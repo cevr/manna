@@ -20,7 +20,7 @@ While a hymn plays, a reader holds its words still for 350 ms, drags through its
 
 ## How to get to it (user POV)
 
-The held seek: open a hymn (`hymnal://hymns/100` / `/hymns/100`), Play, then hold the words still, or tap `Seek by line or word` (`id=hymn-word-seek`, `Seek` at the page's lower right). It is disabled when nothing plays on the page, while paused and during a count-in.
+The held seek: open a hymn (`hymnal://hymns/100` / `/hymns/100`), Play, then hold the words still, or tap `Seek by line or word` (`id=hymn-word-seek`, `Seek` at the page's lower right). It is disabled when nothing plays on the page, while paused, during a count-in, and while the player's own place is still pending (a seek not yet answered): the player decides (`hold.canBegin`), so an enabled entry's press always opens the controls.
 
 The probe: development deep link only, `hymnal://probe/scrub` / `/probe/scrub`. Fixture settings are isolated and discarded when the route ends.
 

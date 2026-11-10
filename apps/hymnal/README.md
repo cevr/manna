@@ -360,7 +360,10 @@ drag and opens a small group above it, at the page's lower right: Previous/Next 
 word, `Play from here` and `Cancel`, focus moving in as it opens and back
 as it closes; its status carries the choice by row, sung line and word,
 with the numbers as its accessible value. It is disabled unless a hold
-could take now (Paused, a count-in or another hold disable it).
+would take now, as the player itself decides (`hold.canBegin`, the rule
+its Begin keeps): Paused, a count-in, another hold, a recording being
+replaced or a place still pending disable it, and the phone's recognizer
+and the web's armed candidate read the same value.
 
 `test:seek` holds the fast traces; `word-seek.property.slow.test.tsx`,
 appended alone to `test:slow`, runs seeded histories over the web, native
