@@ -3183,7 +3183,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     modules), `vite/lexicon.test.ts` (both pronunciation lists as the
     plugin serves them, and each list's wrong shapes refused), `scripts/root-props.test.ts` (each prop a doc
     comment gives the root, in a sentence naming it or an `It` sentence
-    right after one, held to `Root`'s declaration, over the `src` and `app`
+    right after one, a lead such as `No` or `without` in either case of its
+    first letter, held to `Root`'s declaration, over the `src` and `app`
     sources of git's listing of the package and never a file it ignores,
     such as One's `app/routes.d.ts`; generated worlds and a scratch
     repository hold the read set) and

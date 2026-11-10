@@ -9,8 +9,12 @@
  * (each may go on as a list: ``, `y` ``, `` or `y` ``, `` and `y` ``),
  * `` `x` prop ``, `` `x` props `` (with a list before it) or `<Root x`, and
  * each such `x` must be one that `app/index.tsx`'s `export default function
- * Root(…)` destructures. A capitalised name (`Begin`, `Minutes`) is a label on
- * screen, not a prop. The files read are git's listing of the package
+ * Root(…)` destructures. A lead (`no`, `without`, `without a|an|the`) has
+ * its first letter in either case, wherever it stands in the sentence:
+ * `No` and `Without` open a sentence as they may stand inside one, while
+ * `NO`, `WITHOUT`, `not`, `nor`, `within` and a word ending in `no` lead
+ * nothing. A capitalised name (`Begin`, `Minutes`) is a label on screen,
+ * not a prop. The files read are git's listing of the package
  * (tracked or untracked, never ignored: the set `test:infra` hashes), each
  * `.ts` or `.tsx` file under `src` or `app` once, a listed file gone from
  * disk skipped. A listing that fails, or lacks `app/index.tsx`, fails.
@@ -79,57 +83,120 @@ const list = (draw: Draw) => {
   return { names, text };
 };
 
-type Form = 'lead' | 'props' | 'root' | 'label' | 'bare';
+/** Words that lead nothing: a lead in capitals, other words that open with `no` or `with`, and words that end in `no`. */
+const NEAR = ['not', 'Not', 'NO', 'nor', 'WITHOUT', 'within', 'Within', 'know', 'casino'];
 
-/** One drawn mention: its text, the props it names (none for a label or a bare name), and its form. */
-const mention = (draw: Draw) => {
-  const form = pick<Form>(draw, ['lead', 'props', 'root', 'label', 'bare']);
-  if (form === 'lead') {
-    const lead = pick(draw, LEADS);
-    const { names, text } = list(draw);
+const capital = (text: string) => text.slice(0, 1).toUpperCase() + text.slice(1);
+
+type Form = 'lead' | 'props' | 'root' | 'label' | 'bare' | 'near';
+
+/** One drawn mention: its text, the props it names (none for a label, a bare name or a near miss), and its form. */
+interface Mention {
+  readonly text: string;
+  readonly props: ReadonlyArray<string>;
+  readonly form: Form;
+  readonly list: boolean;
+  readonly article: boolean;
+  readonly plural: boolean;
+  readonly capital: boolean;
+}
+
+const plain = { list: false, article: false, plural: false, capital: false };
+
+/** A lead in a drawn case of its first letter. */
+const leadOf = (draw: Draw) => {
+  const lead = pick(draw, LEADS);
+  const capitalised = draw(2) === 0;
+  return { lead: [lead, capital(lead)][Number(capitalised)] ?? lead, capitalised };
+};
+
+/** A lead and its list of names; with `props`, the word `props` after the list. */
+const leadMention = (draw: Draw, written: { lead: string; capitalised: boolean }, props = '') => {
+  const { names, text } = list(draw);
+  return {
+    text: `${written.lead} ${text}${props}`,
+    props: names,
+    form: 'lead',
+    list: names.length > 1,
+    article: written.lead.includes(' '),
+    plural: props !== '',
+    capital: written.capitalised,
+  } satisfies Mention;
+};
+
+/** A lead before a label or a near-miss word before a name: neither names a prop. */
+const unnamed = (
+  draw: Draw,
+  form: 'label' | 'near',
+  written: { lead: string; capitalised: boolean },
+) => {
+  if (form === 'label')
     return {
-      text: `${lead} ${text}`,
-      props: names,
-      list: names.length > 1,
-      article: lead.includes(' '),
-      plural: false,
-    };
-  }
+      text: `${written.lead} \`${pick(draw, LABELS)}\``,
+      props: [],
+      form,
+      ...plain,
+      capital: written.capitalised,
+    } satisfies Mention;
+  return { text: `${pick(draw, NEAR)} \`${pick(draw, NAMES)}\``, props: [], form, ...plain };
+};
+
+/** One drawn mention inside a sentence. */
+const mention = (draw: Draw): Mention => {
+  const form = pick<Form>(draw, ['lead', 'props', 'root', 'label', 'bare', 'near']);
+  if (form === 'lead') return leadMention(draw, leadOf(draw));
   if (form === 'props') {
     const { names, text } = list(draw);
     const plural = names.length > 1 || draw(2) === 0;
     return {
       text: `the ${text} ${['prop', 'props'][Number(plural)] ?? ''}`,
       props: names,
+      form,
+      ...plain,
       list: names.length > 1,
-      article: false,
       plural,
     };
   }
-  const plain = { list: false, article: false, plural: false };
   if (form === 'root') {
     const name = pick(draw, NAMES);
-    return { text: `\`<Root ${name} />\``, props: [name], ...plain };
+    return { text: `\`<Root ${name} />\``, props: [name], form, ...plain };
   }
-  if (form === 'label') return { text: `no \`${pick(draw, LABELS)}\``, props: [], ...plain };
-  return { text: `reads \`${pick(draw, NAMES)}\``, props: [], ...plain };
+  if (form === 'bare') return { text: `reads \`${pick(draw, NAMES)}\``, props: [], form, ...plain };
+  return unnamed(draw, form, leadOf(draw));
+};
+
+/** A sentence's opening, one time in three: a capitalised lead and its list (`props` after it or not), a lead before a label, or a near miss, then a comma. */
+const opening = (draw: Draw): ReadonlyArray<Mention> => {
+  if (draw(3) !== 0) return [];
+  const written = { lead: capital(pick(draw, LEADS)), capitalised: true };
+  const form = pick<'lead' | 'label' | 'near'>(draw, ['lead', 'lead', 'label', 'near']);
+  if (form !== 'lead') {
+    const opened = unnamed(draw, form, written);
+    return [{ ...opened, text: `${opened.text},` }];
+  }
+  const opened = leadMention(draw, written, ['', ' props'][draw(2)] ?? '');
+  return [{ ...opened, text: `${opened.text},` }];
 };
 
 /** One drawn sentence after one about the root or not: its text, whether it is about the root, and its mentions. */
 const sentence = (draw: Draw, afterRoot: boolean) => {
+  const opened = opening(draw);
   const mentions = Array.from({ length: draw(4) }, () => mention(draw));
   const subject = draw(SUBJECTS.length);
+  const said = SUBJECTS[subject] ?? '';
+  const lowered = said.slice(0, 1).toLowerCase() + said.slice(1);
   const text = [
-    SUBJECTS[subject],
+    ...opened.map(({ text: each }) => each),
+    [said, lowered][Math.min(opened.length, 1)],
     ...mentions.map(({ text: each }) => each),
     FILLER[draw(FILLER.length)],
   ].join(' ');
-  const chained = subject >= 5;
+  const chained = subject >= 5 && opened.length === 0;
   const aboutRoot =
     subject < 3 ||
     mentions.some(({ text: each }) => each.startsWith('`<Root ')) ||
     (chained && afterRoot);
-  return { text: `${text}.`, aboutRoot, chained, mentions };
+  return { text: `${text}.`, aboutRoot, chained, opened, mentions: [...opened, ...mentions] };
 };
 
 /** One to four drawn sentences, each drawn knowing whether the one before is about the root. */
@@ -141,20 +208,57 @@ const comment = (draw: Draw) => {
   return sentences;
 };
 
+const CLASSES = [
+  'plural',
+  'list',
+  'article',
+  'chained',
+  'unchained',
+  'capital opens a root sentence',
+  'capital opens with props after its list',
+  'capital with an article',
+  'capital with a list',
+  'capital before a label',
+  'capital in a sentence not about the root',
+  'capital before a chained It sentence naming a prop',
+  'capital inside a sentence',
+  'near miss',
+] as const;
+
 /** Counts in `seen` each new form a comment's sentences draw where it names a prop of the root, or must not. */
 const tally = (
-  seen: Record<'plural' | 'list' | 'article' | 'chained' | 'unchained', number>,
+  seen: Record<(typeof CLASSES)[number], number>,
   sentences: ReadonlyArray<ReturnType<typeof sentence>>,
 ) => {
   sentences.forEach((each, index) => {
     const afterRoot = sentences[index - 1]?.aboutRoot ?? false;
+    const next = sentences[index + 1];
     const named = each.mentions.some(({ props }) => props.length > 0);
     if (named && afterRoot && each.chained) seen.chained += 1;
     if (named && afterRoot && !each.aboutRoot) seen.unchained += 1;
-    const counted = each.mentions.filter(() => each.aboutRoot);
+    const leads = each.opened.filter(({ form }) => form === 'lead');
+    const capitals = each.mentions.filter(({ form, capital: big }) => form === 'lead' && big);
+    if (!each.aboutRoot) {
+      seen['capital in a sentence not about the root'] += capitals.length;
+      return;
+    }
+    const counted = each.mentions;
     seen.plural += counted.filter(({ plural }) => plural).length;
     seen.list += counted.filter(({ list: listed }) => listed).length;
     seen.article += counted.filter(({ article }) => article).length;
+    seen['capital opens a root sentence'] += leads.length;
+    seen['capital opens with props after its list'] += leads.filter(({ plural }) => plural).length;
+    seen['capital with an article'] += capitals.filter(({ article }) => article).length;
+    seen['capital with a list'] += capitals.filter(({ list: listed }) => listed).length;
+    seen['capital before a label'] += each.mentions.filter(
+      ({ form, capital: big }) => form === 'label' && big,
+    ).length;
+    seen['capital inside a sentence'] += capitals.length - leads.length;
+    seen['near miss'] += each.mentions.filter(({ form }) => form === 'near').length;
+    const chainNames =
+      next?.chained === true && next.mentions.some(({ props }) => props.length > 0);
+    if (leads.length > 0 && chainNames)
+      seen['capital before a chained It sentence naming a prop'] += 1;
   });
 };
 
@@ -269,8 +373,11 @@ describe('the doc comments name only props the root takes', () => {
   it('over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare', () => {
     const draw = random(0x5eed);
     let faulted = 0;
-    const seen = { plural: 0, list: 0, article: 0, chained: 0, unchained: 0 };
-    for (let run = 0; run < 300; run += 1) {
+    const seen = Object.fromEntries(CLASSES.map((name) => [name, 0])) as Record<
+      (typeof CLASSES)[number],
+      number
+    >;
+    for (let run = 0; run < 1000; run += 1) {
       const declared = NAMES.filter(() => draw(3) === 0);
       const sentences = comment(draw);
       tally(seen, sentences);

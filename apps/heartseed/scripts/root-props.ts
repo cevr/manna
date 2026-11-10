@@ -10,9 +10,9 @@ import { Option } from 'effect';
 
 const NAME = '[a-z]\\w*';
 const SEPARATOR = '(?:,? (?:or|and) |, )';
-/** A lead form, its first name, then the list that goes on from it. */
+/** A lead form, its first letter in either case, its first name, then the list that goes on from it. */
 const LEAD = new RegExp(
-  `\\b(?:no|without(?: an?| the)?) \`(${NAME})\`((?:${SEPARATOR}\`${NAME}\`)*)`,
+  `\\b(?:[Nn]o|[Ww]ithout(?: an?| the)?) \`(${NAME})\`((?:${SEPARATOR}\`${NAME}\`)*)`,
   'dgu',
 );
 /** The list before a `prop` or `props`, then the name right before the word. */

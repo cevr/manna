@@ -5470,3 +5470,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `root-props.test.ts` walked `src` and `app` on disk, so in a workspace that had run the dev server it read One's ignored `app/routes.d.ts`, a file `test:infra` does not hash, and `test:reads` failed there.
 - **Cause:** The scan read the folders as the disk holds them, not the files git lists, which are the set the task's inputs hash.
 - **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 240 generated worlds, reads each listed source once, in order, and nothing else, and faults exactly theirs`; code: `apps/heartseed/scripts/root-props.test.ts` `reads git's listing of a scratch repository: its tracked and untracked sources, never an ignored one or one gone from disk`
+
+### heartseed-root-props-reads-a-capital-lead
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "root-props misses lead forms at the start of a sentence (`No`/`Without` with a capital), and so did base"
+- **Source:** hymnapp/batch-sg-1-findings.md o1 (On base, its first item)
+- **Wrong:** A doc comment that opened a sentence about the root with `No` or `Without` and a prop the root does not take passed `root-props.test.ts`.
+- **Cause:** The lead pattern held only lower-case `no` and `without`, and the generator drew no lead with a capital, nor a sentence that opens with one.
+- **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare`
