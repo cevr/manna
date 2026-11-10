@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noGlobals, eslint/no-await-in-loop -- a component test: it mounts the end's drawing in happy-dom (react-native-web) through React's promise-based `act`, one list after another, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, eslint/no-await-in-loop -- a component test: it mounts the end's drawing in happy-dom (react-native-web) through React's promise-based `act`, one list after another, and reads nodes whose absent attributes are null. */
 
 /**
  * The end of a run's drawing alone (`Tended`, R2), mounted on the scheme's

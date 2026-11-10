@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noGlobals -- the test drives the root through React's promise-based `act`, one awaited tap at a time, over a disk planted a day before the run's frozen instant (the one `One.Database` reads as null for a missing key), and reads a control not shown as undefined. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish -- the test drives the root through React's promise-based `act`, one awaited tap at a time, over a disk the `One.Database` reads as null for a missing key, and reads a control not shown as undefined. */
 
 /**
  * Every screen's fixed controls outside its scroll views (hspassage C13,
