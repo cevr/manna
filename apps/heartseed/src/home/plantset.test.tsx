@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a React drawing test: it mounts the plant and the root in happy-dom's document through React's promise-based `act`, one command after another, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a React drawing test: it mounts the plant and the root in happy-dom's document through React's promise-based `act`, one command after another, and reads nodes whose absent attributes are null. */
 
 /**
  * The plant set as Today's stage line and the first minute's Planted draw
