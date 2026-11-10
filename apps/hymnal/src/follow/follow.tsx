@@ -421,6 +421,13 @@ export const useFollow = (number: number) => {
   const centred = useRef(Option.none<number>());
   const asked = useRef(0);
   const viewport = () => Math.max(0, height.current - covered.current);
+  /** Those told when the viewport may have changed: a held seek's offer reads it (`preview.ready`). */
+  const sized = useRef(new Set<() => void>());
+  const resized = () => sized.current.forEach((listener) => listener());
+  const subscribeSized = useCallback((listener: () => void) => {
+    sized.current.add(listener);
+    return () => void sized.current.delete(listener);
+  }, []);
   const scrollTo = (y: number) =>
     Option.map(scroll.current, (page) => {
       offset.current = y;
@@ -466,6 +473,7 @@ export const useFollow = (number: number) => {
   };
   const preview: PreviewHost = {
     ready: () => Option.isSome(follower) && viewport() > 0,
+    subscribe: subscribeSized,
     begin: () => {
       epoch.current += 1;
       previewing.current = true;
@@ -497,6 +505,7 @@ export const useFollow = (number: number) => {
     cover: (points: number) => {
       if (points === covered.current) return;
       covered.current = points;
+      resized();
       refit();
     },
     follow,
@@ -510,6 +519,7 @@ export const useFollow = (number: number) => {
     hand: handOf(() => Option.map(follower, (f) => f.drag())),
     onLayout: (event: LayoutChangeEvent) => {
       height.current = event.nativeEvent.layout.height;
+      resized();
       setLaid(height.current);
     },
     /** The scroll's laid-out height: a change moves the words under a held seek, so it revokes one. */

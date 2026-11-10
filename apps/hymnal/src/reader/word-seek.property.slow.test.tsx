@@ -9,12 +9,14 @@
  * Musical places (the anchor a hold takes, a choice's onset) come from
  * hymseek's proved seam: the hold's published target and the fixture's
  * targets. Whether a hold may be offered it decides itself, the count-in
- * from its own model of the history's commands and the score's bar: the
- * player's published count must agree with it, and the page's entry, the
- * phones' recognizer and the web's armed candidate must follow it. After
- * each command it compares those, the drawn choice, the scroll, the held
- * lock, the cues and the seeks; every hold it offered must take. It prints
- * only seeds and counts.
+ * from its own model of the history's commands and the score's bar, and a
+ * refusal while a seek of the history's own waits unanswered at the
+ * device: the player's published count must agree with it, and the page's
+ * entry, the phones' recognizer and the web's armed candidate must follow
+ * it. After each command it compares those, the drawn choice, the scroll,
+ * the held lock, the cues and the seeks; every hold it offered must take,
+ * every enabled entry or recognizer pressed must take, and a disabled one
+ * never does. It prints only seeds and counts.
  */
 
 import { expect, it } from 'effect-bun-test';
@@ -215,6 +217,8 @@ const reference = (
   rects: ReadonlyArray<Rect>,
   /** Whether the history's own count-in model counts now. */
   counting: () => boolean,
+  /** Whether a seek the history asked the player for is still unanswered by the device: the player refuses a hold while its place is pending. */
+  inFlight: () => boolean,
 ) => {
   const lines = app.targets.lines;
   const wordsOn = (k: number) => {
@@ -256,7 +260,8 @@ const reference = (
     state.viewport > RISE &&
     Player.$is('Playing')(app.registry.get(app.player.state)) &&
     app.registry.get(app.player.hold.state)._tag === 'Free' &&
-    !counting();
+    !counting() &&
+    !inFlight();
   const anchor = (): Option.Option<{ readonly line: number; readonly column: number }> => {
     const hold = app.registry.get(app.player.hold.state);
     if (hold._tag === 'Free') return Option.none();
@@ -472,7 +477,17 @@ const history = (seed: number, surface: Surface) =>
     let now = yield* Clock.currentTimeMillis;
     /** The intro switch as the history last set it. */
     let intro = false;
-    const model = reference(app, page, surface, viewport, rects, () => counted.counting(now));
+    /** A seek of the history's own the device has not answered: it waits at the seek's boundary until `answerFlight`. */
+    let flight = Option.none<Deferred.Deferred<Status, PlaybackError>>();
+    const model = reference(
+      app,
+      page,
+      surface,
+      viewport,
+      rects,
+      () => counted.counting(now),
+      () => Option.isSome(flight),
+    );
     const settle = inAct(TestClock.adjust(0));
     const outside = new Set<number>();
     /** When a chord was last pressed, by the page's touch clock. */
@@ -491,6 +506,8 @@ const history = (seed: number, surface: Surface) =>
     let press = Option.none<ReturnType<typeof longPress>>();
     let pressAt = { x: 0, y: 0 };
     let promised = false;
+    /** What the surface itself offered at this step's try: the entry drawn enabled, the phone's recognizer enabled. */
+    let offeredBy = Option.none<boolean>();
     const webDown = (step: number) => {
       const init = rng.pick([
         { x: 100, y: 200 },
@@ -557,7 +574,8 @@ const history = (seed: number, surface: Surface) =>
     const web = (step: number) => {
       const owner = model.state.owner;
       const kind = rng.int(20);
-      if (owner._tag === 'Idle' && kind < 8) return webDown(step);
+      if (owner._tag === 'Idle' && (kind < 8 || (counted.over(now) && kind < 14)))
+        return webDown(step);
       if (owner._tag === 'Candidate' && kind < 10) return webStill(step, owner);
       if (owner._tag === 'Candidate' && kind < 15) {
         promised = model.eligible();
@@ -585,6 +603,7 @@ const history = (seed: number, surface: Surface) =>
       const [dx, dy] = drift;
       const chorded = chordRecent();
       const can = model.eligible() && !chorded;
+      const enabled = gestureOf('reader-word-seek-hold').enabled !== false;
       const still =
         dx * dx + dy * dy <= STILL_PT ** 2 && Math.abs(dx) <= STILL_PT && Math.abs(dy) <= STILL_PT;
       if (!still) count('drift');
@@ -594,6 +613,8 @@ const history = (seed: number, surface: Surface) =>
       });
       pressAt = { x: dx, y: dy };
       promised = still && can;
+      if (still && !chorded) offeredBy = Option.some(enabled);
+      if (!enabled) offeredBy = Option.some(false);
       if (still && can) model.take(1, dx, dy);
       else model.state.owner = { _tag: 'Orphan', id: 1 };
       return `press ${step}`;
@@ -618,8 +639,8 @@ const history = (seed: number, surface: Surface) =>
     const native = (step: number) => {
       const kind = rng.int(20);
       const nearCount = counted.counting(now) || counted.over(now);
-      if (Option.isNone(press) && (kind < 9 || (counted.over(now) && kind < 17)))
-        return nativePress(step);
+      const soon = counted.over(now) || Option.isSome(flight);
+      if (Option.isNone(press) && (kind < 9 || (soon && kind < 17))) return nativePress(step);
       const refusedFinger =
         Option.isSome(press) && model.state.owner._tag === 'Orphan' && nearCount;
       if (Option.isSome(press) && kind < 14 && !(refusedFinger && kind < 8))
@@ -630,8 +651,9 @@ const history = (seed: number, surface: Surface) =>
     const steps = (step: number) => {
       const kind = rng.int(20);
       const owner = model.state.owner;
-      if (owner._tag === 'Idle' && kind < 6) {
+      if (owner._tag === 'Idle' && (kind < 6 || (Option.isSome(flight) && kind < 14))) {
         const can = model.eligible();
+        offeredBy = Option.some(page.enabled('hymn-word-seek'));
         page.press('hymn-word-seek');
         promised = can;
         if (can) model.take(0, 0, 0);
@@ -735,9 +757,52 @@ const history = (seed: number, surface: Surface) =>
       count('land');
       return `land ${step}`;
     };
+    /**
+     * The history's own seek in flight is answered by the device at its
+     * place: the player's place lands and a hold may take again. Any other
+     * playback command answers it first, so the flight never outlives the
+     * ask that made it.
+     */
+    const answerAtLast = (asked: Deferred.Deferred<Status, PlaybackError>) => {
+      const ms = app.commands.findLast(({ kind }) => kind === 'seek')?.ms ?? 0;
+      Deferred.doneUnsafe(
+        asked,
+        Effect.succeed({ state: 'playing' as const, positionMs: ms, durationMs: 21_000 }),
+      );
+    };
+    const answerFlight = () =>
+      Option.map(flight, (it) => {
+        answerAtLast(it);
+        app.boundaries.delete('seek');
+        flight = Option.none();
+        count('flight-answered');
+      });
+    const answered = (step: number) => {
+      answerFlight();
+      return `answered ${step}`;
+    };
+    /**
+     * The player is asked for a place of its own that the device is slow to
+     * answer: the seek waits at its boundary, so the player's place is
+     * pending and it refuses a hold until `answerFlight`.
+     */
+    const pendingSeek = (step: number) => {
+      outsideStep = true;
+      answerFlight();
+      Option.map(landing, answerAtLast);
+      landing = Option.none();
+      const asked = Deferred.makeUnsafe<Status, PlaybackError>();
+      app.boundaries.set('seek', asked);
+      flight = Option.some(asked);
+      app.send(Command.Seek({ seconds: rng.pick([2, 7.5, 12, 17]) }));
+      counted.seek();
+      count('player-pending');
+      return `pending ${step}`;
+    };
     /** The player is asked for something of its own, with no hold: a place, the end, a start again, a pause while it loads. */
     const playerCommand = (step: number) => {
       outsideStep = true;
+      answerFlight();
       const how = rng.pick(['first', 'end', 'restart', 'count-in', 'count-in', 'stop'] as const);
       const timed = Option.getOrThrow(book.of(1));
       const start = () => app.send(Command.Start({ track: { number: 1, title: 'Fixture' } }));
@@ -800,6 +865,7 @@ const history = (seed: number, surface: Surface) =>
       if (kind < 8 && Option.isSome(landing) && holdTag() === 'Landing' && rng.next() < 0.3)
         return land(step);
       if (counted.counting(now) && rng.next() < 0.7) return wait(step);
+      if (Option.isSome(flight) && rng.next() < 0.15) return answered(step);
       if (kind < 4) return `tick ${step}`;
       if (kind < 8) return ordinary(kind, step, keepsPointer);
       if (kind < 10 && later && page.pending().length > 0) return answerSome(step);
@@ -815,12 +881,17 @@ const history = (seed: number, surface: Surface) =>
       if (kind < 14 && unheld && holdTag() === 'Free' && rng.next() < 0.4)
         return playerCommand(step);
       if (kind < 15 && words === 'boxed' && page.hasChord() && idle) return chordPress(step);
+      const playing =
+        model.state.shown && Player.$is('Playing')(app.registry.get(app.player.state));
+      if (unheld && holdTag() === 'Free' && playing && Option.isNone(flight) && rng.next() < 0.5)
+        return pendingSeek(step);
       reduced = !reduced;
       page.motion(reduced);
       count('motion');
       return `motion ${step}`;
     };
     const ordinary = (kind: number, step: number, keepsPointer: boolean): string => {
+      if (kind < 6) answerFlight();
       if (kind < 5) {
         model.revoke(keepsPointer);
         app.send(Command.Pause());
@@ -883,10 +954,13 @@ const history = (seed: number, surface: Surface) =>
         count(`held-after-count-in-${surface}`);
     };
     /** What the step did wrong that `differences` does not compare. */
-    const offences = () => {
+    const offences = (freeBefore: boolean) => {
       const refused = promised && model.state.owner._tag !== 'Held';
+      const taken = freeBefore && holdTag() !== 'Free';
       const found = [
         [refused, 'an offered hold did not take'],
+        [Option.contains(offeredBy, true) && !taken, 'an enabled offer did not take'],
+        [Option.contains(offeredBy, false) && taken, 'a disabled offer took'],
         [staleScrolls.length > 0, `stale=${staleScrolls.join(',')}`],
       ] as const;
       return found.filter(([wrong]) => wrong).map(([, said]) => said);
@@ -894,7 +968,9 @@ const history = (seed: number, surface: Surface) =>
     const mismatches: Array<string> = [];
     for (let step = 0; step < COMMANDS; step++) {
       promised = false;
+      offeredBy = Option.none();
       outsideStep = false;
+      const freeBefore = holdTag() === 'Free';
       if (landLate && model.state.owner._tag === 'Held' && Option.isNone(landing)) {
         const held = yield* Deferred.make<Status, PlaybackError>();
         app.boundaries.set('seek', held);
@@ -903,18 +979,24 @@ const history = (seed: number, surface: Surface) =>
       const seeksBefore = app.commands.length;
       now = yield* Clock.currentTimeMillis;
       const before = { counting: counted.counting(now), owner: model.state.owner._tag };
+      const refusing =
+        Option.isSome(flight) &&
+        model.state.shown &&
+        freeBefore &&
+        Player.$is('Playing')(app.registry.get(app.player.state));
       const command = { web, native, steps }[surface](step);
       const candidate = model.state.owner;
       yield* settle;
       yield* ahead(command, candidate);
       now = yield* Clock.currentTimeMillis;
       countInCovered(before, command);
+      if (refusing && tries(command)) count(`player-refused-${surface}`);
       if (outsideStep)
         app.commands.slice(seeksBefore).forEach((_, k) => outside.add(seeksBefore + k));
       while (askedIn.length < page.asked()) askedIn.push(model.state.epoch);
       const current = page.pending().filter((k) => askedIn[k] === model.state.epoch);
       const wrong = [
-        ...offences(),
+        ...offences(freeBefore),
         ...differences(
           model,
           page,
@@ -1210,13 +1292,15 @@ it.effect('the generated histories reached every case they are for', () => {
     'spacing-compact',
     'spacing-normal',
     'spacing-roomy',
-    ...['first', 'end', 'restart', 'count-in', 'stop'].map((how) => `player-${how}`),
+    ...['first', 'end', 'restart', 'count-in', 'stop', 'pending'].map((how) => `player-${how}`),
+    'flight-answered',
     'state-counting',
     'wait',
     ...surfaces.flatMap((on) => [
       `count-in-refused-${on}`,
       `count-in-ran-out-${on}`,
       `held-after-count-in-${on}`,
+      `player-refused-${on}`,
     ]),
   ];
   const seen = floors.map((name) => [name, counts.get(name) ?? 0] as const);

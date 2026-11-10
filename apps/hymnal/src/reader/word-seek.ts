@@ -37,7 +37,6 @@ import { useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import type { SeekTarget, SeekTargets } from '~/follow/seek-targets';
 import { usePlayer } from '~/player/context';
-import { Player } from '~/player/player';
 import {
   bundledTargets,
   HoldCommand,
@@ -529,6 +528,8 @@ export const focusOn = (view: HostInstance) => {
 export interface PreviewHost {
   /** Whether the lyric viewport is measured and the page is followed. */
   readonly ready: () => boolean;
+  /** Tells `listener` each time `ready` may have changed; returns its end. */
+  readonly subscribe: (listener: () => void) => () => void;
   /** The seek took the page: the follow stands aside and the ends are padded. */
   readonly begin: () => void;
   /** Sets line `line`'s whole block mid-viewport, at once. */
@@ -548,14 +549,18 @@ interface Own {
   ending: Option.Option<'Release' | 'Cancel'>;
 }
 
-const idlePlayer = Atom.make<Player>(Player.Idle());
 const freeHold = Atom.make<HoldState>(HoldState.Free());
-const noBeat = Atom.make(Option.none<unknown>());
 
 /** The page's held seek: what it offers, what it shows, and the moves a gesture or a control makes. */
 export interface WordSeek {
-  /** Whether a hold could take now: the shown page's hymn plays, with no count-in, hold or pending act. A part that draws it reads it through `useSeekAvailable`. */
+  /**
+   * Whether a hold takes now: the page is seen, its viewport measured, and
+   * the player's own `hold.canBegin` says a Begin offering its targets
+   * takes. A part that draws it reads it through `useSeekAvailable`.
+   */
   readonly available: () => boolean;
+  /** Tells `listener` each time `available` may have changed; returns its end. */
+  readonly subscribe: (listener: () => void) => () => void;
   /** How this page holds now, if it does. */
   readonly via: Option.Option<'pointer' | 'steps'>;
   /** The choice, while this page holds. */
@@ -606,9 +611,9 @@ const ShownContext = createContext<ShownPages>(everyPage);
 
 export const ShownPagesProvider = ShownContext.Provider;
 
-/** The page's held seek's offer as a part draws it: drawn again as the page seen changes. */
+/** The page's held seek's offer as a part draws it: drawn again as the page seen, the viewport or the player's word changes. */
 export const useSeekAvailable = (seek: WordSeek): boolean =>
-  useSyncExternalStore(use(ShownContext).subscribe, seek.available, seek.available);
+  useSyncExternalStore(seek.subscribe, seek.available, seek.available);
 
 const FREE = 'Free';
 
@@ -657,35 +662,39 @@ export const useWordSeek = ({
   const choice = useAtomValue(settings.stanzas(number));
   const targets = useMemo(() => targetsFor(number, choice), [targetsFor, number, choice]);
   const atoms = Option.match(player, {
-    onNone: () => ({ state: idlePlayer, hold: freeHold, beat: noBeat }),
-    onSome: (it) => ({ state: it.state, hold: it.hold.state, beat: it.countIn }),
+    onNone: () => ({ hold: freeHold }),
+    onSome: (it) => ({ hold: it.hold.state }),
   });
-  const playingHere = useAtomValue(
-    atoms.state,
-    (current) => Player.$is('Playing')(current) && current.track.number === number,
+  useAtomValue(atoms.hold, holdKey);
+  /** The player's own word on whether a Begin offering this page's targets takes now. */
+  const offer = useMemo(
+    () => Option.flatMap(player, (it) => Option.map(targets, it.hold.canBegin)),
+    [player, targets],
   );
-  const hold = useAtomValue(atoms.hold, holdKey);
-  const counting = useAtomValue(atoms.beat, Option.isSome);
   const marks = useMemo(previewMarksOf, []);
   const own = useRef(Option.none<Own>());
   const [via, setVia] = useState(Option.none<'pointer' | 'steps'>());
   const pages = use(ShownContext);
-  const now = useRef({ host, reduced, pages, targets });
-  now.current = { host, reduced, pages, targets };
+  const now = useRef({ host, reduced, pages, targets, offer });
+  now.current = { host, reduced, pages, targets, offer };
   const seen = () => now.current.pages.isShown(number);
 
-  const availableIn = (here: boolean, held: string, counted: boolean) =>
+  const available = () =>
     seen() &&
-    Option.isSome(player) &&
-    here &&
-    held === FREE &&
-    !counted &&
-    Option.isSome(now.current.targets) &&
     Option.isNone(own.current) &&
-    now.current.host.ready();
-  const playsHere = (current: Player) =>
-    Player.$is('Playing')(current) && current.track.number === number;
-  const available = () => availableIn(playingHere, hold, counting);
+    now.current.host.ready() &&
+    Option.exists(now.current.offer, (atom) => registry.get(atom));
+  const subscribe = useCallback(
+    (listener: () => void) => {
+      const stops = [
+        pages.subscribe(listener),
+        now.current.host.subscribe(listener),
+        ...Option.toArray(Option.map(offer, (atom) => registry.subscribe(atom, listener))),
+      ];
+      return () => stops.forEach((stop) => stop());
+    },
+    [pages, registry, offer],
+  );
 
   const ownTarget = (mine: Own): Option.Option<SeekTarget> => {
     const held = registry.get(atoms.hold);
@@ -702,14 +711,7 @@ export const useWordSeek = ({
   const begin = (how: 'pointer' | 'steps'): boolean => {
     if (Option.isNone(player) || Option.isNone(now.current.targets)) return false;
     const it = player.value;
-    if (
-      !availableIn(
-        playsHere(registry.get(it.state)),
-        holdKey(registry.get(it.hold.state)),
-        Option.isSome(registry.get(it.countIn)),
-      )
-    )
-      return false;
+    if (!available()) return false;
     const offered = now.current.targets.value;
     registry.set(it.hold.send, HoldCommand.Begin({ targets: offered }));
     const taken = registry.get(it.hold.state);
@@ -835,6 +837,7 @@ export const useWordSeek = ({
 
   return {
     available,
+    subscribe,
     via,
     target: Option.flatMap(own.current, ownTarget),
     targets,

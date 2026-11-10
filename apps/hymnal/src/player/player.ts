@@ -468,29 +468,53 @@ export const playerOn = (
    * reads have proved, the place a seek still asks the device for (and
    * whether that ask is in flight), the ask that moves the device, the read
    * in flight, whether a Resume from Ended still reads the device before it
-   * acts, and the recording's count and the count it was announced at.
+   * acts, and the recording's count and the count it was announced at. Each
+   * write tells `work`, so what a hold waits on is published as it changes.
    */
-  const held: Held = {
-    wants: 'play',
-    starts: 0,
-    acts: 0,
-    proof: Proof.none,
-    seeking: Option.none(),
-    moving: Option.none(),
-    reading: Option.none(),
-    resuming: false,
-    id: 0,
-    announced: -1,
-    offset: 0,
-    replacing: false,
-    pace: 1,
-    countEnds: Option.none(),
-  };
-
+  const tellers = new Set<() => void>();
+  const told = () => tellers.forEach((tell) => tell());
+  const held: Held = new Proxy<Held>(
+    {
+      wants: 'play',
+      starts: 0,
+      acts: 0,
+      proof: Proof.none,
+      seeking: Option.none(),
+      moving: Option.none(),
+      reading: Option.none(),
+      resuming: false,
+      id: 0,
+      announced: -1,
+      offset: 0,
+      replacing: false,
+      pace: 1,
+      countEnds: Option.none(),
+    },
+    {
+      set: (target, key, value) => {
+        const done = Reflect.set(target, key, value);
+        told();
+        return done;
+      },
+    },
+  );
   const holdState = Atom.make<HoldState>(HoldState.Free()).pipe(Atom.keepAlive);
   const tokenOf = Brand.nominal<HoldToken>();
   let transaction = Option.none<HoldTransaction>();
   let revokedWork = false;
+  /** Whether no work of the player's own keeps a hold from taking: no hold open, no recording being replaced, no place pending, no count-in told. */
+  const unbusy = () =>
+    Option.isNone(transaction) &&
+    !held.replacing &&
+    Option.isNone(held.proof.pending) &&
+    Option.isNone(held.countEnds);
+  /** `unbusy` as an atom, told again at each write of `held` and of the open hold. */
+  const work = Atom.make((get) => {
+    const tell = () => get.setSelf(unbusy());
+    tellers.add(tell);
+    get.addFinalizer(() => void tellers.delete(tell));
+    return unbusy();
+  });
   const capture = (get: HoldAccess, number: number): HoldSnapshot => ({
     start: held.starts,
     key: get.get(keyFor(number)),
@@ -502,6 +526,7 @@ export const playerOn = (
   const abandonHold = () => {
     if (Option.isNone(transaction)) return;
     transaction = Option.none();
+    told();
     revokedWork = true;
     held.seeking = Option.none();
     held.proof = { ...held.proof, pending: Option.none() };
@@ -533,6 +558,7 @@ export const playerOn = (
   const clearHold = (get: HoldAccess, hold: HoldTransaction) => {
     if (!Option.contains(transaction, hold)) return;
     transaction = Option.none();
+    told();
     get.set(holdState, HoldState.Free());
   };
 
@@ -1553,6 +1579,47 @@ export const playerOn = (
     },
   ).pipe(Atom.keepAlive);
 
+  /** The held hymn's seek targets as it sings them now: none while no hymn is held. */
+  const projected = Atom.make((get) => {
+    const number = get(heldNumber);
+    if (number === 0) return Option.none<SeekTargets>();
+    return targetsFor(number, get(stanzasFor(number)));
+  });
+  /**
+   * The hold a Begin offering `offered` takes now, with the player's own
+   * targets and its first target, or none while the player refuses one: a
+   * hold is open, the hymn does not play, the recording is being replaced,
+   * a place is pending, a count-in is told or counts, or `offered` are not
+   * the playing hymn's targets as it sings them. Begin keeps this rule and
+   * `hold.canBegin` publishes it, so an offer of a hold is one that takes.
+   */
+  const opening = (get: HoldAccess, offered: SeekTargets) => {
+    const current = get.get(state);
+    if (
+      !get.get(work) ||
+      !Player.$is('Playing')(current) ||
+      current.track.number !== offered.number ||
+      Option.isSome(get.get(beat))
+    )
+      return Option.none();
+    return Option.flatMap(
+      Option.filter(get.get(projected), (targets) => sameTargets(targets, offered)),
+      (targets) =>
+        Option.map(initialTarget(offered, current.at * 1000), (target) => ({ targets, target })),
+    );
+  };
+  const offers = new WeakMap<SeekTargets, Atom.Atom<boolean>>();
+  /** Whether a Begin offering `offered` would take now (`opening`), as an atom kept for each targets value. */
+  const canBegin = (offered: SeekTargets): Atom.Atom<boolean> =>
+    Option.getOrElse(Option.fromUndefinedOr(offers.get(offered)), () => {
+      const made = Atom.make((get) => {
+        get(holdLifetime);
+        return Option.isSome(opening(get, offered));
+      });
+      offers.set(offered, made);
+      return made;
+    });
+
   const holdSend = Atom.writable(
     (get) => get(holdLifetime),
     (get, command: HoldCommand) => {
@@ -1564,32 +1631,21 @@ export const playerOn = (
         return;
       }
       if (command._tag === 'Begin') {
-        const current = get.get(state);
-        if (
-          Option.isSome(transaction) ||
-          !Player.$is('Playing')(current) ||
-          current.track.number !== command.targets.number ||
-          held.replacing ||
-          Option.isSome(held.proof.pending) ||
-          Option.isSome(held.countEnds) ||
-          Option.isSome(get.get(beat))
-        )
-          return;
-        const targets = targetsFor(current.track.number, get.get(stanzasFor(current.track.number)));
-        if (!Option.exists(targets, (targets) => sameTargets(targets, command.targets))) return;
-        const target = initialTarget(command.targets, current.at * 1000);
-        if (Option.isNone(target) || Option.isNone(targets)) return;
+        const opened = opening(get, command.targets);
+        if (Option.isNone(opened)) return;
+        const { targets, target } = opened.value;
         const token = tokenOf(Symbol());
         transaction = Option.some({
           token,
-          targets: targets.value,
-          snapshot: capture(get, current.track.number),
-          target: target.value,
+          targets,
+          snapshot: capture(get, targets.number),
+          target,
           origin: Option.none(),
           ending: Option.none(),
           resuming: false,
         });
-        get.set(holdState, HoldState.Acquiring({ token, target: target.value }));
+        told();
+        get.set(holdState, HoldState.Acquiring({ token, target }));
         get.set(dispatch, HoldEvent.AcquireHold({ token }));
         return;
       }
@@ -1634,6 +1690,7 @@ export const playerOn = (
       return get(holdState);
     }),
     send: holdSend,
+    canBegin,
   };
 
   /** Sends each press of the lock screen, Control Center or the Media Session while it is mounted. */

@@ -1,12 +1,12 @@
 import { expect, it } from 'effect-bun-test';
-import { Effect, Option } from 'effect';
+import { Deferred, Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { act } from 'react';
 
-import { Command, Player } from '~/player/player';
+import { Command, type PlaybackError, Player, type Status } from '~/player/player';
 import { RISE } from '~/player/bar';
-import { drag, longPress } from '~/test/gesture';
+import { drag, gestureOf, longPress } from '~/test/gesture';
 
 import { SeekArea } from './WordSeek.native';
 import { LINE_STEP, seekHeld, WORD_STEP } from './word-seek';
@@ -304,6 +304,55 @@ it.effect('on the web a cancel, a lost capture or Escape cancels once; a late ti
       'seek-grab',
     ]);
   }).pipe(Effect.scoped),
+);
+
+it.effect(
+  'a playing hymn whose player would refuse a hold offers none anywhere until it would take',
+  () =>
+    Effect.gen(function* () {
+      const app = yield* openWordSeek(false);
+      const web = yield* mountSeekReader(app, { viewport: VIEWPORT });
+      yield* inAct(app.play);
+      const landed = yield* Deferred.make<Status, PlaybackError>();
+      app.boundaries.set('seek', landed);
+      yield* inAct(
+        Effect.andThen(
+          Effect.sync(() => app.send(Command.Seek({ seconds: 3 }))),
+          app.waitCall('boundary:seek'),
+        ),
+      );
+      const playing = app.registry.get(app.player.state)._tag;
+      const entry = web.enabled('hymn-word-seek');
+      web.press('hymn-word-seek');
+      web.pointer('pointerdown');
+      const armed = web.waiting().length;
+      web.pointer('pointerup');
+      const pressed = app.registry.get(app.player.hold.state)._tag;
+      web.unmount();
+      const phone = yield* mountSeekReader(app, { viewport: VIEWPORT, area: SeekArea });
+      const recognizer = gestureOf(HOLD).enabled !== false;
+      const finger = played(() => longPress(HOLD, { x: 100, y: 200 }));
+      const fingered = [Option.isSome(finger.taken), app.registry.get(app.player.hold.state)._tag];
+      act(() => finger.lift());
+      app.boundaries.delete('seek');
+      yield* inAct(
+        Deferred.succeed(landed, { state: 'playing', positionMs: 3000, durationMs: 21_000 }),
+      );
+      yield* inAct(TestClock.adjust(250));
+      const after = [phone.enabled('hymn-word-seek'), gestureOf(HOLD).enabled !== false];
+      phone.press('hymn-word-seek');
+      yield* inAct(app.untilHold('Held'));
+      expect([playing, entry, pressed, armed, recognizer, fingered, after, phone.cues]).toEqual([
+        'Playing',
+        false,
+        'Free',
+        0,
+        false,
+        [false, 'Free'],
+        [true, true],
+        ['seek-grab'],
+      ]);
+    }).pipe(Effect.scoped),
 );
 
 it.effect(
