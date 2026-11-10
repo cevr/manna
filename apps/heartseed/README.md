@@ -3187,7 +3187,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     first letter, held to `Root`'s declaration, over the `src` and `app`
     sources of git's listing of the package and never a file it ignores,
     such as One's `app/routes.d.ts`; generated worlds and a scratch
-    repository hold the read set) and
+    repository hold the read set), `scripts/probe-lines.test.ts` (each
+    line of a probe that verify-heartseed's `SKILL.md` and `features/*.md`
+    quote, and each `sim open probe/…` target, held to the literal
+    skeleton of a text the probe's sources write, `…` ending an elided line
+    and a tag opening a log line; generated probes and feature files hold
+    the reader, so `test:infra`'s inputs take `.claude/skills/verify-heartseed`) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
     parameter found by name, the pin, the part's files, the search over a
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,

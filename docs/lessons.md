@@ -5490,3 +5490,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `recolour`'s property drew colour tokens of 3, 4, 6, 7 and 8 digits only, and a kept hex only as written, so a reader that stopped at 8 digits, needed 3, read a token by its first 7 characters or kept a kept hex only in lower case passed it.
 - **Cause:** The generator drew the token lengths the masters held and a few short ones, not the rule's domain of any count of hex digits in any case, and its oracle kept a kept hex only as written.
 - **Guard:** code: `apps/heartseed/scripts/home-icons.test.ts` `recolour maps each master’s hex to its role, keeps a kept one, and fails on the first other token`
+
+### verify-heartseed-quotes-only-lines-its-probe-writes
+
+- **Date:** 2026-11-10
+- **Kind:** review
+- **Said:** "Tune:144/Brit:194 and features/light.md:140,147 require terminal25/25"
+- **Source:** hymnapp/batch-sim-3-findings.md o1 (On base / next action, its first item)
+- **Wrong:** `features/light.md` asked for `lit 25/25` at the end of a reading, a line `LightProbe` never writes (it writes `lit <lit>/<words> <status>`, and `lit 0/25 idle` once the reading ends), so a live row could not pass.
+- **Cause:** A feature file's oracle was written from what the probe was meant to show, and nothing held a quoted probe line or an `--expect` target to the texts the probe's sources write.
+- **Guard:** code: `apps/heartseed/scripts/probe-lines.test.ts` `no feature file or SKILL.md of verify-heartseed quotes a line its probe does not write`; code: `apps/heartseed/scripts/probe-lines.test.ts` `over 150 generated probes and feature files, faults exactly the quotes and targets no line of the probe fits`

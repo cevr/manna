@@ -139,8 +139,8 @@ sim snapshot natural-install
 ```
 
 → the snapshot has `install done 83332513/83332513`, `installed 39/39`
-and `excluded true` (tap nothing else until `install done` shows; take
-the snapshot again while it says `install progress`).
+and `excluded true` (tap nothing else until `install done …` shows; take
+the snapshot again while it says `install progress …`).
 `xattr -p com.apple.metadata:com_apple_backup_excludeItem` on the
 container's `natural` folder prints a value, and `serve.log` has 39
 `GET` lines ending `200`, one per path.
@@ -156,7 +156,7 @@ files before it in the manifest are kept).
 
 `natural-offline`: with the server (no `--corrupt`) running, tap
 `Remove`, then `Install`, and stop the server by its handle while the
-probe shows `install progress`:
+probe shows `install progress …`:
 
 → `install failed <bytes>/83332513 network`, and `installed <n>/39` with
 `n` below 39. Start the server again and tap `Install`:
@@ -353,7 +353,7 @@ downloads, until no line shows:
 → `Natural voice: downloading, <p>%` with p rising, then
 `Natural voice: getting ready`, then no line (from the local server the
 download takes about a second, so a snapshot may catch only
-`getting ready`); the module's `install done` and
+`getting ready`); the module's `[natural] install done` and
 `load … voice=af_heart.bin stages=loaded`; `serve.log` has 39 `GET`s
 ending `200`.
 
@@ -374,9 +374,9 @@ failed download, store a base the server answers 404 for (the probe's
 link with `base=http://localhost:$MPORT/missing/`), `sim relaunch`,
 snapshots, then store the good base again and `sim tap "label=Try again"`;
 snapshots until no line shows: `Natural voice could not download.` with
-one `Try again` (the module's `install status=404` and
-`install failed reason=network`); after the tap, `install … missing=<n>`
-with only the files the lost server never sent, `install done`, then no
+one `Try again` (the module's `[natural] install status=404` and
+`[natural] install failed reason=network`); after the tap, `[natural] install … missing=<n>`
+with only the files the lost server never sent, `[natural] install done`, then no
 line.
 
 `today-corrupt`: `Remove`; restart the server with
@@ -384,13 +384,13 @@ line.
 snapshots; then restart it without `--corrupt` and `Try again`:
 
 → `Natural voice could not be checked.` with one `Try again`; after the
-tap, `install … missing=11` (the 28 files before it kept), `install done`,
+tap, `[natural] install … missing=11` (the 28 files before it kept), `[natural] install done`,
 no line.
 
 The second container (uninstall, install, revoke; `sim open / --expect
 "label=Hear it"`; store the base as above; `sim relaunch`; `sim open /
 --expect "label=Hear it"`): the launch downloads and loads, the module
-logging `install done` and `load … voice=af_heart.bin stages=loaded`.
+logging `[natural] install done` and `load … voice=af_heart.bin stages=loaded`.
 
 `today-read`: the first minute's `sim tap "label=Listen"`, then
 `sim tap "label=Say it with help" --timeout 60`; the log:
