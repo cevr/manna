@@ -2246,6 +2246,18 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     with successive read-only observations and explicit cache-distinction
     witnesses. This is a happy-dom oracle contract, not native rendering proof;
     media and pseudo states are checked only as happy-dom implements them.
+    `src/test/seen.ts` scopes snapshots to one synchronous field or readout
+    read. Only literal display/visibility/opacity/colour values under proven
+    type/class/universal selector chains share values across elements, keyed
+    by namespace, tag, class, complete inline style and every ancestor.
+    Ordinary and adopted sheets are checked anew each time; contextual rules,
+    variables, unknown rules, shadow contexts and other unproved inputs use
+    node-identity-only reads. Terminal pseudo-elements do not paint an element's
+    own computed style; an RNW legacy placeholder arm is ignored only after a
+    full document query finds no match. Happy-dom does not apply keyframe values.
+    No cache crosses calls, frames or mounts. `src/test/contrast.ts` accepts the
+    same scoped style reader for the field; every other caller keeps the plain
+    computed-style walk and the identical contrast formula.
   - `test:field-walk`, `test:field-relaunch`, `test:field-grades` and
     `test:field-again`: `src/field/walk.test.tsx`,
     `walk-relaunch.test.tsx`, `walk-grades.test.tsx` and

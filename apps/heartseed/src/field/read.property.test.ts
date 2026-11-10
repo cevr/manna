@@ -22,6 +22,7 @@ interface Node {
 interface Model {
   tree: Node;
   css: string;
+  adopted: string;
   scheme: 'light' | 'dark';
   generation: number;
 }
@@ -91,6 +92,60 @@ const contexts = [
   'span { color:rgb(255,255,255) } div { color:rgb(0,0,0) }',
 ] as const;
 
+const declaration = (next: () => number) => {
+  const rgb = Array.from({ length: 3 }, () => Math.floor(next() * 256)).join(',');
+  const color =
+    pick(next, [
+      `rgba(${rgb},${next()})`,
+      `hsla(${next() * 360},${next() * 100}%,${next() * 100}%,${next()})`,
+      `#${Math.floor(next() * 0x1000000)
+        .toString(16)
+        .padStart(6, '0')}`,
+      'transparent',
+      'inherit',
+      'initial',
+      'unset',
+      'currentColor',
+      'var(--ink)',
+    ]) ?? 'transparent';
+  return (
+    pick(next, [
+      `color:${color}`,
+      `background-color:${color}`,
+      `opacity:${next()}`,
+      `display:${pick(next, ['none', 'block', 'inline', 'inherit', 'initial', 'unset'])}`,
+      `visibility:${pick(next, ['visible', 'hidden', 'inherit', 'initial', 'unset'])}`,
+    ]) ?? ''
+  );
+};
+
+const plantOf = (node: ReturnType<typeof factory>, n: number, p: number) => {
+  const plant = node('field-plant');
+  plant.attrs['role'] = 'button';
+  const stage = ['not planted', 'seed', 'blade', 'ear', 'full corn'][(n + p) % 5] ?? 'seed';
+  plant.attrs['aria-label'] = `Isaiah 41:${10 + p}, ${stage}, ready today`;
+  if ((n + p) % 11 === 10) delete plant.attrs['aria-label'];
+  const soil = stage === 'not planted';
+  const drawing = node(soil ? 'plant-soil' : '', '', soil ? 'div' : 'img');
+  drawing.attrs = soil
+    ? {
+        'data-testid': 'plant-soil',
+        'aria-hidden': 'true',
+        style: `background-color:${theme.light.soil}`,
+      }
+    : {
+        'aria-hidden': 'true',
+        src: `/assets/home/${stage === 'full corn' ? 'corn' : stage}-light.png`,
+      };
+  const number = node('', String(10 + p), 'span');
+  number.attrs['aria-hidden'] = 'true';
+  plant.children.push(drawing, number);
+  if ((n + p) % 9 === 6) drawing.attrs['aria-hidden'] = 'false';
+  if ((n + p) % 9 === 7) drawing.attrs['src'] = '/assets/home/ear-dark.png';
+  if ((n + p) % 9 === 8) plant.children.push(node('', '', 'img'));
+  return plant;
+};
+
 const make = (next: () => number, rows: number): Model => {
   const node = factory();
   const tree = node('', '', 'section');
@@ -115,17 +170,8 @@ const make = (next: () => number, rows: number): Model => {
     image.attrs = { src: '/assets/home/bow-light.png', 'aria-hidden': 'true' };
     icon.children.push(image);
     row.children.push(icon);
-    for (let p = 0; p < 1 + count(next); p += 1) {
-      const plant = node('field-plant');
-      plant.attrs['role'] = 'button';
-      plant.attrs['aria-label'] = `Isaiah 41:${10 + p}, seed, ready today`;
-      const drawing = node('', '', 'img');
-      drawing.attrs = { 'aria-hidden': 'true', src: '/assets/home/seed-light.png' };
-      const number = node('', String(10 + p), 'span');
-      number.attrs['aria-hidden'] = 'true';
-      plant.children.push(drawing, number);
-      row.children.push(plant);
-    }
+    const plants = 1 + count(next);
+    for (let p = 0; p < plants; p += 1) row.children.push(plantOf(node, n, p));
     let branch = row;
     for (let depth = count(next); depth > 0; depth -= 1) {
       const parent = node('', '', pick(next, ['div', 'section', 'article']));
@@ -134,7 +180,7 @@ const make = (next: () => number, rows: number): Model => {
     }
     host.children.push(branch);
   }
-  return { tree, css: contexts[0], scheme: 'light', generation: 0 };
+  return { tree, css: contexts[0], adopted: '', scheme: 'light', generation: 0 };
 };
 
 /** The projector preserves element identities until the model replaces a tag or mount. */
@@ -143,6 +189,8 @@ const projection = () => {
   let generation = -1;
   const sheet = document.createElement('style');
   document.head.append(sheet);
+  const previous = [...document.adoptedStyleSheets];
+  const adopted = new window.CSSStyleSheet();
   let root: Element | undefined;
   const sync = (model: Model) => {
     if (generation !== model.generation) {
@@ -151,6 +199,8 @@ const projection = () => {
       generation = model.generation;
     }
     sheet.textContent = model.css;
+    adopted.replaceSync(model.adopted);
+    document.adoptedStyleSheets = [...previous, adopted];
     setSystem(model.scheme);
     const project = (node: Node): Element => {
       let element = elements.get(node.key);
@@ -176,6 +226,7 @@ const projection = () => {
     close: () => {
       root?.remove();
       sheet.remove();
+      document.adoptedStyleSheets = previous;
     },
   };
 };
@@ -309,10 +360,7 @@ const commandContext = (model: Model, next: () => number): CommandContext => {
         next,
         all.filter((node) => node.children.length > 0),
       ) ?? model.tree,
-    style:
-      next() < 0.5
-        ? (pick(next, declarations) ?? '')
-        : `color:rgba(${Math.floor(next() * 256)},${Math.floor(next() * 256)},${Math.floor(next() * 256)},${next()});opacity:${next()}`,
+    style: next() < 0.5 ? (pick(next, declarations) ?? '') : declaration(next),
   };
 };
 
@@ -348,6 +396,7 @@ test('field reads and five minima agree with the plain oracle after every genera
 
 const witnesses = [
   'ancestor',
+  'ancestor-opacity',
   'inline',
   'tag',
   'stylesheet-remount',
@@ -364,6 +413,8 @@ const witnesses = [
   'empty',
   'large',
   'atomic',
+  'adopted',
+  'legacy-placeholder',
 ] as const;
 
 interface WitnessContext {
@@ -375,6 +426,9 @@ interface WitnessContext {
 }
 
 const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext) => void> = {
+  'ancestor-opacity': ({ model }) => {
+    model.tree.attrs['style'] += ';opacity:0';
+  },
   ancestor: ({ model, all, title, other }) => {
     model.css = '';
     const row = all.find((node) => node.attrs['data-testid'] === 'row');
@@ -408,7 +462,7 @@ const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext)
     if (title) title.attrs['style'] = 'color:rgba(0,0,0,0.00)';
   },
   contrast: ({ title }) => {
-    if (title) title.attrs['style'] = 'color:rgb(255,255,255)';
+    if (title) title.attrs['style'] = 'color:rgb(119,119,119)';
   },
   attribute: ({ model, title, other }) => {
     model.css = '[aria-disabled="true"] { color:transparent } #probe { color:rgb(255,255,255) }';
@@ -472,11 +526,18 @@ const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext)
     expect(classes.length).toBeGreaterThan(0);
     for (const node of all) node.attrs['class'] = pick(random(node.key + 3), classes) ?? '';
   },
+  adopted: ({ model }) => {
+    model.adopted =
+      '[data-testid="row"]:nth-child(3) [data-testid="row-title"] { color:transparent }';
+  },
+  'legacy-placeholder': ({ model }) => {
+    model.css = '.ink:-ms-input-placeholder { color:var(--ink);opacity:0 }';
+  },
 };
 
 const assertWitness = (witness: string, host: Element, old: ReturnType<typeof readField>) => {
   const got = readField(host);
-  if (['ancestor', 'inline', 'transparent'].includes(witness))
+  if (['ancestor', 'ancestor-opacity', 'inline', 'transparent'].includes(witness))
     expect(got.rows[0]?.title, witness).toBe('<title not one seen and exposed>');
   if (witness === 'contrast' || witness === 'stylesheet-remount')
     expect(got.faint).toContain('row-title');
