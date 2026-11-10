@@ -45,6 +45,7 @@ import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
+import { deadline } from './elapsed';
 import { END, watchRoot } from './root-rule';
 
 /** The four radios' names, in the order the group shows them. */
@@ -383,11 +384,11 @@ export const launch = async (
     ),
   );
   frame();
-  /** Waits on the host's clock until `holds`, at most `ms`. */
+  /** Waits until `holds`, at most `ms` on the monotonic deadline. */
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

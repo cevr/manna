@@ -43,6 +43,7 @@ import { TAUGHT } from '../promises';
 import { Haptics, type Recall } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf, type Time } from './clock';
+import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { keyOf } from './garden-model';
 import { lookFaults } from './look';
@@ -248,9 +249,9 @@ export const launchNeed = async (
   );
   frame();
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

@@ -68,6 +68,7 @@ import { MINUTES, type Minutes } from '../session';
 import { MINUTES_KEY, Session } from '../session/service';
 import { Voice, VoiceSource, type VoiceEvent, type VoiceView } from '../voice';
 import { clockOf } from './clock';
+import { deadline } from './elapsed';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
 import {
   KEY,
@@ -348,9 +349,9 @@ export const mount = async (
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

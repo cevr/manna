@@ -41,6 +41,7 @@ import { store } from '../store';
 import type { Scheme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, type Time } from './clock';
+import { deadline } from './elapsed';
 import { scrolled } from './field-rig';
 import { shelvesModel } from './home-model';
 import { LISTS } from './handbook-model';
@@ -433,9 +434,9 @@ export const mountShelves = async (
   );
   await act(async () => root.render(tree(null)));
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

@@ -46,6 +46,7 @@ import { voiceSource } from '../voice/source';
 import type { FieldSeen } from './choose-model';
 import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
 import { clockOf, type Time } from './clock';
+import { deadline } from './elapsed';
 import { homeFaults, scrolled } from './field-rig';
 import { lookFaults } from './look';
 import { KEY } from './passages-model';
@@ -252,9 +253,9 @@ export const mountBar = async (
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

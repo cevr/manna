@@ -35,6 +35,7 @@ import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { CAP, MOST, type ChooserSeen } from './choose-model';
 import { clockOf, type Time } from './clock';
+import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { scrolled } from './field-rig';
 import { lookFaults } from './look';
@@ -280,9 +281,9 @@ export const mountChooser = async (time: Time = { now: null }) => {
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

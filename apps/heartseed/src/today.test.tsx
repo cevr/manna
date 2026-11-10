@@ -17,6 +17,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import Root from '../app/index';
+import { deadline } from './test/elapsed';
 import { device } from './test/one';
 import { watchRoot } from './test/root-rule';
 
@@ -49,9 +50,8 @@ describe('Today', () => {
     );
   /** Waits until `holds`, at most 3 s. */
   const until = async (holds: () => boolean) => {
-    const start = Date.now();
-    while (!holds() && Date.now() - start < 3000)
-      await act(() => new Promise((resolve) => setTimeout(resolve, 2)));
+    const late = deadline(3000);
+    while (!holds() && !late()) await act(() => new Promise((resolve) => setTimeout(resolve, 2)));
   };
   const home = { headings: [''], begins: 0 };
 

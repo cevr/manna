@@ -45,6 +45,7 @@ import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
+import { deadline } from './elapsed';
 import { DAY } from './garden-model';
 import { systemScheme } from './look';
 import { device } from './one';
@@ -220,9 +221,9 @@ export const mount = async (
   );
   const one = (selector: string) => host.querySelector(selector);
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

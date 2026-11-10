@@ -29,6 +29,7 @@ import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { store } from '../store';
 import { clockOf } from '../test/clock';
+import { deadline } from '../test/elapsed';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { device } from '../test/one';
 import { plantFaults } from '../test/plant-image-rule';
@@ -88,9 +89,9 @@ const mount = async (scheme: Scheme, held: boolean) => {
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

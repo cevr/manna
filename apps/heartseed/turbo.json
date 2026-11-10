@@ -4621,6 +4621,11 @@
         "!{scripts,vite}/**/*.test.*"
       ]
     },
+    "test:clock": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json"]
+    },
     "test": {
       "dependsOn": [
         "$TURBO_EXTENDS$",
@@ -4804,6 +4809,7 @@
         "test:dark-screens-b",
         "test:dark-screens-dark",
         "test:dark-screens-dark-b",
+        "test:clock",
         "test:rest",
         "test:infra",
         "test:icon",

@@ -28,6 +28,7 @@ import { voiceSource } from '../voice/source';
 import { fieldRule, heldOn, recallOf } from '../test/field-model';
 import { readField, record } from '../test/field-rig';
 import { DAY } from '../test/garden-model';
+import { deadline } from '../test/elapsed';
 import { device } from '../test/one';
 import { fieldPassagesModel } from '../test/promise-model';
 
@@ -67,9 +68,8 @@ const fieldShown = async (promises: readonly string[] | undefined) => {
   const labels = () =>
     [...host.querySelectorAll('[role="button"]')].map((node) => node.getAttribute('aria-label'));
   const until = async (holds: () => boolean) => {
-    const start = Date.now();
-    while (!holds() && Date.now() - start < 3000)
-      await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
+    const late = deadline(3000);
+    while (!holds() && !late()) await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     return holds();
   };
   expect(await until(() => host.querySelector('[data-testid="row"]') !== null)).toBe(true);

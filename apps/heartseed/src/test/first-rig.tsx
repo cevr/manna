@@ -92,6 +92,7 @@ import { store } from '../store';
 import { theme } from '../theme';
 import { recite, scriptedSource } from '../dictation/script';
 import { clockAt, clockOf, type Time } from './clock';
+import { deadline } from './elapsed';
 import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
 import { device } from './one';
@@ -831,9 +832,9 @@ const mount = async (
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;
@@ -2931,9 +2932,9 @@ export const screenLaunch = async (
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

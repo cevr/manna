@@ -31,6 +31,7 @@ import { CHAIN } from '../dictation/attempt';
 import { Chime } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { AA, contrastOf } from '../test/contrast';
+import { deadline } from '../test/elapsed';
 import { keyOf } from '../test/garden-model';
 import { systemScheme } from '../test/look';
 import { modalOf, openSettings, sheetFaults } from '../test/settings-rig';
@@ -192,9 +193,9 @@ const mount = async (disk: Map<string, string>, fake?: Fake) => {
     ),
   );
   const until = async (holds: () => boolean, ms = 2000) => {
-    const begun = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - begun > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;

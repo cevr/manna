@@ -37,6 +37,7 @@ import { sourceWords } from '../matcher/words';
 import { Haptics, type Recall } from '../sayit';
 import { MINUTES, type Minutes, type TextPiece } from '../session';
 import { clockOf } from '../test/clock';
+import { deadline } from '../test/elapsed';
 import { below, keyOf, pickOf, PREFIX, random } from '../test/garden-model';
 import {
   madeModel,
@@ -300,9 +301,9 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 1));
 
 /** Whether `holds` comes true within `ms`, looked at each millisecond. */
 const until = async (holds: () => boolean, ms = 2000) => {
-  const start = Date.now();
+  const late = deadline(ms);
   while (!holds()) {
-    if (Date.now() - start > ms) return false;
+    if (late()) return false;
     await tick();
   }
   return true;

@@ -25,6 +25,7 @@ import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { store } from '../store';
+import { deadline } from '../test/elapsed';
 import { recallOf } from '../test/field-model';
 import { mount, record, scrolled } from '../test/field-rig';
 import { device } from '../test/one';
@@ -129,9 +130,9 @@ describe('the way to the field', () => {
     const headings = () =>
       [...host.querySelectorAll('[role="heading"]')].map((node) => node.textContent);
     const until = async (holds: () => boolean, ms = 3000) => {
-      const start = Date.now();
+      const late = deadline(ms);
       while (!holds()) {
-        if (Date.now() - start > ms) return false;
+        if (late()) return false;
         await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
       }
       return true;

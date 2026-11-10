@@ -43,6 +43,7 @@ import { screenOf } from '../sayit/screen';
 import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
+import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
 import { END, endShown, watchRoot } from './root-rule';
@@ -461,12 +462,12 @@ export const mount = async (
       await act(() => new Promise((resolve) => setImmediate(resolve)));
     frame();
   };
-  /** Waits on the real clock until `holds`, at most `ms`, holding each frame on the way to Today's rules. */
+  /** Waits until `holds`, at most `ms` on the monotonic deadline, holding each frame on the way to Today's rules. */
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     await settle();
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 5)));
       await settle();
     }

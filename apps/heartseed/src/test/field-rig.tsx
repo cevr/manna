@@ -45,6 +45,7 @@ import { store } from '../store';
 import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
+import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, lookFaults, systemScheme } from './look';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
@@ -504,9 +505,9 @@ export const mount = async (
     ),
   );
   const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
+    const late = deadline(ms);
     while (!holds()) {
-      if (Date.now() - start > ms) return false;
+      if (late()) return false;
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     }
     return true;
