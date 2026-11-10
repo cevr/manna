@@ -877,6 +877,7 @@ export const playerOn = (
           Effect.gen(function* () {
             const read = yield* readFresh;
             const status = read.status;
+            let closedHold = false;
             if (Option.isSome(transaction)) {
               const hold = transaction.value;
               if (!owns(get.registry, hold)) return false;
@@ -887,6 +888,7 @@ export const playerOn = (
               ) {
                 revoke(get.registry);
                 yield* cut;
+                closedHold = true;
               }
             }
             held.pace = paceOf(status);
@@ -937,7 +939,11 @@ export const playerOn = (
               ),
             );
             yield* announceOnce(track, answer);
-            return !gaveUp && (!done || Option.isNone(answer) || Option.isSome(transaction));
+            return (
+              !closedHold &&
+              !gaveUp &&
+              (!done || Option.isNone(answer) || Option.isSome(transaction))
+            );
           }).pipe(
             Effect.catchTag('PlaybackError', (error) =>
               Effect.logWarning('player.status.failed').pipe(

@@ -362,6 +362,18 @@ const completeStatus = (
   return Deferred.succeed(answer, { state: outcome, positionMs, durationMs: 21_000 });
 };
 
+const assertStatusPlayer = (app: SeekApp, placement: StatusPlacement, before: Player) => {
+  const after = app.registry.get(app.player.state);
+  if (placement === 'same-start' || placement === 'other-start') {
+    expect(before._tag).toBe('Playing');
+    expect(after._tag).toBe('Playing');
+    if (Player.$is('Playing')(before) && Player.$is('Playing')(after)) {
+      expect(after.track.number).toBe(before.track.number);
+      expect(after.at).toBeCloseTo(before.at + 0.25, 5);
+    }
+  } else expect(after).toEqual(before);
+};
+
 const statusHistory = Effect.fn('Test.statusHistory')(function* (
   phase: StatusPhase,
   outcome: StatusOutcome,
@@ -379,6 +391,7 @@ const statusHistory = Effect.fn('Test.statusHistory')(function* (
   }
   if (placement !== 'current') yield* replaceStatusOwner(app, placement);
   const before = app.registry.get(app.player.hold.state);
+  const beforePlayer = app.registry.get(app.player.state);
   const commands = [...app.commands];
   let positionMs = 11_100;
   if ('origin' in hold) positionMs = hold.origin;
@@ -395,13 +408,17 @@ const statusHistory = Effect.fn('Test.statusHistory')(function* (
     if (revoked) expected = 'Free';
     expect(app.registry.get(app.player.hold.state)._tag).toBe(expected);
     if (revoked && phase === 'Landing') expect(app.cancelled.includes('seek')).toBe(true);
-  } else expect(app.registry.get(app.player.hold.state)).toEqual(before);
+  } else {
+    expect(app.registry.get(app.player.hold.state)).toEqual(before);
+    assertStatusPlayer(app, placement, beforePlayer);
+  }
   expect(app.commands).toEqual(commands);
   if (placement === 'current' && !revoked) {
     app.hold(HoldCommand.Invalidate({ reason: 'timeline' }));
     expect(app.registry.get(app.player.hold.state)._tag).toBe('Free');
   }
   const kept = app.registry.get(app.player.hold.state);
+  const keptPlayer = app.registry.get(app.player.state);
   app.hold(HoldCommand.Select({ token: hold.token, line: 1, word: Option.none() }));
   expect(app.registry.get(app.player.hold.state)).toEqual(kept);
   app.hold(HoldCommand.Release({ token: hold.token }));
@@ -413,6 +430,7 @@ const statusHistory = Effect.fn('Test.statusHistory')(function* (
   yield* TestClock.adjust(250);
   expect(app.registry.get(app.player.hold.state)).toEqual(kept);
   expect(app.commands).toEqual(commands);
+  assertStatusPlayer(app, placement, keptPlayer);
   if (placement !== 'current') {
     const state = app.registry.get(app.player.state);
     let number = 1;
