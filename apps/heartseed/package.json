@@ -48,6 +48,7 @@
     "test:field-unread": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/unread.test.tsx ./src/field/unread-keep.test.tsx",
     "test:field-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/screen.test.tsx",
     "test:field-garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/garden.test.tsx",
+    "test:field-read": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/read.property.test.ts",
     "test:field-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk.test.tsx",
     "test:field-relaunch": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk-relaunch.test.tsx",
     "test:field-grades": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk-grades.test.tsx",

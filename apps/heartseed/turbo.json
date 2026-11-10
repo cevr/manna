@@ -801,6 +801,15 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:field-read": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
     "test:field-garden": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -4751,6 +4760,7 @@
         "test:field-unread",
         "test:field-screen",
         "test:field-garden",
+        "test:field-read",
         "test:field-walk",
         "test:field-relaunch",
         "test:field-grades",

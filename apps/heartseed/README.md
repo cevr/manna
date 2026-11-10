@@ -2239,6 +2239,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:field-garden`: `src/field/garden.test.tsx`, a generated garden past 140 other verses
     of any reference, canonical twins each its own plant, each label the
     exact reference and each verse number the text after its last colon.
+  - `test:field-read`: `src/field/read.property.test.ts`, the field reader
+    and all five readout minima against the independent plain reader in
+    `src/test/field-read-model.ts`. Generated DOM-model commands cover style,
+    class, topology, text, accessibility, stylesheet, scheme and mount changes,
+    with successive read-only observations and explicit cache-distinction
+    witnesses. This is a happy-dom oracle contract, not native rendering proof;
+    media and pseudo states are checked only as happy-dom implements them.
   - `test:field-walk`, `test:field-relaunch`, `test:field-grades` and
     `test:field-again`: `src/field/walk.test.tsx`,
     `walk-relaunch.test.tsx`, `walk-grades.test.tsx` and

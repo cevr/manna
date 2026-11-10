@@ -229,6 +229,23 @@ export const readField = (host: Element) => {
   };
 };
 
+/** The lowest contrast among the seen text of the field's five readouts. */
+export const readoutsOf = (host: Element) => {
+  const lowest = (id: string) =>
+    Math.min(
+      ...[...host.querySelectorAll(`[data-testid="${id}"], [data-testid="${id}"] *`)]
+        .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
+        .map(contrastOf),
+    );
+  return {
+    sown: lowest('sown'),
+    harvest: lowest('harvest'),
+    titles: lowest('row-title'),
+    numbers: lowest('field-plant'),
+    ripe: lowest('ripe'),
+  };
+};
+
 /** The field frame the rule gives over the disk as it stands. */
 export const wantField = () => {
   const field = fieldRule(heldOn(device.disk), PASSAGES);
@@ -675,21 +692,7 @@ export const mount = async (
     return out;
   };
   /** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, the plants' verse numbers and the furrows' ripe counts. */
-  const readouts = () => {
-    const lowest = (id: string) =>
-      Math.min(
-        ...[...host.querySelectorAll(`[data-testid="${id}"], [data-testid="${id}"] *`)]
-          .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
-          .map(contrastOf),
-      );
-    return {
-      sown: lowest('sown'),
-      harvest: lowest('harvest'),
-      titles: lowest('row-title'),
-      numbers: lowest('field-plant'),
-      ripe: lowest('ripe'),
-    };
-  };
+  const readouts = () => readoutsOf(host);
   /** Ends the launch, and answers what its disk shows wrong against the launch's start (`diskFaults`). */
   const leave = async () => {
     watch.disconnect();
