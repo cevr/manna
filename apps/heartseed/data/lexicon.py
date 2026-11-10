@@ -7,14 +7,17 @@
 #   "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
 # ]
 # ///
-"""Writes Heartseed's KJV pronunciation list, `kjv-phonemes.json`.
+"""Writes Heartseed's two KJV pronunciation lists in one run.
 
-Every distinct word key of the KJV's displayed verses (a whitespace run that
-holds a letter or a number, with its leading and trailing non-letter,
-non-number characters stripped) maps to Misaki 0.9.4's phonemes for that key
-alone, or to its entry in `kjv-phonemes.overrides.json`. Keys are sorted in
-UTF-16 code-unit order, one entry per line, with a trailing newline, so two
-runs write the same bytes.
+`kjv-phonemes.json` is the American list (Misaki 0.9.4 with british=False),
+which Her (af_heart) reads; `kjv-phonemes-gb.json` is the British list
+(british=True), which Him (bm_george) reads. Both hold the same keys: every
+distinct word key of the KJV's displayed verses (a whitespace run that holds
+a letter or a number, with its leading and trailing non-letter, non-number
+characters stripped) maps to Misaki's phonemes for that key alone, or to its
+entry in the list's own overrides file. Keys are sorted in UTF-16 code-unit
+order, one entry per line, with a trailing newline, so two runs write the
+same bytes.
 
 Run from the repo root: uv run --no-project --python 3.12 apps/heartseed/data/lexicon.py
 """
@@ -30,9 +33,11 @@ ROOT = Path(__file__).resolve().parents[3]
 DATA = Path(__file__).resolve().parent
 KJV = ROOT / "packages/core/assets/kjv.json"
 VOCAB = DATA / "kokoro-vocab.json"
-OVERRIDES = DATA / "kjv-phonemes.overrides.json"
-OUT = DATA / "kjv-phonemes.json"
 MAX_OVERRIDES = 200
+LISTS = (
+    ("kjv-phonemes.json", "kjv-phonemes.overrides.json", False),
+    ("kjv-phonemes-gb.json", "kjv-phonemes-gb.overrides.json", True),
+)
 
 
 def is_word_char(char):
@@ -76,16 +81,14 @@ def checked(key, phonemes, vocab, source):
     return phonemes
 
 
-def main():
-    vocab = set(json.loads(VOCAB.read_text(encoding="utf-8")))
-    overrides = json.loads(OVERRIDES.read_text(encoding="utf-8"))
-    keys = kjv_keys()
+def write(keys, vocab, out, overrides_file, british):
+    overrides = json.loads((DATA / overrides_file).read_text(encoding="utf-8"))
     stray = sorted(set(overrides) - set(keys))
     if stray:
-        raise SystemExit(f"overrides name keys the KJV lacks: {stray}")
+        raise SystemExit(f"{overrides_file} names keys the KJV lacks: {stray}")
     if len(overrides) > MAX_OVERRIDES:
-        raise SystemExit(f"{len(overrides)} overrides, over {MAX_OVERRIDES}")
-    g2p = en.G2P(trf=False, british=False, fallback=espeak.EspeakFallback(british=False))
+        raise SystemExit(f"{overrides_file}: {len(overrides)} overrides, over {MAX_OVERRIDES}")
+    g2p = en.G2P(trf=False, british=british, fallback=espeak.EspeakFallback(british=british))
     lines = []
     for key in keys:
         phonemes = g2p(key)[0].strip()
@@ -96,8 +99,15 @@ def main():
         else:
             phonemes = checked(key, phonemes, vocab, "Misaki")
         lines.append(f"{json.dumps(key, ensure_ascii=False)}:{json.dumps(phonemes, ensure_ascii=False)}")
-    OUT.write_text("{\n" + ",\n".join(lines) + "\n}\n", encoding="utf-8")
-    print(f"kjv-phonemes.json keys={len(keys)} overrides={len(overrides)}")
+    (DATA / out).write_text("{\n" + ",\n".join(lines) + "\n}\n", encoding="utf-8")
+    print(f"{out} keys={len(keys)} overrides={len(overrides)}")
+
+
+def main():
+    vocab = set(json.loads(VOCAB.read_text(encoding="utf-8")))
+    keys = kjv_keys()
+    for out, overrides_file, british in LISTS:
+        write(keys, vocab, out, overrides_file, british)
 
 
 main()
