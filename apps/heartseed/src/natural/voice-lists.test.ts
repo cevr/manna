@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals -- the generator and the model are plain branches over plain records, and a wrong reading is named and compared by its JSON. */
+/* oxlint-disable effect/noTernary, effect/noGlobals -- the generator and the model are plain branches over plain records, and a wrong reading is named and compared by its JSON. */
 
 /**
  * Which list the natural source plans a speak by, over seeded readings on a
