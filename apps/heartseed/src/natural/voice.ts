@@ -108,7 +108,7 @@ export const curveFor = (
 const isNatural = (voice: string): voice is NaturalVoice => VOICES.some((each) => each === voice);
 
 export const naturalVoiceSource = (
-  lexicon: Lexicon,
+  lexiconFor: (voice: NaturalVoice) => Lexicon,
 ): Layer.Layer<VoiceSource, never, NaturalModule> =>
   Layer.effect(
     VoiceSource,
@@ -213,6 +213,7 @@ export const naturalVoiceSource = (
                 reason: 'the natural voice has no such voice',
               });
             }
+            const lexicon = lexiconFor(voice);
             const chunks = Option.map(
               planOf(lexicon.words, lexicon.vocab, text),
               (plan) => plan.chunks,

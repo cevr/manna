@@ -3,7 +3,7 @@
 /**
  * The pinned download: 39 files of the seven Kokoro stages, the two voices
  * and the vocab, each with a size and a SHA-256, summing to the total; the
- * voices and their packs; the revision's short name and the mirror's
+ * voices, their packs and their pronunciation lists; the revision's short name and the mirror's
  * folder. Then the base a download
  * reads from, as a property over seeded asks against a reader of the rule
  * written by hand here: a release build always reads the mirror, and a
@@ -18,6 +18,7 @@ import {
   baseFor,
   BM_GEORGE,
   FILES,
+  LISTS,
   MIRROR,
   REVISION,
   SOURCE_REVISION,
@@ -95,6 +96,11 @@ describe('the pinned files', () => {
         voice,
       ).toHaveLength(1);
     }
+  });
+
+  it('gives each voice its pronunciation list: Her the American one, Him the British one', () => {
+    expect(LISTS).toEqual({ af_heart: 'us', bm_george: 'gb' });
+    expect(Object.keys(LISTS)).toEqual([...VOICES]);
   });
 });
 

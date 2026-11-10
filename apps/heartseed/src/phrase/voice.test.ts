@@ -38,7 +38,7 @@ const FIXED = [
 ] as const;
 
 const marksOf = (text: string): Option.Option<readonly WordMark[]> => {
-  const { words, vocab } = lexicon();
+  const { words, vocab } = lexicon('af_heart');
   return Option.map(planOf(words, vocab, text), (plan) =>
     plan.chunks.flatMap((chunk) => chunk.marks),
   );

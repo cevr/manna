@@ -55,7 +55,7 @@ const runtimeOf = (show: Show, voice: NaturalVoice) =>
         Layer.provide(
           Layer.merge(
             speakingIn(voice).pipe(
-              Layer.provide(naturalVoiceSource(lexicon())),
+              Layer.provide(naturalVoiceSource(lexicon)),
               Layer.provide(
                 recording((voiced) =>
                   show((view) => ({ ...view, read: readRendered(view.read, voiced) })),
@@ -181,7 +181,7 @@ const soak = (show: Show, asked: number, voice: NaturalVoice) =>
         ),
       ),
     );
-    const words = lexicon();
+    const words = lexicon(voice);
     let utterance = 0;
     for (const verse of versesInOrder(asked)) {
       utterance++;

@@ -105,7 +105,7 @@ export const naturalVoices = (parts: {
 }): Layer.Layer<Voice | Natural, never, KeyValueStore.KeyValueStore> => {
   const natural = naturalLayer(parts.dev).pipe(Layer.provide(parts.module));
   const source = Layer.unwrap(
-    Effect.sync(() => routed(parts.system, naturalVoiceSource(lexicon()))),
+    Effect.sync(() => routed(parts.system, naturalVoiceSource(lexicon))),
   ).pipe(Layer.provide(Layer.merge(natural, parts.module)));
   const voice = voiceLayer.pipe(Layer.provide(source));
   const begun = Layer.effectDiscard(

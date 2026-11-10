@@ -733,7 +733,10 @@ const makeHistory = (seed: number) => {
 
   const build = Effect.gen(function* () {
     const context = yield* Layer.buildWithScope(
-      Layer.provide(naturalVoiceSource(LEXICON), module.layer),
+      Layer.provide(
+        naturalVoiceSource(() => LEXICON),
+        module.layer,
+      ),
       scope,
     );
     const built = Context.get(context, VoiceSource);
@@ -971,7 +974,14 @@ describe('the natural voice source', () => {
       Effect.gen(function* () {
         const source = yield* VoiceSource;
         expect(yield* source.voices).toEqual([]);
-      }).pipe(Effect.provide(Layer.provide(naturalVoiceSource(LEXICON), makeModule().layer))),
+      }).pipe(
+        Effect.provide(
+          Layer.provide(
+            naturalVoiceSource(() => LEXICON),
+            makeModule().layer,
+          ),
+        ),
+      ),
     ));
 
   it(`equals its model over ${HISTORIES} seeded histories of ${STEPS} steps`, () =>

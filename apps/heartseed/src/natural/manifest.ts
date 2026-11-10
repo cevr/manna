@@ -44,6 +44,16 @@ export type NaturalVoice = (typeof VOICES)[number];
  */
 export const SPEEDS: Readonly<Record<NaturalVoice, number>> = { af_heart: 0.85, bm_george: 0.9 };
 
+/**
+ * The pronunciation list each voice reads by (`data/kjv-phonemes.json` is
+ * `us`, `data/kjv-phonemes-gb.json` is `gb`): Her the American one, Him the
+ * British one, the owner's choice on hearing Him read British words.
+ */
+export const LISTS = { af_heart: 'us', bm_george: 'gb' } as const satisfies Record<
+  NaturalVoice,
+  'us' | 'gb'
+>;
+
 /** The 39 files, in path order, the order they are fetched, each with its size and SHA-256. */
 export const FILES: ReadonlyArray<ModelFile> = [
   {

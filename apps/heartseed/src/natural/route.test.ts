@@ -9,8 +9,10 @@
  * loads, corrupted files and stray events run against a reference written
  * here; after every step the view, the line, the voice's status, the
  * installs and their bases, the store, and each reading's route must match
- * it. Three walks then pin the fallback's log, a stop held in both voices,
- * and a natural reading's lit words, a seek included.
+ * it. Four walks then pin the fallback's log, a stop held in both voices,
+ * a natural reading's lit words, a seek included, and the list each voice
+ * plans by: Today's passage sent to the module as Her's American plan and
+ * Him's British one.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -27,11 +29,13 @@ import {
   Scope,
 } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
+import today from 'virtual:heartseed-passage';
 
 import { CHOICE_KEY, nextChoice, Voice, VoiceSource, type Choice, type VoiceEvent } from '../voice';
 import { lexicon } from './lexicon';
-import { FILES, MIRROR, TOTAL_BYTES } from './manifest';
+import { FILES, MIRROR, TOTAL_BYTES, type NaturalVoice } from './manifest';
 import { NaturalModule, NaturalUnavailable, type InstallEvent } from './module';
+import { planOf } from './plan';
 import { naturalVoices, tapVoice } from './route';
 import { BASE_KEY, FUSE_KEY, Natural } from './service';
 import { lineOf, type Download, type Failure, type NaturalView } from './state';
@@ -100,7 +104,7 @@ const random = (seed: number) => {
 const pick = <A>(next: () => number, list: ReadonlyArray<A>): A =>
   list[Math.floor(next() * list.length)] as A;
 
-const WORDS = [...lexicon().words.keys()].filter((key) => /^[a-z]{3,8}$/.test(key));
+const WORDS = [...lexicon('af_heart').words.keys()].filter((key) => /^[a-z]{3,8}$/.test(key));
 
 const installing: (download: Download) => boolean = Predicate.or(
   Predicate.isTagged('Downloading'),
@@ -162,6 +166,7 @@ const deviceOf = (next: () => number) => {
     installs: [] as string[],
     forbidden: 0,
     rendered: new Map<number, string>(),
+    ids: new Map<number, ReadonlyArray<ReadonlyArray<number>>>(),
     module: { pauses: 0, resumes: 0, stops: 0 },
     system: {
       speaks: new Map<number, string>(),
@@ -188,10 +193,11 @@ const listening = <A>(listeners: Set<(event: A) => void>, listener: (event: A) =
     ),
   );
 
-/** A chunk's prosody: the first chunk records the pack it rendered in, and holds the reading (the crash marker set) unless it is set to break. */
+/** A chunk's prosody: each chunk's ids are kept by utterance, the first chunk records the pack it rendered in, and holds the reading (the crash marker set) unless it is set to break. */
 const prosodyOf = (device: Device, utterance: number, chunk: number, ids: ReadonlyArray<number>) =>
   Effect.suspend(() => {
     if (!device.loaded) return refused('not loaded');
+    device.ids.set(utterance, [...(device.ids.get(utterance) ?? []), ids]);
     if (chunk === 0) {
       device.rendered.set(utterance, device.pack);
       if (device.breakRender) {
@@ -905,19 +911,33 @@ const history = (seed: number, counts: Record<string, number>) => {
   );
 };
 
-/** One launch of a device with every file present and Her stored, its load answered: the natural voice reads. */
-const ready = Effect.gen(function* () {
-  const device = deviceOf(() => 0.5);
-  device.disk.set(CHOICE_KEY, 'her');
-  const scope = yield* Scope.make();
-  const built = yield* Layer.buildWithScope(voicesOf(device, false), scope);
-  yield* settle;
-  device.loaded = true;
-  const answer = device.loads.shift();
-  if (answer !== undefined) yield* Deferred.succeed(answer, 1);
-  yield* settle;
-  return { device, scope, voice: Context.get(built, Voice), natural: Context.get(built, Natural) };
-});
+/** One launch of a device with every file present and `choice` stored (Her unless named), its load answered: the natural voice reads. */
+const readyIn = (choice: 'her' | 'him') =>
+  Effect.gen(function* () {
+    const device = deviceOf(() => 0.5);
+    device.disk.set(CHOICE_KEY, choice);
+    const scope = yield* Scope.make();
+    const built = yield* Layer.buildWithScope(voicesOf(device, false), scope);
+    yield* settle;
+    device.loaded = true;
+    const answer = device.loads.shift();
+    if (answer !== undefined) yield* Deferred.succeed(answer, 1);
+    yield* settle;
+    return {
+      device,
+      scope,
+      voice: Context.get(built, Voice),
+      natural: Context.get(built, Natural),
+    };
+  });
+
+const ready = readyIn('her');
+
+/** Each chunk's ids of `text` planned over the list `voice` reads by. */
+const idsOf = (voice: NaturalVoice, text: string) => {
+  const { words, vocab } = lexicon(voice);
+  return Option.map(planOf(words, vocab, text), (plan) => plan.chunks.map((chunk) => chunk.ids));
+};
 
 describe('the router between the system voice and the natural voice', () => {
   it(`holds the owner's rules over ${HISTORIES} seeded histories of ${STEPS} steps`, () =>
@@ -1040,6 +1060,27 @@ describe('the router between the system voice and the natural voice', () => {
           packs: ['af_heart.bin', 'af_heart.bin'],
           system: 0,
         });
+      }).pipe(Effect.provide(keptLogs(() => undefined))),
+    ));
+
+  it('reads Today’s passage in Him by the British list and in Her by the American one', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const sent: Array<unknown> = [];
+        for (const choice of ['her', 'him'] as const) {
+          const { device, scope, voice } = yield* readyIn(choice);
+          yield* voice.read(today.text);
+          yield* settle;
+          sent.push([device.rendered.get(1), device.ids.get(1)]);
+          yield* Scope.close(scope, Exit.void);
+        }
+        const her = Option.getOrThrow(idsOf('af_heart', today.text));
+        const him = Option.getOrThrow(idsOf('bm_george', today.text));
+        expect(him).not.toEqual(her);
+        expect(sent).toEqual([
+          ['af_heart.bin', her],
+          ['bm_george.bin', him],
+        ]);
       }).pipe(Effect.provide(keptLogs(() => undefined))),
     ));
 });
