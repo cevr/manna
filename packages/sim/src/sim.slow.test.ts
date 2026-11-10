@@ -138,8 +138,9 @@ const ServerUp = Layer.succeed(
 /**
  * Run `sim <args>` over the stand-in, in a state folder of its own (with
  * `drive` as its session when given, and the dev server's log `serverLog`
- * in its output folder; `{state}` in an argument names the folder), against
- * `server`: the lines it printed and its exit.
+ * and error output `serverErrors` in its output folder; `{state}` in an
+ * argument names the folder), against `server`: the lines it printed and its
+ * exit.
  */
 const sim = (
   args: ReadonlyArray<string>,
@@ -147,6 +148,7 @@ const sim = (
   drive: Option.Option<Session['platform']> = Option.none(),
   server: Layer.Layer<HttpClient.HttpClient> = ServerDown,
   serverLog = '',
+  serverErrors = '',
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -160,6 +162,7 @@ const sim = (
       );
       yield* fs.makeDirectory(out, { recursive: true });
       yield* fs.writeFileString(path.join(out, 'server.log'), serverLog);
+      yield* fs.writeFileString(path.join(out, 'server.err.log'), serverErrors);
     }
     const place: Place = {
       app: '/app',
@@ -378,6 +381,33 @@ describe('sim commands', () => {
       });
       expect(answers.runs.some((run) => run.line.includes(' log show '))).toBe(false);
     }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped(
+    'a doctor fails at server-log when the server’s error output holds a failed render',
+    () =>
+      Effect.gen(function* () {
+        const answers = healthy([record(500, 'Running "main"')]);
+        const { exit, printed } = yield* sim(
+          ['doctor'],
+          answers,
+          Option.some('web'),
+          ServerUp,
+          ' ⓵  [ssg] / → app/(hymnal)/index.tsx\n',
+          "(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`\nError rendering / on server\n Unexpected token 'typeof'\n",
+        );
+        expect(Exit.isFailure(exit)).toBe(true);
+        expect(printed[0]).toMatchObject({
+          ok: false,
+          error: {
+            _tag: 'Unhealthy',
+            check: 'server-log',
+            reason: expect.stringMatching(
+              /server\.err\.log reports 1 failures, first: Error rendering/u,
+            ),
+          },
+        });
+      }).pipe(Effect.provide(Host)),
   );
 
   it.scoped('a doctor on the web runs no xcrun', () =>

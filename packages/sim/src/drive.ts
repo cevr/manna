@@ -1329,7 +1329,10 @@ const FAILURE = /\b(error|failed|5\d\d)\b/i;
 
 /**
  * Read-only checks of the booted drive, in order; the first that fails is
- * the result (`Unhealthy` names it). On iOS, once the server's log holds,
+ * the result (`Unhealthy` names it). The server's log is its output and its
+ * error output both (`server-log`): a page the server fails to render (an
+ * SSR error) answers 200 with an error page and is written to its error
+ * output alone. On iOS, once the server's log holds,
  * the app's log since boot is read for the native sources its latest
  * process refused (`native-source`): an install older than the served
  * JavaScript. Load above the core count fails nothing, but `timingsHold`
@@ -1370,13 +1373,24 @@ const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
     return yield* sick('server-answers', `http://127.0.0.1:${session.port}/ does not answer`);
   if (session.platform === 'ios') yield* booted(place.config, session);
   const server = `${session.out}/server.log`;
-  const serverText = yield* fs.readFileString(server);
-  const failures = serverText.split('\n').filter((line) => FAILURE.test(line));
-  if (failures.length > 0)
-    return yield* sick(
-      'server-log',
-      `${server} reports ${failures.length} failures, first: ${failures[0]}`,
-    );
+  const serverErrors = `${session.out}/server.err.log`;
+  const logs = [
+    { file: server, text: yield* fs.readFileString(server) },
+    {
+      file: serverErrors,
+      text: yield* fs
+        .readFileString(serverErrors)
+        .pipe(Effect.catchIf(isNotFound, () => Effect.succeed(''))),
+    },
+  ];
+  for (const log of logs) {
+    const failures = log.text.split('\n').filter((line) => FAILURE.test(line));
+    if (failures.length > 0)
+      return yield* sick(
+        'server-log',
+        `${log.file} reports ${failures.length} failures, first: ${failures[0]}`,
+      );
+  }
   if (session.platform === 'ios') {
     const refusals = nativeRefusals(yield* deviceLog(place.config, session, 'ndjson'));
     const first = (refusals[0] ?? '')
