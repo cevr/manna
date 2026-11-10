@@ -56,12 +56,16 @@ samples, do not change.
   2 semitones or more under its middle, lowers points on every chunk and
   raises none, with a prosody line before each render.
 - `natural-fall-him`: the same in `bm_george` at 0.9.
+- `natural-british`: Him's reading sends the British list's ids
+  (`data/kjv-phonemes-gb.json`), Her's the American list's.
 - `natural-rests`: each chunk plays after the one before it and that
   one's rest, and the reading finishes after the last chunk's audio, not
   after a rest.
 - `natural-voices`: a `Read` with `voice=bm_george`, then one without,
   each switch keeping the loaded stages and changing the pack the render
   slices, Him rendered at 0.9.
+- `natural-soak-him`: Him's soak of 200 verses plans, renders and stays
+  finite by the British list.
 - `natural-crash`: an app ended during a reading says `crashed true` once.
 - `natural-remove`: `Remove` leaves nothing on the phone.
 - `today-mirror`: with no base stored, the app's download goes to
@@ -183,6 +187,8 @@ then one
 and one `[natural] play … skipped=simulator` line, each with
 `s = 600 × Σ` and `to − from ≤ s`. The nine play lines' `rest=` are, in
 order, `13200,13200,13200,13200,13200,7200,13200,7200,0`. No sound plays.
+The nine prosody lines' `ids=` are, in order, `16,20,19,21,24,6,20,6,58`
+(sum 190, the American list's plan), on base and on head.
 
 `natural-rests`: in the same reading's play lines,
 
@@ -225,15 +231,28 @@ Her's `speed=0.85`, a `prosody` line before each `render`. `serve.log`'s ready l
 holding `bm_george.bin` converted from the revision's rows. Sum each
 reading's `render` lines' `frames`: the two
 readings of the same verse give different totals (a pack that never
-switched gives equal ones).
+switched gives equal ones). Her's nine prosody lines' `ids=` are
+`16,20,19,21,24,6,20,6,58` (sum 190).
+
+`natural-british`: in the `natural-voices-him` reading
+(`voice=bm_george`, Isaiah 41:10),
+
+→ the snapshot has `read finished`, `lit 37/37`, `order ok`, `chunks 9`,
+`frames ok 9/9` and `fall 9/9 raised 0`; the nine
+`[natural] prosody … speed=0.9` lines' `ids=` are, in order,
+`16,21,20,21,24,6,21,6,58` (sum 193, the British list's plan), and the
+play lines' `rest=` stay `13200,13200,13200,13200,13200,7200,13200,7200,0`.
+Base: `16,20,19,21,24,6,20,6,58`, red at chunks 1, 2 and 6.
 
 `natural-fall-him`: in the `natural-voices-him` reading (`voice=bm_george`),
 
 → the snapshot has `fall 9/9 raised 0` and `frames ok 9/9`; each of its 9
 chunks logs a `[natural] prosody … points=<2Σ> … speed=0.9` line, then
 its `[natural] render … speed=0.9 points=<2Σ> lowered=<l> raised=0`, with
-`lowered > 0` on each (the planner's Mac CPU run: 11, 21, 29, 22, 26, 12,
-21, 12 and 27). Report every `lowered`. Base: red, as for `natural-fall`.
+`lowered > 0` on each. Report every `lowered`: the numbers on record (the
+planner's Mac CPU run: 11, 21, 29, 22, 26, 12, 21, 12 and 27) were read by
+the American list, before Him read British, so the new ones replace them.
+Base: red, as for `natural-fall`.
 
 `natural-crash`: tap `Read`, and while `read` is still `none`,
 `xcrun simctl terminate <udid> app.heartseed`; then `sim open /` and
@@ -258,7 +277,17 @@ voice), tap `Soak`, and wait for `soak 200/200 …`; report its four
 counts, which should read `unplanned 0 failed 0 nonfinite 0` (each chunk
 runs prosody, the fit, the fall and render as a reading does, so a curve
 that does not fit counts as failed). The full soak (31,102 verses)
-is the phone check's.
+is the phone check's. Her's soak logs 713 `[natural] prosody` lines whose
+`ids=` sum to 25,501.
+
+`natural-soak-him`: open the probe with `soak=200&voice=bm_george` added
+to the link and tap `Soak`:
+
+→ `soak 200/200 unplanned 0 failed 0 nonfinite 0`, and the soak's 713
+`[natural] prosody` lines' `ids=` sum to 26,077 (the British list's plan;
+base: 25,501, red). It also shows Kokoro renders the British symbols
+(`ɒ ː a Q`) finite on the CPU; the Neural Engine's render, and how a
+British word sounds, are the phone check's and the owner's ear.
 
 ## Today's rows
 

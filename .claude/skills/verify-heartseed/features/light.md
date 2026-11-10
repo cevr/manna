@@ -56,6 +56,8 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
 - `light-natural`: the probe's `Listen` read by the natural voice (Her):
   the selection moves forward, and `lit` holds through a rest between
   phrases, then moves on; one render and one play a phrase.
+- `light-natural-him`: the same `Listen` with `Voice: Him` reads through
+  the app's own route in `bm_george` by the British list.
 - `light-natural-seek`: in that reading, `Back 3` and `Forward 3` each
   start a new utterance planned from the target's phrase, lit at the
   target or a little past it, and the reading finishes at 25/25.
@@ -124,14 +126,26 @@ over `[voice]`, from `START`.
    growing, and at least one snapshot whose `lit` equals the one before
    between two that move (a rest); the log over `[natural]` and `[voice]`
    holds `[natural] render` for 4 chunks and their play lines with
-   `rest=7200,7200,7200,0`, and no `[voice] speak`.
-8. `light-natural-seek`: `sim tap "label=Listen"` again, raw snapshots until
+   `rest=7200,7200,7200,0`, four prosody lines `ids=32,38,52,30` at
+   `speed=0.85` (the American list's plan, on base and on head), and no
+   `[voice] speak`.
+8. `light-natural-him`: the probe's route is the app's own, which the
+   natural probe does not take. With the natural voice ready, set
+   `Voice: Him` (the Settings sheet's pill, as `natural.md`'s `today-him`),
+   then `sim open probe/light --expect "label=Light probe"` and
+   `sim tap "label=Listen"`, raw snapshots until the finish → the log holds
+   `[natural] load … voice=bm_george.bin`, four prosody lines
+   `ids=32,40,53,30` at `speed=0.9` (the British list's plan; base:
+   `ids=32,38,52,30`, red at chunks 1 and 2), play lines
+   `rest=7200,7200,7200,0`, no `[voice] speak`, and `lit 25/25` at the
+   finish. The seek row below reads in whichever natural voice is set.
+9. `light-natural-seek`: `sim tap "label=Listen"` again, raw snapshots until
    `lit` is 6 or more, `sim tap "label=Back 3"`, a raw snapshot, then
    `sim tap "label=Forward 3"` and a raw snapshot → after each tap a new
    utterance's `[natural] render utterance=<u> chunk=0` (the tail planned
    from the target word's phrase), `lit` at the target or a little past it,
    the selection moving on, and `lit 25/25` at the finish.
-9. `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+10. `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report only counts, booleans, indexes, the status lines, utterance numbers
 and the labels named above; delete the `snapshots` folder and the raw

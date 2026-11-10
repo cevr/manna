@@ -1463,16 +1463,24 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   today; the owner's listening fills it, at most 200 entries, each a KJV
   key that differs from Misaki's). It holds words and phonemes only, no
   verse text. Heteronyms (read, lead, wind) take Misaki's default sense,
-  and names its guess.
+  and names its guess. It is Her's list, American.
+- `data/kjv-phonemes-gb.json` is Him's list: the same 13,756 keys in the
+  same order, from Misaki 0.9.4's British G2P (`british=True`, with espeak-ng's
+  `en-gb` fallback), or the key's entry in
+  `data/kjv-phonemes-gb.overrides.json` (empty today, at most 200 entries).
+  10,242 of its keys read otherwise than the American list's: no British
+  entry holds Misaki's American-only `æ`, `O`, `T` or `ᵻ`, and no American
+  one its British-only `ɒ`, `ː`, `a` or `Q`.
 - `data/kokoro-vocab.json` is Kokoro's symbol vocabulary, byte for byte the
   `vocab.json` of Hugging Face `FluidInference/kokoro-82m-coreml` at
   revision `2568276a60ff6e7f312afce3dc9e3f07521cb48d`.
-- `data/lexicon.py` writes the list. Regenerate it from the repository
+- `data/lexicon.py` writes both lists in one run, each from the same keys
+  with its own dialect and overrides file. Regenerate them from the repository
   root with `uv run --no-project --python 3.12 apps/heartseed/data/lexicon.py`
-  after editing the overrides; its inline metadata pins Misaki, spaCy,
+  after editing an overrides file; its inline metadata pins Misaki, spaCy,
   `en_core_web_sm` and espeak-ng's loader, and only then are uv and the
   network needed. It writes the keys sorted, one entry a line, so two runs
-  write the same bytes; `src/natural/data.test.ts` holds the list's hash,
+  write the same bytes; `src/natural/data.test.ts` holds each list's hash,
   which a regeneration updates. The tests never run Python. espeak-ng runs
   only on the dev machine and nothing of it ships.
 - `src/natural/plan.ts` is the rule, pure. `planOf(words, vocab, text)`
@@ -1507,9 +1515,12 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   or all of it when nothing is audible; `startsWithin(starts, cut)` moves
   each start into the cut, a start trimmed off the front at 0 and one past
   the end at the cut's length.
-- `src/natural/lexicon.ts` carries the list and the vocab into the bundle:
-  `lexicon()` builds the two maps once, from `virtual:heartseed-lexicon`,
-  which `vite/plugin.ts` serves as `vite/lexicon.ts` prints it. Nothing in
+- `src/natural/lexicon.ts` carries both lists and the vocab into the bundle:
+  `lexicon(voice)` gives `{ words, vocab }` over that voice's list
+  (`LISTS`), each list's map built once on its first call, from
+  `virtual:heartseed-lexicon` (`{ lists: { us, gb }, vocab }`), which
+  `vite/plugin.ts` serves as `vite/lexicon.ts` prints it (`readLexicon()`;
+  `lexiconOf(us, gb, vocab)` refuses a wrong shape in either list). Nothing in
   `src/app.ts`'s graph reaches it yet.
 - `native/natural` is the Swift package (module `Natural`, the local pod
   `OneSwiftPackages/natural`), for iOS 18 and later like the app. Its
@@ -1545,7 +1556,9 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   `http(s)://host[:port]/folder/` it is asked for.
 - **The voices.** `VOICES` (`manifest.ts`) is `af_heart` and `bm_george`;
   a voice's pack is the file `<voice>.bin` of `FILES`, and its speed is
-  `SPEEDS` (`af_heart` 0.85, `bm_george` 0.9, the owner's choice). No other
+  `SPEEDS` (`af_heart` 0.85, `bm_george` 0.9, the owner's choice), and its
+  pronunciation list is `LISTS` (`af_heart` `us`, `bm_george` `gb`: Him
+  reads British, the owner's "british is fine"). No other
   file of `src/natural` names a pack path, and the Swift module outside
   `kokoro/` names no voice and no speed: the voice is data.
 - **Loading.** `load(revision, files, voice)` takes the voice as a pack
@@ -1623,10 +1636,11 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   `Context.Service`); `src/natural/source.ios.ts` is it over the Swift
   module, the only importer of `Natural.swift`, and `src/natural/source.ts`
   is every other platform's, which holds nothing and refuses each call.
-- `src/natural/voice.ts`, `naturalVoiceSource(lexicon)`, is a `VoiceSource`
+- `src/natural/voice.ts`, `naturalVoiceSource(lexiconFor)`, is a `VoiceSource`
   over the module, so `src/voice.ts` reads with it unchanged: a speak stops
   the module, fails `VoiceUnavailable` for a voice not in `VOICES`, else
-  plans the text, loads the speak's voice (`<voice>.bin`), then runs each
+  plans the text over `lexiconFor(voice)`, the speak's own voice's list
+  (`route.ts` and the probe pass `lexicon`), loads the speak's voice (`<voice>.bin`), then runs each
   chunk's prosody, renders it and plays it, chunk by chunk
   (the next chunk renders while one plays). `curveFor(chunk, last, prosody)`
   gives the curve a chunk renders on: none when the prosody does not fit
@@ -2851,17 +2865,29 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `hasFallen`, and the 32 real curves of `data/kokoro-curves.json` each
     ending 2 semitones or more under its middle with no climb; and
     `src/natural/data.test.ts`, the
-    committed data: the vocab's pinned hash, the list's bytes as the
+    committed data: the vocab's pinned hash, each list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
-    phoneme and override spoken in the vocab; `src/natural/manifest.test.ts`,
-    the 39 pinned files, the voices and `baseFor` over seeded asks;
+    phoneme and override spoken in the vocab, the British list's keys the
+    American list's in order, the dialect symbols of each and the 10,242
+    keys that differ; `src/natural/british.property.test.ts`, each voice's
+    list over the whole KJV: every distinct word run (28,881, 21,182 of
+    them read otherwise by Him) planned alone in each voice against a model
+    written in the test, and over a seeded sample of 700 verses with
+    Isaiah 41:10 and John 3:16 among them, Him's plan lighting Her's runs
+    and ending Her's phrases with her rests; `src/natural/voice-lists.test.ts`,
+    the natural source over 260 seeded readings on a stand-in module and two
+    hand lists (Her, Him and a voice outside the download): each speak plans,
+    prosodies and plays by its own voice's list, and asks for no list before
+    its voice is known; `src/natural/manifest.test.ts`,
+    the 39 pinned files, the voices, `LISTS` and `baseFor` over seeded asks;
     `src/natural/guard.test.ts`, the native module's guards (its committed
     declaration equals One's, the simulator branch never starts the engine
     and logs its skip, no file sets the audio session, only
     `source.ios.ts` names the Swift file, the chain split at its pitch curve
     (`prosody` then `vocode`, never `synthesize`), the prosody passing the
     speed it is sent and naming none, the audible floor 0.01 and the play line's
-    cut, rest and `at`, the vendored headers and LICENSE); `src/natural/lexicon.test.ts`, the bundled list and vocab;
+    cut, rest and `at`, the vendored headers and LICENSE); `src/natural/lexicon.test.ts`, the bundled lists and vocab, each voice's
+    list built once;
     and `src/natural/probe.test.ts`, the probe's lines, a read's tally over
     seeded views (order ok only for each word lit once, in order, to a
     finish), the `fall` line and the `recording` module that feeds it, the
@@ -2884,7 +2910,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     each kind; the fallback's `natural.fallback` log; a stop that
     returns only after both voices stopped; and a natural reading's words
     lit from the module's ranges, a seek reading on in the natural voice
-    with the words before it lit.
+    with the words before it lit, and Today's passage read by Her over the
+    American list's plan and by Him over the British list's.
   - `test:status`: `src/natural/status.test.tsx`, the natural voice's
     line in home's Settings sheet, rendered under `appLayer` with a
     stand-in module: the download's walk, each failure's words and
@@ -2993,8 +3020,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     server over a fake cache on a port the system picks, with no network:
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
-    modules), `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it), `scripts/root-props.test.ts` (each prop a doc
+    modules), `vite/lexicon.test.ts` (both pronunciation lists as the
+    plugin serves them, and each list's wrong shapes refused), `scripts/root-props.test.ts` (each prop a doc
     comment gives the root, in a sentence naming it or an `It` sentence
     right after one, held to `Root`'s declaration) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
