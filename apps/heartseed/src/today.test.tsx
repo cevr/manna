@@ -11,12 +11,17 @@
  * frame rule.
  */
 
+import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
+import { Layer } from 'effect';
+import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { readFileSync } from 'node:fs';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import Root from '../app/index';
+import { runtime } from './app';
+import { clockOf, START } from './test/clock';
 import { deadline } from './test/elapsed';
 import { device } from './test/one';
 import { watchRoot } from './test/root-rule';
@@ -60,7 +65,16 @@ describe('Today', () => {
     device.launch([
       [`heartseed/recall/${OTHER.reference}/${OTHER.startedAt}`, JSON.stringify(OTHER)],
     ]);
-    await act(async () => createRoot(host).render(<Root />));
+    const layer = AtomRegistry.make()
+      .get(runtime.layer)
+      .pipe(Layer.provideMerge(clockOf({ now: START })));
+    await act(async () =>
+      createRoot(host).render(
+        <RegistryProvider initialValues={[[runtime.layer, layer]]}>
+          <Root />
+        </RegistryProvider>,
+      ),
+    );
     await until(() => headings().join('|') === 'Your field' && begins().length > 0);
     home.headings = headings().map(String);
     const taps = begins();

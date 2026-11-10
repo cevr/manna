@@ -19,7 +19,7 @@
 
 import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
-import { START } from '../test/clock';
+import { clockOf, START } from '../test/clock';
 import { Deferred, Effect, Exit, Layer } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act } from 'react';
@@ -182,7 +182,7 @@ const mount = async (disk: Map<string, string>, fake?: Fake) => {
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: quietVoice,
     ...naturalParts(fake),
-  });
+  }).pipe(Layer.provideMerge(clockOf({ now: START })));
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);

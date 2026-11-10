@@ -25,6 +25,7 @@ import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { store } from '../store';
+import { clockOf, START } from '../test/clock';
 import { deadline } from '../test/elapsed';
 import { recallOf } from '../test/field-model';
 import { mount, record, scrolled } from '../test/field-rig';
@@ -89,7 +90,7 @@ describe('the way to the field', () => {
       store,
       chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.promise(() => chimed.promise) })),
       voice: voiceSource,
-    });
+    }).pipe(Layer.provideMerge(clockOf({ now: START })));
     const registry = AtomRegistry.make({ initialValues: [[runtime.layer, layer]] });
     const hold = { on: false, subscribers: 0, held: [] as Array<() => void> };
     const subscribe: AtomRegistry.AtomRegistry['subscribe'] = (atom, f, options) => {

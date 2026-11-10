@@ -16,6 +16,7 @@ import { describe, expect, it } from 'bun:test';
 import { Context, Deferred, Effect, Exit, Fiber, Layer, ManagedRuntime, Scope } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
+import { clockOf, START } from '../test/clock';
 import {
   CHOICE_KEY,
   CHOICES,
@@ -276,7 +277,7 @@ describe('the choice in command order', () => {
     Effect.runPromise(
       Effect.gen(function* () {
         for (let seed = 1; seed <= 300; seed++) yield* runHistory(seed);
-      }),
+      }).pipe(Effect.provide(clockOf({ now: START }))),
     ));
 
   it('keeps a later Her over an Off whose stop is still pending, after its stop and a restart', () =>

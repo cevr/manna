@@ -18,6 +18,7 @@ import { describe, expect, it } from 'bun:test';
 import { Context, Effect, Exit, Layer, Scope } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
+import { clockOf, START } from '../test/clock';
 import { spansOf, VoiceModel, type ModelCall, type ModelVoice } from '../test/voice-model';
 import { layer, Voice, VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
 
@@ -276,7 +277,7 @@ describe('the seek against the model', () => {
         expect(floors.back).toBeGreaterThan(30);
         expect(floors.ignored).toBeGreaterThan(150);
         expect(floors.rangesAfterSeek).toBeGreaterThan(80);
-      }),
+      }).pipe(Effect.provide(clockOf({ now: START }))),
     ));
 
   it('lights the words of a sought tail past an astral letter, up to its last unit', () =>

@@ -13,6 +13,7 @@ import { describe, expect, it } from 'bun:test';
 import { Context, Effect, Exit, Layer, Logger, References, Scope } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
+import { clockOf, START } from '../test/clock';
 import {
   CHOICE_KEY,
   CHOICES,
@@ -170,7 +171,7 @@ const launch = (choiceSeed: Seed, oldSeed: Seed) =>
           Layer.succeed(VoiceSource, quiet),
           Layer.succeed(KeyValueStore.KeyValueStore, kv.store),
         ),
-      ).pipe(Layer.provide(kept)),
+      ).pipe(Layer.provide(Layer.merge(kept, clockOf({ now: START })))),
       scope,
     );
     const view = yield* Context.get(services, Voice).view;

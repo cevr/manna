@@ -18,12 +18,16 @@ import { Effect, Exit, Layer, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { store } from './store';
+import { clockOf, START } from './test/clock';
 import { device } from './test/one';
 
 /** One launch: the real store built anew and `use` run over it. */
 const launch = <A>(
   use: (kv: KeyValueStore.KeyValueStore) => Effect.Effect<A, KeyValueStore.KeyValueStoreError>,
-) => Effect.flatMap(KeyValueStore.KeyValueStore, use).pipe(Effect.provide(Layer.fresh(store)));
+) =>
+  Effect.flatMap(KeyValueStore.KeyValueStore, use).pipe(
+    Effect.provide(Layer.merge(Layer.fresh(store), clockOf({ now: START }))),
+  );
 
 /** Whether a call failed with the store's typed error. */
 const failed = <A>(effect: Effect.Effect<A, KeyValueStore.KeyValueStoreError>) =>

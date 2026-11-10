@@ -1,10 +1,13 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, effect/noTryCatch, eslint/no-await-in-loop -- the clock model runs generated commands in order and restores its zone even on failure; real waits independently check that elapsed time never moves its instant. */
 
 import { describe, expect, it } from 'bun:test';
-import { Clock, Effect, type Layer } from 'effect';
+import { Clock, Context, DateTime, Effect, Layer, Logger, ManagedRuntime } from 'effect';
+import { constVoid } from 'effect/Function';
+import * as TestClock from 'effect/testing/TestClock';
 
 import { clockOf, START, type Time } from './test/clock';
 import { deadline } from './test/elapsed';
+import { checkAsked, hostAsked } from './test/setup';
 import { below, random } from './test/garden-model';
 import { hostOffset, hostZone, offsetIn, restore, travel, ZONES } from './test/zone';
 
@@ -137,6 +140,90 @@ describe('the tests’ clock', () => {
     expect([...edges].sort()).toEqual([...EDGES].sort());
     expect([...zones].sort()).toEqual([...ZONES].sort());
     expect([...gaps].sort()).toEqual([...GAPS].sort());
+  });
+});
+
+const quiet = Logger.layer([Logger.make(constVoid)]);
+
+/** One ask of the calendar time of each kind a runtime makes: a clock read, a `DateTime`, a log line's stamp. */
+const ASKS = [
+  Clock.currentTimeMillis,
+  DateTime.now,
+  Effect.logInfo('line').pipe(Effect.provide(quiet)),
+] as const;
+
+/** The class Effect's default clock is made from. */
+const DefaultClock: new () => Clock.Clock = Object.getPrototypeOf(
+  Clock.Clock.defaultValue(),
+).constructor;
+
+/** Effect's default clock with the host's answer replaced by the test's instant, so its own reads (a clock read, a `DateTime`, a log line's stamp) are counted without asking the host. */
+class Held extends DefaultClock {
+  override currentTimeMillisUnsafe() {
+    return START;
+  }
+}
+
+const early = new Held();
+hostAsked(Held.prototype);
+
+/** A runtime whose layer reads the time as it is built, given `clock` by `Layer.provide` alone, so its later reads fall back to the default clock. */
+class Opened extends Context.Service<Opened, { readonly at: number }>()('heartseed/test/Opened') {}
+
+describe('the default clock’s count', () => {
+  it('counts each ask of a held clock once, a clock made before the count began too, and starts again after it is read', () => {
+    const next = random(0x7a5e);
+    const counts = new Set<number>();
+    const kinds = new Set<number>();
+    for (let run = 0; run < 60; run += 1) {
+      const asks = below(next, 9);
+      counts.add(asks);
+      for (let ask = 0; ask < asks; ask += 1) {
+        const kind = below(next, ASKS.length);
+        kinds.add(kind);
+        const held = [early, new Held()][below(next, 2)] ?? early;
+        Effect.runSync(
+          (ASKS[kind] ?? Clock.currentTimeMillis).pipe(Effect.provideService(Clock.Clock, held)),
+        );
+      }
+      if (asks === 0) expect(checkAsked).not.toThrow();
+      else
+        expect(checkAsked).toThrow(
+          `the case asked the host’s clock the time through Effect’s default clock, ${asks} in all:`,
+        );
+      expect(checkAsked).not.toThrow();
+    }
+    expect([...counts].sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect([...kinds].sort()).toEqual([0, 1, 2]);
+  });
+
+  it('counts a runtime whose layer was given the clock but not merged with it, at its later read', () => {
+    const time: Time = { now: START };
+    const opened = Layer.effect(
+      Opened,
+      Effect.map(Clock.currentTimeMillis, (at) => Opened.of({ at })),
+    );
+    const provided = ManagedRuntime.make(
+      opened.pipe(
+        Layer.provide(clockOf(time)),
+        Layer.provideMerge(Layer.succeed(Clock.Clock, early)),
+      ),
+    );
+    time.now = START + DAY;
+    expect(provided.runSync(Effect.map(Opened, ({ at }) => at))).toBe(START + DAY);
+    expect(checkAsked).not.toThrow();
+    expect(provided.runSync(Clock.currentTimeMillis)).toBe(START);
+    expect(checkAsked).toThrow('default clock, 1 in all:');
+  });
+
+  it('counts nothing under the test’s clock, a TestClock or a log line on the test’s clock', () => {
+    const time: Time = { now: START };
+    const merged = ManagedRuntime.make(Layer.merge(quiet, clockOf(time)));
+    for (const ask of ASKS) merged.runSync(ask);
+    for (const ask of ASKS) Effect.runSync(ask.pipe(Effect.provide(clockOf(time))));
+    for (const ask of ASKS) Effect.runSync(ask.pipe(Effect.provide(TestClock.layer())));
+    expect(merged.runSync(Effect.map(DateTime.now, DateTime.toEpochMillis))).toBe(START);
+    expect(checkAsked).not.toThrow();
   });
 });
 

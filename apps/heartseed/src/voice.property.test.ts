@@ -32,6 +32,7 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { sourceWords } from './matcher/words';
+import { clockOf, START } from './test/clock';
 import {
   agreesWithMatcher,
   KEY,
@@ -340,7 +341,7 @@ describe('the voice against its model', () => {
     Effect.runPromise(
       Effect.gen(function* () {
         for (let seed = 1; seed <= 300; seed++) yield* runHistory(seed);
-      }),
+      }).pipe(Effect.provide(clockOf({ now: START }))),
     ));
 
   it('picks the best eligible English voice over 2,000 generated lists', () => {
@@ -412,7 +413,7 @@ describe('the voice against its model', () => {
           expect([one.utterance, two.utterance]).toEqual([1, 2]);
           expect(calls).toEqual(['pause', 'stop']);
         }),
-      ),
+      ).pipe(Effect.provide(clockOf({ now: START }))),
     ));
 
   it('lights a range a source sends inside its own speak call, by UTF-16 spans', () =>

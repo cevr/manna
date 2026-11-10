@@ -21,6 +21,7 @@ import { foregroundSource } from '../foreground/source';
 import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { Session } from '../session/service';
+import { clockOf, START } from '../test/clock';
 import { below, pickOf, random } from '../test/garden-model';
 import { returnsModel } from '../test/wake-model';
 import { voiceSource } from '../voice/source';
@@ -165,7 +166,7 @@ describe('the foreground subscription', () => {
               store: KeyValueStore.layerMemory,
               chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
               voice: voiceSource,
-            }),
+            }).pipe(Layer.provideMerge(clockOf({ now: START }))),
             scope,
           );
           expect(host.listeners.size, `launch ${launch}`).toBe(1);

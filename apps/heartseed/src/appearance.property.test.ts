@@ -38,6 +38,7 @@ import {
   type Choice,
 } from './appearance';
 import { store } from './store';
+import { clockOf, START } from './test/clock';
 import { below, random } from './test/garden-model';
 import { device } from './test/one';
 
@@ -323,6 +324,6 @@ describe('the Appearance service against its model', () => {
             'a refused write',
           ],
         });
-      }).pipe(Effect.provide(kept)),
+      }).pipe(Effect.provide(Layer.merge(kept, clockOf({ now: START })))),
     ));
 });

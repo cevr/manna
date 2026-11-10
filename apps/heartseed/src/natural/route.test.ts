@@ -31,6 +31,7 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import today from 'virtual:heartseed-passage';
 
+import { clockOf, START } from '../test/clock';
 import { CHOICE_KEY, nextChoice, Voice, VoiceSource, type Choice, type VoiceEvent } from '../voice';
 import { lexicon } from './lexicon';
 import { FILES, MIRROR, TOTAL_BYTES, type NaturalVoice } from './manifest';
@@ -315,15 +316,18 @@ const voicesOf = (device: Device, dev: boolean) =>
     dev,
   }).pipe(Layer.provide(Layer.succeed(KeyValueStore.KeyValueStore, device.store)));
 
-/** A logger that hands each line, its message then its annotations as JSON, to `keep`, and prints nothing. */
+/** A logger that hands each line, its message then its annotations as JSON, to `keep`, and prints nothing, stamping each line on the test's clock. */
 const keptLogs = (keep: (line: string) => void) =>
-  Logger.layer([
-    Logger.make((options) => {
-      keep(
-        `${[options.message].flat().map(String).join(' ')} ${JSON.stringify(options.fiber.getRef(References.CurrentLogAnnotations))}`,
-      );
-    }),
-  ]);
+  Layer.merge(
+    Logger.layer([
+      Logger.make((options) => {
+        keep(
+          `${[options.message].flat().map(String).join(' ')} ${JSON.stringify(options.fiber.getRef(References.CurrentLogAnnotations))}`,
+        );
+      }),
+    ]),
+    clockOf({ now: START }),
+  );
 
 /** The reference: what the owner's rules say the app holds after each step. */
 interface Model {

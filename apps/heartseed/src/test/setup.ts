@@ -20,7 +20,8 @@
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
-import { afterEach } from 'bun:test';
+import { afterEach, beforeEach } from 'bun:test';
+import { Clock } from 'effect';
 
 import { readChapters } from '../../vite/kjv';
 import { readLexicon } from '../../vite/lexicon';
@@ -72,6 +73,25 @@ plugin({
 
 const UTC_AT = [Date.UTC(2026, 0, 15, 12), Date.UTC(2026, 6, 15, 12)];
 
+/** How many times Effect's default clock was asked the calendar milliseconds since the count was last read, and whether a case began whose end has not read it. */
+const asked = { count: 0, unread: false };
+
+/** Counts each ask of calendar milliseconds on the class `held` (here, the class every default clock is made from), before the class answers it; a clock made before the count began is counted too. */
+export const hostAsked = (held: { currentTimeMillisUnsafe: () => number }) => {
+  const millis = held.currentTimeMillisUnsafe;
+  held.currentTimeMillisUnsafe = function counted(this: typeof held) {
+    asked.count += 1;
+    return millis.call(this);
+  };
+};
+hostAsked(Object.getPrototypeOf(Clock.Clock.defaultValue()));
+
+/** A case's count holds the asks made since the last case's end was read (a describe's own work among them), and starts at none when the zone's check failed the case before it first. */
+beforeEach(() => {
+  if (asked.unread) asked.count = 0;
+  asked.unread = true;
+});
+
 /** Every case ends with the host in UTC, the zone bun test starts in: one that ends elsewhere fails, naming the zone, and UTC is put back first so the cases after it run where they expect. */
 afterEach(() => {
   if (UTC_AT.every((at) => new Date(at).getTimezoneOffset() === 0)) return;
@@ -81,3 +101,17 @@ afterEach(() => {
     `the case ended in ${left}, not UTC: a zone it set was not put back, or a walk in it outlived it`,
   );
 });
+
+/** Throws when the running case asked Effect's default clock the calendar time, naming the count, after starting the count again. */
+export const checkAsked = () => {
+  const count = asked.count;
+  asked.count = 0;
+  asked.unread = false;
+  if (count === 0) return;
+  throw new Error(
+    `the case asked the host’s clock the time through Effect’s default clock, ${count} in all: give its runtime the test’s clock (clockOf in src/test/clock.ts, merged with Layer.provideMerge)`,
+  );
+};
+
+/** Every case ends having asked Effect's default clock nothing. It runs after the zone's check, so a case that fails both still leaves the host in UTC. */
+afterEach(checkAsked);
