@@ -13,19 +13,20 @@
  */
 
 import { expect, it } from 'effect-bun-test';
-import { Console, Effect, Option, Predicate } from 'effect';
+import { Console, Deferred, Effect, Option, Predicate } from 'effect';
 import { TestClock } from 'effect/testing';
 import { act } from 'react';
+import { View } from 'react-native';
 
 import type { SeekTarget } from '~/follow/seek-targets';
 import { RISE } from '~/player/bar';
-import { Command, Player } from '~/player/player';
+import { Command, type PlaybackError, Player, type Status } from '~/player/player';
 import { longPress } from '~/test/gesture';
-import { inAct, mountSeekReader, type Rect } from '~/test/reader-word-seek';
+import { fixtureRects, inAct, mountSeekReader, type Rect } from '~/test/reader-word-seek';
 import { openWordSeek } from '~/test/word-seek';
 
 import { SeekArea as NativeArea } from './WordSeek.native';
-import { seekHeld } from './word-seek';
+import { type SeekAreaProps, seekHeld } from './word-seek';
 
 type App = Effect.Success<ReturnType<typeof openWordSeek>>;
 type Page = Effect.Success<ReturnType<typeof mountSeekReader>>;
@@ -555,6 +556,62 @@ const history = (seed: number, surface: Surface) =>
     }
     return mismatches;
   }).pipe(Effect.scoped);
+
+it.effect(
+  'an older measure answering late never scrolls over a newer choice or a finished hold',
+  () =>
+    Effect.gen(function* () {
+      const app = yield* openWordSeek(false);
+      const page = yield* mountSeekReader(app, { viewport: 800, later: true });
+      yield* inAct(app.play);
+      page.press('hymn-word-seek');
+      yield* inAct(app.untilHold('Held'));
+      page.press('reader-seek-next-line');
+      const asked = page.asked();
+      Array.from({ length: asked }, (_, k) => asked - 1 - k).forEach(page.answer);
+      const line = fixtureRects[1] ?? { top: 0, height: 0 };
+      const y = page.scrolls.at(-1)?.y ?? Number.NaN;
+      const off = Math.abs(page.padTop() + line.top + line.height / 2 - y - (800 - RISE) / 2);
+      page.press('reader-seek-next-line');
+      page.press('reader-seek-cancel');
+      yield* inAct(app.untilHold('Free'));
+      const before = page.scrolls.length;
+      Array.from({ length: page.asked() - asked }, (_, k) => asked + k).forEach(page.answer);
+      expect([asked >= 2, off <= 2, page.scrolls.length - before]).toEqual([true, true, 0]);
+    }).pipe(Effect.scoped),
+);
+
+/** The page's seek as its area receives it, so a trace can call it as two adapters at once would. */
+const given = { seek: Option.none<SeekAreaProps['seek']>() };
+const GivenArea = ({ seek, style, children }: SeekAreaProps) => {
+  given.seek = Option.some(seek);
+  return <View style={style}>{children}</View>;
+};
+
+it.effect('the first finish of a hold is its only one, however many adapters end it', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: 800, area: GivenArea });
+    yield* inAct(app.play);
+    page.press('hymn-word-seek');
+    yield* inAct(app.untilHold('Held'));
+    page.press('reader-seek-next-line');
+    const seek = Option.getOrThrow(given.seek);
+    const landed = yield* Deferred.make<Status, PlaybackError>();
+    app.boundaries.set('seek', landed);
+    act(() => seek.release());
+    yield* inAct(app.untilHold('Landing'));
+    act(() => {
+      seek.release();
+      seek.cancel();
+    });
+    yield* Deferred.succeed(landed, { state: 'paused', positionMs: 6200, durationMs: 21_000 });
+    yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilHold('Free')));
+    const ends = page.cues.filter((cue) => cue === 'seek-release').length;
+    const seeks = app.commands.filter(({ kind }) => kind === 'seek').map(({ ms }) => ms);
+    expect([ends, seeks]).toEqual([1, [6200]]);
+  }).pipe(Effect.scoped),
+);
 
 const surfaces: ReadonlyArray<Surface> = ['web', 'native', 'steps'];
 

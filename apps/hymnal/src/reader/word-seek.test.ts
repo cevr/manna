@@ -1,4 +1,6 @@
+/* oxlint-disable effect/noNodeBuiltinImport -- the pager's guard reads the phones' own source from disk, synchronously: no test here runs UIKit's pager. */
 import { describe as group, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { Option } from 'effect';
 
 import type { SeekLine, SeekTarget, SeekTargets } from '~/follow/seek-targets';
@@ -310,4 +312,16 @@ group('the pointer that holds', () => {
       run([down(), PointerInput.Escape()]).effects.at(-1),
     ]).toEqual(['Cancel', 'Cancel', 'Disarm']);
   });
+});
+
+/**
+ * The phones' pager is UIKit's and no test here runs it: this reads its
+ * source for the lock it must take while a seek holds, a narrow guard
+ * until a device checks the arbitration itself.
+ */
+it('the phones pager reads the held lock and stands still while it holds', () => {
+  const source = readFileSync(`${import.meta.dir}/HymnScreen.native.tsx`, 'utf8');
+  expect(
+    ['useAtomValue(seekHeld)', 'scrollEnabled={!held}'].map((part) => source.includes(part)),
+  ).toEqual([true, true]);
 });

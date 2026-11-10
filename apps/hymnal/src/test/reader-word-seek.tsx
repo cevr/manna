@@ -61,7 +61,10 @@ export const mountSeekReader = (
     rects = fixtureRects,
     shown = true,
     area,
+    later = false,
   }: {
+    /** Measures answer only when the test says (`answer`), in the order it chooses. */
+    readonly later?: boolean;
     readonly viewport?: number;
     readonly rects?: ReadonlyArray<Rect>;
     readonly shown?: boolean;
@@ -74,6 +77,7 @@ export const mountSeekReader = (
       const cues: Array<string> = [];
       const scrolls: Array<{ readonly y: number; readonly animated: boolean }> = [];
       const reader = { ...readerOn(), book: noChords };
+      const asked: Array<() => void> = [];
       const waiting = new Map<number, { readonly ms: number; readonly run: () => void }>();
       let timers = 0;
       const timer: HoldTimer = {
@@ -117,8 +121,12 @@ export const mountSeekReader = (
               _to: HTMLElement,
               done: (x: number, y: number, width: number, height: number) => void,
             ) => {
-              const rect = rects[k] ?? { top: 0, height: 0 };
-              done(0, padTop() + rect.top, 350, rect.height);
+              const answer = () => {
+                const rect = rects[k] ?? { top: 0, height: 0 };
+                done(0, padTop() + rect.top, 350, rect.height);
+              };
+              if (later) asked.push(answer);
+              else answer();
             },
           }),
         );
@@ -174,6 +182,11 @@ export const mountSeekReader = (
           ),
         /** The hold timers waiting, by their time. */
         waiting: () => [...waiting.values()].map(({ ms }) => ms),
+        /** How many measures were asked for, answered or not. */
+        asked: () => asked.length,
+        /** Measure `k` (in asking order) answers now. */
+        answer: (k: number) =>
+          act(() => Option.map(Option.fromUndefinedOr(asked[k]), (it) => it())),
         /** The waiting hold timers' time comes. */
         elapse: () =>
           act(() => {
