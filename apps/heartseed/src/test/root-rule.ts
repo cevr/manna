@@ -79,6 +79,88 @@ const pendingFaults = (host: Element, controls: readonly Element[]) => {
   return out;
 };
 
+/** The end of a run's heading. */
+const END = 'The field is tended';
+
+/** The end's own nodes, by test id. */
+const END_NODES = ['tended', 'grew', 'grown'];
+
+/** One selector for the end's nodes, so a frame that is not the end asks once. */
+const END_SELECTOR = END_NODES.map((id) => `[data-testid="${id}"]`).join(',');
+
+/** A grown verse's name: its reference, then its stage. */
+const GROWN_NAME = /^.+, (seed|blade|ear|full corn)$/;
+
+/** The text a screen reader reads under `node`: its text nodes outside any `aria-hidden` subtree, whitespace collapsed. */
+const exposed = (node: Element) => {
+  const parts: string[] = [];
+  const walk = (at: Node) => {
+    if (at.nodeType === Node.TEXT_NODE) parts.push(at.textContent ?? '');
+    if (!(at instanceof Element) || at.getAttribute('aria-hidden') === 'true') return;
+    for (const child of at.childNodes) walk(child);
+  };
+  walk(node);
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+/** The count of verses the grew line `line` says grew, or none for a line of another form. */
+const grewCount = (line: string) => {
+  if (line === 'Nothing grew this time.') return 0;
+  const many = /^([1-9]\d*) grew a stage\.$/.exec(line)?.[1];
+  if (many === undefined) return undefined;
+  return Number(many);
+};
+
+/** What the end's lines and grown verses show wrong: not one grew line, a line of another form, a count that is not the grown nodes', and each grown node that is no named image with one picture, or a name twice. */
+const grownFaults = (grew: readonly Element[], grown: readonly Element[]) => {
+  const out: string[] = [];
+  if (grew.length !== 1) out.push(`${grew.length} grew lines on ${END}`);
+  const line = text(grew[0]);
+  const count = grewCount(line);
+  if (grew.length === 1 && count === undefined) out.push(`the grew line ${line}`);
+  if (grew.length === 1 && count !== undefined && count !== grown.length)
+    out.push(`${grown.length} grown under ${line}`);
+  const names = grown.map(nameOf);
+  if (new Set(names).size < names.length) out.push('a verse grown twice');
+  for (const node of grown) {
+    if (node.getAttribute('role') !== 'img' || !GROWN_NAME.test(nameOf(node)))
+      out.push(`a grown node ${node.getAttribute('role')}:${nameOf(node)}`);
+    if (node.querySelectorAll('img').length !== 1) out.push('a grown node without its one image');
+  }
+  return out;
+};
+
+/** What the end shows wrong on the screen `on`: off the end, any node of it; on the end, a control but `Your field`, not one `tended`, a grew line or grown verse wrong (`grownFaults`), a node of it outside the scroll view, an alert, a reading that is not the heading, the back and the line, or an unread garden. */
+const endFaults = (
+  host: Element,
+  on: string,
+  garden: 'read' | 'unread',
+  controls: readonly Element[],
+) => {
+  if (on !== END) {
+    if (host.querySelector(END_SELECTOR) === null) return [];
+    return ids(host, END_NODES).map((id) => `the end's ${id} on ${on}`);
+  }
+  const nodes = (id: string) => [...host.querySelectorAll(`[data-testid="${id}"]`)];
+  const tended = nodes('tended');
+  const grew = nodes('grew');
+  const grown = nodes('grown');
+  const out: string[] = [];
+  if (garden === 'unread') out.push(`the end on an unread garden`);
+  for (const node of controls)
+    if (nameOf(node) !== 'Your field') out.push(`the control ${nameOf(node)} on ${END}`);
+  if (tended.length !== 1) out.push(`${tended.length} tended nodes on ${END}`);
+  out.push(...grownFaults(grew, grown));
+  for (const node of [...tended, ...grew, ...grown])
+    if (!scrolled(node))
+      out.push(`the end's ${node.getAttribute('data-testid')} outside the scroll view`);
+  if (host.querySelector('[role="alert"]') !== null) out.push(`an alert on ${END}`);
+  const read = exposed(host);
+  if (read !== `${END} ‹ Your field ${text(grew[0])}`.trim())
+    out.push(`the end reads ${read.slice(0, 80)}`);
+  return out;
+};
+
 /** What `Your field` shows wrong on the screen `on`: off its screens, on an unread garden, on Today while listening, missing from Today or When I need…, not one, or in a scroll view. */
 const backFaults = (
   on: string,
@@ -88,11 +170,12 @@ const backFaults = (
 ) => {
   const out: string[] = [];
   const offered = backs.length > 0;
-  const allowed = on === 'Today' || on === 'When I need…' || BACKS.has(on);
+  const allowed = on === 'Today' || on === END || on === 'When I need…' || BACKS.has(on);
   if (offered && !allowed) out.push(`Your field on ${on}`);
   if (offered && garden === 'unread') out.push(`Your field on an unread garden (${on})`);
   if (on === 'Today' && offered && listening) out.push('Your field on Today while listening');
-  const owed = on === 'When I need…' || (on === 'Today' && garden === 'read' && !listening);
+  const owed =
+    on === 'When I need…' || on === END || (on === 'Today' && garden === 'read' && !listening);
   if (owed && !offered) out.push(`no Your field on ${on}`);
   if (backs.length > 1) out.push(`${backs.length} Your field controls on ${on}`);
   if (backs.some(scrolled)) out.push(`Your field inside a scroll view on ${on}`);
@@ -158,7 +241,8 @@ const listeningFaults = (host: Element) =>
  * read completes. A frame shows one screen, by its one heading, or the
  * pending frame (no heading), which holds the reference alone. `Your field`
  * is a way back from Today (on a read garden while nothing listens, and then
- * always), When I need… (its one back) and About, never in a scroll view,
+ * always), the end of a run `The field is tended` (always), When I need…
+ * (its one back) and About, never in a scroll view,
  * and nowhere else: never on home, never on the chooser's `Add a passage`,
  * never on an unread garden (`backFaults`). The chooser's `Add a passage`
  * shows exactly one control whose text is `‹ Add verses`, its way back to
@@ -177,7 +261,21 @@ const listeningFaults = (host: Element) =>
  * `Settings`, `Your field`, `Plant` (or starting `Plant `, the Add verses
  * sheet's offers), `Voice`, `Add verses`, `Any passage` or `Remove` (or
  * starting `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
- * node, each the fault `<name> in reach while listening`.
+ * node, each the fault `<name> in reach while listening`. The end of a run
+ * (`endFaults`) holds no control but `Your field` (`the control <name> on
+ * The field is tended`), exactly one `tended` and one `grew` line (`<n>
+ * tended nodes …`, `<n> grew lines …`), a line `Nothing grew this time.` or
+ * `<n> grew a stage.` (`the grew line <line>`) whose n is the count of
+ * `grown` nodes (`<k> grown under <line>`), each `grown` an `img` named
+ * `<reference>, <stage>` (`a grown node <role>:<name>`) holding exactly one
+ * image (`a grown node without its one image`), no name twice (`a verse
+ * grown twice`), each of its nodes inside the scroll view (`the end's <id>
+ * outside the scroll view`), no alert (`an alert on …`), an exposed reading
+ * of exactly the heading, `‹ Your field` and the line (`the end reads
+ * <first 80>`), and a read garden (`the end on an unread garden`); Today's
+ * action and nodes there are faults as on any screen but Today. Any other
+ * screen showing a node of the end is the fault `the end's <id> on
+ * <screen>`, found by one query a frame.
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
@@ -207,6 +305,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   if (needs.some(scrolled)) out.push('When I need… inside a scroll view');
   for (const id of ids(host, HOME_NODES))
     if (on !== 'Your field') out.push(`home's ${id} on ${on}`);
+  out.push(...endFaults(host, on, garden, controls));
   out.push(...settingsFaults(on, named('Settings')));
   out.push(...choicesFaults(on, host, controls));
   out.push(...reach);
