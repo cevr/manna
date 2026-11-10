@@ -5,24 +5,45 @@ import { TestClock } from 'effect/testing';
 import { act } from 'react';
 
 import { Command, type PlaybackError, Player, type Status } from '~/player/player';
-import { RISE } from '~/player/bar';
+import { HASH, HASH_GAP, REST, SOUNDING } from '~/player/bar';
 import { drag, gestureOf, longPress } from '~/test/gesture';
 
 import { SeekArea } from './WordSeek.native';
 import { LINE_STEP, seekHeld, WORD_STEP } from './word-seek';
-import { fixtureRects, inAct, mountSeekReader } from '~/test/reader-word-seek';
+import { fixtureRects, HYMN_PAGE_ROOM, inAct, mountSeekReader } from '~/test/reader-word-seek';
 import { openWordSeek } from '~/test/word-seek';
 
 type Page = Effect.Success<ReturnType<typeof mountSeekReader>>;
 
 const VIEWPORT = 800;
+/** The entry's least height, and the gap between it and the open controls over it. */
+const ENTRY = 48;
+const GAP = 8;
 
-/** How far line `k`'s block's middle sits from the lyric viewport's after the page's last scroll. */
-const offMiddle = (page: Page, k: number) => {
+/**
+ * Where the words stop being seen, over the page's foot: the top of the
+ * entry `Seek` (`entry` points tall), or of the open controls over it
+ * (`panel` points tall, none while closed).
+ */
+const floorOf = (page: Page, entry = ENTRY, panel = 0) =>
+  Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) +
+  entry +
+  ((panel > 0 && GAP + panel) || 0);
+
+/** How far line `k`'s block's middle sits from the middle of the words seen, after the page's last scroll. */
+const offMiddle = (page: Page, k: number, floor = floorOf(page)) => {
   const rect = fixtureRects[k] ?? { top: 0, height: 0 };
   const y = page.scrolls.at(-1)?.y ?? 0;
-  return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - (VIEWPORT - RISE) / 2);
+  return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - (VIEWPORT - floor) / 2);
 };
+
+/**
+ * The highest the sounding bar and its `#` reach over a hymn page's foot,
+ * as the player lays them out: the bar rises `SOUNDING - REST` over the
+ * page, and the `#` stands `HASH_GAP` over the bar while the find room says
+ * it is there.
+ */
+const barReach = (room: number) => SOUNDING - REST + ((room > 0 && HASH_GAP + HASH) || 0);
 
 /** What the page shows of the hold: its numbers, the outlined lines, the underlined words of `k`, the marker. */
 const shownOf = (page: Page, k: number) => ({
@@ -390,5 +411,43 @@ it.effect(
         paused,
         app.registry.get(app.player.hold.state)._tag,
       ]).toEqual([[[], ['seek-grab', 'seek-tick'], false], [[], false, []], false, false, 'Free']);
+    }).pipe(Effect.scoped),
+);
+
+it.effect(
+  'the entry stands clear of the sounding bar and its #, and the marker and the choice sit mid the words left seen',
+  () =>
+    Effect.gen(function* () {
+      const app = yield* openWordSeek(false);
+      const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+      yield* inAct(app.play);
+      const closed = [HYMN_PAGE_ROOM, 0].map((room) => {
+        page.room(room);
+        return Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) >= barReach(room);
+      });
+      page.press('hymn-word-seek');
+      yield* inAct(app.untilHold('Held'));
+      const seen = [HYMN_PAGE_ROOM, 0].flatMap((room) =>
+        [ENTRY, 72].flatMap((entry) =>
+          [120, 260].map((panel) => {
+            page.room(room);
+            page.entry(entry);
+            page.panel(panel);
+            page.press('reader-seek-next-line');
+            page.press('reader-seek-prev-line');
+            const floor = floorOf(page, entry, panel);
+            const marker = Option.getOrElse(page.rise('reader-seek-marker'), () => Number.NaN);
+            return [
+              Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) >= barReach(room),
+              Math.abs(marker - floor) <= 0.5,
+              offMiddle(page, 0, floor) <= 2,
+            ];
+          }),
+        ),
+      );
+      expect([closed, seen]).toEqual([
+        [true, true],
+        Array.from({ length: 8 }, () => [true, true, true]),
+      ]);
     }).pipe(Effect.scoped),
 );

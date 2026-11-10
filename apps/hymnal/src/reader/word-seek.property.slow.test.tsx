@@ -27,7 +27,7 @@ import { View } from 'react-native';
 
 import { book } from '~/follow/book';
 import type { SeekTarget } from '~/follow/seek-targets';
-import { RISE } from '~/player/bar';
+import { HASH, HASH_GAP, REST, SOUNDING } from '~/player/bar';
 import { Command, type PlaybackError, Player, type Status } from '~/player/player';
 import { gestureOf, longPress } from '~/test/gesture';
 import {
@@ -55,6 +55,18 @@ const STILL_PT = 10;
 const STRIP_PT = 20;
 /** The space the open controls keep between themselves and the bar (spec B9: the panel lies outside the viewport). */
 const PANEL_GAP = 8;
+/** The entry `Seek`'s height, as the fixture lays it out (its least, at the default text size). */
+const ENTRY = 48;
+/** The room the `#` takes over a hymn page's bar, as the player tells the screens while it stands there. */
+const HASH_ROOM = HASH_GAP + HASH;
+/** How high the sounding bar, and the `#` over it while it stands (`room` above 0), reach over the page's foot. */
+const reachOf = (room: number) => SOUNDING - REST + ((room > 0 && HASH_ROOM) || 0);
+/**
+ * Where the words stop being seen over the page's foot with the controls
+ * closed: over the sounding bar's rise, the `#` standing over the bar, a gap,
+ * and the entry. The open controls take their own room over it.
+ */
+const FOOT = reachOf(HASH_ROOM) + PANEL_GAP + ENTRY;
 /** How long a chord's press keeps a phone's hold from taking: the hold's 350 ms and 250 ms of grace. */
 const CHORD_MS = 600;
 /** Long enough for a start's count-in and the player's own act after a command to end, so a hold may take again. */
@@ -236,9 +248,14 @@ const reference = (
     cues: [] as Array<string>,
     /** The points the open controls take at the viewport's foot, with their gap; none while closed. */
     room: 0,
+    /** The room the player says the `#` takes (`FindRoom`), and the entry's laid-out height. */
+    hashRoom: HASH_ROOM,
+    entry: ENTRY,
     /** Each hold taken or ended starts a new one: a measure asked in an older one is stale. */
     epoch: 0,
   };
+  /** Where the words stop being seen over the page's foot: the top of the entry, or of the open controls over it. */
+  const floor = () => reachOf(state.hashRoom) + PANEL_GAP + state.entry + state.room;
   /** The hold is over: the controls close, and a new epoch begins. */
   const over = () => {
     state.room = 0;
@@ -257,7 +274,7 @@ const reference = (
     });
   const eligible = () =>
     state.shown &&
-    state.viewport > RISE &&
+    state.viewport > floor() - state.room &&
     Player.$is('Playing')(app.registry.get(app.player.state)) &&
     app.registry.get(app.player.hold.state)._tag === 'Free' &&
     !counting() &&
@@ -289,6 +306,7 @@ const reference = (
     state,
     eligible,
     choiceNow,
+    floor,
     /** The hold took, if the seam published one: its anchor is the sounding target. */
     take: (id: number, x: number, y: number) => {
       const found = anchor();
@@ -395,7 +413,7 @@ const reference = (
     offMiddle: (chosen: Choice) => {
       const rect = rects[chosen.line] ?? { top: 0, height: 0 };
       const y = page.scrolls.at(-1)?.y ?? Number.NaN;
-      const inside = state.viewport - RISE - state.room;
+      const inside = state.viewport - floor();
       return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - inside / 2);
     },
   };
@@ -436,7 +454,15 @@ const differences = (
     owner === 'Held' ||
     (gestureOf('reader-word-seek-hold').enabled !== false) === offered;
   const armed = surface !== 'web' || page.waiting().length > 0 === (owner === 'Candidate');
+  const entryRise = Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN);
+  const clear = entryRise >= reachOf(model.state.hashRoom);
+  const marked = Option.match(page.rise('reader-seek-marker'), {
+    onNone: () => !want.held,
+    onSome: (bottom) => Math.abs(bottom - model.floor()) <= 0.5,
+  });
   const checks = [
+    ['clear', clear, `${entryRise}`],
+    ['marker', marked, `${model.floor()}`],
     ['count-in', Option.isSome(app.registry.get(app.player.countIn)) === counting, `${counting}`],
     ['entry', page.enabled('hymn-word-seek') === offered, `${offered}`],
     ['recognizer', recognizer, `${offered}`],
@@ -735,6 +761,22 @@ const history = (seed: number, surface: Surface) =>
       if (changed) model.revoke(keepsPointer);
       return `setting ${step}`;
     };
+    /**
+     * The `#` comes or goes over the bar (`FindRoom`: over the bar, or nowhere),
+     * and the entry is laid out at another height (the system's text size).
+     */
+    const foot = (step: number) => {
+      const room = rng.pick([HASH_ROOM, 0]);
+      const entry = rng.pick([ENTRY, 66, 90]);
+      page.room(room);
+      page.entry(entry);
+      model.state.hashRoom = room;
+      model.state.entry = entry;
+      count(`foot-${(room > 0 && 'hash') || 'none'}`);
+      if (entry > ENTRY) count('foot-tall-entry');
+      if (model.state.owner._tag === 'Held') count('foot-held');
+      return `foot ${step}`;
+    };
     /** The open controls are laid out at another height. */
     const panel = (step: number) => {
       const height = rng.pick([120, 200, 260]);
@@ -885,6 +927,7 @@ const history = (seed: number, surface: Surface) =>
         model.state.shown && Player.$is('Playing')(app.registry.get(app.player.state));
       if (unheld && holdTag() === 'Free' && playing && Option.isNone(flight) && rng.next() < 0.5)
         return pendingSeek(step);
+      if (rng.next() < 0.4) return foot(step);
       reduced = !reduced;
       page.motion(reduced);
       count('motion');
@@ -1029,7 +1072,7 @@ it.effect(
       Array.from({ length: asked }, (_, k) => asked - 1 - k).forEach(page.answer);
       const line = fixtureRects[1] ?? { top: 0, height: 0 };
       const y = page.scrolls.at(-1)?.y ?? Number.NaN;
-      const off = Math.abs(page.padTop() + line.top + line.height / 2 - y - (800 - RISE) / 2);
+      const off = Math.abs(page.padTop() + line.top + line.height / 2 - y - (800 - FOOT) / 2);
       page.press('reader-seek-next-line');
       page.press('reader-seek-cancel');
       yield* inAct(app.untilHold('Free'));
@@ -1101,7 +1144,7 @@ it.effect(
         page.panel(height);
         const rect = fixtureRects[0] ?? { top: 0, height: 0 };
         const y = page.scrolls.at(-1)?.y ?? Number.NaN;
-        const inside = 800 - RISE - (height + PANEL_GAP);
+        const inside = 800 - FOOT - (height + PANEL_GAP);
         return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - inside / 2);
       });
       const held = app.registry.get(app.player.hold.state)._tag;
@@ -1275,6 +1318,10 @@ it.effect('the generated histories reached every case they are for', () => {
     'answer',
     'stale-answer',
     'panel',
+    'foot-hash',
+    'foot-none',
+    'foot-tall-entry',
+    'foot-held',
     'land',
     'landing',
     'chord',

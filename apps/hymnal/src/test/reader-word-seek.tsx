@@ -19,13 +19,15 @@
 import { RegistryContext } from '@effect/atom-react';
 import { Effect, Option, Predicate } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
-import { act, type ComponentProps } from 'react';
+import { act, type ComponentProps, type ReactNode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { CueProvider } from '~/feel/cue';
 import { targetsOf } from '~/follow/seek-targets';
 import type { Box, HymnChords, Word } from '~/hymns/chords';
-import { PlayerContext } from '~/player/context';
+import { FindAt, findRoom } from '~/player/bar';
+import { FindRoom, PlayerContext } from '~/player/context';
+import { Player } from '~/player/player';
 import { HymnPage } from '~/reader/HymnPage';
 import {
   type HoldTimer,
@@ -123,6 +125,38 @@ export const inAct = <A, E>(effect: Effect.Effect<A, E>) =>
 const underlinedOne = (element: Element) =>
   element instanceof HTMLElement && element.style.textDecorationLine.includes('underline');
 
+/** The room the bar's `#` takes over a hymn page's foot, as the app tells its screens: over the bar. */
+export const HYMN_PAGE_ROOM = findRoom(FindAt.OverBar({ state: Player.Idle() }), 0);
+
+/** The find room the app's player tells the screens (`FindRoom`), set again as a test moves the `#`. */
+function Room({
+  first,
+  told,
+  children,
+}: {
+  readonly first: number;
+  readonly told: { set: (points: number) => void };
+  readonly children: ReactNode;
+}) {
+  const [room, setRoom] = useState(first);
+  told.set = setRoom;
+  return <FindRoom value={room}>{children}</FindRoom>;
+}
+
+/**
+ * How far element `node`'s bottom edge stands over the page's foot, as the
+ * page lays it out: the sum of the `bottom` of each absolutely placed box
+ * from it up to the page.
+ */
+const riseOf = (node: HTMLElement, page: Element): number => {
+  const style = getComputedStyle(node);
+  const own = (style.position === 'absolute' && Number.parseFloat(style.bottom)) || 0;
+  return Option.match(Option.fromNullishOr(node.parentElement), {
+    onNone: () => own,
+    onSome: (parent) => (parent === page && own) || own + riseOf(parent, page),
+  });
+};
+
 /** The page, mounted while the scope lasts. */
 export const mountSeekReader = (
   app: SeekApp,
@@ -135,7 +169,10 @@ export const mountSeekReader = (
     later = false,
     words = 'plain',
     reduced = false,
+    room = HYMN_PAGE_ROOM,
   }: {
+    /** The room the bar's `#` takes over the page's foot (`FindRoom`): over the bar, as on a hymn page. */
+    readonly room?: number;
     /** Measures answer only when the test says (`answer`), in the order it chooses. */
     readonly later?: boolean;
     readonly viewport?: number;
@@ -175,19 +212,22 @@ export const mountSeekReader = (
       document.body.append(host);
       const root = createRoot(host);
       const seen = shownPagesOf(pageOf(shown));
+      const told = { set: (_: number) => {} };
       act(() =>
         root.render(
           <RegistryContext value={app.registry}>
             <PlayerContext value={Option.some(app.player)}>
-              <CueProvider value={(cue) => void cues.push(cue._tag)}>
-                <SeekTargetsProvider value={targetsFor}>
-                  <HoldTimerProvider value={timer}>
-                    <ShownPagesProvider value={seen}>
-                      <HymnPage hymn={seekText} reader={reader} area={area} scroll={scrollArea} />
-                    </ShownPagesProvider>
-                  </HoldTimerProvider>
-                </SeekTargetsProvider>
-              </CueProvider>
+              <Room first={room} told={told}>
+                <CueProvider value={(cue) => void cues.push(cue._tag)}>
+                  <SeekTargetsProvider value={targetsFor}>
+                    <HoldTimerProvider value={timer}>
+                      <ShownPagesProvider value={seen}>
+                        <HymnPage hymn={seekText} reader={reader} area={area} scroll={scrollArea} />
+                      </ShownPagesProvider>
+                    </HoldTimerProvider>
+                  </SeekTargetsProvider>
+                </CueProvider>
+              </Room>
             </PlayerContext>
           </RegistryContext>,
         ),
@@ -242,6 +282,16 @@ export const mountSeekReader = (
             it({ nativeEvent: { layout: { x: 0, y: 0, width: 350, height } }, timeStamp: 0 }),
           );
         });
+      /** The entry `Seek` is laid out `height` points tall, as the platform's layout tells it (the system's text size). */
+      const entry = (height: number) =>
+        acted(() => {
+          const told = Option.flatMap(find('hymn-word-seek'), (it) =>
+            Option.liftPredicate(Reflect.get(it, '__reactLayoutHandler'), Predicate.isFunction),
+          );
+          Option.map(told, (it) =>
+            it({ nativeEvent: { layout: { x: 0, y: 0, width: 64, height } }, timeStamp: 0 }),
+          );
+        });
       const chord = () =>
         Option.fromNullishOr(
           host.querySelector<HTMLElement>('[role="button"][data-testid^="chord-"]'),
@@ -262,6 +312,17 @@ export const mountSeekReader = (
         /** The page's viewport is laid out `height` points tall. */
         lay,
         panel,
+        entry,
+        /** The bar's `#` takes `points` over the page's foot (`FindRoom`), as the player tells the screens when it moves. */
+        room: (points: number) => acted(() => told.set(points)),
+        /**
+         * How far the bottom edge of the element `id` stands over the page's
+         * foot, as the page places it: none while it is not drawn.
+         */
+        rise: (id: string) =>
+          Option.map(find(id), (found) =>
+            riseOf(found, Option.getOrThrow(Option.fromNullishOr(host.firstElementChild))),
+          ),
         /** The page is shown, or another covers it. */
         show: (visible: boolean) => acted(() => seen.show(pageOf(visible))),
         press: (id: string) => acted(() => Option.map(find(id), (found) => found.click())),

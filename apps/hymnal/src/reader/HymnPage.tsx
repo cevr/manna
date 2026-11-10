@@ -45,6 +45,7 @@ import {
 import {
   type ColorValue,
   type HostInstance,
+  type LayoutChangeEvent,
   Pressable,
   ScrollView,
   type StyleProp,
@@ -74,6 +75,7 @@ import { color, useAccent } from '~/color';
 import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
 import { RISE } from '~/player/bar';
+import { useFindRoom } from '~/player/context';
 
 import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
 import { aboutHref } from './About';
@@ -104,8 +106,10 @@ import {
 /** The page's padding over the head and under the last words, outside a held seek's. */
 const PAGE_TOP = 8;
 const PAGE_FOOT = 48;
-/** The space between the seek's controls and the words they leave free. */
+/** The space between the seek's controls, the words they leave free, and the `#` under them. */
 const SEEK_GAP = 8;
+/** The entry's height until its layout tells it: its least, a 48 pt target. */
+const SEEK_ENTRY = 48;
 
 /**
  * What the page reads its chords and its setting from: the stored chords
@@ -175,9 +179,12 @@ export const HymnPage = memo(function HymnPage({
   const seek = useWordSeek({ number: hymn.number, layout, host: follow.preview });
   const timer = useHoldTimer();
   const chordTouch = useMemo(() => chordTouchOf(timer.now), [timer]);
+  const dock = RISE + Math.max(0, useFindRoom()) + SEEK_GAP;
+  const [entry, setEntry] = useState(SEEK_ENTRY);
   const [room, setRoom] = useState(0);
+  const foot = dock + entry + room;
   const { cover } = follow;
-  useLayoutEffect(() => cover(RISE + room), [cover, room]);
+  useLayoutEffect(() => cover(foot), [cover, foot]);
   const holding = Option.isSome(seek.via);
   return (
     <View style={styles.frame}>
@@ -233,7 +240,7 @@ export const HymnPage = memo(function HymnPage({
         </ScrollView>
       </Scroll>
       {holding && (
-        <View pointerEvents="none" style={[styles.middle, { bottom: RISE + room }]}>
+        <View pointerEvents="none" style={[styles.middle, { bottom: foot }]}>
           <View testID="reader-seek-marker" style={[styles.marker, { backgroundColor: accent }]} />
           {Option.exists(seek.target, (target) => target._tag === 'Line') && (
             <Text testID="reader-seek-line-only" style={styles.timingNote}>
@@ -247,9 +254,7 @@ export const HymnPage = memo(function HymnPage({
           <ResumeFollow onPress={follow.resume} />
         </View>
       )}
-      <View pointerEvents="box-none" style={styles.overBar}>
-        <SeekControls seek={seek} onRoom={setRoom} />
-      </View>
+      <SeekControls seek={seek} bottom={dock} onRoom={setRoom} onEntry={setEntry} />
     </View>
   );
 });
@@ -272,10 +277,16 @@ const useLayoutKey = (reading: ReadingSettings, chords: boolean, style: ChordSty
  */
 function SeekControls({
   seek,
+  bottom,
   onRoom,
+  onEntry,
 }: {
   readonly seek: WordSeek;
+  /** How far over the page's foot the dock stands: over the bar's rise and the `#` (`useFindRoom`). */
+  readonly bottom: number;
   readonly onRoom: (points: number) => void;
+  /** The entry's laid-out height, which grows with the system's text size. */
+  readonly onEntry: (points: number) => void;
 }) {
   const open = Option.contains(seek.via, 'steps');
   const available = useSeekAvailable(seek);
@@ -308,7 +319,7 @@ function SeekControls({
     />
   );
   return (
-    <View pointerEvents="box-none" style={styles.seekDock}>
+    <View testID="reader-seek-dock" pointerEvents="box-none" style={[styles.seekDock, { bottom }]}>
       {open && (
         <View
           testID="reader-seek-controls"
@@ -351,6 +362,7 @@ function SeekControls({
         title="Seek"
         disabled={!available}
         onPress={() => seek.begin('steps')}
+        onLayout={(event) => onEntry(event.nativeEvent.layout.height)}
         ref={keepEntry}
       />
     </View>
@@ -370,6 +382,7 @@ function SeekButton({
   title = label,
   disabled = false,
   onPress,
+  onLayout,
   ref,
 }: {
   readonly id: string;
@@ -377,6 +390,7 @@ function SeekButton({
   readonly title?: string;
   readonly disabled?: boolean;
   readonly onPress: () => void;
+  readonly onLayout?: (event: LayoutChangeEvent) => void;
   readonly ref?: Ref<HostInstance>;
 }) {
   const accent = useAccent();
@@ -384,6 +398,7 @@ function SeekButton({
     <Pressable
       ref={ref}
       testID={id}
+      onLayout={onLayout}
       role="button"
       aria-label={label}
       aria-disabled={disabled}
@@ -667,7 +682,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: 12,
     alignItems: 'flex-end',
     gap: SEEK_GAP,
   },
