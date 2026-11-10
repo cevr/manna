@@ -4,7 +4,7 @@ import { TestClock } from 'effect/testing';
 
 import { act } from 'react';
 
-import { Command } from '~/player/player';
+import { Command, Player } from '~/player/player';
 import { RISE } from '~/player/bar';
 import { drag, longPress } from '~/test/gesture';
 
@@ -200,6 +200,109 @@ it.effect('the platform cancels a held finger once; a neighbour page never holds
       Option.isSome(neighbour.taken),
       app.registry.get(app.player.hold.state)._tag,
     ]).toEqual([[[], ['seek-grab', 'seek-tick'], [], false], false, 'Free']);
+  }).pipe(Effect.scoped),
+);
+
+it.effect('on the web only a still primary pointer holds, and only its main lift plays', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+    yield* inAct(app.play);
+    const ignored = [{ button: 2 }, { primary: false }, { x: 10 }].map((init) => {
+      page.pointer('pointerdown', init);
+      const armed = page.waiting().length;
+      page.pointer('pointerup', init);
+      return armed;
+    });
+    page.pointer('pointerdown');
+    page.pointer('pointermove', { x: 100, y: 189 });
+    const swiped = page.waiting().length;
+    page.pointer('pointerup', { x: 100, y: 189 });
+    const before = [page.heldBack('wheel'), page.heldBack('touchmove'), page.touch()];
+    page.pointer('pointerdown');
+    page.pointer('pointermove', { x: 103, y: 196 });
+    const armed = page.waiting();
+    page.elapse();
+    yield* inAct(app.untilHold('Held'));
+    const during = [page.heldBack('wheel'), page.heldBack('touchmove'), page.touch()];
+    page.pointer('pointerdown', { id: 2, primary: false, x: 300, y: 300 });
+    page.pointer('pointermove', { id: 2, x: 300, y: 0 });
+    page.pointer('pointerup', { id: 2, x: 300, y: 0 });
+    page.pointer('pointerup', { button: 2, x: 103, y: 196 }, 'area');
+    const others = choiceShown(page);
+    const trail = [
+      [103 - WORD_STEP, 196 - LINE_STEP],
+      [103 + WORD_STEP, 196 - 2 * LINE_STEP - 30],
+      [103 - WORD_STEP, 196 - LINE_STEP],
+    ].map(([x = 0, y = 0]) => {
+      page.pointer('pointermove', { x, y }, 'area');
+      return choiceShown(page);
+    });
+    page.pointer('pointerup', { x: 103 - WORD_STEP, y: 196 - LINE_STEP }, 'area');
+    page.pointer('lostpointercapture', {}, 'area');
+    yield* inAct(app.untilHold('Free'));
+    expect([ignored, swiped, before, armed, during, others]).toEqual([
+      [0, 0, 0],
+      0,
+      [false, false, ['pan-y', false]],
+      [350],
+      [true, true, ['none', true]],
+      [0, 1, true],
+    ]);
+    expect([trail, seeks(app), page.cues, page.touch()]).toEqual([
+      [
+        [1, 0, true],
+        [2, 1, true],
+        [1, 0, true],
+      ],
+      [6100],
+      ['seek-grab', 'seek-tick', 'seek-tick', 'seek-tick', 'seek-release'],
+      ['pan-y', false],
+    ]);
+  }).pipe(Effect.scoped),
+);
+
+it.effect('on the web a cancel, a lost capture or Escape cancels once; a late timer is inert', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+    yield* inAct(app.play);
+    page.pointer('pointerdown');
+    const menu = page.heldBack('contextmenu');
+    page.pointer('pointerup');
+    const lifted = page.waiting().length;
+    const ends = (['pointercancel', 'lostpointercapture', 'Escape'] as const).map((end) =>
+      Effect.gen(function* () {
+        yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
+        page.pointer('pointerdown');
+        page.elapse();
+        yield* inAct(app.untilHold('Held'));
+        page.pointer('pointermove', { y: 200 - LINE_STEP }, 'area');
+        if (end === 'Escape') page.key('Escape');
+        else page.pointer(end, {}, 'area');
+        page.pointer('pointerup', { y: 200 - LINE_STEP }, 'area');
+        yield* inAct(app.untilHold('Free'));
+        return [page.chosenLines(), [...page.touch()]];
+      }),
+    );
+    const ended = yield* Effect.all(ends);
+    yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
+    page.press('hymn-word-seek');
+    yield* inAct(app.untilHold('Held'));
+    page.key('Escape');
+    yield* inAct(app.untilHold('Free'));
+    const steps = Option.isSome(page.find('reader-seek-controls'));
+    expect([menu, lifted, ended, steps, seeks(app)]).toEqual([
+      true,
+      0,
+      Array.from({ length: 3 }, () => [[], ['pan-y', false]]),
+      false,
+      [],
+    ]);
+    expect(page.cues).toEqual([
+      ...Array.from({ length: 3 }, () => ['seek-grab', 'seek-tick']).flat(),
+      'seek-grab',
+    ]);
   }).pipe(Effect.scoped),
 );
 

@@ -18,7 +18,7 @@ import { CueProvider } from '~/feel/cue';
 import { targetsOf } from '~/follow/seek-targets';
 import { PlayerContext } from '~/player/context';
 import { HymnPage } from '~/reader/HymnPage';
-import { SeekTargetsProvider } from '~/reader/word-seek';
+import { type HoldTimer, HoldTimerProvider, SeekTargetsProvider } from '~/reader/word-seek';
 
 import { readerOn } from './reader';
 import { type openWordSeek, seekText, seekTimeline } from './word-seek';
@@ -74,6 +74,16 @@ export const mountSeekReader = (
       const cues: Array<string> = [];
       const scrolls: Array<{ readonly y: number; readonly animated: boolean }> = [];
       const reader = { ...readerOn(), book: noChords };
+      const waiting = new Map<number, { readonly ms: number; readonly run: () => void }>();
+      let timers = 0;
+      const timer: HoldTimer = {
+        after: (ms, run) => {
+          timers += 1;
+          const id = timers;
+          waiting.set(id, { ms, run });
+          return () => void waiting.delete(id);
+        },
+      };
       const host = document.createElement('div');
       document.body.append(host);
       const root = createRoot(host);
@@ -84,7 +94,9 @@ export const mountSeekReader = (
               <PlayerContext value={Option.some(app.player)}>
                 <CueProvider value={(cue) => void cues.push(cue._tag)}>
                   <SeekTargetsProvider value={targetsFor}>
-                    <HymnPage hymn={seekText} reader={reader} shown={visible} area={area} />
+                    <HoldTimerProvider value={timer}>
+                      <HymnPage hymn={seekText} reader={reader} shown={visible} area={area} />
+                    </HoldTimerProvider>
                   </SeekTargetsProvider>
                 </CueProvider>
               </PlayerContext>
@@ -122,6 +134,10 @@ export const mountSeekReader = (
             told({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } }, timeStamp: 0 });
         });
       lay(viewport);
+      const targetOf = (on: 'words' | 'area') => {
+        if (on === 'words') return Option.fromNullishOr(lines()[0]);
+        return find('reader-word-seek-area');
+      };
       return {
         host,
         cues,
@@ -156,6 +172,72 @@ export const mountSeekReader = (
                 one instanceof HTMLElement && one.style.textDecorationLine.includes('underline'),
             ),
           ),
+        /** The hold timers waiting, by their time. */
+        waiting: () => [...waiting.values()].map(({ ms }) => ms),
+        /** The waiting hold timers' time comes. */
+        elapse: () =>
+          act(() => {
+            const due = [...waiting.values()];
+            waiting.clear();
+            due.forEach(({ run }) => run());
+          }),
+        /**
+         * A pointer event on the web: on the first sung line's words, or on
+         * the lyric area itself, where a captured pointer's events arrive
+         * wherever it is.
+         */
+        pointer: (
+          type:
+            | 'pointerdown'
+            | 'pointermove'
+            | 'pointerup'
+            | 'pointercancel'
+            | 'lostpointercapture',
+          {
+            id = 1,
+            x = 100,
+            y = 200,
+            button = 0,
+            primary = true,
+          }: {
+            readonly id?: number;
+            readonly x?: number;
+            readonly y?: number;
+            readonly button?: number;
+            readonly primary?: boolean;
+          } = {},
+          on: 'words' | 'area' = 'words',
+        ) =>
+          act(() => {
+            const target = Option.getOrThrow(targetOf(on));
+            target.dispatchEvent(
+              new PointerEvent(type, {
+                pointerId: id,
+                isPrimary: primary,
+                button,
+                clientX: x,
+                clientY: y,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          }),
+        /** Whether the area held back a page scroll of `type` on its words. */
+        heldBack: (type: 'wheel' | 'touchmove' | 'contextmenu') => {
+          const event = new Event(type, { bubbles: false, cancelable: true });
+          Option.map(find('reader-word-seek-area'), (area) => area.dispatchEvent(event));
+          return event.defaultPrevented;
+        },
+        /** A key pressed on the page. */
+        key: (key: string) =>
+          act(() => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+          }),
+        /** Whether the area lets the browser scroll a touch on it, and whether it holds pointer `id`. */
+        touch: (id = 1) => {
+          const it = Option.getOrThrow(find('reader-word-seek-area'));
+          return [it.style.touchAction, it.hasPointerCapture(id)] as const;
+        },
         unmount: () => {
           act(() => root.unmount());
           host.remove();

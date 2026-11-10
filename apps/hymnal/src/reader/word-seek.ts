@@ -54,6 +54,8 @@ export const SLOP = 10;
 export const LINE_STEP = 48;
 /** The drag that moves the choice one word, in points. */
 export const WORD_STEP = 24;
+/** The screen's left strip, in points, kept for the back swipe: no hold starts in it. */
+export const BACK_STRIP = 20;
 
 /** The hold's first choice as a place among the targets: its eligible row, and its word's column (0 on a line timed whole). */
 export interface Anchor {
@@ -213,8 +215,15 @@ export const spoken = (described: Described): string => {
 /** Which pointer, if any, holds the lyric area, and where it landed. */
 export type Contact = Data.TaggedEnum<{
   Idle: {};
-  /** A still finger waits for the hold. */
-  Candidate: { readonly id: number; readonly x: number; readonly y: number };
+  /** A still finger waits for the hold: where it landed, and where it is now. */
+  Candidate: {
+    readonly id: number;
+    readonly x: number;
+    readonly y: number;
+    readonly nx: number;
+    readonly ny: number;
+  };
+  /** The hold took: the drag is read from where the finger was then. */
   Held: { readonly id: number; readonly x: number; readonly y: number };
 }>;
 export const Contact = Data.taggedEnum<Contact>();
@@ -270,16 +279,16 @@ export const contactAfter = (
 ): readonly [Contact, PointerEffect] =>
   PointerInput.$match(input, {
     Down: ({ id, primary, button, x, y, startable }) => {
-      if (contact._tag !== 'Idle' || !primary || button !== 0 || !startable)
+      if (contact._tag !== 'Idle' || !primary || button !== 0 || !startable || x < BACK_STRIP)
         return [contact, none] as const;
-      return [Contact.Candidate({ id, x, y }), PointerEffect.Arm()] as const;
+      return [Contact.Candidate({ id, x, y, nx: x, ny: y }), PointerEffect.Arm()] as const;
     },
     Move: ({ id, x, y }) => {
       if (contact._tag === 'Idle' || contact.id !== id) return [contact, none] as const;
       if (contact._tag === 'Candidate') {
         if (Math.hypot(x - contact.x, y - contact.y) > SLOP)
           return [idle, PointerEffect.Disarm()] as const;
-        return [contact, none] as const;
+        return [Contact.Candidate({ ...contact, nx: x, ny: y }), none] as const;
       }
       return [contact, PointerEffect.Drag({ dx: x - contact.x, dy: y - contact.y })] as const;
     },
@@ -303,7 +312,7 @@ export const contactAfter = (
       if (contact._tag !== 'Candidate' || contact.id !== id) return [contact, none] as const;
       if (!acquired) return [idle, none] as const;
       return [
-        Contact.Held({ id, x: contact.x, y: contact.y }),
+        Contact.Held({ id, x: contact.nx, y: contact.ny }),
         PointerEffect.Capture({ id }),
       ] as const;
     },
@@ -434,6 +443,27 @@ const ChordTouchContext = createContext<ChordTouch>({ pressed: () => {}, recent:
 export const ChordTouchProvider = ChordTouchContext.Provider;
 
 export const useChordTouch = (): ChordTouch => use(ChordTouchContext);
+
+/** When a still pointer's hold time comes, on the web: the host's timer, or a test's by hand. */
+export interface HoldTimer {
+  /** Runs `run` after `ms`; the answer stops it. */
+  readonly after: (ms: number, run: () => void) => () => void;
+}
+
+const hostTimer: HoldTimer = {
+  after: (ms, run) => {
+    // oxlint-disable-next-line effect/noGlobals -- the web adapter's hold timer: a host timer stopped with the pointer and the area, with no Effect run per touch.
+    const timer = setTimeout(run, ms);
+    // oxlint-disable-next-line effect/noGlobals -- the same host timer, stopped.
+    return () => clearTimeout(timer);
+  },
+};
+
+const HoldTimerContext = createContext<HoldTimer>(hostTimer);
+
+export const HoldTimerProvider = HoldTimerContext.Provider;
+
+export const useHoldTimer = (): HoldTimer => use(HoldTimerContext);
 
 /** What a platform's hold adapter wraps: the page's sung words, and the page's held seek. */
 export interface SeekAreaProps {
