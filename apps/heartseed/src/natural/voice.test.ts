@@ -122,6 +122,59 @@ describe('the natural voice source', () => {
       }
       return true;
     };
+    const reached = {
+      middleGap: 0,
+      endGap: 0,
+      overlap: 0,
+      duplicate: 0,
+      pastTotal: 0,
+      empty: 0,
+      notWhole: 0,
+      badTotal: 0,
+    };
+    const check = (ranges: ReadonlyArray<Range>, total: number) => {
+      expect(
+        census(ranges, total).length === 0,
+        `${ranges.map(({ from, count }) => `${from}+${count}`).join(',')}; total=${total}`,
+      ).toBe(count(ranges, total));
+    };
+    const checkFault = (
+      ranges: ReadonlyArray<Range>,
+      total: number,
+      fault: keyof typeof reached,
+    ) => {
+      expect(count(ranges, total), fault).toBe(false);
+      reached[fault]++;
+      check(ranges, total);
+    };
+    const nearPartitions = (partition: ReadonlyArray<Range>, total: number) => {
+      checkFault(partition, total + 0.5, 'badTotal');
+      const selected = whole(partition.length);
+      for (const range of partition.slice(selected, selected + 1)) {
+        const rest = partition.filter((_, index) => index !== selected);
+        const end = range.from + range.count;
+        if (range.from > 0 && end < total) checkFault(rest, total, 'middleGap');
+        if (end === total) checkFault(rest, total, 'endGap');
+        if (range.count > 1) check([...rest, { ...range, count: range.count - 1 }], total);
+        check([...rest, { ...range, from: range.from + 1 }], total);
+        check([...rest, { ...range, count: 0 }], total);
+        checkFault([...partition, { from: total, count: 0 }], total, 'empty');
+        if (range.count >= 3)
+          checkFault(
+            [
+              ...rest,
+              { from: range.from + 1.5, count: range.count - 1.5 },
+              { from: range.from, count: 1.5 },
+            ],
+            total,
+            'notWhole',
+          );
+        checkFault([...partition, range], total, 'duplicate');
+        const extended = [...rest, { ...range, count: range.count + 1 }];
+        if (end < total) checkFault(extended, total, 'overlap');
+        else checkFault(extended, total, 'pastTotal');
+      }
+    };
     for (let trial = 0; trial < 800; trial++) {
       const total = whole(25);
       const partition: Array<Range> = [];
@@ -136,12 +189,13 @@ describe('the natural voice source', () => {
       const arbitrary = Array.from({ length: whole(9) }, () => ({ from: value(), count: value() }));
       for (const ranges of [partition, [...partition, ...partition], arbitrary]) {
         for (const size of [total, value()]) {
-          expect(
-            census(ranges, size).length === 0,
-            `${ranges.map(({ from, count }) => `${from}+${count}`).join(',')}; total=${size}`,
-          ).toBe(count(ranges, size));
+          check(ranges, size);
         }
       }
+      nearPartitions(partition, total);
+    }
+    for (const [fault, reachedCount] of Object.entries(reached)) {
+      expect(reachedCount, fault).toBeGreaterThanOrEqual(1);
     }
     expect(census(RANGES, HISTORIES)).toEqual([]);
     expect([SEED, HISTORIES, STEPS]).toEqual([52_031, 300, 72]);
