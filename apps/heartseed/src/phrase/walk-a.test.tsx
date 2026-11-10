@@ -9,7 +9,9 @@
  * record; the disk; the root's frame rule). Its floors: new and reviewed
  * phrases, Listen on a phrase, a making while a phrase's recital listens
  * (at the session seam), a join under first letters, a launch later on a
- * day a new phrase was said, Chatham, and `Begin` taken from home.
+ * day a new phrase was said, Chatham, `Begin` taken from home, and the
+ * end of a run (`The field is tended`) with nothing, one and several
+ * verses grown, one of them grown by its phrase.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -32,6 +34,10 @@ describe('phrases on Today, walked (a)', () => {
       'zone:Pacific/Chatham': 1,
       'day:later-after-new-phrase': 1,
       'home:begin': 5,
+      'end:none': 1,
+      'end:one': 1,
+      'end:many': 1,
+      'end:phrase': 1,
     };
     expect(Object.entries(floors).filter(([kind, floor]) => (cover[kind] ?? 0) < floor)).toEqual(
       [],

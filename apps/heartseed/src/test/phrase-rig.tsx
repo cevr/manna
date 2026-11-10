@@ -36,7 +36,13 @@
  * action, `Listen` and the words under the cue are `run-model.ts`'s run
  * over `session-model.ts`'s plan of the pieces (`passages-model.ts`'s or
  * `promise-model.ts`'s, phrased and expanded by `phrase-model.ts`), each
- * cue `joinCueRule`'s, held after every step; the disk keeps every start
+ * cue `joinCueRule`'s, held after every step. Once every item of a run
+ * not empty is done, Today is the end: the heading `The field is tended`,
+ * no counts line, and the grew line and grown names by `tendedModel` over
+ * the run's baselines (a phrase's verse listed once, at the verse's stage
+ * on the field), tallied `end:none`, `end:one` or `end:many`, and
+ * `end:phrase` when a phrase alone put its verse on the list; home's
+ * counts line stays the plan's. The disk keeps every start
  * key but the minutes after a tap, and gains only each recital's record.
  * Every frame of every launch holds to the root's frame rule (`watchRoot`,
  * the garden read), checked after every step and at each launch's leave.
@@ -81,12 +87,24 @@ import {
   withPhrasesRule,
 } from './phrase-model';
 import { piecesModel } from './promise-model';
-import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } from './run-model';
+import {
+  actionModel,
+  grewLine,
+  madeModel,
+  NO_RUN,
+  nextModel,
+  shownModel,
+  startedModel,
+  tendedModel,
+} from './run-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
-import { watchRoot } from './root-rule';
+import { END, watchRoot } from './root-rule';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
 import { hostZone, offsetIn, restore, travel } from './zone';
+
+/** The floors of an end settled, by how many verses grew: none, one, several. */
+const END_FLOORS = ['end:none', 'end:one', 'end:many'] as const;
 
 const PROMISE = passage.reference;
 const words = (text: string) => sourceWords(text).length;
@@ -347,20 +365,23 @@ export const mount = async (
     });
     return true;
   };
-  /** Today as the walk compares it: the reference, counts line, action, Listen, and the words under the cue as a digest. */
+  const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
+  /** Today as the walk compares it: the headings, the reference, counts line, action, Listen, the words under the cue as a digest, and the end's grew line and grown names. */
   const today = () => {
     const references = [...host.querySelectorAll('[data-testid="reference"]')].map(textOf);
     const verse = verseIn(host);
     const buttons = [...host.querySelectorAll('[role="button"]')].map(nameOf);
     return {
+      headings: headings(),
       references,
       counts: [...host.querySelectorAll('[data-testid="session"]')].map(textOf),
       action: buttons.filter((name) => ['Say it', 'Listening', 'Next'].includes(name)),
       listen: buttons.includes('Listen'),
       verse,
+      grew: [...host.querySelectorAll('[data-testid="grew"]')].map(textOf),
+      grown: [...host.querySelectorAll('[data-testid="grown"]')].map(nameOf),
     };
   };
-  const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
   /** Home as the walk compares it: its headings, its counts line, and whether `Begin` shows. */
   const home = () => ({
     headings: headings(),
@@ -428,6 +449,12 @@ class PhraseWalk {
   minutes: Minutes = 5;
   minutesTapped = false;
   run = NO_RUN;
+  /** The end's want kept by the run and the write count it was computed at. */
+  endWant: {
+    run: typeof NO_RUN;
+    writes: number;
+    tended: ReturnType<typeof tendedModel>;
+  } | null = null;
   app: Mounted | null = null;
   failure: string | null = null;
   /** Whether the day's new piece was said today, and whether it was a phrase; null before it is. */
@@ -538,13 +565,31 @@ class PhraseWalk {
     return false;
   }
 
+  /** The end's want while the run model is done: the run's grown verses by `tendedModel` over its items' baselines and the disk's recalls, computed once per run and write count, so a poll reads it again for free; null off the end. */
+  tended() {
+    if (this.run.plan === null || shownModel(this.run, this.recallsNow) !== null) return null;
+    const kept = this.endWant;
+    if (kept !== null && kept.run === this.run && kept.writes === this.store.writes)
+      return kept.tended;
+    const tended = tendedModel(this.run, [], [...this.plants().values()].flat());
+    this.endWant = { run: this.run, writes: this.store.writes, tended };
+    return tended;
+  }
+
+  /** The counts line home's foot shows: the plan's, none before a plan. */
+  homeWant() {
+    return this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)];
+  }
+
   want() {
     const shown = shownModel(this.run, this.recallsNow);
     const action = actionModel(this.run, this.recallsNow);
     const piece = shown === null ? undefined : pieceRule(this.pieces(), shown.reference);
+    const tended = this.tended();
     return {
+      headings: [tended === null ? 'Today' : END],
       references: shown === null ? [] : [shown.reference],
-      counts: this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)],
+      counts: tended === null ? this.homeWant() : [],
       action: action === null ? [] : [action],
       listen: listenModel(this.run, this.recallsNow, {
         unread: false,
@@ -558,6 +603,8 @@ class PhraseWalk {
           : action === 'Next'
             ? RESULT
             : verseWant(piece.text, joinCueRule(this.plants(), shown.reference)),
+      grew: tended === null ? [] : [grewLine(tended.length)],
+      grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
     };
   }
 
@@ -594,7 +641,24 @@ class PhraseWalk {
     }
     const faults = [...this.mounted.rooted(), ...this.diskFaults()];
     if (faults.length > 0) this.fail(`${step}: ${faults.join(', ')}`);
+    if (this.failure === null) this.tallyEnd();
     return this.failure === null;
+  }
+
+  /** An end settled, by how many verses grew (`end:none`, `end:one`, `end:many`), and `end:phrase` when a phrase of the run grew its verse onto the end's list. */
+  tallyEnd() {
+    const tended = this.tended();
+    if (tended === null) return;
+    bump(this.cover, END_FLOORS[Math.min(tended.length, 2)] ?? 'end:many');
+    const verses = new Set(tended.map((each) => each.reference));
+    const plan = this.run.plan ?? [];
+    const folded = plan.some((item) => {
+      const verse = phraseOfRule(item.reference)?.verse;
+      return (
+        verse !== undefined && verses.has(verse) && !plan.some((other) => other.reference === verse)
+      );
+    });
+    if (folded) bump(this.cover, 'end:phrase');
   }
 
   /** The launch under way left, its frames' root faults failing the walk first. */
@@ -637,7 +701,7 @@ class PhraseWalk {
   /** Home as the model has it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; no fault of the root's rule or the disk's. */
   onHome(step: string, begin: boolean) {
     const seen = this.mounted.home();
-    const expected = { headings: ['Your field'], counts: this.want().counts, begin };
+    const expected = { headings: ['Your field'], counts: this.homeWant(), begin };
     if (JSON.stringify(seen) !== JSON.stringify(expected))
       return this.fail(
         `${step}: home showed ${JSON.stringify(seen)}, expected ${JSON.stringify(expected)}`,

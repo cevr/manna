@@ -6,8 +6,9 @@
  * layer teaching Fear), four days, each launch through home's `Begin`,
  * held to the walk's oracle after every step. Its floors: Fear's phrases
  * reviewed, a making while a phrase's recital listens (at the session
- * seam), the phrases'
- * records, and `Begin` taken from home.
+ * seam), the phrases' records, `Begin` taken from home, and the end of a
+ * run (`The field is tended`) with several verses grown, one of them grown
+ * by its phrase.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -25,6 +26,8 @@ describe('phrases on Today, walked (c2)', () => {
       'held:phrase-made': 2,
       'record:phrase': 6,
       'home:begin': 5,
+      'end:many': 1,
+      'end:phrase': 1,
     };
     expect(Object.entries(floors).filter(([kind, floor]) => (cover[kind] ?? 0) < floor)).toEqual(
       [],

@@ -2499,6 +2499,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     onto Off, a relaunch; a Minutes trip, a return, the field, a tap from
     Her to Him, the reading going on through home and the sheet); each
     case's floors met by its own devices.
+  - `test:wake-end`: `src/wake/end.test.tsx`, the same walk leaning toward
+    Listen on devices the other wake parts do not walk: a return taken
+    while the end (`The field is tended`) shows, its making dropping the
+    run, and the new plan's item ending the end.
   - `test:corpus`: `src/passages/corpus.test.ts`, every verse of the KJV
     through `versesOf` against `test/passages-model.ts`, every book's
     chapter bounds, and the module's reads in a child process

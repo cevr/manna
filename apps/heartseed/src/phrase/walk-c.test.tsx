@@ -5,7 +5,8 @@
  * root (`test/phrase-rig.tsx`), part c, file one: generated device 4, four
  * days, each launch through home's `Begin`, held to the walk's oracle
  * after every step. Its floors: joined verses reviewed, a join under first
- * letters, Listen on a whole verse, and `Begin` taken from home. The
+ * letters, Listen on a whole verse, `Begin` taken from home, and the end
+ * of a run (`The field is tended`) with one and several verses grown. The
  * part's other file is `walk-c2.test.tsx`.
  */
 
@@ -23,6 +24,8 @@ describe('phrases on Today, walked (c)', () => {
       'today:join-under-letters': 1,
       'listen:verse': 1,
       'home:begin': 5,
+      'end:one': 1,
+      'end:many': 1,
     };
     expect(Object.entries(floors).filter(([kind, floor]) => (cover[kind] ?? 0) < floor)).toEqual(
       [],

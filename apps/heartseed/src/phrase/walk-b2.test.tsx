@@ -7,8 +7,10 @@
  * oracle after every step. Its floors: Listen on a phrase, a making while
  * a phrase's recital listens (at the session seam), a launch later on a
  * day a new phrase was
- * said (no second new piece), six days after the first, and `Begin` taken
- * from home.
+ * said (no second new piece), six days after the first, `Begin` taken
+ * from home, and the end of a run (`The field is tended`) with nothing,
+ * one and several verses grown, one of them grown by its phrase (the
+ * part's end floors: file one's device shows no end).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -25,6 +27,10 @@ describe('phrases on Today, walked (b2)', () => {
       'day:later-after-new-phrase': 1,
       'day:next': 6,
       'home:begin': 5,
+      'end:none': 1,
+      'end:one': 1,
+      'end:many': 1,
+      'end:phrase': 1,
     };
     expect(Object.entries(floors).filter(([kind, floor]) => (cover[kind] ?? 0) < floor)).toEqual(
       [],
