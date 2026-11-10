@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction -- the cases keep a device's disk in a plain map, run the app's calls through promise-run calls, and compare values as JSON text. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- the cases keep a device's disk in a plain map, run the app's calls through promise-run calls, and compare values as JSON text. */
 
 /**
  * The session over a planted list (hshandbook R15, C7): the app's own
