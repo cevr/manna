@@ -1,7 +1,8 @@
 /**
- * What grew in a run, as pure code the end of a run will draw (hshomejoy):
- * each verse of the plan's done items whose plant ranks higher now than
- * when the plan was made.
+ * What grew in a run, as pure code: each verse of the run's done items
+ * whose plant ranks higher now than when its item was planned, and when
+ * Today is the end of a run (`tendedOf`): every item of the visit and the
+ * plan done, and none held.
  */
 
 import { Array as Arr, Option } from 'effect';
@@ -9,6 +10,7 @@ import { Array as Arr, Option } from 'effect';
 import { plantOf, STAGES, stageOf, type Plant, type ReadGarden, type Stage } from '../garden';
 import { verseOf } from '../home';
 import { isDone, type Item, type Plan } from '../session';
+import type { SessionView } from '../session/service';
 
 /** A verse that grew in a run, and its stage as the field shows it now. */
 export interface Grown {
@@ -54,3 +56,26 @@ export const grownOf = (plan: Plan, garden: ReadGarden): readonly Grown[] =>
       .map((item) => verseOf(item.reference)),
     (a, b) => a === b,
   ).map((verse) => ({ reference: verse, stage: stageNow(garden, verse) }));
+
+/**
+ * What the end of a run shows over `view` and `garden`: none while no plan
+ * is made, the garden is unread, an item is held, the run (the visit's
+ * items, then the plan's) is empty, or an item of it is not done; else what
+ * grew over the run, in run order. It never follows `shownOf`'s `Done`,
+ * which also holds over an item left with no piece.
+ */
+export const tendedOf = (
+  view: SessionView,
+  garden: Option.Option<ReadGarden>,
+): Option.Option<readonly Grown[]> =>
+  Option.flatMap(Option.all({ plan: view.plan, read: garden }), ({ plan, read }) =>
+    Option.some([...view.visit.map((each) => each.item), ...plan.items]).pipe(
+      Option.filter(
+        (items) =>
+          Option.isNone(view.held) &&
+          Arr.isArrayNonEmpty(items) &&
+          items.every((item) => isDone(read, item)),
+      ),
+      Option.map((items) => grownOf({ items }, read)),
+    ),
+  );
