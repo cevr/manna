@@ -179,7 +179,8 @@ Heartseed has no journey files yet. The features:
   `Start here with Isaiah 41:10`.
 - [features/run.md](features/run.md): Today runs the session's plan one
   piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
-  and the done state with no `Say it`; the action button and the grades in
+  and the end (`The field is tended`, what grew, `Your field` the way on)
+  with no `Say it`; the action button and the grades in
   a fixed footer; the verse due again after the first minute, through a
   `Minutes` tap in home's Settings. Run it from `first.md`'s `first-home`: `fade.md`, `grow.md`,
   `sayit.md` and `session.md` name the steps of it that are theirs.

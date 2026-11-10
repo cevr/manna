@@ -30,8 +30,10 @@ open sheet), at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
 (`passage.md`). An item is done once its piece (a verse or a phrase,
 `phrase.md`) holds a new recall.
-Today runs the plan one piece at a time (`run.md`): when the line reads
-`Nothing to tend now`, Today shows the done state, with no `Say it`.
+Today runs the plan one piece at a time (`run.md`): after a run's last
+`Next` it shows the end (`The field is tended` and what grew); when the
+run holds nothing and the line reads `Nothing to tend now`, Today shows
+the done state. Neither has `Say it`.
 
 A verse planted in the evening (18:00 to 03:59 local) is not due before
 04:00 the next morning. Otherwise FSRS's due date rules, so after the first
@@ -81,7 +83,7 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
   tap in home's Settings works too). The evening rule stays: a planting from 18:00 to
   03:59 local shows `Nothing to tend now` until 04:00 the next morning.
 - `session-tend`: replaced by `run.md`'s `run-recite` and `run-next`: the
-  recital leaves `Next`, and `Next` the done state, never `Say it`.
+  recital leaves `Next`, and `Next` the end of the run, never `Say it`.
 - `session-field`: Today's `Your field` shows home's foot with the same
   counts line, and no `Begin` in the done state.
 

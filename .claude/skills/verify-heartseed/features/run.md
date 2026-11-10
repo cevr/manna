@@ -8,8 +8,14 @@ the first verse not done of a visit (a promise tapped on When I need…,
 piece, first letters for a join or at a seed, nothing from a blade on), its stage line,
 and `Say it`. Once the recital's recall is kept, the result and the grades
 stay, and the button reads `Next`. `Next` moves on to the next item. After
-the last item, and whenever the plan holds nothing to tend, Today shows the
-done state: under the header there is only the counts line,
+the last item's `Next`, Today shows the end of the run: the heading
+`The field is tended`, the header's `Your field` the only button, and in
+the scroll view a sun, the line `Nothing grew this time.`,
+`1 grew a stage.` or `<n> grew a stage.`, and one image per grown verse
+labelled `<reference>, <stage>` (the visit's verses first, then the
+plan's). There is no counts line, verse, grade or other button. When the
+run holds nothing to tend (no visit and an empty plan), Today shows the
+done state: the heading `Today` and under it only the counts line,
 `Nothing to tend now`. There is no reference, no verse, no grade and no
 button.
 
@@ -62,9 +68,12 @@ of `first-planted`.
   window, with no scroll.
 - `run-held-field`: `Your field`, then `Begin`: the same result and
   `Next`.
-- `run-next`: `Next` gives Today's done state: the counts line
-  `Nothing to tend now` alone under the header, and no `Say it`, `Next`,
-  `Grade` or `Isaiah 41:10` node.
+- `run-next`: `Next` gives the end (`home.md`'s `home-end`): the heading
+  `The field is tended` and no heading `Today`, the text
+  `1 grew a stage.`, an image labelled `Isaiah 41:10, blade`, a button
+  `Your field`, and no `Nothing to tend now`, `Say it`, `Next`, `Grade`,
+  `Settings`, `Minutes` or `Voice`. Record how the tree shows the image's
+  `role="img"`.
 - `run-listening`: during `run-recite`'s recital, a raw snapshot taken at
   once after `Say it` shows `Listening`, and no `Minutes` radio, no
   `Voice`, no `Your field`, no `Settings`, no `Plant`, no `Remove` and no
@@ -74,7 +83,9 @@ of `first-planted`.
   passage is due again after `run-recite` (wait 15 minutes, then
   `Your field`, `Settings`, the checked `5 min`, `Done`, `Begin`), Today shows `1 to tend`, no word node labelled (nothing
   is cued at a blade), and `Say it`. A recital gives `Stage: ear` and
-  `Grew to an ear.`, then `Next` and the done state.
+  `Grew to an ear.`, then `Next` and the end with `1 grew a stage.` and an
+  image `Isaiah 41:10, ear`. Or, in its place, the grade `Again`, then
+  `Next`: `Nothing grew this time.` and no image.
 - `run-held-settings` (only when the drive started before 16:00 local,
   after `run-second`'s recital, in place of its `Next`): `Your field`
   shows home with the heading `Your field` and `Begin` (the verse just
@@ -133,7 +144,7 @@ sets them.
    `sim tap "label=5 min"`, `sim tap "label=Done"`, `sim snapshot
    run-held-settings` → no heading `Settings`, the counts line
    `Nothing to tend now`, no `Begin`. `run-second`'s last claim (`Next`
-   and the done state) is `run-next`'s already.
+   and the end) is `run-next`'s already, at an ear.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw

@@ -105,8 +105,10 @@ must start empty: uninstall by udid as `first.md` says.
    `sim tap "label=36 of 37 words" --timeout 30` (or the count the replay
    gives), `sim snapshot promise-said` → the stage line, the `Grade`
    group with one radio checked, `Next`, no `Say it`. Then
-   `sim tap "label=Next"`, `sim snapshot promise-next` → the done state
-   (`Nothing to tend now`, no reference) or the plan's item. Then
+   `sim tap "label=Next"`, `sim snapshot promise-next` → the plan's item, or,
+   when the plan holds none, the end: `The field is tended`, its line
+   (record it, such as `1 grew a stage.`) and an image per grown verse,
+   no reference. Record which. Then
    `sim tap "label=Your field"` → a button whose label starts
    `Isaiah 41:10, <stage>`, at the stage `promise-said` showed
    (`, ready today` follows while a plan item on it is open).

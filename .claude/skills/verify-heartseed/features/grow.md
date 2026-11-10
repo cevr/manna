@@ -43,7 +43,7 @@ passage's due: every row below starts from `run.md`'s `run-due`, at
   `Stage: blade`, `Grew to a blade.`, still one `[growth] play` line.
 - `grow-restart`: the app restarted while `Next` is pending: no other stage
   than the store's (`blade`) in the launch frame, no `Grew to` line, then
-  the done state, or the passage at `Stage: blade` with `Say it` when the
+  home's done state, or the passage at `Stage: blade` with `Say it` when the
   new plan holds it.
 - `grow-again`: a third recital (live at `run-second`, the second wait,
   only when the drive started before 16:00 local; else tests only:

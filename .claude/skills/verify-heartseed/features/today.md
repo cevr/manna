@@ -29,7 +29,9 @@ whatever Today holds, and Today holds no `When I need…` (`promise.md`:
 it is on home's bar). The header holds no `Minutes` radio and no `Voice`
 (both are in home's Settings sheet, `home.md`), and at the top of the scroll
 view, above the reference, the counts line (`id=session`), such as
-`Nothing to tend now` (`session.md`). While a new piece's `Listen` reads
+`Nothing to tend now` (`session.md`). At the end of a run the heading reads
+`The field is tended` and the scroll view holds what grew in place of the
+counts line (`run.md`). While a new piece's `Listen` reads
 it, its words show as the reading view (`id=reading`, a `word-<i>` node
 per word, lit as read) in place of `id=passage` (`light.md`).
 

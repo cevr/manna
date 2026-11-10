@@ -43,7 +43,7 @@ aloud:
   voice reads, `Listen` is gone; it comes back at the reading's end
   (finished, failed or interrupted) and after an unheard, cancelled or
   refused recital. A press of `Say it` stops the voice before the
-  recognizer listens. A review, `Next`, the done state and an unread
+  recognizer listens. A review, `Next`, the done state, the end and an unread
   garden never show `Listen`; a making of the plan (a Minutes tap, a
   return, an add or a remove of a passage) does not stop a reading, and a
   tap of `Voice` (home's Settings sheet) onto Off does; a tap from Her to
@@ -1029,10 +1029,21 @@ more than at the plan's making, read from the garden, never from the
 recital's end, so a refused write never moves on), the result and the
 `Grade` group stay, a grade can still change, and the button reads `Next`;
 a recital that is unheard, cancelled or refused leaves `Say it` on the
-same item. `Next` drops the hold. With no item left (every item done and
-none held, or a plan with no items) Today shows the done state: the
-scroll view holds the counts line alone, `Nothing to tend now`, with no
-reference, verse, stage, grade, summary or button. A making of the plan
+same item. `Next` drops the hold. With every item of a run done and none
+held (the run is the visit's items, then the plan's), Today is the end of
+the run (`tendedOf`, `src/home/grown.ts`): the one heading reads
+`The field is tended`, the header's `‹ Your field` is the only control and
+leads home, and the scroll view holds `Tended` (`src/run/tended.tsx`)
+alone: a sun, the line `Nothing grew this time.`, `1 grew a stage.` or
+`<n> grew a stage.`, and per grown verse, in run order, one image named
+`<reference>, <stage>` with its stage's drawing and the reference, both
+hidden from the screen reader. There is no counts line, verse, grade,
+summary, footer or action. The end is a pure state of the view: nothing
+remembers a `Next`, so a making that gives a new plan with an item ends
+it, and an item left with no piece never shows it. With an empty run (no
+visit and a plan with no items) Today shows the done state: the heading `Today` over the counts
+line alone, `Nothing to tend now`, with no reference, verse, stage,
+grade, summary or button. A making of the plan
 with no recital under way drops the hold, and an earlier result with it;
 a making while a recital listens or finishes keeps the hold, so the verse
 recited stays shown until its `Next`, even when the new plan leaves it
@@ -1394,7 +1405,9 @@ session (verify-heartseed, `features/home.md`).
   `heldCount`) or `plant`, and the sheet draws each offer by it.
 - **What grew** (`grownOf`, `src/home/grown.ts`): the verses of a run's
   done items whose stage now ranks above their stage at the plan's making,
-  each once, in plan order (hshomejoy draws it).
+  each once, in plan order. `tendedOf` gives the same over a finished run
+  (the visit's items, then the plan's) and is none while anything is
+  left, held or unread; Today's end draws it (Session, above).
 
 ## Natural voice
 
@@ -2403,7 +2416,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     view but a missed word's mark, at most one action button):
     `src/run/footer.test.tsx`, home's `Begin` on a due device, then the
     action button and the grades under the scroll view through a recital,
-    a grade and the field and back.
+    a grade and the field and back. `src/run/tended.test.tsx`, `Tended`
+    alone in both schemes over generated lists (its line, one image per
+    verse named `<reference>, <stage>`, its children hidden, the look);
+    `src/run/rule.test.ts`, the root rule's clauses for the end over
+    hosts built by hand, one cell per clause.
   - `test:run-walk`, `test:run-cues`, `test:run-cues-b`, `test:run-hold`,
     `test:run-hold-b`, `test:run-relaunch`, `test:run-relaunch-b`,
     `test:run-edges`, `test:run-done`, `test:run-end`, `test:run-end-b`,
@@ -2684,7 +2701,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     arbitrary items, and the greeting at every minute in the 15 zones of
     `src/test/zone.ts` read through `Intl`, the daylight-saving days and the
     edges. `src/home/grown.property.test.ts`: `grownOf` against
-    `grownModel` over generated histories, Again included.
+    `grownModel` over generated histories, Again included, and `tendedOf`
+    against `tendedModel` (`src/test/run-model.ts`) over plans, visits,
+    holds, unread gardens and items with no piece.
   - `test:home-shelves`: `src/shelves.property.test.ts`, the shelves
     against `shelvesModel` (the collections derived as those not taught,
     every pick and promise choosable, ids unique, no paid words) and

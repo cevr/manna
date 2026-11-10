@@ -102,8 +102,13 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   home shows the seed ready today with `Begin`, which opens Today on it
   with no `Minutes` radio, `Voice` or `Settings` (the trip the test rigs
   take to renew the plan).
-- Planned, not yet drivable (the later units of the home, split.md):
-  `home-end`.
+- `home-end`: after a run's last `Next`, Today is the end: the heading
+  `The field is tended` and no heading `Today`, `1 grew a stage.`, an
+  image labelled `Isaiah 41:10, blade`, a button `Your field`, and no
+  `Nothing to tend now`, `Say it`, `Next`, `Grade`, `Settings`, `Minutes`
+  or `Voice`. `Your field` leads home: the heading `Your field`,
+  `Nothing to tend now`, no `Begin`, and the plant button
+  `Isaiah 41:10, blade`. The plants are drawn still.
 
 ## How to get to it (user POV)
 
@@ -326,6 +331,21 @@ no `0 of 1 ripe`, no `Add verses` and the plant an image, not a button
 no `Begin` (`home-begin`); no `id=add-verses` (`home-add-places`); no
 label ending `, ready today` (`home-dot`).
 
+### The end of a run
+
+Daytime only, as `run.md`'s `run-due`. From `run.md`'s drive, after
+`run-recite` (`Grew to a blade.`), in place of its step 6:
+
+1. `home-end`: `sim tap "label=Next"`, `sim snapshot home-end` → the
+   nodes of the row above; record how the tree shows `role="img"`.
+2. `sim tap "label=Your field"`, `sim snapshot home-end-home` → the
+   heading `Your field`, `Nothing to tend now`, no `Begin`, the plant
+   button `Isaiah 41:10, blade`.
+
+Red on base (`c7bce58da`, before the end): after `Next` the snapshot
+holds the heading `Today` and `Nothing to tend now`, and no
+`1 grew a stage.`.
+
 ### The Add verses sheet
 
 On a fresh install of its own, from `first.md` steps 1-7 to `first-home`
@@ -423,7 +443,10 @@ Report only the lines named above and the reference; delete the
 - What the simulator cannot show, the tests own: the greeting at other
   hours and in other zones (`test:home-clock`), a phrase start
   (`test:home-walk-a`), a remove's effect on the furrows (`passage.md`
-  covers the remove), the 3-held limit (`passage.md`), the end of a run, how VoiceOver speaks the selection, and
+  covers the remove), the 3-held limit (`passage.md`), several verses
+  grown in one run (`test:run-cues-b`, `src/run/tended.test.tsx`), a
+  visit's growth beside a plan (`test:home`, `test:need-walk-b`), a
+  making while the end shows (`test:wake-end`), the end over an unread garden (`src/run/rule.test.ts`), how VoiceOver speaks the selection, and
   how each icon looks: its colours and contrast as drawn
   (`test:home-pixels`, `test:theme`), the dot's colour and its 3:1
   (`test:home-clock`), the dark set under a dark system, whether furrow
