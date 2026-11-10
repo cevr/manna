@@ -128,7 +128,7 @@ export const openWordSeek = (audible = true) =>
       () => Option.some(seekTimeline),
       soundRef,
       (_number, choice) => keptOf(seekText.sections, choice),
-    );
+    ).pipe(Layer.provide(Layer.succeed(Clock.Clock, clock)));
     const commands: Array<{ kind: string; ms: number }> = [];
     const boundaries = new Map<string, Deferred.Deferred<Status, PlaybackError>>();
     const cancelled: Array<string> = [];
