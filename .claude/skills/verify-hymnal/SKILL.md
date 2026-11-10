@@ -113,10 +113,17 @@ summary names in `failedStep` and `failedName`. The journeys:
   [features/hymn-reader.journey.json](features/hymn-reader.journey.json), [features/player.journey.json](features/player.journey.json), [features/search.journey.json](features/search.journey.json),
   [features/settings.journey.json](features/settings.journey.json).
 
-For the development-only silent held-seek fixture (`hymnal://probe/scrub`), use
-[features/scrub.md](features/scrub.md): six by-hand numeric rows, no journey.
-Its numeric/boolean-only receipts replace the Evidence section's video,
-snapshot and screenshot defaults; keep no raw trees or corpus text.
+For the held seek, the development-only silent fixture (`hymnal://probe/scrub`)
+and the reader's own (`Seek` on a playing hymn), use
+[features/scrub.md](features/scrub.md): thirteen by-hand numeric rows, no journey.
+Their numeric/boolean-only receipts (indexes, targetMs, `Position`, rects,
+marker presence, button states, page number) replace the Evidence section's
+video, snapshot and screenshot defaults; keep no raw trees, console or corpus
+text. The rows the held seek touches in other features (`reader-scroll`,
+`reader-pager`, `reader-back`, `chords-tap`, `follow-hand`, `follow-seek`,
+`follow-stanzas`, `player-seek-bar`, `player-seek-tap`) are run in their
+focused by-hand portions under the same exception, with Sound and `Sounds and
+haptics` read and off before each Play.
 
 The recipe beside each says what to read in its receipts and which steps stay by hand
 ([features/README.md](features/README.md)). A by-hand step is one `sim` command:

@@ -123,7 +123,7 @@ under its number, and the refrain written out each time it is sung.
   (`src/reader/keyboard.ts`).
 - Each row is a link (an anchor on the web): a press opens the hymn inside
   the app; Enter, a Cmd-click and "Open in New Tab" work as on any link.
-- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as nine parts,
+- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as ten parts,
   each a package script and a task of `turbo.json` that the commandless
   `test` task depends on, so the gate runs each as its own task and
   `bun run test:budget @manna/hymnal-app` times each alone (under 1 s). The
@@ -138,6 +138,9 @@ under its number, and the refrain written out each time it is sung.
     `finddrums.open`, `drums`, `findplace.property`, `findplace.static`,
     `glide`, `bar`, `button`, `title`), named file by file; `test:player`
     runs the rest of `src/player` and ignores those.
+  - `test:seek`: the held reader's two files of `src/reader`
+    (`word-seek.test.ts`, `WordSeek.test.tsx`), named file by file;
+    `test:reader` runs the rest of `src/reader` and ignores those.
   - `test:reader`, `test:follow` and `test:hymns`: their folders of `src`.
   - `test:rest`: `src/tuner`, `src/feel`, `src/offline`, `src/test` and the
     test files at the root of `src`, named file by file.
@@ -308,10 +311,58 @@ wiring, not real reader gestures. The default route renders nothing unless
 that guard and the fixture controls. The six numeric-only by-hand rows in
 `.claude/skills/verify-hymnal/features/scrub.md` have no journey. Both slow
 acceptance files are explicit in `test:slow`, outside every fast part.
-No reader interaction uses this seam yet; hymscrub owns the later centred
-reader, gestures, arbitration and cues. `seek-targets.test.ts` belongs to
+The held reader below is the reader's one use of this seam. `seek-targets.test.ts` belongs to
 `test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
 every corpus stanza subset, occurrence and word and generated numeric scores.
+
+**The held reader** (`src/reader/word-seek.ts`, `WordSeek.tsx`,
+`WordSeek.native.tsx`, `HymnPage.tsx`) lets a reader seek by the sung words
+while the page's own hymn plays. A still finger on the words for 350 ms
+(`HOLD_MS`, within 10 pt, `SLOP`) takes the hold through the player's seam
+above: playback freezes at its origin, the choice starts at the player's
+own first target, and dragging moves it on both axes at once, a sung line
+for each 48 pt down or up (`LINE_STEP`) and a word for each 24 pt across
+(`WORD_STEP`). A Select is sent only when the choice changes; lifting plays
+from it once (Release), and the platform taking the touch, Escape, Pause,
+a route, the page leaving view or its words moving (text size, font,
+spacing, chords, viewport) cancels or revokes it once, without a seek. A
+quick swipe or a drift past the slop never holds, so the page's scroll and
+the pager keep their ordinary gestures; a press on a chord, the native
+back-edge strip and the web's left 20 pt (`BACK_STRIP`) never start one.
+While held, the native pager's scroll is off (`seekHeld`), the page's own
+scroll is off, and only the page seen (`ShownPages`, which the pager tells
+on each settle without drawing its pages again) can hold.
+
+The geometry exists only while held: the page gains end padding of half
+its viewport at each end, so the first and last lines can stand at its
+middle, and each choice scrolls its line's full block to the middle
+(`centerOffset`, at once under Reduce Motion; a newer choice wins over an
+older measure answering late). The chosen line takes an outline and the
+chosen word an underline in the accent; follow's marks, hand-scroll
+detection and Resume follow pause for the preview and come back as it
+ends, restoring the frozen place or the released one. A line timed only by
+its line (no word onsets) chooses by line alone: horizontal drags and the
+word steps do nothing, and the page shows `Line timing only`. Words that
+share an onset stay distinct ordinals; the status says the timing is
+shared, and a release from either lands on the same time. The cues are the
+ones Feel already plays: a grab as a hold takes, a tick per changed choice,
+a release.
+
+`Seek by line or word` (`hymn-word-seek`) takes the same hold without a
+drag and opens a small group above it, at the page's lower right: Previous/Next line, Previous/Next
+word, `Play from here` and `Cancel`, focus moving in as it opens and back
+as it closes; its status carries the choice by row, sung line and word,
+with the numbers as its accessible value. It is disabled unless a hold
+could take now (Paused, a count-in or another hold disable it).
+
+`test:seek` holds the fast traces; `word-seek.property.slow.test.tsx`,
+appended alone to `test:slow`, runs seeded histories over the web, native
+and steps surfaces against an independent reference. The Sideshow feel page
+the owner chose the constants from is a standalone audition, not the One
+reader. Not proved by any test here, and left to the owner on a Release
+build from main: native continuous hold-then-drag recognition, UIKit
+arbitration with the pager and scroll after activation, multitouch, the
+acoustic landing of a word, actual haptics and VoiceOver navigation.
 
 Play on another hymn's page replaces the held hymn at that page's own start and saved Key. Navigation alone keeps the held hymn. `Command.Start({ track })` is the normal start/swap command for reader and browse controls. Each Start owns its status reads, including Starts in one clock millisecond; late replies cannot describe the replacement. A full sheet route for another hymn also offers that hymn's Play while the held hymn sounds. The bar and sheet share `PlayPage` and the same command.
 

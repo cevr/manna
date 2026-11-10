@@ -46,6 +46,7 @@ Numeric guards: `packages/hymnal/src/playback.slow.test.ts` walks all 695 hymns,
 - A hymn page, `hymnal://hymns/<n>` (iOS) or `/hymns/<n>` (web): `Play hymn <n>` in the bar at its foot.
 - `Resume follow` over the page after a drag while it plays.
 - `Open player`, then the `Position` bar, to seek.
+- A held seek on the words, or `Seek` on the page (scrub.md): while it is held the follow's marks, hand scroll and `Resume follow` wait, and the chosen line stands at the middle, not a third of the way down.
 
 ## Driving it with sim
 

@@ -1,6 +1,6 @@
-# Silent held-seek probe
+# Held seek
 
-A development-only synthetic score exposes numeric held-seek state through buttons. It is not a reader gesture or an acoustic word-landing check. Production has no probe content or reader entry point.
+While a hymn plays, a reader holds its words still for 350 ms, drags through its sung lines (48 pt each, down or up) and words (24 pt each, across), sees the chosen line centred with the chosen word underlined, and lifts to play from there; `Seek by line or word` does the same with buttons. A development-only synthetic score (the probe) exposes the player's numeric hold state through buttons; it is not a reader gesture or an acoustic word-landing check, and production has no probe content.
 
 ## Sub-features
 
@@ -10,16 +10,25 @@ A development-only synthetic score exposes numeric held-seek state through butto
 - `scrub-inactive`: Paused and count-in reject Begin without acquisition or movement.
 - `scrub-stanzas`: retained original identities map into cut time; changing choice revokes an old hold.
 - `scrub-repeat`: repeated occurrences stay distinct; shared onsets keep distinct ordinals; line-only horizontal selection is a no-op.
+- `scrub-lines`: the real reader's line steps choose sung lines, freeze the position and centre the chosen block; Play from here plays from the chosen line.
+- `scrub-words`: word steps choose word ordinals within the line; line-only lines refuse them; Cancel keeps the frozen origin.
+- `scrub-scroll`: with no hold, the page's hand scroll and Resume follow work as before while playing.
+- `scrub-pager`: the pager and the back pan still work while playing; an offscreen or covered page never holds.
+- `scrub-accessible`: the named buttons alone begin, step, play and cancel, with roles, disabled states, value and focus.
+- `scrub-motion`: the same selection and centre at the largest text and both themes; the held scroll is immediate under Reduce Motion.
+- `scrub-web`: the web's pointer, touch and keyboard paths, proved by focused handler tests, and live only once the web client is hydrated.
 
 ## How to get to it (user POV)
 
-Development deep link only: `hymnal://probe/scrub` / `/probe/scrub`. There is no normal-reader opener. Fixture settings are isolated and discarded when the route ends.
+The held seek: open a hymn (`hymnal://hymns/100` / `/hymns/100`), Play, then hold the words still, or tap `Seek by line or word` (`id=hymn-word-seek`, `Seek` at the page's lower right). It is disabled when nothing plays on the page, while paused and during a count-in.
+
+The probe: development deep link only, `hymnal://probe/scrub` / `/probe/scrub`. Fixture settings are isolated and discarded when the route ends.
 
 ## Driving it with sim
 
 - **Preconditions:** SKILL.md's doctor passes on this head, own state/port and verify-hymnal simulator. Establish a mounted existing native reader on base before recording base TargetMissing. Read and disable Sound and Sounds and haptics immediately before any Play; the fixture is independently silent.
 - **States:** default, open, loading (Acquiring/Landing), empty (production), inactive and count-in; focus-visible and error n/a to this by-hand drive (device failures belong to executable histories).
-- **Regression:** `apps/hymnal/src/follow/seek-targets.test.ts`, `apps/hymnal/src/follow/seek-targets.property.slow.test.ts`, `apps/hymnal/src/player/word-seek.test.ts`, `apps/hymnal/src/player/word-seek.property.slow.test.tsx`.
+- **Regression:** `apps/hymnal/src/follow/seek-targets.test.ts`, `apps/hymnal/src/follow/seek-targets.property.slow.test.ts`, `apps/hymnal/src/player/word-seek.test.ts`, `apps/hymnal/src/player/word-seek.property.slow.test.tsx`, `apps/hymnal/src/reader/word-seek.test.ts`, `apps/hymnal/src/reader/WordSeek.test.tsx`, `apps/hymnal/src/reader/word-seek.property.slow.test.tsx`.
 
 No journey: a by-hand numeric recipe, with no video, screenshots or retained raw trees. `sim` means `bun run --cwd apps/hymnal sim`, with this run's `--state` on every call. Require each command's JSON `ok`. Read status after every action; retain numeric fields and boolean comparisons only. Read `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal` in the drive's own HOME, filtering in memory to the node labelled `player=…` (`scrub-status`). Record player/hold tags, line, word, targetMs, originMs, positionMs, commits, commitMs and choice. Negative word means no word, not ordinal zero. Two reads are separate host-clock observations; no timing claim when doctor says timingsHold=false.
 
@@ -32,6 +41,16 @@ No journey: a by-hand numeric recipe, with no video, screenshots or retained raw
 5. **Stanzas (`scrub-stanzas`).** Play, Begin, `sim tap id=scrub-stanza` → old hold Free, late Release makes no commit. Choice is now 2. Play, Begin → original line 2, shared word onset 1100 (cut from 11100); next line is original line 3 at 6000, never line 0 or 1. Release lands at that cut target. `sim tap id=scrub-stanza` restores all. Leaving/reopening discards fixture choices.
 6. **Repeated/shared/line-only (`scrub-repeat`).** All stanzas: Play, Begin; Previous line until line 0, then Next line twice → line 2, not line 0 despite identical synthetic text. Next word selects word 0 at11100, Next word selects word 1 also at11100: distinct ordinal, equal time, no commits. Release → commitMs11100. Play, Begin, step to line 3 → Line at16000, word=-1; Previous/Next word leave preview unchanged. Release → commitMs16000. This does not promise a uniquely lit shared word. Corpus/663 accuracy is the slow sweep.
 
+**The held reader (rows 7–13).** Base first: doctor, `sim open hymns/100 --expect id=hymn-scroll` (a mounted reader: positive count of `line` nodes, `hymn-scroll` rect height > 0), then `sim tap id=hymn-word-seek` → TargetMissing on base, recorded as the native red. A reader that does not mount on base is infrastructure-blocked, not feature-red. On head, after the silent setup above, read in memory only: `id=reader-seek-status`'s value (`row=<r> line=<l> word=<w> targetMs=<t>`; word 0 means the line alone), `Position`'s value from `Open player` or the bar, the rects of `id=reader-seek-marker`, the open page's `id=hymn-scroll` (the one inside the screen's frame) and the chosen line, and each button's role, disabled state and focus. Midpoint means the marker's centre and the chosen line block's centre, each within 2 pt of `hymn-scroll`'s vertical centre.
+
+7. **Lines (`scrub-lines`).** `sim open hymns/100 --expect id=hymn-word-seek`; `sim tap "label=Play hymn 100"`; after the count-in, `sim tap id=hymn-word-seek` → `id=reader-seek-controls` shown, status row r0, line l0; save `Position` P. Read `Position` twice a second apart → both P. `sim tap id=reader-seek-next-line` → row r0+1, line greater than l0, marker and chosen block at the midpoint, `Position` still P (no commit). `sim tap id=reader-seek-prev-line` → row r0. Repeat Next line to the last row: at it Next line is disabled, and a later refrain row's line number exceeds the first refrain's. Repeat Previous line to row 1: Previous line disabled. Choose a row R, save targetMs T, `sim tap id=reader-seek-release` → controls and marker gone; a later `Position` is past T and before T plus the time read. Native continuous drag stays owner-hand proof.
+8. **Words (`scrub-words`).** Play, `sim tap id=hymn-word-seek`, `sim tap id=reader-seek-next-word` → word w+1, targetMs greater than or equal to the last (shared onsets may be equal), whole word underlined (its syllables' underline booleans all true). `sim tap id=reader-seek-prev-word` → word w. Step to a line whose status says word 0 (line timing only): both word buttons disabled, `id=reader-seek-line-only` shown, status unchanged by a tap on either. `sim tap id=reader-seek-cancel` → controls gone, a later `Position` advances from the saved origin, not from the preview. Hymn 100 has no line-only or shared case: those run in `apps/hymnal/src/test/reader-word-seek.tsx` (fixture evidence, named apart).
+9. **Hand scroll (`scrub-scroll`).** With no controls open and Play running, `sim scroll screen down`, then `sim scroll screen up` (`sim scroll id=hymn-scroll` takes an offscreen neighbour's scroll: follow.md, Gotchas) → `Resume follow` shown, player still Playing, no `reader-seek-marker`, `Position` advancing. `sim tap "label=Resume follow"` → the selected line about a third of the way down `hymn-scroll` again. `sim hold` alone proves a still acquire and release only, never a drag.
+10. **Pager (`scrub-pager`).** Playing 100: `sim scroll screen right` → hymn 101 shown (a link's pages run in number order), `Pause hymn 100` still shown, `Position` advancing, and 101's `id=hymn-word-seek` disabled (its hymn does not play); `sim scroll screen left` → 100 again, its `Seek` enabled. `sim gesture edge-pan` → back to the list, audio unchanged. A held horizontal or diagonal drag never pages: controller tests now, owner hand later.
+11. **Named buttons (`scrub-accessible`).** Play, `sim tap id=hymn-word-seek` → focus inside the group `Seek by line or word`; `Next line`, `Next word`, `Play from here` → controls closed, focus back on `Seek by line or word`, one commit. Begin, `Cancel` → closed, no commit. Pause, then `id=hymn-word-seek` disabled. During a count-in it is disabled. Begin, `sim tap "label=Pause hymn 100"` → controls closed, then Play from here or Cancel is gone and no restart follows. This proves controls and wiring, not VoiceOver gestures or speech.
+12. **Motion (`scrub-motion`).** Repeat row 7's first steps at the largest text size (`Reading` → `Text size` at its top) and in both appearances: same row/line/word values, marker and block at the midpoint. Reduce Motion on and off only by the orchestrator's simulator-only method: the held scroll is immediate both ways (the handler's animated flag false under Reduce Motion), no pulse. Restore the text size and appearance with a second view. Feel stays owner review.
+13. **Web (`scrub-web`).** The web handlers are proved by `WordSeek.test.tsx` and the slow acceptance file (primary pointer only, lost capture cancels once, diagonal and reversal, Escape and the keyboard path). The Sideshow page is a standalone audition, not the One reader. A live production web row runs only after hymweb's recipe gives a hydrated client; otherwise record the integration as unproven, never TargetMissing-green.
+
 ## Gotchas
 
 - A current refused status observation closes an owned hold, cancels its pending work and leaves the player Failed; late Select/Release/Cancel cannot restart it. Older cancelled observations cannot close a newer hold. Executable status-completion histories cover failures, delayed answers and replacement races in every owned phase on both Sound paths; this live recipe does not inject device failures.
@@ -39,4 +58,7 @@ No journey: a by-hand numeric recipe, with no video, screenshots or retained raw
 - On base or production `sim open probe/scrub --expect id=scrub-begin` is TargetMissing; a broken base reader is infrastructure-blocked, not feature-red.
 - Controls may require `sim scroll screen down` or `sim scroll screen up`; read status independently of control visibility. Restart Play per trace so the short score has not ended.
 - The counter observes seeks across the normal score-clock boundary: compare deltas per trace. Refused device retries remain one logical player act (covered by controlled tests).
-- No One Audio, microphone, real recording, haptics or continuous hold-and-drag is enabled. UIKit gesture arbitration, acoustic landing, VoiceOver and feel are not proved; the later hymscrub reader owns them.
+- The probe enables no One Audio, microphone, real recording, haptics or continuous hold-and-drag.
+- The simulator driver has a hold and a pan, never one continuous hold-then-drag. No row here proves native continuous recognition, UIKit arbitration with the pager and scroll after activation, multitouch, acoustic word landing, actual haptics or VoiceOver navigation: those are the owner's on a Release build from main, never a Debug or prototype build.
+- The held reader's receipts are numeric and boolean only: row, line, word and targetMs, `Position`, marker presence, rects, selected booleans, button roles and states, page number. No raw tree, console, screenshot, video or hymn text.
+- `id=hymn-word-seek` floats at the page's lower right, above the bar, whatever the scroll; its group opens above it. Read status after a step's scroll settles.
