@@ -461,6 +461,48 @@ describe('sim commands', () => {
     }).pipe(Effect.provide(Host)),
   );
 
+  it.scoped(
+    'an iOS open retried after a missing target hands the link over once the app is ready',
+    () =>
+      Effect.gen(function* () {
+        const devices = encodeJson({
+          devices: { ios: [{ name: 'probe-sim', udid: UDID, state: 'Booted' }] },
+        });
+        let waits = 0;
+        const answers = standIn((line) => {
+          if (line.startsWith('xcrun simctl list devices')) return ok(devices);
+          if (line.includes('Open in “Probe”?')) return failed();
+          if (line.startsWith('agent-device wait id="hymn-scroll"')) {
+            waits += 1;
+            if (waits === 1) return failed('wait timed out for selector: id="hymn-scroll"');
+          }
+          return ok();
+        });
+        const { exit, printed } = yield* sim(
+          ['open', 'hymns/100', '--expect', 'id=hymn-scroll'],
+          answers,
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(printed[0]).toMatchObject({ ok: true, detail: { retried: true } });
+        const steps = answers.runs
+          .map((run) => run.line)
+          .filter((line) => /simctl (?:terminate|openurl)|^agent-device (?:open|wait) /.test(line))
+          .filter((line) => !line.includes('Open in'))
+          .map((line) => line.replace(/ --.*$/, '').replace(UDID, '<udid>'));
+        expect(steps).toEqual([
+          'agent-device open app.probe.drive',
+          'xcrun simctl openurl <udid> probe://hymns/100',
+          'agent-device wait id="hymn-scroll" 30000',
+          'xcrun simctl terminate <udid> app.probe.drive',
+          'agent-device open app.probe.drive',
+          'agent-device wait label="Probe Ready" 30000',
+          'xcrun simctl openurl <udid> probe://hymns/100',
+          'agent-device wait id="hymn-scroll" 30000',
+        ]);
+      }).pipe(Effect.provide(Host)),
+  );
+
   it.scoped('a scroll before any open starts the app session, then scrolls', () =>
     Effect.gen(function* () {
       const devices = encodeJson({

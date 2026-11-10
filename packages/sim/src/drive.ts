@@ -798,7 +798,12 @@ const confirmOpen = Effect.fn('Sim.confirmOpen')(function* (app: App, session: S
   return answered;
 });
 
-/** How `open` opens: `terminate` stops the app first (iOS), so it launches afresh. */
+/**
+ * How `open` opens: `terminate` stops the app first (iOS), so it launches
+ * afresh, and gives it the link only once its `readyTarget` shows: a link
+ * handed to an app whose JavaScript is still loading is dropped, and the app
+ * draws its first screen.
+ */
 interface OpenOptions {
   readonly terminate?: boolean;
 }
@@ -819,6 +824,7 @@ const open = Effect.fn('Sim.open')(function* (
     if (options.terminate === true)
       yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, app.bundleId], short));
     yield* openApp(app, udid, Duration.seconds(seconds));
+    if (options.terminate === true) yield* present(app, session, app.readyTarget, seconds);
     yield* succeed('xcrun', ['simctl', 'openurl', udid, url], short);
     prompts = yield* confirmOpen(app, session);
   } else yield* browser(app, ['open', url], Duration.seconds(seconds));

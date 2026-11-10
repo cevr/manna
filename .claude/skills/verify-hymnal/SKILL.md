@@ -93,7 +93,9 @@ start time `boot` recorded, `serverStarted` in the session file; a legacy
 session, an older `sim`'s with no start time, fails it, so run `sim down`
 and boot again), `port-owner` (the port
 is held by that process or a child of it), `server-answers` (the server
-answers), `server-log` (no failure line in `server.log`), and on iOS
+answers), `server-log` (no failure line in `server.log` or in the
+server's error output `server.err.log`, where a page the server fails to
+render goes while it still answers 200), and on iOS
 `native-source` (the app's log since boot holds no refusal by its latest
 process of a native source the installed build lacks, One's "…; rebuild
 the app": run `sim install`); on iOS a simulator that is not booted fails
@@ -154,7 +156,9 @@ What the drivers do that a step does not show:
 
 - **The first open after a relaunch lands on the home list.** `sim open` and a journey's open terminate
   the app and open once more on iOS `TargetMissing` (`detail.retried`), never a third time, unless
-  `--no-relaunch` (a journey open's `relaunch: false`) asks them to fail it as it is.
+  `--no-relaunch` (a journey open's `relaunch: false`) asks them to fail it as it is. The second open
+  hands the link over only once the home list's `label=Hymns` shows: a link given while the app's
+  JavaScript still loads is dropped. So a first open right after `sim relaunch` takes about 40 s.
 - **The pod hermesc.** `sim boot` points the dev server at the checkout's own `hermes-compiler`
   (`detail.hermesc`); a red box "native iOS dev bytecode needs the pod hermesc" means it did not.
 - **`label=Key` matches two elements** while chords are on (the bar's button and the word inside it):
