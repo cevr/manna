@@ -60,8 +60,13 @@ const storeOn = (db: Database) =>
     keys: call('keys', Option.none(), () => db.getAllKeys()),
   });
 
-/** The web's server, rendering a page: it has no local storage, and keeps no setting. */
-const onServer = Option.isNone(Option.fromNullishOr(Reflect.get(globalThis, 'localStorage')));
+/**
+ * The web's server, rendering a page: it has no window, so no store, and
+ * keeps no setting. Told by the window alone: a browser that denies the page
+ * its storage throws from `localStorage` itself, so the storage is touched
+ * only inside the store's guarded open, which falls back to memory.
+ */
+const onServer = !Reflect.has(globalThis, 'window');
 
 const opened = Effect.match(
   call('open', Option.none(), () => One.Database.openKeyValue({ name: 'hymnal' })),
