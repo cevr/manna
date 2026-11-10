@@ -46,7 +46,7 @@ import { clockOf, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { keyOf } from './garden-model';
 import { lookFaults } from './look';
-import { rootFaults } from './root-rule';
+import { END, rootFaults } from './root-rule';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
@@ -217,7 +217,7 @@ export const launchNeed = async (
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
-  const frames = { need: 0, today: 0, listening: 0, offer: 0 };
+  const frames = { need: 0, today: 0, end: 0, listening: 0, offer: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
   const looks = new Map<string, readonly string[]>();
   const frame = () => {
@@ -225,6 +225,7 @@ export const launchNeed = async (
     const names = [...host.querySelectorAll(CONTROLS)].map(nameOf);
     if (shown.includes(NEED)) frames.need += 1;
     if (shown.includes('Today')) frames.today += 1;
+    if (shown.includes(END)) frames.end += 1;
     if (names.includes('Listening')) frames.listening += 1;
     if (names.includes(NEED)) frames.offer += 1;
     for (const fault of [
@@ -286,6 +287,13 @@ export const launchNeed = async (
     references: () => [...host.querySelectorAll('[data-testid="reference"]')].map(textOf),
     /** The counts lines Today shows. */
     counts: () => [...host.querySelectorAll('[data-testid="session"]')].map(textOf),
+    /** The line of what grew at the end of a run (`The field is tended`). */
+    grew: () => [...host.querySelectorAll('[data-testid="grew"]')].map(textOf),
+    /** Each grown verse's name at the end of a run, `<reference>, <stage>`. */
+    grown: () =>
+      [...host.querySelectorAll('[data-testid="grown"]')].map(
+        (node) => node.getAttribute('aria-label') ?? '',
+      ),
     /** When I need…'s cards: each title, promise names and to-learn line. */
     cards: () =>
       [...host.querySelectorAll('[data-testid="need-card"]')].map((card) => ({

@@ -51,7 +51,10 @@
  * reads, the held word and the screen held still while a finger holds,
  * one tick a hold, the recognizer's cancel at a relaunch, the chime, and Today's run:
  * its one action (Say it, Listening or Next, never Next unread) and its done
- * state, the counts line alone, by hsdaily's plan model; home's counts line
+ * state, by hsdaily's plan model: the end of the run (`The field is tended`
+ * over the line of what grew and each grown verse's name, by `tendedModel`
+ * over the plan made last) when that plan holds the passage, else the
+ * counts line alone; home's counts line
  * by the same model, and `Begin` exactly when the plan shows an item. It counts
  * words without printing one.
  *
@@ -90,7 +93,8 @@ import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
 import { device } from './one';
 import { voiceOverFaults } from './voiceover';
-import { watchRoot } from './root-rule';
+import { END, endShown, watchRoot } from './root-rule';
+import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
@@ -119,7 +123,15 @@ const GRAMS = new Set(
 );
 /** A word the verse does not hold, said as an extra word. */
 export const EXTRA = 'zebra';
-const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Your field', 'Today'];
+const HEADINGS = [
+  'Hear it',
+  'Say it with help',
+  'Say it alone',
+  'Planted',
+  'Your field',
+  'Today',
+  END,
+];
 const CLAIM = /\b(seeds?|blades?|ears?|corn|planted|plants?|grew|grow|growth|stages?)\b/iu;
 const SETTING =
   /\b(sign ?up|sign ?in|log ?in|account|settings?|password|e-?mail|notifications?|remind(?:er)?s?)\b/iu;
@@ -657,9 +669,10 @@ const phaseFaults = (
 const SESSION_NODES =
   '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[aria-label="Voice"],[data-testid="session"]';
 
-/** A frame other than Today's that shows the session's nodes: the pending frame, the first minute's phases and Planted show none. */
+/** A frame other than Today's (or the end of its run, which the root's rule judges) that shows the session's nodes: the pending frame, the first minute's phases and Planted show none. */
 const sessionFaults = (host: Element, heading: string | undefined): string[] => {
-  if (heading === 'Today' || host.querySelector(SESSION_NODES) === null) return [];
+  if (heading === 'Today' || heading === END || host.querySelector(SESSION_NODES) === null)
+    return [];
   return [`frame: the session's choices or counts in ${heading ?? 'the pending frame'}`];
 };
 
@@ -696,7 +709,7 @@ const frameFaults = (
     if (stage !== 'Stage: seed' || plant?.getAttribute('aria-hidden') !== 'true')
       out.push('frame: Planted without its hidden seed');
   }
-  if (heading === 'Today' || heading === 'Planted' || heading === 'Your field') return out;
+  if (['Today', END, 'Planted', 'Your field'].includes(heading)) return out;
   out.push(...phaseFaults(host, heading, buttons, phase.voiceOn));
   if (heading === 'Hear it') return [...out, ...hearFaults(host, phase.held)];
   return [...out, ...wordFaults(host, heading, phase.said)];
@@ -853,15 +866,27 @@ const actionsOf = (r: Rig) =>
       (name): name is string => name !== null && ['Say it', 'Listening', 'Next'].includes(name),
     );
 
-/** Whether a read Today is ready in the done state (the counts line alone) or under Next (with its result), with `sets` writes reached; not yet while no stage shows; none for Say it's own checks. */
-const runReady = (r: Rig, run: 'say' | 'next' | 'done', sets: number): boolean | null => {
+/** What the end of a run shows of `ended`, as `endShown` reads it: its heading, no counts line, the line of what grew and each grown verse's name. */
+const endWant = (ended: readonly { readonly reference: string; readonly stage: string }[]) => ({
+  headings: [END],
+  counts: [],
+  grew: [grewLine(ended.length)],
+  grown: ended.map((each) => `${each.reference}, ${each.stage}`),
+});
+
+/** Whether a read Today is ready in the done state (the end of the run as `endWant` gives `ended`, or with none the bare counts line alone) or under Next (with its result), with `sets` writes reached; not yet while no stage shows; none for Say it's own checks. */
+const runReady = (
+  r: Rig,
+  run: 'say' | 'next' | 'done',
+  sets: number,
+  ended: Parameters<typeof endWant>[0] | null,
+): boolean | null => {
   const written = device.calls.set >= sets;
-  if (run === 'done')
-    return (
-      r.host.querySelector('[data-testid="session"]')?.textContent === DONE &&
-      actionsOf(r).length === 0 &&
-      written
-    );
+  if (run === 'done') {
+    if (actionsOf(r).length > 0 || !written) return false;
+    if (ended !== null) return JSON.stringify(endShown(r.host)) === JSON.stringify(endWant(ended));
+    return r.host.querySelector('[data-testid="session"]')?.textContent === DONE;
+  }
   if (r.host.querySelector('[data-testid="stage"]') === null) return false;
   if (run === 'say') return null;
   return (
@@ -953,6 +978,29 @@ const runOf = (m: Model): 'say' | 'next' | 'done' => {
   const done = m.passage > plan.recalls;
   if (!m.held && (!plan.passage || done)) return 'done';
   return done ? 'next' : 'say';
+};
+
+/** The end of each plan asked, by the writes and the disk's size it was asked at: a poll asks no model. */
+const ENDS = new WeakMap<object, { readonly at: string; readonly ended: ModelEnd }>();
+type ModelEnd = ReturnType<typeof tendedModel>;
+
+/** H9: the end of Today's run by `tendedModel` over the plan made last and the model's disk, asked only in the run's done state (nothing held); none while that plan holds no item, Today's bare done state. */
+const endOf = (m: Model): ModelEnd => {
+  const plan = m.plan;
+  if (plan === null || m.held || runOf(m) !== 'done') return null;
+  const at = `${m.sets}:${m.disk.size}`;
+  const cached = ENDS.get(plan);
+  if (cached !== undefined && cached.at === at) return cached.ended;
+  const records = [...plantsOf(m.disk).values()].flat();
+  const ended = tendedModel({ plan: plan.items, hold: null }, [], records);
+  ENDS.set(plan, { at, ended });
+  return ended;
+};
+
+/** The heading the model's screen shows: Today's is `The field is tended` at the end of a run. */
+const headingOf = (m: Model) => {
+  if (m.screen === 'today' && endOf(m) !== null) return END;
+  return HEADING[m.screen];
 };
 
 /** The valid recalls of each verse on `disk`, as the garden reads them: a key that names its record's reference and start. */
@@ -1144,6 +1192,8 @@ export const session = (count: (key: string) => void) => {
     held: false,
     cued: false,
   };
+  /** Whether the last settle showed the end of a run, so the frames of the command after it may still show its heading. */
+  const settled = { end: false };
   const trace: string[] = [];
   const where = () => trace.join(' > ');
   const rig = (): Rig => at.rig ?? expect.unreachable('no launch');
@@ -1175,24 +1225,27 @@ export const session = (count: (key: string) => void) => {
 
   /** The screen moves from `before` to `screen`, the frames between allowed the two headings; home's first show makes the plan. */
   const go = (before: Screen, screen: Screen) => {
-    at.allowed.headings = new Set(
-      [HEADING[before], HEADING[screen]].filter((each): each is string => each !== null),
-    );
     m.screen = screen;
     if (screen === 'home' && before !== 'home') make();
+    const ends = settled.end || headingOf(m) === END;
+    at.allowed.headings = new Set(
+      [HEADING[before], HEADING[screen], ends ? END : null].filter(
+        (each): each is string => each !== null,
+      ),
+    );
   };
 
   /** The screen is ready for the model's oracles. */
   const ready = () => {
     const r = rig();
-    const want = HEADING[m.screen];
+    const want = headingOf(m);
     if (r.heading() !== want) return false;
     if (m.screen === 'pending') return true;
     if (m.screen === 'hear') return r.buttons().includes('Listen') === (m.voiceOn && !m.reading);
     if (m.screen === 'planted') return true;
     if (m.screen === 'home') return r.home().counts !== '';
     if (m.screen === 'today') {
-      const run = runReady(r, runOf(m), m.sets);
+      const run = runReady(r, runOf(m), m.sets, endOf(m));
       if (run !== null) return run;
     }
     if (m.said === 'open')
@@ -1338,7 +1391,9 @@ export const session = (count: (key: string) => void) => {
     const here = where();
     r.takeRoot();
     expect(r.faults, here).toEqual([]);
-    expect(r.heading(), here).toBe(HEADING[m.screen]);
+    const heading = headingOf(m);
+    expect(r.heading(), here).toBe(heading);
+    settled.end = heading === END;
     expect([...device.disk].toSorted(), `${here}: the disk`).toEqual([...m.disk].toSorted());
     expect(device.calls.set, `${here}: the writes`).toBe(m.sets);
     expect(device.calls.remove + device.calls.clear, `${here}: removals`).toBe(0);
@@ -1365,7 +1420,7 @@ export const session = (count: (key: string) => void) => {
     checkClaims(r, here);
   };
 
-  /** Today's run: the action the model's run offers (Listening while a recital is open, none in the done state, never Next on an unread Today), and the done state's counts line alone, with no verse, stage, grade or result. */
+  /** Today's run: the action the model's run offers (Listening while a recital is open, none in the done state, never Next on an unread Today), and in the done state no verse, stage, grade or result, over the end of the run exactly as `endOf` gives it (tallied `end:none`, `end:one` or `end:many`), or with none the counts line alone. */
   const checkRun = (r: Rig, here: string) => {
     if (m.screen !== 'today' && m.screen !== 'unread') return;
     const run = m.screen === 'today' ? runOf(m) : 'say';
@@ -1375,14 +1430,26 @@ export const session = (count: (key: string) => void) => {
       m.said === 'open' ? ['Listening'] : want,
     );
     if (run !== 'done') return;
+    const none = {
+      verse: r.host.querySelector('[data-testid="reference"],[data-testid^="word-"]') !== null,
+      stage: r.host.querySelector('[data-testid="stage"]') !== null,
+      grade: r.host.querySelector('[role="radiogroup"][aria-label="Grade"]') !== null,
+      result: r.host.querySelector('[data-testid="summary"],[role="alert"]') !== null,
+    };
+    const ended = m.screen === 'today' ? endOf(m) : null;
+    if (ended !== null) {
+      count(['end:none', 'end:one'][ended.length] ?? 'end:many');
+      expect({ ...endShown(r.host), ...none }, `${here}: the end of the run`).toEqual({
+        ...endWant(ended),
+        verse: false,
+        stage: false,
+        grade: false,
+        result: false,
+      });
+      return;
+    }
     expect(
-      {
-        counts: r.host.querySelector('[data-testid="session"]')?.textContent ?? null,
-        verse: r.host.querySelector('[data-testid="reference"],[data-testid^="word-"]') !== null,
-        stage: r.host.querySelector('[data-testid="stage"]') !== null,
-        grade: r.host.querySelector('[role="radiogroup"][aria-label="Grade"]') !== null,
-        result: r.host.querySelector('[data-testid="summary"],[role="alert"]') !== null,
-      },
+      { counts: r.host.querySelector('[data-testid="session"]')?.textContent ?? null, ...none },
       `${here}: the done state`,
     ).toEqual({ counts: DONE, verse: false, stage: false, grade: false, result: false });
   };
@@ -1665,7 +1732,7 @@ export const session = (count: (key: string) => void) => {
     m.sets += 1;
     m.opened = true;
     make();
-    at.allowed.headings = new Set(['Today', 'Your field']);
+    at.allowed.headings = new Set(['Today', 'Your field', ...(settled.end ? [END] : [])]);
     const trip = await renewBySettings(r);
     m.screen = runOf(m) === 'done' ? 'home' : 'today';
     expect(
@@ -2584,6 +2651,7 @@ export const FLOORS = {
     /^run:today:next$/u,
     /^cmd:Next@today:/u,
     /^run:today:done$/u,
+    /^end:(one|many)$/u,
     /^renew:today:done$/u,
   ],
   launch: [
@@ -2811,7 +2879,7 @@ export const screenLaunch = async (
       if (buttons().length > 0) frames.pendingOffers += 1;
     }
     const firstMinute = shown.some(
-      (text) => text !== 'Planted' && text !== 'Today' && text !== 'Your field',
+      (text) => !['Planted', 'Today', END, 'Your field'].includes(text),
     );
     if (
       firstMinute &&

@@ -18,13 +18,17 @@
  * - A tap on a known promise of another collection shows Today on it with
  *   `Say it`, no `Listen` and no `When I need…`; Today's `Your field` then
  *   `Begin`, and When I need…'s `Your field` then `Begin`, each keep the
- *   visit; nothing is written but the recall said.
+ *   visit; said and `Next`, the run ends: `The field is tended`, no counts
+ *   line, `Nothing grew this time.` (a second recall of a verse first said
+ *   today leaves it a seed), no grown verse and `Your field` the one
+ *   control; nothing is written but the recall said.
  */
 
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { launchNeed, needDevice as deviceOf, recordOf as recall } from '../test/need-rig';
+import { END } from '../test/root-rule';
 
 const NEED = 'When I need…';
 
@@ -92,12 +96,25 @@ describe('When I need…', () => {
     expect(await rig.until(() => rig.has('Next'))).toBe(true);
     await rig.tap('Next');
     expect(await rig.until(() => !rig.has('Next'))).toBe(true);
-    expect({ references: rig.references(), say: rig.has('Say it') }).toEqual({
+    expect(await rig.until(() => rig.headings().includes(END))).toBe(true);
+    expect({
+      headings: rig.headings(),
+      references: rig.references(),
+      counts: rig.counts(),
+      grew: rig.grew(),
+      grown: rig.grown(),
+      names: rig.names(),
+    }).toEqual({
+      headings: [END],
       references: [],
-      say: false,
+      counts: [],
+      grew: ['Nothing grew this time.'],
+      grown: [],
+      names: [HOME],
     });
-    expect({ frames: rig.frames.need > 0, faults: rig.faults }).toEqual({
+    expect({ frames: rig.frames.need > 0, end: rig.frames.end > 0, faults: rig.faults }).toEqual({
       frames: true,
+      end: true,
       faults: [],
     });
     await rig.leave();

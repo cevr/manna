@@ -8,7 +8,7 @@
  * minute's day, Fear's card with none known, a minutes choice made in the
  * Settings sheet and a visit dropped by it, one dropped by a relaunch the
  * next morning, When I need… opened from home, and a relaunch that lands
- * on home. Visits of other collections and two visits said are
+ * on home, and the end of a run that held a visit, one verse grown. Visits of other collections and two visits said are
  * `walk-b2.test.tsx`'s; the bar's way back is `walk-e.test.tsx`'s.
  */
 
@@ -23,6 +23,8 @@ describe('When I need…, walked (b)', () => {
     const { failure, cover } = await walkNeed(141, [0], 10);
     expect(failure).toBeNull();
     expect({
+      end: (cover['end:one'] ?? 0) >= 1,
+      endVisit: (cover['end:visit'] ?? 0) >= 1,
       firstDay: (cover['gen:first-minute-day'] ?? 0) >= 1,
       noneKnown: (cover['need:fear-none-known'] ?? 0) >= 2,
       minutes: (cover['made:minutes'] ?? 0) >= 1,
@@ -30,6 +32,8 @@ describe('When I need…, walked (b)', () => {
       relaunch: (cover['visit:dropped-by-relaunch'] ?? 0) >= 1,
       root: ROOT.filter((kind) => (cover[kind] ?? 0) >= 1),
     }).toEqual({
+      end: true,
+      endVisit: true,
       firstDay: true,
       noneKnown: true,
       minutes: true,

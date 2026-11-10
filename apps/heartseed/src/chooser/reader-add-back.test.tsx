@@ -7,8 +7,8 @@
  * past twenty verses and clipped, a restart, a tap that clears the range,
  * backs to the books and the chapters, Psalms 119, leaving the chooser,
  * and plants of one verse, of twenty and of a whole chapter, then back on
- * Today the next morning a passage verse new and said. Its device alone
- * must reach those cases.
+ * Today the next morning a passage verse new and said, and a run's end
+ * with several verses grown. Its device alone must reach those cases.
  *
  * It catches a backward range off the rule (not clipped, or clipped from
  * the wrong end), a restart that keeps the old range, an add with no
@@ -39,6 +39,7 @@ it('clips a range tapped backward and restarts one, through the field and the ch
     'home:launch-begin',
     'home:begin',
     'home:no-begin',
+    'end:many',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

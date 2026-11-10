@@ -12,7 +12,8 @@
  * (`rootFaults`, over the garden read) and to the screens' rules, and each
  * fault kept (`barFaults`): at most one heading; on Today, the footer
  * rule (`footerFaults`: no control but a missed word's mark inside the scroll
- * view) and no node of the field or the chooser; off Today, no control but a
+ * view) and no node of the field or the chooser; off Today (the end of a
+ * run, `The field is tended`, among them), no control but a
  * list control (a book, a chapter, a verse, a plant, a row's own `Remove`,
  * the `Add verses` row, a promise of When I need…) and no alert or limit
  * line inside a scroll view;
@@ -24,7 +25,8 @@
  * the gear `Settings`, `Keep`, a row's `Remove`, every plant, `Begin`,
  * `Start here …`) disabled too and no `Add verses`; `Listening` only on Today; on
  * the field, home A's layout rules (`homeFaults`); and every seen text of
- * the field and the chooser at WCAG AA against what lies behind it.
+ * every screen but Today (the field, the chooser, the end of a run) at WCAG
+ * AA against what lies behind it.
  */
 
 import { RegistryProvider } from '@effect/atom-react';

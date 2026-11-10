@@ -6,7 +6,9 @@
  * launch and its `Begin`, then generated
  * sequences of Say it (heard whole, heard with a word missed, unheard, and
  * each with the system flipped while it listens), a peek at a missed word,
- * a grade, Next to the done state, minutes chosen in home's Settings sheet
+ * a grade, Next to the end of the run (`The field is tended`; the one
+ * verse is in every plan, so the bare done state never shows and the walks
+ * hold that it does not), minutes chosen in home's Settings sheet
  * (`renewBySettings`: `Your field`, the radio, `Done`, then `Begin` while
  * the verse shows, else the walk ends on home), the field and back, and a
  * flip of the system between any two steps. A Minutes trip ends on Today
@@ -30,7 +32,7 @@ import { recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
 import { below, DAY, pickOf, PREFIX, random } from '../test/garden-model';
 import { lookFaults, setSystem, watchLook } from '../test/look';
-import { rootFaults } from '../test/root-rule';
+import { END, endShown, rootFaults } from '../test/root-rule';
 import { madeModel, NO_RUN, shownModel } from '../test/run-model';
 import { deviceOf, launch, type Device, type Hearing } from '../test/run-rig';
 import { planModel } from '../test/session-model';
@@ -60,8 +62,8 @@ const STEPS = [
 ] as const;
 type Step = (typeof STEPS)[number];
 
-/** What the walks count: each step taken, the done state, the field in the done state, and each Minutes trip by whether its plan offers the verse. */
-type Covered = Step | 'done' | 'field, done' | 'minutes:due' | 'minutes:none';
+/** What the walks count: each step taken, the bare done state (`Today` with no action), the end of a run (`The field is tended`), the field from either, and each Minutes trip by whether its plan offers the verse. */
+type Covered = Step | 'done' | 'end' | 'field, done' | 'minutes:due' | 'minutes:none';
 
 /** The steps each walk opens with, in turn, before the generated steps: a recital and a peek; the fourth walk's unheard recital writes no recall, so its Minutes trip makes a plan that offers the verse. */
 const OPENINGS: readonly (readonly Step[])[] = [
@@ -115,7 +117,7 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   const app = await launch(device, { unread: false, refuse: false }, { now: T0 });
   const look = watchLook(app.host, () => model.system);
   const report: string[] = [];
-  /** Whether the field in the done state left the walk on home, which ends it. */
+  /** Whether the field from the end left the walk on home, which ends it. */
   const ended = { home: false };
   const flip = async () => {
     model.system = other(model.system);
@@ -218,7 +220,8 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
     const step = first[n] ?? pickOf(next, STEPS);
     if (await run[step]()) coverage[step] = (coverage[step] ?? 0) + 1;
     await settle(step);
-    if (app.headings().includes('Today') && app.actions().length === 0)
+    if (app.headings().includes(END)) coverage.end = (coverage.end ?? 0) + 1;
+    else if (app.headings().includes('Today') && app.actions().length === 0)
       coverage.done = (coverage.done ?? 0) + 1;
   }
   if (next() < 0.5) {
@@ -231,14 +234,14 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   return { report, frames: look.faults, footer, seen: look.frames.seen };
 };
 
-/** How many times each step took effect across the walks, how many settled screens showed the done state, and how many walks the field in the done state ended on home. */
+/** How many times each step took effect across the walks, how many settled screens showed the end and the bare done state, and how many walks the field from there ended on home. */
 const coverage: Partial<Record<Covered, number>> = {};
 
 describe('Today in dark and across flips of the system', () => {
   it('holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes ending where its plan offers, the field and back) to the oracle for the system’s last value', async () => {
     const walks = [];
     for (let n = 0; n < 4; n++) walks.push(await walk(n, n % 2 === 0 ? 'dark' : 'light', 10));
-    const all: readonly Covered[] = [...STEPS, 'done', 'field, done', 'minutes:due'];
+    const all: readonly Covered[] = [...STEPS, 'end', 'field, done', 'minutes:due'];
     const reached = all.filter((step) => (coverage[step] ?? 0) === 0);
     expect({
       reports: walks.flatMap((each) => each.report),
@@ -246,10 +249,11 @@ describe('Today in dark and across flips of the system', () => {
       footers: walks.flatMap((each) => each.footer ?? []),
       seen: walks.every((each) => each.seen > 5),
       unreached: reached,
-    }).toEqual({ reports: [], frames: [], footers: [], seen: true, unreached: [] });
+      bare: coverage.done ?? 0,
+    }).toEqual({ reports: [], frames: [], footers: [], seen: true, unreached: [], bare: 0 });
   });
 
-  it('reaches the done state in dark, a flip there repainting it with no tap', async () => {
+  it('reaches the end of the run in dark, its read exact, a flip there repainting it with no tap', async () => {
     setSystem('dark');
     const app = await launch(dueDevice(), { unread: false, refuse: false }, { now: T0 });
     const model: Model = { system: 'dark' };
@@ -264,13 +268,22 @@ describe('Today in dark and across flips of the system', () => {
     await app.until(() => app.has('Next'));
     await app.tap('Next');
     const done = await app.until(() => app.actions().length === 0);
+    const shown = endShown(app.host);
+    const before = lookFaults(app.host, 'dark');
     model.system = 'light';
     await act(async () => setSystem('light'));
     const after = lookFaults(app.host, 'light');
     look.stop();
     const footer = await app.leave();
-    expect({ done, after, frames: look.faults, footer }).toEqual({
+    expect({ done, shown, before, after, frames: look.faults, footer }).toEqual({
       done: true,
+      shown: {
+        headings: [END],
+        counts: [],
+        grew: ['1 grew a stage.'],
+        grown: [`${passage.reference}, full corn`],
+      },
+      before: [],
       after: [],
       frames: [],
       footer: [],

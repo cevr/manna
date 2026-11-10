@@ -6,7 +6,9 @@
  * yesterday and one passage held, held to `rootFaults` and `barFaults` on
  * every frame while the reader goes from home through each screen a control
  * can hide on: Today by `Begin` and a recital (`Say it`, `Listening`, the
- * grades and `Next` in the footer, Today's `Your field`), home's bar
+ * grades and `Next` in the footer), the run's end that `Next` shows
+ * (`The field is tended`, `1 grew a stage.` and the promise grown to a blade,
+ * read exactly, its header `Your field` the way on), home's bar
  * (`When I need…`, `Add verses`, the ask and its `Remove` and `Keep`), the
  * Add verses sheet's `Done`, the chooser's header (each step's back, the
  * first `‹ Add verses` back to the sheet) and footer (`Up to 20 verses` and
@@ -26,6 +28,7 @@ import { recallOf } from '../test/field-model';
 import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
+import { END, endShown } from '../test/root-rule';
 import { sheetControl } from '../test/settings-rig';
 import { activateSheet, tapSheet } from '../test/shelves-rig';
 
@@ -47,6 +50,13 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   await step('Say it', 'Listening');
   await step('Listening', 'Next');
   await step('Next', 'Your field');
+  expect(await rig.until(() => endShown(rig.host).headings.includes(END))).toBe(true);
+  expect(endShown(rig.host)).toEqual({
+    headings: [END],
+    counts: [],
+    grew: ['1 grew a stage.'],
+    grown: [`${passage.reference}, blade`],
+  });
   await step('Your field', 'Add verses');
   await step('Remove John 15:1-5', 'Keep');
   await step('Keep', 'Add verses');

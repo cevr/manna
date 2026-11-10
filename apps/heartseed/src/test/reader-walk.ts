@@ -8,7 +8,10 @@
  * opening on home (the root's own opening), judged after every command against
  * the models: Today by `run-model.ts` over `session-model.ts`'s plan of
  * hskjv's pieces (`passages-model.ts`), made at each making (home's first
- * show, a landed add or remove, a Minutes tap); home by `choose-model.ts`'s
+ * show, a landed add or remove, a Minutes tap), and at the end of a run
+ * (every item of a plan that is not empty done, none held) `The field is
+ * tended` over no counts line, the line of what grew and each grown verse's
+ * name by `tendedModel`, tallied `end:none`, `end:one` or `end:many`; home by `choose-model.ts`'s
  * `fieldWant`, with the plan's counts line and `Begin` exactly when the
  * model shows a verse or the passages read unread (R3); the chooser by its
  * `chooserWant`.
@@ -86,10 +89,19 @@ import {
   type Span,
 } from './passages-model';
 import { CORPUS, countIn, storedOf } from './passages-rig';
-import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } from './run-model';
+import {
+  actionModel,
+  grewLine,
+  madeModel,
+  NO_RUN,
+  nextModel,
+  shownModel,
+  startedModel,
+  tendedModel,
+} from './run-model';
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
 import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
-import { rootFaults } from './root-rule';
+import { END, rootFaults } from './root-rule';
 import { closeSettings, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, localDay, MINUTE, planModel } from './session-model';
 import { listenModel } from './wake-model';
@@ -262,6 +274,11 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const isPassageVerse = (reference: string) =>
     passages().some((span) => versesOf(span).includes(verseOfRule(reference)));
 
+  /** The end of the run by `tendedModel` over the plan and the disk's recalls, asked only at a done state (none held, nothing shown); none elsewhere. */
+  const tendedNow = () => {
+    if (run.plan === null || shownModel(run, recallsNow) !== null) return null;
+    return tendedModel(run, [], heldOn(device.disk));
+  };
   const todayWant = () => {
     if (held.tag === 'Unread')
       return {
@@ -269,15 +286,20 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
         references: [PROMISE],
         actions: ['Say it'],
         counts: [],
+        grew: [],
+        grown: [],
         listen: false,
       };
     const shown = shownModel(run, recallsNow);
     const action = actionModel(run, recallsNow);
+    const tended = tendedNow();
     return {
-      heading: 'Today',
+      heading: tended === null ? 'Today' : END,
       references: shown === null ? [] : [shown.reference],
       actions: action === null ? [] : [action],
-      counts: run.plan === null ? [] : [countsModel(run.plan, recallsNow)],
+      counts: run.plan === null || tended !== null ? [] : [countsModel(run.plan, recallsNow)],
+      grew: tended === null ? [] : [grewLine(tended.length)],
+      grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
       listen: listenModel(run, recallsNow, {
         unread: false,
         voiceOn: true,
@@ -333,6 +355,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
         references: at.references(),
         actions: at.actions(),
         counts: at.counts(),
+        grew: at.grew(),
+        grown: at.grown(),
         listen: at.has('Listen'),
       };
     if (screen === 'home' || screen === 'sheet')
@@ -380,6 +404,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   };
   const tallyToday = () => {
     if (held.tag === 'Unread') return;
+    const tended = tendedNow();
+    if (tended !== null) reached.add(['end:none', 'end:one'][tended.length] ?? 'end:many');
     if (todayWant().listen) reached.add('today:listen');
     if (addedOnPlantedDay && mornings === 0 && planOf().fresh === 'planted today')
       reached.add('today:no-new-on-a-planted-day');

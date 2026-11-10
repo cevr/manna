@@ -7,8 +7,8 @@
  * local, between adds on the field and the chooser, in Lord Howe from the
  * first minute's day. Its device alone must reach: a new passage verse with
  * `Listen`, no new verse on a day a verse was first planted and the first
- * verse new the next morning, a second morning, and a making at each add
- * and Minutes tap. `reader-unread.test.tsx` owns unread passages, removes,
+ * verse new the next morning, a second morning, a making at each add
+ * and Minutes tap, and a run's end with one verse grown. `reader-unread.test.tsx` owns unread passages, removes,
  * reviews and Chatham, and `reader-add-back.test.tsx` a new verse said.
  *
  * It catches a change that makes no plan, Today's counts or shown verse off
@@ -41,6 +41,7 @@ it('shows Today the plan made at each change, over the passages chosen, morning 
     'home:launch-begin',
     'home:begin',
     'home:no-begin',
+    'end:one',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

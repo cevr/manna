@@ -38,7 +38,12 @@
  *   phrases, expanded by `phrase-model.ts`'s `expandRule`), its counts line
  *   `countsModel`'s over the plan alone, its action `Say it`, `Next` or
  *   none, no `Listen` on a review, no `When I need…`, and `Your field`
- *   exactly on a read garden;
+ *   exactly on a read garden; at the end of a run (the visit's verses then
+ *   the plan's items all said, none held) the heading `The field is
+ *   tended` over no counts line, the line of what grew and each grown
+ *   verse's name by `tendedModel` over the visit then the plan, tallied
+ *   `end:none`, `end:one` or `end:many`, and `end:visit` when the run held
+ *   a visit;
  * - home: the counts line with a plan made, `Begin` exactly with a verse
  *   shown (over unread passages the app's own, rq1 (a)), `When I need…`
  *   exactly with a plan made; the rows titled as `fieldPassagesModel`
@@ -73,6 +78,8 @@ import {
   type ModelVisitVerse,
 } from './promise-model';
 import { expandRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { END } from './root-rule';
+import { grewLine, tendedModel } from './run-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from './session-model';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { hostOffset } from './zone';
@@ -282,14 +289,23 @@ export class Walk {
     return this.visit.some((each) => each.reference === verse.reference);
   }
 
-  /** What Today must show settled: the reference, counts line, action, no way to When I need…, and the back `Your field` on a read garden. */
-  wantToday() {
+  /** H9: the end of the run (the visit, then the plan) by `tendedModel` over the disk's recalls, asked only at a done state of a made plan; none elsewhere. */
+  tendedNow() {
+    if (!this.planned() || this.shown() !== null) return null;
+    const records = [...plantsOf(this.device.disk).values()].flat();
+    return tendedModel({ plan: this.plan, hold: this.hold }, this.visit, records);
+  }
+
+  /** What Today must show settled: the reference, counts line, action, no way to When I need…, and the back `Your field` on a read garden; at the end of a run (`tended`, from `tendedNow`) the heading `The field is tended` over no counts line, the line of what grew and each grown verse's name. */
+  wantToday(tended: ReturnType<Walk['tendedNow']> = this.tendedNow()) {
     const shown = this.shown();
     const done = shown !== null && this.recallsNow(shown.reference) > shown.recalls;
     return {
-      headings: ['Today'],
+      headings: [tended === null ? 'Today' : END],
       references: shown === null ? [] : [shown.reference],
-      counts: this.planned() ? [countsModel(this.plan, this.recallsNow)] : [],
+      counts: this.planned() && tended === null ? [countsModel(this.plan, this.recallsNow)] : [],
+      grew: tended === null ? [] : [grewLine(tended.length)],
+      grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
       action: shown === null ? null : this.hold !== null && done ? 'Next' : 'Say it',
       need: false,
       field: !this.device.unread,
@@ -303,6 +319,8 @@ export class Walk {
       headings: rig.headings(),
       references: rig.references(),
       counts: rig.counts(),
+      grew: rig.grew(),
+      grown: rig.grown(),
       action: names.includes('Next') ? 'Next' : names.includes('Say it') ? 'Say it' : null,
       need: names.includes(NEED),
       field: names.includes('Your field'),
@@ -382,16 +400,22 @@ export class Walk {
   }
 
   async settleToday() {
-    const want = JSON.stringify(this.wantToday());
+    const tended = this.tendedNow();
+    const wanted = this.wantToday(tended);
+    const want = JSON.stringify(wanted);
     await this.launched.until(() => JSON.stringify(this.seenToday()) === want);
     const seen = this.seenToday();
+    if (tended !== null && JSON.stringify(seen) === want) {
+      this.bump(['end:none', 'end:one'][tended.length] ?? 'end:many');
+      if (this.visit.length > 0) this.bump('end:visit');
+    }
     const shown = this.shown();
     if (shown !== null && this.planned()) {
       const fresh = this.plan.some((item) => item.reference === shown.reference && item.fresh);
       if ((!fresh || this.fromVisit(shown)) && this.launched.names().includes('Listen'))
         this.fault('Listen on a review');
     }
-    return { seen, want: this.wantToday() };
+    return { seen, want: wanted };
   }
 
   fault(what: string) {
