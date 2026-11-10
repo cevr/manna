@@ -39,9 +39,11 @@
  * that makes the plan is in reach anywhere in the document: no `Settings`,
  * `Your field`, `Plant`, `Remove`, `<n> min` radio, `Minutes` group, `Voice`
  * or sheet. A recital where Today offers no Say it (its item done, or the
- * done state) first makes a new plan at the passage's due: Next, the clock
- * set to the due, and a Minutes trip to the minutes checked, which ends on
- * Today with Say it.
+ * done state) first makes a new plan at the passage's due: Next, Today held
+ * to the run's model (the end of a run, `The field is tended` with the line
+ * of what grew and each grown verse by `tendedModel`, once the plan's items
+ * are all done), the clock set to the due, and a Minutes trip from there to
+ * the minutes checked, which ends on Today with Say it.
  */
 
 import { expect, it } from 'bun:test';
@@ -54,8 +56,8 @@ import { MINUTES_KEY } from '../session/service';
 import { CHOICE_KEY, ENABLED_KEY, nextChoice, type Choice } from '../voice';
 import { toDue } from './clock';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
-import { rootFaults } from './root-rule';
-import { madeModel, NO_RUN, shownModel } from './run-model';
+import { END, rootFaults } from './root-rule';
+import { grewLine, madeModel, NO_RUN, shownModel, tendedModel } from './run-model';
 import { countsModel, planModel } from './session-model';
 import {
   choicesOf,
@@ -508,16 +510,51 @@ const passageRecalls = (device: Device) =>
     .filter(([key]) => key.startsWith(`heartseed/recall/${passage.reference}/`))
     .map(([, value]): Recall => JSON.parse(value));
 
+/** The floors of an end shown, by how many verses grew: none, one, several. */
+const END_FLOORS = ['end:none', 'end:one', 'end:many'] as const;
+
+/**
+ * Today with nothing held, against the run's model: the end of a run
+ * (`The field is tended`, the line of what grew and each grown verse's name
+ * by `tendedModel` over the plan's items and the disk's recalls, tallied
+ * `end:none`, `end:one` or `end:many`) once every item of a plan that is
+ * not empty is done, else the heading `Today` with no end node; fails
+ * `<at>: Today showed …, expected …`.
+ */
+const endCheck = async (run: Run, at: string) => {
+  const { app, device, m } = run;
+  if (m.plan === null) return;
+  const tended = tendedModel(
+    { plan: m.plan, hold: null },
+    [],
+    [...plantsOn(device).values()].flat(),
+  );
+  let want = JSON.stringify({ headings: ['Today'], grew: [], grown: [] });
+  if (tended !== null)
+    want = JSON.stringify({
+      headings: [END],
+      grew: [grewLine(tended.length)],
+      grown: tended.map((each) => `${each.reference}, ${each.stage}`),
+    });
+  const shown = () =>
+    JSON.stringify({ headings: app.headings(), grew: app.grew(), grown: app.grown() });
+  if (!(await app.until(() => shown() === want)))
+    fail(`${at}: Today showed ${shown()}, expected ${want}`);
+  if (tended !== null) cover(END_FLOORS[Math.min(tended.length, 2)] ?? 'end:many');
+};
+
 /**
  * Where Today offers no Say it (its item done, or the done state): `Next`
- * when it shows, the clock set to the passage's due, and a Minutes trip to
- * the minutes checked, which makes a new plan that offers it and ends on
- * Today with `Say it`.
+ * when it shows, Today then held to the run's model (`endCheck`: the end
+ * of a run once the plan's items are all done), the clock set to the
+ * passage's due, and a Minutes trip from there to the minutes checked,
+ * which makes a new plan that offers it and ends on Today with `Say it`.
  */
 const renewCommand = async (run: Run, at: string) => {
   const { app, device, m } = run;
   if (app.has('Say it')) return;
   if (app.has('Next')) await app.tap('Next');
+  await endCheck(run, at);
   toDue(run.time, passageRecalls(device));
   const ended = await minutesTrip(run, m.minutes, false);
   expect({ at, offered: !ended && (await app.until(() => app.has('Say it'))) }).toEqual({
@@ -614,10 +651,16 @@ const command = async (run: Run, c: number) => {
 /** A held launch shows its pending frame, never Today, until the listing is let go. */
 const holdThenRelease = async (app: Launch, step: string) => {
   await app.until(() => false, 15);
-  expect({ step, pending: app.frames.pending > 0, today: app.frames.today }).toEqual({
+  expect({
+    step,
+    pending: app.frames.pending > 0,
+    today: app.frames.today,
+    end: app.frames.end,
+  }).toEqual({
     step,
     pending: true,
     today: 0,
+    end: 0,
   });
   cover('held');
   app.release();
@@ -701,10 +744,17 @@ const fromHome = async (run: Run) => {
     cover('home:begin');
     return false;
   }
-  expect({ step, begin: app.has('Begin'), today: app.frames.today, faults: app.faults }).toEqual({
+  expect({
+    step,
+    begin: app.has('Begin'),
+    today: app.frames.today,
+    end: app.frames.end,
+    faults: app.faults,
+  }).toEqual({
     step,
     begin: false,
     today: 0,
+    end: 0,
     faults: [],
   });
   cover('home:done');

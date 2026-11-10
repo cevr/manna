@@ -349,15 +349,17 @@ const headingsOf = (rig: Rig) =>
   [...rig.host.querySelectorAll('[role="heading"]')].map(text).join('|');
 
 /**
- * A new plan from Today the way a reader makes one: `Your field` back to
- * home, the gear, in the sheet the radio `${minutes} min` (or, with no
- * `minutes`, the Minutes radio checked, which makes the plan again), `Done`,
- * then `Begin` when home offers it. Every frame of the trip's sheet is held
- * by a `watchSheet` against `scheme`. Answers the screen it ends on by its
+ * A new plan from Today, or from the end of a run (`The field is tended`,
+ * after a run's last `Next`), the way a reader makes one: `Your field`
+ * back to home, the gear, in the sheet the radio `${minutes} min` (or, with
+ * no `minutes`, the Minutes radio checked, which makes the plan again),
+ * `Done`, then `Begin` and the wait for `Today` only when home offers it,
+ * the new plan showing an item. Every frame of the trip's sheet is held by
+ * a `watchSheet` against `scheme`. Answers the screen it ends on by its
  * headings (`Today` after `Begin`, else `Your field`), the sheet's faults,
  * and its look-checked frames; only the radio's tap writes. Fails `no Your
- * field on Today`, `no <label> in the sheet`, or `the sheet stayed after
- * Done`.
+ * field on <headings>`, `no <label> in the sheet`, or `the sheet stayed
+ * after Done`.
  */
 export const renewBySettings = async (
   rig: Rig,
@@ -365,7 +367,7 @@ export const renewBySettings = async (
   scheme: () => Scheme = systemScheme,
 ) => {
   const back = hostControl(rig, 'Your field');
-  if (back === undefined) throw new Error('no Your field on Today');
+  if (back === undefined) throw new Error(`no Your field on ${headingsOf(rig)}`);
   await act(async () => {
     click(back);
   });

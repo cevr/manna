@@ -4,7 +4,8 @@
  * (the passage or another verse) and the stored texts `10` and `20`:
  * unread launches offering no choice, failed reads, recitals with nothing
  * that makes the plan in reach while they listen, renewals at the due by a
- * Minutes trip, and the done state on home. Devices 1 and 2 are
+ * Minutes trip from the end of a run with one verse grown, and the done
+ * state on home. Devices 1 and 2 are
  * `header.test.tsx`'s.
  */
 
@@ -22,6 +23,7 @@ describe('The reader’s choices across launches, read in Settings', () => {
     'listening:bare': 2,
     recital: 2,
     'new plan at the due': 2,
+    'end:one': 1,
     'field and back': 2,
     'sheet at launch': 3,
     'home:begin': 1,

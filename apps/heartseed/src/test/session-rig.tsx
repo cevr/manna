@@ -45,7 +45,7 @@ import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
-import { watchRoot } from './root-rule';
+import { END, watchRoot } from './root-rule';
 
 /** The four radios' names, in the order the group shows them. */
 export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
@@ -288,8 +288,11 @@ const mounted = new Set<() => Promise<void>>();
  * Effect's clock, its registry given `seeded` atoms' values beside the
  * app's layer. Every frame is held to the root's frame rule and the
  * screen's rules; the faults found are kept in `faults`, and `frames`
- * counts the frames seen by their screen (pending, Today, home, the first
- * minute, any other) and by what they showed. The root mounts as the app's
+ * counts the frames seen by their screen (pending, Today, the end of a run,
+ * home, the first minute, any other) and by what they showed. An end
+ * frame (`The field is tended`) is judged by the root's rule, and the
+ * screen's rule holds the session's nodes off it as off every screen but
+ * Today. The root mounts as the app's
  * `<Root />`, and `seen` notes the open Settings sheet's choices.
  */
 export const launch = async (
@@ -322,6 +325,7 @@ export const launch = async (
   const frames = {
     pending: 0,
     today: 0,
+    end: 0,
     home: 0,
     first: 0,
     other: 0,
@@ -342,6 +346,7 @@ export const launch = async (
     const shown = headings();
     if (shown.length === 0) frames.pending += 1;
     else if (shown.includes('Today')) frames.today += 1;
+    else if (shown.includes(END)) frames.end += 1;
     else if (shown.includes('Your field')) frames.home += 1;
     else if (shown.some((heading) => FIRST_MINUTE.has(heading))) frames.first += 1;
     else frames.other += 1;
@@ -417,6 +422,13 @@ export const launch = async (
     has: (label: string) => buttonNamed(label) !== undefined,
     choices: () => choicesOf(host),
     counts: () => countsIn(host),
+    /** The end's lines of what grew, as they read. */
+    grew: () => [...host.querySelectorAll('[data-testid="grew"]')].map(text),
+    /** The end's grown verses, by name, in order. */
+    grown: () =>
+      [...host.querySelectorAll('[data-testid="grown"]')].map(
+        (node) => node.getAttribute('aria-label') ?? '',
+      ),
     homeCounts: () => [...host.querySelectorAll('[data-testid="counts"]')].map(text),
     release: () => gate.resolve(),
     leave,

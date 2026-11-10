@@ -20,7 +20,11 @@
  * model (`src/test/run-model.ts`) shows an item: `Begin` leads to Today,
  * and in the done state the launch ends on home with no Today frame. After
  * every step on Today the line is the model's counts of that plan over the
- * disk's recalls now (S12, S13), and an unread launch, which opens Today,
+ * disk's recalls now (S12, S13); at the end of a run (every item of a
+ * plan that is not empty done, none held) Today reads `The field is
+ * tended` over no counts line, the line of what grew and each grown verse's
+ * name by `tendedModel`, tallied `end:none`, `end:one` or `end:many`, and
+ * home's line stays the plan's. An unread launch, which opens Today,
  * shows no line in any frame (S14) and offers no Minutes, Voice, Settings
  * or Your field. After every step the action button is the run's model's
  * (Say it on the item shown, Next once it is done, none in the done state;
@@ -52,8 +56,16 @@ import type { Minutes } from '../session';
 import { MINUTES_KEY } from '../session/service';
 import { CHOICE_KEY } from '../voice';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
-import { rootFaults } from './root-rule';
-import { actionModel, madeModel, nextModel, shownModel, startedModel } from './run-model';
+import { END, rootFaults } from './root-rule';
+import {
+  actionModel,
+  grewLine,
+  madeModel,
+  nextModel,
+  shownModel,
+  startedModel,
+  tendedModel,
+} from './run-model';
 import {
   countsModel,
   DAY,
@@ -182,18 +194,35 @@ const wantOf = (run: Run) => {
   return [countsModel(run.m.plan, recallsNow(run.device))];
 };
 
+/** The end of a run as the model has it: the verses grown by `tendedModel` over the plan's items and the disk's recalls, none while Today is not the end (an unread launch, no plan, an item held or not done, an empty plan). */
+const tendedNow = (run: Run) => {
+  const { m } = run;
+  if (!m.read || m.plan === null) return null;
+  return tendedModel({ plan: m.plan, hold: m.hold }, [], [...plantsOn(run.device).values()].flat());
+};
+
+/** The floors of an end settled, by how many verses grew: none, one, several. */
+const END_FLOORS = ['end:none', 'end:one', 'end:many'] as const;
+
 const SETTINGS = [MINUTES_KEY, CHOICE_KEY];
 
-/** Holds the screen and the disk to the model once the view caught up with the last step, and, after a step that must change nothing (`still`), a moment after it too. */
+/** Holds the screen and the disk to the model once the view caught up with the last step, and, after a step that must change nothing (`still`), a moment after it too. At the end of a run Today reads `The field is tended` over no counts line, the line of what grew and each grown verse's name. */
 const settle = async (run: Run, still = false) => {
   const { app, device, m, step } = run;
   const action = actionWant(m, device);
+  const tended = tendedNow(run);
   const want = {
-    counts: wantOf(run),
+    headings: [tended === null ? 'Today' : END],
+    counts: tended === null ? wantOf(run) : [],
+    grew: tended === null ? [] : [grewLine(tended.length)],
+    grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
     actions: action === null ? [] : [action],
   };
   const shown = () => ({
+    headings: app.headings(),
     counts: app.counts(),
+    grew: app.grew(),
+    grown: app.grown(),
     actions: ACTIONS.filter((name) => app.has(name)),
   });
   await app.until(() => JSON.stringify(shown()) === JSON.stringify(want));
@@ -205,7 +234,8 @@ const settle = async (run: Run, still = false) => {
     others: device.writes.filter((key) => !SETTINGS.includes(key) && !key.startsWith(PREFIX)),
   }).toEqual({ step, minutes: m.stored, others: [] });
   const line = want.counts[0];
-  if (line === undefined) cover('counts:none');
+  if (tended !== null) cover(END_FLOORS[Math.min(tended.length, 2)] ?? 'end:many');
+  else if (line === undefined) cover('counts:none');
   else cover(`counts:${line.replace(/\d+/g, 'n')}`);
   cover(`action:${action ?? 'none'}`);
 };
@@ -442,11 +472,11 @@ const againCommand = async (run: Run) => {
   cover('again');
 };
 
-/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows Today's counts line and no `Begin` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
+/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state (bare, or the end of a run) home shows the plan's counts line and no `Begin` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
   if (!run.m.read) return false;
   const acted = run.app.has('Say it') || run.app.has('Next');
-  const counts = run.app.counts();
+  const counts = wantOf(run);
   await run.app.tap('Your field');
   expect(
     await run.app.until(
@@ -660,7 +690,11 @@ const fromHome = async (run: Run) => {
     faults: [],
   });
   if (!begin) {
-    expect({ step, today: app.frames.today }).toEqual({ step, today: 0 });
+    expect({ step, today: app.frames.today, end: app.frames.end }).toEqual({
+      step,
+      today: 0,
+      end: 0,
+    });
     cover('home:done');
     return true;
   }
@@ -703,11 +737,13 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
     expect({
       step,
       today: app.frames.today,
+      end: app.frames.end,
       shown: app.frames.shown,
       counts: app.frames.counts,
     }).toEqual({
       step,
       today: 0,
+      end: 0,
       shown: 0,
       counts: 0,
     });

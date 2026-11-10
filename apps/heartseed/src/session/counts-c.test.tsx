@@ -2,8 +2,9 @@
  * Today's counts line over the counts walk (`src/test/counts-walk.ts`):
  * two generated disks (devices 2 and 3), leaning on Today's lines and
  * actions, the Minutes and Voice choices made in the Settings sheet, the
- * recitals heard and unheard, Again, and Today's done state and the new
- * plan made after it. Devices 4 and 5, with a Minutes choice after a
+ * recitals heard and unheard, Again, and Today's done state (the end of a
+ * run, with nothing grown and with one verse grown) and the new plan made
+ * after it. Devices 4 and 5, with a Minutes choice after a
  * recital, a missed recital and the trips that end on home's done state,
  * are `counts-f.test.tsx`'s.
  */
@@ -28,6 +29,8 @@ describe('Today’s counts line', () => {
     'action:Next': 5,
     next: 1,
     'done state: a new plan': 2,
+    'end:none': 1,
+    'end:one': 1,
     'home:begin': 1,
     'settings:minutes': 1,
     'settings:voice': 1,
