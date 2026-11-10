@@ -17,7 +17,9 @@
  * otherwise; the fourth walk opens with an unheard recital and a trip, so
  * a trip whose plan offers the verse is walked. The model is the system's last
  * value; every frame (each DOM mutation batch) and every settled screen
- * holds the frame oracle (`src/test/look.ts`) for it, every frame of the
+ * holds the frame oracle (`src/test/look.ts`) for it, every settled Today
+ * draws its stage line's plant image in it (`src/test/plant-image-rule.ts`),
+ * in each scheme across the walks, every frame of the
  * sheet holds the sheet's rule for it, and the run rig's footer rule holds
  * too. It counts words without printing one.
  */
@@ -32,6 +34,7 @@ import { recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
 import { below, DAY, pickOf, PREFIX, random } from '../test/garden-model';
 import { lookFaults, setSystem, watchLook } from '../test/look';
+import { ownsImages, plantFaults, STAGE_IMAGE } from '../test/plant-image-rule';
 import { END, endShown, rootFaults } from '../test/root-rule';
 import { madeModel, NO_RUN, shownModel } from '../test/run-model';
 import { deviceOf, launch, type Device, type Hearing } from '../test/run-rig';
@@ -103,6 +106,19 @@ const offerOf = (device: Device, minutes: number) => {
 
 const other = (scheme: Scheme): Scheme => (scheme === 'light' ? 'dark' : 'light');
 
+/** Each scheme a settled Today drew its stage's plant image in, over the walks. */
+const DREW = new Set<Scheme>();
+
+/** What a settled screen draws wrong against the plant it owes in `scheme` (`plantFaults`): Today's stage line's 28 pt image of that scheme, none with no planted stage; home and the end draw their own. */
+const drawing = (host: Element, scheme: Scheme) => {
+  if (ownsImages(host)) return [];
+  const label = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? '';
+  const name = STAGE_IMAGE.get(label);
+  if (name === undefined) return plantFaults(host, null);
+  DREW.add(scheme);
+  return plantFaults(host, { asset: `assets/home/${name}-${scheme}.png`, size: 28 });
+};
+
 /** The model of the system: the appearance it last named. */
 interface Model {
   system: Scheme;
@@ -125,7 +141,7 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   };
   const settle = async (name: string) => {
     await app.until(() => lookFaults(app.host, model.system).length === 0, 300);
-    const faults = lookFaults(app.host, model.system);
+    const faults = [...lookFaults(app.host, model.system), ...drawing(app.host, model.system)];
     if (faults.length > 0)
       report.push(`seed ${seed} ${name} [${model.system}]: ${faults.join('; ')}`);
   };
@@ -250,7 +266,16 @@ describe('Today in dark and across flips of the system', () => {
       seen: walks.every((each) => each.seen > 5),
       unreached: reached,
       bare: coverage.done ?? 0,
-    }).toEqual({ reports: [], frames: [], footers: [], seen: true, unreached: [], bare: 0 });
+      drew: [...DREW].toSorted(),
+    }).toEqual({
+      reports: [],
+      frames: [],
+      footers: [],
+      seen: true,
+      unreached: [],
+      bare: 0,
+      drew: ['dark', 'light'],
+    });
   });
 
   it('reaches the end of the run in dark, its read exact, a flip there repainting it with no tap', async () => {

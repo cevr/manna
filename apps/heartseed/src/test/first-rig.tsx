@@ -41,7 +41,10 @@
  * rule (`rootFaults` through `watchRoot`, the garden the launch's read), and
  * an unread launch shows no `Your field` in any frame. Every frame (each DOM
  * mutation batch) and every settle is read against
- * the model: the heading, the pending rules, what a sighted reader and the
+ * the model: the heading, the pending rules, the plant images by their
+ * sources (`src/test/plant-image-rule.ts`: none in the pending frame or the
+ * phases, Planted's one hidden 112 pt seed of the system's scheme, Today's
+ * its stage line's 28 pt image), what a sighted reader and the
  * screen reader get of each word, the hear phase's ink and selection, the
  * claims and setting words, the whole disk with every write counted and each
  * kept record's nine fields from the model's own grade rule and the zone's
@@ -92,6 +95,7 @@ import { clockAt, clockOf, type Time } from './clock';
 import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
 import { device } from './one';
+import { plantFaults, STAGE_IMAGE } from './plant-image-rule';
 import { voiceOverFaults } from './voiceover';
 import { END, endShown, watchRoot } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
@@ -681,7 +685,24 @@ interface Allowed {
   pending: boolean;
 }
 
-/** What one frame shows wrong: more than one heading; a pending frame after the launch decided, or one offering a button or a stage; a heading the command cannot reach; Planted with no recall on the disk or without its seed; and the phases' own faults. */
+/** The plant Planted owes (`src/test/plant-image-rule.ts`): the home set's seed in the scheme the system names, 112 pt. */
+const PLANTED_SEED = () => ({ asset: `assets/home/seed-${systemScheme()}.png`, size: 112 });
+
+/** The plant Today's stage line `label` owes: its stage's image in the scheme the system names, 28 pt; none with no stage line or one not planted. */
+const todayPlant = (label: string | null | undefined) => {
+  const name = STAGE_IMAGE.get(label ?? '');
+  if (name === undefined) return null;
+  return { asset: `assets/home/${name}-${systemScheme()}.png`, size: 28 };
+};
+
+/** A frame's drawing faults against the plant `want` owes (`plantFaults`), each named for `where`. */
+const drawingFaults = (
+  host: Element,
+  where: string,
+  want: { readonly asset: string; readonly size: number } | null,
+) => plantFaults(host, want).map((fault) => `frame: ${where} draws ${fault}`);
+
+/** What one frame shows wrong: more than one heading; a pending frame after the launch decided, or one offering a button, a stage or a plant image; a heading the command cannot reach; Planted with no recall on the disk or without its one hidden seed image; Today's drawing not its stage line's; and the phases' own faults, a plant image among them. */
 const frameFaults = (
   host: Element,
   shown: readonly string[],
@@ -698,6 +719,7 @@ const frameFaults = (
     if (host.querySelector('[data-testid="stage"],[data-testid="plant"],[role="alert"]') !== null)
       out.push('frame: a pending frame claims a stage');
     if (CLAIM.test(host.textContent ?? '')) out.push('frame: a pending frame claims');
+    out.push(...drawingFaults(host, 'the pending frame', null));
     return out;
   }
   if (!allowed.headings.has(heading)) out.push(`frame: heading ${heading} not allowed now`);
@@ -708,8 +730,14 @@ const frameFaults = (
     const plant = host.querySelector('[data-testid="plant"]');
     if (stage !== 'Stage: seed' || plant?.getAttribute('aria-hidden') !== 'true')
       out.push('frame: Planted without its hidden seed');
+    out.push(...drawingFaults(host, 'Planted', PLANTED_SEED()));
+  }
+  if (heading === 'Today') {
+    const stage = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
+    out.push(...drawingFaults(host, 'Today', todayPlant(stage)));
   }
   if (['Today', END, 'Planted', 'Your field'].includes(heading)) return out;
+  out.push(...drawingFaults(host, heading, null));
   out.push(...phaseFaults(host, heading, buttons, phase.voiceOn));
   if (heading === 'Hear it') return [...out, ...hearFaults(host, phase.held)];
   return [...out, ...wordFaults(host, heading, phase.said)];
@@ -1524,16 +1552,20 @@ export const session = (count: (key: string) => void) => {
     }
   };
 
-  /** The claims at rest: none on an unread Today, a seed on Planted, Today's stage the model's with no growth line until a grown write. */
+  /** The claims at rest: none and no plant image on an unread Today, a seed and its one hidden 112 pt seed image on Planted, Today's stage the model's with no growth line until a grown write. */
   const checkClaims = (r: Rig, here: string) => {
     const stage = r.host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
     const growth = r.host.querySelector('[data-testid="growth"]') !== null;
     if (m.screen === 'unread')
       expect(
-        [stage, growth, r.host.querySelector('[data-testid="plant"]')],
+        [stage, growth, r.host.querySelector('[data-testid="plant"]'), plantFaults(r.host, null)],
         `${here}: unread claims`,
-      ).toEqual([null, false, null]);
-    if (m.screen === 'planted') expect(stage, `${here}: Planted's stage`).toBe('Stage: seed');
+      ).toEqual([null, false, null, []]);
+    if (m.screen === 'planted')
+      expect([stage, plantFaults(r.host, PLANTED_SEED())], `${here}: Planted's seed`).toEqual([
+        'Stage: seed',
+        [],
+      ]);
     if (m.screen !== 'today' || runOf(m) === 'done') return;
     const want = ['Stage: not planted', 'Stage: seed'][m.passage] ?? 'Stage: planted';
     const planted = stage !== null && (STAGES.includes(stage) || stage === 'Stage: seed');

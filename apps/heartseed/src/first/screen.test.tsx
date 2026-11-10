@@ -13,8 +13,9 @@
  * colour, the light scheme's `quiet`, so the letters count among the muted
  * texts. Every element of every phase at
  * rest, of the hear phase while it reads and of the letters while their
- * recital listens keeps base's look (`BASE_LOOK`), the letters' ink alone
- * left out. It counts words without printing one.
+ * recital listens keeps base's look (`BASE_LOOK`), the letters' ink left
+ * out and Planted's seed drawn as its hand-drawn image. It counts words
+ * without printing one.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -161,7 +162,11 @@ const LETTERS_LOOK = [
  * unit's head with the letters put back in the mute, which gives the same
  * lines: the letters' ink is the one line `lookOf` leaves out. The hear
  * phase's words while read sit in the reading view, whose box alone gains
- * its `reading` test id; every other line is base's.
+ * its `reading` test id. Planted's drawing is the hand-drawn seed: its
+ * hidden `plant` wrapper holds the hidden `plant-image` box and its image
+ * (react-native-web's box, its painted layer and its `img`), where base drew
+ * a soil box and a gold seed inside a scaled wrapper; its image's source and
+ * size are `src/test/plant-image-rule.ts`'s. Every other line is base's.
  */
 const BASE_LOOK = {
   hear: [
@@ -216,13 +221,13 @@ const BASE_LOOK = {
   planted: [
     button('Continue', CARD),
     `1× div||plant||aria-hidden=true|||${CLEAR}||${VIEW}`,
+    `1× div||plant-image||aria-hidden=true|||${CLEAR}||${VIEW}`,
+    `1× img||||||||0|||"Times New Roman"|16px|normal|normal`,
     REFERENCE,
     `1× div||stage|Stage: seed||A seed|${MUTE}|${CLEAR}||inline||${face}|15px|normal|normal`,
     HALO,
     pill('Continue', INK),
     phaseLine('Your first promise is a seed.'),
-    boxes(1, computed(theme.light.soil)),
-    boxes(1, computed(theme.light.gold)),
     boxes(1, GROUND),
     heading('Planted'),
     boxes(4, INK, '1'),
@@ -258,7 +263,7 @@ describe('the first minute', () => {
     await first.leave();
   });
 
-  it('keeps base’s look element for element in every phase at rest (hear, letters, alone, Planted), while the hear phase reads and while the letters’ recital listens, the letters’ ink alone moved', async () => {
+  it('keeps base’s look element for element in every phase at rest (hear, letters, alone, Planted), while the hear phase reads and while the letters’ recital listens, the letters’ ink and Planted’s drawn seed alone moved', async () => {
     const looks: Partial<Record<keyof typeof BASE_LOOK, readonly string[]>> = {};
     device.launch([]);
     const held = await mount(

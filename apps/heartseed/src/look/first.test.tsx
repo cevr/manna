@@ -9,7 +9,9 @@
  * alone, Planted, and home's done state after Continue) is shown in dark,
  * then the system flips to light and back, and every frame (each DOM
  * mutation batch) holds the frame oracle (`src/test/look.ts`) for the
- * system's last value and the root's frame rule (`rootFaults`). It counts words without
+ * system's last value and the root's frame rule (`rootFaults`); each
+ * settled phase in each scheme draws the plant image it owes in that scheme
+ * (`src/test/plant-image-rule.ts`), Planted's seed and no other. It counts words without
  * printing one.
  */
 
@@ -29,6 +31,7 @@ import { store } from '../store';
 import { clockOf } from '../test/clock';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { device } from '../test/one';
+import { plantFaults } from '../test/plant-image-rule';
 import { watchRoot } from '../test/root-rule';
 import type { Scheme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
@@ -116,12 +119,19 @@ const mount = async (scheme: Scheme, held: boolean) => {
     model.system = to;
     await act(async () => setSystem(to));
   };
-  /** The phase shown now, `name`, settled in dark, then flipped to light and back, each settled screen held to the oracle. */
+  /** The plant the phase `name` owes in `scheme` (`plantFaults`): Planted's 112 pt seed of that scheme, home its own, every other phase none. */
+  const drawing = (name: string, scheme: Scheme) => {
+    if (name === 'home') return [];
+    if (name === 'planted')
+      return plantFaults(host, { asset: `assets/home/seed-${scheme}.png`, size: 112 });
+    return plantFaults(host, null);
+  };
+  /** The phase shown now, `name`, settled in dark, then flipped to light and back, each settled screen held to the oracle and to the plant image it owes in that scheme. */
   const phase = async (name: string) => {
     for (const to of ['dark', 'light', 'dark'] as const) {
       if (model.system !== to) await flip(to);
       await until(() => lookFaults(host, to).length === 0, 300);
-      const faults = lookFaults(host, to);
+      const faults = [...lookFaults(host, to), ...drawing(name, to)];
       if (faults.length > 0) report.push(`${name} [${to}]: ${faults.join('; ')}`);
     }
   };
