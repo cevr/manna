@@ -33,6 +33,7 @@ const harness = (timeline: Timeline = three) => {
   let now = 0;
   let timers: Array<{ at: number; run: () => void }> = [];
   const scrolled: Array<number> = [];
+  const animated: Array<boolean> = [];
   const logged: Array<string> = [];
   const host: Host = {
     now: () => now,
@@ -43,7 +44,10 @@ const harness = (timeline: Timeline = three) => {
         timers = timers.filter((t) => t !== timer);
       };
     },
-    scrollTo: (to) => scrolled.push(to),
+    scrollTo: (to, moving) => {
+      scrolled.push(to);
+      animated.push(moving);
+    },
     log: (event) => logged.push(event),
   };
   const follower = followerOf(timeline, host);
@@ -60,7 +64,16 @@ const harness = (timeline: Timeline = three) => {
   };
   const marks = () => timeline.lines.map((_, k) => follower.marks.markOf(k));
   const report = (told: Report) => follower.report(told);
-  return { advance, marks, report, scrolled, logged, follower };
+  return {
+    advance,
+    marks,
+    report,
+    scrolled,
+    animated,
+    logged,
+    follower,
+    timers: () => timers.length,
+  };
 };
 
 const playing = (at: number): Report => ({ _tag: 'Here', at, state: 'playing' });
@@ -367,6 +380,43 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
   it('marks a line-level line whole when a singing of it on the same notes starts no notes', () => {
     const off = line18.syllables.map((t) => t + 1);
     expect(litOf(timelineFor(withLine18(off)))).toEqual([false, false, true]);
+  });
+});
+
+describe('a held seek on the page', () => {
+  it('stops the follow scrolling, marking and waking, and a drag is no hand scroll', () => {
+    const h = harness();
+    h.report(playing(1000));
+    const before = { scrolled: h.scrolled.length, marks: h.marks() };
+    h.follower.beginPreview();
+    h.advance(400);
+    h.report(playing(3200));
+    h.follower.drag();
+    h.follower.relayout();
+    h.follower.resume();
+    h.follower.show();
+    expect([h.scrolled.length, h.marks(), h.timers(), h.follower.held.get()]).toEqual([
+      before.scrolled,
+      before.marks,
+      0,
+      false,
+    ]);
+  });
+
+  it('restores to the line sung now at its end, at once under Reduce Motion, and an invalidated end restores nothing', () => {
+    const ends = ([true, false] as const).map((restore) => {
+      const h = harness();
+      h.report(playing(1000));
+      h.follower.beginPreview();
+      h.report({ _tag: 'Here', at: 3100, state: 'paused' });
+      const scrolled = h.scrolled.length;
+      h.follower.endPreview(restore, false);
+      return [h.scrolled.slice(scrolled), h.animated.slice(scrolled), h.marks()];
+    });
+    expect(ends).toEqual([
+      [[2], [false], [OFF, OFF, 0]],
+      [[], [], [OFF, OFF, 0]],
+    ]);
   });
 });
 

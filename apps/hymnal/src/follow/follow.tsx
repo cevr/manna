@@ -23,14 +23,18 @@ import {
   use,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from 'react';
 import type {
   ColorValue,
   HostInstance,
   LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollViewInstance,
   TextStyle,
 } from 'react-native';
@@ -41,6 +45,7 @@ import { usePlayer } from '~/player/context';
 import type { Beat } from '~/player/countin';
 import { type HymnPlayer, Player, trackOf } from '~/player/player';
 import { cutOf, keptOf } from '~/player/stanzas';
+import { centerOffset, type PreviewHost } from '~/reader/word-seek';
 import { settings } from '~/store';
 
 import { book } from './book';
@@ -388,7 +393,80 @@ export const useFollow = (number: number) => {
     Option.match(follower, { onNone: () => false, onSome: (f) => f.held.get() });
   const held = useSyncExternalStore(subscribeHeld, readHeld, readHeld);
 
+  /** The points of the scroll's foot under the docked bar and the seek's controls. */
+  const covered = useRef(0);
+  /** The scroll's offset as last told: kept so the padding's end leaves the words in place. */
+  const offset = useRef(0);
+  /** The held padding over and under the words: drawn, and wanted. */
+  const [pad, setPad] = useState(0);
+  const drawnPad = useRef(0);
+  const wantedPad = useRef(0);
+  /** The line the held seek sets mid-viewport, and the newest measure asked for it. */
+  const centred = useRef(Option.none<number>());
+  const asked = useRef(0);
+  const viewport = () => Math.max(0, height.current - covered.current);
+  const scrollTo = (y: number) =>
+    Option.map(scroll.current, (page) => {
+      offset.current = y;
+      page.scrollTo({ y, animated: false });
+    });
+  const measureCentre = (line: number) => {
+    asked.current += 1;
+    const ask = asked.current;
+    Option.all([
+      Option.fromNullishOr(views.current.get(line)),
+      Option.flatMap(scroll.current, (page) => Option.fromNullishOr(page.getInnerViewRef())),
+    ]).pipe(
+      Option.map(([view, inner]) =>
+        view.measureLayout(inner, (_x, y, _width, tall) => {
+          if (ask !== asked.current || !Option.contains(centred.current, line)) return;
+          Option.map(
+            centerOffset(y - drawnPad.current, tall, viewport(), wantedPad.current),
+            scrollTo,
+          );
+        }),
+      ),
+    );
+  };
+  useLayoutEffect(() => {
+    const before = drawnPad.current;
+    drawnPad.current = pad;
+    if (pad < before) scrollTo(Math.max(0, offset.current - (before - pad)));
+    else Option.map(centred.current, measureCentre);
+  }, [pad]);
+  const preview: PreviewHost = {
+    ready: () => Option.isSome(follower) && viewport() > 0,
+    begin: () => {
+      Option.map(follower, (f) => f.beginPreview());
+      wantedPad.current = viewport() / 2;
+      setPad(wantedPad.current);
+    },
+    center: (line) => {
+      centred.current = Option.some(line);
+      measureCentre(line);
+    },
+    finish: () => {
+      centred.current = Option.none();
+      asked.current += 1;
+      wantedPad.current = 0;
+      setPad(0);
+    },
+    end: (restore, animated) => Option.map(follower, (f) => f.endPreview(restore, animated)),
+  };
+
   return {
+    /** The held seek's hold on the page's scroll (`reader/word-seek.ts`). */
+    preview,
+    /** The held padding over and under the words, while a held seek holds the page. */
+    pad,
+    /** The points the docked bar and the seek's controls cover at the scroll's foot. */
+    cover: (points: number) => {
+      covered.current = points;
+    },
+    /** The scroll's offset, told as it scrolls. */
+    onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      offset.current = event.nativeEvent.contentOffset.y;
+    },
     follow,
     /** The page's scroll's ref. */
     scroll: scrollRef,

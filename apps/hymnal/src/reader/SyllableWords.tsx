@@ -58,6 +58,7 @@ import { useLineFollow } from '~/follow/follow';
 import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
+import { useSeekTreatment } from './word-seek';
 
 /** A syllable of a line: its box, and its place in the line from 0. */
 interface Placed {
@@ -87,6 +88,7 @@ export function SyllableLine({
   const { fontScale } = useWindowDimensions();
   const text = usePageText();
   const { marked, ref, syllableStyle } = useLineFollow(index);
+  const seek = useSeekTreatment(index);
   const starts = wordStarts(words);
   const boxed = Option.isSome(over);
   const textStyle = [style, text.words];
@@ -97,12 +99,13 @@ export function SyllableLine({
     </Text>
   );
   /** A run of syllables as one text: the first its own colour, each later one a span after a muted hyphen. */
-  const run = (syllables: Arr.NonEmptyReadonlyArray<Placed>, after: ReactNode) => {
+  const run = (syllables: Arr.NonEmptyReadonlyArray<Placed>, after: ReactNode, w: number) => {
     const first = Arr.headNonEmpty(syllables);
+    const chosen = seek.word(w);
     return (
       <Text
         testID={`syllable-${at}-${first.s + 1}`}
-        style={[textStyle, syllableStyle(first.s)]}
+        style={[textStyle, syllableStyle(first.s), chosen]}
         dynamicTypeRamp="body"
         pointerEvents="none"
         {...(boxed && { 'aria-label': syllables.map(({ box }) => box.text).join('') })}
@@ -111,7 +114,7 @@ export function SyllableLine({
         {Arr.tailNonEmpty(syllables).map(({ box, s }) => (
           <Fragment key={s}>
             {hyphen}
-            <Text testID={`syllable-${at}-${s + 1}`} style={syllableStyle(s)}>
+            <Text testID={`syllable-${at}-${s + 1}`} style={[syllableStyle(s), chosen]}>
               {box.text}
             </Text>
           </Fragment>
@@ -132,6 +135,7 @@ export function SyllableLine({
           styles.line,
           boxed && [styles.boxed, { columnGap: 5 * fontScale }],
           { paddingLeft: text.indent },
+          seek.line,
         ]}
       >
         {words.map((word, w) => {
@@ -141,7 +145,7 @@ export function SyllableLine({
           return Option.match(over, {
             onNone: () => (
               <View key={w} style={[styles.word, pulled]}>
-                {run(placed, (w < words.length - 1 && '\u00A0') || '')}
+                {run(placed, (w < words.length - 1 && '\u00A0') || '', w)}
               </View>
             ),
             onSome: (draw) => (
@@ -154,7 +158,7 @@ export function SyllableLine({
                     <View key={head.s} style={styles.box}>
                       {draw(head.box, `${at}-${head.s + 1}`)}
                       <View style={styles.syllable}>
-                        {run(joined, more && bare && hyphen)}
+                        {run(joined, more && bare && hyphen, w)}
                         {more && !bare && (
                           <Text
                             style={[textStyle, styles.muted, styles.hyphen]}

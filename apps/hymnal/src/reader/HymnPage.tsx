@@ -31,9 +31,20 @@ import { useAtomValue } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
-import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
+import {
+  memo,
+  type ReactNode,
+  type Ref,
+  type RefCallback,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   type ColorValue,
+  type HostInstance,
   Pressable,
   ScrollView,
   type StyleProp,
@@ -73,6 +84,22 @@ import { KeepAwake } from './KeepAwake';
 import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
 import { readingStyle } from './reading';
+import {
+  type Described,
+  describe,
+  focusOn,
+  PreviewProvider,
+  spoken,
+  type Step,
+  useWordSeek,
+  type WordSeek,
+} from './word-seek';
+
+/** The page's padding over the head and under the last words, outside a held seek's. */
+const PAGE_TOP = 8;
+const PAGE_FOOT = 48;
+/** The space between the seek's controls and the words they leave free. */
+const SEEK_GAP = 8;
 
 /**
  * What the page reads its chords and its setting from: the stored chords
@@ -95,9 +122,12 @@ export interface ChordReader {
 export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
+  shown = true,
 }: {
   readonly hymn: HymnText;
   readonly reader: ChordReader;
+  /** Whether this is the page the reader sees: a neighbour in the pager, or a page under another, takes no held seek. */
+  readonly shown?: boolean;
 }) {
   const accent = useAccent();
   const on = useAtomValue(reader.chords);
@@ -128,19 +158,30 @@ export const HymnPage = memo(function HymnPage({
   const now = useRef({ router, played });
   now.current = { router, played };
   const tap = useCallback(
-    (shown: ReadonlyArray<Chord.Chord>) =>
-      now.current.router.push(chordHref(shown, now.current.played)),
+    (chosen: ReadonlyArray<Chord.Chord>) =>
+      now.current.router.push(chordHref(chosen, now.current.played)),
     [],
   );
+  const layout = useLayoutKey(reader.reading, on, style);
+  const seek = useWordSeek({ number: hymn.number, shown, layout, host: follow.preview });
+  const [room, setRoom] = useState(0);
+  follow.cover(RISE + room);
+  const holding = Option.isSome(seek.via);
   return (
     <View style={styles.frame}>
       <ScrollView
         ref={follow.scroll}
         testID="hymn-scroll"
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.page}
+        contentContainerStyle={[
+          styles.page,
+          { paddingTop: PAGE_TOP + follow.pad, paddingBottom: PAGE_FOOT + follow.pad },
+        ]}
         onLayout={follow.onLayout}
         onContentSizeChange={follow.onContentSizeChange}
+        onScroll={follow.onScroll}
+        scrollEventThrottle={16}
+        scrollEnabled={!holding}
         {...follow.hand}
       >
         <KeepAwake on={reader.reading.awake} />
@@ -167,20 +208,180 @@ export const HymnPage = memo(function HymnPage({
           <PlayedKeyProvider value={played}>
             <FollowProvider value={follow.follow}>
               <ChordTapProvider value={tap}>
-                <Sections hymn={hymn} book={wordsBook} chords={chords} />
+                <PreviewProvider value={seek.marks}>
+                  <Sections hymn={hymn} book={wordsBook} chords={chords} />
+                </PreviewProvider>
               </ChordTapProvider>
             </FollowProvider>
           </PlayedKeyProvider>
         </PageText>
       </ScrollView>
+      {holding && (
+        <View pointerEvents="none" style={[styles.middle, { bottom: RISE + room }]}>
+          <View testID="reader-seek-marker" style={[styles.marker, { backgroundColor: accent }]} />
+          {Option.exists(seek.target, (target) => target._tag === 'Line') && (
+            <Text testID="reader-seek-line-only" style={styles.timingNote}>
+              Line timing only
+            </Text>
+          )}
+        </View>
+      )}
       {follow.held && (
         <View testID="resume-follow-dock" pointerEvents="box-none" style={styles.overBar}>
           <ResumeFollow onPress={follow.resume} />
         </View>
       )}
+      <View pointerEvents="box-none" style={styles.overBar}>
+        <SeekControls seek={seek} onRoom={setRoom} />
+      </View>
     </View>
   );
 });
+
+/** The reading's layout as one key: the words' size, font and spacing, the system's text size, the chords. */
+const useLayoutKey = (reading: ReadingSettings, chords: boolean, style: ChordStyle) => {
+  const size = useAtomValue(reading.size);
+  const font = useAtomValue(reading.font);
+  const spacing = useAtomValue(reading.spacing);
+  const { fontScale, width } = useWindowDimensions();
+  return `${size} ${font} ${spacing} ${fontScale} ${width} ${chords} ${style}`;
+};
+
+/**
+ * The held seek without a drag: `Seek by line or word` takes the hold as a
+ * held finger does, and opens a small group on the page (no route, so the
+ * hold stays) that steps a line or a word, plays from the choice, or
+ * cancels. Focus moves into the group as it opens and back to the button as
+ * it closes; the status says the choice by number.
+ */
+function SeekControls({
+  seek,
+  onRoom,
+}: {
+  readonly seek: WordSeek;
+  readonly onRoom: (points: number) => void;
+}) {
+  const open = Option.contains(seek.via, 'steps');
+  const entry = useRef(Option.none<HostInstance>());
+  const first = useRef(Option.none<HostInstance>());
+  const keepEntry = useCallback<RefCallback<HostInstance>>((node) => {
+    entry.current = Option.fromNullishOr(node);
+  }, []);
+  const keepFirst = useCallback<RefCallback<HostInstance>>((node) => {
+    first.current = Option.fromNullishOr(node);
+  }, []);
+  const was = useRef(open);
+  useLayoutEffect(() => {
+    const before = was.current;
+    was.current = open;
+    if (open && !before) Option.map(first.current, focusOn);
+    if (!open && before) Option.map(entry.current, focusOn);
+    if (!open) onRoom(0);
+  }, [open, onRoom]);
+  const said = Option.flatMap(Option.all([seek.targets, seek.target]), ([targets, target]) =>
+    describe(targets, target),
+  );
+  const step = (kind: Step, id: string, label: string, ref?: Ref<HostInstance>) => (
+    <SeekButton
+      id={id}
+      label={label}
+      disabled={!seek.canStep(kind)}
+      onPress={() => seek.step(kind)}
+      ref={ref}
+    />
+  );
+  return (
+    <View pointerEvents="box-none" style={styles.seekDock}>
+      {open && (
+        <View
+          testID="reader-seek-controls"
+          role="group"
+          aria-label="Seek by line or word"
+          style={styles.seekPanel}
+          onLayout={(event) => onRoom(event.nativeEvent.layout.height + SEEK_GAP)}
+        >
+          <Text
+            testID="reader-seek-status"
+            aria-live="polite"
+            aria-label={Option.getOrElse(Option.map(said, spoken), () => '')}
+            aria-valuetext={Option.getOrElse(
+              Option.map(Option.all([said, seek.target]), ([one, target]) =>
+                numbersOf(one, target.ms),
+              ),
+              () => '',
+            )}
+            style={styles.seekStatus}
+          >
+            {Option.getOrElse(Option.map(said, spoken), () => '')}
+          </Text>
+          <View style={styles.seekRow}>
+            {step('prev-line', 'reader-seek-prev-line', 'Previous line', keepFirst)}
+            {step('next-line', 'reader-seek-next-line', 'Next line')}
+          </View>
+          <View style={styles.seekRow}>
+            {step('prev-word', 'reader-seek-prev-word', 'Previous word')}
+            {step('next-word', 'reader-seek-next-word', 'Next word')}
+          </View>
+          <View style={styles.seekRow}>
+            <SeekButton id="reader-seek-release" label="Play from here" onPress={seek.release} />
+            <SeekButton id="reader-seek-cancel" label="Cancel" onPress={seek.cancel} />
+          </View>
+        </View>
+      )}
+      <SeekButton
+        id="hymn-word-seek"
+        label="Seek by line or word"
+        title="Seek"
+        disabled={!seek.available}
+        onPress={() => seek.begin('steps')}
+        ref={keepEntry}
+      />
+    </View>
+  );
+}
+
+/** A choice's numbers as an accessible value: its eligible row, sung line, word and onset. */
+const numbersOf = (said: Described, ms: number) =>
+  `row=${said.row} line=${said.line} word=${Option.getOrElse(
+    Option.map(said.word, (word) => word.ordinal),
+    () => 0,
+  )} targetMs=${Math.round(ms)}`;
+
+function SeekButton({
+  id,
+  label,
+  title = label,
+  disabled = false,
+  onPress,
+  ref,
+}: {
+  readonly id: string;
+  readonly label: string;
+  readonly title?: string;
+  readonly disabled?: boolean;
+  readonly onPress: () => void;
+  readonly ref?: Ref<HostInstance>;
+}) {
+  const accent = useAccent();
+  return (
+    <Pressable
+      ref={ref}
+      testID={id}
+      role="button"
+      aria-label={label}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.seekButton,
+        disabled && styles.seekDisabled,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={[styles.seekLabel, { color: accent }]}>{title}</Text>
+    </Pressable>
+  );
+}
 
 /** The head line's words: the section, and the first passage with how many more follow it. */
 const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
@@ -426,6 +627,57 @@ const styles = StyleSheet.create({
   refrain: { paddingLeft: 16 },
   line: { fontSize: 17, lineHeight: 24, color: color.ink },
   refrainLine: { fontStyle: 'italic' },
+  middle: { position: 'absolute', left: 0, right: 0, top: 0, justifyContent: 'center' },
+  marker: {
+    position: 'absolute',
+    left: 4,
+    width: 3,
+    height: 28,
+    marginTop: -14,
+    top: '50%',
+    borderRadius: 2,
+  },
+  timingNote: {
+    position: 'absolute',
+    right: 20,
+    top: '50%',
+    marginTop: 18,
+    fontSize: 13,
+    color: color.muted,
+  },
+  seekDock: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    alignItems: 'flex-end',
+    gap: SEEK_GAP,
+  },
+  seekPanel: {
+    alignSelf: 'stretch',
+    gap: 8,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: color.ground,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
+  },
+  seekStatus: { fontSize: 15, color: color.ink },
+  seekRow: { flexDirection: 'row', gap: 8 },
+  seekButton: {
+    flexGrow: 1,
+    minWidth: 48,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 24,
+    backgroundColor: color.ground,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
+  },
+  seekDisabled: { opacity: 0.4 },
+  seekLabel: { fontSize: 15, fontWeight: '600' },
 });
 
 const refrainStyle = [styles.line, styles.refrainLine];

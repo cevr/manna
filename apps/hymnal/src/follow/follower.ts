@@ -90,12 +90,16 @@ export const followerOf = (timeline: Timeline, host: Host) => {
   let shown = -1;
   /** Whether the next tick scrolls to the line sung now, not the one ahead: after a seek. */
   let snap = false;
+  /** Whether the next scroll lands at once: a held seek's end under Reduce Motion. */
+  let still = false;
+  /** Whether a held seek owns the page: no scroll, no mark and no wake of the follow's own. */
+  let previewing = false;
   let cancel = () => {};
 
   const tick = () => {
     cancel();
     cancel = () => {};
-    if (Option.isNone(clock)) return;
+    if (Option.isNone(clock) || previewing) return;
     const { playing } = clock.value;
     const now = host.now();
     const at = placeOf(clock.value, now);
@@ -110,9 +114,10 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     if (snap) target = place.line;
     if ((playing || snap) && !held.get() && target >= 0 && target !== shown) {
       shown = target;
-      host.scrollTo(target, true);
+      host.scrollTo(target, !still);
     }
     snap = false;
+    still = false;
     if (!playing) return;
     const next = Math.min(place.nextAt, ahead.nextAt - LEAD);
     if (Number.isFinite(next)) cancel = host.wake(Math.max(0, next - at) / clock.value.rate, tick);
@@ -161,7 +166,7 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     held: { get: held.get, subscribe: held.subscribe } satisfies Held,
     /** A hand scroll began: hold the page's scroll while the player is on the hymn and not paused. */
     drag: () => {
-      if (last._tag === 'Away' || last.state === 'paused' || held.get()) return;
+      if (previewing || last._tag === 'Away' || last.state === 'paused' || held.get()) return;
       held.set(true);
       host.log('pause reason=drag');
     },
@@ -175,7 +180,7 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     },
     /** The pill was tapped: scroll to the line sung now and follow again. */
     resume: () => {
-      if (!held.get()) return;
+      if (previewing || !held.get()) return;
       held.set(false);
       host.log('resume reason=pill');
       if (Option.isNone(clock)) return;
@@ -189,7 +194,7 @@ export const followerOf = (timeline: Timeline, host: Host) => {
      * drawn, even when it was shown before and the reader scrolled away since.
      */
     show: () => {
-      if (Option.isNone(clock) || held.get()) return;
+      if (previewing || Option.isNone(clock) || held.get()) return;
       const line = placeAt(timeline, placeOf(clock.value, host.now())).line;
       if (line < 0) return;
       shown = line;
@@ -197,8 +202,31 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     },
     /** The page's lines moved (chords, text size, a turn): scroll the shown line back into place. */
     relayout: () => {
-      if (Option.isSome(clock) && clock.value.playing && !held.get() && shown >= 0)
+      if (!previewing && Option.isSome(clock) && clock.value.playing && !held.get() && shown >= 0)
         host.scrollTo(shown, false);
+    },
+    /**
+     * A held seek took the page: the follow stops scrolling, marking and
+     * waking until `endPreview`, and a hand drag meanwhile is not a hand scroll.
+     */
+    beginPreview: () => {
+      previewing = true;
+      held.set(false);
+      cancel();
+      cancel = () => {};
+    },
+    /**
+     * The held seek let the page go. `restore` (a release or a cancel on the
+     * page still shown) scrolls to the line sung now, at once when `animated`
+     * is false; an invalidated hold restores nothing and follows on.
+     */
+    endPreview: (restore: boolean, animated: boolean) => {
+      if (!previewing) return;
+      previewing = false;
+      shown = -1;
+      snap = restore;
+      still = restore && !animated;
+      tick();
     },
     /** The page is gone: stop waking. */
     stop: () => {

@@ -19,6 +19,7 @@ import { useLineFollow } from '~/follow/follow';
 import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
+import { useSeekTreatment } from './word-seek';
 
 /** Each word of `line` with the space after it; a no-break space, so no row drops it at its end. */
 const wordsOf = (line: string): ReadonlyArray<string> => {
@@ -38,6 +39,7 @@ export function HangingLine({
 }) {
   const { words, indent } = usePageText();
   const { marked, ref, wordsStyle } = useLineFollow(index);
+  const seek = useSeekTreatment(index);
   return (
     <WithIntro index={index}>
       <View
@@ -47,12 +49,12 @@ export function HangingLine({
         aria-selected={marked}
         {...currentOf(marked)}
         testID="line"
-        style={[styles.row, { paddingLeft: indent }]}
+        style={[styles.row, { paddingLeft: indent }, seek.line]}
       >
         {wordsOf(line).map((word, k) => (
           <Text
             key={k}
-            style={[style, words, k === 0 && { marginLeft: -indent }, wordsStyle]}
+            style={[style, words, k === 0 && { marginLeft: -indent }, wordsStyle, seek.word(k)]}
             dynamicTypeRamp="body"
           >
             {word}
