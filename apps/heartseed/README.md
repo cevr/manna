@@ -3216,7 +3216,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     such as One's `app/routes.d.ts`; generated worlds and a scratch
     repository hold the read set), `scripts/probe-lines.test.ts` (each
     line of a probe that verify-heartseed's `SKILL.md` and `features/*.md`
-    quote, and each `sim open probe/…` target, held to the literal
+    quote, and each `sim open probe/…` target (its command on one line or
+    continued over lines with a backslash), held to the literal
     skeleton of a text the probe's sources write, `…` ending an elided line
     and a tag opening a log line; generated probes and feature files hold
     the reader, so `test:infra`'s inputs take `.claude/skills/verify-heartseed`) and

@@ -120,20 +120,26 @@ const linesOf = (texts: ReadonlyArray<Parts>): ReadonlyArray<Line> =>
 /** The line number of `index` in `text`. */
 const lineAt = (text: string, index: number) => text.slice(0, index).split('\n').length;
 
-/** Each `--expect` target of a `sim open probe/<name>` command whose target fits no text of the probe that opens with a literal. */
+/** A command's argument boundary: blanks, or a shell continuation (a backslash ending the line) and the next line's indent. */
+const GAP = String.raw`(?:[ \t]|\\\n)+`;
+/** A `sim open probe/<name>` command and its `--expect` target, over shell continuations. */
+const TARGET = new RegExp(
+  String.raw`sim${GAP}open${GAP}"?probe\/([a-z-]+)(?:\\\n|[^\n])*?${GAP}--expect${GAP}"(?:label|id)=([^"]+)"`,
+  'gu',
+);
+
+/** Each `--expect` target of a `sim open probe/<name>` command, continued over lines or not, whose target fits no text of the probe that opens with a literal; the fault names the line the command's `sim` is on. */
 const targetFaults = (
   file: string,
   text: string,
   textsOf: (name: string) => ReadonlyArray<Parts>,
 ) =>
-  [...text.matchAll(/sim open "?probe\/([a-z-]+)[^\n]*?--expect "(?:label|id)=([^"]+)"/gu)].flatMap(
-    (match) => {
-      const [, name = '', target = ''] = match;
-      const fitting = textsOf(name).some((parts) => parts[0] !== '' && fits(parts, target));
-      if (fitting) return [];
-      return [`${file}:${lineAt(text, match.index)}: target \`${target}\` (probe ${name})`];
-    },
-  );
+  [...text.matchAll(TARGET)].flatMap((match) => {
+    const [, name = '', target = ''] = match;
+    const fitting = textsOf(name).some((parts) => parts[0] !== '' && fits(parts, target));
+    if (fitting) return [];
+    return [`${file}:${lineAt(text, match.index)}: target \`${target}\` (probe ${name})`];
+  });
 
 /** The quoted spans of `text` outside its fenced blocks: each with the line it starts on, its white space folded. */
 const spansOf = (text: string) => {
@@ -286,11 +292,53 @@ const quote = (kind: string, span: string, faults: boolean, text = span): Row =>
   faults: (line) => [`:${line}: \`${span.trim()}\` (probe alpha)`].filter(() => faults),
 });
 
-/** A row whose fenced command opens probe alpha and expects `target`, whose fault, if `faults`, names it. */
-const expecting = (draw: Draw, kind: string, target: string, faults: boolean): Row => ({
-  text: `\`\`\`sh\nbun run sim open probe/alpha --expect "${pick(draw, ['label', 'id'])}=${target}"\n\`\`\``,
-  kind,
-  faults: (line) => [`:${line + 1}: target \`${target}\` (probe alpha)`].filter(() => faults),
+/** A shell continuation between two arguments: a backslash ending the line, the next indented or not. */
+const CONTINUATIONS = [' \\\n  ', ' \\\n', ' \\\n    '];
+
+/**
+ * A row whose fenced command opens probe alpha and expects `target`, whose
+ * fault, if `faults`, names it on the line of the command's `sim`. Its
+ * layout is drawn apart from the target: one line, or continued at each
+ * argument boundary drawn (`continued`, one or more).
+ */
+const expecting = (draw: Draw, kind: string, target: string, faults: boolean): Row => {
+  const args = [
+    'bun',
+    'run',
+    'sim',
+    'open',
+    'probe/alpha',
+    '--expect',
+    `"${pick(draw, ['label', 'id'])}=${target}"`,
+  ];
+  const layout = pick(draw, ['single', 'continued']);
+  const continued = layout === 'continued';
+  const gaps = args.slice(1).map(() => ' ');
+  if (continued)
+    distinct(
+      draw,
+      gaps.map((_, index) => index),
+      1 + draw(gaps.length),
+    ).forEach((index) => {
+      gaps[index] = pick(draw, CONTINUATIONS);
+    });
+  const command = args
+    .slice(1)
+    .reduce((text, arg, index) => `${text}${gaps[index] ?? ' '}${arg}`, args[0] ?? '');
+  const before = gaps.slice(0, 2).filter((gap) => gap !== ' ').length;
+  return {
+    text: `\`\`\`sh\n${command}\n\`\`\``,
+    kind: `${kind} ${layout}`,
+    faults: (line) =>
+      [`:${line + 1 + before}: target \`${target}\` (probe alpha)`].filter(() => faults),
+  };
+};
+
+/** A row whose `--expect` stands on the line after the command with no continuation: another command, no target of the probe's. */
+const unjoined = (target: string): Row => ({
+  text: `\`\`\`sh\nbun run sim open probe/alpha\n  --expect "label=${target}"\n\`\`\``,
+  kind: 'target unjoined',
+  faults: () => [],
 });
 
 /** One row of a drawn class over the probe's lines. */
@@ -315,7 +363,9 @@ const drawRow = (draw: Draw, lines: ReadonlyArray<Drawn>, other: ReadonlyArray<D
     'target fits',
     'target missing',
     'target gap',
+    'target unjoined',
   ]);
+  if (kind === 'target unjoined') return unjoined(pick(draw, ['Gone probe', `${line.field} zz`]));
   if (kind === 'field alone') return quote(kind, line.field, false);
   if (kind === 'whole') return quote(kind, instance(draw, written), false);
   if ((kind === 'dropped' || kind === 'changed') && literalAt.length > 0) {
@@ -408,9 +458,11 @@ describe('the probe lines a feature file quotes', () => {
       'fenced',
       'folded whole',
       'folded wrong',
-      'target fits',
-      'target missing',
-      'target gap',
+      ...['target fits', 'target missing', 'target gap'].flatMap((kind) => [
+        `${kind} single`,
+        `${kind} continued`,
+      ]),
+      'target unjoined',
     ];
     expect(floors.filter((kind) => (seen.get(kind) ?? 0) < 10)).toEqual([]);
   });
@@ -446,6 +498,17 @@ describe('the probe lines a feature file quotes', () => {
     ].join('\n');
     expect(featureFaults('light.md', text, probeTexts)).toEqual([
       'light.md:2: `lit 25/25` (probe light)',
+    ]);
+  });
+
+  it('faults vb-9’s missing light target on one line and continued onto the next', () => {
+    const command = (gap: string) =>
+      ['```bash', `sim open probe/light${gap}--expect "label=Gone light"`, '```'].join('\n');
+    expect(
+      [' ', ' \\\n  '].map((gap) => featureFaults('light.md', command(gap), probeTexts)),
+    ).toEqual([
+      ['light.md:2: target `Gone light` (probe light)'],
+      ['light.md:2: target `Gone light` (probe light)'],
     ]);
   });
 
