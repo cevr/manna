@@ -14,4 +14,5 @@ walkCase('end', 38, 1, [
   'cue:review:initials',
   'cue:review:none',
   'next',
+  'end:one',
 ]);

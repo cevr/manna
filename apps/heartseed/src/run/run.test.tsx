@@ -12,6 +12,7 @@ walkCase('run', 5, 2, [
   'next',
   'next:another-group',
   'done:after-next',
+  'end:one',
   'shown:fresh',
   'shown:review',
   'say:heard',

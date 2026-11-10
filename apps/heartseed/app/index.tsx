@@ -46,6 +46,7 @@ import {
   type Stage,
 } from '../src/garden';
 import { furrowsOf, readyOf } from '../src/home';
+import { tendedOf } from '../src/home/grown';
 import { startOf } from '../src/home/start';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
@@ -61,6 +62,7 @@ import { countsOf, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
 import { ReadingView, type Hold } from '../src/reading/view';
+import { Tended } from '../src/run/tended';
 
 /** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
 type VoiceView = Parameters<typeof readingAloud>[0];
@@ -342,9 +344,12 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * Its first show with the garden read makes the launch's plan, unless home
  * made it first; a later show finds it made. The run shows one item at a time:
  * Say it holds it, and once its recall is kept (never at a recital's end
- * alone) the button reads Next, which lets it go. With every item done and
- * none held, the scroll holds the counts line alone, and there is no
- * button. A recital's marks, result and alert show only while its item is
+ * alone) the button reads Next, which lets it go. With every item of a run
+ * that is not empty done and none held (`tendedOf`), the heading reads
+ * `The field is tended` and the scroll holds the end's drawing alone
+ * (`Tended`): what grew, with the header's way to the field the only
+ * control. With a run that is empty, the scroll holds the counts line alone.
+ * Either way there is no button. A recital's marks, result and alert show only while its item is
  * held, or with no plan.
  * Today keeps the reading view's hold: the word a finger holds while a
  * reading is under way, and while one is held the scroll view stands still
@@ -379,6 +384,7 @@ function Today({ onField }: { readonly onField: () => void }) {
   const recital = Option.exists(showing, (each) => each.recital);
   const shownSayIt = Option.filter(sayIt, () => recital);
   const marks = Option.filter(screen.marks, () => recital);
+  const tended = Option.flatMap(session, (view) => tendedOf(view, garden));
   const onAction = (each: Showing) => {
     if (screen.listening) return onPress({ piece: each.piece, item: Option.none() });
     if (each.done) return onNext();
@@ -389,7 +395,10 @@ function Today({ onField }: { readonly onField: () => void }) {
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerRow}>
           <Text role="heading" aria-level={1} style={look.title}>
-            Today
+            {Option.match(tended, {
+              onNone: () => 'Today',
+              onSome: () => 'The field is tended',
+            })}
           </Text>
           {!screen.listening && (
             <View style={styles.ways}>
@@ -412,7 +421,10 @@ function Today({ onField }: { readonly onField: () => void }) {
           },
         ]}
       >
-        <Counts garden={garden} />
+        {Option.match(tended, {
+          onNone: () => <Counts garden={garden} />,
+          onSome: (grown) => <Tended grown={grown} />,
+        })}
         {Option.match(showing, {
           onNone: () => false,
           onSome: ({ piece }) => (

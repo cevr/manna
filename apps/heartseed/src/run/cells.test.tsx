@@ -13,4 +13,4 @@
 
 import { CELLS, walkCase } from '../test/run-walk';
 
-walkCase('cells', 20, 1, [...CELLS.map((cell) => cell.key), 'settings:minutes']);
+walkCase('cells', 20, 1, [...CELLS.map((cell) => cell.key), 'settings:minutes', 'end:one']);

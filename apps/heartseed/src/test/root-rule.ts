@@ -79,8 +79,8 @@ const pendingFaults = (host: Element, controls: readonly Element[]) => {
   return out;
 };
 
-/** The end of a run's heading. */
-const END = 'The field is tended';
+/** The end of a run's heading, which the rigs that find Today by its heading tally apart. */
+export const END = 'The field is tended';
 
 /** The end's own nodes, by test id. */
 const END_NODES = ['tended', 'grew', 'grown'];

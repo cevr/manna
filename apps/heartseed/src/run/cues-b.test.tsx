@@ -18,4 +18,6 @@ walkCase('run', 36, 1, [
   'cue:review:none',
   'next:review:initials',
   'home:begin',
+  'end:one',
+  'end:many',
 ]);

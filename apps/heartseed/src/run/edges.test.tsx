@@ -18,6 +18,7 @@ walkCase(
     'first-minute',
     'done:first-show',
     'home:done',
+    'end:one',
     'launch:unread',
     'say:unread',
     'minutes:none-unread',

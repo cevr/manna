@@ -12,4 +12,5 @@ walkCase('cells', 2, 1, [
   'cell:after:unheard:kept',
   'cell:after:cancelled:kept',
   'settings:minutes',
+  'end:one',
 ]);

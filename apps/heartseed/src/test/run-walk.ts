@@ -34,8 +34,12 @@
  * verse as its cue draws it, shown and named (the new piece whole, a
  * review's first letters or empty slots by the ladder, a held recital's own
  * words while its result shows, never a stale mark on an item newly
- * shown), the result and alert (none while nothing is held), the done
- * state's scroll text, and the disk (the start's keys unchanged, plus each
+ * shown), the result and alert (none while nothing is held), the heading,
+ * the end of a run (`The field is tended` once every item of a run that is
+ * not empty is done and none is held: no counts line, the line of what
+ * grew and each grown verse's name by `tendedModel`, tallied `end:none`,
+ * `end:one` or `end:many`), the done state's scroll text read exactly (the
+ * counts line, or the end's line, alone), and the disk (the start's keys unchanged, plus each
  * kept recall's key under the piece said, and the minutes key after a
  * tap). Each recall a recital keeps holds the piece said, its reference and
  * word count, and a recital heard whole the matcher's suggestion under that
@@ -52,11 +56,13 @@ import type { TextPiece } from '../session';
 import { below, keyOf, pickOf, PREFIX, random, referenceCue } from './garden-model';
 import {
   actionModel,
+  grewLine,
   madeModel,
   nextModel,
   NO_RUN,
   shownModel,
   startedModel,
+  tendedModel,
   type RunModel,
 } from './run-model';
 import {
@@ -69,7 +75,7 @@ import {
   type Faults,
   type Launch,
 } from './run-rig';
-import { rootFaults } from './root-rule';
+import { END, rootFaults } from './root-rule';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
@@ -390,8 +396,14 @@ const bump = (coverage: Coverage, key: string) => {
   coverage[key] = (coverage[key] ?? 0) + 1;
 };
 
+/** The floors of an end settled, by how many verses grew: none, one, several. */
+const END_FLOORS = ['end:none', 'end:one', 'end:many'] as const;
+
 /** What the screen shows of the run after a step, and what the model expects. */
 interface Seen {
+  readonly headings: readonly string[];
+  readonly grew: readonly string[];
+  readonly grown: readonly string[];
   readonly references: readonly string[];
   readonly actions: readonly string[];
   readonly counts: readonly string[];
@@ -421,6 +433,12 @@ class Walk {
   app: Launch | null = null;
   /** Whether the launch under way ended on home's done state. */
   ended = false;
+  /** The end's want last computed, with the run and the disk's size it was computed over. */
+  endWant: {
+    readonly run: RunModel;
+    readonly size: number;
+    readonly tended: ReturnType<typeof tendedModel>;
+  } | null = null;
   readonly expected = new Map<string, string | null>();
 
   constructor(
@@ -456,16 +474,35 @@ class Walk {
     }).items;
   }
 
+  /** The end's want while the run model is done: the run's grown verses by `tendedModel` over its items' baselines and the disk's recalls, computed once per run and disk, so a poll reads it again for free; null off the end. */
+  tendedNow() {
+    if (this.unread || this.run.plan === null || shownModel(this.run, this.recallsNow) !== null)
+      return null;
+    const size = this.device.disk.size;
+    const cached = this.endWant;
+    if (cached !== null && cached.run === this.run && cached.size === size) return cached.tended;
+    const tended = tendedModel(this.run, [], [...plantsOf(this.device).values()].flat());
+    this.endWant = { run: this.run, size, tended };
+    return tended;
+  }
+
   /** What the model expects the screen to show at rest. */
   expect(): Seen {
     if (this.unread) return this.expectUnread();
     const shown = shownModel(this.run, this.recallsNow);
     const action = actionModel(this.run, this.recallsNow);
     const held = this.run.hold !== null;
+    const tended = this.tendedNow();
     return {
+      headings: [tended === null ? 'Today' : END],
+      grew: tended === null ? [] : [grewLine(tended.length)],
+      grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
       references: shown === null ? [] : [shown.reference.trim()],
       actions: action === null ? [] : [action],
-      counts: this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)],
+      counts:
+        this.run.plan === null || tended !== null
+          ? []
+          : [countsModel(this.run.plan, this.recallsNow)],
       verse: shown === null ? '' : verseModel(this.pieceOf(shown.reference), this.drawnNow(shown)),
       grades: held && this.result === 'grades' ? 1 : 0,
       alerts: held && this.result === 'alert' ? 1 : 0,
@@ -477,6 +514,9 @@ class Walk {
   expectUnread(): Seen {
     const first = this.pieces[0];
     return {
+      headings: ['Today'],
+      grew: [],
+      grown: [],
       references: first === undefined ? [] : [first.reference.trim()],
       actions: first === undefined ? [] : ['Say it'],
       counts: [],
@@ -499,14 +539,19 @@ class Walk {
     const item = this.unread ? this.pieces[0] : shownModel(this.run, this.recallsNow);
     const shown = item?.reference.trim();
     const piece = this.pieces.find((each) => each.reference === item?.reference);
+    const counts = app.counts();
+    const grew = app.grew();
     return {
+      headings: app.headings(),
+      grew,
+      grown: app.grown(),
       references: app.references(),
       actions: app.actions(),
-      counts: app.counts(),
+      counts,
       verse: piece === undefined ? '' : verseSeen(app.host, piece),
       grades: app.grades().length,
       alerts: app.alerts(),
-      doneText: shown !== undefined || app.scrollText() === 'Nothing to tend now',
+      doneText: shown !== undefined || app.scrollText() === [...counts, ...grew].join(' '),
     };
   }
 
@@ -546,6 +591,8 @@ class Walk {
     if (disk.length > 0) throw new Error(`after ${this.log.join(' > ')}: disk ${disk.join(', ')}`);
     if (this.screen.faults.length > 0)
       throw new Error(`after ${this.log.join(' > ')}: frames ${this.screen.faults.join('; ')}`);
+    const tended = this.tendedNow();
+    if (tended !== null) bump(this.coverage, END_FLOORS[Math.min(tended.length, 2)] ?? 'end:many');
     const shown = this.unread ? null : shownModel(this.run, this.recallsNow);
     if (shown === null) return;
     const drawn = this.drawnNow(shown);
@@ -617,7 +664,8 @@ class Walk {
   onHome(begin: boolean) {
     const app = this.screen;
     const counts = homeCounts(app);
-    const want = this.expect().counts;
+    const want =
+      this.unread || this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)];
     const seen = { headings: app.headings(), counts, begin: app.has('Begin') };
     const expected = { headings: ['Your field'], counts: want, begin };
     if (JSON.stringify(seen) !== JSON.stringify(expected))
@@ -767,7 +815,9 @@ class Walk {
       this.minutes = minutes;
       this.expected.set(MINUTES_KEY, String(minutes));
       if (this.run.plan !== null) this.run = madeModel(this.run, this.planNow(), false);
-      const counts = JSON.stringify(this.expect().counts);
+      const counts = JSON.stringify(
+        this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)],
+      );
       const checked = () =>
         modalOf()
           ?.querySelector(`[role="radio"][aria-label="${step}"]`)

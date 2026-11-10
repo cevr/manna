@@ -18,7 +18,8 @@
  * garden. Every frame (each DOM mutation batch), from before the root's
  * first render, is held to the root's frame rule (`rootFaults`, through
  * `watchRoot`, the garden read unless the launch's listings fail), and
- * every Today frame to the footer rule, over the whole tree: no control
+ * every Today frame (and the end of a run's, `The field is tended`, whose
+ * own clauses the root's rule holds) to the footer rule, over the whole tree: no control
  * lies inside a scroll view but a missed word's mark (`Missed word <n>`),
  * so the action button and the `Grade` group never do, and at most one
  * action button (`Say it`, `Listening`, `Next`) shows. Each footer fault is
@@ -46,7 +47,7 @@ import type { TextPiece } from '../session';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
 import { PREFIX } from './garden-model';
-import { watchRoot } from './root-rule';
+import { END, watchRoot } from './root-rule';
 
 /** The app's own piece: the passage, its own group. */
 export const PASSAGE: TextPiece = {
@@ -239,10 +240,10 @@ const actionsIn = (host: Element) =>
     (ACTIONS as readonly string[]).includes(nameOf(node)),
   );
 
-/** What one Today frame shows wrong of the footer rule: a control in the scroll view other than a missed word's mark, or more than one action button. */
+/** What one Today frame, the end of a run's among them, shows wrong of the footer rule: a control in the scroll view other than a missed word's mark, or more than one action button. */
 export const footerFaults = (host: Element): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
-  if (!headings.includes('Today')) return [];
+  if (!headings.includes('Today') && !headings.includes(END)) return [];
   const out: string[] = [];
   const actions = actionsIn(host);
   if (actions.length > 1) out.push(`${actions.length} action buttons`);
@@ -272,8 +273,10 @@ export interface LaunchParts {
  * A launch of the root over `device` with `faults`, at `time.now` on
  * Effect's clock, with `pieces` given to `appLayer` (the app's own when
  * none) and `parts` in place of the rig's own. Every frame is held to the
- * root's frame rule and every Today frame to the footer rule; the faults
- * found are kept in `faults`, and `frames` counts the Today frames seen.
+ * root's frame rule and every Today frame, the end of a run's among them,
+ * to the footer rule; the faults found are kept in `faults`, and `frames`
+ * counts the Today frames seen (`done` the bare done state's) and the end's
+ * apart (`end`).
  */
 export const launch = async (
   device: Device,
@@ -312,12 +315,18 @@ export const launch = async (
     found.push(...rule.faults.slice(taken.n));
     taken.n = rule.faults.length;
   };
-  const frames = { today: 0, listening: 0, next: 0, done: 0 };
+  const frames = { today: 0, listening: 0, next: 0, done: 0, end: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
   const actions = () => actionsIn(host).map(nameOf);
   const frame = () => {
     takeRoot();
-    if (!headings().includes('Today')) return;
+    const shownHeadings = headings();
+    if (shownHeadings.includes(END)) {
+      frames.end += 1;
+      for (const fault of footerFaults(host)) found.push(`${fault} (the end)`);
+      return;
+    }
+    if (!shownHeadings.includes('Today')) return;
     frames.today += 1;
     const shown = actions();
     if (shown.includes('Listening')) frames.listening += 1;
@@ -400,6 +409,13 @@ export const launch = async (
     references: () => [...host.querySelectorAll('[data-testid="reference"]')].map(text),
     /** The counts lines Today shows, as they read. */
     counts: () => [...host.querySelectorAll('[data-testid="session"]')].map(text),
+    /** The end's lines of what grew, as they read. */
+    grew: () => [...host.querySelectorAll('[data-testid="grew"]')].map(text),
+    /** The end's grown verses, by name, in order. */
+    grown: () =>
+      [...host.querySelectorAll('[data-testid="grown"]')].map(
+        (node) => node.getAttribute('aria-label') ?? '',
+      ),
     /** The scroll view's text as a reader sees it. */
     scrollText: () => scroll().map(seenText).join(' '),
     grades: () =>

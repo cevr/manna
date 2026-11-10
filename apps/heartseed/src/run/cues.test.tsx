@@ -20,4 +20,5 @@ walkCase('run', 14, 1, [
   'next:review:none',
   'say:cancelled',
   'home:begin',
+  'end:one',
 ]);

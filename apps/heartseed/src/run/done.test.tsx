@@ -11,6 +11,8 @@ import { walkCase } from '../test/run-walk';
 walkCase('edges', 14, 2, [
   'done:after-minutes',
   'done:field',
+  'end:none',
+  'end:one',
   'minutes:appears',
   'home:begin',
   'cue:review:initials',
