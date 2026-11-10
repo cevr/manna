@@ -9,22 +9,52 @@
  * seek begin (`word-seek.ts`). Its translation from that moment chooses; a
  * lift releases, the handler's cancel cancels, each once.
  *
- * The handler's long-press activation is a native recognizer: once it has
- * taken, UIKit lets it keep the touch from the page's scroll view and the
- * pager's, and the page turns both off while it holds (`scrollEnabled`).
- * That arbitration is the platform's and is checked on a device, not here.
+ * The page's vertical scroll and the pager's horizontal one are each the
+ * handler's native gesture (`SeekScroll` here, the pager's own), and the
+ * hold's recognizer blocks both (`block`): neither begins until the hold
+ * fails, so a finger that moves within its time scrolls or turns the page,
+ * and one held still keeps the touch. The page also turns both off while it
+ * holds (`scrollEnabled`). How UIKit plays that graph is checked on a
+ * device, not here.
  */
 
-import { useRef } from 'react';
-import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { type ReactNode, useRef } from 'react';
+import { GestureDetector, useNativeGesture, usePanGesture } from 'react-native-gesture-handler';
 import { View } from 'react-native';
 import { Option } from 'effect';
 
-import { HOLD_MS, type SeekAreaProps, SLOP, useChordTouch, useSeekAvailable } from './word-seek';
+import {
+  HOLD_MS,
+  type SeekAreaProps,
+  SeekScrollsProvider,
+  SLOP,
+  useChordTouch,
+  useSeekAvailable,
+  useSeekScrolls,
+} from './word-seek';
+
+/**
+ * The page's vertical scroll as the handler's native gesture: the hold
+ * inside it blocks it, with any scroll outside it (the pager).
+ */
+export function SeekScroll({ children }: { readonly children: ReactNode }) {
+  const outer = useSeekScrolls();
+  const scroll = useNativeGesture({
+    testID: 'hymn-scroll-native',
+    disallowInterruption: true,
+    shouldCancelWhenOutside: false,
+  });
+  return (
+    <SeekScrollsProvider value={[scroll, ...outer]}>
+      <GestureDetector gesture={scroll}>{children}</GestureDetector>
+    </SeekScrollsProvider>
+  );
+}
 
 export function SeekArea({ seek, style, children }: SeekAreaProps) {
   const chord = useChordTouch();
   const available = useSeekAvailable(seek);
+  const scrolls = useSeekScrolls();
   const origin = useRef(Option.none<{ readonly x: number; readonly y: number }>());
   const now = useRef(seek);
   now.current = seek;
@@ -43,6 +73,7 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
     failOffsetX: [-SLOP, SLOP],
     failOffsetY: [-SLOP, SLOP],
     shouldCancelWhenOutside: false,
+    block: [...scrolls],
     onActivate: ({ translationX, translationY }) => {
       if (Math.hypot(translationX, translationY) > SLOP || chord.recent()) return;
       if (!now.current.begin('pointer')) return;

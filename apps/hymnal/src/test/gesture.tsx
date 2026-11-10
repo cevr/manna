@@ -23,7 +23,7 @@
  */
 
 import { Option } from 'effect';
-import { createContext, type ReactNode, use } from 'react';
+import { createContext, isValidElement, type ReactNode, use } from 'react';
 import { View } from 'react-native';
 
 /** The touch a gesture reports: where the finger is along the view, and how far and fast it moved, in points. */
@@ -57,6 +57,14 @@ export interface PanConfig {
   readonly activateAfterLongPress?: number;
   readonly maxPointers?: number;
   readonly shouldCancelWhenOutside?: boolean;
+  /** A native gesture's own (a scroll view's): it cancels the others once it takes. */
+  readonly disallowInterruption?: boolean;
+  /** The gestures that wait for this one to fail before they may begin. */
+  readonly block?: ReadonlyArray<PanConfig>;
+  /** The gestures this one waits on to fail before it may begin. */
+  readonly requireToFail?: ReadonlyArray<PanConfig>;
+  /** The gestures that may act with this one at once. */
+  readonly simultaneousWith?: ReadonlyArray<PanConfig>;
   readonly onBegin?: (touch: Touch) => void;
   readonly onActivate?: (touch: Touch) => void;
   readonly onUpdate?: (touch: Touch) => void;
@@ -69,7 +77,16 @@ export interface Drawn extends PanConfig {
   readonly pan: boolean;
   readonly beside: ReadonlyArray<PanConfig>;
   readonly within: ReadonlyArray<PanConfig>;
+  /** The view the detector holds, by its test id and whether it scrolls sideways. */
+  readonly child: { readonly testID?: string; readonly horizontal?: boolean };
 }
+
+/** The props a detector's one child was given that say which view it is. */
+const childOf = (children: ReactNode): Drawn['child'] => {
+  if (!isValidElement<{ testID?: string; horizontal?: boolean }>(children)) return {};
+  const { testID, horizontal } = children.props;
+  return { testID, horizontal };
+};
 
 interface Composed {
   readonly composed: ReadonlyArray<PanConfig | Composed>;
@@ -94,6 +111,8 @@ export const usePanGesture = (config: PanConfig) => {
 export const useTapGesture = (config: PanConfig) => config;
 export const useLongPressGesture = (config: PanConfig) => config;
 export const usePinchGesture = (config: PanConfig) => config;
+/** A native view's own gesture (a scroll view's), as a detector around it holds it: never a pan here. */
+export const useNativeGesture = (config: PanConfig) => config;
 
 const compose = (...composed: ReadonlyArray<PanConfig | Composed>): Composed => ({ composed });
 export const useCompetingGestures = compose;
@@ -116,7 +135,13 @@ export function GestureDetector({
   const around = use(Around);
   const own = flat(gesture);
   gestures.push(
-    ...own.map((config) => ({ ...config, pan: pans.has(config), beside: own, within: around })),
+    ...own.map((config) => ({
+      ...config,
+      pan: pans.has(config),
+      beside: own,
+      within: around,
+      child: childOf(children),
+    })),
   );
   return <Around value={[...own, ...around]}>{children}</Around>;
 }

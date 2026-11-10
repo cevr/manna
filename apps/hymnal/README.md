@@ -329,6 +329,10 @@ spacing, chords, viewport) cancels or revokes it once, without a seek. A
 quick swipe or a drift past the slop never holds, so the page's scroll and
 the pager keep their ordinary gestures; a press on a chord, the native
 back-edge strip and the web's left 20 pt (`BACK_STRIP`) never start one.
+On a phone the page's scroll and the pager's are each the gesture
+handler's native gesture (`SeekScroll`, and the pager's own through
+LegendList's `renderScrollComponent`), and the hold's recognizer blocks
+both (`block`), so neither begins until the hold fails.
 While held, the native pager's scroll is off (`seekHeld`), the page's own
 scroll is off, and only the page seen (`ShownPages`, which the pager tells
 on each settle without drawing its pages again) can hold.
@@ -337,7 +341,10 @@ The geometry exists only while held: the page gains end padding of half
 its viewport at each end, so the first and last lines can stand at its
 middle, and each choice scrolls its line's full block to the middle
 (`centerOffset`, at once under Reduce Motion; a newer choice wins over an
-older measure answering late). The chosen line takes an outline and the
+older measure answering late, and a measure the follow asked before the
+hold, or before the page went, never scrolls). The open controls take
+their height from the bottom of the viewport, and the choice is centred
+again in what is left. The chosen line takes an outline and the
 chosen word an underline in the accent; follow's marks, hand-scroll
 detection and Resume follow pause for the preview and come back as it
 ends, restoring the frozen place or the released one. A line timed only by
@@ -357,7 +364,11 @@ could take now (Paused, a count-in or another hold disable it).
 
 `test:seek` holds the fast traces; `word-seek.property.slow.test.tsx`,
 appended alone to `test:slow`, runs seeded histories over the web, native
-and steps surfaces against an independent reference. The Sideshow feel page
+and steps surfaces against an independent reference: words drawn plain, as
+syllables and boxed under chords, every reading setting, measures that
+answer late in any order, a landing held back, the controls' height, the
+player's own commands and Reduce Motion. `pager.slow.test.ts` reads the
+mounted recognizer graph on the phones' pager. The Sideshow feel page
 the owner chose the constants from is a standalone audition, not the One
 reader. Not proved by any test here, and left to the owner on a Release
 build from main: native continuous hold-then-drag recognition, UIKit

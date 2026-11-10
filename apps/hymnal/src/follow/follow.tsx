@@ -288,6 +288,15 @@ export const useFollow = (number: number) => {
   };
 
   const sung = useSung(number);
+  /**
+   * The page's scroll's owner, as a count: a held seek's preview taking or
+   * giving back the scroll, and the page going, each start a new one. A
+   * measure answers only within the one it was asked in, so an ordinary
+   * lead asked before a preview, or one asked before the page went, never
+   * scrolls.
+   */
+  const epoch = useRef(0);
+  const previewing = useRef(false);
 
   const follower = useMemo(
     () =>
@@ -298,20 +307,24 @@ export const useFollow = (number: number) => {
             const timer = setTimeout(run, ms);
             return () => clearTimeout(timer);
           },
-          scrollTo: (line, animated) =>
-            Option.all([
+          scrollTo: (line, animated) => {
+            const asked = epoch.current;
+            return Option.all([
               Option.fromNullishOr(views.current.get(line)),
-              scroll.current,
               Option.flatMap(scroll.current, (page) =>
                 Option.fromNullishOr(page.getInnerViewRef()),
               ),
             ]).pipe(
-              Option.map(([view, page, inner]) =>
-                view.measureLayout(inner, (_x, y) =>
-                  page.scrollTo({ y: Math.max(0, y - height.current / 3), animated }),
-                ),
+              Option.map(([view, inner]) =>
+                view.measureLayout(inner, (_x, y) => {
+                  if (asked !== epoch.current || previewing.current) return;
+                  Option.map(scroll.current, (page) =>
+                    page.scrollTo({ y: Math.max(0, y - height.current / 3), animated }),
+                  );
+                }),
               ),
-            ),
+            );
+          },
           log: (event) => {
             if (!dev) return;
             Effect.runSync(Effect.logInfo(`[follow] ${withClock(event)}`));
@@ -434,12 +447,28 @@ export const useFollow = (number: number) => {
   useLayoutEffect(() => {
     const before = drawnPad.current;
     drawnPad.current = pad;
-    if (pad < before) scrollTo(Math.max(0, offset.current - (before - pad)));
-    else Option.map(centred.current, measureCentre);
+    if (Option.isSome(centred.current)) measureCentre(centred.current.value);
+    else if (pad < before) scrollTo(Math.max(0, offset.current - (before - pad)));
   }, [pad]);
+  useEffect(
+    () => () => {
+      epoch.current += 1;
+    },
+    [],
+  );
+  /** The held padding and the choice's centre, made again for the viewport as it is now. */
+  const refit = () => {
+    if (Option.isNone(centred.current)) return;
+    const wanted = viewport() / 2;
+    if (wanted === wantedPad.current) return measureCentre(centred.current.value);
+    wantedPad.current = wanted;
+    setPad(wanted);
+  };
   const preview: PreviewHost = {
     ready: () => Option.isSome(follower) && viewport() > 0,
     begin: () => {
+      epoch.current += 1;
+      previewing.current = true;
       Option.map(follower, (f) => f.beginPreview());
       wantedPad.current = viewport() / 2;
       setPad(wantedPad.current);
@@ -449,6 +478,8 @@ export const useFollow = (number: number) => {
       measureCentre(line);
     },
     finish: () => {
+      epoch.current += 1;
+      previewing.current = false;
       centred.current = Option.none();
       asked.current += 1;
       wantedPad.current = 0;
@@ -464,7 +495,9 @@ export const useFollow = (number: number) => {
     pad,
     /** The points the docked bar and the seek's controls cover at the scroll's foot. */
     cover: (points: number) => {
+      if (points === covered.current) return;
       covered.current = points;
+      refit();
     },
     follow,
     /** The page's scroll's ref. */

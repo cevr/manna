@@ -103,6 +103,15 @@ interface Run {
     readonly paramsSet: ReadonlyArray<Record<string, string>>;
     readonly route: string;
   };
+  readonly graph: {
+    readonly blocks: ReadonlyArray<string>;
+    readonly waits: ReadonlyArray<string>;
+    readonly together: ReadonlyArray<string>;
+    readonly around: ReadonlyArray<string>;
+    readonly scrollHolds: { readonly testID?: string; readonly horizontal?: boolean };
+    readonly pagerHolds: { readonly testID?: string; readonly horizontal?: boolean };
+    readonly interrupt: ReadonlyArray<boolean>;
+  };
 }
 
 const run = runScript(Bun.resolveSync('../test/phone-pager.tsx', import.meta.dir));
@@ -111,6 +120,20 @@ const seen: Run = JSON.parse(run.stdout.trim().split('\n').at(-1) ?? 'null');
 
 /** A screen 390 points wide: page `i` starts at `i` screens. */
 const width = 390;
+
+describe('the held seek’s recognizer on the pager', () => {
+  it('blocks the page’s scroll and the pager, each the native gesture of the scroll view its detector holds', () => {
+    expect(seen.graph).toEqual({
+      blocks: ['hymn-scroll-native', 'hymn-pager-native'],
+      waits: [],
+      together: [],
+      around: ['hymn-scroll-native', 'hymn-pager-native'],
+      scrollHolds: { testID: 'hymn-scroll' },
+      pagerHolds: { horizontal: true },
+      interrupt: [true, true],
+    });
+  });
+});
 
 describe('the pager’s source', () => {
   it('is the home list a row was pressed in, handed over before the hymn opens', () => {

@@ -15,7 +15,7 @@
  */
 
 import { Option } from 'effect';
-import { type RefCallback, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, type RefCallback, useCallback, useEffect, useRef } from 'react';
 import { type HostInstance, View } from 'react-native';
 
 import {
@@ -40,6 +40,11 @@ const onWords = (target: Option.Option<EventTarget>) =>
         Option.isNone(Option.fromNullishOr(one.closest('[role="button"], a, input, button'))),
     },
   );
+
+/** The page's scroll on the web: the browser's own, with no recognizer to block (the hold holds back its touch and wheel itself). */
+export function SeekScroll({ children }: { readonly children: ReactNode }) {
+  return children;
+}
 
 export function SeekArea({ seek, style, children }: SeekAreaProps) {
   const chord = useChordTouch();

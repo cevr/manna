@@ -17,7 +17,8 @@ const { scrolls } = phone({ nativeList: true });
  * Each hymn page's draws, by its hymn's number: the page's module is loaded
  * with its `HymnPage` renamed and a wrapper exported in its place, which
  * counts a draw and draws the real page, memoized as the real one is, so a
- * page that is skipped is not counted.
+ * page that is skipped is not counted. Its touch is the phones' own
+ * (`WordSeek.native.tsx`), as the phones' bundler picks it.
  */
 const pageDraws = new Map<number, number>();
 Object.assign(globalThis, { hymnalPageDraws: pageDraws });
@@ -30,7 +31,8 @@ Object.assign(globalThis, { hymnalPageDraws: pageDraws });
         const source = await Bun.file(args.path).text();
         const renamed = source
           .replace('export const HymnPage = memo(', 'const RealHymnPage = memo(')
-          .replace('export function HymnPage(', 'function RealHymnPage(');
+          .replace('export function HymnPage(', 'function RealHymnPage(')
+          .replace("from './WordSeek';", "from './WordSeek.native';");
         return {
           contents: [
             renamed,
@@ -67,6 +69,7 @@ const { PlayerBar } = await import('../player/PlayerBar');
 const { Command, playerOn } = await import('../player/player');
 const { fakeDevice } = await import('./device');
 const { opened, params, paramsSet } = await import('./one');
+const { gestureOf } = await import('./gesture');
 
 const width = 390;
 
@@ -242,6 +245,28 @@ const until = (shown: App, holds: (state: { readonly _tag: string }) => boolean)
 
 const out: Record<string, unknown> = {};
 
+/**
+ * The shown page's recognizer graph as the handler was handed it: whom the
+ * hold blocks and lets act with it, the detectors around it (innermost
+ * first), and the views the scroll gestures' detectors hold.
+ */
+const graph = () => {
+  const ids = (all: ReadonlyArray<{ readonly testID?: string }> | undefined) =>
+    (all ?? []).map((it) => it.testID ?? '');
+  const hold = gestureOf('reader-word-seek-hold');
+  const scroll = gestureOf('hymn-scroll-native');
+  const pager = gestureOf('hymn-pager-native');
+  return {
+    blocks: ids(hold.block),
+    waits: ids(hold.requireToFail),
+    together: ids(hold.simultaneousWith),
+    around: ids(hold.within),
+    scrollHolds: scroll.child,
+    pagerHolds: pager.child,
+    interrupt: [scroll.disallowInterruption, pager.disallowInterruption],
+  };
+};
+
 {
   const shown = app();
   await shown.show(
@@ -257,6 +282,7 @@ const out: Record<string, unknown> = {};
   out['homeOpened'] = [...opened];
   await route(shown, 3);
   out['open3'] = seen(shown);
+  out['graph'] = graph();
   out['sourceAfterOpen'] = Option.isSome(shown.registry.get(pagesFrom));
   out['recentOpen3'] = shown.registry.get(settings.lists.recent);
   await settle(shown, 3);

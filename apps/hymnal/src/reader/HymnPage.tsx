@@ -84,7 +84,7 @@ import { KeepAwake } from './KeepAwake';
 import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
 import { readingStyle } from './reading';
-import { SeekArea } from './WordSeek';
+import { SeekArea, SeekScroll } from './WordSeek';
 import {
   ChordTouchProvider,
   chordTouchOf,
@@ -95,6 +95,7 @@ import {
   PreviewProvider,
   spoken,
   type Step,
+  useHoldTimer,
   useSeekAvailable,
   useWordSeek,
   type WordSeek,
@@ -103,9 +104,6 @@ import {
 /** The page's padding over the head and under the last words, outside a held seek's. */
 const PAGE_TOP = 8;
 const PAGE_FOOT = 48;
-// oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read of when a chord's press began, with no Effect run per touch.
-const touchClock = () => performance.now();
-
 /** The space between the seek's controls and the words they leave free. */
 const SEEK_GAP = 8;
 
@@ -131,11 +129,14 @@ export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
   area: Area = SeekArea,
+  scroll: Scroll = SeekScroll,
 }: {
   readonly hymn: HymnText;
   readonly reader: ChordReader;
   /** The hold's touch over the sung words: the platform's own (`WordSeek.tsx`, `WordSeek.native.tsx`) unless given. */
   readonly area?: (props: SeekAreaProps) => ReactNode;
+  /** What the page's scroll is to the hold's recognizer: the platform's own unless given. */
+  readonly scroll?: (props: { readonly children: ReactNode }) => ReactNode;
 }) {
   const accent = useAccent();
   const on = useAtomValue(reader.chords);
@@ -172,61 +173,65 @@ export const HymnPage = memo(function HymnPage({
   );
   const layout = `${useLayoutKey(reader.reading, on, style)} viewport=${follow.laid}`;
   const seek = useWordSeek({ number: hymn.number, layout, host: follow.preview });
-  const chordTouch = useMemo(() => chordTouchOf(touchClock), []);
+  const timer = useHoldTimer();
+  const chordTouch = useMemo(() => chordTouchOf(timer.now), [timer]);
   const [room, setRoom] = useState(0);
-  follow.cover(RISE + room);
+  const { cover } = follow;
+  useLayoutEffect(() => cover(RISE + room), [cover, room]);
   const holding = Option.isSome(seek.via);
   return (
     <View style={styles.frame}>
-      <ScrollView
-        ref={follow.scroll}
-        testID="hymn-scroll"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[
-          styles.page,
-          { paddingTop: PAGE_TOP + follow.pad, paddingBottom: PAGE_FOOT + follow.pad },
-        ]}
-        onLayout={follow.onLayout}
-        onContentSizeChange={follow.onContentSizeChange}
-        scrollEnabled={!holding}
-        {...follow.hand}
-      >
-        <KeepAwake on={reader.reading.awake} />
-        <View style={styles.head}>
-          <AboutLine number={hymn.number} section={hymn.topic} accent={accent} />
-          <View testID="hymn-name" style={styles.name}>
-            <View style={styles.words}>
-              <Text
-                testID="hymn-number"
-                style={[styles.number, { color: accent }]}
-                dynamicTypeRamp="title2"
-              >
-                {hymn.number}
-              </Text>
-              <Text role="heading" aria-level={1} style={styles.title} dynamicTypeRamp="title2">
-                {hymn.title}
-              </Text>
+      <Scroll>
+        <ScrollView
+          ref={follow.scroll}
+          testID="hymn-scroll"
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: PAGE_TOP + follow.pad, paddingBottom: PAGE_FOOT + follow.pad },
+          ]}
+          onLayout={follow.onLayout}
+          onContentSizeChange={follow.onContentSizeChange}
+          scrollEnabled={!holding}
+          {...follow.hand}
+        >
+          <KeepAwake on={reader.reading.awake} />
+          <View style={styles.head}>
+            <AboutLine number={hymn.number} section={hymn.topic} accent={accent} />
+            <View testID="hymn-name" style={styles.name}>
+              <View style={styles.words}>
+                <Text
+                  testID="hymn-number"
+                  style={[styles.number, { color: accent }]}
+                  dynamicTypeRamp="title2"
+                >
+                  {hymn.number}
+                </Text>
+                <Text role="heading" aria-level={1} style={styles.title} dynamicTypeRamp="title2">
+                  {hymn.title}
+                </Text>
+              </View>
+              <FavouriteButton number={hymn.number} favourites={reader.favourites} />
             </View>
-            <FavouriteButton number={hymn.number} favourites={reader.favourites} />
           </View>
-        </View>
-        <ChordNotice on={on} printed={printed} />
-        <PageText reading={reader.reading}>
-          <PlayedKeyProvider value={played}>
-            <FollowProvider value={follow.follow}>
-              <ChordTapProvider value={tap}>
-                <PreviewProvider value={seek.marks}>
-                  <ChordTouchProvider value={chordTouch}>
-                    <Area seek={seek} style={styles.sections}>
-                      <Sections hymn={hymn} book={wordsBook} chords={chords} />
-                    </Area>
-                  </ChordTouchProvider>
-                </PreviewProvider>
-              </ChordTapProvider>
-            </FollowProvider>
-          </PlayedKeyProvider>
-        </PageText>
-      </ScrollView>
+          <ChordNotice on={on} printed={printed} />
+          <PageText reading={reader.reading}>
+            <PlayedKeyProvider value={played}>
+              <FollowProvider value={follow.follow}>
+                <ChordTapProvider value={tap}>
+                  <PreviewProvider value={seek.marks}>
+                    <ChordTouchProvider value={chordTouch}>
+                      <Area seek={seek} style={styles.sections}>
+                        <Sections hymn={hymn} book={wordsBook} chords={chords} />
+                      </Area>
+                    </ChordTouchProvider>
+                  </PreviewProvider>
+                </ChordTapProvider>
+              </FollowProvider>
+            </PlayedKeyProvider>
+          </PageText>
+        </ScrollView>
+      </Scroll>
       {holding && (
         <View pointerEvents="none" style={[styles.middle, { bottom: RISE + room }]}>
           <View testID="reader-seek-marker" style={[styles.marker, { backgroundColor: accent }]} />

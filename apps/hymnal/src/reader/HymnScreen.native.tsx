@@ -29,21 +29,28 @@
  * item's own content, so a page given only `flex: 1` grows to its words'
  * full height and its scroll view has nothing to scroll. Each page is
  * therefore given the pager's measured height (`onLayout`).
+ *
+ * The pager's scroll view is LegendList's own (`Animated.ScrollView`), drawn
+ * inside the gesture handler's native gesture (`renderScrollComponent`), so
+ * a page's held seek can block it (`SeekScrollsProvider`, `WordSeek.native.tsx`).
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { LegendList } from '@legendapp/list/react-native';
 import { Option } from 'effect';
 import { useParams, useRouter } from 'one';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Animated,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollViewProps,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureDetector, useNativeGesture } from 'react-native-gesture-handler';
 
 import { hymnAt, type HymnText, hymns } from '~/hymns/hymns';
 import { readMeaningSoon } from '~/hymns/meaning';
@@ -53,7 +60,7 @@ import { HymnPage, NoHymn } from './HymnPage';
 import { backEdge, onPage, pageSource, settledAt } from './pager';
 import { pagesFrom } from './place';
 import { reader, Shown } from './screen';
-import { seekHeld, ShownPagesProvider, shownPagesOf } from './word-seek';
+import { seekHeld, SeekScrollsProvider, ShownPagesProvider, shownPagesOf } from './word-seek';
 
 export { hymnParams } from './screen';
 
@@ -86,6 +93,19 @@ function Pager({ shown }: { readonly shown: HymnText }) {
   const held = useAtomValue(seekHeld);
   const [seen] = useState(() => shownPagesOf(shown.number));
   useEffect(() => seen.show(shown.number), [seen, shown.number]);
+  const pagerGesture = useNativeGesture({
+    testID: 'hymn-pager-native',
+    disallowInterruption: true,
+    shouldCancelWhenOutside: false,
+  });
+  const renderScroll = useCallback(
+    (props: ScrollViewProps) => (
+      <GestureDetector gesture={pagerGesture}>
+        <Animated.ScrollView {...props} />
+      </GestureDetector>
+    ),
+    [pagerGesture],
+  );
   const router = useRouter();
   const settle = (offset: number) =>
     Option.match(
@@ -107,24 +127,27 @@ function Pager({ shown }: { readonly shown: HymnText }) {
       <Shown hymn={shown} />
       <View style={styles.pages} onLayout={onLayout}>
         <ShownPagesProvider value={seen}>
-          <LegendList
-            data={pages.list}
-            keyExtractor={String}
-            horizontal
-            pagingEnabled
-            scrollEnabled={!held}
-            showsHorizontalScrollIndicator={false}
-            getFixedItemSize={() => width}
-            estimatedItemSize={width}
-            initialScrollIndex={pages.index}
-            recycleItems={false}
-            drawDistance={width}
-            extraData={extraData}
-            onMomentumScrollEnd={onMomentumScrollEnd}
-            onScrollEndDrag={onScrollEndDrag}
-            renderItem={drawPage}
-            style={styles.pager}
-          />
+          <SeekScrollsProvider value={[pagerGesture]}>
+            <LegendList
+              renderScrollComponent={renderScroll}
+              data={pages.list}
+              keyExtractor={String}
+              horizontal
+              pagingEnabled
+              scrollEnabled={!held}
+              showsHorizontalScrollIndicator={false}
+              getFixedItemSize={() => width}
+              estimatedItemSize={width}
+              initialScrollIndex={pages.index}
+              recycleItems={false}
+              drawDistance={width}
+              extraData={extraData}
+              onMomentumScrollEnd={onMomentumScrollEnd}
+              onScrollEndDrag={onScrollEndDrag}
+              renderItem={drawPage}
+              style={styles.pager}
+            />
+          </SeekScrollsProvider>
         </ShownPagesProvider>
         <View testID="back-edge" style={styles.backEdge} />
       </View>

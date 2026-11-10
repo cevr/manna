@@ -11,6 +11,7 @@
  */
 
 import { RegistryContext, useAtomValue } from '@effect/atom-react';
+import type { NativeGesture } from 'react-native-gesture-handler';
 import { Array as Arr, Data, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import {
@@ -444,10 +445,15 @@ export const ChordTouchProvider = ChordTouchContext.Provider;
 
 export const useChordTouch = (): ChordTouch => use(ChordTouchContext);
 
-/** When a still pointer's hold time comes, on the web: the host's timer, or a test's by hand. */
+/**
+ * The touch path's time: when a still pointer's hold time comes on the web,
+ * and the clock a chord's press is timed by. The host's, or a test's by hand.
+ */
 export interface HoldTimer {
   /** Runs `run` after `ms`; the answer stops it. */
   readonly after: (ms: number, run: () => void) => () => void;
+  /** Now, in milliseconds. */
+  readonly now: () => number;
 }
 
 const hostTimer: HoldTimer = {
@@ -456,6 +462,8 @@ const hostTimer: HoldTimer = {
     const timer = setTimeout(run, ms);
     return () => clearTimeout(timer);
   },
+  // oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read of when a chord's press began, with no Effect run per touch.
+  now: () => performance.now(),
 };
 
 const HoldTimerContext = createContext<HoldTimer>(hostTimer);
@@ -463,6 +471,20 @@ const HoldTimerContext = createContext<HoldTimer>(hostTimer);
 export const HoldTimerProvider = HoldTimerContext.Provider;
 
 export const useHoldTimer = (): HoldTimer => use(HoldTimerContext);
+
+/**
+ * The native scrolls a held finger must win from, innermost first: the
+ * page's own vertical scroll and the pager's horizontal one. The hold's
+ * recognizer blocks each (`block`), so neither begins until the hold
+ * fails: a finger that moves before its time lets them have the touch, and
+ * one held still keeps it. Each scroll's own detector adds itself
+ * (`WordSeek.native.tsx`, `HymnScreen.native.tsx`); the web has none.
+ */
+const ScrollsContext = createContext<ReadonlyArray<NativeGesture>>([]);
+
+export const SeekScrollsProvider = ScrollsContext.Provider;
+
+export const useSeekScrolls = (): ReadonlyArray<NativeGesture> => use(ScrollsContext);
 
 /** What a platform's hold adapter wraps: the page's sung words, and the page's held seek. */
 export interface SeekAreaProps {
