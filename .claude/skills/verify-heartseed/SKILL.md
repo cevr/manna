@@ -124,7 +124,7 @@ latest process refused a native source its build lacks (One's "native
 module natural.Natural changed; rebuild the app"): the installed build is
 older than the JavaScript the server serves, so run `sim install`. It
 sees a refusal only once the JavaScript has called the native source
-(`features/doctor.md`).
+([features/doctor.md](features/doctor.md)).
 
 ## Drive
 
