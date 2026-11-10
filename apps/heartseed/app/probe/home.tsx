@@ -17,6 +17,7 @@ import {
   type Greeting,
 } from '../../src/home';
 import { ICON_IMAGES } from '../../src/home/icons';
+import { motionOf } from '../../src/home/motion';
 import { startOf } from '../../src/home/start';
 import { fieldPassagesOf } from '../../src/promises/taught';
 import { countsOf } from '../../src/session';
@@ -75,6 +76,20 @@ const furrowLines = (furrow: Furrow) => [
   ...furrow.plants.map((plant) => `plant ${plant.label}`),
 ];
 
+/** Delays space-joined, or `none` when there are none. */
+const delaysOf = (delays: readonly number[]) =>
+  Arr.match(delays, { onEmpty: () => 'none', onNonEmpty: (some) => some.join(' ') });
+
+/** The motion plan over the live furrows: each icon delay, each spring delay in reading order, and how many sway. */
+const motionLine = (furrows: readonly Furrow[]) => {
+  const plan = motionOf(furrows);
+  const plants = plan.flatMap((furrow) => furrow.plants);
+  const icons = delaysOf(Arr.getSomes(plan.map((furrow) => furrow.icon)));
+  const springs = delaysOf(Arr.getSomes(plants.map((plant) => plant.spring)));
+  const sways = plants.filter((plant) => plant.sway).length;
+  return `motion icons ${icons} · springs ${springs} · sways ${sways}`;
+};
+
 /** The probe's first lines: its title and the greeting. */
 const headOf = (greeting: Greeting) => [
   'Home probe',
@@ -102,6 +117,7 @@ const linesOf = (
     onSome: (plan) => countsOf(plan, garden),
   })}`,
   ...furrows.flatMap(furrowLines),
+  motionLine(furrows),
   `lists ${lists}`,
   `shelves ${SHELVES.length}`,
   ...SHELVES.map(shelfLine),
@@ -114,11 +130,11 @@ const linesOf = (
 
 /**
  * A development probe for the live check of the home's rules
- * (verify-heartseed, `home-probe` and `home-icons`): the greeting, then
+ * (verify-heartseed, `home-probe`, `home-icons` and `home-probe-motion`): the greeting, then
  * how many of the home's icons loaded (and which failed) above each icon
  * drawn in both schemes, then the plan's counts, each
  * furrow of the field with its kind, icon and ripe count and each of its
- * plants' labels, the lists the field holds, the shelves Add verses
+ * plants' labels, the motion plan over those furrows (`motionOf`), the lists the field holds, the shelves Add verses
  * offers, the session's visit and what Today would show, one line each,
  * over the live garden, passages and session. It begins the session once
  * the garden is read, as Today does, and its one button starts the first
