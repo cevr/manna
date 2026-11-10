@@ -27,8 +27,8 @@
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Effect, Match, Option, SubscriptionRef } from 'effect';
 import { usePathname, useRouter, useSafeAreaInsets } from 'one';
-import { type ReactNode, useEffect, useRef } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
+import { AppState, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
@@ -74,7 +74,8 @@ import { MOST_SCALE } from './DialView';
 import { FindDrums } from './FindDrums';
 import { useShownPage } from './page';
 import { playbackLive } from './playback.live';
-import { playerOn, statusEvery } from './player';
+import { type HymnPlayer, playerOn, statusEvery } from './player';
+import { bundledTargets, HoldCommand } from './word-seek';
 import { cachedPlayback } from './offline';
 import { keptOf } from './stanzas';
 import { offlineLive } from '~/offline/live';
@@ -95,6 +96,8 @@ const player = playerOn(
   settings.tempo,
   settings.stanzas,
   settings.intro,
+  bundledTargets,
+  settings.sound,
 );
 /** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
@@ -110,10 +113,30 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);
   return (
     <PlayerContext value={provided}>
+      <HoldLifetime player={player} />
       <SaveShown />
       <Finding>{children}</Finding>
     </PlayerContext>
   );
+}
+
+/** Route and application-lifetime notifications revoke a hold without changing ordinary navigation audio. */
+export function HoldLifetime({ player }: { readonly player: HymnPlayer }) {
+  const invalidate = useAtomSet(player.hold.send);
+  const path = usePathname();
+  useLayoutEffect(() => {
+    invalidate(HoldCommand.Invalidate({ reason: 'route' }));
+  }, [path, invalidate]);
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') invalidate(HoldCommand.Invalidate({ reason: 'background' }));
+    });
+    return () => {
+      listener.remove();
+      invalidate(HoldCommand.Invalidate({ reason: 'unmount' }));
+    };
+  }, [invalidate]);
+  return <></>;
 }
 
 /** Whether the book holds the hymn a route's number segment names: the hymn route draws its page and bar. */

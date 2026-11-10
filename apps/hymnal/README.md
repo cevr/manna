@@ -288,6 +288,18 @@ sections; an inert fixture can supply its own score projection. The optional
 eighth Sound atom participates in ownership checks. Existing callers keep
 their defaults. `word-seek.test.ts` belongs to `test:player` and uses the real
 score clock over a controllable silent Playback boundary.
+`LivePlayer` owns `HoldLifetime`: route changes invalidate in a layout
+effect, inactive/background notifications invalidate through AppState, and
+cleanup removes the listener and invalidates. These events leave ordinary
+navigation audio unchanged when no hold exists. Stanza topology, effective
+requested Key, tempo, Intro, Sound, recording selection and Start generation
+are checked from current atoms before each continuation, not only from
+subscription notifications. Invalidation never restores or resumes an old
+origin. A native operation already issued cannot be un-issued; later work
+and completions remain token-owned. The slow hold acceptance file exercises
+fixed refusal/retry/interruption traces and replayable seeded immediate and
+deferred reference histories over the real player and score clock. It proves
+numeric protocol behavior, not acoustic word landing or a continuous gesture.
 No reader interaction uses this seam yet. `seek-targets.test.ts` belongs to
 `test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
 every corpus stanza subset, occurrence and word and generated numeric scores.

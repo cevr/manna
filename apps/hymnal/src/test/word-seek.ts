@@ -128,9 +128,26 @@ export const openWordSeek = (audible = true) =>
       soundRef,
       (_number, choice) => keptOf(seekText.sections, choice),
     );
+    const commands: Array<{ kind: string; ms: number }> = [];
+    const commandCalls = yield* Queue.unbounded<string>();
+    const observed = Layer.effect(Playback)(
+      Effect.gen(function* () {
+        const device = yield* Playback;
+        const record = (kind: string, ms = 0) =>
+          Effect.sync(() => {
+            commands.push({ kind, ms });
+          }).pipe(Effect.andThen(Queue.offer(commandCalls, kind)));
+        return Playback.of({
+          ...device,
+          pause: record('pause').pipe(Effect.andThen(device.pause)),
+          resume: record('resume').pipe(Effect.andThen(device.resume)),
+          seek: (ms) => record('seek', ms).pipe(Effect.andThen(device.seek(ms))),
+        });
+      }),
+    ).pipe(Layer.provide(layer));
     const player = playerOn(
       Layer.mergeAll(
-        layer,
+        observed,
         Layer.succeed(Clock.Clock, clock),
         Layer.succeed(References.MinimumLogLevel, 'None'),
       ),
@@ -160,6 +177,21 @@ export const openWordSeek = (audible = true) =>
       player,
       registry,
       trace,
+      commands,
+      waitCommand: (kind: string) =>
+        Stream.fromQueue(commandCalls).pipe(
+          Stream.filter((value) => value === kind),
+          Stream.runHead,
+        ),
+      setStatus: (value: Status) =>
+        Effect.gen(function* () {
+          run = {
+            ...run,
+            state: value.state,
+            at: value.positionMs,
+            since: yield* Clock.currentTimeMillis,
+          };
+        }),
       calls,
       waitCall: (kind: string) =>
         Stream.fromQueue(calls).pipe(
@@ -182,7 +214,7 @@ export const openWordSeek = (audible = true) =>
       hold: (command: HoldCommand) => registry.set(player.hold.send, command),
       play: Effect.gen(function* () {
         registry.set(player.send, Command.Start({ track: { number: 1, title: 'Fixture' } }));
-        yield* until(player.state, Player.$is('Loading'));
+        yield* until(player.state, (state) => state._tag !== 'Idle');
         yield* TestClock.adjust(250);
         return yield* until(player.state, Player.$is('Playing'));
       }),

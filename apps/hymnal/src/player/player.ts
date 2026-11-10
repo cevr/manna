@@ -499,12 +499,16 @@ export const playerOn = (
     sound: Option.map(Option.fromNullishOr(sound), (atom) => get.get(atom)),
     recording: get.get(recording),
   });
-  const revoke = (get: HoldAccess) => {
+  const abandonHold = () => {
     if (Option.isNone(transaction)) return;
     transaction = Option.none();
     revokedWork = true;
     held.seeking = Option.none();
     held.proof = { ...held.proof, pending: Option.none() };
+  };
+  const revoke = (get: HoldAccess) => {
+    if (Option.isNone(transaction)) return;
+    abandonHold();
     get.set(holdState, HoldState.Free());
   };
   const owns = (get: HoldAccess, hold: HoldTransaction): boolean => {
@@ -876,8 +880,14 @@ export const playerOn = (
             if (Option.isSome(transaction)) {
               const hold = transaction.value;
               if (!owns(get.registry, hold)) return false;
-              if (status.state === 'idle' || status.state === 'ended' || status.state === 'failed')
+              if (
+                status.state === 'idle' ||
+                status.state === 'ended' ||
+                status.state === 'failed'
+              ) {
                 revoke(get.registry);
+                yield* cut;
+              }
             }
             held.pace = paceOf(status);
             const count = counting(status);
@@ -1316,9 +1326,11 @@ export const playerOn = (
             held.wants = 'play';
             yield* act(Option.none());
             if (!owns(get.registry, hold)) return;
-            const status = yield* device.resume;
+            const answer = yield* device.resume.pipe(Effect.option);
             if (!owns(get.registry, hold)) return;
             clearHold(get.registry, hold);
+            if (Option.isNone(answer)) return;
+            const status = answer.value;
             const track = Option.getOrThrow(trackOf(get.registry.get(state)));
             yield* show(
               Player.Buffering({
@@ -1389,7 +1401,7 @@ export const playerOn = (
           const active = Option.filter(transaction, (hold) => hold.token === command.token);
           if (Option.isNone(active)) return;
           const hold = active.value;
-          let operation = finishHold(hold);
+          let operation: Effect.Effect<void, PlaybackError> = finishHold(hold);
           if (command._tag === 'AcquireHold') operation = acquireHold(hold);
           return yield* operation.pipe(
             Effect.catchTag('PlaybackError', (error) =>
@@ -1531,6 +1543,7 @@ export const playerOn = (
   const holdSend = Atom.writable(
     (get) => get(holdLifetime),
     (get, command: HoldCommand) => {
+      get.get(holdLifetime);
       if (command._tag === 'Invalidate') {
         if (Option.isNone(transaction)) return;
         revoke(get);
@@ -1600,7 +1613,7 @@ export const playerOn = (
     }
     if (intro) get.subscribe(intro, check);
     if (sound) get.subscribe(sound, check);
-    get.addFinalizer(() => revoke(get.registry));
+    get.addFinalizer(abandonHold);
   }).pipe(Atom.keepAlive);
   const hold = {
     state: Atom.make((get) => {
