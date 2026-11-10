@@ -5520,3 +5520,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Under the real root no test read what an Add verses offer says: a root that handed the sheet a field without the taught collections, or with the app's own row alone, passed all 182 parts.
 - **Cause:** The sheet's offers were checked beside a stand-in home, and the root's own walk opened the sheet with every shelf closed.
 - **Guard:** code: `apps/heartseed/src/shelves/root.test.tsx` `offers Proverbs 18:10 as in your field when only the taught protection collection holds it`; code: `apps/heartseed/src/shelves/root-c.test.tsx` `offers Proverbs 18:10 as in your field by the second of three taught collections`
+
+### heartseed-hold-kept-at-your-field-beside-another-open-item
+
+- **Date:** 2026-11-10
+- **Kind:** review
+- **Said:** "A product that dropped the hold at `Your field` would therefore show home's `Begin` against the model whenever the held item is the plan's last. I did not build this product mutant."
+- **Source:** hymnapp/hssettings5/round-1-findings.md R3 (its Risk 3)
+- **Wrong:** A product that let the held item go at `Your field` was caught, with another item open after it, only by two run walks whose seeds happened to reach that hold; no floor named the case, so another seed could lose it with every part green.
+- **Cause:** The run walk counted a hold at `Your field` as one case, whatever followed it in the plan.
+- **Guard:** code: `apps/heartseed/src/run/end-b.test.tsx` `field:held:next:more`; code: `apps/heartseed/src/run/cues-b.test.tsx` `field:held:next:more`

@@ -2509,7 +2509,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (cancelled, finishing, and a trip after each ending that kept nothing)
     and a trip after each ending (every ending and whether the new plan
     moves the held item or keeps it first, `CELLS`); each case's floors
-    met by its own devices. A Minutes making while the recital listens or
+    met by its own devices. A trip to the field with an item held is
+    tallied by what the model shows once it lets the item go
+    (`field:held:last` nothing, `field:held:again` the held reference,
+    `field:held:more` another item), and as `field:held:next:<kind>` when
+    Today showed `Next`: `run.test.tsx` floors `field:held:next:last`,
+    `relaunch.test.tsx` `field:held:again`, and `end-b.test.tsx` and
+    `cues-b.test.tsx` `field:held:next:more`. A Minutes making while the recital listens or
     finishes, which no reader reaches, is `test:session-cells`'.
   - `test:wake`: `src/wake/life.test.ts` (the return rule over every
     sequence of up to six host states after each launch state, and long

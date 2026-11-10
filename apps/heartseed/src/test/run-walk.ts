@@ -927,7 +927,7 @@ class Walk {
     await this.settle('peek');
   }
 
-  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there (`homeDone`). */
+  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there (`homeDone`). A hold kept there is tallied by what the model shows after it lets the item go (`field:held:last` none, `again` the held reference, `more` another), and as `field:held:next:<kind>` when Today showed `Next`. */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
@@ -936,6 +936,14 @@ class Walk {
     )
       throw new Error('no field');
     bump(this.coverage, this.run.hold === null ? 'field:none' : 'field:held');
+    if (this.run.hold !== null) {
+      const after = shownModel(nextModel(this.run), this.recallsNow);
+      const kind =
+        after === null ? 'last' : after.reference === this.run.hold.reference ? 'again' : 'more';
+      bump(this.coverage, `field:held:${kind}`);
+      if (actionModel(this.run, this.recallsNow) === 'Next')
+        bump(this.coverage, `field:held:next:${kind}`);
+    }
     if (this.run.hold === null && shownModel(this.run, this.recallsNow) === null) {
       bump(this.coverage, 'done:field');
       return this.homeDone('the field');
