@@ -20,15 +20,17 @@ import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
 import {
   AT,
+  DRAWING_FAULTS,
   fullCorn,
   mount,
   OTHER,
   passageKeys,
   passageRecalls,
-  PLANT_LOOKS,
+  PLANT_IMAGES,
   PREFIX,
   recallAt,
   recordOf,
+  UNREAD_FRAMES,
   UNREAD_LOOKS,
 } from '../test/stage-rig';
 
@@ -96,11 +98,16 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
     await today.leave();
   });
 
-  it('draws no part of a plant, with or without a test id or label, in any frame of the failed launch above, though the seed, the blade and the ear drew their parts once read', () => {
-    const stages = new Set([...PLANT_LOOKS.values()].flatMap((each) => [...each]));
-    expect([...stages].toSorted()).toEqual(['Stage: blade', 'Stage: ear', 'Stage: seed']);
-    expect(PLANT_LOOKS.size).toBeGreaterThanOrEqual(5);
+  it('draws no plant image, with or without a test id or label, in any frame of the failed launch above, though the seed, the blade and the ear drew their own images beside their stage lines once read', () => {
+    expect(
+      Object.fromEntries([...PLANT_IMAGES].map(([asset, stages]) => [asset, [...stages]])),
+    ).toEqual({
+      'assets/home/seed-light.png': ['Stage: seed'],
+      'assets/home/blade-light.png': ['Stage: blade'],
+      'assets/home/ear-light.png': ['Stage: ear'],
+    });
+    expect(UNREAD_FRAMES.seen).toBeGreaterThan(0);
     expect(UNREAD_LOOKS.size).toBeGreaterThan(10);
-    expect([...PLANT_LOOKS.keys()].filter((look) => UNREAD_LOOKS.has(look))).toEqual([]);
+    expect([...DRAWING_FAULTS]).toEqual([]);
   });
 });

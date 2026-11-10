@@ -9,13 +9,15 @@
  * a recording chime. A restart is a new registry over the same disk.
  *
  * Every frame (each DOM mutation batch) is watched: each counts as a claim
- * when it names a stage, a plant, planting or growth, and each files its
- * looks, a read plant's parts under its stage and every look of a frame
- * with no stage line and no home heading as unread, over every mount of
- * the test file's process. Home's frames are neither: home draws plants of
- * its own, read, under no stage line. The done state's and the end of a
- * run's frames are filed as unread, so no look of Today's plant may show
- * there either; the end's are also counted in `frames.end`. Each `renew`'s
+ * when it names a stage, a plant, planting or growth, and each is filed
+ * over every mount of the test file's process (`src/test/plant-image-rule.ts`).
+ * A stage line's frame files its plant images by source under its stage
+ * and owes the stage's one hidden, still, 28 pt image in the scheme now,
+ * or none when not planted. A frame with no stage line and no home heading
+ * files its looks as unread and, but at the end of a run, may draw no
+ * plant asset in any image, whatever its ids or labels. Home's frames are
+ * neither: home draws plants of its own, read, under no stage line, and so
+ * does the end, whose frames are also counted in `frames.end`. Each `renew`'s
  * `Next` ends the run, the passage its one item, and Today then shows the
  * end exactly as `tendedModel` has it (kept in `ends`).
  *
@@ -32,6 +34,7 @@ import { expect } from 'bun:test';
 import { Effect, Layer, Logger } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Appearance } from 'react-native';
 import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
@@ -41,12 +44,11 @@ import { NEW_CARD, review } from '../fsrs';
 import { Chime, type Growth } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
-import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { DAY } from './garden-model';
-import { computed } from './look';
 import { device } from './one';
+import { ownsImages, plantAssetsIn, plantFaults, STAGE_IMAGE } from './plant-image-rule';
 import { END, endShown, watchRoot } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
@@ -59,12 +61,6 @@ export const OTHER = 'Made 1:1';
 /** The instant a launch whose clock is set starts at: long after every record these disks hold. */
 export const AT = Date.UTC(2026, 10, 5, 15);
 
-/** The plant's colours in the light scheme (`src/theme.ts`), as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
-export const GOLD = computed(theme.light.gold);
-export const LEAF = computed(theme.light.leaf);
-export const GREEN_EAR = computed(theme.light.greenEar);
-export const SOIL = computed(theme.light.soil);
-
 /** Words that claim a stage, a plant, planting or growth, in any text or attribute (react-native-web's `r-flexGrow` class is no claim, so growth is matched as its own word). */
 const CLAIM = /stage|plant|grew|\bgrow|growth|seed|blade|\bear\b|full corn/iu;
 
@@ -72,11 +68,23 @@ const CLAIM = /stage|plant|grew|\bgrow|growth|seed|blade|\bear\b|full corn/iu;
 const lookOf = (node: Element) =>
   `${node.tagName} ${[...node.classList].toSorted().join(' ')} | ${node.getAttribute('style') ?? ''}`;
 
-/** Every look drawn inside a read plant, with the stages it was drawn at, over every mount of the test file's process. */
-export const PLANT_LOOKS = new Map<string, Set<string>>();
+/** Every plant asset a frame with a stage line drew (`assets/home/<name>-<scheme>.png`, read from its source), with the stage lines it was drawn beside, over every mount of the test file's process. */
+export const PLANT_IMAGES = new Map<string, Set<string>>();
 
 /** Every look in a frame drawn before the garden's read completed or through an unread session, over every mount of the test file's process. */
 export const UNREAD_LOOKS = new Set<string>();
+
+/** The frames that may draw no plant (no stage line, and neither home nor the end of a run) seen, over every mount of the test file's process. */
+export const UNREAD_FRAMES = { seen: 0 };
+
+/** Each drawing fault of a frame (`plantFaults`), once, with its stage line or `unread`, over every mount of the test file's process: a stage line's frame owes its stage's one 28 pt image in the scheme now, any other frame but home's and the end's no plant image at all. */
+export const DRAWING_FAULTS = new Set<string>();
+
+/** The scheme the app draws in now: these launches store no appearance, so it is the system's. */
+const schemeNow = () => {
+  if (Appearance.getColorScheme() === 'dark') return 'dark';
+  return 'light';
+};
 
 /** A recall of the passage at `startedAt`, recalled alone with Good. */
 export const recallAt = (startedAt: number, reference = passage.reference): Recall => ({
@@ -166,18 +174,29 @@ export const mount = async (
     );
   const headings = () =>
     [...host.querySelectorAll('[role="heading"]')].map((node) => node.textContent ?? '');
-  /** Files the frame's looks: a read frame's plant parts under its stage, every look of a frame with no stage line and no home heading as unread. */
+  /**
+   * Files the frame: a stage line's frame's plant images under its stage
+   * and its drawing held to the stage's one image; every look of a frame
+   * with no stage line and no home heading as unread, and every image of
+   * such a frame but the end's read for a plant asset, ids and labels
+   * aside.
+   */
   const file = () => {
     const label = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
     if (label === undefined || label === null) {
       if (headings().includes('Your field')) return;
       for (const node of host.querySelectorAll('*')) UNREAD_LOOKS.add(lookOf(node));
+      if (ownsImages(host)) return;
+      UNREAD_FRAMES.seen += 1;
+      for (const fault of plantFaults(host, null)) DRAWING_FAULTS.add(`unread: ${fault}`);
       return;
     }
-    for (const node of host.querySelectorAll('[data-testid="plant"], [data-testid="plant"] *')) {
-      const look = lookOf(node);
-      PLANT_LOOKS.set(look, (PLANT_LOOKS.get(look) ?? new Set()).add(label));
-    }
+    for (const asset of plantAssetsIn(host))
+      PLANT_IMAGES.set(asset, (PLANT_IMAGES.get(asset) ?? new Set()).add(label));
+    const name = STAGE_IMAGE.get(label);
+    let want: { asset: string; size: number } | null = null;
+    if (name !== undefined) want = { asset: `assets/home/${name}-${schemeNow()}.png`, size: 28 };
+    for (const fault of plantFaults(host, want)) DRAWING_FAULTS.add(`${label}: ${fault}`);
   };
   const watch = new MutationObserver(() => {
     frames.seen += 1;
@@ -222,9 +241,8 @@ export const mount = async (
   const stage = () => one('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
   const growth = () => one('[data-testid="growth"]')?.textContent ?? null;
   const plant = () => one('[data-testid="plant"]');
-  /** The plant's parts as drawn, by their colours, read without a word. */
-  const drawn = () =>
-    [...(plant()?.children ?? [])].map((part) => getComputedStyle(part).backgroundColor);
+  /** The plant's images as drawn, by their sources (`assets/home/<name>-<scheme>.png`), read without a word. */
+  const drawn = () => plantAssetsIn(plant());
   const button = (name: string) =>
     [...host.querySelectorAll('[role="button"]')].find(
       (node) => node.getAttribute('aria-label') === name,

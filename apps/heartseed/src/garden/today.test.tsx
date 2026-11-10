@@ -9,8 +9,8 @@
  * disk: the passage's, or, for the passage not planted, another verse's.
  *
  * The stage line reads `Stage: <stage>`, the plant beside it is hidden from
- * the screen reader and drawn one way per stage in the prototype's
- * colours, and the growth line shows only while the finished recital it
+ * the screen reader and drawn as its stage's one hand-drawn image, known by
+ * its source, and the growth line shows only while the finished recital it
  * names is on the screen. Every frame is watched: until the garden's read
  * completes, no frame names a stage, a plant, planting or growth. It counts
  * words without printing one. The failed reads and another verse's plant
@@ -25,23 +25,21 @@ import { toDue } from '../test/clock';
 import { device } from '../test/one';
 import {
   AT,
+  DRAWING_FAULTS,
   fullCorn,
-  GOLD,
-  GREEN_EAR,
-  LEAF,
   mount,
   OTHER,
   passageKeys,
   passageRecalls,
-  PLANT_LOOKS,
+  PLANT_IMAGES,
   recallAt,
   recordOf,
-  SOIL,
+  UNREAD_FRAMES,
   UNREAD_LOOKS,
 } from '../test/stage-rig';
 
 describe('Today’s stage over the device’s store', () => {
-  it('reads not planted, then a gold seed, grows to a blade under its letters and then to a green ear at each due, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
+  it('reads not planted, then a seed, grows to a blade under its letters and then to a green ear at each due, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
     device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9), OTHER))]);
     const chimes: Growth[] = [];
     const time = { now: AT };
@@ -60,14 +58,17 @@ describe('Today’s stage over the device’s store', () => {
       'true',
       [],
     ]);
-    expect(today.drawn()).toEqual([SOIL, GOLD]);
+    expect(today.drawn()).toEqual(['assets/home/seed-light.png']);
     expect(passageKeys()).toHaveLength(1);
 
     await today.renew();
     expect([today.stage(), today.growth()]).toEqual(['Stage: seed', null]);
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
-    expect([today.growth(), today.drawn()]).toEqual(['Grew to a blade.', [SOIL, LEAF, LEAF]]);
+    expect([today.growth(), today.drawn()]).toEqual([
+      'Grew to a blade.',
+      ['assets/home/blade-light.png'],
+    ]);
     expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
       [passage.reference, 'seed', 'blade'],
     ]);
@@ -84,7 +85,7 @@ describe('Today’s stage over the device’s store', () => {
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect([today.growth(), today.drawn()]).toEqual([
       'Grew to an ear.',
-      [SOIL, LEAF, LEAF, GREEN_EAR],
+      ['assets/home/ear-light.png'],
     ]);
     expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
       [passage.reference, 'seed', 'blade'],
@@ -97,7 +98,7 @@ describe('Today’s stage over the device’s store', () => {
       null,
       2,
       3,
-      [SOIL, LEAF, LEAF],
+      ['assets/home/blade-light.png'],
     ]);
     await today.leave();
 
@@ -130,7 +131,7 @@ describe('Today’s stage over the device’s store', () => {
     await again.leave();
   });
 
-  it('claims nothing in any frame while the launch is held, opens nothing, and reads full corn once released, drawn as a gold ear with its awn', async () => {
+  it('claims nothing in any frame while the launch is held, opens nothing, and reads full corn once released, drawn as the corn', async () => {
     device.launch(fullCorn());
     const gate = Promise.withResolvers<void>();
     const today = await mount([], gate.promise);
@@ -148,22 +149,23 @@ describe('Today’s stage over the device’s store', () => {
     expect([today.plant()?.getAttribute('aria-hidden'), today.growth(), today.drawn()]).toEqual([
       'true',
       null,
-      [SOIL, LEAF, LEAF, GOLD, GOLD],
+      ['assets/home/corn-light.png'],
     ]);
     expect(today.frames.claimed).toBeGreaterThan(0);
     await today.leave();
   });
 
   it('draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read', () => {
-    const stages = new Set([...PLANT_LOOKS.values()].flatMap((each) => [...each]));
-    expect([...stages].toSorted()).toEqual([
-      'Stage: blade',
-      'Stage: ear',
-      'Stage: full corn',
-      'Stage: seed',
-    ]);
-    expect(PLANT_LOOKS.size).toBeGreaterThanOrEqual(6);
+    expect(
+      Object.fromEntries([...PLANT_IMAGES].map(([asset, stages]) => [asset, [...stages]])),
+    ).toEqual({
+      'assets/home/seed-light.png': ['Stage: seed'],
+      'assets/home/blade-light.png': ['Stage: blade'],
+      'assets/home/ear-light.png': ['Stage: ear'],
+      'assets/home/corn-light.png': ['Stage: full corn'],
+    });
+    expect(UNREAD_FRAMES.seen).toBeGreaterThan(0);
     expect(UNREAD_LOOKS.size).toBeGreaterThan(10);
-    expect([...PLANT_LOOKS.keys()].filter((look) => UNREAD_LOOKS.has(look))).toEqual([]);
+    expect([...DRAWING_FAULTS]).toEqual([]);
   });
 });
