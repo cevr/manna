@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, eslint/no-await-in-loop -- a component test: it mounts the end's drawing in happy-dom (react-native-web) through React's promise-based `act`, one list after another, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop -- a component test: it mounts the end's drawing in happy-dom (react-native-web) through React's promise-based `act`, one list after another, yields one animation frame for Reanimated's entering styles, and reads nodes whose absent attributes are null. */
 
 /**
  * The end of a run's drawing alone (`Tended`, R2), mounted on the scheme's
@@ -9,19 +9,25 @@
  * `<reference>, <stage>` unmodified, holding one image (the stage's home
  * icon of the scheme shown) and only hidden children; no control and no
  * alert; the text a screen reader is given is the line alone; and every
- * text holds a text role of the scheme at AA (`lookFaults`). Today's
+ * text holds a text role of the scheme at AA (`lookFaults`). With motion
+ * on, over generated lists of 0 to 14, each grown image's entry and sway
+ * equal `endMotionOf` and nothing else moves (`motionFaults`). Today's
  * wiring of it is the root rule's and `accept/end.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Option } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { View } from 'react-native';
 
 import { STAGES, type Stage } from '../garden';
 import type { Grown } from '../home/grown';
+import { endMotionOf } from '../home/motion';
 import { below, random } from '../test/garden-model';
 import { lookFaults, setSystem } from '../test/look';
+import { entryOf, swayOf, under } from '../test/motion';
+import { motionFaults } from '../test/motion-rule';
 import { grewLine } from '../test/run-model';
 import { theme, type Scheme } from '../theme';
 import { Tended } from './tended';
@@ -149,7 +155,72 @@ const want = (grown: readonly Grown[], scheme: Scheme) => ({
   scheme,
 });
 
+const MOTION_SEED = 4417;
+const MOTION_CASES = 10;
+const delayOf = (delay: Option.Option<number>) =>
+  Option.match(delay, { onNone: () => null, onSome: (ms) => ms });
+
+/** A motion list's length by its turn: 0 and 1, then 13 and 14 past the cap, else 2 to 14. */
+const motionSizeOf = (next: () => number, turn: number) => {
+  if (turn < 2) return turn;
+  if (turn < 4) return 11 + turn;
+  return 2 + below(next, 13);
+};
+
+/** Each grown node's name, its image's entry and sway, read from the document with motion on. */
+const movedOf = async (grown: readonly Grown[]) => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => root.render(<Tended grown={grown} />));
+  await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  const seen = {
+    grown: by(host, 'grown').map((node) => ({
+      name: node.getAttribute('aria-label'),
+      spring: entryOf(node.querySelector('img'), node),
+      sway: swayOf(node.querySelector('img'), node),
+    })),
+    faults: motionFaults(host),
+  };
+  await act(async () => root.unmount());
+  host.remove();
+  return seen;
+};
+
 describe('the end of a run, drawn alone', () => {
+  it('springs each grown image by endMotionOf over generated lists of 0 to 14, swaying full corn, with nothing else moving', () =>
+    under('no-preference', async () => {
+      const next = random(MOTION_SEED);
+      const floors = { past: 0, corn: 0, held: 0 };
+      for (let turn = 0; turn < MOTION_CASES; turn += 1) {
+        const grown = listOf(next, motionSizeOf(next, turn));
+        const plan = endMotionOf(grown);
+        const seen = await movedOf(grown);
+        expect(seen, `list ${turn}`).toEqual({
+          grown: grown.map((each, index) => ({
+            name: `${each.reference}, ${each.stage}`,
+            spring: delayOf(plan[index]?.spring ?? Option.none()),
+            sway: plan[index]?.sway ?? false,
+          })),
+          faults: [],
+        });
+        expect(
+          seen.grown.map(({ spring, sway }) => [spring, sway]),
+          `list ${turn}, by the rule`,
+        ).toEqual(
+          grown.map((each, index) => {
+            if (index >= 12) return [null, false];
+            return [Math.min(300 + 160 * index, 1200), each.stage === 'full corn'];
+          }),
+        );
+        if (grown.length > 12) floors.past += 1;
+        if (grown.slice(0, 12).some((each) => each.stage === 'full corn')) floors.corn += 1;
+        if (grown.length > 6) floors.held += 1;
+      }
+      for (const [kind, count] of Object.entries(floors))
+        expect(count, kind).toBeGreaterThanOrEqual(2);
+    }));
+
   it('draws the line, the sun and each grown verse as one hidden-children image, over generated lists in both schemes', async () => {
     const next = random(SEED);
     const tally = {

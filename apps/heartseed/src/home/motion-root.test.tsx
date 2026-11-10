@@ -1,6 +1,7 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noNullish, effect/noNewPromise, effect/noFixedWaitInTests -- React's promise-based act mounts the real root in happy-dom; the device's recall fixtures use the host clock; DOM absence is null; one 40 ms frame lets Reanimated write its entering styles, not finish its delays. */
 
 import { describe, expect, it } from 'bun:test';
+import { MutableRef } from 'effect';
 import { act } from 'react';
 import passage from 'virtual:heartseed-passage';
 
@@ -13,9 +14,12 @@ import { entryOf, moving, swayOf, under } from '../test/motion';
 import { motionFaults } from '../test/motion-rule';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
+import { deviceOf, launch } from '../test/run-rig';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="checkbox"],[role="link"]';
 const HELD = { book: 19, chapter: 119, first: 1, last: 20 };
+const NOON = Date.UTC(2026, 0, 15, 12);
+const END = 'The field is tended';
 const heldVerse = (verse: number) => `Psalms 119:${verse}`;
 const by = (top: Element, id: string) => [...top.querySelectorAll(`[data-testid="${id}"]`)];
 
@@ -38,6 +42,26 @@ const home = async () => {
     await rig.until(() => by(rig.host, 'row').length === 2 && by(rig.host, 'counts').length === 1),
   ).toBe(true);
   return rig;
+};
+
+/** The own verse planted yesterday, launched at noon, said and heard whole, `Next`: the end with that verse grown to a blade. */
+const toEnd = async () => {
+  const app = await launch(
+    deviceOf([record(recallOf(passage.reference, NOON - DAY, 3, 0))]),
+    { unread: false, refuse: false },
+    { now: NOON },
+  );
+  expect(await app.until(() => app.has('Begin'))).toBe(true);
+  expect(await app.tap('Begin')).toBe(true);
+  expect(await app.until(() => app.headings().includes('Today') && app.has('Say it'))).toBe(true);
+  MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
+  expect(await app.tap('Say it')).toBe(true);
+  expect(await app.until(() => app.has('Listening'))).toBe(true);
+  expect(await app.tap('Listening')).toBe(true);
+  expect(await app.until(() => app.has('Next'))).toBe(true);
+  expect(await app.tap('Next')).toBe(true);
+  expect(await app.until(() => app.headings().includes(END))).toBe(true);
+  return app;
 };
 
 const frame = () => act(() => new Promise((resolve) => setTimeout(resolve, 40)));
@@ -136,5 +160,25 @@ describe('home motion through the root', () => {
       ]);
       expect(rig.faults).toEqual([]);
       await rig.leave();
+    }));
+
+  it('M6 springs the grown plant at the end 300 ms in, its image alone, and keeps Your field in reach', () =>
+    under('no-preference', async () => {
+      const app = await toEnd();
+      await frame();
+      expect(
+        by(app.host, 'grown').map((node) => [
+          labelOf(node),
+          entryOf(node.querySelector('img'), node),
+          moving(node).filter((at) => at.querySelector('img') === null && at.tagName !== 'IMG')
+            .length,
+          moving(app.host).filter((at) => at.contains(node)).length,
+        ]),
+      ).toEqual([[`${passage.reference}, blade`, 300, 0, 0]]);
+      expect(motionFaults(app.host)).toEqual([]);
+      const controls = [...app.host.querySelectorAll(CONTROLS)];
+      expect(controls.map(labelOf)).toEqual(['Your field']);
+      expect(controls.filter((node) => !reachable(node)).map(labelOf)).toEqual([]);
+      expect(await app.leave()).toEqual([]);
     }));
 });
