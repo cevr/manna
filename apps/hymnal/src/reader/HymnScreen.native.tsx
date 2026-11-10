@@ -33,6 +33,10 @@
  * The pager's scroll view is LegendList's own (`Animated.ScrollView`), drawn
  * inside the gesture handler's native gesture (`renderScrollComponent`), so
  * a page's held seek can block it (`SeekScrollsProvider`, `WordSeek.native.tsx`).
+ * A pushed screen is a native view of its own, outside the home screen's
+ * gesture root, so the screen is its own `GestureHandlerRootView`: a
+ * detector outside one throws as it draws in a development build, and the
+ * gesture handler does not recognize its gestures.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -50,7 +54,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { GestureDetector, useNativeGesture } from 'react-native-gesture-handler';
+import {
+  GestureDetector,
+  GestureHandlerRootView,
+  useNativeGesture,
+} from 'react-native-gesture-handler';
 
 import { hymnAt, type HymnText, hymns } from '~/hymns/hymns';
 import { readMeaningSoon } from '~/hymns/meaning';
@@ -123,7 +131,7 @@ function Pager({ shown }: { readonly shown: HymnText }) {
       { onNone: () => {}, onSome: settle },
     );
   return (
-    <View style={styles.screen}>
+    <GestureHandlerRootView style={styles.screen}>
       <Shown hymn={shown} />
       <View style={styles.pages} onLayout={onLayout}>
         <ShownPagesProvider value={seen}>
@@ -152,7 +160,7 @@ function Pager({ shown }: { readonly shown: HymnText }) {
         <View testID="back-edge" style={styles.backEdge} />
       </View>
       <PageBar track={shown} />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
