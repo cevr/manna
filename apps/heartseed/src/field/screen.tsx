@@ -40,7 +40,7 @@ import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
 import { SettingsSheet } from '../settings/sheet';
 import { Foot, type Chosen } from './foot';
-import { AddRow, Control, FurrowRow, Icon, Legend, type Removal } from './plot';
+import { AddRow, Control, Furrows, Icon, Legend, type Removal } from './plot';
 
 /** The bar's own state: the passage or list a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
 interface Bar {
@@ -292,16 +292,13 @@ export function FieldScreen({
         <Text testID="hint" style={styles.hint}>
           A gold dot marks a plant ready today. Tap one to start there.
         </Text>
-        {furrows.map((furrow, index) => (
-          <FurrowRow
-            key={index}
-            furrow={furrow}
-            chosen={shownChoice}
-            pending={bar.pending}
-            onChoose={onChoose}
-            onRemove={onRemove}
-          />
-        ))}
+        <Furrows
+          furrows={furrows}
+          chosen={shownChoice}
+          pending={bar.pending}
+          onChoose={onChoose}
+          onRemove={onRemove}
+        />
         {offersAdd(passages, bar) && <AddRow onAdd={() => tapped(onAdd)} />}
         <Legend />
       </ScrollView>

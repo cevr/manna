@@ -14,15 +14,20 @@
  */
 
 import { Match, Option } from 'effect';
+import { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { verseNumberOf, type PlantStage } from '../field';
 import { STAGES, type Stage } from '../garden';
 import type { Furrow, FurrowPlant, HomeIcon } from '../home';
 import { ICON_IMAGES } from '../home/icons';
+import { motionOf, type FurrowMotion, type PlantMotion } from '../home/motion';
 import { themed, useScheme, useThemed } from '../look';
 import { passageReference, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
+import { EnteringIcon, Moves } from './moves';
+
+const STILL_PLANT: PlantMotion = { spring: Option.none(), sway: false };
 
 /** The icon each stage is drawn with, on the field and at the end of a run: full corn as `corn`. */
 export const DRAWN: Readonly<Record<Stage, HomeIcon>> = {
@@ -99,20 +104,26 @@ export function Control({
 }
 
 /** A plant's stage drawn: its icon, or bare soil before planting. */
-function Drawing({ stage }: { readonly stage: PlantStage }) {
+function Drawing({ stage, motion }: { readonly stage: PlantStage; readonly motion: PlantMotion }) {
   const styles = useThemed(sheets);
   if (stage === 'not planted') return <View aria-hidden testID="plant-soil" style={styles.bare} />;
-  return <Icon testID="plant-image" name={DRAWN[stage]} size={32} />;
+  return (
+    <Moves motion={motion}>
+      <Icon testID="plant-image" name={DRAWN[stage]} size={32} />
+    </Moves>
+  );
 }
 
 /** One plant: a button over its dot, its drawing and its number, each hidden inside it. */
 function Plot({
   plant,
+  motion,
   chosen,
   pending,
   onChoose,
 }: {
   readonly plant: FurrowPlant;
+  readonly motion: PlantMotion;
   readonly chosen: boolean;
   readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
@@ -136,7 +147,7 @@ function Plot({
     >
       {plant.ready && <View aria-hidden testID="dot" style={[styles.dot, styles.ready]} />}
       {!plant.ready && <View aria-hidden style={styles.dot} />}
-      <Drawing stage={plant.stage} />
+      <Drawing stage={plant.stage} motion={motion} />
       <Text aria-hidden style={styles.number}>
         {verseNumberOf(plant.reference)}
       </Text>
@@ -165,12 +176,14 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
 /** One furrow: its head (icon, title, ripe count and, on a held passage or list, `Remove`), its plants, and its soil line. */
 export function FurrowRow({
   furrow,
+  motion,
   chosen,
   pending,
   onChoose,
   onRemove,
 }: {
   readonly furrow: Furrow;
+  readonly motion: FurrowMotion;
   readonly chosen: Option.Option<string>;
   readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
@@ -180,7 +193,9 @@ export function FurrowRow({
   return (
     <View testID="row" style={styles.furrow}>
       <View style={styles.head}>
-        <Icon testID="furrow-icon" name={furrow.icon} size={28} />
+        <EnteringIcon delay={motion.icon}>
+          <Icon testID="furrow-icon" name={furrow.icon} size={28} />
+        </EnteringIcon>
         <View style={styles.names}>
           <Text testID="row-title" style={styles.title}>
             {furrow.title}
@@ -206,6 +221,7 @@ export function FurrowRow({
           <Plot
             key={index}
             plant={plant}
+            motion={motion.plants[index] ?? STILL_PLANT}
             chosen={Option.contains(chosen, plant.reference)}
             pending={pending}
             onChoose={onChoose}
@@ -215,6 +231,34 @@ export function FurrowRow({
       <View aria-hidden style={styles.soil} />
     </View>
   );
+}
+
+/** The field's rows share one motion plan per furrows value; only their icon and plant images move. */
+export function Furrows({
+  furrows,
+  chosen,
+  pending,
+  onChoose,
+  onRemove,
+}: {
+  readonly furrows: readonly Furrow[];
+  readonly chosen: Option.Option<string>;
+  readonly pending: boolean;
+  readonly onChoose: (reference: string) => void;
+  readonly onRemove: (removal: Removal) => void;
+}) {
+  const motion = useMemo(() => motionOf(furrows), [furrows]);
+  return furrows.map((furrow, index) => (
+    <FurrowRow
+      key={index}
+      furrow={furrow}
+      motion={motion[index] ?? { icon: Option.none(), plants: [] }}
+      chosen={chosen}
+      pending={pending}
+      onChoose={onChoose}
+      onRemove={onRemove}
+    />
+  ));
 }
 
 /** The dashed row at the field's end: `Add verses`, as the bar's does. */
