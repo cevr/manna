@@ -49,6 +49,7 @@ import { AA, contrastOf } from './contrast';
 import { computed, lookFaults, systemScheme } from './look';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
+import { motionFaults } from './motion-rule';
 import { device } from './one';
 import { END, endShown, rootFaults } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
@@ -383,7 +384,8 @@ const greetingFaults = (host: Element) => {
  * faults (`footFaults`); `Add verses` beside the limit line, or drawn
  * other than with the one hidden `add` icon of the scheme now (`addFaults`);
  * the gear's faults (`gearFaults`); the greeting's faults; and any home icon
- * of the other scheme.
+ * of the other scheme; and moving nodes that are not hidden drawings with
+ * exactly one image, no text and no control (`motionFaults`).
  */
 export const homeFaults = (host: Element): string[] => {
   const out: string[] = [];
@@ -406,6 +408,7 @@ export const homeFaults = (host: Element): string[] => {
   out.push(...addFaults(controls), ...gearFaults(controls), ...greetingFaults(host));
   for (const image of host.querySelectorAll('img'))
     if (iconOf(image).endsWith(' set>')) out.push(`an image drawn ${iconOf(image)}`);
+  out.push(...motionFaults(host));
   return out;
 };
 

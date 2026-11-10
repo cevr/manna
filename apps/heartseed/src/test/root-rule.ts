@@ -1,5 +1,7 @@
 /* oxlint-disable effect/noNullish, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction -- the frame rule reads happy-dom nodes whose absent attributes are null; a rig's launch is promise-based, and a rig that added no host cannot be watched, which stops its case. */
 
+import { motionFaults } from './motion-rule';
+
 /** Text as a reader sees it: whitespace collapsed. */
 const text = (node: Element | null | undefined) =>
   (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -140,7 +142,7 @@ const grownFaults = (grew: readonly Element[], grown: readonly Element[]) => {
   return out;
 };
 
-/** What the end shows wrong on the screen `on`: off the end, any node of it; on the end, a control but `Your field`, not one `tended`, a grew line or grown verse wrong (`grownFaults`), a node of it outside the scroll view, an alert, a reading that is not the heading, the back and the line, or an unread garden. */
+/** What the end shows wrong on the screen `on`: off the end, any node of it; on the end, a control but `Your field`, not one `tended`, a grew line or grown verse wrong (`grownFaults`), a node of it outside the scroll view, an alert, a reading that is not the heading, the back and the line, an unread garden, or a moving node that is not one hidden drawing without text or a control (`motionFaults`). */
 const endFaults = (
   host: Element,
   on: string,
@@ -168,6 +170,7 @@ const endFaults = (
   const read = exposed(host);
   if (read !== `${END} ‹ Your field ${text(grew[0])}`.trim())
     out.push(`the end reads ${read.slice(0, 80)}`);
+  out.push(...motionFaults(host));
   return out;
 };
 
