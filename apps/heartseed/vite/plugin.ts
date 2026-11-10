@@ -7,9 +7,9 @@
  *   promise needs no corpus read;
  * - `virtual:heartseed-kjv`, the whole KJV as one string per chapter
  *   (`kjv.ts`), which the app reads through `src/kjv.ts` alone;
- * - `virtual:heartseed-lexicon`, the natural voice's pronunciation list
- *   and Kokoro's vocab (`lexicon.ts`), read through `src/natural/lexicon.ts`
- *   alone;
+ * - `virtual:heartseed-lexicon`, the natural voice's two pronunciation
+ *   lists (Her's American, Him's British) and Kokoro's vocab (`lexicon.ts`),
+ *   read through `src/natural/lexicon.ts` alone;
  * - `virtual:heartseed-licence`, the Apache License 2.0 the natural voice's
  *   vendored code carries (`licence.ts`), shown whole by the About screen
  *   (`src/about/screen.tsx`) alone.

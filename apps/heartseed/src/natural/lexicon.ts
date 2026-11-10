@@ -19,7 +19,7 @@ let built: Option.Option<Lexicon> = Option.none();
 export const lexicon = (): Lexicon =>
   Option.getOrElse(built, () => {
     const made: Lexicon = {
-      words: new Map(Object.entries(carried.words)),
+      words: new Map(Object.entries(carried.lists.us)),
       vocab: new Map(Object.entries(carried.vocab)),
     };
     built = Option.some(made);
