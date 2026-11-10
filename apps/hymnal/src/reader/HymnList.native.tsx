@@ -82,7 +82,7 @@ import { useStackBottom } from '~/player/StackBottom';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
 
-import type { HymnListProps } from './HymnList';
+import type { HymnListProps, RowOpening } from './HymnList';
 import { listEndSpace } from './end';
 import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
@@ -136,16 +136,6 @@ interface Look {
   readonly onGroup: Option.Option<() => void>;
   /** How the rows open their hymns, when the list's owner asks; else each pushes its hymn. */
   readonly opening: Option.Option<RowOpening>;
-}
-
-/**
- * How a list's rows open their hymns, as its owner asks (a search on a hymn
- * page, `Search.tsx`): `of` a row's number gives its opening (`openingAt`),
- * and `opened` is told it after the press.
- */
-export interface RowOpening {
-  readonly of: (number: number) => Opening;
-  readonly opened: (how: Opening) => void;
 }
 
 const drawRow = ({
@@ -258,16 +248,12 @@ export function HymnList({
   onGroup,
   opening: rowOpening,
 }: HymnListProps & {
-  /** A search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). */
-  readonly about?: ReadonlyArray<HymnText>;
   /** A home tab's groups in place of `byTopic`'s topics: each under its pinned row (`groupRowsOf`). */
   readonly grouped?: Grouped;
   /** The offset the list opens at, when not at `pullDown`'s rest (a tab's kept place). */
   readonly start?: number;
   /** A tap on a group's row, in the list or pinned: a home tab's `All at once`. */
   readonly onGroup?: () => void;
-  /** How the rows open their hymns: a search's results on a hymn page replace it (`RowOpening`). Rows push when not given. */
-  readonly opening?: RowOpening;
 }) {
   const { fontScale, height: viewport } = useWindowDimensions();
   const accent = useAccent();

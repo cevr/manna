@@ -30,7 +30,7 @@ import { color } from '~/color';
 import { hymnAt } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
-import { HymnList, type RowOpening } from '~/reader/HymnList.native';
+import { HymnList, type RowOpening } from '~/reader/HymnList';
 import { searchOffset, searchOpen, searchQuery } from '~/reader/place';
 
 import { searchBack } from './back';

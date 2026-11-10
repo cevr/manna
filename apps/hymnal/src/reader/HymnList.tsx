@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
+import type { Opening } from '~/home/opening';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
 
@@ -56,6 +57,20 @@ export interface HymnListProps {
   readonly pullDown?: PullDown;
   /** Phones only, a search's results: the line each hymn was found by, shown under its title. The web shows none. */
   readonly lines?: ReadonlyMap<number, string>;
+  /** Phones only, a search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). The web draws none. */
+  readonly about?: ReadonlyArray<HymnText>;
+  /** Phones only: how the rows open their hymns, a search's results on a hymn page replacing it (`RowOpening`). Rows push when not given; the web's rows always push. */
+  readonly opening?: RowOpening;
+}
+
+/**
+ * How a list's rows open their hymns, as its owner asks (a search on a hymn
+ * page, `Search.tsx`): `of` a row's number gives its opening (`openingAt`),
+ * and `opened` is told it after the press.
+ */
+export interface RowOpening {
+  readonly of: (number: number) => Opening;
+  readonly opened: (how: Opening) => void;
 }
 
 /**
