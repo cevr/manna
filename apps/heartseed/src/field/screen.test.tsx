@@ -51,6 +51,9 @@ describe('the field from Today', () => {
 
     await app.say();
     expect(await app.renew()).toBe(1);
+    expect(app.ends).toEqual([
+      { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
+    ]);
     await app.say();
     const shown = app.summary();
     const grown = await app.field();
@@ -67,7 +70,7 @@ describe('the field from Today', () => {
       grown.sown,
     ]);
     expect(again).toEqual(wantField());
-    expect([app.frames.listening > 0, app.faults]).toEqual([true, []]);
+    expect([app.frames.listening > 0, app.frames.end > 0, app.faults]).toEqual([true, true, []]);
     expect(await app.leave()).toEqual([]);
 
     device.launch();

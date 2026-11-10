@@ -16,7 +16,9 @@
  * not yet planted, so home offers it), and an unread disk opens Today with
  * no `Your field` in any frame. Every frame, from before the root's first
  * render, is also held to the root's frame rule (`rootFaults` through
- * `watchRoot`, the garden the disk's read).
+ * `watchRoot`, the garden the disk's read). Each `renew`'s `Next` ends the
+ * run, the passage its one item: Today then shows the end exactly as
+ * `tendedModel` has it (kept in `ends`).
  */
 
 import { RegistryProvider, useAtomValue } from '@effect/atom-react';
@@ -43,7 +45,8 @@ import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
-import { watchRoot } from './root-rule';
+import { END, endShown, watchRoot } from './root-rule';
+import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 
 export const WORDS = sourceWords(passage.text);
@@ -491,9 +494,41 @@ export const mount = async (
     [...backing]
       .filter(([key]) => key.startsWith(`heartseed/recall/${passage.reference}/`))
       .map(([, value]): Recall => JSON.parse(value));
+  /** The passage's recalls when the plan Today runs was made: at the launch, then at each `renew`'s Minutes radio. */
+  const planned = { recalls: passageRecalls().length };
+  /** Each end of a run `renew` met after its `Next`, as Today read: its grew line and grown verses. */
+  const ends: { readonly grew: readonly string[]; readonly grown: readonly string[] }[] = [];
   /**
-   * A new plan at the passage's due: `Next` when it shows, the clock set to
-   * the due, and the reader's trip through the Settings sheet
+   * After `Next` on the plan's one item, the passage: Today held to the end
+   * of the run exactly as `tendedModel` gives it over that item's recalls
+   * when the plan was made and the store's recalls now (the heading `The
+   * field is tended`, no counts line, the grew line and the grown verses by
+   * name), kept in `ends`.
+   */
+  const ended = async () => {
+    const tended = tendedModel(
+      { plan: [{ reference: passage.reference, recalls: planned.recalls }], hold: null },
+      [],
+      passageRecalls(),
+    );
+    const want =
+      tended === null
+        ? '<no end over the run>'
+        : JSON.stringify({
+            headings: [END],
+            counts: [],
+            grew: [grewLine(tended.length)],
+            grown: tended.map((each) => `${each.reference}, ${each.stage}`),
+          });
+    const read = () => JSON.stringify(endShown(host));
+    await until(() => read() === want);
+    expect({ after: 'Next', shown: read() }).toEqual({ after: 'Next', shown: want });
+    const end = endShown(host);
+    ends.push({ grew: end.grew, grown: end.grown });
+  };
+  /**
+   * A new plan at the passage's due: `Next`, then the end of the run it
+   * gives (`ended`), the clock set to the due, and the reader's trip through the Settings sheet
    * (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`,
    * `Begin`), which makes the plan again with no recital under way (the
    * recital's marks and result go) and ends on Today, the sheet held and
@@ -501,6 +536,7 @@ export const mount = async (
    */
   const renew = async (cue: Cue) => {
     await click(all('[role="button"]').find((node) => node.getAttribute('aria-label') === 'Next'));
+    await ended();
     toDue(time, passageRecalls());
     shown.recital = false;
     shown.cue = cue;
@@ -510,7 +546,11 @@ export const mount = async (
       sheet: [],
       looked: true,
     });
-    return until(() => label() === 'Say it' && one('[data-testid="summary"]') === null);
+    const offered = await until(
+      () => label() === 'Say it' && one('[data-testid="summary"]') === null,
+    );
+    planned.recalls = passageRecalls().length;
+    return offered;
   };
   const leave = async () => {
     if (!mounted.delete(leave)) return;
@@ -588,6 +628,7 @@ export const mount = async (
     label,
     actions,
     renew,
+    ends,
     begin,
     time,
     click,

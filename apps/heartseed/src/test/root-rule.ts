@@ -88,6 +88,16 @@ const END_NODES = ['tended', 'grew', 'grown'];
 /** One selector for the end's nodes, so a frame that is not the end asks once. */
 const END_SELECTOR = END_NODES.map((id) => `[data-testid="${id}"]`).join(',');
 
+/** Today as the end of a run reads it, for a scripted rig to compare with the run's want: the headings, the counts lines, the grew lines and the grown verses by name, in order. */
+export const endShown = (host: Element) => ({
+  headings: [...host.querySelectorAll('[role="heading"]')].map(text),
+  counts: [...host.querySelectorAll('[data-testid="session"]')].map(text),
+  grew: [...host.querySelectorAll('[data-testid="grew"]')].map(text),
+  grown: [...host.querySelectorAll('[data-testid="grown"]')].map(
+    (node) => node.getAttribute('aria-label') ?? '',
+  ),
+});
+
 /** A grown verse's name: its reference, then its stage. */
 const GROWN_NAME = /^.+, (seed|blade|ear|full corn)$/;
 

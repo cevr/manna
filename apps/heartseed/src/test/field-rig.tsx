@@ -12,17 +12,20 @@
  * kept: the root's frame rule (`rootFaults`: `Your field` only as a way
  * back, on Today never while Say it listens and never inside a scroll view,
  * so it is on screen however much Today holds; a home node only under home's
- * heading, never beside Today's); `Your field` only once the garden's read
- * completed; the field holds exactly one
- * `Your field` heading and no `Today` heading, whatever its references
- * spell; every field frame holds home A's layout rules (`homeFaults`); and
+ * heading, never beside Today's; the end of a run judged whole by it);
+ * `Your field` only once the garden's read completed; the field holds
+ * exactly one `Your field` heading and no `Today` or `The field is tended`
+ * heading, whatever its references spell; every field frame holds home A's layout rules (`homeFaults`); and
  * every field frame shows the rule's field over the records the disk holds
  * (`field-model.ts`): the rows, each with its icon and ripe count, each
  * plant's label (readiness cut off: the home walk holds it to the plan),
  * its drawing (the home icon of its stage in the scheme now, or bare soil)
  * and its verse number and nothing else, the days sown and the harvest as
  * seen and as exposed, and no other number or exposed image. Opening the
- * field must write nothing.
+ * field must write nothing. Each `Next` a `renew` takes ends the run, the
+ * passage its one item: Today then shows the end exactly as `tendedModel`
+ * has it, kept per launch (`ends`) and tallied over the process (`ENDS`),
+ * and its frames are counted apart (`frames.end`).
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -47,10 +50,17 @@ import { computed, lookFaults, systemScheme } from './look';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
-import { rootFaults } from './root-rule';
+import { END, endShown, rootFaults } from './root-rule';
+import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
+
+/** The ends of a run each `renew` met over every mount of the test file's process, by how many verses grew: `end:none`, `end:one` or `end:many`. */
+export const ENDS = new Map<string, number>();
+
+/** The tally of an end over `n` grown verses. */
+const endTally = (n: number) => (n === 0 ? 'end:none' : n === 1 ? 'end:one' : 'end:many');
 
 /** Each stage as the field draws it: the home icon of its name (full corn as `corn`), or bare soil before planting. */
 const DRAWN: Readonly<Record<ModelPlantStage, string>> = {
@@ -426,8 +436,14 @@ export const mount = async (
   document.body.append(host);
   const faults: string[] = [];
   const fixed = new Map(device.disk);
+  /** The passage's recalls when the plan Today runs was made: at the launch, then at each `renew`'s Minutes radio. */
+  const planned = {
+    recalls: heldOn(device.disk).filter((recall) => recall.reference === passage.reference).length,
+  };
+  /** Each end of a run `renew` met after its `Next`, as Today read: its grew line and grown verses. */
+  const ends: { readonly grew: readonly string[]; readonly grown: readonly string[] }[] = [];
   const taps = { minutes: 0 };
-  const frames = { control: 0, listening: 0, field: 0, pending: 0 };
+  const frames = { control: 0, listening: 0, field: 0, pending: 0, end: 0 };
   const state = { released: false };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
   const buttons = () =>
@@ -446,7 +462,8 @@ export const mount = async (
     frames.field += 1;
     const own = shown.filter((heading) => heading === 'Your field').length;
     if (own !== 1) faults.push(`${own} Your field headings on the field`);
-    if (shown.includes('Today')) faults.push('Today and the field at once');
+    for (const heading of ['Today', END])
+      if (shown.includes(heading)) faults.push(`${heading} and the field at once`);
     for (const fault of homeFaults(host))
       if (faults.length < 8 && !faults.includes(fault)) faults.push(fault);
     const got = JSON.stringify(readField(host));
@@ -461,6 +478,7 @@ export const mount = async (
     const labels = buttons();
     if (labels.includes('Listening')) frames.listening += 1;
     if (shown.length === 0) frames.pending += 1;
+    if (shown.includes(END)) frames.end += 1;
     if (labels.includes('Your field')) {
       frames.control += 1;
       if (!read || !state.released) faults.push('the control before a read completed');
@@ -528,18 +546,51 @@ export const mount = async (
   const passageRecalls = () =>
     heldOn(device.disk).filter((recall) => recall.reference === passage.reference);
   /**
-   * A new plan at the passage's due: `Next` when it shows, the clock set to
-   * the due, and the reader's trip through the Settings sheet
-   * (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`,
-   * `Begin`), whose radio makes the plan again (and writes the minutes it
-   * shows); every home frame on the way is held to the field's rules, the
-   * sheet's frames to its own with its look checked, and the trip ends on
-   * Today, which offers Say it on the passage with no result. Answers the
-   * writes it made.
+   * After `Next` on the plan's one item, the passage: Today held to the end
+   * of the run exactly as `tendedModel` gives it over that item's recalls
+   * when the plan was made and the disk's recalls now (the heading `The
+   * field is tended`, no counts line, the grew line and the grown verses by
+   * name), kept in `ends` and tallied in `ENDS`.
+   */
+  const ended = async () => {
+    const tended = tendedModel(
+      { plan: [{ reference: passage.reference, recalls: planned.recalls }], hold: null },
+      [],
+      heldOn(device.disk),
+    );
+    const want =
+      tended === null
+        ? '<no end over the run>'
+        : JSON.stringify({
+            headings: [END],
+            counts: [],
+            grew: [grewLine(tended.length)],
+            grown: tended.map((each) => `${each.reference}, ${each.stage}`),
+          });
+    const shown = () => JSON.stringify(endShown(host));
+    await until(() => shown() === want);
+    expect({ after: 'Next', shown: shown() }).toEqual({ after: 'Next', shown: want });
+    const end = endShown(host);
+    ends.push({ grew: end.grew, grown: end.grown });
+    const tally = endTally(end.grown.length);
+    ENDS.set(tally, (ENDS.get(tally) ?? 0) + 1);
+  };
+  /**
+   * A new plan at the passage's due: `Next` when it shows, then the end of
+   * the run (`ended`), the clock set to the due, and the reader's trip
+   * through the Settings sheet (`renewBySettings`: `Your field`, the Minutes
+   * radio checked, `Done`, `Begin`), whose radio makes the plan again (and
+   * writes the minutes it shows); every home frame on the way is held to
+   * the field's rules, the sheet's frames to its own with its look checked,
+   * and the trip ends on Today, which offers Say it on the passage with no
+   * result. Answers the writes it made.
    */
   const renew = async () => {
     const sets = device.calls.set;
-    if (button('Next') !== undefined) await tap('Next');
+    if (button('Next') !== undefined) {
+      await tap('Next');
+      await ended();
+    }
     toDue(time, passageRecalls());
     taps.minutes += 1;
     const trip = await renewBySettings({ host, until });
@@ -556,6 +607,7 @@ export const mount = async (
           device.calls.set === sets + 1,
       ),
     ).toBe(true);
+    planned.recalls = passageRecalls().length;
     return device.calls.set - sets;
   };
   /** The device's whole disk and its write, remove and clear counts. */
@@ -644,6 +696,7 @@ export const mount = async (
   return {
     faults,
     frames,
+    ends,
     headings,
     buttons,
     control,

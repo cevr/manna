@@ -13,7 +13,11 @@
  * looks, a read plant's parts under its stage and every look of a frame
  * with no stage line and no home heading as unread, over every mount of
  * the test file's process. Home's frames are neither: home draws plants of
- * its own, read, under no stage line.
+ * its own, read, under no stage line. The done state's and the end of a
+ * run's frames are filed as unread, so no look of Today's plant may show
+ * there either; the end's are also counted in `frames.end`. Each `renew`'s
+ * `Next` ends the run, the passage its one item, and Today then shows the
+ * end exactly as `tendedModel` has it (kept in `ends`).
  *
  * The root opens as it opens for a reader: a read launch lands on home,
  * where `begin` takes `Begin` to Today, and an unread one (every listing
@@ -43,7 +47,8 @@ import { clockOf, toDue, type Time } from './clock';
 import { DAY } from './garden-model';
 import { computed } from './look';
 import { device } from './one';
-import { watchRoot } from './root-rule';
+import { END, endShown, watchRoot } from './root-rule';
+import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 
 export const PREFIX = 'heartseed/recall/';
@@ -146,7 +151,11 @@ export const mount = async (
   }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
-  const frames = { seen: 0, claimed: 0 };
+  const frames = { seen: 0, claimed: 0, end: 0 };
+  /** The passage's recalls when the plan Today runs was made: at the launch, then at each `renew`'s Minutes radio. */
+  const planned = { recalls: passageRecalls().length };
+  /** Each end of a run `renew` met after its `Next`, as Today read: its grew line and grown verses. */
+  const ends: { readonly grew: readonly string[]; readonly grown: readonly string[] }[] = [];
   /** Whether the tree claims anything: a pinned node, or a claiming word in any text or attribute. */
   const claims = () =>
     host.querySelector('[data-testid="stage"],[data-testid="plant"],[data-testid="growth"]') !==
@@ -173,6 +182,7 @@ export const mount = async (
   const watch = new MutationObserver(() => {
     frames.seen += 1;
     if (claims()) frames.claimed += 1;
+    if (headings().includes(END)) frames.end += 1;
     file();
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -236,9 +246,37 @@ export const mount = async (
     [...host.querySelectorAll('[role="radiogroup"] [role="radio"]')].find(
       (node) => node.getAttribute('aria-label') === name,
     );
-  /** `Next`, the clock set to the passage's due, and the reader's trip through the Settings sheet (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`, `Begin`), ending on Today with the sheet held and its look checked: a new plan, which offers Say it on the passage again with no result shown. */
+  /**
+   * After `Next` on the plan's one item, the passage: Today held to the end
+   * of the run exactly as `tendedModel` gives it over that item's recalls
+   * when the plan was made and the disk's recalls now (the heading `The
+   * field is tended`, no counts line, the grew line and the grown verses by
+   * name), kept in `ends`.
+   */
+  const ended = async () => {
+    const tended = tendedModel(
+      { plan: [{ reference: passage.reference, recalls: planned.recalls }], hold: null },
+      [],
+      passageRecalls(),
+    );
+    let want = '<no end over the run>';
+    if (tended !== null)
+      want = JSON.stringify({
+        headings: [END],
+        counts: [],
+        grew: [grewLine(tended.length)],
+        grown: tended.map((each) => `${each.reference}, ${each.stage}`),
+      });
+    const shown = () => JSON.stringify(endShown(host));
+    await until(() => shown() === want);
+    expect({ after: 'Next', shown: shown() }).toEqual({ after: 'Next', shown: want });
+    const end = endShown(host);
+    ends.push({ grew: end.grew, grown: end.grown });
+  };
+  /** `Next`, the end of the run it gives (`ended`), the clock set to the passage's due, and the reader's trip through the Settings sheet (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`, `Begin`), ending on Today with the sheet held and its look checked: a new plan, which offers Say it on the passage again with no result shown. */
   const renew = async () => {
     await click(button('Next'));
+    await ended();
     toDue(time, passageRecalls());
     const trip = await renewBySettings({ host, until });
     expect({ at: trip.at, sheet: trip.sheet, looked: trip.looked > 0 }, 'the trip').toEqual({
@@ -249,6 +287,7 @@ export const mount = async (
     expect(
       await until(() => sayIt() !== undefined && one('[data-testid="summary"]') === null),
     ).toBe(true);
+    planned.recalls = passageRecalls().length;
   };
   const leave = async () => {
     watch.disconnect();
@@ -284,6 +323,7 @@ export const mount = async (
     renew,
     radio,
     frames,
+    ends,
     begin,
     leave,
   };

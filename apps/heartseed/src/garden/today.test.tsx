@@ -73,6 +73,13 @@ describe('Today’s stage over the device’s store', () => {
     ]);
 
     await today.renew();
+    expect([today.ends, today.frames.end > 0]).toEqual([
+      [
+        { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
+        { grew: ['1 grew a stage.'], grown: [`${passage.reference}, blade`] },
+      ],
+      true,
+    ]);
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect([today.growth(), today.drawn()]).toEqual([

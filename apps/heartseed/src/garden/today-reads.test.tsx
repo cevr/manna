@@ -79,6 +79,10 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
     expect(today.growth()).toBe('Grew to a blade.');
     await today.renew();
+    expect(today.ends).toEqual([
+      { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
+      { grew: ['1 grew a stage.'], grown: [`${passage.reference}, blade`] },
+    ]);
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect(today.growth()).toBe('Grew to an ear.');

@@ -92,6 +92,9 @@ describe('Today’s Say it', () => {
     expect(today.reached.get('peek') ?? 0).toBeGreaterThanOrEqual(1);
     expect(today.actions()).toEqual(['Next']);
     expect(await today.renew('initials')).toBe(true);
+    expect(today.ends).toEqual([
+      { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
+    ]);
     expect([today.actions(), today.radios().length, today.kept.length]).toEqual([['Say it'], 0, 3]);
     expect(today.all('[data-testid^="word-"]')).toHaveLength(n);
     expect(today.unsaid.get('initials') ?? 0).toBeGreaterThanOrEqual(n);

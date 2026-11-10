@@ -12,6 +12,7 @@
 
 import { describe, expect, it } from 'bun:test';
 
+import { ENDS } from '../test/field-rig';
 import { walkField } from '../test/field-walk';
 
 describe('the field across generated commands', () => {
@@ -22,6 +23,7 @@ describe('the field across generated commands', () => {
       say: (cover.say ?? 0) >= 2,
       relaunch: (cover.relaunch ?? 0) >= 1,
       peek: (cover.peek ?? 0) >= 1,
-    }).toEqual({ field: true, say: true, relaunch: true, peek: true });
+      'end:one': (ENDS.get('end:one') ?? 0) >= 1,
+    }).toEqual({ field: true, say: true, relaunch: true, peek: true, 'end:one': true });
   });
 });
