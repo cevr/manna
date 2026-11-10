@@ -13,8 +13,9 @@
  *
  * It catches a reference taken from a line's note, a 40-character label
  * refused or a 41-character one taken, two lists of one title in one
- * section kept apart (owner, q60 (b): one list under the first) or two of
- * one title in two sections merged, an
+ * section kept apart (owner, q60 (b): one list under the first), two of
+ * one title in two sections merged, a sub-heading titled as its section
+ * merged into the section's own list, an
  * empty section or list kept, a row given to the wrong entry, a duplicate
  * range kept, a skipped record lost or repeated, and a left-out section's
  * rows read. Chapters are 30 verses here (`count`); R4 and R5 over their
@@ -288,12 +289,13 @@ const bookCase = (seed: number) => {
     entries.push(head);
     para = rowsOf(next, built, para, head.para, counted);
     const subs: Entry[] = [];
-    const shared = chance(next, 0.6);
-    for (let sub = 0; sub < below(next, 4); sub += 1) {
+    const shared = chance(next, 0.7);
+    for (let sub = 0; sub < below(next, 5); sub += 1) {
+      const sectionTitled = chance(next, 0.2);
       const entry: Entry = {
         para,
         level: 2,
-        title: shared ? SUB_TITLES[0]! : pick(next, SUB_TITLES),
+        title: sectionTitled ? title : shared ? SUB_TITLES[0]! : pick(next, SUB_TITLES),
       };
       subs.push(entry);
       para = rowsOf(next, built, para, entry.para, counted);
@@ -330,15 +332,17 @@ const titleRanges = (group: readonly Entry[], title: string, built: Built): Rang
   return held;
 };
 
-/** What the model says a book gives: each section in contents order with its own list first, then its sub-headings', a title's lists in a section one list under its first. */
+/** What the model says a book gives: each section in contents order with its own list first, then its sub-headings', a sub-heading title's lists in a section one list under its first, a sub-heading titled as its section a list of its own. */
 const expectedOf = (entries: readonly Entry[], built: Built): Lists => {
   const sections: { id: string; title: string; lists: List[] }[] = [];
   for (const group of groupsOf(entries)) {
     const head = group[0]!;
+    const subs = group.slice(1);
     const lists: List[] = [];
     for (const [at, entry] of group.entries()) {
-      if (group.findIndex((each) => each.title === entry.title) !== at) continue;
-      const ranges = titleRanges(group, entry.title, built);
+      const peers = at === 0 ? [head] : subs;
+      if (at > 0 && subs.findIndex((each) => each.title === entry.title) !== at - 1) continue;
+      const ranges = titleRanges(peers, entry.title, built);
       if (ranges.length > 0) lists.push({ id: `bhb-${entry.para}`, title: entry.title, ranges });
     }
     if (lists.length > 0) sections.push({ id: `bhb-${head.para}`, title: head.title, lists });
@@ -374,18 +378,24 @@ describe('the rows read as lists under their headings (R2, R3, R6, R7)', () => {
       );
       if (titles.length > new Set(titles).size)
         tally.set('shared titles', (tally.get('shared titles') ?? 0) + 1);
+      const listed = (entry: Entry) => (built.ranges.get(entry.para)?.length ?? 0) > 0;
       const merged = groupsOf(entries).some((group) =>
         group.some((entry, at) =>
           group.some(
             (other, later) =>
-              later > at &&
-              other.title === entry.title &&
-              (built.ranges.get(entry.para)?.length ?? 0) > 0 &&
-              (built.ranges.get(other.para)?.length ?? 0) > 0,
+              at > 0 && later > at && other.title === entry.title && listed(entry) && listed(other),
           ),
         ),
       );
       if (merged) tally.set('merged titles', (tally.get('merged titles') ?? 0) + 1);
+      const sectionTitled = groupsOf(entries).some((group) =>
+        group.some(
+          (entry, at) =>
+            at > 0 && entry.title === group[0]!.title && listed(entry) && listed(group[0]!),
+        ),
+      );
+      if (sectionTitled)
+        tally.set('sub titled as its section', (tally.get('sub titled as its section') ?? 0) + 1);
       if (
         entries.some(
           (entry) =>
@@ -410,6 +420,7 @@ describe('the rows read as lists under their headings (R2, R3, R6, R7)', () => {
       'line at its entry’s para': 300,
       'shared titles': 50,
       'merged titles': 50,
+      'sub titled as its section': 50,
       'empty section': 50,
     };
     const short = Object.entries(floors).filter(([key, floor]) => (tally.get(key) ?? 0) < floor);

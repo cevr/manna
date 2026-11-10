@@ -153,16 +153,23 @@ const sectionTitles = (entries: readonly Entry[]): ReadonlyMap<number, string> =
 };
 
 /**
- * Each entry's home, by para: the first entry of its section, in contents
- * order, that has its title. Lists of one title in one section are one list
+ * Each entry's home, by para: a section's own entry is its own home, and a
+ * sub-heading's is the first sub-heading of its section, in contents order,
+ * that has its title. Sub-headings of one title in one section are one list
  * under the first (owner, 2026-11-09, q60 (b)): one plant per verse, and no
- * two controls of a shelf share a name.
+ * two controls of a shelf share a name. A sub-heading titled as its own
+ * section (`The Law of God`, para 1358) is a list of its own, not the
+ * section's.
  */
 const homesOf = (entries: readonly Entry[]): ReadonlyMap<number, number> => {
   const homes = new Map<number, number>();
   let firsts = new Map<string, number>();
   for (const entry of entries) {
-    if (entry.level === 1) firsts = new Map();
+    if (entry.level === 1) {
+      firsts = new Map();
+      homes.set(entry.para, entry.para);
+      continue;
+    }
     const home = firsts.get(entry.title) ?? entry.para;
     firsts.set(entry.title, home);
     homes.set(entry.para, home);
@@ -235,7 +242,7 @@ const readRows = (
   return read;
 };
 
-/** R7: each level-1 entry with its own list, then its sub-headings' in contents order; a title's later lists in a section held by its first, empty lists and sections left out. */
+/** R7: each level-1 entry with its own list, then its sub-headings' in contents order; a sub-heading title's later lists in a section held by its first, empty lists and sections left out. */
 const sectionsOf = (
   entries: readonly Entry[],
   ranges: ReadonlyMap<number, readonly Range[]>,

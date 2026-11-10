@@ -2,16 +2,21 @@
  * R8: what the generator writes and when it refuses. A small book in an
  * in-memory database (two headings of one title in one section, written as
  * one list under the first, a section left
- * out, a section with no sub-heading, a long range, a past-chapter part, an
+ * out, a section with no sub-heading, a sub-heading titled as its section
+ * and kept a list of its own, a long range, a past-chapter part, an
  * unlinked reference, a row of another book) is written to the exact text
  * below, one list per line, and twice to the same bytes. A contents
  * snapshot with a repeated or fractional para, a database with no row of
  * the book, and a left-out title the contents lack are refused. The
  * committed `data/handbook.json` is the writer's own text of what it holds,
- * and its totals are the line the CLI prints.
+ * its totals are the line the CLI prints, and its lists, read back as rows
+ * under their own headings of the committed contents snapshot, are written
+ * again to the same text.
  *
  * It catches a writer whose key order or line breaks change, a run that
- * differs from the one before, and a refusal lost.
+ * differs from the one before, a refusal lost, and a committed file the
+ * writer would not write over its contents: a list under another id,
+ * title or section, out of order, or two lists the rule makes one.
  */
 
 import { Database } from 'bun:sqlite';
@@ -21,7 +26,7 @@ import { getBibleBookByName } from '@manna/core/bible';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Schema } from 'effect';
 
-import type { Lists, Node } from './lists';
+import { handbookOf, LEFT_OUT_SECTIONS, type List, type Lists, type Node, type Row } from './lists';
 import {
   type Chapters,
   contentsText,
@@ -52,6 +57,7 @@ const ENTRIES: readonly Entry[] = [
   { para: 20, level: 2, title: 'Second Chapter of Daniel' },
   { para: 30, level: 1, title: 'Dress' },
   { para: 40, level: 1, title: 'Nature of Man' },
+  { para: 44, level: 2, title: 'Nature of Man' },
 ];
 
 const text = (value: string): Node => ({ _tag: 'Text', text: value });
@@ -101,6 +107,7 @@ const ROWS: readonly (readonly [
   [978, '978.31', 'p', [text('• '), link('Isaiah 3:16', 'Isaiah 3:16')]],
   [978, '978.41', 'p', [text('• Act 13:42-45 and a note.')]],
   [978, '978.42', 'p', [text('• '), link('Ecclesiastes 9:5', 'Ecclesiastes 9:5, 6')]],
+  [978, '978.45', 'p', [text('• '), link('Job 14:12', 'Job 14:12')]],
   [1, '1.42', 'p', [text('• '), link('Genesis 1:1', 'Genesis 1:1')]],
 ];
 
@@ -131,7 +138,8 @@ const EXPECTED = [
   '{"id":"bhb-12","title":"Second Chapter of Daniel","ranges":[[27,2,44,44],[23,9,6,6],[23,9,7,7],[65,1,21,23],[45,3,20,20]]}',
   ']},',
   '{"id":"bhb-40","title":"Nature of Man","lists":[',
-  '{"id":"bhb-40","title":"Nature of Man","ranges":[[21,9,5,5],[21,9,6,6]]}',
+  '{"id":"bhb-40","title":"Nature of Man","ranges":[[21,9,5,5],[21,9,6,6]]},',
+  '{"id":"bhb-44","title":"Nature of Man","ranges":[[18,14,12,12]]}',
   ']}',
   '],',
   '"skipped":[',
@@ -172,6 +180,23 @@ const Committed = Schema.fromJsonString(
   }),
 );
 
+/** A committed list as one bullet line at its own heading's para, each range a link titled `B<book> <chapter>:<first>` and shown `<chapter>:<first>-<last>`, joined by `; `. */
+const rowOfList = (list: List): Row => ({
+  para: Number(list.id.replace('bhb-', '')),
+  type: 'p',
+  nodes: [
+    text('•'),
+    ...list.ranges.flatMap(([book, chapter, first, last]) => [
+      text('; '),
+      link(`B${book} ${chapter}:${first}`, `${chapter}:${first}-${last}`),
+    ]),
+  ],
+});
+
+const MARK = /^B(\d+)$/;
+const bookOfMark = (name: string) =>
+  Option.map(Option.fromNullishOr(MARK.exec(name)), ([, book]) => Number(book));
+
 const dataAt = (name: string) => new URL(`../../data/${name}`, import.meta.url).pathname;
 
 describe('the writer', () => {
@@ -193,7 +218,7 @@ describe('the writer', () => {
       const rows = yield* rowsOf(
         databaseOf([...ROWS, [978, '', 'p', [text('• '), link('Joel 2:28', 'Joel 2:28')]]]),
       );
-      expect(rows.map((row) => row.para)).toEqual([10, 13, 21, 22, 31, 41, 42]);
+      expect(rows.map((row) => row.para)).toEqual([10, 13, 21, 22, 31, 41, 42, 45]);
     }),
   );
 
@@ -271,6 +296,23 @@ describe('the committed files', () => {
         expect(totalsLine(held)).toBe(
           'handbook sections=25 lists=130 ranges=2528 verses=3542 skipped=15',
         );
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'data/handbook.json’s lists, read back as rows under their own headings of the contents snapshot, are written to the same text',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const written = yield* fs.readFileString(dataAt('handbook.json'));
+        const held = yield* Schema.decodeEffect(Committed)(written);
+        const entries = yield* readContents(
+          yield* fs.readFileString(dataAt('handbook-contents.json')),
+        );
+        const rows = held.sections.flatMap((section) => section.lists.map(rowOfList));
+        const again = handbookOf(rows, entries, bookOfMark, () => 200, LEFT_OUT_SECTIONS);
+        expect(again.skipped).toEqual([]);
+        expect(handbookText({ sections: again.sections, skipped: held.skipped })).toBe(written);
       }).pipe(Effect.provide(BunServices.layer)),
   );
 

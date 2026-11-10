@@ -1269,9 +1269,10 @@ counts.
   section are one list, under the first's id, its ranges in the first's
   order then the others' new ones, a range again left out (`homesOf`;
   owner, 2026-11-09: the two `Second Chapter of Daniel` lists of
-  `Prophecy` are one, `bhb-1695`, 102 verses). Lists in different
-  sections may share a title, as a section and its one list may; ids
-  tell them apart. No word is added to a title.
+  `Prophecy` are one, `bhb-1695`, 102 verses). A sub-heading titled as
+  its own section is a list of its own (`The Law of God`, `bhb-1358`,
+  under section `bhb-1327`). Lists in different sections may share a
+  title, as a section and its one list may; ids tell them apart. No word is added to a title.
 - **Teaching sections only** (owner, 2026-11-09). `LEFT_OUT_SECTIONS`
   leaves out eight practical sections whole (`Health and Temperance`,
   `Dress`, `Diet and Dress`, `Business Principles`, `School of the
@@ -3011,7 +3012,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     left-out titles in the real snapshot; `output.test.ts`, the writer's
     exact text and bytes twice over an in-memory book, its refusals
     (a repeated or broken paragraph id, no row of book 978, a left-out
-    title missing), and `data/handbook.json` as the writer writes it.
+    title missing), and `data/handbook.json` as the writer writes it:
+    its lists, read back as rows under their own headings of the
+    committed contents snapshot, are written to the same sections,
+    ids, titles and ranges (the EGW database itself is not here).
   - `test:icon`: `scripts/icon.test.ts`, with no preload: the native
     manifest (`vite/app.ts`) named Heartseed, valid to One for iOS and
     Android, with no `userInterfaceStyle`, naming the icons on the icon's
