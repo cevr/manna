@@ -113,7 +113,7 @@ summary names in `failedStep` and `failedName`. The journeys:
   [features/hymn-reader.journey.json](features/hymn-reader.journey.json), [features/player.journey.json](features/player.journey.json), [features/search.journey.json](features/search.journey.json),
   [features/settings.journey.json](features/settings.journey.json).
 
-For the development-only silent held-seek fixture (`probe/scrub`), use
+For the development-only silent held-seek fixture (`hymnal://probe/scrub`), use
 [features/scrub.md](features/scrub.md): six by-hand numeric rows, no journey.
 Its numeric/boolean-only receipts replace the Evidence section's video,
 snapshot and screenshot defaults; keep no raw trees or corpus text.
