@@ -708,8 +708,8 @@ export const useWordSeek = ({
     () =>
       Option.match(player, {
         onNone: () => () => {},
-        onSome: (it) =>
-          registry.subscribe(it.hold.state, (held) =>
+        onSome: (it) => {
+          const told = (held: HoldState) =>
             Option.map(own.current, (mine) => {
               if (held._tag !== 'Free' && held.token === mine.token) return;
               own.current = Option.none();
@@ -719,8 +719,10 @@ export const useWordSeek = ({
                 now.current.host.finish();
               }
               now.current.host.end(restore && now.current.shown, !now.current.reduced);
-            }),
-          ),
+            });
+          told(registry.get(it.hold.state));
+          return registry.subscribe(it.hold.state, told);
+        },
       }),
     [player, registry],
   );
@@ -742,7 +744,9 @@ export const useWordSeek = ({
     laid.current = layout;
     revoke('timeline');
   }, [layout, revoke]);
-  useEffect(() => () => void revoke('unmount'), [revoke]);
+  const latest = useRef(revoke);
+  latest.current = revoke;
+  useEffect(() => () => void latest.current('unmount'), []);
 
   return {
     available,

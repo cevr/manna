@@ -172,7 +172,7 @@ export const HymnPage = memo(function HymnPage({
       now.current.router.push(chordHref(chosen, now.current.played)),
     [],
   );
-  const layout = useLayoutKey(reader.reading, on, style);
+  const layout = `${useLayoutKey(reader.reading, on, style)} viewport=${follow.laid}`;
   const seek = useWordSeek({ number: hymn.number, shown, layout, host: follow.preview });
   const chordTouch = useMemo(() => chordTouchOf(touchClock), []);
   const [room, setRoom] = useState(0);

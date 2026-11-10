@@ -306,32 +306,40 @@ it.effect('on the web a cancel, a lost capture or Escape cancels once; a late ti
   }).pipe(Effect.scoped),
 );
 
-it.effect('cancel keeps the origin, and a paused or covered page offers no hold', () =>
-  Effect.gen(function* () {
-    const app = yield* openWordSeek(false);
-    const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
-    yield* inAct(app.play);
-    page.press('hymn-word-seek');
-    yield* inAct(app.untilHold('Held'));
-    page.press('reader-seek-next-line');
-    page.press('reader-seek-cancel');
-    yield* inAct(app.untilHold('Free'));
-    const cancelled = [
-      seeks(app),
-      [...page.cues],
-      Option.isSome(page.find('reader-seek-controls')),
-    ];
-    page.show(false);
-    const covered = page.enabled('hymn-word-seek');
-    page.show(true);
-    yield* inAct(Effect.sync(() => app.send(Command.Pause())));
-    const paused = page.enabled('hymn-word-seek');
-    page.press('hymn-word-seek');
-    expect([cancelled, covered, paused, app.registry.get(app.player.hold.state)._tag]).toEqual([
-      [[], ['seek-grab', 'seek-tick'], false],
-      false,
-      false,
-      'Free',
-    ]);
-  }).pipe(Effect.scoped),
+it.effect(
+  'cancel keeps the origin; covering revokes; a paused or covered page offers no hold',
+  () =>
+    Effect.gen(function* () {
+      const app = yield* openWordSeek(false);
+      const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+      yield* inAct(app.play);
+      page.press('hymn-word-seek');
+      yield* inAct(app.untilHold('Held'));
+      page.press('reader-seek-next-line');
+      page.press('reader-seek-cancel');
+      yield* inAct(app.untilHold('Free'));
+      const cancelled = [
+        seeks(app),
+        [...page.cues],
+        Option.isSome(page.find('reader-seek-controls')),
+      ];
+      yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
+      page.press('hymn-word-seek');
+      yield* inAct(app.untilHold('Held'));
+      page.show(false);
+      yield* inAct(app.untilHold('Free'));
+      const revoked = [page.chosenLines(), app.registry.get(seekHeld), seeks(app)];
+      const covered = page.enabled('hymn-word-seek');
+      page.show(true);
+      yield* inAct(Effect.sync(() => app.send(Command.Pause())));
+      const paused = page.enabled('hymn-word-seek');
+      page.press('hymn-word-seek');
+      expect([
+        cancelled,
+        revoked,
+        covered,
+        paused,
+        app.registry.get(app.player.hold.state)._tag,
+      ]).toEqual([[[], ['seek-grab', 'seek-tick'], false], [[], false, []], false, false, 'Free']);
+    }).pipe(Effect.scoped),
 );

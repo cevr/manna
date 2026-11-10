@@ -397,6 +397,7 @@ export const useFollow = (number: number) => {
   const offset = useRef(0);
   /** The held padding over and under the words: drawn, and wanted. */
   const [pad, setPad] = useState(0);
+  const [laid, setLaid] = useState(0);
   const drawnPad = useRef(0);
   const wantedPad = useRef(0);
   /** The line the held seek sets mid-viewport, and the newest measure asked for it. */
@@ -472,7 +473,10 @@ export const useFollow = (number: number) => {
     hand: handOf(() => Option.map(follower, (f) => f.drag())),
     onLayout: (event: LayoutChangeEvent) => {
       height.current = event.nativeEvent.layout.height;
+      setLaid(height.current);
     },
+    /** The scroll's laid-out height: a change moves the words under a held seek, so it revokes one. */
+    laid,
     onContentSizeChange: () => Option.map(follower, (f) => f.relayout()),
   };
 };
