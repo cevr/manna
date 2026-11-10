@@ -159,6 +159,22 @@ drivers in the caller's environment, files it away, and reports
 identity by `Os.started` only: it fails `server-pid` on a legacy session,
 and on a session whose start time no longer reads back.
 
+**The doctor's native sources** (`src/native-source.ts`). On iOS, once
+`server-log` holds, `doctor` reads the app's log since boot as records
+(`xcrun simctl spawn <udid> log show --style ndjson --last <since boot>s
+--predicate 'process == "<logProcess>"'`) and fails `Unhealthy` at
+`native-source` when the app's latest process (the last record's) refused
+a native source: a record whose message holds `; rebuild the app` on any
+of its lines, as every refusal One writes ends (a module or view changed,
+a module, method or view not linked). The reason gives the count, the
+first refusal's line and `sim install`. A line that is no record (the
+header, the closing count, a record whose pid is not a number) is
+skipped; a refusal of an earlier process, before a rebuild and `sim
+install` in the same boot or a relaunch, fails nothing. A read that fails
+is the step's failure, as `sim log`'s is; the web runs no such read, and
+the doctor writes no file. It sees a stale install only once the
+JavaScript has called the native source.
+
 **The drivers' HOME.** Only `agent-device` and `agent-browser` run in the
 drive's child environment: `HOME` is `<state>/home`, made by `boot` through
 the contained host with mode 0700 and kept across drives of the state

@@ -22,7 +22,7 @@ import {
   Sink,
   Stream,
 } from 'effect';
-import { HttpClient, HttpClientError } from 'effect/http';
+import { HttpClient, HttpClientError, HttpClientResponse } from 'effect/http';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { runSim } from './command.ts';
@@ -127,26 +127,40 @@ const session = (platform: Session['platform'], out: string): Session => ({
 
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.toType(Schema.Unknown)));
 
+/** A dev server that answers every request 200. */
+const ServerUp = Layer.succeed(
+  HttpClient.HttpClient,
+  HttpClient.make((request) =>
+    Effect.succeed(HttpClientResponse.fromWeb(request, new Response('', { status: 200 }))),
+  ),
+);
+
 /**
  * Run `sim <args>` over the stand-in, in a state folder of its own (with
- * `drive` as its session when given; `{state}` in an argument names the
- * folder): the lines it printed and its exit.
+ * `drive` as its session when given, and the dev server's log `serverLog`
+ * in its output folder; `{state}` in an argument names the folder), against
+ * `server`: the lines it printed and its exit.
  */
 const sim = (
   args: ReadonlyArray<string>,
   answers: ReturnType<typeof standIn>,
   drive: Option.Option<Session['platform']> = Option.none(),
+  server: Layer.Layer<HttpClient.HttpClient> = ServerDown,
+  serverLog = '',
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const state = yield* fs.makeTempDirectoryScoped();
     const out = path.join(state, 'out');
-    if (Option.isSome(drive))
+    if (Option.isSome(drive)) {
       yield* fs.writeFileString(
         path.join(state, 'session.json'),
         encodeJson(session(drive.value, out)),
       );
+      yield* fs.makeDirectory(out, { recursive: true });
+      yield* fs.writeFileString(path.join(out, 'server.log'), serverLog);
+    }
     const place: Place = {
       app: '/app',
       state,
@@ -167,9 +181,32 @@ const sim = (
       ),
     );
     return { exit, printed: printed.map((line) => decodeResult(line)) };
-  }).pipe(Effect.provide(Layer.provideMerge(DriveLive, Layer.mergeAll(answers.layer, ServerDown))));
+  }).pipe(Effect.provide(Layer.provideMerge(DriveLive, Layer.mergeAll(answers.layer, server))));
 
 const Host = BunServices.layer;
+
+/** One's refusal of a native module the installed build holds in another shape. */
+const REFUSED = 'native module natural.Natural changed; rebuild the app';
+
+/** A record of the app's log (`log show --style ndjson`) by process `pid`. */
+const record = (pid: number, message: string) =>
+  encodeJson({ processID: pid, eventMessage: message, category: 'javascript' });
+
+/** A stand-in for a healthy drive: its server is its own and listening, the simulator booted, and the app's log since boot `records`, closed by `log show`'s count. */
+const healthy = (records: ReadonlyArray<string>) =>
+  standIn((line) => {
+    if (line === START_READ) return ok(`${STARTED}\n`);
+    if (line.startsWith('lsof')) return ok('4242\n');
+    if (line.startsWith('xcrun simctl list devices'))
+      return ok(
+        encodeJson({ devices: { ios: [{ name: 'probe-sim', udid: UDID, state: 'Booted' }] } }),
+      );
+    if (line.includes(' log show --style ndjson '))
+      return ok(['[', ...records, `{"count":${records.length},"finished":1}`].join('\n'));
+    if (line === 'sysctl -n vm.loadavg') return ok('{ 1.00 1.00 1.00 }\n');
+    if (line === 'sysctl -n hw.ncpu') return ok('12\n');
+    return ok();
+  });
 
 describe('sim commands', () => {
   it.scoped('a tap on the web prints one success and clicks the label', () =>
@@ -275,6 +312,81 @@ describe('sim commands', () => {
         ok: false,
         error: { _tag: 'Unhealthy', check: 'port-owner', reason: expect.stringContaining('999') },
       });
+    }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped('a doctor on iOS reads the app’s log since boot and passes a clean one', () =>
+    Effect.gen(function* () {
+      const answers = healthy([record(500, '[natural] install done')]);
+      const { exit, printed } = yield* sim(['doctor'], answers, Option.some('ios'), ServerUp);
+      expect(printed[0]).toMatchObject({ ok: true, command: 'doctor' });
+      expect(Exit.isSuccess(exit)).toBe(true);
+      expect(
+        answers.runs.filter((run) =>
+          /^xcrun simctl spawn \S+ log show --style ndjson --last \d+s --predicate process == "ProbeProcess"$/u.test(
+            run.line,
+          ),
+        ),
+      ).toHaveLength(1);
+    }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped('a doctor on iOS fails at native-source when the latest process refused one', () =>
+    Effect.gen(function* () {
+      const answers = healthy([
+        record(500, 'Running "main"'),
+        record(
+          500,
+          `'Listen failed', { [Error: ${REFUSED}] }\n    at anonymous (index.bundle:1:2)`,
+        ),
+      ]);
+      const { exit, printed } = yield* sim(['doctor'], answers, Option.some('ios'), ServerUp);
+      expect(Exit.isFailure(exit)).toBe(true);
+      expect(printed[0]).toMatchObject({
+        ok: false,
+        error: {
+          _tag: 'Unhealthy',
+          check: 'native-source',
+          reason: expect.stringMatching(/refused 1 .*natural\.Natural changed.*sim install/u),
+        },
+      });
+    }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped('a doctor on iOS passes a refusal of an earlier process alone', () =>
+    Effect.gen(function* () {
+      const answers = healthy([record(500, `Error: ${REFUSED}`), record(501, 'Running "main"')]);
+      const { exit, printed } = yield* sim(['doctor'], answers, Option.some('ios'), ServerUp);
+      expect(printed[0]).toMatchObject({ ok: true, command: 'doctor' });
+      expect(Exit.isSuccess(exit)).toBe(true);
+    }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped('a doctor reports a failing server log before it reads the app’s log', () =>
+    Effect.gen(function* () {
+      const answers = healthy([record(500, `Error: ${REFUSED}`)]);
+      const { printed } = yield* sim(
+        ['doctor'],
+        answers,
+        Option.some('ios'),
+        ServerUp,
+        'GET /index.bundle 500\n',
+      );
+      expect(printed[0]).toMatchObject({
+        ok: false,
+        error: { _tag: 'Unhealthy', check: 'server-log' },
+      });
+      expect(answers.runs.some((run) => run.line.includes(' log show '))).toBe(false);
+    }).pipe(Effect.provide(Host)),
+  );
+
+  it.scoped('a doctor on the web runs no xcrun', () =>
+    Effect.gen(function* () {
+      const answers = healthy([record(500, `Error: ${REFUSED}`)]);
+      const { exit, printed } = yield* sim(['doctor'], answers, Option.some('web'), ServerUp);
+      expect(printed[0]).toMatchObject({ ok: true, command: 'doctor', platform: 'web' });
+      expect(Exit.isSuccess(exit)).toBe(true);
+      expect(answers.runs.some((run) => run.line.startsWith('xcrun'))).toBe(false);
     }).pipe(Effect.provide(Host)),
   );
 

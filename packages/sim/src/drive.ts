@@ -45,6 +45,7 @@ import {
   ToolFailed,
 } from './errors.ts';
 import { acquire, release } from './holder.ts';
+import { nativeRefusals } from './native-source.ts';
 import { either, holds, type Identity, Os, stop } from './os.ts';
 import { fileAway, ownedBy, readRecord, recordFile, writeRecord } from './record.ts';
 import { type Platform, Session } from './result.ts';
@@ -1010,6 +1011,15 @@ const log = Effect.fn('Sim.log')(function* (place: Place) {
 /** The app's log since boot: the simulator's unified log for its process, or the page's console. */
 const appLog = Effect.fn('Sim.appLog')(function* (app: App, session: Session) {
   if (session.platform === 'web') return yield* browser(app, ['console']);
+  return yield* deviceLog(app, session, 'compact');
+});
+
+/** The simulator's unified log for the app's process since boot, in `style` (`compact` lines or `ndjson` records). */
+const deviceLog = Effect.fn('Sim.deviceLog')(function* (
+  app: App,
+  session: Session,
+  style: 'compact' | 'ndjson',
+) {
   const udid = yield* booted(app, session);
   const now = yield* DateTime.now;
   const start = DateTime.makeUnsafe(session.bootedAt);
@@ -1023,7 +1033,7 @@ const appLog = Effect.fn('Sim.appLog')(function* (app: App, session: Session) {
       'log',
       'show',
       '--style',
-      'compact',
+      style,
       '--last',
       `${since}s`,
       '--predicate',
@@ -1319,8 +1329,11 @@ const FAILURE = /\b(error|failed|5\d\d)\b/i;
 
 /**
  * Read-only checks of the booted drive, in order; the first that fails is
- * the result (`Unhealthy` names it). Load above the core count fails
- * nothing, but `timingsHold` says no timing of this drive claims anything.
+ * the result (`Unhealthy` names it). On iOS, once the server's log holds,
+ * the app's log since boot is read for the native sources its latest
+ * process refused (`native-source`): an install older than the served
+ * JavaScript. Load above the core count fails nothing, but `timingsHold`
+ * says no timing of this drive claims anything.
  */
 const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
@@ -1364,6 +1377,17 @@ const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
       'server-log',
       `${server} reports ${failures.length} failures, first: ${failures[0]}`,
     );
+  if (session.platform === 'ios') {
+    const refusals = nativeRefusals(yield* deviceLog(place.config, session, 'ndjson'));
+    const first = (refusals[0] ?? '')
+      .split('\n')
+      .find((line) => line.includes('; rebuild the app'));
+    if (refusals.length > 0)
+      return yield* sick(
+        'native-source',
+        `the app's latest process refused ${refusals.length} native source(s) its build lacks, first: ${first ?? ''}; the installed build is older than the served JavaScript, so run sim install`,
+      );
+  }
   const head = yield* succeed('git', ['-C', place.app, 'rev-parse', 'HEAD'], short);
   const audio = yield* attempt('pmset', ['-g', 'assertions'], short);
   const audioHolders = audio.output.split('\n').filter((line) => line.includes('audio-out')).length;

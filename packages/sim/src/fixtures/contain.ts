@@ -373,6 +373,8 @@ const tool = (
     return { exitCode: 0, stdout: devices };
   if (command === 'xcrun' && joined === 'simctl list runtimes -j')
     return { exitCode: 0, stdout: runtimes };
+  if (command === 'xcrun' && args[1] === 'spawn' && args.includes('ndjson'))
+    return { exitCode: 0, stdout: '[\n{"count":0,"finished":1}\n' };
   if (command === 'xcrun' && args[1] === 'install') {
     nfs.readFileSync(`${last}/Info.plist`);
     return { exitCode: 0, stdout: '' };

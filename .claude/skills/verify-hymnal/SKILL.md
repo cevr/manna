@@ -93,8 +93,11 @@ start time `boot` recorded, `serverStarted` in the session file; a legacy
 session, an older `sim`'s with no start time, fails it, so run `sim down`
 and boot again), `port-owner` (the port
 is held by that process or a child of it), `server-answers` (the server
-answers), `server-log` (no failure line in `server.log`); on iOS a simulator
-that is not booted fails as `SimulatorDown`.
+answers), `server-log` (no failure line in `server.log`), and on iOS
+`native-source` (the app's log since boot holds no refusal by its latest
+process of a native source the installed build lacks, One's "…; rebuild
+the app": run `sim install`); on iOS a simulator that is not booted fails
+as `SimulatorDown`.
 
 ## Drive
 

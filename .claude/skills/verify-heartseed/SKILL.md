@@ -117,8 +117,14 @@ It is read only. It prints `detail` with `head` (the commit the checkout is
 at: compare it with the commit under test), `audioHolders`, `load`, `cores`
 and `timingsHold`; when `timingsHold` is false, no timing of this drive
 claims anything. Or it fails with `Unhealthy` naming the first check that
-does not hold (`server-pid`, `port-owner`, `server-answers`, `server-log`);
-a simulator that is not booted fails as `SimulatorDown`.
+does not hold (`server-pid`, `port-owner`, `server-answers`, `server-log`,
+`native-source`); a simulator that is not booted fails as `SimulatorDown`.
+`native-source` reads the app's log since boot and fails when the app's
+latest process refused a native source its build lacks (One's "native
+module natural.Natural changed; rebuild the app"): the installed build is
+older than the JavaScript the server serves, so run `sim install`. It
+sees a refusal only once the JavaScript has called the native source
+(`features/doctor.md`).
 
 ## Drive
 
@@ -299,6 +305,11 @@ Heartseed has no journey files yet. The features:
   `When I need…` and `Settings` (the sheet with Minutes, Voice, the
   appearance and About; Today with no choices). Run it from `first.md` (`first-planted` or
   `first-home`).
+- [features/doctor.md](features/doctor.md): `sim doctor` against an
+  installed build older than the served JavaScript: the row
+  `doctor-native-stale` (a native contract changed in the working tree,
+  the natural probe's `Load` refused, `native-source`) and
+  `doctor-native-fresh` (the source restored, the doctor ok).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
@@ -322,6 +333,13 @@ app's storage.
   parse (rolldown 1.3.0 did);
   `bun run --cwd apps/heartseed test:devbundle` names it. The hymnal's
   devDependency `rolldown` is the one vxrn gets.
+- **A preserved install serves new JavaScript.** A change to a native
+  module's contract (a method, its parameters, a view) needs a rebuild:
+  the installed app refuses the call, and the refusal ("native module
+  natural.Natural changed; rebuild the app") shows only in the app's log,
+  as a step that silently does nothing. `sim doctor` fails `native-source`
+  once the JavaScript has called it; run `sim install` (with `--prebuild`
+  when the native folder changed).
 
 ## Evidence
 

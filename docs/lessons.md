@@ -5500,3 +5500,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `features/light.md` asked for `lit 25/25` at the end of a reading, a line `LightProbe` never writes (it writes `lit <lit>/<words> <status>`, and `lit 0/25 idle` once the reading ends), so a live row could not pass.
 - **Cause:** A feature file's oracle was written from what the probe was meant to show, and nothing held a quoted probe line or an `--expect` target to the texts the probe's sources write.
 - **Guard:** code: `apps/heartseed/scripts/probe-lines.test.ts` `no feature file or SKILL.md of verify-heartseed quotes a line its probe does not write`; code: `apps/heartseed/scripts/probe-lines.test.ts` `over 150 generated probes and feature files, faults exactly the quotes and targets no line of the probe fits`
+
+### sim-doctor-fails-on-a-stale-native-source
+
+- **Date:** 2026-11-10
+- **Kind:** review
+- **Said:** "doctor should compare recorded installed-native/dependency fingerprint with served JS, so stale-native incompatibility is caught before a navigation drive. Current doctor checks server health, not the native contract."
+- **Source:** hymnapp/batch-sim-3-findings.md o5 (On base / next action, its fifth item)
+- **Wrong:** A preserved install served new JavaScript after `natural.Natural` changed, every call into it was refused with "native module natural.Natural changed; rebuild the app" in the device log only, and `sim doctor` printed ok, so sim-3 lost a morning to steps that did nothing.
+- **Cause:** The doctor checked the dev server and the simulator, and read nothing of the app's own log, where One writes each refusal of a native source.
+- **Guard:** code: `packages/sim/src/native-source.test.ts` `over 500 generated logs, answers exactly the refusals of the last record’s process, in order`; code: `packages/sim/src/sim.slow.test.ts` `a doctor on iOS fails at native-source when the latest process refused one`
