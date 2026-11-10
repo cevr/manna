@@ -157,6 +157,7 @@
     "test:home-walk-f": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-f.test.tsx",
     "test:home-walk-g": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-g.test.tsx",
     "test:home-walk-h": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-h.test.tsx",
+    "test:home-motion": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/motion.property.test.ts",
     "test:need": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/need.property.test.ts",
     "test:need-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/screen.test.tsx",
     "test:need-offer": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/offer.test.tsx ./src/need/offer-b.test.tsx",
