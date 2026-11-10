@@ -31,6 +31,7 @@
 import type { Scope } from 'effect';
 import {
   Array as Arr,
+  Brand,
   Clock,
   Context,
   Data,
@@ -54,6 +55,47 @@ import type { Beat } from './countin';
 import * as Proof from './proof';
 import { ALL } from './stanzas';
 import { DEFAULT_TEMPO, rateOf } from './tempo';
+import { initialTarget, type SeekTarget, type SeekTargets, targetAt } from '../follow/seek-targets';
+import {
+  bundledTargets,
+  type HoldCommand,
+  HoldState,
+  type HoldToken,
+  sameTargets,
+  type TargetsFor,
+} from './word-seek';
+
+type HoldEvent = Data.TaggedEnum<{
+  AcquireHold: { readonly token: HoldToken };
+  FinishHold: { readonly token: HoldToken };
+  RevokeHold: {};
+}>;
+const HoldEvent = Data.taggedEnum<HoldEvent>();
+const holdAction = Predicate.or(HoldEvent.$is('AcquireHold'), HoldEvent.$is('FinishHold'));
+
+interface HoldSnapshot {
+  readonly start: number;
+  readonly key: number;
+  readonly tempo: number;
+  readonly intro: Option.Option<boolean>;
+  readonly sound: Option.Option<boolean>;
+  readonly recording: Option.Option<RecordingSelection>;
+}
+
+interface HoldTransaction {
+  readonly token: HoldToken;
+  readonly targets: SeekTargets;
+  readonly snapshot: HoldSnapshot;
+  target: SeekTarget;
+  origin: Option.Option<number>;
+  ending: Option.Option<'Release' | 'Cancel'>;
+  resuming: boolean;
+}
+
+interface HoldAccess {
+  get<A>(atom: Atom.Atom<A>): A;
+  set<R, W>(atom: Atom.Writable<R, W>, value: W): void;
+}
 
 /** A hymn the player plays: its number names its recording. */
 export interface Track {
@@ -372,6 +414,7 @@ interface Held {
   moving: Option.Option<Fiber.Fiber<unknown, unknown>>;
   reading: Option.Option<{
     readonly start: number;
+    readonly act: number;
     readonly done: Deferred.Deferred<Proof.Read, PlaybackError>;
   }>;
   resuming: boolean;
@@ -405,6 +448,8 @@ export const playerOn = (
   tempoFor: (number: number) => Atom.Atom<number> = () => asWritten,
   stanzasFor: (number: number) => Atom.Atom<ReadonlyArray<number>> = () => everyStanza,
   intro?: Atom.Atom<boolean>,
+  targetsFor: TargetsFor = bundledTargets,
+  sound?: Atom.Atom<boolean>,
 ) => {
   const keyFor = Atom.family((number: number) =>
     Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
@@ -442,9 +487,57 @@ export const playerOn = (
     countEnds: Option.none(),
   };
 
-  const send = runtime
+  const holdState = Atom.make<HoldState>(HoldState.Free()).pipe(Atom.keepAlive);
+  const tokenOf = Brand.nominal<HoldToken>();
+  let transaction = Option.none<HoldTransaction>();
+  let revokedWork = false;
+  const capture = (get: HoldAccess, number: number): HoldSnapshot => ({
+    start: held.starts,
+    key: get.get(keyFor(number)),
+    tempo: get.get(rateFor(number)),
+    intro: Option.map(Option.fromNullishOr(intro), (atom) => get.get(atom)),
+    sound: Option.map(Option.fromNullishOr(sound), (atom) => get.get(atom)),
+    recording: get.get(recording),
+  });
+  const revoke = (get: HoldAccess) => {
+    if (Option.isNone(transaction)) return;
+    transaction = Option.none();
+    revokedWork = true;
+    held.seeking = Option.none();
+    held.proof = { ...held.proof, pending: Option.none() };
+    get.set(holdState, HoldState.Free());
+  };
+  const owns = (get: HoldAccess, hold: HoldTransaction): boolean => {
+    if (!Option.contains(transaction, hold)) return false;
+    const snapshot = capture(get, hold.targets.number);
+    const before = hold.snapshot;
+    const projection = targetsFor(hold.targets.number, get.get(stanzasFor(hold.targets.number)));
+    const valid =
+      snapshot.start === before.start &&
+      snapshot.key === before.key &&
+      snapshot.tempo === before.tempo &&
+      Option.makeEquivalence<boolean>((a, b) => a === b)(snapshot.intro, before.intro) &&
+      Option.makeEquivalence<boolean>((a, b) => a === b)(snapshot.sound, before.sound) &&
+      Option.makeEquivalence<RecordingSelection>(
+        (a, b) =>
+          a.number === b.number && a.requested === b.requested && a.effective === b.effective,
+      )(snapshot.recording, before.recording) &&
+      Option.exists(projection, (current) => sameTargets(current, hold.targets));
+    if (!valid) revoke(get);
+    return valid;
+  };
+  const clearHold = (get: HoldAccess, hold: HoldTransaction) => {
+    if (!Option.contains(transaction, hold)) return;
+    transaction = Option.none();
+    get.set(holdState, HoldState.Free());
+  };
+
+  const dispatch = runtime
     .fn(
-      Effect.fn('Player.send')(function* (command: Command | KeyChange, get: Atom.FnContext) {
+      Effect.fn('Player.send')(function* (
+        command: Command | KeyChange | HoldEvent,
+        get: Atom.FnContext,
+      ) {
         const device = yield* Playback;
         const link = yield* Link;
         const answers = yield* Answers;
@@ -493,14 +586,17 @@ export const playerOn = (
          */
         const readDevice = Effect.suspend(() =>
           Option.match(
-            Option.filter(held.reading, (reading) => reading.start === held.starts),
+            Option.filter(
+              held.reading,
+              (reading) => reading.start === held.starts && reading.act === held.acts,
+            ),
             {
               onSome: ({ done }) => Deferred.await(done),
               onNone: () =>
                 Effect.gen(function* () {
                   const done = yield* Deferred.make<Proof.Read, PlaybackError>();
                   const start = held.starts;
-                  held.reading = Option.some({ start, done });
+                  held.reading = Option.some({ start, act: held.acts, done });
                   const reading = Effect.gen(function* () {
                     const asked = yield* now;
                     const raw = yield* device.status;
@@ -587,6 +683,10 @@ export const playerOn = (
           held.moving = Option.none();
           return Option.match(fiber, { onNone: () => Effect.void, onSome: Fiber.interrupt });
         });
+        if (revokedWork) {
+          revokedWork = false;
+          yield* cut;
+        }
         /**
          * An ask that moves the device (a play or a seek), run in the player's scope in place of
          * the one before it: the adapter asks a play's seek again until it lands, so only the
@@ -601,11 +701,20 @@ export const playerOn = (
         /** The place a seek asks, asked of the device until an answer lands it. */
         const askSeek = (to: number) =>
           Effect.gen(function* () {
+            const owner = transaction;
+            if (Option.isSome(owner) && !owns(get.registry, owner.value)) return;
             const seeking = { to, asking: true };
             held.seeking = Option.some(seeking);
             const asked = yield* now;
             yield* device.seek(to).pipe(
-              Effect.flatMap(answeredAt(asked, to)),
+              Effect.flatMap((status) =>
+                Effect.gen(function* () {
+                  if (Option.isSome(owner) && !owns(get.registry, owner.value)) return;
+                  yield* answeredAt(asked, to)(status);
+                  if (Option.isSome(owner) && Option.isNone(held.proof.pending))
+                    yield* resumeHold(owner.value);
+                }),
+              ),
               Effect.catchTag('PlaybackError', (error) =>
                 Effect.logWarning('player.seek.refused').pipe(
                   Effect.annotateLogs({ to, message: error.message }),
@@ -750,6 +859,7 @@ export const playerOn = (
          * (One 2.8.1, HybridOneAudio.kt:199-204); a device paused already stays so.
          */
         const heldPaused = Effect.suspend(() => {
+          if (Option.isSome(transaction)) return Effect.void;
           if (held.wants === 'pause') return Effect.void;
           held.wants = 'pause';
           return Effect.ignore(device.pause);
@@ -763,6 +873,12 @@ export const playerOn = (
           Effect.gen(function* () {
             const read = yield* readFresh;
             const status = read.status;
+            if (Option.isSome(transaction)) {
+              const hold = transaction.value;
+              if (!owns(get.registry, hold)) return false;
+              if (status.state === 'idle' || status.state === 'ended' || status.state === 'failed')
+                revoke(get.registry);
+            }
             held.pace = paceOf(status);
             const count = counting(status);
             held.countEnds = Option.map(count, (ms) => read.answered + ms);
@@ -811,7 +927,7 @@ export const playerOn = (
               ),
             );
             yield* announceOnce(track, answer);
-            return !gaveUp && (!done || Option.isNone(answer));
+            return !gaveUp && (!done || Option.isNone(answer) || Option.isSome(transaction));
           }).pipe(
             Effect.catchTag('PlaybackError', (error) =>
               Effect.logWarning('player.status.failed').pipe(
@@ -1193,6 +1309,99 @@ export const playerOn = (
             }
             yield* ask(track, askSeek(ms), logged, !held.replacing);
           });
+        const resumeHold = (hold: HoldTransaction) =>
+          Effect.gen(function* () {
+            if (!owns(get.registry, hold) || hold.resuming) return;
+            hold.resuming = true;
+            held.wants = 'play';
+            yield* act(Option.none());
+            if (!owns(get.registry, hold)) return;
+            const status = yield* device.resume;
+            if (!owns(get.registry, hold)) return;
+            clearHold(get.registry, hold);
+            const track = Option.getOrThrow(trackOf(get.registry.get(state)));
+            yield* show(
+              Player.Buffering({
+                track,
+                at: seconds(status.positionMs),
+                length: lengthOf(status),
+                retry: false,
+              }),
+            );
+          });
+        const finishHold = (hold: HoldTransaction) =>
+          Effect.gen(function* () {
+            if (!owns(get.registry, hold) || Option.isNone(hold.origin)) return;
+            get.registry.set(
+              holdState,
+              HoldState.Landing({
+                token: hold.token,
+                target: hold.target,
+                origin: hold.origin.value,
+              }),
+            );
+            const track = Option.getOrThrow(trackOf(get.registry.get(state)));
+            if (Option.contains(hold.ending, 'Cancel')) {
+              yield* resumeHold(hold);
+              if (Option.isNone(transaction)) yield* follow(track);
+            } else {
+              yield* seek(track, hold.target.ms / 1000);
+            }
+          });
+        const acquireHold = (hold: HoldTransaction) =>
+          Effect.gen(function* () {
+            if (!owns(get.registry, hold) || !Player.$is('Playing')(current)) return;
+            held.wants = 'pause';
+            yield* cut;
+            yield* act(Option.none());
+            if (!owns(get.registry, hold)) return;
+            yield* show(
+              Player.Paused({ track: current.track, at: current.at, length: current.length }),
+            );
+            const status = yield* device.pause;
+            if (!owns(get.registry, hold)) return;
+            if (
+              status.state !== 'paused' ||
+              !Number.isFinite(status.positionMs) ||
+              status.positionMs < 0
+            ) {
+              clearHold(get.registry, hold);
+              return yield* follow(current.track);
+            }
+            hold.origin = Option.some(status.positionMs);
+            held.proof = Proof.followed(held.proof, yield* now, status.positionMs);
+            yield* show(
+              Player.Paused({
+                track: current.track,
+                at: seconds(status.positionMs),
+                length: lengthOf(status),
+              }),
+            );
+            if (Option.isSome(hold.ending)) return yield* finishHold(hold);
+            get.registry.set(
+              holdState,
+              HoldState.Held({ token: hold.token, target: hold.target, origin: status.positionMs }),
+            );
+            yield* follow(current.track);
+          });
+        if (command._tag === 'RevokeHold') return yield* cut;
+        if (holdAction(command)) {
+          const active = Option.filter(transaction, (hold) => hold.token === command.token);
+          if (Option.isNone(active)) return;
+          const hold = active.value;
+          let operation = finishHold(hold);
+          if (command._tag === 'AcquireHold') operation = acquireHold(hold);
+          return yield* operation.pipe(
+            Effect.catchTag('PlaybackError', (error) =>
+              Effect.gen(function* () {
+                if (!owns(get.registry, hold)) return;
+                clearHold(get.registry, hold);
+                yield* logged(error);
+                yield* onHeld(follow);
+              }),
+            ),
+          );
+        }
         if (KeyChange.$is('Key')(command)) {
           const { number, offset } = command;
           return yield* onHeld((track) =>
@@ -1311,6 +1520,96 @@ export const playerOn = (
     )
     .pipe(Atom.keepAlive);
 
+  const send = Atom.writable(
+    (get) => get(dispatch),
+    (get, command: Command | KeyChange) => {
+      revoke(get);
+      get.set(dispatch, command);
+    },
+  ).pipe(Atom.keepAlive);
+
+  const holdSend = Atom.writable(
+    (get) => get(holdLifetime),
+    (get, command: HoldCommand) => {
+      if (command._tag === 'Invalidate') {
+        if (Option.isNone(transaction)) return;
+        revoke(get);
+        get.set(dispatch, HoldEvent.RevokeHold());
+        return;
+      }
+      if (command._tag === 'Begin') {
+        const current = get.get(state);
+        if (
+          Option.isSome(transaction) ||
+          !Player.$is('Playing')(current) ||
+          current.track.number !== command.targets.number ||
+          held.replacing ||
+          Option.isSome(held.proof.pending) ||
+          Option.isSome(held.countEnds) ||
+          Option.isSome(get.get(beat))
+        )
+          return;
+        const targets = targetsFor(current.track.number, get.get(stanzasFor(current.track.number)));
+        if (!Option.exists(targets, (targets) => sameTargets(targets, command.targets))) return;
+        const target = initialTarget(command.targets, current.at * 1000);
+        if (Option.isNone(target) || Option.isNone(targets)) return;
+        const token = tokenOf(Symbol());
+        transaction = Option.some({
+          token,
+          targets: targets.value,
+          snapshot: capture(get, current.track.number),
+          target: target.value,
+          origin: Option.none(),
+          ending: Option.none(),
+          resuming: false,
+        });
+        get.set(holdState, HoldState.Acquiring({ token, target: target.value }));
+        get.set(dispatch, HoldEvent.AcquireHold({ token }));
+        return;
+      }
+      const active = Option.filter(transaction, (hold) => hold.token === command.token);
+      if (Option.isNone(active) || !owns(get, active.value) || Option.isSome(active.value.ending))
+        return;
+      const hold = active.value;
+      if (command._tag === 'Select') {
+        const target = targetAt(hold.targets, command.line, command.word);
+        if (Option.isNone(target)) return;
+        hold.target = target.value;
+        const was = get.get(holdState);
+        if (was._tag !== 'Free') get.set(holdState, { ...was, target: target.value });
+        return;
+      }
+      hold.ending = Option.some(command._tag);
+      if (Option.isSome(hold.origin))
+        get.set(dispatch, HoldEvent.FinishHold({ token: hold.token }));
+    },
+  ).pipe(Atom.keepAlive);
+
+  const holdLifetime = Atom.make((get) => {
+    const check = () => {
+      if (Option.isSome(transaction) && !owns(get.registry, transaction.value))
+        get.set(dispatch, HoldEvent.RevokeHold());
+    };
+    get.subscribe(holdState, check);
+    get.subscribe(recording, check);
+    const number = get(heldNumber);
+    if (number !== 0) {
+      get.subscribe(keyFor(number), check);
+      get.subscribe(rateFor(number), check);
+      get.subscribe(stanzasFor(number), check);
+    }
+    if (intro) get.subscribe(intro, check);
+    if (sound) get.subscribe(sound, check);
+    get.addFinalizer(() => revoke(get.registry));
+  }).pipe(Atom.keepAlive);
+  const hold = {
+    state: Atom.make((get) => {
+      get(holdLifetime);
+      return get(holdState);
+    }),
+    send: holdSend,
+  };
+
   /** Sends each press of the lock screen, Control Center or the Media Session while it is mounted. */
   const remote = runtime.atom((get) =>
     Effect.gen(function* () {
@@ -1424,6 +1723,7 @@ export const playerOn = (
   const countIn: Atom.Atom<Option.Option<Beat>> = beat;
 
   return {
+    hold,
     state,
     send,
     remote,

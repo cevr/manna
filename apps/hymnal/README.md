@@ -275,6 +275,19 @@ Stripped timing, even timing and unplayed score-tail lines remain line-only
 score targets, not a claim of recorded word precision. Malformed geometry,
 line counts or nonempty word arrays fail closed. The lexical count ignores
 standalone punctuation, without renumbering the compiled word ordinals.
+`playerOn` exposes an additive `hold.state`/`hold.send` transaction. Begin
+acquires only current Playing topology, pauses once, and freezes the actual
+pause acknowledgement. Select changes preview only. The first Release or
+Cancel wins, including before pause acknowledgement: Release uses the
+existing seek proof/retry path and resumes only after its acknowledged
+landing; Cancel resumes the frozen origin without a corrective seek.
+Unique player-created tokens and current settings snapshots guard every
+continuation. Normal commands revoke synchronously before dispatch. The
+optional seventh `TargetsFor` argument defaults to the bundled score and
+sections; an inert fixture can supply its own score projection. The optional
+eighth Sound atom participates in ownership checks. Existing callers keep
+their defaults. `word-seek.test.ts` belongs to `test:player` and uses the real
+score clock over a controllable silent Playback boundary.
 No reader interaction uses this seam yet. `seek-targets.test.ts` belongs to
 `test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
 every corpus stanza subset, occurrence and word and generated numeric scores.
