@@ -1,8 +1,9 @@
 /**
  * What Today and the first minute draw alike, in the scheme now's roles
  * (`../look`): a recital's word as `wordOf` shows it, a word not yet said
- * under its cue (whole, in letters or nothing), the one large round button,
- * and the plant, with the styles every screen shares (`useLook`). Each word
+ * under its cue (whole, in letters or nothing) and the one large round
+ * button, with the styles every screen shares (`useLook`); the plant is
+ * drawn with the home's hand-drawn set (`../home/plant`). Each word
  * is its own accessibility element; a word or part of one that is not shown
  * is laid out in transparent ink and hidden from the screen reader.
  */
@@ -20,7 +21,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import type { PlantStage } from '../field';
 import { themed, useThemed } from '../look';
 import type { Cue, Mark } from '../matcher';
 import { wordOf, type Ink, type ShownWord } from './screen';
@@ -205,25 +205,6 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
   return <Animated.View aria-hidden style={[look.ring, ring]} />;
 }
 
-/** The plant drawn as the prototype draws it, hidden from the screen reader, which reads the stage line or the field's label: bare soil before planting, a gold seed in the soil, a green stem and leaf, a green ear on the stem, a gold ear. */
-export function PlantMark({ stage }: { readonly stage: PlantStage }) {
-  const look = useLook();
-  const sown = stage !== 'not planted';
-  const grown = sown && stage !== 'seed';
-  const eared = stage === 'ear' || stage === 'full corn';
-  const ripe = stage === 'full corn';
-  return (
-    <View testID="plant" aria-hidden style={look.plant}>
-      <View style={look.soil} />
-      {sown && !grown && <View style={look.seed} />}
-      {grown && <View style={[look.stem, eared && look.tallStem]} />}
-      {grown && <View style={look.leaf} />}
-      {eared && <View style={[look.ear, ripe && look.ripeEar]} />}
-      {ripe && <View style={look.awn} />}
-    </View>
-  );
-}
-
 /** The styles every screen shares, in each scheme. */
 const looks = themed((color, face) =>
   StyleSheet.create({
@@ -246,63 +227,6 @@ const looks = themed((color, face) =>
     alert: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.miss },
     stageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
     stage: { fontFamily: face, fontSize: 15, color: color.quiet },
-    plant: { width: 24, height: 28 },
-    soil: {
-      position: 'absolute',
-      left: 2,
-      right: 2,
-      bottom: 1,
-      height: 2.5,
-      borderRadius: 1.25,
-      backgroundColor: color.soil,
-    },
-    seed: {
-      position: 'absolute',
-      left: 8,
-      bottom: 4,
-      width: 8,
-      height: 6,
-      borderRadius: 4,
-      backgroundColor: color.gold,
-    },
-    stem: {
-      position: 'absolute',
-      left: 11,
-      bottom: 3,
-      width: 2.5,
-      height: 14,
-      borderRadius: 1.25,
-      backgroundColor: color.leaf,
-    },
-    tallStem: { height: 19 },
-    leaf: {
-      position: 'absolute',
-      left: 3,
-      bottom: 8,
-      width: 9,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: color.leaf,
-      transform: [{ rotate: '-35deg' }],
-    },
-    ear: {
-      position: 'absolute',
-      left: 8,
-      top: 1,
-      width: 8,
-      height: 10,
-      borderRadius: 4,
-      backgroundColor: color.greenEar,
-    },
-    ripeEar: { backgroundColor: color.gold },
-    awn: {
-      position: 'absolute',
-      left: 11.25,
-      top: -3,
-      width: 1.5,
-      height: 4,
-      backgroundColor: color.gold,
-    },
     buttonPlace: { alignSelf: 'center', width: 132, height: 132, marginTop: 8 },
     ring: {
       position: 'absolute',

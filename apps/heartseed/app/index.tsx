@@ -47,6 +47,7 @@ import {
 } from '../src/garden';
 import { furrowsOf, readyOf } from '../src/home';
 import { tendedOf } from '../src/home/grown';
+import { PlantImage } from '../src/home/plant';
 import { startOf } from '../src/home/start';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
@@ -55,7 +56,7 @@ import { NeedScreen } from '../src/need/screen';
 import { AddSheet } from '../src/shelves/sheet';
 import type { PassagesView, Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
-import { BigButton, PlantMark, Unsaid, useLook, Word } from '../src/sayit/draw';
+import { BigButton, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, type Item, type TextPiece } from '../src/session';
@@ -212,7 +213,8 @@ const grownBy = (plant: Option.Option<Plant>, sayIt: Option.Option<SayItView>) =
   );
 
 /**
- * The stage of the verse of `reference`, its plant beside it once planted,
+ * The stage of the verse of `reference`, its plant beside it once planted
+ * (still, drawn with the home's hand-drawn set at 28 pt),
  * and how the recital shown grew it. Until a read of the garden completes,
  * and for the session when it failed, it claims nothing: the row holds its
  * place empty, so a planted verse never reads as not planted.
@@ -242,7 +244,7 @@ function Growing({
       <View style={look.stageRow}>
         {Option.match(stage, {
           onNone: () => false,
-          onSome: (each) => <PlantMark stage={each} />,
+          onSome: (each) => <PlantImage stage={each} size={28} />,
         })}
         <Text
           testID="stage"

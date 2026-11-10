@@ -37,10 +37,11 @@ import {
 import type { GardenView } from '../garden';
 import type { Mark } from '../matcher';
 import { sourceWords } from '../matcher/words';
+import { PlantImage } from '../home/plant';
 import { ReadingView, type Hold } from '../reading/view';
 import type { OrNull, Recital, SayItView } from '../sayit';
 import { themed, useThemed } from '../look';
-import { BigButton, Initial, PlantMark, Pulse, useLook, Word } from '../sayit/draw';
+import { BigButton, Initial, Pulse, useLook, Word } from '../sayit/draw';
 import { screenOf, wordOf } from '../sayit/screen';
 import type { VoiceView } from '../voice';
 import { isActive } from '../voice/reading';
@@ -360,16 +361,14 @@ function Say({
   );
 }
 
-/** Planted: the seed drawn large, its stage line, and Continue. */
+/** Planted: the hand-drawn seed at 112 pt in its 120 pt place, still, its stage line, and Continue. */
 function Planted({ onContinue }: { readonly onContinue: () => void }) {
   const look = useLook();
   const styles = useThemed(sheets);
   return (
     <View style={styles.planted}>
       <View style={styles.bigPlant}>
-        <View style={styles.scaled}>
-          <PlantMark stage="seed" />
-        </View>
+        <PlantImage stage="seed" size={112} />
       </View>
       <View style={look.stageRow}>
         <Text testID="stage" aria-label="Stage: seed" style={look.stage}>
@@ -404,6 +403,5 @@ const sheets = themed((color, face) =>
     pillText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     planted: { alignItems: 'center', gap: 16, paddingTop: 24 },
     bigPlant: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
-    scaled: { transform: [{ scale: 4 }] },
   }),
 );
