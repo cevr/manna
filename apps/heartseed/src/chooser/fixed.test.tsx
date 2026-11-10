@@ -1,9 +1,9 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noGlobals -- the test drives the root through React's promise-based `act`, one awaited tap at a time, over a disk planted a day before the host's clock (the one `One.Database` reads as null for a missing key), and reads a control not shown as undefined. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noGlobals -- the test drives the root through React's promise-based `act`, one awaited tap at a time, over a disk planted a day before the run's frozen instant (the one `One.Database` reads as null for a missing key), and reads a control not shown as undefined. */
 
 /**
  * Every screen's fixed controls outside its scroll views (hspassage C13,
  * hsfield's lost tap): the root mounted over a disk with the promise planted
- * yesterday and one passage held, held to `rootFaults` and `barFaults` on
+ * a day before `NIGHT`, the clock frozen there, and one passage held, held to `rootFaults` and `barFaults` on
  * every frame while the reader goes from home through each screen a control
  * can hide on: Today by `Begin` and a recital (`Say it`, `Listening`, the
  * grades and `Next` in the footer), the run's end that `Next` shows
@@ -32,13 +32,21 @@ import { END, endShown } from '../test/root-rule';
 import { sheetControl } from '../test/settings-rig';
 import { activateSheet, tapSheet } from '../test/shelves-rig';
 
+/**
+ * The run's instant: 02:00 in the tests' zone, an hour before 04:00 at
+ * which the plan offers no new piece of the held passage, so the promise is
+ * the run's one item and its `Next` gives the end whatever the host's hour.
+ */
+const NIGHT = Date.UTC(2026, 10, 9, 2);
+
 it('keeps each screen’s fixed controls outside its scroll views in every frame, on Today, the field and the chooser', async () => {
+  const time = { now: NIGHT };
   const disk = new Map<string, string | null>([
-    record(recallOf(passage.reference, Date.now() - DAY, 3, 0)),
+    record(recallOf(passage.reference, time.now - DAY, 3, 0)),
     [KEY, storedText([{ book: 43, chapter: 15, first: 1, last: 5 }])],
   ]);
   device.launch(disk);
-  const rig = await mountBar(0, false);
+  const rig = await mountBar(0, false, null, time);
   const seen: string[] = [];
   const step = async (label: string, then: string) => {
     expect(await rig.tap(label)).toBe(true);
