@@ -263,6 +263,22 @@ hymn's move.
 
 ## The player
 
+`src/follow/seek-targets.ts` is the pure musical seek seam: `targetsOf`
+accepts uncut bundled timing and the displayed sung sections, applies the
+stanza choice once, and preserves the original flat line index of every
+retained occurrence. `targetAt` resolves an exact line or trusted compiled
+word ordinal; `initialTarget` anchors intro, current playback and tail with
+last-at-or-before shared times. Targets carry sung milliseconds, not recording
+milliseconds, and never scale with tempo, chords or appearance. A word uses
+its earliest syllable onset; shared onsets expose every ambiguous ordinal.
+Stripped timing, even timing and unplayed score-tail lines remain line-only
+score targets, not a claim of recorded word precision. Malformed geometry,
+line counts or nonempty word arrays fail closed. The lexical count ignores
+standalone punctuation, without renumbering the compiled word ordinals.
+No reader interaction uses this seam yet. `seek-targets.test.ts` belongs to
+`test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
+every corpus stanza subset, occurrence and word and generated numeric scores.
+
 Play on another hymn's page replaces the held hymn at that page's own start and saved Key. Navigation alone keeps the held hymn. `Command.Start({ track })` is the normal start/swap command for reader and browse controls. Each Start owns its status reads, including Starts in one clock millisecond; late replies cannot describe the replacement. A full sheet route for another hymn also offers that hymn's Play while the held hymn sounds. The bar and sheet share `PlayPage` and the same command.
 
 A hymn page plays the hymn's 1985 recording from `audioUrl(n, offset)`: a Play or
