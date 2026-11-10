@@ -148,6 +148,7 @@ function ProbeBody({ probe }: { readonly probe: Probe }) {
   useAtomMount(player.beats);
   const state = useAtomValue(player.state);
   const hold = useAtomValue(player.hold.state);
+  const countIn = useAtomValue(player.countIn);
   const targets = useAtomValue(probe.targets);
   const commits = useAtomValue(probe.commits);
   const last = useAtomValue(probe.last);
@@ -167,7 +168,10 @@ function ProbeBody({ probe }: { readonly probe: Probe }) {
   const receipt = `player=${state._tag} hold=${hold._tag} line=${Option.getOrElse(line, () => -1)} word=${Option.getOrElse(word, () => -1)} targetMs=${Option.getOrElse(
     Option.map(preview, (target) => target.ms),
     () => -1,
-  )} originMs=${origin} positionMs=${positionOf(state)} commits=${commits} commitMs=${last} choice=${chosen.join(',') || '0'}`;
+  )} originMs=${origin} positionMs=${positionOf(state)} countIn=${Option.getOrElse(
+    Option.map(countIn, (beat) => beat.index),
+    () => -1,
+  )} commits=${commits} commitMs=${last} choice=${chosen.join(',') || '0'}`;
   const finalize = (release: boolean) => {
     if (hold._tag === 'Free') return;
     if (release) sendHold(HoldCommand.Release({ token: hold.token }));

@@ -34,6 +34,7 @@ it.effect(
         expect(html.includes(`data-testid="${id}"`)).toBe(true);
       expect(html.includes('commits=0')).toBe(true);
       expect(html.includes('hold=Free')).toBe(true);
+      expect(html.includes('countIn=-1')).toBe(true);
     }),
 );
 
