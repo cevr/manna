@@ -3183,7 +3183,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     modules), `vite/lexicon.test.ts` (both pronunciation lists as the
     plugin serves them, and each list's wrong shapes refused), `scripts/root-props.test.ts` (each prop a doc
     comment gives the root, in a sentence naming it or an `It` sentence
-    right after one, held to `Root`'s declaration) and
+    right after one, held to `Root`'s declaration, over the `src` and `app`
+    sources of git's listing of the package and never a file it ignores,
+    such as One's `app/routes.d.ts`; generated worlds and a scratch
+    repository hold the read set) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
     parameter found by name, the pin, the part's files, the search over a
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,

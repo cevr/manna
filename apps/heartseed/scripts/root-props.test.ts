@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport -- the test reads the app's `src` and `app` sources from disk, synchronously, as `parts.test.ts` does. */
+/* oxlint-disable effect/noNodeBuiltinImport -- the test reads the app's listed sources, and writes a scratch repository in the system's temp folder, from disk, synchronously, as `parts.test.ts` does. */
 
 /**
  * No doc comment names a prop the root does not take. A sentence of a
@@ -10,96 +10,30 @@
  * `` `x` prop ``, `` `x` props `` (with a list before it) or `<Root x`, and
  * each such `x` must be one that `app/index.tsx`'s `export default function
  * Root(…)` destructures. A capitalised name (`Begin`, `Minutes`) is a label on
- * screen, not a prop.
+ * screen, not a prop. The files read are git's listing of the package
+ * (tracked or untracked, never ignored: the set `test:infra` hashes), each
+ * `.ts` or `.tsx` file under `src` or `app` once, a listed file gone from
+ * disk skipped. A listing that fails, or lacks `app/index.tsx`, fails.
  */
 
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { it as effectIt } from 'effect-bun-test';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { Effect, FileSystem, Option } from 'effect';
+
+import {
+  DECLARATION,
+  docComments,
+  faultsIn,
+  listing,
+  rootPropFaults,
+  rootProps,
+  sources,
+} from './root-props.ts';
 
 const APP = join(import.meta.dir, '..');
-
-const NAME = '[a-z]\\w*';
-const SEPARATOR = '(?:,? (?:or|and) |, )';
-/** A lead form, its first name, then the list that goes on from it. */
-const LEAD = new RegExp(
-  `\\b(?:no|without(?: an?| the)?) \`(${NAME})\`((?:${SEPARATOR}\`${NAME}\`)*)`,
-  'dgu',
-);
-/** The list before a `prop` or `props`, then the name right before the word. */
-const PROPS = new RegExp(`((?:\`${NAME}\`${SEPARATOR})*)\`(${NAME})\` props?\\b`, 'dgu');
-const ROOT_JSX = new RegExp(`<Root (${NAME})`, 'dgu');
-const TICKED = new RegExp(`\`(${NAME})\``, 'gu');
-
-/** The names the forms give in `sentence`, each once, in the order they stand. */
-const formNames = (sentence: string): ReadonlyArray<string> => {
-  const at = new Map<number, string>();
-  const named = (match: RegExpExecArray, group: number) =>
-    at.set(match.indices?.[group]?.[0] ?? match.index, match[group] ?? '');
-  const listed = (match: RegExpExecArray, group: number) => {
-    const from = match.indices?.[group]?.[0] ?? match.index;
-    for (const ticked of (match[group] ?? '').matchAll(TICKED)) {
-      at.set(from + ticked.index + 1, ticked[1] ?? '');
-    }
-  };
-  for (const match of sentence.matchAll(LEAD)) {
-    named(match, 1);
-    listed(match, 2);
-  }
-  for (const match of sentence.matchAll(PROPS)) {
-    listed(match, 1);
-    named(match, 2);
-  }
-  for (const match of sentence.matchAll(ROOT_JSX)) named(match, 1);
-  return [...at.entries()].toSorted(([left], [right]) => left - right).map(([, name]) => name);
-};
-
-/** The sentences of `prose` about the root: each holding `root`, and each `It`/`Its` sentence right after one. */
-const rootSentences = (prose: string): ReadonlyArray<string> => {
-  const about: Array<string> = [];
-  let chained = false;
-  for (const sentence of prose.split(/(?<=[.;])\s+/u)) {
-    chained = /\broot\b/iu.test(sentence) || (chained && /^Its?\b/u.test(sentence));
-    if (chained) about.push(sentence);
-  }
-  return about;
-};
-
-const DECLARATION = /export default function Root\(([^)]*)\)/u;
-
-/** The names `Root` destructures from its props, read from its declaration in `index`. */
-const rootProps = (index: string): ReadonlyArray<string> => {
-  const params = DECLARATION.exec(index)?.[1] ?? '';
-  const inner = /^\s*\{([^}]*)\}/u.exec(params)?.[1] ?? '';
-  return inner
-    .split(',')
-    .map((each) => each.trim().split(/[:=\s]/u)[0] ?? '')
-    .filter((name) => name !== '');
-};
-
-/** The prop names that the sentences of `prose` about the root give it, and `declared` lacks. */
-const rootPropFaults = (prose: string, declared: ReadonlyArray<string>): ReadonlyArray<string> =>
-  rootSentences(prose)
-    .flatMap(formNames)
-    .filter((name) => !declared.includes(name));
-
-/** The doc comments of `text`: the line each starts on, and its prose as one line. */
-const docComments = (text: string) =>
-  [...text.matchAll(/\/\*\*([\s\S]*?)\*\//gu)].map((match) => ({
-    line: text.slice(0, match.index).split('\n').length,
-    prose: (match[1] ?? '').replaceAll(/^\s*\*\s?/gmu, '').replaceAll(/\s+/gu, ' '),
-  }));
-
-/** Every `.ts`/`.tsx` file under `folder` (a path from the app), skipping `node_modules` and dot folders. */
-const sourcesUnder = (folder: string): ReadonlyArray<string> =>
-  readdirSync(join(APP, folder), { withFileTypes: true }).flatMap((entry) => {
-    const path = `${folder}/${entry.name}`;
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name.startsWith('.')) return [];
-      return sourcesUnder(path);
-    }
-    return [path].filter((file) => /\.tsx?$/u.test(file));
-  });
 
 /** A small seeded generator (mulberry32), so each run draws the same sentences. */
 const random = (seed: number) => {
@@ -224,6 +158,113 @@ const tally = (
   });
 };
 
+/** What a drawn file of a world is: a listed source, a listed file outside the sources, a listed file gone from disk, or an ignored one on disk. */
+type Kind = 'source' | 'outside' | 'gone' | 'ignored';
+/** What its one doc comment says: nothing of a prop, a prop the root lacks, or a prop of something else. */
+type Body = 'clean' | 'fault' | 'aside';
+
+interface Drawn {
+  readonly path: string;
+  readonly kind: Kind;
+  readonly drawnAs: string;
+  readonly body: Body;
+  readonly name: string;
+  readonly line: number;
+}
+
+const FOLDERS = ['home', 'first', 'test', 'probe', 'deep', '.cache'];
+const SOURCE_ENDINGS = ['.ts', '.tsx', '.d.ts'];
+const OTHER_ENDINGS = ['.md', '.json', '.js', '.mts', '.tsx.txt', '.ts.snap', '.css'];
+const OTHER_TOPS = ['scripts', 'srcs', 'apple', 'vite', 'apps', 'source', 'infra'];
+
+/** Zero to three folders under a top, each ending in `/`. */
+const folders = (draw: Draw) =>
+  Array.from({ length: draw(4) }, () => `${pick(draw, FOLDERS)}/`).join('');
+
+/** A path of `kind`, unique by `stem`, and the class it was drawn in. */
+const pathOf = (draw: Draw, kind: Kind, stem: string) => {
+  if (kind !== 'outside') {
+    const ending = pick(draw, SOURCE_ENDINGS);
+    const under = folders(draw);
+    const depth = under.split('/').length - 1;
+    return {
+      path: `${pick(draw, ['src', 'app'])}/${under}${stem}${ending}`,
+      drawnAs: `${kind} ${ending} depth ${Math.min(depth, 2)}`,
+    };
+  }
+  const where = pick(draw, ['ending', 'top', 'root']);
+  if (where === 'ending')
+    return {
+      path: `${pick(draw, ['src', 'app'])}/${folders(draw)}${stem}${pick(draw, OTHER_ENDINGS)}`,
+      drawnAs: 'outside ending',
+    };
+  if (where === 'top')
+    return {
+      path: `${pick(draw, OTHER_TOPS)}/${folders(draw)}${stem}${pick(draw, SOURCE_ENDINGS)}`,
+      drawnAs: 'outside top',
+    };
+  return {
+    path: `${pick(draw, ['', 'src', 'app'])}${stem}${pick(draw, SOURCE_ENDINGS)}`,
+    drawnAs: 'outside root',
+  };
+};
+
+/** A file's text: its doc comment after `blank` empty lines. */
+const textOf = (body: Body, name: string, blank: number) => {
+  const prose = {
+    clean: 'The root renders home.',
+    fault: `The root renders without \`${name}\`.`,
+    aside: `The screen renders without \`${name}\`.`,
+  }[body];
+  return `${'\n'.repeat(blank)}/** ${prose} */\nexport {};\n`;
+};
+
+/** One world: one to twelve files of drawn kinds and bodies, in a drawn listing order. */
+const world = (draw: Draw, index: number): ReadonlyArray<Drawn> =>
+  Array.from({ length: 1 + draw(12) }, (_, at) => {
+    const kind = pick<Kind>(draw, ['source', 'source', 'outside', 'gone', 'ignored']);
+    const { path, drawnAs } = pathOf(draw, kind, `f${index}x${at}`);
+    const blank = draw(3);
+    return {
+      path,
+      kind,
+      drawnAs,
+      body: pick<Body>(draw, ['clean', 'fault', 'aside']),
+      name: `ghost${index}x${at}`,
+      line: blank + 1,
+    };
+  });
+
+/** A read over `contents` that logs each file it is asked for in `asked`. */
+const reader = (contents: ReadonlyMap<string, string>, asked: Array<string>) => (file: string) => {
+  asked.push(file);
+  return Option.fromUndefinedOr(contents.get(file));
+};
+
+/** A read of `folder`'s files from disk: none for a file gone from it. */
+const fromDisk = (folder: string) => (file: string) =>
+  Option.map(Option.liftPredicate(join(folder, file), existsSync), (path) =>
+    readFileSync(path, 'utf8'),
+  );
+
+/** Runs git in `folder`, its output dropped, and answers its exit code. */
+const git = (folder: string, args: ReadonlyArray<string>) =>
+  /* oxlint-disable-next-line effect/noGlobals -- the test builds a scratch repository with git, synchronously, before it lists it. */
+  Bun.spawnSync(['git', ...args], { cwd: folder, stdout: 'pipe', stderr: 'pipe' }).exitCode;
+
+/** The files of `files` git ignores in `folder`, by `git check-ignore`. */
+const ignoredOf = (folder: string, files: ReadonlyArray<string>) =>
+  /* oxlint-disable-next-line effect/noGlobals -- the test asks git which listed files it ignores, synchronously. */
+  Bun.spawnSync(['git', 'check-ignore', '--stdin', '-z'], {
+    cwd: folder,
+    stdin: Buffer.from(files.join('\0')),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+    .stdout.toString()
+    .split('\0')
+    .filter(Boolean);
+
 describe('the doc comments name only props the root takes', () => {
   it('over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare', () => {
     const draw = random(0x5eed);
@@ -258,15 +299,128 @@ describe('the doc comments name only props the root takes', () => {
     expect(rootProps('function Home() {}')).toEqual([]);
   });
 
+  it('reads each doc comment by the line it starts on, its prose as one line', () => {
+    expect(docComments('const a = 1;\n\n/**\n * The root\n * renders.\n */\n/* not */')).toEqual([
+      { line: 3, prose: 'The root renders. ' },
+    ]);
+  });
+
   it('every doc comment under src and app names only props Root declares, each fault by file:line and name', () => {
+    const { code, files } = listing(APP);
+    expect(code).toBe(0);
+    expect(files).toContain('app/index.tsx');
+    expect(ignoredOf(APP, files)).toEqual([]);
+    expect(sources(files).length).toBeGreaterThan(300);
     const index = readFileSync(join(APP, 'app/index.tsx'), 'utf8');
     expect(index).toMatch(DECLARATION);
-    const declared = rootProps(index);
-    const faults = [...sourcesUnder('src'), ...sourcesUnder('app')].flatMap((file) =>
-      docComments(readFileSync(join(APP, file), 'utf8')).flatMap(({ line, prose }) =>
-        rootPropFaults(prose, declared).map((name) => `${file}:${line} \`${name}\``),
-      ),
-    );
-    expect(faults).toEqual([]);
+    expect(faultsIn(files, fromDisk(APP), rootProps(index))).toEqual([]);
   });
+});
+
+describe('the files root-props reads', () => {
+  it('over 240 generated worlds, reads each listed source once, in order, and nothing else, and faults exactly theirs', () => {
+    const draw = random(0x11_57);
+    const seen = new Map<string, number>();
+    const count = (key: string) => seen.set(key, (seen.get(key) ?? 0) + 1);
+    const got: Array<unknown> = [];
+    const want: Array<unknown> = [];
+    for (let run = 0; run < 240; run += 1) {
+      const files = world(draw, run);
+      files.forEach(({ drawnAs, body, kind }) => {
+        count(drawnAs);
+        count(`${kind} ${body}`);
+      });
+      const listed = files.filter(({ kind }) => kind !== 'ignored');
+      const contents = new Map(
+        files
+          .filter(({ kind }) => kind !== 'gone')
+          .map((each) => [each.path, textOf(each.body, each.name, each.line - 1)]),
+      );
+      const declared = files
+        .filter(({ body }) => body === 'fault' && draw(4) === 0)
+        .map(({ name }) => name);
+      const faultOf = ({ path, name, line }: Drawn) => `${path}:${line} \`${name}\``;
+      const wantFaults = listed
+        .filter(
+          ({ kind, body, name }) =>
+            kind === 'source' && body === 'fault' && !declared.includes(name),
+        )
+        .map(faultOf);
+      const asked: Array<string> = [];
+      const paths = listed.map(({ path }) => path);
+      got.push({ run, asked, faults: faultsIn(paths, reader(contents, asked), declared) });
+      want.push({
+        run,
+        asked: listed
+          .filter(({ kind }) => kind === 'source' || kind === 'gone')
+          .map(({ path }) => path),
+        faults: wantFaults,
+      });
+      for (const ignored of files.filter(({ kind }) => kind === 'ignored').slice(0, 1)) {
+        count('ignored turned');
+        const turned = { ...ignored, body: 'fault' as const, name: `${ignored.name}turned` };
+        contents.set(turned.path, textOf('fault', turned.name, turned.line - 1));
+        got.push({
+          run,
+          unlisted: faultsIn(paths, reader(contents, []), declared),
+          listed: faultsIn([...paths, turned.path], reader(contents, []), declared),
+        });
+        want.push({ run, unlisted: wantFaults, listed: [...wantFaults, faultOf(turned)] });
+      }
+    }
+    expect(got).toEqual(want);
+    const floors = [
+      ...['source', 'gone', 'ignored'].flatMap((kind) =>
+        SOURCE_ENDINGS.flatMap((ending) =>
+          [0, 1, 2].map((depth) => `${kind} ${ending} depth ${depth}`),
+        ),
+      ),
+      'outside ending',
+      'outside top',
+      'outside root',
+      ...['source', 'outside', 'gone', 'ignored'].flatMap((kind) =>
+        ['clean', 'fault', 'aside'].map((body) => `${kind} ${body}`),
+      ),
+      'ignored turned',
+    ];
+    expect(floors.filter((key) => (seen.get(key) ?? 0) < 10)).toEqual([]);
+  });
+
+  effectIt.effect(
+    "reads git's listing of a scratch repository: its tracked and untracked sources, never an ignored one or one gone from disk",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const folder = yield* fs.makeTempDirectoryScoped({ prefix: 'root-props-' });
+        const write = (file: string, name: string) =>
+          Effect.andThen(
+            fs.makeDirectory(dirname(join(folder, file)), { recursive: true }),
+            fs.writeFileString(
+              join(folder, file),
+              `/** The root renders without \`${name}\`. */\nexport {};\n`,
+            ),
+          );
+        expect(git(folder, ['init', '-q'])).toBe(0);
+        yield* fs.writeFileString(join(folder, '.gitignore'), 'app/routes.d.ts\n.cache/\n');
+        yield* write('app/index.tsx', 'tracked');
+        yield* write('src/gone.tsx', 'gone');
+        expect(git(folder, ['add', 'app/index.tsx', 'src/gone.tsx'])).toBe(0);
+        yield* fs.remove(join(folder, 'src/gone.tsx'));
+        yield* write('src/home/untracked.ts', 'untracked');
+        yield* write('app/routes.d.ts', 'routes');
+        yield* write('src/.cache/generated.ts', 'generated');
+        const { code, files } = listing(folder);
+        expect(code).toBe(0);
+        expect(files.toSorted()).toEqual([
+          '.gitignore',
+          'app/index.tsx',
+          'src/gone.tsx',
+          'src/home/untracked.ts',
+        ]);
+        expect(faultsIn(files, fromDisk(folder), []).toSorted()).toEqual([
+          'app/index.tsx:1 `tracked`',
+          'src/home/untracked.ts:1 `untracked`',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
 });

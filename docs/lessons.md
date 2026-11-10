@@ -5460,3 +5460,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `src/chooser/fixed.test.tsx` ran on the host's clock, so from 04:00 UTC the plan offered a new piece after the promise and chooser-leave failed, while the commits checked between 00:00 and 03:59 UTC were reported green.
 - **Cause:** A rig given no instant read the host's (`Date.now()`, `new Date()`, a runtime with no clock), so what a case saw hung on the hour it ran at, and no check refused such a read.
 - **Guard:** code: `apps/heartseed/scripts/clock-reads.test.ts` `reads every listed file of the package in it, and none of them holds a fault`; code: `apps/heartseed/src/clock.test.ts` `counts each ask of a held clock once, a clock made before the count began too, and starts again after it is read`
+
+### heartseed-root-props-reads-only-what-git-lists
+
+- **Date:** 2026-11-09
+- **Kind:** retraction
+- **Said:** "heartseed `test:infra` reads `app/routes.d.ts` (One's generated, ignored file) without hashing it, so any workspace that ran the dev server fails `test:reads`"
+- **Source:** tmp/orchestrate/hymnapp/guards-backlog.md line 52 (hsnatural rebase-2)
+- **Wrong:** `root-props.test.ts` walked `src` and `app` on disk, so in a workspace that had run the dev server it read One's ignored `app/routes.d.ts`, a file `test:infra` does not hash, and `test:reads` failed there.
+- **Cause:** The scan read the folders as the disk holds them, not the files git lists, which are the set the task's inputs hash.
+- **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 240 generated worlds, reads each listed source once, in order, and nothing else, and faults exactly theirs`; code: `apps/heartseed/scripts/root-props.test.ts` `reads git's listing of a scratch repository: its tracked and untracked sources, never an ignored one or one gone from disk`
