@@ -942,6 +942,13 @@ export const playerOn = (
             Effect.catchTag('PlaybackError', (error) =>
               Effect.logWarning('player.status.failed').pipe(
                 Effect.annotateLogs({ message: error.message }),
+                Effect.andThen(
+                  Effect.suspend(() => {
+                    if (Option.isNone(transaction)) return Effect.void;
+                    revoke(get.registry);
+                    return cut;
+                  }),
+                ),
                 Effect.andThen(show(failed(track))),
                 Effect.as(false),
               ),

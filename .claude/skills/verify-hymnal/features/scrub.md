@@ -34,6 +34,8 @@ No journey: a by-hand numeric recipe, with no video, screenshots or retained raw
 
 ## Gotchas
 
+- A current refused status observation closes an owned hold, cancels its pending work and leaves the player Failed; late Select/Release/Cancel cannot restart it. Older cancelled observations cannot close a newer hold. Executable status-completion histories cover failures, delayed answers and replacement races in every owned phase on both Sound paths; this live recipe does not inject device failures.
+
 - On base or production `sim open probe/scrub --expect id=scrub-begin` is TargetMissing; a broken base reader is infrastructure-blocked, not feature-red.
 - Controls may require `sim scroll screen down` or `sim scroll screen up`; read status independently of control visibility. Restart Play per trace so the short score has not ended.
 - The counter observes seeks across the normal score-clock boundary: compare deltas per trace. Refused device retries remain one logical player act (covered by controlled tests).

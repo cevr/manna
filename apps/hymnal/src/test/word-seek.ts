@@ -61,6 +61,7 @@ export const openWordSeek = (audible = true) =>
     const soundRef = yield* SubscriptionRef.make(audible);
     const remote = yield* Queue.unbounded<Remote>();
     const calls = yield* Queue.unbounded<string>();
+    const statusCalls = yield* Queue.unbounded<boolean>();
     const trace: Array<{ kind: string; ms: number }> = [];
     const gates = new Map<string, Deferred.Deferred<Status, PlaybackError>>();
     let run = { state: 'idle' as Status['state'], at: 0, since: 0, rate: 1 };
@@ -129,6 +130,8 @@ export const openWordSeek = (audible = true) =>
       (_number, choice) => keptOf(seekText.sections, choice),
     );
     const commands: Array<{ kind: string; ms: number }> = [];
+    const boundaries = new Map<string, Deferred.Deferred<Status, PlaybackError>>();
+    const cancelled: Array<string> = [];
     const commandCalls = yield* Queue.unbounded<string>();
     const observed = Layer.effect(Playback)(
       Effect.gen(function* () {
@@ -137,11 +140,27 @@ export const openWordSeek = (audible = true) =>
           Effect.sync(() => {
             commands.push({ kind, ms });
           }).pipe(Effect.andThen(Queue.offer(commandCalls, kind)));
+        const answerAt = (kind: string, operation: Effect.Effect<Status, PlaybackError>) =>
+          Effect.gen(function* () {
+            const status = yield* operation;
+            const answer = Option.fromUndefinedOr(boundaries.get(kind));
+            if (Option.isNone(answer)) return status;
+            yield* Queue.offer(calls, `boundary:${kind}`);
+            return yield* Deferred.await(answer.value).pipe(
+              Effect.onInterrupt(() => Effect.sync(() => cancelled.push(kind))),
+            );
+          });
         return Playback.of({
           ...device,
-          pause: record('pause').pipe(Effect.andThen(device.pause)),
-          resume: record('resume').pipe(Effect.andThen(device.resume)),
-          seek: (ms) => record('seek', ms).pipe(Effect.andThen(device.seek(ms))),
+          status: Effect.gen(function* () {
+            const forced = Option.fromUndefinedOr(gates.get('status'));
+            if (Option.isNone(forced)) return yield* device.status;
+            yield* Queue.offer(statusCalls, true);
+            return yield* Deferred.await(forced.value);
+          }),
+          pause: record('pause').pipe(Effect.andThen(answerAt('pause', device.pause))),
+          resume: record('resume').pipe(Effect.andThen(answerAt('resume', device.resume))),
+          seek: (ms) => record('seek', ms).pipe(Effect.andThen(answerAt('seek', device.seek(ms)))),
         });
       }),
     ).pipe(Layer.provide(layer));
@@ -178,6 +197,9 @@ export const openWordSeek = (audible = true) =>
       registry,
       trace,
       commands,
+      boundaries,
+      cancelled,
+      waitStatus: Queue.take(statusCalls),
       waitCommand: (kind: string) =>
         Stream.fromQueue(commandCalls).pipe(
           Stream.filter((value) => value === kind),

@@ -7,7 +7,7 @@ import { openWordSeek } from '../test/word-seek';
 import ScrubProbe from '../../app/(hymnal)/probe/scrub';
 import { WordSeekProbe } from './WordSeekProbe';
 import { Command, PlaybackError, Player, Remote, type Status } from './player';
-import { HoldCommand, type HoldToken } from './word-seek';
+import { HoldCommand, type HoldState, type HoldToken } from './word-seek';
 
 it.effect(
   'the default probe route is empty outside development and the silent fixture exposes its numeric controls',
@@ -235,6 +235,222 @@ it.effect('no-op and other-hymn settings do not revoke a valid hold or invalid r
 );
 
 const start = { number: 1, title: 'Fixture' };
+
+it.effect('a refused status read cannot leave a live token on a Failed player', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek();
+    yield* app.play;
+    app.hold(HoldCommand.Begin({ targets: app.targets }));
+    const held = yield* app.untilHold('Held');
+    if (held._tag !== 'Held') return yield* Effect.die('missing Held');
+    const failure = yield* Deferred.make<Status, PlaybackError>();
+    app.gates.set('status', failure);
+    yield* TestClock.adjust(250);
+    yield* app.waitStatus;
+    yield* Deferred.fail(failure, PlaybackError.make({ operation: 'status', message: 'fixture' }));
+    yield* app.untilPlayer(Player.$is('Failed'));
+    const before = app.registry.get(app.player.hold.state)._tag;
+    app.hold(HoldCommand.Release({ token: held.token }));
+    const after = app.registry.get(app.player.hold.state)._tag;
+    expect({ before, after }).toEqual({ before: 'Free', after: 'Free' });
+  }).pipe(Effect.scoped),
+);
+
+const statusPhases = ['Acquiring', 'Held', 'Landing', 'Resuming'] as const;
+type StatusPhase = (typeof statusPhases)[number];
+const statusOutcomes = [
+  'idle',
+  'loading',
+  'playing',
+  'paused',
+  'ended',
+  'failed',
+  'error',
+] as const;
+type StatusOutcome = (typeof statusOutcomes)[number];
+const statusPlacements = ['current', 'same-start', 'other-start', 'new-token'] as const;
+type StatusPlacement = (typeof statusPlacements)[number];
+type SeekApp = Effect.Success<ReturnType<typeof openWordSeek>>;
+
+const statusPhaseTag = (phase: StatusPhase) => {
+  if (phase === 'Resuming') return 'Landing';
+  return phase;
+};
+const holdTrace = (phase: StatusPhase) => {
+  if (phase === 'Landing') return ['pause', 'seek'];
+  if (phase === 'Resuming') return ['pause', 'resume'];
+  return ['pause'];
+};
+
+const enterStatusPhase = Effect.fn('Test.enterStatusPhase')(function* (
+  app: SeekApp,
+  phase: StatusPhase,
+) {
+  const answer = yield* Deferred.make<Status, PlaybackError>();
+  const operation = yield* Deferred.make<Status, PlaybackError>();
+  if (phase === 'Acquiring') {
+    app.gates.set('status', answer);
+    yield* TestClock.adjust(250);
+    yield* app.waitStatus;
+    app.boundaries.set('pause', operation);
+  }
+  app.hold(HoldCommand.Begin({ targets: app.targets }));
+  let acquired: 'Acquiring' | 'Held' = 'Held';
+  if (phase === 'Acquiring') acquired = 'Acquiring';
+  expect(app.registry.get(app.player.hold.state)._tag).toBe(acquired);
+  const hold = yield* app.untilHold(acquired);
+  if (hold._tag === 'Free') return yield* Effect.die('missing owned hold');
+  if (phase === 'Acquiring') yield* app.waitCall('boundary:pause');
+  app.hold(HoldCommand.Select({ token: hold.token, line: 2, word: Option.some(0) }));
+  expect(app.commands.map(({ kind }) => kind)).toEqual(['pause']);
+  if (phase !== 'Acquiring') app.gates.set('status', answer);
+  if (phase === 'Held' || phase === 'Resuming') {
+    yield* TestClock.adjust(250);
+    yield* app.waitStatus;
+  }
+  if (phase === 'Landing') {
+    app.boundaries.set('seek', operation);
+    app.hold(HoldCommand.Release({ token: hold.token }));
+    expect(app.registry.get(app.player.hold.state)._tag).toBe('Landing');
+    yield* app.waitCall('boundary:seek');
+    yield* app.waitStatus;
+  }
+  if (phase === 'Resuming') {
+    app.boundaries.set('resume', operation);
+    app.hold(HoldCommand.Cancel({ token: hold.token }));
+    expect(app.registry.get(app.player.hold.state)._tag).toBe('Landing');
+    yield* app.waitCall('boundary:resume');
+  }
+  expect(app.registry.get(app.player.hold.state)._tag).toBe(statusPhaseTag(phase));
+  expect(app.commands.map(({ kind }) => kind)).toEqual(holdTrace(phase));
+  return { hold, answer, operation };
+});
+
+const replaceStatusOwner = Effect.fn('Test.replaceStatusOwner')(function* (
+  app: SeekApp,
+  placement: StatusPlacement,
+) {
+  app.gates.delete('status');
+  app.boundaries.clear();
+  let number = 1;
+  if (placement === 'other-start') number = 2;
+  app.send(Command.Start({ track: { number, title: 'Fixture' } }));
+  expect(app.registry.get(app.player.hold.state)._tag).toBe('Free');
+  yield* TestClock.adjust(250);
+  const playing = yield* app.untilPlayer(Player.$is('Playing'));
+  expect(Player.$is('Playing')(playing) && playing.track.number).toBe(number);
+  if (placement === 'new-token') {
+    app.hold(HoldCommand.Begin({ targets: app.targets }));
+    yield* app.untilHold('Held');
+  }
+});
+
+const statusResult = (outcome: StatusOutcome): Player['_tag'] => {
+  if (outcome === 'idle') return 'Idle';
+  if (outcome === 'ended') return 'Ended';
+  if (outcome === 'failed' || outcome === 'error') return 'Failed';
+  return 'Paused';
+};
+
+const completeStatus = (
+  answer: Deferred.Deferred<Status, PlaybackError>,
+  outcome: StatusOutcome,
+  positionMs: number,
+) => {
+  if (outcome === 'error')
+    return Deferred.fail(answer, PlaybackError.make({ operation: 'status', message: 'fixture' }));
+  return Deferred.succeed(answer, { state: outcome, positionMs, durationMs: 21_000 });
+};
+
+const statusHistory = Effect.fn('Test.statusHistory')(function* (
+  phase: StatusPhase,
+  outcome: StatusOutcome,
+  placement: StatusPlacement,
+  delayed: boolean,
+  audible: boolean,
+) {
+  const app = yield* openWordSeek(audible);
+  yield* app.play;
+  const { hold, answer, operation } = yield* enterStatusPhase(app, phase);
+  if (delayed) {
+    yield* TestClock.adjust(1000);
+    expect(app.registry.get(app.player.hold.state)._tag).toBe(statusPhaseTag(phase));
+    expect(app.commands.map(({ kind }) => kind)).toEqual(holdTrace(phase));
+  }
+  if (placement !== 'current') yield* replaceStatusOwner(app, placement);
+  const before = app.registry.get(app.player.hold.state);
+  const commands = [...app.commands];
+  let positionMs = 11_100;
+  if ('origin' in hold) positionMs = hold.origin;
+  if (phase === 'Landing') positionMs = 11_100;
+  yield* completeStatus(answer, outcome, positionMs);
+  yield* TestClock.adjust(250);
+  const terminal =
+    outcome === 'idle' || outcome === 'ended' || outcome === 'failed' || outcome === 'error';
+  const watched = phase === 'Held' || phase === 'Landing';
+  const revoked = placement === 'current' && watched && terminal;
+  if (placement === 'current' && watched) {
+    expect(app.registry.get(app.player.state)._tag).toBe(statusResult(outcome));
+    let expected: HoldState['_tag'] = statusPhaseTag(phase);
+    if (revoked) expected = 'Free';
+    expect(app.registry.get(app.player.hold.state)._tag).toBe(expected);
+    if (revoked && phase === 'Landing') expect(app.cancelled.includes('seek')).toBe(true);
+  } else expect(app.registry.get(app.player.hold.state)).toEqual(before);
+  expect(app.commands).toEqual(commands);
+  if (placement === 'current' && !revoked) {
+    app.hold(HoldCommand.Invalidate({ reason: 'timeline' }));
+    expect(app.registry.get(app.player.hold.state)._tag).toBe('Free');
+  }
+  const kept = app.registry.get(app.player.hold.state);
+  app.hold(HoldCommand.Select({ token: hold.token, line: 1, word: Option.none() }));
+  expect(app.registry.get(app.player.hold.state)).toEqual(kept);
+  app.hold(HoldCommand.Release({ token: hold.token }));
+  expect(app.registry.get(app.player.hold.state)).toEqual(kept);
+  app.hold(HoldCommand.Cancel({ token: hold.token }));
+  expect(app.registry.get(app.player.hold.state)).toEqual(kept);
+  app.gates.delete('status');
+  yield* Deferred.succeed(operation, { state: 'paused', positionMs: 11_100, durationMs: 21_000 });
+  yield* TestClock.adjust(250);
+  expect(app.registry.get(app.player.hold.state)).toEqual(kept);
+  expect(app.commands).toEqual(commands);
+  if (placement !== 'current') {
+    const state = app.registry.get(app.player.state);
+    let number = 1;
+    if (placement === 'other-start') number = 2;
+    expect(state._tag !== 'Idle' && state.track.number).toBe(number);
+  }
+}, Effect.scoped);
+
+for (const phase of statusPhases)
+  for (const outcome of statusOutcomes)
+    for (const placement of statusPlacements)
+      for (const delayed of [false, true])
+        for (const audible of [false, true])
+          it.effect(
+            `status history ${phase}/${outcome}/${placement}/delayed=${delayed}/sound=${audible}`,
+            () => statusHistory(phase, outcome, placement, delayed, audible),
+          );
+
+for (let seed = 0; seed < 128; seed++)
+  it.effect(`status completion reference history seed ${seed} x16`, () =>
+    Effect.gen(function* () {
+      const cells = new Set<string>();
+      for (let step = 0; step < 16; step++) {
+        const phase = Option.getOrThrow(
+          Option.fromUndefinedOr(statusPhases[(seed + step) % statusPhases.length]),
+        );
+        const outcome = Option.getOrThrow(
+          Option.fromUndefinedOr(statusOutcomes[(seed * 5 + step) % statusOutcomes.length]),
+        );
+        const placement = Option.getOrThrow(
+          Option.fromUndefinedOr(statusPlacements[(seed + step * 3) % statusPlacements.length]),
+        );
+        cells.add(`${phase}/${outcome}/${placement}`);
+        yield* statusHistory(phase, outcome, placement, step % 2 === 0, seed % 2 === 0);
+      }
+      expect(cells.size).toBe(16);
+    }),
+  );
 
 for (const command of [
   Command.Pause(),
