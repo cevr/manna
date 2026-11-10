@@ -5,9 +5,10 @@
  * through the stage rig (`src/test/stage-rig.tsx`): Today in happy-dom
  * under the app's own layer over the scripted recital, the app's real
  * store on the device and a recording chime. For the whole session when
- * the garden's read failed, no frame names a stage, a plant, planting or
- * growth, and another verse's plant never shows as the passage's. It counts
- * words without printing one.
+ * every listing failed, no frame names a stage, a plant, planting or
+ * growth, and another verse's plant never shows as the passage's. An open
+ * that fails every attempt is `today-reads-b.test.tsx`'s, a part of its
+ * own. It counts words without printing one.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -59,23 +60,6 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
     await next.leave();
   });
 
-  it('claims nothing for the session when the open fails every attempt, and a recital with the device down keeps nothing', async () => {
-    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]).fail('open', 16);
-    const chimes: Growth[] = [];
-    const today = await mount(chimes, undefined, undefined, 'unread');
-    expect(await today.until(() => device.calls.open === 14)).toBe(true);
-    await today.say('Say it');
-    await today.until(() => false, 20);
-    expect([
-      today.stage(),
-      today.plant(),
-      today.frames.claimed,
-      chimes,
-      passageKeys().length,
-    ]).toEqual([null, null, 0, [], 1]);
-    await today.leave();
-  });
-
   it('reads the passage’s own plant, never another verse’s: with another verse at full corn on the disk, the passage is not planted, then a seed, then grows to a blade and an ear at each due', async () => {
     const theirs = fullCorn(OTHER);
     device.launch(theirs);
@@ -108,7 +92,7 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
     await today.leave();
   });
 
-  it('draws no part of a plant, with or without a test id or label, in any frame of the failed launches above, though the seed, the blade and the ear drew their parts once read', () => {
+  it('draws no part of a plant, with or without a test id or label, in any frame of the failed launch above, though the seed, the blade and the ear drew their parts once read', () => {
     const stages = new Set([...PLANT_LOOKS.values()].flatMap((each) => [...each]));
     expect([...stages].toSorted()).toEqual(['Stage: blade', 'Stage: ear', 'Stage: seed']);
     expect(PLANT_LOOKS.size).toBeGreaterThanOrEqual(5);

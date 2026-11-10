@@ -2029,9 +2029,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     prototype's colours, full corn after a held launch, and no claim in
     any frame of a held launch), through `src/test/stage-rig.tsx`.
   - `test:today-reads`: `src/garden/today-reads.test.tsx`, the same stage
-    over failed reads (every listing, every open: no claim in any frame
-    of the session, and the recital kept or not) and over another verse's
-    plant at full corn, which never shows as the passage's.
+    over a failed read (every listing: no claim in any frame of the
+    session, and the recital kept) and over another verse's plant at full
+    corn, which never shows as the passage's.
+  - `test:today-reads-b`: `src/garden/today-reads-b.test.tsx`, the same
+    stage over an open failing every attempt (no claim in any frame, the
+    recital not kept), its frames held against the parts the passage's
+    own seed, blade and ear draw when read from the disk.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
