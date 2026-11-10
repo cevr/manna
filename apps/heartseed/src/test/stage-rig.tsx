@@ -34,7 +34,6 @@ import { expect } from 'bun:test';
 import { Effect, Layer, Logger } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Appearance } from 'react-native';
 import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
@@ -47,6 +46,7 @@ import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { DAY } from './garden-model';
+import { systemScheme } from './look';
 import { device } from './one';
 import { ownsImages, plantAssetsIn, plantFaults, STAGE_IMAGE } from './plant-image-rule';
 import { END, endShown, watchRoot } from './root-rule';
@@ -80,11 +80,8 @@ export const UNREAD_FRAMES = { seen: 0 };
 /** Each drawing fault of a frame (`plantFaults`), once, with its stage line or `unread`, over every mount of the test file's process: a stage line's frame owes its stage's one 28 pt image in the scheme now, any other frame but home's and the end's no plant image at all. */
 export const DRAWING_FAULTS = new Set<string>();
 
-/** The scheme the app draws in now: these launches store no appearance, so it is the system's. */
-const schemeNow = () => {
-  if (Appearance.getColorScheme() === 'dark') return 'dark';
-  return 'light';
-};
+/** The scheme the app draws in now: a stored Light or Dark over the system's, the system's under System (`systemScheme`). */
+const schemeNow = systemScheme;
 
 /** A recall of the passage at `startedAt`, recalled alone with Good. */
 export const recallAt = (startedAt: number, reference = passage.reference): Recall => ({
