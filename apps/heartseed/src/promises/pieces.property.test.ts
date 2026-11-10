@@ -179,7 +179,7 @@ const layerOf = (ids: readonly string[] | undefined, now: number) => {
     onNone: () => appLayer(parts),
     onSome: (promises) => appLayer({ ...parts, promises }),
   });
-  return layer.pipe(Layer.provide(Layer.merge(clockOf({ now }), Logger.layer([]))));
+  return layer.pipe(Layer.provideMerge(Layer.merge(clockOf({ now }), Logger.layer([]))));
 };
 
 /** The plan's items as `reference:fresh:recalls`. */

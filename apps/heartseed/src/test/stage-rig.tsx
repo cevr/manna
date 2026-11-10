@@ -44,7 +44,7 @@ import { Chime, type Growth } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
-import { clockOf, toDue, type Time } from './clock';
+import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { DAY } from './garden-model';
 import { systemScheme } from './look';
@@ -137,7 +137,7 @@ export const passageRecalls = () =>
 export const mount = async (
   chimes: Growth[],
   held?: Promise<void>,
-  time: Time = { now: null },
+  time: Time = { now: START },
   garden: 'read' | 'unread' = 'read',
 ) => {
   const layer = appLayer({
@@ -154,7 +154,7 @@ export const mount = async (
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voiceSource,
-  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const frames = { seen: 0, claimed: 0, end: 0 };

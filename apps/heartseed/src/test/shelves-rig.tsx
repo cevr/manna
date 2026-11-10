@@ -40,7 +40,7 @@ import { AddSheet } from '../shelves/sheet';
 import { store } from '../store';
 import type { Scheme } from '../theme';
 import { voiceSource } from '../voice/source';
-import { clockOf, type Time } from './clock';
+import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { scrolled } from './field-rig';
 import { shelvesModel } from './home-model';
@@ -382,7 +382,7 @@ export const mountShelves = async (
     voice: voiceSource,
     promises: options.promises ?? [],
   }).pipe(
-    Layer.provideMerge(Layer.merge(clockOf(options.time ?? { now: null }), Logger.layer([]))),
+    Layer.provideMerge(Layer.merge(clockOf(options.time ?? { now: START }), Logger.layer([]))),
   );
   const host = document.createElement('div');
   document.body.append(host);

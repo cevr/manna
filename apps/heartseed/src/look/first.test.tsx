@@ -28,7 +28,7 @@ import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { store } from '../store';
-import { clockOf } from '../test/clock';
+import { clockOf, START } from '../test/clock';
 import { deadline } from '../test/elapsed';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { device } from '../test/one';
@@ -75,7 +75,7 @@ const mount = async (scheme: Scheme, held: boolean) => {
     store,
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice,
-  }).pipe(Layer.provide(clockOf({ now: null })));
+  }).pipe(Layer.provideMerge(clockOf({ now: START })));
   const host = document.createElement('div');
   document.body.append(host);
   const look = watchLook(host, () => model.system);

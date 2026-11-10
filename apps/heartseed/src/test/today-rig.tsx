@@ -42,7 +42,7 @@ import { pendingAt } from '../sayit/draw';
 import { screenOf } from '../sayit/screen';
 import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
-import { clockOf, toDue, type Time } from './clock';
+import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
@@ -383,7 +383,7 @@ export const mount = async (
   source: Layer.Layer<DictationSource>,
   disk: Disk = NOT_PLANTED,
   rest: { readonly cue: Cue } = { cue: 'full' },
-  time: Time = { now: null },
+  time: Time = { now: START },
 ) => {
   for (const left of [...mounted]) await left();
   const ticks = { n: 0 };
@@ -396,7 +396,7 @@ export const mount = async (
     store: recordingStore(kept, disk, backing),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
-  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const garden = disk.unread ? 'unread' : 'read';

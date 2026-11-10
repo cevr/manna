@@ -173,7 +173,7 @@ class HomeWalk extends Walk {
         .filter((plant) => plant.reference === this.chosen)
         .map((plant) => plant.label),
       foot,
-      greeting: greetingModel(Intl.DateTimeFormat().resolvedOptions().timeZone, this.time.now ?? 0),
+      greeting: greetingModel(Intl.DateTimeFormat().resolvedOptions().timeZone, this.time.now),
       need: this.planned(),
     };
   }
@@ -363,7 +363,7 @@ class HomeWalk extends Walk {
    */
   async waitBegin(): Promise<unknown> {
     const wait = (1 + below(this.next, 30)) * HOUR + below(this.next, 60) * MINUTE;
-    this.time.now = (this.time.now ?? 0) + wait;
+    this.time.now += wait;
     this.trail.push(`wait:${wait / MINUTE}`);
     if (this.visit.length === 0 && this.hold === null && this.differsMadeNow())
       this.bump('home:wait-begin');

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noNullish, effect/noNewPromise, effect/noFixedWaitInTests -- React's promise-based act mounts the real root in happy-dom; the device's recall fixtures use the host clock; DOM absence is null; one 40 ms frame lets Reanimated write its entering styles, not finish its delays. */
+/* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noNullish, effect/noNewPromise, effect/noFixedWaitInTests -- React's promise-based act mounts the real root in happy-dom; the device's recall fixtures use its test-owned instant; DOM absence is null; one 40 ms frame lets Reanimated write its entering styles, not finish its delays. */
 
 import { describe, expect, it } from 'bun:test';
 import { MutableRef } from 'effect';
@@ -7,6 +7,7 @@ import passage from 'virtual:heartseed-passage';
 
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
+import { START } from '../test/clock';
 import { historyOf, recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
 import { DAY } from '../test/garden-model';
@@ -25,11 +26,11 @@ const by = (top: Element, id: string) => [...top.querySelectorAll(`[data-testid=
 
 /** A full-corn own verse, two held seeds and eighteen bare places, read from the device's store. */
 const launchField = () => {
-  const today = Math.floor(Date.now() / DAY);
+  const today = Math.floor(START / DAY);
   const disk = new Map<string, string | null>([
     ...historyOf(() => 0.1, passage.reference, today - 400).map(record),
-    record(recallOf(heldVerse(2), Date.now() - DAY, 3, 0)),
-    record(recallOf(heldVerse(20), Date.now() - DAY, 3, 0)),
+    record(recallOf(heldVerse(2), START - DAY, 3, 0)),
+    record(recallOf(heldVerse(20), START - DAY, 3, 0)),
   ]);
   disk.set(KEY, storedText([HELD]));
   device.launch(disk);

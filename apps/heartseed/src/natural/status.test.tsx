@@ -19,6 +19,7 @@
 
 import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
+import { START } from '../test/clock';
 import { Deferred, Effect, Exit, Layer } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act } from 'react';
@@ -55,7 +56,7 @@ const LINES = {
 
 const recall: Recall = {
   reference: 'Made 1:1',
-  startedAt: Date.now() - 3 * DAY,
+  startedAt: START - 3 * DAY,
   offset: 0,
   grade: 3,
   suggested: 3,

@@ -240,7 +240,7 @@ interface Walk {
   app: Launch;
   faults: Faults;
   readonly device: Device;
-  readonly time: { now: number | null };
+  readonly time: { now: number };
   readonly plants: ReadonlyMap<string, readonly Recall[]>;
   readonly pieces: readonly ModelPiece[];
   readonly m: Model;
@@ -255,7 +255,7 @@ const cover = (walk: Walk, name: string) =>
 
 /** The plan the model makes now, at the clock's instant, over `minutes` (the model's own by default). */
 const planNow = (walk: Walk, minutes: Minutes = walk.m.minutes) => {
-  const at = walk.time.now ?? AT;
+  const at = walk.time.now;
   return planModel({
     plants: walk.plants,
     pieces: walk.pieces,
@@ -558,7 +558,7 @@ const relaunchCommand = async (walk: Walk) => {
   const shown = JSON.stringify([m.minutes, m.voice, m.look]);
   const refused = m.refused;
   await walk.app.leave();
-  walk.time.now = (walk.time.now ?? AT) + DAY;
+  walk.time.now += DAY;
   await launchOver(walk, null);
   if (refused && JSON.stringify([m.minutes, m.voice, m.look]) !== shown)
     cover(walk, 'relaunch:refused-forgotten');

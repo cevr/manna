@@ -35,7 +35,7 @@ import { Chime } from '../garden';
 import { versesOf } from '../kjv';
 import { TAUGHT } from '../promises';
 import { Haptics } from '../sayit';
-import { clockAt } from '../test/clock';
+import { clockOf } from '../test/clock';
 import { below, random } from '../test/garden-model';
 import { gestureOf, type PanConfig } from '../test/gesture';
 import { computed } from '../test/look';
@@ -295,14 +295,7 @@ it('lights the words through Today and seeks under a held finger, every step aga
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: source.layer,
     promises: TAUGHT,
-  }).pipe(
-    Layer.provideMerge(
-      Layer.merge(
-        clockAt(() => NOW),
-        Logger.layer([]),
-      ),
-    ),
-  );
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf({ now: NOW }), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);

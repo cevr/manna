@@ -15,6 +15,7 @@ import { Clock, Context, Effect, Layer, Logger, References, Scope } from 'effect
 import { readVerses } from '../../vite/passage';
 import { layer, Passages } from '../passages';
 import { store } from '../store';
+import { clockOf, START } from './clock';
 import { below } from './garden-model';
 import { corpusOf, type Span, storedText, versesIn } from './passages-model';
 
@@ -135,22 +136,14 @@ export const storedOf = (
   return [`stored ${list.length}`, storedText(list)];
 };
 
-/** Effect's clock with the host's instants and sleeps that end at once. */
+/** Effect's clock at the tests' default instant with sleeps that end at once. */
 export const instantSleeps = Layer.effect(
   Clock.Clock,
-  Effect.map(
-    Clock.clockWith((clock) => Effect.succeed(clock)),
-    (real): Clock.Clock => ({
-      currentTimeMillisUnsafe: () => real.currentTimeMillisUnsafe(),
-      currentTimeMillis: real.currentTimeMillis,
-      currentTimeNanosUnsafe: () => real.currentTimeNanosUnsafe(),
-      currentTimeNanos: real.currentTimeNanos,
-      monotonicTimeNanosUnsafe: () => real.monotonicTimeNanosUnsafe(),
-      monotonicTimeNanos: real.monotonicTimeNanos,
-      sleep: () => Effect.void,
-    }),
-  ),
-);
+  Effect.map(Clock.Clock, (clock): Clock.Clock => ({
+    ...clock,
+    sleep: () => Effect.void,
+  })),
+).pipe(Layer.provide(clockOf({ now: START })));
 
 /** A logger that keeps each line in `logs`, its message and its annotations as text, and prints nothing. */
 export const keptLogs = (logs: string[]) =>

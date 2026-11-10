@@ -31,6 +31,7 @@ import passage from 'virtual:heartseed-passage';
 
 import { fieldWant, notRemoved, QUIET, type Asking } from './choose-model';
 import { bookName, TARGETS } from './chooser-rig';
+import { START } from './clock';
 import { record } from './field-rig';
 import { heldOn, recallOf } from './field-model';
 import { below, DAY, random } from './garden-model';
@@ -97,7 +98,7 @@ const deviceOf = (next: () => number, seed: number, lean: Lean) => {
   const [kind, raw] = lean === 'bar' ? storedOf(next, seed) : listOf(next, seed);
   const reads =
     (lean === 'bar' ? [0, 1, 2, 3, 3] : [0, 0, 1, 2])[below(next, lean === 'bar' ? 5 : 4)] ?? 0;
-  const now = Date.now();
+  const now = START;
   const back = [0, 1, 2, 6][below(next, 4)] ?? 0;
   const recalls = [recallOf(PROMISE, now - back * DAY - 3_600_000, 3, 0)];
   if (below(next, 2) === 0) recalls.push(recallOf('Genesis 1:1', now - 2 * DAY, 3, 0));

@@ -299,7 +299,7 @@ const mounted = new Set<() => Promise<void>>();
 export const launch = async (
   device: Device,
   faults: Faults,
-  time: { now: number | null },
+  time: { now: number },
   seeded: readonly (readonly [Atom.Atom<unknown>, unknown, Atom.InitialValueOptions])[] = [],
 ) => {
   for (const left of [...mounted]) await left();
@@ -311,7 +311,7 @@ export const launch = async (
     store: storeOf(device, faults, gate.promise),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: silentVoice,
-  }).pipe(Layer.provide(clockOf(time)));
+  }).pipe(Layer.provideMerge(clockOf(time)));
   const host = document.createElement('div');
   document.body.append(host);
   const found: string[] = [];

@@ -18,7 +18,7 @@
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
-import { toDue, type Time } from '../test/clock';
+import { START, toDue, type Time } from '../test/clock';
 import { recallKeys, screenLaunch as mount, SWITCH } from '../test/first-rig';
 import { device } from '../test/one';
 import { sourceWords } from '../matcher/words';
@@ -82,7 +82,7 @@ describe('the first minute', () => {
     expect(first.frames).toMatchObject({ pendingOffers: 0, claims: 0, many: 0 });
     await first.leave();
 
-    const time: Time = { now: null };
+    const time: Time = { now: START };
     toDue(time, [kept]);
     device.launch();
     const next = await mount(undefined, undefined, time);

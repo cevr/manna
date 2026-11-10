@@ -44,7 +44,7 @@ import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
 import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
-import { clockOf, toDue, type Time } from './clock';
+import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, lookFaults, systemScheme } from './look';
@@ -422,7 +422,7 @@ export const homeFaults = (host: Element): string[] => {
 export const mount = async (
   read: boolean,
   held: Promise<void> = Promise.resolve(),
-  time: Time = { now: null },
+  time: Time = { now: START },
 ) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 3 })),

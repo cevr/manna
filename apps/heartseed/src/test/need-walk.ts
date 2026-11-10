@@ -271,8 +271,8 @@ export class Walk {
     this.plan = planModel({
       plants,
       pieces: expandRule(pieces, plants),
-      at: this.time.now ?? 0,
-      offset: hostOffset(this.time.now ?? 0),
+      at: this.time.now,
+      offset: hostOffset(this.time.now),
       minutes: this.minutes,
     }).items;
   }
@@ -537,7 +537,7 @@ export class Walk {
       return null;
     }
     this.trail.push(`say:${shown.reference}`);
-    this.time.now = (this.time.now ?? 0) + MINUTE;
+    this.time.now += MINUTE;
     const before = this.recallsNow(shown.reference);
     const visiting = this.planned() && this.fromVisit(shown);
     this.said.add(shown.reference);
@@ -641,7 +641,7 @@ export class Walk {
   }
 
   async relaunch() {
-    const now = this.time.now ?? 0;
+    const now = this.time.now;
     const morning = new Date(now);
     morning.setDate(morning.getDate() + 1);
     morning.setHours(4, 1 + below(this.next, 59), 0, 0);

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary, effect/noGlobals -- a generated walk through the field with Handbook lists planted: it drives the root one awaited tap at a time, names faults and stored texts by their JSON, dates recalls by the host's clock, and reads the model's undefined as none. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary, effect/noGlobals -- a generated walk through the field with Handbook lists planted: it drives the root one awaited tap at a time, names faults and stored texts by their JSON, dates recalls by its test-owned instant, and reads the model's undefined as none. */
 
 /**
  * Generated readers' walks with Handbook lists: through the field with
@@ -40,6 +40,8 @@
  */
 
 import passage from 'virtual:heartseed-passage';
+
+import { START } from './clock';
 
 import { fieldWant, notRemoved, QUIET, type Asking, type FieldSeen } from './choose-model';
 import { record } from './field-rig';
@@ -100,7 +102,7 @@ const pick = <A>(next: () => number, from: readonly A[]): A => from[below(next, 
 
 /** A device from `next`: its stored passages and lists as texts, and the recalls on its disk. */
 const deviceOf = (next: () => number) => {
-  const now = Date.now();
+  const now = START;
   const recalls = [recallOf(PROMISE, now - DAY - 3_600_000, 3, 0)];
   const lists: ModelHandbookList[] = [];
   const count = 1 + below(next, 3);
@@ -379,7 +381,7 @@ type How = (typeof HOWS)[number];
 export const walkListShelf = async (seed: number, steps: number) => {
   const next = random(mixed(seed + 7_919));
   const drawn = shelfDeviceOf(next);
-  const at = Date.now() - DAY;
+  const at = START - DAY;
   const disk = new Map<string, string | null>();
   if (drawn.own) disk.set(...record(recallOf(PROMISE, at, 3, 0)));
   if (drawn.loose !== undefined) disk.set(...record(recallOf(drawn.loose, at, 3, 0)));

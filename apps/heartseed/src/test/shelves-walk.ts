@@ -23,6 +23,7 @@
 
 import passage from 'virtual:heartseed-passage';
 
+import { START } from './clock';
 import { record } from './field-rig';
 import { recallOf } from './field-model';
 import { below, DAY, random } from './garden-model';
@@ -106,7 +107,7 @@ const launchDevice = (next: () => number) => {
   const [kind, raw] = storedOf(next);
   const own = below(next, 2) === 0;
   const loose = below(next, 3) === 0 ? LOOSE[below(next, LOOSE.length)] : undefined;
-  const at = Date.now() - DAY;
+  const at = START - DAY;
   const disk = new Map<string, string | null>();
   if (own) disk.set(...record(recallOf(passage.reference, at, 3, 0)));
   if (loose !== undefined) disk.set(...record(recallOf(loose.verses[0] ?? '', at, 3, 0)));

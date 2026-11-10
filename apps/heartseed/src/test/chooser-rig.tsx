@@ -34,7 +34,7 @@ import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { CAP, MOST, type ChooserSeen } from './choose-model';
-import { clockOf, type Time } from './clock';
+import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { scrolled } from './field-rig';
@@ -244,7 +244,7 @@ const storeHeld = (hold: Hold) =>
   ).pipe(Layer.provide(store));
 
 /** The chooser over the device's disk as it stands; every frame is held to the rules and the faults kept. */
-export const mountChooser = async (time: Time = { now: null }) => {
+export const mountChooser = async (time: Time = { now: START }) => {
   const hold: Hold = { armed: false, planting: false, waiting: [] };
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),

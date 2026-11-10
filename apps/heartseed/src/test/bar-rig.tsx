@@ -45,7 +45,7 @@ import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import type { FieldSeen } from './choose-model';
 import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
-import { clockOf, type Time } from './clock';
+import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { homeFaults, scrolled } from './field-rig';
 import { lookFaults } from './look';
@@ -220,7 +220,7 @@ export const mountBar = async (
   passageReads: number,
   unread: boolean,
   beside: ReactNode = null,
-  time: Time = { now: null },
+  time: Time = { now: START },
 ) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),

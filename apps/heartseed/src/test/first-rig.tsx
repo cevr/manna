@@ -91,7 +91,7 @@ import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
 import { theme } from '../theme';
 import { recite, scriptedSource } from '../dictation/script';
-import { clockAt, clockOf, type Time } from './clock';
+import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
@@ -744,17 +744,12 @@ const frameFaults = (
   return [...out, ...wordFaults(host, heading, phase.said)];
 };
 
-/** The device's clock: the host's moved on by `by` milliseconds, which a new plan at the passage's due sets. */
-interface Shift {
-  by: number;
-}
-
 /** A launch: the root over the device's disk as it stands, on the device's clock, built once `gate` resolves; every frame from before the first render held to the root's rule for `garden`, the launch's read as it stands. */
 const mount = async (
   allowed: Allowed,
   voices: 0 | 1,
   count: (key: string) => void,
-  shift: Shift,
+  time: Time,
   garden: 'read' | 'unread',
 ) => {
   const voice = voiceStandIn(voices);
@@ -779,14 +774,7 @@ const mount = async (
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voice.layer,
-  }).pipe(
-    Layer.provide(
-      Layer.merge(
-        clockAt((host) => host + shift.by),
-        Logger.layer([]),
-      ),
-    ),
-  );
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const headings = () =>
@@ -1226,9 +1214,9 @@ export const session = (count: (key: string) => void) => {
   const trace: string[] = [];
   const where = () => trace.join(' > ');
   const rig = (): Rig => at.rig ?? expect.unreachable('no launch');
-  const shift: Shift = { by: 0 };
+  const time: Time = { now: START };
   /** The device's instant now, as its app's clock reads it. */
-  const now = () => Date.now() + shift.by;
+  const now = () => time.now;
 
   const opening = (): Screen => {
     if (m.unread) return 'unread';
@@ -1607,7 +1595,7 @@ export const session = (count: (key: string) => void) => {
       cued: false,
     } satisfies Partial<Model>);
     at.allowed = { headings: new Set(), pending: true };
-    at.rig = await mount(at.allowed, kind.voices, count, shift, gardenOf(kind));
+    at.rig = await mount(at.allowed, kind.voices, count, time, gardenOf(kind));
     if (kind.held) {
       await rig().until(() => false, 5);
       await settle();
@@ -1664,6 +1652,7 @@ export const session = (count: (key: string) => void) => {
     if (before === 'today') m.held = true;
     const stage = r.host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
     m.cued = before === 'today' && (m.passage <= 1 || stage === 'Stage: seed');
+    time.now += 1000;
     const start = now();
     let outcome = UNWRITTEN;
     const window = [start, start] as [number, number];
@@ -1747,7 +1736,7 @@ export const session = (count: (key: string) => void) => {
   const toDue = () => {
     const recalls = plantsOf(m.disk).get(passage.reference) ?? [];
     const due = recalls.length > 0 ? dueModel(recalls) + 1 : 0;
-    shift.by += Math.max(MINUTE, due - now());
+    time.now = Math.max(now() + MINUTE, due);
   };
 
   /**
@@ -2877,7 +2866,7 @@ export const recallKeys = () => [...device.disk.keys()].filter((key) => key.star
 export const screenLaunch = async (
   held: Promise<void> = Promise.resolve(),
   source = scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
-  time: Time = { now: null },
+  time: Time = { now: START },
   garden: 'read' | 'unread' = 'read',
 ) => {
   const voice = recordingVoice();
@@ -2896,7 +2885,7 @@ export const screenLaunch = async (
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voice.layer,
-  }).pipe(Layer.provide(clockOf(time)));
+  }).pipe(Layer.provideMerge(clockOf(time)));
   const host = document.createElement('div');
   document.body.append(host);
   const headings = () =>

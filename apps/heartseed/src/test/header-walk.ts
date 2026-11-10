@@ -225,7 +225,7 @@ interface Run {
   readonly faults: Faults;
   readonly m: Model;
   readonly next: () => number;
-  readonly time: { now: number | null };
+  readonly time: { now: number };
   readonly step: string;
 }
 
@@ -275,7 +275,7 @@ const recallsOn = (device: Device) => {
 /** What home shows over a plan made now, by the session's and the run's models: the plan's items, its counts line, and `Begin` exactly when the run shows an item. */
 const homeModel = (run: Omit<Run, 'app'>) => {
   const plants = plantsOn(run.device);
-  const at = run.time.now ?? AT;
+  const at = run.time.now;
   const items = planModel({
     plants,
     pieces: [PIECE],
@@ -627,7 +627,7 @@ const fieldCommand = async (run: Run) => {
 
 /** Time passing on the clock: a minute, an hour or the night. */
 const waitCommand = async (run: Run) => {
-  run.time.now = (run.time.now ?? AT) + pickOf(run.next, [60_000, HOUR, 13 * HOUR]);
+  run.time.now += pickOf(run.next, [60_000, HOUR, 13 * HOUR]);
   await run.app.until(() => false, 5);
   cover('wait');
 };

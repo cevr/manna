@@ -25,6 +25,7 @@ import { TAUGHT } from '../promises';
 import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
+import { clockOf, START } from '../test/clock';
 import { fieldRule, heldOn, recallOf } from '../test/field-model';
 import { readField, record } from '../test/field-rig';
 import { DAY } from '../test/garden-model';
@@ -36,7 +37,7 @@ const HELD = { book: 19, chapter: 91, first: 1, last: 16 };
 
 /** The field's rows a reader gets on the launch's home, and the buttons it offers, over a layer teaching `promises`. */
 const fieldShown = async (promises: readonly string[] | undefined) => {
-  const now = Date.now();
+  const now = START;
   device.launch([
     record(recallOf(passage.reference, now - 2 * DAY, 3, 0)),
     record(recallOf('Psalms 91:4', now - DAY, 3, 0)),
@@ -54,7 +55,7 @@ const fieldShown = async (promises: readonly string[] | undefined) => {
   const layer = Option.match(Option.fromUndefinedOr(promises), {
     onNone: () => appLayer(parts),
     onSome: (ids) => appLayer({ ...parts, promises: ids }),
-  }).pipe(Layer.provide(Logger.layer([])));
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf({ now }), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
