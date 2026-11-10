@@ -8,12 +8,17 @@
  * the generated rectangles, never the product's mapping or centring helper.
  * Musical places (the anchor a hold takes, a choice's onset) come from
  * hymseek's proved seam: the hold's published target and the fixture's
- * targets. After each command it compares the drawn choice, the scroll, the
- * held lock, the cues and the seeks; it prints only seeds and counts.
+ * targets. Whether a hold may be offered it decides itself, the count-in
+ * from its own model of the history's commands and the score's bar: the
+ * player's published count must agree with it, and the page's entry, the
+ * phones' recognizer and the web's armed candidate must follow it. After
+ * each command it compares those, the drawn choice, the scroll, the held
+ * lock, the cues and the seeks; every hold it offered must take. It prints
+ * only seeds and counts.
  */
 
 import { expect, it } from 'effect-bun-test';
-import { Console, Deferred, Effect, Option, Predicate } from 'effect';
+import { Clock, Console, Deferred, Effect, Option, Predicate } from 'effect';
 import { TestClock } from 'effect/testing';
 import { act } from 'react';
 import { View } from 'react-native';
@@ -22,7 +27,7 @@ import { book } from '~/follow/book';
 import type { SeekTarget } from '~/follow/seek-targets';
 import { RISE } from '~/player/bar';
 import { Command, type PlaybackError, Player, type Status } from '~/player/player';
-import { longPress } from '~/test/gesture';
+import { gestureOf, longPress } from '~/test/gesture';
 import {
   fixtureRects,
   inAct,
@@ -30,7 +35,7 @@ import {
   type Rect,
   type WordsDrawn,
 } from '~/test/reader-word-seek';
-import { openWordSeek } from '~/test/word-seek';
+import { openWordSeek, seekTimeline } from '~/test/word-seek';
 
 import { SIZES } from './reading';
 import { SeekArea as NativeArea, SeekScroll as NativeScroll } from './WordSeek.native';
@@ -52,6 +57,57 @@ const PANEL_GAP = 8;
 const CHORD_MS = 600;
 /** Long enough for a start's count-in and the player's own act after a command to end, so a hold may take again. */
 const SETTLE_MS = 3_000;
+/**
+ * One bar of the fixture's first tempo, counted in quarters of its 4/4 at
+ * the dial's 100 (a rate of 1): how long a counted start holds the first
+ * sung line, read from the score, never from the player's count.
+ */
+const BAR_MS = (seekTimeline.tempo.numerator * seekTimeline.tempo.microsPerQuarter) / 1000;
+
+/**
+ * The count-in as the history's own commands lead to it: a start with the
+ * intro on counts one bar from its command; a pause during the count keeps
+ * it and the next resume counts the whole bar again; a seek, or a start with
+ * the intro off, leaves it. A resume that plays from the start again
+ * (`startsAgain`) is a start.
+ */
+const countInModel = () => {
+  let from = Number.NaN;
+  let until = Number.NaN;
+  let kept = false;
+  const counting = (now: number) => from <= now && now < until;
+  const count = (now: number) => {
+    from = now;
+    until = now + BAR_MS;
+  };
+  const leave = () => {
+    from = Number.NaN;
+    until = Number.NaN;
+  };
+  return {
+    counting,
+    /** A count-in this history began has run its whole bar. */
+    over: (now: number) => until <= now,
+    start: (now: number, intro: boolean) => {
+      kept = false;
+      leave();
+      if (intro) count(now);
+    },
+    pause: (now: number) => {
+      if (counting(now)) kept = true;
+      leave();
+    },
+    resume: (now: number) => {
+      if (!kept) return;
+      kept = false;
+      count(now);
+    },
+    seek: () => {
+      kept = false;
+      leave();
+    },
+  };
+};
 
 /** A small seeded generator, so each seed's history replays. */
 const random = (seed: number) => {
@@ -136,6 +192,17 @@ const pointerDown = Predicate.or(Predicate.isTagged('Held'), Predicate.isTagged(
 const sameList = <A,>(a: ReadonlyArray<A>, b: ReadonlyArray<A>) =>
   a.length === b.length && a.every((value, k) => value === b[k]);
 
+/**
+ * Whether a Resume from `state` plays the hymn from its start again, as the
+ * player publishes it: from the end, or stopped before any place was proved.
+ */
+const startsAgain = (state: Player) =>
+  Player.$is('Ended')(state) ||
+  (Player.$is('Stopped')(state) && Option.getOrElse(state.at, () => 0) <= 0);
+
+/** A command that tries to begin a hold: a pointer down, a finger's press, the entry pressed. */
+const tries = (command: string) => /^(down|press|open) /.test(command);
+
 const counts = new Map<string, number>();
 const count = (name: string) => counts.set(name, (counts.get(name) ?? 0) + 1);
 
@@ -146,6 +213,8 @@ const reference = (
   surface: Surface,
   viewport: number,
   rects: ReadonlyArray<Rect>,
+  /** Whether the history's own count-in model counts now. */
+  counting: () => boolean,
 ) => {
   const lines = app.targets.lines;
   const wordsOn = (k: number) => {
@@ -187,7 +256,7 @@ const reference = (
     state.viewport > RISE &&
     Player.$is('Playing')(app.registry.get(app.player.state)) &&
     app.registry.get(app.player.hold.state)._tag === 'Free' &&
-    Option.isNone(app.registry.get(app.player.countIn));
+    !counting();
   const anchor = (): Option.Option<{ readonly line: number; readonly column: number }> => {
     const hold = app.registry.get(app.player.hold.state);
     if (hold._tag === 'Free') return Option.none();
@@ -336,6 +405,9 @@ const differences = (
   outside: ReadonlySet<number>,
   /** A measure the current hold asked has not answered yet, so its scroll is still to come. */
   waiting: boolean,
+  surface: Surface,
+  /** Whether the history's count-in model counts now. */
+  counting: boolean,
 ) => {
   const want = model.expected();
   const chosen = page.chosenLines();
@@ -352,7 +424,18 @@ const differences = (
   });
   const still =
     !want.held || page.scrolls.slice(model.state.heldFrom).every(({ animated }) => !animated);
+  const offered = model.eligible();
+  const owner = model.state.owner._tag;
+  const recognizer =
+    surface !== 'native' ||
+    owner === 'Held' ||
+    (gestureOf('reader-word-seek-hold').enabled !== false) === offered;
+  const armed = surface !== 'web' || page.waiting().length > 0 === (owner === 'Candidate');
   const checks = [
+    ['count-in', Option.isSome(app.registry.get(app.player.countIn)) === counting, `${counting}`],
+    ['entry', page.enabled('hymn-word-seek') === offered, `${offered}`],
+    ['recognizer', recognizer, `${offered}`],
+    ['armed', armed, owner],
     ['lines', sameList(chosen, want.lines), `${want.lines.join(',')}/${chosen.join(',')}`],
     ['words', sameList(words, want.words), `${want.words.join(',')}/${words.join(',')}`],
     ['held', app.registry.get(seekHeld) === want.held, `${want.held}`],
@@ -384,7 +467,12 @@ const history = (seed: number, surface: Surface) =>
       }[surface],
     );
     yield* inAct(app.play);
-    const model = reference(app, page, surface, viewport, rects);
+    const counted = countInModel();
+    /** The history's clock, read before each command and again before its checks. */
+    let now = yield* Clock.currentTimeMillis;
+    /** The intro switch as the history last set it. */
+    let intro = false;
+    const model = reference(app, page, surface, viewport, rects, () => counted.counting(now));
     const settle = inAct(TestClock.adjust(0));
     const outside = new Set<number>();
     /** When a chord was last pressed, by the page's touch clock. */
@@ -399,13 +487,6 @@ const history = (seed: number, surface: Surface) =>
     const staleScrolls: Array<number> = [];
     /** The step asked the player for a place itself, so its seeks are not a release's. */
     let outsideStep = false;
-    /**
-     * The history has asked the player for something of its own. From then
-     * the player's own unfinished act (a place still to be proved, a
-     * count-in's end) may refuse a hold the page offered: the reference
-     * cannot see those, so such a refusal is counted, not failed.
-     */
-    let playerActed = false;
     const holdTag = () => app.registry.get(app.player.hold.state)._tag;
     let press = Option.none<ReturnType<typeof longPress>>();
     let pressAt = { x: 0, y: 0 };
@@ -489,52 +570,61 @@ const history = (seed: number, surface: Surface) =>
       if (kind < 16) return webEnd(step);
       return common(step);
     };
+    /** A finger lands on the words, drifts or stays, and waits for the hold's time. */
+    const nativePress = (step: number) => {
+      const drift = rng.pick([
+        [0, 0],
+        [3, -4],
+        [6, 8],
+        [7, 7],
+        [8, 8],
+        [10, 0],
+        [0, -11],
+        [20, 3],
+      ] as const);
+      const [dx, dy] = drift;
+      const chorded = chordRecent();
+      const can = model.eligible() && !chorded;
+      const still =
+        dx * dx + dy * dy <= STILL_PT ** 2 && Math.abs(dx) <= STILL_PT && Math.abs(dy) <= STILL_PT;
+      if (!still) count('drift');
+      if (chorded) count('chord-refused');
+      act(() => {
+        press = Option.some(longPress('reader-word-seek-hold', { x: 100, y: 200, dx, dy }));
+      });
+      pressAt = { x: dx, y: dy };
+      promised = still && can;
+      if (still && can) model.take(1, dx, dy);
+      else model.state.owner = { _tag: 'Orphan', id: 1 };
+      return `press ${step}`;
+    };
+    /** The finger down moves. */
+    const nativeMove = (step: number) => {
+      const mx = offset(rng, WORD_PT);
+      const my = offset(rng, LINE_PT);
+      act(() => press.pipe(Option.map((it) => it.move(mx, my))));
+      model.drag(mx - pressAt.x, my - pressAt.y);
+      return `move ${step}`;
+    };
+    /** The finger down lifts, or the platform cancels it. */
+    const nativeEnd = (step: number) => {
+      const end = { cancel: model.cancel, lift: model.release };
+      const how = rng.pick(['cancel', 'lift', 'lift'] as const);
+      act(() => press.pipe(Option.map((it) => it[how]())));
+      press = Option.none();
+      end[how]();
+      return `end ${step}`;
+    };
     const native = (step: number) => {
       const kind = rng.int(20);
-      if (Option.isNone(press) && kind < 9) {
-        const drift = rng.pick([
-          [0, 0],
-          [3, -4],
-          [6, 8],
-          [7, 7],
-          [8, 8],
-          [10, 0],
-          [0, -11],
-          [20, 3],
-        ] as const);
-        const [dx, dy] = drift;
-        const chorded = chordRecent();
-        const can = model.eligible() && !chorded;
-        const still =
-          dx * dx + dy * dy <= STILL_PT ** 2 &&
-          Math.abs(dx) <= STILL_PT &&
-          Math.abs(dy) <= STILL_PT;
-        if (!still) count('drift');
-        if (chorded) count('chord-refused');
-        act(() => {
-          press = Option.some(longPress('reader-word-seek-hold', { x: 100, y: 200, dx, dy }));
-        });
-        pressAt = { x: dx, y: dy };
-        promised = still && can;
-        if (still && can) model.take(1, dx, dy);
-        else model.state.owner = { _tag: 'Orphan', id: 1 };
-        return `press ${step}`;
-      }
-      if (Option.isSome(press) && kind < 14) {
-        const mx = offset(rng, WORD_PT);
-        const my = offset(rng, LINE_PT);
-        act(() => press.pipe(Option.map((it) => it.move(mx, my))));
-        model.drag(mx - pressAt.x, my - pressAt.y);
-        return `move ${step}`;
-      }
-      if (Option.isSome(press) && kind < 17) {
-        const end = { cancel: model.cancel, lift: model.release };
-        const how = rng.pick(['cancel', 'lift', 'lift'] as const);
-        act(() => press.pipe(Option.map((it) => it[how]())));
-        press = Option.none();
-        end[how]();
-        return `end ${step}`;
-      }
+      const nearCount = counted.counting(now) || counted.over(now);
+      if (Option.isNone(press) && (kind < 9 || (counted.over(now) && kind < 17)))
+        return nativePress(step);
+      const refusedFinger =
+        Option.isSome(press) && model.state.owner._tag === 'Orphan' && nearCount;
+      if (Option.isSome(press) && kind < 14 && !(refusedFinger && kind < 8))
+        return nativeMove(step);
+      if (Option.isSome(press) && (kind < 17 || refusedFinger)) return nativeEnd(step);
       return common(step);
     };
     const steps = (step: number) => {
@@ -648,28 +738,47 @@ const history = (seed: number, surface: Surface) =>
     /** The player is asked for something of its own, with no hold: a place, the end, a start again, a pause while it loads. */
     const playerCommand = (step: number) => {
       outsideStep = true;
-      playerActed = true;
-      const how = rng.pick(['first', 'end', 'restart', 'count-in', 'stop'] as const);
+      const how = rng.pick(['first', 'end', 'restart', 'count-in', 'count-in', 'stop'] as const);
       const timed = Option.getOrThrow(book.of(1));
       const start = () => app.send(Command.Start({ track: { number: 1, title: 'Fixture' } }));
       ({
-        first: () => app.send(Command.Seek({ seconds: (timed.lines[0]?.start ?? 0) / 1000 })),
-        end: () => app.send(Command.Seek({ seconds: 20.9 })),
+        first: () => {
+          app.send(Command.Seek({ seconds: (timed.lines[0]?.start ?? 0) / 1000 }));
+          counted.seek();
+        },
+        end: () => {
+          app.send(Command.Seek({ seconds: 20.9 }));
+          counted.seek();
+        },
         restart: () => {
-          app.registry.set(app.intro, false);
+          intro = false;
+          app.registry.set(app.intro, intro);
           start();
+          counted.start(now, intro);
         },
         'count-in': () => {
-          app.registry.set(app.intro, true);
+          intro = true;
+          app.registry.set(app.intro, intro);
           start();
+          counted.start(now, intro);
         },
         stop: () => {
           start();
           app.send(Command.Pause());
+          counted.start(now, intro);
+          counted.pause(now);
         },
       })[how]();
       count(`player-${how}`);
       return `player ${step} ${how}`;
+    };
+    /** How long the next `wait` lets pass. */
+    let waitMs = 0;
+    /** Time passes while the count-in counts: to a beat, past its middle, or to and past its end. */
+    const wait = (step: number) => {
+      waitMs = rng.pick([BAR_MS / 4, BAR_MS / 2, BAR_MS, BAR_MS + 250]);
+      count('wait');
+      return `wait ${step}`;
     };
     /** A press on a chord: never a hold, and on a phone none for its time after. */
     const chordPress = (step: number) => {
@@ -690,6 +799,7 @@ const history = (seed: number, surface: Surface) =>
       const owner = model.state.owner;
       if (kind < 8 && Option.isSome(landing) && holdTag() === 'Landing' && rng.next() < 0.3)
         return land(step);
+      if (counted.counting(now) && rng.next() < 0.7) return wait(step);
       if (kind < 4) return `tick ${step}`;
       if (kind < 8) return ordinary(kind, step, keepsPointer);
       if (kind < 10 && later && page.pending().length > 0) return answerSome(step);
@@ -700,7 +810,10 @@ const history = (seed: number, surface: Surface) =>
     /** What reaches the page from outside it: the player's own commands, a chord, the system's Reduce Motion. */
     const outer = (kind: number, step: number): string => {
       const idle = model.state.owner._tag === 'Idle';
-      if (kind < 14 && idle && holdTag() === 'Free' && rng.next() < 0.4) return playerCommand(step);
+      /** No hold: none was taken, or a finger still down was refused one. */
+      const unheld = idle || model.state.owner._tag === 'Orphan';
+      if (kind < 14 && unheld && holdTag() === 'Free' && rng.next() < 0.4)
+        return playerCommand(step);
       if (kind < 15 && words === 'boxed' && page.hasChord() && idle) return chordPress(step);
       reduced = !reduced;
       page.motion(reduced);
@@ -711,12 +824,16 @@ const history = (seed: number, surface: Surface) =>
       if (kind < 5) {
         model.revoke(keepsPointer);
         app.send(Command.Pause());
+        counted.pause(now);
         count('pause');
         return `pause ${step}`;
       }
       if (kind < 6) {
         model.revoke(keepsPointer);
+        const again = startsAgain(app.registry.get(app.player.state));
         app.send(Command.Resume());
+        if (again) counted.start(now, intro);
+        else counted.resume(now);
         return `resume ${step}`;
       }
       if (kind < 7) {
@@ -744,17 +861,32 @@ const history = (seed: number, surface: Surface) =>
           page.advance(250);
           yield* inAct(TestClock.adjust(250));
         }
-        if (command.startsWith('player')) yield* inAct(TestClock.adjust(SETTLE_MS));
+        if (command.startsWith('wait')) {
+          page.advance(waitMs);
+          yield* inAct(TestClock.adjust(waitMs));
+        }
+        if (command.startsWith('player') && !command.endsWith('count-in'))
+          yield* inAct(TestClock.adjust(SETTLE_MS));
         if (holdTag() === 'Landing') count('landing');
         if (command.startsWith('elapse') && model.state.owner._tag === 'Candidate')
           model.state.owner = { _tag: 'Idle' };
       });
+    /** Which count-in cases the step reached, from how it stood `before` the command. */
+    const countInCovered = (
+      before: { readonly counting: boolean; readonly owner: Owner['_tag'] },
+      command: string,
+    ) => {
+      if (counted.counting(now)) count('state-counting');
+      if (before.counting && counted.over(now)) count(`count-in-ran-out-${surface}`);
+      if (before.counting && tries(command)) count(`count-in-refused-${surface}`);
+      if (before.owner !== 'Held' && model.state.owner._tag === 'Held' && counted.over(now))
+        count(`held-after-count-in-${surface}`);
+    };
     /** What the step did wrong that `differences` does not compare. */
     const offences = () => {
       const refused = promised && model.state.owner._tag !== 'Held';
-      if (refused && playerActed && holdTag() === 'Free') count('player-refused');
       const found = [
-        [refused && !(playerActed && holdTag() === 'Free'), 'an offered hold did not take'],
+        [refused, 'an offered hold did not take'],
         [staleScrolls.length > 0, `stale=${staleScrolls.join(',')}`],
       ] as const;
       return found.filter(([wrong]) => wrong).map(([, said]) => said);
@@ -769,15 +901,30 @@ const history = (seed: number, surface: Surface) =>
         landing = Option.some(held);
       }
       const seeksBefore = app.commands.length;
+      now = yield* Clock.currentTimeMillis;
+      const before = { counting: counted.counting(now), owner: model.state.owner._tag };
       const command = { web, native, steps }[surface](step);
       const candidate = model.state.owner;
       yield* settle;
       yield* ahead(command, candidate);
+      now = yield* Clock.currentTimeMillis;
+      countInCovered(before, command);
       if (outsideStep)
         app.commands.slice(seeksBefore).forEach((_, k) => outside.add(seeksBefore + k));
       while (askedIn.length < page.asked()) askedIn.push(model.state.epoch);
       const current = page.pending().filter((k) => askedIn[k] === model.state.epoch);
-      const wrong = [...offences(), ...differences(model, page, app, outside, current.length > 0)];
+      const wrong = [
+        ...offences(),
+        ...differences(
+          model,
+          page,
+          app,
+          outside,
+          current.length > 0,
+          surface,
+          counted.counting(now),
+        ),
+      ];
       if (wrong.length > 0) {
         mismatches.push(`seed=${seed} ${surface} ${command} ${wrong.join(' ')}`);
         break;
@@ -1064,6 +1211,13 @@ it.effect('the generated histories reached every case they are for', () => {
     'spacing-normal',
     'spacing-roomy',
     ...['first', 'end', 'restart', 'count-in', 'stop'].map((how) => `player-${how}`),
+    'state-counting',
+    'wait',
+    ...surfaces.flatMap((on) => [
+      `count-in-refused-${on}`,
+      `count-in-ran-out-${on}`,
+      `held-after-count-in-${on}`,
+    ]),
   ];
   const seen = floors.map((name) => [name, counts.get(name) ?? 0] as const);
   return Effect.gen(function* () {
