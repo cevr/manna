@@ -84,6 +84,23 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/reader/{word-seek,WordSeek}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/player/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:seek": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/reader/{About,SyllableWords,back,end,header,line-level,lists,pager,pin,place,rail-marks,reading,rows}.test.*",
         "!src/home/**/*.test.*",
         "!src/player/**/*.test.*",
         "!src/follow/**/*.test.*",
@@ -148,6 +165,7 @@
         "test:tempo",
         "test:player",
         "test:reader",
+        "test:seek",
         "test:follow",
         "test:hymns",
         "test:rest",
