@@ -342,9 +342,11 @@ its viewport at each end, so the first and last lines can stand at its
 middle, and each choice scrolls its line's full block to the middle
 (`centerOffset`, at once under Reduce Motion; a newer choice wins over an
 older measure answering late, and a measure the follow asked before the
-hold, or before the page went, never scrolls). The open controls take
-their height from the bottom of the viewport, and the choice is centred
-again in what is left. The chosen line takes an outline and the
+hold, or before the page went, never scrolls). The middle is that of the
+words left seen: the page less its foot, which is the sounding bar's rise,
+the bar's `#` over it (`FindRoom`), the entry `Seek` with its laid-out
+height and, while open, the controls over it; the marker stands there, and
+the choice is centred again whenever the foot changes. The chosen line takes an outline and the
 chosen word an underline in the accent; follow's marks, hand-scroll
 detection and Resume follow pause for the preview and come back as it
 ends, restoring the frozen place or the released one. A line timed only by
@@ -356,7 +358,8 @@ ones Feel already plays: a grab as a hold takes, a tick per changed choice,
 a release.
 
 `Seek by line or word` (`hymn-word-seek`) takes the same hold without a
-drag and opens a small group above it, at the page's lower right: Previous/Next line, Previous/Next
+drag and opens a small group above it, at the page's lower right over the
+bar's `#` (the room `FindRoom` tells), so a press on it never lands on the `#`: Previous/Next line, Previous/Next
 word, `Play from here` and `Cancel`, focus moving in as it opens and back
 as it closes; its status carries the choice by row, sung line and word,
 with the numbers as its accessible value. It is disabled unless a hold
