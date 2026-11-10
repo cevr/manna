@@ -109,7 +109,7 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
           button: event.button,
           x: event.clientX,
           y: event.clientY,
-          startable: now.current.available && onWords(Option.fromNullishOr(event.target)),
+          startable: now.current.available() && onWords(Option.fromNullishOr(event.target)),
         }),
       );
     const move = (event: PointerEvent) =>

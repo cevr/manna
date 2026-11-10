@@ -533,8 +533,8 @@ const noBeat = Atom.make(Option.none<unknown>());
 
 /** The page's held seek: what it offers, what it shows, and the moves a gesture or a control makes. */
 export interface WordSeek {
-  /** Whether a hold could take now: the shown page's hymn plays, with no count-in, hold or pending act. */
-  readonly available: boolean;
+  /** Whether a hold could take now: the shown page's hymn plays, with no count-in, hold or pending act. A part that draws it reads it through `useSeekAvailable`. */
+  readonly available: () => boolean;
   /** How this page holds now, if it does. */
   readonly via: Option.Option<'pointer' | 'steps'>;
   /** The choice, while this page holds. */
@@ -550,22 +550,80 @@ export interface WordSeek {
 }
 
 /**
+ * Which hymn page the reader sees, as a store a page reads without being
+ * drawn again: the pager tells it each settle, and only the parts that
+ * offer a hold follow it (`useSeekAvailable`), so a settle draws no page
+ * it found mounted.
+ */
+export interface ShownPages {
+  readonly isShown: (number: number) => boolean;
+  readonly subscribe: (listener: () => void) => () => void;
+}
+
+/** A pager's store of the page seen, starting at `first`: `show` names the page seen, or none (`-1`). */
+export const shownPagesOf = (first: number) => {
+  let current = first;
+  const listeners = new Set<() => void>();
+  return {
+    isShown: (number: number) => number === current,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
+    show: (number: number) => {
+      if (number === current) return;
+      current = number;
+      listeners.forEach((listener) => listener());
+    },
+  };
+};
+
+/** Where no pager says otherwise (the web's one page, a test's), each page is the one seen. */
+const everyPage: ShownPages = { isShown: () => true, subscribe: () => () => {} };
+
+const ShownContext = createContext<ShownPages>(everyPage);
+
+export const ShownPagesProvider = ShownContext.Provider;
+
+/** The page's held seek's offer as a part draws it: drawn again as the page seen changes. */
+export const useSeekAvailable = (seek: WordSeek): boolean =>
+  useSyncExternalStore(use(ShownContext).subscribe, seek.available, seek.available);
+
+const FREE = 'Free';
+
+/**
+ * The hold as the page draws it: its stage and choice, as a value. The
+ * player publishes its hold again as it polls; a page drawn again only when
+ * this changes is not drawn again for each poll.
+ */
+const holdKey = (held: HoldState): string => {
+  if (held._tag === 'Free') return FREE;
+  const word = Option.getOrElse(
+    Option.map(
+      Option.liftPredicate(held.target, (target) => target._tag === 'Word'),
+      (target) => target.word,
+    ),
+    () => -1,
+  );
+  return `${held._tag} ${held.target.line} ${word}`;
+};
+
+/**
  * Hymn `number`'s held seek on its page, over the player's hold seam
- * (`player/word-seek.ts`): it begins only on the `shown` page while the
- * hymn plays, anchors on the player's own first target, sends a Select only
- * when the choice changes, and ends once. A cue is told for each touch's
- * result: a grab as it takes, a tick for each changed choice, a release.
- * The page going (`shown` false, unmounted) or its words moving (`layout`)
- * revokes the hold; the player letting go of it, for any reason, clears it.
+ * (`player/word-seek.ts`): it begins only on the page seen (`ShownPages`)
+ * while the hymn plays, anchors on the player's own first target, sends a
+ * Select only when the choice changes, and ends once. A cue is told for
+ * each touch's result: a grab as it takes, a tick for each changed choice,
+ * a release. The page going (no longer seen, unmounted) or its words moving
+ * (`layout`) revokes the hold; the player letting go of it, for any reason,
+ * clears it.
  */
 export const useWordSeek = ({
   number,
-  shown,
   layout,
   host,
 }: {
   readonly number: number;
-  readonly shown: boolean;
   /** The page's reading layout, as one key: a change revokes a hold. */
   readonly layout: string;
   readonly host: PreviewHost;
@@ -585,26 +643,28 @@ export const useWordSeek = ({
     atoms.state,
     (current) => Player.$is('Playing')(current) && current.track.number === number,
   );
-  const hold = useAtomValue(atoms.hold);
+  const hold = useAtomValue(atoms.hold, holdKey);
   const counting = useAtomValue(atoms.beat, Option.isSome);
   const marks = useMemo(previewMarksOf, []);
   const own = useRef(Option.none<Own>());
   const [via, setVia] = useState(Option.none<'pointer' | 'steps'>());
-  const now = useRef({ host, reduced, shown, targets });
-  now.current = { host, reduced, shown, targets };
+  const pages = use(ShownContext);
+  const now = useRef({ host, reduced, pages, targets });
+  now.current = { host, reduced, pages, targets };
+  const seen = () => now.current.pages.isShown(number);
 
-  const availableIn = (here: boolean, held: HoldState, counted: boolean) =>
-    now.current.shown &&
+  const availableIn = (here: boolean, held: string, counted: boolean) =>
+    seen() &&
     Option.isSome(player) &&
     here &&
-    held._tag === 'Free' &&
+    held === FREE &&
     !counted &&
     Option.isSome(now.current.targets) &&
     Option.isNone(own.current) &&
     now.current.host.ready();
   const playsHere = (current: Player) =>
     Player.$is('Playing')(current) && current.track.number === number;
-  const available = availableIn(playingHere, hold, counting);
+  const available = () => availableIn(playingHere, hold, counting);
 
   const ownTarget = (mine: Own): Option.Option<SeekTarget> => {
     const held = registry.get(atoms.hold);
@@ -624,7 +684,7 @@ export const useWordSeek = ({
     if (
       !availableIn(
         playsHere(registry.get(it.state)),
-        registry.get(it.hold.state),
+        holdKey(registry.get(it.hold.state)),
         Option.isSome(registry.get(it.countIn)),
       )
     )
@@ -718,7 +778,7 @@ export const useWordSeek = ({
                 clear();
                 now.current.host.finish();
               }
-              now.current.host.end(restore && now.current.shown, !now.current.reduced);
+              now.current.host.end(restore && seen(), !now.current.reduced);
             });
           told(registry.get(it.hold.state));
           return registry.subscribe(it.hold.state, told);
@@ -736,8 +796,12 @@ export const useWordSeek = ({
     [player, registry],
   );
   useEffect(() => {
-    if (!shown) revoke('route');
-  }, [shown, revoke]);
+    const check = () => {
+      if (!pages.isShown(number)) revoke('route');
+    };
+    check();
+    return pages.subscribe(check);
+  }, [pages, number, revoke]);
   const laid = useRef(layout);
   useEffect(() => {
     if (laid.current === layout) return;

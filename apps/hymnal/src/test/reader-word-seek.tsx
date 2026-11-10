@@ -18,7 +18,13 @@ import { CueProvider } from '~/feel/cue';
 import { targetsOf } from '~/follow/seek-targets';
 import { PlayerContext } from '~/player/context';
 import { HymnPage } from '~/reader/HymnPage';
-import { type HoldTimer, HoldTimerProvider, SeekTargetsProvider } from '~/reader/word-seek';
+import {
+  type HoldTimer,
+  HoldTimerProvider,
+  SeekTargetsProvider,
+  ShownPagesProvider,
+  shownPagesOf,
+} from '~/reader/word-seek';
 
 import { readerOn } from './reader';
 import { type openWordSeek, seekText, seekTimeline } from './word-seek';
@@ -42,6 +48,12 @@ export const fixtureRects: ReadonlyArray<Rect> = [
 const targetsFor = (number: number, choice: ReadonlyArray<number>) => {
   if (number !== 1) return Option.none();
   return targetsOf(seekText, seekTimeline, choice);
+};
+
+/** The fixture's hymn is the page seen, or another is (the pager's neighbour, a page over it). */
+const pageOf = (visible: boolean) => {
+  if (visible) return 1;
+  return -1;
 };
 
 const noChords = { of: () => Option.none(), decodes: () => 0 };
@@ -91,7 +103,8 @@ export const mountSeekReader = (
       const host = document.createElement('div');
       document.body.append(host);
       const root = createRoot(host);
-      const draw = (visible: boolean) =>
+      const seen = shownPagesOf(pageOf(shown));
+      const draw = () =>
         act(() =>
           root.render(
             <RegistryContext value={app.registry}>
@@ -99,7 +112,9 @@ export const mountSeekReader = (
                 <CueProvider value={(cue) => void cues.push(cue._tag)}>
                   <SeekTargetsProvider value={targetsFor}>
                     <HoldTimerProvider value={timer}>
-                      <HymnPage hymn={seekText} reader={reader} shown={visible} area={area} />
+                      <ShownPagesProvider value={seen}>
+                        <HymnPage hymn={seekText} reader={reader} area={area} />
+                      </ShownPagesProvider>
                     </HoldTimerProvider>
                   </SeekTargetsProvider>
                 </CueProvider>
@@ -107,7 +122,7 @@ export const mountSeekReader = (
             </RegistryContext>,
           ),
         );
-      draw(shown);
+      draw();
       const find = (id: string) =>
         Option.fromNullishOr(host.querySelector<HTMLElement>(`[data-testid="${id}"]`));
       const scroll = Option.getOrThrow(find('hymn-scroll'));
@@ -156,10 +171,7 @@ export const mountSeekReader = (
         /** The page's viewport is laid out `height` points tall. */
         lay,
         /** The page is shown, or another covers it. */
-        show: (visible: boolean) => {
-          draw(visible);
-          measure();
-        },
+        show: (visible: boolean) => act(() => seen.show(pageOf(visible))),
         press: (id: string) => act(() => Option.map(find(id), (found) => found.click())),
         /** Whether the button `id` is drawn and can be pressed. */
         enabled: (id: string) =>

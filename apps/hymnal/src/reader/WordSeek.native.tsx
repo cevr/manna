@@ -20,10 +20,11 @@ import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { View } from 'react-native';
 import { Option } from 'effect';
 
-import { HOLD_MS, type SeekAreaProps, SLOP, useChordTouch } from './word-seek';
+import { HOLD_MS, type SeekAreaProps, SLOP, useChordTouch, useSeekAvailable } from './word-seek';
 
 export function SeekArea({ seek, style, children }: SeekAreaProps) {
   const chord = useChordTouch();
+  const available = useSeekAvailable(seek);
   const origin = useRef(Option.none<{ readonly x: number; readonly y: number }>());
   const now = useRef(seek);
   now.current = seek;
@@ -35,7 +36,7 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
     });
   const gesture = usePanGesture({
     testID: 'reader-word-seek-hold',
-    enabled: seek.available || Option.contains(seek.via, 'pointer'),
+    enabled: available || Option.contains(seek.via, 'pointer'),
     runOnJS: true,
     maxPointers: 1,
     activateAfterLongPress: HOLD_MS,

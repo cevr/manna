@@ -95,6 +95,7 @@ import {
   PreviewProvider,
   spoken,
   type Step,
+  useSeekAvailable,
   useWordSeek,
   type WordSeek,
 } from './word-seek';
@@ -129,13 +130,10 @@ export interface ChordReader {
 export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
-  shown = true,
   area: Area = SeekArea,
 }: {
   readonly hymn: HymnText;
   readonly reader: ChordReader;
-  /** Whether this is the page the reader sees: a neighbour in the pager, or a page under another, takes no held seek. */
-  readonly shown?: boolean;
   /** The hold's touch over the sung words: the platform's own (`WordSeek.tsx`, `WordSeek.native.tsx`) unless given. */
   readonly area?: (props: SeekAreaProps) => ReactNode;
 }) {
@@ -173,7 +171,7 @@ export const HymnPage = memo(function HymnPage({
     [],
   );
   const layout = `${useLayoutKey(reader.reading, on, style)} viewport=${follow.laid}`;
-  const seek = useWordSeek({ number: hymn.number, shown, layout, host: follow.preview });
+  const seek = useWordSeek({ number: hymn.number, layout, host: follow.preview });
   const chordTouch = useMemo(() => chordTouchOf(touchClock), []);
   const [room, setRoom] = useState(0);
   follow.cover(RISE + room);
@@ -275,6 +273,7 @@ function SeekControls({
   readonly onRoom: (points: number) => void;
 }) {
   const open = Option.contains(seek.via, 'steps');
+  const available = useSeekAvailable(seek);
   const entry = useRef(Option.none<HostInstance>());
   const first = useRef(Option.none<HostInstance>());
   const keepEntry = useCallback<RefCallback<HostInstance>>((node) => {
@@ -345,7 +344,7 @@ function SeekControls({
         id="hymn-word-seek"
         label="Seek by line or word"
         title="Seek"
-        disabled={!seek.available}
+        disabled={!available}
         onPress={() => seek.begin('steps')}
         ref={keepEntry}
       />

@@ -53,7 +53,7 @@ import { HymnPage, NoHymn } from './HymnPage';
 import { backEdge, onPage, pageSource, settledAt } from './pager';
 import { pagesFrom } from './place';
 import { reader, Shown } from './screen';
-import { seekHeld } from './word-seek';
+import { seekHeld, ShownPagesProvider, shownPagesOf } from './word-seek';
 
 export { hymnParams } from './screen';
 
@@ -82,11 +82,10 @@ function Pager({ shown }: { readonly shown: HymnText }) {
     const measured = event.nativeEvent.layout.height;
     setHeight((was) => (Option.exists(was, (h) => h === measured) && was) || Option.some(measured));
   };
-  const extraData = useMemo(
-    () => ({ width, height, shown: shown.number }),
-    [width, height, shown.number],
-  );
+  const extraData = useMemo(() => ({ width, height }), [width, height]);
   const held = useAtomValue(seekHeld);
+  const [seen] = useState(() => shownPagesOf(shown.number));
+  useEffect(() => seen.show(shown.number), [seen, shown.number]);
   const router = useRouter();
   const settle = (offset: number) =>
     Option.match(
@@ -107,24 +106,26 @@ function Pager({ shown }: { readonly shown: HymnText }) {
     <View style={styles.screen}>
       <Shown hymn={shown} />
       <View style={styles.pages} onLayout={onLayout}>
-        <LegendList
-          data={pages.list}
-          keyExtractor={String}
-          horizontal
-          pagingEnabled
-          scrollEnabled={!held}
-          showsHorizontalScrollIndicator={false}
-          getFixedItemSize={() => width}
-          estimatedItemSize={width}
-          initialScrollIndex={pages.index}
-          recycleItems={false}
-          drawDistance={width}
-          extraData={extraData}
-          onMomentumScrollEnd={onMomentumScrollEnd}
-          onScrollEndDrag={onScrollEndDrag}
-          renderItem={drawPage}
-          style={styles.pager}
-        />
+        <ShownPagesProvider value={seen}>
+          <LegendList
+            data={pages.list}
+            keyExtractor={String}
+            horizontal
+            pagingEnabled
+            scrollEnabled={!held}
+            showsHorizontalScrollIndicator={false}
+            getFixedItemSize={() => width}
+            estimatedItemSize={width}
+            initialScrollIndex={pages.index}
+            recycleItems={false}
+            drawDistance={width}
+            extraData={extraData}
+            onMomentumScrollEnd={onMomentumScrollEnd}
+            onScrollEndDrag={onScrollEndDrag}
+            renderItem={drawPage}
+            style={styles.pager}
+          />
+        </ShownPagesProvider>
         <View testID="back-edge" style={styles.backEdge} />
       </View>
       <PageBar track={shown} />
@@ -138,35 +139,22 @@ const drawPage = ({
   extraData,
 }: {
   readonly item: number;
-  readonly extraData: {
-    readonly width: number;
-    readonly height: Option.Option<number>;
-    readonly shown: number;
-  };
-}) => (
-  <PagerPage
-    number={item}
-    width={extraData.width}
-    height={extraData.height}
-    shown={item === extraData.shown}
-  />
-);
+  readonly extraData: { readonly width: number; readonly height: Option.Option<number> };
+}) => <PagerPage number={item} width={extraData.width} height={extraData.height} />;
 
 /**
- * Hymn `number`'s page in the pager: drawn again only when its hymn, the
- * pager's size or whether it is the route's page changes. Only the route's
- * page takes a held seek; a neighbour drawn beside it never does.
+ * Hymn `number`'s page in the pager: drawn again only when its hymn or the
+ * pager's size changes. Which page is seen, for a held seek, the page reads
+ * from the pager's `ShownPages` without being drawn again.
  */
 const PagerPage = memo(function PagerPage({
   number,
   width,
   height,
-  shown,
 }: {
   readonly number: number;
   readonly width: number;
   readonly height: Option.Option<number>;
-  readonly shown: boolean;
 }) {
   return (
     <View
@@ -179,7 +167,7 @@ const PagerPage = memo(function PagerPage({
     >
       {Option.match(hymnAt(String(number)), {
         onNone: () => <NoHymn number={String(number)} />,
-        onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} shown={shown} />,
+        onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} />,
       })}
     </View>
   );

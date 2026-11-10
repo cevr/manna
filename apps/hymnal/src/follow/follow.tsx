@@ -271,7 +271,6 @@ const useSung = (number: number) => {
 
 /** The page's follow: its marks for the lines and the scroll's handlers. */
 export const useFollow = (number: number) => {
-  const state = usePlayerState();
   const player = usePlayer();
   const registry = use(RegistryContext);
   /** The page's scroll, once drawn: React hands a ref over as nothing until then. */
@@ -325,15 +324,20 @@ export const useFollow = (number: number) => {
   const counting = useCounting();
   const counted = useRef(false);
   useEffect(() => {
-    const rate = Option.match(player, { onNone: () => 1, onSome: (it) => registry.get(it.rate) });
-    const told = reportOf(number, state, rate, counting);
-    const starts = counting && told._tag === 'Here' && !counted.current;
-    counted.current = counting && told._tag === 'Here';
-    Option.map(follower, (f) => {
-      f.report(told);
-      if (starts) f.show();
-    });
-  }, [follower, number, state, player, registry, counting]);
+    const stateAtom = Option.match(player, { onNone: () => idle, onSome: (it) => it.state });
+    const told = (state: Player) => {
+      const rate = Option.match(player, { onNone: () => 1, onSome: (it) => registry.get(it.rate) });
+      const report = reportOf(number, state, rate, counting);
+      const starts = counting && report._tag === 'Here' && !counted.current;
+      counted.current = counting && report._tag === 'Here';
+      Option.map(follower, (f) => {
+        f.report(report);
+        if (starts) f.show();
+      });
+    };
+    told(registry.get(stateAtom));
+    return registry.subscribe(stateAtom, told);
+  }, [follower, number, player, registry, counting]);
   useEffect(
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
     [follower],
