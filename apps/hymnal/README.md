@@ -300,7 +300,16 @@ and completions remain token-owned. The slow hold acceptance file exercises
 fixed refusal/retry/interruption traces and replayable seeded immediate and
 deferred reference histories over the real player and score clock. It proves
 numeric protocol behavior, not acoustic word landing or a continuous gesture.
-No reader interaction uses this seam yet. `seek-targets.test.ts` belongs to
+The development-only route `probe/scrub` mounts `WordSeekProbe`: normal
+projection, player and score clock over an inert silent Playback boundary
+and isolated nonpersistent fixture atoms. Its numeric controls/readout test
+wiring, not real reader gestures. The default route renders nothing unless
+`typeof __DEV__ !== 'undefined' && __DEV__`; the slow hold acceptance renders
+that guard and the fixture controls. The six numeric-only by-hand rows in
+`.claude/skills/verify-hymnal/features/scrub.md` have no journey. Both slow
+acceptance files are explicit in `test:slow`, outside every fast part.
+No reader interaction uses this seam yet; hymscrub owns the later centred
+reader, gestures, arbitration and cues. `seek-targets.test.ts` belongs to
 `test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
 every corpus stanza subset, occurrence and word and generated numeric scores.
 

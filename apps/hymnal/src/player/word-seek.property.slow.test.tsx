@@ -1,10 +1,41 @@
 import { expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Option, Queue } from 'effect';
 import { TestClock } from 'effect/testing';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { openWordSeek } from '../test/word-seek';
+import ScrubProbe from '../../app/(hymnal)/probe/scrub';
+import { WordSeekProbe } from './WordSeekProbe';
 import { Command, PlaybackError, Player, Remote, type Status } from './player';
 import { HoldCommand, type HoldToken } from './word-seek';
+
+it.effect(
+  'the default probe route is empty outside development and the silent fixture exposes its numeric controls',
+  () =>
+    Effect.sync(() => {
+      expect(renderToStaticMarkup(<ScrubProbe />).length).toBe(0);
+      const html = renderToStaticMarkup(<WordSeekProbe />);
+      for (const id of [
+        'scrub-play',
+        'scrub-begin',
+        'scrub-prev-line',
+        'scrub-next-line',
+        'scrub-prev-word',
+        'scrub-next-word',
+        'scrub-release',
+        'scrub-cancel',
+        'scrub-invalidate',
+        'scrub-pause',
+        'scrub-replace',
+        'scrub-stanza',
+        'scrub-count-in',
+        'scrub-status',
+      ])
+        expect(html.includes(`data-testid="${id}"`)).toBe(true);
+      expect(html.includes('commits=0')).toBe(true);
+      expect(html.includes('hold=Free')).toBe(true);
+    }),
+);
 
 for (const audible of [true, false])
   it.effect(`frozen origin and cancel preserve score-clock position sound=${audible}`, () =>
