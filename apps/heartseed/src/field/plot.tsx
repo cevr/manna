@@ -24,8 +24,8 @@ import { themed, useScheme, useThemed } from '../look';
 import { passageReference, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
 
-/** The icon each stage is drawn with: full corn as `corn`. */
-const DRAWN: Readonly<Record<Stage, HomeIcon>> = {
+/** The icon each stage is drawn with, on the field and at the end of a run: full corn as `corn`. */
+export const DRAWN: Readonly<Record<Stage, HomeIcon>> = {
   seed: 'seed',
   blade: 'blade',
   ear: 'ear',

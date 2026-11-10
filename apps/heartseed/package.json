@@ -81,7 +81,7 @@
     "test:settings-walk-a": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/settings/walk-a.test.tsx",
     "test:settings-walk-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/settings/walk-b.test.tsx",
     "test:settings-walk-c": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/settings/walk-c.test.tsx",
-    "test:run": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/footer.test.tsx",
+    "test:run": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/footer.test.tsx ./src/run/tended.test.tsx",
     "test:run-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/run.test.tsx",
     "test:run-hold": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/hold.test.tsx",
     "test:run-hold-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/hold-b.test.tsx",
