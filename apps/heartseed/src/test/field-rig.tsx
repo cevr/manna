@@ -55,7 +55,7 @@ import { device } from './one';
 import { END, endShown, rootFaults } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
-import { fieldReader } from './seen';
+import type { fieldReader as createFieldReader } from './seen';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
@@ -115,6 +115,13 @@ export const text = (node: Element | null | undefined) =>
 const hidden = (node: Element) => node.closest('[aria-hidden="true"]') !== null;
 
 type Seen = (node: Element) => boolean;
+
+/** Loads the test-only style machinery on an actual read, not for callers that need only the rig's labels or layout rules. */
+const fieldReader = (host: Element) => {
+  // oxlint-disable-next-line effect/noDynamicImports -- this synchronous Bun test boundary defers the reader module until a read; helper-only importing parts need none of its style machinery
+  const create: typeof createFieldReader = require('./seen').fieldReader;
+  return create(host);
+};
 
 /** The properties `ownStyle` reads: none inherited, so each is the node's own class and inline style alone. */
 type OwnProperty =

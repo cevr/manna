@@ -12,6 +12,7 @@ const PROPERTIES = [
   'background-color',
   'all',
 ] as const;
+const PROJECTED = new Set<string>([...PROPERTIES, 'background']);
 const SIMPLE = /^(?:[a-z][\w-]*|\*)?(?:\.[a-z_][\w-]*)*$/i;
 const PSEUDO_ELEMENT = /^(.*)::[a-z-]+$/i;
 const WORDS = /^[a-z -]+$/i;
@@ -25,8 +26,40 @@ const safeValue = (property: string, value: string) =>
   ((property === 'color' || property === 'background-color') && COLOR.test(value));
 const safeStyle = (style: CSSStyleDeclaration) =>
   PROPERTIES.every((property) => safeValue(property, style.getPropertyValue(property)));
-const affectsRead = (style: CSSStyleDeclaration) =>
-  PROPERTIES.some((property) => style.getPropertyValue(property) !== '');
+const affectsRead = (style: CSSStyleDeclaration) => {
+  for (let at = 0; at < style.length; at += 1) if (PROJECTED.has(style.item(at))) return true;
+  return false;
+};
+
+/** A value is captured only when requested, so layout-only ancestors do not pay for unused paint. */
+const snapshot = (node: Element): Style => {
+  const source = getComputedStyle(node);
+  const values: Partial<Record<keyof Style, string>> = {};
+  const read = (property: keyof Style) => {
+    const known = values[property];
+    if (known !== undefined) return known;
+    const value = source[property];
+    values[property] = value;
+    return value;
+  };
+  return {
+    get display() {
+      return read('display');
+    },
+    get visibility() {
+      return read('visibility');
+    },
+    get opacity() {
+      return read('opacity');
+    },
+    get color() {
+      return read('color');
+    },
+    get backgroundColor() {
+      return read('backgroundColor');
+    },
+  };
+};
 
 /** Simple type/class selectors depend only on the chain; terminal pseudo-elements cannot style an element's own computed read. */
 const safeSelector = (selector: string) =>
@@ -76,7 +109,10 @@ const safeSheets = (document: Document) => {
 export const fieldReader = (host: Element) => {
   const document = host.ownerDocument;
   const view = document.defaultView;
-  const eligible = view !== null && safeSheets(document);
+  const eligible =
+    view !== null &&
+    host.querySelectorAll('[data-testid="row"]').length > 1 &&
+    safeSheets(document);
   const styles = new Map<Element, Style>();
   const chains = new Map<Element, number | null>();
   const interned = new Map<string, number>();
@@ -128,14 +164,7 @@ export const fieldReader = (host: Element) => {
       styles.set(node, reused);
       return reused;
     }
-    const style = getComputedStyle(node);
-    const value = {
-      display: style.display,
-      visibility: style.visibility,
-      opacity: style.opacity,
-      color: style.color,
-      backgroundColor: style.backgroundColor,
-    };
+    const value = snapshot(node);
     styles.set(node, value);
     if (chain !== null) shared.set(chain, value);
     return value;
