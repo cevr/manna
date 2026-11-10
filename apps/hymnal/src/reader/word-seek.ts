@@ -454,7 +454,6 @@ const hostTimer: HoldTimer = {
   after: (ms, run) => {
     // oxlint-disable-next-line effect/noGlobals -- the web adapter's hold timer: a host timer stopped with the pointer and the area, with no Effect run per touch.
     const timer = setTimeout(run, ms);
-    // oxlint-disable-next-line effect/noGlobals -- the same host timer, stopped.
     return () => clearTimeout(timer);
   },
 };
