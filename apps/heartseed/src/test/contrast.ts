@@ -20,9 +20,11 @@ const luminance = (rgb: readonly number[]) => {
 };
 
 /** The nearest element from `node` up whose background is opaque, null when none is. */
-const groundOf = (node: Element | null) => {
+type StyleReader = (node: Element) => Pick<CSSStyleDeclaration, 'color' | 'backgroundColor'>;
+
+const groundOf = (node: Element | null, styleOf: StyleReader = getComputedStyle) => {
   let ground = node;
-  while (ground !== null && channels(getComputedStyle(ground).backgroundColor).a < 1)
+  while (ground !== null && channels(styleOf(ground).backgroundColor).a < 1)
     ground = ground.parentElement;
   return ground;
 };
@@ -31,11 +33,11 @@ const groundOf = (node: Element | null) => {
 const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
 /** The contrast of an element's computed text colour against the nearest opaque background painted behind it; 0 when none is. */
-export const contrastOf = (node: Element) => {
-  const ground = groundOf(node);
+export const contrastOf = (node: Element, styleOf: StyleReader = getComputedStyle) => {
+  const ground = groundOf(node, styleOf);
   if (ground === null) return 0;
-  const ink = luminance(channels(getComputedStyle(node).color).rgb);
-  return ratio(ink, luminance(channels(getComputedStyle(ground).backgroundColor).rgb));
+  const ink = luminance(channels(styleOf(node).color).rgb);
+  return ratio(ink, luminance(channels(styleOf(ground).backgroundColor).rgb));
 };
 
 /** The contrast of an element's own fill against the nearest opaque background painted behind it (a mark's 3:1, WCAG 1.4.11); 0 when the element or what lies behind it has no opaque fill. */

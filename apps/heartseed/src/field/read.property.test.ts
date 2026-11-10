@@ -1,11 +1,15 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noTryCatch -- the generated DOM model owns plain mutable trees and happy-dom style/scheme state; try/finally releases that boundary even when a synchronous assertion throws. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noTryCatch, effect/noAsyncFunction -- the generated DOM model owns plain mutable trees and happy-dom style/scheme state; try/finally releases that boundary even when an assertion throws, including the mounted rig's promise-based lifetime. */
 
 import { expect, test } from 'bun:test';
+import passage from 'virtual:heartseed-passage';
 
 import { theme } from '../theme';
 import { contrastOf } from '../test/contrast';
 import { fieldReadModel, readoutsModel, contrastModel } from '../test/field-read-model';
-import { readField, readoutsOf } from '../test/field-rig';
+import { mount, record, readField, readoutsOf } from '../test/field-rig';
+import { recallOf } from '../test/field-model';
+import { START } from '../test/clock';
+import { device } from '../test/one';
 import { setSystem, systemScheme } from '../test/look';
 
 interface Node {
@@ -324,7 +328,7 @@ test('field reads and five minima agree with the plain oracle after every genera
       let host = view.sync(model);
       try {
         observe(model, host, `seed ${seed}: initial`);
-        for (const kind of commands) {
+        for (const kind of commands.toSorted(() => next() - 0.5)) {
           changes[kind](commandContext(model, next));
           covered.add(kind);
           if (kind !== 'repeat') host = view.sync(model);
@@ -371,14 +375,26 @@ interface WitnessContext {
 }
 
 const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext) => void> = {
-  ancestor: ({ model }) => {
-    model.tree.attrs['style'] += ';opacity:0';
+  ancestor: ({ model, all, title, other }) => {
+    model.css = '';
+    const row = all.find((node) => node.attrs['data-testid'] === 'row');
+    if (row) row.attrs['style'] = 'color:transparent';
+    if (title && other) {
+      title.attrs['class'] = '';
+      other.attrs['class'] = '';
+      title.tag = 'span';
+      other.tag = 'span';
+    }
   },
-  inline: ({ title }) => {
-    if (title) title.attrs['style'] = 'display:none';
+  inline: ({ title, other }) => {
+    if (title) {
+      title.tag = 'span';
+      title.attrs['style'] = 'display:none';
+    }
+    if (other) other.tag = 'span';
   },
   tag: ({ model, title, other }) => {
-    model.css = 'span { color:rgb(255,255,255) } div { color:rgb(0,0,0) }';
+    model.css = 'span { color:transparent } div { color:rgb(0,0,0) }';
     if (title && other) {
       title.tag = 'span';
       other.tag = 'div';
@@ -486,6 +502,12 @@ for (const witness of witnesses) {
     const hostModel = model.tree.children[0];
     expect(hostModel).toBeDefined();
     if (hostModel === undefined) return;
+    hostModel.children = [
+      ...hostModel.children.filter((node) =>
+        ['sown', 'harvest'].includes(node.attrs['data-testid'] ?? ''),
+      ),
+      ...nodesOf(hostModel).filter((node) => node.attrs['data-testid'] === 'row'),
+    ];
     const all = nodesOf(model.tree);
     const titles = all.filter((node) => node.attrs['data-testid'] === 'row-title');
     const title = titles[0];
@@ -506,3 +528,25 @@ for (const witness of witnesses) {
     }
   });
 }
+
+test('a malformed field mutation is read and its frame fault is retained', async () => {
+  const disk = new Map(device.disk);
+  device.launch([record(recallOf(passage.reference, START - 86_400_000, 3, 0))]);
+  const app = await mount(true);
+  try {
+    expect(await app.until(app.home)).toBe(true);
+    expect(app.faults).toEqual([]);
+    const frames = app.frames.field;
+    const title = document.querySelector('[data-testid="row-title"]');
+    expect(title).not.toBeNull();
+    title?.remove();
+    expect(await app.until(() => app.frames.field > frames)).toBe(true);
+    expect(
+      app.faults.some((fault) => fault.startsWith('a field frame ')),
+      'the observed frame retains its reader fault',
+    ).toBe(true);
+  } finally {
+    await app.leave();
+    device.launch(disk);
+  }
+});

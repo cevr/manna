@@ -55,6 +55,7 @@ import { device } from './one';
 import { END, endShown, rootFaults } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
+import { fieldReader } from './seen';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
@@ -113,15 +114,7 @@ export const text = (node: Element | null | undefined) =>
 
 const hidden = (node: Element) => node.closest('[aria-hidden="true"]') !== null;
 
-/** Whether a reader sees `node`: no ancestor out of the layout or transparent, its ink not transparent. */
-const seen = (node: Element) => {
-  for (let at: Element | null = node; at !== null; at = at.parentElement) {
-    const style = getComputedStyle(at);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')
-      return false;
-  }
-  return !/rgba\(.*, 0(\.0+)?\)$|transparent/.test(getComputedStyle(node).color);
-};
+type Seen = (node: Element) => boolean;
 
 /** The properties `ownStyle` reads: none inherited, so each is the node's own class and inline style alone. */
 type OwnProperty =
@@ -152,7 +145,7 @@ export const scrolled = (node: Element) => {
 };
 
 /** A count's text when it is one node, seen, and exposed as that text. */
-const counted = (host: Element, id: string) => {
+const counted = (host: Element, id: string, seen: Seen) => {
   const nodes = host.querySelectorAll(`[data-testid="${id}"]`);
   const node = nodes[0];
   if (nodes.length !== 1 || node === undefined) return `<${nodes.length} ${id}>`;
@@ -173,7 +166,7 @@ const drawingOf = (plant: Element) => {
 };
 
 /** A plant as the reader gets it: its name (readiness cut off) when it is one exposed button, its drawing, and the text it shows. */
-const plantRead = (plant: Element) => ({
+const plantRead = (plant: Element, seen: Seen) => ({
   label:
     plant.getAttribute('role') === 'button' && !hidden(plant)
       ? unready(plant.getAttribute('aria-label') ?? '<no name>')
@@ -191,6 +184,7 @@ const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'ripe', 'counts'
 
 /** A field frame as the reader gets it: the counts, each row's title, icon, ripe count and plants, and the numbers and exposed images outside them. */
 export const readField = (host: Element) => {
+  const { seen, styleOf } = fieldReader(host);
   const rows = [...host.querySelectorAll('[data-testid="row"]')].map((row) => {
     const titles = row.querySelectorAll('[data-testid="row-title"]');
     const title = titles[0];
@@ -202,8 +196,10 @@ export const readField = (host: Element) => {
           ? text(title)
           : '<title not one seen and exposed>',
       icon: icons.length === 1 && icon !== undefined ? oneIcon(icon) : `<${icons.length} icons>`,
-      ripe: counted(row, 'ripe'),
-      plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map(plantRead),
+      ripe: counted(row, 'ripe', seen),
+      plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map((plant) =>
+        plantRead(plant, seen),
+      ),
     };
   });
   const strays = [...host.querySelectorAll('*')].filter(
@@ -218,11 +214,11 @@ export const readField = (host: Element) => {
   ).length;
   const faint = [...host.querySelectorAll('*')]
     .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
-    .filter((node) => contrastOf(node) < AA)
+    .filter((node) => contrastOf(node, styleOf) < AA)
     .map((node) => node.closest('[data-testid]')?.getAttribute('data-testid') ?? 'text');
   return {
-    sown: counted(host, 'sown'),
-    harvest: counted(host, 'harvest'),
+    sown: counted(host, 'sown', seen),
+    harvest: counted(host, 'harvest', seen),
     rows,
     strays,
     faint: [...new Set(faint)],
@@ -231,11 +227,12 @@ export const readField = (host: Element) => {
 
 /** The lowest contrast among the seen text of the field's five readouts. */
 export const readoutsOf = (host: Element) => {
+  const { seen, styleOf } = fieldReader(host);
   const lowest = (id: string) =>
     Math.min(
       ...[...host.querySelectorAll(`[data-testid="${id}"], [data-testid="${id}"] *`)]
         .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
-        .map(contrastOf),
+        .map((node) => contrastOf(node, styleOf)),
     );
   return {
     sown: lowest('sown'),
