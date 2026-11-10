@@ -3237,10 +3237,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:home-icons`: `scripts/home-icons.test.ts`, with no preload:
     `assets/home` holds exactly each `ICON_IMAGES` name's master, two PNGs
     and two declarations; each master 48 × 48 on no fill with every colour
-    mapped or kept; `recolour` against a rule written in the test over 400
-    seeded texts (each master hex in any case, the kept ones, random
-    six-digit hexes, three-, four- and eight-digit tokens, a bare `#`,
-    filler; both schemes, floors on clean and unmapped texts); the table
+    mapped or kept; `recolour` against a rule written in the test over 600
+    seeded texts (a token is `#` and any count of hex digits in any case:
+    each master hex and each kept one in any case, random tokens of 1 to 9
+    digits and of 10 or more with no bound, a master's or a kept hex with
+    digits added or one dropped, a bare `#`, filler; both schemes, floors on
+    clean and unmapped texts, on each unmapped kind as the first unmapped
+    token, and on each digit count from 1 to 10 and one of 16 or more); the table
     naming each PNG; each declaration the script's `DECLARATION`; each PNG
     144 × 144 with four channels; and every committed PNG byte for byte
     what `bun run home-icons` draws now.

@@ -5480,3 +5480,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A doc comment that opened a sentence about the root with `No` or `Without` and a prop the root does not take passed `root-props.test.ts`.
 - **Cause:** The lead pattern held only lower-case `no` and `without`, and the generator drew no lead with a capital, nor a sentence that opens with one.
 - **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare`
+
+### heartseed-recolour-property-draws-every-token-length
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "`scripts/home-icons.test.ts`'s generator should draw token digit counts from 1 to 9, since the spec's 3/4/8 classes let two mutants through (T1)"
+- **Source:** hymnapp/batch-ic-1-findings.md o2 (On base, its second item)
+- **Wrong:** `recolour`'s property drew colour tokens of 3, 4, 6, 7 and 8 digits only, and a kept hex only as written, so a reader that stopped at 8 digits, needed 3, read a token by its first 7 characters or kept a kept hex only in lower case passed it.
+- **Cause:** The generator drew the token lengths the masters held and a few short ones, not the rule's domain of any count of hex digits in any case, and its oracle kept a kept hex only as written.
+- **Guard:** code: `apps/heartseed/scripts/home-icons.test.ts` `recolour maps each master’s hex to its role, keeps a kept one, and fails on the first other token`
