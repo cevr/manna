@@ -2875,10 +2875,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     written in the test, and over a seeded sample of 700 verses with
     Isaiah 41:10 and John 3:16 among them, Him's plan lighting Her's runs
     and ending Her's phrases with her rests; `src/natural/voice-lists.test.ts`,
-    the natural source over 260 seeded readings on a stand-in module and two
-    hand lists (Her, Him and a voice outside the download): each speak plans,
-    prosodies and plays by its own voice's list, and asks for no list before
-    its voice is known; `src/natural/manifest.test.ts`,
+    the natural source over 80 seeded sessions of two to five speaks on one
+    source, as the app builds it once, on a stand-in module and two hand
+    lists (Her, Him and a voice outside the download, in any order): each
+    speak plans, prosodies and plays by its own voice's list, never an
+    earlier speak's, and asks for no list before its voice is known; `src/natural/manifest.test.ts`,
     the 39 pinned files, the voices, `LISTS` and `baseFor` over seeded asks;
     `src/natural/guard.test.ts`, the native module's guards (its committed
     declaration equals One's, the simulator branch never starts the engine
@@ -2911,7 +2912,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     returns only after both voices stopped; and a natural reading's words
     lit from the module's ranges, a seek reading on in the natural voice
     with the words before it lit, and Today's passage read by Her over the
-    American list's plan and by Him over the British list's.
+    American list's plan and by Him over the British list's, on launches of
+    their own and on one launch, Her then Him and Him then Her, the Voice
+    pill switching between.
   - `test:status`: `src/natural/status.test.tsx`, the natural voice's
     line in home's Settings sheet, rendered under `appLayer` with a
     stand-in module: the download's walk, each failure's words and

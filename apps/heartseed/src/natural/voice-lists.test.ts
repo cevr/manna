@@ -1,21 +1,24 @@
 /* oxlint-disable effect/noTernary, effect/noGlobals -- the generator and the model are plain branches over plain records, and a wrong reading is named and compared by its JSON. */
 
 /**
- * Which list the natural source plans a speak by, over seeded readings on a
- * stand-in module that records its calls: two hand lists over one vocab,
- * whose entries differ in phonemes and in length and which each lack a key
- * the other holds, read in Her, in Him, and in a voice outside the
- * download. A speak in a voice of the download is exactly its two stops,
- * the load of `<voice>.bin`, then per chunk of `planOf` over that voice's
- * own list its prosody at the voice's speed, its render and its play with
- * the starts that list's marks give; a text the voice's own list cannot plan
- * fails the speak after its two stops. A list is asked for only by the
- * speak's own voice, and never for a voice outside `VOICES`.
+ * Which list the natural source plans a speak by, over seeded sessions on a
+ * stand-in module that records its calls: one source, as the app builds it
+ * once for its life, speaks two to five readings in turn, each in Her, in
+ * Him or in a voice outside the download drawn on its own, so a voice
+ * follows the other in both orders. Two hand lists over one vocab, whose
+ * entries differ in phonemes and in length and which each lack a key the
+ * other holds. The source's build stops the module once; a speak in a voice
+ * of the download is then exactly its stop, the load of `<voice>.bin`, then
+ * per chunk of `planOf` over that voice's own list its prosody at the
+ * voice's speed, its render and its play with the starts that list's marks
+ * give; a text the voice's own list cannot plan fails the speak after its
+ * stop. A list is asked for only by the speak's own voice, and never for a
+ * voice outside `VOICES`.
  *
- * It catches a source that plans every voice by one list, asks for the list
- * before it knows the voice is one of the download, or plans by a list other
- * than the speak's own. It misses the app's own lists: `lexicon.test.ts`
- * and `route.test.ts` hold those.
+ * It catches a source that plans every voice by one list, keeps the list of
+ * an earlier speak, asks for the list before it knows the voice is one of
+ * the download, or plans by a list other than the speak's own. It misses the
+ * app's own lists: `lexicon.test.ts` and `route.test.ts` hold those.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -29,7 +32,7 @@ import { planOf, type Chunk } from './plan';
 import { naturalVoiceSource } from './voice';
 
 const SEED = 31_007;
-const READINGS = 260;
+const SESSIONS = 80;
 const SYMBOLS = [...'abcdefghijklmnop'];
 const VOCAB: ReadonlyMap<string, number> = new Map([
   [' ', 16],
@@ -162,9 +165,8 @@ const standIn = (calls: Array<Call>) => {
   );
 };
 
-/** The calls a reading of `chunks` in `voice` makes on the stand-in. */
+/** The calls a speak of `chunks` in `voice` makes on the stand-in after the source's build. */
 const wanted = (chunks: ReadonlyArray<Chunk>, voice: NaturalVoice): ReadonlyArray<Call> => [
-  { _tag: 'stop' },
   { _tag: 'stop' },
   { _tag: 'load', file: `${voice}.bin` },
   ...chunks.flatMap((chunk, k): ReadonlyArray<Call> => {
@@ -188,22 +190,43 @@ const wanted = (chunks: ReadonlyArray<Chunk>, voice: NaturalVoice): ReadonlyArra
   }),
 ];
 
-/** Speaks `text` in `voice` over `lexiconFor`; the speak's exit and the module's calls once `awaited` are in. */
-const spoken = (
-  lexiconFor: (voice: NaturalVoice) => Lexicon,
-  text: string,
-  voice: string,
-  awaited: number,
-) => {
+/** A reading: its voice, its text, and the calls its speak makes after the source's build. */
+type Reading = { readonly voice: string; readonly text: string; readonly awaited: number };
+
+/** What one speak did: its exit, the module's calls and the lists asked for from its start to the next. */
+type Spoken = {
+  readonly exit: Exit.Exit<void, unknown>;
+  readonly calls: ReadonlyArray<Call>;
+  readonly asked: ReadonlyArray<string>;
+};
+
+/** Speaks each reading in turn on one source over the hand lists; the build's calls and asks, and what each speak did once its `awaited` calls are in. */
+const session = (readings: ReadonlyArray<Reading>) => {
   const calls: Array<Call> = [];
+  const asked: Array<string> = [];
+  const lexiconFor = (named: NaturalVoice) => {
+    asked.push(named);
+    return OWN[named];
+  };
   return Effect.gen(function* () {
     const source = yield* VoiceSource;
-    const exit = yield* Effect.exit(
-      source.speak(7, text, { system: '', natural: voice as NaturalVoice }),
-    );
-    for (let turn = 0; turn < 900 && calls.length < awaited; turn++) yield* Effect.yieldNow;
-    for (let turn = 0; turn < 20; turn++) yield* Effect.yieldNow;
-    return { exit, calls };
+    const built = { calls: [...calls], asked: [...asked] };
+    const spoken: Array<Spoken> = [];
+    for (const [at, reading] of readings.entries()) {
+      const from = calls.length;
+      const fromAsked = asked.length;
+      const exit = yield* Effect.exit(
+        source.speak(7 + at, reading.text, {
+          system: '',
+          natural: reading.voice as NaturalVoice,
+        }),
+      );
+      for (let turn = 0; turn < 900 && calls.length - from < reading.awaited; turn++)
+        yield* Effect.yieldNow;
+      for (let turn = 0; turn < 20; turn++) yield* Effect.yieldNow;
+      spoken.push({ exit, calls: calls.slice(from), asked: asked.slice(fromAsked) });
+    }
+    return { built, spoken };
   }).pipe(Effect.provide(Layer.provide(naturalVoiceSource(lexiconFor), standIn(calls))));
 };
 
@@ -225,57 +248,77 @@ const readingOf = (next: () => number) => {
 /** What a reading drew, for the floors: Her or Him planned, a text the voice's list cannot plan, or a voice outside the download. */
 type Kind = 'her' | 'him' | 'unplanned' | 'stranger';
 
-/** Speaks one reading; what it drew, and each rule it broke. */
-const judged = (voice: string, text: string) =>
-  Effect.gen(function* () {
-    const asked: Array<string> = [];
-    const lexiconFor = (named: NaturalVoice) => {
-      asked.push(named);
-      return OWN[named];
-    };
-    const wrong: Array<string> = [];
-    if (!isNatural(voice)) {
-      const { exit, calls } = yield* spoken(lexiconFor, text, voice, 2);
-      if (!Exit.isFailure(exit)) wrong.push('a voice outside the download read');
-      if (calls.length !== 2) wrong.push(`calls ${JSON.stringify(calls)}`);
-      if (asked.length > 0) wrong.push(`a list was asked for ${asked.join(',')}`);
-      return { kind: 'stranger' as Kind, chunks: 0, wrong };
-    }
-    const planned = planOf(OWN[voice].words, VOCAB, text);
-    const chunks = planned._tag === 'Some' ? planned.value.chunks : [];
-    const want = planned._tag === 'Some' ? wanted(chunks, voice) : wanted([], voice).slice(0, 2);
-    const { exit, calls } = yield* spoken(lexiconFor, text, voice, want.length);
-    const kind: Kind =
-      planned._tag === 'None' ? 'unplanned' : voice === 'bm_george' ? 'him' : 'her';
-    if (kind === 'unplanned' && !Exit.isFailure(exit))
-      wrong.push('a text its list cannot plan read');
-    if (kind !== 'unplanned' && !Exit.isSuccess(exit)) wrong.push('the speak failed');
-    if (asked.some((named) => named !== voice)) wrong.push(`lists asked ${asked.join(',')}`);
-    if (JSON.stringify(calls) !== JSON.stringify(want))
-      wrong.push(`calls ${JSON.stringify(calls).slice(0, 300)}`);
-    return { kind, chunks: chunks.length, wrong };
-  });
-
 /** Whether Him's plan of `text` differs from Her's: the readings must tell the two lists apart. */
 const listsDiffer = (text: string) =>
   JSON.stringify(planOf(GB.words, VOCAB, text)) !== JSON.stringify(planOf(US.words, VOCAB, text));
 
+/** What a drawn reading should do: its kind, its chunks and the calls of its speak. */
+const expected = (voice: string, text: string) => {
+  if (!isNatural(voice))
+    return { kind: 'stranger' as Kind, chunks: 0, want: wanted([], 'af_heart').slice(0, 1) };
+  const planned = planOf(OWN[voice].words, VOCAB, text);
+  if (planned._tag === 'None')
+    return { kind: 'unplanned' as Kind, chunks: 0, want: wanted([], voice).slice(0, 1) };
+  const kind: Kind = voice === 'bm_george' ? 'him' : 'her';
+  return { kind, chunks: planned.value.chunks.length, want: wanted(planned.value.chunks, voice) };
+};
+
+/** Speaks two to five drawn readings on one source; each reading's kind and chunks, and each rule the session broke. */
+const judged = (next: () => number) =>
+  Effect.gen(function* () {
+    const drawn = Array.from({ length: 2 + Math.floor(next() * 4) }, () => readingOf(next)).map(
+      ({ voice, text }) => ({ voice, text, ...expected(voice, text) }),
+    );
+    const wrong: Array<string> = [];
+    const { built, spoken } = yield* session(
+      drawn.map(({ voice, text, want }) => ({ voice, text, awaited: want.length })),
+    );
+    if (JSON.stringify(built) !== JSON.stringify({ calls: [{ _tag: 'stop' }], asked: [] }))
+      wrong.push(`build ${JSON.stringify(built)}`);
+    for (const [at, reading] of drawn.entries()) {
+      const { exit, calls, asked } = spoken[at] ?? { exit: Exit.void, calls: [], asked: [] };
+      const says = (each: string) =>
+        wrong.push(`speak ${at} ${reading.voice} ${JSON.stringify(reading.text)}: ${each}`);
+      if (reading.kind === 'stranger' || reading.kind === 'unplanned') {
+        if (!Exit.isFailure(exit)) says('read, though it should fail');
+      } else if (!Exit.isSuccess(exit)) says('the speak failed');
+      if (asked.some((named) => named !== reading.voice)) says(`lists asked ${asked.join(',')}`);
+      if (JSON.stringify(calls) !== JSON.stringify(reading.want))
+        says(`calls ${JSON.stringify(calls).slice(0, 300)}`);
+    }
+    return { drawn, wrong };
+  });
+
 describe('the list the natural source plans by', () => {
-  it(`plans each speak by its own voice's list, asked for only by a voice of the download, over ${READINGS} seeded readings`, () =>
+  it(`plans each speak by its own voice's list, asked for only by a voice of the download, over ${SESSIONS} seeded sessions of two to five speaks on one source`, () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const next = random(SEED);
         const wrong: Array<string> = [];
-        const floors = { her: 0, him: 0, unplanned: 0, stranger: 0, himDiffers: 0, manyChunks: 0 };
-        for (let reading = 0; reading < READINGS && wrong.length < 6; reading++) {
-          const { voice, text } = readingOf(next);
-          const found = yield* judged(voice, text);
-          floors[found.kind]++;
-          if (found.kind === 'him' && listsDiffer(text)) floors.himDiffers++;
-          if (found.chunks > 2) floors.manyChunks++;
-          wrong.push(
-            ...found.wrong.map((each) => `${reading} ${voice} ${JSON.stringify(text)}: ${each}`),
-          );
+        const floors = {
+          her: 0,
+          him: 0,
+          unplanned: 0,
+          stranger: 0,
+          himDiffers: 0,
+          manyChunks: 0,
+          himAfterHer: 0,
+          herAfterHim: 0,
+        };
+        for (let at = 0; at < SESSIONS && wrong.length < 6; at++) {
+          const found = yield* judged(next);
+          for (const [index, reading] of found.drawn.entries()) {
+            floors[reading.kind]++;
+            if (reading.chunks > 2) floors.manyChunks++;
+            const differs = listsDiffer(reading.text);
+            if (reading.kind === 'him' && differs) floors.himDiffers++;
+            const before = found.drawn.slice(0, index).map((each) => each.voice);
+            if (reading.kind === 'him' && differs && before.includes('af_heart'))
+              floors.himAfterHer++;
+            if (reading.kind === 'her' && differs && before.includes('bm_george'))
+              floors.herAfterHim++;
+          }
+          wrong.push(...found.wrong.map((each) => `session ${at} ${each}`));
         }
         expect(wrong).toEqual([]);
         for (const [name, floor] of Object.entries(floors)) expect(floor, name).toBeGreaterThan(5);

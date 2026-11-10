@@ -1083,4 +1083,50 @@ describe('the router between the system voice and the natural voice', () => {
         ]);
       }).pipe(Effect.provide(keptLogs(() => undefined))),
     ));
+
+  it('reads Today’s passage by each voice’s own list on one launch, Her then Him and Him then Her, the Voice pill switching between', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const her = Option.getOrThrow(idsOf('af_heart', today.text));
+        const him = Option.getOrThrow(idsOf('bm_george', today.text));
+        const heard: Array<unknown> = [];
+        for (const first of ['her', 'him'] as const) {
+          const { device, scope, voice, natural } = yield* readyIn(first);
+          const readings: Array<unknown> = [];
+          const readOne = Effect.gen(function* () {
+            const known = new Set(device.ids.keys());
+            yield* voice.read(today.text);
+            yield* settle;
+            const utterance = [...device.ids.keys()].find((each) => !known.has(each));
+            readings.push([
+              (yield* voice.view).choice,
+              utterance === undefined ? undefined : device.rendered.get(utterance),
+              utterance === undefined ? undefined : device.ids.get(utterance),
+            ]);
+          });
+          const tap = tapVoice.pipe(
+            Effect.provideService(Voice, voice),
+            Effect.provideService(Natural, natural),
+          );
+          yield* readOne;
+          yield* tap;
+          if (first === 'him') yield* tap;
+          yield* settle;
+          yield* readOne;
+          heard.push(readings);
+          yield* Scope.close(scope, Exit.void);
+        }
+        expect(him).not.toEqual(her);
+        expect(heard).toEqual([
+          [
+            ['her', 'af_heart.bin', her],
+            ['him', 'bm_george.bin', him],
+          ],
+          [
+            ['him', 'bm_george.bin', him],
+            ['her', 'af_heart.bin', her],
+          ],
+        ]);
+      }).pipe(Effect.provide(keptLogs(() => undefined))),
+    ));
 });
