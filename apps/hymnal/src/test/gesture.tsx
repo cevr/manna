@@ -53,6 +53,10 @@ export interface PanConfig {
   readonly activeOffsetY?: Offset;
   readonly failOffsetX?: Offset;
   readonly failOffsetY?: Offset;
+  /** A pan that takes only after the finger stays still this long, in milliseconds: no movement activates it. */
+  readonly activateAfterLongPress?: number;
+  readonly maxPointers?: number;
+  readonly shouldCancelWhenOutside?: boolean;
   readonly onBegin?: (touch: Touch) => void;
   readonly onActivate?: (touch: Touch) => void;
   readonly onUpdate?: (touch: Touch) => void;
@@ -136,6 +140,7 @@ const past = (offset: Offset, t: number) =>
 const DEFAULT_DISTANCE = 10;
 
 const activates = (pan: PanConfig, tx: number, ty: number) => {
+  if (pan.activateAfterLongPress !== undefined) return false;
   const offsets = pan.activeOffsetX !== undefined || pan.activeOffsetY !== undefined;
   const distance = pan.minDistance ?? ((!offsets && DEFAULT_DISTANCE) || undefined);
   return (
@@ -201,6 +206,91 @@ const pansAt = (start: Drawn) =>
         },
     )
     .filter((gesture) => gesture.pan && gesture.enabled !== false);
+
+const keyOf = (pan: PanConfig) => pan.testID ?? pan;
+
+/** A finger's drift before a long press's time: the pans it fails (each told), and the pan it activates, if any. */
+const drift = (
+  touched: ReadonlyArray<PanConfig>,
+  { x, y, dx, dy }: { x: number; y: number; dx: number; dy: number },
+) => {
+  const failed = new Set<string | PanConfig>();
+  let moved: PanConfig | undefined;
+  const steps = Math.max(Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))), 1);
+  for (let k = 1; k <= steps && moved === undefined; k += 1) {
+    const tx = (dx * k) / steps;
+    const ty = (dy * k) / steps;
+    for (const pan of touched.filter((one) => !failed.has(keyOf(one)))) {
+      if (moved !== undefined) break;
+      if (fails(pan, tx, ty)) {
+        failed.add(keyOf(pan));
+        pan.onFinalize?.({ x: x + tx, y: y + ty, canceled: true });
+      } else if (activates(pan, tx, ty)) moved = pan;
+    }
+  }
+  return { failed, moved };
+};
+
+/** The long-press pan, if it still stands enabled when its time passes. */
+const stillWinner = (own: Drawn, failed: ReadonlySet<string | PanConfig>) =>
+  (own.enabled !== false && !failed.has(keyOf(own)) && own) || undefined;
+
+/** A finger on a long-press pan: whether the pan took it, and what the finger does next. */
+export interface Held {
+  /** The test id of the pan that took the touch, if one did. */
+  readonly taken: Option.Option<string>;
+  /** The finger is `dx`, `dy` points from where it landed. */
+  readonly move: (dx: number, dy: number) => void;
+  readonly lift: () => void;
+  /** The platform cancels the touch (a call, a system gesture). */
+  readonly cancel: () => void;
+}
+
+/**
+ * A finger lands at `x`, `y` on the detector of the long-press pan
+ * `testID`, drifts `dx`, `dy` points before the pan's time, and stays until
+ * its time passes. Every pan it reaches begins; the drift fails a pan whose
+ * fail offsets it leaves and may activate another pan (which then takes the
+ * touch); a long-press pan still standing at its time activates, and every
+ * other pan fails. Each gesture is read as its detector last drew it.
+ */
+export const longPress = (
+  testID: string,
+  { x = 0, y = 0, dx = 0, dy = 0 }: { x?: number; y?: number; dx?: number; dy?: number },
+): Held => {
+  const touched = pansAt(gestureOf(testID));
+  for (const pan of touched) pan.onBegin?.({ x, y });
+  const { failed, moved } = drift(touched, { x, y, dx, dy });
+  const at = { x: x + dx, y: y + dy, translationX: dx, translationY: dy };
+  let winner = moved ?? stillWinner(gestureOf(testID), failed);
+  winner?.onActivate?.(at);
+  for (const pan of touched)
+    if (!failed.has(keyOf(pan)) && keyOf(pan) !== keyOf(winner ?? {}))
+      pan.onFinalize?.({ ...at, canceled: true });
+  const taken = Option.fromNullishOr(winner?.testID);
+  const current = () =>
+    Option.filter(
+      Option.map(taken, (id) => gestureOf(id)),
+      () => winner !== undefined,
+    );
+  const end = (canceled: boolean, touch: Touch) =>
+    Option.map(current(), (pan) => {
+      pan.onDeactivate?.({ ...touch, canceled });
+      pan.onFinalize?.({ ...touch, canceled });
+      winner = undefined;
+    });
+  let last: Touch = at;
+  return {
+    taken,
+    move: (mx, my) =>
+      Option.map(current(), (pan) => {
+        last = { x: x + mx, y: y + my, translationX: mx, translationY: my };
+        pan.onUpdate?.(last);
+      }),
+    lift: () => end(false, last),
+    cancel: () => end(true, last),
+  };
+};
 
 /** Which ends first as a still finger lifts: the tap's activation, or the pans' failure. UIKit gives no order. */
 export type TapOrder = 'tap-first' | 'pans-first';

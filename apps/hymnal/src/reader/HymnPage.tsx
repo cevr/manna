@@ -84,9 +84,13 @@ import { KeepAwake } from './KeepAwake';
 import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
 import { readingStyle } from './reading';
+import { SeekArea } from './WordSeek';
 import {
+  ChordTouchProvider,
+  chordTouchOf,
   type Described,
   describe,
+  type SeekAreaProps,
   focusOn,
   PreviewProvider,
   spoken,
@@ -98,6 +102,9 @@ import {
 /** The page's padding over the head and under the last words, outside a held seek's. */
 const PAGE_TOP = 8;
 const PAGE_FOOT = 48;
+// oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read of when a chord's press began, with no Effect run per touch.
+const touchClock = () => performance.now();
+
 /** The space between the seek's controls and the words they leave free. */
 const SEEK_GAP = 8;
 
@@ -123,11 +130,14 @@ export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
   shown = true,
+  area: Area = SeekArea,
 }: {
   readonly hymn: HymnText;
   readonly reader: ChordReader;
   /** Whether this is the page the reader sees: a neighbour in the pager, or a page under another, takes no held seek. */
   readonly shown?: boolean;
+  /** The hold's touch over the sung words: the platform's own (`WordSeek.tsx`, `WordSeek.native.tsx`) unless given. */
+  readonly area?: (props: SeekAreaProps) => ReactNode;
 }) {
   const accent = useAccent();
   const on = useAtomValue(reader.chords);
@@ -164,6 +174,7 @@ export const HymnPage = memo(function HymnPage({
   );
   const layout = useLayoutKey(reader.reading, on, style);
   const seek = useWordSeek({ number: hymn.number, shown, layout, host: follow.preview });
+  const chordTouch = useMemo(() => chordTouchOf(touchClock), []);
   const [room, setRoom] = useState(0);
   follow.cover(RISE + room);
   const holding = Option.isSome(seek.via);
@@ -179,8 +190,6 @@ export const HymnPage = memo(function HymnPage({
         ]}
         onLayout={follow.onLayout}
         onContentSizeChange={follow.onContentSizeChange}
-        onScroll={follow.onScroll}
-        scrollEventThrottle={16}
         scrollEnabled={!holding}
         {...follow.hand}
       >
@@ -209,7 +218,11 @@ export const HymnPage = memo(function HymnPage({
             <FollowProvider value={follow.follow}>
               <ChordTapProvider value={tap}>
                 <PreviewProvider value={seek.marks}>
-                  <Sections hymn={hymn} book={wordsBook} chords={chords} />
+                  <ChordTouchProvider value={chordTouch}>
+                    <Area seek={seek} style={styles.sections}>
+                      <Sections hymn={hymn} book={wordsBook} chords={chords} />
+                    </Area>
+                  </ChordTouchProvider>
                 </PreviewProvider>
               </ChordTapProvider>
             </FollowProvider>
@@ -615,6 +628,7 @@ const styles = StyleSheet.create({
   overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
+  sections: { gap: 24 },
   about: { alignSelf: 'flex-start' },
   topic: { fontSize: 13, color: color.muted },
   pressed: { opacity: 0.5 },

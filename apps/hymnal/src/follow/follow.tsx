@@ -33,8 +33,6 @@ import type {
   ColorValue,
   HostInstance,
   LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   ScrollViewInstance,
   TextStyle,
 } from 'react-native';
@@ -395,7 +393,7 @@ export const useFollow = (number: number) => {
 
   /** The points of the scroll's foot under the docked bar and the seek's controls. */
   const covered = useRef(0);
-  /** The scroll's offset as last told: kept so the padding's end leaves the words in place. */
+  /** The offset of the held seek's last scroll (the page cannot scroll otherwise while held): kept so the padding's end leaves the words in place. */
   const offset = useRef(0);
   /** The held padding over and under the words: drawn, and wanted. */
   const [pad, setPad] = useState(0);
@@ -462,10 +460,6 @@ export const useFollow = (number: number) => {
     /** The points the docked bar and the seek's controls cover at the scroll's foot. */
     cover: (points: number) => {
       covered.current = points;
-    },
-    /** The scroll's offset, told as it scrolls. */
-    onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      offset.current = event.nativeEvent.contentOffset.y;
     },
     follow,
     /** The page's scroll's ref. */

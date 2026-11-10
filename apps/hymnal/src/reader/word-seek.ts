@@ -15,6 +15,7 @@ import { Array as Arr, Data, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import {
   createContext,
+  type ReactNode,
   use,
   useCallback,
   useEffect,
@@ -23,7 +24,13 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { AccessibilityInfo, type HostInstance, Platform } from 'react-native';
+import {
+  AccessibilityInfo,
+  type HostInstance,
+  Platform,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
@@ -398,6 +405,43 @@ const TargetsContext = createContext<TargetsFor>(bundledTargets);
 
 export const SeekTargetsProvider = TargetsContext.Provider;
 
+/**
+ * The page's chord presses, so a hold never takes from a chord: a chord's
+ * press began (its own target and hit slop, as the press decides it) within
+ * a hold's time before the hold would take.
+ */
+export interface ChordTouch {
+  readonly pressed: () => void;
+  readonly recent: () => boolean;
+}
+
+/** How long after a chord's press began a hold still counts as that press's touch, past the hold's own time. */
+const CHORD_GRACE = 250;
+
+/** A page's chord presses, timed by `now` in milliseconds. */
+export const chordTouchOf = (now: () => number): ChordTouch => {
+  let at = Number.NEGATIVE_INFINITY;
+  return {
+    pressed: () => {
+      at = now();
+    },
+    recent: () => now() - at <= HOLD_MS + CHORD_GRACE,
+  };
+};
+
+const ChordTouchContext = createContext<ChordTouch>({ pressed: () => {}, recent: () => false });
+
+export const ChordTouchProvider = ChordTouchContext.Provider;
+
+export const useChordTouch = (): ChordTouch => use(ChordTouchContext);
+
+/** What a platform's hold adapter wraps: the page's sung words, and the page's held seek. */
+export interface SeekAreaProps {
+  readonly seek: WordSeek;
+  readonly style: StyleProp<ViewStyle>;
+  readonly children: ReactNode;
+}
+
 /** Whether a page holds a held seek: the pager stays still while one does. */
 export const seekHeld = Atom.make(false).pipe(Atom.keepAlive);
 
@@ -507,26 +551,30 @@ export const useWordSeek = ({
     onNone: () => ({ state: idlePlayer, hold: freeHold, beat: noBeat }),
     onSome: (it) => ({ state: it.state, hold: it.hold.state, beat: it.countIn }),
   });
-  const state = useAtomValue(atoms.state);
+  const playingHere = useAtomValue(
+    atoms.state,
+    (current) => Player.$is('Playing')(current) && current.track.number === number,
+  );
   const hold = useAtomValue(atoms.hold);
-  const beat = useAtomValue(atoms.beat);
+  const counting = useAtomValue(atoms.beat, Option.isSome);
   const marks = useMemo(previewMarksOf, []);
   const own = useRef(Option.none<Own>());
   const [via, setVia] = useState(Option.none<'pointer' | 'steps'>());
   const now = useRef({ host, reduced, shown, targets });
   now.current = { host, reduced, shown, targets };
 
-  const availableIn = (current: Player, held: HoldState, counting: boolean) =>
+  const availableIn = (here: boolean, held: HoldState, counted: boolean) =>
     now.current.shown &&
     Option.isSome(player) &&
-    Player.$is('Playing')(current) &&
-    current.track.number === number &&
+    here &&
     held._tag === 'Free' &&
-    !counting &&
+    !counted &&
     Option.isSome(now.current.targets) &&
     Option.isNone(own.current) &&
     now.current.host.ready();
-  const available = availableIn(state, hold, Option.isSome(beat));
+  const playsHere = (current: Player) =>
+    Player.$is('Playing')(current) && current.track.number === number;
+  const available = availableIn(playingHere, hold, counting);
 
   const ownTarget = (mine: Own): Option.Option<SeekTarget> => {
     const held = registry.get(atoms.hold);
@@ -545,7 +593,7 @@ export const useWordSeek = ({
     const it = player.value;
     if (
       !availableIn(
-        registry.get(it.state),
+        playsHere(registry.get(it.state)),
         registry.get(it.hold.state),
         Option.isSome(registry.get(it.countIn)),
       )

@@ -2,8 +2,14 @@ import { expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 
+import { act } from 'react';
+
 import { Command } from '~/player/player';
 import { RISE } from '~/player/bar';
+import { drag, longPress } from '~/test/gesture';
+
+import { SeekArea } from './WordSeek.native';
+import { LINE_STEP, seekHeld, WORD_STEP } from './word-seek';
 import { fixtureRects, inAct, mountSeekReader } from '~/test/reader-word-seek';
 import { openWordSeek } from '~/test/word-seek';
 
@@ -27,6 +33,23 @@ const shownOf = (page: Page, k: number) => ({
   lineOnly: Option.isSome(page.find('reader-seek-line-only')),
   centred: offMiddle(page, k) <= 2,
 });
+
+/** The outlined line and its underlined word, by place (-1 for none), and whether that line is centred. */
+const choiceShown = (page: Page) => {
+  const line = page.chosenLines()[0] ?? -1;
+  return [line, page.underlined(line)[0] ?? -1, offMiddle(page, line) <= 2];
+};
+
+const HOLD = 'reader-word-seek-hold';
+
+/** `play`'s result, the page drawn after it. */
+const played = <A,>(play: () => A): A => {
+  let out = Option.none<A>();
+  act(() => {
+    out = Option.some(play());
+  });
+  return Option.getOrThrow(out);
+};
 
 const seeks = (app: Effect.Success<ReturnType<typeof openWordSeek>>) =>
   app.commands.filter(({ kind }) => kind === 'seek').map(({ ms }) => ms);
@@ -104,6 +127,79 @@ it.effect('the accessible path holds, steps, centres each choice and plays from 
       [],
       8,
     ]);
+  }).pipe(Effect.scoped),
+);
+
+it.effect('a still finger holds and both axes choose; a quick swipe or a drift never holds', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT, area: SeekArea });
+    yield* inAct(app.play);
+    const swipe = played(() => drag(HOLD, { x: 100, y: 200, dx: 4, dy: -80 }));
+    const drift = played(() => longPress(HOLD, { x: 100, y: 200, dx: 8, dy: 8 }));
+    const drifted = app.registry.get(app.player.hold.state)._tag;
+    act(() => drift.lift());
+    const before = [Option.isSome(swipe), drifted, [...page.cues], app.commands.length];
+    const held = played(() => longPress(HOLD, { x: 100, y: 200, dx: 3, dy: -4 }));
+    yield* inAct(app.untilHold('Held'));
+    const locked = app.registry.get(seekHeld);
+    const trail = [
+      [3, -4 - LINE_STEP],
+      [3 - WORD_STEP, -4 - LINE_STEP],
+      [3 - WORD_STEP, -4 - LINE_STEP - 10],
+      [3 - WORD_STEP, -4 - 2 * LINE_STEP],
+      [3, -4 - LINE_STEP],
+      [3 + WORD_STEP, -4 - 2 * LINE_STEP],
+      [3 + 1e9, -4 + 1e9],
+      [3, -4],
+    ].map(([dx = 0, dy = 0]) => {
+      act(() => held.move(dx, dy));
+      return choiceShown(page);
+    });
+    act(() => held.lift());
+    yield* inAct(app.untilHold('Free'));
+    expect([before, Option.isSome(held.taken), locked, app.registry.get(seekHeld)]).toEqual([
+      [false, 'Free', [], 0],
+      true,
+      true,
+      false,
+    ]);
+    expect(trail).toEqual([
+      [1, 1, true],
+      [1, 0, true],
+      [1, 0, true],
+      [2, 0, true],
+      [1, 1, true],
+      [2, 1, true],
+      [0, 1, true],
+      [0, 1, true],
+    ]);
+    expect([seeks(app), page.cues]).toEqual([
+      [1200],
+      ['seek-grab', ...Array.from({ length: 6 }, () => 'seek-tick'), 'seek-release'],
+    ]);
+  }).pipe(Effect.scoped),
+);
+
+it.effect('the platform cancels a held finger once; a neighbour page never holds', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT, area: SeekArea });
+    yield* inAct(app.play);
+    const held = played(() => longPress(HOLD, { x: 100, y: 200 }));
+    yield* inAct(app.untilHold('Held'));
+    act(() => held.move(0, -LINE_STEP));
+    act(() => held.cancel());
+    act(() => held.lift());
+    yield* inAct(app.untilHold('Free'));
+    const cancelled = [seeks(app), [...page.cues], page.chosenLines(), app.registry.get(seekHeld)];
+    page.show(false);
+    const neighbour = played(() => longPress(HOLD, { x: 100, y: 200 }));
+    expect([
+      cancelled,
+      Option.isSome(neighbour.taken),
+      app.registry.get(app.player.hold.state)._tag,
+    ]).toEqual([[[], ['seek-grab', 'seek-tick'], [], false], false, 'Free']);
   }).pipe(Effect.scoped),
 );
 

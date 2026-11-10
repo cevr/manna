@@ -11,7 +11,7 @@
 
 import { RegistryContext } from '@effect/atom-react';
 import { Effect, Option, Predicate } from 'effect';
-import { act } from 'react';
+import { act, type ComponentProps } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { CueProvider } from '~/feel/cue';
@@ -60,10 +60,13 @@ export const mountSeekReader = (
     viewport = 800,
     rects = fixtureRects,
     shown = true,
+    area,
   }: {
     readonly viewport?: number;
     readonly rects?: ReadonlyArray<Rect>;
     readonly shown?: boolean;
+    /** The hold's touch: the phones' (`WordSeek.native.tsx`) where a test plays a native gesture. */
+    readonly area?: ComponentProps<typeof HymnPage>['area'];
   } = {},
 ) =>
   Effect.acquireRelease(
@@ -81,7 +84,7 @@ export const mountSeekReader = (
               <PlayerContext value={Option.some(app.player)}>
                 <CueProvider value={(cue) => void cues.push(cue._tag)}>
                   <SeekTargetsProvider value={targetsFor}>
-                    <HymnPage hymn={seekText} reader={reader} shown={visible} />
+                    <HymnPage hymn={seekText} reader={reader} shown={visible} area={area} />
                   </SeekTargetsProvider>
                 </CueProvider>
               </PlayerContext>

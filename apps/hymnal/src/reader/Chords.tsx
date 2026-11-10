@@ -36,6 +36,7 @@ import type { Box, SectionChords } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
 import { useChordTap } from './ChordSheet';
+import { useChordTouch } from './word-seek';
 import { usePageText } from './pageText';
 
 /** The key the chords are spelled in, as the hymn's move reaches it. */
@@ -138,6 +139,7 @@ function ChordText({
   const key = use(PlayedKey);
   const text = usePageText();
   const tap = useChordTap();
+  const touch = useChordTouch();
   const names = chords.map((chord) => Chord.format(chord, key)).join(' ');
   const style = [styles.chord, text.chords, { color: color.chord }];
   if (chords.length === 0)
@@ -158,6 +160,7 @@ function ChordText({
       aria-label={names}
       accessibilityHint="Shows how to play it"
       hitSlop={chordSlop(text.chords.lineHeight ?? CHORD_LINE)}
+      onPressIn={touch.pressed}
       onPress={() => tap(chords)}
     >
       {shown}

@@ -53,6 +53,7 @@ import { HymnPage, NoHymn } from './HymnPage';
 import { backEdge, onPage, pageSource, settledAt } from './pager';
 import { pagesFrom } from './place';
 import { reader, Shown } from './screen';
+import { seekHeld } from './word-seek';
 
 export { hymnParams } from './screen';
 
@@ -81,7 +82,11 @@ function Pager({ shown }: { readonly shown: HymnText }) {
     const measured = event.nativeEvent.layout.height;
     setHeight((was) => (Option.exists(was, (h) => h === measured) && was) || Option.some(measured));
   };
-  const extraData = useMemo(() => ({ width, height }), [width, height]);
+  const extraData = useMemo(
+    () => ({ width, height, shown: shown.number }),
+    [width, height, shown.number],
+  );
+  const held = useAtomValue(seekHeld);
   const router = useRouter();
   const settle = (offset: number) =>
     Option.match(
@@ -107,6 +112,7 @@ function Pager({ shown }: { readonly shown: HymnText }) {
           keyExtractor={String}
           horizontal
           pagingEnabled
+          scrollEnabled={!held}
           showsHorizontalScrollIndicator={false}
           getFixedItemSize={() => width}
           estimatedItemSize={width}
@@ -132,18 +138,35 @@ const drawPage = ({
   extraData,
 }: {
   readonly item: number;
-  readonly extraData: { readonly width: number; readonly height: Option.Option<number> };
-}) => <PagerPage number={item} width={extraData.width} height={extraData.height} />;
+  readonly extraData: {
+    readonly width: number;
+    readonly height: Option.Option<number>;
+    readonly shown: number;
+  };
+}) => (
+  <PagerPage
+    number={item}
+    width={extraData.width}
+    height={extraData.height}
+    shown={item === extraData.shown}
+  />
+);
 
-/** Hymn `number`'s page in the pager: drawn again only when its hymn or the pager's size changes. */
+/**
+ * Hymn `number`'s page in the pager: drawn again only when its hymn, the
+ * pager's size or whether it is the route's page changes. Only the route's
+ * page takes a held seek; a neighbour drawn beside it never does.
+ */
 const PagerPage = memo(function PagerPage({
   number,
   width,
   height,
+  shown,
 }: {
   readonly number: number;
   readonly width: number;
   readonly height: Option.Option<number>;
+  readonly shown: boolean;
 }) {
   return (
     <View
@@ -156,7 +179,7 @@ const PagerPage = memo(function PagerPage({
     >
       {Option.match(hymnAt(String(number)), {
         onNone: () => <NoHymn number={String(number)} />,
-        onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} />,
+        onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} shown={shown} />,
       })}
     </View>
   );
