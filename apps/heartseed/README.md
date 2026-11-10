@@ -2257,7 +2257,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `bar-held.test.tsx` (read lists of 1, 2 and 4 held), generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads,
-    launched on home; every frame held to `rootFaults`, one heading, no bar
+    under the app's layer teaching the collections a test gives, none by
+    default, launched on home; every frame held to `rootFaults`, one heading, no bar
     control, alert or limit line inside a scroll view, no add beside the
     limit line or at 3 held, nothing offered over unread passages, every
     field control, `Settings` and `When I need…` among them, disabled while a
@@ -2812,6 +2813,26 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Done` or held, a refusal retried; after every command the sheet, the
     counts and both stored texts against the models (a: the list plants; b:
     the devices, a pick beside a list, the limit and an unread lists' key).
+  - `test:shelves-root`, `test:shelves-root-b` and `test:shelves-root-c`:
+    `src/shelves/root.test.tsx` (seeds 1576 and 13), `root-b.test.tsx`
+    (seeds 1421 and 430) and `root-c.test.tsx` (seeds 834, 5, 59 and 6),
+    the Add verses sheet under the real `<Root />` through
+    `src/test/root-sheet-walk.ts` over `src/test/bar-rig.tsx`, one world a
+    case: the collections the app's layer teaches (none, protection alone,
+    several with protection in either order, several without it, an
+    unknown id before or after a known one), 0-3 stored passages (a pick
+    whole or in part, Proverbs 18:10, a range of the protection collection,
+    a promise of a shelf) or unread ones, the app's own verse planted or
+    not and a loose planted verse; the sheet opened by the bar's or the
+    row's `Add verses`, up to four shelves, one `Plant`, the sheet opened
+    again on that shelf, `Done`. After every command the sheet against
+    `sheetWant` over rows of verse membership (the app's own row, the held
+    ranges and the taught collections by `listsModel`, each planted verse),
+    each offer reading `In your field` exactly when home under the sheet
+    draws a plant for every verse of it, home's rows against `fieldRule`
+    and `fieldPassagesModel`, the stored passages and every other key; no
+    `Add verses` over unread passages or at 3 held; each case's floors met
+    by its own world.
   - `test:home-start`: `src/home/start.property.test.ts`, Start here at the
     session seam, walked as `test:session-visit` walks a visit: after every
     step the plan, the hold, the visit against `startModel`

@@ -215,12 +215,13 @@ const storeFailing = (passageReads: number) =>
     }),
   ).pipe(Layer.provide(store));
 
-/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`; `beside` renders next to the root under the same registry; the runtime's clock reads `time` (the host's while `time.now` is null). Every frame is held to the rules and the faults kept. */
+/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`; `beside` renders next to the root under the same registry; the runtime's clock reads `time` (the host's while `time.now` is null); the app's layer teaches the collections `promises` (none by default). Every frame is held to the rules and the faults kept. */
 export const mountBar = async (
   passageReads: number,
   unread: boolean,
   beside: ReactNode = null,
   time: Time = { now: START },
+  promises: readonly string[] = [],
 ) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),
@@ -228,6 +229,7 @@ export const mountBar = async (
     store: storeFailing(passageReads),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
+    promises,
   }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);

@@ -5510,3 +5510,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A preserved install served new JavaScript after `natural.Natural` changed, every call into it was refused with "native module natural.Natural changed; rebuild the app" in the device log only, and `sim doctor` printed ok, so sim-3 lost a morning to steps that did nothing.
 - **Cause:** The doctor checked the dev server and the simulator, and read nothing of the app's own log, where One writes each refusal of a native source.
 - **Guard:** code: `packages/sim/src/native-source.test.ts` `over 500 generated logs, answers exactly the refusals of the last record’s process, in order`; code: `packages/sim/src/sim.slow.test.ts` `a doctor on iOS fails at native-source when the latest process refused one`
+
+### heartseed-root-sheet-field-holds-the-taught-collections
+
+- **Date:** 2026-11-10
+- **Kind:** review
+- **Said:** "No unit test mounts the root with a collection taught and the sheet open, so a root that built the sheet's field without the taught rows would pass"
+- **Source:** hymnapp/hsshelves/round-1-findings.md U1
+- **Wrong:** Under the real root no test read what an Add verses offer says: a root that handed the sheet a field without the taught collections, or with the app's own row alone, passed all 182 parts.
+- **Cause:** The sheet's offers were checked beside a stand-in home, and the root's own walk opened the sheet with every shelf closed.
+- **Guard:** code: `apps/heartseed/src/shelves/root.test.tsx` `offers Proverbs 18:10 as in your field when only the taught protection collection holds it`; code: `apps/heartseed/src/shelves/root-c.test.tsx` `offers Proverbs 18:10 as in your field by the second of three taught collections`
