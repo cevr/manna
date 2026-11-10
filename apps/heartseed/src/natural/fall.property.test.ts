@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noGlobals, effect/noNullish -- the model and the generator write their choices as plain branches over plain arrays, a wrong curve is named by its last points, and a curve with no voiced point has no window (undefined). */
+/* oxlint-disable effect/noTernary, effect/noNullish -- the model and the generator write their choices as plain branches, and a curve with no voiced point has no window (undefined). */
 
 /**
  * The Gentle fall (`fallOf`) against a model written here, over seeded
