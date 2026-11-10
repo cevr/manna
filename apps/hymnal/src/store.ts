@@ -3,12 +3,15 @@
  * phone, local storage on the web) under Effect's KeyValueStore. A store
  * that fails is logged, since a sync `Atom.kvs` drops a failed read and keeps
  * a failed write for the session only; where the store cannot open at all,
- * the settings live in memory.
+ * the settings live in memory. The web's server, rendering a page, has no
+ * store to open: its settings live in memory unlogged, so its log holds no
+ * failure for every page it renders.
  */
 
 import { Effect, Layer, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { One } from 'one';
+import { Platform } from 'react-native';
 
 import { settingsOn } from './settings';
 
@@ -57,14 +60,22 @@ const storeOn = (db: Database) =>
     keys: call('keys', Option.none(), () => db.getAllKeys()),
   });
 
+/** The web's server, rendering a page: it has no local storage, and keeps no setting. */
+const onServer = Option.isNone(Option.fromNullishOr(Reflect.get(globalThis, 'localStorage')));
+
+const opened = Effect.match(
+  call('open', Option.none(), () => One.Database.openKeyValue({ name: 'hymnal' })),
+  {
+    onFailure: () => KeyValueStore.layerMemory,
+    onSuccess: (db) => Layer.succeed(KeyValueStore.KeyValueStore, storeOn(db)),
+  },
+);
+
 const device = Layer.unwrap(
-  Effect.match(
-    call('open', Option.none(), () => One.Database.openKeyValue({ name: 'hymnal' })),
-    {
-      onFailure: () => KeyValueStore.layerMemory,
-      onSuccess: (db) => Layer.succeed(KeyValueStore.KeyValueStore, storeOn(db)),
-    },
-  ),
+  Effect.suspend(() => {
+    if (Platform.OS === 'web' && onServer) return Effect.succeed(KeyValueStore.layerMemory);
+    return opened;
+  }),
 );
 
 export const settings = settingsOn(device);
