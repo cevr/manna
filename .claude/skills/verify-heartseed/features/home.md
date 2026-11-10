@@ -14,7 +14,7 @@ plan is made in this launch), the gear `Settings` and `Add verses`
 view the greeting (`Good morning`, `Good afternoon` or `Good evening`,
 with a sun or a moon), the heading `Your field`, the days sown and the
 harvest, the hint, one furrow per row (its icon, title, ripe count
-`<k> of <n> ripe`, a held passage's `Remove`, and its plants as buttons
+`<k> of <n> ripe`, a held passage's or Handbook list's `Remove`, and its plants as buttons
 named `<reference>, <stage>`, then `, ready today` with a gold dot when a
 plan item not done is on the verse), the dashed row `Add verses`
 (`id=add-row`) and the legend; in a foot fixed under it the Begin card
@@ -30,9 +30,10 @@ the `Appearance` radios and `About`; Today holds no `Minutes` and no
 `Add verses` and `Done`, then a shelf head per shelf (`Any passage`, which
 opens the chooser, whose first back `‹ Add verses` returns to the sheet;
 then the Psalms, Proverbs and John picks and each collection the session
-does not teach, each opening its offers in place, one shelf at a time),
-each offer its reference, its count and `Plant <reference>` or
-`In your field`. The development probe
+does not teach, then the 25 sections of Haskell's Bible Handbook
+(`handbook.md`), each opening its offers in place, one shelf at a time),
+each offer its reference or title, its count and `Plant <reference>` (or
+`Plant <title>`) or `In your field`. The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
 one line each, then the home's icons as images with a count of those
 loaded, and begins the session once the garden is read, as Today
@@ -72,7 +73,8 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   it.
 - `home-add-places`: the bar's `Add verses` and the row's each open the
   Add verses sheet, whose `Done` leads back to home.
-- `home-add`: the sheet lists the 17 shelves in order; `Proverbs` lists
+- `home-add`: the sheet lists the 17 shelves in order, then the 25
+  Handbook shelves (`handbook.md`); `Proverbs` lists
   its five picks, `Proverbs 18:10` (taught in `Protection & Fear`) as
   `In your field`, the rest with `Plant`; `Plant Psalms 46:1-3` leads home
   with `Psalms 46:1-3` the furrow after `Isaiah 41:10`.
@@ -139,7 +141,7 @@ JavaScript comes from the dev server.
      counts line says `1 to tend`;
    - 14 nodes `plant <reference>, not planted`;
    - `lists 2`;
-   - `shelves 17` and
+   - `shelves 42` and
      `shelf Psalms · harp · Songs to carry through the day · 6 lists`;
    - a button `Start with Isaiah 41:10`.
 

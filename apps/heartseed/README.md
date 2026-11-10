@@ -496,7 +496,8 @@ launch counts them.
 - `src/field.ts` is the rule, pure: `fieldOf(garden, passages)` over a
   `Read` view and the passages taught: the promise's, a passage of one
   verse, then each the reader holds, in the order chosen, carrying its
-  range, then each taught collection, titled by its title, its verses in
+  range, then each Handbook list held, in the order planted, titled by its
+  title, then each taught collection, titled by its title, its verses in
   order, with no range (`fieldPassagesOf`, `src/promises/taught.ts`, over
   the app's layer's taught part, mapped in `app/index.tsx`; with the
   reader's passages unread, the promise's and the taught ones). Each row's
@@ -561,7 +562,8 @@ launch counts them.
   furrow's head holds its icon (`furrow-icon`), its title (plain text,
   never a heading, so a reference spelled `Your field` or `Today` adds
   none), its ripe count (`<k> of <n> ripe`, testID `ripe`) and, for a held
-  passage, `Remove <reference>`; then its plants, then a soil line. Each
+  passage, `Remove <reference>`, for a held Handbook list, `Remove
+  <title>`; then its plants, then a soil line. Each
   plant (testID `field-plant`) is one button at least 44 × 44 pt named
   `<reference>, <stage>`, then `, ready today` for a verse of the plan's
   open items, with `aria-selected` while its verse is chosen; inside it,
@@ -660,7 +662,8 @@ verses, About, a recital that brings Today) or a relaunch closes it.
 ## Passages
 
 The reader may learn passages of the KJV beside the app's own promise.
-The free tier holds 3 passages of up to 20 verses each. These are the data
+The free tier holds 3 passages or lists together, a passage of up to 20
+verses, a Handbook list whole whatever its size. These are the data
 and the session's seams; Choosing a passage, below, is how the reader adds
 and removes one.
 
@@ -698,10 +701,31 @@ and removes one.
   add's, so a later tier lifts them without a migration); anything else,
   or three failed reads, is `Unread`, which claims no list and is never
   written over. Faults are logged as `passages.read.retry`,
-  `passages.read.failed` and `passages.write.failed`, with the key, the
-  method or reason and a count, never a verse.
+  `passages.read.failed` and `passages.write.failed`, with the key and the
+  method or reason, never a verse.
+- **The stored lists** are the key `heartseed/lists`, a JSON array of
+  Handbook list ids (`bhb-<para>`) in the order planted, read in the same
+  start as the passages' key, each key read whatever the other gave, each
+  tried 3 times in all. No key reads as none; a text that is not an array
+  of strings, or three failed reads of either key, makes the whole view
+  `Unread`: no add, remove, plant or uproot, and no plan over passages or
+  lists. A `Read` view's `lists` are the stored ids this build knows, each
+  once, in stored order; an unknown id (a later build's, or `bhb-1760`,
+  merged into `bhb-1695`) is not shown or counted, and every write keeps it
+  in the stored text, in place.
+- **The limit is joint** (`heldCount(view)`): passages and lists held count
+  together, and an add or a plant needs fewer than 3. The service, the
+  sheet's offers and foot, and the field's bar read that one function.
+- **A plant** (`Passages.plant(id)`) answers, in this order: `Unread`,
+  `Invalid` (an id this build does not know), `Held` (nothing written),
+  `Full`, else `Added` once the lists' key is written with the id at its
+  end, or `Failed` (nothing changes). **An uproot** (`Passages.uproot(id)`)
+  answers `Unread`, `Absent` (not held, every unknown id among them), else
+  `Removed` once every stored entry equal to the id is dropped and the rest
+  written in place, or `Failed`. A plant or uproot writes the lists' key
+  alone and touches no recall; an add or remove the passages' key alone.
 - **An add** answers, in this order: `Unread`, `Invalid` (not choosable),
-  `Full` (3 or more held), else `Added` once the list with the range at
+  `Full` (3 or more passages and lists held), else `Added` once the list with the range at
   its end is written, or `Failed` when the write is refused (the view
   stays). **A remove** takes out the first passage equal to the range in
   all four fields: `Unread`, `Absent`, else `Removed` once written, or
@@ -715,13 +739,17 @@ and removes one.
   (`appLayer`'s `pieces`, the promise by default), then each passage's
   verses in passage and verse order, each with its corpus text, its words
   counted as the matcher counts them and its passage's reference as its
-  group, and a long verse its phrases (Phrases, below), then the taught
+  group, and a long verse its phrases (Phrases, below), then each held
+  list's verses in Haskell's order, grouped by the list's title (The
+  Handbook lists, below), then the taught
   collections' verses (Promises, below). Each
   reference is kept once, at its first place, so a passage over
   Isaiah 41:10 shares the promise's plant. With the passages unread, the
   app's own alone.
-- **An add or a remove is a making.** `addPassage(range)` and
-  `removePassage(range)` in `src/app.ts` answer the service's answer, and
+- **An add, a remove, a plant or an uproot is a making.** `addPassage(range)`,
+  `removePassage(range)`, `addList(id)` and `removeList(id)` in
+  `src/app.ts` (the atoms `plantPassage`, `uprootPassage`, `plantList`,
+  `uprootList`) answer the service's answer, and
   after `Added` or `Removed` alone run `Session.remake`: a plan made in
   this launch is made again at that instant over the passages now, with
   the hold kept only while a recital is under way. Before the first plan,
@@ -738,8 +766,9 @@ scroll views.
 
 - **The field's bar** holds `When I need…` once a plan is made, then,
   with the passages read, `Add verses` (testID `add-verses`) while fewer than 3
-  are held, else the limit line "3 passages, the most for now. Remove one
-  to add another." (testID `limit`), which a stored list of 4 or more
+  passages and lists are held together, else the limit line "3 passages or
+  lists, the most for now. Remove one to add another." (testID `limit`),
+  which a stored list of 4 or more
   shows too, so the bar never offers an add the service would refuse. The
   dashed row `Add verses` at the field's end (testID `add-row`) shows
   exactly when the bar's does and does the same; both open the Add verses
@@ -747,20 +776,24 @@ scroll views.
   it offers neither and no row offers `Remove`: the app never writes over
   what it could not read.
 - **The rows** are the promise's, then each passage held, in the order
-  chosen, titled by its reference, then each taught collection's
+  chosen, titled by its reference, then each list held, in the order
+  planted, titled by its title, then each taught collection's
   (`Protection & Fear`), then every other plant as a passage of one verse,
-  a phrase's folded into its verse (Field, above). Each passage row, and no other, holds
+  a phrase's folded into its verse (Field, above). Each passage row holds
   `Remove <its reference>`, which finds its passage by the row's range,
-  never by its place. The promise and the taught collections are not the
+  never by its place; each list row holds `Remove <its title>`, which
+  finds its list by its id (`removalOf`, `src/field/plot.tsx`, by the
+  row's source). The promise and the taught collections are not the
   reader's choice and have none.
 - **Remove asks once**, in the bar in place of `Add verses` or the limit
-  line: "Remove <reference>? Its plants stay in your field." (testID
+  line: "Remove <reference or title>? Its plants stay in your field." (testID
   `ask`), with `Remove` and `Keep`. `Keep` closes it. `Remove` runs
-  `removePassage` (`uprootPassage`, `src/app.ts`); the service takes out
+  `removePassage` (`uprootPassage`, `src/app.ts`) for a passage, or
+  `removeList` (`uprootList`) for a list; the service takes out
   the first equal passage, so with equal rows either row's `Remove` takes
-  one. On `Removed` the row leaves and its plants stay, a planted verse
-  then a row of its own; on any other answer the row stays and the bar
-  says "<reference> was not removed. Try again." (`role="alert"`). Another
+  one, and every stored entry of the list's id. On `Removed` the row leaves and its plants stay, a planted verse
+  no other row names then a row of its own; on any other answer the row stays and the bar
+  says "<reference or title> was not removed. Try again." (`role="alert"`). Another
   row's `Remove` moves the ask; leaving the field drops the ask and the
   alert, and the next tap of a field control clears the alert.
 - **The Add verses sheet** (`src/shelves/sheet.tsx`, `AddSheet`) is a
@@ -770,12 +803,15 @@ scroll views.
   `SHELVES` entry (`src/shelves.ts`), each at least 56 pt tall with its
   icon, title and note. `Any passage` opens the chooser. A shelf of lists
   opens in place (`aria-expanded`), closing any other, and lists one offer
-  per list: its reference, its count, and `Plant <reference>` or
+  per list: its title (a reference, or a Handbook list's title), its count
+  of distinct verses, and `Plant <title>` or
   `In your field` by `offerStateOf` over home's field, so a list whose
-  every verse a furrow holds is never planted again. `Plant` runs
-  `plantPassage`: on `Added` home shows, the new row last among the
-  passages; on `Full` the foot shows the limit line, on any other answer
-  "<reference> was not planted. Try again." (`role="alert"`), the shelf
+  every verse a furrow holds is never planted again. `Plant` acts by the
+  list's source: a passage's runs `plantPassage(range)`, a Handbook
+  list's `plantList(id)`. On `Added` (or `Held`) home shows, the new row
+  last among the passages or the lists; on `Full` the foot shows the limit
+  line (shown too while 3 or more are held), on any other answer
+  "<title> was not planted. Try again." (`role="alert"`), the shelf
   still open, and the next tap clears it. From a tap of `Plant` until its
   answer no tap in the sheet, Escape or the swipe-down changes anything.
   `Done`, Escape and the swipe-down close it.
@@ -1029,7 +1065,7 @@ marks. The alert stays in the scroll.
 - `src/session.ts` is the rule, pure: `planOf` over a `Read` view, the
   pieces the app holds text for (`appLayer`'s `pieces`, by default
   Today's passage alone, then the reader's passages' verses, then the
-  taught collections': Passages and Promises, above; each its reference, its word count and its group,
+  held lists', then the taught collections': Passages and Promises, above; each its reference, its word count and its group,
   and a long verse its phrases; `TextPiece` adds its text), the instant, the zone's offset at it
   and the minutes. `isDone` reads an item's done from the garden.
   - A plant is due at FSRS's due. While it holds one recall that carries
@@ -1075,7 +1111,7 @@ marks. The alert stays in the scroll.
   before the plan that decides its counts line and `Begin`, again at each Minutes tap, at
   each return to the foreground (`wake`, a no-op with no plan, an
   unread garden or a recital under way, read in the same step as the
-  making), and after each `Added` or `Removed` passage (`remake`, a no-op
+  making), and after each `Added` or `Removed` passage or list (`remake`, a no-op
   with no plan, an unread garden or unread passages, keeping the hold while a recital is
   under way).
   It is made in one step from the garden's view, Dictation's and the
@@ -1182,11 +1218,25 @@ it now, and the saying counts as a review.
 
 Stephen N. Haskell's _Bible Handbook_ (1919) is data the app holds as
 lists of references, each named by Haskell's own heading, grouped under
-his sections. No screen shows them yet: the Add verses sheet draws no
-Handbook shelf, since a list planted whole needs the reader's lists
-stored, a later unit; only the development probe
-(`app/probe/handbook.tsx`, `heartseed://probe/handbook`) reads them,
-counts only.
+his sections. Each teaching section is a shelf of the Add verses sheet,
+after the 17 others, in the book's order, under Haskell's title with the
+note `S. N. Haskell, Bible Handbook (1919)`; each of its lists is an
+offer, planted whole (Choosing a passage, above), its id stored under
+`heartseed/lists` (Passages, above), its furrow on home after the
+passages, titled by the list, every verse in Haskell's order, with
+`Remove <title>`. A verse already in the field keeps its one plant, and
+planting writes no recall. The development probe
+(`app/probe/handbook.tsx`, `heartseed://probe/handbook`) shows the data's
+counts.
+
+- **Titles and lists** (`src/handbook.ts`, `src/lists.ts`).
+  `handbookTitle` is the one function of a list's title: a title used more
+  than once in the book gets ` (n)` on its n-th use (no title repeats in
+  today's data; the rule stays for the data's sake). `handbookListOf(id)`
+  finds a list; `plantedListOf(id)` gives it as a `List` of source
+  `Handbook` (its id, its title, its ranges' verses in Haskell's order,
+  each once, no `range`), all 130 built once per process. Its furrow's kind
+  is `held` and its icon `scroll`.
 
 - **The source.** The references come from the repo's EGW paragraph
   database (book `BHB`, book id 978, each reference a structured
@@ -1215,17 +1265,21 @@ counts only.
   than 20 verses (the passage cap), is left out and recorded; so is a
   link read no other way and a plain reference with no link. Each
   sub-heading is a list, and a section written without sub-headings is
-  one list; ids are `bhb-<para>`. Two lists may share a title (a section
-  and its one list, or `Second Chapter of Daniel` twice); ids tell them
-  apart. No word is added to a title.
+  one list; ids are `bhb-<para>`. Sub-headings of one title in one
+  section are one list, under the first's id, its ranges in the first's
+  order then the others' new ones, a range again left out (`homesOf`;
+  owner, 2026-11-09: the two `Second Chapter of Daniel` lists of
+  `Prophecy` are one, `bhb-1695`, 102 verses). Lists in different
+  sections may share a title, as a section and its one list may; ids
+  tell them apart. No word is added to a title.
 - **Teaching sections only** (owner, 2026-11-09). `LEFT_OUT_SECTIONS`
   leaves out eight practical sections whole (`Health and Temperance`,
   `Dress`, `Diet and Dress`, `Business Principles`, `School of the
   Prophets`, `Bible Etiquette`, `City Work`, `Organization of Local
   Churches Officers`); the generator refuses to run when one of those
   titles is missing from the contents, so a renamed title fails loudly.
-- **The data** is `data/handbook.json`: its source, 25 sections, 131
-  lists, 2,529 ranges over 3,542 distinct verses, each list 4 to 183
+- **The data** is `data/handbook.json`: its source, 25 sections, 130
+  lists, 2,528 ranges over 3,542 distinct verses, each list 4 to 183
   verses, one list per line so a diff reads list by list; and its 15
   skipped records (3 past the chapter, such as `Romans 3:20, 77`; 9 over
   20 verses; 3 unread, such as `Genesis 7-11, 12`). Ten more sections
@@ -1233,13 +1287,13 @@ counts only.
   a line's lead (`Introduction`, `The Two Covenants`, `The Earth`, …).
   `src/handbook.ts` decodes it once and exports `HANDBOOK_SOURCE`,
   `HANDBOOK` (each section its lists, each list a `Collection` of
-  `Range`s) and `HANDBOOK_LISTS`; nothing in `src/app.ts`'s graph imports
-  it.
+  `Range`s) and `HANDBOOK_LISTS`; `src/passages.ts` imports it, so every
+  launch decodes it (about 4 ms, and 6-11 ms to build the 130 lists).
 - **Regenerating.** Copy the database and its `-wal` into a scratch
   folder (never open the owner's file in place), then
   `bun run handbook -- --db <copy>`; it opens the copy read-only, writes
   the same bytes for the same inputs and prints
-  `handbook sections=25 lists=131 ranges=2529 verses=3542 skipped=15`.
+  `handbook sections=25 lists=130 ranges=2528 verses=3542 skipped=15`.
   `bun run handbook -- --db <copy> --refresh-contents` fetches the
   contents page once and rewrites the snapshot first. It exits non-zero
   on a contents entry whose paragraph id is not a whole number, two
@@ -1284,12 +1338,13 @@ session (verify-heartseed, `features/home.md`).
   `FieldPassage` with an `id` and a `source`: `Own` (the app's own row,
   `own:<title>`), `Passage` (a range in one chapter, carrying its `range`,
   `passage:<index>:<book>.<chapter>.<first>-<last>` by its place in the
-  stored list), `Collection` (`collection:<id>`) or `Loose` (a verse no list
+  stored list), `Handbook` (a Haskell list held, `id` its `bhb-<para>`),
+  `Collection` (`collection:<id>`) or `Loose` (a verse no list
   names, `verse:<reference>`). `listsOf(own, view, collections)` gives the
-  own rows, then each held range in stored order (none while unread), then
-  each taught collection; `fieldPassagesOf` returns it, so the field's rows
-  are as before. It is a read model over today's keys: nothing migrates,
-  and no key is added.
+  own rows, then each held range in stored order, then each held list in
+  stored order (neither while unread), then
+  each taught collection; `fieldPassagesOf` returns it. It is a read model
+  over the stored keys: nothing migrates.
 - **Furrows** (`src/home.ts`). `furrowsOf(garden, lists, ready)` gives one
   furrow per row of `fieldOf`, in row order, each with its list's id,
   title and source, later rows `Loose`; its kind (`kindOf`: own, held,
@@ -1329,9 +1384,13 @@ session (verify-heartseed, `features/home.md`).
 - **Shelves** (`SHELVES`, `offerStateOf`, `src/shelves.ts`): what the Add
   verses sheet offers (Choosing a passage): any passage (the chooser), the
   Psalms, the Proverbs and John's picks, then each collection the session
-  does not teach, each pick and promise a `Passage` list. `offerStateOf`
-  says `unread`, `in field` (every verse already on the field), `full` (3
-  passages held) or `plant`, and the sheet draws each offer by it.
+  does not teach, each pick and promise a `Passage` list, then one shelf
+  per Handbook section (id `handbook:<section>`, icon `scroll`, the note
+  `S. N. Haskell, Bible Handbook (1919)`), each list a `Handbook` list.
+  `ShelfSource` keeps its two tags; an offer acts by its list's source.
+  `offerStateOf` judges any list by its verses: `unread`, `in field`
+  (every verse already on the field), `full` (3 passages and lists held,
+  `heldCount`) or `plant`, and the sheet draws each offer by it.
 - **What grew** (`grownOf`, `src/home/grown.ts`): the verses of a run's
   done items whose stage now ranks above their stage at the plan's making,
   each once, in plan order (hshomejoy draws it).
@@ -2480,14 +2539,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:handbook`: `src/handbook`. `content.test.ts`, the Handbook lists
     (`src/handbook.ts`) over the committed data through the app's corpus:
     `HANDBOOK` equal to `data/handbook.json`, the totals pinned (25
-    sections, 131 lists, 2,529 ranges, 3,542 verses, 15 skipped by reason),
+    sections, 130 lists, 2,528 ranges, 3,542 verses, 15 skipped by reason),
     none of the eight left-out sections, no empty section or list, every
     range 1-20 verses of its chapter with text, ids unique as
     `bhb-<para>` and none a promise collection's, the source and no title
     holding "doctrine", each list's pieces and field row, and no When I
     need… card for a Handbook id. `lists.property.test.ts`, a Handbook
     list as a list of the field and the session against
-    `test/handbook-model.ts`: all 131 lists (id, title with ` (n)` past a
+    `test/handbook-model.ts`: all 130 lists (id, title with ` (n)` past a
     title's first use, distinct verses in Haskell's order), `listsOf` and
     `piecesOf` over generated views of passages and lists sharing verses
     (own, passages, lists, taught), and one plant per verse over generated

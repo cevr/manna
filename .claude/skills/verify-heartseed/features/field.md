@@ -38,7 +38,8 @@ gear `Settings` (`home.md`: the Settings sheet, with the `Minutes`
 radios, `Voice`, the appearance and `About`, which opens the About screen,
 `about.md`), then `Add verses` (`id=add-verses`; it and the dashed row
 open the Add verses sheet over home, `home.md`) or the limit line, and a
-passage furrow's `Remove` (`passage.md`). Under the scroll view, a fixed
+passage furrow's `Remove` (`passage.md`), or a Handbook list furrow's
+`Remove <title>` (`handbook.md`). Under the scroll view, a fixed
 foot holds the Begin card (the counts line and `Begin`) or, with a verse
 chosen, the chosen card (`<reference> · <stage words>` and
 `Start here with <reference>`), and no `About`; like every field control

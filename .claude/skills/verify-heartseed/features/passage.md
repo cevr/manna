@@ -2,13 +2,15 @@
 
 The reader chooses what to learn (`apps/heartseed/src/chooser/screen.tsx`,
 the range rule `apps/heartseed/src/chooser.ts`, the field's bar
-`apps/heartseed/src/field/screen.tsx`). The free tier holds 3 passages of
-up to 20 verses each, from the whole KJV in the bundle.
+`apps/heartseed/src/field/screen.tsx`). The free tier holds 3 passages or
+Handbook lists together, a passage of up to 20 verses, from the whole KJV
+in the bundle.
 
 - **The field's bar** sits above the field's scroll view: `When I need…`
   once a plan is made (`promise.md`), then `Add verses` (`id=add-verses`) while
-  fewer than 3 passages are held, else the line "3 passages, the most for
-  now. Remove one to add another." (testID `limit`). The dashed row
+  fewer than 3 passages and Handbook lists are held together
+  (`handbook.md`), else the line "3 passages or lists, the most for now.
+  Remove one to add another." (testID `limit`). The dashed row
   `Add verses` at the field's end (`id=add-row`) shows exactly when the
   bar's does. Both open the Add verses sheet over home (`home.md`), whose
   `Any passage` opens the chooser. With the reader's passages unread
@@ -64,8 +66,8 @@ up to 20 verses each, from the whole KJV in the bundle.
 - `passage-plant`: `Plant` shows the field with the row `John 15:1-5`, five
   `John 15:<n>, not planted` plants, and `Remove John 15:1-5`.
 - `passage-limit`: after two more passages, no `Add verses` (neither the
-  bar's nor the row), and the line "3 passages, the most for now. Remove
-  one to add another."
+  bar's nor the row), and the line "3 passages or lists, the most for
+  now. Remove one to add another."
 - `passage-remove`: a row's `Remove` → the ask → `Remove`: the row leaves,
   and both `Add verses` come back.
 - `passage-keep`: `Remove` → `Keep` changes nothing.

@@ -154,14 +154,14 @@ field, which is home, every launch's screen after the first minute (its
 counts line `id=counts`, as Today's is `id=session`), in its bar
 `When I need…`, `Settings`, `Add verses` (`id=add-verses`: the dashed row at the field's end
 is `Add verses` too, `id=add-row`), and the ask's `Remove` and `Keep`, in
-a furrow `Remove <reference>` and its plants (`<reference>, <stage>`,
+a furrow `Remove <reference>` (a Handbook list's `Remove <title>`) and its plants (`<reference>, <stage>`,
 then `, ready today` when ready), and in its foot `Begin` and
 `Start here with <reference>`; in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
 `About`; in the Add verses sheet (both `Add verses` open it) `Done`, a
-shelf head by its title (`Any passage`, `Psalms`, …) and an offer's
-`Plant <reference>`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
+shelf head by its title (`Any passage`, `Psalms`, …, `Seven Churches`) and an offer's
+`Plant <reference>` or `Plant <title>`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Add verses`, shown `‹ Add verses`, back to the sheet, `Books`, `Chapters`); and on the home's
 development probe (`sim open probe/home --expect "label=Home probe"`,
 `apps/heartseed/app/probe/home.tsx`) its one button
@@ -271,11 +271,12 @@ Heartseed has no journey files yet. The features:
   dark system, kept across a relaunch, and System again.
   Run it from `first.md`'s `first-home`.
 - [features/handbook.md](features/handbook.md): Haskell's Bible Handbook
-  as lists of references, on its development probe
+  as 25 shelves of Add verses after `Rest`, each list planted whole into
+  a furrow titled by the list with `Remove <title>`, one plant per verse,
+  the limit of 3 over passages and lists, and its development probe
   (`apps/heartseed/app/probe/handbook.tsx`): the sections, lists, ranges
-  and verses, every verse resolved in the device's corpus; the field
-  unchanged. No screen a reader sees shows the lists yet. Run it from
-  `first.md`'s `first-home`.
+  and verses, every verse resolved in the device's corpus. Run it from
+  `first.md`'s `first-home` on a fresh install.
 - [features/home.md](features/home.md): the home's rules (the greeting,
   the furrows with their kinds, icons, ripe counts and ready marks, the
   lists, the shelves Add verses will offer, and Start here at the
