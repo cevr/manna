@@ -2896,8 +2896,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:home-motion-drawn`: `src/home/motion-drawn.test.tsx`, `Furrows`
     mounted alone over generated fields (past 14 furrows, past 60 planted,
     past 12 at full corn, soil alone): with motion on each icon's and
-    plant's entry and sway read from the document equal `motionOf`, no
-    motion fault and every plant button named; under Reduce Motion
+    plant's entry and sway read from the document equal `motionOf`, the
+    caps held by their literal values (nothing moving past the 14th
+    furrow, at most 60 springs and 12 sways), no motion fault and every
+    plant button named; under Reduce Motion
     nothing enters or is unseen and every sway rests at `rotate(0deg)`.
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`

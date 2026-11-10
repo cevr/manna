@@ -110,6 +110,19 @@ const want = (furrows: readonly Furrow[]) => {
 const nextFrame = () =>
   act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
 
+/** The caps as drawn, by their literal values: nothing moves past the 14th furrow, at most 60 springs and 12 sways. */
+const expectCaps = (host: Element, turn: number) => {
+  for (const [row, node] of by(host, 'row').entries())
+    if (row >= 14)
+      expect(
+        moving(node).map((each) => each.getAttribute('style')),
+        `field ${turn} row ${row}`,
+      ).toEqual([]);
+  const plants = seen(host).flatMap((row) => row.plants);
+  expect(plants.filter((plant) => plant.spring !== null).length).toBeLessThanOrEqual(60);
+  expect(plants.filter((plant) => plant.sway).length).toBeLessThanOrEqual(12);
+};
+
 /** At rest a plant image stays directly in its button, with no redundant animation box. */
 const expectRest = (host: Element, furrows: readonly Furrow[]) => {
   const plans = motionOf(furrows);
@@ -117,9 +130,9 @@ const expectRest = (host: Element, furrows: readonly Furrow[]) => {
     for (const [place, plant] of by(node, 'field-plant').entries()) {
       const plan = plans[row]?.plants[place];
       if (plan && Option.isNone(plan.spring) && !plan.sway) {
-        expect(moving(plant)).toEqual([]);
+        expect(moving(plant).map((each) => each.getAttribute('style'))).toEqual([]);
         const image = plant.querySelector('[data-testid="plant-image"]');
-        if (image) expect(image.parentNode).toBe(plant);
+        if (image) expect(image.parentNode === plant, `field row ${row} place ${place}`).toBe(true);
       }
     }
   }
@@ -154,6 +167,7 @@ const checkFields = async (prefers: 'reduce' | 'no-preference') => {
     if (prefers === 'no-preference') {
       expect(seen(host), `field ${turn}`).toEqual(want(furrows));
       expectRest(host, furrows);
+      expectCaps(host, turn);
     } else {
       expect(moving(host).map((node) => node.getAttribute('style'))).toEqual(
         motionOf(furrows).flatMap((row) =>
