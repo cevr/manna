@@ -1992,7 +1992,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `virtual:heartseed-licence`, a happy-dom document which prefers reduced motion,
   so the parts read the rest state without paying for animation frames;
   the motion tests turn motion on themselves, `src/test/motion.ts`);
-  `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
+  `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels`, `test:clock-reads` and `test:mirror` run with none.
+  No test asks the host what time it is. A test's instant is a `Time`
+  (`src/test/clock.ts`), a number the test owns from `START`
+  (2026-11-10T15:00Z) and moves only by its own commands; `clockOf(time)`
+  answers it, and every rig merges it into the app's layer
+  (`Layer.provideMerge`), so the runtime's own reads take it too. A rig
+  given no `time` runs at `START`. How long an `until` loop waits is
+  measured apart, by `deadline(ms)` (`src/test/elapsed.ts`) on the host's
+  monotonic clock, so a stalled wait still ends.
   The rigs of Today's run (`src/test/today-rig.tsx`, `stage-rig.tsx`,
   `session-rig.tsx`, `first-rig.tsx`, `phrase-rig.tsx`, `run-rig.tsx` and
   `wake-rig.tsx`) render `<Root />` as every other rig does, so a read
@@ -3150,7 +3158,21 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     nested `inZone` levels and `travel` and `restore` pairs: each level
     reads its own zone, and each run ends in UTC). Every `src` part's
     preload, `src/test/setup.ts`, fails a case that ends outside UTC,
-    naming the zone it ended in, and puts back UTC for the next case.
+    naming the zone it ended in, and puts back UTC for the next case. It
+    also fails a case in which Effect's default clock was asked the
+    calendar time (a `Clock.currentTimeMillis`, a `DateTime.now` or a log
+    line's stamp run by a runtime given no clock), naming the host's clock
+    and the count, and counts from zero again for the next case.
+  - `test:clock`: `src/clock.test.ts`, under the preload. The tests' clock
+    as a model: 200 runs of 30 generated commands (set to an instant or an
+    edge, advance, travel among the zones, relaunch, a real wait, a sleep
+    on the clock, a move of another `Time`) against the instant and zone
+    the test keeps, each of the clock's four reads equal to it; the
+    preload's count of default-clock asks over generated reads, a clock
+    made before the count began and a layer given the clock but not merged
+    with it, and none under the test's clock, a `TestClock` or a logger on
+    the test's clock; and `deadline`, which expires on elapsed time while
+    the instant stands still and never because it jumps.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting
@@ -3167,6 +3189,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,
     `scripts/home-icons.test.ts` to `test:home-icons`,
     `scripts/home-pixels.test.ts` to `test:home-pixels`,
+    `scripts/clock-reads.test.ts` to `test:clock-reads`,
     `vite/devbundle.test.ts` to `test:devbundle` and `scripts/handbook`
     to `test:handbook-build`.
   - `test:handbook-build`: `scripts/handbook`, with no preload: the
@@ -3224,6 +3247,22 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     exactly in at least 40 opaque pixels, has at most 12 seen pixels more
     than 3 from every blend of two expected colours, and fails the exact
     floor against the other scheme's colours.
+  - `test:clock-reads`: `scripts/clock-reads.test.ts`, with no preload,
+    the source rule over `scripts/clock-reads.ts`. Every `.ts` and `.tsx`
+    file git lists in the package (tracked or untracked, never ignored)
+    that is a test, a helper under `src/test` or a tool (`scripts`,
+    `vite`, `infra`), less `*.d.ts`, is parsed, and none may read the
+    host's clock (`Date.now`, `new Date()`, `Date()`,
+    `DateTime.nowUnsafe`, through `globalThis` too), hold `Date` in any
+    way it cannot place, read monotonic time (`performance`,
+    `process.hrtime`, `Bun.nanoseconds`), read a held clock or run a
+    clock read with no clock given; a file that does not parse is
+    refused. Three declarations may hold their own kinds: `deadline`
+    (`src/test/elapsed.ts`), `hostClock` (`src/test/clock.ts`) and
+    `hostAsked` (`src/test/setup.ts`). The reader is held to 600
+    generated sources from fragments whose verdicts the test writes, each
+    fragment alone, the boundaries and their edges, and the domain over
+    generated paths; each fault is named `file:line kind`.
   - `test:mirror`: `infra`, the mirror's stack, with no preload:
     `infra/models/plan.test.ts` (the list, the keys, the headers and the
     plan's keep, upload and conflict), `infra/models/voice-pack.test.ts`

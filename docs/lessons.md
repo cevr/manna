@@ -5450,3 +5450,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Each walk part's seed was found by a one-off script of its own (need-walk-b's 141 at 1 seed in 600), so a change to a walk's draws had no way back to a passing seed but another such script.
 - **Cause:** No tool ran a part with its walk's seed pinned and let the part's own expectations judge it.
 - **Guard:** code: `apps/heartseed/scripts/seed-search.test.ts` `runs each seed once, never more than its jobs at once, and answers the meeting seeds ascending`
+
+### heartseed-tests-never-read-the-host-clock
+
+- **Date:** 2026-11-10
+- **Kind:** retraction
+- **Said:** "a rig ran on the host's clock: chooser-leave failed every day from 04:00 UTC, hidden because commits were checked 00:00–03:59"
+- **Source:** tmp/orchestrate/hymnapp/guards-backlog.md line 64 (hshomeend r1); hymnapp/hshomeend/round-1-request.md, commit 11
+- **Wrong:** `src/chooser/fixed.test.tsx` ran on the host's clock, so from 04:00 UTC the plan offered a new piece after the promise and chooser-leave failed, while the commits checked between 00:00 and 03:59 UTC were reported green.
+- **Cause:** A rig given no instant read the host's (`Date.now()`, `new Date()`, a runtime with no clock), so what a case saw hung on the hour it ran at, and no check refused such a read.
+- **Guard:** code: `apps/heartseed/scripts/clock-reads.test.ts` `reads every listed file of the package in it, and none of them holds a fault`; code: `apps/heartseed/src/clock.test.ts` `counts each ask of a held clock once, a clock made before the count began too, and starts again after it is read`
