@@ -5,8 +5,9 @@
  * part d2: generated device 0 of seed 297, twenty-eight commands, held to
  * the walk's oracle on the screen its model names after every command and
  * to the screens' and the root's rules on every frame. Its floors, the
- * rest of `walk-d.test.tsx`'s visits' counts: two visits said, three over
- * a held result, and the way back to home by Today's `Your field`.
+ * visits' counts that `walk-d.test.tsx` and `walk-d3.test.tsx` leave: two
+ * visits said, three over a held result, and the way back to home by
+ * Today's `Your field`.
  */
 
 import { describe, expect, it } from 'bun:test';

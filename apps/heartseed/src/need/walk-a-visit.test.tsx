@@ -9,7 +9,8 @@
  * and left by a promise, and no launch over unread passages (seed 3's one
  * is device 0's, `walk-a.test.tsx`). The visits' counts (the cards opened
  * five times, four multi-verse visits, four replaced; two said, three over
- * a held result) are `walk-d.test.tsx`'s and `walk-d2.test.tsx`'s.
+ * a held result) are `walk-d.test.tsx`'s, `walk-d3.test.tsx`'s and
+ * `walk-d2.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';

@@ -171,6 +171,7 @@
     "test:need-walk-c": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-c.test.tsx",
     "test:need-walk-d": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-d.test.tsx",
     "test:need-walk-d2": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-d2.test.tsx",
+    "test:need-walk-d3": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-d3.test.tsx",
     "test:need-walk-e": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-e.test.tsx",
     "test:need-walk-e2": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/walk-e2.test.tsx",
     "test:phrase": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase.property.test.ts ./src/phrase/census.test.ts ./src/phrase/voice.test.ts",

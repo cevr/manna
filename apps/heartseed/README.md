@@ -2714,8 +2714,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     none while Say it listens, home offering it again after the result.
   - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
     `test:need-walk-b2`, `test:need-walk-c`, `test:need-walk-d`,
-    `test:need-walk-d2`, `test:need-walk-e`, `test:need-walk-e2`:
-    `src/need/walk-{a,a-visit,b,b2,c,d,d2,e,e2}.test.tsx`, one file each,
+    `test:need-walk-d2`, `test:need-walk-d3`, `test:need-walk-e`,
+    `test:need-walk-e2`:
+    `src/need/walk-{a,a-visit,b,b2,c,d,d2,d3,e,e2}.test.tsx`, one file each,
     When I need… and a
     visit walked through the root (`src/test/need-walk.ts`, each launch on
     home, each command drawn from those the model's screen allows: on home
@@ -2728,9 +2729,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Settings` and no `<n> min` and makes nothing. Seed 3's device 0 in
     `walk-a` and its device 6 in `walk-a-visit`, device 0 of seed 141 in
     `walk-b` and device 2 of seed 10 in `walk-b2`, two generated devices
-    of seed 193 in `walk-c`, device 0 of seed 131 in `walk-d`, of seed
-    297 in `walk-d2`, of seed 208 in `walk-e` and of seed 107 in
-    `walk-e2`, settled after every command on
+    of seed 193 in `walk-c`, device 0 of seed 151 in `walk-d` and of
+    seed 382 in `walk-d3` (sixteen commands each), of seed 297 in
+    `walk-d2`, of seed 208 in `walk-e` and of seed 107 in `walk-e2`,
+    settled after every command on
     the screen the model names and held there to `shownModel`,
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
     every frame to `rootFaults`, and to the disk's rule (no key added but
