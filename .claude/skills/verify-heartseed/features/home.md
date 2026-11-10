@@ -36,7 +36,12 @@ each offer its reference or title, its count and `Plant <reference>` (or
 `Plant <title>`) or `In your field`. The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
 one line each, then the home's icons as images with a count of those
-loaded, and begins the session once the garden is read, as Today
+loaded, then one `motion` line, the motion plan (`motionOf`) over the
+live furrows: `motion icons <each icon delay> · springs <each spring
+delay in reading order> · sways <count>`, `none` for an empty list. On
+home only drawings move (each furrow's icon, each planted plant, full
+corn's sway; the end's grown plants), hidden from the tree, so no node a
+snapshot reads waits on them. It begins the session once the garden is read, as Today
 does. Its one button, `Start with <reference>`, starts the first plant (in
 furrow order) that `startOf` offers. Nothing it does writes the store.
 
@@ -50,6 +55,14 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-icons`: the same probe loads every one of the home's icons
   (`src/home/icons.ts`, 12 names in light and dark, 24 PNGs) through One's
   asset registry, and says how many loaded.
+- `home-probe-motion`: the same probe's `motion` line over the first
+  minute's field: `motion icons 0 90 · springs 70 · sways 0` (two
+  furrows, the own verse a seed, 14 plants not planted). It shows the
+  plan on the device's runtime, not the drawings moving.
+- `home-motion-reach`: at once after a relaunch, while the drawings still
+  enter, home holds every control: `Your field`, `Settings`, both
+  `Add verses`, the own plant's button and the 14 not planted, and a tap
+  on the own plant chooses it.
 - `home-open`: the first minute's `Continue` opens home in the done
   state: the heading `Your field`, the greeting, `Nothing to tend now`
   with no `Begin`, `When I need…` and `Add verses` in the bar; no Today.
@@ -108,7 +121,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   `Nothing to tend now`, `Say it`, `Next`, `Grade`, `Settings`, `Minutes`
   or `Voice`. `Your field` leads home: the heading `Your field`,
   `Nothing to tend now`, no `Begin`, and the plant button
-  `Isaiah 41:10, blade`. The plants are drawn still.
+  `Isaiah 41:10, blade`.
 
 ## How to get to it (user POV)
 
@@ -172,14 +185,26 @@ JavaScript comes from the dev server.
    `dark` (record the role the snapshot gives them, expected `image`); the
    `home-probe` lines of step 2 still as listed there.
 
-5. Regression: `field.md`'s `field-first` and `field-back` on the same
+5. `home-probe-motion`:
+
+   ```bash
+   sim open probe/home --expect "label=motion icons 0 90 · springs 70 · sways 0"
+   sim snapshot home-probe-motion
+   ```
+
+   → that line, and the `home-probe` lines of step 2 still as listed
+   there.
+
+6. Regression: `field.md`'s `field-first` and `field-back` on the same
    install pass unchanged.
-6. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+7. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Red on base: `sim open probe/home --expect "label=Home probe"` times out
 (`ReadinessTimedOut`): base has no such route. For `home-icons`, the
 `--expect "label=icons loaded 24 of 24"` times out on a base whose probe has
-no icon lines, or no `gear`.
+no icon lines, or no `gear`. For `home-probe-motion`, the `--expect` times
+out (`ReadinessTimedOut`) on a base (`55f2bad31`) whose probe has no
+`motion` line.
 
 ### The field in home A's layout
 
@@ -255,7 +280,16 @@ puts `Begin` in the field's foot), with the same variables:
 10. `home-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
     `sim snapshot home-relaunch` → the heading `Your field`, the greeting,
     the foot's counts line, and no heading `Today`.
-11. Regression on the same install: `field.md`'s `field-first`,
+11. `home-motion-reach` (a keep-guard, green on base): `sim relaunch`,
+    `sim open / --expect "id=counts"`, at once `sim snapshot
+    home-motion-reach` → the heading `Your field`, the buttons
+    `Settings`, two `Add verses`, the own plant's button (its label starts
+    `Isaiah 41:10, seed`; it ends `, ready today` when step 9 ran) and 14
+    buttons ending `, not planted`. Then at once tap that plant by the
+    label the snapshot gave, and `sim snapshot home-motion-reach-chosen` →
+    `Isaiah 41:10 · a seed` and `Start here with Isaiah 41:10`. Record the
+    seconds between the relaunch and each snapshot.
+12. Regression on the same install: `field.md`'s `field-first`,
     `field-control` and `field-back` (the plants as buttons), and
     `about.md`'s way to About through `Settings`. Then `sim doctor` (record
     `head` and `timingsHold`) and `sim down`.
@@ -461,3 +495,15 @@ Report only the lines named above and the reference; delete the
   disabled while a remove is pending (`test:settings-ways`), a refused
   write (`test:settings-walk-*`), and Today with no choices when held,
   done or on an unread garden (the root's rule on every test frame).
+- What the simulator cannot show of motion (the driver reads the
+  accessibility tree, takes no picture here, and has no Reduce Motion
+  switch), the tests own: that anything moves at all, the timing, the
+  stagger, the spring's shape and the sway (the acceptance file,
+  `test:home-motion`, `test:home-motion-root`, `test:home-motion-drawn`,
+  `test:run`); stillness under Reduce Motion (the same, and the source
+  guard in `test:home-motion`); dropped frames and battery on a large
+  field (bounded by the caps, `test:home-motion`). That a moving wrapper
+  leaves its drawing's place and size as they were, and how the motion
+  feels, no check shows: the owner judges both on a Release build from
+  main. `home-probe-motion` shows the plan on the device's runtime and
+  `home-motion-reach` that no control waits.

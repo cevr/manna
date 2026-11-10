@@ -1408,6 +1408,27 @@ session (verify-heartseed, `features/home.md`).
   each once, in plan order. `tendedOf` gives the same over a finished run
   (the visit's items, then the plan's) and is none while anything is
   left, held or unread; Today's end draws it (Session, above).
+- **Motion** (`motionOf`, `endMotionOf`, `src/home/motion.ts`; drawn by
+  `src/field/moves.tsx`). Only drawings move: on home each furrow's icon
+  enters in turn (furrow `i` at `90·i` ms, over 300 ms), each planted
+  plant springs up after the one before it (place `j` of furrow `i` at
+  `90·i + 70·(j + 1)` ms, held at 1,200, over 420 ms), and a plant at full
+  corn sways ±3°, 1.8 s from side to side, starting and resting upright;
+  soil never moves. At the end of a run the grown plants spring one after
+  another (verse `k` at `300 + 160·k` ms, held at 1,200) and full corn
+  among them sways. The caps bound the work on any field: the first 14
+  furrows, the first 60 planted plants and the first 12 at full corn on
+  home, counted in reading order (spring and sway apart), and the first
+  12 grown at the end; the rest are drawn at rest, so every entrance has
+  ended by 1,620 ms. A moving node is an `aria-hidden` wrapper holding one
+  image and no text or control, so titles, counts, `Remove`, plant
+  buttons, the bar, the foot and the end's line and `Your field` stand
+  still and answer a tap from home's first frame. The entrance plays at
+  each mount of home (a sheet's close does not replay it). Every
+  animation passes Reanimated's `ReduceMotion.System`: with the system's
+  Reduce Motion on, nothing enters, nothing is held unseen and full corn
+  stands upright. The probe's `motion` line gives the plan over the live
+  furrows.
 
 ## Natural voice
 
@@ -1956,7 +1977,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
   the corpus for `virtual:heartseed-kjv`, the licence for
   `virtual:heartseed-licence`, a happy-dom document which prefers reduced motion,
-  so the parts read the rest state without paying for animation frames);
+  so the parts read the rest state without paying for animation frames;
+  the motion tests turn motion on themselves, `src/test/motion.ts`);
   `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
   The rigs of Today's run (`src/test/today-rig.tsx`, `stage-rig.tsx`,
   `session-rig.tsx`, `first-rig.tsx`, `phrase-rig.tsx`, `run-rig.tsx` and
@@ -2420,7 +2442,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     action button and the grades under the scroll view through a recital,
     a grade and the field and back. `src/run/tended.test.tsx`, `Tended`
     alone in both schemes over generated lists (its line, one image per
-    verse named `<reference>, <stage>`, its children hidden, the look);
+    verse named `<reference>, <stage>`, its children hidden, the look,
+    and, with motion on, each image's entry and sway equal to
+    `endMotionOf` and the rule written out, over generated lists of 0-14
+    verses, with `motionFaults` empty);
     `src/run/rule.test.ts`, the root rule's clauses for the end over
     hosts built by hand, one cell per clause.
   - `test:run-walk`, `test:run-cues`, `test:run-cues-b`, `test:run-hold`,
@@ -2838,6 +2863,42 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     floor `home:wait-begin` is a wait, no visit or hold kept, after which a
     plan made at the later instant would show Today otherwise, and Today
     must still show the plan made at home's first show.
+  - `test:home-motion`: home's motion without a mount.
+    `src/home/motion.property.test.ts`, `motionOf` and `endMotionOf`
+    against a loop with two counters written in the test, over generated
+    fields of 0-20 furrows of 0-200 plants, fields of 0-120 one-plant
+    furrows and grown lists of 0-30 verses (the shape, each delay by its
+    formula and under 1,200, the caps of 14 furrows, 60 springs and 12
+    sways, soil still, purity), each floor met at least 10 times;
+    `src/home/motion-rule.test.ts`, the frame rule `motionFaults`
+    (`src/test/motion-rule.ts`, run by `homeFaults` on every home frame
+    and by the root rule on every end frame: a node with an inline
+    animation, `visibility: hidden` or transform must be hidden from
+    assistive tech, hold no text, be and hold no control, and hold one
+    image) over hosts built by hand, one cell per fault, and the preload's
+    preference for reduced motion; `src/home/motion-guard.test.ts`, M7's
+    source guard read with oxc-parser over `src/home`, `src/field`,
+    `src/settings`, `src/shelves`, `src/run` and `app/index.tsx`: every
+    entering value and Reanimated call passes `ReduceMotion.System`, no
+    CSS animation or React Native `Animated`, `entering` only on an
+    `aria-hidden` element, both sheets slide, one `useEffect` (the sway's,
+    in `src/field/moves.tsx`), and seeded bad sources each named by file,
+    line and rule.
+  - `test:home-motion-root`: `src/home/motion-root.test.tsx`, motion
+    through the root with motion on (`under` of `src/test/motion.ts`, which
+    sets happy-dom's preference and mounts a `ReducedMotionConfig` of
+    `ReduceMotion.System` before the app, and puts both back in a
+    `finally`): the icons and plants at their delays and the hold, only
+    hidden drawings moving, every control seen and enabled in the first
+    frame with a plant's tap choosing it, nothing entering under Reduce
+    Motion with full corn upright, and the end's grown plant at 300 ms
+    with `Your field` in reach; every frame held to the rig's faults.
+  - `test:home-motion-drawn`: `src/home/motion-drawn.test.tsx`, `Furrows`
+    mounted alone over generated fields (past 14 furrows, past 60 planted,
+    past 12 at full corn, soil alone): with motion on each icon's and
+    plant's entry and sway read from the document equal `motionOf`, no
+    motion fault and every plant button named; under Reduce Motion
+    nothing enters or is unseen and every sway rests at `rotate(0deg)`.
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated

@@ -283,10 +283,12 @@ Heartseed has no journey files yet. The features:
   lists, the shelves Add verses will offer, and Start here at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
   over the live garden, the row `home-icons` (the home's 24 icon PNGs
-  loaded on the device), and the field in home A's layout: the greeting,
+  loaded on the device), the row `home-probe-motion` (the motion plan
+  over the live furrows), and the field in home A's layout: the greeting,
   furrows of plant buttons with their ripe counts, a choice and
   `Start here`, `Begin` in the foot, `Add verses` in two places and the
-  gold dot on a ready plant; and home as the root: `Continue` and every
+  gold dot on a ready plant, every control there at once while the
+  drawings enter (`home-motion-reach`); and home as the root: `Continue` and every
   relaunch open it, Today's `Your field` leads back to it, and its bar's
   `When I need…` and `Settings` (the sheet with Minutes, Voice, the
   appearance and About; Today with no choices). Run it from `first.md` (`first-planted` or
