@@ -2636,9 +2636,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     shelves; and `sheet-lists-b.test.tsx`, a list's `Full` and `Held` by
     stale props, a pending list plant blocking every control and the close,
     and no paid word or verse text on three Handbook shelves.
-  - `test:shelves-walk-a`, `test:shelves-walk-a-b`, `test:shelves-walk-b`
-    and `test:shelves-walk-c`: `src/shelves/walk-a.test.tsx`,
-    `walk-a-b.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
+  - `test:shelves-walk-a`, `test:shelves-walk-a-b`, `test:shelves-walk-b`,
+    `test:shelves-walk-b-b`, `test:shelves-walk-c` and
+    `test:shelves-walk-c-b`: `src/shelves/walk-a.test.tsx`,
+    `walk-a-b.test.tsx`, `walk-b.test.tsx`, `walk-b-b.test.tsx`,
+    `walk-c.test.tsx` and `walk-c-b.test.tsx`, two devices each,
     generated readers through `src/test/shelves-walk.ts` over the same rig:
     no passages, 1-3 held, 4 held or a garbled value, the promise planted
     or not and a loose verse recalled; shelves opened, switched and closed,
@@ -2648,8 +2650,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     every command the sheet, the counts, the stored passages and every
     other key against the models; each file's floors met by its own devices
     (a: the adds that land; b: refusals and the ways out; c: the stored
-    values, shelves and offers in the field); they walk the first 17
-    shelves.
+    values, shelves and offers in the field; each `-b` file the other half
+    of its letter's devices); they walk the first 17 shelves.
   - `test:shelves-walk-lists-a` and `test:shelves-walk-lists-b`:
     `src/shelves/walk-lists-a.test.tsx` (seeds 2, 3, 6 and 11) and
     `walk-lists-b.test.tsx` (seeds 1, 4, 13 and 15), generated readers
