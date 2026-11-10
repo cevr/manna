@@ -50,6 +50,7 @@ import { describe, expect, it } from 'bun:test';
 import { Effect, Layer, Option } from 'effect';
 
 import {
+  census,
   chunksOf,
   FLOORS,
   HISTORIES,
@@ -57,13 +58,18 @@ import {
   LEXICON,
   LONG_PHRASE,
   makeModule,
+  random,
   RANGES,
+  SEED,
   STEPS,
   TEXTS,
   UNMARKED,
+  type Range,
 } from '../test/natural-voice';
 import { VoiceSource } from '../voice';
 import { naturalVoiceSource } from './voice';
+
+const RANGE = RANGES[0];
 
 describe('the natural voice source', () => {
   it('plans the test texts in one, two and three chunks, a long phrase in two, an unmarked one with no rest, and refuses the last', () => {
@@ -94,13 +100,71 @@ describe('the natural voice source', () => {
       ),
     ));
 
-  it(`equals its model over ${HISTORIES} seeded histories of ${STEPS} steps`, () =>
+  it('counts every history exactly once in whole, non-empty ranges inside the total, whatever their order', () => {
+    const next = random(81_203);
+    const whole = (limit: number) => Math.floor(next() * limit);
+    const count = (ranges: ReadonlyArray<Range>, total: number) => {
+      if (!Number.isInteger(total) || total < 0) return false;
+      if (
+        ranges.some(
+          ({ from, count }) =>
+            !Number.isInteger(from) ||
+            !Number.isInteger(count) ||
+            from < 0 ||
+            count < 1 ||
+            from + count > total,
+        )
+      )
+        return false;
+      for (let index = 0; index < total; index++) {
+        if (ranges.filter(({ from, count }) => index >= from && index < from + count).length !== 1)
+          return false;
+      }
+      return true;
+    };
+    for (let trial = 0; trial < 800; trial++) {
+      const total = whole(25);
+      const partition: Array<Range> = [];
+      for (let from = 0; from < total;) {
+        const count = 1 + whole(total - from);
+        partition.splice(whole(partition.length + 1), 0, { from, count });
+        from += count;
+      }
+      const values = [-3, -1, 0, 0.5, 1, total, total + 1, Number.NaN, Infinity];
+      const value = () =>
+        Option.getOrElse(Option.fromUndefinedOr(values[whole(values.length)]), () => Number.NaN);
+      const arbitrary = Array.from({ length: whole(9) }, () => ({ from: value(), count: value() }));
+      for (const ranges of [partition, [...partition, ...partition], arbitrary]) {
+        for (const size of [total, value()]) {
+          expect(
+            census(ranges, size).length === 0,
+            `${ranges.map(({ from, count }) => `${from}+${count}`).join(',')}; total=${size}`,
+          ).toBe(count(ranges, size));
+        }
+      }
+    }
+    expect(census(RANGES, HISTORIES)).toEqual([]);
+    expect([SEED, HISTORIES, STEPS]).toEqual([52_031, 300, 72]);
+    for (const key of Object.keys(FLOORS) as ReadonlyArray<keyof typeof FLOORS>) {
+      for (const range of RANGES) {
+        expect(Number.isInteger(range.floors[key]) && range.floors[key] >= 1, key).toBe(true);
+      }
+      expect(
+        RANGES.reduce((sum, range) => sum + range.floors[key], 0),
+        key,
+      ).toBeGreaterThanOrEqual(FLOORS[key]);
+    }
+  });
+
+  it(`equals its model over the first 150 seeded histories of ${STEPS} steps`, () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const runs = yield* Effect.forEach(RANGES, histories);
-        for (const key of Object.keys(FLOORS) as ReadonlyArray<keyof typeof FLOORS>) {
-          const total = runs.reduce((sum, run) => sum + run.totals[key], 0);
-          expect(total, key).toBeGreaterThanOrEqual(FLOORS[key]);
+        const run = yield* histories(RANGE);
+        expect([run.seeds[0], run.seeds.at(-1), run.seeds.length, new Set(run.seeds).size]).toEqual(
+          [52_031, 52_180, 150, 150],
+        );
+        for (const key of Object.keys(RANGE.floors) as ReadonlyArray<keyof typeof RANGE.floors>) {
+          expect(run.totals[key], key).toBeGreaterThanOrEqual(RANGE.floors[key]);
         }
       }),
     ));

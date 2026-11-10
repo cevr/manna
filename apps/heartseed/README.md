@@ -3028,6 +3028,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Natural` service's yield points: a download event landing at any
     yield of the launch's begin leaves the replayed view the current one
     (`src/test/yielding.ts`). It leaves out `src/natural/voice.test.ts`,
+    `src/natural/voice-b.test.ts`,
     `src/natural/route.test.ts` and `src/natural/status.test.tsx`, each its
     own part.
   - `test:route`: `src/natural/route.test.ts`, the router, the download and
@@ -3050,18 +3051,23 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Appearance`, inside the sheet, at AA contrast, `Try again` never
     inside it, and the sheet's own rule (`sheetFaults`) holding.
   - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
-    `VoiceSource` against a model written in the test, over 300 seeded
-    histories of a stand-in module that answers each load, prosody and
-    render when the history says (speaks of one to three phrases, of a
+    `VoiceSource` against the model in `src/test/natural-voice.ts`, over the
+    first 150 of 300 seeded histories of 72 steps. It also holds the two
+    ranges to a partition against a generated per-index count, their seeds
+    and the sum of their coverage floors. A stand-in module answers each
+    load, prosody and render when the history says (speaks of one to three phrases, of a
     phrase over `CHUNK_CAP` that breaks mid-phrase and of a text no plan
     takes, prosodies whose frames or curve do not fit, renders with and
     without audible samples, malformed frames and spans, a refused play,
-    events of the held utterance and of others, a reload): its module calls
+    events of the held utterance and of others, a reload). The model holds its module calls
     (each prosody at the voice's speed, each render on `fallOf` of its
     prosody's curve at a phrase's or the reading's end and on the curve as
     given inside a phrase, no render after a prosody that does not fit, each
     play with its starts moved into the cut, the cut and the chunk's rest),
     the events it forwards and each speak's state after every step.
+  - `test:natural-voice-b`: `src/natural/voice-b.test.ts`, the last 150 of
+    the same 300 seeded histories over `src/test/natural-voice.ts`, with
+    the same per-step model check, its own seeds and coverage floors.
   - `test:theme`: `src/theme.test.ts`, the brand's colours (`src/theme.ts`):
     every role of brand C in light and dark, the icon's colours, the home
     icons' `masters` and `kept` and the face pinned; every role given a use

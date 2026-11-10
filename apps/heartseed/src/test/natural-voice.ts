@@ -961,7 +961,7 @@ export interface Range {
  * with its floors: `FLOORS` shared by what each range reaches, so each
  * counter's two floors sum to its floor in `FLOORS`.
  */
-export const RANGES: ReadonlyArray<Range & { readonly floors: Readonly<Totals> }> = [
+export const RANGES = [
   {
     from: 0,
     count: 150,
@@ -1016,7 +1016,7 @@ export const RANGES: ReadonlyArray<Range & { readonly floors: Readonly<Totals> }
       heardAfterLeaving: 10,
     },
   },
-];
+] as const satisfies ReadonlyArray<Range & { readonly floors: Readonly<Totals> }>;
 
 /**
  * What keeps `ranges` from being a partition of the indices 0..`total`-1:
