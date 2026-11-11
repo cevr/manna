@@ -52,7 +52,7 @@ import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
 import { layer as passagesLayer, Passages, type Range } from './passages';
-import { TAUGHT, type Collection } from './promises';
+import { TAUGHT } from './promises';
 import { collectionsOf, layer as taughtLayer, Taught } from './promises/taught';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
@@ -301,13 +301,6 @@ export const uprootPassage = runtime.fn((range: Range) => removePassage(range), 
 export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {
   concurrent: true,
 });
-
-/** A tap on a known promise of When I need…: its verses become the visit Today shows ahead of the plan, each said as a review; the hold stays. */
-export const visitPromise = runtime.fn(
-  (tap: { readonly collection: Pick<Collection, 'id' | 'title'>; readonly promise: Range }) =>
-    Effect.flatMap(Session, (session) => session.visit(tap.collection, tap.promise)),
-  { concurrent: true },
-);
 
 /** Start here, a tap on a verse of the home: the verse `startOf` starts becomes the visit Today shows ahead of the plan; the hold stays. */
 export const startHere = runtime.fn(

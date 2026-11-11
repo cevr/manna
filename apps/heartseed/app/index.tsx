@@ -26,7 +26,6 @@ import {
   sessionView,
   startHere,
   taughtView,
-  visitPromise,
   voiceView,
 } from '../src/app';
 import { AboutScreen } from '../src/about/screen';
@@ -54,10 +53,7 @@ import type { StartKind } from '../src/field/card';
 import type { VisitVerse } from '../src/session/service';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
-import { needOf, type NeedCard } from '../src/need';
-import { NeedScreen } from '../src/need/screen';
 import { AddSheet } from '../src/shelves/sheet';
-import type { Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
@@ -589,41 +585,6 @@ function FieldOf({
   });
 }
 
-/**
- * When I need… over the garden read and the collections the app's layer
- * teaches; nothing until both are known. Its back shows home (`onField`). A
- * tap on a known promise makes its verses the session's visit, then shows
- * Today once the visit is made (or failed), so Today never shows the plan's
- * item first.
- */
-function NeedOf({
-  onToday,
-  onField,
-}: {
-  readonly onToday: () => void;
-  readonly onField: () => void;
-}) {
-  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
-  const taught = AsyncResult.value(useAtomValue(taughtView));
-  const visit = useAtomSet(visitPromise, { mode: 'promise' });
-  const onVisit = (card: NeedCard, promise: Range) => {
-    void visit({ collection: { id: card.id, title: card.title }, promise }).then(onToday, onToday);
-  };
-  return Option.match(Option.all({ garden, taught }), {
-    onNone: () => false,
-    onSome: (known) => (
-      <NeedScreen
-        cards={needOf(
-          known.garden,
-          known.taught.map((collection) => collection.id),
-        )}
-        onField={onField}
-        onVisit={onVisit}
-      />
-    ),
-  });
-}
-
 /** The frame a launch shows until the garden's read decides the screen: the reference alone, with no heading, button or claim. */
 function Pending() {
   const look = useLook();
@@ -638,7 +599,7 @@ function Pending() {
 }
 
 /** The root's screens once the launch has opened, home being `field`, and `add` home with the Add verses sheet open. */
-type Screen = 'today' | 'field' | 'add' | 'choose' | 'about' | 'need';
+type Screen = 'today' | 'field' | 'add' | 'choose' | 'about';
 
 /** The screen an opening shows first: home for `home`, else Today. */
 const screenAt = (shown: Opening): Screen => {
@@ -652,15 +613,13 @@ const screenAt = (shown: Opening): Screen => {
  * recall of any verse, home when it holds one, and Today in an unread
  * garden. The opening is decided once per launch, at the read: planting the
  * seed inside the first minute keeps Planted on until Continue, which shows
- * home. After it, the root shows one of five screens in place: home (back
- * from Today's and When I need…'s `Your field`), with the Add verses sheet
- * over it from either of home's `Add verses` until the sheet's `Done` or a
- * landed plant, Today (from home's
- * `Start` or `Start here`, or once a promise tapped in When I need… is made
- * the visit), the chooser (from the sheet's `Any passage`, back to the sheet
- * from its first back, home once a passage is added), About (from the `About`
- * of home's Settings sheet, back to home) and When I need… (from home's
- * `When I need…`).
+ * home. After it, the root shows one of four screens in place: home (back
+ * from Today's `Your field`), with the Add a list sheet over it from home's
+ * `Add a list` until the sheet's `Done` or a landed plant, Today (from the
+ * Today card's `Start` or `Practice anyway`, or the chosen card's
+ * `Practice` or `Learn`), the chooser (from the sheet's `Any passage`, back
+ * to the sheet from its first back, home once a passage is added) and
+ * About (from the `About` of home's Settings sheet, back to home).
  * Which one shows is the launch's state, never stored and with no route of
  * its own, so every launch opens as above. Whenever Say it listens the
  * screen is Today. The root holds Say it's view, so Today comes back as it
@@ -705,8 +664,6 @@ export default function Root() {
             onAbout={() => setScreen('about')}
           />
         );
-      if (screen === 'need')
-        return <NeedOf onToday={() => setScreen('today')} onField={() => setScreen('field')} />;
       return <Today onField={() => setScreen('field')} />;
   }
 }

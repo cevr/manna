@@ -1,8 +1,9 @@
 /* oxlint-disable effect/noNullish, effect/noTernary -- the model writes the hspromise spec's rules out as plain branches, apart from the app's code, so the two cannot share a mistake. */
 
 /**
- * The hspromise spec's rules written plainly, apart from `src/need.ts`,
- * the session and the screens. Its collection data is the committed list
+ * The hspromise spec's rules written plainly, apart from the session and
+ * the screens; the need cards (N3) live on only here, for the session's
+ * visit properties. Its collection data is the committed list
  * (`COLLECTIONS`), which the content test and the acceptance check hold to
  * Selah's; references come from `test/passages-model.ts`.
  *

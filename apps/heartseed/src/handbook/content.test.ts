@@ -10,7 +10,7 @@
  * text, a list or section shown with no range, an id twice or shared with
  * a promise collection, a title the app words itself (a "Doctrine"), a
  * practical section kept, a list whose pieces or field row lose its
- * title or its order, and a When I need… card made for a list. It misses
+ * title or its order. It misses
  * a range moved to another of the same size in the same chapter, which
  * only the parity with the planner's model sees.
  */
@@ -20,7 +20,6 @@ import { describe, expect, it } from 'bun:test';
 import data from '../../data/handbook.json';
 import { HANDBOOK, HANDBOOK_LISTS, HANDBOOK_SOURCE } from '../handbook';
 import { versesOf } from '../kjv';
-import { needOf } from '../need';
 import { type Range, collectionPieces, verseReference } from '../passages';
 import { COLLECTIONS } from '../promises';
 import { fieldPassagesOf } from '../promises/taught';
@@ -185,12 +184,5 @@ describe('the Bible Handbook in the app', () => {
         };
       }),
     );
-  });
-
-  it('makes no When I need… card for a list', () => {
-    const ids = HANDBOOK_LISTS.map((list) => list.id);
-    expect(
-      needOf({ _tag: 'Read', plants: new Map() }, ids).filter((card) => ids.includes(card.id)),
-    ).toEqual([]);
   });
 });

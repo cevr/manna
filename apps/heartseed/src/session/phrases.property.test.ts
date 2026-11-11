@@ -4,8 +4,7 @@
  * Phrases first, then the join, then the verse alone (hsphrase H4-H6, H9's
  * known), at the pure seam: `planOf` and `cueIn` over generated gardens,
  * against `test/phrase-model.ts`'s expansion and join cue with
- * `test/session-model.ts`'s plan, and `needOf` over phrase plants against
- * hspromise's need rule over the references planted.
+ * `test/session-model.ts`'s plan.
  *
  * Each case is the app's own long verse (never phrased) and one to four
  * verses of made-up text (three in four long, cut by the model's H1), one
@@ -28,8 +27,6 @@
 import { describe, expect, it } from 'bun:test';
 
 import { cueIn, plantOf, type ReadGarden } from '../garden';
-import { needOf } from '../need';
-import { COLLECTIONS, TAUGHT } from '../promises';
 import type { Recall } from '../sayit';
 import { MINUTES, planOf, type Minutes } from '../session';
 import { below, pickOf, random, referenceStage } from '../test/garden-model';
@@ -41,7 +38,6 @@ import {
   verseOfRule,
   withPhrasesRule,
 } from '../test/phrase-model';
-import { needModel, promiseVerses } from '../test/promise-model';
 import { DAY, dueModel, HOUR, localDay, MINUTE, planModel } from '../test/session-model';
 import { offsetIn, ZONES } from '../test/zone';
 
@@ -292,56 +288,6 @@ const tallyCue = (
   if (each.plants.has(reference) && phrased.length > 0) bump(tally, `cue:joined-${wanted}`);
 };
 
-const FEAR = COLLECTIONS.find((collection) => collection.id === 'protection');
-
-/** The references planted for a need case: each Fear verse (and every verse of some other collections) none, its own plant, two phrase plants, or both; sometimes a phrase of the first minute's verse. */
-const plantedOf = (next: () => number, tally: Tally) => {
-  const planted = new Set<string>();
-  const sown = (reference: string) => {
-    const history = pickOf(next, ['none', 'own', 'phrases', 'both', 'own'] as const);
-    if (history === 'own' || history === 'both') planted.add(reference);
-    if (history === 'phrases' || history === 'both') {
-      planted.add(`${reference} [1-${4 + below(next, 6)}]`);
-      planted.add(`${reference} [${10 + below(next, 3)}-20]`);
-    }
-    return history;
-  };
-  for (const range of FEAR?.promises ?? []) {
-    const histories = promiseVerses(range).map(sown);
-    const decisive =
-      histories.includes('phrases') &&
-      histories.every((history) => history === 'own' || history === 'phrases');
-    if (decisive && histories.length > 1 && histories.includes('own'))
-      bump(tally, 'need:one-phrased');
-    else if (decisive) bump(tally, 'need:phrased');
-  }
-  for (const collection of COLLECTIONS)
-    if (collection.id !== 'protection' && below(next, 8) === 0)
-      for (const range of collection.promises) promiseVerses(range).forEach(sown);
-  if (below(next, 4) === 0) planted.add('Isaiah 41:10 [1-6]');
-  return planted;
-};
-
-/** One recall for each reference: `needOf` reads only which references are planted. */
-const oneRecallEach = (references: ReadonlySet<string>) =>
-  new Map(
-    [...references].map((reference): [string, Recall[]] => [
-      reference,
-      [
-        {
-          reference,
-          startedAt: 1,
-          grade: 3,
-          suggested: 3,
-          words: 1,
-          missed: 0,
-          peeked: 0,
-          extra: 0,
-        },
-      ],
-    ]),
-  );
-
 describe('phrases first, then the join, then the verse alone', () => {
   it('plans over the pieces expanded into phrases and joins, and cues a join under first letters, as H4-H6 make them, over generated gardens', () => {
     const next = random(4_242);
@@ -457,24 +403,5 @@ describe('phrases first, then the join, then the verse alone', () => {
     sow(verse.reference, 1, 3);
     expect(plan().every((item) => phraseOfRule(item) === undefined)).toBe(true);
     expect(cueIn(gardenOf(plants), verse.reference)).toBe('initials');
-  });
-
-  it('counts a promise known only when each verse has its own plant, never by its phrases, as the need rule over the references planted', () => {
-    const next = random(9_001);
-    const tally: Tally = new Map();
-    const wrong: string[] = [];
-    for (let n = 0; n < 600 && wrong.length < 3; n++) {
-      const planted = plantedOf(next, tally);
-      const taught = pickOf(next, [TAUGHT, [], TAUGHT] as const);
-      const got = JSON.stringify(needOf(gardenOf(oneRecallEach(planted)), taught));
-      const want = JSON.stringify(needModel(planted, taught));
-      if (got !== want)
-        wrong.push(`case ${n}: ${got.slice(0, 200)} where the rule has ${want.slice(0, 200)}`);
-    }
-    expect(wrong).toEqual([]);
-    expect([
-      (tally.get('need:phrased') ?? 0) >= 100,
-      (tally.get('need:one-phrased') ?? 0) >= 100,
-    ]).toEqual([true, true]);
   });
 });
