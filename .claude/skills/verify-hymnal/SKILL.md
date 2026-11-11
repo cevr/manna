@@ -116,10 +116,10 @@ summary names in `failedStep` and `failedName`. The journeys:
   [features/settings.journey.json](features/settings.journey.json).
 
 For the held seek, the development-only silent fixture (`hymnal://probe/scrub`)
-and the reader's own (`Seek` on a playing hymn), use
+and the reader's own (a hold on a playing hymn's words; no button), use
 [features/scrub.md](features/scrub.md): thirteen by-hand numeric rows, no journey.
 Their numeric/boolean-only receipts (indexes, targetMs, `Position`, rects,
-marker presence, button states, page number) replace the Evidence section's
+marker presence, offered actions, page number) replace the Evidence section's
 video, snapshot and screenshot defaults; keep no raw trees, console or corpus
 text. The rows the held seek touches in other features (`reader-scroll`,
 `reader-pager`, `reader-back`, `chords-tap`, `follow-hand`, `follow-seek`,

@@ -344,9 +344,8 @@ middle, and each choice scrolls its line's full block to the middle
 older measure answering late, and a measure the follow asked before the
 hold, or before the page went, never scrolls). The middle is that of the
 words left seen: the page less its foot, which is the sounding bar's rise,
-the bar's `#` over it (`FindRoom`), the entry `Seek` with its laid-out
-height and, while open, the controls over it; the marker stands there, and
-the choice is centred again whenever the foot changes. The chosen line takes an outline and the
+the bar's `#` over it (`FindRoom`); the marker stands there, and the
+choice is centred again whenever the foot changes. The chosen line takes an outline and the
 chosen word an underline in the accent; follow's marks, hand-scroll
 detection and Resume follow pause for the preview and come back as it
 ends, restoring the frozen place or the released one. A line timed only by
@@ -357,23 +356,29 @@ shared, and a release from either lands on the same time. The cues are the
 ones Feel already plays: a grab as a hold takes, a tick per changed choice,
 a release.
 
-`Seek by line or word` (`hymn-word-seek`) takes the same hold without a
-drag and opens a small group above it, at the page's lower right over the
-bar's `#` (the room `FindRoom` tells), so a press on it never lands on the `#`: Previous/Next line, Previous/Next
-word, `Play from here` and `Cancel`, focus moving in as it opens and back
-as it closes; its status carries the choice by row, sung line and word,
-with the numbers as its accessible value. It is disabled unless a hold
-would take now, as the player itself decides (`hold.canBegin`, the rule
-its Begin keeps): Paused, a count-in, another hold, a recording being
-replaced or a place still pending disable it, and the phone's recognizer
-and the web's armed candidate read the same value.
+The page draws no button or panel for the seek (owner, 2026-11-11: the
+hold and its drag are the whole of it). The way without a drag is
+unseen: each sung line's accessible element (a boxed line's each box)
+offers a screen reader the actions `Seek by line or word`, then
+Previous/Next line and word while they move the choice, `Play from here`
+and `Cancel`, which take, step and end the same hold (`useSeekActions`);
+on the web the focused words take Enter, the arrows and Escape. While a
+page holds, a status one point square and clear (`reader-seek-status`)
+says the choice by row, sung line and word, with the numbers as its
+accessible value; iOS also announces each new choice. `Seek by line or
+word` is offered only while a hold would take now, as the player itself
+decides (`hold.canBegin`, the rule its Begin keeps): Paused, a count-in,
+another hold, a recording being replaced or a place still pending take it
+away, and the phone's recognizer and the web's armed candidate read the
+same value.
 
 `test:seek` holds the fast traces; `word-seek.property.slow.test.tsx`,
 appended alone to `test:slow`, runs seeded histories over the web, native
 and steps surfaces against an independent reference: words drawn plain, as
 syllables and boxed under chords, every reading setting, measures that
-answer late in any order, a landing held back, the controls' height, the
-player's own commands and Reduce Motion. `pager.slow.test.ts` reads the
+answer late in any order, a landing held back, the `#` coming and going,
+the player's own commands and Reduce Motion; the steps surface comes by a
+screen reader's actions or the web's keys. `pager.slow.test.ts` reads the
 mounted recognizer graph on the phones' pager. The Sideshow feel page
 the owner chose the constants from is a standalone audition, not the One
 reader. Not proved by any test here, and left to the owner on a Release
