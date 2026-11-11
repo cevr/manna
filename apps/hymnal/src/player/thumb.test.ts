@@ -4,7 +4,8 @@
  * states, against every event: a tap, a hold, a tap on the page, the key
  * dial turned to each of the twelve sounding keys, the capo dial turned to
  * each fret and one past each end, reset, the end of a reset’s wait, and the
- * key button’s Tuner; the key turned a semitone either way. Three printed
+ * key button’s Tuner, and its wheel’s step of the key a semitone either
+ * way (`StepKey`, which closes the dials whether open or shut). Three printed
  * keys: hymn 100’s D-flat, a sharp key, and a minor one.
  */
 
@@ -27,7 +28,6 @@ import {
   step,
   type Thumb,
   ThumbEvent,
-  turnBy,
 } from './thumb';
 
 const printedKeys: ReadonlyArray<Chord.Key> = [
@@ -53,6 +53,8 @@ const events: ReadonlyArray<ThumbEvent> = [
   ThumbEvent.Reset(),
   ThumbEvent.ResetShown(),
   ThumbEvent.Tune(),
+  ThumbEvent.StepKey({ by: -1 }),
+  ThumbEvent.StepKey({ by: 1 }),
 ];
 
 const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => void) => {
@@ -61,9 +63,9 @@ const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => vo
 };
 
 describe('the key model', () => {
-  it('walks 576 states against 32 events', () => {
+  it('walks 576 states against 34 events', () => {
     expect(states).toHaveLength(576);
-    expect(events).toHaveLength(32);
+    expect(events).toHaveLength(34);
   });
 
   it('resets a moved hymn to the printed key and no capo, the dials and chords as they were, with one cue', () =>
@@ -176,14 +178,30 @@ describe('the key model', () => {
       });
     }));
 
-  it('turns the key a semitone either way from the key it sounds in, wrapping', () =>
+  it('steps the key one semitone either way from the key it sounds in, wrapping, with the dials closed whether open or shut before', () =>
     each((printed, state, event) => {
-      if (event._tag !== 'Tap') return;
+      if (event._tag !== 'StepKey') return;
       const sounding = Chord.pitchClass(soundingKey(printed, state.move).tonic);
-      expect([turnBy(printed, state.move, -1), turnBy(printed, state.move, 1)]).toEqual([
-        ThumbEvent.TurnKey({ pitch: (sounding + 11) % 12 }),
-        ThumbEvent.TurnKey({ pitch: (sounding + 1) % 12 }),
-      ]);
+      const next = step(printed, state, event);
+      expect({
+        sounds: Chord.pitchClass(soundingKey(printed, next.state.move).tonic),
+        capo: next.state.move.capo,
+        open: next.state.open,
+        chords: next.state.chords,
+        cues: next.cues,
+      }).toEqual({
+        sounds: (sounding + 12 + event.by) % 12,
+        capo: state.move.capo,
+        open: false,
+        chords: true,
+        cues: (state.chords && []) || [plain('chords-on')],
+      });
+    }));
+
+  it('keeps the dials as they were on a turn of the key dial itself', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'TurnKey') return;
+      expect(step(printed, state, event).state.open).toBe(state.open);
     }));
 
   it('gives nothing but a state and cues: no step carries a command for the player', () =>

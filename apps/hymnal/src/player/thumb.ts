@@ -15,7 +15,10 @@
  * them go (`ResetShown`, which the bar tells when its wait is over). A reset
  * of a hymn already at home (a double tap on a dial there) closes them at
  * once, with no cue. The key button's Tuner closes them, with no cue, as
- * the tuner opens over the page.
+ * the tuner opens over the page. The wheel's Key ♭ and Key ♯ (and
+ * VoiceOver's `keyDown` and `keyUp`) are one step, `StepKey`: the sounding
+ * key one semitone, with the dials closed whether they were open or not;
+ * a turn of the key dial itself keeps them open.
  *
  * Each step gives the next state and the cues it makes (`~/feel/cue`), and
  * nothing else: no step commands the player. The sound follows the stored
@@ -52,6 +55,8 @@ export type ThumbEvent = Data.TaggedEnum<{
   TapPage: {};
   /** The key dial turned to the sounding key on `pitch` (a pitch class, 0 = C). */
   TurnKey: { readonly pitch: number };
+  /** The key button's wheel's Key ♭ or Key ♯ (or VoiceOver's): the sounding key `by` semitones, the dials closed. */
+  StepKey: { readonly by: number };
   /** The capo dial turned to fret `capo`; a turn may ask for one past an end. */
   TurnCapo: { readonly capo: number };
   /** Reset, or a double tap on a dial. */
@@ -74,11 +79,9 @@ const mod12 = (n: number) => ((n % 12) + 12) % 12;
 export const transposeTo = (printed: Chord.Key, pitch: number): number =>
   mod12(pitch - Chord.pitchClass(printed.tonic) + 5) - 5;
 
-/** The key dial's turn `by` semitones from the key a hymn printed in `printed` sounds in at `move`. */
-export const turnBy = (printed: Chord.Key, move: Move, by: number): ThumbEvent =>
-  ThumbEvent.TurnKey({
-    pitch: mod12(Chord.pitchClass(soundingKey(printed, move).tonic) + by),
-  });
+/** The pitch class `by` semitones from the key a hymn printed in `printed` sounds in at `move`. */
+const pitchBy = (printed: Chord.Key, move: Move, by: number): number =>
+  mod12(Chord.pitchClass(soundingKey(printed, move).tonic) + by);
 
 /** Whether `move` is the hymn as printed. */
 export const isStill = (move: Move): boolean => move.transpose === 0 && move.capo === 0;
@@ -104,6 +107,15 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
         ...state,
         chords: true,
         move: { ...state.move, transpose: transposeTo(printed, pitch) },
+      },
+      cues: (state.chords && []) || [plain('chords-on')],
+    }),
+    StepKey: ({ by }) => ({
+      state: {
+        ...state,
+        chords: true,
+        open: false,
+        move: { ...state.move, transpose: transposeTo(printed, pitchBy(printed, state.move, by)) },
       },
       cues: (state.chords && []) || [plain('chords-on')],
     }),

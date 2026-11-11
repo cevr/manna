@@ -216,7 +216,9 @@ view): its items fan up and to the right, 140 points out and 26° apart,
 Still holding, the finger slides; it is over an item beyond 34 points out
 and within 20° of the item's angle, which then grows on the button's fill
 with a tick (`choose`). Letting go over an item does it once: the tuner,
-the key a semitone down or up, the printed key with no capo, or chords
+the key a semitone down or up with the dials closed (`StepKey` in
+`thumb.ts`, whether they were open or not; a turn of the key dial itself
+keeps them open), the printed key with no capo, or chords
 off; letting go in the middle, or a cancelled touch, does nothing. A press
 that drifts 10 points before its hold is the bar's swipe's or the page's.
 The wheel is hidden from VoiceOver, which reaches its items as `Key`'s

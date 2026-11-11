@@ -58,7 +58,7 @@ import { GuitarHead } from '~/reader/GuitarHead';
 import type { BoundThumb } from './Dials';
 import type { Shown } from './KeyWheel';
 import { useReduceMotion } from './motion';
-import { type Face, faceOf, hintOf, saidOf, ThumbEvent, turnBy } from './thumb';
+import { type Face, faceOf, hintOf, saidOf, ThumbEvent } from './thumb';
 import { HOLD, idle, type Item, Out, SLOP, step, Wheel, WheelEvent } from './wheel';
 
 /** The least distance of the wheel's origin from the screen's left edge, so the Tuner, at 98°, is not clipped. */
@@ -147,10 +147,7 @@ export function KeyButton({
       Match.orElse(() => withSpring(1, { ...SPRING_OUT, reduceMotion: ReduceMotion.Never })),
     );
   };
-  const turn = (by: number) => {
-    const bound = now.current.thumb;
-    for (const key of Option.toArray(bound.printed)) bound.send(turnBy(key, bound.state.move, by));
-  };
+  const turn = (by: number) => now.current.thumb.send(ThumbEvent.StepKey({ by }));
   const pick = (item: Item) => {
     const bound = now.current.thumb;
     Match.value(item).pipe(

@@ -58,11 +58,12 @@ const eventsByTag = {
   Reset: [ThumbEvent.Reset()],
   ResetShown: [ThumbEvent.ResetShown()],
   Tune: [ThumbEvent.Tune()],
+  StepKey: [ThumbEvent.StepKey({ by: -1 }), ThumbEvent.StepKey({ by: 1 })],
 } satisfies { readonly [Tag in ThumbEvent['_tag']]: ReadonlyArray<ThumbEvent> };
 const events: ReadonlyArray<ThumbEvent> = Object.values(eventsByTag).flat();
 
 /** The tags whose step may change the move. */
-const moving: ReadonlySet<string> = new Set(['TurnKey', 'TurnCapo', 'Reset']);
+const moving: ReadonlySet<string> = new Set(['TurnKey', 'StepKey', 'TurnCapo', 'Reset']);
 
 type Rule = 'a1' | 'a2' | 'a3' | 'a4' | 'a5';
 
@@ -177,10 +178,10 @@ const keys = 30;
 const half = 288;
 
 describe('the key button as the chords switch (chordmode A1)', () => {
-  it('walks 30 printed keys, 576 states and 32 events', () => {
+  it('walks 30 printed keys, 576 states and 34 events', () => {
     expect(new Set(printedKeys.map((key) => `${key.tonic}:${key.minor}`)).size).toBe(keys);
     expect(states).toHaveLength(2 * half);
-    expect(events).toHaveLength(32);
+    expect(events).toHaveLength(34);
   });
 
   it('a1: a tap with chords off turns chords on and opens nothing, the move kept, with one chords-on cue', () => {
@@ -203,9 +204,9 @@ describe('the key button as the chords switch (chordmode A1)', () => {
     });
   });
 
-  it('a5: only a key turn, a capo turn and a reset change the move', () => {
+  it('a5: only a key turn or step, a capo turn and a reset change the move', () => {
     expect(verdict('a5')).toEqual({
-      checked: keys * 2 * half * (events.length - 12 - 14 - 1),
+      checked: keys * 2 * half * (events.length - 12 - 2 - 14 - 1),
       missed: 0,
       first: [],
     });

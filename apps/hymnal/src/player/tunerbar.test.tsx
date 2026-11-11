@@ -262,6 +262,46 @@ describe('the key button’s wheel', () => {
     }).toEqual({ routed: [], chords: 'true', dials: true, ...before });
   });
 
+  describe('a key step from the wheel or VoiceOver turns one semitone with the dials closed', () => {
+    const steps = [
+      { item: 'keyDown', angle: 72, key: 'C' },
+      { item: 'keyUp', angle: 46, key: 'D' },
+    ] as const;
+    for (const open of [true, false]) {
+      for (const { item, angle, key } of steps) {
+        for (const door of ['wheel', 'VoiceOver'] as const) {
+          it(`${item} by the ${door}, the dials ${(open && 'open') || 'shut'} before`, () => {
+            using page = onPage(chordsOn(), true);
+            if (open) act(() => keyButton(page).click());
+            expect(Option.isSome(page.find('[data-testid="dials"]'))).toBe(open);
+            if (door === 'wheel') {
+              const held = hold();
+              held.move(...toward(angle));
+              held.lift();
+            } else perform(keyButton(page), item);
+            expect({
+              key: keyButton(page).getAttribute('aria-valuetext'),
+              dials: Option.isSome(page.find('[data-testid="dials"]')),
+              expanded: keyButton(page).getAttribute('aria-expanded'),
+              chords: page.device.get('chords'),
+            }).toEqual({ key, dials: false, expanded: 'false', chords: 'true' });
+          });
+        }
+      }
+      it(`a hold let go in the middle keeps the dials ${(open && 'open') || 'shut'}`, () => {
+        using page = onPage(chordsOn(), true);
+        if (open) act(() => keyButton(page).click());
+        const held = hold();
+        held.move(4, -6);
+        held.lift();
+        expect({
+          key: keyButton(page).getAttribute('aria-valuetext'),
+          dials: Option.isSome(page.find('[data-testid="dials"]')),
+        }).toEqual({ key: 'Db', dials: open });
+      });
+    }
+  });
+
   it('R5: a hold slid to Chords off turns chords off, as the old hold did', () => {
     using page = onPage(chordsOn(), true);
     const held = hold();
