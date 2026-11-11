@@ -49,12 +49,13 @@ import { furrowsOf, readyOf } from '../src/home';
 import { tendedOf } from '../src/home/grown';
 import { PlantImage } from '../src/home/plant';
 import { startOf } from '../src/home/start';
+import { beginsOf } from '../src/home/today';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { needOf, type NeedCard } from '../src/need';
 import { NeedScreen } from '../src/need/screen';
 import { AddSheet } from '../src/shelves/sheet';
-import type { PassagesView, Range } from '../src/passages';
+import type { Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
@@ -502,14 +503,6 @@ const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
 /**
- * Whether home offers `Begin`: while the run shows an item, or, with the
- * reader's passages unread (so no plan is made), while it shows a verse.
- */
-const beginsOf = (shown: Shown, passages: PassagesView) =>
-  shown._tag === 'Item' ||
-  (passages._tag === 'Unread' && shown._tag === 'Unplanned' && Option.isSome(shown.piece));
-
-/**
  * Home: the field over the garden read, the reader's passages, the
  * collections taught, the session's view and the greeting by the runtime's
  * clock. Its first show begins the session, so the launch's plan is made at
@@ -568,7 +561,10 @@ function FieldOf({
             passages={known.passages}
             greeting={known.greeting}
             counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
-            begin={beginsOf(shownOf(known.session, Option.some(known.garden)), known.passages)}
+            begin={beginsOf(
+              shownOf(known.session, Option.some(known.garden)),
+              known.passages._tag === 'Unread',
+            )}
             need={Option.isSome(known.session.plan)}
             startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
             onToday={onToday}

@@ -136,6 +136,7 @@ class HomeWalk extends Walk {
       this.recallsNow,
       CANON,
       verseOfRule,
+      this.piecesNow(),
     );
   }
 

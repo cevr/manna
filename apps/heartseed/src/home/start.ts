@@ -4,7 +4,10 @@
  * open item on the verse (a phrase folded into its verse) starts exactly as
  * planned, so a phrase starts its phrase and the new piece stays fresh;
  * else a planted canon verse starts as a review from its plant's recalls
- * now; else nothing starts, as for a verse not planted yet. Pure: it reads
+ * now; else a canon verse not planted starts as the piece the plan would
+ * teach first for it (its first phrase not planted, for a verse learned in
+ * phrases), fresh, so Today offers Listen on it as on the plan's new piece;
+ * else nothing starts. Pure: it reads
  * the session's view and the garden read, and nothing is stored.
  */
 
@@ -69,12 +72,43 @@ const review = (view: SessionView, garden: ReadGarden, verse: string): Option.Op
       })),
   );
 
-/** What a tap on `verse` starts: none before a plan; the plan's earliest open item on it; else a review of the planted verse; else none. */
+/** The piece the plan would teach first for `verse`: the first of the session's pieces (a verse's phrases before the verse) on it with no plant, else its corpus text. */
+const firstPiece = (view: SessionView, garden: ReadGarden, verse: string) =>
+  Option.orElse(
+    Arr.findFirst(
+      view.pieces.flatMap((piece) => [...(piece.phrases ?? []), piece]),
+      (piece) => verseOf(piece.reference) === verse && !garden.plants.has(piece.reference),
+    ),
+    () => wholePiece(view, verse),
+  );
+
+/** A canon verse not planted, learned: the piece the plan would teach first for it, fresh, with no recalls. */
+const learn = (view: SessionView, garden: ReadGarden, verse: string): Option.Option<VisitVerse> =>
+  Option.flatMap(
+    Option.filter(
+      Option.some(verse),
+      () => Option.isSome(placeOf(verse)) && !garden.plants.has(verse),
+    ),
+    () =>
+      Option.map(firstPiece(view, garden, verse), (piece) => ({
+        item: {
+          reference: piece.reference,
+          fresh: true,
+          recalls: 0,
+          seconds: secondsOf(piece.words),
+        },
+        piece,
+      })),
+  );
+
+/** What a tap on `verse` starts: none before a plan; the plan's earliest open item on it; else a review of the planted verse; else the verse learned, when it is a canon verse not planted; else none. */
 export const startOf = (
   view: SessionView,
   garden: ReadGarden,
   verse: string,
 ): Option.Option<VisitVerse> => {
   if (Option.isNone(view.plan)) return Option.none();
-  return Option.orElse(planned(view, garden, verse), () => review(view, garden, verse));
+  return Option.orElse(planned(view, garden, verse), () =>
+    Option.orElse(review(view, garden, verse), () => learn(view, garden, verse)),
+  );
 };

@@ -7,8 +7,7 @@
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
  * one, `Begin`, a choice let go and moved, `Start here` on a plan item, on
- * a phrase and over an open visit, a verse with nothing to start, the
- * morning's greeting, Today's `Your field`, and a relaunch that lands on
+ * a phrase and over an open visit, the morning's greeting, Today's `Your field`, and a relaunch that lands on
  * home. Parts b to g walk other devices.
  */
 
@@ -23,7 +22,6 @@ const FLOORS = [
   'home:letgo',
   'home:moved',
   'start:plan',
-  'start:none',
   'start:phrase',
   'start:over-visit',
   'greeting:morning',

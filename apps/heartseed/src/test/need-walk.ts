@@ -258,6 +258,11 @@ export class Walk {
     return !this.device.unread && this.held.tag === 'Read';
   }
 
+  /** The session's pieces over the passages held, with their phrases, as `piecesModel` gives them. */
+  piecesNow() {
+    return piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words, withPhrasesRule);
+  }
+
   /** The plan made now over the disk, as `planModel` makes it. */
   make() {
     this.visit = [];
@@ -266,7 +271,7 @@ export class Walk {
       this.plan = [];
       return;
     }
-    const pieces = piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words, withPhrasesRule);
+    const pieces = this.piecesNow();
     const plants = plantsOf(this.device.disk);
     this.plan = planModel({
       plants,

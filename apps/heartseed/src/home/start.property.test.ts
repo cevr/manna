@@ -400,6 +400,8 @@ class Walk {
   visit: VisitEntry[] = [];
   fromStart = false;
   held: string | null = null;
+  /** The pieces a learn started, by reference: once one is planted, no plan offers it new again. */
+  learned = new Set<string>();
 
   constructor(
     seed: number,
@@ -497,6 +499,13 @@ class Walk {
     });
     if (json(plan) !== json(this.plan.map(itemText)))
       this.fail(`${step}: plan ${json(plan)}, model ${json(this.plan.map(itemText))}`);
+    for (const reference of this.learned) {
+      if (this.recallsNow(reference) === 0) continue;
+      if (plan?.some((item) => item.fresh && item.reference === reference) === true)
+        this.fail(`${step}: the plan offers ${reference} new again after its learn was kept`);
+      else if (plan !== null && /^(minutes|wake|add|remove)/.test(step))
+        this.bump('learn:remade after kept');
+    }
     const references = view.pieces.map((piece) => piece.reference);
     if (json(references) !== json(this.pieces.map((piece) => piece.reference)))
       this.fail(`${step}: pieces ${references.length}, model ${this.pieces.length}`);
@@ -644,9 +653,20 @@ class Walk {
       (reference) => this.recallsNow(reference),
       CANON,
       verseOfRule,
+      this.pieces,
     );
     if (started !== null) {
       const piece = this.startPiece(started.item.reference);
+      if (started.from === 'learn') {
+        this.learned.add(started.item.reference);
+        if (started.item.reference !== verse) this.bump('learn:phrase');
+      }
+      if (
+        started.from === 'plan' &&
+        started.item.fresh &&
+        this.plan.some((item) => item === started.item)
+      )
+        this.bump('start:plan new as planned');
       this.visit = [
         {
           ...itemText(started.item),
@@ -860,6 +880,10 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['start:over open visit', 5],
   ['start:from plan', 20],
   ['start:from plant', 20],
+  ['start:from learn', 20],
+  ['learn:phrase', 5],
+  ['learn:remade after kept', 5],
+  ['start:plan new as planned', 5],
   ['start:none', 20],
   ['make:after start:under way:kept', 5],
   ['make:after start:idle:dropped', 5],
@@ -933,7 +957,7 @@ const startsEvery = async (seed: number, failKeys: boolean, begins: boolean) => 
 };
 
 describe('Start here', () => {
-  it('starts the plan’s open item on the verse as planned, else a review of the planted verse, as the visit, keeping the hold, the plan and the disk, over generated devices', async () => {
+  it('starts the plan’s open item on the verse as planned, else a review of the planted verse, else a canon verse not planted learned fresh on its first piece, as the visit, keeping the hold, the plan and the disk, over generated devices', async () => {
     const tally = new Map<string, number>();
     const failures = await playAll(tally);
     expect(failures.slice(0, 2)).toEqual([]);

@@ -173,18 +173,29 @@ export interface ModelStartItem {
   readonly recalls: number;
 }
 
-/** What Start here starts as the model holds it: a plan item as planned, or a review of a planted verse from its recalls now. */
+/** What Start here starts as the model holds it: a plan item as planned, a review of a planted verse from its recalls now, or a verse not planted learned fresh. */
 export type ModelStart<I extends ModelStartItem> =
   | { readonly from: 'plan'; readonly item: I }
-  | { readonly from: 'plant'; readonly item: ModelStartItem };
+  | { readonly from: 'plant'; readonly item: ModelStartItem }
+  | { readonly from: 'learn'; readonly item: ModelStartItem };
+
+/** A piece as the learn rule reads it: its reference and its phrases. */
+export interface ModelLearnPiece {
+  readonly reference: string;
+  readonly phrases?: readonly ModelLearnPiece[];
+}
 
 /**
- * H4 (hshomebase): what a tap on `verse` starts, over the plan's items
- * (null before a plan), each reference's recall count now (0 when not
- * planted), the canon's verses and the verse a reference belongs to: none
- * before a plan; the plan's first item whose recalls are not past its
- * baseline and whose verse is `verse`, as planned; else, for a canon verse
- * with recalls of its own, a review from its recalls now; else none.
+ * H4 (hshomebase) and hsstart T2: what a tap on `verse` starts, over the
+ * plan's items (null before a plan), each reference's recall count now (0
+ * when not planted), the canon's verses, the verse a reference belongs to
+ * and the session's pieces: none before a plan; the plan's first item
+ * whose recalls are not past its baseline and whose verse is `verse`, as
+ * planned; else, for a canon verse with recalls of its own, a review from
+ * its recalls now; else, for a canon verse with none, a fresh item of no
+ * recalls on the first piece (each piece's phrases, then the piece) whose
+ * verse is `verse` and that has no recalls, else on the verse itself;
+ * else none.
  */
 export const startModel = <I extends ModelStartItem>(
   plan: readonly I[] | null,
@@ -192,14 +203,22 @@ export const startModel = <I extends ModelStartItem>(
   recallsNow: (reference: string) => number,
   canon: ReadonlySet<string>,
   verseOf: (reference: string) => string,
+  pieces: readonly ModelLearnPiece[],
 ): ModelStart<I> | null => {
   if (plan === null) return null;
   for (const item of plan)
     if (recallsNow(item.reference) <= item.recalls && verseOf(item.reference) === verse)
       return { from: 'plan', item };
-  if (canon.has(verse) && recallsNow(verse) > 0)
+  if (!canon.has(verse)) return null;
+  if (recallsNow(verse) > 0)
     return { from: 'plant', item: { reference: verse, fresh: false, recalls: recallsNow(verse) } };
-  return null;
+  const first = pieces
+    .flatMap((piece) => [...(piece.phrases ?? []), piece])
+    .find((each) => verseOf(each.reference) === verse && recallsNow(each.reference) === 0);
+  return {
+    from: 'learn',
+    item: { reference: first?.reference ?? verse, fresh: true, recalls: 0 },
+  };
 };
 
 /** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */

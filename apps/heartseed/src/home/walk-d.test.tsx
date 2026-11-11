@@ -7,7 +7,7 @@
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
  * one, `Begin`, a moved choice, `Start here` on a plan item and on a
- * phrase, a verse with nothing to start, the morning's greeting, and
+ * phrase, the morning's greeting, and
  * relaunches that land on home. `Start here` on a planted verse and over
  * an open visit, and a landed remove, which this device no longer draws,
  * are `walk-g.test.tsx`'s, `walk-e.test.tsx`'s and `walk-b.test.tsx`'s.
@@ -23,7 +23,6 @@ const FLOORS = [
   'home:begin',
   'home:moved',
   'start:plan',
-  'start:none',
   'start:phrase',
   'greeting:morning',
   'root:start',

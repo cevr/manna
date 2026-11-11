@@ -442,7 +442,7 @@ export const plannedOf = (next: () => number) => {
     recalls,
     seconds,
   }));
-  return { at, records, items };
+  return { at, records, items, pieces };
 };
 
 const RANK: Readonly<Record<ModelStage, number>> = { seed: 0, blade: 1, ear: 2, 'full corn': 3 };
