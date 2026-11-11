@@ -25,13 +25,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import {
-  AccessibilityInfo,
-  type HostInstance,
-  Platform,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { AccessibilityInfo, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
@@ -515,14 +509,79 @@ export const useReducedMotion = (): boolean => {
   return reduced;
 };
 
-/** Moves the screen reader's or the keyboard's focus to `view`. */
-export const focusOn = (view: HostInstance) => {
-  if (Platform.OS === 'web') {
-    view.focus();
-    return;
-  }
-  AccessibilityInfo.sendAccessibilityEvent(view, 'focus');
+/** What a screen reader's actions on the sung words do: take the hold, step it, play from it or cancel it. */
+export type SeekAction = Step | 'seek' | 'release' | 'cancel';
+
+const actionLabels: Record<SeekAction, string> = {
+  seek: 'Seek by line or word',
+  'prev-line': 'Previous line',
+  'next-line': 'Next line',
+  'prev-word': 'Previous word',
+  'next-word': 'Next word',
+  release: 'Play from here',
+  cancel: 'Cancel',
 };
+
+const steps: ReadonlyArray<Step> = ['prev-line', 'next-line', 'prev-word', 'next-word'];
+
+/**
+ * The actions a screen reader offers on the sung words now: `seek` while a
+ * hold would take, each step that moves the choice, `release` and `cancel`
+ * while a hold this way is open; none while a finger holds.
+ */
+const seekActionsOf = (seek: WordSeek, available: boolean): ReadonlyArray<SeekAction> => {
+  if (Option.isNone(seek.via)) return (available && ['seek']) || [];
+  if (seek.via.value !== 'steps') return [];
+  return [...steps.filter((step) => seek.canStep(step)), 'release', 'cancel'];
+};
+
+/** Does `action` on the page's held seek: the same Begin, Select, Release or Cancel a finger's hold makes. */
+const runSeekAction = (seek: WordSeek, action: SeekAction) => {
+  if (action === 'seek') return void seek.begin('steps');
+  if (action === 'release') return seek.release();
+  if (action === 'cancel') return seek.cancel();
+  return seek.step(action);
+};
+
+const isSeekAction = (name: string): name is SeekAction => Object.hasOwn(actionLabels, name);
+
+/** A sung line's accessibility actions and their handler, as the platform reads them. */
+export interface SeekActionProps {
+  readonly accessibilityActions?: ReadonlyArray<{ readonly name: string; readonly label: string }>;
+  readonly onAccessibilityAction?: (event: {
+    readonly nativeEvent: { readonly actionName: string };
+  }) => void;
+}
+
+/**
+ * The page's seek as a screen reader's actions, the same object until the
+ * actions offered change: an action performed runs on the seek as it is
+ * then, and only if it was offered.
+ */
+export const useSeekActionProps = (seek: WordSeek): SeekActionProps => {
+  const available = useSeekAvailable(seek);
+  const key = seekActionsOf(seek, available).join(' ');
+  const now = useRef(seek);
+  now.current = seek;
+  return useMemo(() => {
+    const names = key.split(' ').filter(isSeekAction);
+    if (names.length === 0) return {};
+    return {
+      accessibilityActions: names.map((name) => ({ name, label: actionLabels[name] })),
+      onAccessibilityAction: ({ nativeEvent }) => {
+        const name = nativeEvent.actionName;
+        if (isSeekAction(name) && names.includes(name)) runSeekAction(now.current, name);
+      },
+    } satisfies SeekActionProps;
+  }, [key]);
+};
+
+const ActionsContext = createContext<SeekActionProps>({});
+
+export const SeekActionsProvider = ActionsContext.Provider;
+
+/** The held seek's actions a sung line carries, so a screen reader on any line offers them. */
+export const useSeekActions = (): SeekActionProps => use(ActionsContext);
 
 /** What the page's scroll does for a held seek (`follow.tsx`). */
 export interface PreviewHost {

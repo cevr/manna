@@ -26,7 +26,8 @@
  * words (`label`); the syllables and hyphens are not read on their own.
  * Boxed, the row is not one element, so each chord keeps its own id on iOS
  * (`chord-p-l-s`) and each box's label reads its syllables under its chords,
- * without the visual join or trailing hyphens. While
+ * without the visual join or trailing hyphens. Each element read (the row,
+ * or each box) offers the held seek's actions (`word-seek.ts`). While
  * the line is sung (`follow/`), it is `selected`, its syllables take the
  * muted colour and the sung syllable the accent: a change of colour only, so
  * nothing moves. A line the timing gives no syllable times (held to even
@@ -58,7 +59,7 @@ import { useLineFollow } from '~/follow/follow';
 import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
-import { useSeekTreatment } from './word-seek';
+import { useSeekActions, useSeekTreatment } from './word-seek';
 
 /** A syllable of a line: its box, and its place in the line from 0. */
 interface Placed {
@@ -89,6 +90,7 @@ export function SyllableLine({
   const text = usePageText();
   const { marked, ref, syllableStyle } = useLineFollow(index);
   const seek = useSeekTreatment(index);
+  const actions = useSeekActions();
   const starts = wordStarts(words);
   const boxed = Option.isSome(over);
   const textStyle = [style, text.words];
@@ -108,7 +110,10 @@ export function SyllableLine({
         style={[textStyle, syllableStyle(first.s), chosen]}
         dynamicTypeRamp="body"
         pointerEvents="none"
-        {...(boxed && { 'aria-label': syllables.map(({ box }) => box.text).join('') })}
+        {...(boxed && {
+          'aria-label': syllables.map(({ box }) => box.text).join(''),
+          ...actions,
+        })}
       >
         {first.box.text}
         {Arr.tailNonEmpty(syllables).map(({ box, s }) => (
@@ -128,6 +133,7 @@ export function SyllableLine({
       <View
         ref={ref}
         {...readAs(boxed, label)}
+        {...(!boxed && actions)}
         aria-selected={marked}
         {...currentOf(marked)}
         testID="line"

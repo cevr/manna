@@ -1,8 +1,9 @@
 /**
  * The held seek's acceptance: the real hymn page over the real player and
  * its held transaction (`~/test/word-seek`), driven through the web's
- * pointer handlers, the phones' gesture callbacks and the accessible
- * controls, against a reference written here. The reference keeps its own
+ * pointer handlers, the phones' gesture callbacks and the screen reader's
+ * actions on the sung lines or the web's keys on the focused words, against
+ * a reference written here. The reference keeps its own
  * owner, anchor and choice: it counts the 48 and 24 point thresholds a
  * translation has crossed itself, and checks the page's last scroll against
  * the generated rectangles, never the product's mapping or centring helper.
@@ -11,12 +12,12 @@
  * targets. Whether a hold may be offered it decides itself, the count-in
  * from its own model of the history's commands and the score's bar, and a
  * refusal while a seek of the history's own waits unanswered at the
- * device: the player's published count must agree with it, and the page's
- * entry, the phones' recognizer and the web's armed candidate must follow
- * it. After each command it compares those, the drawn choice, the scroll,
- * the held lock, the cues and the seeks; every hold it offered must take,
- * every enabled entry or recognizer pressed must take, and a disabled one
- * never does. It prints only seeds and counts.
+ * device: the player's published count must agree with it, and the lines'
+ * offered `seek` action, the phones' recognizer and the web's armed
+ * candidate must follow it. After each command it compares those, the drawn
+ * choice, the scroll, the held lock, the cues and the seeks; every hold it
+ * offered must take, every offered action or enabled recognizer used must
+ * take, and one not offered never does. It prints only seeds and counts.
  */
 
 import { expect, it } from 'effect-bun-test';
@@ -53,20 +54,15 @@ const LINE_PT = 48;
 const WORD_PT = 24;
 const STILL_PT = 10;
 const STRIP_PT = 20;
-/** The space the open controls keep between themselves and the bar (spec B9: the panel lies outside the viewport). */
-const PANEL_GAP = 8;
-/** The entry `Seek`'s height, as the fixture lays it out (its least, at the default text size). */
-const ENTRY = 48;
 /** The room the `#` takes over a hymn page's bar, as the player tells the screens while it stands there. */
 const HASH_ROOM = HASH_GAP + HASH;
-/** How high the sounding bar, and the `#` over it while it stands (`room` above 0), reach over the page's foot. */
-const reachOf = (room: number) => SOUNDING - REST + ((room > 0 && HASH_ROOM) || 0);
 /**
- * Where the words stop being seen over the page's foot with the controls
- * closed: over the sounding bar's rise, the `#` standing over the bar, a gap,
- * and the entry. The open controls take their own room over it.
+ * How high the sounding bar, and the `#` over it while it stands (`room`
+ * above 0), reach over the page's foot: where the words stop being seen.
  */
-const FOOT = reachOf(HASH_ROOM) + PANEL_GAP + ENTRY;
+const reachOf = (room: number) => SOUNDING - REST + ((room > 0 && HASH_ROOM) || 0);
+/** Where the words stop being seen over the page's foot on a hymn page: over the sounding bar and its `#`. */
+const FOOT = reachOf(HASH_ROOM);
 /** How long a chord's press keeps a phone's hold from taking: the hold's 350 ms and 250 ms of grace. */
 const CHORD_MS = 600;
 /** Long enough for a start's count-in and the player's own act after a command to end, so a hold may take again. */
@@ -214,7 +210,7 @@ const startsAgain = (state: Player) =>
   Player.$is('Ended')(state) ||
   (Player.$is('Stopped')(state) && Option.getOrElse(state.at, () => 0) <= 0);
 
-/** A command that tries to begin a hold: a pointer down, a finger's press, the entry pressed. */
+/** A command that tries to begin a hold: a pointer down, a finger's press, the `seek` action or Enter. */
 const tries = (command: string) => /^(down|press|open) /.test(command);
 
 const counts = new Map<string, number>();
@@ -246,19 +242,15 @@ const reference = (
     /** The page's scrolls before the hold took: the held ones follow. */
     heldFrom: 0,
     cues: [] as Array<string>,
-    /** The points the open controls take at the viewport's foot, with their gap; none while closed. */
-    room: 0,
-    /** The room the player says the `#` takes (`FindRoom`), and the entry's laid-out height. */
+    /** The room the player says the `#` takes (`FindRoom`). */
     hashRoom: HASH_ROOM,
-    entry: ENTRY,
     /** Each hold taken or ended starts a new one: a measure asked in an older one is stale. */
     epoch: 0,
   };
-  /** Where the words stop being seen over the page's foot: the top of the entry, or of the open controls over it. */
-  const floor = () => reachOf(state.hashRoom) + PANEL_GAP + state.entry + state.room;
-  /** The hold is over: the controls close, and a new epoch begins. */
+  /** Where the words stop being seen over the page's foot: the top of the sounding bar, or of the `#` over it. */
+  const floor = () => reachOf(state.hashRoom);
+  /** The hold is over: a new epoch begins. */
   const over = () => {
-    state.room = 0;
     state.epoch += 1;
   };
   const msOf = (choice: Choice) =>
@@ -274,7 +266,7 @@ const reference = (
     });
   const eligible = () =>
     state.shown &&
-    state.viewport > floor() - state.room &&
+    state.viewport > floor() &&
     Player.$is('Playing')(app.registry.get(app.player.state)) &&
     app.registry.get(app.player.hold.state)._tag === 'Free' &&
     !counting() &&
@@ -454,17 +446,14 @@ const differences = (
     owner === 'Held' ||
     (gestureOf('reader-word-seek-hold').enabled !== false) === offered;
   const armed = surface !== 'web' || page.waiting().length > 0 === (owner === 'Candidate');
-  const entryRise = Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN);
-  const clear = entryRise >= reachOf(model.state.hashRoom);
   const marked = Option.match(page.rise('reader-seek-marker'), {
     onNone: () => !want.held,
     onSome: (bottom) => Math.abs(bottom - model.floor()) <= 0.5,
   });
   const checks = [
-    ['clear', clear, `${entryRise}`],
     ['marker', marked, `${model.floor()}`],
     ['count-in', Option.isSome(app.registry.get(app.player.countIn)) === counting, `${counting}`],
-    ['entry', page.enabled('hymn-word-seek') === offered, `${offered}`],
+    ['offer', page.offers().includes('seek') === offered, `${offered}`],
     ['recognizer', recognizer, `${offered}`],
     ['armed', armed, owner],
     ['lines', sameList(chosen, want.lines), `${want.lines.join(',')}/${chosen.join(',')}`],
@@ -674,37 +663,50 @@ const history = (seed: number, surface: Surface) =>
       if (Option.isSome(press) && (kind < 17 || refusedFinger)) return nativeEnd(step);
       return common(step);
     };
+    /** The `seek` action on line `line`, or Enter on the focused words when `keyed`. */
+    const stepsOpen = (step: number, keyed: boolean, line: number) => {
+      const can = model.eligible();
+      offeredBy = Option.some(page.offers(line).includes('seek'));
+      if (keyed) page.keyOn('Enter');
+      else page.act('seek', line);
+      promised = can;
+      if (can) model.take(0, 0, 0);
+      return `open ${step}`;
+    };
+    /** A step of the choice: the action on line `line`, or its arrow on the focused words when `keyed`. */
+    const stepsMove = (step: number, keyed: boolean, line: number) => {
+      const [name, key, lineBy, wordBy] = rng.pick([
+        ['next-line', 'ArrowDown', 1, 0],
+        ['prev-line', 'ArrowUp', -1, 0],
+        ['next-word', 'ArrowRight', 0, 1],
+        ['prev-word', 'ArrowLeft', 0, -1],
+      ] as const);
+      if (keyed) page.keyOn(key);
+      else page.act(name, line);
+      model.step(lineBy, wordBy);
+      return `${name} ${step}`;
+    };
+    /** Play from here or Cancel by an action, Enter when `keyed`, or Escape. */
+    const stepsEnd = (step: number, keyed: boolean, line: number) => {
+      const how = rng.pick(['release', 'cancel', 'Escape'] as const);
+      if (how === 'Escape') page.key('Escape');
+      else if (keyed && how === 'release') page.keyOn('Enter');
+      else page.act(how, line);
+      if (how === 'release') model.release();
+      else model.cancel();
+      return `${how} ${step}`;
+    };
     const steps = (step: number) => {
       const kind = rng.int(20);
-      const owner = model.state.owner;
-      if (owner._tag === 'Idle' && (kind < 6 || (Option.isSome(flight) && kind < 14))) {
-        const can = model.eligible();
-        offeredBy = Option.some(page.enabled('hymn-word-seek'));
-        page.press('hymn-word-seek');
-        promised = can;
-        if (can) model.take(0, 0, 0);
-        return `open ${step}`;
-      }
-      if (owner._tag === 'Held' && kind < 3) return panel(step);
-      if (owner._tag === 'Held' && kind < 14) {
-        const [id, lineBy, wordBy] = rng.pick([
-          ['reader-seek-next-line', 1, 0],
-          ['reader-seek-prev-line', -1, 0],
-          ['reader-seek-next-word', 0, 1],
-          ['reader-seek-prev-word', 0, -1],
-        ] as const);
-        page.press(id);
-        model.step(lineBy, wordBy);
-        return `${id} ${step}`;
-      }
-      if (owner._tag === 'Held' && kind < 17) {
-        const how = rng.pick(['reader-seek-release', 'reader-seek-cancel', 'Escape'] as const);
-        if (how === 'Escape') page.key('Escape');
-        else page.press(how);
-        if (how === 'reader-seek-release') model.release();
-        else model.cancel();
-        return `${how} ${step}`;
-      }
+      const owner = model.state.owner._tag;
+      /** This command comes by the web's keys on the focused words, else by a screen reader's action on a line. */
+      const keyed = rng.next() < 0.5;
+      const line = rng.int(4);
+      count(`steps-${(keyed && 'keys') || 'actions'}`);
+      if (owner === 'Idle' && (kind < 6 || (Option.isSome(flight) && kind < 14)))
+        return stepsOpen(step, keyed, line);
+      if (owner === 'Held' && kind < 14) return stepsMove(step, keyed, line);
+      if (owner === 'Held' && kind < 17) return stepsEnd(step, keyed, line);
       return common(step);
     };
     /** Some of the measures waiting answer, in an order of the history's choosing. */
@@ -761,29 +763,14 @@ const history = (seed: number, surface: Surface) =>
       if (changed) model.revoke(keepsPointer);
       return `setting ${step}`;
     };
-    /**
-     * The `#` comes or goes over the bar (`FindRoom`: over the bar, or nowhere),
-     * and the entry is laid out at another height (the system's text size).
-     */
+    /** The `#` comes or goes over the bar (`FindRoom`: over the bar, or nowhere). */
     const foot = (step: number) => {
       const room = rng.pick([HASH_ROOM, 0]);
-      const entry = rng.pick([ENTRY, 66, 90]);
       page.room(room);
-      page.entry(entry);
       model.state.hashRoom = room;
-      model.state.entry = entry;
       count(`foot-${(room > 0 && 'hash') || 'none'}`);
-      if (entry > ENTRY) count('foot-tall-entry');
       if (model.state.owner._tag === 'Held') count('foot-held');
       return `foot ${step}`;
-    };
-    /** The open controls are laid out at another height. */
-    const panel = (step: number) => {
-      const height = rng.pick([120, 200, 260]);
-      page.panel(height);
-      model.state.room = height + PANEL_GAP;
-      count('panel');
-      return `panel ${step}`;
     };
     /** A release's seek, held at its boundary, lands. */
     const land = (step: number) => {
@@ -903,7 +890,6 @@ const history = (seed: number, surface: Surface) =>
     const common = (step: number): string => {
       const kind = rng.int(16);
       const keepsPointer = surface !== 'steps';
-      const owner = model.state.owner;
       if (kind < 8 && Option.isSome(landing) && holdTag() === 'Landing' && rng.next() < 0.3)
         return land(step);
       if (counted.counting(now) && rng.next() < 0.7) return wait(step);
@@ -912,7 +898,6 @@ const history = (seed: number, surface: Surface) =>
       if (kind < 8) return ordinary(kind, step, keepsPointer);
       if (kind < 10 && later && page.pending().length > 0) return answerSome(step);
       if (kind < 11) return setting(step, keepsPointer);
-      if (kind < 13 && surface === 'steps' && owner._tag === 'Held') return panel(step);
       return outer(kind, step);
     };
     /** What reaches the page from outside it: the player's own commands, a chord, the system's Reduce Motion. */
@@ -1065,16 +1050,16 @@ it.effect(
       const app = yield* openWordSeek(false);
       const page = yield* mountSeekReader(app, { viewport: 800, later: true });
       yield* inAct(app.play);
-      page.press('hymn-word-seek');
+      page.act('seek');
       yield* inAct(app.untilHold('Held'));
-      page.press('reader-seek-next-line');
+      page.act('next-line');
       const asked = page.asked();
       Array.from({ length: asked }, (_, k) => asked - 1 - k).forEach(page.answer);
       const line = fixtureRects[1] ?? { top: 0, height: 0 };
       const y = page.scrolls.at(-1)?.y ?? Number.NaN;
       const off = Math.abs(page.padTop() + line.top + line.height / 2 - y - (800 - FOOT) / 2);
-      page.press('reader-seek-next-line');
-      page.press('reader-seek-cancel');
+      page.act('next-line');
+      page.act('cancel');
       yield* inAct(app.untilHold('Free'));
       const before = page.scrolls.length;
       Array.from({ length: page.asked() - asked }, (_, k) => asked + k).forEach(page.answer);
@@ -1104,7 +1089,7 @@ it.effect('an ordinary follow measure asked before a hold never scrolls over its
     yield* inAct(app.play);
     yield* seekToFirst(app);
     const ordinary = page.asked();
-    page.press('hymn-word-seek');
+    page.act('seek');
     yield* inAct(app.untilHold('Held'));
     Array.from({ length: page.asked() - ordinary }, (_, k) => ordinary + k).forEach(page.answer);
     const before = page.scrolls.length;
@@ -1120,36 +1105,15 @@ it.effect('a measure asked before the page goes never scrolls it', () =>
     yield* inAct(app.play);
     yield* seekToFirst(app);
     const ordinary = page.asked();
-    page.press('hymn-word-seek');
+    page.act('seek');
     yield* inAct(app.untilHold('Held'));
-    page.press('reader-seek-next-line');
+    page.act('next-line');
     const asked = page.asked();
     page.unmount();
     const before = page.scrolls.length;
     Array.from({ length: asked }, (_, k) => k).forEach(page.answer);
     expect([ordinary > 0, asked > ordinary, page.scrolls.length - before]).toEqual([true, true, 0]);
   }).pipe(Effect.scoped),
-);
-
-it.effect(
-  'the open controls take their room from the middle, and the choice is centred in what is left',
-  () =>
-    Effect.gen(function* () {
-      const app = yield* openWordSeek(false);
-      const page = yield* mountSeekReader(app, { viewport: 800 });
-      yield* inAct(app.play);
-      page.press('hymn-word-seek');
-      yield* inAct(app.untilHold('Held'));
-      const offs = [200, 120, 260].map((height) => {
-        page.panel(height);
-        const rect = fixtureRects[0] ?? { top: 0, height: 0 };
-        const y = page.scrolls.at(-1)?.y ?? Number.NaN;
-        const inside = 800 - FOOT - (height + PANEL_GAP);
-        return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - inside / 2);
-      });
-      const held = app.registry.get(app.player.hold.state)._tag;
-      expect([held, offs.every((off) => off <= 2)]).toEqual(['Held', true]);
-    }).pipe(Effect.scoped),
 );
 
 const wordsDrawn: ReadonlyArray<WordsDrawn> = ['plain', 'syllables', 'boxed'];
@@ -1163,12 +1127,12 @@ it.effect(
         const app = yield* openWordSeek(false);
         const page = yield* mountSeekReader(app, { viewport: 800, words });
         yield* inAct(app.play);
-        page.press('hymn-word-seek');
+        page.act('seek');
         yield* inAct(app.untilHold('Held'));
         const first = [page.chosenLines(), page.underlined(0)];
-        page.press('reader-seek-prev-word');
+        page.act('prev-word');
         const second = [page.chosenLines(), page.underlined(0)];
-        page.press('reader-seek-cancel');
+        page.act('cancel');
         yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilHold('Free')));
         seen.push([words, first, second, page.underlined(0), page.hasChord()]);
       }
@@ -1231,11 +1195,11 @@ it.effect(
         const page = yield* mountSeekReader(app, { viewport: 800, reduced: atMount });
         yield* inAct(app.play);
         yield* seekToFirst(app);
-        page.press('hymn-word-seek');
+        page.act('seek');
         yield* inAct(app.untilHold('Held'));
         if (during !== atMount) page.motion(during);
         const before = page.scrolls.length;
-        page.press('reader-seek-cancel');
+        page.act('cancel');
         yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilHold('Free')));
         const after = page.scrolls.slice(before);
         seen.push([during, after.length > 0, after.some(({ animated }) => animated)]);
@@ -1262,9 +1226,9 @@ it.effect('the first finish of a hold is its only one, however many adapters end
     const app = yield* openWordSeek(false);
     const page = yield* mountSeekReader(app, { viewport: 800, area: GivenArea });
     yield* inAct(app.play);
-    page.press('hymn-word-seek');
+    page.act('seek');
     yield* inAct(app.untilHold('Held'));
-    page.press('reader-seek-next-line');
+    page.act('next-line');
     const seek = Option.getOrThrow(given.seek);
     const landed = yield* Deferred.make<Status, PlaybackError>();
     app.boundaries.set('seek', landed);
@@ -1317,10 +1281,10 @@ it.effect('the generated histories reached every case they are for', () => {
     'layout',
     'answer',
     'stale-answer',
-    'panel',
+    'steps-keys',
+    'steps-actions',
     'foot-hash',
     'foot-none',
-    'foot-tall-entry',
     'foot-held',
     'land',
     'landing',

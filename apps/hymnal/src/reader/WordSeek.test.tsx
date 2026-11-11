@@ -16,34 +16,24 @@ import { openWordSeek } from '~/test/word-seek';
 type Page = Effect.Success<ReturnType<typeof mountSeekReader>>;
 
 const VIEWPORT = 800;
-/** The entry's least height, and the gap between it and the open controls over it. */
-const ENTRY = 48;
-const GAP = 8;
-
-/**
- * Where the words stop being seen, over the page's foot: the top of the
- * entry `Seek` (`entry` points tall), or of the open controls over it
- * (`panel` points tall, none while closed).
- */
-const floorOf = (page: Page, entry = ENTRY, panel = 0) =>
-  Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) +
-  entry +
-  ((panel > 0 && GAP + panel) || 0);
-
-/** How far line `k`'s block's middle sits from the middle of the words seen, after the page's last scroll. */
-const offMiddle = (page: Page, k: number, floor = floorOf(page)) => {
-  const rect = fixtureRects[k] ?? { top: 0, height: 0 };
-  const y = page.scrolls.at(-1)?.y ?? 0;
-  return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - (VIEWPORT - floor) / 2);
-};
 
 /**
  * The highest the sounding bar and its `#` reach over a hymn page's foot,
  * as the player lays them out: the bar rises `SOUNDING - REST` over the
  * page, and the `#` stands `HASH_GAP` over the bar while the find room says
- * it is there.
+ * it is there. The words are seen down to it.
  */
 const barReach = (room: number) => SOUNDING - REST + ((room > 0 && HASH_GAP + HASH) || 0);
+
+/** How far line `k`'s block's middle sits from the middle of the words seen, after the page's last scroll. */
+const offMiddle = (page: Page, k: number, floor = barReach(HYMN_PAGE_ROOM)) => {
+  const rect = fixtureRects[k] ?? { top: 0, height: 0 };
+  const y = page.scrolls.at(-1)?.y ?? 0;
+  return Math.abs(page.padTop() + rect.top + rect.height / 2 - y - (VIEWPORT - floor) / 2);
+};
+
+/** Whether the page offers a screen reader the action `name` on its words. */
+const offers = (page: Page, name: string) => page.offers().includes(name);
 
 /** What the page shows of the hold: its numbers, the outlined lines, the underlined words of `k`, the marker. */
 const shownOf = (page: Page, k: number) => ({
@@ -75,30 +65,40 @@ const played = <A,>(play: () => A): A => {
 const seeks = (app: Effect.Success<ReturnType<typeof openWordSeek>>) =>
   app.commands.filter(({ kind }) => kind === 'seek').map(({ ms }) => ms);
 
-it.effect('the accessible path holds, steps, centres each choice and plays from it', () =>
+it.effect('the screen reader’s actions hold, step, centre each choice and play from it', () =>
   Effect.gen(function* () {
     const app = yield* openWordSeek(false);
     const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
-    expect(page.enabled('hymn-word-seek')).toBe(false);
+    const before = page.offers();
     yield* inAct(app.play);
-    expect(page.enabled('hymn-word-seek')).toBe(true);
-    page.press('hymn-word-seek');
+    const playing = page.offers();
+    page.act('seek');
     yield* inAct(app.untilHold('Held'));
+    const opened = page.offers();
     const held = [shownOf(page, 0)];
-    page.press('reader-seek-next-line');
+    page.act('next-line', 2);
     held.push(shownOf(page, 1));
-    const lastWord = page.enabled('reader-seek-next-word');
-    page.press('reader-seek-prev-word');
+    const lastWord = offers(page, 'next-word');
+    page.act('prev-word');
     held.push(shownOf(page, 1));
-    page.press('reader-seek-next-line');
-    page.press('reader-seek-next-line');
+    page.act('next-line');
+    page.act('next-line');
     held.push(shownOf(page, 3));
-    const atEnd = ['reader-seek-next-line', 'reader-seek-next-word', 'reader-seek-prev-word'].map(
-      page.enabled,
-    );
+    const atEnd = page.offers();
+    page.act('next-line');
     yield* inAct(TestClock.adjust(3000));
     const still = page.scrolls.every(({ animated }) => !animated);
-    expect([seeks(app), lastWord, atEnd, still]).toEqual([[], false, [false, false, false], true]);
+    expect([before, playing, opened]).toEqual([
+      [],
+      ['seek'],
+      ['next-line', 'prev-word', 'release', 'cancel'],
+    ]);
+    expect([seeks(app), lastWord, atEnd, still]).toEqual([
+      [],
+      false,
+      ['prev-line', 'release', 'cancel'],
+      true,
+    ]);
     expect(held).toEqual([
       {
         status: 'row=1 line=1 word=2 targetMs=1200',
@@ -133,7 +133,7 @@ it.effect('the accessible path holds, steps, centres each choice and plays from 
         centred: true,
       },
     ]);
-    page.press('reader-seek-release');
+    page.act('release', 1);
     yield* inAct(app.untilHold('Free'));
     expect([
       seeks(app),
@@ -308,11 +308,11 @@ it.effect('on the web a cancel, a lost capture or Escape cancels once; a late ti
     );
     const ended = yield* Effect.all(ends);
     yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
-    page.press('hymn-word-seek');
+    page.act('seek');
     yield* inAct(app.untilHold('Held'));
     page.key('Escape');
     yield* inAct(app.untilHold('Free'));
-    const steps = Option.isSome(page.find('reader-seek-controls'));
+    const steps = offers(page, 'cancel') || Option.isSome(page.find('reader-seek-status'));
     expect([menu, lifted, ended, steps, seeks(app)]).toEqual([
       true,
       0,
@@ -343,8 +343,8 @@ it.effect(
         ),
       );
       const playing = app.registry.get(app.player.state)._tag;
-      const entry = web.enabled('hymn-word-seek');
-      web.press('hymn-word-seek');
+      const entry = offers(web, 'seek');
+      web.keyOn('Enter');
       web.pointer('pointerdown');
       const armed = web.waiting().length;
       web.pointer('pointerup');
@@ -360,8 +360,8 @@ it.effect(
         Deferred.succeed(landed, { state: 'playing', positionMs: 3000, durationMs: 21_000 }),
       );
       yield* inAct(TestClock.adjust(250));
-      const after = [phone.enabled('hymn-word-seek'), gestureOf(HOLD).enabled !== false];
-      phone.press('hymn-word-seek');
+      const after = [offers(phone, 'seek'), gestureOf(HOLD).enabled !== false];
+      phone.act('seek');
       yield* inAct(app.untilHold('Held'));
       expect([playing, entry, pressed, armed, recognizer, fingered, after, phone.cues]).toEqual([
         'Playing',
@@ -383,27 +383,27 @@ it.effect(
       const app = yield* openWordSeek(false);
       const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
       yield* inAct(app.play);
-      page.press('hymn-word-seek');
+      page.act('seek');
       yield* inAct(app.untilHold('Held'));
-      page.press('reader-seek-next-line');
-      page.press('reader-seek-cancel');
+      page.act('next-line');
+      page.act('cancel');
       yield* inAct(app.untilHold('Free'));
       const cancelled = [
         seeks(app),
         [...page.cues],
-        Option.isSome(page.find('reader-seek-controls')),
+        Option.isSome(page.find('reader-seek-status')),
       ];
       yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
-      page.press('hymn-word-seek');
+      page.act('seek');
       yield* inAct(app.untilHold('Held'));
       page.show(false);
       yield* inAct(app.untilHold('Free'));
       const revoked = [page.chosenLines(), app.registry.get(seekHeld), seeks(app)];
-      const covered = page.enabled('hymn-word-seek');
+      const covered = offers(page, 'seek');
       page.show(true);
       yield* inAct(Effect.sync(() => app.send(Command.Pause())));
-      const paused = page.enabled('hymn-word-seek');
-      page.press('hymn-word-seek');
+      const paused = offers(page, 'seek');
+      page.keyOn('Enter');
       expect([
         cancelled,
         revoked,
@@ -414,40 +414,130 @@ it.effect(
     }).pipe(Effect.scoped),
 );
 
+it.effect('the marker and the choice sit mid the words seen over the sounding bar and its #', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+    yield* inAct(app.play);
+    page.act('seek');
+    yield* inAct(app.untilHold('Held'));
+    const seen = [HYMN_PAGE_ROOM, 0].map((room) => {
+      page.room(room);
+      page.act('next-line');
+      page.act('prev-line');
+      const marker = Option.getOrElse(page.rise('reader-seek-marker'), () => Number.NaN);
+      return [Math.abs(marker - barReach(room)) <= 0.5, offMiddle(page, 0, barReach(room)) <= 2];
+    });
+    expect(seen).toEqual([
+      [true, true],
+      [true, true],
+    ]);
+  }).pipe(Effect.scoped),
+);
+
+/** The names a seek's control would carry, as a button, a group or its text. */
+const SEEK_CONTROL =
+  /^(Seek|Seek by line or word|Previous line|Next line|Previous word|Next word|Play from here|Cancel)$/;
+
+/**
+ * What the page draws for the held seek beyond the hold's own marks: any
+ * element named as a seek's control, the old entry, dock and panel by id,
+ * and the status drawn larger than its one clear point.
+ */
+const drawnForSeek = (page: Page) => {
+  const named = [...page.host.querySelectorAll('[role="button"], button, [role="group"]')].filter(
+    (element) =>
+      SEEK_CONTROL.test(element.getAttribute('aria-label') ?? '') ||
+      SEEK_CONTROL.test((element.textContent ?? '').trim()),
+  ).length;
+  const byId = ['hymn-word-seek', 'reader-seek-dock', 'reader-seek-controls'].filter((id) =>
+    Option.isSome(page.find(id)),
+  );
+  const status = Option.match(page.find('reader-seek-status'), {
+    onNone: () => 'none',
+    onSome: (it) => {
+      const style = getComputedStyle(it);
+      const unseen =
+        style.width === '1px' &&
+        style.height === '1px' &&
+        /^(transparent|rgba\(.*,\s*0(\.0+)?\))$/.test(style.color);
+      return (unseen && 'unseen') || 'seen';
+    },
+  });
+  return { named, byId, status };
+};
+
 it.effect(
-  'the entry stands clear of the sounding bar and its #, and the marker and the choice sit mid the words left seen',
+  'the page draws no seek button or panel: idle, playing, held by a finger or by a screen reader',
+  () =>
+    Effect.gen(function* () {
+      const app = yield* openWordSeek(false);
+      const page = yield* mountSeekReader(app, { viewport: VIEWPORT, words: 'boxed' });
+      const drawn = [drawnForSeek(page)];
+      yield* inAct(app.play);
+      drawn.push(drawnForSeek(page));
+      page.act('seek');
+      yield* inAct(app.untilHold('Held'));
+      page.act('next-line');
+      drawn.push(drawnForSeek(page));
+      page.act('cancel');
+      yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
+      page.pointer('pointerdown');
+      page.elapse();
+      yield* inAct(app.untilHold('Held'));
+      drawn.push(drawnForSeek(page));
+      page.pointer('pointerup', {}, 'area');
+      yield* inAct(app.untilHold('Free'));
+      expect(drawn).toEqual([
+        { named: 0, byId: [], status: 'none' },
+        { named: 0, byId: [], status: 'none' },
+        { named: 0, byId: [], status: 'unseen' },
+        { named: 0, byId: [], status: 'unseen' },
+      ]);
+    }).pipe(Effect.scoped),
+);
+
+it.effect(
+  'on the web the focused words take Enter, the arrows and Escape, with no control drawn',
   () =>
     Effect.gen(function* () {
       const app = yield* openWordSeek(false);
       const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
       yield* inAct(app.play);
-      const closed = [HYMN_PAGE_ROOM, 0].map((room) => {
-        page.room(room);
-        return Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) >= barReach(room);
-      });
-      page.press('hymn-word-seek');
+      const area = Option.getOrThrow(page.find('reader-word-seek-area'));
+      const focus = [area.tabIndex, area.getAttribute('aria-keyshortcuts')];
+      page.keyOn('ArrowDown');
+      const idleArrow = app.registry.get(app.player.hold.state)._tag;
+      page.keyOn('Enter');
       yield* inAct(app.untilHold('Held'));
-      const seen = [HYMN_PAGE_ROOM, 0].flatMap((room) =>
-        [ENTRY, 72].flatMap((entry) =>
-          [120, 260].map((panel) => {
-            page.room(room);
-            page.entry(entry);
-            page.panel(panel);
-            page.press('reader-seek-next-line');
-            page.press('reader-seek-prev-line');
-            const floor = floorOf(page, entry, panel);
-            const marker = Option.getOrElse(page.rise('reader-seek-marker'), () => Number.NaN);
-            return [
-              Option.getOrElse(page.rise('hymn-word-seek'), () => Number.NaN) >= barReach(room),
-              Math.abs(marker - floor) <= 0.5,
-              offMiddle(page, 0, floor) <= 2,
-            ];
-          }),
-        ),
-      );
-      expect([closed, seen]).toEqual([
-        [true, true],
-        Array.from({ length: 8 }, () => [true, true, true]),
+      const trail = ['ArrowDown', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'].map((key) => {
+        page.keyOn(key);
+        return Option.getOrElse(page.status(), () => '');
+      });
+      page.keyOn('Enter');
+      yield* inAct(app.untilHold('Free'));
+      const released = [...page.cues];
+      yield* inAct(Effect.andThen(TestClock.adjust(250), app.untilPlayer(Player.$is('Playing'))));
+      page.keyOn('Enter');
+      yield* inAct(app.untilHold('Held'));
+      page.keyOn('ArrowDown');
+      page.key('Escape');
+      yield* inAct(app.untilHold('Free'));
+      expect([focus, idleArrow, trail]).toEqual([
+        [0, 'Enter ArrowUp ArrowDown ArrowLeft ArrowRight Escape'],
+        'Free',
+        [
+          'row=2 line=2 word=2 targetMs=6200',
+          'row=2 line=2 word=1 targetMs=6100',
+          'row=3 line=3 word=1 targetMs=11100',
+          'row=2 line=2 word=1 targetMs=6100',
+          'row=2 line=2 word=2 targetMs=6200',
+        ],
+      ]);
+      expect([released, seeks(app), page.cues.slice(released.length)]).toEqual([
+        ['seek-grab', ...Array.from({ length: 5 }, () => 'seek-tick'), 'seek-release'],
+        [6200],
+        ['seek-grab', 'seek-tick'],
       ]);
     }).pipe(Effect.scoped),
 );

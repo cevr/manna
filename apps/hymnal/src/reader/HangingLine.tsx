@@ -4,7 +4,7 @@
  * poem. React Native's text has no indent of its own, so the line is a row of
  * its words that wraps between them; the row is indented and its first word
  * pulled back to the line's start. The row is one accessible element that
- * reads the whole line.
+ * reads the whole line, and offers the held seek's actions (`word-seek.ts`).
  *
  * It draws a line of a Plain part, which carries words and no syllables; a
  * sung line is drawn as its syllables (`SyllableWords.tsx`). While the line
@@ -19,7 +19,7 @@ import { useLineFollow } from '~/follow/follow';
 import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
-import { useSeekTreatment } from './word-seek';
+import { useSeekActions, useSeekTreatment } from './word-seek';
 
 /** Each word of `line` with the space after it; a no-break space, so no row drops it at its end. */
 const wordsOf = (line: string): ReadonlyArray<string> => {
@@ -40,11 +40,13 @@ export function HangingLine({
   const { words, indent } = usePageText();
   const { marked, ref, wordsStyle } = useLineFollow(index);
   const seek = useSeekTreatment(index);
+  const actions = useSeekActions();
   return (
     <WithIntro index={index}>
       <View
         ref={ref}
         accessible
+        {...actions}
         aria-label={line}
         aria-selected={marked}
         {...currentOf(marked)}

@@ -13,11 +13,15 @@
  * (`ChordLines`), from a chord book of the fixture's own words. The touch
  * path's time (a still pointer's deadline, a chord press's age) is the
  * fixture's clock, moved by hand, and the system's Reduce Motion is the
- * document's, set as the page mounts.
+ * document's, set as the page mounts. A screen reader's action on a sung
+ * line is performed as the phones perform it, by calling the handler the
+ * line's component was given with the action's name; react-native-web
+ * draws no attribute for it, so the fixture reads it from React's current
+ * tree.
  */
 
 import { RegistryContext } from '@effect/atom-react';
-import { Effect, Option, Predicate } from 'effect';
+import { Array as Arr, Effect, Option, Predicate } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import { act, type ComponentProps, type ReactNode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -157,6 +161,107 @@ const riseOf = (node: HTMLElement, page: Element): number => {
   });
 };
 
+/** A React fiber, as far as the fixture reads one. */
+interface Fiber {
+  readonly stateNode: unknown;
+  readonly memoizedProps: unknown;
+}
+
+const isFiber = Predicate.and(
+  Predicate.hasProperty('stateNode'),
+  Predicate.hasProperty('memoizedProps'),
+);
+
+/** The fiber in field `name` of a fiber or a root, if one is there. */
+const field = (of: Fiber | Element | FiberRoot, name: string): Option.Option<Fiber> =>
+  Option.liftPredicate(Reflect.get(of, name), isFiber);
+
+/** A React root, as far as the fixture reads one: its current fiber. */
+interface FiberRoot {
+  readonly current: unknown;
+}
+
+const isRoot = Predicate.hasProperty('current');
+
+/** The props of a component that offers accessibility actions, as it was given them. */
+interface ActionProps {
+  readonly accessibilityActions: unknown;
+  readonly onAccessibilityAction: (event: {
+    readonly nativeEvent: { readonly actionName: string };
+  }) => void;
+}
+
+const isActionProps = (props: unknown): props is ActionProps =>
+  Predicate.hasProperty(props, 'onAccessibilityAction') &&
+  Predicate.isFunction(props.onAccessibilityAction);
+
+/** The fiber drawn now under `fiber` (itself included) whose host element is `element`. */
+const fiberOf = (fiber: Fiber, element: Element): Option.Option<Fiber> => {
+  if (fiber.stateNode === element) return Option.some(fiber);
+  return Option.orElse(
+    Option.flatMap(field(fiber, 'child'), (child) => fiberOf(child, element)),
+    () => Option.flatMap(field(fiber, 'sibling'), (next) => fiberOf(next, element)),
+  );
+};
+
+/**
+ * Host element `element`'s fiber as drawn now, found from the root's
+ * current tree: the fiber an element keeps from when it was made may be the
+ * alternate of a later draw, with older props over it.
+ */
+const drawnFiber = (element: Element, root: Element): Option.Option<Fiber> =>
+  Option.fromUndefinedOr(Object.keys(root).find((one) => one.startsWith('__reactContainer$'))).pipe(
+    Option.flatMap((key) => field(root, key)),
+    Option.flatMap((made) => Option.liftPredicate(made.stateNode, isRoot)),
+    Option.flatMap((container) => field(container, 'current')),
+    Option.flatMap((current) => fiberOf(current, element)),
+  );
+
+/**
+ * The first props, in drawing order, under `fiber` (its siblings left out
+ * when `top`) that carry an accessibility action handler: as the component
+ * was given them, before react-native-web leaves out what the web has no
+ * attribute for.
+ */
+const handlerUnder = (fiber: Fiber, top: boolean): Option.Option<ActionProps> => {
+  const props = Option.liftPredicate(fiber.memoizedProps, isActionProps);
+  if (Option.isSome(props)) return props;
+  return Option.orElse(
+    Option.flatMap(field(fiber, 'child'), (child) => handlerUnder(child, false)),
+    () => {
+      if (top) return Option.none();
+      return Option.flatMap(field(fiber, 'sibling'), (next) => handlerUnder(next, false));
+    },
+  );
+};
+
+/**
+ * The accessibility actions a host element offers, by its own component or
+ * the first inside it that has them (a boxed line's first box), each
+ * performed as the phones' screen reader performs it: the handler called
+ * with the action's name.
+ */
+const actionsOf = (element: Element, root: Element) =>
+  Option.match(
+    Option.flatMap(drawnFiber(element, root), (fiber) =>
+      Option.flatMap(field(fiber, 'return'), (owner) => handlerUnder(owner, true)),
+    ),
+    {
+      onNone: () => [],
+      onSome: (props) => {
+        const offered: unknown = props.accessibilityActions;
+        if (!Array.isArray(offered)) return [];
+        return offered.filter(Predicate.hasProperty('name')).map((one) => {
+          const name = String(one.name);
+          return {
+            name,
+            perform: () => props.onAccessibilityAction({ nativeEvent: { actionName: name } }),
+          };
+        });
+      },
+    },
+  );
+
 /** The page, mounted while the scope lasts. */
 export const mountSeekReader = (
   app: SeekApp,
@@ -272,25 +377,15 @@ export const mountSeekReader = (
             told({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } }, timeStamp: 0 });
         });
       lay(viewport);
-      /** The open seek controls are laid out `height` points tall, as the platform's layout tells them. */
-      const panel = (height: number) =>
-        acted(() => {
-          const told = Option.flatMap(find('reader-seek-controls'), (it) =>
-            Option.liftPredicate(Reflect.get(it, '__reactLayoutHandler'), Predicate.isFunction),
-          );
-          Option.map(told, (it) =>
-            it({ nativeEvent: { layout: { x: 0, y: 0, width: 350, height } }, timeStamp: 0 }),
-          );
-        });
-      /** The entry `Seek` is laid out `height` points tall, as the platform's layout tells it (the system's text size). */
-      const entry = (height: number) =>
-        acted(() => {
-          const told = Option.flatMap(find('hymn-word-seek'), (it) =>
-            Option.liftPredicate(Reflect.get(it, '__reactLayoutHandler'), Predicate.isFunction),
-          );
-          Option.map(told, (it) =>
-            it({ nativeEvent: { layout: { x: 0, y: 0, width: 64, height } }, timeStamp: 0 }),
-          );
+      /**
+       * The accessibility actions sung line `k` offers, as the phones'
+       * screen reader reads them from the element it focuses: the row, or
+       * a boxed line's first box.
+       */
+      const offeredOn = (k: number) =>
+        Option.match(Option.fromUndefinedOr(lines()[k]), {
+          onNone: () => [],
+          onSome: (line) => actionsOf(line, host),
         });
       const chord = () =>
         Option.fromNullishOr(
@@ -311,8 +406,25 @@ export const mountSeekReader = (
         padTop,
         /** The page's viewport is laid out `height` points tall. */
         lay,
-        panel,
-        entry,
+        /** The names of the accessibility actions sung line `k` offers a screen reader now. */
+        offers: (k = 0) => offeredOn(k).map(({ name }) => name),
+        /** A screen reader performs action `name` on sung line `k`; an action it does not offer it cannot. */
+        act: (name: string, k = 0) =>
+          acted(() =>
+            Option.map(
+              Arr.findFirst(offeredOn(k), (one) => one.name === name),
+              (one) => one.perform(),
+            ),
+          ),
+        /** A key pressed while the words have the keyboard's focus. */
+        keyOn: (key: string) =>
+          acted(() =>
+            Option.map(find('reader-word-seek-area'), (area) =>
+              area.dispatchEvent(
+                new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }),
+              ),
+            ),
+          ),
         /** The bar's `#` takes `points` over the page's foot (`FindRoom`), as the player tells the screens when it moves. */
         room: (points: number) => acted(() => told.set(points)),
         /**
@@ -329,7 +441,7 @@ export const mountSeekReader = (
         /** Whether the button `id` is drawn and can be pressed. */
         enabled: (id: string) =>
           Option.exists(find(id), (found) => found.getAttribute('aria-disabled') !== 'true'),
-        /** The status's numbers, while the controls are open. */
+        /** The status's numbers, while the page holds. */
         status: () =>
           Option.flatMap(find('reader-seek-status'), (found) =>
             Option.fromNullishOr(found.getAttribute('aria-valuetext')),

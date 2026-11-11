@@ -8,7 +8,12 @@
  * vertical swipe still scrolls). The same pointer's main-button lift plays
  * from the choice; a cancel, a lost capture or Escape cancels. The contact
  * is let go before the capture is, so the capture its own lift ends never
- * cancels a release. Escape also cancels a hold the page's controls took.
+ * cancels a release.
+ *
+ * With no pointer, the words are one focusable region that the keys hold
+ * (no control is drawn for it): Enter takes the hold as a still pointer
+ * does, the arrows step the choice a line or a word, Enter plays from it
+ * and Escape cancels, each through the same seek.
  *
  * The listeners are the area's own, added while it is drawn and removed with
  * it, with the hold's timer.
@@ -25,6 +30,7 @@ import {
   PointerEffect,
   PointerInput,
   type SeekAreaProps,
+  type Step,
   useChordTouch,
   useHoldTimer,
 } from './word-seek';
@@ -40,6 +46,27 @@ const onWords = (target: Option.Option<EventTarget>) =>
         Option.isNone(Option.fromNullishOr(one.closest('[role="button"], a, input, button'))),
     },
   );
+
+/** The keys the focused words take: Enter holds and plays from the choice, the arrows step it, Escape cancels. */
+const SHORTCUTS = 'Enter ArrowUp ArrowDown ArrowLeft ArrowRight Escape';
+
+const stepKeys = new Map<string, Step>([
+  ['ArrowUp', 'prev-line'],
+  ['ArrowDown', 'next-line'],
+  ['ArrowLeft', 'prev-word'],
+  ['ArrowRight', 'next-word'],
+]);
+
+/**
+ * What `key` on the focused words does: Enter takes the hold, or plays from
+ * the choice while the keys hold; an arrow steps the choice while they hold.
+ * None for any other key, so the page scrolls by its keys as before.
+ */
+const keyAction = (key: string, held: boolean): Option.Option<'begin' | 'release' | Step> => {
+  if (key === 'Enter') return Option.some((held && 'release') || 'begin');
+  if (!held) return Option.none();
+  return Option.fromUndefinedOr(stepKeys.get(key));
+};
 
 /** The page's scroll on the web: the browser's own, with no recognizer to block (the hold holds back its touch and wheel itself). */
 export function SeekScroll({ children }: { readonly children: ReactNode }) {
@@ -133,6 +160,17 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
       if (contact._tag !== 'Idle') run(PointerInput.Escape());
       else if (Option.contains(now.current.via, 'steps')) now.current.cancel();
     };
+    const typed = (event: KeyboardEvent) => {
+      if (event.target !== area || contact._tag !== 'Idle') return;
+      const held = Option.contains(now.current.via, 'steps');
+      const action = keyAction(event.key, held);
+      if (Option.isNone(action)) return;
+      event.preventDefault();
+      const seek = now.current;
+      if (action.value === 'begin') seek.begin('steps');
+      else if (action.value === 'release') seek.release();
+      else seek.step(action.value);
+    };
     area.style.touchAction = 'pan-y';
     area.addEventListener('pointerdown', down);
     area.addEventListener('pointermove', move);
@@ -142,6 +180,7 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
     area.addEventListener('touchmove', held, { passive: false });
     area.addEventListener('wheel', held, { passive: false });
     area.addEventListener('contextmenu', menu);
+    area.addEventListener('keydown', typed);
     document.addEventListener('keydown', key);
     return () => {
       disarm();
@@ -153,11 +192,20 @@ export function SeekArea({ seek, style, children }: SeekAreaProps) {
       area.removeEventListener('touchmove', held);
       area.removeEventListener('wheel', held);
       area.removeEventListener('contextmenu', menu);
+      area.removeEventListener('keydown', typed);
       document.removeEventListener('keydown', key);
     };
   }, [chord, clock]);
   return (
-    <View ref={keep} testID="reader-word-seek-area" style={style}>
+    <View
+      ref={keep}
+      testID="reader-word-seek-area"
+      focusable
+      role="region"
+      aria-label="Sung words"
+      aria-keyshortcuts={SHORTCUTS}
+      style={style}
+    >
       {children}
     </View>
   );
