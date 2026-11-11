@@ -4,16 +4,17 @@
  * whether the dials above the bar are open. With chords off the key button
  * is the chords switch: a tap turns chords on and opens nothing (a chords-on
  * cue). With chords on a tap opens the dials, or closes them (a press cue).
- * A tap on the page closes them. A hold turns chords on or off, and a hold
- * that turns them off closes the dials: no step leaves them open with chords
- * off. The key dial turns the sounding key, and turning it
+ * A tap on the page closes them. `Hold` turns chords on or off (with chords
+ * off, the key button's hold; with chords on, its wheel's Chords off), and
+ * one that turns them off closes the dials: no step leaves them open with
+ * chords off. The key dial turns the sounding key, and turning it
  * turns chords on, keeping the key turned to. The capo dial sets the fret,
  * held to 0 to 11: a turn past an end stays at the end and cues a wall.
  * Reset is the hymn as printed: its key and no capo. Over the bar the dials
  * stay open while the rows turn home, and close once the reader has seen
  * them go (`ResetShown`, which the bar tells when its wait is over). A reset
  * of a hymn already at home (a double tap on a dial there) closes them at
- * once, with no cue. A tap on the dials' Tuner closes them, with no cue, as
+ * once, with no cue. The key button's Tuner closes them, with no cue, as
  * the tuner opens over the page.
  *
  * Each step gives the next state and the cues it makes (`~/feel/cue`), and
@@ -45,7 +46,7 @@ export interface Thumb {
 export type ThumbEvent = Data.TaggedEnum<{
   /** A tap on the key button. */
   Tap: {};
-  /** A hold of the key button, or VoiceOver's action on it. */
+  /** Chords turned on or off at the key button: its hold with chords off, its wheel's Chords off, or VoiceOver's action. */
   Hold: {};
   /** A tap on the page while the dials are open. */
   TapPage: {};
@@ -57,7 +58,7 @@ export type ThumbEvent = Data.TaggedEnum<{
   Reset: {};
   /** A reset's turn home has been seen: the dials close. */
   ResetShown: {};
-  /** A tap on the dials' Tuner: the dials close as the tuner opens. */
+  /** The key button's Tuner: the dials close as the tuner opens. */
   Tune: {};
 }>;
 export const ThumbEvent = Data.taggedEnum<ThumbEvent>();
@@ -73,10 +74,16 @@ const mod12 = (n: number) => ((n % 12) + 12) % 12;
 export const transposeTo = (printed: Chord.Key, pitch: number): number =>
   mod12(pitch - Chord.pitchClass(printed.tonic) + 5) - 5;
 
+/** The key dial's turn `by` semitones from the key a hymn printed in `printed` sounds in at `move`. */
+export const turnBy = (printed: Chord.Key, move: Move, by: number): ThumbEvent =>
+  ThumbEvent.TurnKey({
+    pitch: mod12(Chord.pitchClass(soundingKey(printed, move).tonic) + by),
+  });
+
 /** Whether `move` is the hymn as printed. */
 export const isStill = (move: Move): boolean => move.transpose === 0 && move.capo === 0;
 
-/** The cue a switch of chords to `on` gives, at every door: the bar's tap or hold, and Settings' switch. */
+/** The cue a switch of chords to `on` gives, at every door: the bar's tap, hold or wheel, and Settings' switch. */
 export const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'chords-off');
 
 /** The state after `event`, for a hymn printed in `printed`, and the cues it makes. */
@@ -116,18 +123,11 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
   });
 
 /** A chip of the open dials' top row. */
-export type Chip = 'tuner' | 'reset';
+export type Chip = 'reset';
 
-/**
- * The chips of the open dials' top row, leading to trailing: the Tuner where
- * the panel holds it (`tuner`: the hymn page's panel on a device with the
- * ear), then Reset while chords are on and the move is not the hymn as printed.
- */
-export const chipsOf = (state: Thumb, tuner: boolean): ReadonlyArray<Chip> => {
-  const reset = state.chords && !isStill(state.move);
-  if (tuner && reset) return ['tuner', 'reset'];
-  if (tuner) return ['tuner'];
-  if (reset) return ['reset'];
+/** The chips of the open dials' top row: Reset while chords are on and the move is not the hymn as printed. */
+export const chipsOf = (state: Thumb): ReadonlyArray<Chip> => {
+  if (state.chords && !isStill(state.move)) return ['reset'];
   return [];
 };
 
@@ -137,8 +137,8 @@ export type Shown = 'chips' | 'capo' | 'key';
  * What the open dials show, top to bottom: the chips' row while it holds a
  * chip (`chipsOf`), the capo dial with chords on, and the key dial.
  */
-export const shownOf = (state: Thumb, tuner: boolean): ReadonlyArray<Shown> => {
-  const chips: ReadonlyArray<Shown> = (chipsOf(state, tuner).length > 0 && ['chips']) || [];
+export const shownOf = (state: Thumb): ReadonlyArray<Shown> => {
+  const chips: ReadonlyArray<Shown> = (chipsOf(state).length > 0 && ['chips']) || [];
   const capo: ReadonlyArray<Shown> = (state.chords && ['capo']) || [];
   return [...chips, ...capo, 'key'];
 };

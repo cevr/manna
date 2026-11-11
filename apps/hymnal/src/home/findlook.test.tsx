@@ -3,9 +3,9 @@
 
 /**
  * The find bar and the key panel's chips, as the owner asked (2026-11-01,
- * plan `packages/hymnal/plans/hymnapp-run.md`, unit findlook): the Tuner
- * chip and Reset are one height, the Tuner's mark small and upright; the
- * find bar's capsule is glass (`glass`), its marks the
+ * plan `packages/hymnal/plans/hymnapp-run.md`, unit findlook): Reset is 32
+ * points tall, and the panel holds no Tuner chip (owner, 2026-11-11: the
+ * tuner moved to the key button's wheel); the find bar's capsule is glass (`glass`), its marks the
  * glass's ink, and one chosen mark, a disk in the `glassChosen` colour behind
  * the chosen control: the `#` while the drums are open, Search while search
  * is open, and none at rest (owner, 2026-11-11: the `#` "shouldn't be
@@ -179,7 +179,7 @@ afterEach(() => landAnimations());
 
 describe('the key panel’s chips', () => {
   const key: Chord.Key = { tonic: 'C', minor: false };
-  /** The panel open on a hymn moved from its printed key, so Reset shows beside the Tuner. */
+  /** The panel open on a hymn moved from its printed key, so Reset shows. */
   const dials = () =>
     mounted(
       <Dials
@@ -191,36 +191,16 @@ describe('the key panel’s chips', () => {
           resets: 0,
         }}
         printed={key}
-        tuner
       />,
     );
 
-  it('the Tuner and Reset are one height, 32 points', () => {
+  it('Reset is 32 points tall, and the panel holds no Tuner chip', () => {
     using panel = dials();
-    const tuner = panel.get('[data-testid="dials-tuner"]');
     const reset = panel.get('[data-testid="dials"] [role="button"][aria-label="Reset"]');
-    expect({ tuner: style(tuner).height, reset: style(reset).height }).toEqual({
-      tuner: '32px',
-      reset: '32px',
-    });
-  });
-
-  it('the Tuner’s mark is small and upright: at most 14 points tall, no wider than tall, nothing turned', () => {
-    using panel = dials();
-    const tuner = panel.get('[data-testid="dials-tuner"]');
-    const mark = Option.getOrThrow(
-      Option.fromNullishOr(tuner.querySelector<HTMLElement>('[aria-hidden="true"]')),
-    );
-    const height = Number.parseFloat(style(mark).height);
-    const width = Number.parseFloat(style(mark).width);
-    const turned = [mark, ...mark.querySelectorAll('*')].filter((part) =>
-      /rotate/.test(style(part).transform),
-    );
-    expect({ small: height <= 14, upright: width <= height, turned: turned.length }).toEqual({
-      small: true,
-      upright: true,
-      turned: 0,
-    });
+    expect({
+      reset: style(reset).height,
+      tuner: Option.isSome(panel.one('[data-testid="dials-tuner"]')),
+    }).toEqual({ reset: '32px', tuner: false });
   });
 
   it('on iOS the Tuner’s mark is drawn, not the diagonal tuning-fork symbol', async () => {
@@ -412,7 +392,7 @@ describe('the theme’s find bar roles', () => {
   };
 
   it.each(['light', 'dark'] as const)(
-    '%s: the capsule is soft glass, the chosen disk the accent with its ink on it (4.5:1), and the placeholder quieter than the words',
+    '%s: the capsule is soft glass, the chosen disk the button with its ink on it (4.5:1), and the placeholder quieter than the words',
     (scheme) => {
       const roles = themes.theme[scheme];
       expect({
@@ -424,7 +404,7 @@ describe('the theme’s find bar roles', () => {
       }).toEqual({
         glass: `${roles.soft}d9`,
         words: roles.ink,
-        chosen: roles.accent,
+        chosen: roles.button,
         onChosen: true,
         quieter: true,
       });

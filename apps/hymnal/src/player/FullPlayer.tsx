@@ -258,7 +258,7 @@ const ChordSection = memo(function ChordSection({ track }: { readonly track: Tra
         onNone: () => <></>,
         onSome: (printed) => (
           <DialPanel>
-            <Dials thumb={thumb} printed={printed} tuner={false} />
+            <Dials thumb={thumb} printed={printed} />
           </DialPanel>
         ),
       })}

@@ -4,7 +4,8 @@
  * default) the page, the bar and the player sheet show only what is sung and
  * heard, and the switch; with chords on, every control for playing comes in.
  * The switch is one setting (`chords`) with three doors here: a tap on the
- * bar's guitar head, the sheet's `Chords` switch, and a hold. While chords
+ * bar's guitar head, the sheet's `Chords` switch, and the key button's hold
+ * (with chords on, its wheel's Chords off). While chords
  * are off the recording plays in the printed key, and a hymn's stored key is
  * heard again once they are on.
  *
@@ -94,8 +95,8 @@ interface Row {
  * sheet open on its own page and the bar's dials open (a tap of the key
  * button while chords are on). Rows it cannot reach here: H1-H4 (home), A1
  * (the about sheet), T1-T4 (Settings: `settings.chordmode.test.tsx`), U1-U2
- * (routes); the bar's Tuner (`dials-tuner`) is drawn only on a device with
- * the ear, which the web lacks.
+ * (routes); the Tuner is on the key button's wheel, which a hold opens, not
+ * on the dials.
  */
 const rows: ReadonlyArray<Row> = [
   { row: 'R1 about', where: 'page', handle: '[data-testid="hymn-about"]', sort: 'simple' },

@@ -36,7 +36,7 @@ import { settings } from '~/store';
 import { StackHeader } from '~/test/stack';
 
 import { fakeDevice } from '../test/device';
-import { drag, gestureOf } from '../test/gesture';
+import { drag, gestureOf, type Held, longPress } from '../test/gesture';
 import { params, routed } from '../test/one';
 import { propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
@@ -219,16 +219,19 @@ type Page = ReturnType<typeof mount>;
 
 const keyButton = (page: Page) => page.get('[role="button"][aria-label="Key"]');
 
-/** The key button held down until the hold turns chords to `to`, then let go. */
+/**
+ * The key button held until chords turn to `to`, then let go: with chords
+ * on, the hold opens the wheel and the finger slides to Chords off (−6°,
+ * 120 points out). The hold is the gesture handler's, played through its
+ * callbacks.
+ */
 const hold = (page: Page, to: boolean) =>
   Effect.gen(function* () {
-    const button = keyButton(page);
-    act(() => void button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
+    let held = Option.none<Held>();
+    act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
+    if (!to) act(() => void Option.map(held, (finger) => finger.move(119.3, 12.5)));
+    act(() => void Option.map(held, (finger) => finger.lift()));
     yield* page.untilChords(to);
-    act(() => {
-      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-    });
   });
 
 /** A drag of dial `testID` by `by` detents in one update, then let go at `velocity` points a second. */
@@ -308,7 +311,7 @@ describe('the page’s and the bar’s touches under the Feel', () => {
         yield* page.untilChords(true);
         expect(page.feel.take()).toEqual(expected([plain('chords-on')]));
         yield* hold(page, false);
-        expect(page.feel.take()).toEqual(expected([plain('chords-off')]));
+        expect(page.feel.take()).toEqual(expected([plain('choose'), plain('chords-off')]));
         expect(page.asked()).toEqual(nothingAsked);
       }),
   );

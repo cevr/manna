@@ -14,10 +14,15 @@
  * and title only when the bar's hymn is not the page's own; the Sound
  * switch; and the player's button. While another hymn sounds over a page,
  * a compact Play for the page's hymn sits before Sound. The opener is the
- * row's only flexible item, so it takes whatever width the marks leave. On a
- * device with the ear, the key button's dials hold the way to the tuner
- * (`Dials`, which the bar tells `available`). A swipe up on the bar opens the
- * sheet too. Over a hymn page, a pan from the docked bar's
+ * row's only flexible item, so it takes whatever width the marks leave.
+ * While it shows the grabber, the row is three columns: the key button's
+ * on the left and the marks' on the right each take the wider one's width
+ * (`barSides`), so the grabber stands at the bar's centre; while it names a
+ * hymn, the columns keep their own widths, so the title is not squeezed.
+ * On a device with the ear, the key button's wheel holds the way to the
+ * tuner (`KeyWheel`, drawn over the bar while a hold keeps it open, which
+ * the bar tells the ear, `Ear`). The marks are tinted in the button's role.
+ * A swipe up on the bar opens the sheet too. Over a hymn page, a pan from the docked bar's
  * left edge goes back, as the stack's own edge pan does above the bar
  * (`BackEdge`).
  *
@@ -32,7 +37,7 @@
 import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import { type Href, Link, useLinkTo, useRouter, useSafeAreaInsets } from 'one';
-import { useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
@@ -48,10 +53,9 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { color, useAccent } from '~/color';
+import { color, useAccent, useButton } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import { settings } from '~/store';
-import { available } from '~/tuner/native';
 
 import {
   Bar,
@@ -72,6 +76,7 @@ import { buttonsOf } from './button';
 import { DialPopover } from './DialPanel';
 import { type BoundThumb, Dials, useThumb } from './Dials';
 import { KeyButton } from './KeyButton';
+import { Ear, KeyWheel, type Shown } from './KeyWheel';
 import { Seeker } from './Seeker';
 import { ThumbEvent } from './thumb';
 import { RecordingNotice } from './RecordingNotice';
@@ -188,9 +193,8 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
     Option.map(bound.printed, (printed) => ({ bound, printed })),
   );
   const keyAt = useSharedValue(KEY_CENTRE);
-  const keyLaidOut = (event: LayoutChangeEvent) => {
-    const { x, width } = event.nativeEvent.layout;
-    keyAt.value = x + width / 2 - SIDE;
+  const keyLaidOut = (centre: number) => {
+    keyAt.value = centre - SIDE;
   };
   return (
     <>
@@ -215,29 +219,75 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
           >
             {Option.match(dials, {
               onNone: () => <></>,
-              onSome: ({ bound, printed }) => (
-                <Dials thumb={bound} printed={printed} tuner={available} />
-              ),
+              onSome: ({ bound, printed }) => <Dials thumb={bound} printed={printed} />,
             })}
           </DialPopover>
         </View>
-        <Frame drawing={drawing} thumb={thumb} onKeyLayout={keyLaidOut} />
+        <Frame drawing={drawing} thumb={thumb} onKeyAt={keyLaidOut} />
       </View>
     </>
   );
 }
 
+/** The bar's padding at each side, and the gap between its items, in points. */
+const PAD = 12;
+const GAP = 8;
+
+/**
+ * The side columns' width while the opener shows the grabber: the wider of
+ * the key button's and the marks' own widths, once both have laid out, so
+ * the grabber stands at the bar's centre. None while the opener names a
+ * hymn, or before the layout: the columns keep their own widths.
+ */
+const barSides = (grabber: boolean, key: number, marks: number): Option.Option<number> =>
+  Option.filter(Option.some(Math.max(key, marks)), () => grabber && key > 0 && marks > 0);
+
+/** Where the key button lies in the bar's row, and the widths its side columns' contents take. */
+interface Places {
+  /** The key button's left column's place in the row. */
+  readonly column: { readonly x: number; readonly y: number };
+  /** The key button's place and width in its column. */
+  readonly key: { readonly x: number; readonly y: number; readonly width: number };
+  /** The marks' own width, the right column's content. */
+  readonly marks: number;
+}
+
+const unplaced: Places = {
+  column: { x: PAD, y: 0 },
+  key: { x: 0, y: 0, width: 0 },
+  marks: 0,
+};
+
 /** The bar in its frame: its row of buttons, the seeker under them while the player sounds and the bar stands tall (`heightOf`). */
 function Frame({
   drawing,
   thumb,
-  onKeyLayout,
+  onKeyAt,
 }: {
   readonly drawing: Drawing;
   readonly thumb: Option.Option<BoundThumb>;
-  readonly onKeyLayout: (event: LayoutChangeEvent) => void;
+  /** The key button's centre from the bar's left edge, as it lays out. */
+  readonly onKeyAt: (centre: number) => void;
 }) {
   const { track, state, page, shown, send, inset } = drawing;
+  const [places, setPlaces] = useState(unplaced);
+  const [wheel, setWheel] = useState(Option.none<Shown>());
+  const ear = use(Ear);
+  const named = !Option.exists(shown, (hymn) => hymn.number === track.number);
+  const side = Option.match(barSides(!named, places.key.width, places.marks), {
+    onNone: () => ({}),
+    onSome: (width) => ({ width }),
+  });
+  const keyX = places.column.x + places.key.x;
+  useEffect(() => {
+    if (places.key.width > 0) onKeyAt(keyX + places.key.width / 2);
+  }, [keyX, places.key.width]);
+  const laid =
+    (at: (layout: LayoutChangeEvent['nativeEvent']['layout']) => Partial<Places>) =>
+    (event: LayoutChangeEvent) => {
+      const told = at(event.nativeEvent.layout);
+      setPlaces((was) => ({ ...was, ...told }));
+    };
   const cue = useCue();
   const target = heightOf(state);
   const height = useSharedValue(REST);
@@ -274,20 +324,37 @@ function Frame({
               <View style={styles.bar}>
                 {Option.match(thumb, {
                   onNone: () => <></>,
-                  onSome: (bound) => <KeyButton thumb={bound} onLayout={onKeyLayout} />,
+                  onSome: (bound) => (
+                    <View
+                      testID="bar-side-key"
+                      style={[styles.left, side]}
+                      onLayout={laid(({ x, y }) => ({ column: { x, y } }))}
+                    >
+                      <KeyButton
+                        thumb={bound}
+                        ear={ear}
+                        screenX={keyX}
+                        onWheel={setWheel}
+                        onLayout={laid(({ x, y, width }) => ({ key: { x, y, width } }))}
+                      />
+                    </View>
+                  ),
                 })}
-                <Opener
-                  track={track}
-                  state={state}
-                  href={sheet}
-                  named={!Option.exists(shown, (hymn) => hymn.number === track.number)}
-                />
-                {Option.match(page, {
-                  onNone: () => <></>,
-                  onSome: (other) => <PlayPage track={other} send={send} />,
-                })}
-                <Sound />
-                <Buttons track={track} state={state} send={send} />
+                <Opener track={track} state={state} href={sheet} named={named} />
+                <View testID="bar-side-marks" style={[styles.right, side]}>
+                  <View
+                    testID="bar-marks"
+                    style={styles.marks}
+                    onLayout={laid(({ width }) => ({ marks: width }))}
+                  >
+                    {Option.match(page, {
+                      onNone: () => <></>,
+                      onSome: (other) => <PlayPage track={other} send={send} />,
+                    })}
+                    <Sound />
+                    <Buttons track={track} state={state} send={send} />
+                  </View>
+                </View>
               </View>
               {sounding(state) && (
                 <Seeker
@@ -303,6 +370,12 @@ function Frame({
       </Animated.View>
       <RecordingNotice number={track.number} />
       {drawing.docked && Option.isSome(shown) && <BackEdge />}
+      {Option.match(wheel, {
+        onNone: () => <></>,
+        onSome: (open) => (
+          <KeyWheel shown={open} at={{ x: keyX, y: places.column.y + places.key.y }} />
+        ),
+      })}
     </View>
   );
 }
@@ -391,16 +464,16 @@ function Opener({
 }
 
 /**
- * Whether Play sounds the recording: on, a speaker with waves in the accent;
+ * Whether Play sounds the recording: on, a speaker with waves in the button's role;
  * off, a speaker with a slash, muted, and the score clock runs (`sound.ts`).
  * It sits left of the player's button, so Play keeps its place at the bar's
  * end.
  */
 function Sound() {
   const [on, setOn] = useAtom(settings.sound);
-  const accent = useAccent();
+  const button = useButton();
   const cue = useCue();
-  const tint = [color.muted, accent][Number(on)] ?? accent;
+  const tint = [color.muted, button][Number(on)] ?? button;
   return (
     <Pressable
       role="button"
@@ -419,8 +492,8 @@ function Sound() {
 
 /**
  * The player's buttons for the bar's hymn (`buttonsOf`) as marks in the
- * accent, the size of the Sound mark; a spinner in the same box while it
- * loads.
+ * button's role, the size of the Sound mark; a spinner in the same box
+ * while it loads.
  */
 function Buttons({
   track,
@@ -431,13 +504,13 @@ function Buttons({
   readonly state: Player;
   readonly send: (command: Command) => void;
 }) {
-  const accent = useAccent();
+  const tint = useButton();
   const cue = useCue();
   return buttonsOf(state, track).map((button) =>
     Option.match(button.command, {
       onNone: () => (
         <View key={button.kind} style={styles.mark}>
-          <ActivityIndicator color={accent} accessibilityLabel={button.label} />
+          <ActivityIndicator color={tint} accessibilityLabel={button.label} />
         </View>
       ),
       onSome: (command) => (
@@ -453,7 +526,7 @@ function Buttons({
         >
           {Match.value(button.kind).pipe(
             Match.when('loading', () => <></>),
-            Match.orElse((kind) => <BarMark mark={kind} tint={accent} />),
+            Match.orElse((kind) => <BarMark mark={kind} tint={tint} />),
           )}
         </Pressable>
       ),
@@ -480,10 +553,13 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: GAP,
+    paddingHorizontal: PAD,
     height: REST,
   },
+  left: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' },
+  right: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  marks: { flexDirection: 'row', alignItems: 'center', gap: GAP },
   open: {
     flex: 1,
     flexDirection: 'row',

@@ -3,9 +3,9 @@
  * (transpose -5 to 6, capo 0 to 11) and the dials closed or open, 576
  * states, against every event: a tap, a hold, a tap on the page, the key
  * dial turned to each of the twelve sounding keys, the capo dial turned to
- * each fret and one past each end, reset, the end of a reset’s wait, and a tap on the
- * dials’ Tuner; the dials with the Tuner and without. Three printed keys: hymn 100’s
- * D-flat, a sharp key, and a minor one.
+ * each fret and one past each end, reset, the end of a reset’s wait, and the
+ * key button’s Tuner; the key turned a semitone either way. Three printed
+ * keys: hymn 100’s D-flat, a sharp key, and a minor one.
  */
 
 import * as Chord from '@manna/hymnal/chord';
@@ -27,6 +27,7 @@ import {
   step,
   type Thumb,
   ThumbEvent,
+  turnBy,
 } from './thumb';
 
 const printedKeys: ReadonlyArray<Chord.Key> = [
@@ -158,28 +159,31 @@ describe('the key model', () => {
       expect(next.cues).toEqual((held !== event.capo && [plain('wall')]) || []);
     }));
 
-  it('closes the dials on a tap on the Tuner, the move and chords as they were, with no cue', () =>
+  it('closes the dials as the key button’s Tuner opens, the move and chords as they were, with no cue', () =>
     each((printed, state, event) => {
       if (event._tag !== 'Tune') return;
       expect(step(printed, state, event)).toEqual({ state: { ...state, open: false }, cues: [] });
     }));
 
-  it('leads the chips with the Tuner where the dials hold it and trails them with reset while moved with chords on; shows the chips while they hold one, the capo with chords on, and the key last', () =>
+  it('holds no Tuner chip: Reset alone while moved with chords on; shows the chips while they hold one, the capo with chords on, and the key last', () =>
     each((printed, state, event) => {
       const next = step(printed, state, event).state;
       const reset = next.chords && !isStill(next.move);
       const dials: ReadonlyArray<Shown> = (next.chords && (['capo', 'key'] as const)) || ['key'];
-      expect({
-        tuner: chipsOf(next, true),
-        none: chipsOf(next, false),
-        shownTuner: shownOf(next, true),
-        shownNone: shownOf(next, false),
-      }).toEqual({
-        tuner: (reset && ['tuner', 'reset']) || ['tuner'],
-        none: (reset && ['reset']) || [],
-        shownTuner: ['chips', ...dials],
-        shownNone: [...((reset && (['chips'] as const)) || []), ...dials],
+      expect({ chips: chipsOf(next), shown: shownOf(next) }).toEqual({
+        chips: (reset && ['reset']) || [],
+        shown: [...((reset && (['chips'] as const)) || []), ...dials],
       });
+    }));
+
+  it('turns the key a semitone either way from the key it sounds in, wrapping', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'Tap') return;
+      const sounding = Chord.pitchClass(soundingKey(printed, state.move).tonic);
+      expect([turnBy(printed, state.move, -1), turnBy(printed, state.move, 1)]).toEqual([
+        ThumbEvent.TurnKey({ pitch: (sounding + 11) % 12 }),
+        ThumbEvent.TurnKey({ pitch: (sounding + 1) % 12 }),
+      ]);
     }));
 
   it('gives nothing but a state and cues: no step carries a command for the player', () =>

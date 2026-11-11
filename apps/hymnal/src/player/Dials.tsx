@@ -6,8 +6,8 @@
  * key marked; the capo dial runs from 0 to 11 and stops at each end, each
  * fret over the key played there, the open keys marked. While the move is
  * not the hymn as printed, a chip resets it: the printed key and no capo. A
- * double tap on either dial does the same. On the hymn page's dials, on a
- * device with the ear, a Tuner chip leads the top row and opens the tuner.
+ * double tap on either dial does the same. The tuner opens from the key
+ * button's wheel (`KeyWheel`), not from the dials.
  *
  * Over the bar a reset turns both rows home where the reader sees them,
  * and the dials close `RESET_WAIT` ms after it. Any touch of the reader's
@@ -23,7 +23,7 @@
 
 import * as Chord from '@manna/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
-import { Clock, Duration, Effect, Fiber, Match, Option } from 'effect';
+import { Clock, Duration, Effect, Fiber, Option } from 'effect';
 import {
   createContext,
   memo,
@@ -36,7 +36,6 @@ import {
   useState,
 } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'one';
 
 import { color } from '~/color';
 import { useCue } from '~/feel/cue';
@@ -62,7 +61,6 @@ import {
   type Thumb,
   ThumbEvent,
 } from './thumb';
-import { TunerMark } from './TunerMark';
 
 /** What the dials read and set: the app's own stores, or a test's. */
 export const ChordReaderContext = createContext<ChordReader>(reader);
@@ -185,18 +183,16 @@ const sameMove = (a: Move, b: Move) => a.transpose === b.transpose && a.capo ===
 export const Dials = memo(function Dials({
   thumb,
   printed,
-  tuner,
 }: {
   readonly thumb: BoundThumb;
   readonly printed: Chord.Key;
-  readonly tuner: boolean;
 }) {
   const { state, send, keep, resets } = thumb;
   const keys = useMemo(() => keyStops(printed), [printed]);
   const frets = useMemo(() => capoStops(printed, state.move), [printed, state.move]);
   const reset = () => send(ThumbEvent.Reset());
-  const shown = shownOf(state, tuner);
-  const chips = chipsOf(state, tuner);
+  const shown = shownOf(state);
+  const chips = chipsOf(state);
   return (
     <View testID="dials" style={styles.dials} pointerEvents="box-none">
       {shown.map((row, k) => {
@@ -204,18 +200,10 @@ export const Dials = memo(function Dials({
         if (row === 'chips')
           return (
             <PanelRow key="chips" fromBottom={fromBottom}>
-              <View style={[styles.chips, tuner && styles.ends]}>
-                {chips.map((chip) =>
-                  Match.value(chip).pipe(
-                    Match.when('tuner', () => (
-                      <TunerChip key="tuner" onPress={() => send(ThumbEvent.Tune())} />
-                    )),
-                    Match.when('reset', () => (
-                      <ResetChip key="reset" printed={printed} onPress={reset} />
-                    )),
-                    Match.exhaustive,
-                  ),
-                )}
+              <View style={styles.chips}>
+                {chips.map((chip) => (
+                  <ResetChip key={chip} printed={printed} onPress={reset} />
+                ))}
               </View>
             </PanelRow>
           );
@@ -262,30 +250,6 @@ export const Dials = memo(function Dials({
     </View>
   );
 });
-
-/**
- * The Tuner, on the hymn page's dials on a device with the ear: a small
- * upright tuning fork (`TunerMark`) and its word. A tap closes the dials (`onPress`, the model's `Tune`) and
- * opens the tuner over the page at once, so the dials' close plays under it.
- * It plays no cue: the tuner's path is silent.
- */
-function TunerChip({ onPress }: { readonly onPress: () => void }) {
-  const router = useRouter();
-  return (
-    <Chip
-      testID="dials-tuner"
-      label="Tuner"
-      hint="Opens the guitar tuner"
-      mark={<TunerMark tint={color.onPill} />}
-      onPress={() => {
-        onPress();
-        router.push('/tuner');
-      }}
-    >
-      Tuner
-    </Chip>
-  );
-}
 
 /** Reset, while the move is not the hymn as printed: "↺ Db, no capo". */
 function ResetChip({
@@ -348,7 +312,6 @@ function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: bo
 const styles = StyleSheet.create({
   dials: { gap: ROW_GAP, alignItems: 'stretch' },
   chips: { flexDirection: 'row', justifyContent: 'center' },
-  ends: { justifyContent: 'space-between' },
   key: { fontSize: 17, fontWeight: '600', color: color.muted },
   longKey: { fontSize: 14 },
   current: { color: color.chord },

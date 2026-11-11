@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { useAccent } from '~/color';
+import { useButton } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 
 import { Command, type Track } from './player';
 
-/** Start the page's hymn in place of the hymn the player holds. */
+/** Start the page's hymn in place of the hymn the player holds: a word in the button's role. */
 export function PlayPage({
   track,
   send,
@@ -13,7 +13,7 @@ export function PlayPage({
   readonly track: Track;
   readonly send: (command: Command) => void;
 }) {
-  const accent = useAccent();
+  const tint = useButton();
   const cue = useCue();
   return (
     <Pressable
@@ -25,7 +25,7 @@ export function PlayPage({
       }}
       style={styles.compact}
     >
-      <Text style={[styles.text, { color: accent }]}>{`Play ${track.number}`}</Text>
+      <Text style={[styles.text, { color: tint }]}>{`Play ${track.number}`}</Text>
     </Pressable>
   );
 }

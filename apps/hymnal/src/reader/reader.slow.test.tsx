@@ -291,7 +291,7 @@ function KeyAt({ n }: { readonly n: number }) {
         Option.filter(thumb.printed, () => thumb.state.open),
         {
           onNone: () => <></>,
-          onSome: (printed) => <Dials thumb={thumb} printed={printed} tuner={false} />,
+          onSome: (printed) => <Dials thumb={thumb} printed={printed} />,
         },
       )}
     </>

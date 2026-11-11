@@ -44,13 +44,20 @@ under its number, and the refrain written out each time it is sung.
   accent fill and its text), panel and edge (the open dials' panel and its
   border), bar (the docked player bar), pill and onPill (the key button's
   lit pill and the dials' Reset, and their ink), and chosen and onChosen (a
-  checked chip's fill and its ink). The glass roles, laid over any opaque
-  role under the find bar's capsule: glass (soft at 85 %), onGlass (its
-  words), onGlassMuted (its placeholder), and glassChosen and onGlassChosen
-  (the disk behind its chosen control, and that control's ink). Light is a
-  cool white page under the night's ink, with the dusk's gold deepened for
-  the chords; dark keeps the night as the page, with the dusk's gold for
-  the accent and the chords. A screen reads a role, never a hex value. On
+  checked chip's fill and its ink), button and onButton (a filled
+  control: the bar's marks and play, the wheel's lit item, the find bar's
+  chosen disk), and selected (a chosen tab's fill). The glass roles, laid
+  over any opaque role under the find bar's capsule: glass (soft at 85 %),
+  onGlass (its words), onGlassMuted (its placeholder), and glassChosen and
+  onGlassChosen (the disk behind its chosen control, on the button's fill,
+  and that control's ink). Light is a cool white page under the night's
+  ink, with the dusk's gold deepened for the chords; dark is the owner's
+  Night field (2026-11-11, base C2): the night 42 % toward black as the
+  page, the bar and lines mixed from it toward the sky, with the s1
+  Analogous accents: a cyan for the numbers, the buttons and a chosen
+  tab, a lavender for the chords, each a fixed OKLCH value written as hex
+  in `theme.ts`. A
+  screen reads a role, never a hex value. On
   iOS each role is a `DynamicColorIOS` (`src/color.native.ts`), on the web
   a CSS `light-dark()` property (`src/color.ts`). Android keeps the
   system's colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
@@ -193,14 +200,29 @@ chords on and opens nothing, on every hymn's page, one with no chords
 too; the player sheet's `Chords` switch heads its `Chord settings` group
 whenever the sheet holds a hymn; Settings' `Chords` switch heads its
 `Chords` section. Turning chords on brings in the chords over the words,
-the `KEY`/`CAPO` face on `Key`, its key and capo dials (and their `Tuner`
-chip), the sheet's key and capo dials (over the hymn's own page, the
-hymn having chords) and its `Chord placement` dial, and Settings'
-`Chord style`, `Chord placement` and `Tuner` (where the tuner has an ear).
-A hold of `Key` turns chords on or off in both states. Chords turned off
-by any door close the bar's dials (`useThumb` in `src/player/Dials.tsx`),
-and they stay closed when chords come back. The tuner and chord-sheet
-routes stay open to a link; only their entries hide.
+the `KEY`/`CAPO` face on `Key`, its key and capo dials and its wheel, the
+sheet's key and capo dials (over the hymn's own page, the hymn having
+chords) and its `Chord placement` dial, and Settings' `Chord style`,
+`Chord placement` and `Tuner` (where the tuner has an ear). With chords
+off a hold of `Key` (350 ms) turns them on, as a tap does. With chords on,
+on a hymn with a printed key, the hold opens the key button's wheel
+around the press (`src/player/wheel.ts`, the rule; `KeyWheel.tsx`, its
+view): its items fan up and to the right, 140 points out and 26° apart,
+`Tuner` (with the ear) at 98°, `Key ♭` 72°, `Key ♯` 46°, `Reset` 20° and
+`Chords off` −6°, the origin held 84 points from the screen's left edge.
+Still holding, the finger slides; it is over an item beyond 34 points out
+and within 20° of the item's angle, which then grows on the button's fill
+with a tick (`choose`). Letting go over an item does it once: the tuner,
+the key a semitone down or up, the printed key with no capo, or chords
+off; letting go in the middle, or a cancelled touch, does nothing. A press
+that drifts 10 points before its hold is the bar's swipe's or the page's.
+The wheel is hidden from VoiceOver, which reaches its items as `Key`'s
+actions (`Open tuner`, `Key down`, `Key up`, `Reset key`, and the
+`chords` switch). On a hymn with no printed key the hold turns chords on
+or off. Chords turned off by any door close the bar's dials (`useThumb`
+in `src/player/Dials.tsx`), and they stay closed when chords come back.
+The tuner and chord-sheet routes stay open to a link; only their entries
+hide.
 
 While chords are off the recording plays in the hymn's printed key:
 `settings.heardMove(n)` (`src/settings.ts`) is the hymn's stored move
@@ -633,9 +655,9 @@ Android haptics only.
   to ±50 cents (`needleOf`), and lights a string after 8 frames in a row
   in tune on it (`latch`).
 - `src/tuner/Tuner.tsx` is the sheet at `/tuner`, opened by the chord
-  sheet's `Tuner` button, the bar's dials' `Tuner` chip and Settings'
-  `Tuner` row, each shown only where the tuner has an ear (iOS); the chip
-  and the row only with chords on, and the chord sheet is reached from a
+  sheet's `Tuner` button, the key button's wheel's `Tuner` (and its `Open
+  tuner` action) and Settings' `Tuner` row, each shown only where the tuner
+  has an ear (iOS); the wheel and the row only with chords on, and the chord sheet is reached from a
   chord, which shows only then. It says the reading at most once a second,
   shows `Open Settings` when the microphone is denied and `Tap to listen
   again` when listening ended. In development
@@ -659,7 +681,7 @@ The app is named Hymnal, and its icon is one blade of wheat:
 - The launch screen: `public/splash.png` (the night's blade) and
   `splash-dark.png` (the wheat's), each on a transparent square the launch
   screen centres 200 points wide on the app's own ground (the sky's white, and
-  the night in dark mode), so the first screen follows with no change of
+  the Night field, the night 42 % toward black, in dark mode), so the first screen follows with no change of
   colour. One's prebuild trims an opaque ground away, so the ground is the
   config's `backgroundColor`, not the PNG's.
 

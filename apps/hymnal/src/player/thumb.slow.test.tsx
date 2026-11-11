@@ -30,7 +30,7 @@ import { Shown } from '~/reader/screen';
 import { StackHeader } from '~/test/stack';
 
 import { fakeDevice } from '../test/device';
-import { drag, gestureOf, touchDown, touchUp } from '../test/gesture';
+import { drag, gestureOf, type Held, longPress, touchDown, touchUp } from '../test/gesture';
 import { animations, holdAnimations, landAnimations } from '../test/reanimated';
 import { params, routed } from '../test/one';
 import { actionsOf, perform, propsWith } from '../test/props';
@@ -234,18 +234,18 @@ const valueOf = (page: Page, label: string) =>
 const turn = (page: Page, label: string, way: 'increment' | 'decrement' = 'increment') =>
   perform(Option.getOrThrow(dial(page, label)), way);
 /**
- * The key button held down until the hold turns chords to `to`, then let go:
- * the press, the hold, the release, and the click the browser sends after it.
+ * The key button held until chords turn to `to`, then let go: with chords
+ * on, the hold opens the wheel and the finger slides to Chords off (−6°,
+ * 120 points out); with chords off, the hold itself turns them on. The hold
+ * is the gesture handler's, played through its callbacks.
  */
 const hold = (page: Page, to: boolean) =>
   Effect.gen(function* () {
-    const button = keyButton(page);
-    act(() => void button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
+    let held = Option.none<Held>();
+    act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
+    if (!to) act(() => void Option.map(held, (finger) => finger.move(119.3, 12.5)));
+    act(() => void Option.map(held, (finger) => finger.lift()));
     yield* page.untilChords(to);
-    act(() => {
-      button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-    });
   });
 /** A tap on the key button. */
 const tapKey = (page: Page) =>
@@ -345,13 +345,18 @@ describe('bar J on a hymn page', () => {
   );
 
   it.live(
-    'turns chords off on a hold with no tap after it and closes the dials; a tap then turns chords on and opens nothing',
+    'turns chords off on the wheel’s Chords off with no tap after it and closes the dials; a tap then turns chords on and opens nothing',
     () =>
       Effect.gen(function* () {
         const device = chordsOn();
         using page = mount(route(100), device);
         tapKey(page);
-        expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords off' }]);
+        expect(actionsOf(keyButton(page))).toEqual([
+          { name: 'keyDown', label: 'Key down' },
+          { name: 'keyUp', label: 'Key up' },
+          { name: 'reset', label: 'Reset key' },
+          { name: 'chords', label: 'Turn chords off' },
+        ]);
         yield* hold(page, false);
         expect(device.get('chords')).toBe('false');
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
@@ -862,75 +867,69 @@ describe('the player sheet over a hymn page', () => {
 });
 
 /**
- * Hymn `n`'s key button and its open dials as the bar draws them, holding the
- * Tuner when `tuner` (the bar tells the device's ear, which the web lacks),
- * every cue told to `cues`.
+ * Hymn `n`'s key button, on a device with the ear, and its open dials as the
+ * bar draws them, every cue told to `cues`.
  */
-const keyPanel = (n: number, tuner: boolean, cues: Array<Cue>) => () => {
+const keyPanel = (n: number, cues: Array<Cue>) => () => {
   params['number'] = String(n);
   return (
     <CueProvider value={(cue) => void cues.push(cue)}>
-      <KeyPanel n={n} tuner={tuner} />
+      <KeyPanel n={n} />
     </CueProvider>
   );
 };
 
-function KeyPanel({ n, tuner }: { readonly n: number; readonly tuner: boolean }) {
+function KeyPanel({ n }: { readonly n: number }) {
   const thumb = useThumb(n);
   return (
     <>
-      <KeyButton thumb={thumb} />
+      <KeyButton thumb={thumb} ear />
       {Option.match(
         Option.filter(thumb.printed, () => thumb.state.open),
         {
           onNone: () => <></>,
-          onSome: (printed) => <Dials thumb={thumb} printed={printed} tuner={tuner} />,
+          onSome: (printed) => <Dials thumb={thumb} printed={printed} />,
         },
       )}
     </>
   );
 }
 
-describe('the Tuner on the key button’s dials', () => {
-  it.live('leads the dials, and a tap closes them, opens the tuner and cues nothing', () =>
+describe('the Tuner on the key button’s wheel', () => {
+  it.live('closes the open dials, opens the tuner and cues only the tick on its item', () =>
     Effect.sync(() => {
       const cues: Array<Cue> = [];
-      using page = mount(keyPanel(100, true, cues));
+      using page = mount(keyPanel(100, cues));
       tapKey(page);
-      const tuner = page.get('[data-testid="dials-tuner"]');
-      expect(tuner.getAttribute('role')).toBe('button');
-      expect(tuner.getAttribute('aria-label')).toBe('Tuner');
-      expect(tuner.textContent).toBe('Tuner');
-      const capo = page.get('[data-testid="dial-capo"]');
-      expect(tuner.compareDocumentPosition(capo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(cues).toEqual([plain('press')]);
-      page.press('Tuner');
+      expect(Option.isSome(page.find('[data-testid="dials"]'))).toBe(true);
+      expect(page.all('[data-testid="dials-tuner"]')).toHaveLength(0);
+      let held = Option.none<Held>();
+      act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
+      act(() => void Option.map(held, (finger) => finger.move(0, -100)));
+      act(() => void Option.map(held, (finger) => finger.lift()));
       expect(Option.isNone(page.find('[data-testid="dials"]'))).toBe(true);
       expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
       expect(routed).toEqual(['push /tuner']);
-      expect(cues).toEqual([plain('press')]);
-      tapKey(page);
-      expect(Option.isSome(page.find('[data-testid="dials-tuner"]'))).toBe(true);
+      expect(cues).toEqual([plain('press'), plain('choose')]);
     }),
   );
 
   it.live(
-    'leads Reset with it while moved, and goes with the dials when a hold turns chords off',
+    'leaves Reset alone on the dials while moved, and the dials go when the wheel turns chords off',
     () =>
       Effect.gen(function* () {
-        using page = mount(keyPanel(100, true, []));
+        using page = mount(keyPanel(100, []));
         tapKey(page);
         turn(page, 'Capo');
         const chips = page.all('[data-testid="dials"] [role="button"]');
-        expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual(['Tuner', 'Reset']);
+        expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual(['Reset']);
         yield* hold(page, false);
-        expect(Option.isNone(page.find('[data-testid="dials-tuner"]'))).toBe(true);
         expect(Option.isNone(page.find('[data-testid="dial-capo"]'))).toBe(true);
         expect(Option.isNone(page.find('[data-testid="dial-key"]'))).toBe(true);
       }),
   );
 
-  it.live('is not on the dials of a device with no ear, nor on the player sheet’s', () =>
+  it.live('is not on the dials of the page nor on the player sheet’s', () =>
     Effect.sync(() => {
       using page = mount(route(100, true));
       tapKey(page);
