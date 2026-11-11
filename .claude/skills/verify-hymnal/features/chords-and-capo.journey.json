@@ -98,7 +98,7 @@
       "name": "chords-off-sheet",
       "action": "tap",
       "target": "label=Open player",
-      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-key" }],
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-tempo" }],
       "receipt": "none"
     },
     {
@@ -249,7 +249,7 @@
       "name": "chords-mode-kept-sheet",
       "action": "tap",
       "target": "label=Open player",
-      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-key" }],
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-tempo" }],
       "receipt": "none"
     },
     {
