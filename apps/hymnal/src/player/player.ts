@@ -414,7 +414,6 @@ interface Held {
   moving: Option.Option<Fiber.Fiber<unknown, unknown>>;
   reading: Option.Option<{
     readonly start: number;
-    readonly act: number;
     readonly done: Deferred.Deferred<Proof.Read, PlaybackError>;
   }>;
   resuming: boolean;
@@ -608,7 +607,9 @@ export const playerOn = (
           });
         /**
          * One status read per Start, run in the player's scope.
-         * Commands on that hymn share an in-flight read. A new Start
+         * Commands on that hymn share an in-flight read, an act between them
+         * or not: `readFresh` reads again after a read asked before the act,
+         * and a second read beside it could answer out of order. A new Start
          * owns a fresh read, even in the same clock millisecond: the former
          * recording's delayed status cannot describe its replacement or hold
          * the player's read slot. The score clock also observes outside its
@@ -616,17 +617,14 @@ export const playerOn = (
          */
         const readDevice = Effect.suspend(() =>
           Option.match(
-            Option.filter(
-              held.reading,
-              (reading) => reading.start === held.starts && reading.act === held.acts,
-            ),
+            Option.filter(held.reading, (reading) => reading.start === held.starts),
             {
               onSome: ({ done }) => Deferred.await(done),
               onNone: () =>
                 Effect.gen(function* () {
                   const done = yield* Deferred.make<Proof.Read, PlaybackError>();
                   const start = held.starts;
-                  held.reading = Option.some({ start, act: held.acts, done });
+                  held.reading = Option.some({ start, done });
                   const reading = Effect.gen(function* () {
                     const asked = yield* now;
                     const raw = yield* device.status;
