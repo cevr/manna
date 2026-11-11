@@ -7,7 +7,8 @@
  * three rows. Folded: `Search` and the `#`. Open while search is on at the
  * screen's path (`modeAt`): the search box, the `#` and `Cancel`. While the
  * home list shows `All at once`: the `#` alone, since the tiles' `Done` is
- * the way back. While the find drums are open, the `#` alone is reachable:
+ * the way back. The `#` is drawn chosen only while the drums are open, and
+ * Search only while search is (`chosenOf`). While the find drums are open, the `#` alone is reachable:
  * `FindBar` lets a touch on any other point of the row through to the
  * drums' backdrop, so a tap there closes the drums and fires nothing.
  */
@@ -99,29 +100,32 @@ export const drawn = (row: Row): ReadonlyArray<Control> => {
 /** Whether `control`, drawn, takes a touch and VoiceOver's focus: only the `#` while the drums are open. */
 export const inReach = (control: Control, drums: boolean): boolean => !drums || control === 'hash';
 
-/** The side of the capsule the chosen mark stands behind: the `#` or Search (the box's magnifier while open). */
-export type Chosen = 'hash' | 'search';
+/** The control the chosen mark stands behind: the `#`, Search (the box's magnifier while open), or none, the mark hidden. */
+export type Chosen = 'hash' | 'search' | 'none';
 
 /**
  * The control `row` marks chosen, with the drums open (`drumsOpen`) or not:
- * Search while search is open, else the `#`. The drums are the `#`'s, so
- * while they are open the `#` is chosen whatever the row.
+ * a control is chosen while what it opens is open. The drums are the `#`'s,
+ * so while they are open the `#` is chosen whatever the row; else Search
+ * while search is open, and none at rest, the `#` drawn as Search is.
  */
 export const chosenOf = (row: Row, drumsOpen: boolean): Chosen => {
-  if (drumsOpen || row !== 'open') return 'hash';
-  return 'search';
+  if (drumsOpen) return 'hash';
+  if (row === 'open') return 'search';
+  return 'none';
 };
 
 /**
  * How the `#` draws in the find bar: alone on a disk of its own (the tiles'
- * row, with no capsule round it), or in the capsule over the chosen mark
+ * row, with no capsule round it), in the chosen colours there while the
+ * drums are open (`aloneChosen`), or in the capsule over the chosen mark
  * (`chosen`) or beside it (`unchosen`).
  */
-export type HashLook = 'alone' | 'chosen' | 'unchosen';
+export type HashLook = 'alone' | 'aloneChosen' | 'chosen' | 'unchosen';
 
-/** The `#`'s look in `row`, the chosen side being `chosen`. */
+/** The `#`'s look in `row`, the chosen control being `chosen`. */
 export const hashLookOf = (row: Row, chosen: Chosen): HashLook => {
-  if (row === 'tiles') return 'alone';
+  if (row === 'tiles') return (chosen === 'hash' && 'aloneChosen') || 'alone';
   if (chosen === 'hash') return 'chosen';
   return 'unchosen';
 };

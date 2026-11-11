@@ -9,8 +9,7 @@
  * another's place (numreplace) keeps the bar's place and its node, so
  * nothing glides and nothing mounts again. With Reduce Motion the bar jumps
  * to its place under a 150 ms fade. The `#` the player layer draws takes
- * the chosen ink while it is the chosen control and the glass's ink while
- * Search is.
+ * the chosen ink while the drums are open, and the glass's ink else.
  *
  * Mounted as the layout nests them, as `numreplace.slow.test.tsx` mounts
  * them: the player layer (`LivePlayer`) over the stack's wrapper
@@ -247,18 +246,23 @@ describe('the # the player layer draws in the find bar', () => {
     return Option.match(glyph, { onNone: () => 'none', onSome: (view) => style(view).color });
   };
 
-  it('is in the chosen ink folded, and the glass’s ink with search open', () => {
+  it('is in the glass’s ink folded and with search open, and in the chosen ink with the drums open', () => {
     using phone = mount(home, hymn(6));
+    const press = (id: string) =>
+      act(() =>
+        Option.map(
+          Option.fromNullishOr(phone.host.querySelector<HTMLElement>(`[data-testid="${id}"]`)),
+          (control) => control.click(),
+        ),
+      );
     const folded = ink(phone.host);
-    act(() =>
-      Option.map(
-        Option.fromNullishOr(phone.host.querySelector<HTMLElement>('[data-testid="find-search"]')),
-        (search) => search.click(),
-      ),
-    );
-    expect({ folded, open: ink(phone.host) }).toEqual({
-      folded: role('onGlassChosen'),
+    press('find-search');
+    const open = ink(phone.host);
+    press('find-number');
+    expect({ folded, open, drums: ink(phone.host) }).toEqual({
+      folded: role('onGlass'),
       open: role('onGlass'),
+      drums: role('onGlassChosen'),
     });
   });
 });

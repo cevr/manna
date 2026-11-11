@@ -258,11 +258,15 @@ function FindNumber({
       style={({ pressed }) => [
         styles.hash,
         look === 'alone' && styles.disk,
+        look === 'aloneChosen' && styles.diskChosen,
         pressed && styles.pressed,
       ]}
     >
       <Text
-        style={[styles.hashText, look === 'chosen' && styles.hashChosen]}
+        style={[
+          styles.hashText,
+          (look === 'chosen' || look === 'aloneChosen') && styles.hashChosen,
+        ]}
         maxFontSizeMultiplier={MOST_SCALE}
       >
         #
@@ -333,6 +337,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disk: { backgroundColor: color.glass },
+  diskChosen: { backgroundColor: color.glassChosen },
   pressed: { opacity: 0.6 },
   hashText: { fontSize: 20, fontWeight: '700', color: color.onGlass },
   hashChosen: { color: color.onGlassChosen },

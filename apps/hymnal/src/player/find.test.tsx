@@ -125,3 +125,50 @@ describe('the find drums', () => {
     expect(texts.length).toBeGreaterThan(0);
   });
 });
+
+describe('the find bar’s `#`', () => {
+  /** The roles the bar reads, each a colour of its own, so a computed colour names its role (`color.ts`). */
+  const ROLES = ['onGlass', 'glassChosen', 'onGlassChosen'] as const;
+  const role = (name: (typeof ROLES)[number]) => `rgb(${ROLES.indexOf(name) + 1}, 5, 6)`;
+  /** The role sheet in the document for one test. */
+  const roleSheet = () => {
+    const sheet = document.createElement('style');
+    sheet.textContent = `:root { ${ROLES.map((name) => `--${name}: ${role(name)};`).join(' ')} }`;
+    document.head.append(sheet);
+    return { [Symbol.dispose]: () => sheet.remove() };
+  };
+  /** How the `#` draws: its glyph's ink, the Search mark's ink beside it, and how opaque the chosen disk is. */
+  const look = (host: HTMLElement) => {
+    const glyph = [...get(host, 'find-number').querySelectorAll<HTMLElement>('*')].find(
+      (element) => element.textContent === '#' && element.children.length === 0,
+    );
+    const search = [...get(host, 'find-search').querySelectorAll<HTMLElement>('*')]
+      .map((part) => getComputedStyle(part).backgroundColor)
+      .find((fill) => fill.startsWith('rgb('));
+    const disk = getComputedStyle(get(host, 'find-chosen')).opacity;
+    return {
+      ink: Option.match(Option.fromNullishOr(glyph), {
+        onNone: () => 'none',
+        onSome: (element) => getComputedStyle(element).color,
+      }),
+      search: search ?? 'none',
+      disk: (disk === '' && 1) || Number(disk),
+      expanded: get(host, 'find-number').getAttribute('aria-expanded'),
+    };
+  };
+
+  it('draws as Search does while the drums are shut, and chosen only while they are open', () => {
+    using _roles = roleSheet();
+    using page = mount();
+    const { host } = page;
+    const shut = look(host);
+    click(get(host, 'find-number'));
+    const opened = look(host);
+    click(get(host, 'find-number'));
+    expect({ shut, opened, closed: look(host) }).toEqual({
+      shut: { ink: role('onGlass'), search: role('onGlass'), disk: 0, expanded: 'false' },
+      opened: { ink: role('onGlassChosen'), search: role('onGlass'), disk: 1, expanded: 'true' },
+      closed: { ink: role('onGlass'), search: role('onGlass'), disk: 0, expanded: 'false' },
+    });
+  });
+});

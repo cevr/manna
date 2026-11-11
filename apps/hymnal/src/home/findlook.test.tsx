@@ -7,9 +7,10 @@
  * chip and Reset are one height, the Tuner's mark small and upright; the
  * find bar's capsule is glass (`glass`), its marks the
  * glass's ink, and one chosen mark, a disk in the `glassChosen` colour behind
- * the chosen control, slides to the side tapped: the `#` while the bar is
- * folded or the drums are open, Search while search is open. With Reduce
- * Motion the mark jumps. Between a hymn page and the home list the whole
+ * the chosen control: the `#` while the drums are open, Search while search
+ * is open, and none at rest (owner, 2026-11-11: the `#` "shouldn't be
+ * highlighted ... should only be highlighted once this is open"). With
+ * Reduce Motion the mark jumps. Between a hymn page and the home list the whole
  * bar glides (`glideOf`); the bar's own rise rides the bar's spring.
  *
  * Mounted in a browser's document (`src/test/setup.ts`), where an animation
@@ -273,12 +274,13 @@ describe('the find bar’s colours', () => {
   });
 
   it.each([
-    ['folded', Option.none<Searching>(), false],
-    ['open', searchAt(PAGE, 'field'), false],
-    ['folded, the drums open', Option.none<Searching>(), true],
+    ['folded', Option.none<Searching>(), false, 0],
+    ['open', searchAt(PAGE, 'field'), false, 1],
+    ['folded, the drums open', Option.none<Searching>(), true, 1],
+    ['open, the drums open', searchAt(PAGE, 'field'), true, 1],
   ] as const)(
-    '%s, one chosen mark in the chosen colour, out of touch and of VoiceOver',
-    (_, open, drumsOpen) => {
+    '%s, one chosen mark in the chosen colour, out of touch and of VoiceOver, seen only while something is open',
+    (_, open, drumsOpen, seen) => {
       using found = findBar(open, drumsOpen);
       const marks = [...found.host.querySelectorAll<HTMLElement>('[data-testid="find-chosen"]')];
       expect(
@@ -286,8 +288,9 @@ describe('the find bar’s colours', () => {
           fill: style(mark).backgroundColor,
           hidden: mark.getAttribute('aria-hidden'),
           touch: style(mark).pointerEvents,
+          seen: Number(style(mark).opacity || 1),
         })),
-      ).toEqual([{ fill: role('glassChosen'), hidden: 'true', touch: 'none' }]);
+      ).toEqual([{ fill: role('glassChosen'), hidden: 'true', touch: 'none', seen }]);
     },
   );
 });
@@ -295,36 +298,44 @@ describe('the find bar’s colours', () => {
 describe('the chosen mark', () => {
   const rows: ReadonlyArray<finding.Row> = ['folded', 'open', 'tiles'];
 
-  it('is the # while folded, in the tiles or with the drums open, and Search while search is open: every row, drums open or shut', () => {
+  it('is the # while the drums are open, Search while search is open, and none at rest: every row, drums open or shut', () => {
     const cases = rows.flatMap((row) => [false, true].map((drumsOpen) => ({ row, drumsOpen })));
     const want = ({ row, drumsOpen }: (typeof cases)[number]) =>
-      (drumsOpen && 'hash') || (row === 'open' && 'search') || 'hash';
+      (drumsOpen && 'hash') || (row === 'open' && 'search') || 'none';
     expect(cases.map((c) => [c, finding.chosenOf(c.row, c.drumsOpen)])).toEqual(
       cases.map((c) => [c, want(c)]),
     );
   });
 
-  it('slides to Search as search opens, and back to the # on Cancel', () => {
+  it('draws the # chosen only while the drums are open, alone on its disk in the tiles: every row, drums open or shut', () => {
+    const cases = rows.flatMap((row) => [false, true].map((drumsOpen) => ({ row, drumsOpen })));
+    const want = ({ row, drumsOpen }: (typeof cases)[number]) =>
+      (row === 'tiles' && ((drumsOpen && 'aloneChosen') || 'alone')) ||
+      (drumsOpen && 'chosen') ||
+      'unchosen';
+    expect(
+      cases.map((c) => [c, finding.hashLookOf(c.row, finding.chosenOf(c.row, c.drumsOpen))]),
+    ).toEqual(cases.map((c) => [c, want(c)]));
+  });
+
+  it('fades in behind Search as search opens, and out where it stands on Cancel', () => {
     using found = findBar(Option.none(), false);
     layOut(found, 343);
     const mark = () => found.get('[data-testid="find-chosen"]');
-    const folded = translateX(mark());
-    holdAnimations();
+    const seen = () => Number(style(mark()).opacity || 1);
+    const folded = seen();
     act(() => found.get('[data-testid="find-search"]').click());
-    const under = translateX(mark());
-    act(() => landAnimations());
-    const opened = { at: translateX(mark()), leading: leading(found) };
+    const opened = { at: translateX(mark()), leading: leading(found), seen: seen() };
     holdAnimations();
     act(() => found.get('[data-testid="find-cancel"]').click());
-    const back = translateX(mark());
+    const fading = { at: translateX(mark()), seen: seen() };
     act(() => landAnimations());
     expect({
       folded,
-      under,
-      opened: opened.at === opened.leading && opened.at < 0,
-      back: back !== 0,
-      landed: translateX(mark()),
-    }).toEqual({ folded: 0, under: 0, opened: true, back: true, landed: 0 });
+      opened: opened.at === opened.leading && opened.at < 0 && opened.seen,
+      fading: fading.at === opened.at && fading.seen,
+      landed: seen(),
+    }).toEqual({ folded: 0, opened: 1, fading: 1, landed: 0 });
   });
 
   it('with the drums open, stays on the # with search open', () => {

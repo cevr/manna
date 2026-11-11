@@ -9,15 +9,17 @@
  * no hairline round it, over whatever scrolls under the bar), its marks and
  * typed words the ink (`onGlass`), its placeholder `onGlassMuted`, and one
  * chosen mark, a disk in `glassChosen`, lies behind the chosen control
- * (`chosenOf`), whose mark takes `onGlassChosen`: the `#` while folded,
- * Search while search is open.
+ * (`chosenOf`), whose mark takes `onGlassChosen`: the `#` while the drums
+ * are open, Search while search is open, and at rest none, the mark faded
+ * out and the `#` in the glass's ink as Search is.
  * A press on `Search` opens search on the screen at the bar's `path`
  * (`searchOpen`, keyed by the path): the capsule grows leftward across the
- * screen into a focused search box, the chosen mark slides with it to the
+ * screen into a focused search box, the chosen mark fades in behind the
  * box's magnifier at the leading end, the `#` keeps the capsule's trailing
  * end, and `Cancel` stands at the bar's right. The results show over the
- * screen (`StackBottom.tsx`). `Cancel` folds it back, and the mark slides
- * home to the `#`. With Reduce Motion on the growth is a cross-fade alone
+ * screen (`StackBottom.tsx`). `Cancel` folds it back, and the mark fades
+ * out. Between two chosen controls (the drums opened with search open) the
+ * mark slides. With Reduce Motion on the growth is a cross-fade alone
  * and the mark jumps. While the keyboard is up the bar rides 8 points over
  * its top.
  * The whole bar glides between its two places (`glideOf`), over the bar on a
@@ -94,6 +96,8 @@ const CANCEL_GAP = 12;
 const GROWTH = { duration: 300, dampingRatio: 1 } as const;
 /** The whole bar's glide between its two places: a little longer than the growth, as it crosses more of the screen, and as calm. */
 const GLIDE = { duration: 350, dampingRatio: 1 } as const;
+/** The chosen mark's fade as it shows over a control or leaves one with none chosen. */
+const MARK_FADE = { duration: 150 } as const;
 
 /** Cancel's work, for the bar's `Cancel` and Android's Back: the query cleared, the keyboard lowered, search off. */
 export const useCancelSearch = () => {
@@ -192,14 +196,23 @@ export function FindBar({
   const [cancelWidth, setCancelWidth] = useState(0);
   const chosen = chosenOf(row, drumsOpen);
   const side = useSharedValue(Number(chosen === 'search'));
+  const markSeen = useSharedValue(Number(chosen !== 'none'));
   const wasChosen = useRef(chosen);
   useEffect(() => {
-    if (wasChosen.current === chosen) return;
+    const before = wasChosen.current;
+    if (before === chosen) return;
     wasChosen.current = chosen;
     const to = Number(chosen === 'search');
-    if (reduced) side.value = to;
-    else side.value = withSpring(to, GROWTH);
-  }, [chosen, reduced, side]);
+    const seen = Number(chosen !== 'none');
+    if (reduced) {
+      if (chosen !== 'none') side.value = to;
+      markSeen.value = seen;
+    } else if (chosen === 'none') markSeen.value = withTiming(0, MARK_FADE);
+    else if (before === 'none') {
+      side.value = to;
+      markSeen.value = withTiming(1, MARK_FADE);
+    } else side.value = withSpring(to, GROWTH);
+  }, [chosen, reduced, side, markSeen]);
   const was = useRef(row);
   useEffect(() => {
     const before = was.current;
@@ -243,9 +256,9 @@ export function FindBar({
     return { width: FOLDED + (open - FOLDED) * progress.value };
   });
   const slid = useAnimatedStyle(() => {
-    if (width === 0) return { transform: [{ translateX: 0 }] };
+    if (width === 0) return { opacity: markSeen.value, transform: [{ translateX: 0 }] };
     const across = FOLDED + (open - FOLDED) * progress.value - HASH;
-    return { transform: [{ translateX: -across * side.value }] };
+    return { opacity: markSeen.value, transform: [{ translateX: -across * side.value }] };
   });
   const faded = useAnimatedStyle(() => ({ opacity: fade.value }));
   const searchInk = (chosen === 'search' && color.onGlassChosen) || color.onGlass;
