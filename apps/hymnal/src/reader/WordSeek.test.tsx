@@ -1,5 +1,5 @@
 import { expect, it } from 'effect-bun-test';
-import { Deferred, Effect, Option } from 'effect';
+import { Deferred, Effect, Option, Predicate } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { act } from 'react';
@@ -9,7 +9,15 @@ import { HASH, HASH_GAP, REST, SOUNDING } from '~/player/bar';
 import { drag, gestureOf, longPress } from '~/test/gesture';
 
 import { SeekArea } from './WordSeek.native';
-import { LINE_STEP, seekHeld, WORD_STEP } from './word-seek';
+import {
+  LINE_STEP,
+  type SeekActionProps,
+  type SeekAreaProps,
+  seekHeld,
+  type Step,
+  useSeekActionProps,
+  WORD_STEP,
+} from './word-seek';
 import { fixtureRects, HYMN_PAGE_ROOM, inAct, mountSeekReader } from '~/test/reader-word-seek';
 import { openWordSeek } from '~/test/word-seek';
 
@@ -435,16 +443,94 @@ it.effect('the marker and the choice sit mid the words seen over the sounding ba
   }).pipe(Effect.scoped),
 );
 
+it.effect('a web key cannot take a hold while a pointer waits on the words', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT });
+    yield* inAct(app.play);
+    page.pointer('pointerdown');
+    const before = [page.waiting(), page.touch(), [...page.cues], page.chosenLines()];
+    for (const key of ['Enter', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight']) {
+      page.keyOn(key);
+      expect([page.waiting(), page.touch(), page.cues, page.chosenLines()]).toEqual(before);
+      expect(app.registry.get(app.player.hold.state)._tag).toBe('Free');
+    }
+    page.elapse();
+    yield* inAct(app.untilHold('Held'));
+    expect([page.touch(), page.cues]).toEqual([['none', true], ['seek-grab']]);
+    page.pointer('pointerup', {}, 'area');
+    yield* inAct(app.untilHold('Free'));
+    expect([seeks(app), page.cues]).toEqual([[1200], ['seek-grab', 'seek-release']]);
+  }).pipe(Effect.scoped),
+);
+
+it.effect('an unoffered next-line action never reaches the seek and leaves it Free', () =>
+  Effect.gen(function* () {
+    const app = yield* openWordSeek(false);
+    const forwarded: Array<Step> = [];
+    let props: SeekActionProps = {};
+    const ActionArea = ({ seek, children }: SeekAreaProps) => {
+      props = useSeekActionProps({
+        ...seek,
+        step: (kind) => {
+          forwarded.push(kind);
+          seek.step(kind);
+        },
+      });
+      return children;
+    };
+    const page = yield* mountSeekReader(app, { viewport: VIEWPORT, area: ActionArea });
+    yield* inAct(app.play);
+    expect(props.accessibilityActions?.map(({ name }) => name)).toEqual(['seek']);
+    const perform = (actionName: string) =>
+      act(() => props.onAccessibilityAction?.({ nativeEvent: { actionName } }));
+    perform('next-line');
+    expect([
+      forwarded,
+      app.registry.get(app.player.hold.state)._tag,
+      page.chosenLines(),
+      page.cues,
+      seeks(app),
+    ]).toEqual([[], 'Free', [], [], []]);
+    perform('seek');
+    yield* inAct(app.untilHold('Held'));
+    perform('next-line');
+    expect([forwarded, page.chosenLines()]).toEqual([['next-line'], [1]]);
+    perform('cancel');
+    yield* inAct(app.untilHold('Free'));
+  }).pipe(Effect.scoped),
+);
+
 /** The names a seek's control would carry, as a button, a group or its text. */
 const SEEK_CONTROL =
   /^(Seek|Seek by line or word|Previous line|Next line|Previous word|Next word|Play from here|Cancel)$/;
 
 /**
- * What the page draws for the held seek beyond the hold's own marks: any
- * element named as a seek's control, the old entry, dock and panel by id,
- * and the status drawn larger than its one clear point.
+ * What the page draws for the held seek beyond the hold's own marks: every
+ * drawn tappable element outside the words except About, Favourite and
+ * Resume follow, any element named as a seek's control, the old entry, dock
+ * and panel by id, and the status drawn larger than its one clear point.
  */
 const drawnForSeek = (page: Page) => {
+  const tappable = [...page.host.querySelectorAll<HTMLElement>('*')].filter((element) => {
+    if (!Predicate.isFunction(element.onclick) && !element.hasAttribute('tabindex')) return false;
+    if (element.closest('[data-testid="reader-word-seek-area"]')) return false;
+    if (element.getAttribute('data-testid') === 'hymn-about') return false;
+    if (['Favourite', 'Resume follow'].includes(element.getAttribute('aria-label') ?? ''))
+      return false;
+    let ancestor: Option.Option<HTMLElement> = Option.some(element);
+    while (Option.isSome(ancestor) && ancestor.value !== page.host) {
+      const style = getComputedStyle(ancestor.value);
+      if (
+        style.display === 'none' ||
+        ['hidden', 'collapse'].includes(style.visibility) ||
+        style.opacity === '0'
+      )
+        return false;
+      ancestor = Option.fromNullishOr(ancestor.value.parentElement);
+    }
+    return true;
+  }).length;
   const named = [...page.host.querySelectorAll('[role="button"], button, [role="group"]')].filter(
     (element) =>
       SEEK_CONTROL.test(element.getAttribute('aria-label') ?? '') ||
@@ -464,7 +550,7 @@ const drawnForSeek = (page: Page) => {
       return (unseen && 'unseen') || 'seen';
     },
   });
-  return { named, byId, status };
+  return { tappable, named, byId, status };
 };
 
 it.effect(
@@ -489,10 +575,10 @@ it.effect(
       page.pointer('pointerup', {}, 'area');
       yield* inAct(app.untilHold('Free'));
       expect(drawn).toEqual([
-        { named: 0, byId: [], status: 'none' },
-        { named: 0, byId: [], status: 'none' },
-        { named: 0, byId: [], status: 'unseen' },
-        { named: 0, byId: [], status: 'unseen' },
+        { tappable: 0, named: 0, byId: [], status: 'none' },
+        { tappable: 0, named: 0, byId: [], status: 'none' },
+        { tappable: 0, named: 0, byId: [], status: 'unseen' },
+        { tappable: 0, named: 0, byId: [], status: 'unseen' },
       ]);
     }).pipe(Effect.scoped),
 );

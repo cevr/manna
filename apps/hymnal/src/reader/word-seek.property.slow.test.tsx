@@ -441,6 +441,11 @@ const differences = (
     !want.held || page.scrolls.slice(model.state.heldFrom).every(({ animated }) => !animated);
   const offered = model.eligible();
   const owner = model.state.owner._tag;
+  const fingerHeld = owner === 'Held' && surface !== 'steps';
+  if (fingerHeld) count(`offer-finger-held-${surface}`);
+  const offer =
+    (fingerHeld && page.lines().every((_, line) => page.offers(line).length === 0)) ||
+    (!fingerHeld && page.offers().includes('seek') === offered);
   const recognizer =
     surface !== 'native' ||
     owner === 'Held' ||
@@ -453,7 +458,7 @@ const differences = (
   const checks = [
     ['marker', marked, `${model.floor()}`],
     ['count-in', Option.isSome(app.registry.get(app.player.countIn)) === counting, `${counting}`],
-    ['offer', page.offers().includes('seek') === offered, `${offered}`],
+    ['offer', offer, (fingerHeld && 'no actions during finger hold') || `${offered}`],
     ['recognizer', recognizer, `${offered}`],
     ['armed', armed, owner],
     ['lines', sameList(chosen, want.lines), `${want.lines.join(',')}/${chosen.join(',')}`],
@@ -1262,6 +1267,8 @@ it.effect('the generated histories reached every case they are for', () => {
     'held-web',
     'held-native',
     'held-steps',
+    'offer-finger-held-web',
+    'offer-finger-held-native',
     'tick',
     'diagonal',
     'line-clamp',
