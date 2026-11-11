@@ -2,16 +2,16 @@
  * The player's buttons for a hymn as text (the full player's): the buttons
  * `buttonsOf` gives, each titled by its kind, and a spinner while it loads.
  * While it buffers the buttons sit in a row (Retry beside Pause once a wait
- * online runs long). The button is in the accent (`AccentButton`): a
- * `UIButton`'s title on iOS, an accent fill under `onAccent` on the web and
- * Android.
+ * online runs long). The button and the spinner are in the button role
+ * (`AccentButton`): a `UIButton`'s title on iOS, a `button` fill under
+ * `onButton` on the web and Android.
  */
 
 import { Match, Option } from 'effect';
 import { Fragment } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { useAccent } from '~/color';
+import { useButton } from '~/color';
 
 import { AccentButton } from './AccentButton';
 import { type Button, buttonsOf, type Kind } from './button';
@@ -27,10 +27,10 @@ export function Toggle({
   readonly state: Player;
   readonly send: (command: Command) => void;
 }) {
-  const accent = useAccent();
+  const tint = useButton();
   const drawn = (button: Button) =>
     Option.match(button.command, {
-      onNone: () => <ActivityIndicator color={accent} accessibilityLabel={button.label} />,
+      onNone: () => <ActivityIndicator color={tint} accessibilityLabel={button.label} />,
       onSome: (command) => (
         <AccentButton
           title={titleOf(button.kind)}

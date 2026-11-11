@@ -1,16 +1,16 @@
 /**
- * The player's button on the web and Android: an accent fill with its title
- * in `onAccent`. React Native's `Button` there draws its title white on the
- * colour it is given, which reads at 1.59:1 on the dark accent; this one
- * takes the theme's text on the accent (`theme.test.ts` holds it to AA).
- * Pressed, it draws the theme's pressed fill under that fill's own text, so
- * the label keeps AA there too.
+ * The player's button on the web and Android: a fill in the button role
+ * with its title in `onButton`. React Native's `Button` there draws its
+ * title white on the colour it is given, which reads poorly on the dark
+ * button; this one takes the theme's text on the button (`theme.test.ts`
+ * holds it to AA). Pressed, it draws the theme's pressed fill under that
+ * fill's own text, so the label keeps AA there too.
  */
 
 import { Match } from 'effect';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { useAccent, useOnAccent, usePressed } from '~/color';
+import { useButton, useOnButton, usePressed } from '~/color';
 
 export interface AccentButtonProps {
   readonly title: string;
@@ -19,7 +19,7 @@ export interface AccentButtonProps {
 }
 
 export function AccentButton({ title, label, onPress }: AccentButtonProps) {
-  const rest = { fill: useAccent(), text: useOnAccent() };
+  const rest = { fill: useButton(), text: useOnButton() };
   const held = usePressed();
   const look = (pressed: boolean) =>
     Match.value(pressed).pipe(

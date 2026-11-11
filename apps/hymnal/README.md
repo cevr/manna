@@ -144,10 +144,12 @@ under its number, and the refrain written out each time it is sung.
     `TempoDial.tap`, `tempo`, `tempo.beat`, `dial`, `find`,
     `finddrums.open`, `drums`, `findplace.property`, `findplace.static`,
     `glide`, `bar`, `button`, `title`), named file by file; `test:player`
-    runs the rest of `src/player` and ignores those and `tunerbar`.
+    runs the rest of `src/player` and ignores those, `tunerbar` and
+    `buttonrole`.
   - `test:bar`: the bar mounted whole over a player and a reader's store
-    (`src/player/tunerbar.test.tsx`), apart because the bar's tree is
-    the part's load.
+    (`src/player/tunerbar.test.tsx`) and the full player's buttons drawn
+    over a hymn (`src/player/buttonrole.test.tsx`), apart because the
+    bar's tree and the hymns are the part's load.
   - `test:seek`: the held reader's two files of `src/reader`
     (`word-seek.test.ts`, `WordSeek.test.tsx`), named file by file;
     `test:reader` runs the rest of `src/reader` and ignores those.
@@ -416,8 +418,9 @@ acoustic landing of a word, actual haptics and VoiceOver navigation.
 Play on another hymn's page replaces the held hymn at that page's own start and saved Key. Navigation alone keeps the held hymn. `Command.Start({ track })` is the normal start/swap command for reader and browse controls. Each Start owns its status reads, including Starts in one clock millisecond; late replies cannot describe the replacement. A full sheet route for another hymn also offers that hymn's Play while the held hymn sounds. The bar and sheet share `PlayPage` and the same command.
 
 A hymn page plays the hymn's 1985 recording from `audioUrl(n, offset)`: a Play or
-Pause button in the accent (a `UIButton`'s title on iOS, an accent fill
-under the onAccent text on the web and Android), a bar to seek, and the time played and the
+Pause button in the button role (a `UIButton`'s title on iOS, a `button`
+fill under the `onButton` text on the web and Android, and the loading
+spinner in `button`; `src/player/buttonrole.test.tsx`), a bar to seek, and the time played and the
 length. The recording plays on when the reader leaves the hymn, and a bar
 docked at the foot of the screen shows the hymn playing (its number, title and Play or Pause);
 a press on it opens the hymn. Playing another hymn replaces the first.

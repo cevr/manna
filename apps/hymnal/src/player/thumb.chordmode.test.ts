@@ -8,7 +8,7 @@
  * the dials open and closed, against every event (a tap, a hold, a tap on
  * the page, the key dial turned to each of the twelve pitches, the capo dial
  * turned to each fret and one past each end, reset, the end of a reset's
- * wait, a tap on the Tuner):
+ * wait, a tap on the Tuner, the wheel's key step a semitone either way):
  *
  * - a1 A tap with chords off turns chords on and opens nothing, the move as
  *   it was, with one `chords-on` cue.
