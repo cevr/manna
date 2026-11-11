@@ -41,29 +41,58 @@ describe('held', () => {
 });
 
 describe('turn', () => {
-  it('turns one drum’s digit and keeps the others', () => {
+  it('turns the ones drum alone: the hundreds and tens kept', () => {
     expect(turn(123, 'ones', 7)).toBe(127);
-    expect(turn(123, 'tens', 0)).toBe(103);
-    expect(turn(123, 'hundreds', 5)).toBe(523);
-  });
-
-  it('wraps the ones and tens drums among their own, the other digits kept', () => {
     expect(turn(129, 'ones', 10)).toBe(120);
     expect(turn(120, 'ones', -1)).toBe(129);
-    expect(turn(195, 'tens', 10)).toBe(105);
   });
 
-  it('stops the hundreds drum at 0 and at 6', () => {
-    expect(turn(123, 'hundreds', -1)).toBe(23);
-    expect(turn(523, 'hundreds', 7)).toBe(623);
-    expect(turn(623, 'hundreds', 9)).toBe(623);
+  it('turns the tens drum and sets the ones to 0', () => {
+    expect(turn(123, 'tens', 5)).toBe(150);
+    expect(turn(195, 'tens', 10)).toBe(100);
+    expect(turn(291, 'tens', 8)).toBe(280);
   });
 
-  it('holds a dialled number past the book to its ends', () => {
-    expect(turn(689, 'tens', 9)).toBe(LAST);
-    expect(turn(599, 'hundreds', 6)).toBe(LAST);
-    expect(turn(10, 'tens', 0)).toBe(FIRST);
-    expect(turn(100, 'hundreds', 0)).toBe(FIRST);
+  it('turns the hundreds drum and sets the tens and ones to 0', () => {
+    expect(turn(123, 'hundreds', 5)).toBe(500);
+    expect(turn(291, 'hundreds', 3)).toBe(300);
+    expect(turn(599, 'hundreds', 6)).toBe(600);
+  });
+
+  it('never lands on 000: a reset to 0 dials the first hymn', () => {
+    expect(turn(123, 'hundreds', 0)).toBe(FIRST);
+    expect(turn(45, 'tens', 0)).toBe(FIRST);
+    expect(turn(10, 'ones', 0)).toBe(10);
+    expect(turn(1, 'ones', 0)).toBe(FIRST);
+  });
+
+  it('holds a number past the book to the last hymn', () => {
+    expect(turn(691, 'ones', 9)).toBe(LAST);
+    expect(turn(LAST, 'tens', 9)).toBe(LAST);
+  });
+
+  it('changes nothing when the drum’s digit stays: VoiceOver past the hundreds’ ends', () => {
+    expect(turn(23, 'hundreds', -1)).toBe(23);
+    expect(turn(623, 'hundreds', 7)).toBe(623);
+    expect(turn(147, 'tens', 4)).toBe(147);
+  });
+
+  it('every turn that moves a drum zeroes every drum to its right, then holds to the book', () => {
+    const worth = { hundreds: 100, tens: 10, ones: 1 } as const;
+    for (const drum of ['hundreds', 'tens', 'ones'] as const)
+      for (let number = FIRST; number <= LAST; number += 7)
+        for (let digit = 0; digit <= 9; digit += 1) {
+          const now = digitsOf(number);
+          const top = (drum === 'hundreds' && Math.min(digit, 6)) || digit;
+          if (top === now[drum]) continue;
+          const above = number - (number % (worth[drum] * 10));
+          expect([number, drum, digit, turn(number, drum, digit)]).toEqual([
+            number,
+            drum,
+            digit,
+            held(above + top * worth[drum]),
+          ]);
+        }
   });
 
   it('never dials a number outside the book, whatever the turn', () => {

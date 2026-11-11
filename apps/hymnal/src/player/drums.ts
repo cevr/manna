@@ -5,9 +5,10 @@
  * coming 0. Each drum is a dial (`dial.ts`), so it flings, glides and wraps
  * as the key dial does.
  *
- * The number dialled is held to the book, `FIRST` to `LAST`, whatever the
- * drums are turned to: a turn that would dial past it dials its end, and
- * the drums show the number held.
+ * A drum turned sets the drums to its right to 0 (`turn`). The number
+ * dialled is held to the book, `FIRST` to `LAST`, whatever the drums are
+ * turned to: a turn that would dial past it dials its end, and the drums
+ * show the number held.
  *
  * A drum's detent is felt as every dial's is, and heard only while the
  * player's Sound switch is on (`drumTell`).
@@ -60,12 +61,18 @@ export const digitsOf = (number: number): Readonly<Record<Drum, number>> => ({
 /**
  * The number dialled once `drum`, at `number`, turns to digit `n`: among
  * its own on a wrapping drum; on the hundreds drum, held to its ends (a
- * VoiceOver turn past an end tells one past it). Held to the book.
+ * VoiceOver turn past an end tells one past it). A drum that moves sets
+ * every drum to its right to 0, so the hundreds start a hundred afresh and
+ * the tens a ten; the number is then held to the book, the nearest hymn: 0
+ * dials the first, and one past the last dials the last. A turn that leaves
+ * the drum's digit as it was changes nothing.
  */
 export const turn = (number: number, drum: Drum, n: number): number => {
   const digit = ownDetent(DRUMS[drum], Math.round(n));
   const now = held(number);
-  return held(now + (digit - digitOf(now, drum)) * WORTH[drum]);
+  if (digit === digitOf(now, drum)) return now;
+  const above = now - (now % (WORTH[drum] * 10));
+  return held(above + digit * WORTH[drum]);
 };
 
 /**
