@@ -109,6 +109,25 @@ const hidesBeforeLanding = (journey: Journey) =>
     return [`${journey.feature}/${step.name}`];
   });
 
+/** The key button, whose hold with chords on opens its wheel and, let go in the middle, changes nothing. */
+const KEY_BUTTON = 'id=key-button';
+
+/**
+ * The holds of the key button that expect something gone: in the hold's own
+ * expects, or in the next step's when the hold has none. A hold of the key
+ * button only turns chords on; with chords on it opens the wheel, and a
+ * plain hold lets go in its middle, which does nothing, so chords off goes
+ * through a `Chords` switch.
+ */
+const holdsHidingAtKey = (journey: Journey) =>
+  journey.steps.flatMap((step, index) => {
+    if (step.action !== 'hold' || step.target !== KEY_BUTTON) return [];
+    let after = step.expect;
+    if (after.length === 0) after = journey.steps[index + 1]?.expect ?? [];
+    if (!after.some((expect) => 'hides' in expect)) return [];
+    return [`${journey.feature}/${step.name}`];
+  });
+
 const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 /** A `role=tab` term in a step's JSON: in a selector string, between spaces or quotes. */
@@ -187,6 +206,38 @@ describe('verify-hymnal journey files', () => {
       const journeys = yield* decodeAll(FEATURES);
       expect(journeys.flatMap(hidesBeforeLanding)).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('no shipped hold of the key button expects anything gone', () =>
+    Effect.gen(function* () {
+      const journeys = yield* decodeAll(FEATURES);
+      expect(journeys.flatMap(holdsHidingAtKey)).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('a hold of the key button before a hides is named; one before a shows is not', () =>
+    Effect.gen(function* () {
+      const hold = { action: 'hold', target: KEY_BUTTON };
+      const text = toJson({
+        feature: 'chords-and-capo',
+        platform: 'ios',
+        steps: [
+          { ...hold, name: 'off', expect: [{ hides: 'id=chord-1-1-1' }] },
+          { ...hold, name: 'next' },
+          { name: 'gone', action: 'back', expect: [{ hides: 'id=dials' }] },
+          { ...hold, name: 'on', settle: 2, expect: [{ shows: 'id=chord-1-1-1' }] },
+          { name: 'other', action: 'hold', target: 'id=row-1', expect: [{ hides: 'id=x' }] },
+          {
+            name: 'switch',
+            action: 'tap',
+            target: 'role=switch label=Chords',
+            expect: [{ hides: 'id=dial-key' }],
+          },
+        ],
+      });
+      const journey = yield* loadText('chords-and-capo', text);
+      expect(holdsHidingAtKey(journey)).toEqual(['chords-and-capo/off', 'chords-and-capo/next']);
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect('no shipped iOS journey selects by role=tab', () =>

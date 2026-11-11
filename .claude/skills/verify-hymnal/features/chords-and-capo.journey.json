@@ -95,10 +95,39 @@
       "expect": [{ "shows": "id=key-button" }, { "hides": "id=chord-sheet" }]
     },
     {
+      "name": "chords-off-sheet",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-key" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-off-switch",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Chords" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-off",
-      "action": "hold",
-      "target": "id=key-button",
-      "expect": [{ "hides": "id=chord-1-1-1" }]
+      "action": "tap",
+      "target": "role=switch label=Chords",
+      "expect": [{ "hides": "id=dial-key" }, { "hides": "id=dial-capo" }]
+    },
+    {
+      "name": "chords-off-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [
+        { "shows": "id=key-button" },
+        { "hides": "label=Sheet Grabber" },
+        { "hides": "id=chord-1-1-1" }
+      ],
+      "receipt": "none"
     },
     {
       "name": "chords-mode-simple",
@@ -217,10 +246,39 @@
       "receipt": "snapshot"
     },
     {
+      "name": "chords-mode-kept-sheet",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-key" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-kept-switch",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Chords" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-mode-kept-off",
-      "action": "hold",
-      "target": "id=key-button",
-      "expect": [{ "hides": "id=chord-1-1-1" }],
+      "action": "tap",
+      "target": "role=switch label=Chords",
+      "expect": [{ "hides": "id=dial-key" }, { "hides": "id=dial-capo" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-kept-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [
+        { "shows": "id=key-button" },
+        { "hides": "label=Sheet Grabber" },
+        { "hides": "id=chord-1-1-1" }
+      ],
       "receipt": "snapshot"
     }
   ]
