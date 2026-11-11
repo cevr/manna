@@ -2194,15 +2194,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:field-reach`: `src/field/reach.test.tsx`, Today's `Your field`
     outside its scroll view before and after a recital that grows the
     passage; a recital started in the turn of a tap on `Your field`, which
-    keeps Today on screen through its result; and one view of Say it
-    deciding both the control and home: with the root's news of Say it
-    held back, a tap in the first frame that offers the control after a
+    keeps Today on screen through its result.
+  - `test:field-reach-held`: `src/field/reach-held.test.tsx`, one view of
+    Say it deciding both the control and home: with the root's news of Say
+    it held back, a tap in the first frame that offers the control after a
     growing recital opens home.
   - `test:field-unread`: `src/field/unread.test.tsx`, no field and no
     `Your field` in any frame of a held launch until its read lands, then
     home, of an unread session (whose recital the next launch's home
-    counts) or of the first minute; and
-    `src/field/unread-keep.test.tsx`, an unread session whose listing and then its keep's read of its key fail, or
+    counts) or of the first minute.
+  - `test:field-unread-keep`: `src/field/unread-keep.test.tsx`, an unread
+    session whose listing and then its keep's read of its key fail, or
     whose every record read fails, while writes work: its finished recital
     is written with its zone's offset and the next healthy launch counts
     its day.
