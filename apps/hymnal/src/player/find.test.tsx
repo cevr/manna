@@ -16,6 +16,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Pressable, Text, View } from 'react-native';
 
+import { Tiles, tiles } from '../home/finding';
+import { searchAt, type Searching, searchOpen } from '../reader/place';
 import { pathname, routed } from '../test/one';
 
 import { LivePlayer } from './LivePlayer';
@@ -36,7 +38,10 @@ function Screen() {
 }
 
 /** The player layer over the stand-in screen, mounted in the document; it unmounts when the test's `using` ends. */
-const mount = () => {
+const mount = (
+  shown: Tiles = Tiles.Hidden(),
+  searching: Option.Option<Searching> = Option.none(),
+) => {
   pathname.current = '/';
   behind.splice(0);
   routed.splice(0);
@@ -45,7 +50,12 @@ const mount = () => {
   const root = createRoot(host);
   act(() =>
     root.render(
-      <RegistryProvider>
+      <RegistryProvider
+        initialValues={[
+          [tiles, shown],
+          [searchOpen, searching],
+        ]}
+      >
         <LivePlayer>
           <Screen />
         </LivePlayer>
@@ -128,7 +138,7 @@ describe('the find drums', () => {
 
 describe('the find bar’s `#`', () => {
   /** The roles the bar reads, each a colour of its own, so a computed colour names its role (`color.ts`). */
-  const ROLES = ['onGlass', 'glassChosen', 'onGlassChosen'] as const;
+  const ROLES = ['onGlass', 'glassChosen', 'onGlassChosen', 'glass'] as const;
   const role = (name: (typeof ROLES)[number]) => `rgb(${ROLES.indexOf(name) + 1}, 5, 6)`;
   /** The role sheet in the document for one test. */
   const roleSheet = () => {
@@ -170,5 +180,59 @@ describe('the find bar’s `#`', () => {
       opened: { ink: role('onGlassChosen'), search: role('onGlass'), disk: 1, expanded: 'true' },
       closed: { ink: role('onGlass'), search: role('onGlass'), disk: 0, expanded: 'false' },
     });
+  });
+
+  it('is chosen iff the drums are open: every row of the bar (folded, search open, All at once) × drums shut or open', () => {
+    using _roles = roleSheet();
+    const rows = {
+      folded: () => mount(),
+      open: () => mount(Tiles.Hidden(), searchAt('/', 'field')),
+      tiles: () => mount(Tiles.Shown({ stood: { offset: 0, cover: 0 } })),
+    } as const;
+    /** The `#` drawn: its glyph's ink, its own disk's fill (the lone one), and the capsule's chosen disk over it. */
+    const drawn = (host: HTMLElement) => {
+      const hash = get(host, 'find-number');
+      const glyph = [...hash.querySelectorAll<HTMLElement>('*')].find(
+        (element) => element.textContent === '#' && element.children.length === 0,
+      );
+      const fill = getComputedStyle(hash).backgroundColor;
+      const mark = byId(host, 'find-chosen');
+      const markSeen = Option.map(mark, (view) => getComputedStyle(view).opacity);
+      return {
+        ink: Option.match(Option.fromNullishOr(glyph), {
+          onNone: () => 'none',
+          onSome: (element) => getComputedStyle(element).color,
+        }),
+        disk: (fill.startsWith('rgb(') && fill) || 'none',
+        mark: Option.match(markSeen, {
+          onNone: () => 'none',
+          onSome: (seen) => ((seen === '' || Number(seen) > 0) && 'seen') || 'hidden',
+        }),
+      };
+    };
+    const cases = (Object.keys(rows) as Array<keyof typeof rows>).flatMap((row) =>
+      [false, true].map((drums) => ({ row, drums })),
+    );
+    const got = cases.map(({ row, drums }) => {
+      using page = rows[row]();
+      const { host } = page;
+      if (drums) click(get(host, 'find-number'));
+      return [row, drums, drawn(host)] as const;
+    });
+    const want = cases.map(({ row, drums }) => {
+      const ink = (drums && role('onGlassChosen')) || role('onGlass');
+      if (row === 'tiles')
+        return [
+          row,
+          drums,
+          { ink, disk: (drums && role('glassChosen')) || role('glass'), mark: 'none' },
+        ] as const;
+      return [
+        row,
+        drums,
+        { ink, disk: 'none', mark: ((drums || row === 'open') && 'seen') || 'hidden' },
+      ] as const;
+    });
+    expect(got).toEqual(want);
   });
 });

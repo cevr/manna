@@ -280,7 +280,7 @@ export function FindBar({
         style={styles.row}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       >
-        {row === 'tiles' && hash('alone')}
+        {row === 'tiles' && hash(hashLookOf(row, chosen))}
         {row !== 'tiles' && (
           <Animated.View
             {...(drumsOpen && passThrough)}
