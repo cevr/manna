@@ -1,6 +1,7 @@
 /**
  * The home list's tabs under its title (`tabs.ts`): a row of tabs, each a
- * button VoiceOver reads as a tab, the tab in use selected and drawn filled.
+ * button VoiceOver reads as a tab, the tab in use selected and drawn on the
+ * `selected` fill under the ink.
  * A tap on another tab chooses it with a `tab` cue, a haptic alone; a tap on
  * the tab in use does nothing. A row too wide for the screen at a large text
  * size scrolls sideways.
@@ -9,7 +10,7 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { useCue } from '~/feel/cue';
-import { color, useAccent } from '~/color';
+import { color, useAccent, useSelected } from '~/color';
 
 import type { TabName } from './tabs';
 
@@ -33,6 +34,7 @@ export function TabRow({
 }) {
   const cue = useCue();
   const accent = useAccent();
+  const selectedFill = useSelected();
   const choose = (name: TabName) => {
     if (name === selected) return;
     cue({ _tag: 'tab' });
@@ -56,7 +58,7 @@ export function TabRow({
             onPress={() => choose(name)}
             style={({ pressed }) => [
               styles.tab,
-              chosen && styles.chosen,
+              chosen && { backgroundColor: selectedFill },
               pressed && !chosen && styles.pressed,
             ]}
           >
@@ -76,7 +78,6 @@ export function TabRow({
 const styles = StyleSheet.create({
   row: { gap: 8, paddingHorizontal: 16, paddingVertical: rowMargin },
   tab: { paddingHorizontal: 12, paddingVertical: tabPadding, borderRadius: 16 },
-  chosen: { backgroundColor: color.soft },
   pressed: { opacity: 0.6 },
   name: { fontSize: 15, lineHeight: tabLine, fontWeight: '600' },
   chosenName: { color: color.ink },

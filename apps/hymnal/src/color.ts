@@ -14,6 +14,9 @@ const roles = [
   'muted',
   'line',
   'accent',
+  'button',
+  'onButton',
+  'selected',
   'soft',
   'onAccent',
   'pressed',
@@ -54,11 +57,20 @@ export const color = {
   onGlassChosen: 'var(--onGlassChosen)',
 } satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
-/** The roles a screen reads through a hook: the accent fill and its text, pressed or not. */
-type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed';
+/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, and the selected fill. */
+type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed' | 'button' | 'onButton' | 'selected';
 
 /** The accent in the scheme showing now. */
 export const useAccent = (): ColorValue => 'var(--accent)';
+
+/** A button's tint or fill in the scheme showing now. */
+export const useButton = (): ColorValue => 'var(--button)';
+
+/** Text and marks on the button's fill in the scheme showing now. */
+export const useOnButton = (): ColorValue => 'var(--onButton)';
+
+/** A chosen tab's fill in the scheme showing now. */
+export const useSelected = (): ColorValue => 'var(--selected)';
 
 /** Text on the accent in the scheme showing now. */
 export const useOnAccent = (): ColorValue => 'var(--onAccent)';

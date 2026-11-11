@@ -63,8 +63,8 @@ export const color = Platform.select({
   }),
 })() satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
-/** The roles a screen reads through a hook: the accent fill and its text, pressed or not. */
-type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed';
+/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, and the selected fill. */
+type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed' | 'button' | 'onButton' | 'selected';
 
 /** The theme's roles in the scheme showing now. */
 const useRoles = (): Roles =>
@@ -75,6 +75,15 @@ const useRoles = (): Roles =>
 
 /** The accent in the scheme showing now. */
 export const useAccent = (): ColorValue => useRoles().accent;
+
+/** A button's tint or fill in the scheme showing now. */
+export const useButton = (): ColorValue => useRoles().button;
+
+/** Text and marks on the button's fill in the scheme showing now. */
+export const useOnButton = (): ColorValue => useRoles().onButton;
+
+/** A chosen tab's fill in the scheme showing now. */
+export const useSelected = (): ColorValue => useRoles().selected;
 
 /** Text on the accent in the scheme showing now. */
 export const useOnAccent = (): ColorValue => useRoles().onAccent;

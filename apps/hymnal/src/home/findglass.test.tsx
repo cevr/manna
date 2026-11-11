@@ -10,7 +10,7 @@
  * - Over every role a screen draws under the bar (every role but the glass
  *   ones), the glass laid on it keeps the typed words (`onGlass`, the ink)
  *   and the placeholder (`onGlassMuted`) at WCAG AA (4.5:1), and the chosen
- *   disk (`glassChosen`, the accent) at 3:1; the chosen disk's mark
+ *   disk (`glassChosen`, the button) at 3:1; the chosen disk's mark
  *   (`onGlassChosen`) keeps AA on it.
  * - The placeholder is the ink moved toward `soft`, in hundredths, as far as
  *   AA holds over every one of those roles.
@@ -103,11 +103,11 @@ describe('the theme’s glass', () => {
       expect(under.length).toBeGreaterThanOrEqual(16);
     });
 
-    it(`${scheme}: the chosen disk is the accent, and its mark keeps 4.5:1 on it`, () => {
+    it(`${scheme}: the chosen disk is the button, and its mark keeps 4.5:1 on it`, () => {
       expect({
         chosen: roles['glassChosen'],
         mark: contrast(roles['onGlassChosen'] ?? '', roles['glassChosen'] ?? '') >= 4.5,
-      }).toEqual({ chosen: roles['accent'], mark: true });
+      }).toEqual({ chosen: roles['button'], mark: true });
     });
 
     it(`${scheme}: the placeholder is the ink moved toward soft as far as AA holds over every role under the bar`, () => {

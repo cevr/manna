@@ -35,10 +35,10 @@ const contrast = (a: string, b: string) => {
  * Every text role on every role it is drawn on, with WCAG AA's least ratio
  * for its smallest size there: all are body sizes (13 to 17 points), so 4.5.
  * The player draws on the ground: its title in ink, its caption and times
- * in muted, the hymn number and iOS's play button in accent; the web's and
- * Android's play button is an accent fill under onAccent, and while pressed
- * a pressed fill under onPressed. The chords stand on the page, and the
- * search field's placeholder on soft.
+ * in muted, the hymn number in accent; the web's and Android's play button
+ * is an accent fill under onAccent, and while pressed a pressed fill under
+ * onPressed. A button's fill carries onButton, a chosen tab's fill the ink.
+ * The chords stand on the page, and the search field's placeholder on soft.
  */
 const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['ink', 'ground'],
@@ -50,6 +50,9 @@ const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['muted', 'soft'],
   ['onAccent', 'accent'],
   ['onPressed', 'pressed'],
+  ['onButton', 'button'],
+  ['ink', 'selected'],
+  ['chord', 'bar'],
   ['ink', 'panel'],
   ['muted', 'panel'],
   ['accent', 'panel'],
@@ -100,8 +103,9 @@ describe('the dials’ panel stands off the page', () => {
 /**
  * A checked chip's chosen mark is a state, not text: a fill that must read on
  * the pill at WCAG 1.4.11's 3:1. The accent where it does (by day, the
- * night), else the pill's ink (by night, where the gold reads 1.09:1). The
- * find bar's glass is held in `home/findglass.test.tsx`.
+ * night), else the pill's ink (by night, where the number reads 1.13:1 on
+ * the button's pill). The find bar's glass is held in
+ * `home/findglass.test.tsx`.
  */
 describe('the chosen mark reads on the pill', () => {
   for (const scheme of ['light', 'dark'] as const) {
@@ -110,10 +114,42 @@ describe('the chosen mark reads on the pill', () => {
       expect(contrast(roles.chosen, roles.pill)).toBeGreaterThanOrEqual(3);
     });
   }
-  test('dark: the gold fails on the pill, so the chosen mark is the night', () => {
+  test('dark: the number fails on the pill, so the chosen mark is the night', () => {
     expect(contrast(theme.dark.accent, theme.dark.pill)).toBeLessThan(3);
     expect(theme.dark.chosen).toBe(theme.dark.onPill);
   });
+});
+
+/** A colour in OKLab (Ottosson's matrices), from its sRGB hex. */
+const oklab = (hex: string) => {
+  const [r = 0, g = 0, b = 0] = rgb(hex).map(linear);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+};
+
+/**
+ * Buttons are told from what they stand on and from the chords: the play
+ * and Sound marks on the bar at WCAG 1.4.11's 3:1, and the chords at least
+ * 0.06 from the button in OKLab, so a chord never reads as a button.
+ */
+describe('the button stands apart', () => {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`${scheme}: the button is at least 3:1 on the bar`, () => {
+      const roles = theme[scheme];
+      expect(contrast(roles.button, roles.bar)).toBeGreaterThanOrEqual(3);
+    });
+    test(`${scheme}: the chord is at least 0.06 from the button in OKLab`, () => {
+      const [chord, button] = [oklab(theme[scheme].chord), oklab(theme[scheme].button)];
+      const distance = Math.hypot(...chord.map((value, k) => value - (button[k] ?? 0)));
+      expect(distance).toBeGreaterThanOrEqual(0.06);
+    });
+  }
 });
 
 /**
@@ -147,14 +183,17 @@ test('the contrast ratio is WCAG 2’s', () => {
 });
 
 /**
- * The roles as the owner's pick, "sky" (2026-10-25), draws them: each role
- * the prototype named is its value there, or within 2 of it per channel
- * where a mix of the brand's colours draws it (light muted, panel and soft,
- * dark line), but the edges, moved until they read at 3.5:1 (the prototype's were
- * 1.6:1 by day and 2.3:1 by night). A change to the brand, the mixing or a
- * channel's order shows here.
+ * The roles as the owner's picks draw them. Light is "sky" (2026-10-25):
+ * each role the prototype named is its value there, or within 2 of it per
+ * channel where a mix of the brand's colours draws it (muted, panel and
+ * soft), but the edge, moved until it reads at 3.5:1 (the prototype's was
+ * 1.6:1); the button is the accent and a chosen tab's fill is soft, so
+ * light draws as before. Dark is the Night field with lifted panels (C2)
+ * under the analogous accents (system 1), each role the value the pick's
+ * pages show. A change to the brand, the mixing or a channel's order shows
+ * here.
  */
-test('the roles are the sky', () => {
+test('the roles are the owner’s picks', () => {
   expect(theme).toEqual({
     light: {
       ground: '#f7f9fb',
@@ -162,6 +201,9 @@ test('the roles are the sky', () => {
       muted: '#526b7d',
       line: '#dfe6ee',
       accent: PALETTE.night,
+      button: PALETTE.night,
+      onButton: '#ffffff',
+      selected: '#e1e8f0',
       chord: PALETTE.duskDeep,
       soft: '#e1e8f0',
       onAccent: '#ffffff',
@@ -181,27 +223,30 @@ test('the roles are the sky', () => {
       onGlassChosen: '#ffffff',
     },
     dark: {
-      ground: PALETTE.night,
-      ink: '#eef2f6',
-      muted: PALETTE.sky,
-      line: '#2c4c64',
-      accent: PALETTE.duskGold,
-      chord: PALETTE.duskGold,
+      ground: '#0a1f2d',
+      ink: '#f3f5f9',
+      muted: '#99adc2',
+      line: '#233745',
+      accent: '#94d8e2',
+      button: '#66d0df',
+      onButton: PALETTE.night,
+      selected: '#155159',
+      chord: '#d1d3ff',
       soft: PALETTE.nightPanel,
       onAccent: PALETTE.night,
-      pressed: '#c8ab7e',
+      pressed: '#42b0bf',
       onPressed: PALETTE.night,
       panel: PALETTE.nightPanel,
-      edge: '#778ea3',
-      bar: '#0f2d43',
-      pill: PALETTE.sky,
+      edge: '#647686',
+      bar: '#081722',
+      pill: '#66d0df',
       onPill: PALETTE.night,
       chosen: PALETTE.night,
       onChosen: '#ffffff',
       glass: `${PALETTE.nightPanel}d9`,
-      onGlass: '#eef2f6',
-      onGlassMuted: '#cad4dd',
-      glassChosen: PALETTE.duskGold,
+      onGlass: '#f3f5f9',
+      onGlassMuted: '#cad3dc',
+      glassChosen: '#66d0df',
       onGlassChosen: PALETTE.night,
     },
   });

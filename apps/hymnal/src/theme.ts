@@ -1,34 +1,51 @@
 /**
- * The app's colours: twenty-two roles in light and dark, all drawn from the
- * brand (`@manna/brand`, the one source the First the Blade site reads too)
- * as the owner's pick of 2026-10-25, "sky": the brand's painted sky as the
- * second colour, the night as the ink. A screen reads a role (`color.ts` on
- * the web, `color.native.ts` on a phone), never a hex value.
+ * The app's colours: twenty-five roles in light and dark. Light is drawn
+ * from the brand (`@manna/brand`, the one source the First the Blade site
+ * reads too) as the owner's pick of 2026-10-25, "sky": the brand's painted
+ * sky as the second colour, the night as the ink. Dark is the owner's pick
+ * of 2026-11-11, the Night field with lifted panels and the analogous
+ * accents. A screen reads a role (`color.ts` on the web, `color.native.ts`
+ * on a phone), never a hex value.
  *
  * Light is a cool white page (the sky tinted 88% toward white) under the
  * night's ink, with the night for the accent too (the hymn numbers, the
- * tint, the play button) and the dusk's gold deepened for the chords
- * (`chord`). Panels and pressed rows are the sky tinted less far toward
- * white, the rules a step deeper, and the key button's lit pill the sky
- * itself under the night (`pill`, `onPill`). Dark keeps the night as the
- * page, with a sky-white ink, the sky for quiet text, the dusk's gold for
- * the accent and the chords, the night raised (`nightPanel`) for panels and
- * pressed rows, and the docked bar a shade under the night (`bar`).
+ * tint) and for the buttons (`button`: the play button, the find bar's
+ * chosen disk), and the dusk's gold deepened for the chords (`chord`).
+ * Panels, pressed rows and a chosen tab (`selected`) are the sky tinted
+ * less far toward white, the rules a step deeper, and the key button's lit
+ * pill the sky itself under the night (`pill`, `onPill`).
  *
- * Text on a fill (`onAccent`, `onPressed`, `onPill`, `onChosen`,
- * `onGlassChosen`) is the night where it meets AA on the fill, else white,
- * else black (`onColor`). A checked chip stands on the accent where the
- * accent reads at 3:1 on the pill, else on the pill's ink (`chosen`; by night
- * the gold does not, so the night). The find bar's capsule is glass: `soft`
- * at 85 % (`glass`), laid over whatever scrolls under the bar, with the ink
- * for its words (`onGlass`) and its chosen control on a disk of the accent
- * (`glassChosen`). Its placeholder is the ink moved toward `soft` as far as
- * AA holds over every opaque role with the glass laid on it (`onGlassMuted`).
- * A pressed accent is a fill of its own (`pressed`), the accent a fifth
- * toward the ground.
+ * Dark is the Night field: the page is the night 42 % toward black, panels
+ * and pressed rows the night raised (`nightPanel`), the ink the sky 82 %
+ * toward white, quiet text the sky moved toward the panel as far as AA holds
+ * on the page and the panel, and the docked bar the page a quarter toward
+ * black. Its accents are analogous about the night's OKLCH hue, 243°: every
+ * one stays within 40° of it, so the page carries no warm hue. Numbers and
+ * buttons sit 35° toward teal (hue 208), sharing a hue and differing in
+ * lightness and chroma: the number `oklch(0.84 0.070 207)`, the button
+ * `oklch(0.80 0.100 208)` (the key button's pill, every pill, the play and
+ * Sound marks, the find bar's chosen disk), a pressed button
+ * `oklch(0.70 0.100 208)` (set by hand, not mixed from the accent and the
+ * ground), and a chosen tab's fill `oklch(0.40 0.060 208)`, under ink only.
+ * Chords take the night's other side, 40° toward periwinkle,
+ * `oklch(0.88 0.061 283)`, so they never read as buttons (`theme.test.ts`
+ * holds their OKLab distance from the button at 0.06 or more). Each is
+ * written here as its sRGB hex.
+ *
+ * Text on a fill (`onAccent`, `onButton`, `onPressed`, `onPill`,
+ * `onChosen`, `onGlassChosen`) is the night where it meets AA on the fill,
+ * else white, else black (`onColor`). A checked chip stands on the accent
+ * where the accent reads at 3:1 on the pill, else on the pill's ink
+ * (`chosen`; by night the number does not, so the night). The find bar's
+ * capsule is glass: `soft` at 85 % (`glass`), laid over whatever scrolls
+ * under the bar, with the ink for its words (`onGlass`) and its chosen
+ * control on a disk of the button (`glassChosen`). Its placeholder is the
+ * ink moved toward `soft` as far as AA holds over every opaque role with the
+ * glass laid on it (`onGlassMuted`). By day a pressed button is a fill of
+ * its own (`pressed`), the night a fifth toward the page.
  * The open dials stand on an opaque panel (`panel`), so no page word shows
  * through it; its edge (`edge`) is the sky moved toward the night by day and
- * the night toward the sky by night, until it reads at 3.5:1 on the ground:
+ * the page toward the sky by night, until it reads at 3.5:1 on the ground:
  * WCAG 1.4.11's 3:1 for a control's boundary, with the margin the shadow
  * under the panel takes from the ground around it. Every text role keeps
  * WCAG AA on every role it is drawn on (`theme.test.ts`).
@@ -46,15 +63,21 @@ interface OpaqueRoles {
   readonly muted: string;
   /** Separators and outlines; never under text. */
   readonly line: string;
-  /** The tab tint, the hymn number, links, the play button. */
+  /** The tab tint, the hymn number, links. */
   readonly accent: string;
+  /** A button's tint or fill: the play and Sound marks, the key button's pill, the find bar's chosen disk. */
+  readonly button: string;
+  /** Text and marks drawn on the button's fill. */
+  readonly onButton: string;
+  /** A chosen tab's fill, and other selected backgrounds: under ink words only. */
+  readonly selected: string;
   /** A chord's symbol over the words, and the dials' current stop and notch. */
   readonly chord: string;
   /** A pressed row, a selection, the search field: under ink, accent and muted text. */
   readonly soft: string;
   /** Text drawn on an accent fill: the play button's label on the web and Android. */
   readonly onAccent: string;
-  /** The accent fill while it is pressed: the accent mixed a fifth toward the ground. */
+  /** A button's fill while it is pressed: by day the night mixed a fifth toward the ground, by night set by hand. */
   readonly pressed: string;
   /** Text drawn on the pressed fill, picked for it as `onAccent` is for the accent. */
   readonly onPressed: string;
@@ -165,7 +188,7 @@ const over = (glass: string, under: string) =>
 
 /**
  * The find bar's glass over a scheme's opaque roles: `soft` at 85 %, its words
- * the ink, its chosen disk the accent. The placeholder is the ink moved toward
+ * the ink, its chosen disk the button. The placeholder is the ink moved toward
  * `soft`, in steps of a hundredth, as far as it still meets WCAG AA (4.5:1)
  * over every opaque role with the glass laid on it, since any of them may
  * scroll under the bar.
@@ -179,8 +202,8 @@ const glassRoles = (opaque: OpaqueRoles) => {
     glass,
     onGlass: opaque.ink,
     onGlassMuted: steps.findLast(holds) ?? opaque.ink,
-    glassChosen: opaque.accent,
-    onGlassChosen: onColor(opaque.accent),
+    glassChosen: opaque.button,
+    onGlassChosen: onColor(opaque.button),
   };
 };
 
@@ -196,8 +219,25 @@ const white = '#ffffff';
 const skyTint = (t: number) => mix(PALETTE.sky, white, t);
 
 const lightGround = skyTint(0.88);
+const lightSoft = skyTint(0.57);
 const lightPressed = mix(PALETTE.night, lightGround, 0.2);
-const darkPressed = mix(PALETTE.duskGold, PALETTE.night, 0.2);
+
+/** The Night field's page: the night 42 % toward black. */
+const nightField = mix(PALETTE.night, '#000000', 0.42);
+
+/** The analogous accents by night, each its OKLCH value in sRGB hex. */
+const night = {
+  /** `oklch(0.84 0.070 207)`: the hymn numbers, the tint. */
+  number: '#94d8e2',
+  /** `oklch(0.88 0.061 283)`: the chords. */
+  chord: '#d1d3ff',
+  /** `oklch(0.80 0.100 208)`: the buttons. */
+  button: '#66d0df',
+  /** `oklch(0.70 0.100 208)`: a pressed button. */
+  pressed: '#42b0bf',
+  /** `oklch(0.40 0.060 208)`: a chosen tab's fill. */
+  selected: '#155159',
+} as const;
 
 export const theme = {
   light: withGlass({
@@ -206,8 +246,11 @@ export const theme = {
     muted: mix(PALETTE.night, white, 0.268),
     line: skyTint(0.529),
     accent: PALETTE.night,
+    button: PALETTE.night,
+    onButton: onColor(PALETTE.night),
+    selected: lightSoft,
     chord: PALETTE.duskDeep,
-    soft: skyTint(0.57),
+    soft: lightSoft,
     onAccent: onColor(PALETTE.night),
     pressed: lightPressed,
     onPressed: onColor(lightPressed),
@@ -217,19 +260,22 @@ export const theme = {
     ...onPillRoles(PALETTE.night, PALETTE.sky),
   }),
   dark: withGlass({
-    ground: PALETTE.night,
-    ink: skyTint(0.75),
-    muted: PALETTE.sky,
-    line: mix(PALETTE.night, PALETTE.sky, 0.153),
-    accent: PALETTE.duskGold,
-    chord: PALETTE.duskGold,
+    ground: nightField,
+    ink: skyTint(0.82),
+    muted: mix(PALETTE.sky, PALETTE.nightPanel, 0.21),
+    line: mix(nightField, PALETTE.sky, 0.14),
+    accent: night.number,
+    button: night.button,
+    onButton: onColor(night.button),
+    selected: night.selected,
+    chord: night.chord,
     soft: PALETTE.nightPanel,
-    onAccent: onColor(PALETTE.duskGold),
-    pressed: darkPressed,
-    onPressed: onColor(darkPressed),
+    onAccent: onColor(night.number),
+    pressed: night.pressed,
+    onPressed: onColor(night.pressed),
     panel: PALETTE.nightPanel,
-    edge: mix(PALETTE.night, PALETTE.sky, 0.6),
-    bar: mix(PALETTE.night, '#000000', 0.147),
-    ...onPillRoles(PALETTE.duskGold, PALETTE.sky),
+    edge: mix(nightField, PALETTE.sky, 0.51),
+    bar: mix(nightField, '#000000', 0.25),
+    ...onPillRoles(night.number, night.button),
   }),
 } as const satisfies { readonly light: Roles; readonly dark: Roles };
