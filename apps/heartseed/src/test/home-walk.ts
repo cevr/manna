@@ -16,12 +16,14 @@
  *   `Start` (exactly when the model shows a verse, R3; with `waits`, after
  *   a wait on home that keeps the plan, `waitBegin`), `Practice anyway`
  *   (exactly when no verse shows and a planted verse starts), with nothing
- *   held a landed `Remove <reference>` then `Remove`, a relaunch the next
- *   morning;
- * - on Today: `Your field` a quarter of the time on a read garden, else
- *   one of `root-walk`'s (`Say it`, `Next`, a minutes choice by `Your
- *   field` and the Settings sheet, or none offered on an unread garden,
- *   `Your field`, a relaunch).
+ *   held a landed `Remove <reference>` then `Remove`, a landed add (`Add a
+ *   list`, the sheet's `Any passage`, a verse of a drawn chapter, `Plant`),
+ *   a return to the foreground, a relaunch the next morning; while a visit
+ *   is open or an item held, an add takes a remove's turn;
+ * - on Today: a return to the foreground one time in ten, `Your field` a
+ *   quarter of the rest on a read garden, else one of `root-walk`'s (`Say
+ *   it`, `Next`, a minutes choice by `Your field` and the Settings sheet, or
+ *   none offered on an unread garden, `Your field`, a relaunch).
  *
  * The oracle, apart from the app's code: the walk's plan, hold and visit
  * as `root-walk` keeps them; the chosen verse; the furrows as
@@ -36,11 +38,17 @@
  * no lines); the greeting by `greetingModel` in the host's zone at the
  * clock's now. `Practice`, `Learn` and `Practice anyway` make the visit
  * the one verse `startModel` gives and keep the hold; a remove drops its
- * span and makes the plan again. After every command the screen the model
+ * span and an add appends it (`addRule`), each making the plan again; a
+ * return to the foreground comes after a drawn time away and, over a read
+ * garden and passages, makes the plan again at the later instant. Each
+ * making drops the visit and the hold (no recital is under way between
+ * commands). After every command the screen the model
  * names is held to the model (Today as `root-walk` holds it), and the disk
- * to `root-walk`'s rule (the passages key only as the removes leave it).
+ * to `root-walk`'s rule (the passages key only as the adds and removes
+ * leave it).
  */
 
+import { bookName, TARGETS } from './chooser-rig';
 import { cardOf, homeFaults, iconOf, nameOf, selectedPlants, text } from './field-rig';
 import type { ModelPlantStage } from './field-model';
 import { below, random } from './garden-model';
@@ -54,8 +62,8 @@ import {
   weakestModel,
   type ModelFurrow,
 } from './home-model';
-import { KEY, readRule, spanRef, type Held } from './passages-model';
-import { CORPUS } from './passages-rig';
+import { addRule, KEY, readRule, spanRef, verseRef, type Held, type Span } from './passages-model';
+import { CORPUS, countIn } from './passages-rig';
 import { verseOfRule } from './phrase-model';
 import { startModel, type ModelVisitVerse } from './promise-model';
 import {
@@ -68,6 +76,7 @@ import {
   type Settled,
 } from './root-walk';
 import { HOUR, MINUTE } from './session-model';
+import { activateSheet, tapSheet } from './shelves-rig';
 
 const CANON = new Set(placesOf(CORPUS).keys());
 
@@ -94,7 +103,8 @@ const onField = (host: Element) =>
 class HomeWalk extends Walk {
   declare held: Held;
   chosen: string | null = null;
-  removed = false;
+  /** Whether an add or a remove landed, so the passages key holds `held`. */
+  changed = false;
   /** The visit the last start from home made, while it is the visit. */
   started: readonly Started[] | null = null;
   /** Whether `Start` on home comes after a wait (`waitBegin`); off but in walk-h. */
@@ -255,13 +265,16 @@ class HomeWalk extends Walk {
     return { seen, want: this.wantToday() };
   }
 
-  /** `root-walk`'s disk rule, the passages key held to what the removes leave. */
+  /** `root-walk`'s disk rule, the passages key held to what the adds and removes leave. */
   override diskFaults() {
     const out = super.diskFaults();
-    if (!this.removed) return out;
-    const kept = out.filter((fault) => fault !== `changed ${KEY}` && fault !== 'passages written');
+    if (!this.changed) return out;
+    const kept = out.filter(
+      (fault) =>
+        fault !== `changed ${KEY}` && fault !== `added ${KEY}` && fault !== 'passages written',
+    );
     const now = readRule(CORPUS, this.device.disk.get(KEY), 0);
-    if (JSON.stringify(now) !== JSON.stringify(this.held)) kept.push('passages not as removed');
+    if (JSON.stringify(now) !== JSON.stringify(this.held)) kept.push('passages not as changed');
     return kept;
   }
 
@@ -428,23 +441,102 @@ class HomeWalk extends Walk {
       tag: 'Read',
       passages: this.held.passages.filter((_, at) => at !== index),
     };
-    this.removed = true;
+    this.changed = true;
     this.make();
     this.bump('made:remove');
     this.bump('home:remove');
     await rig.until(
       () =>
         by(rig.host, 'ask').length === 0 &&
-        !by(rig.host, 'row-title').some((node) => text(node) === reference),
+        JSON.stringify(readRule(CORPUS, this.device.disk.get(KEY), 0)) ===
+          JSON.stringify(this.held),
     );
     const plants = this.furrows().flatMap((furrow) => furrow.plants);
     if (!plants.some((plant) => plant.reference === this.chosen)) this.chosen = null;
     return null;
   }
 
+  /** Whether a verse of the visit is still open. */
+  visitOpen() {
+    return this.visit.some((each) => this.recallsNow(each.reference) <= each.recalls);
+  }
+
+  /** Counts what an add or a wake (`kind`) lands over: an open visit (`wake:today-over-visit` too when Today shows it), a hold. */
+  over(kind: string) {
+    if (this.visitOpen()) this.bump(`${kind}:over-visit`);
+    if (this.visitOpen() && this.screen === 'today') this.bump(`${kind}:today-over-visit`);
+    if (this.hold !== null) this.bump(`${kind}:over-held`);
+  }
+
+  /** The add `Add a list` would land now, drawn: a verse of a drawn chapter, as `addRule` answers it. */
+  addable() {
+    const target = TARGETS[below(this.next, TARGETS.length)] ?? TARGETS[0];
+    const verse = 1 + below(this.next, countIn(target.book, target.chapter));
+    const span = { ...target, first: verse, last: verse };
+    return { span, answer: addRule(CORPUS, this.held, span, false) };
+  }
+
+  /**
+   * A landed add from home: `Add a list`, the sheet's `Any passage`, then
+   * the book, the chapter, the verse and `Plant`. The passages gain the
+   * span, and the plan is made again over them, the visit and the hold
+   * dropped (no recital is under way).
+   */
+  async add(span: Span, held: Held): Promise<unknown> {
+    const rig = this.launched;
+    const name = bookName(span.book);
+    this.trail.push(`add:${spanRef(span)}`);
+    this.over('add');
+    if (!(await rig.tap('Add a list'))) return 'no Add a list';
+    if (!(await activateSheet(rig.until))) return 'Add a list: no sheet came';
+    if (!(await tapSheet('Any passage'))) return 'no Any passage';
+    for (const label of [
+      name,
+      `${name} ${span.chapter}`,
+      verseRef(span.book, span.chapter, span.first),
+      'Plant',
+    ])
+      if (!(await rig.until(() => rig.has(label))) || !(await rig.tap(label))) return `no ${label}`;
+    this.held = held;
+    this.changed = true;
+    this.make();
+    this.chosen = null;
+    this.bump('made:add');
+    this.bump('home:add');
+    await rig.until(() => rig.headings().includes('Your field'));
+    this.atHome();
+    return null;
+  }
+
+  /** A return to the foreground after a drawn time away (a minute to thirty hours), on home or Today: the plan made again at the later instant over a read garden and passages, the visit and the hold dropped (no recital is under way), home's greeting read again. */
+  async wake(): Promise<unknown> {
+    const away = below(this.next, 30) * HOUR + (1 + below(this.next, 60)) * MINUTE;
+    this.time.now += away;
+    this.trail.push(`wake:${away / MINUTE}`);
+    this.bump(`${this.screen}:wake`);
+    this.over('wake');
+    if (!(await this.launched.wake())) return 'the foreground never took the return';
+    if (!this.planned()) return null;
+    this.make();
+    this.bump('made:wake');
+    return null;
+  }
+
+  /** Roll 10 or 11 on home: an add on 11, and on 10 while a visit is open or an item held; else a remove of a passage held; else (no add lands, or no passage) a tap on a plant. */
+  async changeStep(roll: number): Promise<unknown> {
+    if (roll === 11 || this.visitOpen() || this.hold !== null) {
+      const { span, answer } = this.addable();
+      return answer.outcome === 'Added' ? this.add(span, answer.held) : this.tapPlant();
+    }
+    if (this.held.tag === 'Read' && this.held.passages.length > 0) return this.remove();
+    return this.tapPlant();
+  }
+
   /** One command on home. */
   override async homeStep(): Promise<unknown> {
     const roll = below(this.next, 20);
+    if (roll === 10 || roll === 11) return this.changeStep(roll);
+    if (roll === 19) return this.wake();
     if (roll < 2 && this.chosen !== null) return this.tap(this.chosen, 'again');
     if (roll < 6 && this.chosen !== null && this.startOf(this.chosen) !== null)
       return this.startHere();
@@ -454,19 +546,12 @@ class HomeWalk extends Walk {
       return this.chosen === null && !this.offersBegin() && this.weakest() !== null
         ? this.practiceAnyway()
         : this.relaunch();
-    if (
-      roll < 12 &&
-      this.hold === null &&
-      this.held.tag === 'Read' &&
-      this.held.passages.length > 0
-    )
-      return this.remove();
-    if (roll === 19) return this.relaunch();
     return this.tapPlant();
   }
 
-  /** One command on Today: on a read garden `Your field` a quarter of the time, else one of `root-walk`'s. */
+  /** One command on Today: a return to the foreground one time in ten, on a read garden `Your field` a quarter of the rest, else one of `root-walk`'s. */
   override async todayStep(): Promise<unknown> {
+    if (below(this.next, 10) === 0) return this.wake();
     if (!this.device.unread && below(this.next, 4) === 0) return this.field();
     return super.todayStep();
   }

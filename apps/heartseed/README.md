@@ -2891,9 +2891,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     root (`src/test/home-walk.ts`, a `root-walk` `Walk` over the root's
     screens: on home a tap on a plant of each class, a tap again,
     `Practice`, `Learn`, `Start` when the model offers it, else
-    `Practice anyway`, a Minutes tap, a landed remove and a relaunch; on
-    Today `root-walk`'s commands and `Your field`), one device each
-    of seeds 30, 10, 69, 74, 14, 2, 317 and 18, part f's in the unread class
+    `Practice anyway`, a Minutes tap, a landed remove, a landed add (`Add
+    a list`, `Any passage`, a verse, `Plant`), a return to the foreground
+    (the root rig's host sends `background` then `active`) and a
+    relaunch; on Today `root-walk`'s commands, `Your field` and a return
+    to the foreground; each add or return makes the plan again and drops
+    the visit and the hold, and parts reach both over an open visit and
+    over a result held), one device each
+    of seeds 572, 282, 10, 636, 444, 1, 309 and 166, part f's in the unread class
     (every listing fails: Today alone, with no `Your field`), held after
     every command, on the screen the model names, to `furrowsModel` and
     `readyModel` (full labels with `, ready today`), the Today card's
@@ -2902,8 +2907,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     frame to `rootFaults` and every home frame to `homeFaults`; each part's
     floors met (part f's Today checked to offer no minutes choice, no
     `Settings` and no `<n> min`, a minutes choice made being
-    another part's floor on a read garden; part g's `Learn` on a verse not
-    planted, its recall planting it). Part h alone
+    another part's floor on a read garden; parts a's and e's `Learn` on a
+    verse not planted, its recall planting it). Part h alone
     (`walkHome`'s `waits`) puts a wait of one to thirty hours on home
     before each `Start` (`waitBegin`), so parts a-g draw as before; its
     floor `home:wait-begin` is a wait, no visit or hold kept, after which a

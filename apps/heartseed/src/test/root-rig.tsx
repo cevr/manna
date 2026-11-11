@@ -9,7 +9,9 @@
  * map that outlives launches and whose listings can fail every attempt (an
  * unread garden), a recognizer that recites the app's promise at once on
  * every listen (so a recital of any other verse is heard short, and still
- * kept), a voice that never speaks, a silent chime and haptics, and
+ * kept), a voice that never speaks, a silent chime and haptics, a host
+ * that reports the app `active` until the launch's `wake` sends a
+ * `background` then an `active` (a return to the foreground), and
  * Effect's `Clock` frozen where the test sets it.
  *
  * Every frame (each DOM mutation batch) is held to the root's frame rule
@@ -20,7 +22,7 @@
  */
 
 import { RegistryProvider } from '@effect/atom-react';
-import { Effect, Layer, Logger } from 'effect';
+import { Effect, Layer, Logger, Option, Queue, Stream } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -29,6 +31,7 @@ import passage from 'virtual:heartseed-passage';
 import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
+import { Foreground } from '../foreground';
 import { Chime } from '../garden';
 import { TAUGHT } from '../promises';
 import { Haptics, type Recall } from '../sayit';
@@ -117,6 +120,33 @@ export const screenFaults = (host: Element): string[] => {
   return out;
 };
 
+/** The host's side of the foreground: the subscription's queue once it starts, the states offered to it, and the pulls it made. */
+interface Host {
+  live: Option.Option<Queue.Queue<string>>;
+  offered: number;
+  pulls: number;
+}
+
+/** The foreground over `host`: `active` at the subscription first, then each state offered, one pull at a time. */
+const foregroundOf = (host: Host) =>
+  Layer.succeed(
+    Foreground,
+    Foreground.of({
+      states: Stream.fromPull(
+        Effect.map(Queue.unbounded<string>(), (queue) => {
+          host.live = Option.some(queue);
+          let first = true;
+          return Effect.suspend(() => {
+            host.pulls += 1;
+            if (!first) return Effect.map(Queue.take(queue), (state) => [state] as const);
+            first = false;
+            return Effect.succeed(['active'] as const);
+          });
+        }),
+      ),
+    }),
+  );
+
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
@@ -129,12 +159,14 @@ export const launchRoot = async (
   check: (host: Element) => readonly string[] = () => [],
 ) => {
   for (const left of [...mounted]) await left();
+  const foreground: Host = { live: Option.none(), offered: 0, pulls: 0 };
   const parts = {
     source: scriptedSource(recite(passage.text, { every: 5, pace })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
     store: storeOf(device),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: silentVoice,
+    foreground: foregroundOf(foreground),
   };
   const layer = (promises === null ? appLayer(parts) : appLayer({ ...parts, promises })).pipe(
     Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))),
@@ -197,6 +229,18 @@ export const launchRoot = async (
     host.remove();
   };
   mounted.add(leave);
+  /** Whether the subscription has taken every state offered so far and waits for the next. */
+  const taken = () => Option.isSome(foreground.live) && foreground.pulls === foreground.offered + 2;
+  /** A return to the foreground: the host sends `background` then `active` once the subscription reads; false when it never took them. */
+  const wake = async () => {
+    if (!(await until(taken))) return false;
+    for (const state of ['background', 'active']) {
+      if (Option.isNone(foreground.live)) return false;
+      Queue.offerUnsafe(foreground.live.value, state);
+      foreground.offered += 1;
+    }
+    return until(taken);
+  };
   return {
     host,
     faults,
@@ -204,6 +248,7 @@ export const launchRoot = async (
     headings,
     until,
     tap,
+    wake,
     has: (label: string) => named(label) !== undefined,
     /** Every control's name, in document order. */
     names: () => controls().map(nameOf),

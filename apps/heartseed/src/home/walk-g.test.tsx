@@ -2,14 +2,14 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part g: device 0
- * of seed 317, fourteen commands from its launch on home, held to the
+ * of seed 309, eighteen commands from its launch on home, held to the
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
- * those that parts b, d and e's devices reached while the walk began on
- * Today: a moved choice, `Practice` on a planted verse and over an open
- * visit, `Learn` on a verse not planted, and a minutes choice made in the
- * Settings sheet. `Start` tapped while a said result is held, with `Your
- * field` taken with it held, is `walk-c.test.tsx`'s.
+ * from the counts the device reaches: gold dots and planted plants without
+ * one, `Start`, a moved choice, `Practice` on a plan item and over a
+ * result held, a landed add, returns to the foreground on home over an
+ * open visit and over a result held, the morning's and afternoon's
+ * greetings, and a relaunch that lands on home.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -17,18 +17,27 @@ import { describe, expect, it } from 'bun:test';
 import { walkHome } from '../test/home-walk';
 
 const FLOORS = [
+  'home:dot',
+  'home:no-dot',
+  'home:begin',
   'home:moved',
-  'start:plant',
-  'start:over-visit',
+  'start:plan',
+  'start:over-held',
+  'greeting:morning',
+  'greeting:afternoon',
+  'root:begin',
   'root:start',
-  'start:learn',
-  'card:Learn',
-  'made:minutes',
+  'root:back',
+  'root:relaunch-home',
+  'home:add',
+  'home:wake',
+  'wake:over-visit',
+  'wake:over-held',
 ];
 
 describe('home A, walked (g)', () => {
   it('shows the furrows, the choice, the card and the greeting as the models give them', async () => {
-    const { failure, cover } = await walkHome(317, [0], 14);
+    const { failure, cover } = await walkHome(309, [0], 18);
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);
   });
