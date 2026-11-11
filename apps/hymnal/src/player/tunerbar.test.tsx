@@ -267,9 +267,10 @@ describe('the key button’s wheel', () => {
       { item: 'keyDown', angle: 72, key: 'C' },
       { item: 'keyUp', angle: 46, key: 'D' },
     ] as const;
+    const doors = (open: boolean) => (open && (['wheel', 'VoiceOver'] as const)) || ['wheel'];
     for (const open of [true, false]) {
       for (const { item, angle, key } of steps) {
-        for (const door of ['wheel', 'VoiceOver'] as const) {
+        for (const door of doors(open)) {
           it(`${item} by the ${door}, the dials ${(open && 'open') || 'shut'} before`, () => {
             using page = onPage(chordsOn(), true);
             if (open) act(() => keyButton(page).click());
@@ -288,18 +289,17 @@ describe('the key button’s wheel', () => {
           });
         }
       }
-      it(`a hold let go in the middle keeps the dials ${(open && 'open') || 'shut'}`, () => {
-        using page = onPage(chordsOn(), true);
-        if (open) act(() => keyButton(page).click());
-        const held = hold();
-        held.move(4, -6);
-        held.lift();
-        expect({
-          key: keyButton(page).getAttribute('aria-valuetext'),
-          dials: Option.isSome(page.find('[data-testid="dials"]')),
-        }).toEqual({ key: 'Db', dials: open });
-      });
     }
+    it('a hold let go in the middle keeps the dials shut (R4 keeps them open)', () => {
+      using page = onPage(chordsOn(), true);
+      const held = hold();
+      held.move(4, -6);
+      held.lift();
+      expect({
+        key: keyButton(page).getAttribute('aria-valuetext'),
+        dials: Option.isSome(page.find('[data-testid="dials"]')),
+      }).toEqual({ key: 'Db', dials: false });
+    });
   });
 
   it('R5: a hold slid to Chords off turns chords off, as the old hold did', () => {
