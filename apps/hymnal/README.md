@@ -144,7 +144,10 @@ under its number, and the refrain written out each time it is sung.
     `TempoDial.tap`, `tempo`, `tempo.beat`, `dial`, `find`,
     `finddrums.open`, `drums`, `findplace.property`, `findplace.static`,
     `glide`, `bar`, `button`, `title`), named file by file; `test:player`
-    runs the rest of `src/player` and ignores those.
+    runs the rest of `src/player` and ignores those and `tunerbar`.
+  - `test:bar`: the bar mounted whole over a player and a reader's store
+    (`src/player/tunerbar.test.tsx`), apart because the bar's tree is
+    the part's load.
   - `test:seek`: the held reader's two files of `src/reader`
     (`word-seek.test.ts`, `WordSeek.test.tsx`), named file by file;
     `test:reader` runs the rest of `src/reader` and ignores those.
