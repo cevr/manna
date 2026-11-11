@@ -19,7 +19,9 @@
  * real `HymnList.native` and its real rows, pressed as a reader presses
  * them; only LegendList is a plain list (it draws no row without a layout,
  * which the document has none of), so this file runs in a process of its
- * own (`test:slow`).
+ * own (`test:slow`). Search names `~/reader/HymnList`, which Bun resolves to
+ * the web's list as the web does; a phone's bundler resolves it to
+ * `HymnList.native`, so the stand-in names that file for it.
  *
  * The router's steps are read from the `one` stand-in: a pushing link's
  * press in `opened`, and `useRouter`'s steps and a replacing link's press
@@ -49,6 +51,10 @@ export function AnimatedLegendList(props) {
     rows.length > 0 ? rows : node(props.ListEmptyComponent), node(props.ListFooterComponent));
 }
 `,
+      loader: 'js',
+    }));
+    build.module('~/reader/HymnList', () => ({
+      contents: `export * from ${JSON.stringify(`${import.meta.dir}/../reader/HymnList.native.tsx`)};`,
       loader: 'js',
     }));
   },
