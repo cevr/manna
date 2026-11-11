@@ -565,7 +565,7 @@ describe('the full player', () => {
         expect(Option.getOrThrow(page.find('[aria-label="Open player"]')).textContent).toBe('');
       }),
   );
-  it.live('draws Play and Pause in the text on the accent, on an accent fill, in each scheme', () =>
+  it.live('draws Play and Pause in the text on the button, on a button fill, in each scheme', () =>
     Effect.gen(function* () {
       using page = mount();
       /** The button's fill and its title's colour, as the document computes them. */
@@ -586,8 +586,8 @@ describe('the full player', () => {
         for (const scheme of schemes) {
           using _ = showing(scheme);
           expect(drawn(label)).toEqual({
-            fill: rgbOf(theme[scheme].accent),
-            title: rgbOf(theme[scheme].onAccent),
+            fill: rgbOf(theme[scheme].button),
+            title: rgbOf(theme[scheme].onButton),
           });
         }
       };
