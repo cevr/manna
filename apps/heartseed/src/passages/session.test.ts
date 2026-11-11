@@ -86,7 +86,16 @@ const WALK_ZONES = [
 
 const PROMISE_TEXT = readPassage();
 
-const words = (text: string) => sourceWords(text).length;
+/** Each text's word count, kept once counted: the plan's model asks it of the same verses at every check. */
+const WORDS = new Map<string, number>();
+
+const words = (text: string) => {
+  const kept = WORDS.get(text);
+  if (kept !== undefined) return kept;
+  const count = sourceWords(text).length;
+  WORDS.set(text, count);
+  return count;
+};
 
 /** The promise as the app's own piece. */
 const PROMISE: ModelTextPiece = {

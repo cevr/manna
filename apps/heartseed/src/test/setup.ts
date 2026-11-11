@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noTestLifecycleHooks, effect/noThrowStatement, effect/noNewError -- Bun's loader takes each stand-in module as source text, so paths and the passage are written into it as JSON literals; every case passes through one check after it, which fails a case that left the host outside UTC by throwing to bun's runner. */
+/* oxlint-disable effect/noGlobals, effect/noTestLifecycleHooks, effect/noThrowStatement, effect/noNewError -- Bun's loader takes each stand-in module for a package as source text, so its path is written into it as a JSON literal, and each data module as an object, handed over without a text round trip; every case passes through one check after it, which fails a case that left the host outside UTC by throwing to bun's runner. */
 
 /**
  * The app's tests run its screens under Bun, mounted in a browser's
@@ -53,20 +53,20 @@ plugin({
       loader: 'js',
     }));
     build.module('virtual:heartseed-passage', () => ({
-      contents: `export default ${JSON.stringify(readPassage())};`,
-      loader: 'js',
+      exports: { default: readPassage() },
+      loader: 'object',
     }));
     build.module('virtual:heartseed-kjv', () => ({
-      contents: `export default ${JSON.stringify(readChapters())};`,
-      loader: 'js',
+      exports: { default: readChapters() },
+      loader: 'object',
     }));
     build.module('virtual:heartseed-lexicon', () => ({
-      contents: `export default ${JSON.stringify(readLexicon())};`,
-      loader: 'js',
+      exports: { default: readLexicon() },
+      loader: 'object',
     }));
     build.module('virtual:heartseed-licence', () => ({
-      contents: `export default ${JSON.stringify(readLicence())};`,
-      loader: 'js',
+      exports: { default: readLicence() },
+      loader: 'object',
     }));
   },
 });

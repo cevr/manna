@@ -39,17 +39,49 @@ export interface Corpus {
   readonly books: ReadonlyArray<number>;
 }
 
-/** The model's corpus over `rows`, each verse placed by its own numbers. */
+/** A chapter's shown verses from its rows, each verse placed by its own number. */
+const versesOfRows = (rows: ReadonlyArray<Row>): ReadonlyArray<string> => {
+  const list: Array<string> = [];
+  for (const row of rows) list[row.verse - 1] = shown(row.text);
+  return list;
+};
+
+/**
+ * The model's corpus over `rows`, each verse placed by its own numbers. A
+ * chapter's verses are shown the first time it is read and kept, so a test
+ * that reads a few chapters does not show the whole canon.
+ */
 export const corpusOf = (rows: ReadonlyArray<Row>): Corpus => {
-  const chapters = new Map<string, Array<string>>();
+  const grouped = new Map<string, Array<Row>>();
   const counts = new Map<number, number>();
   for (const row of rows) {
     const key = `${row.book}:${row.chapter}`;
-    const list = chapters.get(key) ?? [];
-    list[row.verse - 1] = shown(row.text);
-    chapters.set(key, list);
+    const list = grouped.get(key) ?? [];
+    list.push(row);
+    grouped.set(key, list);
     counts.set(row.book, Math.max(counts.get(row.book) ?? 0, row.chapter));
   }
+  const kept = new Map<string, ReadonlyArray<string>>();
+  const get = (key: string) => {
+    const held = kept.get(key);
+    if (held !== undefined) return held;
+    const chapter = grouped.get(key);
+    if (chapter === undefined) return undefined;
+    const verses = versesOfRows(chapter);
+    kept.set(key, verses);
+    return verses;
+  };
+  const all = () => new Map([...grouped.keys()].map((key) => [key, get(key) ?? []]));
+  const chapters: ReadonlyMap<string, ReadonlyArray<string>> = {
+    size: grouped.size,
+    get,
+    has: (key) => grouped.has(key),
+    keys: () => grouped.keys(),
+    values: () => all().values(),
+    entries: () => all().entries(),
+    forEach: (each) => all().forEach(each),
+    [Symbol.iterator]: () => all().entries(),
+  };
   return { chapters, counts, books: [...counts.keys()].toSorted((a, b) => a - b) };
 };
 

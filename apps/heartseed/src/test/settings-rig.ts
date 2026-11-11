@@ -219,6 +219,9 @@ export const sheetFaults = (
   return [];
 };
 
+/** Each style chain's answers, kept across every sheet watch of the process: an answer is read from the chain's classes and inline styles alone, and react-native-web names a class by its declarations, so a chain answers the same on every mount. */
+const KNOWN = new Map<string, readonly string[]>();
+
 /**
  * Holds every frame of the document (each DOM mutation batch under its
  * body) from now on to `sheetFaults` against `scheme` (the system's by
@@ -235,7 +238,7 @@ export const sheetFaults = (
 export const watchSheet = (scheme: () => Scheme = systemScheme) => {
   const faults: string[] = [];
   const seen = new Set<string>();
-  const known = new Map<string, readonly string[]>();
+  const known = KNOWN;
   const frames = { open: 0, looked: 0 };
   const shown = { modal: null as Element | null, looked: false };
   const keep = (fault: string) => {

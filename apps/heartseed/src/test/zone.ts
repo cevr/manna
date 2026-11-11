@@ -37,8 +37,8 @@ export const offsetIn = (zone: string, at: number) => {
       second: 'numeric',
     });
   formats.set(zone, format);
-  const part = (type: string) =>
-    Number(format.formatToParts(at).find((each) => each.type === type)?.value ?? 0);
+  const parts = format.formatToParts(at);
+  const part = (type: string) => Number(parts.find((each) => each.type === type)?.value ?? 0);
   const wall = new Date(0);
   wall.setUTCFullYear(part('year'), part('month') - 1, part('day'));
   wall.setUTCHours(part('hour'), part('minute'), part('second'), ((at % 1000) + 1000) % 1000);

@@ -471,14 +471,17 @@ interface Sight {
   readonly outside: string;
 }
 
-/** What a sighted reader sees under `host`: each word node's text whose element's ink is not transparent, with nothing above it out of the layout, hidden or at no opacity; each word node's own ink; and the text seen outside the word nodes. One style read per element. */
+/** Each element's ink and whether it hides, by its tag, classes, inline style and the ink it inherits, kept across every frame of the process: react-native-web names a class by its declarations, so these answer the same in every frame. */
+const STYLES = new Map<string, { readonly color: string; readonly hides: boolean }>();
+
+/** What a sighted reader sees under `host`: each word node's text whose element's ink is not transparent, with nothing above it out of the layout, hidden or at no opacity; each word node's own ink; and the text seen outside the word nodes. One style read per element style not seen before. */
 const sightOf = (host: Element): Sight => {
   const text = new Map<number, string>();
   const ink = new Map<number, string>();
   let outside = '';
-  const styles = new Map<string, { readonly color: string; readonly hides: boolean }>();
+  const styles = STYLES;
   const styleOf = (at: Element, inherited: string) => {
-    const key = `${inherited}|${at.getAttribute('class') ?? ''}|${at.getAttribute('style') ?? ''}`;
+    const key = `${at.tagName}|${inherited}|${at.getAttribute('class') ?? ''}|${at.getAttribute('style') ?? ''}`;
     const known = styles.get(key);
     if (known !== undefined) return known;
     const style = getComputedStyle(at);
