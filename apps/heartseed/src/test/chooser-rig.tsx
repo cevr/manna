@@ -38,7 +38,7 @@ import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { scrolled } from './field-rig';
-import { lookFaults } from './look';
+import { KEPT_LOOKS, lookFaults } from './look';
 import { KEY, NAMES } from './passages-model';
 import { CORPUS, countIn } from './passages-rig';
 
@@ -258,7 +258,7 @@ export const mountChooser = async (time: Time = { now: START }) => {
   const faults: string[] = [];
   const left = { backs: 0, adds: 0 };
   const known = new Map<string, boolean>();
-  const looks = new Map<string, readonly string[]>();
+  const looks = KEPT_LOOKS;
   const watch = new MutationObserver(() => {
     for (const fault of [
       ...chooserFaults(host, known, hold.planting),

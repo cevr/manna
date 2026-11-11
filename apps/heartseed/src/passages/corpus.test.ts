@@ -40,11 +40,21 @@ describe('versesOf, over the whole KJV', () => {
         : [key];
     });
     const verses = [...CORPUS.chapters.values()].reduce((sum, list) => sum + list.length, 0);
-    expect({ verses, chapters: CORPUS.chapters.size, books: CORPUS.books.length, wrong }).toEqual({
+    const miscounted = [...CORPUS.chapters].flatMap(([key, want]) =>
+      CORPUS.lengths.get(key) === want.length ? [] : [key],
+    );
+    expect({
+      verses,
+      chapters: CORPUS.chapters.size,
+      books: CORPUS.books.length,
+      wrong,
+      miscounted,
+    }).toEqual({
       verses: 31102,
       chapters: 1189,
       books: 66,
       wrong: [],
+      miscounted: [],
     });
     expect(
       ROWS.filter((row) => versesOf(row.book, row.chapter)[row.verse - 1] !== row.text).length,

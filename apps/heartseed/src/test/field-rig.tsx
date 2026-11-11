@@ -47,7 +47,7 @@ import { voiceSource } from '../voice/source';
 import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
-import { computed, lookFaults, systemScheme } from './look';
+import { computed, KEPT_LOOKS, lookFaults, systemScheme } from './look';
 import { fieldRule, heldOn, type ModelPlantStage } from './field-model';
 import { captionModel } from './home-model';
 import { keyOf, PREFIX } from './garden-model';
@@ -477,7 +477,7 @@ export const mount = async (
     [...host.querySelectorAll('[role="button"]')].find(
       (node) => node.getAttribute('aria-label') === 'Your field',
     );
-  const looks = new Map<string, readonly string[]>();
+  const looks = KEPT_LOOKS;
   const looked = (on: string) => {
     for (const fault of lookFaults(host, undefined, looks))
       if (faults.length < 8) faults.push(`${fault} on ${on}`);

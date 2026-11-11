@@ -33,6 +33,8 @@ export const shown = (source: string): string => {
 export interface Corpus {
   /** Keyed `book:chapter`; the verse `n` at index `n - 1`. */
   readonly chapters: ReadonlyMap<string, ReadonlyArray<string>>;
+  /** Each chapter's verse count, its highest verse number, keyed as `chapters`. */
+  readonly lengths: ReadonlyMap<string, number>;
   /** Each book's chapter count, by book number. */
   readonly counts: ReadonlyMap<number, number>;
   /** The books in canon order. */
@@ -54,11 +56,13 @@ const versesOfRows = (rows: ReadonlyArray<Row>): ReadonlyArray<string> => {
 export const corpusOf = (rows: ReadonlyArray<Row>): Corpus => {
   const grouped = new Map<string, Array<Row>>();
   const counts = new Map<number, number>();
+  const lengths = new Map<string, number>();
   for (const row of rows) {
     const key = `${row.book}:${row.chapter}`;
     const list = grouped.get(key) ?? [];
     list.push(row);
     grouped.set(key, list);
+    lengths.set(key, Math.max(lengths.get(key) ?? 0, row.verse));
     counts.set(row.book, Math.max(counts.get(row.book) ?? 0, row.chapter));
   }
   const kept = new Map<string, ReadonlyArray<string>>();
@@ -82,12 +86,16 @@ export const corpusOf = (rows: ReadonlyArray<Row>): Corpus => {
     forEach: (each) => all().forEach(each),
     [Symbol.iterator]: () => all().entries(),
   };
-  return { chapters, counts, books: [...counts.keys()].toSorted((a, b) => a - b) };
+  return { chapters, lengths, counts, books: [...counts.keys()].toSorted((a, b) => a - b) };
 };
 
 /** The shown verses of a chapter, none for one the corpus does not hold. */
 export const versesIn = (corpus: Corpus, book: number, chapter: number): ReadonlyArray<string> =>
   corpus.chapters.get(`${book}:${chapter}`) ?? [];
+
+/** A chapter's verse count (`versesIn`'s length) without showing its verses, 0 for one the corpus does not hold. */
+export const verseCountIn = (corpus: Corpus, book: number, chapter: number): number =>
+  corpus.lengths.get(`${book}:${chapter}`) ?? 0;
 
 /** The store key of the passages (P3). */
 export const KEY = 'heartseed/passages';
@@ -129,7 +137,7 @@ export const fits = (corpus: Corpus, span: Span): boolean =>
   whole(span.last) &&
   span.first >= 1 &&
   span.first <= span.last &&
-  span.last <= versesIn(corpus, span.book, span.chapter).length;
+  span.last <= verseCountIn(corpus, span.book, span.chapter);
 
 /** P1: a range a reader may add: it fits, and spans at most 20 verses. */
 export const addable = (corpus: Corpus, span: Span): boolean =>

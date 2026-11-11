@@ -15,7 +15,7 @@ import {
   NAMES,
   spanRef,
   verseRef,
-  versesIn,
+  verseCountIn,
   type Corpus,
   type Held,
   type Span,
@@ -151,7 +151,7 @@ export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
       line: undefined,
     };
   }
-  const count = versesIn(corpus, step.book, step.chapter).length;
+  const count = verseCountIn(corpus, step.book, step.chapter);
   const chosen = state.chosen;
   const inside = (verse: number) =>
     chosen !== undefined && chosen.first <= verse && verse <= chosen.last;

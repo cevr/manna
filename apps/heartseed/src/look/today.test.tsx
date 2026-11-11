@@ -139,9 +139,13 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
     model.system = other(model.system);
     await act(async () => setSystem(model.system));
   };
+  const looks = new Map<string, readonly string[]>();
   const settle = async (name: string) => {
-    await app.until(() => lookFaults(app.host, model.system).length === 0, 300);
-    const faults = [...lookFaults(app.host, model.system), ...drawing(app.host, model.system)];
+    await app.until(() => lookFaults(app.host, model.system, looks).length === 0, 300);
+    const faults = [
+      ...lookFaults(app.host, model.system, looks),
+      ...drawing(app.host, model.system),
+    ];
     if (faults.length > 0)
       report.push(`seed ${seed} ${name} [${model.system}]: ${faults.join('; ')}`);
   };

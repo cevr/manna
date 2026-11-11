@@ -39,7 +39,7 @@ import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf, type Time } from './clock';
 import { deadline } from './elapsed';
 import { keyOf } from './garden-model';
-import { lookFaults } from './look';
+import { KEPT_LOOKS, lookFaults } from './look';
 import { END, rootFaults } from './root-rule';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
@@ -177,7 +177,7 @@ export const launchRoot = async (
   const faults: string[] = [];
   const frames = { today: 0, end: 0, listening: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
-  const looks = new Map<string, readonly string[]>();
+  const looks = KEPT_LOOKS;
   const frame = () => {
     const shown = headings();
     const names = [...host.querySelectorAll(CONTROLS)].map(nameOf);

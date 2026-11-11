@@ -17,13 +17,13 @@ import { layer, Passages } from '../passages';
 import { store } from '../store';
 import { clockOf, START } from './clock';
 import { below } from './garden-model';
-import { corpusOf, type Span, storedText, versesIn } from './passages-model';
+import { corpusOf, type Span, storedText, verseCountIn } from './passages-model';
 
 /** The model's corpus, from the KJV's own rows. */
 export const CORPUS = corpusOf(readVerses());
 
 /** The verse count of a chapter in the model's corpus, 0 for one it does not hold. */
-export const countIn = (book: number, chapter: number) => versesIn(CORPUS, book, chapter).length;
+export const countIn = (book: number, chapter: number) => verseCountIn(CORPUS, book, chapter);
 
 /** Each stored value that does not decode, by name. */
 export const GARBLED = [

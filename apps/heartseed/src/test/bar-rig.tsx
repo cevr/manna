@@ -48,7 +48,7 @@ import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
 import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { homeFaults, scrolled } from './field-rig';
-import { lookFaults } from './look';
+import { KEPT_LOOKS, lookFaults } from './look';
 import { KEY } from './passages-model';
 import { rootFaults } from './root-rule';
 import { footerFaults } from './run-rig';
@@ -231,7 +231,7 @@ export const mountBar = async (
   document.body.append(host);
   const faults: string[] = [];
   const known = new Map<string, boolean>();
-  const looks = new Map<string, readonly string[]>();
+  const looks = KEPT_LOOKS;
   const watch = new MutationObserver(() => {
     for (const fault of [
       ...rootFaults(host, 'read'),

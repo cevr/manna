@@ -56,7 +56,7 @@ import { HANDBOOK_MODEL, HANDBOOK_NOTE, HANDBOOK_SECTIONS, heldLists } from './h
 import {
   spanRef,
   verseRef,
-  versesIn,
+  verseCountIn,
   type Corpus,
   type Held,
   type ModelTextPiece,
@@ -78,7 +78,7 @@ export const placesOf = (corpus: Corpus): ReadonlyMap<string, ModelPlace> => {
   for (const book of corpus.books) {
     const chapters = corpus.counts.get(book) ?? 0;
     for (let chapter = 1; chapter <= chapters; chapter++) {
-      const count = versesIn(corpus, book, chapter).length;
+      const count = verseCountIn(corpus, book, chapter);
       for (let verse = 1; verse <= count; verse++)
         places.set(verseRef(book, chapter, verse), { book, chapter, verse });
     }

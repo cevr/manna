@@ -92,6 +92,21 @@ const chainOf = (node: Element) => {
   return parts.join('>');
 };
 
+/** `chainOf`'s classes and styles from a node up, each ancestor's read once per frame: the answer reads `at`'s own, then its parent's chain. */
+const chainsUp = () => {
+  const known = new Map<Element, string>();
+  const chainUp = (at: Element): string => {
+    const kept = known.get(at);
+    if (kept !== undefined) return kept;
+    const own = `${at.getAttribute('class') ?? ''}/${at.getAttribute('style') ?? ''}`;
+    const parent = at.parentElement;
+    const chain = parent === null ? own : `${own}>${chainUp(parent)}`;
+    known.set(at, chain);
+    return chain;
+  };
+  return chainUp;
+};
+
 /**
  * The faults the frame `host` shows now against `scheme` (the system's by
  * default), each once, at most six; `known` keeps each style chain's
@@ -104,8 +119,9 @@ export const lookFaults = (
   known = new Map<string, readonly string[]>(),
 ) => {
   const faults = [...groundFaults(host, scheme)];
+  const chainUp = chainsUp();
   for (const node of host.querySelectorAll('*')) {
-    const chain = `${scheme}|${chainOf(node)}`;
+    const chain = `${scheme}|${String(ownText(node))}>${node.getAttribute('aria-disabled') ?? ''}>${chainUp(node)}`;
     const found = known.get(chain) ?? nodeFaults(node, scheme);
     known.set(chain, found);
     faults.push(...found);
@@ -114,13 +130,23 @@ export const lookFaults = (
 };
 
 /**
+ * `lookFaults`'s kept faults for the rigs that watch the app's own frames,
+ * shared by every mount of the process: a key is a node's style chain
+ * (its own and each ancestor's classes and inline style, with its own
+ * text's presence) under a scheme, and react-native-web names a class by
+ * its declarations, so a key answers the same on every mount as on every
+ * frame of one.
+ */
+export const KEPT_LOOKS = new Map<string, readonly string[]>();
+
+/**
  * Holds every frame of `host` (each DOM mutation batch) from now on to the
  * oracle, against the scheme `scheme` names at that frame (a test's model
  * of the system), and keeps the first eight faults with the heading shown.
  */
 export const watchLook = (host: Element, scheme: () => Scheme) => {
   const faults: string[] = [];
-  const looks = new Map<string, readonly string[]>();
+  const looks = KEPT_LOOKS;
   const frames = { seen: 0 };
   const check = () => {
     frames.seen += 1;
