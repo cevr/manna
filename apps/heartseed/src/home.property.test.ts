@@ -23,15 +23,17 @@
  *   at its edges.
  *
  * It catches a furrow moved, a kind or icon of the wrong source or book, a
- * ripe count that counts an ear, a ready mark on a done item or missing on
+ * caption of the wrong form or a plural for one verse, a ready mark on a done item or missing on
  * a phrase's verse, and a greeting a minute early or by UTC.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr, Option } from 'effect';
 
+import type { PlantStage } from './field';
 import { plantOf, type Plant, type ReadGarden } from './garden';
 import {
+  captionOf,
   furrowsOf,
   greetingAt,
   greetingOf,
@@ -116,7 +118,7 @@ const plainFurrow = (furrow: Furrow): ModelFurrow => ({
   source: plainSource(furrow.source),
   kind: furrow.kind,
   icon: furrow.icon,
-  ripe: furrow.ripe,
+  caption: furrow.caption,
   plants: furrow.plants.map((plant) => ({
     reference: plant.reference,
     stage: plant.stage,
@@ -143,13 +145,18 @@ const tallyFurrows = (want: readonly ModelFurrow[], records: readonly Recall[], 
   if (new Set(references).size < references.length) bump(tally, 'a verse in two lists');
   if (records.some((r) => verseOfRule(r.reference) !== r.reference)) bump(tally, 'phrase plants');
   for (const kind of new Set(want.map((furrow) => furrow.kind))) bump(tally, `kind:${kind}`);
-  if (want.some((furrow) => !furrow.ripe.startsWith('0 '))) bump(tally, 'some ripe');
+  for (const furrow of want) {
+    if (furrow.caption.endsWith(' ready today')) bump(tally, 'caption:ready');
+    else if (furrow.caption.endsWith(' planted')) bump(tally, 'caption:planted');
+    else bump(tally, 'caption:to learn');
+    if (furrow.caption.startsWith('1 verse ')) bump(tally, 'caption:one verse');
+  }
   if (plants.some((plant) => plant.stage === 'ear')) bump(tally, 'an ear');
   if (plants.some((plant) => plant.ready)) bump(tally, 'ready');
 };
 
 describe('the furrows', () => {
-  it('are the rows of the field, each its list’s id, title, range, kind and icon, its ripe count and each plant’s stage, ready mark and label, as H1 makes them over generated gardens and lists in every zone', () => {
+  it('are the rows of the field, each its list’s id, title, range, kind and icon, its caption and each plant’s stage, ready mark and label, as H1 makes them over generated gardens and lists in every zone', () => {
     const next = random(7_301);
     const tally: Tally = new Map();
     const wrong: string[] = [];
@@ -183,11 +190,37 @@ describe('the furrows', () => {
       ['kind:own', 30],
       ['kind:held', 30],
       ['kind:taught', 30],
-      ['some ripe', 30],
+      ['caption:ready', 30],
+      ['caption:planted', 30],
+      ['caption:to learn', 30],
+      ['caption:one verse', 30],
       ['an ear', 30],
       ['ready', 30],
     ] as const)
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);
+  });
+
+  it('caption each furrow in words: ready today first, else planted, else to learn, one verse singular', () => {
+    const plant = (stage: PlantStage, ready = false) => ({ stage, ready });
+    expect(
+      [
+        [plant('seed', true)],
+        [plant('seed', true), plant('ear', true), plant('not planted')],
+        [plant('blade')],
+        [plant('full corn'), plant('ear'), plant('not planted')],
+        [plant('not planted')],
+        [plant('not planted'), plant('not planted')],
+        [plant('not planted', true)],
+      ].map(captionOf),
+    ).toEqual([
+      '1 verse · 1 ready today',
+      '3 verses · 2 ready today',
+      '1 verse · 1 planted',
+      '3 verses · 2 planted',
+      '1 verse to learn',
+      '2 verses to learn',
+      '1 verse · 1 ready today',
+    ]);
   });
 
   it('take their kind and icon from the source: a bow for the own row and a collection, a harp for a psalm, a lamp for a proverb, a scroll for any other book and a loose verse', () => {

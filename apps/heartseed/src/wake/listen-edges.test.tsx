@@ -6,7 +6,7 @@
  * Say it and outside the scroll view, and two taps in one turn read its own
  * text once; a refused speak leaves Listen and Say it with no alert and
  * nothing written; and Say it while Listen reads stops the voice before the
- * recognizer listens. Each launch lands on home, whose `Begin` (the device
+ * recognizer listens. Each launch lands on home, whose `Start` (the device
  * due) leads to Today.
  */
 
@@ -63,13 +63,13 @@ const recordOf = (reference: string, words: number): readonly [string, string] =
 
 const faultsOf = (): Faults => ({ unread: false, refuse: false });
 
-/** Waits for home, which the launch lands on, to show `Begin` (the device is due), holds it with no frame fault, and takes it to Today. */
+/** Waits for home, which the launch lands on, to show `Start` (the device is due), holds it with no frame fault, and takes it to Today. */
 const begin = async (app: WakeLaunch) => {
-  expect(await app.until(() => app.headings().join('|') === 'Your field' && app.has('Begin'))).toBe(
+  expect(await app.until(() => app.headings().join('|') === 'Your field' && app.has('Start'))).toBe(
     true,
   );
   expect(app.faults).toEqual([]);
-  expect(await app.tap('Begin')).toBe(true);
+  expect(await app.tap('Start')).toBe(true);
 };
 
 /** The node of the button named `label`; the test fails when none shows. */

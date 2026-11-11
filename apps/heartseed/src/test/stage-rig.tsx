@@ -22,7 +22,7 @@
  * end exactly as `tendedModel` has it (kept in `ends`).
  *
  * The root opens as it opens for a reader: a read launch lands on home,
- * where `begin` takes `Begin` to Today, and an unread one (every listing
+ * where `begin` takes `Start` to Today, and an unread one (every listing
  * or open failing) opens Today with no `Your field` in any frame. Every
  * frame, from before the root's first render, is also held to the root's
  * frame rule (`rootFaults` through `watchRoot`), its faults failing the
@@ -289,7 +289,7 @@ export const mount = async (
     const end = endShown(host);
     ends.push({ grew: end.grew, grown: end.grown });
   };
-  /** `Next`, the end of the run it gives (`ended`), the clock set to the passage's due, and the reader's trip through the Settings sheet (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`, `Begin`), ending on Today with the sheet held and its look checked: a new plan, which offers Say it on the passage again with no result shown. */
+  /** `Next`, the end of the run it gives (`ended`), the clock set to the passage's due, and the reader's trip through the Settings sheet (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`, `Start`), ending on Today with the sheet held and its look checked: a new plan, which offers Say it on the passage again with no result shown. */
   const renew = async () => {
     await click(button('Next'));
     await ended();
@@ -313,17 +313,17 @@ export const mount = async (
   };
   /**
    * The step from home to Today on a read launch: home shows with its
-   * heading alone and `Begin`, no frame faulting the root's rule, and
-   * `Begin` taken lands on Today with Say it.
+   * heading alone and `Start`, no frame faulting the root's rule, and
+   * `Start` taken lands on Today with Say it.
    */
   const begin = async () => {
     expect(await until(() => headings().join('|') === 'Your field')).toBe(true);
     expect({
       headings: headings(),
-      begin: button('Begin') !== undefined,
+      begin: button('Start') !== undefined,
       faults: rootRule.faults,
     }).toEqual({ headings: ['Your field'], begin: true, faults: [] });
-    await click(button('Begin'));
+    await click(button('Start'));
     expect(await until(() => headings().join('|') === 'Today' && sayIt() !== undefined)).toBe(true);
   };
   if (garden === 'read' && held === undefined) await begin();

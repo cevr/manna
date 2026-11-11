@@ -28,15 +28,15 @@
  *   the reading finishes or Next is tapped), Next, Say it, Listening, a
  *   peek, a grade, Continue,
  *   two taps queued before a render, and a relaunch in every phase and
- *   activity, the pending frame included; on home, `Begin` when the model
+ *   activity, the pending frame included; on home, `Start` when the model
  *   shows an item, and in its done state `Later` (the device's clock moved
  *   to the passage's due, then a relaunch); on Today, Next after a kept
  *   recall and a new plan at the passage's due (the device's clock moved
  *   there, then `Your field`, home's Settings sheet and its Minutes radio
- *   checked, `Done`, and `Begin` when the plan shows an item).
+ *   checked, `Done`, and `Start` when the plan shows an item).
  *
  * A read launch with a plant of any verse, and Continue, show home, whose
- * first show makes Today's plan; `Begin` shows that plan on Today. Every
+ * first show makes Today's plan; `Start` shows that plan on Today. Every
  * frame, from before the root's first render, is held to the root's frame
  * rule (`rootFaults` through `watchRoot`, the garden the launch's read), and
  * an unread launch shows no `Your field` in any frame. Every frame (each DOM
@@ -58,7 +58,7 @@
  * over the line of what grew and each grown verse's name, by `tendedModel`
  * over the plan made last) when that plan holds the passage, else the
  * counts line alone; home's counts line
- * by the same model, and `Begin` exactly when the plan shows an item. It counts
+ * by the same model, and `Start` exactly when the plan shows an item. It counts
  * words without printing one.
  *
  * It also gives the first minute's screen cases their launch
@@ -98,10 +98,11 @@ import { gestureOf } from './gesture';
 import { device } from './one';
 import { plantFaults, STAGE_IMAGE } from './plant-image-rule';
 import { voiceOverFaults } from './voiceover';
-import { END, endShown, watchRoot } from './root-rule';
+import { cardLineModel } from './home-model';
+import { cardLine, END, endShown, watchRoot } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
-import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
+import { dueModel, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '../voice';
 
@@ -843,10 +844,10 @@ const mount = async (
     await act(async () => root.unmount());
     host.remove();
   };
-  /** Home as it shows: its counts line (none before a plan) and whether it offers `Begin`. */
+  /** Home as it shows: its Today card's lines (none before a plan) and whether it offers `Start`. */
   const home = () => ({
-    counts: (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim(),
-    begin: node('Begin') !== undefined,
+    counts: cardLine(host),
+    begin: node('Start') !== undefined,
   });
   return {
     host,
@@ -1471,14 +1472,17 @@ export const session = (count: (key: string) => void) => {
     ).toEqual({ counts: DONE, verse: false, stage: false, grade: false, result: false });
   };
 
-  /** Home at rest: the counts line the plan made at its first show gives (`Nothing to tend now` in its done state), and `Begin` exactly when that plan shows an item. */
+  /** Home at rest: the Today card's lines the plan made at its first show gives (`All tended for today` in its done state), and `Start` exactly when that plan shows an item. */
   const checkHome = (r: Rig, here: string) => {
     if (m.screen !== 'home') return;
     const run = runOf(m);
     count(`run:home:${run}`);
     const recalls = plantsOf(m.disk);
     expect(r.home(), `${here}: home`).toEqual({
-      counts: countsModel(m.plan?.items ?? [], (reference) => recalls.get(reference)?.length ?? 0),
+      counts: cardLineModel(
+        m.plan?.items ?? null,
+        (reference) => recalls.get(reference)?.length ?? 0,
+      ),
       begin: run !== 'done',
     });
   };
@@ -1743,7 +1747,7 @@ export const session = (count: (key: string) => void) => {
    * A new plan at the passage's due: the device's clock moved there (a minute
    * on at least), then the trip through home's Settings sheet
    * (`renewBySettings`: `Your field`, the Minutes radio checked, which writes
-   * the minutes and makes the plan again at its tap, `Done`, and `Begin` when
+   * the minutes and makes the plan again at its tap, `Done`, and `Start` when
    * the plan shows an item). Arriving on home makes nothing; the trip ends on
    * Today when the plan shows an item, else on home's done state.
    */
@@ -2022,7 +2026,7 @@ export const session = (count: (key: string) => void) => {
         break;
       case 'Begin':
         go(before, 'today');
-        await r.click('Begin');
+        await r.click('Start');
         break;
       case 'Later':
         toDue();
@@ -2470,7 +2474,7 @@ const offerDone = (offering: Offering) => {
   offering.late();
 };
 
-/** Home: `Begin` when the plan shows an item, else `Later` (the clock to the passage's due, then a relaunch); and a late event. */
+/** Home: `Start` when the plan shows an item, else `Later` (the clock to the passage's due, then a relaunch); and a late event. */
 const offerHome = ({ m, pick, choose, add, late }: Offering) => {
   if (runOf(m) === 'done')
     add(
@@ -2638,7 +2642,7 @@ const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
  * stays under its budget; together they are every floor: each ending in
  * letters and alone, missed words none, some and all, each write fault,
  * each launch, read and disk, each relaunch activity, each voice event and
- * tap batch, home (opened at a launch and after Continue, `Begin`, `Later`
+ * tap batch, home (opened at a launch and after Continue, `Start`, `Later`
  * and a relaunch from it), and Today's run (Next, the done state, a new
  * plan at the passage's due). Every part draws from the whole generator; its group only
  * steers which unmet values come first, and is what it asserts.
@@ -2956,10 +2960,10 @@ export const screenLaunch = async (
   /** Today's action buttons shown, by name: Say it, Listening or Next. */
   const actions = () =>
     buttons().filter((name) => name === 'Say it' || name === 'Listening' || name === 'Next');
-  /** Home as it shows: its counts line (none before a plan) and whether it offers `Begin`. */
+  /** Home as it shows: its Today card's lines (none before a plan) and whether it offers `Start`. */
   const home = () => ({
-    counts: (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim(),
-    begin: buttons().includes('Begin'),
+    counts: cardLine(host),
+    begin: buttons().includes('Start'),
   });
   /** Holds every frame of the launch to the root's rule: no fault, and on an unread garden no `Your field` heading in any frame. */
   const leave = async () => {

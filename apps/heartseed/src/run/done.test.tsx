@@ -1,7 +1,7 @@
 /**
  * Today's run against its model on generated devices, leaning toward its
  * edges on Today (`src/test/run-walk.ts`): a launch taken from home to
- * Today by `Begin`, then the done state after a Minutes trip through home's
+ * Today by `Start`, then the done state after a Minutes trip through home's
  * Settings sheet and after the field (home in the done state, the launch
  * ending there), and a verse that comes due at a trip's Minutes tap.
  */

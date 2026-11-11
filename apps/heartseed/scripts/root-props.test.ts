@@ -13,7 +13,7 @@
  * its first letter in either case, wherever it stands in the sentence:
  * `No` and `Without` open a sentence as they may stand inside one, while
  * `NO`, `WITHOUT`, `not`, `nor`, `within` and a word ending in `no` lead
- * nothing. A capitalised name (`Begin`, `Minutes`) is a label on screen,
+ * nothing. A capitalised name (`Start`, `Minutes`) is a label on screen,
  * not a prop. The files read are git's listing of the package
  * (tracked or untracked, never ignored: the set `test:infra` hashes), each
  * `.ts` or `.tsx` file under `src` or `app` once, a listed file gone from

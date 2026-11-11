@@ -4,7 +4,7 @@
  * `src/wake/clocks.test.tsx` does not walk: a verse planted minutes before
  * the first launch (the new piece held back for the day), a garden with
  * nothing due, whose home shows the done state until an away's return
- * brings an item and `Begin`, the launch's end on home, and a return, a
+ * brings an item and `Start`, the launch's end on home, and a return, a
  * Minutes trip and a return again.
  */
 

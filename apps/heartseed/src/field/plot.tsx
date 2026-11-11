@@ -1,14 +1,14 @@
 /**
  * The field's furrows as home A draws them. A furrow's head holds its icon,
  * its title (plain text, never a heading: a reference may spell `Your field`
- * or `Today`, and the field holds one heading, its own), how many of its
- * plants are ripe and, for a passage or a Handbook list the reader holds,
+ * or `Today`, and the field holds one heading, its own), its caption
+ * (`captionOf`) and, for a passage or a Handbook list the reader holds,
  * its `Remove` (`Remove <reference>`, `Remove <title>`); under
  * it, its plants, then a soil line. Each plant is one button named
  * `<reference>, <stage>` (then `, ready today`), selected while its verse is
  * the one chosen; inside it, hidden from the screen reader, the gold dot of
  * a plant ready today, its stage drawn with the home's icons of the scheme
- * now (bare soil before planting) and its verse number. The legend draws
+ * now (bare soil before planting), and no text. The legend draws
  * the four stages the same way, over Mark 4:28. Every text is a text role
  * of the scheme, and every fill a role.
  */
@@ -17,7 +17,7 @@ import { Match, Option } from 'effect';
 import { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { verseNumberOf, type PlantStage } from '../field';
+import type { PlantStage } from '../field';
 import { STAGES, type Stage } from '../garden';
 import type { Furrow, FurrowPlant, HomeIcon } from '../home';
 import { ICON_IMAGES } from '../home/icons';
@@ -60,13 +60,14 @@ export function Icon({
   );
 }
 
-/** A pill of the field, outlined in ink, or filled in ink with `onInk` text when `strong`: at least 44 pt tall, named `label`, showing `shown` after an optional icon, disabled while a remove is pending. */
+/** A pill of the field, outlined in ink, or filled in ink with `onInk` text when `strong`, the card's whole width and 52 pt tall when `wide`: at least 44 pt tall, named `label`, showing `shown` after an optional icon, disabled while a remove is pending. */
 export function Control({
   label,
   shown,
   pending,
   onPress,
   strong = false,
+  wide = false,
   icon,
   testID,
 }: {
@@ -75,6 +76,7 @@ export function Control({
   readonly pending: boolean;
   readonly onPress: () => void;
   readonly strong?: boolean;
+  readonly wide?: boolean;
   readonly icon?: HomeIcon;
   readonly testID?: string;
 }) {
@@ -90,6 +92,7 @@ export function Control({
       style={({ pressed }) => [
         styles.pill,
         strong && styles.strong,
+        wide && styles.wide,
         pressed && look.pressed,
         pending && look.disabled,
       ]}
@@ -114,7 +117,7 @@ function Drawing({ stage, motion }: { readonly stage: PlantStage; readonly motio
   );
 }
 
-/** One plant: a button over its dot, its drawing and its number, each hidden inside it. */
+/** One plant: a button over its dot and its drawing, each hidden inside it, with no text. */
 function Plot({
   plant,
   motion,
@@ -148,9 +151,6 @@ function Plot({
       {plant.ready && <View aria-hidden testID="dot" style={[styles.dot, styles.ready]} />}
       {!plant.ready && <View aria-hidden style={styles.dot} />}
       <Drawing stage={plant.stage} motion={motion} />
-      <Text aria-hidden style={styles.number}>
-        {verseNumberOf(plant.reference)}
-      </Text>
     </Pressable>
   );
 }
@@ -173,7 +173,7 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
     }),
   );
 
-/** One furrow: its head (icon, title, ripe count and, on a held passage or list, `Remove`), its plants, and its soil line. */
+/** One furrow: its head (icon, title, caption and, on a held passage or list, `Remove`), its plants, and its soil line. */
 export function FurrowRow({
   furrow,
   motion,
@@ -200,8 +200,8 @@ export function FurrowRow({
           <Text testID="row-title" style={styles.title}>
             {furrow.title}
           </Text>
-          <Text testID="ripe" style={styles.ripe}>
-            {furrow.ripe}
+          <Text testID="caption" style={styles.furrowCaption}>
+            {furrow.caption}
           </Text>
         </View>
         {Option.match(removalOf(furrow), {
@@ -261,29 +261,11 @@ export function Furrows({
   ));
 }
 
-/** The dashed row at the field's end: `Add verses`, as the bar's does. */
-export function AddRow({ onAdd }: { readonly onAdd: () => void }) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  return (
-    <Pressable
-      testID="add-row"
-      role="button"
-      aria-label="Add verses"
-      onPress={onAdd}
-      style={({ pressed }) => [styles.addRow, pressed && look.pressed]}
-    >
-      <Icon name="add" size={28} />
-      <Text style={styles.addText}>Add verses</Text>
-    </Pressable>
-  );
-}
-
 /** The four stages as the plants draw them, named, hidden from the screen reader, over Mark 4:28. */
 export function Legend() {
   const styles = useThemed(sheets);
   return (
-    <View style={styles.legendPlace}>
+    <View testID="legend" style={styles.legendPlace}>
       <View aria-hidden style={styles.legend}>
         {STAGES.map((stage) => (
           <View key={stage} style={styles.key}>
@@ -312,13 +294,14 @@ const sheets = themed((color, face) =>
       justifyContent: 'center',
     },
     strong: { backgroundColor: color.ink },
+    wide: { alignSelf: 'stretch', minHeight: 52 },
     pillText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     strongText: { color: color.onInk },
     furrow: { gap: 8 },
     head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     names: { flex: 1, gap: 2 },
     title: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
-    ripe: { fontFamily: face, fontSize: 13, color: color.quiet },
+    furrowCaption: { fontFamily: face, fontSize: 13, color: color.quiet },
     plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
     plot: {
       width: 48,
@@ -338,20 +321,7 @@ const sheets = themed((color, face) =>
       borderRadius: 1.5,
       backgroundColor: color.soil,
     },
-    number: { fontFamily: face, fontSize: 11, color: color.ink },
     soil: { height: 2, borderRadius: 1, backgroundColor: color.furrow },
-    addRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      minHeight: 56,
-      borderRadius: 20,
-      borderWidth: 1.5,
-      borderStyle: 'dashed',
-      borderColor: color.furrow,
-    },
-    addText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
     legend: {
       flexDirection: 'row',

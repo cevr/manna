@@ -3,7 +3,7 @@
  * (`src/test/header-walk.ts`), over devices 6 and 7: the minutes key
  * holding an empty text, none of the four, and the device with no recall,
  * whose launch opens the first minute with no choice and no sheet shown;
- * `Your field` from Today's done state reaches home with no `Begin`, and a
+ * `Your field` from Today's done state reaches home with no `Start`, and a
  * renewal from the end of a run with one verse grown.
  * Devices 0 and 5 are `header-b.test.tsx`'s.
  */

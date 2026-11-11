@@ -164,7 +164,7 @@ const openFaults = (
   if (roots.length !== 1 || root === undefined) return [`${roots.length} add-sheet roots`];
   const out: string[] = [];
   const headings = [...modal.querySelectorAll('[role="heading"]')].map(text);
-  if (headings.join('|') !== 'Add verses') out.push(`the sheet's headings ${headings.join('|')}`);
+  if (headings.join('|') !== 'Add a list') out.push(`the sheet's headings ${headings.join('|')}`);
   const done = sheetControl('Done');
   if (done === undefined) out.push('no Done');
   else if (scrolled(done)) out.push('Done inside the scroll view');
@@ -212,8 +212,8 @@ export const addSheetFaults = (
   const out: string[] = [];
   if (page.querySelector('[data-testid="add-sheet"]') !== null)
     out.push('an add-sheet outside a modal');
-  if ([...page.querySelectorAll('[role="heading"]')].some((node) => text(node) === 'Add verses'))
-    out.push('a heading Add verses with no sheet');
+  if ([...page.querySelectorAll('[role="heading"]')].some((node) => text(node) === 'Add a list'))
+    out.push('a heading Add a list with no sheet');
   return out;
 };
 

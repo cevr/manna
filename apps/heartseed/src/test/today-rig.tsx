@@ -12,7 +12,7 @@
  * reads it, its name and its role. It counts words without printing one.
  *
  * The root opens as it opens for a reader: a read disk lands on home, where
- * `begin` takes `Begin` to Today (each disk here holds the passage due or
+ * `begin` takes `Start` to Today (each disk here holds the passage due or
  * not yet planted, so home offers it), and an unread disk opens Today with
  * no `Your field` in any frame. Every frame, from before the root's first
  * render, is also held to the root's frame rule (`rootFaults` through
@@ -531,7 +531,7 @@ export const mount = async (
    * A new plan at the passage's due: `Next`, then the end of the run it
    * gives (`ended`), the clock set to the due, and the reader's trip through the Settings sheet
    * (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`,
-   * `Begin`), which makes the plan again with no recital under way (the
+   * `Start`), which makes the plan again with no recital under way (the
    * recital's marks and result go) and ends on Today, the sheet held and
    * its look checked; Today then offers Say it on the passage under `cue`.
    */
@@ -563,13 +563,13 @@ export const mount = async (
   mounted.add(leave);
   /**
    * The step from home to Today on a read disk: home shows with its heading
-   * alone and `Begin`, no frame faulting the root's rule, and `Begin` taken
+   * alone and `Start`, no frame faulting the root's rule, and `Start` taken
    * lands on Today with its action.
    */
   const begin = async () => {
     expect(await until(() => headings().join('|') === 'Your field')).toBe(true);
     const offered = all('[role="button"]').find(
-      (node) => (node.getAttribute('aria-label') ?? node.textContent) === 'Begin',
+      (node) => (node.getAttribute('aria-label') ?? node.textContent) === 'Start',
     );
     expect({ headings: headings(), begin: offered !== undefined, faults: rootRule.faults }).toEqual(
       {

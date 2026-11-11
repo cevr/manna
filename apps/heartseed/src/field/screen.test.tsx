@@ -3,8 +3,8 @@
 /**
  * The field from Today, through the screen rig (`src/test/field-rig.tsx`),
  * which holds every frame to the root's and the field's rules: a launch on
- * home, `Begin` to Today, and the way to the field by `Your field` and back
- * by `Begin` through recitals, Again and a relaunch, Today coming back as it was and
+ * home, `Start` to Today, and the way to the field by `Your field` and back
+ * by `Start` through recitals, Again and a relaunch, Today coming back as it was and
  * the device untouched across each open and each way back, and every text
  * at AA contrast in every field frame. It counts words without printing one.
  */
@@ -39,12 +39,11 @@ describe('the field from Today', () => {
       [passage.reference, 'Made 1:1', 'Made 1:1'],
     ]);
     expect(first.rows[0]?.plants).toEqual([
-      { label: `${passage.reference}, not planted`, drawn: 'soil', shown: '10' },
+      { label: `${passage.reference}, not planted`, drawn: 'soil', shown: '' },
     ]);
-    expect(first.rows.map((row) => [row.icon, row.ripe])).toEqual([
-      ['bow', '0 of 1 ripe'],
-      ['scroll', '0 of 1 ripe'],
-      ['scroll', '0 of 1 ripe'],
+    expect([first.rows.map((row) => row.icon), app.captions()]).toEqual([
+      ['bow', 'scroll', 'scroll'],
+      ['1 verse · 1 ready today', '1 verse · 1 planted', '1 verse · 1 planted'],
     ]);
     await app.back();
     expect(app.stage()).toBe('Stage: not planted');

@@ -23,7 +23,7 @@ const CONTROLS = '[role="button"],[role="radio"],[role="checkbox"],[role="link"]
 /** The first minute's headings, whose screen holds a recital, a summary and a stage of its own. */
 const FIRST = new Set(['Hear it', 'Say it with help', 'Say it alone', 'Planted']);
 
-/** The screens on which `Your field` is a way back besides Today and When I need…. */
+/** The screens on which `Your field` is a way back besides Today and the end of a run. */
 const BACKS = new Set(['About']);
 
 /** The chooser's first back, to the Add verses sheet, by its text. */
@@ -42,6 +42,21 @@ const addBackFaults = (on: string, backs: readonly Element[]) => {
   return out;
 };
 
+/** The Today card's lines as a reader reads them, `<headline> | <parts>`, the empty text when no line shows. */
+export const cardLine = (host: Element) =>
+  [
+    text(host.querySelector('[data-testid="today-headline"]')),
+    text(host.querySelector('[data-testid="today-parts"]')),
+  ]
+    .filter((line) => line !== '')
+    .join(' | ');
+
+/** The Today card's lines on home as the walks compare them: `[cardLine]` once a plan gives it a headline, else none. */
+export const homeLines = (host: Element) =>
+  [...host.querySelectorAll('[data-testid="today-headline"]')]
+    .slice(0, 1)
+    .map(() => cardLine(host));
+
 /** Home's own nodes, by test id. */
 export const HOME_NODES = [
   'greeting',
@@ -49,8 +64,7 @@ export const HOME_NODES = [
   'harvest',
   'row',
   'field-plant',
-  'foot',
-  'begin-card',
+  'today-card',
   'chosen',
 ];
 
@@ -174,7 +188,7 @@ const endFaults = (
   return out;
 };
 
-/** What `Your field` shows wrong on the screen `on`: off its screens, on an unread garden, on Today while listening, missing from Today or When I need…, not one, or in a scroll view. */
+/** What `Your field` shows wrong on the screen `on`: off its screens, on an unread garden, on Today while listening, missing from Today or the end, not one, or in a scroll view. */
 const backFaults = (
   on: string,
   garden: 'read' | 'unread',
@@ -183,25 +197,24 @@ const backFaults = (
 ) => {
   const out: string[] = [];
   const offered = backs.length > 0;
-  const allowed = on === 'Today' || on === END || on === 'When I need…' || BACKS.has(on);
+  const allowed = on === 'Today' || on === END || BACKS.has(on);
   if (offered && !allowed) out.push(`Your field on ${on}`);
   if (offered && garden === 'unread') out.push(`Your field on an unread garden (${on})`);
   if (on === 'Today' && offered && listening) out.push('Your field on Today while listening');
-  const owed =
-    on === 'When I need…' || on === END || (on === 'Today' && garden === 'read' && !listening);
+  const owed = on === END || (on === 'Today' && garden === 'read' && !listening);
   if (owed && !offered) out.push(`no Your field on ${on}`);
   if (backs.length > 1) out.push(`${backs.length} Your field controls on ${on}`);
   if (backs.some(scrolled)) out.push(`Your field inside a scroll view on ${on}`);
   return out;
 };
 
-/** What the gear `Settings` shows wrong on the screen `on`: not exactly one on home, any on another screen, or one inside a scroll view. */
-const settingsFaults = (on: string, gears: readonly Element[]) => {
+/** What the `Settings` row shows wrong on the screen `on`: not exactly one on home, any on another screen, or one outside the scroll view. */
+const settingsFaults = (on: string, rows: readonly Element[]) => {
   const out: string[] = [];
-  if (on === 'Your field' && gears.length !== 1)
-    out.push(`${gears.length} Settings controls on Your field`);
-  if (on !== 'Your field' && gears.length > 0) out.push(`Settings on ${on}`);
-  if (gears.some(scrolled)) out.push('Settings inside a scroll view');
+  if (on === 'Your field' && rows.length !== 1)
+    out.push(`${rows.length} Settings controls on Your field`);
+  if (on !== 'Your field' && rows.length > 0) out.push(`Settings on ${on}`);
+  if (rows.some((node) => !scrolled(node))) out.push('Settings outside the scroll view');
   return out;
 };
 
@@ -220,7 +233,7 @@ const PLAN_CONTROLS = new Set([
   'Your field',
   'Plant',
   'Voice',
-  'Add verses',
+  'Add a list',
   'Any passage',
 ]);
 
@@ -254,25 +267,25 @@ const listeningFaults = (host: Element) =>
  * read completes. A frame shows one screen, by its one heading, or the
  * pending frame (no heading), which holds the reference alone. `Your field`
  * is a way back from Today (on a read garden while nothing listens, and then
- * always), the end of a run `The field is tended` (always), When I need…
- * (its one back) and About, never in a scroll view,
+ * always), the end of a run `The field is tended` (always) and About,
+ * never in a scroll view,
  * and nowhere else: never on home, never on the chooser's `Add a passage`,
  * never on an unread garden (`backFaults`). The chooser's `Add a passage`
  * shows exactly one control whose text is `‹ Add verses`, its way back to
  * the Add verses sheet, outside its scroll view, and no other screen shows
- * one (`addBackFaults`); home's own `Add verses`, with no `‹ `, is no back.
+ * one (`addBackFaults`); home's own `Add a list`, with no `‹ `, is no back.
  * `Listening`, Today's action and Today's
  * nodes show only on Today (or in the first minute, whose recitals are its
- * own), home's nodes only on home, `When I need…` only on home outside the
- * scroll view, exactly one `Settings` on home outside the scroll view and
- * none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
+ * own), home's nodes only on home, no `When I need…` on any screen,
+ * exactly one `Settings` on home, a row inside the scroll
+ * view, and none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
  * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`. The
  * Settings sheet lies outside the host, so its nodes are the sheet rule's
  * (`settings-rig.ts`). While the host shows `Listening`, on any frame,
  * nothing that makes the plan is in reach anywhere in the host's document,
  * the sheet's portal included (`listeningFaults`): no control named
- * `Settings`, `Your field`, `Plant` (or starting `Plant `, the Add verses
- * sheet's offers), `Voice`, `Add verses`, `Any passage` or `Remove` (or
+ * `Settings`, `Your field`, `Plant` (or starting `Plant `, the Add a list
+ * sheet's offers), `Voice`, `Add a list`, `Any passage` or `Remove` (or
  * starting `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
  * node, each the fault `<name> in reach while listening`. The end of a run
  * (`endFaults`) holds no control but `Your field` (`the control <name> on
@@ -313,9 +326,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
     if (ACTIONS.has(nameOf(node)) && !today) out.push(`${nameOf(node)} on ${on}`);
   for (const id of ids(host, TODAY_NODES)) if (!today) out.push(`Today's ${id} on ${on}`);
   if (named('Today').length > 0) out.push(`a control named Today on ${on}`);
-  const needs = named('When I need…');
-  if (needs.length > 0 && on !== 'Your field') out.push(`When I need… on ${on}`);
-  if (needs.some(scrolled)) out.push('When I need… inside a scroll view');
+  if (named('When I need…').length > 0) out.push(`When I need… on ${on}`);
   for (const id of ids(host, HOME_NODES))
     if (on !== 'Your field') out.push(`home's ${id} on ${on}`);
   out.push(...endFaults(host, on, garden, controls));
@@ -340,7 +351,7 @@ export const watchRoot = (host: Element, garden: 'read' | 'unread') => {
     const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
     frames.push({
       headings,
-      counts: text(host.querySelector('[data-testid="counts"]')),
+      counts: cardLine(host),
       listening: [...host.querySelectorAll(CONTROLS)].some((node) => nameOf(node) === 'Listening'),
     });
     for (const fault of rootFaults(host, garden)) {
@@ -394,7 +405,7 @@ export const watchedLaunch = async <App extends { readonly leave: () => Promise<
   const { host, watch } = added;
   if (host === undefined || watch === undefined) throw new Error('the rig added no host');
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text).join('|');
-  const counts = () => text(host.querySelector('[data-testid="counts"]'));
+  const counts = () => cardLine(host);
   return {
     app,
     host,

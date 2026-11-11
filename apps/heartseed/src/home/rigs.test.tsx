@@ -2,10 +2,10 @@
 
 /**
  * The rig contract (hshomerigs R2, R3), for every rig of Today's run: a
- * launch on a read garden with the passage due lands on home with `Begin`,
+ * launch on a read garden with the passage due lands on home with `Start`,
  * and the rig's own step takes it to Today, which shows the passage with
  * `Say it`; the screens, pending dropped, are home then Today. A passage
- * planted at the launch shows home's done state, with no `Begin` and no
+ * planted at the launch shows home's done state, with no `Start` and no
  * Today after it. A launch on an unread garden opens Today alone, with no
  * `Your field` in any frame. Every frame holds to the root's frame rule
  * (`watchedLaunch`).
@@ -70,13 +70,13 @@ const named = (host: Element, label: string) =>
 const shows = (host: Element, label: string) => named(host, label) !== undefined;
 
 /**
- * Holds one launch to the contract: home shows with `Begin` before the
+ * Holds one launch to the contract: home shows with `Start` before the
  * rig's `step`, then Today shows the passage with `Say it`; the screens,
  * pending dropped, are home then Today, and no frame faults the root's rule.
  */
 const throughHome = async (watched: Watched, until: Until, step: () => Promise<unknown>) => {
   expect(await until(() => watched.home() || watched.today())).toBe(true);
-  const begun = watched.home() && shows(watched.host, 'Begin');
+  const begun = watched.home() && shows(watched.host, 'Start');
   await step();
   expect(await until(() => watched.today() && shows(watched.host, 'Say it'))).toBe(true);
   expect({
@@ -95,7 +95,7 @@ const throughHome = async (watched: Watched, until: Until, step: () => Promise<u
 };
 
 describe('every rig of Today’s run launches through home', () => {
-  it('today-rig’s mount shows home, then Today by Begin', async () => {
+  it('today-rig’s mount shows home, then Today by Start', async () => {
     const held = heldDisk(SEED);
     const w = await watchedLaunch('read', () =>
       todayMount(scriptedSource(recite(passage.text, { every: 5, pace: 1 })), held.disk, {
@@ -107,46 +107,46 @@ describe('every rig of Today’s run launches through home', () => {
     await w.end();
   });
 
-  it('stage-rig’s mount shows home, then Today by Begin', async () => {
+  it('stage-rig’s mount shows home, then Today by Start', async () => {
     device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]);
     const w = await watchedLaunch('read', () => stageMount([], Promise.resolve(), { now: AT }));
     await throughHome(w, w.app.until, () => w.app.begin());
     await w.end();
   });
 
-  it('run-rig’s launch shows home, then Today by Begin', async () => {
+  it('run-rig’s launch shows home, then Today by Start', async () => {
     const w = await watchedLaunch('read', () => launch(deviceOf([DUE]), READ, { now: T0 }));
-    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
+    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Start')).toBe(true));
     expect(await w.end()).toEqual([]);
   });
 
-  it('session-rig’s launch shows home, then Today by Begin', async () => {
+  it('session-rig’s launch shows home, then Today by Start', async () => {
     const w = await watchedLaunch('read', () =>
       session.launch(session.deviceOf([DUE]), session.faultsOf(), { now: T0 }),
     );
-    await throughHome(w, w.app.until, () => w.app.tap('Begin'));
+    await throughHome(w, w.app.until, () => w.app.tap('Start'));
     expect(w.app.faults).toEqual([]);
     await w.end();
   });
 
-  it('wake-rig’s launch shows home, then Today by Begin', async () => {
+  it('wake-rig’s launch shows home, then Today by Start', async () => {
     const w = await watchedLaunch('read', () =>
       wakeLaunch(deviceOf([DUE]), READ, { now: T0 }, [PASSAGE]),
     );
-    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
+    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Start')).toBe(true));
     expect(await w.end()).toEqual([]);
   });
 
-  it('phrase-rig’s mount shows home, then Today by Begin', async () => {
+  it('phrase-rig’s mount shows home, then Today by Start', async () => {
     const w = await watchedLaunch('read', () =>
       phraseMount({ map: new Map([DUE]), writes: 0 }, { now: T0 }, [], { text: '', skip: [] }),
     );
-    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
+    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Start')).toBe(true));
     expect(w.app.rooted()).toEqual([]);
     await w.end();
   });
 
-  it('first-rig’s play shows home with Begin, then Today by Begin', async () => {
+  it('first-rig’s play shows home with Start, then Today by Start', async () => {
     const w = await watchedLaunch('read', async () => {
       const m = await first.play({ parts: ['passage'], voice: 'absent', launch: FIRST_OK }, [
         { _tag: 'Begin' },
@@ -168,11 +168,11 @@ describe('every rig of Today’s run launches through home', () => {
     await w.app.until(() => w.today(), 50);
     expect({
       counts: w.counts(),
-      begin: w.app.has('Begin'),
+      begin: w.app.has('Start'),
       screens: screensOf(w.watch.frames).filter((each) => each !== 'pending'),
       faults: w.watch.faults,
     }).toEqual({
-      counts: 'Nothing to tend now',
+      counts: 'All tended for today | Nothing is due right now.',
       begin: false,
       screens: ['Your field'],
       faults: [],

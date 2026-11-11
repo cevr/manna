@@ -4,14 +4,14 @@
  * More ways of home's Settings sheet (the rest are `ways.test.tsx`'s),
  * through the field bar's rig (`src/test/bar-rig.tsx`) and the session's
  * rig (`src/test/session-rig.tsx`), each frame held to the root's rule (one
- * `Settings` on home outside the scroll view, none elsewhere) and, while
+ * `Settings` row at the end of home's scroll view, none elsewhere) and, while
  * the sheet's rig watches, to the sheet's rule (`src/test/settings-rig.ts`).
  *
  * A relaunch with the sheet open opens home with it closed. No other
- * screen has `Settings`: Today, When I need…, the chooser, About, the first
- * minute, and Today on an unread garden. Today shows no `Minutes` and no
- * `Voice`: the sheet's choices are the only ones, and Today's counts line
- * follows the sheet's minutes. The session rig's launches here mount the
+ * screen has `Settings`: Today, the chooser, About, the first minute, and
+ * Today on an unread garden. Today shows no `Minutes` and no `Voice`: the
+ * sheet's choices are the only ones, and Today's counts line follows the
+ * sheet's minutes, its minutes those of home's Today card. The session rig's launches here mount the
  * app's root, so the root's rule holds Today strictly.
  */
 
@@ -24,7 +24,11 @@ import { record } from '../test/field-rig';
 import { device } from '../test/one';
 import { choicesOf, deviceOf, faultsOf, launch } from '../test/session-rig';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from '../test/settings-rig';
+import { cardLine } from '../test/root-rule';
 import { activateSheet } from '../test/shelves-rig';
+
+/** The `about <k> min` a line reads, or none. */
+const minutesOf = (line: string) => /about \d+ min/u.exec(line)?.[0] ?? '';
 
 const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]';
 
@@ -71,7 +75,7 @@ describe('Settings, more ways', () => {
     await again.leave();
   });
 
-  it('shows on no screen but home: Today, When I need…, the chooser, About, the first minute, Today on an unread garden', async () => {
+  it('shows on no screen but home: Today, the chooser, About, the first minute, Today on an unread garden', async () => {
     launchWith();
     const rig = await mountBar(0, false);
     const seen: Record<string, number> = {};
@@ -86,11 +90,10 @@ describe('Settings, more ways', () => {
       seen[heading] = named(rig, 'Settings').length;
       expect(await back()).toBe(true);
     };
-    await visit(() => rig.tap('Begin'), 'Today');
-    await visit(() => rig.tap('When I need…'), 'When I need…');
+    await visit(() => rig.tap('Start'), 'Today');
     await visit(
       async () =>
-        (await rig.tapId('add-verses')) &&
+        (await rig.tapId('add-list')) &&
         (await activateSheet(rig.until)) &&
         tapInSheet('Any passage'),
       'Add a passage',
@@ -103,7 +106,7 @@ describe('Settings, more ways', () => {
     }, 'About');
     await toField(rig);
     expect({ seen, faults: rig.faults }).toEqual({
-      seen: { Today: 0, 'When I need…': 0, 'Add a passage': 0, About: 0 },
+      seen: { Today: 0, 'Add a passage': 0, About: 0 },
       faults: [],
     });
     await rig.leave();
@@ -142,20 +145,20 @@ describe('Settings, more ways', () => {
     await toField(rig);
     await openSettings(rig);
     expect(await tapInSheet('10 min')).toBe(true);
-    const counts = text(rig.host.querySelector('[data-testid="counts"]'));
+    const counts = minutesOf(cardLine(rig.host));
     expect(await closeSettings(rig, 'Done')).toBe(true);
-    expect(await rig.tap('Begin')).toBe(true);
+    expect(await rig.tap('Start')).toBe(true);
     expect(await rig.until(() => headings(rig).join('|') === 'Today')).toBe(true);
     const today = {
       choices: choicesOf(rig.host),
-      counts: text(rig.host.querySelector('[data-testid="session"]')),
+      counts: minutesOf(text(rig.host.querySelector('[data-testid="session"]'))),
     };
     expect(await rig.tap('Your field')).toBe(true);
     await toField(rig);
     await openSettings(rig);
     expect(await tapInSheet('Voice')).toBe(true);
     expect(await closeSettings(rig, 'Done')).toBe(true);
-    expect(await rig.tap('Begin')).toBe(true);
+    expect(await rig.tap('Start')).toBe(true);
     expect(await rig.until(() => headings(rig).join('|') === 'Today')).toBe(true);
     const voiced = choicesOf(rig.host).voices;
     expect(await rig.tap('Your field')).toBe(true);

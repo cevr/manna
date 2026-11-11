@@ -164,7 +164,7 @@ const make = (next: () => number, rows: number): Model => {
       pick(next, ['span', 'div', 'p']),
     );
     title.attrs['class'] = 'ink';
-    row.children.push(title, node('ripe', '0 of 1 ripe', 'span'));
+    row.children.push(title, node('caption', '1 verse · 1 planted', 'span'));
     const icon = node('furrow-icon');
     const image = node('', '', 'img');
     image.attrs = { src: '/assets/home/bow-light.png', 'aria-hidden': 'true' };
@@ -307,7 +307,7 @@ const changes: Record<(typeof commands)[number], (context: CommandContext) => vo
     ancestor.children.push({
       key: Math.max(...all.map((n) => n.key)) + 1,
       tag: 'span',
-      attrs: { 'data-testid': 'counts' },
+      attrs: { 'data-testid': 'today-card' },
       text: '9',
       children: [],
     });
@@ -329,7 +329,7 @@ const changes: Record<(typeof commands)[number], (context: CommandContext) => vo
   },
   testid: ({ own, next }) => {
     own.attrs['data-testid'] =
-      pick(next, ['sown', 'row-title', 'field-plant', 'ripe', 'counts', 'x|/>']) ?? '';
+      pick(next, ['sown', 'row-title', 'field-plant', 'caption', 'today-card', 'x|/>']) ?? '';
   },
   'sheet-insert': ({ model, next }) => {
     model.css += pick(next, contexts) ?? '';
@@ -548,7 +548,7 @@ const assertWitness = (witness: string, host: Element, old: ReturnType<typeof re
       harvest: Infinity,
       titles: Infinity,
       numbers: Infinity,
-      ripe: Infinity,
+      captions: Infinity,
     });
   if (witness === 'malformed') {
     expect(got.rows[0]?.title).toBe('<title not one seen and exposed>');

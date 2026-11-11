@@ -8,8 +8,8 @@
  * space, colons; `test/field-model.ts`), canonically equivalent twins each
  * its own row, references spelled as the screens' own words (`Your field`,
  * `Today`, the counts, the stages) with spaces of any kind, in the order
- * first sown, at every stage, each label the exact reference and stage, each
- * verse number the text after the reference's last colon, one `Your field`
+ * first sown, at every stage, each label the exact reference and stage, no
+ * plant showing a number (hsstart T3), one `Your field`
  * heading and no `Today` heading in every field frame, and every readout at
  * AA contrast.
  */
@@ -43,7 +43,7 @@ const SPOKEN = [
 ] as const;
 
 describe('a large garden on the field', () => {
-  it('shows a generated garden of any count past forty other verses of any reference, canonical twins apart, references spelled as the screens’ own words, in the order first sown, at every stage, each label the exact reference and stage, each verse number the text after its reference’s last colon, one Your field heading and no Today heading, every readout at AA contrast', async () => {
+  it('shows a generated garden of any count past forty other verses of any reference, canonical twins apart, references spelled as the screens’ own words, in the order first sown, at every stage, each label the exact reference and stage, no plant showing a number, one Your field heading and no Today heading, every readout at AA contrast', async () => {
     const next = random(112);
     const said = random(28);
     const start = Date.UTC(2026, 3, 1) / DAY;
@@ -112,7 +112,7 @@ describe('a large garden on the field', () => {
     expect(
       field.rows.flatMap((row) => row.plants).find((plant) => plant.label?.startsWith('Other:'))
         ?.shown,
-    ).toBe('0');
+    ).toBe('');
     const lowest = Math.min(...Object.values(app.readouts()));
     expect([lowest >= 4.5, field.faint, app.faults]).toEqual([true, [], []]);
     expect(await app.leave()).toEqual([]);

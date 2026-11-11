@@ -3,11 +3,11 @@
 /**
  * Today over days with long verses learned as phrases, walked through the
  * root (`test/phrase-rig.tsx`), part b, file two: generated device 3,
- * seven days, each launch through home's `Begin`, held to the walk's
+ * seven days, each launch through home's `Start`, held to the walk's
  * oracle after every step. Its floors: Listen on a phrase, a making while
  * a phrase's recital listens (at the session seam), a launch later on a
  * day a new phrase was
- * said (no second new piece), six days after the first, `Begin` taken
+ * said (no second new piece), six days after the first, `Start` taken
  * from home, and the end of a run (`The field is tended`) with nothing,
  * one and several verses grown, one of them grown by its phrase (the
  * part's end floors: file one's device shows no end).

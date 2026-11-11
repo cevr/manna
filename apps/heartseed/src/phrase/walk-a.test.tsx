@@ -3,13 +3,13 @@
 /**
  * Today over days with long verses learned as phrases, walked through the
  * root (`test/phrase-rig.tsx`), part a: generated device 1, four days,
- * each launch through home's `Begin`, held to the walk's oracle after
- * every step (home's counts line and `Begin`; Today's item, counts,
+ * each launch through home's `Start`, held to the walk's oracle after
+ * every step (home's counts line and `Start`; Today's item, counts,
  * action, Listen and cue; the voice's text and lit words; the summary; the
  * record; the disk; the root's frame rule). Its floors: new and reviewed
  * phrases, Listen on a phrase, a making while a phrase's recital listens
  * (at the session seam), a join under first letters, a launch later on a
- * day a new phrase was said, Chatham, `Begin` taken from home, and the
+ * day a new phrase was said, Chatham, `Start` taken from home, and the
  * end of a run (`The field is tended`) with nothing, one and several
  * verses grown, one of them grown by its phrase.
  */

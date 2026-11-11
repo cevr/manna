@@ -84,7 +84,7 @@ const plantRead = (plant: Element) => {
       .join(''),
   };
 };
-const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'ripe', 'counts', 'chosen']
+const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'caption', 'today-card', 'chosen']
   .map((id) => `[data-testid="${id}"]`)
   .join(',');
 
@@ -101,7 +101,6 @@ export const fieldReadModel = (host: Element) => {
           ? text(title)
           : '<title not one seen and exposed>',
       icon: icons.length === 1 && icon !== undefined ? oneIcon(icon) : `<${icons.length} icons>`,
-      ripe: counted(row, 'ripe'),
       plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map(plantRead),
     };
   });
@@ -141,6 +140,6 @@ export const readoutsModel = (host: Element) => {
     harvest: lowest('harvest'),
     titles: lowest('row-title'),
     numbers: lowest('field-plant'),
-    ripe: lowest('ripe'),
+    captions: lowest('caption'),
   };
 };

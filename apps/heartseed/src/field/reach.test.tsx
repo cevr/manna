@@ -140,12 +140,12 @@ describe('the way to the field', () => {
     };
     const click = (node: Element | undefined) =>
       node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-    expect(await until(() => button('Begin') !== undefined)).toBe(true);
-    await act(async () => click(button('Begin')));
+    expect(await until(() => button('Start') !== undefined)).toBe(true);
+    await act(async () => click(button('Start')));
     expect(await until(() => button('Your field') !== undefined)).toBe(true);
     await act(async () => click(button('Your field')));
     expect(await until(() => headings().includes('Your field'))).toBe(true);
-    await act(async () => click(button('Begin')));
+    await act(async () => click(button('Start')));
     expect(await until(() => button('Say it') !== undefined)).toBe(true);
     hold.on = true;
     await act(async () => click(button('Say it')));

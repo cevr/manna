@@ -1,8 +1,8 @@
 /**
- * Home's Add verses sheet: React Native's own `Modal` as a page sheet over
+ * Home's Add a list sheet: React Native's own `Modal` as a page sheet over
  * home, as the Settings sheet is (`src/settings/sheet.tsx`). Its root
  * (`add-sheet`) holds a header fixed above the scroll view (the one heading
- * `Add verses` and `Done`), the scroll view with one head per shelf of
+ * `Add a list` and `Done`), the scroll view with one head per shelf of
  * `SHELVES`, and a foot fixed under it, clear of the home indicator, for
  * the one line: the limit line or the plant's alert.
  *
@@ -178,7 +178,7 @@ function Head({
 }
 
 /**
- * The Add verses sheet, open while mounted, over home's `field` and the
+ * The Add a list sheet, open while mounted, over home's `field` and the
  * reader's `passages`: `onDone` closes it (`Done`, the swipe down, Escape),
  * `onAny` shows the chooser, and `onAdded` shows home once a plant landed.
  */
@@ -247,7 +247,7 @@ export function AddSheet({
       <View testID="add-sheet" style={styles.root}>
         <View style={styles.header}>
           <Text role="heading" aria-level={1} style={styles.title}>
-            Add verses
+            Add a list
           </Text>
           <Pressable
             role="button"

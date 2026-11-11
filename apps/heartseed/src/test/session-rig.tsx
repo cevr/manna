@@ -46,7 +46,7 @@ import { Haptics } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
 import { deadline } from './elapsed';
-import { END, watchRoot } from './root-rule';
+import { END, homeLines, watchRoot } from './root-rule';
 
 /** The four radios' names, in the order the group shows them. */
 export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
@@ -430,7 +430,8 @@ export const launch = async (
       [...host.querySelectorAll('[data-testid="grown"]')].map(
         (node) => node.getAttribute('aria-label') ?? '',
       ),
-    homeCounts: () => [...host.querySelectorAll('[data-testid="counts"]')].map(text),
+    /** The Today card's lines on home (`<headline> | <parts>`), none before a plan. */
+    homeCounts: () => homeLines(host),
     release: () => gate.resolve(),
     leave,
   };

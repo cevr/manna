@@ -15,8 +15,8 @@
  * launched again one to three hours later to tend up to two more (no new
  * piece on a day one was said, a phrase's included). Each launch lands on
  * home, whose first show makes the plan: with an item shown, home shows
- * the model's counts line and `Begin`, which the walk takes to Today; with
- * none, home shows the done state's counts line and no `Begin`, no other
+ * the model's counts line and `Start`, which the walk takes to Today; with
+ * none, home shows the done state's counts line and no `Start`, no other
  * screen follows, and the launch ends there.
  *
  * Each item: `Listen` on a new piece in eight of ten, where the voice must be
@@ -99,7 +99,8 @@ import {
   tendedModel,
 } from './run-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
-import { END, watchRoot } from './root-rule';
+import { cardLineModel } from './home-model';
+import { END, homeLines, watchRoot } from './root-rule';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
 import { hostZone, offsetIn, restore, travel } from './zone';
@@ -383,11 +384,11 @@ export const mount = async (
       grown: [...host.querySelectorAll('[data-testid="grown"]')].map(nameOf),
     };
   };
-  /** Home as the walk compares it: its headings, its counts line, and whether `Begin` shows. */
+  /** Home as the walk compares it: its headings, its counts line, and whether `Start` shows. */
   const home = () => ({
     headings: headings(),
-    counts: [...host.querySelectorAll('[data-testid="counts"]')].map(textOf),
-    begin: named('Begin', 'button') !== undefined,
+    counts: homeLines(host),
+    begin: named('Start', 'button') !== undefined,
   });
   const leave = async () => {
     rule.stop();
@@ -577,9 +578,11 @@ class PhraseWalk {
     return tended;
   }
 
-  /** The counts line home's foot shows: the plan's, none before a plan. */
+  /** The Today card's line home shows: the plan's by `cardLineModel`, none before a plan. */
   homeWant() {
-    return this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)];
+    return this.run.plan === null
+      ? []
+      : [cardLineModel(this.run.plan, this.recallsNow, shownModel(this.run, this.recallsNow))];
   }
 
   want() {
@@ -590,7 +593,10 @@ class PhraseWalk {
     return {
       headings: [tended === null ? 'Today' : END],
       references: shown === null ? [] : [shown.reference],
-      counts: tended === null ? this.homeWant() : [],
+      counts:
+        tended === null && this.run.plan !== null
+          ? [countsModel(this.run.plan, this.recallsNow)]
+          : [],
       action: action === null ? [] : [action],
       listen: listenModel(this.run, this.recallsNow, {
         unread: false,
@@ -673,7 +679,7 @@ class PhraseWalk {
 
   /**
    * A launch named `day`: home's first show makes the plan; with an item,
-   * home's heading, the model's counts line and `Begin`, then `Begin` and
+   * home's heading, the model's counts line and `Start`, then `Start` and
    * Today's first show; with none, home's done state (`homeDone`). Answers
    * whether the launch goes on to its items.
    */
@@ -694,12 +700,12 @@ class PhraseWalk {
     const begin = shownModel(this.run, this.recallsNow) !== null;
     if (!this.onHome(step, begin)) return false;
     if (!begin) return this.homeDone(step);
-    if (!(await app.tap('Begin'))) return this.fail(`${step}: no Begin`);
+    if (!(await app.tap('Start'))) return this.fail(`${step}: no Start`);
     bump(this.cover, 'home:begin');
-    return this.settle(`${step}, Begin`);
+    return this.settle(`${step}, Start`);
   }
 
-  /** Home as the model has it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; no fault of the root's rule or the disk's. */
+  /** Home as the model has it: one heading, `Your field`; the model's counts line; `Start` exactly when `begin`; no fault of the root's rule or the disk's. */
   onHome(step: string, begin: boolean) {
     const seen = this.mounted.home();
     const expected = { headings: ['Your field'], counts: this.homeWant(), begin };

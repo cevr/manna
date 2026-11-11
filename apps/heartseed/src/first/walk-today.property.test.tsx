@@ -1,6 +1,6 @@
 /**
  * The root route against the first minute's model on generated devices
- * (`src/test/first-rig.tsx`), steered to Today's run floors: `Begin` from
+ * (`src/test/first-rig.tsx`), steered to Today's run floors: `Start` from
  * home, a finished recital on Today whose write lands, Next after a kept
  * recall, the done state, the end of the run with a verse grown, and a new
  * plan made there at the passage's due.

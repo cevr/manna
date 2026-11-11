@@ -329,8 +329,8 @@ it('lights the words through Today and seeks under a held finger, every step aga
         node?.__reactLayoutHandler?.({ nativeEvent: { layout: box }, timeStamp: 0 });
       });
     });
-  for (let turn = 0; turn < 300 && button('Begin') === undefined; turn++) await settle(1);
-  await tap('Begin');
+  for (let turn = 0; turn < 300 && button('Start') === undefined; turn++) await settle(1);
+  await tap('Start');
   for (let turn = 0; turn < 300 && button('Listen') === undefined; turn++) await settle(1);
   const faults: string[] = [];
   const tally: Tally = { holds: 0, moves: 0, releases: 0, cancels: 0, swipes: 0, ranges: 0 };

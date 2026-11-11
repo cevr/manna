@@ -3,10 +3,10 @@
 /**
  * Today over days with long verses learned as phrases, walked through the
  * root (`test/phrase-rig.tsx`), part b, file one: generated device 2 (its
- * layer teaching Fear), four days, each launch through home's `Begin`,
+ * layer teaching Fear), four days, each launch through home's `Start`,
  * held to the walk's oracle after every step. Its floors: Fear's phrases
  * and joins on Today, joined verses reviewed, the phrases' records, and
- * `Begin` taken from home. The part's other file is `walk-b2.test.tsx`.
+ * `Start` taken from home. The part's other file is `walk-b2.test.tsx`.
  */
 
 import { describe, expect, it } from 'bun:test';

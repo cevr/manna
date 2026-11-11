@@ -12,7 +12,7 @@
  * (every item of a plan that is not empty done, none held) `The field is
  * tended` over no counts line, the line of what grew and each grown verse's
  * name by `tendedModel`, tallied `end:none`, `end:one` or `end:many`; home by `choose-model.ts`'s
- * `fieldWant`, with the plan's counts line and `Begin` exactly when the
+ * `fieldWant`, with the plan's counts line and `Start` exactly when the
  * model shows a verse or the passages read unread (R3); the chooser by its
  * `chooserWant`.
  *
@@ -27,7 +27,7 @@
  * Commands by screen. Today: `Your field`, `Say it` heard then `Next`, a
  * Minutes trip (`Your field`, `<n> min` in home's Settings sheet, `Done`,
  * then home's way to Today), or a relaunch after the next 04:00 local. A
- * tap of a control that does not show is a fault. Home: `Begin` (a
+ * tap of a control that does not show is a fault. Home: `Start` (a
  * relaunch after the next 04:00 local when home offers none), a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
  * once or twice in one turn), or an add (the bar's `Add verses`, the
  * Add verses sheet over home with every shelf closed, then its
@@ -101,7 +101,8 @@ import {
 } from './run-model';
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
 import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
-import { END, rootFaults } from './root-rule';
+import { cardLineModel } from './home-model';
+import { END, homeLines, rootFaults } from './root-rule';
 import { closeSettings, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, localDay, MINUTE, planModel } from './session-model';
 import { listenModel } from './wake-model';
@@ -308,14 +309,20 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       }),
     };
   };
-  /** R3: home offers `Begin` exactly when the model shows a verse, or over unread passages (the app's own passage, unplanned). */
+  /** R3: home offers `Start` exactly when the model shows a verse, or over unread passages (the app's own passage, unplanned). */
   const offersBegin = () => held.tag === 'Unread' || shownModel(run, recallsNow) !== null;
-  /** Home settled: the field and its bar, the plan's counts line over read passages, and `Begin` by R3. */
-  const homeWant = () => ({
-    field: fieldWant(heldOn(device.disk), PROMISE, held, bar),
-    counts: held.tag === 'Read' && run.plan !== null ? [countsModel(run.plan, recallsNow)] : [],
-    begin: offersBegin(),
-  });
+  /** Home settled: the field and its bar, and the Today card unless an ask holds its place: its line over read passages and `Start` by R3. */
+  const homeWant = () => {
+    const card = bar.ask === undefined;
+    return {
+      field: fieldWant(heldOn(device.disk), PROMISE, held, bar),
+      counts:
+        card && held.tag === 'Read' && run.plan !== null
+          ? [cardLineModel(run.plan, recallsNow, shownModel(run, recallsNow))]
+          : [],
+      begin: card && offersBegin(),
+    };
+  };
   const wantOn = () => {
     if (screen === 'Today') return todayWant();
     if (screen === 'home' || screen === 'sheet') return homeWant();
@@ -362,10 +369,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     if (screen === 'home' || screen === 'sheet')
       return {
         field: readBar(at.host),
-        counts: [...at.host.querySelectorAll('[data-testid="counts"]')].map(
-          (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-        ),
-        begin: control('Begin') !== undefined,
+        counts: homeLines(at.host),
+        begin: control('Start') !== undefined,
       };
     return readChooser(at.host);
   };
@@ -449,7 +454,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     reached.add(`made:${what}`);
   };
 
-  /** Home's way to Today: `Begin` when home offers it, else a relaunch the next morning. */
+  /** Home's way to Today: `Start` when home offers it, else a relaunch the next morning. */
   const today = async () => {
     if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
@@ -458,10 +463,10 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       return relaunch();
     }
     reached.add('home:begin');
-    await tap('Begin');
+    await tap('Start');
     screen = 'Today';
     bar = QUIET;
-    await settle('Begin');
+    await settle('Start');
   };
   const field = async () => {
     await tap('Your field');
@@ -535,7 +540,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     bar = QUIET;
     await arrive(`relaunch ${mornings}`);
   };
-  /** A launch: home settled with the plan made at its first show, then `Begin` when home offers it, drawing nothing. */
+  /** A launch: home settled with the plan made at its first show, then `Start` when home offers it, drawing nothing. */
   const arrive = async (step: string) => {
     const at = await opened();
     await at.until(() => at.headings().includes('Your field'));
@@ -543,9 +548,9 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     await settle(step);
     reached.add(offersBegin() ? 'home:launch-begin' : 'home:launch-done');
     if (!offersBegin()) return;
-    await tap('Begin');
+    await tap('Start');
     screen = 'Today';
-    await settle(`${step}, Begin`);
+    await settle(`${step}, Start`);
   };
 
   /** Taps the `Remove` of held passage `at`, by its place among the rows of equal title. */
@@ -686,7 +691,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     }
   };
   const add = async () => {
-    await click((app as Launch).host.querySelector('[data-testid="add-verses"]') ?? undefined);
+    await click((app as Launch).host.querySelector('[data-testid="add-list"]') ?? undefined);
     bar = QUIET;
     await toSheet('Add verses');
     if (!(await tapSheet('Any passage')))

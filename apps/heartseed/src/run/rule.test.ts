@@ -27,7 +27,6 @@ const END = 'The field is tended';
 const SCREENS = [
   'Your field',
   'Today',
-  'When I need…',
   'Add a passage',
   'About',
   'Hear it',
@@ -373,6 +372,6 @@ describe("the root's rule at the end of a run", () => {
       })),
     );
     expect(mismatched(cells)).toEqual([]);
-    expect(cells.length).toBe(27);
+    expect(cells.length).toBe(24);
   });
 });

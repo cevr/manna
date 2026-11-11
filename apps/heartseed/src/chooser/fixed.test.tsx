@@ -5,14 +5,14 @@
  * hsfield's lost tap): the root mounted over a disk with the promise planted
  * a day before `NIGHT`, the clock frozen there, and one passage held, held to `rootFaults` and `barFaults` on
  * every frame while the reader goes from home through each screen a control
- * can hide on: Today by `Begin` and a recital (`Say it`, `Listening`, the
+ * can hide on: Today by `Start` and a recital (`Say it`, `Listening`, the
  * grades and `Next` in the footer), the run's end that `Next` shows
  * (`The field is tended`, `1 grew a stage.` and the promise grown to a blade,
- * read exactly, its header `Your field` the way on), home's bar
- * (`When I need…`, `Add verses`, the ask and its `Remove` and `Keep`), the
- * Add verses sheet's `Done`, the chooser's header (each step's back, the
- * first `‹ Add verses` back to the sheet) and footer (`Up to 20 verses` and
- * `Plant` under Psalms 119's 176 verses), and When I need…'s `Your field`.
+ * read exactly, its header `Your field` the way on), home's fixed top (the
+ * ask and its `Remove` and `Keep`), the Add a list sheet's `Done`, the
+ * chooser's header (each step's back, the first `‹ Add verses` back to the
+ * sheet) and footer (`Up to 20 verses` and `Plant` under Psalms 119's 176
+ * verses), and About's `Your field`, reached by home's Settings row.
  *
  * It catches any of those controls, an alert or the limit line moved into a
  * scroll view, as hsfield's `‹ Today` at the foot of the field's scroll was,
@@ -29,7 +29,7 @@ import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
 import { END, endShown } from '../test/root-rule';
-import { sheetControl } from '../test/settings-rig';
+import { openSettings, sheetControl, tapInSheet } from '../test/settings-rig';
 import { activateSheet, tapSheet } from '../test/shelves-rig';
 
 /**
@@ -53,8 +53,8 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
     expect(await rig.until(() => then === '' || rig.control(then) !== undefined)).toBe(true);
     seen.push(label);
   };
-  expect(await rig.until(() => rig.control('Begin') !== undefined)).toBe(true);
-  await step('Begin', 'Say it');
+  expect(await rig.until(() => rig.control('Start') !== undefined)).toBe(true);
+  await step('Start', 'Say it');
   await step('Say it', 'Listening');
   await step('Listening', 'Next');
   await step('Next', 'Your field');
@@ -65,10 +65,10 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
     grew: ['1 grew a stage.'],
     grown: [`${passage.reference}, blade`],
   });
-  await step('Your field', 'Add verses');
+  await step('Your field', 'Add a list');
   await step('Remove John 15:1-5', 'Keep');
-  await step('Keep', 'Add verses');
-  expect(await rig.tapId('add-verses')).toBe(true);
+  await step('Keep', 'Add a list');
+  expect(await rig.tapId('add-list')).toBe(true);
   expect(await activateSheet(rig.until)).toBe(true);
   seen.push('Add verses');
   const done = sheetControl('Done');
@@ -86,11 +86,13 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   expect(await activateSheet(rig.until)).toBe(true);
   seen.push('Add verses back');
   expect(await tapSheet('Done')).toBe(true);
-  expect(await rig.until(() => rig.control('When I need…') !== undefined)).toBe(true);
+  expect(await rig.until(() => rig.control('Add a list') !== undefined)).toBe(true);
   seen.push('Done');
-  await step('When I need…', 'Your field');
-  await step('Your field', 'When I need…');
+  await openSettings(rig);
+  expect(await tapInSheet('About')).toBe(true);
+  expect(await rig.until(() => rig.control('Your field') !== undefined)).toBe(true);
+  await step('Your field', 'Add a list');
   await rig.leave();
-  expect(seen).toHaveLength(19);
+  expect(seen).toHaveLength(18);
   expect(rig.faults).toEqual([]);
 });

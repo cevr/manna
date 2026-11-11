@@ -1,28 +1,28 @@
 /**
- * The field as home A draws it, the app's home. A bar fixed above the scroll
- * view holds, in its first row, `When I need…` once a plan is made in this
- * launch and, at the row's end, the gear `Settings`, an icon alone at least
- * 44 pt square, which opens the Settings sheet (`../settings/sheet`) over
- * home; under that row, with the reader's passages read, `Add verses`
- * while fewer than 3 passages and lists are held together, else the limit
- * line; a furrow's `Remove` (a held passage's or a planted list's) puts
- * its ask there instead, with `Remove` and `Keep`, and a remove that does
- * not land leaves an alert there. Under the bar scroll the greeting by
- * the hour, the heading, the days sown and the harvest, a hint, one furrow
- * per row (`./plot`), the dashed `Add verses` row whenever the bar offers
- * it, and the legend under Mark 4:28. A foot fixed under the scroll view
- * (`./foot`) holds the Begin card or, with a verse chosen, the chosen card
- * with `Start here`. So every control but the plants, a furrow's `Remove`
- * and the row is on screen without a scroll.
+ * The field as home draws it, the app's home. Fixed above the scroll view
+ * sit the greeting by the hour and one card (`./card`): the Today card
+ * with the day's line and its one full-width button (`Start`, or
+ * `Practice anyway` when nothing is due), or, with a verse chosen, the
+ * chosen card with `Practice this verse` or `Learn this verse`, or, while
+ * a furrow's `Remove` (a held passage's or a planted list's) asks, the ask
+ * with `Remove` and `Keep`; a remove that does not land leaves an alert
+ * under it. Nothing else is fixed, so what starts a recital is the first
+ * and largest thing on the screen.
+ *
+ * In the scroll view: the heading `Your field` with the days sown and the
+ * harvest; the label `Lists` with `Add a list` while fewer than 3 passages
+ * and lists are held together, else the limit line; one furrow per row
+ * (`./plot`); the legend under Mark 4:28; then the rows `Settings`, which
+ * opens the Settings sheet (`../settings/sheet`) over home, and `How
+ * Heartseed works`, which shows About.
  *
  * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
  * lets it go, and a tap on another moves the choice: one verse at most, the
  * screen's own state, as are the ask, the alert and whether the sheet is
- * open, all dropped when the reader leaves. The sheet's `About` shows
- * About. With the passages unread it offers no add and no remove.
- * From a tap of the ask's `Remove` until its answer, no tap of a field
- * control changes anything, even two in one turn, and each shows as
- * disabled.
+ * open, all dropped when the reader leaves. With the passages unread it
+ * offers no add and no remove. From a tap of the ask's `Remove` until its
+ * answer, no tap of a field control changes anything, even two in one
+ * turn, and each shows as disabled.
  */
 
 import { useAtomSet } from '@effect/atom-react';
@@ -35,14 +35,15 @@ import { uprootList, uprootPassage } from '../app';
 import { LIMIT_LINE } from '../chooser';
 import { harvestText, sownText, type Field } from '../field';
 import type { Furrow, Greeting } from '../home';
+import type { TodayCard } from '../home/today';
 import { themed, useThemed } from '../look';
 import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
 import { SettingsSheet } from '../settings/sheet';
-import { Foot, type Chosen } from './foot';
-import { AddRow, Control, Furrows, Icon, Legend, type Removal } from './plot';
+import { ChosenCard, TodayCardView, type Chosen, type StartKind } from './card';
+import { Control, Furrows, Icon, Legend, type Removal } from './plot';
 
-/** The bar's own state: the passage or list a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
+/** The screen's remove state: the passage or list a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
 interface Bar {
   readonly ask: Option.Option<Removal>;
   readonly alert: Option.Option<string>;
@@ -57,68 +58,109 @@ const alertAfter = (answer: string, removal: Removal): Option.Option<string> => 
   return Option.some(`${removal.name} was not removed. Try again.`);
 };
 
-/** Whether the bar offers `Add verses`: the passages read, no ask showing, and fewer than 3 passages and lists held together. */
+/** Whether the field offers `Add a list`: the passages read, no ask showing, and fewer than 3 passages and lists held together. */
 const offersAdd = (passages: PassagesView, bar: Bar) =>
   passages._tag === 'Read' && Option.isNone(bar.ask) && heldCount(passages) < MOST_PASSAGES;
 
-/** What the bar offers after `When I need…` with the passages read: the ask while one shows, else `Add verses` under 3 held, else the limit line. */
-function Offer({
-  bar,
-  held,
-  onAdd,
+/** The ask a furrow's `Remove` puts in the card's place, with `Remove` and `Keep`. */
+function Ask({
+  removal,
+  pending,
   onConfirm,
   onKeep,
 }: {
-  readonly bar: Bar;
-  readonly held: number;
-  readonly onAdd: () => void;
+  readonly removal: Removal;
+  readonly pending: boolean;
   readonly onConfirm: (removal: Removal) => void;
   readonly onKeep: () => void;
 }) {
   const styles = useThemed(sheets);
-  return Option.match(bar.ask, {
-    onSome: (removal) => (
-      <View style={styles.ask}>
-        <Text testID="ask" style={styles.line}>
-          {`Remove ${removal.name}? Its plants stay in your field.`}
-        </Text>
-        <View style={styles.answers}>
-          <Control
-            label="Remove"
-            shown="Remove"
-            pending={bar.pending}
-            onPress={() => onConfirm(removal)}
-          />
-          <Control label="Keep" shown="Keep" pending={bar.pending} onPress={onKeep} />
-        </View>
-      </View>
-    ),
-    onNone: () => {
-      if (held >= MOST_PASSAGES)
-        return (
-          <Text testID="limit" style={styles.line}>
-            {LIMIT_LINE}
-          </Text>
-        );
-      return (
+  return (
+    <View style={styles.ask}>
+      <Text testID="ask" style={styles.line}>
+        {`Remove ${removal.name}? Its plants stay in your field.`}
+      </Text>
+      <View style={styles.answers}>
         <Control
-          testID="add-verses"
-          label="Add verses"
-          shown="Add verses"
+          label="Remove"
+          shown="Remove"
+          pending={pending}
+          onPress={() => onConfirm(removal)}
+        />
+        <Control label="Keep" shown="Keep" pending={pending} onPress={onKeep} />
+      </View>
+    </View>
+  );
+}
+
+/** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held, else nothing while an ask shows. */
+function Lists({
+  passages,
+  bar,
+  onAdd,
+}: {
+  readonly passages: PassagesView;
+  readonly bar: Bar;
+  readonly onAdd: () => void;
+}) {
+  const styles = useThemed(sheets);
+  const full =
+    passages._tag === 'Read' && Option.isNone(bar.ask) && heldCount(passages) >= MOST_PASSAGES;
+  return (
+    <View style={styles.lists}>
+      <Text style={styles.label}>Lists</Text>
+      {offersAdd(passages, bar) && (
+        <Control
+          testID="add-list"
+          label="Add a list"
+          shown="Add a list"
           icon="add"
           pending={false}
           onPress={onAdd}
         />
-      );
-    },
-  });
+      )}
+      {full && (
+        <Text testID="limit" style={styles.limit}>
+          {LIMIT_LINE}
+        </Text>
+      )}
+    </View>
+  );
 }
 
-/** The chosen verse as the foot shows it: none when no furrow holds it now. */
+/** A row at the field's end: a button the width of the field, named and showing `label`. */
+function EndRow({
+  label,
+  pending,
+  onPress,
+}: {
+  readonly label: string;
+  readonly pending: boolean;
+  readonly onPress: () => void;
+}) {
+  const look = useLook();
+  const styles = useThemed(sheets);
+  return (
+    <Pressable
+      role="button"
+      aria-label={label}
+      disabled={pending}
+      onPress={onPress}
+      style={({ pressed }) => [styles.endRow, pressed && look.pressed, pending && look.disabled]}
+    >
+      <Text style={styles.endText}>{label}</Text>
+      <Text aria-hidden style={styles.endText}>
+        ›
+      </Text>
+    </Pressable>
+  );
+}
+
+/** The chosen verse as the chosen card shows it: none when no furrow holds it now. */
 const chosenIn = (
   furrows: readonly Furrow[],
   chosen: Option.Option<string>,
-  startable: (verse: string) => boolean,
+  starts: (verse: string) => Option.Option<StartKind>,
 ): Option.Option<Chosen> =>
   Option.flatMap(chosen, (reference) =>
     Option.map(
@@ -126,34 +168,26 @@ const chosenIn = (
         furrows.flatMap((furrow) => furrow.plants),
         (plant) => plant.reference === reference,
       ),
-      (plant): Chosen => ({
-        reference,
-        stage: plant.stage,
-        startable: startable(reference),
-      }),
+      (plant): Chosen => ({ reference, stage: plant.stage, starts: starts(reference) }),
     ),
   );
 
 /**
  * The field screen over `field` (its days sown and harvest), its `furrows`
- * and the reader's `passages`, greeting by `greeting`; the foot's counts
- * line `counts` (none before a plan), `Begin` when `begin`, and `Start here`
- * on a chosen verse `startable` offers, and `When I need…` when `need`.
- * `onToday` is `Begin`'s way to Today, `onStart` Start here's, `onNeed` the
- * way to When I need…, `onAdd` the way to the chooser and `onAbout` the
- * sheet's way to About.
+ * and the reader's `passages`, greeting by `greeting`; the Today card
+ * `card`, and on a chosen verse what `starts` gives it. `onToday` is
+ * `Start`'s way to Today, `onStart` the way `Practice anyway`, `Practice
+ * this verse` and `Learn this verse` start a verse, `onAdd` the way to the
+ * Add a list sheet and `onAbout` the way to About.
  */
 export function FieldScreen({
   field,
   furrows,
   passages,
   greeting,
-  counts,
-  begin,
-  need,
-  startable,
+  card,
+  starts,
   onToday,
-  onNeed,
   onStart,
   onAdd,
   onAbout,
@@ -162,12 +196,9 @@ export function FieldScreen({
   readonly furrows: readonly Furrow[];
   readonly passages: PassagesView;
   readonly greeting: Greeting;
-  readonly counts: Option.Option<string>;
-  readonly begin: boolean;
-  readonly need: boolean;
-  readonly startable: (verse: string) => boolean;
+  readonly card: TodayCard;
+  readonly starts: (verse: string) => Option.Option<StartKind>;
   readonly onToday: () => void;
-  readonly onNeed: () => void;
   readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
@@ -188,7 +219,7 @@ export function FieldScreen({
       Handbook: ({ id }): Promise<string> => uprootPlanted(id),
     }),
   );
-  const chosen = chosenIn(furrows, choice, startable);
+  const chosen = chosenIn(furrows, choice, starts);
   const shownChoice = Option.map(chosen, (verse) => verse.reference);
   /** A tap of a field control: nothing while a remove is pending, else the alert clears and `then` runs. */
   const tapped = (then: () => void) => {
@@ -217,50 +248,36 @@ export function FieldScreen({
     };
     void removeOf(removal).then(settle, () => settle('Failed'));
   };
+  const start = (verse: string) => tapped(() => onStart(verse));
   return (
     <View style={look.screen}>
-      <View style={[styles.bar, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.top}>
-          {need && (
-            <Pressable
-              role="button"
-              aria-label="When I need…"
-              hitSlop={10}
-              disabled={bar.pending}
-              onPress={() => tapped(onNeed)}
-              style={({ pressed }) => [
-                styles.need,
-                pressed && look.pressed,
-                bar.pending && look.disabled,
-              ]}
-            >
-              <Text style={styles.needText}>When I need…</Text>
-            </Pressable>
-          )}
-          <Pressable
-            role="button"
-            aria-label="Settings"
-            hitSlop={10}
-            disabled={bar.pending}
-            onPress={() => tapped(() => setSettings(true))}
-            style={({ pressed }) => [
-              styles.gear,
-              pressed && look.pressed,
-              bar.pending && look.disabled,
-            ]}
-          >
-            <Icon name="gear" size={28} />
-          </Pressable>
+      <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
+        <View testID="greeting" style={styles.greeting}>
+          <Icon name={greeting.icon} size={28} />
+          <Text style={styles.greetingText}>{greeting.words}</Text>
         </View>
-        {passages._tag === 'Read' && (
-          <Offer
-            bar={bar}
-            held={heldCount(passages)}
-            onAdd={() => tapped(onAdd)}
-            onConfirm={onConfirm}
-            onKeep={() => tapped(() => setBar(IDLE))}
-          />
-        )}
+        {Option.match(bar.ask, {
+          onSome: (removal) => (
+            <Ask
+              removal={removal}
+              pending={bar.pending}
+              onConfirm={onConfirm}
+              onKeep={() => tapped(() => setBar(IDLE))}
+            />
+          ),
+          onNone: () =>
+            Option.match(chosen, {
+              onSome: (verse) => <ChosenCard verse={verse} pending={bar.pending} onStart={start} />,
+              onNone: () => (
+                <TodayCardView
+                  card={card}
+                  pending={bar.pending}
+                  onToday={() => tapped(onToday)}
+                  onStart={start}
+                />
+              ),
+            }),
+        })}
         {Option.match(bar.alert, {
           onNone: () => false,
           onSome: (alert) => (
@@ -272,12 +289,12 @@ export function FieldScreen({
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[look.content, styles.content, { paddingTop: 8, paddingBottom: 24 }]}
+        contentContainerStyle={[
+          look.content,
+          styles.content,
+          { paddingTop: 8, paddingBottom: insets.bottom + 24 },
+        ]}
       >
-        <View testID="greeting" style={styles.greeting}>
-          <Icon name={greeting.icon} size={28} />
-          <Text style={styles.greetingText}>{greeting.words}</Text>
-        </View>
         <View style={styles.head}>
           <Text role="heading" aria-level={1} style={look.title}>
             Your field
@@ -289,9 +306,7 @@ export function FieldScreen({
             {harvestText(field.harvest)}
           </Text>
         </View>
-        <Text testID="hint" style={styles.hint}>
-          A gold dot marks a plant ready today. Tap one to start there.
-        </Text>
+        <Lists passages={passages} bar={bar} onAdd={() => tapped(onAdd)} />
         <Furrows
           furrows={furrows}
           chosen={shownChoice}
@@ -299,17 +314,20 @@ export function FieldScreen({
           onChoose={onChoose}
           onRemove={onRemove}
         />
-        {offersAdd(passages, bar) && <AddRow onAdd={() => tapped(onAdd)} />}
         <Legend />
+        <View style={styles.ends}>
+          <EndRow
+            label="Settings"
+            pending={bar.pending}
+            onPress={() => tapped(() => setSettings(true))}
+          />
+          <EndRow
+            label="How Heartseed works"
+            pending={bar.pending}
+            onPress={() => tapped(onAbout)}
+          />
+        </View>
       </ScrollView>
-      <Foot
-        chosen={chosen}
-        counts={counts}
-        begin={begin}
-        pending={bar.pending}
-        onBegin={() => tapped(onToday)}
-        onStart={(reference) => tapped(() => onStart(reference))}
-      />
       {settings && <SettingsSheet onDone={() => setSettings(false)} onAbout={onAbout} />}
     </View>
   );
@@ -317,25 +335,28 @@ export function FieldScreen({
 
 const sheets = themed((color, face) =>
   StyleSheet.create({
-    bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
+    top: { paddingHorizontal: 24, paddingBottom: 8, gap: 12 },
     scroll: { flex: 1 },
     content: { gap: 16 },
-    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-    need: { marginRight: 'auto', minHeight: 44, justifyContent: 'center' },
-    gear: {
-      minWidth: 44,
-      minHeight: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    needText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
     ask: { gap: 8 },
     answers: { flexDirection: 'row', gap: 8 },
     greeting: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     greetingText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.sun },
     head: { gap: 6 },
-    hint: { fontFamily: face, fontSize: 13, lineHeight: 18, color: color.quiet },
+    lists: { gap: 8 },
+    label: { fontFamily: face, fontSize: 13, fontWeight: '600', color: color.ink },
+    limit: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.ink },
+    ends: { gap: 8, marginTop: 8 },
+    endRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 52,
+      paddingHorizontal: 16,
+      borderRadius: 16,
+      backgroundColor: color.card,
+    },
+    endText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
   }),
 );

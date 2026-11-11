@@ -25,7 +25,7 @@
  *
  * `renewBySettings` is the trip a rig takes to make its plan again from
  * Today, where no Minutes choice shows: `Your field`, the sheet's Minutes
- * radio, `Done`, and `Begin` when home offers it, the sheet held throughout.
+ * radio, `Done`, and `Start` when home offers it, the sheet held throughout.
  */
 
 import { act } from 'react';
@@ -300,17 +300,17 @@ export const tapInSheet = async (label: string) => {
 };
 
 /**
- * Taps the gear on `rig`'s home and waits for the sheet, then plays the
+ * Taps the `Settings` row on `rig`'s home and waits for the sheet, then plays the
  * end of its slide-in as a browser would: one bubbling `animationend` on
  * the node react-native-web's `ModalAnimation` draws (the modal's
  * grandparent), which makes the dialog active. Fails `the sheet never
  * became active` when its role is not then `dialog`.
  */
 export const openSettings = async (rig: Rig) => {
-  const gear = [...rig.host.querySelectorAll(CONTROLS)].find((node) => nameOf(node) === 'Settings');
-  if (gear === undefined) throw new Error('no Settings on the screen');
+  const row = [...rig.host.querySelectorAll(CONTROLS)].find((node) => nameOf(node) === 'Settings');
+  if (row === undefined) throw new Error('no Settings on the screen');
   await act(async () => {
-    click(gear);
+    click(row);
   });
   if (!(await rig.until(() => modalOf() !== null))) throw new Error('no sheet after Settings');
   const animated = modalOf()?.parentElement?.parentElement;
@@ -351,12 +351,12 @@ const headingsOf = (rig: Rig) =>
 /**
  * A new plan from Today, or from the end of a run (`The field is tended`,
  * after a run's last `Next`), the way a reader makes one: `Your field`
- * back to home, the gear, in the sheet the radio `${minutes} min` (or, with
+ * back to home, the `Settings` row, in the sheet the radio `${minutes} min` (or, with
  * no `minutes`, the Minutes radio checked, which makes the plan again),
- * `Done`, then `Begin` and the wait for `Today` only when home offers it,
+ * `Done`, then `Start` and the wait for `Today` only when home offers it,
  * the new plan showing an item. Every frame of the trip's sheet is held by
  * a `watchSheet` against `scheme`. Answers the screen it ends on by its
- * headings (`Today` after `Begin`, else `Your field`), the sheet's faults,
+ * headings (`Today` after `Start`, else `Your field`), the sheet's faults,
  * and its look-checked frames; only the radio's tap writes. Fails `no Your
  * field on <headings>`, `no <label> in the sheet`, or `the sheet stayed
  * after Done`.
@@ -393,7 +393,7 @@ export const renewBySettings = async (
   if (minutes !== undefined) label = `${minutes} min`;
   if (!(await tapInSheet(label))) throw fail(`no ${label} in the sheet`);
   if (!(await closeSettings(rig, 'Done'))) throw fail('the sheet stayed after Done');
-  const begin = hostControl(rig, 'Begin');
+  const begin = hostControl(rig, 'Start');
   if (begin !== undefined) {
     await act(async () => {
       click(begin);

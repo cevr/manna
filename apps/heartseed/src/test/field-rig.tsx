@@ -17,10 +17,10 @@
  * exactly one `Your field` heading and no `Today` or `The field is tended`
  * heading, whatever its references spell; every field frame holds home A's layout rules (`homeFaults`); and
  * every field frame shows the rule's field over the records the disk holds
- * (`field-model.ts`): the rows, each with its icon and ripe count, each
- * plant's label (readiness cut off: the home walk holds it to the plan),
- * its drawing (the home icon of its stage in the scheme now, or bare soil)
- * and its verse number and nothing else, the days sown and the harvest as
+ * (`field-model.ts`): the rows, each with its icon (its caption is held to
+ * its own plants' names every frame), each plant's label (readiness cut
+ * off: the home walk holds it to the plan), its drawing (the home icon of
+ * its stage in the scheme now, or bare soil) and no text, the days sown and the harvest as
  * seen and as exposed, and no other number or exposed image. Opening the
  * field must write nothing. Each `Next` a `renew` takes ends the run, the
  * passage its one item: Today then shows the end exactly as `tendedModel`
@@ -48,11 +48,12 @@ import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, lookFaults, systemScheme } from './look';
-import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
+import { fieldRule, heldOn, type ModelPlantStage } from './field-model';
+import { captionModel } from './home-model';
 import { keyOf, PREFIX } from './garden-model';
 import { motionFaults } from './motion-rule';
 import { device } from './one';
-import { END, endShown, rootFaults } from './root-rule';
+import { cardLine, END, endShown, rootFaults } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 import type { fieldReader as createFieldReader } from './seen';
@@ -185,11 +186,11 @@ const plantRead = (plant: Element, seen: Seen) => ({
     .join(''),
 });
 
-const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'ripe', 'counts', 'chosen']
+const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'caption', 'today-card', 'chosen']
   .map((id) => `[data-testid="${id}"]`)
   .join(',');
 
-/** A field frame as the reader gets it: the counts, each row's title, icon, ripe count and plants, and the numbers and exposed images outside them. */
+/** A field frame as the reader gets it: the counts, each row's title, icon and plants, and the numbers and exposed images outside them. */
 export const readField = (host: Element) => {
   const { seen, styleOf } = fieldReader(host);
   const rows = [...host.querySelectorAll('[data-testid="row"]')].map((row) => {
@@ -203,7 +204,6 @@ export const readField = (host: Element) => {
           ? text(title)
           : '<title not one seen and exposed>',
       icon: icons.length === 1 && icon !== undefined ? oneIcon(icon) : `<${icons.length} icons>`,
-      ripe: counted(row, 'ripe', seen),
       plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map((plant) =>
         plantRead(plant, seen),
       ),
@@ -232,7 +232,7 @@ export const readField = (host: Element) => {
   };
 };
 
-/** The lowest contrast among the seen text of the field's five readouts. */
+/** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant and the furrows' captions. */
 export const readoutsOf = (host: Element) => {
   const { seen, styleOf } = fieldReader(host);
   const lowest = (id: string) =>
@@ -246,7 +246,7 @@ export const readoutsOf = (host: Element) => {
     harvest: lowest('harvest'),
     titles: lowest('row-title'),
     numbers: lowest('field-plant'),
-    ripe: lowest('ripe'),
+    captions: lowest('caption'),
   };
 };
 
@@ -259,11 +259,10 @@ export const wantField = () => {
     rows: field.rows.map((row, index) => ({
       title: row.title.replace(/\s+/g, ' ').trim(),
       icon: index < PASSAGES.length ? 'bow' : 'scroll',
-      ripe: `${row.plants.filter((plant) => plant.stage === 'full corn').length} of ${row.plants.length} ripe`,
       plants: row.plants.map((plant) => ({
         label: `${plant.reference}, ${plant.stage}`,
         drawn: DRAWN[plant.stage],
-        shown: verseNumberRule(plant.reference).replace(/\s+/g, ' ').trim(),
+        shown: '',
       })),
     })),
     strays: 0,
@@ -282,22 +281,28 @@ const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
 export const selectedPlants = (host: Element) =>
   [...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]')].map(nameOf);
 
-/** The foot's one card as a reader reads it: which card, its line (the counts, or the chosen verse and its stage), and its controls' names. */
-export const footOf = (host: Element) => {
-  const card = host.querySelector(
-    '[data-testid="foot"] [data-testid="begin-card"],[data-testid="foot"] [data-testid="chosen"]',
-  );
+/** Home's one card as a reader reads it: which card (`today-card` or `chosen`), its line (the Today card's headline and parts, or the chosen verse and its stage), and its controls' names. */
+export const cardOf = (host: Element) => {
+  const card = host.querySelector('[data-testid="today-card"],[data-testid="chosen"]');
+  const today = card?.getAttribute('data-testid') === 'today-card';
   return {
     card: card?.getAttribute('data-testid') ?? '<none>',
-    line: text(card?.querySelector('[data-testid="counts"]') ?? card?.firstElementChild),
+    line: today ? cardLine(host) : text(card?.firstElementChild),
     controls: [...(card?.querySelectorAll(CONTROLS) ?? [])].map(nameOf),
   };
 };
 
-/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Remove …` and the `Add verses` row. */
+/** The names home starts a recital by: `Start`, `Practice anyway`, `Practice <reference>` and `Learn <reference>`. */
+export const STARTS = /^(Start|Practice anyway|Practice .+|Learn .+)$/su;
+
+/** The controls of the field's end rows. */
+const END_ROWS = new Set(['Settings', 'How Heartseed works']);
+
+/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Remove …`, `Add a list` and the end rows. */
 const listed = (node: Element) =>
   idOf(node) === 'field-plant' ||
-  idOf(node) === 'add-row' ||
+  idOf(node) === 'add-list' ||
+  END_ROWS.has(nameOf(node)) ||
   (nameOf(node).startsWith('Remove ') && node.closest('[data-testid="row"]') !== null);
 
 /** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, more than one image or one of the other scheme. */
@@ -320,62 +325,54 @@ const plantFaults = (plant: Element) => {
   return out;
 };
 
-/** What one furrow shows wrong: its ripe count not `<k> of <n> ripe` over its own plants' names. */
+/** What one furrow shows wrong: its caption not `captionModel`'s over its own plants' names (each name's stage, and whether it ends `, ready today`). */
 const furrowFaults = (row: Element) => {
-  const stages = [...row.querySelectorAll('[data-testid="field-plant"]')].map(
-    (plant) => nameParts(nameOf(plant))?.stage,
-  );
-  const ripe = `${stages.filter((stage) => stage === 'full corn').length} of ${stages.length} ripe`;
-  const shown = text(row.querySelector('[data-testid="ripe"]'));
-  return shown === ripe ? [] : [`a furrow showing ${shown} over ${ripe}`];
+  const plants = [...row.querySelectorAll('[data-testid="field-plant"]')].map((plant) => ({
+    stage: nameParts(nameOf(plant))?.stage ?? '<no stage>',
+    ready: nameOf(plant).endsWith(READY),
+  }));
+  const caption = captionModel(plants);
+  const shown = text(row.querySelector('[data-testid="caption"]'));
+  return shown === caption ? [] : [`a furrow showing ${shown} over ${caption}`];
 };
 
-/** What the foot shows wrong: not one foot outside the scroll view, both cards, the chosen card without a chosen plant or the other way round, plants of two verses chosen, or `Start here …` outside the chosen card. */
-const footFaults = (host: Element, controls: readonly Element[]) => {
+/** What home's card shows wrong: more than one of the Today card, the chosen card and a remove's ask, one inside the scroll view, the chosen card without a chosen plant or a chosen plant with no ask and no chosen card, plants of two verses chosen, `Practice <reference>` or `Learn <reference>` outside the chosen card, or `Start` or `Practice anyway` outside the Today card. */
+const cardFaults = (host: Element, controls: readonly Element[]) => {
   const out: string[] = [];
-  const feet = host.querySelectorAll('[data-testid="foot"]');
-  const foot = feet[0];
-  if (feet.length !== 1 || foot === undefined) out.push(`${feet.length} feet`);
-  else if (scrolled(foot)) out.push('the foot inside a scroll view');
-  const begins = host.querySelectorAll('[data-testid="begin-card"]').length;
+  const cards = [
+    ...host.querySelectorAll('[data-testid="today-card"],[data-testid="chosen"]'),
+    ...[...host.querySelectorAll('[data-testid="ask"]')].map((ask) => ask.parentElement ?? ask),
+  ];
+  if (cards.length > 1) out.push(`${cards.length} cards`);
+  for (const card of cards)
+    if (scrolled(card)) out.push(`${idOf(card) || 'the ask'} in a scroll view`);
   const chosen = host.querySelectorAll('[data-testid="chosen"]').length;
-  if (begins + chosen > 1) out.push(`${begins} Begin and ${chosen} chosen cards`);
   const selected = [
     ...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]'),
   ].map((plant) => nameParts(nameOf(plant))?.reference);
-  if (chosen > 0 !== selected.length > 0)
+  const asking = host.querySelector('[data-testid="ask"]') !== null;
+  if (chosen > 0 !== (selected.length > 0 && !asking))
     out.push(`${chosen} chosen cards over ${selected.length} chosen plants`);
   if (new Set(selected).size > 1) out.push(`${new Set(selected).size} verses chosen`);
-  for (const node of controls)
-    if (nameOf(node).startsWith('Start here') && node.closest('[data-testid="chosen"]') === null)
-      out.push(`${nameOf(node)} outside the chosen card`);
-  return out;
-};
-
-/** What the `Add verses` controls show wrong: one not drawn with the one hidden `add` icon of the scheme now, or the row (`add-row`) under 56 tall. */
-const addFaults = (controls: readonly Element[]) => {
-  const out: string[] = [];
   for (const node of controls) {
-    if (nameOf(node) !== 'Add verses') continue;
-    const drawn = oneIcon(node);
-    if (drawn !== 'add') out.push(`Add verses (${idOf(node)}) drawn ${drawn}`);
-    if (idOf(node) === 'add-row' && !(parseFloat(ownStyle(node, 'minHeight')) >= 56))
-      out.push('the Add verses row under 56 tall');
+    const name = nameOf(node);
+    const inChosen = node.closest('[data-testid="chosen"]') !== null;
+    const inToday = node.closest('[data-testid="today-card"]') !== null;
+    if (/^(Practice|Learn) /u.test(name) && name !== 'Practice anyway' && !inChosen)
+      out.push(`${name} outside the chosen card`);
+    if ((name === 'Start' || name === 'Practice anyway') && !inToday)
+      out.push(`${name} outside the Today card`);
   }
   return out;
 };
 
-/** What the gear shows wrong: `Settings` not drawn with the one hidden `gear` icon of the scheme now, showing a word, under 44 × 44, or inside a scroll view. */
-const gearFaults = (controls: readonly Element[]) => {
+/** What `Add a list` shows wrong: not drawn with the one hidden `add` icon of the scheme now. */
+const addFaults = (controls: readonly Element[]) => {
   const out: string[] = [];
   for (const node of controls) {
-    if (nameOf(node) !== 'Settings') continue;
+    if (nameOf(node) !== 'Add a list') continue;
     const drawn = oneIcon(node);
-    if (drawn !== 'gear') out.push(`Settings drawn ${drawn}`);
-    if (text(node) !== '') out.push(`Settings showing ${text(node)}`);
-    if (!(parseFloat(ownStyle(node, 'minWidth')) >= 44)) out.push('Settings under 44 wide');
-    if (!(parseFloat(ownStyle(node, 'minHeight')) >= 44)) out.push('Settings under 44 tall');
-    if (scrolled(node)) out.push('Settings in a scroll view');
+    if (drawn !== 'add') out.push(`Add a list drawn ${drawn}`);
   }
   return out;
 };
@@ -399,15 +396,16 @@ const greetingFaults = (host: Element) => {
 };
 
 /**
- * What a field frame shows wrong of home A's layout: other than one
- * heading, `Your field`; a control in a scroll view but a plant, a furrow's
- * `Remove …` and the `Add verses` row; a control under 44 tall; a plant's
- * faults (`plantFaults`); a furrow's ripe count off its plants; the foot's
- * faults (`footFaults`); `Add verses` beside the limit line, or drawn
- * other than with the one hidden `add` icon of the scheme now (`addFaults`);
- * the gear's faults (`gearFaults`); the greeting's faults; and any home icon
- * of the other scheme; and moving nodes that are not hidden drawings with
- * exactly one image, no text and no control (`motionFaults`).
+ * What a field frame shows wrong of home's layout: other than one heading,
+ * `Your field`; a control in a scroll view but a plant, a furrow's `Remove
+ * …`, `Add a list` and the end rows `Settings` and `How Heartseed works`;
+ * a control under 44 tall; a plant's faults (`plantFaults`); a furrow's
+ * caption off its plants (`furrowFaults`); the card's faults (`cardFaults`); `Add a
+ * list` beside the limit line, or drawn other than with the one hidden
+ * `add` icon of the scheme now (`addFaults`); the greeting's faults; any
+ * home icon of the other scheme; and moving nodes that are not hidden
+ * drawings with exactly one image, no text and no control
+ * (`motionFaults`).
  */
 export const homeFaults = (host: Element): string[] => {
   const out: string[] = [];
@@ -421,13 +419,13 @@ export const homeFaults = (host: Element): string[] => {
   for (const plant of host.querySelectorAll('[data-testid="field-plant"]'))
     out.push(...plantFaults(plant));
   for (const row of host.querySelectorAll('[data-testid="row"]')) out.push(...furrowFaults(row));
-  out.push(...footFaults(host, controls));
+  out.push(...cardFaults(host, controls));
   if (
     host.querySelector('[data-testid="limit"]') !== null &&
-    controls.some((node) => nameOf(node) === 'Add verses')
+    controls.some((node) => nameOf(node) === 'Add a list')
   )
-    out.push('Add verses beside the limit line');
-  out.push(...addFaults(controls), ...gearFaults(controls), ...greetingFaults(host));
+    out.push('Add a list beside the limit line');
+  out.push(...addFaults(controls), ...greetingFaults(host));
   for (const image of host.querySelectorAll('img'))
     if (iconOf(image).endsWith(' set>')) out.push(`an image drawn ${iconOf(image)}`);
   out.push(...motionFaults(host));
@@ -544,9 +542,10 @@ export const mount = async (
       node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
   };
-  /** Whether home shows, its foot drawn: the launch's plan made, or no plan over unread passages. */
+  /** Whether home shows, its Today card drawn: the launch's plan made, or no plan over unread passages. */
   const home = () =>
-    headings().join('|') === 'Your field' && host.querySelector('[data-testid="foot"]') !== null;
+    headings().join('|') === 'Your field' &&
+    host.querySelector('[data-testid="today-card"]') !== null;
   const summary = () => text(host.querySelector('[data-testid="summary"]'));
   /** The grade checked on Today, none when no grade shows. */
   const checked = () =>
@@ -604,7 +603,7 @@ export const mount = async (
    * A new plan at the passage's due: `Next` when it shows, then the end of
    * the run (`ended`), the clock set to the due, and the reader's trip
    * through the Settings sheet (`renewBySettings`: `Your field`, the Minutes
-   * radio checked, `Done`, `Begin`), whose radio makes the plan again (and
+   * radio checked, `Done`, `Start`), whose radio makes the plan again (and
    * writes the minutes it shows); every home frame on the way is held to
    * the field's rules, the sheet's frames to its own with its look checked,
    * and the trip ends on Today, which offers Say it on the passage with no
@@ -662,15 +661,15 @@ export const mount = async (
   };
   /** Home read whole, as it shows now. */
   const onHome = () => readField(host);
-  /** Goes from home to Today by `Begin`; the device takes no write, remove or clear, and keeps its disk. */
-  const begin = () => still('Begin', 'Today');
+  /** Goes from home to Today by `Start`; the device takes no write, remove or clear, and keeps its disk. */
+  const begin = () => still('Start', 'Today');
   /**
-   * Goes back to Today by `Begin`, which home offers because Today showed an
+   * Goes back to Today by `Start`, which home offers because Today showed an
    * action (`Say it` or `Next`) when `Your field` left it; Today shows that
    * action again. The device takes no write, remove or clear, and keeps its disk.
    */
   const back = async () => {
-    expect({ left: left.action, begin: button('Begin') !== undefined }).toEqual({
+    expect({ left: left.action, begin: button('Start') !== undefined }).toEqual({
       left: left.action === 'none' ? '<Say it or Next>' : left.action,
       begin: true,
     });
@@ -695,8 +694,10 @@ export const mount = async (
     }
     return out;
   };
-  /** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, the plants' verse numbers and the furrows' ripe counts. */
+  /** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant and the furrows' captions. */
   const readouts = () => readoutsOf(host);
+  /** Each furrow's caption, in row order. */
+  const captions = () => [...host.querySelectorAll('[data-testid="caption"]')].map(text);
   /** Ends the launch, and answers what its disk shows wrong against the launch's start (`diskFaults`). */
   const leave = async () => {
     watch.disconnect();
@@ -724,6 +725,7 @@ export const mount = async (
     checked,
     stage,
     readouts,
+    captions,
     leave,
   };
 };

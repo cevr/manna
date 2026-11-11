@@ -41,7 +41,7 @@ it("offers the app's own verse and a held Proverbs 18:10 as in your field beside
       ['taught:protection', 1],
       ['sheet:taught:protection', 1],
       ['stored:proverb', 1],
-      ['open:add-row', 1],
+      ['open:add-list', 1],
       ['in-field:needs-own', 1],
       ['proverb:in-field:taught-and-more', 1],
     ]),

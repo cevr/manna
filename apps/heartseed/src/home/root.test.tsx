@@ -7,17 +7,18 @@
  * The root takes no props, so every case opens as a launch does. Each case
  * names its expected screens and values: a read launch with the passage due, pending then home with its plan's counts in every
  * home frame; an unread garden on Today with no field; garbled passages,
- * home with `Begin` alone; a held read, pending until its release; a
- * relaunch after a choice and a visit, which keeps neither; and When I
- * need… from home and back, then a known promise on Today. The launches
- * that hold a recital are `root-say.test.tsx`'s.
+ * home with `Start` alone; a held read, pending until its release; a
+ * relaunch after a choice and a visit, which keeps neither; and home with
+ * nothing due, whose `Practice anyway` opens Today on the passage and comes
+ * back with the card as it was. The launches that hold a recital are
+ * `root-say.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { recallOf } from '../test/field-model';
-import { footOf, mount, record, selectedPlants } from '../test/field-rig';
+import { cardOf, mount, record, selectedPlants } from '../test/field-rig';
 import type { Time } from '../test/clock';
 import { device } from '../test/one';
 import { KEY } from '../test/passages-model';
@@ -40,20 +41,24 @@ describe('the root', () => {
   it('opens a read launch with the passage due on pending frames, then home with its plan in every frame', async () => {
     device.launch([due(), VOICE_OFF]);
     const read = await launch('read');
-    expect(await read.app.until(() => footOf(read.host).controls.includes('Begin'))).toBe(true);
+    expect(await read.app.until(() => cardOf(read.host).controls.includes('Start'))).toBe(true);
     await read.app.until(() => false, 8);
     const homes = read.watch.frames.filter((frame) => frame.headings.join('|') === 'Your field');
     expect({
-      foot: footOf(read.host),
+      foot: cardOf(read.host),
       screens: screensOf(read.watch.frames),
       uncounted: homes.filter((frame) => frame.counts === '').length,
       first: homes[0]?.counts,
       faults: [...read.watch.faults, ...read.app.faults],
     }).toEqual({
-      foot: { card: 'begin-card', line: '1 to tend · about 1 min', controls: ['Begin'] },
+      foot: {
+        card: 'today-card',
+        line: '1 verse · about 1 min | 1 to review',
+        controls: ['Start'],
+      },
       screens: ['pending', 'Your field'],
       uncounted: 0,
-      first: '1 to tend · about 1 min',
+      first: '1 verse · about 1 min | 1 to review',
       faults: [],
     });
     expect(await read.end()).toEqual([]);
@@ -72,20 +77,19 @@ describe('the root', () => {
     expect(await unread.end()).toEqual([]);
   });
 
-  it('opens home over garbled passages with Begin alone, which opens Today on the app’s passage', async () => {
+  it('opens home over garbled passages with Start alone, which opens Today on the app’s passage', async () => {
     device.launch([due(), [KEY, GARBLED], VOICE_OFF]);
     const garbled = await launch('read');
-    expect(await garbled.app.until(() => footOf(garbled.host).controls.includes('Begin'))).toBe(
+    expect(await garbled.app.until(() => cardOf(garbled.host).controls.includes('Start'))).toBe(
       true,
     );
     await garbled.app.until(() => false, 8);
     expect({
       heading: garbled.app.headings(),
-      foot: footOf(garbled.host).controls,
-      counts: garbled.host.querySelectorAll('[data-testid="counts"]').length,
-      need: garbled.app.buttons().includes('When I need…'),
-    }).toEqual({ heading: ['Your field'], foot: ['Begin'], counts: 0, need: false });
-    await garbled.app.tap('Begin');
+      foot: cardOf(garbled.host).controls,
+      headline: garbled.host.querySelectorAll('[data-testid="today-headline"]').length,
+    }).toEqual({ heading: ['Your field'], foot: ['Start'], headline: 0 });
+    await garbled.app.tap('Start');
     expect(
       await garbled.app.until(
         () =>
@@ -120,7 +124,7 @@ describe('the root', () => {
     expect(await first.app.until(first.home)).toBe(true);
     const plant = first.app.buttons().find((label) => label?.startsWith(`${passage.reference}, `));
     await first.app.tap(plant ?? `<no plant of ${passage.reference}>`);
-    await first.app.tap(`Start here with ${passage.reference}`);
+    await first.app.tap(`Practice ${passage.reference}`);
     expect(
       await first.app.until(
         () =>
@@ -131,7 +135,7 @@ describe('the root', () => {
     ).toBe(true);
     await first.app.tap('Your field');
     expect(await first.app.until(first.home)).toBe(true);
-    expect([selectedPlants(first.host), footOf(first.host).controls]).toEqual([[], ['Begin']]);
+    expect([selectedPlants(first.host), cardOf(first.host).controls]).toEqual([[], ['Start']]);
     expect([...first.watch.faults, ...first.app.faults]).toEqual([]);
     expect(await first.end()).toEqual([]);
 
@@ -140,50 +144,56 @@ describe('the root', () => {
     await again.app.until(() => false, 8);
     expect({
       chosen: selectedPlants(again.host),
-      foot: footOf(again.host),
+      foot: cardOf(again.host),
       screens: screensOf(again.watch.frames),
       faults: [...again.watch.faults, ...again.app.faults],
     }).toEqual({
       chosen: [],
-      foot: { card: 'begin-card', line: 'Nothing to tend now', controls: [] },
+      foot: {
+        card: 'today-card',
+        line: 'All tended for today | Nothing is due right now.',
+        controls: ['Practice anyway'],
+      },
       screens: ['pending', 'Your field'],
       faults: [],
     });
     expect(await again.end()).toEqual([]);
   });
 
-  it('opens When I need… from home, back to home by Your field, and a known promise on Today', async () => {
-    device.launch([due(), VOICE_OFF]);
-    const need = await launch('read');
-    const onNeed = () => need.app.until(() => need.app.headings().join('|') === 'When I need…');
-    expect(await need.app.until(need.home)).toBe(true);
-    await need.app.tap('When I need…');
-    expect(await onNeed()).toBe(true);
+  it('offers Practice anyway on home with nothing due, which opens Today on the passage, then home again as it was', async () => {
+    const time = { now: DAY + 15 * HOUR };
+    device.launch([record(recallOf(passage.reference, time.now - 2 * MINUTE, 3, 0)), VOICE_OFF]);
+    const anyway = await launch('read', undefined, time);
+    expect(await anyway.app.until(() => cardOf(anyway.host).controls.length > 0)).toBe(true);
+    const before = cardOf(anyway.host);
+    await anyway.app.tap('Practice anyway');
     expect(
-      ['Your field', passage.reference, 'Today'].map((name) => need.app.buttons().includes(name)),
-    ).toEqual([true, true, false]);
-    await need.app.tap('Your field');
-    expect(await need.app.until(need.home)).toBe(true);
-    await need.app.tap('When I need…');
-    expect(await onNeed()).toBe(true);
-    await need.app.tap(passage.reference);
-    expect(
-      await need.app.until(
+      await anyway.app.until(
         () =>
-          need.today() &&
-          need.reference() === passage.reference &&
-          need.app.buttons().includes('Say it'),
+          anyway.today() &&
+          anyway.reference() === passage.reference &&
+          anyway.app.buttons().includes('Say it'),
       ),
     ).toBe(true);
+    await anyway.app.tap('Your field');
+    expect(await anyway.app.until(anyway.home)).toBe(true);
     expect({
-      need: need.app.buttons().includes('When I need…'),
-      screens: screensOf(need.watch.frames),
-      faults: [...need.watch.faults, ...need.app.faults],
+      before,
+      after: cardOf(anyway.host).card,
+      need: anyway.app.buttons().includes('When I need…'),
+      screens: screensOf(anyway.watch.frames),
+      faults: [...anyway.watch.faults, ...anyway.app.faults],
     }).toEqual({
+      before: {
+        card: 'today-card',
+        line: 'All tended for today | Nothing is due right now.',
+        controls: ['Practice anyway'],
+      },
+      after: 'today-card',
       need: false,
-      screens: ['pending', 'Your field', 'When I need…', 'Your field', 'When I need…', 'Today'],
+      screens: ['pending', 'Your field', 'Today', 'Your field'],
       faults: [],
     });
-    expect(await need.end()).toEqual([]);
+    expect(await anyway.end()).toEqual([]);
   });
 });

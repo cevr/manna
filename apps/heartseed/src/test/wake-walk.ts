@@ -15,10 +15,10 @@
  * the background (sent `active` on the screen the launch lands on). A read
  * launch and the first minute's Continue land on home, whose first show
  * makes the plan: with an item shown, home shows the model's counts line
- * and `Begin`, which the walk takes to Today; with none (and after the
+ * and `Start`, which the walk takes to Today; with none (and after the
  * field in the done state), home shows the done state's counts line and no
- * `Begin`, and stays the screen, with commands of its own: an away (states
- * sent while home shows, a return making the plan again, and `Begin` taken
+ * `Start`, and stays the screen, with commands of its own: an away (states
+ * sent while home shows, a return making the plan again, and `Start` taken
  * once it shows an item), a wait, and the launch's end. On Today each
  * launch runs commands chosen by the screen the
  * model expects: an away (a wait of a minute to a month, then a return or
@@ -29,7 +29,7 @@
  * field with states sent on it, and a wait. A Minutes trip is the
  * reader's: `Your field`, home's `Settings`, now and then states sent with
  * the sheet open (a return makes the plan again under it, and the sheet
- * stays), the `<n> min` radio, `Done`, then `Begin` and Today, or home's
+ * stays), the `<n> min` radio, `Done`, then `Start` and Today, or home's
  * done state. No Minutes is chosen while a recital listens or finishes: no
  * reader reaches one (Today shows no `Your field` then), and
  * `test:session-cells` makes that making at the session seam. Leaning
@@ -47,7 +47,7 @@
  * after one) over `src/test/run-model.ts`'s run and
  * `src/test/session-model.ts`'s plan, made at home's first show, at each
  * return and at each `<n> min` tap in the sheet: on home its heading,
- * counts line and `Begin`, before and after each trip, and the counts line
+ * counts line and `Start`, before and after each trip, and the counts line
  * under the open sheet after each tap and each state sent there; in the
  * sheet the radio checked and the `Voice` value the model's choice after
  * each tap; and on Today after every step the heading, the reference
@@ -92,7 +92,8 @@ import {
   type RunModel,
 } from './run-model';
 import { deviceOf, PASSAGE, type Device, type Faults } from './run-rig';
-import { END, rootFaults } from './root-rule';
+import { cardLineModel } from './home-model';
+import { END, homeLines, rootFaults } from './root-rule';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { choicesOf } from './session-rig';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
@@ -276,9 +277,8 @@ interface During {
   readonly at: 'listening' | 'finishing';
 }
 
-/** The counts lines home's foot shows, as they read. */
-const homeCounts = (app: WakeLaunch) =>
-  [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
+/** The Today card's lines home shows, as `homeLines` reads them. */
+const homeCounts = (app: WakeLaunch) => homeLines(app.host);
 
 /** The walk of one device: its pieces, its disk, the model's run, and the expected disk. */
 class Walk {
@@ -368,9 +368,16 @@ class Walk {
     return tended;
   }
 
-  /** The counts line home's foot shows over `run`: the plan's, the end's run among them, none before a plan or in an unread launch. */
-  homeWant(run: RunModel) {
+  /** Today's counts line over `run`: the plan's by `countsModel`, none before a plan or in an unread launch. */
+  todayWant(run: RunModel) {
     return this.unread || run.plan === null ? [] : [countsModel(run.plan, this.recallsNow)];
+  }
+
+  /** The Today card's line home shows over `run`: the plan's by `cardLineModel`, the end's run among them, none before a plan or in an unread launch. */
+  homeWant(run: RunModel) {
+    return this.unread || run.plan === null
+      ? []
+      : [cardLineModel(run.plan, this.recallsNow, shownModel(run, this.recallsNow))];
   }
 
   /** What the model expects the screen to show at rest, over `run`. */
@@ -406,7 +413,7 @@ class Walk {
       grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
       references: shown === null ? [] : [shown.reference],
       actions: action === null ? [] : [action],
-      counts: tended !== null ? [] : this.homeWant(run),
+      counts: tended !== null ? [] : this.todayWant(run),
       grades: held && this.result === 'grades' ? 1 : 0,
       alerts: held && this.result === 'alert' ? 1 : 0,
       doneText: true,
@@ -789,7 +796,7 @@ class Walk {
       );
   }
 
-  /** After a trip's `Done`: home held to the model, then `Begin` and Today when the model shows an item, else home's done state; answers whether Today shows. */
+  /** After a trip's `Done`: home held to the model, then `Start` and Today when the model shows an item, else home's done state; answers whether Today shows. */
   async back(step: string) {
     const begin = shownModel(this.run, this.recallsNow) !== null;
     this.log.push(`${step}, Done`);
@@ -798,7 +805,7 @@ class Walk {
       await this.homeDone(step);
       return false;
     }
-    if (!(await this.screen.tap('Begin'))) this.fail('no Begin');
+    if (!(await this.screen.tap('Start'))) this.fail('no Start');
     return true;
   }
 
@@ -820,7 +827,7 @@ class Walk {
    * Voice turned on or off in the Settings sheet, reached from Today by
    * `Your field` and home's gear: from Off one tap to Her, and now and then
    * a second to Him; from Her or Him the taps through to Off (Her by Him,
-   * the reading under way going on through it); then `Done`, and `Begin`
+   * the reading under way going on through it); then `Done`, and `Start`
    * and Today, or home's done state. Whether a second tap goes on to Him is
    * drawn from `aside`, so the walk's own draws run as they do with the
    * voice turned on and off alone. An unread launch offers no choices.
@@ -909,23 +916,24 @@ class Walk {
     this.ending = null;
   }
 
-  /** States sent while the sheet is open on home: a return makes the plan again under it, and the sheet stays; a return whose plan moves home's counts is noted (`wake:sheet-return-differs`). */
+  /** States sent while the sheet is open on home: a return makes the plan again under it, and the sheet stays; a return whose plan moves Today's counts line is noted (`wake:sheet-return-differs`). */
   async sheetAway() {
     const app = this.screen;
     this.time.now += pickOf(this.next, GAPS[this.steer]);
     const states = this.next() < 0.75 ? returnOf(this.next) : quietOf(this.next);
-    const before = JSON.stringify(this.homeWant(this.run));
+    const before = JSON.stringify(this.todayWant(this.run));
     const returns = await this.states(states, false);
     const counts = JSON.stringify(this.homeWant(this.run));
+    const after = JSON.stringify(this.todayWant(this.run));
     if (!(await app.until(() => modalOf() !== null && JSON.stringify(homeCounts(app)) === counts)))
       throw new Error(
         `states ${states.join(',')} with the sheet open: sheet ${modalOf() !== null}, home showed ${JSON.stringify(homeCounts(app))}, expected ${counts}`,
       );
     bump(this.coverage, returns > 0 ? 'wake:sheet-return' : 'wake:sheet-quiet');
-    if (returns > 0 && counts !== before) bump(this.coverage, 'wake:sheet-return-differs');
+    if (returns > 0 && after !== before) bump(this.coverage, 'wake:sheet-return-differs');
   }
 
-  /** A Minutes trip the reader's way: `Your field`, the gear, now and then states sent with the sheet open, `<n> min`, `Done`, then `Begin` and Today, or home's done state. */
+  /** A Minutes trip the reader's way: `Your field`, the gear, now and then states sent with the sheet open, `<n> min`, `Done`, then `Start` and Today, or home's done state. */
   async minutesTap() {
     const minutes = pickOf(this.next, MINUTES);
     if (this.unread) return this.noChoices('minutes:none-unread');
@@ -965,7 +973,7 @@ class Walk {
     this.trail.push('again');
   }
 
-  /** The field and back by `Begin`, a return or a sequence that is none sent on it now and then; when the run shows no item after them, home is left in its done state (`homeDone`) and the launch goes on there. */
+  /** The field and back by `Start`, a return or a sequence that is none sent on it now and then; when the run shows no item after them, home is left in its done state (`homeDone`) and the launch goes on there. */
   async field() {
     const app = this.screen;
     await this.press('Your field');
@@ -992,24 +1000,24 @@ class Walk {
       bump(this.coverage, 'done:field');
       return this.homeDone(sends ? 'the field, states sent' : 'the field');
     }
-    if (!(await app.tap('Begin'))) this.fail('no Begin');
+    if (!(await app.tap('Start'))) this.fail('no Start');
     bump(this.coverage, 'field');
     await this.settle(sends ? 'the field, states sent, and back' : 'the field and back');
     this.trail.push('field');
   }
 
-  /** Waits for home as the model expects it (`onHome`), the counts line and `Begin` given a few frames to follow a making. */
+  /** Waits for home as the model expects it (`onHome`), the counts line and `Start` given a few frames to follow a making. */
   async homeSettled(begin: boolean) {
     const app = this.screen;
     const want = JSON.stringify(this.homeWant(this.run));
-    await app.until(() => JSON.stringify(homeCounts(app)) === want && app.has('Begin') === begin);
+    await app.until(() => JSON.stringify(homeCounts(app)) === want && app.has('Start') === begin);
     this.onHome(begin);
   }
 
-  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; the disk; and no fault of the root's frame rule, the rig's frames or the voice. */
+  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Start` exactly when `begin`; the disk; and no fault of the root's frame rule, the rig's frames or the voice. */
   onHome(begin: boolean) {
     const app = this.screen;
-    const seen = { headings: app.headings(), counts: homeCounts(app), begin: app.has('Begin') };
+    const seen = { headings: app.headings(), counts: homeCounts(app), begin: app.has('Start') };
     const expected = { headings: ['Your field'], counts: this.homeWant(this.run), begin };
     if (JSON.stringify(seen) !== JSON.stringify(expected))
       this.fail(`home showed ${JSON.stringify(seen)}, expected ${JSON.stringify(expected)}`);
@@ -1024,7 +1032,7 @@ class Walk {
 
   /**
    * Home's first show, which makes the plan; a launch in the background is
-   * sent `active` there first. With an item shown, `Begin` and Today's first
+   * sent `active` there first. With an item shown, `Start` and Today's first
    * show; with none, home's done state (`homeDone`).
    */
   async fromHome(step: string, background: boolean) {
@@ -1046,16 +1054,16 @@ class Walk {
     await this.begin('home:begin');
   }
 
-  /** Home's `Begin`, then Today as the model expects it; `floor` names the way home was reached. */
+  /** Home's `Start`, then Today as the model expects it; `floor` names the way home was reached. */
   async begin(floor: string) {
-    if (!(await this.screen.tap('Begin'))) this.fail('no Begin');
+    if (!(await this.screen.tap('Start'))) this.fail('no Start');
     this.home = false;
     bump(this.coverage, floor);
-    await this.settle('Begin');
+    await this.settle('Start');
     this.trail.push('begin');
   }
 
-  /** Home in the done state, reached by `step`: the model's counts line, no `Begin`, and the root's frame rule kept; home stays the screen, with its own commands (`homeCommand`). */
+  /** Home in the done state, reached by `step`: the model's counts line, no `Start`, and the root's frame rule kept; home stays the screen, with its own commands (`homeCommand`). */
   async homeDone(step: string) {
     this.log.push(`${step}, done`);
     await this.homeSettled(false);
@@ -1076,7 +1084,7 @@ class Walk {
     return this.homeAway();
   }
 
-  /** A wait on home: the clock moves and home stays as it was, with no `Begin`. */
+  /** A wait on home: the clock moves and home stays as it was, with no `Start`. */
   async homeWait() {
     this.time.now += pickOf(this.next, [MINUTE, 7 * MINUTE, 2 * HOUR, 9 * HOUR] as const);
     this.log.push('a wait on home');
@@ -1085,7 +1093,7 @@ class Walk {
     bump(this.coverage, 'home:wait');
   }
 
-  /** An away while home shows the done state: a wait, then states sent; a return makes the plan again, and when it shows an item home shows `Begin`, which the walk takes. */
+  /** An away while home shows the done state: a wait, then states sent; a return makes the plan again, and when it shows an item home shows `Start`, which the walk takes. */
   async homeAway() {
     const gap = pickOf(this.next, GAPS[this.steer]);
     this.time.now += gap;

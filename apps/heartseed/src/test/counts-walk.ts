@@ -16,8 +16,8 @@
  * the disk's recalls at the instant home first shows with the garden read
  * (at a read launch, and after Continue in the first minute) and again at
  * each Minutes tap in the sheet, and at no other step (S11). Home then
- * shows the model's counts of that plan and `Begin` exactly when the run's
- * model (`src/test/run-model.ts`) shows an item: `Begin` leads to Today,
+ * shows the model's counts of that plan and `Start` exactly when the run's
+ * model (`src/test/run-model.ts`) shows an item: `Start` leads to Today,
  * and in the done state the launch ends on home with no Today frame. After
  * every step on Today the line is the model's counts of that plan over the
  * disk's recalls now (S12, S13); at the end of a run (every item of a
@@ -36,7 +36,7 @@
  * radio checked at the launch's minutes; the radio (the plan made at that
  * tap, the radio checked and home's counts under the sheet the new plan's)
  * or `Voice` (the pill the cycle's next); `Done`, the sheet's frames
- * faultless; then `Begin` and Today when the model shows an item, else
+ * faultless; then `Start` and Today when the model shows an item, else
  * home's done state, which ends the launch. The commands: recitals; a
  * recital then a Minutes trip (`held`); Again; Minutes trips now and after
  * time passes; Voice trips; time; the field and back. A recital where the
@@ -56,6 +56,7 @@ import type { Minutes } from '../session';
 import { MINUTES_KEY } from '../session/service';
 import { CHOICE_KEY } from '../voice';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
+import { cardLineModel } from './home-model';
 import { END, rootFaults } from './root-rule';
 import {
   actionModel,
@@ -194,6 +195,14 @@ const wantOf = (run: Run) => {
   return [countsModel(run.m.plan, recallsNow(run.device))];
 };
 
+/** The Today card's lines home must show now (`cardLineModel`, the held item counted when the plan holds none open), none without a plan. */
+const homeWantOf = (run: Run) => {
+  const { m } = run;
+  if (m.plan === null) return [];
+  const now = recallsNow(run.device);
+  return [cardLineModel(m.plan, now, shownModel({ plan: m.plan, hold: m.hold }, now))];
+};
+
 /** The end of a run as the model has it: the verses grown by `tendedModel` over the plan's items and the disk's recalls, none while Today is not the end (an unread launch, no plan, an item held or not done, an empty plan). */
 const tendedNow = (run: Run) => {
   const { m } = run;
@@ -262,7 +271,7 @@ const sheetChecked = () => choicesOf(modalOf() ?? document.createElement('div'))
 
 /**
  * A trip's way out from Today: `Your field` to home, held to the model as
- * it stands (the one heading, the counts of the plan, `Begin` exactly when
+ * it stands (the one heading, the counts of the plan, `Start` exactly when
  * the run's model shows an item), then the sheet opened under a watch of
  * its frames, its Minutes radio checked at the launch's minutes.
  */
@@ -271,13 +280,13 @@ const openTrip = async (run: Run) => {
   await app.tap('Your field');
   const want = {
     headings: ['Your field'],
-    counts: wantOf(run),
+    counts: homeWantOf(run),
     begin: actionWant(m, device) !== null,
   };
   const shown = () => ({
     headings: app.headings(),
     counts: app.homeCounts(),
-    begin: app.has('Begin'),
+    begin: app.has('Start'),
   });
   const same = () => JSON.stringify(shown()) === JSON.stringify(want);
   await app.until(same);
@@ -305,8 +314,8 @@ const openTrip = async (run: Run) => {
 
 /**
  * A trip's way back: `Done`, the sheet's frames faultless with its look
- * checked, then `Begin` and Today when the run's model shows an item; else
- * home stays with no `Begin` and the root's frame rule, and the launch ends
+ * checked, then `Start` and Today when the run's model shows an item; else
+ * home stays with no `Start` and the root's frame rule, and the launch ends
  * there (true).
  */
 const closeTrip = async (run: Run, watch: ReturnType<typeof watchSheet>) => {
@@ -319,13 +328,13 @@ const closeTrip = async (run: Run, watch: ReturnType<typeof watchSheet>) => {
       `${step}: sheet ${watch.faults.join('; ') || 'faultless'}, its look checked on ${watch.frames.looked} frames`,
     );
   if (actionWant(m, device) !== null) {
-    await app.tap('Begin');
+    await app.tap('Start');
     if (!(await app.until(() => app.headings().includes('Today') && ACTIONS.some(app.has))))
-      fail(`${step}: no Today after Begin, at ${app.headings().join('|')}`);
+      fail(`${step}: no Today after Start, at ${app.headings().join('|')}`);
     return false;
   }
   await app.until(() => false, 10);
-  expect({ step, begin: app.has('Begin'), root: rootFaults(app.host, 'read') }).toEqual({
+  expect({ step, begin: app.has('Start'), root: rootFaults(app.host, 'read') }).toEqual({
     step,
     begin: false,
     root: [],
@@ -338,7 +347,7 @@ const closeTrip = async (run: Run, watch: ReturnType<typeof watchSheet>) => {
  * A Minutes choice the reader's way (R2): from Today, `Your field`, the
  * gear, the radio `<n> min` (its write refused one time in five), the plan
  * made at that tap with the held item let go, the radio checked and home's
- * counts line under the sheet the new plan's, `Done`, then `Begin` and
+ * counts line under the sheet the new plan's, `Done`, then `Start` and
  * Today, or home's done state, which ends the launch (true). An unread
  * launch offers no choices.
  */
@@ -351,7 +360,7 @@ const minutesTrip = async (run: Run, n: Minutes) => {
   const refused = run.next() < 0.2;
   if (refused) faults.refuse.add(MINUTES_KEY);
   else faults.refuse.delete(MINUTES_KEY);
-  const before = wantOf(run);
+  const before = homeWantOf(run);
   const watch = await openTrip(run);
   if (!(await tapInSheet(`${n} min`))) {
     watch.stop();
@@ -364,7 +373,7 @@ const minutesTrip = async (run: Run, n: Minutes) => {
     m.plan = made.plan;
     m.hold = made.hold;
   }
-  const want = JSON.stringify(wantOf(run));
+  const want = JSON.stringify(homeWantOf(run));
   const radio = JSON.stringify([`${n} min`]);
   if (
     !(await app.until(
@@ -472,11 +481,11 @@ const againCommand = async (run: Run) => {
   cover('again');
 };
 
-/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state (bare, or the end of a run) home shows the plan's counts line and no `Begin` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
+/** The field and back to Today by `Start`, offered only in a read garden, while Today shows an action; in the done state (bare, or the end of a run) home shows the plan's counts line and no `Start` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
   if (!run.m.read) return false;
   const acted = run.app.has('Say it') || run.app.has('Next');
-  const counts = wantOf(run);
+  const counts = homeWantOf(run);
   await run.app.tap('Your field');
   expect(
     await run.app.until(
@@ -487,13 +496,13 @@ const fieldCommand = async (run: Run) => {
     expect({
       step: run.step,
       counts: run.app.homeCounts(),
-      begin: run.app.has('Begin'),
+      begin: run.app.has('Start'),
       root: rootFaults(run.app.host, 'read'),
     }).toEqual({ step: run.step, counts, begin: false, root: [] });
     cover('field, done');
     return true;
   }
-  await run.app.tap('Begin');
+  await run.app.tap('Start');
   expect(await run.app.until(() => run.app.headings().includes('Today'))).toBe(true);
   cover('field and back');
   return false;
@@ -511,7 +520,7 @@ const cycledFrom = (shown: string | undefined) => {
  * A Voice choice the reader's way (R5): its write refused one time in
  * five, then from Today `Your field`, the gear, `Voice`, the sheet's pill
  * showing the cycle's next after its value at the open, `Done`, then
- * `Begin` and Today, or home's done state, which ends the launch (true).
+ * `Start` and Today, or home's done state, which ends the launch (true).
  * The plan stays. An unread launch offers no choices.
  */
 const voiceTrip = async (run: Run) => {
@@ -661,8 +670,8 @@ const firstMinute = async (run: Run) => {
 
 /**
  * Home's first show in a read garden (R2), which makes the plan: the
- * heading `Your field` alone, the model's counts of it, `Begin` exactly
- * when the run's model shows an item, and no fault. Then `Begin` and
+ * heading `Your field` alone, the model's counts of it, `Start` exactly
+ * when the run's model shows an item, and no fault. Then `Start` and
  * Today's first show, held to the model; or, in the done state, no Today
  * frame follows and the launch ends on home (true).
  */
@@ -674,18 +683,18 @@ const fromHome = async (run: Run) => {
   m.plan = planNow(run);
   m.hold = null;
   const begin = shownModel({ plan: m.plan, hold: m.hold }, recallsNow(device)) !== null;
-  await app.until(() => app.has('Begin') === begin);
+  await app.until(() => app.has('Start') === begin);
   if (!begin) await app.until(() => false, 10);
   expect({
     step,
     headings: app.headings(),
     counts: app.homeCounts(),
-    begin: app.has('Begin'),
+    begin: app.has('Start'),
     faults: app.faults,
   }).toEqual({
     step,
     headings: ['Your field'],
-    counts: wantOf(run),
+    counts: homeWantOf(run),
     begin,
     faults: [],
   });
@@ -698,7 +707,7 @@ const fromHome = async (run: Run) => {
     cover('home:done');
     return true;
   }
-  await app.tap('Begin');
+  await app.tap('Start');
   cover('home:begin');
   expect(await app.until(() => app.headings().includes('Today') && ACTIONS.some(app.has))).toBe(
     true,
@@ -723,7 +732,7 @@ const minutesRule = (text: string | undefined, failed: boolean): Minutes => {
   return MINUTES.find((each) => String(each) === text) ?? 5;
 };
 
-/** One launch: held and pending, then the first minute or home, or Today in an unread garden; the plan at home's first show in a read garden, `Begin` or the launch's end there; 2-4 commands on Today; no frame fault; no line in any frame of an unread launch. */
+/** One launch: held and pending, then the first minute or home, or Today in an unread garden; the plan at home's first show in a read garden, `Start` or the launch's end there; 2-4 commands on Today; no frame fault; no line in any frame of an unread launch. */
 const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: string) => {
   const { device, m, next, time } = base;
   const recalled = [...device.disk.keys()].some((key) => key.startsWith(PREFIX));

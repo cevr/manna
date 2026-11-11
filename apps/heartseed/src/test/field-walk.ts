@@ -5,8 +5,8 @@
  * (`field-rig.tsx`), which holds every frame to the root's and the field's
  * rules. Each device starts from a generated disk (the passage's history or
  * none, other verses of any reference, a setting); each launch lands on home
- * and goes to Today by `Begin` (`opened`), and the device plays opens of the
- * field by `Your field` and ways back by `Begin`, recitals, Again, peeks and
+ * and goes to Today by `Start` (`opened`), and the device plays opens of the
+ * field by `Your field` and ways back by `Start`, recitals, Again, peeks and
  * relaunches in any order. The writes each
  * command may make are modelled apart from the app: a recital adds one
  * record of the passage (and, when Today offers no Say it, first makes a
@@ -53,12 +53,12 @@ const allowed = (command: WalkCommand, againChosen: boolean, offered: boolean) =
   return { sets: 0, keys: 0 };
 };
 
-/** Whether a launch's home offers `Begin`. */
-const begins = (app: App) => app.buttons().includes('Begin');
+/** Whether a launch's home offers `Start`. */
+const begins = (app: App) => app.buttons().includes('Start');
 
 /**
  * Mounts a launch over the disk as it stands, at `time`, on home, and goes
- * to Today by `Begin`. When home offers no `Begin` (the done state), that
+ * to Today by `Start`. When home offers no `Start` (the done state), that
  * launch ends writing nothing, and a relaunch at the passage's due (as a
  * Minutes radio in the Settings sheet makes the plan there) offers it.
  */

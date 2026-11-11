@@ -4,7 +4,7 @@
  * The field's bar and rows over unread stored kinds (hspassage C3, C12):
  * on generated readers through `test/bar-walk.ts`, a garbled value and 3
  * failed reads of the passages' key alone (unread: no add, no remove, no
- * limit line and no `When I need…` on any frame, `Begin` offered and taken
+ * limit line and no `When I need…` on any frame, `Start` offered and taken
  * to Today, and the planted verses of the stored list as one-verse rows),
  * and other plants. Its devices alone must reach those cases;
  * `bar-held.test.tsx` holds the read lists.
@@ -26,7 +26,7 @@ it('offers no add and no remove over unread passages, their planted verses each 
     'unread:a planted passage verse as its own row',
     'reads:3',
     'other plant',
-    'round:by Begin',
+    'round:by Start',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
   expect([...reached.keys()].some((each) => each.startsWith('stored:garbled'))).toBe(true);

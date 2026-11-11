@@ -1,7 +1,7 @@
 /**
  * Today's run against its model on generated devices, leaning toward whole
  * plans run item by item (`src/test/run-walk.ts`): each launch from home by
- * `Begin`, pieces in more than one group and devices without the passage
+ * `Start`, pieces in more than one group and devices without the passage
  * first, each item under its own cue (the new piece whole, a review in
  * first letters or empty slots, at the first show and after Next), each
  * kept recall's suggestion under that cue, and a recital cancelled. This

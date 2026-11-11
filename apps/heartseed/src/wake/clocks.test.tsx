@@ -6,7 +6,7 @@
  * return sent with the sheet open, zones every side of UTC (Lord Howe's
  * half-hour daylight saving among them), a plan the minutes chosen change,
  * a verse planted the evening before, and home in the done state until an
- * away's return brings an item and `Begin`. `src/wake/clocks-b.test.tsx`
+ * away's return brings an item and `Start`. `src/wake/clocks-b.test.tsx`
  * walks the rest.
  */
 

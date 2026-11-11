@@ -7,7 +7,7 @@
  * the reference nor the words itself: they reach it from the corpus. The
  * device holds another verse's recall, so the launch opens home, not the
  * first minute, and the passage, unplanted, is the plan's new piece: home
- * shows `Begin`, which leads to Today. Every frame holds to the root's
+ * shows `Start`, which leads to Today. Every frame holds to the root's
  * frame rule.
  */
 
@@ -48,10 +48,10 @@ describe('Today', () => {
   const rule = watchRoot(host, 'read');
   const headings = () =>
     [...host.querySelectorAll('[role="heading"]')].map((node) => node.textContent);
-  /** The buttons named `Begin`, by label or text. */
+  /** The buttons named `Start`, by label or text. */
   const begins = () =>
     [...host.querySelectorAll('[role="button"]')].filter(
-      (node) => node.getAttribute('aria-label') === 'Begin' || node.textContent === 'Begin',
+      (node) => node.getAttribute('aria-label') === 'Start' || node.textContent === 'Start',
     );
   /** Waits until `holds`, at most 3 s. */
   const until = async (holds: () => boolean) => {
@@ -60,7 +60,7 @@ describe('Today', () => {
   };
   const home = { headings: [''], begins: 0 };
 
-  /** The launch: home once it shows `Begin`, then `Begin`, then Today once its heading shows. */
+  /** The launch: home once it shows `Start`, then `Start`, then Today once its heading shows. */
   const shown = (async () => {
     device.launch([
       [`heartseed/recall/${OTHER.reference}/${OTHER.startedAt}`, JSON.stringify(OTHER)],
@@ -86,7 +86,7 @@ describe('Today', () => {
     await until(() => headings().includes('Today'));
   })();
 
-  it('opens on home with Begin, which shows the header Today', async () => {
+  it('opens on home with Start, which shows the header Today', async () => {
     await shown;
     expect({ home, today: headings(), faults: rule.faults }).toEqual({
       home: { headings: ['Your field'], begins: 1 },

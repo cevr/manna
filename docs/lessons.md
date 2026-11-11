@@ -5409,7 +5409,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/batch-hg-1-findings.md o2 (Follow-up, Unproven 1)
 - **Wrong:** Heartseed makes the launch's plan at home's first show, and Today's mount after `Begin` keeps it, but no walk moved the clock between home's first show and `Begin`, so a product that made the plan again at the tap passed every walk.
 - **Cause:** The home walk drew `Begin` only at the instant home showed, so the plan's instant and the tap's were one in every walk.
-- **Guard:** code: `apps/heartseed/src/home/walk-h.test.tsx` `keeps the plan made at home's first show when Begin follows a wait on home`
+- **Guard:** code: `apps/heartseed/src/home/walk-h.test.tsx` `keeps the plan made at home's first show when Start follows a wait on home`
 
 ### dead-exports-reads-a-shell-run-entry
 

@@ -5,7 +5,7 @@
  * (`src/test/today-rig.tsx`): while the garden's read is held, every
  * pending frame shows no word of the verse, seen or named, in the
  * whole-text node or a word node, and no run of it anywhere; once the read
- * lands, a read garden's launch is taken from home to Today by `Begin`,
+ * lands, a read garden's launch is taken from home to Today by `Start`,
  * an unread one opens Today, and the passage shows its cue. The cue at
  * rest and after an unheard recital is `cue.test.tsx`'s.
  */

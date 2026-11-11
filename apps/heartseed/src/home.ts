@@ -1,7 +1,7 @@
 /**
  * The home's rules over the field, as pure code no screen draws yet
  * (hshomefield onward): the furrows (one per row of the field, each its
- * list's kind and icon, how many of its plants are ripe, and each plant's
+ * list's kind and icon, its caption, and each plant's
  * stage and ready mark), the verses today's plan still holds open, and the
  * greeting by the reader's local hour.
  *
@@ -90,10 +90,32 @@ export interface Furrow {
   readonly source: ListSource;
   readonly kind: FurrowKind;
   readonly icon: HomeIcon;
-  /** `<k> of <n> ripe`: its plants at full corn, of all its plants. */
-  readonly ripe: string;
+  /** What the furrow holds in words (`captionOf`). */
+  readonly caption: string;
   readonly plants: readonly FurrowPlant[];
 }
+
+/** `<n> verse` or `<n> verses`. */
+const versesText = (n: number) =>
+  Match.value(n).pipe(
+    Match.when(1, () => '1 verse'),
+    Match.orElse(() => `${n} verses`),
+  );
+
+/**
+ * A furrow's caption over its plants: `<n> verse(s) · <r> ready today` when
+ * the plan holds r of them open, else `<n> verse(s) · <p> planted` when p
+ * are planted, else `<n> verse(s) to learn`. Words, not numbers under each
+ * plant, so a reader sees at a glance what the list asks of today.
+ */
+export const captionOf = (plants: readonly Pick<FurrowPlant, 'stage' | 'ready'>[]) => {
+  const verses = versesText(plants.length);
+  const ready = plants.filter((plant) => plant.ready).length;
+  if (ready > 0) return `${verses} · ${ready} ready today`;
+  const planted = plants.filter((plant) => plant.stage !== 'not planted').length;
+  if (planted > 0) return `${verses} · ${planted} planted`;
+  return `${verses} to learn`;
+};
 
 /** A plant's label: `<reference>, <stage>`, then `, ready today` when the plan holds it open. */
 const labelOf = (reference: string, stage: PlantStage, ready: boolean) => {
@@ -123,7 +145,6 @@ export const furrowsOf = (
         label: labelOf(plant.reference, plant.stage, isReady),
       };
     });
-    const ripe = plants.filter((plant) => plant.stage === 'full corn').length;
     return {
       id: list.id,
       title: list.title,
@@ -131,7 +152,7 @@ export const furrowsOf = (
       source: list.source,
       kind: kindOf(list.source),
       icon: iconOf(list.source),
-      ripe: `${ripe} of ${plants.length} ripe`,
+      caption: captionOf(plants),
       plants,
     };
   });

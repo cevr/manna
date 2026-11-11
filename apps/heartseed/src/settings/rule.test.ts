@@ -35,7 +35,6 @@ import { watchSheet } from '../test/settings-rig';
 const SCREENS = [
   'Your field',
   'Today',
-  'When I need…',
   'Add a passage',
   'About',
   'Hear it',
@@ -287,7 +286,7 @@ describe("the root's listening clause", () => {
       ),
     ).toEqual([]);
     expect(cells.length).toBe(SCREENS.length * 2 * 2 * REACH_KINDS.length);
-    expect(cells.length).toBe(468);
+    expect(cells.length).toBe(416);
   });
 });
 

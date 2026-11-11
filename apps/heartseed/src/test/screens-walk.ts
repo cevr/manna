@@ -1,38 +1,33 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through the rigs' promise-based taps, one awaited step after another. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noNullish, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through the rigs' promise-based taps, one awaited step after another, reading a node's absent attributes as null. */
 
 /**
  * The walks `src/look/screens.test.tsx` (light) and
  * `src/look/screens-dark.test.tsx` (dark) run, with the add's half in
  * `screens-b.test.tsx` and `screens-dark-b.test.tsx`, one scheme each, so each
  * part stays inside its time budget: the field (the launch's home), Today
- * by `Begin` and home again by `Your field`, About (by home's `Settings`
- * and the sheet's `About`, the sheet's frames held to `sheetFaults`), the
- * Add verses sheet with `Psalms` open (held to `addSheetFaults` in the
- * scheme shown, each of its controls pressed in turn), the chooser by its
- * `Any passage`, and
- * When I need… in the scheme, and across a flip of the system on each,
- * through the bar rig and the need rig, which hold every frame (each DOM
+ * by `Start` and home again by `Your field`, the chosen card, About (by
+ * home's `Settings` and the sheet's `About`, the sheet's frames held to
+ * `sheetFaults`), the Add a list sheet with `Psalms` open (held to
+ * `addSheetFaults` in the scheme shown, each of its controls pressed in
+ * turn), and the chooser by its `Any passage`, in the scheme, and across a
+ * flip of the system on each, through the bar rig, which holds every frame (each DOM
  * mutation batch) to the frame oracle (`look.ts`) for the system's scheme
- * at that frame, beside their own rules. Each settled screen is also held
+ * at that frame, beside its own rules. Each settled screen is also held
  * to the oracle for the scheme shown, with each control pressed in turn.
  */
 
 import { act } from 'react';
-import passage from 'virtual:heartseed-passage';
 
 import type { Scheme } from '../theme';
 import { mountBar } from './bar-rig';
 import { recallOf } from './field-model';
 import { record } from './field-rig';
 import { lookFaults, pressedFaults, setSystem } from './look';
-import { launchNeed, needDevice, recordOf } from './need-rig';
 import { device } from './one';
 import { KEY, storedText } from './passages-model';
 import { openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { activateSheet, addSheetFaults, tapSheet } from './shelves-rig';
 
-const NOW = Date.UTC(2026, 4, 12, 15);
-const NEED = 'When I need…';
 const other = (scheme: Scheme): Scheme => (scheme === 'light' ? 'dark' : 'light');
 
 type Bar = Awaited<ReturnType<typeof mountBar>>;
@@ -70,6 +65,7 @@ export const FIELD_PLACES = [
   'the field',
   'Today',
   'home from Today',
+  'the chosen card',
   'every stage',
   'the ask',
   'a remove landed',
@@ -114,8 +110,18 @@ export const walkFieldScreens = async (scheme: Scheme) => {
   const reached: string[] = [];
   const { rig, presses, step } = await launchScreens(scheme, report, reached);
   await held(rig, scheme, 'the field', report, presses);
-  await step('Begin', 'Today', 'Today');
+  await step('Start', 'Today', 'Today');
   await step('Your field', 'Your field', 'home from Today');
+  const made = [...rig.host.querySelectorAll('[data-testid="field-plant"]')]
+    .map((node) => node.getAttribute('aria-label') ?? '')
+    .find((name) => name.startsWith('Made 1:1, '));
+  if (made !== undefined && (await rig.tap(made))) {
+    if (await rig.until(() => rig.host.querySelector('[data-testid="chosen"]') !== null)) {
+      reached.push('the chosen card');
+      await held(rig, scheme, 'the chosen card', report, presses);
+    }
+    await rig.tap(made);
+  }
   const drawn = new Set(
     [...rig.host.querySelectorAll('img')].flatMap(
       (node) =>
@@ -154,7 +160,7 @@ export const walkAddScreens = async (scheme: Scheme) => {
   const report: string[] = [];
   const reached: string[] = [];
   const { rig, presses, step } = await launchScreens(scheme, report, reached);
-  await rig.tapId('add-verses');
+  await rig.tapId('add-list');
   await activateSheet(rig.until);
   await tapSheet('Psalms');
   const open = () =>
@@ -186,25 +192,4 @@ export const walkAddScreens = async (scheme: Scheme) => {
   await rig.leave();
   setSystem('light');
   return { report, reached, pressed: presses.pressed };
-};
-
-/** When I need… and its cards in `scheme`: the faults found and how many cards showed. */
-export const walkNeedScreen = async (scheme: Scheme) => {
-  const report: string[] = [];
-  const presses = { pressed: 0 };
-  setSystem(scheme);
-  const need = needDevice([
-    recordOf(passage.reference, NOW - 3 * 60_000),
-    recordOf('Psalms 56:3', NOW - 2 * 60_000),
-  ]);
-  const rig = await launchNeed(need, { now: NOW });
-  await rig.until(() => rig.has(NEED));
-  await rig.tap(NEED);
-  await rig.until(() => rig.headings().includes(NEED));
-  const cards = rig.host.querySelectorAll('[data-testid="need-card"]').length;
-  await held(rig, scheme, NEED, report, presses);
-  if (rig.faults.length > 0) report.push(`rig: ${rig.faults.join(' | ')}`);
-  await rig.leave();
-  setSystem('light');
-  return { report, cards };
 };

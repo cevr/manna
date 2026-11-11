@@ -184,7 +184,7 @@ const lineOf = (model: SheetModel) => {
 export const sheetWant = (model: SheetModel, rows: readonly (readonly string[])[]): SheetSeen => {
   if (!model.open) return 'closed';
   return {
-    headings: ['Add verses'],
+    headings: ['Add a list'],
     shelves: SHELVES_MODEL.map((shelf): readonly [string, string | null] => [
       shelf.title,
       shelf.lists === 'chooser' ? null : String(shelf.title === model.shelf),

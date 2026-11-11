@@ -28,7 +28,7 @@ import { press } from '../app';
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
 import { recallOf } from '../test/field-model';
-import { footOf, record, selectedPlants } from '../test/field-rig';
+import { cardOf, record, selectedPlants } from '../test/field-rig';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
 import {
@@ -171,8 +171,8 @@ describe('Settings, its ways', () => {
       .map(labelOf)
       .find((label) => label.startsWith(`${passage.reference},`));
     expect(await rig.tap(plant ?? '')).toBe(true);
-    const chosen = { foot: footOf(rig.host), plants: selectedPlants(rig.host) };
-    expect(chosen.foot.line).toBe(`${passage.reference} · a seed`);
+    const chosen = { card: cardOf(rig.host), plants: selectedPlants(rig.host) };
+    expect(chosen.card.line).toBe(`${passage.reference} · a seed`);
     const start = new Map(device.disk);
     const kept: unknown[] = [];
     for (const way of ['Done', 'Escape'] as const) {
@@ -182,7 +182,7 @@ describe('Settings, its ways', () => {
         way,
         closed,
         modal: modalOf(),
-        foot: footOf(rig.host),
+        card: cardOf(rig.host),
         plants: selectedPlants(rig.host),
       });
     }

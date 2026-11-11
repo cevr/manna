@@ -3,10 +3,10 @@
 /**
  * Today over days with long verses learned as phrases, walked through the
  * root (`test/phrase-rig.tsx`), part c, file two: generated device 5 (its
- * layer teaching Fear), four days, each launch through home's `Begin`,
+ * layer teaching Fear), four days, each launch through home's `Start`,
  * held to the walk's oracle after every step. Its floors: Fear's phrases
  * reviewed, a making while a phrase's recital listens (at the session
- * seam), the phrases' records, `Begin` taken from home, and the end of a
+ * seam), the phrases' records, `Start` taken from home, and the end of a
  * run (`The field is tended`) with several verses grown, one of them grown
  * by its phrase.
  */

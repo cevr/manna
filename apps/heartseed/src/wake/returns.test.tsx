@@ -7,7 +7,7 @@
  * sheet stays, the plan made again under it at the return), a return under
  * the open sheet whose new plan moves home's counts
  * (`wake:sheet-return-differs`), a Minutes trip followed by a return, and a
- * plant no piece names; each launch takes home's `Begin` to Today.
+ * plant no piece names; each launch takes home's `Start` to Today.
  */
 
 import { wakeCase } from '../test/wake-walk';

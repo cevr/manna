@@ -9,7 +9,7 @@
  * garden). Its floors: launches on Today, the first and relaunches the
  * next morning; recitals kept; Today checked to offer no minutes choice
  * (no `Settings`, no `<n> min`). A minutes choice made is
- * `need-walk-b`'s floor, on a read garden.
+ * `walk-g`'s floor, on a read garden.
  */
 
 import { describe, expect, it } from 'bun:test';

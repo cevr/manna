@@ -33,7 +33,7 @@ import { deadline } from '../test/elapsed';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { device } from '../test/one';
 import { plantFaults } from '../test/plant-image-rule';
-import { watchRoot } from '../test/root-rule';
+import { cardLine, watchRoot } from '../test/root-rule';
 import type { Scheme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
 import { wordSpans } from '../voice/reading';
@@ -97,8 +97,9 @@ const mount = async (scheme: Scheme, held: boolean) => {
     return true;
   };
   const heading = () => host.querySelector('[role="heading"]')?.textContent ?? '';
-  /** Home's counts line, none before a plan. */
-  const counts = () => (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim();
+  /** Home's Today card line, none before a plan. */
+  const counts = () =>
+    host.querySelector('[data-testid="today-card"]') === null ? '' : cardLine(host);
   const has = (label: string) =>
     [...host.querySelectorAll('[role="button"]')].some(
       (node) => node.getAttribute('aria-label') === label,
@@ -192,11 +193,19 @@ describe('the first minute in dark and across flips of the system', () => {
     if (await first.until(() => first.heading() === 'Your field' && first.counts() !== ''))
       shown.push('home');
     await first.phase('home');
-    const done = { counts: first.counts(), begin: first.has('Begin') };
+    const done = {
+      counts: first.counts(),
+      begin: first.has('Start'),
+      anyway: first.has('Practice anyway'),
+    };
     const left = await first.leave();
     expect({ shown, done, ...left, seen: left.seen > 10 }).toEqual({
       shown: ['alone', 'planted', 'home'],
-      done: { counts: 'Nothing to tend now', begin: false },
+      done: {
+        counts: 'All tended for today | Nothing is due right now.',
+        begin: false,
+        anyway: true,
+      },
       report: [],
       frames: [],
       root: [],

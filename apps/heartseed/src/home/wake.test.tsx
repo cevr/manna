@@ -29,7 +29,7 @@ const DAY = Date.UTC(2026, 10, 5);
 
 const ICON = /\/assets\/home\/([a-z]+)-(?:light|dark)\.png$/u;
 
-/** A device whose garden holds the passage, recalled long ago, so a read launch opens home with `Begin`. */
+/** A device whose garden holds the passage, recalled long ago, so a read launch opens home with `Start`. */
 const planted = () => {
   const recall = recallOf(passage.reference, Date.UTC(2020, 0, 1, 12), 3, 0);
   return deviceOf([[keyOf(recall), JSON.stringify(recall)]]);
@@ -129,7 +129,7 @@ describe('the greeting at each return', () => {
     const time = { now: DAY + 11 * HOUR + 59 * MINUTE };
     const home = await launchHome(time);
     expect(greeted(home)).toEqual(['Good morning', 'sun']);
-    await home.app.tap('Begin');
+    await home.app.tap('Start');
     expect(await home.app.until(home.today)).toBe(true);
     time.now = DAY + 12 * HOUR;
     await home.app.send(['background', 'active']);

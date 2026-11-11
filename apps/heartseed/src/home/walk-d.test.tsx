@@ -6,9 +6,9 @@
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
- * one, `Begin`, a moved choice, `Start here` on a plan item and on a
+ * one, `Start`, a moved choice, `Practice` on a plan item and on a
  * phrase, the morning's greeting, and
- * relaunches that land on home. `Start here` on a planted verse and over
+ * relaunches that land on home. `Practice` on a planted verse and over
  * an open visit, and a landed remove, which this device no longer draws,
  * are `walk-g.test.tsx`'s, `walk-e.test.tsx`'s and `walk-b.test.tsx`'s.
  */
@@ -30,7 +30,7 @@ const FLOORS = [
 ];
 
 describe('home A, walked (d)', () => {
-  it('shows the furrows, the choice, the foot and the greeting as the models give them', async () => {
+  it('shows the furrows, the choice, the card and the greeting as the models give them', async () => {
     const { failure, cover } = await walkHome(74, [0], 14);
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);

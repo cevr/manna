@@ -1,7 +1,7 @@
-/* oxlint-disable effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary, effect/noGlobals, effect/noRuntimeTypeof -- a generated walk through the Add verses sheet under the real root: it drives the root one awaited tap at a time through React's promise-based `act`, names faults by their JSON, reads the model's undefined as none, and tells the bar's reading of the field from the heading shown off it by its type. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary, effect/noGlobals, effect/noRuntimeTypeof -- a generated walk through the Add a list sheet under the real root: it drives the root one awaited tap at a time through React's promise-based `act`, names faults by their JSON, reads the model's undefined as none, and tells the bar's reading of the field from the heading shown off it by its type. */
 
 /**
- * The Add verses sheet walked under the real `<Root />` (hsguards7 §C), for
+ * The Add a list sheet walked under the real `<Root />` (hsguards7 §C), for
  * the parts `src/shelves/root*.test.tsx`, over `bar-rig.tsx` with the
  * collections a world teaches handed to the app's layer.
  *
@@ -12,11 +12,11 @@
  * whole, a pick in part, Proverbs 18:10, a range of the protection
  * collection or a promise of a shelf; three failed reads of them, so
  * unread); the app's own verse planted or not, and one loose planted verse
- * or none. The script opens the sheet by the bar's `Add verses` or the
- * row's, taps up to four shelves (most often `Proverbs`, a taught
+ * or none. The script opens the sheet by `Add a list`, taps up to four
+ * shelves (most often `Proverbs`, a taught
  * collection's own shelf or `Strength`), plants once, opens the sheet again
  * on that shelf, and taps `Done`. A world with unread passages or three
- * held, or a plant that makes three, offers no `Add verses`.
+ * held, or a plant that makes three, offers no `Add a list`.
  *
  * After every command the sheet equals `sheetWant` over rows of verse
  * membership (the app's own row, the held ranges and the taught collections
@@ -248,7 +248,7 @@ const tallyShelf = (world: World, model: SheetModel, reach: Reach) => {
 interface Step {
   readonly name: string;
   readonly act:
-    | { readonly kind: 'open'; readonly by: 'add-verses' | 'add-row' }
+    | { readonly kind: 'open'; readonly by: 'add-list' }
     | { readonly kind: 'shelf'; readonly title: string }
     | { readonly kind: 'plant'; readonly title: string }
     | { readonly kind: 'done' };
@@ -258,7 +258,7 @@ interface Step {
   readonly stored: string | undefined;
 }
 
-/** The sheet's script over a world whose passages read with fewer than 3 held, into `steps`; answers how many `Add verses` home offers at its end. */
+/** The sheet's script over a world whose passages read with fewer than 3 held, into `steps`; answers how many `Add a list` home offers at its end. */
 const sheetScript = (
   next: () => number,
   world: World,
@@ -275,9 +275,8 @@ const sheetScript = (
       want: sheetWant(model, rowsOf(world, model.held)),
       stored: written && model.held.tag === 'Read' ? storedText(model.held.passages) : world.raw,
     });
-  const by = () => (below(next, 2) === 0 ? 'add-verses' : 'add-row');
   const open = () => {
-    const where = by();
+    const where = 'add-list';
     model = opened(model.held, model.counts);
     reach(`open:${where}`);
     push(`open by ${where}`, { kind: 'open', by: where });
@@ -324,7 +323,7 @@ const sheetScript = (
   }
   model = done(model);
   push('Done', { kind: 'done' });
-  return 2;
+  return 1;
 };
 
 /** The world and the script of `seed`, by the models alone. */
@@ -411,12 +410,12 @@ export const walkRoot = async (seed: number) => {
         );
     }
   };
-  /** Home's `Add verses` controls: the bar's and the row's, or none over unread passages and at 3 held. */
+  /** Home's `Add a list`, or none over unread passages and at 3 held. */
   const adds = (step: string, want: number) => {
     const seen = readBar(rig.host);
     if (typeof seen === 'string' || seen.add !== want)
       fail(
-        `${step}: home offers ${typeof seen === 'string' ? seen : seen.add} Add verses, not ${want}`,
+        `${step}: home offers ${typeof seen === 'string' ? seen : seen.add} Add a list, not ${want}`,
       );
   };
   let held: Held = script.held;

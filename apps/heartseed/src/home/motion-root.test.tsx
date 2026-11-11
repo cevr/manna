@@ -40,7 +40,9 @@ const home = async () => {
   launchField();
   const rig = await mountBar(0, false);
   expect(
-    await rig.until(() => by(rig.host, 'row').length === 2 && by(rig.host, 'counts').length === 1),
+    await rig.until(
+      () => by(rig.host, 'row').length === 2 && by(rig.host, 'today-card').length === 1,
+    ),
   ).toBe(true);
   return rig;
 };
@@ -52,8 +54,8 @@ const toEnd = async () => {
     { unread: false, refuse: false },
     { now: NOON },
   );
-  expect(await app.until(() => app.has('Begin'))).toBe(true);
-  expect(await app.tap('Begin')).toBe(true);
+  expect(await app.until(() => app.has('Start'))).toBe(true);
+  expect(await app.tap('Start')).toBe(true);
   expect(await app.until(() => app.headings().includes('Today') && app.has('Say it'))).toBe(true);
   MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
   expect(await app.tap('Say it')).toBe(true);

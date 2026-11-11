@@ -12,7 +12,7 @@
  * when it is exactly `system`, `light` or `dark`, else System; the scheme
  * the appearance's own, System's the system's. A tap shows at once and its
  * write lands unless the store refuses it; a refused choice holds for the
- * launch and the next launch reads the disk. Home's counts line and `Begin`
+ * launch and the next launch reads the disk. Home's counts line and `Start`
  * follow the plan made at a Minutes tap's instant (the session's model,
  * `src/test/session-model.ts`, and the run's, `src/test/run-model.ts`), the
  * chosen card the plant tapped. Opening and closing write nothing, and
@@ -26,7 +26,7 @@
  * and no `Voice` on any screen, Today's included), and every document frame
  * holds the sheet's rule (`src/test/settings-rig.ts`) in the model's scheme.
  * After each command the sheet's checked minutes, `Voice`'s value and the
- * checked appearance, home's counts line, `Begin`, the chosen card, the
+ * checked appearance, home's counts line, `Start`, the chosen card, the
  * disk's keys and every write equal the model's, with no fault.
  */
 
@@ -43,12 +43,13 @@ import { MINUTES_KEY } from '../session/service';
 import type { Scheme } from '../theme';
 import { CHOICE_KEY, ENABLED_KEY } from '../voice';
 import { recallOf } from './field-model';
-import { footOf, selectedPlants } from './field-rig';
+import { cardOf, selectedPlants } from './field-rig';
 import { below, keyOf, pickOf, random } from './garden-model';
 import { setSystem } from './look';
 import { KEY as PASSAGES_KEY, storedText } from './passages-model';
 import { madeModel, NO_RUN, shownModel } from './run-model';
-import { countsModel, planModel, type ModelPiece } from './session-model';
+import { cardLineModel } from './home-model';
+import { planModel, type ModelPiece } from './session-model';
 import {
   choicesOf,
   deviceOf,
@@ -275,7 +276,7 @@ const seen = (walk: Walk) => {
     ...(modal?.querySelectorAll('[role="radiogroup"][aria-label="Appearance"] [role="radio"]') ??
       []),
   ];
-  const foot = footOf(app.host);
+  const card = cardOf(app.host);
   const choices = modal === null ? null : choicesOf(modal);
   return {
     sheet:
@@ -290,8 +291,8 @@ const seen = (walk: Walk) => {
           },
     headings: app.headings(),
     counts: app.homeCounts(),
-    begin: app.has('Begin'),
-    chosen: foot.card === 'chosen' ? (foot.line.split(' · ')[0] ?? '') : null,
+    begin: app.has('Start'),
+    chosen: card.card === 'chosen' ? (card.line.split(' · ')[0] ?? '') : null,
     selected: selectedPlants(app.host).map((name) => name.split(', ')[0]),
     disk: {
       minutes: device.disk.get(MINUTES_KEY),
@@ -320,7 +321,7 @@ const wanted = (walk: Walk): ReturnType<typeof seen> => {
         }
       : null,
     headings: ['Your field'],
-    counts: unchosen ? [countsModel(items, recallsNow)] : [],
+    counts: unchosen ? [cardLineModel(items, recallsNow)] : [],
     begin: unchosen && shownModel(madeModel(NO_RUN, items, false), recallsNow) !== null,
     chosen: m.chosen,
     selected: unchosen ? [] : [m.chosen ?? ''],
@@ -494,13 +495,13 @@ const plantCommand = async (walk: Walk) => {
   await tapPlant(walk, name);
 };
 
-/** `Begin`, the sheet closed and any plant let go first: Today shows no choice and no `Settings`; then back to home. */
+/** `Start`, the sheet closed and any plant let go first: Today shows no choice and no `Settings`; then back to home. */
 const beginCommand = async (walk: Walk) => {
   await ensureClosed(walk);
   const chosen = plantNames(walk).find((name) => name.startsWith(`${walk.m.chosen}, `));
   if (chosen !== undefined) await tapPlant(walk, chosen);
   if (!wanted(walk).begin) return;
-  await walk.app.tap('Begin');
+  await walk.app.tap('Start');
   expect(await walk.app.until(() => walk.app.headings().includes('Today'))).toBe(true);
   expect({
     at: walk.step,

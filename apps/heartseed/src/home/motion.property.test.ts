@@ -17,7 +17,7 @@ const furrowOf = (next: () => number, index: number, plants: readonly PlantStage
   source: { _tag: 'Loose' },
   kind: pickOf(next, kinds),
   icon: pickOf(next, HOME_ICONS),
-  ripe: `${plants.filter((stage) => stage === 'full corn').length} of ${plants.length} ripe`,
+  caption: `${plants.length} verses to learn`,
   plants: plants.map((stage, place) => ({
     reference: `Psalms 119:${place + 1}`,
     stage,

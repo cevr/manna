@@ -17,7 +17,7 @@ import { walkRoot } from '../test/root-sheet-walk';
 import { missed } from '../test/shelves-walk';
 
 it('offers Proverbs 18:10 as in your field when only the taught protection collection holds it', async () => {
-  const { faults, reached } = await walkRoot(1576);
+  const { faults, reached } = await walkRoot(20750);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
@@ -27,7 +27,7 @@ it('offers Proverbs 18:10 as in your field when only the taught protection colle
       ['stored:pick', 1],
       ['stored:taught-range', 1],
       ['own:not-planted', 1],
-      ['open:add-verses', 1],
+      ['open:add-list', 1],
       ['offer:plant', 1],
       ['offer:in field', 1],
       ['in-field:needs-held', 1],
@@ -42,14 +42,14 @@ it('offers Proverbs 18:10 as in your field when only the taught protection colle
 });
 
 it('offers a taught collection named after an unknown id as in your field, and a landed plant as in your field on reopening', async () => {
-  const { faults, reached } = await walkRoot(13);
+  const { faults, reached } = await walkRoot(857);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
       ['taught:unknown', 1],
       ['sheet:taught:unknown', 1],
       ['own:planted', 1],
-      ['open:add-row', 1],
+      ['open:add-list', 1],
       ['in-field:needs-taught', 1],
       ['proverb:plant:untaught', 1],
       ['proverb:in-field:untaught', 1],

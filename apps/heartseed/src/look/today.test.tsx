@@ -3,17 +3,17 @@
 /**
  * Today in dark, and across flips of the system, as a model-based walk
  * through the run rig (`src/test/run-rig.tsx`): over a verse due, home at the
- * launch and its `Begin`, then generated
+ * launch and its `Start`, then generated
  * sequences of Say it (heard whole, heard with a word missed, unheard, and
  * each with the system flipped while it listens), a peek at a missed word,
  * a grade, Next to the end of the run (`The field is tended`; the one
  * verse is in every plan, so the bare done state never shows and the walks
  * hold that it does not), minutes chosen in home's Settings sheet
- * (`renewBySettings`: `Your field`, the radio, `Done`, then `Begin` while
+ * (`renewBySettings`: `Your field`, the radio, `Done`, then `Start` while
  * the verse shows, else the walk ends on home), the field and back, and a
  * flip of the system between any two steps. A Minutes trip ends on Today
  * when the plan made at its tap offers the verse, by the session's and the
- * run's models over the device's disk, and on home with no `Begin`
+ * run's models over the device's disk, and on home with no `Start`
  * otherwise; the fourth walk opens with an unheard recital and a trip, so
  * a trip whose plan offers the verse is walked. The model is the system's last
  * value; every frame (each DOM mutation batch) and every settled screen
@@ -192,11 +192,11 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
       if (trip.at === 'Today') return true;
       if (offered)
         report.push(
-          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Begin ${app.has('Begin') ? 'shown' : 'none'}, where the plan offers ${passage.reference}`,
+          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Start ${app.has('Start') ? 'shown' : 'none'}, where the plan offers ${passage.reference}`,
         );
-      else if (trip.at !== 'Your field' || app.has('Begin'))
+      else if (trip.at !== 'Your field' || app.has('Start'))
         report.push(
-          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Begin ${app.has('Begin') ? 'shown' : 'none'}`,
+          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Start ${app.has('Start') ? 'shown' : 'none'}`,
         );
       ended.home = true;
       return true;
@@ -207,18 +207,18 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
       await app.until(
         () =>
           app.headings().includes('Your field') &&
-          app.host.querySelectorAll('[data-testid="counts"]').length > 0,
+          app.host.querySelectorAll('[data-testid="today-card"]').length > 0,
       );
       await settle('the field');
       if (!acted) {
         ended.home = true;
         coverage['field, done'] = (coverage['field, done'] ?? 0) + 1;
-        if (app.has('Begin')) report.push(`seed ${seed} the field, done: Begin shown`);
+        if (app.has('Start')) report.push(`seed ${seed} the field, done: Start shown`);
         for (const fault of rootFaults(app.host, 'read'))
           report.push(`seed ${seed} the field, done: ${fault}`);
         return true;
       }
-      await app.tap('Begin');
+      await app.tap('Start');
       return app.until(() => app.headings().includes('Today'));
     },
     flip: async () => {
@@ -226,9 +226,9 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
       return true;
     },
   };
-  if (!(await app.until(() => app.has('Begin')))) report.push(`seed ${seed} launch: no Begin`);
+  if (!(await app.until(() => app.has('Start')))) report.push(`seed ${seed} launch: no Start`);
   await settle('home');
-  await app.tap('Begin');
+  await app.tap('Start');
   await app.until(() => app.has('Say it'));
   await settle('launch');
   const first = OPENINGS[seed % OPENINGS.length] ?? [];
@@ -283,8 +283,8 @@ describe('Today in dark and across flips of the system', () => {
     const app = await launch(dueDevice(), { unread: false, refuse: false }, { now: T0 });
     const model: Model = { system: 'dark' };
     const look = watchLook(app.host, () => model.system);
-    expect(await app.until(() => app.has('Begin'))).toBe(true);
-    await app.tap('Begin');
+    expect(await app.until(() => app.has('Start'))).toBe(true);
+    await app.tap('Start');
     await app.until(() => app.has('Say it'));
     MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
     await app.tap('Say it');

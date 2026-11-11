@@ -196,7 +196,7 @@ const askedName = (asked: Span | string) => (typeof asked === 'string' ? asked :
 /** The bar with no ask and no alert, as the field opens. */
 export const QUIET: Asking = { ask: undefined, alert: undefined };
 
-/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add verses` show (the bar's and the row's) and how many `When I need…`; the limit line, the ask and the alerts, `undefined` for none. */
+/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add a list` show and how many Today cards; the limit line, the ask and the alerts, `undefined` for none. */
 export interface FieldSeen {
   readonly rows: ReadonlyArray<{
     readonly title: string;
@@ -204,7 +204,7 @@ export interface FieldSeen {
     readonly controls: ReadonlyArray<string>;
   }>;
   readonly add: number;
-  readonly need: number;
+  readonly card: number;
   readonly limit: string | undefined;
   readonly ask: string | undefined;
   readonly alert: string | undefined;
@@ -225,13 +225,13 @@ const versesOfSpan = (span: Span) =>
  * `handbook-model.ts`), then every other plant (hsfield's rule), each
  * phrase folded into its verse (H7); each held passage's row holds one
  * `Remove <reference>`, each held list's one `Remove <title>`, and no other
- * row a `Remove`. With the passages read, the bar holds the ask while
- * there is one, else `Add verses` under 3 passages and lists held together
- * (in the bar and as the row at the field's end, so two), else the limit
- * line; unread, it holds neither and no row a `Remove`. The bar's one
- * `When I need…` shows once a plan is made (hshomeroot R5), which is at
- * home's first show with the passages read, and never over unread passages
- * (no plan reads them).
+ * row a `Remove`. With the passages read, the card's place holds the ask
+ * while there is one, and `Lists` offers `Add a list` under 3 passages and
+ * lists held together, else the limit line, neither while the ask shows;
+ * unread, it holds neither and no row a `Remove`. The Today card shows
+ * exactly while no ask does (hsstart T3): with the passages read a plan is
+ * made at home's first show, so it has its lines, and over unread passages
+ * it offers `Start`.
  */
 export const fieldWant = (
   records: ReadonlyArray<Recall>,
@@ -261,8 +261,8 @@ export const fieldWant = (
       plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
       controls: index >= 1 && index <= count ? [`Remove ${row.title}`] : [],
     })),
-    add: read && asking === undefined && count < 3 ? 2 : 0,
-    need: read ? 1 : 0,
+    add: read && asking === undefined && count < 3 ? 1 : 0,
+    card: asking === undefined ? 1 : 0,
     limit: read && asking === undefined && count >= 3 ? LIMIT : undefined,
     ask: asking === undefined ? undefined : askText(askedName(asking)),
     alert: bar.alert,

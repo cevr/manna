@@ -6,7 +6,7 @@
  * 1 or 2 failed reads of the passages' key, read; other plants; `Add
  * verses` from none held, by the bar's and by the row's, and the chooser
  * left back to the field; the limit line at launch; and a round trip from
- * home by `Begin`. Every frame keeps the bar's controls, the alert and the
+ * home by `Start`. Every frame keeps the bar's controls, the alert and the
  * limit line out of the scroll view, one heading, the root's frame rule,
  * and every seen text at AA. Its devices alone must reach those cases;
  * `bar-adds.test.tsx` walks the rest of the adds.
@@ -21,7 +21,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('offers an add under 3 passages held, and the limit line at 3 or more', async () => {
-  const { faults, reached } = await walkBars([120, 122], 5, 'bar');
+  const { faults, reached } = await walkBars([109, 230], 5, 'bar');
   expect(faults).toEqual([]);
   const floors = [
     'reads:1',
@@ -31,11 +31,10 @@ it('offers an add under 3 passages held, and the limit line at 3 or more', async
     'held:3',
     'add:from-0',
     'add:left',
-    'add:by add-verses',
-    'add:by add-row',
+    'add:by add-list',
     'limit:at launch',
     'other plant',
-    'round:by Begin',
+    'round:by Start',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

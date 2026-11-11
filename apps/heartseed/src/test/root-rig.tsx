@@ -1,8 +1,8 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop -- When I need…'s screen rig: it mounts the root route in happy-dom's document through React's promise-based `act`, handing each turn over until the frame a test waits on lands, at most 3 s; the disk is a plain map a test reads between steps, and a parsed node's absent attributes are null. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop -- the root's screen rig: it mounts the root route in happy-dom's document through React's promise-based `act`, handing each turn over until the frame a test waits on lands, at most 3 s; the disk is a plain map a test reads between steps, and a parsed node's absent attributes are null. */
 
 /**
- * When I need…, home and Today as a reader and a screen reader meet them,
- * for the tests of `src/need` and the home walk: the root route (it takes
+ * Home and Today as a reader and a screen reader meet them, for the home
+ * walk and the screens' look: the root route (it takes
  * no props, so a launch on a read garden opens home) mounted in happy-dom
  * (react-native-web) under the app's own layer teaching `promises`
  * (`TAUGHT` unless the test leaves the part out), over a disk in a plain
@@ -13,19 +13,10 @@
  * Effect's `Clock` frozen where the test sets it.
  *
  * Every frame (each DOM mutation batch) is held to the root's frame rule
- * (`rootFaults`, over the garden read or not) and to the screens' rules:
- * - at most one heading;
- * - `Listening` only on Today, and never beside `When I need…`;
- * - `When I need…` only on home;
- * - on When I need…: no control inside a scroll view but a promise, no
- *   node of Today or the field, the bar's `Your field` outside the scroll
- *   view, no `Say it` or `Next`, every control at least 44 tall, every
- *   text at AA on what lies behind it;
- * - on home: `When I need…` never inside the scroll view, at least 44 tall;
- * - off When I need…, no card of it;
- * - any check the launch is given (the home walk's `homeFaults` on the
- *   field).
- * Each fault is kept with the frame's heading.
+ * (`rootFaults`, over the garden read or not), to the look's rule, and to
+ * the screens' rules: at most one heading; `Listening` only on Today; and
+ * any check the launch is given (the home walk's `homeFaults` on the
+ * field). Each fault is kept with the frame's heading.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -44,7 +35,6 @@ import { Haptics, type Recall } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf, type Time } from './clock';
 import { deadline } from './elapsed';
-import { AA, contrastOf } from './contrast';
 import { keyOf } from './garden-model';
 import { lookFaults } from './look';
 import { END, rootFaults } from './root-rule';
@@ -52,7 +42,7 @@ import { END, rootFaults } from './root-rule';
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
 /** The device's disk, which outlives every launch, and whether every listing fails (an unread garden). */
-export interface NeedDevice {
+export interface RootDevice {
   readonly disk: Map<string, string>;
   unread: boolean;
 }
@@ -60,7 +50,7 @@ export interface NeedDevice {
 const failure = (method: string, key: string) =>
   new KeyValueStore.KeyValueStoreError({ message: `test: ${method}`, method, key });
 
-const storeOf = (device: NeedDevice) =>
+const storeOf = (device: RootDevice) =>
   Layer.succeed(
     KeyValueStore.KeyValueStore,
     KeyValueStore.makeStringOnly({
@@ -105,7 +95,7 @@ export const recordOf = (reference: string, startedAt: number): readonly [string
 };
 
 /** A device over `entries`, its listings read. */
-export const needDevice = (entries: readonly (readonly [string, string])[]): NeedDevice => ({
+export const rootDevice = (entries: readonly (readonly [string, string])[]): RootDevice => ({
   disk: new Map(entries),
   unread: false,
 });
@@ -117,78 +107,13 @@ export const textOf = (node: Element | null | undefined) =>
 /** A node's name: its label, else its text. */
 const nameOf = (node: Element) => node.getAttribute('aria-label') ?? textOf(node);
 
-const scrolls = (node: Element) => {
-  const style = getComputedStyle(node);
-  return /auto|scroll/.test(`${style.overflowY} ${style.overflow}`);
-};
-
-/** Whether `node` lies inside a scroll view. */
-export const inScroll = (node: Element) => {
-  for (let at = node.parentElement; at !== null; at = at.parentElement)
-    if (scrolls(at)) return true;
-  return false;
-};
-
-/** Whether `node` is at least 44 tall by its own minimum height. */
-const tall = (node: Element) => parseFloat(getComputedStyle(node).minHeight) >= 44;
-
-/** Every node holding text of its own below AA on what lies behind it, by its text. */
-const faint = (host: Element) =>
-  [...host.querySelectorAll('*')]
-    .filter((node) =>
-      [...node.childNodes].some(
-        (child) => child.nodeType === 3 && (child.textContent ?? '').trim() !== '',
-      ),
-    )
-    .filter((node) => contrastOf(node) < AA)
-    .map((node) => textOf(node).slice(0, 24));
-
-const NEED = 'When I need…';
-
-const HOME = 'Your field';
-
 /** What one frame shows wrong of the screens' rules (above). */
-export const needFaults = (host: Element): string[] => {
+export const screenFaults = (host: Element): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(textOf);
-  const controls = [...host.querySelectorAll(CONTROLS)];
-  const names = controls.map(nameOf);
+  const names = [...host.querySelectorAll(CONTROLS)].map(nameOf);
   const out: string[] = [];
   if (headings.length > 1) out.push(`${headings.length} headings: ${headings.join('|')}`);
   if (names.includes('Listening') && !headings.includes('Today')) out.push('Listening off Today');
-  if (names.includes('Listening') && names.includes(NEED)) out.push(`Listening beside ${NEED}`);
-  if (names.includes(NEED) && !headings.includes(HOME)) out.push(`${NEED} off home`);
-  if (headings.includes(NEED)) out.push(...onNeedFaults(host, controls));
-  else if (host.querySelector('[data-testid="need-card"]') !== null)
-    out.push(`a need card on ${headings.join('|') || 'the pending frame'}`);
-  if (headings.includes(HOME)) out.push(...onHomeFaults(controls));
-  return out;
-};
-
-/** What a frame of When I need… shows wrong: a control in the scroll view but a promise, one under 44, no bar `Your field`, a node of Today or the field, or a faint text. */
-const onNeedFaults = (host: Element, controls: readonly Element[]) => {
-  const out: string[] = [];
-  for (const node of controls) {
-    if (inScroll(node) && node.getAttribute('data-testid') !== 'promise')
-      out.push(`a control in the scroll view: ${nameOf(node)}`);
-    if (!tall(node)) out.push(`a control under 44: ${nameOf(node)}`);
-  }
-  if (!controls.some((node) => nameOf(node) === HOME && !inScroll(node)))
-    out.push(`no bar ${HOME}`);
-  for (const id of ['session', 'reference', 'row', 'sown'])
-    if (host.querySelector(`[data-testid="${id}"]`) !== null) out.push(`a ${id} node on ${NEED}`);
-  if (controls.some((node) => ['Say it', 'Next'].includes(nameOf(node))))
-    out.push(`a Today control on ${NEED}`);
-  for (const text of faint(host)) out.push(`faint: ${text}`);
-  return out;
-};
-
-/** What a frame of home shows wrong of When I need…: its way in the scroll view or under 44. */
-const onHomeFaults = (controls: readonly Element[]) => {
-  const out: string[] = [];
-  for (const node of controls.filter((each) => nameOf(each) === NEED)) {
-    if (inScroll(node)) out.push(`${NEED} in the scroll view`);
-    if (!tall(node)) out.push(`${NEED} under 44`);
-  }
   return out;
 };
 
@@ -196,8 +121,8 @@ const onHomeFaults = (controls: readonly Element[]) => {
 const mounted = new Set<() => Promise<unknown>>();
 
 /** A launch of the root over `device` at `time.now` on Effect's clock, the layer teaching `promises` (the part left out when null), the recital's words `pace` ms apart, every frame also held to `check` (none by default). */
-export const launchNeed = async (
-  device: NeedDevice,
+export const launchRoot = async (
+  device: RootDevice,
   time: Time,
   promises: readonly string[] | null = TAUGHT,
   pace = 1,
@@ -218,20 +143,18 @@ export const launchNeed = async (
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
-  const frames = { need: 0, today: 0, end: 0, listening: 0, offer: 0 };
+  const frames = { today: 0, end: 0, listening: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
   const looks = new Map<string, readonly string[]>();
   const frame = () => {
     const shown = headings();
     const names = [...host.querySelectorAll(CONTROLS)].map(nameOf);
-    if (shown.includes(NEED)) frames.need += 1;
     if (shown.includes('Today')) frames.today += 1;
     if (shown.includes(END)) frames.end += 1;
     if (names.includes('Listening')) frames.listening += 1;
-    if (names.includes(NEED)) frames.offer += 1;
     for (const fault of [
       ...rootFaults(host, garden),
-      ...needFaults(host),
+      ...screenFaults(host),
       ...lookFaults(host, undefined, looks),
       ...check(host),
     ])
@@ -295,16 +218,8 @@ export const launchNeed = async (
       [...host.querySelectorAll('[data-testid="grown"]')].map(
         (node) => node.getAttribute('aria-label') ?? '',
       ),
-    /** When I need…'s cards: each title, promise names and to-learn line. */
-    cards: () =>
-      [...host.querySelectorAll('[data-testid="need-card"]')].map((card) => ({
-        title: textOf(card.querySelector('[data-testid="need-title"]')),
-        heading: card.querySelector('[role="heading"]') !== null,
-        promises: [...card.querySelectorAll('[data-testid="promise"]')].map(nameOf),
-        toLearn: [...card.querySelectorAll('[data-testid="to-learn"]')].map(textOf),
-      })),
     leave,
   };
 };
 
-export type NeedLaunch = Awaited<ReturnType<typeof launchNeed>>;
+export type RootLaunch = Awaited<ReturnType<typeof launchRoot>>;

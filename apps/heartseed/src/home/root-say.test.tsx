@@ -5,7 +5,8 @@
  * R7), cut from `root.test.tsx` by its budget, through the field's screen
  * rig with each frame held to the root's frame rule (`watchedLaunch`). The
  * root takes no props. A fresh install's first minute through
- * `Continue` opens home in the done state, with no Today frame after it;
+ * `Continue` opens home in the done state, `Practice anyway` its one
+ * action, with no Today frame after it;
  * a recital on Today shows no way back while Say it listens, and
  * `Your field` after its result leads home.
  */
@@ -14,7 +15,7 @@ import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { recallOf } from '../test/field-model';
-import { footOf, mount, record } from '../test/field-rig';
+import { cardOf, mount, record } from '../test/field-rig';
 import { device } from '../test/one';
 import { screensOf, watchedLaunch } from '../test/root-rule';
 
@@ -40,13 +41,19 @@ describe('the root around a recital', () => {
     expect(await fresh.app.until(fresh.home)).toBe(true);
     await fresh.app.until(() => false, 8);
     expect({
-      foot: footOf(fresh.host),
+      foot: cardOf(fresh.host),
       need: fresh.app.buttons().includes('When I need…'),
+      learn: fresh.app.buttons().filter((name) => name?.startsWith('Learn ')),
       after: screensOf(fresh.watch.frames.slice(planted)),
       faults: [...fresh.watch.faults, ...fresh.app.faults],
     }).toEqual({
-      foot: { card: 'begin-card', line: 'Nothing to tend now', controls: [] },
-      need: true,
+      foot: {
+        card: 'today-card',
+        line: 'All tended for today | Nothing is due right now.',
+        controls: ['Practice anyway'],
+      },
+      need: false,
+      learn: [],
       after: ['Your field'],
       faults: [],
     });
@@ -56,8 +63,8 @@ describe('the root around a recital', () => {
   it('shows Today with no way back while Say it listens, and Your field after the result', async () => {
     device.launch([record(recallOf(passage.reference, Date.UTC(2020, 0, 1, 12), 3, 0)), VOICE_OFF]);
     const run = await launch();
-    expect(await run.app.until(() => footOf(run.host).controls.includes('Begin'))).toBe(true);
-    await run.app.tap('Begin');
+    expect(await run.app.until(() => cardOf(run.host).controls.includes('Start'))).toBe(true);
+    await run.app.tap('Start');
     expect(await run.app.until(() => run.today() && run.app.buttons().includes('Say it'))).toBe(
       true,
     );

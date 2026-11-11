@@ -288,7 +288,7 @@ export const walkListBar = async (seed: number, steps: number) => {
     );
     if (model.tag === 'Unread' || count() >= 3 || choices.length === 0) return relaunch();
     const list = pick(next, choices);
-    if (!(await rig.tapId('add-verses'))) faults.push('no add-verses');
+    if (!(await rig.tapId('add-list'))) faults.push('no add-list');
     if (!(await activateSheet(rig.until))) faults.push('the sheet never became active');
     if (!(await tapSheet(list.section))) faults.push(`no shelf ${list.section}`);
     if (!(await tapSheet(`Plant ${list.title}`))) faults.push(`no Plant ${list.title}`);

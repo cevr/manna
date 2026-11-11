@@ -36,7 +36,7 @@ it('offers Proverbs 18:10 as in your field by the second of three taught collect
 });
 
 it('offers by the held and planted verses alone when no collection is taught', async () => {
-  const { faults, reached } = await walkRoot(5);
+  const { faults, reached } = await walkRoot(64);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
@@ -50,7 +50,7 @@ it('offers by the held and planted verses alone when no collection is taught', a
   ).toEqual([]);
 });
 
-it('offers no Add verses with three passages held', async () => {
+it('offers no Add a list with three passages held', async () => {
   const { faults, reached } = await walkRoot(59);
   expect(faults).toEqual([]);
   expect(
@@ -63,7 +63,7 @@ it('offers no Add verses with three passages held', async () => {
   ).toEqual([]);
 });
 
-it('offers no Add verses over unread passages', async () => {
+it('offers no Add a list over unread passages', async () => {
   const { faults, reached } = await walkRoot(6);
   expect(faults).toEqual([]);
   expect(

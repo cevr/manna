@@ -2,7 +2,7 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part h: device 0
- * of seed 18, twelve commands from its launch on home, with `Begin` on home
+ * of seed 18, twelve commands from its launch on home, with `Start` on home
  * after a wait (`waitBegin`), held to the walk's oracle on the screen its
  * model names after every command and to the screens', the root's and
  * home A's rules on every frame. Its floor `home:wait-begin` is a wait of
@@ -18,7 +18,7 @@ import { walkHome } from '../test/home-walk';
 const FLOORS = ['home:wait-begin', 'root:begin', 'home:begin', 'root:back', 'home:remove'];
 
 describe('home A, walked (h)', () => {
-  it("keeps the plan made at home's first show when Begin follows a wait on home", async () => {
+  it("keeps the plan made at home's first show when Start follows a wait on home", async () => {
     const { failure, cover } = await walkHome(18, [0], 12, 'read', { waits: true });
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);

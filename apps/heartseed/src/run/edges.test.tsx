@@ -2,7 +2,7 @@
  * Today's run against its model on generated devices, leaning toward its
  * edges at a launch (`src/test/run-walk.ts`): the first minute and home
  * after Continue, a done state at home's first show (the launch ending on
- * home with no `Begin`), unread launches whose recitals of the first piece
+ * home with no `Start`), unread launches whose recitals of the first piece
  * are all written and which offer no Minutes and no Settings, and three or
  * more zones. Today's own done state is
  * `src/run/done.test.tsx`'s.

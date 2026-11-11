@@ -72,7 +72,7 @@ const todayLine = (shown: Shown) =>
 
 /** A furrow's lines: its own, then one per plant. */
 const furrowLines = (furrow: Furrow) => [
-  `furrow ${furrow.title} · ${furrow.kind} · ${furrow.icon} · ${furrow.ripe}`,
+  `furrow ${furrow.title} · ${furrow.kind} · ${furrow.icon} · ${furrow.caption}`,
   ...furrow.plants.map((plant) => `plant ${plant.label}`),
 ];
 
@@ -133,7 +133,7 @@ const linesOf = (
  * (verify-heartseed, `home-probe`, `home-icons` and `home-probe-motion`): the greeting, then
  * how many of the home's icons loaded (and which failed) above each icon
  * drawn in both schemes, then the plan's counts, each
- * furrow of the field with its kind, icon and ripe count and each of its
+ * furrow of the field with its kind, icon and caption and each of its
  * plants' labels, the motion plan over those furrows (`motionOf`), the lists the field holds, the shelves Add verses
  * offers, the session's visit and what Today would show, one line each,
  * over the live garden, passages and session. It begins the session once

@@ -27,7 +27,6 @@ import { rootFaults } from '../test/root-rule';
 const SCREENS = [
   'Your field',
   'Today',
-  'When I need…',
   'Add a passage',
   'About',
   'Hear it',
@@ -111,7 +110,7 @@ const backCell = (screen: string, count: number, place: keyof typeof PLACES) => 
 
 const IN_REACH = ' in reach while listening';
 
-const REACH = ['Plant Psalms 1:1-3', 'Add verses', 'Any passage'];
+const REACH = ['Plant Psalms 1:1-3', 'Add a list', 'Any passage'];
 
 const REACH_KINDS: readonly (readonly string[])[] = [...REACH.map((name) => [name]), REACH];
 
@@ -161,13 +160,13 @@ describe("the root's rule at the Add verses sheet's seams", () => {
       cells.filter((each) => JSON.stringify(each.faults) !== JSON.stringify(each.wanted)),
     ).toEqual([]);
     expect(cells.find((each) => each.cell === `${ADDING} 1 fixed`)?.faults).toEqual([]);
-    expect(cells.length).toBe(54);
+    expect(cells.length).toBe(48);
   });
 
-  it("takes home's own Add verses for no back", () => {
+  it("takes home's own Add a list for no back", () => {
     const cells = SCREENS.map((screen) => ({
       screen,
-      faults: faultsWith(screen, [element('button', 'Add verses', 'Add verses')]),
+      faults: faultsWith(screen, [element('button', 'Add a list', 'Add a list')]),
       wanted: faultsWith(screen, []),
     }));
     expect(
@@ -176,7 +175,7 @@ describe("the root's rule at the Add verses sheet's seams", () => {
     expect(cells.find((each) => each.screen === ADDING)?.faults).toContain(
       `no Add verses back on ${ADDING}`,
     );
-    expect(cells.length).toBe(9);
+    expect(cells.length).toBe(8);
   });
 
   it('names Plant <title>, Add verses and Any passage anywhere in the document while a recital listens, and nothing while not', () => {
@@ -190,6 +189,6 @@ describe("the root's rule at the Add verses sheet's seams", () => {
     expect(
       cells.filter((each) => JSON.stringify(each.added) !== JSON.stringify(each.wanted)),
     ).toEqual([]);
-    expect(cells.length).toBe(144);
+    expect(cells.length).toBe(128);
   });
 });

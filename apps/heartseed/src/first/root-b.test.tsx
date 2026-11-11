@@ -61,7 +61,7 @@ describe('the root route on fixed devices, unheard, refused and unread', () => {
     expect([m.screen, m.passage]).toEqual(['planted', 1]);
   });
 
-  it('keeps the recital of an unread launch for the next launch, which opens home in its done state, and Today at a seed by Begin once Later relaunches at the seed’s due', async () => {
+  it('keeps the recital of an unread launch for the next launch, which opens home in its done state, and Today at a seed by Start once Later relaunches at the seed’s due', async () => {
     const unread: DeviceStart = { ...FRESH, launch: { read: 'unread', held: false, voices: 0 } };
     const next = await play(unread, [sayOf(recital({ skip: [2] })), relaunch()]);
     expect([next.screen, next.passage, next.plan?.passage]).toEqual(['home', 1, false]);

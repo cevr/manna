@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import type { PlantStage } from '../field';
 import { Furrows } from '../field/plot';
 import { STAGES } from '../garden';
-import { HOME_ICONS, type Furrow } from '../home';
+import { captionOf, HOME_ICONS, type Furrow } from '../home';
 import { below, pickOf, random } from '../test/garden-model';
 import { setSystem } from '../test/look';
 import { entryOf, moving, swayOf, under } from '../test/motion';
@@ -73,7 +73,7 @@ const fieldAt = (next: () => number, turn: number): readonly Furrow[] => {
       kind: 'other',
       title: `Furrow ${row}`,
       icon: pickOf(next, HOME_ICONS),
-      ripe: `${plants.filter((plant) => plant.stage === 'full corn').length} of ${places} ripe`,
+      caption: captionOf(plants),
       plants,
     };
   });

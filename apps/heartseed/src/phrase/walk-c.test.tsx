@@ -3,9 +3,9 @@
 /**
  * Today over days with long verses learned as phrases, walked through the
  * root (`test/phrase-rig.tsx`), part c, file one: generated device 4, four
- * days, each launch through home's `Begin`, held to the walk's oracle
+ * days, each launch through home's `Start`, held to the walk's oracle
  * after every step. Its floors: joined verses reviewed, a join under first
- * letters, Listen on a whole verse, `Begin` taken from home, and the end
+ * letters, Listen on a whole verse, `Start` taken from home, and the end
  * of a run (`The field is tended`) with one and several verses grown. The
  * part's other file is `walk-c2.test.tsx`.
  */

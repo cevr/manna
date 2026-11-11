@@ -8,7 +8,7 @@
  * `Off`, `Her` or `Him` that reads `Voice: <value>`, never checked or
  * pressed.
  *
- * Each launch lands on home, whose `Begin` (the passage is the plan's new
+ * Each launch lands on home, whose `Start` (the passage is the plan's new
  * piece) leads to Today, and opens the sheet there. From each start a disk
  * may hold (the choice's key alone, the old switch's alone, junk over the
  * old switch, nothing), the sheet's pill shows the choice read by hsspeaker
@@ -18,7 +18,7 @@
  * and a relaunch shows the last choice. Two taps in one turn cycle twice
  * and store the second; a refused write keeps the choice shown for the
  * launch, and the next launch reads the disk. Before each leave the sheet
- * closes by `Done` and `Begin` opens Today, which shows no `Voice`.
+ * closes by `Done` and `Start` opens Today, which shows no `Voice`.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -117,13 +117,13 @@ const voiceWrites = (device: Device) =>
 
 type Sheet = ReturnType<typeof watchSheet>;
 
-/** A launch of `device` that lands on home with `Begin` (the passage, unplanted beside another verse, is the plan's new piece), no pill and no fault, then opens the Settings sheet under a watch of its frames. */
+/** A launch of `device` that lands on home with `Start` (the passage, unplanted beside another verse, is the plan's new piece), no pill and no fault, then opens the Settings sheet under a watch of its frames. */
 const open = async (device: Device, faults = faultsOf()) => {
   const app = await launch(device, faults, { now: AT });
-  await app.until(() => app.headings().includes('Your field') && app.has('Begin'));
+  await app.until(() => app.headings().includes('Your field') && app.has('Start'));
   expect({
     headings: app.headings(),
-    begin: app.has('Begin'),
+    begin: app.has('Start'),
     pill: app.host.querySelector('[aria-label="Voice"]') !== null,
     faults: app.faults,
   }).toEqual({ headings: ['Your field'], begin: true, pill: false, faults: [] });
@@ -140,10 +140,10 @@ const settled = (app: Launch, device: Device, choice: Choice, stored: string | u
       device.disk.get(CHOICE_KEY) === stored,
   );
 
-/** Closes the sheet by `Done`, takes `Begin` to Today, and holds Today to no `Voice` and the launch and the sheet to no fault, the sheet's look checked; then leaves. */
+/** Closes the sheet by `Done`, takes `Start` to Today, and holds Today to no `Voice` and the launch and the sheet to no fault, the sheet's look checked; then leaves. */
 const close = async (name: string, app: Launch, sheet: Sheet) => {
   const closed = await closeSettings(app, 'Done');
-  await app.tap('Begin');
+  await app.tap('Start');
   const today = await app.until(() => app.headings().includes('Today'));
   sheet.stop();
   expect({

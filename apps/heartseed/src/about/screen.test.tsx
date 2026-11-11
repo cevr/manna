@@ -14,7 +14,7 @@
  * for byte, one `Your field` button outside the scroll view and no
  * `Voice`, each text at AA; the way back shows the field, and a relaunch
  * opens home again; nothing is written. About holds no appearance and no
- * foot, its one control the way back, and home's foot holds no `About`
+ * foot, its one control the way back, and home's Today card holds no `About`
  * (the sheet's appearance is `src/settings`'s). A recital that starts
  * while About shows brings Today back. The bundle's module serves the
  * licence as `vite/licence.ts` prints it.
@@ -161,11 +161,11 @@ describe('About', () => {
     expect(new Map(device.disk)).toEqual(start);
   });
 
-  it('holds no appearance and no foot of its own, home’s foot holds no About, and only the way back is a control', async () => {
+  it('holds no appearance and no foot of its own, home’s Today card holds no About, and only the way back is a control', async () => {
     launchWith();
     const rig = await mountBar(0, false);
     await toField(rig);
-    const foot = [...rig.host.querySelectorAll('[data-testid="foot"]')].map((node) =>
+    const foot = [...rig.host.querySelectorAll('[data-testid="today-card"]')].map((node) =>
       [...node.querySelectorAll(CONTROL)].map(labelOf),
     );
     await openSettings(rig);
@@ -178,7 +178,7 @@ describe('About', () => {
       modal: modalOf(),
       faults: rig.faults,
     }).toEqual({
-      foot: [['Begin']],
+      foot: [['Start']],
       groups: [],
       aboutFoot: 0,
       controls: ['Your field'],

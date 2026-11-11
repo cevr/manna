@@ -9,9 +9,10 @@
  * minutes, the voice and the appearance, zipped so that every class of
  * each key meets a launch (its words, a garbled text or a near miss,
  * another text, a missing key, and for the voice the old switch alone),
- * half under each system. Home holds one gear in its bar's first row, after `When I need…`
- * and before `Add verses`, drawn with the hidden `gear` icon alone, at
- * least 44 × 44, and home's foot holds no `About`. Its tap opens the sheet: the heading `Settings`, `Done`
+ * half under each system. Home holds no control outside the scroll view
+ * but its card's, and one `Settings`: a row at the field's end, before `How
+ * Heartseed works`, showing its name with no image, at least 52 tall. Its
+ * tap opens the sheet: the heading `Settings`, `Done`
  * outside the scroll view, then each line over its choice (the minutes
  * read, the voice read, the appearance read) and `About`; the sheet holds
  * its look after a flip of the system, `Done` closes it, and nothing is
@@ -110,26 +111,25 @@ const storedOf = (row: Row) =>
 const schemeOf = (row: Row, system: Scheme): Scheme =>
   row.appearance === 'light' || row.appearance === 'dark' ? row.appearance : system;
 
-/** The bar's controls outside every scroll view, by name, in document order. */
-const barOf = (host: Element) =>
+/** Home's controls outside every scroll view but the Today card's, by name, in document order. */
+const fixedOf = (host: Element) =>
   [...host.querySelectorAll(CONTROL)]
-    .filter((node) => !scrolled(node) && node.closest('[data-testid="foot"]') === null)
+    .filter((node) => !scrolled(node) && node.closest('[data-testid="today-card"]') === null)
     .map(labelOf);
 
-/** The gear as a reader meets it: its row's controls, its words, its image, its size and its state. */
-const gearOf = (host: Element) =>
+/** The `Settings` controls as a reader meets them: the scroll view's last two controls, its words, its images, its height and its state. */
+const settingsOf = (host: Element) =>
   [...host.querySelectorAll(CONTROL)]
     .filter((node) => labelOf(node) === 'Settings')
     .map((node) => {
       const style = getComputedStyle(node);
       const images = [...node.querySelectorAll('img')];
       return {
-        row: [...(node.parentElement?.querySelectorAll(CONTROL) ?? [])].map(labelOf),
+        ends: [...host.querySelectorAll(CONTROL)].filter(scrolled).map(labelOf).slice(-2),
+        scrolled: scrolled(node),
         words: text(node),
-        images: images.map(
-          (image) => `${iconOf(image)}${image.closest('[aria-hidden="true"]') ? '' : '!exposed'}`,
-        ),
-        square: parseFloat(style.minWidth) >= 44 && parseFloat(style.minHeight) >= 44,
+        images: images.map((image) => iconOf(image)),
+        tall: parseFloat(style.minHeight) >= 52,
         disabled: node.getAttribute('aria-disabled'),
       };
     });
@@ -181,7 +181,7 @@ const SHOWN = [
 
 describe('Settings', () => {
   for (const row of ROWS)
-    it(`opens from home's gear over ${JSON.stringify(storedOf(row))} under a ${row.system} system`, async () => {
+    it(`opens from home's Settings row over ${JSON.stringify(storedOf(row))} under a ${row.system} system`, async () => {
       setSystem(row.system);
       const system = { now: row.system };
       device.launch([record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)), ...storedOf(row)]);
@@ -192,28 +192,28 @@ describe('Settings', () => {
         await rig.until(
           () =>
             text(rig.host.querySelector('[role="heading"]')) === 'Your field' &&
-            barOf(rig.host).includes('When I need…') &&
-            barOf(rig.host).includes('Add verses'),
+            rig.host.querySelector('[data-testid="today-card"]') !== null,
         ),
       ).toBe(true);
       expect({
-        bar: barOf(rig.host),
-        gear: gearOf(rig.host),
-        footAbout: [...rig.host.querySelectorAll('[data-testid="foot"] [role="button"]')]
+        fixed: fixedOf(rig.host),
+        settings: settingsOf(rig.host),
+        about: [...rig.host.querySelectorAll(CONTROL)]
           .map(labelOf)
           .filter((label) => label === 'About'),
       }).toEqual({
-        footAbout: [],
-        bar: ['When I need…', 'Settings', 'Add verses'],
-        gear: [
+        fixed: [],
+        settings: [
           {
-            row: ['When I need…', 'Settings'],
-            words: '',
-            images: ['gear'],
-            square: true,
+            ends: ['Settings', 'How Heartseed works'],
+            scrolled: true,
+            words: 'Settings›',
+            images: [],
+            tall: true,
             disabled: null,
           },
         ],
+        about: [],
       });
 
       await openSettings(rig);

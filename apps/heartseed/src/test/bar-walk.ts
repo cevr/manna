@@ -14,14 +14,15 @@
  * launch lands on home. Each step, over passages read: a row's `Remove`
  * (any of equal rows), then `Keep`, another row's `Remove`, leaving, or the
  * ask's `Remove` (its write landing or refused; once, twice in one turn, or
- * with `When I need…` or `Keep` in the same turn; a refusal retried in
- * half); a round trip; or `Add verses` (the bar's or the row's), the
- * Add verses sheet over the field with every shelf closed, then
+ * with the end row `Settings` or `Keep` in the same turn; a refusal
+ * retried in half); a round trip; or `Add a list`, the
+ * Add a list sheet over the field with every shelf closed, then
  * `Any passage`, then back to the sheet by `Add verses` and to the field by
  * `Done`, or a verse planted. Over unread passages, a round trip. A
- * round trip leaves by `Begin` when home offers it, Today then showing
- * `Say it` or `Next`, else by `When I need…`, and comes back by
- * `Your field`; over unread passages `Begin` is owed. After every tap the screen is the model's,
+ * round trip leaves by `How Heartseed works` (About) while an ask shows,
+ * else by `Start` when home offers it, else by `Practice anyway`, Today then showing `Say it` or `Next`, and comes back by
+ * `Your field`; over unread passages `Start` is owed, and one of the two
+ * always. After every tap the screen is the model's,
  * the sheet open (`sheetWant`) exactly while the model has it,
  * the stored passages are the start's until a change lands and the model's
  * list after, no other key is written, and every frame kept the rules.
@@ -53,8 +54,6 @@ import { opened, sheetWant } from './shelves-model';
 import { activateSheet, settleSheet, tapSheet } from './shelves-rig';
 
 const PROMISE = passage.reference;
-
-const NEED = 'When I need…';
 
 /** `seed` mixed, so neighbouring seeds start the generator far apart. */
 const mixed = (seed: number) => {
@@ -140,7 +139,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   let held: Held = readRule(CORPUS, raw, reads);
   let written = false;
   let bar: Asking = QUIET;
-  let screen: 'field' | 'sheet' | 'Today' | typeof NEED | 'Add a passage' = 'field';
+  let screen: 'field' | 'sheet' | 'Today' | 'About' | 'Add a passage' = 'field';
   const reached = launchCases(drawn, held);
   const faults: string[] = [];
   const log: string[] = [];
@@ -189,27 +188,33 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     await settle(`ask ${spanRef(span)}#${nth}`);
     return span;
   };
-  /** Leaves home and comes back by `Your field`: by `Begin` when home offers it (Today then shows `Say it` or `Next`), else by `When I need…`; over unread passages `Begin` is owed (rq1 (a)). */
+  /** Leaves home and comes back by `Your field`: by `Start` when home offers it, else by `Practice anyway` (Today then shows `Say it` or `Next`); over unread passages `Start` is owed (rq1 (a)), and one of the two always (hsstart T1). */
   const round = async (label: string) => {
     if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
-    const begins = rig.control('Begin') !== undefined;
-    if (held.tag === 'Unread' && !begins)
-      faults.push(`${label}: no Begin over unread passages after ${log.slice(-5).join(' > ')}`);
-    if (begins) {
-      reached.add('round:by Begin');
-      await rig.tap('Begin');
-      screen = 'Today';
-      await settle(`${label}: Begin`);
-      const acts = ['Say it', 'Next'].some((name) => rig.control(name) !== undefined);
-      if (faults.length === 0 && !acts)
-        faults.push(`${label}: Today by Begin shows neither Say it nor Next`);
-    } else {
-      reached.add('round:by When I need…');
-      await rig.tap(NEED);
-      screen = NEED;
-      await settle(`${label}: ${NEED}`);
+    if (bar.ask !== undefined) {
+      reached.add('round:by How Heartseed works');
+      await rig.tap('How Heartseed works');
+      screen = 'About';
+      await settle(`${label}: How Heartseed works`);
+      await rig.tap('Your field');
+      screen = 'field';
+      bar = QUIET;
+      await settle(`${label}: the field from About`);
+      return;
     }
+    const begins = rig.control('Start') !== undefined;
+    if (held.tag === 'Unread' && !begins)
+      faults.push(`${label}: no Start over unread passages after ${log.slice(-5).join(' > ')}`);
+    const way = begins ? 'Start' : 'Practice anyway';
+    reached.add(`round:by ${way}`);
+    if (!(await rig.tap(way)))
+      faults.push(`${label}: neither Start nor Practice anyway after ${log.slice(-5).join(' > ')}`);
+    screen = 'Today';
+    await settle(`${label}: ${way}`);
+    const acts = ['Say it', 'Next'].some((name) => rig.control(name) !== undefined);
+    if (faults.length === 0 && !acts)
+      faults.push(`${label}: Today by ${way} shows neither Say it nor Next`);
     await rig.tap('Your field');
     screen = 'field';
     bar = QUIET;
@@ -223,11 +228,11 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       .map((recall) => recall.reference)
       .filter((reference) => named([span], reference));
     device.fail('set', refused ? 1 : 0);
-    const ways = ['once', 'twice', `then ${NEED}`, 'then Keep'] as const;
+    const ways = ['once', 'twice', 'then Settings', 'then Keep'] as const;
     const way = ways[how] ?? 'once';
     if (way === 'once') await rig.tap('Remove');
     if (way === 'twice') await rig.tap('Remove', 0, true);
-    if (way === `then ${NEED}`) await rig.tapBoth('Remove', NEED);
+    if (way === 'then Settings') await rig.tapBoth('Remove', 'Settings');
     if (way === 'then Keep') await rig.tapBoth('Remove', 'Keep');
     const answer = removeRule(held, span, refused);
     reached.add(`remove:${answer.outcome}`);
@@ -272,13 +277,12 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   };
   const add = async () => {
     if (bar.alert !== undefined) reached.add('alert:cleared by a tap');
-    const where = below(next, 2) === 0 ? 'add-verses' : 'add-row';
-    reached.add(`add:by ${where}`);
-    await rig.tapId(where);
-    if (!(await activateSheet(rig.until))) faults.push(`add verses by ${where}: no sheet came`);
+    reached.add('add:by add-list');
+    await rig.tapId('add-list');
+    if (!(await activateSheet(rig.until))) faults.push('Add a list: no sheet came');
     screen = 'sheet';
     bar = QUIET;
-    await settle(`add verses by ${where}`);
+    await settle('Add a list');
     await tapSheet('Any passage');
     screen = 'Add a passage';
     await settle('any passage');

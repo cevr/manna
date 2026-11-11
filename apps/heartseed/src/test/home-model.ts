@@ -20,8 +20,8 @@
  *   promises' verses in order, each once).
  * - H1 the furrows: one per row of the field, the lists' first, then each
  *   other verse as a `Loose` list (`verse:<reference>`); each its kind and
- *   icon by its source (a passage's icon by its book), `<k> of <n> ripe`,
- *   and each plant's stage, ready mark and label.
+ *   icon by its source (a passage's icon by its book), its caption
+ *   (`captionModel`), and each plant's stage, ready mark and label.
  * - H2 ready: the verse (a phrase's verse for a phrase) of each item whose
  *   plant holds no more recalls than the item's baseline.
  * - H5 the greeting by the local hour and minute: morning 04:00-11:59,
@@ -246,7 +246,7 @@ export interface ModelFurrow {
   readonly source: ModelSource;
   readonly kind: ModelKind;
   readonly icon: string;
-  readonly ripe: string;
+  readonly caption: string;
   readonly plants: readonly {
     readonly reference: string;
     readonly stage: ModelPlantStage;
@@ -254,6 +254,20 @@ export interface ModelFurrow {
     readonly label: string;
   }[];
 }
+
+/** hsstart T3: a furrow's caption over its plants, written out: `<n> verse(s) · <r> ready today` for r > 0 ready, else `<n> verse(s) · <p> planted` for p > 0 planted, else `<n> verse(s) to learn`. */
+export const captionModel = (plants: readonly { stage: string; ready: boolean }[]) => {
+  const n = plants.length === 1 ? '1 verse' : `${plants.length} verses`;
+  let ready = 0;
+  let planted = 0;
+  for (const plant of plants) {
+    if (plant.ready) ready += 1;
+    if (plant.stage !== 'not planted') planted += 1;
+  }
+  if (ready > 0) return `${n} · ${ready} ready today`;
+  if (planted > 0) return `${n} · ${planted} planted`;
+  return `${n} to learn`;
+};
 
 /** H1: the furrows over `records` (one per recital) and `lists`, a plant ready when its verse is in `ready`. */
 export const furrowsModel = (
@@ -269,9 +283,7 @@ export const furrowsModel = (
       range: undefined,
       source: { tag: 'Loose' },
     };
-    let full = 0;
     const plants = row.plants.map((plant) => {
-      if (plant.stage === 'full corn') full += 1;
       const marked = ready.has(plant.reference);
       return {
         reference: plant.reference,
@@ -287,7 +299,7 @@ export const furrowsModel = (
       source: list.source,
       kind: kindRule(list.source),
       icon: iconRule(list.source),
-      ripe: `${full} of ${plants.length} ripe`,
+      caption: captionModel(plants),
       plants,
     };
   });
@@ -465,6 +477,60 @@ export const grownModel = (
     out.push({ reference: verse, stage: own.length === 0 ? 'seed' : referenceStage(own) });
   }
   return out;
+};
+
+/**
+ * hsstart T1: the Today card's lines as a reader reads them, `<headline> |
+ * <parts>`, over the plan's `items` (null before a plan: no lines, the
+ * empty text), each reference's recall count now and the item the run
+ * shows (null in the done state). The counted items are the plan's not
+ * done, else the item shown; with some, the headline is `<n> verse(s) ·
+ * about <k> min` (n distinct verses, k the ceiling of their seconds over
+ * 60) and the parts `<r> to review` (distinct verses of items not new) and
+ * `1 new`, a zero part left out; with none, `All tended for today |
+ * Nothing is due right now.`
+ */
+export const cardLineModel = (
+  items: readonly ModelPlanItem[] | null,
+  recallsNow: (reference: string) => number,
+  shown: ModelPlanItem | null = null,
+): string => {
+  if (items === null) return '';
+  const open = items.filter((item) => recallsNow(item.reference) <= item.recalls);
+  const counted = open.length > 0 ? open : shown === null ? [] : [shown];
+  if (counted.length === 0) return 'All tended for today | Nothing is due right now.';
+  const verses = new Set(counted.map((item) => verseOfRule(item.reference)));
+  const reviews = new Set(
+    counted.filter((item) => !item.fresh).map((item) => verseOfRule(item.reference)),
+  );
+  let seconds = 0;
+  for (const item of counted) seconds += item.seconds;
+  const parts: string[] = [];
+  if (reviews.size > 0) parts.push(`${reviews.size} to review`);
+  if (counted.some((item) => item.fresh)) parts.push('1 new');
+  const n = verses.size === 1 ? '1 verse' : `${verses.size} verses`;
+  return `${n} · about ${Math.ceil(seconds / 60)} min | ${parts.join(' · ')}`;
+};
+
+/** hsstart T1: the planted reference `Practice anyway` offers among `plants` (each reference's recalls) for which `starts` holds: the lowest stage (seed, blade, ear, full corn), then the earlier last recall, then the reference; null when none starts. */
+export const weakestModel = (
+  plants: ReadonlyMap<string, readonly Recall[]>,
+  starts: (reference: string) => boolean,
+): string | null => {
+  const ranks: readonly ModelStage[] = ['seed', 'blade', 'ear', 'full corn'];
+  let best: { reference: string; rank: number; last: number } | null = null;
+  for (const [reference, recalls] of plants) {
+    if (recalls.length === 0 || !starts(reference)) continue;
+    const rank = ranks.indexOf(referenceStage(recalls));
+    const last = Math.max(...recalls.map((recall) => recall.startedAt));
+    const weaker =
+      best === null ||
+      rank < best.rank ||
+      (rank === best.rank && last < best.last) ||
+      (rank === best.rank && last === best.last && reference < best.reference);
+    if (weaker) best = { reference, rank, last };
+  }
+  return best?.reference ?? null;
 };
 
 /** A shelf as the model holds it: its lists, or `chooser` for the whole Bible. */

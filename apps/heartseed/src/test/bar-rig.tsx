@@ -15,15 +15,15 @@
  * view) and no node of the field or the chooser; off Today (the end of a
  * run, `The field is tended`, among them), no control but a
  * list control (a book, a chapter, a verse, a plant, a row's own `Remove`,
- * the `Add verses` row, a promise of When I need…) and no alert or limit
- * line inside a scroll view;
- * `Plant` only over a shown reference of 1-20 verses; never `Add verses`
- * beside the limit line or with 3 rows' `Remove`s, and the row's
- * `Add verses` exactly when the bar's shows; over unread passages, no add,
- * remove, `Keep`, `Plant` or limit line; while the ask's `Remove` is
- * disabled (a remove pending), every other field control (`When I need…`,
- * the gear `Settings`, `Keep`, a row's `Remove`, every plant, `Begin`,
- * `Start here …`) disabled too and no `Add verses`; `Listening` only on Today; on
+ * `Add a list`, the end rows `Settings` and `How Heartseed works`) and no
+ * alert inside a scroll view;
+ * `Plant` only over a shown reference of 1-20 verses; never `Add a list`
+ * beside the limit line or with 3 rows' `Remove`s, and at most one; over
+ * unread passages, no add, remove, `Keep`, `Plant` or limit line; while
+ * the ask's `Remove` is disabled (a remove pending), every other field
+ * control (`Settings`, `How Heartseed works`, `Keep`, a row's `Remove`,
+ * every plant, `Start`, `Practice …`, `Learn …`) disabled too and no
+ * `Add a list`; `Listening` only on Today; on
  * the field, home A's layout rules (`homeFaults`); and every seen text of
  * every screen but Today (the field, the chooser, the end of a run) at WCAG
  * AA against what lies behind it.
@@ -57,10 +57,11 @@ const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"
 
 const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
 
-/** A list control: a book, a chapter, a verse, a plant, a row's own `Remove`, the `Add verses` row, or a promise of When I need…; these scroll with their list by nature. */
+/** A list control: a book, a chapter, a verse, a plant, a row's own `Remove`, `Add a list`, or an end row of the field; these scroll with their list by nature. */
 const listed = (node: Element) => {
   const id = idOf(node);
-  if (['book', 'chapter', 'verse', 'field-plant', 'add-row', 'promise'].includes(id)) return true;
+  if (['book', 'chapter', 'verse', 'field-plant', 'add-list'].includes(id)) return true;
+  if (END_ROWS.includes(labelOf(node))) return true;
   return labelOf(node).startsWith('Remove ') && node.closest('[data-testid="row"]') !== null;
 };
 
@@ -71,9 +72,9 @@ const READY = ', ready today';
 /** A plant's name with its ready mark cut off: readiness is the home walk's to judge. */
 const unready = (label: string) => (label.endsWith(READY) ? label.slice(0, -READY.length) : label);
 
-const ADD = 'Add verses';
+const ADD = 'Add a list';
 
-const NEED = 'When I need…';
+const END_ROWS = ['Settings', 'How Heartseed works'];
 
 /** The field as the reader gets it, or the heading shown (`no heading` before one) off the field. */
 export const readBar = (host: Element): FieldSeen | string => {
@@ -97,20 +98,20 @@ export const readBar = (host: Element): FieldSeen | string => {
         .map(labelOf),
     })),
     add: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === ADD).length,
-    need: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === NEED).length,
+    card: host.querySelectorAll('[data-testid="today-card"]').length,
     limit: one('limit'),
     ask: one('ask'),
     alert: alerts.length === 0 ? undefined : alerts.join(' | '),
   };
 };
 
-/** Off Today: every control but a list control, every alert and the limit line outside the scroll views. */
+/** Off Today: every control but a list control, and every alert, outside the scroll views. */
 const scrollFaults = (host: Element, on: string, controls: readonly Element[]) => {
   if (on === 'Today' || on === '') return [];
   const out = controls
     .filter((node) => !listed(node) && scrolled(node))
     .map((node) => `the control ${labelOf(node)} inside a scroll view on ${on}`);
-  for (const node of host.querySelectorAll('[role="alert"],[data-testid="limit"]'))
+  for (const node of host.querySelectorAll('[role="alert"]'))
     if (scrolled(node)) out.push(`the line ${text(node).slice(0, 30)} inside a scroll view`);
   return out;
 };
@@ -119,33 +120,28 @@ const scrollFaults = (host: Element, on: string, controls: readonly Element[]) =
 const changes = (label: string) =>
   [ADD, 'Plant', 'Keep', 'Remove'].includes(label) || label.startsWith('Remove ');
 
-/** What the bar offers wrong: an add beside the limit line or with 3 rows' `Remove`s, the row's add without the bar's or the bar's without the row's, and anything offered over unread passages. */
+/** What the field offers wrong: an add beside the limit line, with 3 rows' `Remove`s or more than once, and anything offered over unread passages. */
 const offerFaults = (host: Element, on: string, unread: boolean, controls: readonly Element[]) => {
   const out: string[] = [];
   const labels = controls.map(labelOf);
   const limit = host.querySelector('[data-testid="limit"]');
   const added = controls.filter((node) => labelOf(node) === ADD);
   const adds = added.length > 0;
-  if (adds && limit !== null) out.push('Add verses beside the limit line');
+  if (adds && limit !== null) out.push('Add a list beside the limit line');
   const removes = controls.filter((node) => listed(node) && labelOf(node).startsWith('Remove '));
-  if (on === 'Your field' && adds && removes.length >= 3) out.push('Add verses with 3 held');
-  const bar = added.filter((node) => idOf(node) === 'add-verses').length;
-  const row = added.filter((node) => idOf(node) === 'add-row').length;
-  if (on === 'Your field' && (bar > 1 || row !== bar))
-    out.push(`${bar} Add verses in the bar and ${row} rows Add verses`);
+  if (on === 'Your field' && adds && removes.length >= 3) out.push('Add a list with 3 held');
+  if (added.length > 1) out.push(`${added.length} Add a list`);
   const offered = labels.filter(changes);
   if (unread && (offered.length > 0 || limit !== null))
     out.push(`${offered[0] ?? 'the limit line'} offered over unread passages`);
   return out;
 };
 
-/** A field control S7 holds while a remove is pending: `When I need…`, `Settings`, `Keep`, `Begin`, a row's `Remove …`, `Start here …` or a plant. */
+/** A field control S7 holds while a remove is pending: an end row, `Keep`, `Start`, a row's `Remove …`, `Practice …`, `Learn …` or a plant. */
 const held = (node: Element) => {
   const label = labelOf(node);
-  if ([NEED, 'Settings', 'Keep', 'Begin'].includes(label)) return true;
-  return (
-    label.startsWith('Remove ') || label.startsWith('Start here') || idOf(node) === 'field-plant'
-  );
+  if ([...END_ROWS, 'Keep', 'Start'].includes(label)) return true;
+  return /^(Remove|Practice|Learn) /u.test(label) || idOf(node) === 'field-plant';
 };
 
 /** While the ask's `Remove` is disabled (a remove pending): every other field control disabled, and no add. */
@@ -155,7 +151,7 @@ const pendingFaults = (controls: readonly Element[]) => {
   const live = controls.filter((node) => !disabled(node) && held(node));
   const out = live.map((node) => `${labelOf(node)} live while a remove is pending`);
   if (controls.some((node) => labelOf(node) === ADD))
-    out.push('Add verses while a remove is pending');
+    out.push('Add a list while a remove is pending');
   return out;
 };
 
@@ -163,7 +159,7 @@ const pendingFaults = (controls: readonly Element[]) => {
 const strayOnToday = (host: Element, controls: readonly Element[]) => {
   const out: string[] = [];
   const nodes = host.querySelectorAll(
-    ['row', 'field-plant', 'add-row', 'book', 'chapter', 'verse', 'limit']
+    ['row', 'field-plant', 'add-list', 'book', 'chapter', 'verse', 'limit']
       .map((id) => `[data-testid="${id}"]`)
       .join(','),
   );

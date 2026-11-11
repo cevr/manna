@@ -9,7 +9,7 @@
  * before the garden's read shows no heading and no button, no first-minute
  * frame names a stage outside Planted, and every frame holds the root's
  * frame rule (`rootFaults`). Continue, and a later launch with a plant, show
- * home; `Begin` there opens Today. The voice off offers no Listen; Next
+ * home; `Start` there opens Today. The voice off offers no Listen; Next
  * stops a reading; a relaunch mid-flow keeps nothing; an unread garden opens
  * Today; a held launch shows nothing until its read. It counts words without
  * printing one.
@@ -74,7 +74,7 @@ describe('the first minute', () => {
     await first.until(() => first.heading() !== 'Your field', 20);
     expect([first.heading(), first.home(), first.stage(), first.actions()]).toEqual([
       'Your field',
-      { counts: 'Nothing to tend now', begin: false },
+      { counts: 'All tended for today | Nothing is due right now.', begin: false },
       null,
       [],
     ]);
@@ -88,7 +88,7 @@ describe('the first minute', () => {
     const next = await mount(undefined, undefined, time);
     expect(await next.until(() => next.home().begin)).toBe(true);
     expect(next.heading()).toBe('Your field');
-    await next.click('Begin');
+    await next.click('Start');
     expect(await next.until(() => next.stage() !== null)).toBe(true);
     expect([next.heading(), next.stage(), next.frames.claims, recallKeys().length]).toEqual([
       'Today',

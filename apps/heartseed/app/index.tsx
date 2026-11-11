@@ -49,7 +49,9 @@ import { furrowsOf, readyOf } from '../src/home';
 import { tendedOf } from '../src/home/grown';
 import { PlantImage } from '../src/home/plant';
 import { startOf } from '../src/home/start';
-import { beginsOf } from '../src/home/today';
+import { todayOf } from '../src/home/today';
+import type { StartKind } from '../src/field/card';
+import type { VisitVerse } from '../src/session/service';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { needOf, type NeedCard } from '../src/need';
@@ -502,6 +504,12 @@ const actionOf = (listening: boolean, done: boolean) => {
 const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
+/** What a start on a chosen verse is to the reader: learning it new for a fresh item, else practising it. */
+const startKindOf = (visit: VisitVerse): StartKind => {
+  if (visit.item.fresh) return 'Learn';
+  return 'Practice';
+};
+
 /**
  * Home: the field over the garden read, the reader's passages, the
  * collections taught, the session's view and the greeting by the runtime's
@@ -510,17 +518,17 @@ const offersListen = (listening: boolean, each: Showing) =>
  * with the passages read, the plan is made: it never claims a history it
  * has not read, a frame without the reader's rows, or a run before the plan
  * that decides it. Its furrows' ready marks are the plan's open verses;
- * `Begin` (`beginsOf`) opens Today, writing nothing; `Start here` on a verse
- * makes what `startOf` starts the session's visit, then shows Today once it
- * is made (or failed), so Today never shows the plan's item first; `When I
- * need…` shows once a plan is made. While `adding`, the Add verses sheet
- * shows over it on the same field, in the same place in the tree, so
- * home's own state stays while the sheet opens and closes.
+ * the Today card is `todayOf`'s: `Start` opens Today, writing nothing, and
+ * `Practice anyway`, `Practice this verse` and `Learn this verse` make
+ * what `startOf` starts on their verse the session's visit, then show
+ * Today once it is made (or failed), so Today never shows the plan's item
+ * first. While `adding`, the Add a list sheet shows over it on the same
+ * field, in the same place in the tree, so home's own state stays while
+ * the sheet opens and closes.
  */
 function FieldOf({
   adding,
   onToday,
-  onNeed,
   onAdd,
   onAddDone,
   onAny,
@@ -528,7 +536,6 @@ function FieldOf({
 }: {
   readonly adding: boolean;
   readonly onToday: () => void;
-  readonly onNeed: () => void;
   readonly onAdd: () => void;
   readonly onAddDone: () => void;
   readonly onAny: () => void;
@@ -560,15 +567,9 @@ function FieldOf({
             furrows={furrowsOf(known.garden, lists, readyOf(known.session.plan, known.garden))}
             passages={known.passages}
             greeting={known.greeting}
-            counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
-            begin={beginsOf(
-              shownOf(known.session, Option.some(known.garden)),
-              known.passages._tag === 'Unread',
-            )}
-            need={Option.isSome(known.session.plan)}
-            startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
+            card={todayOf(known.session, known.garden, known.passages._tag === 'Unread')}
+            starts={(verse) => Option.map(startOf(known.session, known.garden, verse), startKindOf)}
             onToday={onToday}
-            onNeed={onNeed}
             onStart={onStart}
             onAdd={onAdd}
             onAbout={onAbout}
@@ -655,7 +656,7 @@ const screenAt = (shown: Opening): Screen => {
  * from Today's and When I need…'s `Your field`), with the Add verses sheet
  * over it from either of home's `Add verses` until the sheet's `Done` or a
  * landed plant, Today (from home's
- * `Begin` or `Start here`, or once a promise tapped in When I need… is made
+ * `Start` or `Start here`, or once a promise tapped in When I need… is made
  * the visit), the chooser (from the sheet's `Any passage`, back to the sheet
  * from its first back, home once a passage is added), About (from the `About`
  * of home's Settings sheet, back to home) and When I need… (from home's
@@ -698,7 +699,6 @@ export default function Root() {
           <FieldOf
             adding={screen === 'add'}
             onToday={() => setScreen('today')}
-            onNeed={() => setScreen('need')}
             onAdd={() => setScreen('add')}
             onAddDone={() => setScreen('field')}
             onAny={() => setScreen('choose')}

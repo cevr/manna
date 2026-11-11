@@ -6,9 +6,9 @@
  * to home A's rules (`homeFaults`) and to the rule's field over the disk.
  * Each case names its expected values written out: the gold dot on a seed
  * at its due once the Minutes radio in the Settings sheet (from Today,
- * reached by `Start here`, by `Your field`) makes the plan again and on no
+ * reached by `Practice`, by `Your field`) makes the plan again and on no
  * plant before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
- * and `gold` nowhere on the field; the Begin card's counts and `Begin`
+ * and `gold` nowhere on the field; the Today card's line and `Start`
  * leading to Today as the run stands, writing nothing; and the greeting by
  * the runtime's clock at each mount of home, in the reader's own zone. The layout
  * and the choice are `screen.test.tsx`'s.
@@ -19,9 +19,10 @@ import passage from 'virtual:heartseed-passage';
 
 import { fillContrastOf } from '../test/contrast';
 import { recallOf } from '../test/field-model';
-import { footOf, iconOf, mount, nameOf, record, selectedPlants, text } from '../test/field-rig';
+import { cardOf, iconOf, mount, nameOf, record, selectedPlants, text } from '../test/field-rig';
 import { computed, setSystem } from '../test/look';
 import { device } from '../test/one';
+import { openSettings, tapInSheet } from '../test/settings-rig';
 import { hostZone, travel } from '../test/zone';
 import { theme, type Scheme } from '../theme';
 
@@ -46,10 +47,11 @@ const greeted = () => {
   return [text(greeting), iconOf(greeting?.querySelector('img'))];
 };
 
-/** Opens home again, by When I need… and its back `Your field`, so home mounts anew. */
+/** Opens home again, by the Settings sheet's About and its back `Your field`, so home mounts anew. */
 const reopen = async (app: Awaited<ReturnType<typeof mount>>) => {
-  await app.tap('When I need…');
-  expect(await app.until(() => app.headings().join('|') === 'When I need…')).toBe(true);
+  await openSettings({ host: document.body, until: app.until });
+  expect(await tapInSheet('About')).toBe(true);
+  expect(await app.until(() => app.headings().join('|') === 'About')).toBe(true);
   await app.tap('Your field');
   expect(await app.until(app.home)).toBe(true);
 };
@@ -58,7 +60,7 @@ const SCHEMES: readonly Scheme[] = ['light', 'dark'];
 
 for (const scheme of SCHEMES)
   describe(`home A's field by the clock in ${scheme}`, () => {
-    it('marks a seed at its due after a Minutes tap with a gold dot filled sun, at 3:1 against its plant chosen or not, and its Begin leads to Today writing nothing', async () => {
+    it('marks a seed at its due after a Minutes tap with a gold dot filled sun, at 3:1 against its plant chosen or not, and its Start leads to Today writing nothing', async () => {
       setSystem(scheme);
       const time = { now: DAY + 9 * HOUR };
       device.launch([
@@ -73,7 +75,7 @@ for (const scheme of SCHEMES)
         0,
       ]);
       await app.tap(`${passage.reference}, seed`);
-      await app.tap(`Start here with ${passage.reference}`);
+      await app.tap(`Practice ${passage.reference}`);
       expect(
         await app.until(() => app.headings().includes('Today') && app.buttons().includes('Say it')),
       ).toBe(true);
@@ -86,10 +88,10 @@ for (const scheme of SCHEMES)
       const dot = dots[0] ?? host;
       expect(getComputedStyle(dot).backgroundColor).toBe(computed(theme[scheme].sun));
       expect(fillContrastOf(dot)).toBeGreaterThanOrEqual(3);
-      expect(footOf(host)).toEqual({
-        card: 'begin-card',
-        line: '1 to tend · about 1 min',
-        controls: ['Begin'],
+      expect(cardOf(host)).toEqual({
+        card: 'today-card',
+        line: '1 verse · about 1 min | 1 to review',
+        controls: ['Start'],
       });
       await app.tap(ready);
       expect(selectedPlants(host)).toEqual([ready]);
@@ -101,7 +103,7 @@ for (const scheme of SCHEMES)
       expect(selectedPlants(host)).toEqual([]);
 
       const sets = device.calls.set;
-      await app.tap('Begin');
+      await app.tap('Start');
       expect(await app.until(() => app.headings().includes('Today'))).toBe(true);
       await app.until(() => false, 8);
       expect([

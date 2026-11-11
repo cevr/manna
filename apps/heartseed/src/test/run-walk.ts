@@ -13,8 +13,8 @@
  * zones that change, minutes to a month apart, some launches unread. A read
  * launch (and the first minute's Continue) lands on home, whose first show
  * makes the plan: with an item shown, home shows the model's counts line
- * and `Begin`, which the walk takes to Today; with none, home shows the
- * done state's counts line and no `Begin`, and the launch ends there, as it
+ * and `Start`, which the walk takes to Today; with none, home shows the
+ * done state's counts line and no `Start`, and the launch ends there, as it
  * does when the field is taken in the done state. On Today each launch runs
  * commands chosen by the screen the model expects: at Say
  * it a heard recital (a word skipped or not), an unheard one, a refused
@@ -22,7 +22,7 @@
  * held, a Minutes trip, the field and back, a wait; at Next, Next, Again, a
  * peek, a Minutes trip, the field and a wait; at the done state a wait, a
  * Minutes trip and the field. A Minutes trip is the reader's: `Your field`,
- * home's Settings sheet, `<n> min` there, `Done`, then `Begin` when home
+ * home's Settings sheet, `<n> min` there, `Done`, then `Start` when home
  * offers it, else the launch ends on home's done state. An unread launch
  * offers no Minutes and no Settings, which the walk checks in place of a
  * trip. The making while a recital listens or finishes, which no reader can
@@ -75,7 +75,8 @@ import {
   type Faults,
   type Launch,
 } from './run-rig';
-import { END, rootFaults } from './root-rule';
+import { cardLineModel } from './home-model';
+import { END, homeLines, rootFaults } from './root-rule';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
@@ -413,9 +414,8 @@ interface Seen {
   readonly doneText: boolean;
 }
 
-/** The counts lines home's foot shows, as they read. */
-const homeCounts = (app: Launch) =>
-  [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
+/** The Today card's lines home shows, as `homeLines` reads them. */
+const homeCounts = (app: Launch) => homeLines(app.host);
 
 class Walk {
   readonly faults: Faults = { unread: false, refuse: false };
@@ -634,8 +634,8 @@ class Walk {
 
   /**
    * Home's first show, which makes the plan: with an item shown, home's
-   * heading, the model's counts line, `Begin` and the root's frame rule
-   * held, then `Begin` and Today's first show; with none, home's done state
+   * heading, the model's counts line, `Start` and the root's frame rule
+   * held, then `Start` and Today's first show; with none, home's done state
    * (`homeDone`), which ends the launch.
    */
   async fromHome(step: string) {
@@ -655,18 +655,20 @@ class Walk {
     }
     this.log.push(`${step} on home`);
     this.onHome(true);
-    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
+    if (!(await app.tap('Start'))) throw new Error(`after ${this.log.join(' > ')}: no Start`);
     bump(this.coverage, 'home:begin');
-    await this.settle('Begin');
+    await this.settle('Start');
   }
 
-  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; and no frame fault of the root's rule or the footer's. */
+  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Start` exactly when `begin`; and no frame fault of the root's rule or the footer's. */
   onHome(begin: boolean) {
     const app = this.screen;
     const counts = homeCounts(app);
     const want =
-      this.unread || this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)];
-    const seen = { headings: app.headings(), counts, begin: app.has('Begin') };
+      this.unread || this.run.plan === null
+        ? []
+        : [cardLineModel(this.run.plan, this.recallsNow, shownModel(this.run, this.recallsNow))];
+    const seen = { headings: app.headings(), counts, begin: app.has('Start') };
     const expected = { headings: ['Your field'], counts: want, begin };
     if (JSON.stringify(seen) !== JSON.stringify(expected))
       throw new Error(
@@ -785,7 +787,7 @@ class Walk {
    * the plan as it was, the gear, `<n> min` in the sheet (the making, at
    * that tap, with no recital under way), the radio checked and home's
    * counts line under the sheet the new plan's, `Done`, home held to the
-   * new plan, then `Begin` when the model shows an item. Every frame of the
+   * new plan, then `Start` when the model shows an item. Every frame of the
    * sheet is held by `watchSheet`. Answers whether Today shows again; when
    * not, the launch is left on home's done state for the caller to end.
    */
@@ -816,7 +818,9 @@ class Walk {
       this.expected.set(MINUTES_KEY, String(minutes));
       if (this.run.plan !== null) this.run = madeModel(this.run, this.planNow(), false);
       const counts = JSON.stringify(
-        this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)],
+        this.run.plan === null
+          ? []
+          : [cardLineModel(this.run.plan, this.recallsNow, shownModel(this.run, this.recallsNow))],
       );
       const checked = () =>
         modalOf()
@@ -844,7 +848,7 @@ class Walk {
     this.log.push(`${step}, Done`);
     this.onHome(offers);
     if (!offers) return false;
-    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
+    if (!(await app.tap('Start'))) throw new Error(`after ${this.log.join(' > ')}: no Start`);
     return true;
   }
 
@@ -927,7 +931,7 @@ class Walk {
     await this.settle('peek');
   }
 
-  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there (`homeDone`). A hold kept there is tallied by what the model shows after it lets the item go (`field:held:last` none, `again` the held reference, `more` another), and as `field:held:next:<kind>` when Today showed `Next`. */
+  /** Today's `Your field`, then back by home's `Start` while Today showed an action; in the done state home shows the model's counts and no `Start`, and the launch ends there (`homeDone`). A hold kept there is tallied by what the model shows after it lets the item go (`field:held:last` none, `again` the held reference, `more` another), and as `field:held:next:<kind>` when Today showed `Next`. */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
@@ -948,11 +952,11 @@ class Walk {
       bump(this.coverage, 'done:field');
       return this.homeDone('the field');
     }
-    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
+    if (!(await app.tap('Start'))) throw new Error(`after ${this.log.join(' > ')}: no Start`);
     await this.settle('the field and back');
   }
 
-  /** Home in the done state, reached by `step`: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, with no Today frame after. */
+  /** Home in the done state, reached by `step`: the model's counts line, no `Start`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, with no Today frame after. */
   async homeDone(step: string) {
     this.log.push(`${step}, done`);
     this.onHome(false);
