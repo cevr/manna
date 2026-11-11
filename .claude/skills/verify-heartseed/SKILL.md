@@ -139,9 +139,10 @@ bun run --cwd apps/heartseed sim snapshot today
 `sim open <link> --expect <target>` opens `heartseed://<link>`, answers the
 "Open in “Heartseed”?" prompt with Open (`detail.prompts`), and waits for
 the target. Into the running app already on `/`, it is a wait: the root
-keeps the screen it shows (home, Today, When I need…), so a feature file
+keeps the screen it shows (home, Today), so a feature file
 writes `sim open / --expect "id=session" --no-relaunch` after a tap that
-opens Today and `--expect "id=counts" --no-relaunch` for home; a wait for
+opens Today and `--expect "id=today-card" --no-relaunch` for home (no
+plant chosen); a wait for
 Today that lands on home is a finding to record, not a step to retry.
 Without `--no-relaunch` a missing target terminates the app and opens once
 more, and every launch opens home, so a wait for home would pass on a tap
@@ -154,18 +155,20 @@ which nodes prove it. A target is `label=<accessible name>` or
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
-word's mark, `Next` and `Your field` (back to home); on When I
-need… a promise by its reference and its bar's `Your field`; on the
-field, which is home, every launch's screen after the first minute (its
-counts line `id=counts`, as Today's is `id=session`), in its bar
-`When I need…`, `Settings`, `Add verses` (`id=add-verses`: the dashed row at the field's end
-is `Add verses` too, `id=add-row`), and the ask's `Remove` and `Keep`, in
-a furrow `Remove <reference>` (a Handbook list's `Remove <title>`) and its plants (`<reference>, <stage>`,
-then `, ready today` when ready), and in its foot `Begin` and
-`Start here with <reference>`; in the Settings sheet `Done`, a `Minutes`
+word's mark, `Next` and `Your field` (back to home); on the
+field, which is home, every launch's screen after the first minute: in
+its fixed top the Today card (`id=today-card`, its lines `id=today-headline`
+and `id=today-parts`, as Today's counts line is `id=session`) with one
+button, `Start` or `Practice anyway`, or with a plant chosen the chosen
+card (`id=chosen`) with `Practice <reference>` or `Learn <reference>`, or
+the ask's `Remove` and `Keep`; in its scroll view `Add a list`
+(`id=add-list`), in a furrow `Remove <reference>` (a Handbook list's
+`Remove <title>`) and its plants (`<reference>, <stage>`, then `, ready
+today` when ready), and at its end the rows `Settings` and `How Heartseed
+works` (scroll to them first: `sim scroll "label=Settings" down`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
-`About`; in the Add verses sheet (both `Add verses` open it) `Done`, a
+`About`; in the Add a list sheet (`Add a list` opens it) `Done`, a
 shelf head by its title (`Any passage`, `Psalms`, …, `Seven Churches`) and an offer's
 `Plant <reference>` or `Plant <title>`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Add verses`, shown `‹ Add verses`, back to the sheet, `Books`, `Chapters`); and on the home's
@@ -180,9 +183,9 @@ Heartseed has no journey files yet. The features:
   install opens on: hear it (the voice's lit words, silent on the
   simulator), say it with first letters, say it alone, Planted, then home
   in the done state (`first-home`). Run it first: the other features
-  start from its `first-home`. Today is reached from home by `Begin` once
-  a verse is due (after a `sim relaunch`), else by a plant and
-  `Start here with Isaiah 41:10`. Its `first-plantset` row pairs native
+  start from its `first-home`. Today is reached from home by `Start` once
+  a verse is due (after a `sim relaunch`), else by `Practice anyway` or a
+  plant and `Practice Isaiah 41:10`. Its `first-plantset` row pairs native
   semantic parity with same-head mounted-image receipts; AX cannot
   identify the hidden hand-drawn seed.
 - [features/run.md](features/run.md): Today runs the session's plan one
@@ -232,31 +235,28 @@ Heartseed has no journey files yet. The features:
   it from `first.md`'s `first-home`, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, the app's home,
   which every launch opens and Today's `Your field` leads back to, with
-  `Begin` to Today: a furrow per passage, a
+  the Today card's `Start` to Today: a furrow per passage with its caption, a
   plant button per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
 - [features/about.md](features/about.md): the About screen, from the
   `About` of home's Settings sheet: the natural voice's credits and the
   Apache License 2.0 whole, and the way back to the field.
 - [features/passage.md](features/passage.md): choosing passages: the
-  field's fixed bar with `Add verses` or the limit line, the chooser
+  field's `Add a list` under `Lists` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
   in a fixed footer), a row's `Remove` and its one ask, and Today over the
   passages chosen, the first day and after the next 04:00. Run it from
   `first.md`'s `first-home`; its second session comes after the next 04:00.
 - [features/wake.md](features/wake.md): a return to the foreground makes
-  the plan again with no tap (a due verse offers `Begin`, a shown result goes),
+  the plan again with no tap (a due verse offers `Start`, a shown result goes),
   and changes nothing while a recital is under way; a new verse's `Listen`
   beside `Say it` (live in `passage.md`'s `passage-new`). Run it from
   `first.md`'s `first-home`, in place of `run.md` step 6.
-- [features/promise.md](features/promise.md): the promise collections
-  and When I need…: the Fear collection's row on the field, home's
-  `When I need…` in its fixed bar, the cards of the promises the
-  reader knows (`Protection & Fear` with its count still to learn,
-  `Strength` with the first minute's promise), a tap on a promise said on
-  Today as a review, and the first Fear phrase after the next 04:00. Run
-  it from `first.md`'s `first-home`; its second session comes after the
-  next 04:00.
+- [features/promise.md](features/promise.md): the promise collections:
+  the Fear collection's row on the field, no `When I need…` on home or
+  Today (`need-gone`), and the first Fear phrase after the next 04:00.
+  Run it from `first.md`'s `first-home`; its second session comes after
+  the next 04:00.
 - [features/phrase.md](features/phrase.md): long verses learned as
   phrases first, then joined: John 3:16 planted as a passage, its first
   phrase `John 3:16 [1-6]` new after the next 04:00 with `Listen` and
@@ -284,25 +284,26 @@ Heartseed has no journey files yet. The features:
   dark system, kept across a relaunch, and System again.
   Run it from `first.md`'s `first-home`.
 - [features/handbook.md](features/handbook.md): Haskell's Bible Handbook
-  as 25 shelves of Add verses after `Rest`, each list planted whole into
+  as 25 shelves of the Add a list sheet after `Rest`, each list planted whole into
   a furrow titled by the list with `Remove <title>`, one plant per verse,
   the limit of 3 over passages and lists, and its development probe
   (`apps/heartseed/app/probe/handbook.tsx`): the sections, lists, ranges
   and verses, every verse resolved in the device's corpus. Run it from
   `first.md`'s `first-home` on a fresh install.
 - [features/home.md](features/home.md): the home's rules (the greeting,
-  the furrows with their kinds, icons, ripe counts and ready marks, the
-  lists, the shelves Add verses will offer, and Start here at the
+  the furrows with their kinds, icons, captions and ready marks, the
+  lists, the shelves Add a list will offer, and a start at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
   over the live garden, the row `home-icons` (the home's 24 icon PNGs
   loaded on the device), the row `home-probe-motion` (the motion plan
-  over the live furrows), and the field in home A's layout: the greeting,
-  furrows of plant buttons with their ripe counts, a choice and
-  `Start here`, `Begin` in the foot, `Add verses` in two places and the
-  gold dot on a ready plant, every control there at once while the
-  drawings enter (`home-motion-reach`); and home as the root: `Continue` and every
-  relaunch open it, Today's `Your field` leads back to it, and its bar's
-  `When I need…` and `Settings` (the sheet with Minutes, Voice, the
+  over the live furrows), and the field in its layout: the greeting and
+  the Today card with one `Start` or `Practice anyway` fixed on top,
+  furrows of plant buttons with their captions and no numbers, a choice
+  with `Practice` or `Learn`, `Add a list` under `Lists`, the gold dot on
+  a ready plant, every control there at once while the drawings enter
+  (`home-motion-reach`); and home as the root: `Continue` and every
+  relaunch open it, Today's `Your field` leads back to it, and the
+  `Settings` row at the field's end (the sheet with Minutes, Voice, the
   appearance and About; Today with no choices). Run it from `first.md` (`first-planted` or
   `first-home`).
 - [features/doctor.md](features/doctor.md): `sim doctor` against an

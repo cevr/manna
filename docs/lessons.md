@@ -5411,6 +5411,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The home walk drew `Begin` only at the instant home showed, so the plan's instant and the tap's were one in every walk.
 - **Guard:** code: `apps/heartseed/src/home/walk-h.test.tsx` `keeps the plan made at home's first show when Start follows a wait on home`
 
+### heartseed-home-one-start
+
+- **Date:** 2026-11-11
+- **Kind:** owner
+- **Said:** "yeah so we just need I feel like Maybe there just needs to be a more default way to just start practicing. Right now it seems like there's too much friction to begin"
+- **Source:** hymnapp/hsfirstrun/owner.md #10 (the scrawl of 2026-11-11 on home's `1 to tend · 1 new · about 1 min / Begin` bar)
+- **Wrong:** Home's way to practice was a small `Begin` in a fixed foot beside the counts line, while the top bar filled with `When I need…`, the gear and `Add verses`, so the primary action did not read as primary.
+- **Cause:** Each control was added to home's bar or foot by its own unit, and no rule held home to one primary action.
+- **Guard:** code: `apps/heartseed/src/home/rule.test.ts` `names one fault for each clause a frame of home breaks`
+
 ### dead-exports-reads-a-shell-run-entry
 
 - **Date:** 2026-11-09

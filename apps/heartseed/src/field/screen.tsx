@@ -142,6 +142,7 @@ function EndRow({
   const styles = useThemed(sheets);
   return (
     <Pressable
+      testID="end-row"
       role="button"
       aria-label={label}
       disabled={pending}

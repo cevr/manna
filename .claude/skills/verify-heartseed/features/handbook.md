@@ -14,7 +14,7 @@ Principles`, `School of the Prophets`, `Bible Etiquette`, `City Work`,
 `Organization of Local Churches Officers`) are left out. References only:
 every verse's text comes from the bundled KJV.
 
-Each of the 25 teaching sections is a shelf of the Add verses sheet
+Each of the 25 teaching sections is a shelf of the Add a list sheet
 (`home.md`), after the 17 others, in the book's order, under Haskell's
 title with the text `S. N. Haskell, Bible Handbook (1919)`. A shelf lists
 its lists, each with its title, `<n> verses` (distinct verses) and
@@ -58,7 +58,7 @@ corpus gives) and `missing <n>`. A release build renders nothing on it.
 
 ## How to get to it (user POV)
 
-- Home → `Add verses` → scroll the sheet past `Rest` → a Handbook shelf
+- Home → `Add a list` → scroll the sheet past `Rest` → a Handbook shelf
   (`Seven Churches`, `Prophecy`, …) → `Plant <title>`.
 - Home → a list's furrow → `Remove <title>` → `Remove` or `Keep`.
 
@@ -74,7 +74,7 @@ driver cannot scroll is a finding to record.
 
 1. On a fresh install, `first.md` steps 1-7, to `first-home`: the own
    furrow and `Protection & Fear` on home.
-2. `handbook-shelf`: `sim tap "id=add-verses"`, then scroll to the
+2. `handbook-shelf`: `sim tap "id=add-list"`, then scroll to the
    sheet's end. After `Rest`, the buttons in order: `The Word of God`,
    `Duty`, `Second Advent of Christ`, `Ministry of Angels`, `The
    Sanctuary`, `Passover`, `The Family`, `Prayer`, `The Bible Sabbath`,
@@ -101,40 +101,42 @@ driver cannot scroll is a finding to record.
    ```bash
    sim tap "label=Seven Churches"
    sim tap "label=Plant Smyrna"
-   sim open / --expect "id=counts" --no-relaunch
+   sim open / --expect "id=today-card" --no-relaunch
    sim snapshot handbook-plant
    ```
 
-   → the heading `Your field`, no heading `Add verses`; the furrow titles
-   in order `Isaiah 41:10`, `Smyrna`, `Protection & Fear`; `0 of 4 ripe`;
+   → the heading `Your field`, no heading `Add a list`; the furrow titles
+   in order `Isaiah 41:10`, `Smyrna`, `Protection & Fear`; the caption
+   `4 verses to learn`;
    the buttons `Revelation 2:8, not planted` to `Revelation 2:11, not
-   planted`; `Remove Smyrna`; `id=add-verses` still.
+   planted`; `Remove Smyrna`; `id=add-list` still.
 
-4. `handbook-row`: `sim relaunch`, `sim open / --expect "id=counts"`,
+4. `handbook-row`: `sim relaunch`, `sim open / --expect "id=today-card"`,
    snapshot → the `Smyrna` furrow in the same place. The sheet, `Seven
    Churches` → `In your field`, no `Plant Smyrna`, `Plant Ephesus` still.
    `Done`.
 5. `handbook-one-plant`: record the own plant's button name
    (`Isaiah 41:10, <stage>`). The sheet, `Promises of God` → `87 verses`,
    `Plant Promises of God`; tap it → home with the furrow `Promises of
-   God` after `Smyrna`, `<k> of 87 ripe`, the own plant's button name
+   God` after `Smyrna`, its caption `87 verses · 1 planted` (or
+   `87 verses · 1 ready today` while the own verse is due), the own plant's button name
    unchanged in every furrow that shows the verse, no `Isaiah 41:10, not
    planted`. Record the seconds from the tap to home, and whether home
    still scrolls and answers a tap on a plant.
 6. `handbook-limit`: the sheet, `Psalms` → `Plant Psalms 46:1-3` → home:
    the furrows `Isaiah 41:10`, `Psalms 46:1-3`, `Smyrna`, `Promises of
    God`, `Protection & Fear`; the text `3 passages or lists, the most for
-   now. Remove one to add another.`; no `id=add-verses`, no `id=add-row`;
+   now. Remove one to add another.`; no `id=add-list`, no `id=add-row`;
    exactly three `Remove <…>` buttons.
 7. `handbook-remove`: `sim tap "label=Remove Promises of God"` → `Remove
    Promises of God? Its plants stay in your field.`, `Remove` and `Keep`.
    `Keep` → as before. Again, then `sim tap "label=Remove"` → no `Promises
-   of God` furrow, both `Add verses` back, no limit line, the own plant's
+   of God` furrow, `Add a list` back, no limit line, the own plant's
    button name unchanged. `sim relaunch` → the same.
 8. `handbook-probe`:
 
    ```bash
-   sim open / --expect "id=counts" --no-relaunch
+   sim open / --expect "id=today-card" --no-relaunch
    sim open probe/handbook --expect "label=resolved 3542"
    sim snapshot handbook-probe
    ```

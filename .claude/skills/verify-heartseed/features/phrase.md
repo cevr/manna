@@ -18,18 +18,16 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 - **The field** never shows a phrase: a verse with only phrases planted is
   `<verse>, seed`, and its row and plant are the verse's. Days sown count
   phrase recalls; the harvest counts verses alone.
-- **When I need…**: a planted phrase makes nothing known; a verse is known
-  only once its own plant (the join) exists.
 
 ## Sub-features
 
-- `phrase-day-one`: after the first minute, home's `Add verses`
+- `phrase-day-one`: after the first minute, home's `Add a list`
   → `Any passage` → `John` → `John 3` → `John 3:16` → `Plant`. The field shows the row
   `John 3:16` with the plant button `John 3:16, not planted` and no node
-  naming `[`, and its counts line no `1 new` (so Today, if `Begin` opens
+  naming `[`, and the Today card's parts line no `1 new` (so Today, if `Start` opens
   it, no `Listen`). (Holds on base too: a guard row.)
 - `phrase-new` (the second session, after the next 04:00 local, with no
-  uninstall): home's `Begin` shows Today with `1 new`; after the promise's review if it is
+  uninstall): the Today card's `Start` shows Today with `1 new`; after the promise's review if it is
   due, the reference is `John 3:16 [1-6]`, its six words whole
   (`id=passage`), with `Listen` before `Say it`.
 - `phrase-say`: `Listen` → the simulator logs `[voice] speak utterance=`
@@ -43,9 +41,6 @@ leave the session (`apps/heartseed/README.md`, Phrases).
   there is no row or plant titled `John 3:16 [1-6]`; the
   `Protection & Fear` row holds 14 `<reference>, not planted` plants; the
   field shows `1 day sown` or more.
-- `phrase-need`: When I need… in that session still lists `Isaiah 41:10`
-  under `Strength` and `12 still to learn` under `Protection & Fear`: the
-  planted phrase makes nothing known.
 - `phrase-join` (tests only: the join after every phrase is at an ear,
   under first letters, needs at least three days of recalls per phrase,
   and the simulator's clock cannot be set):
@@ -59,7 +54,7 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 
 ## How to get to it (user POV)
 
-- From home, `Add verses` → `Any passage` → a long verse (`John 3:16`)
+- From home, `Add a list` → `Any passage` → a long verse (`John 3:16`)
   → `Plant`; its first phrase is new on Today after the next 04:00 local.
 
 ## Driving it
@@ -74,22 +69,22 @@ must start empty: uninstall by udid as `first.md` says.
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
    and the first minute to `first-home`.
 2. `phrase-day-one`: on home,
-   `sim tap "id=add-verses"`, `sim tap "label=Any passage"`,
+   `sim tap "id=add-list"`, `sim tap "label=Any passage"`,
    `sim tap "label=John"`,
    `sim tap "label=John 3"`, then `sim scroll screen down` until
    `John 3:16` shows clear of the footer (a snapshot after each scroll),
    `sim tap "label=John 3:16"`, `sim tap "label=Plant"`, `sim snapshot phrase-day-one-field` → the row
    titles `Isaiah 41:10`, `John 3:16`, `Protection & Fear`; the button
-   `John 3:16, not planted`; no node whose label holds `[`; the foot's
-   counts line holds no `1 new`. When the foot offers `Begin` (the
-   promise's review due), `sim tap "label=Begin"`,
+   `John 3:16, not planted`; no node whose label holds `[`; the Today
+   card's parts line holds no `1 new`. When the card offers `Start` (the
+   promise's review due), `sim tap "label=Start"`,
    `sim open / --expect "id=session" --no-relaunch`, `sim snapshot phrase-day-one` → no
    `Listen`; then `sim tap "label=Your field"`.
 3. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
    the install.
 4. `phrase-new`, the second session, after the next 04:00 local, with no
-   uninstall: `sim boot`, then `sim open / --expect "id=counts"` → home's
-   counts line holds `1 new`, with `Begin`; `sim tap "label=Begin"`,
+   uninstall: `sim boot`, then `sim open / --expect "id=today-card"` → the Today
+   card's parts line holds `1 new`, with `Start`; `sim tap "label=Start"`,
    `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot phrase-new` → the counts line holds `1 new`; when the
    reference is `Isaiah 41:10` (its review due), run it through `Say it`
@@ -113,11 +108,8 @@ must start empty: uninstall by udid as `first.md` says.
 6. `phrase-field`: `sim tap "label=Your field"`, `sim snapshot
    phrase-field` → `John 3:16, seed` in the row `John 3:16`; no row title
    or plant label holding `[`; 14 `<reference>, not planted` buttons in the
-   row `Protection & Fear` (count them); `1 day sown` or more.
-7. `phrase-need`: on home, `sim tap "label=When I need…"`, `sim snapshot
-   phrase-need` → the button `Isaiah 41:10` under `Strength`, the text
-   `12 still to learn`. Then `sim tap "label=Your field"`, `sim doctor`
-   and `sim down`.
+   row `Protection & Fear` (count them); `1 day sown` or more. Then
+   `sim doctor` and `sim down`.
 
 Report only counts, booleans, the labels named above, the counts line, the
 summary and the references; delete the `snapshots` folder and the raw

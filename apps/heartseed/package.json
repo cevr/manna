@@ -129,7 +129,7 @@
     "test:reader-remove": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-remove.test.tsx ./src/chooser/reader-remove-b.test.tsx",
     "test:promises": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/promises",
     "test:handbook": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/handbook",
-    "test:home": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/lists.property.test.ts ./src/home.property.test.ts ./src/home/grown.property.test.ts",
+    "test:home": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/lists.property.test.ts ./src/home.property.test.ts ./src/home/grown.property.test.ts ./src/home/rule.test.ts",
     "test:home-shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves.property.test.ts",
     "test:shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/sheet.test.tsx ./src/shelves/rule.test.ts",
     "test:shelves-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/sheet-b.test.tsx",

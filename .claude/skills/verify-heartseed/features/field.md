@@ -5,8 +5,10 @@ its rule `apps/heartseed/src/field.ts`): every passage is a row and every
 verse a plant (Mark 4:28: seed, then blade, then ear, then full corn). It is
 the app's home: every launch on a read garden opens it, and so does the
 first minute's `Continue`, in place in the root route: no route, no link,
-no tab. Today is reached from it by `Begin`, `Start here with <reference>`
-or a promise of When I need…, and left by the button `Your field` (shown
+no tab. Today is reached from it by the Today card's `Start` or
+`Practice anyway`, or the chosen card's `Practice <reference>` (or
+`Learn <reference>` on a verse not planted), and left by the button
+`Your field` (shown
 `‹ Your field`), which leads back to home. Today offers it only once the
 garden's read of the device's store completes, and never while Say it
 listens. It sits in Today's header beside the heading, outside the scroll
@@ -18,9 +20,11 @@ on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, never a phrase, so
-Again takes a verse out). Above them, the greeting by the hour (`home.md`);
-after them a hint, then one furrow per row, each with its icon, title and
-ripe count (`<k> of <n> ripe`): the promise's first (`Isaiah 41:10`, shown
+Again takes a verse out). After them the label `Lists` with `Add a list`
+(`id=add-list`; it opens the Add a list sheet over home, `home.md`) or
+the limit line, then one furrow per row, each with its icon, title and
+caption (`<n> verse(s) · <r> ready today`, else `<n> verse(s) · <p>
+planted`, else `<n> verse(s) to learn`): the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
 chose, in the order chosen (`passage.md`), then the taught collection's
 row `Protection & Fear`, its 14 verses in order, with no `Remove`
@@ -30,20 +34,20 @@ phrases planted shows `seed`, and a removed passage's phrases make one
 row for their verse (`phrase.md`). Each plant is one button, labelled
 `<reference>, <stage>` (`seed`, `blade`, `ear`, `full corn` or
 `not planted`), then `, ready today` when a plan item not done is on it,
-its gold dot, drawing and verse number hidden inside it; a tap chooses its
-verse (`home.md`). The dashed row `Add verses` (`id=add-row`), a legend
-of the four stages and the caption `Mark 4:28` close the scroll view. The
-bar holds first `When I need…` (`promise.md`) once a plan is made and the
-gear `Settings` (`home.md`: the Settings sheet, with the `Minutes`
-radios, `Voice`, the appearance and `About`, which opens the About screen,
-`about.md`), then `Add verses` (`id=add-verses`; it and the dashed row
-open the Add verses sheet over home, `home.md`) or the limit line, and a
-passage furrow's `Remove` (`passage.md`), or a Handbook list furrow's
-`Remove <title>` (`handbook.md`). Under the scroll view, a fixed
-foot holds the Begin card (the counts line and `Begin`) or, with a verse
-chosen, the chosen card (`<reference> · <stage words>` and
-`Start here with <reference>`), and no `About`; like every field control
-each is disabled while a remove is pending, `Settings` too. Which screen shows is never stored:
+its gold dot and drawing hidden inside it, no number under it; a tap
+chooses its verse (`home.md`). A furrow of a held passage holds its
+`Remove` (`passage.md`), a Handbook list's `Remove <title>`
+(`handbook.md`). A legend of the four stages and the caption `Mark 4:28`,
+then the rows `Settings` (`home.md`: the Settings sheet, with the
+`Minutes` radios, `Voice`, the appearance and `About`, which opens the
+About screen, `about.md`) and `How Heartseed works` (About) close the
+scroll view. Above the scroll view, fixed, the greeting by the hour
+(`home.md`) and the Today card (`id=today-card`: its lines and `Start`,
+else `Practice anyway`) or, with a verse chosen, the chosen card
+(`<reference> · <stage words>` and `Practice <reference>`, or
+`Learn <reference>` on a verse not planted), or a remove's ask, and no
+`About`; like every field control each is disabled while a remove is
+pending, `Settings` too. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or home
 (Today on an unread garden).
 
@@ -53,10 +57,10 @@ every launch opens on the pending frame, then the first minute or home
   its header, inside the window and above the home indicator's area.
 - `field-first`: after the first minute, `Continue` opens the field: the
   passage at a seed as a plant button, then the row `Protection & Fear`
-  with no plant planted, `1 day sown`, `0 verses at full corn` and a
-  button `When I need…`, with no `Today` heading, no button `Today` and
-  no `Say it`.
-- `field-back`: Today's `Your field` shows the field, and `Begin` (when
+  with no plant planted, `1 day sown`, `0 verses at full corn` and the
+  Today card's `Practice anyway`, with no `When I need…`, no `Today`
+  heading, no button `Today` and no `Say it`.
+- `field-back`: Today's `Your field` shows the field, and `Start` (when
   the field offers it) shows Today as it was.
 - `field-grow` (live at the first wait, `run.md`'s `run-recite` and
   `run-held-field`): a recital under letters that grows the passage to a
@@ -74,7 +78,7 @@ every launch opens on the pending frame, then the first minute or home
 ## How to get to it (user POV)
 
 - Open the app: home is the field. From Today, tap `Your field`; tap
-  `Begin` (or `Start here with <reference>`) to go to Today.
+  `Start` (or `Practice anyway`, or a plant and `Practice <reference>` or `Learn <reference>`) to go to Today.
 
 ## Driving it
 
@@ -90,16 +94,17 @@ Launch); the JavaScript comes from the dev server.
    the text `Isaiah 41:10`; a button `Isaiah 41:10, seed`; the text
    `Protection & Fear` and 14 buttons ending `, not planted`
    (`promise.md`'s `promise-field`); `1 day sown`;
-   `0 verses at full corn`; a button `When I need…`; no `Today` heading,
+   `0 verses at full corn`; a button `Practice anyway`; no button
+   `When I need…`; no `Today` heading,
    no button `Today`, no `Say it`, no label starting `Stage:`.
 3. `field-control`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim tap "label=Practice Isaiah 41:10"`,
    `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot field-control` → the
    heading `Today`, `Isaiah 41:10`, `Say it` and a button `Your field`.
 4. `field-back`: `sim tap "label=Your field"`, `sim snapshot field-back-home`
-   → the heading `Your field` and `Begin` in the foot (the visit open);
-   `sim tap "label=Begin"`, `sim open / --expect "id=session" --no-relaunch`,
+   → the heading `Your field` and `Start` on the Today card (the visit open);
+   `sim tap "label=Start"`, `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot field-back` → the heading `Today`, `Isaiah 41:10` and
    `Say it` (as it was), `Your field`.
 5. `field-listening` and `field-grow`, at the first wait: `run.md` steps
@@ -108,7 +113,7 @@ Launch); the JavaScript comes from the dev server.
    `sim tap "label=Your field"`, `sim snapshot field-grow` →
    `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 04:00 local
    fell between the planting and this recital: compare `START` with the
-   time now, local), `0 verses at full corn`; then `sim tap "label=Begin"`
+   time now, local), `0 verses at full corn`; then `sim tap "label=Start"`
    is `run.md` step 5 (`run-held-field`).
 6. (`field-listening` is in step 5.)
 7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
@@ -116,13 +121,13 @@ Launch); the JavaScript comes from the dev server.
    `sim snapshot field-again` → a button whose label starts
    `Isaiah 41:10, seed` (`, ready today` follows while its item is open),
    the same days sown as
-   step 5; then `sim tap "label=Begin"` (the result held, with `Next`).
+   step 5; then `sim tap "label=Start"` (the result held, with `Next`).
    Otherwise the tests own it.
 8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once
    `sim snapshot field-relaunch-launch` → no `Your field` heading, no label
    ending `sown` or `full corn`; then
-   `sim open / --expect "id=counts" --no-relaunch`,
+   `sim open / --expect "id=today-card" --no-relaunch`,
    `sim snapshot field-relaunch` → the heading `Your field`, no heading
    `Today`, and the same plants and days as step 7 (step 5 when step 7
    did not run).
@@ -160,5 +165,5 @@ delete the `snapshots` folder and the raw snapshot.
 - `Your field` never needs a `sim scroll`: it is in Today's header, outside
   the scroll view. Tap it as it is; a scroll just before a tap can leave the
   scroll view moving, and a tap then may stop the scroll instead of pressing.
-  The field's `When I need…` likewise sits in its bar, above the scroll
-  view.
+  The field's Today card likewise sits fixed above the scroll view; its
+  `Settings` row lies at the scroll view's end, so scroll to it first.

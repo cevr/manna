@@ -218,6 +218,37 @@ const settingsFaults = (on: string, rows: readonly Element[]) => {
   return out;
 };
 
+/** Home's old nodes, by test id, which no frame of home may show again. */
+const OLD_HOME = ['counts', 'add-verses', 'add-row'];
+
+/** Home's one primary action by name: the Today card's `Start` or `Practice anyway`, the chosen card's `Practice <reference>` or `Learn <reference>`. */
+const PRIMARY = /^(Start|Practice .+|Learn .+)$/u;
+
+/**
+ * hsstart's home rule over a frame of home (`on` being `Your field`): none
+ * of home's old nodes (`home's old <id>`), at most one `Add a list` (`<n>
+ * Add a list controls`), at most one primary action (`<n> primary actions:
+ * <names>`), which lies outside the scroll view (`<name> inside the scroll
+ * view`), and no plant showing a number (`a number in <name>`). Off home it
+ * holds nothing; `When I need…` on any screen and `Settings` outside the
+ * scroll view are `rootFaults`'s own clauses.
+ */
+export const homeRuleFaults = (on: string, host: Element, controls: readonly Element[]) => {
+  if (on !== 'Your field') return [];
+  const out = ids(host, OLD_HOME).map((id) => `home's old ${id}`);
+  const adds = controls.filter((node) => nameOf(node) === 'Add a list');
+  if (adds.length > 1) out.push(`${adds.length} Add a list controls`);
+  const primary = controls.filter((node) => PRIMARY.test(nameOf(node)));
+  if (primary.length > 1)
+    out.push(`${primary.length} primary actions: ${primary.map(nameOf).join(', ')}`);
+  for (const node of primary)
+    if (scrolled(node)) out.push(`${nameOf(node)} inside the scroll view`);
+  for (const plant of host.querySelectorAll('[data-testid="field-plant"]'))
+    if ([plant, ...plant.querySelectorAll('*')].some((node) => /^\d+$/u.test(text(node))))
+      out.push(`a number in ${nameOf(plant)}`);
+  return out;
+};
+
 const CHOICE_NAME = /^(\d+ min|Voice)$/;
 
 /** What the reader's choices show wrong on the screen `on`: a `Minutes` group, an `<n> min` control or a `Voice` control under the host, on every screen. */
@@ -279,7 +310,9 @@ const listeningFaults = (host: Element) =>
  * own), home's nodes only on home, no `When I need…` on any screen,
  * exactly one `Settings` on home, a row inside the scroll
  * view, and none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
- * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`. The
+ * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`; home holds home's rule
+ * (`homeRuleFaults`: one primary action, outside the scroll view, no old
+ * node, one `Add a list`, no number in a plant). The
  * Settings sheet lies outside the host, so its nodes are the sheet rule's
  * (`settings-rig.ts`). While the host shows `Listening`, on any frame,
  * nothing that makes the plan is in reach anywhere in the host's document,
@@ -331,6 +364,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
     if (on !== 'Your field') out.push(`home's ${id} on ${on}`);
   out.push(...endFaults(host, on, garden, controls));
   out.push(...settingsFaults(on, named('Settings')));
+  out.push(...homeRuleFaults(on, host, controls));
   out.push(...choicesFaults(on, host, controls));
   out.push(...reach);
   return out;

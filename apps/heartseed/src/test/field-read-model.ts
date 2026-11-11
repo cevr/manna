@@ -141,5 +141,7 @@ export const readoutsModel = (host: Element) => {
     titles: lowest('row-title'),
     numbers: lowest('field-plant'),
     captions: lowest('caption'),
+    card: Math.min(lowest('today-card'), lowest('chosen')),
+    ends: lowest('end-row'),
   };
 };

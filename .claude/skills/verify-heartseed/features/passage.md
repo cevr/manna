@@ -1,26 +1,25 @@
-# Passages: the field's bar, the chooser, Plant and Remove
+# Passages: the field's lists, the chooser, Plant and Remove
 
 The reader chooses what to learn (`apps/heartseed/src/chooser/screen.tsx`,
-the range rule `apps/heartseed/src/chooser.ts`, the field's bar
+the range rule `apps/heartseed/src/chooser.ts`, the field
 `apps/heartseed/src/field/screen.tsx`). The free tier holds 3 passages or
 Handbook lists together, a passage of up to 20 verses, from the whole KJV
 in the bundle.
 
-- **The field's bar** sits above the field's scroll view: `When I need…`
-  once a plan is made (`promise.md`), then `Add verses` (`id=add-verses`) while
-  fewer than 3 passages and Handbook lists are held together
-  (`handbook.md`), else the line "3 passages or lists, the most for now.
-  Remove one to add another." (testID `limit`). The dashed row
-  `Add verses` at the field's end (`id=add-row`) shows exactly when the
-  bar's does. Both open the Add verses sheet over home (`home.md`), whose
-  `Any passage` opens the chooser. With the reader's passages unread
+- **The field's lists** sit in the field's scroll view under the label
+  `Lists`: `Add a list` (`id=add-list`) while fewer than 3 passages and
+  Handbook lists are held together (`handbook.md`), else the line
+  "3 passages or lists, the most for now. Remove one to add another."
+  (testID `limit`). `Add a list` opens the Add a list sheet over home
+  (`home.md`), whose `Any passage` opens the chooser. With the reader's passages unread
   it offers neither, and no row offers `Remove`.
 - **The rows**: the promise's (`Isaiah 41:10`), then each passage held in
   the order chosen, titled by its reference, each verse a plant button
   labelled `<verse reference>, <stage>`, then every other plant, one verse each, in
   the order first sown; a phrase folds into its verse (`phrase.md`). Each passage row, and no other, holds
   `Remove <its reference>`.
-- **Remove asks once**, in the bar: "Remove <reference>? Its plants stay in
+- **Remove asks once**, fixed above the scroll view in the Today card's
+  place: "Remove <reference>? Its plants stay in
   your field." (testID `ask`) with `Remove` and `Keep`. A remove that does
   not land leaves the alert "<reference> was not removed. Try again."
 - **The chooser** is the root's third screen, in place, opened at its
@@ -53,9 +52,9 @@ in the bundle.
 
 ## Sub-features
 
-- `passage-bar`: on the field, `When I need…` and `Add verses` sit in the
-  bar, inside the window, without a scroll.
-- `passage-books`: the bar's `Add verses`, then the sheet's `Any passage`,
+- `passage-bar`: on the field, `Lists` and one `Add a list` sit in the
+  scroll view, and no `When I need…` and no `Add verses` anywhere.
+- `passage-books`: `Add a list`, then the sheet's `Any passage`,
   shows the heading `Add a passage`, `‹ Add verses`, `Old Testament`,
   `New Testament` and the books.
 - `passage-range`: `John` → `John 15` → taps on 1 and 5 show
@@ -65,14 +64,13 @@ in the bundle.
   `Psalms 119:1-20` and `20 verses`.
 - `passage-plant`: `Plant` shows the field with the row `John 15:1-5`, five
   `John 15:<n>, not planted` plants, and `Remove John 15:1-5`.
-- `passage-limit`: after two more passages, no `Add verses` (neither the
-  bar's nor the row), and the line "3 passages or lists, the most for
+- `passage-limit`: after two more passages, no `Add a list`, and the line "3 passages or lists, the most for
   now. Remove one to add another."
 - `passage-remove`: a row's `Remove` → the ask → `Remove`: the row leaves,
-  and both `Add verses` come back.
+  and `Add a list` comes back.
 - `passage-keep`: `Remove` → `Keep` changes nothing.
-- `passage-day-one`: back on home, on the first minute's day, the foot's
-  counts line holds no `1 new`, and Today, if `Begin` opens it, no
+- `passage-day-one`: back on home, on the first minute's day, the Today
+  card's parts line holds no `1 new`, and Today, if `Start` opens it, no
   `Listen`.
 - `passage-relaunch`: a relaunch opens home, and the field shows the
   passages kept.
@@ -99,10 +97,10 @@ in the bundle.
 
 ## How to get to it (user POV)
 
-- On home (the field), tap `Add verses`, then `Any passage`: a book, a chapter,
+- On home (the field), tap `Add a list`, then `Any passage`: a book, a chapter,
   the first verse and the last, then `Plant`.
 - On the field, a passage row's `Remove`, then `Remove` or `Keep` in the
-  bar.
+  ask fixed above the scroll view.
 
 ## Driving it
 
@@ -116,14 +114,10 @@ must start empty: uninstall by udid as `first.md` says.
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
    and the first minute to `first-home`.
 2. `passage-bar`: on home, `sim snapshot passage-bar`
-   → the buttons `When I need…` and two `Add verses` (the bar's and the
-   row's), the heading `Your field`, the row `Isaiah 41:10` and no
-   `Remove`, no button `Today`; then
-   a raw snapshot (`agent-device snapshot --json --raw --observe-only
-   --force-full --session verify-heartseed`) → the rects of `When I need…` and of
-   `id=add-verses` inside the window, above the heading, with no
-   `sim scroll` before.
-3. `passage-books`: `sim tap "id=add-verses"`, `sim tap "label=Any
+   → the text `Lists`, one button `Add a list` (`id=add-list`), no
+   `When I need…` and no `Add verses`, the heading `Your field`, the row
+   `Isaiah 41:10` and no `Remove`, no button `Today`.
+3. `passage-books`: `sim tap "id=add-list"`, `sim tap "label=Any
    passage"`, `sim snapshot passage-books` → the heading `Add a passage`,
    the button `Add verses` showing `‹ Add verses`, no button `Your field`, the texts `Old Testament` and
    `New Testament`, and the buttons `Genesis` and `Revelation`.
@@ -146,27 +140,27 @@ must start empty: uninstall by udid as `first.md` says.
 7. `passage-plant`: `sim tap "label=Plant"`, `sim snapshot passage-plant` →
    the heading `Your field`; the row titles `Isaiah 41:10` then
    `John 15:1-5`; five buttons `John 15:<n>, not planted` (n 1-5); a button
-   `Remove John 15:1-5` and no other `Remove`; two `Add verses`.
-8. `passage-limit`: two more passages through `sim tap "id=add-verses"`
+   `Remove John 15:1-5` and no other `Remove`; one `Add a list`.
+8. `passage-limit`: two more passages through `sim tap "id=add-list"`
    and `sim tap "label=Any passage"` (for example `Psalms` → `Psalms 23` → `Psalms 23:1`, then `sim scroll screen
    down` until `Psalms 23:6` shows clear of the footer (it can sit partly
    under it), `Psalms 23:6`, `Plant`; then on the books `sim scroll screen
    down` until `Romans` shows, `Romans` → `Romans 8` → `Romans 8:28`,
    `Plant`; a snapshot after each scroll, then the tap),
    `sim snapshot passage-limit` → three `Remove` buttons, no
-   `Add verses`, and the limit line's text.
+   `Add a list`, and the limit line's text.
 9. `passage-keep`: `sim tap "label=Remove Psalms 23:1-6"`,
    `sim snapshot passage-ask` → the ask's text, `Remove`, `Keep`; then
    `sim tap "label=Keep"`, `sim snapshot passage-keep` → as step 8.
 10. `passage-remove`: `sim tap "label=Remove Romans 8:28"`,
     `sim tap "label=Remove"`, `sim snapshot passage-remove` → no row
-    `Romans 8:28`, two `Remove` buttons, two `Add verses`.
+    `Romans 8:28`, two `Remove` buttons, one `Add a list`.
 11. `passage-day-one`: on home, `sim snapshot passage-day-one` → the
-    foot's counts line holds no `1 new`. When the foot offers `Begin`
-    (the promise's review due), `sim tap "label=Begin"`,
+    Today card's parts line holds no `1 new`. When the card offers `Start`
+    (the promise's review due), `sim tap "label=Start"`,
     `sim open / --expect "id=session" --no-relaunch`, `sim snapshot passage-day-one-today`
     → no `Listen`; then `sim tap "label=Your field"`.
-12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
+12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,
     `sim snapshot passage-relaunch` → the heading `Your field` and the rows
     `Isaiah 41:10`, `John 15:1-5`, `Psalms 23:1-6`, in that order.
 13. `passage-launch-time`: three times, `sim relaunch` then
@@ -176,8 +170,8 @@ must start empty: uninstall by udid as `first.md` says.
 14. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
     the install.
 15. `passage-new`, the second session, after the next 04:00 local, with no
-    uninstall: `sim boot`, then `sim open / --expect "id=counts"` → home's
-    counts line holds `1 new`, with `Begin`; `sim tap "label=Begin"`,
+    uninstall: `sim boot`, then `sim open / --expect "id=today-card"` → the Today
+    card's parts line holds `1 new`, with `Start`; `sim tap "label=Start"`,
     `sim open / --expect "id=session" --no-relaunch`,
     `sim snapshot passage-new` → the counts line holds `1 new`; when the
     reference is `Isaiah 41:10` (its review due), run it through `Say it`
@@ -205,8 +199,8 @@ snapshots.
 - The simulator's clock cannot be set: the second day is `passage-new`,
   after the next 04:00 local, and every zone and day after it are the
   tests' (`src/chooser/reader-*.test.tsx`).
-- Two nodes are named `Add verses` (the bar's and the dashed row): a tap
-  by `label=Add verses` matches both, so tap `id=add-verses`.
+- Home's one add is `Add a list` (`id=add-list`), in the scroll view;
+  on the chooser, `label=Add verses` is its back to the sheet.
 - A refused write, unread passages, a double tap in one turn and a remove
   under way are the tests' alone (`passage-fail`, `passage-unread`,
   `passage-held-remove`).

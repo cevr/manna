@@ -232,7 +232,7 @@ export const readField = (host: Element) => {
   };
 };
 
-/** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant and the furrows' captions. */
+/** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant, the furrows' captions, the Today card's or the chosen card's texts and the end rows' (none shown reads as no bound). */
 export const readoutsOf = (host: Element) => {
   const { seen, styleOf } = fieldReader(host);
   const lowest = (id: string) =>
@@ -247,6 +247,8 @@ export const readoutsOf = (host: Element) => {
     titles: lowest('row-title'),
     numbers: lowest('field-plant'),
     captions: lowest('caption'),
+    card: Math.min(lowest('today-card'), lowest('chosen')),
+    ends: lowest('end-row'),
   };
 };
 

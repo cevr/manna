@@ -60,14 +60,15 @@ word 11 and the seed is graded Hard.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
 - `first-home`: `Continue` opens home in the done state (`home.md`'s
-  `home-open`): the heading `Your field`, in the foot the counts line
-  `Nothing to tend now` with no `Begin`, and no heading `Today`, no label
+  `home-open`): the heading `Your field`, on the Today card
+  `All tended for today` and `Practice anyway` with no `Start`, and no
+  heading `Today`, no label
   starting `Stage:` or `Grew to`, no grade, and no `Say it` or `Next`. The
   seed was just planted, so the plan holds nothing to tend.
 - `first-again`: a relaunch shows no first-minute heading in its launch
   frame, then home in the done state until the passage is due. Once it
   is due (7 minutes after a daytime planting; `run.md`'s `run-due`), a
-  relaunch shows home with `Begin`, and `Begin` a clean `Today` at
+  relaunch shows home with `Start`, and `Start` a clean `Today` at
   `Stage: seed`: no grade, no count, and the passage in letters
   (`today-passage`, `fade.md`'s `fade-letters`), not whole.
 - `first-plantset`: steps 1–7 on the same fresh, verifier-owned install.
@@ -122,15 +123,17 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 6. `first-planted`: `sim snapshot first-planted` → `Planted`,
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
 7. `first-home`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=counts" --no-relaunch`, `sim snapshot first-home` → the heading `Your field`;
-   in the foot `Nothing to tend now`, no `Begin` and no `About`; the
-   buttons `When I need…` and `Settings`; no heading `Today`, no button `Today`, no label
+   "id=today-card" --no-relaunch`, `sim snapshot first-home` → the heading `Your field`;
+   on the Today card `All tended for today`, `Nothing is due right now.`
+   and `Practice anyway`, no `Start` and no `About`; the buttons
+   `Settings` and `How Heartseed works` (at the scroll view's end) and no
+   `When I need…`; no heading `Today`, no button `Today`, no label
    starting `Stage:` or `Grew to`, no label ending `words`, no grade
    label, no `Say it` and no `Next` (the done state).
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once `sim snapshot
    first-again-launch` → no `Hear it`, `Say it with help`, `Say it alone`
-   or `Planted`. Then `sim open / --expect "id=counts" --no-relaunch`,
+   or `Planted`. Then `sim open / --expect "id=today-card" --no-relaunch`,
    `sim snapshot first-again` → the heading `Your field`, no first-minute
    heading, and the done state, as in step 7. Once the passage is due,
    `run.md`'s `run-due` shows `today-passage` (`today.md`).

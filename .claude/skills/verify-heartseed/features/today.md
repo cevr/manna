@@ -2,7 +2,8 @@
 
 Today is the run (`apps/heartseed/app/index.tsx`), reached from home
 (`home.md`, the screen Heartseed opens on once the garden holds a recall)
-by `Begin`, `Start here with <reference>` or a promise of When I need…; a
+by the Today card's `Start` or `Practice anyway`, or a chosen verse's
+`Practice <reference>` (or `Learn <reference>` on a verse not planted); a
 fresh install opens the first minute first (`first.md`), whose `Continue`
 opens home. An unread garden opens Today, with no `Your field`. It shows the passage the
 reader is learning: the header `Today`, then the
@@ -26,7 +27,7 @@ passage, once the garden's read completes and never while Say it listens,
 is the button `Your field` (shown `‹ Your field`), which leads back to
 home, the field, in place (`field.md`); it is on screen without a scroll
 whatever Today holds, and Today holds no `When I need…` (`promise.md`:
-it is on home's bar). The header holds no `Minutes` radio and no `Voice`
+it is gone). The header holds no `Minutes` radio and no `Voice`
 (both are in home's Settings sheet, `home.md`), and at the top of the scroll
 view, above the reference, the counts line (`id=session`), such as
 `Nothing to tend now` (`session.md`). At the end of a run the heading reads
@@ -39,7 +40,7 @@ per word, lit as read) in place of `id=passage` (`light.md`).
 
 - `today-passage`: whenever Today's run shows the passage (`run.md`: after
   the first minute home is the done state, `run-done-first`; once the
-  passage is due and a plan is made, home's `Begin`, `run-due`), Today shows the header
+  passage is due and a plan is made, the Today card's `Start`, `run-due`), Today shows the header
   `Today` (role header), the reference `Isaiah 41:10`, its stage line (a
   label starting `Stage: `), one `Say it` button in the fixed footer under
   the scroll view, the button `Your field`, and its words under the cue
@@ -50,7 +51,7 @@ per word, lit as read) in place of `id=passage` (`light.md`).
   Today shows that text whole only before the passage is planted, which no
   live drive reaches.
 - `today-plantset`: from `first.md`'s `first-home`, the passage's seed
-  reached by choosing its plant and `Start here`, with no relaunch. Today,
+  reached by choosing its plant and `Practice Isaiah 41:10`, with no relaunch. Today,
   `Isaiah 41:10`, `Stage: seed`, `Say it` and `Your field` remain present,
   with no exposed image, plant name or control added. The stage's still
   hand-drawn asset is seed, blade, ear or corn (full corn), at 28 × 28 pt,
@@ -63,14 +64,14 @@ per word, lit as read) in place of `id=passage` (`light.md`).
 
 - On a fresh install, go through the first minute and tap `Continue`; it
   and any later launch open home. Once the verse is due, home offers
-  `Begin`, which opens Today on it.
+  `Start`, which opens Today on it.
 
 ## Driving it
 
 After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
 waits for `label=Isaiah 41:10`) and `run.md` through `run-due` (the
 home `Continue` opens at `first-home` is the done state, with no
-`Begin`, so it is not this row's start), its Drive's two commands are this feature's drive, the
+`Start`, so it is not this row's start), its Drive's two commands are this feature's drive, the
 open waiting for the stage line (`id=stage`), which shows only once the
 garden is read and the run shows the passage:
 
@@ -99,7 +100,7 @@ Branch at `first-home` of the same fresh, verifier-owned drive used for
 
 ```bash
 sim tap "label=Isaiah 41:10, seed"
-sim tap "label=Start here with Isaiah 41:10"
+sim tap "label=Practice Isaiah 41:10"
 sim open / --expect "id=session" --no-relaunch
 sim snapshot today-plantset
 ```

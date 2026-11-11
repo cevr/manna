@@ -47,7 +47,7 @@ first minute.
 ## How to get to it (user POV)
 
 - Go through the first minute (`first.md`), tap `Continue`, come back once
-  the verse is due, tap home's `Begin`, then on Today tap `Say it`.
+  the verse is due, tap the Today card's `Start`, then on Today tap `Say it`.
 
 ## Driving it
 

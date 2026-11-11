@@ -549,6 +549,8 @@ const assertWitness = (witness: string, host: Element, old: ReturnType<typeof re
       titles: Infinity,
       numbers: Infinity,
       captions: Infinity,
+      card: Infinity,
+      ends: Infinity,
     });
   if (witness === 'malformed') {
     expect(got.rows[0]?.title).toBe('<title not one seen and exposed>');

@@ -293,7 +293,7 @@ British word sounds, are the phone check's and the owner's ear.
 
 Driven in this order on two containers, with the model server running as
 above. The line and `Voice` live in home's Settings sheet: from Today
-`sim tap "label=Your field"`, then the gear, `sim tap "label=Settings"`;
+`sim tap "label=Your field"`, then `sim scroll "label=Settings" down` and `sim tap "label=Settings"`;
 read the line from `sim snapshot <step>`: the `natural-status` node's
 text under `Voice`, and the `Try again` button beside it; `Done` closes
 the sheet. Every tap of `Voice` and `Try again` below is in the open

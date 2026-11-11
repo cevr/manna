@@ -3,8 +3,8 @@
 Every Heartseed screen is drawn in brand C's roles
 (`apps/heartseed/src/theme.ts`), in light or dark, and every text in SF
 Rounded (`ui-rounded`). The reader's appearance, `System`, `Light` or
-`Dark` (System by default), is chosen in home's Settings sheet (the gear
-`Settings` in home's bar) and stored under
+`Dark` (System by default), is chosen in home's Settings sheet (the `Settings` row
+at the field's end) and stored under
 the key `APPEARANCE_KEY` (`apps/heartseed/src/appearance.ts`); a stored text
 other than exactly `system`, `light` or `dark` reads as System. The scheme
 is decided in one place, `useScheme()` (`apps/heartseed/src/look.tsx`):
@@ -51,7 +51,7 @@ paints are the unit tests' (`apps/heartseed/src/look/`,
 ## How to get to it (user POV)
 
 - A reader who never chooses follows the phone's appearance, set in
-  the phone's Settings (or Control Centre). From home, the gear
+  the phone's Settings (or Control Centre). From home, the `Settings` row
   `Settings`, then `System`, `Light` or `Dark` in the sheet. The probe is a developer's
   link, not a reader's.
 
@@ -68,7 +68,7 @@ server.
 
    ```bash
    xcrun simctl ui <udid> appearance light
-   sim open / --expect "id=counts" --no-relaunch
+   sim open / --expect "id=today-card" --no-relaunch
    sim open probe/theme --expect "label=scheme light"
    sim snapshot appearance-light
    ```
@@ -90,7 +90,8 @@ server.
 4. `appearance-choice`, the simulator still dark:
 
    ```bash
-   sim open / --expect "id=counts" --no-relaunch
+   sim open / --expect "id=today-card" --no-relaunch
+   sim scroll "label=Settings" down
    sim tap "label=Settings"
    agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
    sim tap "label=Light"
@@ -109,9 +110,10 @@ server.
 
    ```bash
    sim relaunch
-   sim open / --expect "id=counts"
+   sim open / --expect "id=today-card"
    sim open probe/theme --expect "label=scheme light"
-   sim open / --expect "id=counts" --no-relaunch
+   sim open / --expect "id=today-card" --no-relaunch
+   sim scroll "label=Settings" down
    sim tap "label=Settings"
    sim tap "label=System"
    sim tap "label=Done"

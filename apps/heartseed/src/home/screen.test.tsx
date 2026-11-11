@@ -19,7 +19,17 @@ import { describe, expect, it } from 'bun:test';
 
 import { mountBar } from '../test/bar-rig';
 import { recallOf } from '../test/field-model';
-import { cardOf, iconOf, nameOf, record, scrolled, selectedPlants, text } from '../test/field-rig';
+import { AA } from '../test/contrast';
+import {
+  cardOf,
+  iconOf,
+  nameOf,
+  readoutsOf,
+  record,
+  scrolled,
+  selectedPlants,
+  text,
+} from '../test/field-rig';
 import { setSystem, systemScheme } from '../test/look';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
@@ -138,7 +148,14 @@ for (const scheme of SCHEMES)
       });
       expect(by(host, 'dot')).toEqual([]);
 
+      const shown = readoutsOf(host);
+      expect([
+        shown.card >= AA,
+        shown.ends >= AA,
+        Number.isFinite(shown.card + shown.ends),
+      ]).toEqual([true, true, true]);
       await rig.tap('Isaiah 41:10, seed');
+      expect(readoutsOf(host).card >= AA).toBe(true);
       expect([selectedPlants(host), cardOf(host)]).toEqual([
         ['Isaiah 41:10, seed', 'Isaiah 41:10, seed'],
         { card: 'chosen', line: 'Isaiah 41:10 · a seed', controls: ['Practice Isaiah 41:10'] },

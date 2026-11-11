@@ -3,8 +3,9 @@
 Today (`apps/heartseed/app/index.tsx`) runs the session's plan
 (`session.md`) one piece at a time: a verse, or a phrase of a long verse
 (`phrase.md`). It shows the held item if any, else
-the first verse not done of a visit (a promise tapped on When I need…,
-`promise.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
+the first verse not done of a visit (a verse started from home by
+`Practice anyway`, `Practice <reference>` or `Learn <reference>`,
+`home.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
 piece, first letters for a join or at a seed, nothing from a blade on), its stage line,
 and `Say it`. Once the recital's recall is kept, the result and the grades
 stay, and the button reads `Next`. `Next` moves on to the next item. After
@@ -25,9 +26,10 @@ them. A recital that is not heard, or whose write is refused, leaves
 `Say it` on the same verse.
 
 A plan is made when home or Today first shows in a launch, and again at
-each `Minutes` tap (in home's Settings sheet). Today is reached from home by `Begin` (shown exactly
-when the plan or a visit holds an item), `Start here with <reference>`
-or a promise of When I need…, and left by `Your field`. A tap made with no recital under way starts the run again at
+each `Minutes` tap (in home's Settings sheet). Today is reached from home by the Today card's `Start` (shown exactly
+when the plan or a visit holds an item) or `Practice anyway`, or by a
+chosen verse's `Practice <reference>` (or `Learn <reference>` on a verse
+not planted), and left by `Your field`. A tap made with no recital under way starts the run again at
 the new plan's first item, and an earlier result is gone. A reader cannot
 make a `Minutes` tap while a recital listens, since the sheet is on home
 alone and Today shows no `Your field` then; the session keeps the verse
@@ -51,12 +53,12 @@ Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
 of `first-planted`.
 
 - `run-done-first`: home after the first minute is the done state: the
-  heading `Your field`, the foot's counts line `Nothing to tend now` with
-  no `Begin`, `When I need…` in the bar, and no heading `Today`, no
+  heading `Your field`, the Today card's `All tended for today` with
+  `Practice anyway` and no `Start`, no `When I need…`, and no heading `Today`, no
   `Say it`, `Next` or `Grade`.
 - `run-due` (daytime only, when `PLANTED` was between 04:00 and 17:52
   local): 7 minutes after `PLANTED`, a relaunch makes a new plan. Home
-  then offers `Begin` with `1 to tend · about 1 min`, and `Begin` shows
+  then offers `Start` with `1 verse · about 1 min` and `1 to review`, and `Start` shows
   Today with `1 to tend · about 1 min`, the reference
   `Isaiah 41:10`, 37 `word-<i>` nodes in first letters (a seed), and
   `Say it`. In a raw snapshot, `Say it` lies wholly inside the window,
@@ -66,7 +68,7 @@ of `first-planted`.
   checked, and a button `Next` where `Say it` was, with no `Say it`. In a
   raw snapshot, `Next` and the four grade radios lie wholly inside the
   window, with no scroll.
-- `run-held-field`: `Your field`, then `Begin`: the same result and
+- `run-held-field`: `Your field`, then `Start`: the same result and
   `Next`.
 - `run-next`: `Next` gives the end (`home.md`'s `home-end`): the heading
   `The field is tended` and no heading `Today`, the text
@@ -81,24 +83,24 @@ of `first-planted`.
   listens.
 - `run-second` (only when the drive started before 16:00 local): once the
   passage is due again after `run-recite` (wait 15 minutes, then
-  `Your field`, `Settings`, the checked `5 min`, `Done`, `Begin`), Today shows `1 to tend`, no word node labelled (nothing
+  `Your field`, `Settings`, the checked `5 min`, `Done`, `Start`), Today shows `1 to tend`, no word node labelled (nothing
   is cued at a blade), and `Say it`. A recital gives `Stage: ear` and
   `Grew to an ear.`, then `Next` and the end with `1 grew a stage.` and an
   image `Isaiah 41:10, ear`. Or, in its place, the grade `Again`, then
   `Next`: `Nothing grew this time.` and no image.
 - `run-held-settings` (only when the drive started before 16:00 local,
   after `run-second`'s recital, in place of its `Next`): `Your field`
-  shows home with the heading `Your field` and `Begin` (the verse just
+  shows home with the heading `Your field` and `Start` (the verse just
   said is still held), and no heading `Settings`. In the sheet `5 min`
   alone is selected; a tap of `5 min`, then `Done`, gives home with no
-  heading `Settings`, the counts line `Nothing to tend now` and no
-  `Begin`: a making with no recital under way drops the hold, and the
+  heading `Settings`, the Today card's `All tended for today` and no
+  `Start`: a making with no recital under way drops the hold, and the
   verse just kept is not due.
 
 ## How to get to it (user POV)
 
 - Go through the first minute and tap `Continue`: home has nothing to
-  tend yet. Come back once the verse is due: home offers `Begin`, and
+  tend yet. Come back once the verse is due: home offers `Start`, and
   Today shows the verse and `Say it`. Say it, then tap `Next`.
 
 ## Driving it
@@ -114,10 +116,10 @@ sets them.
 2. `run-done-first`: `sim snapshot run-done-first` → the nodes above. Then
    `session.md`'s `session-first`, `session-header` and `session-choose`
    (steps 2-3) and `session-field` (step 5), on the Today that
-   `Start here with Isaiah 41:10` opens.
+   `Practice Isaiah 41:10` opens.
 3. `run-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
-   `sim open / --expect "id=counts"` → home's `1 to tend · about 1 min`
-   and `Begin`; `sim tap "label=Begin"`, `sim open / --expect
+   `sim open / --expect "id=today-card"` → the Today card's
+   `1 verse · about 1 min`, `1 to review` and `Start`; `sim tap "label=Start"`, `sim open / --expect
    "id=session" --no-relaunch`, and `sim snapshot run-due`, plus a raw snapshot
    (`agent-device snapshot --json --raw --observe-only --force-full
    --session verify-heartseed`) for the rects. When `PLANTED` was in the
@@ -126,24 +128,24 @@ sets them.
 4. `run-listening` and `run-recite`: `sim tap "label=Say it"`, a raw
    snapshot at once, then `sim tap "label=36 of 37 words" --timeout 30`,
    `sim snapshot run-recite`, and a raw snapshot for the rects.
-5. `run-held-field`: `sim tap "label=Your field"`, `sim tap "label=Begin"`,
+5. `run-held-field`: `sim tap "label=Your field"`, `sim tap "label=Start"`,
    `sim snapshot run-held-field`.
 6. `run-next`: `sim tap "label=Next"`, `sim snapshot run-next`.
 7. `run-second`, only when the drive started before 16:00 local: wait 15
    minutes from step 4, `sim tap "label=Your field"`,
-   `sim tap "label=Settings"`, `sim tap "label=5 min"`,
-   `sim tap "label=Done"`, `sim tap "label=Begin"`, `sim snapshot
+   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim tap "label=5 min"`,
+   `sim tap "label=Done"`, `sim tap "label=Start"`, `sim snapshot
    run-second-due`, `sim tap "label=Say it"`, `sim tap "label=37 of 37
    words" --timeout 30` (or the count the replay gives), `sim snapshot
    run-second`, `sim tap "label=Next"` (or step 8 in its place).
 8. `run-held-settings`, only when the drive started before 16:00 local,
    in place of step 7's `Next`: `sim tap "label=Your field"`,
-   `sim snapshot run-held-home` → the heading `Your field`, `Begin`, no
-   heading `Settings`; record the counts line as shown. Then
-   `sim tap "label=Settings"`, a raw snapshot → `5 min` alone selected;
+   `sim snapshot run-held-home` → the heading `Your field`, `Start`, no
+   heading `Settings`; record the Today card's lines as shown. Then
+   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw snapshot → `5 min` alone selected;
    `sim tap "label=5 min"`, `sim tap "label=Done"`, `sim snapshot
-   run-held-settings` → no heading `Settings`, the counts line
-   `Nothing to tend now`, no `Begin`. `run-second`'s last claim (`Next`
+   run-held-settings` → no heading `Settings`, the Today card's
+   `All tended for today`, no `Start`. `run-second`'s last claim (`Next`
    and the end) is `run-next`'s already, at an ear.
 
 Report only counts, booleans, rect numbers, the labels named, the counts

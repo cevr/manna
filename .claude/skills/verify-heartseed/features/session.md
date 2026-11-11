@@ -4,7 +4,7 @@ Today (`apps/heartseed/app/index.tsx`) shows the day's session as a plan made
 by `apps/heartseed/src/session.ts`: the due reviews, then one new piece,
 within the minutes the reader chose. The session's two choices sit in
 home's Settings sheet alone (`apps/heartseed/src/settings/sheet.tsx`,
-opened by the gear `Settings` in home's bar, `home.md`): the radio group
+opened by the `Settings` row at the field's end, `home.md`): the radio group
 `Minutes` (`2 min`, `5 min`, `10 min`, `20 min`; `5 min` until the reader
 picks another) under `A day's tending`, and the button `Voice` under
 `Reads new verses aloud`, which each tap cycles Off → Her → Him → Off
@@ -23,9 +23,11 @@ voice's line.
 At the top of Today's scroll view, above the reference, the counts line
 (`id=session`) says what the session holds: `<n> to tend`, `1 new`,
 `about <k> min`, joined by `·`, or `Nothing to tend now`. It never counts
-the backlog; home's foot shows the same line (`id=counts`). The plan is
+the backlog. Home's Today card (`id=today-card`, `home.md`) counts the
+same items by verse: `<n> verse(s) · about <k> min` and `<r> to review`,
+`1 new`, or `All tended for today`. The plan is
 made when home or Today first shows in a launch, again
-at each Minutes tap in the sheet (home's counts line changes under the
+at each Minutes tap in the sheet (home's Today card changes under the
 open sheet), at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
 (`passage.md`). An item is done once its piece (a verse or a phrase,
@@ -43,15 +45,15 @@ minute's alone recital (the replay suggests Hard), the passage is due again
 ## Sub-features
 
 Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
-of `first-planted`. After the first minute home offers no `Begin` (the
-done state), so these rows reach Today by `Start here with Isaiah 41:10`
+of `first-planted`. After the first minute home offers no `Start` (the
+done state), so these rows reach Today by `Practice Isaiah 41:10`
 (tap `Isaiah 41:10, seed` first), whose visit leaves the counts line the
 plan's.
 
 - `session-first`: after the first minute, home's `Settings` shows the
   group `Minutes` with four radios `2 min`, `5 min`, `10 min` and
   `20 min`, `5 min` alone checked, and the button `Voice` valued `Her`.
-  Today (by `Start here`) shows `Nothing to tend now` and no `Minutes` or
+  Today (by `Practice Isaiah 41:10`) shows `Nothing to tend now` and no `Minutes` or
   `Voice`. No snapshot of the first minute (`first-launch` to
   `first-planted`) holds `Minutes`, `Voice`, `Settings`, `to tend` or
   `Nothing to tend`.
@@ -79,19 +81,20 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 - `session-listening`: moved into `run.md`'s `run-listening`, after the
   wait.
 - `session-due`: replaced by `run.md`'s `run-due`: 7 minutes after
-  `PLANTED`, a relaunch makes the plan and home offers `Begin` (a Minutes
+  `PLANTED`, a relaunch makes the plan and home offers `Start` (a Minutes
   tap in home's Settings works too). The evening rule stays: a planting from 18:00 to
   03:59 local shows `Nothing to tend now` until 04:00 the next morning.
 - `session-tend`: replaced by `run.md`'s `run-recite` and `run-next`: the
   recital leaves `Next`, and `Next` the end of the run, never `Say it`.
-- `session-field`: Today's `Your field` shows home's foot with the same
-  counts line, and no `Begin` in the done state.
+- `session-field`: Today's `Your field` shows home's Today card counting
+  the visit's verse (`1 verse · about <k> min`, `1 to review`) with
+  `Start`.
 
 ## How to get to it (user POV)
 
-- Go through the first minute and tap `Continue`. On home, the gear
-  `Settings` shows the minutes and the voice; a plant and `Start here`
-  (or `Begin` once a verse is due) opens Today, whose line under the
+- Go through the first minute and tap `Continue`. On home, the `Settings` row
+  `Settings` shows the minutes and the voice; `Practice anyway`, a plant
+  and `Practice <reference>` (or `Start` once a verse is due) opens Today, whose line under the
   header shows what to tend.
 
 ## Driving it
@@ -107,7 +110,7 @@ sets them.
    `first-alone` and `first-planted`, check the snapshot for
    `session-first`'s absences. Note `PLANTED` (`date`).
 2. `session-first` and `session-header`: `first.md` step 7 (`first-home`),
-   then `sim tap "label=Settings"`, `sim snapshot session-first-sheet`,
+   then `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim snapshot session-first-sheet`,
    and:
    - check the snapshot for the sheet's nodes above;
    - take a raw snapshot (`agent-device snapshot --json --raw --observe-only
@@ -117,23 +120,23 @@ sets them.
      `10 min` checked; `sim tap "label=5 min"` (restored),
      `sim tap "label=Done"`.
      Then `sim tap "label=Isaiah 41:10, seed"`,
-     `sim tap "label=Start here with Isaiah 41:10"`,
+     `sim tap "label=Practice Isaiah 41:10"`,
      `sim open / --expect "id=session" --no-relaunch`, `sim snapshot session-first` →
      `Nothing to tend now`, and no `Minutes`, `5 min` or `Voice`.
 3. `session-choose`: `sim tap "label=Your field"`,
-   `sim tap "label=Settings"`, two `sim tap "label=Voice"` (Her → Him →
+   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, two `sim tap "label=Voice"` (Her → Him →
    Off), `sim tap "label=20 min"`, `sim tap "label=Done"`, `sim relaunch`,
-   `sim open / --expect "id=counts"` (home), `sim tap "label=Settings"`,
+   `sim open / --expect "id=today-card"` (home), `sim scroll "label=Settings" down`, `sim tap "label=Settings"`,
    `sim snapshot session-choose` and a raw snapshot → `20 min` checked,
    `Voice` valued `Off`. Turn the voice back to `Her` with one
    `sim tap "label=Voice"`, pick `5 min` again, then `sim tap
    "label=Done"`.
 4. (`session-listening` is `run.md`'s `run-listening`.)
 5. `session-field`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim tap "label=Practice Isaiah 41:10"`,
    `sim tap "label=Your field"`, `sim snapshot session-field` → the
-   heading `Your field`, the foot's counts line as Today's, and no
-   `Begin`.
+   heading `Your field`, the Today card's `1 verse · about <k> min` and
+   `1 to review`, and `Start` (the visit open).
 6. `session-due` and `session-tend` are `run.md`'s `run-due`, `run-recite`
    and `run-next`: go on with `run.md`, Driving it, from step 3.
 
@@ -161,14 +164,14 @@ value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
    the switch's text node is labelled `Voice` too); a store copy → the old
    switch row `false` and no choice row; `sim down`.
 2. `voice-migrate`, from the head: `sim boot`, `sim relaunch`,
-   `sim open / --expect "id=counts"` (home), `sim tap "label=Settings"`;
+   `sim open / --expect "id=today-card"` (home), `sim scroll "label=Settings" down`, `sim tap "label=Settings"`;
    a raw snapshot and a store copy → `Voice` valued `Off`, no choice row.
    `sim tap "label=Voice"`; a raw snapshot and a store copy → `Her`, the
    choice row `her`, the old switch row still `false`.
 3. `voice-cycle`: three `sim tap "label=Voice"`, a raw snapshot after each
    → `Him`, `Off`, `Her`; one more tap, `sim tap "label=Done"`,
-   `sim relaunch`, `sim open / --expect "id=counts"`,
-   `sim tap "label=Settings"`, a raw snapshot and a store copy → `Him`,
+   `sim relaunch`, `sim open / --expect "id=today-card"`,
+   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw snapshot and a store copy → `Him`,
    the choice row `him`. Two taps bring it back to `Her`; then
    `sim tap "label=Done"`.
 4. Then `session-choose` (step 3 above) runs from here.
