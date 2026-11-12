@@ -1,0 +1,20 @@
+{
+  "feature": "natural-try",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-try-sheet",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Try again" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-try",
+      "action": "tap",
+      "target": "label=Try again",
+      "receipt": "snapshot"
+    }
+  ]
+}

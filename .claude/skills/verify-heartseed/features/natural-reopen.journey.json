@@ -1,0 +1,22 @@
+{
+  "feature": "natural-reopen",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-reopen-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-crash",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Install" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

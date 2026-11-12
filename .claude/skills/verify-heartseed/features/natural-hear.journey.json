@@ -1,0 +1,35 @@
+{
+  "feature": "natural-hear",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-hear-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-hear-skip",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-hear",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-read",
+      "action": "tap",
+      "target": "label=Say it with help",
+      "timeout": 60,
+      "receipt": "none"
+    }
+  ]
+}

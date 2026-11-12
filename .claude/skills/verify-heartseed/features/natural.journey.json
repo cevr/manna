@@ -1,0 +1,28 @@
+{
+  "feature": "natural",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Install" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-install",
+      "action": "tap",
+      "target": "label=Install",
+      "receipt": "snapshot"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "feature": "natural-read",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-read-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Read" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-read",
+      "action": "tap",
+      "target": "label=Read",
+      "receipt": "none"
+    }
+  ]
+}

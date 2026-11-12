@@ -1,0 +1,28 @@
+{
+  "feature": "natural-remove",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-remove-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-remove-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Remove" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-remove",
+      "action": "tap",
+      "target": "label=Remove",
+      "receipt": "snapshot"
+    }
+  ]
+}

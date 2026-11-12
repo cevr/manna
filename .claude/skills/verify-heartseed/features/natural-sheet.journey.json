@@ -1,0 +1,28 @@
+{
+  "feature": "natural-sheet",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-sheet-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-sheet-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "natural-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=Voice" }, { "shows": "label=Done" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

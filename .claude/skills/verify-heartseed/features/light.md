@@ -163,8 +163,8 @@ the status line `lit <k>/<n> <status>` among them, but no id, frame or
 8. `light-natural-him`: the probe's route is the app's own, which the
    natural probe does not take. With the natural voice ready, set
    `Voice: Him` (the Settings sheet's pill, as `natural.md`'s `today-him`:
-   `sim journey natural-sheet`, then `sim journey natural-voice` until its
-   receipt reads `Him`), then `sim journey light`, raw snapshots until the
+   `sim journey natural-sheet`, then `sim journey natural-voice` until a raw
+   snapshot's `Voice` value is `Him`), then `sim journey light`, raw snapshots until the
    finish → the log holds
    `[natural] load … voice=bm_george.bin`, four prosody lines
    `ids=32,40,53,30` at `speed=0.9` (the British list's plan; base:

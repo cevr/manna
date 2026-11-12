@@ -1,0 +1,20 @@
+{
+  "feature": "natural-voice",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-voice-sheet",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Voice" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-voice",
+      "action": "tap",
+      "target": "label=Voice",
+      "receipt": "snapshot"
+    }
+  ]
+}

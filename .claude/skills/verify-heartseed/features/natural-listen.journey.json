@@ -1,0 +1,20 @@
+{
+  "feature": "natural-listen",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-listen-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-listen",
+      "action": "tap",
+      "target": "label=Listen",
+      "receipt": "none"
+    }
+  ]
+}

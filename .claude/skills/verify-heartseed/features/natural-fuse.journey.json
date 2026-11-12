@@ -1,0 +1,33 @@
+{
+  "feature": "natural-fuse",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-fuse-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-fuse-launch",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-fuse-skip",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-fuse",
+      "action": "tap",
+      "target": "label=Listen",
+      "receipt": "none"
+    }
+  ]
+}

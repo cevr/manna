@@ -1,0 +1,19 @@
+{
+  "feature": "natural-relaunch",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-relaunch-root",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    }
+  ]
+}

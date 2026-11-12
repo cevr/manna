@@ -1,0 +1,20 @@
+{
+  "feature": "natural-soak",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-soak-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/&soak=200",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Soak" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-soak",
+      "action": "tap",
+      "target": "label=Soak",
+      "receipt": "none"
+    }
+  ]
+}

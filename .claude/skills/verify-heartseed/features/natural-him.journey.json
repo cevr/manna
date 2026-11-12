@@ -1,0 +1,20 @@
+{
+  "feature": "natural-him",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-him-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/&voice=bm_george",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Read" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-voices-him",
+      "action": "tap",
+      "target": "label=Read",
+      "receipt": "none"
+    }
+  ]
+}

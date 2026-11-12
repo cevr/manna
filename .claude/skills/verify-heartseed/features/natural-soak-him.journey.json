@@ -1,0 +1,20 @@
+{
+  "feature": "natural-soak-him",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-soak-him-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/&soak=200&voice=bm_george",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Soak" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-soak-him",
+      "action": "tap",
+      "target": "label=Soak",
+      "receipt": "none"
+    }
+  ]
+}

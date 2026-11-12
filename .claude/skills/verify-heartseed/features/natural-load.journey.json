@@ -1,0 +1,20 @@
+{
+  "feature": "natural-load",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-load-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Load" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-load",
+      "action": "tap",
+      "target": "label=Load",
+      "receipt": "none"
+    }
+  ]
+}

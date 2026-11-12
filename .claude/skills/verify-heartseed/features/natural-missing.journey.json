@@ -1,0 +1,22 @@
+{
+  "feature": "natural-missing",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-missing-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-missing",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/missing/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Install" }],
+      "receipt": "none"
+    }
+  ]
+}

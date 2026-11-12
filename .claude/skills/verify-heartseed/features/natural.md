@@ -87,14 +87,30 @@ samples, do not change.
 
 After Launch steps 2-5 of `SKILL.md`, with `sim install --prebuild` (the
 `ios` folder must be made again for iOS 18 and the natural pod). Start the
-model server in the background on a free port of 8280-8289 other than the
-dev server's, with its output in the evidence folder, and stop it by its
-own handle (never by name or port):
+model server in the background on port 8281, the port the journeys' probe
+links name (so the dev server takes another port of 8280-8289), with its
+output in the evidence folder, and stop it by its own handle (never by
+name or port):
 
 ```bash
 MPORT=8281
 bun run --cwd apps/heartseed natural:serve -- --port $MPORT --cache "$PWD/tmp/natural-models" > "$EVIDENCE/serve.log"
 ```
+
+The taps are journeys beside this file, each one `sim journey` call, each
+starting at the root (`label=Isaiah 41:10`) or at the screen it names:
+`natural` (the root, the probe with the local base, `Install`),
+`natural-base` (the root, then the probe: the base stored, nothing
+tapped), `natural-missing` (the same with `base=…/missing/`),
+`natural-remove`, `natural-load`, `natural-read`, `natural-him` (the probe
+with `voice=bm_george`, `Read`), `natural-soak`, `natural-soak-him`,
+`natural-reopen` (the root, then the probe, its receipt
+`natural-reopen/natural-crash`), and for Today's rows `natural-sheet`,
+`natural-voice`, `natural-try`, `natural-relaunch`, `natural-hear`,
+`natural-fuse`, `natural-fused` and `natural-listen`. A probe's line is
+read with `sim snapshot <step>` (it drives nothing), again until it shows
+what the row waits for: the probe's lines are built at run time, so no
+journey waits for one.
 
 Ready is one JSON line, `{"ready":true,"url":…,"files":39,"fetched":<n>,…}`;
 `fetched` is 0 once the cache holds the files. It logs
@@ -129,14 +145,16 @@ prints `0`;
 `grep -F OneSwiftPackages/natural apps/heartseed/ios/Podfile.lock`; and
 `$EVIDENCE/build.log` ends `** BUILD SUCCEEDED **`.
 
-`natural-install`:
+On a fresh container the app's own download starts at launch from the
+mirror and waits for it, and while it waits the probe's `Install` does
+nothing (`install none`, `installed 0/39`, live at this head). So store
+the base first, `sim journey natural-base`, then `sim journey
+natural-relaunch`: the launch downloads the 39 files from the local
+server itself (`serve.log` gains 39 `GET`s), and the probe's install
+then finds them.
 
-```bash
-sim open / --expect "label=Isaiah 41:10"
-sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Install"
-sim tap Install
-sim snapshot natural-install
-```
+`natural-install`: `sim journey natural`, then `sim snapshot
+natural-install`
 
 → the snapshot has `install done 83332513/83332513`, `installed 39/39`
 and `excluded true` (tap nothing else until `install done …` shows; take
@@ -145,34 +163,29 @@ the snapshot again while it says `install progress …`).
 container's `natural` folder prints a value, and `serve.log` has 39
 `GET` lines ending `200`, one per path.
 
-`natural-corrupt`: tap `Remove`, stop the server, start it again with
-`--corrupt KokoroTail_v2.mlmodelc/weights/weight.bin` added, then
-`sim tap Install`:
+`natural-corrupt`: `sim journey natural-remove`, stop the server, start it
+again with `--corrupt KokoroTail_v2.mlmodelc/weights/weight.bin` added,
+then `sim journey natural` (its `Install`) and snapshots:
 
 → `install failed <bytes>/83332513 check`; `serve.log` has three `GET`s of
 that path; the path is absent from the revision folder `2568276a60ff` in
 the container's `natural` folder; and the probe shows `installed 28/39` (the 28
 files before it in the manifest are kept).
 
-`natural-offline`: with the server (no `--corrupt`) running, tap
-`Remove`, then `Install`, and stop the server by its handle while the
-probe shows `install progress …`:
+`natural-offline`: with the server (no `--corrupt`) running,
+`sim journey natural-remove`, then `sim journey natural`, and stop the
+server by its handle while the probe shows `install progress …`:
 
 → `install failed <bytes>/83332513 network`, and `installed <n>/39` with
-`n` below 39. Start the server again and tap `Install`:
+`n` below 39. Start the server again and `sim journey natural`:
 `install done 83332513/83332513`, `installed 39/39`, and its new
 `serve.log` holds `GET`s of only the `39 − n` missing paths. The `waiting`
 event (Low Data Mode, or no network) cannot be made on the simulator
 without changing the host; it is the phone check's.
 
-`natural-read`:
-
-```bash
-sim tap Load
-sim snapshot natural-load
-sim tap Read
-sim snapshot natural-read
-```
+`natural-read`: `sim journey natural-load`, `sim snapshot natural-load`
+(again until `loaded true`), `sim journey natural-read`, `sim snapshot
+natural-read`
 
 → `voice af_heart`, `load <ms>`, `loaded true`; after the reading
 (snapshot again until `read` is not `none`): `read finished`,
@@ -211,15 +224,8 @@ Base has no `prosody` line and no `fall` line.
 
 `natural-voices`: after `natural-read`, open the probe with the second
 voice and read, then open it without and read again:
-
-```bash
-sim open "probe/natural?base=http://localhost:$MPORT/&voice=bm_george" --expect "label=Read"
-sim tap Read
-sim snapshot natural-voices-him
-sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Read"
-sim tap Read
-sim snapshot natural-voices-her
-```
+`sim journey natural-him`, `sim snapshot natural-voices-him` (again until `read` is
+not `none`), `sim journey natural-read`, `sim snapshot natural-voices-her`
 
 → the first snapshot has `voice bm_george`, and each, once `read` is not
 `none`, has `read finished`, `lit 37/37` and `order ok` (the second
@@ -254,34 +260,29 @@ planner's Mac CPU run: 11, 21, 29, 22, 26, 12, 21, 12 and 27) were read by
 the American list, before Him read British, so the new ones replace them.
 Base: red, as for `natural-fall`.
 
-`natural-crash`: tap `Read`, and while `read` is still `none`,
-`xcrun simctl terminate <udid> app.heartseed`; then `sim open /` and
-the probe link again:
+`natural-crash`: `sim journey natural-read`, and while `read` is still
+`none`, `xcrun simctl terminate <udid> app.heartseed`; then
+`sim journey natural-reopen` (the root launches the app, then the probe):
 
-→ `crashed true`, and the log holds `[natural] start crashed=true`.
-Terminate, `sim open /` and open the probe again: `crashed false`.
+→ `natural-reopen/natural-crash` has `crashed true`, and the log holds
+`[natural] start crashed=true`. Terminate, `sim journey natural-reopen`
+again: `crashed false`.
 
-`natural-remove`:
+`natural-remove`: `sim journey natural-remove`
 
-```bash
-sim tap Remove
-sim snapshot natural-remove
-```
-
-→ `installed 0/39`, `bytes 0`, `loaded false`, and the container's
+→ `natural-remove/natural-remove` has `installed 0/39`, `bytes 0`, `loaded false`, and the container's
 `natural` folder is gone.
 
-A soak on the simulator proves only the tally: open the probe with
-`soak=200` added to the link (and `voice=bm_george` for the second
-voice), tap `Soak`, and wait for `soak 200/200 …`; report its four
+A soak on the simulator proves only the tally: `sim journey natural-soak`
+(the probe with `soak=200`, then `Soak`; `natural-soak-him` adds
+`voice=bm_george`), and `sim snapshot` until `soak 200/200 …`; report its four
 counts, which should read `unplanned 0 failed 0 nonfinite 0` (each chunk
 runs prosody, the fit, the fall and render as a reading does, so a curve
 that does not fit counts as failed). The full soak (31,102 verses)
 is the phone check's. Her's soak logs 713 `[natural] prosody` lines whose
 `ids=` sum to 25,501.
 
-`natural-soak-him`: open the probe with `soak=200&voice=bm_george` added
-to the link and tap `Soak`:
+`natural-soak-him`: `sim journey natural-soak-him`:
 
 → `soak 200/200 unplanned 0 failed 0 nonfinite 0`, and the soak's 713
 `[natural] prosody` lines' `ids=` sum to 26,077 (the British list's plan;
@@ -292,12 +293,19 @@ British word sounds, are the phone check's and the owner's ear.
 ## Today's rows
 
 Driven in this order on two containers, with the model server running as
-above. The line and `Voice` live in home's Settings sheet: from Today
-`sim tap "label=Your field"`, then `sim scroll "label=Settings" down` and `sim tap "label=Settings"`;
-read the line from `sim snapshot <step>`: the `natural-status` node's
-text under `Voice`, and the `Try again` button beside it; `Done` closes
-the sheet. Every tap of `Voice` and `Try again` below is in the open
-sheet. Today offers `Listen`
+above. The line and `Voice` live in home's Settings sheet:
+`sim journey natural-sheet` opens it from home (its receipt
+`natural-sheet/natural-sheet`); read the line from that receipt or from
+`sim snapshot <step>`: the `natural-status` node's text under `Voice`,
+and the `Try again` button beside it. Every tap of `Voice` below is one
+`sim journey natural-voice` in the open sheet. The pill's choice is the
+`Voice` button's value (`Her`, `Him`, `Off`): a raw snapshot (`first.md`,
+Driving it) holds it, and a receipt only sometimes holds its
+`Voice: <choice>` text, so read the choice in the raw snapshot after each
+tap. Every `Try again` is one `sim journey natural-try`. A relaunch is
+`sim journey natural-relaunch`: its open waits for the reference, which
+the open sheet hides, so its retry relaunches, and then its relaunch
+step launches again (about 50 s); it ends with the sheet closed. Today offers `Listen`
 only for a new verse after the next 04:00 (`wake.md`), and the promise's
 row has no `Remove`, so the reading a drive can hear is the first minute's
 `Listen` (`first.md`), on a container whose garden is still empty: the
@@ -322,11 +330,10 @@ container's store (as `field.md`'s `field-record` does) and run
 `sqlite3 -readonly <copy> "SELECT key, value FROM one_kv WHERE key LIKE 'heartseed/natural/%' OR key = 'heartseed/voice/choice'"`.
 
 `today-mirror`: a fresh container (uninstall by udid, install, revoke the
-microphone), then `sim open / --expect "label=Begin"` (the welcome a fresh
-install opens on), `sim tap "label=Skip"`, `sim open / --expect
-"label=Hear it" --no-relaunch`, the first minute's `Listen`, and
-`first.md`'s steps 3-7 to Today, then home's
-Settings sheet; snapshots for 60 s:
+microphone), then `first.md`'s `sim journey first-reading` (the welcome a
+fresh install opens on, `Skip`, the first minute's `Listen`) and
+`sim journey first` (on to home, `first-home`), then
+`sim journey natural-sheet`; snapshots for 60 s:
 
 → the line is `Natural voice: waiting for a connection`, or
 `Natural voice could not download.` with one `Try again` (record which:
@@ -338,19 +345,21 @@ network log of the app names
 process == "Heartseed"`); and the first minute's Listen logs a
 `[voice] speak` and no `[natural] render`.
 
-Store the base: `sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Install"`,
-tapping nothing in the probe → the store copy holds
-the base key (`BASE_KEY`) = `http://localhost:$MPORT/`.
+Store the base: `sim journey natural-base` (the root, then the probe with
+`base=http://localhost:8281/`, tapping nothing) → the store copy holds
+the base key (`BASE_KEY`) = `http://localhost:8281/`.
 
-`today-off`: `sim open /`, the sheet, tap `Voice` until `Voice: Off`,
-`sim relaunch`, `sim open / --expect "label=Settings"`, the sheet,
-snapshot:
+`today-off`: `sim journey natural-sheet`, then `sim journey natural-voice`
+until the raw snapshot's `Voice` value is `Off` (the cycle is Off, Her,
+Him), then
+`sim journey natural-relaunch` and `sim journey natural-sheet`:
 
-→ no `natural-status` node; no `[natural] install` in the log since the
-relaunch; the choice key (`CHOICE_KEY`) = `off`.
+→ `natural-sheet/natural-sheet`: no `natural-status` node; no
+`[natural] install` in the log since the relaunch; the choice key
+(`CHOICE_KEY`) = `off`.
 
-`today-download`: one `sim tap "label=Voice"` (Her); snapshots while it
-downloads, until no line shows:
+`today-download`: one `sim journey natural-voice` (Her); snapshots while
+it downloads, until no line shows:
 
 → `Natural voice: downloading, <p>%` with p rising, then
 `Natural voice: getting ready`, then no line (from the local server the
@@ -359,59 +368,63 @@ download takes about a second, so a snapshot may catch only
 `load … voice=af_heart.bin stages=loaded`; `serve.log` has 39 `GET`s
 ending `200`.
 
-`today-him`: `sim tap "label=Voice"` (`Voice: Him`):
+`today-him`: `sim journey natural-voice` (Him):
 
 → no line; the choice key = `him`. Today offers no `Listen` on the first
 day, so a Him reading is not heard here: the router's tests own it.
 
-`today-fail`: tap `Voice` to Off, then Her; the probe's `Remove`; start
-the server so that it stops after some `GET`s (a server lost
-mid-download); `sim relaunch` (the launch starts the download);
-snapshots; start the server again:
+`today-fail`: `sim journey natural-voice` twice (Off, then Her);
+`sim journey natural-remove` (the probe's `Remove`); start the server so
+that it stops after some `GET`s (a server lost mid-download);
+`sim journey natural-relaunch` (the launch starts the download), then
+`sim journey natural-sheet`; snapshots; start the server again:
 
 → on the simulator the module waits for a connection when the local
 server refuses it: `Natural voice: waiting for a connection`, no
 `Try again`, and no new `GET` once the server is back (record it). For the
-failed download, store a base the server answers 404 for (the probe's
-link with `base=http://localhost:$MPORT/missing/`), `sim relaunch`,
-snapshots, then store the good base again and `sim tap "label=Try again"`;
-snapshots until no line shows: `Natural voice could not download.` with
-one `Try again` (the module's `[natural] install status=404` and
-`[natural] install failed reason=network`); after the tap, `[natural] install … missing=<n>`
-with only the files the lost server never sent, `[natural] install done`, then no
-line.
+failed download, store a base the server answers 404 for
+(`sim journey natural-missing`), `sim journey natural-relaunch`,
+`sim journey natural-sheet`, snapshots, then store the good base again
+(`sim journey natural-base`), `sim journey natural-sheet` and
+`sim journey natural-try`; snapshots until no line shows:
+`Natural voice could not download.` with one `Try again` (the module's
+`[natural] install status=404` and `[natural] install failed
+reason=network`); after the tap, `[natural] install … missing=<n>` with
+only the files the lost server never sent, `[natural] install done`, then
+no line.
 
-`today-corrupt`: `Remove`; restart the server with
-`--corrupt KokoroTail_v2.mlmodelc/weights/weight.bin`; relaunch;
-snapshots; then restart it without `--corrupt` and `Try again`:
+`today-corrupt`: `sim journey natural-remove`; restart the server with
+`--corrupt KokoroTail_v2.mlmodelc/weights/weight.bin`;
+`sim journey natural-relaunch`, `sim journey natural-sheet`; snapshots;
+then restart it without `--corrupt` and `sim journey natural-try`:
 
 → `Natural voice could not be checked.` with one `Try again`; after the
 tap, `[natural] install … missing=11` (the 28 files before it kept), `[natural] install done`,
 no line.
 
-The second container (uninstall, install, revoke; `sim open / --expect
-"label=Begin"`; store the base as above; `sim relaunch`; `sim open /
---expect "label=Begin"`): the launch downloads and loads, the module
+The second container (uninstall, install, revoke; store the base,
+`sim journey natural-base`; then `sim journey natural-relaunch`, whose
+launch opens the welcome): the launch downloads and loads, the module
 logging `[natural] install done` and `load … voice=af_heart.bin stages=loaded`.
 
-`today-read`: the welcome's `sim tap "label=Skip"`, `sim open / --expect
-"label=Hear it" --no-relaunch`, the first minute's `sim tap "label=Listen"`, then
-`sim tap "label=Say it with help" --timeout 60`; the log:
+`today-read`: `sim journey natural-hear` (the welcome, `Skip`, the first
+minute's `Listen`, then the wait for `Say it with help`, timeout 60); the
+log:
 
 → `[natural] load … voice=af_heart.bin stages=kept`, and per chunk a
 `[natural] render` and a `play … skipped=simulator` line, no
 `[voice] speak`; the reading finished (the first minute goes on by
 itself).
 
-`today-fuse`: `sim relaunch`, `sim open / --expect "label=Begin"` (the
-garden still holds no recall, so the launch opens the welcome again),
-`sim tap "label=Skip"`, `sim open / --expect "label=Hear it" --no-relaunch`,
-Listen, and at once `xcrun simctl terminate <udid> app.heartseed`;
-`sim open / --expect "label=Begin"`, `sim tap "label=Skip"`; store copy;
-Listen; the log. Then `first.md`'s steps 3-7 to
-Today and home's Settings sheet; snapshot; `sim tap "label=Voice"` (Him),
-snapshot, store copy; twice more (Off, Her), snapshot, store copy;
-`sim relaunch`; the sheet; snapshot:
+`today-fuse`: `sim journey natural-fuse` (the welcome, a relaunch: the
+garden still holds no recall, so the launch opens the welcome again;
+`Skip`, then `Listen`), and at once `xcrun simctl terminate <udid>
+app.heartseed`; `sim journey natural-fused` (the welcome, `Skip`); store
+copy; `sim journey natural-listen` (`Listen`); the log. Then
+`sim journey first` (to `first-home`) and `sim journey natural-sheet`;
+snapshot; `sim journey natural-voice` (Him), store copy; twice more (Off,
+Her), store copy; `sim journey natural-relaunch`;
+`sim journey natural-sheet`:
 
 → after the crash, `[natural] start crashed=true`, the fuse key
 (`FUSE_KEY`) = `blown`, and Listen logs a `[voice] speak` and no

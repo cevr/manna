@@ -1,0 +1,21 @@
+{
+  "feature": "natural-fused",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "natural-fused-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "natural-fused",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Listen" }],
+      "receipt": "none"
+    }
+  ]
+}
