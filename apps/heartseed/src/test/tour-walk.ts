@@ -6,12 +6,12 @@
  * model, over the field bar's rig (`src/test/bar-rig.tsx`, whose every
  * frame holds the root's rule, hsintro's clauses among them). One device
  * starts fresh and goes through the first minute to Planted's `Continue`;
- * another starts on a planted garden (`CHOSEN_REPLAY` first). Generated commands, each offered
+ * another starts on a planted garden (`TWO_REPLAYS` first). Generated commands, each offered
  * only where its screen shows it: `How Heartseed works`, the Settings
  * sheet's `Show the welcome again`, `Begin`, `Skip`, `See your field`,
  * `Got it`, the card's button to Today and `Your field` back, `Open
  * <title>` and back, the Settings sheet opened and closed, the Add a list
- * sheet opened and closed, a plant chosen, and a relaunch. After every
+ * sheet opened and closed, a plant tapped (which opens Today on its verse), and a relaunch. After every
  * step the screen and whether the tips show equal the model's; across
  * each replay the field as read and the whole disk are as they were
  * before it.
@@ -181,11 +181,11 @@ const leaveHome = async (walk: Walk, where: Where, step: string, go: () => Promi
   return check(walk, step);
 };
 
-/** The card's one button: `Start`, `Practice anyway`, or the chosen verse's `Practice` or `Learn`. */
+/** The Today card's one button: `Start` or `Practice anyway`. */
 const primaryOf = (rig: Bar) =>
   [...rig.host.querySelectorAll('[role="button"]')]
     .map((node) => node.getAttribute('aria-label') ?? '')
-    .find((name) => /^(Start|Practice .+|Learn .+)$/u.test(name)) ?? 'Start';
+    .find((name) => name === 'Start' || name === 'Practice anyway') ?? 'Start';
 
 /** The first `Open <title>` on home. */
 const openOf = (rig: Bar) =>
@@ -220,10 +220,8 @@ const onHome = async (walk: Walk, roll: number) => {
     walk.where = 'add';
     return check(walk, 'Add a list');
   }
-  if (roll < 0.88) {
-    await rig.tapId('field-plant');
-    return check(walk, 'a plant chosen');
-  }
+  if (roll < 0.88)
+    return leaveHome(walk, 'today', 'a plant tapped', () => rig.tapId('field-plant'));
   return relaunch(walk, 'relaunch on home');
 };
 
@@ -276,12 +274,11 @@ export const FLOORS = [
 ] as const;
 
 /**
- * The rolls that open a walk on a verse chosen, then replay twice: a plant
- * chosen, `How Heartseed works`, `Begin`, `See your field`, then the
- * Settings sheet, `Show the welcome again` and `Skip`; each replay must
- * leave the chosen card as it was.
+ * The rolls that open a walk on both replays: `How Heartseed works`,
+ * `Begin`, `See your field`, then the Settings sheet, `Show the welcome
+ * again` and `Skip`; each must leave the field and the disk as they were.
  */
-export const CHOSEN_REPLAY = [0.8, 0.1, 0.1, 0.1, 0.6, 0.1, 0.6] as const;
+export const TWO_REPLAYS = [0.1, 0.1, 0.1, 0.6, 0.1, 0.6] as const;
 
 /** One device: the rolls of `script`, then `steps` generated commands, from its launch; answers each move of the tour it made. */
 export const walkDevice = async (

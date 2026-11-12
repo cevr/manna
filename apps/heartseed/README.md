@@ -2219,10 +2219,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     frame.
   - `test:tour-walk`: `src/first/tour-walk.test.tsx` (a fresh device
     through Planted's `Continue`) and `tour-walk-planted.test.tsx` (a
-    planted one, opening on a verse chosen and two replays), the tour through the root over the bar rig on
+    planted one, opening on both replays), the tour through the root over the bar rig on
     generated commands (`src/test/tour-walk.ts`): after every step the
     screen and the tips equal `tourStep`'s, and across each replay the
-    field (the chosen verse's card among it) and the disk are as before.
+    field and the disk are as before.
   - `test:root`: `src/first/root.test.tsx` and `root-b.test.tsx`, the root
     route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
