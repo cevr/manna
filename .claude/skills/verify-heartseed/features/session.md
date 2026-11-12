@@ -184,8 +184,9 @@ value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
    `sim journey session-voice-kept` (`Done`, a relaunch, the sheet again);
    a raw snapshot and a store copy → `Him`, the choice row `him`. Two
    more `sim journey natural-voice` bring it back to `Her`; then
-   `session-voice-kept`'s `Done` again, or `session-restore`.
-4. Then `session-choose` (step 3 above) runs from here.
+   `sim journey session-done` (`Done`, home).
+4. Then `session` and `session-choose` (steps 2-3 above) run from here:
+   `session` ends on Today, where `session-choose` starts.
 
 Report only values, booleans and the store's rows (the keys and their
 values, never a recall); delete the store copies.
