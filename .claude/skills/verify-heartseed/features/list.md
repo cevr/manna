@@ -65,52 +65,59 @@ installed Debug build of `verify-heartseed`, or `--app` with a build of the
 head's native code, serves; the JavaScript comes from the dev server.
 Report labels, counts and booleans only, never a verse's words.
 
-1. On a fresh install, `first.md` steps 1-7, to `first-home`, and
-   `home.md`'s `home-lists` (step 3).
-2. `list-open`: `sim tap "label=Open Protection & Fear"`, `sim snapshot
-   list-open` → the heading `Protection & Fear` (the one heading);
-   `id=list-caption` `14 verses · none planted yet`; the button `Practice
-   this list` with `id=list-line` `Starts with Psalms 91:1, new today`; 14
-   buttons ending `, not planted`, `Psalms 91:1` first and `Isaiah 41:13`
-   last, in the list's order (`promise.md`); the button `Your field`; 0
-   buttons starting `Remove`.
-3. `list-back`: `sim tap "label=Your field"` → home: `id=today-card`, the
-   heading `Your field`.
-4. `list-weakest` (before the seed is due): `sim tap "label=Open Isaiah
-   41:10"` → the caption `1 verse · 1 planted`; the line `Starts with
-   Isaiah 41:10, nothing is due`; one row button `Isaiah 41:10, seed`.
-   `sim tap "label=Practice this list"`, `sim open / --expect "id=session"
-   --no-relaunch` → `id=reference` `Isaiah 41:10`, `Say it`. `sim tap
-   "label=Your field"`.
-5. `list-learn`: `sim tap "label=Open Protection & Fear"` → the line
-   `Starts with Psalms 91:1, new today`; `sim tap
-   "label=Practice this list"`, `sim open / --expect "id=session"
-   --no-relaunch` → `id=reference` `Psalms 91:1`, whole (`phrase.md`);
-   `Say it` (`Listen` too while the voice is on). `sim tap
-   "label=Your field"` → home (the heading `Your field`, `id=today-card`),
-   not the page.
-6. `list-verse`: `sim tap "label=Open Protection & Fear"`, `sim tap
-   "label=Psalms 91:2, not planted"`, `sim open / --expect "id=session"
-   --no-relaunch` → `id=reference` `Psalms 91:2`;
-   `Say it`. `sim tap "label=Your field"`.
-7. `list-practice`, only in `home.md`'s `home-today` state (7 minutes
-   after planting, `5 min` in Settings): `sim tap "label=Open Isaiah
-   41:10"` → the row `Isaiah 41:10, seed, ready today`; the line `1 ready
-   today · about 1 min`; `sim tap "label=Practice this list"` →
-   `id=session` on `Isaiah 41:10`. `sim tap "label=Your field"`.
+The taps are the journeys `list`, `list-practice` and `list-remove`
+beside this file, each one `sim journey` call; each first step opens `/`
+where the app is and waits for the Today card. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels; a line built
+at run time (the caption, `Starts with …`) is read there or in a raw
+snapshot (`first.md`, Driving it).
+
+1. On a fresh install, `first.md`'s `sim journey first`, to `first-home`.
+2. `sim journey list` → `"ok":true`, before the seed is due (steps 3-6).
+3. `list-open`: `list/list-open` → the heading `Protection & Fear` (the
+   one heading); `id=list-caption` `14 verses · none planted yet`; the
+   button `Practice this list` with `id=list-line`
+   `Starts with Psalms 91:1, new today`; 14 buttons ending
+   `, not planted`, `Psalms 91:1` first and `Isaiah 41:13` last, in the
+   list's order (`promise.md`); the button `Your field`; 0 buttons
+   starting `Remove`. `list-back`: the journey's `Your field` waits for
+   `id=today-card`.
+4. `list-weakest`: `list/list-weakest` → the caption
+   `1 verse · 1 planted`; the line `Starts with Isaiah 41:10, nothing is
+   due`; one row button `Isaiah 41:10, seed`. `list/list-weakest-today`,
+   after `Practice this list` → `id=session`, the reference
+   `Isaiah 41:10`, `Say it`; then `Your field`.
+5. `list-learn`: `list/list-learn-page` → the line
+   `Starts with Psalms 91:1, new today`; `list/list-learn`, after
+   `Practice this list` → `id=session`, the reference `Psalms 91:1`,
+   whole (`phrase.md`); `Say it` (`Listen` too while the voice is on).
+   The journey's `Your field` then waits for `id=today-card` with no
+   `Practice this list`: home, not the page.
+6. `list-verse`: `list/list-verse`, after the page and
+   `Psalms 91:2, not planted` → `id=session` on `Psalms 91:2`; `Say it`.
+   Then `Your field`.
+7. `list-practice`, only in `home.md`'s `home-dot` state (7 minutes after
+   planting, `5 min` in Settings; by the clock as `home.md` says):
+   `sim journey list-practice` → `"ok":true`.
+   `list-practice/list-practice-page` → the row
+   `Isaiah 41:10, seed, ready today`; the line `1 ready today · about 1
+   min`. `list-practice/list-practice` → `id=session` on `Isaiah 41:10`.
 8. `list-remove`: `passage.md`'s `passage-plant` first (John 15:1-5
-   planted). On home 0 buttons starting `Remove`. `sim tap "label=Open
-   John 15:1-5"`, `sim tap "label=Remove John 15:1-5"` → `id=ask` with
+   planted). `sim journey list-remove` → `"ok":true`: its first step
+   holds home with `Open John 15:1-5` and no `Remove John 15:1-5`.
+   `list-remove/list-remove-ask` → `id=ask` with
    `Remove John 15:1-5? Its plants stay in your field.`, the buttons
-   `Remove` and `Keep`. `sim tap "label=Keep"` → `Remove John 15:1-5`
-   back, no `id=ask`. `sim tap "label=Remove John 15:1-5"`, `sim tap
-   "label=Remove"` → home: no `Open John 15:1-5`, `id=add-list` present.
+   `Remove` and `Keep`. The journey's `Keep` brings `Remove John 15:1-5`
+   back with no `id=ask`; then `Remove John 15:1-5` and `Remove`:
+   `list-remove/list-remove` → home: no `Open John 15:1-5`,
+   `id=add-list` present.
 9. `sim doctor` (record `head` and `timingsHold`) and `sim down`; delete
    the `snapshots` folder.
 
-Red on base (`97c44ecad`): at `first-home`, `sim tap "label=Open
-Protection & Fear"` fails `TargetMissing`; after `passage-plant`, home's
-snapshot holds `Remove John 15:1-5`.
+Red on base (`97c44ecad`): at `first-home`, `list`'s `list-open` fails
+`TargetMissing`; after `passage-plant`, `list-remove`'s first step fails on
+its `hides "label=Remove John 15:1-5"` (home held the remove).
 
 ## What the simulator cannot show
 

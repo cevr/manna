@@ -1,0 +1,57 @@
+{
+  "feature": "list-remove",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "list-remove-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open John 15:1-5" },
+        { "hides": "label=Remove John 15:1-5" }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "list-remove-page",
+      "action": "tap",
+      "target": "label=Open John 15:1-5",
+      "expect": [{ "shows": "label=Remove John 15:1-5" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-remove-ask",
+      "action": "tap",
+      "target": "label=Remove John 15:1-5",
+      "expect": [{ "shows": "id=ask" }, { "shows": "label=Remove" }, { "shows": "label=Keep" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-remove-keep",
+      "action": "tap",
+      "target": "label=Keep",
+      "expect": [{ "shows": "label=Remove John 15:1-5" }, { "hides": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-remove-ask-again",
+      "action": "tap",
+      "target": "label=Remove John 15:1-5",
+      "expect": [{ "shows": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-remove",
+      "action": "tap",
+      "target": "label=Remove",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "hides": "label=Open John 15:1-5" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
