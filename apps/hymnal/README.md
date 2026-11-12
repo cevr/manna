@@ -132,26 +132,34 @@ under its number, and the refrain written out each time it is sung.
   (`src/reader/keyboard.ts`).
 - Each row is a link (an anchor on the web): a press opens the hymn inside
   the app; Enter, a Cmd-click and "Open in New Tab" work as on any link.
-- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as twelve parts,
+- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as thirteen parts,
   each a package script and a task of `turbo.json` that the commandless
   `test` task depends on, so the gate runs each as its own task and
   `bun run test:budget @manna/hymnal-app` times each alone (under 1 s). The
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the real words for `virtual:hymnal`, a happy-dom
   document for the tests that press and type); `test:infra` runs with none.
-  - `test:search`: the search half of `src/home` (`Search`, `pinch`, `zoom`,
-    `findlook`, `FindBar`, `findglass`, `finding`, `reveal`), named file by
-    file; `test:home` runs the rest of `src/home` and ignores those.
+  About half of a part's time is each of its processes deriving the four
+  data modules before its first test, so a file near the budget alone is
+  cut into files that the part's processes run side by side.
+  - `test:search`: the search quarter of `src/home` (`Search`, `pinch`,
+    `zoom`, `reveal`), named file by file.
+  - `test:find`: the find bar's quarter of `src/home` (`findlook`, `FindBar`,
+    `findglass`, `finding`), named file by file; `test:home` runs the rest
+    of `src/home` and ignores those and `test:search`'s.
   - `test:tempo`: the tempo half of `src/player` (`TempoDial.reset`,
     `TempoDial.tap`, `tempo`, `tempo.beat`, `dial`, `find`,
     `finddrums.open`, `drums`, `findplace.property`, `findplace.static`,
     `glide`, `bar`, `button`, `title`), named file by file; `test:player`
-    runs the rest of `src/player` and ignores those and `tunerbar`.
+    runs the rest of `src/player` and ignores those and `test:bar`'s.
   - `test:bar`: the bar mounted whole over a player and a reader's store
-    (`src/player/tunerbar.test.tsx`), apart because the bar's tree is
-    the part's load.
-  - `test:seek`: the held reader's two files of `src/reader`
-    (`word-seek.test.ts`, `WordSeek.test.tsx`), named file by file;
+    (`src/test/bar.tsx`): its columns (`src/player/tunerbar.test.tsx`), its
+    key button's wheel (`tunerbar.wheel.test.tsx`) and the wheel's look and
+    motion (`tunerbar.motion.test.tsx`), apart because the bar's tree is the
+    part's load.
+  - `test:seek`: the held reader's three files of `src/reader`
+    (`word-seek.test.ts`, `WordSeek.test.tsx`, `WordSeek.web.test.tsx`, the
+    last the web's pointer, keys and drawn controls), named file by file;
     `test:reader` runs the rest of `src/reader` and ignores those.
   - `test:reader`, `test:follow` and `test:hymns`: their folders of `src`.
   - `test:tuner`: `src/tuner`, apart because its mounted screens are the
