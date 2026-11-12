@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals -- Bun's loader takes each stand-in module as source text, so paths and words are written into it as JSON literals. */
+/* oxlint-disable effect/noGlobals -- Bun's loader takes each stand-in module for a package as source text, so its path is written into it as a JSON literal; the data modules are handed over as objects, with no text round trip. */
 
 /**
  * The app's tests run its screens under Bun, rendered to HTML as the web
@@ -58,20 +58,20 @@ plugin({
       loader: 'js',
     }));
     build.module('virtual:hymnal', () => ({
-      contents: `export default ${JSON.stringify(readWords())};`,
-      loader: 'js',
+      exports: { default: readWords() },
+      loader: 'object',
     }));
     build.module('virtual:hymnal-chords', () => ({
-      contents: `export default ${JSON.stringify(readChords())};`,
-      loader: 'js',
+      exports: { default: readChords() },
+      loader: 'object',
     }));
     build.module('virtual:hymnal-timing', () => ({
-      contents: `export default ${JSON.stringify(readTiming())};`,
-      loader: 'js',
+      exports: { default: readTiming() },
+      loader: 'object',
     }));
     build.module('virtual:hymnal-indexes', () => ({
-      contents: `export default ${JSON.stringify(readIndexes())};`,
-      loader: 'js',
+      exports: { default: readIndexes() },
+      loader: 'object',
     }));
   },
 });
