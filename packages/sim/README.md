@@ -33,6 +33,7 @@ verify-heartseed skill drives through them.
 | `src/drive.ts`                   | The `Drive` service and `DriveLive`, every step reading the place's app |
 | `src/host.ts`                    | The contained host every step and command reaches files and tools by    |
 | `src/journey.ts`                 | `sim journey`: a feature's journey file, run step by step               |
+| `src/screen.ts`                  | The iOS screen as numbers: `sim read`'s readout, the view a scroll pans |
 | `src/errors.ts`, `src/result.ts` | The tagged errors and the JSON results                                  |
 | `src/tools.ts`                   | Running a tool to its end, and the readiness wait                       |
 | `src/index.ts`                   | `launch`: an app's script in one call                                   |
@@ -100,7 +101,10 @@ it answer `go` on the start's stdin, and only then does the child become
 `serve` (by `exec`: the same pid and start time). It first closes the
 start's output and sets its input to `/dev/null`, so `serve` holds only
 fds 0-2 and no file the booting command holds, and `boot` ends while
-`serve` runs. A failure before the
+`serve` runs. The start leads a session and process group of its own
+(the spawner's `detached`), and `serve` stays in them, so a signal to the
+group of the shell call that ran `boot` (a host's shell tool ending the
+call) never reaches the server. A failure before the
 answer (the start itself, the child's read, its line, the drive's read of
 it, the answer itself) closes the start's input unanswered, and the child
 ends itself: the boot fails typed, with nothing running and nothing

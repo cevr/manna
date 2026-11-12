@@ -141,9 +141,12 @@ must start empty: uninstall by udid as `first.md` says.
    "label=Psalms 119"`, `sim snapshot passage-clip-top` → `Psalms 119:1`
    the first verse shown, with nothing hidden above it (each step opens at
    its top, whatever the last step's scroll), `sim tap "label=Psalms
-   119:1"`, then `sim scroll screen down` until `Psalms 119:30` shows,
-   `sim tap "label=Psalms 119:30"`, `sim snapshot passage-clip` →
-   `Psalms 119:1-20`, `20 verses`, `Plant`.
+   119:1"`, then `sim scroll "label=Psalms 119:30" down` (it pans inside
+   the verses, between the fixed header and footer, until that verse is
+   on screen and hittable: `detail.passes`), `sim tap "label=Psalms
+   119:30"`, `sim read passage-clip --id verse --label "Psalms 119:1-20"
+   --label "20 verses" --label Plant` → `Psalms 119:1-20` and `20 verses`
+   each shown, a shown `Plant`, and 20 of the `verse` nodes `checked`.
 6. Back to John 15:1-5: `sim tap "label=Chapters"`,
    `sim tap "label=Books"`, then step 4's taps from `John`.
 7. `passage-plant`: `sim tap "label=Plant"`, `sim snapshot passage-plant` →

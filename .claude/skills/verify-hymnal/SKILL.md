@@ -55,7 +55,9 @@ drive at a time per checkout, or give each its own `--state <dir>`.
 
    Ready is `{"ok":true,"command":"boot",…,"detail":{"udid":…,"port":…,"serverPid":…}}`
    once the server answers. `--platform web` opens the app's `/` in the
-   browser instead.
+   browser instead. The server runs in a session and process group of its
+   own, so it outlives a short shell call that ran `boot`: no long-lived
+   shell need hold it, and only `sim down` stops it.
 
 4. iOS only, build and install this checkout's app:
 
@@ -133,7 +135,17 @@ The recipe beside each says what to read in its receipts and which steps stay by
 - `sim open <link> --expect <target>`: `hymnal://hymns/100` on iOS, `http://127.0.0.1:$PORT/hymns/100` on
   the web. On iOS it answers the "Open in “Hymnal”?" prompt with Open (`detail.prompts`).
 - `sim tap <target>`, `sim fill <target> <text>`, `sim back`, and
-  `sim scroll <target|screen> <up|down|left|right>`.
+  `sim scroll <target|screen> <up|down|left|right>`. On iOS a scroll pans inside the scroll view that
+  scrolls that way, never from a fixed header or footer around it, and checks its content moved:
+  `detail.moved` (false at the content's end), or `ScrollStuck` when a pan moved nothing while the view
+  hides more. A target scroll pans until the target's centre is on screen and hittable
+  (`detail.passes`), else `TargetMissing`.
+- `sim read [name] [--id <testID>]… [--label <name>]…` (iOS) reads the screen as numbers, never words:
+  for each asked testID (a trailing `*` reads every id it begins) and name, its nodes' frames, states
+  (`shown`, `hittable`, `checked`, …) and value digits, with the count of each node type, in
+  `$EVIDENCE/reads/<name>.json`; `detail` holds the counts (`id=<asked>`, `label=<asked>`). It is the
+  shared driver's (`packages/sim/src/screen.ts`); `apps/hymnal/scripts/readout.ts` adds the hymnal's
+  silent switches, page, play button and paced press over the same nodes.
 - `sim gesture pan <from> <dx> <dy> [--ms 900]` pans from a target's centre. From `id=dial-key`,
   `dx -52` at 900 ms turns one detent; 300 ms glides past two; 1500 ms stops surest.
 - **A page turn** is a pan mid-screen: `sim gesture pan 332,437 -262 0 --ms 400` turns a hymn page on,
@@ -278,7 +290,8 @@ exits 0; or `{"ok":false,"command":…,"message":…,"error":{"_tag":…},"ms":�
 and exits 1 (`journey` prints one line per step, then its summary). The
 tags: `WarmCheckout`, `NoSession`, `SimulatorDown`, `ReadinessTimedOut`,
 `TargetMissing` (with what the driver said), `TargetShown` (a `hides`
-expect still showed), `BadJourney` (a journey file that does not decode),
+expect still showed), `ScrollStuck` (a scroll's pan moved nothing while
+its view hides more), `BadJourney` (a journey file that does not decode),
 `ToolMissing`, `ToolFailed`, `NotOnPlatform`, `HostFailed`, `Escaped` (the
 contained host refused a path that leads out of its roots), `Unhealthy`,
 `BootRefused` (`boot` started nothing: the state holds a live, legacy or
@@ -296,7 +309,7 @@ runs. `boot`'s line records the server's identity (`detail.serverPid` and
 `detail.serverStarted`), as the session file does. The
 commands: `boot`, `install`, `doctor`, `journey`, `open`, `tap`, `back`,
 `fill`, `scroll`, `gesture`, `hold`, `relaunch`, `shot`, `snapshot`,
-`record`, `log`, `down`, and `serve` (the dev server's own process, which
+`read`, `record`, `log`, `down`, and `serve` (the dev server's own process, which
 `boot` starts). Its tests: the driver's in `packages/sim/src` (a stand-in
 Drive or host, no device; `sim.slow.test.ts` and
 `app.property.slow.test.ts` run by its `test:slow`), and the hymnal's

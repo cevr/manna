@@ -67,7 +67,11 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    ```
 
    Ready is `{"ok":true,"command":"boot",…,"detail":{"udid":…,"port":…,"serverPid":…}}`
-   once the server answers. `boot` ends while the server runs on.
+   once the server answers. `boot` ends while the server runs on, in a
+   session and process group of its own, so it outlives a short shell call
+   that ran `boot` (a host's shell tool that signals the call's group when
+   it ends never reaches it): no long-lived shell need hold it, and only
+   `sim down` stops it.
 
 4. **Build, install and launch** this checkout's app:
 
@@ -119,7 +123,9 @@ at: compare it with the commit under test), `audioHolders`, `load`, `cores`
 and `timingsHold`; when `timingsHold` is false, no timing of this drive
 claims anything. Or it fails with `Unhealthy` naming the first check that
 does not hold (`server-pid`, `port-owner`, `server-answers`, `server-log`,
-`native-source`); a simulator that is not booted fails as `SimulatorDown`.
+`native-source`); `server-log` reads the server's output and its error
+output both, `$EVIDENCE/server.log` and `$EVIDENCE/server.err.log`, for a
+failed request or build. A simulator that is not booted fails as `SimulatorDown`.
 `native-source` reads the app's log since boot and fails when the app's
 latest process refused a native source its build lacks (One's "native
 module natural.Natural changed; rebuild the app"): the installed build is
@@ -153,7 +159,11 @@ still be launching. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
-the hymnal's skill describes; in the first minute a reader taps the
+the hymnal's skill describes: a scroll pans inside the scroll view, so the
+chooser's verses scroll between its fixed header and footer, and it fails
+`ScrollStuck` when a pan moved nothing while more lay hidden (`sim scroll
+"label=Psalms 119:30" down` pans until that verse is on screen and
+hittable); `sim read <step>` reads the screen as numbers (Evidence). In the first minute a reader taps the
 welcome's `Begin` or `Skip`, `Plant your first verse`, `Listen`,
 `Next`, `Say it` and `Continue`, then home's `Got it` under its tips
 (`id=tip-1` … `id=tip-3`); on Today `Listen` (on a new verse),
@@ -362,10 +372,18 @@ app's storage.
 ## Evidence
 
 All of it goes under `$EVIDENCE`, outside the tracked files: `server.log`,
-`build.log`, each command's JSON line, the session file `sim down` files
-there, and the snapshots. A snapshot of Today holds the passage's words:
-read it for the feature's nodes, report only counts, booleans and the
-reference, and delete the `snapshots` folder once read. A flaky step is
+`server.err.log`, `build.log`, each command's JSON line, the session file
+`sim down` files there, the snapshots and the reads. A snapshot of Today
+holds the passage's words: read it for the feature's nodes, report only
+counts, booleans and the reference, and delete the `snapshots` folder once
+read. Where counts and frames are the proof, read with `sim read` instead
+(the shared driver's readout, `packages/sim/src/screen.ts`): `sim read
+<step> --id <testID>… --label <name>…` writes `$EVIDENCE/reads/<step>.json`
+with each asked testID's and name's nodes (frames, `shown`, `hittable`,
+`checked`, `selected`, value digits) and each node type's count, and its
+`detail` gives the counts; no word of a verse is in either, so the reads
+stay. `--id "word-*"` counts a passage's words, `--id "line-*"` gives its
+lines' frames. A flaky step is
 reported as n/n trials with the load; a failure is run again on the base
 commit, in its own worktree and port, to tell a new failure from an old
 one.
