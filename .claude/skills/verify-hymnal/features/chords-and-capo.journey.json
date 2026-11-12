@@ -116,11 +116,21 @@
       "expect": [{ "hides": "id=dial-key" }, { "hides": "id=dial-capo" }]
     },
     {
+      "name": "chords-off-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-off-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [
         { "shows": "id=key-button" },
@@ -161,11 +171,21 @@
       "receipt": "snapshot"
     },
     {
+      "name": "chords-mode-simple-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-mode-simple-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }],
       "receipt": "none"
@@ -213,11 +233,21 @@
       "receipt": "snapshot"
     },
     {
+      "name": "chords-mode-off-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-mode-off-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [
         { "shows": "id=key-button" },
@@ -268,11 +298,21 @@
       "receipt": "none"
     },
     {
+      "name": "chords-mode-kept-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-mode-kept-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [
         { "shows": "id=key-button" },

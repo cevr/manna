@@ -50,11 +50,21 @@
       ]
     },
     {
+      "name": "stanzas-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "stanzas-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "label=Play hymn 78" }, { "hides": "label=Sheet Grabber" }]
     },
@@ -137,11 +147,21 @@
       "expect": [{ "shows": "label=Text size" }]
     },
     {
+      "name": "sheet-half-again",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "sheet-close-again",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
     },

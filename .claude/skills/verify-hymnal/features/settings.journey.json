@@ -130,11 +130,21 @@
       "receipt": "snapshot"
     },
     {
+      "name": "half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "role=button label=Settings" }, { "hides": "label=Sheet Grabber" }]
     }

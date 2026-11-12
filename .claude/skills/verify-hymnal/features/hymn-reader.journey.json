@@ -40,11 +40,21 @@
       "expect": [{ "shows": "label=Text size" }, { "shows": "label=Keep screen on" }]
     },
     {
+      "name": "reading-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "reading-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "label=Open player" }, { "hides": "label=Sheet Grabber" }]
     },

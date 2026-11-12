@@ -71,11 +71,21 @@
       "expect": [{ "shows": "label=Sounds and haptics" }]
     },
     {
+      "name": "settings-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "settings-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
     },
@@ -128,11 +138,21 @@
       "receipt": "none"
     },
     {
+      "name": "chords-put-back-half",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-put-back-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [
         { "shows": "id=key-button" },
@@ -164,7 +184,7 @@
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
       "dx": 0,
-      "dy": 760,
+      "dy": 400,
       "ms": 400,
       "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
     }

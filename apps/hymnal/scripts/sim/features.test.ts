@@ -2,16 +2,17 @@
  * The verify-hymnal journey files: every `features/<feature>.journey.json`
  * loads as `sim journey` loads it and names its own feature, so a bad file
  * fails the gate rather than the verifier's first `sim journey`; no hold
- * checks that something is gone before the hold has landed; and each open
+ * checks that something is gone before the hold has landed; each open
  * that expects the no-chords notice opens a hymn the compiled data gives no
- * chords.
+ * chords; and every pan fits on the screen of the simulator the journey
+ * runs on, as agent-device requires.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Hymn } from '@manna/hymnal/hymn';
 import { Drive, type DriveMembers, type Place } from '@manna/sim/drive';
-import { HOLD_SETTLE, loadJourney } from '@manna/sim/journey';
-import { Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
+import { HOLD_SETTLE, loadJourney, panStart } from '@manna/sim/journey';
+import { Effect, Exit, FileSystem, Match, Option, Path, Schema } from 'effect';
 
 import { app } from '../sim-app.ts';
 
@@ -143,6 +144,47 @@ const tabRolesOnIos = (journey: Journey) => {
   return journey.steps
     .filter((step) => ROLE_TAB.test(toJson(step)))
     .map((step) => `${journey.feature}/${step.name}`);
+};
+
+/** A screen's size in points. */
+interface Screen {
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The screen of each simulator device type an iOS journey runs on, in points, as agent-device reads its viewport. */
+const SCREENS = new Map<string, Screen>([['iPhone 18 Pro', { width: 402, height: 874 }]]);
+
+/** The screen of `app.deviceType`, the simulator every iOS journey of the hymnal runs on. */
+const screenOf = (deviceType: string) => Option.fromNullishOr(SCREENS.get(deviceType));
+
+/**
+ * The pans of an iOS journey that do not fit on `screen`, by step: agent-device
+ * refuses a pan any point of which leaves the screen. A pan from `x,y` must
+ * end on it; a pan from a target starts wherever the target is drawn, so it
+ * must fit from the screen's middle, each way no longer than half the screen.
+ */
+const pansOffScreen = (journey: Journey, screen: Screen) => {
+  if (journey.platform !== 'ios') return [];
+  const inside = (at: number, size: number) => at >= 1 && at <= size - 1;
+  return journey.steps.flatMap((step) => {
+    if (step.action !== 'gesture') return [];
+    const fromTarget = () =>
+      Math.abs(step.dx) <= screen.width / 2 - 1 && Math.abs(step.dy) <= screen.height / 2 - 1;
+    const fits = Option.match(panStart(step.from), {
+      onNone: () => false,
+      onSome: (start) =>
+        Match.value(start).pipe(
+          Match.when(Match.string, fromTarget),
+          Match.orElse(
+            (point) =>
+              inside(point.x + step.dx, screen.width) && inside(point.y + step.dy, screen.height),
+          ),
+        ),
+    });
+    if (fits) return [];
+    return [`${journey.feature}/${step.name}`];
+  });
 };
 
 const FEATURES = import.meta.dir + '/../../../../.claude/skills/verify-hymnal/features';
@@ -332,6 +374,50 @@ describe('verify-hymnal journey files', () => {
       const journey = yield* loadText('chords-and-capo', text);
       expect(hidesBeforeLanding(journey)).toEqual(['chords-and-capo/own', 'chords-and-capo/next']);
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('every pan of a shipped journey fits on the screen of the simulator it runs on', () =>
+    Effect.gen(function* () {
+      const journeys = yield* decodeAll(FEATURES);
+      const screen = screenOf(app.deviceType);
+      expect(Option.isSome(screen)).toBe(true);
+      expect(
+        Option.match(screen, {
+          onNone: () => ['no screen for the device type'],
+          onSome: (known) => journeys.flatMap((journey) => pansOffScreen(journey, known)),
+        }),
+      ).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'a pan longer than half the screen from a target, or off it from a point, is named',
+    () =>
+      Effect.gen(function* () {
+        const pan = { action: 'gesture', from: 'role=button label=Sheet Grabber', dx: 0 };
+        const text = toJson({
+          feature: 'feel',
+          platform: 'ios',
+          steps: [
+            { ...pan, name: 'close', dy: 760 },
+            { ...pan, name: 'short', dy: 400 },
+            { ...pan, name: 'half', dy: 436 },
+            { ...pan, name: 'over-half', dy: 437 },
+            { ...pan, name: 'wide', dx: -202, dy: 0 },
+            { name: 'edge', action: 'gesture', from: '3,437', dx: 200, dy: 0 },
+            { name: 'off', action: 'gesture', from: '3,437', dx: -3, dy: 0 },
+            { name: 'below', action: 'gesture', from: '201,500', dx: 0, dy: 400 },
+          ],
+        });
+        const journey = yield* loadText('feel', text);
+        expect(pansOffScreen(journey, { width: 402, height: 874 })).toEqual([
+          'feel/close',
+          'feel/over-half',
+          'feel/wide',
+          'feel/off',
+          'feel/below',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect('a bad journey file is refused, naming the file', () =>
