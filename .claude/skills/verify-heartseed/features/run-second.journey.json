@@ -1,0 +1,72 @@
+{
+  "feature": "run-second",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "run-second-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-home",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-settings",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=5 min" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-minutes",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-made",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "label=Start" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-second-due",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-second-listening",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "run-second",
+      "action": "tap",
+      "target": "label=36 of 37 words",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Stage: ear" }, { "shows": "label=Next" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

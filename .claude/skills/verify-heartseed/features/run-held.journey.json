@@ -1,0 +1,52 @@
+{
+  "feature": "run-held",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "run-held-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Next" }, { "shows": "label=Stage: ear" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-held-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-held-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "run-held-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=5 min" }, { "shows": "label=Done" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-held-minutes",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "run-held-settings",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=All tended for today" },
+        { "hides": "label=Start" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}

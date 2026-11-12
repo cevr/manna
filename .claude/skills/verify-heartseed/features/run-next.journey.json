@@ -1,0 +1,57 @@
+{
+  "feature": "run-next",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "run-next-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Next" }, { "shows": "label=Good" }],
+      "receipt": "none"
+    },
+    {
+      "name": "sayit-grade",
+      "action": "tap",
+      "target": "label=Good",
+      "expect": [{ "shows": "label=Next" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "sayit-peek",
+      "action": "tap",
+      "target": "label=Missed word 11",
+      "expect": [{ "shows": "label=Next" }, { "hides": "label=Missed word 11" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-held-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-held-field",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [{ "shows": "label=Next" }, { "hides": "label=Say it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [
+        { "shows": "label=The field is tended" },
+        { "shows": "label=1 grew a stage." },
+        { "shows": "label=Isaiah 41:10, blade" },
+        { "shows": "label=Your field" },
+        { "hides": "label=Nothing to tend now" },
+        { "hides": "label=Say it" },
+        { "hides": "label=Next" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}

@@ -112,41 +112,69 @@ from the dev server. The garden must start empty: uninstall by udid as
 `first.md` says. Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md`
 sets them.
 
+The taps are journeys beside this file, each run in one `sim journey`
+call: `run`, `run-recite`, `run-next`, `run-second` and `run-held`
+(`run.journey.json`, `run-<segment>.journey.json`). Their `shows` and
+`hides` hold what a selector can say; the waits for the clock, the raw
+snapshots and the log lie between them, by hand. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited below as
+`<journey>/<step>`) holds the visible nodes' types and labels, with a
+radio's `[checked]`: the counts line, a label built at run time
+(`Suggested: Hard`, `36 of 37 words, 1 peeked`) and a checked grade are
+read there. A raw snapshot (`first.md`, Driving it) holds the rects, and
+the `Grew to …` line (`id=growth`), which the receipt leaves out though
+it lies above the fold. Each journey's first step opens `/` and shows where it starts
+(the Today card, or the verse's `Say it` or `Next`), so a journey run on
+the wrong screen fails there.
+
 1. `first.md` steps 1-7. Note `PLANTED` (`date`).
-2. `run-done-first`: `sim snapshot run-done-first` → the nodes above. Then
+2. `run-done-first`: `first/first-home` → the nodes above. Then
    `session.md`'s `session-first`, `session-header` and `session-choose`
    (steps 2-3) and `session-field` (step 5), on the Today that
    a tap on `Isaiah 41:10, seed` opens.
-3. `run-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
-   `sim open / --expect "id=today-card"` → the Today card's
-   `1 verse · about 1 min`, `1 to review` and `Start`; `sim tap "label=Start"`, `sim open / --expect
-   "id=session" --no-relaunch`, and `sim snapshot run-due`, plus a raw snapshot
-   (`agent-device snapshot --json --raw --observe-only --force-full
-   --session verify-heartseed`) for the rects. When `PLANTED` was in the
-   evening, record `Nothing to tend now` and stop here: only tests reach the
-   rest (Gotchas).
-4. `run-listening` and `run-recite`: `sim tap "label=Say it"`, a raw
-   snapshot at once, then `sim tap "label=36 of 37 words" --timeout 30`,
-   `sim snapshot run-recite`, and a raw snapshot for the rects.
-5. `run-held-field`: `sim tap "label=Your field"`, `sim tap "label=Start"`,
-   `sim snapshot run-held-field`.
-6. `run-next`: `sim tap "label=Next"`, `sim snapshot run-next`.
+3. `run-due`: wait until 7 minutes after `PLANTED`, then
+   `sim journey run` → `"ok":true`: a launch (a new plan) on home with the
+   Today card and `Start`, then `Start` to Today. `run/run-due-home`: the
+   card's `1 verse · about 1 min`, `1 to review` and `Start`.
+   `run/run-due`: the row's nodes, the counts line `1 to tend · about 1
+   min`. Then a raw snapshot for the rects. When `PLANTED` was in the
+   evening, the journey fails at `run-due-home` (no `Start`): record the
+   card's `All tended for today` and stop here: only tests reach the rest
+   (Gotchas).
+4. `run-listening` and `run-recite`: `sim journey run-recite` →
+   `"ok":true`: `Say it`, then the wait for the end (a tap on
+   `36 of 37 words`, which does nothing). `run-recite/run-listening`,
+   taken as the `Say it` tap ends: when it holds `Listening`, no `Minutes`
+   radio, no `Voice`, no `Your field`, no `Settings`, no `Plant`, no
+   `Remove`. The simulator's scripted recital can end before the receipt
+   (it then holds the end, as `run-recite/run-recite`): the journey does not
+   wait for `Listening`, and `run-listening` is then unproven in that run.
+   `run-recite/run-recite`: `Stage: blade`, the grade radios with one
+   `[checked]`, `Next`, no `Say it`. Then a raw snapshot for the rects and
+   `id=growth`'s `Grew to a blade.`.
+5. `run-held-field` and `run-next`: `sim journey run-next` → `"ok":true`.
+   Its first steps are `sayit.md`'s grade and peek (`run-next/sayit-grade`,
+   `run-next/sayit-peek`); then `Your field` and `Start`
+   (`run-next/run-held-field`: the same result and `Next`).
+6. `run-next/run-next`: the row's nodes; no `Grade`, `Settings`, `Minutes`
+   or `Voice`; record how the line holds the image's `role="img"`.
+   When `grow.md` rides this drive, its `grow-restart` journey runs now,
+   before the verse is due again (it ends on home, in the done state).
 7. `run-second`, only when the drive started before 16:00 local: wait 15
-   minutes from step 4, `sim tap "label=Your field"`,
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim tap "label=5 min"`,
-   `sim tap "label=Done"`, `sim tap "label=Start"`, `sim snapshot
-   run-second-due`, `sim tap "label=Say it"`, `sim tap "label=37 of 37
-   words" --timeout 30` (or the count the replay gives), `sim snapshot
-   run-second`, `sim tap "label=Next"` (or step 8 in its place).
-8. `run-held-settings`, only when the drive started before 16:00 local,
-   in place of step 7's `Next`: `sim tap "label=Your field"`,
-   `sim snapshot run-held-home` → the heading `Your field`, `Start`, no
-   heading `Settings`; record the Today card's lines as shown. Then
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw snapshot → `5 min` alone selected;
-   `sim tap "label=5 min"`, `sim tap "label=Done"`, `sim snapshot
-   run-held-settings` → no heading `Settings`, the Today card's
-   `All tended for today`, no `Start`. `run-second`'s last claim (`Next`
-   and the end) is `run-next`'s already, at an ear.
+   minutes from step 4, then `sim journey run-second` → `"ok":true`
+   (from the end or home, a relaunch to home): `Settings`, the
+   checked `5 min` again, `Done` (a making), `Start`, `Say it`, and the
+   end. `run-second/run-second-due`: `1 to tend`, no word node labelled.
+   `run-second/run-second`: `Stage: ear`; a raw snapshot: `id=growth`'s
+   `Grew to an ear.`. Its `Next`
+   and the end are `run-next`'s at an ear, so step 8 takes its place.
+8. `run-held-settings`, only when the drive started before 16:00 local:
+   `sim journey run-held` → `"ok":true`. `run-held/run-held-home`: the
+   heading `Your field` and `Start`; record the Today card's lines.
+   `run-held/run-held-sheet`: `5 min` alone `[checked]`.
+   `run-held/run-held-settings`: no heading `Settings`, the Today card's
+   `All tended for today`, no `Start`. In a drive of its own, `grow.md`'s
+   `grow-again` takes this step's place.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw
@@ -177,4 +205,4 @@ snapshots.
   - a second recital in one sitting (`apps/heartseed/src/sayit/today.test.tsx`).
 - A return to the foreground makes the plan again too, and drops a shown
   result: `wake.md` drives it (`wake-due`, `wake-result`). A relaunch
-  (`sim relaunch`) or a `Minutes` tap also makes it.
+  (a journey's `open` that relaunches) or a `Minutes` tap also makes it.

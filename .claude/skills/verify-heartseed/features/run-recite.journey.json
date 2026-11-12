@@ -1,0 +1,34 @@
+{
+  "feature": "run-recite",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "run-recite-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Say it" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-listening",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-recite",
+      "action": "tap",
+      "target": "label=36 of 37 words",
+      "timeout": 30,
+      "expect": [
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Missed word 11" },
+        { "shows": "label=Next" },
+        { "hides": "label=Say it" },
+        { "hides": "label=Listening" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}

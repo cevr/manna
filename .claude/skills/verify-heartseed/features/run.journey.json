@@ -1,0 +1,36 @@
+{
+  "feature": "run",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "run-home",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "run-due-home",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-due",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=stage" },
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Your field" },
+        { "hides": "label=Listening" },
+        { "hides": "label=Next" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
