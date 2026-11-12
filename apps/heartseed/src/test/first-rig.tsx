@@ -86,6 +86,7 @@ import {
 } from '../dictation';
 import { Chime, type Growth } from '../garden';
 import { sourceWords } from '../matcher/words';
+import { breaksOf, linesOf } from '../reading/lines';
 import { Haptics, type Recall } from '../sayit';
 import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
@@ -791,7 +792,30 @@ const pendingFrameFaults = (
   return out;
 };
 
-/** What one frame shows wrong: more than one heading; a pending frame after the launch decided, or one offering a button, a stage or a plant image; a heading the command cannot reach; Planted with no recall on the disk or without its one hidden seed image; Today's drawing not its stage line's; and the phases' own faults, a plant image among them. */
+/** The breaks the passage's lines owe in every drawing of a phase, as Today draws them: one before each line after the first (`linesOf`). */
+export const FIRST_BREAKS = [...breaksOf(linesOf(passage.text))].map((word) => `break-${word}`);
+
+/** The breaks a frame of a phase draws, in order, and whether each is a sibling of the words. */
+export const breaksShown = (host: Element) => {
+  const view = host.querySelector('[data-testid="word-0"]')?.parentElement ?? null;
+  const breaks = [...host.querySelectorAll('[data-testid^="break-"]')];
+  return {
+    breaks: breaks.map((node) => node.getAttribute('data-testid') ?? ''),
+    siblings: breaks.every((node) => node.parentElement === view),
+  };
+};
+
+/** What a frame of hear, letters or alone draws wrong of the passage's lines: breaks other than `FIRST_BREAKS`, or one outside the words' view. */
+const firstLineFaults = (host: Element, heading: string): string[] => {
+  const shown = breaksShown(host);
+  const out: string[] = [];
+  if (shown.breaks.join() !== FIRST_BREAKS.join())
+    out.push(`frame: ${heading} breaks ${shown.breaks.join() || 'none'}`);
+  if (!shown.siblings) out.push(`frame: a break in ${heading} outside the words' view`);
+  return out;
+};
+
+/** What one frame shows wrong: more than one heading; a pending frame after the launch decided, or one offering a button, a stage or a plant image; a heading the command cannot reach; Planted with no recall on the disk or without its one hidden seed image; Today's drawing not its stage line's; and the phases' own faults, a plant image and breaks other than the passage's lines (`firstLineFaults`) among them. */
 const frameFaults = (
   host: Element,
   shown: readonly string[],
@@ -822,6 +846,7 @@ const frameFaults = (
   if (['Today', END, 'Planted', 'Your field'].includes(heading)) return out;
   out.push(...drawingFaults(host, heading, null));
   out.push(...phaseFaults(host, heading, buttons, phase.voiceOn));
+  out.push(...firstLineFaults(host, heading));
   if (heading === 'Hear it') return [...out, ...hearFaults(host, phase.held)];
   return [...out, ...wordFaults(host, heading, phase.said)];
 };

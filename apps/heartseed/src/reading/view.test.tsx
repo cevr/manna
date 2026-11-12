@@ -29,7 +29,8 @@
  * draws no DOM for it; performing it asks for one seek to that word, and
  * any other action asks for nothing. Each word stays its own element:
  * nothing from `reading` down to it is `accessible` or hides its children
- * (`src/test/voiceover.ts`).
+ * (`src/test/voiceover.ts`), a rule that faults a node hiding a word or a
+ * text and never a line's empty hidden `break-<k>`.
  *
  * It catches the ink off by one, a selection or ground left on a word out
  * of the range, a word nested in a wrapper, a word's text cut at its
@@ -43,7 +44,7 @@ import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { gestureOf, type PanConfig } from '../test/gesture';
 import { below, random } from '../test/garden-model';
@@ -442,5 +443,42 @@ describe('the reading view', () => {
     await act(async () => root.unmount());
     host.remove();
     expect(faults).toEqual([]);
+  });
+
+  it('holds VoiceOver’s rule to a node hiding a word or a text, never to an empty hidden break', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const drawn = (inner: React.ReactNode) =>
+      act(async () =>
+        root.render(
+          <View testID="reading">
+            <Text testID="word-0">alpha</Text>
+            <View testID="break-1" aria-hidden importantForAccessibility="no-hide-descendants" />
+            {inner}
+          </View>,
+        ),
+      );
+    await drawn(<Text testID="word-1">beta</Text>);
+    const clean = voiceOverFaults(host);
+    await drawn(
+      <View testID="wrap" aria-hidden>
+        <Text testID="word-1">beta</Text>
+      </View>,
+    );
+    const word = voiceOverFaults(host);
+    await drawn(
+      <View testID="note" importantForAccessibility="no-hide-descendants">
+        <Text>gamma</Text>
+      </View>,
+    );
+    const text = voiceOverFaults(host);
+    await act(async () => root.unmount());
+    host.remove();
+    expect({
+      clean,
+      word: word.includes("voiceover: wrap hides the reading view's children"),
+      text: text.includes("voiceover: note hides the reading view's children"),
+    }).toEqual({ clean: [], word: true, text: true });
   });
 });

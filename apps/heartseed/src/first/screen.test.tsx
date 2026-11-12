@@ -23,6 +23,7 @@ import passage from 'virtual:heartseed-passage';
 
 import { scriptedSource } from '../dictation/script';
 import { sourceWords } from '../matcher/words';
+import { breaksOf, linesOf } from '../reading/lines';
 import { AA, contrastOf } from '../test/contrast';
 import { screenLaunch as mount } from '../test/first-rig';
 import { computed } from '../test/look';
@@ -140,7 +141,12 @@ const phaseLine = (text: string) =>
   `1× div|||||${text}|${MUTE}|${CLEAR}||inline||${face}|13px|normal|normal`;
 const boxes = (count: number, ground: string, opacity = '') =>
   `${count}× div|||||||${ground}|${opacity}|${VIEW}`;
+/** The passage's line breaks as a look holds them: one hidden empty box before each line after the first (`linesOf`). */
+const BREAKS_LOOK = [...breaksOf(linesOf(passage.text))].map(
+  (word) => `1× div||break-${word}||aria-hidden=true|||${CLEAR}||${VIEW}`,
+);
 const LETTERS_LOOK = [
+  ...BREAKS_LOOK,
   `32× span||||aria-hidden=true|#|${CLEAR}|${CLEAR}||inline||${face}|24px|normal|36px`,
   `37× div||word-#|#|||rgba(0, 0, 0, 1.00)|${CLEAR}||inline||${face}|24px|normal|36px`,
   `37× span|||||#|the letters’ ink|${CLEAR}||inline||${face}|24px|normal|36px`,
@@ -166,10 +172,13 @@ const LETTERS_LOOK = [
  * hidden `plant` wrapper holds the hidden `plant-image` box and its image
  * (react-native-web's box, its painted layer and its `img`), where base drew
  * a soil box and a gold seed inside a scaled wrapper; its image's source and
- * size are `src/test/plant-image-rule.ts`'s. Every other line is base's.
+ * size are `src/test/plant-image-rule.ts`'s. Every phase that shows the
+ * words draws the passage's line breaks as Today does (`BREAKS_LOOK`), where
+ * base drew the verse as one line. Every other line is base's.
  */
 const BASE_LOOK = {
   hear: [
+    ...BREAKS_LOOK,
     button('Listen', INK),
     button('Next', CARD),
     REFERENCE,
@@ -186,6 +195,7 @@ const BASE_LOOK = {
     boxes(5, CLEAR),
   ],
   reading: [
+    ...BREAKS_LOOK,
     button('Next', CARD),
     REFERENCE,
     `1× div||word-#||aria-selected=true|#|${INK}|${computed(theme.light.hearing)}||inline||${face}|24px|normal|36px`,
@@ -204,6 +214,7 @@ const BASE_LOOK = {
   letters: [button('Say it', INK), pill('Say it', ON_INK), ...LETTERS_LOOK],
   listening: [button('Listening', INK), pill('Listening', ON_INK), ...LETTERS_LOOK],
   alone: [
+    ...BREAKS_LOOK,
     button('Say it', INK),
     REFERENCE,
     HALO,

@@ -9,7 +9,9 @@
  * before the garden's read shows no heading and no button, no first-minute
  * frame names a stage outside Planted, and every frame holds the root's
  * frame rule (`rootFaults`). Continue, and a later launch with a plant, show
- * home; `Start` there opens Today. The voice off offers no Listen; Next
+ * home; `Start` there opens Today. Hear (whole and read aloud), letters
+ * and alone draw a `break-<k>` beside the words before each line Today's
+ * lines (`linesOf`) start after the first. The voice off offers no Listen; Next
  * stops a reading; a relaunch mid-flow keeps nothing; an unread garden opens
  * Today; a held launch shows nothing until its read. It counts words without
  * printing one.
@@ -19,7 +21,13 @@ import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { START, toDue, type Time } from '../test/clock';
-import { recallKeys, screenLaunch as mount, SWITCH } from '../test/first-rig';
+import {
+  breaksShown,
+  FIRST_BREAKS,
+  recallKeys,
+  screenLaunch as mount,
+  SWITCH,
+} from '../test/first-rig';
 import { device } from '../test/one';
 import { sourceWords } from '../matcher/words';
 import { wordSpans } from '../voice/reading';
@@ -34,11 +42,13 @@ describe('the first minute', () => {
     expect(await first.past()).toBe(true);
     expect([first.buttons(), first.voice.calls.speaks]).toEqual([['Listen', 'Next'], 0]);
     expect(WORDS.every((text, index) => first.word(index)?.textContent === text)).toBe(true);
+    const lined: unknown[] = [breaksShown(first.host)];
     await first.click('Listen');
     expect(await first.until(() => first.voice.calls.speaks === 1 && first.inked() === 0)).toBe(
       true,
     );
     expect(first.buttons()).toEqual(['Next']);
+    lined.push(breaksShown(first.host));
     await first.send({ kind: 'range', location: SPANS[0]?.start ?? 0, length: 1 });
     await first.send({
       kind: 'range',
@@ -56,12 +66,18 @@ describe('the first minute', () => {
           [...text].find((char) => /[\p{L}\p{N}]/u.test(char)),
       ),
     ).toBe(true);
+    lined.push(breaksShown(first.host));
     await first.click('Say it');
     expect(await first.until(() => first.heading() === 'Say it alone')).toBe(true);
     expect([recallKeys(), device.calls.set]).toEqual([[], 0]);
     expect(
       WORDS.every((_, index) => first.word(index)?.getAttribute('aria-hidden') === 'true'),
     ).toBe(true);
+    lined.push(breaksShown(first.host));
+    expect([FIRST_BREAKS.length > 0, lined]).toEqual([
+      true,
+      lined.map(() => ({ breaks: FIRST_BREAKS, siblings: true })),
+    ]);
     await first.click('Say it');
     expect(await first.until(() => first.heading() === 'Planted')).toBe(true);
     expect([first.stage(), recallKeys().length, first.chimes]).toEqual(['Stage: seed', 1, []]);

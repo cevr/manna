@@ -12,6 +12,10 @@
  * only a recital of the phase's own shows the words it heard. A word or a
  * part of one that is not shown is laid out in transparent ink and hidden
  * from the screen reader.
+ *
+ * Every phase draws the verse in its lines as Today does (`linesOf`): a
+ * `break-<k>` row before each line after the first, a sibling of the
+ * words, so the words keep their numbers.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -38,7 +42,8 @@ import type { GardenView } from '../garden';
 import type { Mark } from '../matcher';
 import { sourceWords } from '../matcher/words';
 import { PlantImage } from '../home/plant';
-import { ReadingView, type Hold } from '../reading/view';
+import { breaksOf, linesOf } from '../reading/lines';
+import { breakBefore, ReadingView, type Hold } from '../reading/view';
 import type { OrNull, Recital, SayItView } from '../sayit';
 import { themed, useThemed } from '../look';
 import { BigButton, Initial, Pulse, useLook, Word } from '../sayit/draw';
@@ -49,6 +54,10 @@ import { begin, isOwn, observe, step, type Flow, type Input, type Phase } from '
 import { Grows, Pill, Welcome } from './intro';
 
 const WORDS = sourceWords(passage.text);
+
+/** The passage's lines, as Today draws them (`linesOf`), and the words that start a line after the first. */
+const LINES = linesOf(passage.text);
+const BREAKS = breaksOf(LINES);
 
 /** Each phase's heading and the line under it. */
 const COPY: Readonly<Record<Shown, { readonly heading: string; readonly line: string }>> = {
@@ -92,10 +101,11 @@ function Heard({ voice, hold }: { readonly voice: Option.Option<VoiceView>; read
   const styles = useThemed(sheets);
   const reading = Option.filter(voice, isActive);
   const own = Option.filter(reading, (view) => view.verse === passage.text);
-  if (Option.isSome(own)) return <ReadingView text={passage.text} view={own.value} hold={hold} />;
+  if (Option.isSome(own))
+    return <ReadingView text={passage.text} view={own.value} hold={hold} lines={LINES} />;
   return (
     <View style={look.verse}>
-      {WORDS.map((word, index) => {
+      {WORDS.flatMap((word, index) => {
         const lit = Option.match(reading, {
           onNone: () => true,
           onSome: (view) => index < view.lit,
@@ -106,7 +116,8 @@ function Heard({ voice, hold }: { readonly voice: Option.Option<VoiceView>; read
             (range) => index >= range.first && index <= range.last,
           ),
         );
-        return (
+        return [
+          ...breakBefore(BREAKS, index),
           <Text
             key={index}
             testID={`word-${index}`}
@@ -114,8 +125,8 @@ function Heard({ voice, hold }: { readonly voice: Option.Option<VoiceView>; read
             style={[look.word, look.lit, !lit && styles.unread, selected && styles.current]}
           >
             {word}
-          </Text>
-        );
+          </Text>,
+        ];
       })}
     </View>
   );
@@ -134,14 +145,17 @@ function Recited({
   const look = useLook();
   return (
     <View style={look.verse}>
-      {WORDS.map((word, index) => {
+      {WORDS.flatMap((word, index) => {
         const mark = Option.getOrElse(
           Option.flatMap(marks, (all) => Option.fromNullishOr(all[index])),
           () => pending(index),
         );
         if (phase === 'letters' && mark.status === 'pending')
-          return <Initial key={index} index={index} word={word} />;
-        return <Word key={index} shown={wordOf(mark, word)} onPeek={onPeek} />;
+          return [...breakBefore(BREAKS, index), <Initial key={index} index={index} word={word} />];
+        return [
+          ...breakBefore(BREAKS, index),
+          <Word key={index} shown={wordOf(mark, word)} onPeek={onPeek} />,
+        ];
       })}
     </View>
   );

@@ -83,6 +83,10 @@ word 11 and the seed is graded Hard.
   label one character; its recital goes on to `Say it alone`.
 - `first-alone`: `Say it alone` and `Say it`, no word label at all, no
   `Stage:`; its recital plants the seed.
+- `first-lines`: hear (whole, and read in `id=reading`), letters and
+  alone draw Isaiah 41:10 in the lines Today draws it in (`fade.md`'s
+  `lines-letters`): among the 37 `word-<i>`, `break-8`, `break-16`,
+  `break-20` and `break-25`, and no other `break-`.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
 - `first-tips`: `Continue` opens home with `id=tip-1`, `id=tip-2` and
@@ -148,6 +152,8 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    `sim snapshot first-launch` → the heading `Hear it`, `Isaiah 41:10`,
    the buttons `Listen` and `Next`; no `Today`, no label starting
    `Stage:`, no `Say it`; 37 word nodes (count them, never print them).
+   `first-lines`, here and in each snapshot of steps 3-5: the `break-` ids
+   in the tree are exactly `break-8`, `break-16`, `break-20`, `break-25`.
 3. `first-hear`: `sim tap "label=Listen"`, then at once two raw snapshots
    about 1 s apart (`agent-device snapshot --json --raw --observe-only
    --force-full --session verify-heartseed`, in the drive's HOME) → in each,

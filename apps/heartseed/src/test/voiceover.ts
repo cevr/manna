@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noUnsafeDictionaryType -- a test rig: it reads React's fiber tree as React keeps it, whose absent links are null and whose props are a plain record, and names each fault with a plain branch. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noUnsafeDictionaryType, effect/noRuntimeTypeof -- a test rig: it reads React's fiber tree as React keeps it, whose absent links are null, whose props are a plain record and whose text is a string where an element's is not, and names each fault with a plain branch. */
 
 /** A fiber as React keeps it: the props it was drawn with (a string for a text), its first child, its next sibling and its host node. */
 export interface Fiber {
@@ -36,12 +36,24 @@ const hides = (props: Record<string, unknown>): boolean =>
 
 const WORD = /^word-\d+$/u;
 
+/** Whether the fibers from `fiber` on, and every one below them, hold a word or a text. */
+const holdsWords = (fiber: Fiber | null | undefined): boolean => {
+  for (let each = fiber; each; each = each.sibling) {
+    if (typeof each.memoizedProps === 'string') return true;
+    if (typeof fiberProps(each)['children'] === 'string') return true;
+    if (WORD.test(String(fiberProps(each)['testID'] ?? ''))) return true;
+    if (holdsWords(each.child)) return true;
+  }
+  return false;
+};
+
 /**
  * What would merge the reading view's words into one VoiceOver element, or
  * hide them, in the React root drawing `host`: an `accessible` node from
  * `reading` (inclusive) down to a word (exclusive: a word is its own
  * element), or a node hiding its children from `reading` down to a word's
- * text. Faults too when the root or the `reading` view is not in the tree.
+ * text, when they hold a word or a text (a line's empty `break-<k>` hides
+ * nothing). Faults too when the root or the `reading` view is not in the tree.
  * Read from React's current fiber tree, since react-native-web draws no DOM
  * for the props VoiceOver reads (`accessible`,
  * `accessibilityElementsHidden`, `importantForAccessibility`).
@@ -60,7 +72,7 @@ export const voiceOverFaults = (host: Node): string[] => {
       const own = word ?? (reading && id !== undefined && WORD.test(id) ? id : undefined);
       if (reading && own === undefined && props['accessible'] === true)
         faults.add(`voiceover: ${id ?? 'a node'} in the reading view is one element`);
-      if (reading && hides(props))
+      if (reading && hides(props) && holdsWords(each.child))
         faults.add(`voiceover: ${id ?? 'a node'} hides ${own ?? 'the reading view'}'s children`);
       walk(each.child, reading, own);
     }
