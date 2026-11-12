@@ -121,6 +121,36 @@ describe('pressTarget', () => {
     expect([refOf('label=Sounds and haptics'), refOf('label=Play hymn 34')]).toEqual(['e9', 'e7']);
   });
 
+  test('takes a Switch over a Button of its name, a Button over any other node, whatever their order', () => {
+    const row = { x: 0, y: 200, width: 402, height: 44 };
+    const named = (type: string, ref: string, label: string): Node => ({
+      type,
+      ref,
+      label,
+      rect: row,
+    });
+    const nodes: ReadonlyArray<Node> = [
+      named('Other', 'a1', 'Sounds and haptics'),
+      named('Button', 'a2', 'Sounds and haptics'),
+      named('Switch', 'a3', 'Sounds and haptics'),
+      named('Cell', 'b1', 'Open player'),
+      named('Other', 'b2', 'Open player'),
+      named('Button', 'b3', 'Open player'),
+      named('Cell', 'c1', 'Done'),
+      named('Other', 'c2', 'Done'),
+    ];
+    const refOf = (target: string) =>
+      Option.match(pressTarget(nodes, target, 402), {
+        onNone: () => 'none',
+        onSome: (node) => String(node.ref),
+      });
+    expect(['label=Sounds and haptics', 'label=Open player', 'label=Done'].map(refOf)).toEqual([
+      'a3',
+      'b3',
+      'c1',
+    ]);
+  });
+
   test('finds nothing for an id off the screen or a node with no ref', () => {
     expect(Option.isNone(pressTarget(NODES, 'id=hymn-number', 402))).toBe(true);
     expect(Option.isNone(pressTarget(NODES, 'label=Sound', 402))).toBe(true);
