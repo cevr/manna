@@ -130,7 +130,7 @@ under its number, and the refrain written out each time it is sung.
   (`src/reader/keyboard.ts`).
 - Each row is a link (an anchor on the web): a press opens the hymn inside
   the app; Enter, a Cmd-click and "Open in New Tab" work as on any link.
-- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as ten parts,
+- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as twelve parts,
   each a package script and a task of `turbo.json` that the commandless
   `test` task depends on, so the gate runs each as its own task and
   `bun run test:budget @manna/hymnal-app` times each alone (under 1 s). The
@@ -152,8 +152,10 @@ under its number, and the refrain written out each time it is sung.
     (`word-seek.test.ts`, `WordSeek.test.tsx`), named file by file;
     `test:reader` runs the rest of `src/reader` and ignores those.
   - `test:reader`, `test:follow` and `test:hymns`: their folders of `src`.
-  - `test:rest`: `src/tuner`, `src/feel`, `src/offline`, `src/test` and the
-    test files at the root of `src`, named file by file.
+  - `test:tuner`: `src/tuner`, apart because its mounted screens are the
+    part's load.
+  - `test:rest`: `src/feel`, `src/offline`, `src/test` and the test files at
+    the root of `src`, named file by file.
   - `test:infra`: `infra`, `scripts` and `vite`.
 
   Run one with `bun run test:<part>` here, or all with `bun run test

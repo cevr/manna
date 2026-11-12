@@ -156,6 +156,22 @@
         "!{infra,scripts,vite}/**/*.test.*"
       ]
     },
+    "test:tuner": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/**/*.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
     "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -185,6 +201,7 @@
         "test:seek",
         "test:follow",
         "test:hymns",
+        "test:tuner",
         "test:rest",
         "test:infra"
       ]
