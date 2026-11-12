@@ -322,15 +322,26 @@ describe('verify-heartseed journeys', () => {
         expect([
           ...new Set(journeys.map((journey) => journey.feature.split('-')[0] ?? '')),
         ]).toEqual([
+          'about',
+          'appearance',
           'dictation',
           'doctor',
+          'field',
           'first',
           'grow',
+          'handbook',
+          'home',
           'light',
+          'list',
           'natural',
+          'passage',
+          'phrase',
+          'promise',
           'run',
           'sayit',
+          'session',
           'today',
+          'wake',
         ]);
         const files = markdown();
         expect(
@@ -489,6 +500,49 @@ describe('verify-heartseed journeys', () => {
           { label: 'Mark 4:99', drawn: false },
           { label: 'Isaiah 41:99', drawn: false },
           { label: 'Isaiah 41:20', drawn: true },
+        ];
+        const journey = yield* loaded(
+          [
+            {
+              name: 'gen-open',
+              action: 'open',
+              link: '/',
+              receipt: 'none',
+              expect: all.map(({ label }) => ({ shows: `label=${label}` })),
+            },
+          ],
+          'gen',
+        );
+        expect(undrawn([journey], sources)).toEqual(
+          all.filter(({ drawn }) => !drawn).map(({ label }) => `gen/gen-open label=${label}`),
+        );
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'R4 takes the canon’s books and chapters, the Handbook’s titles, the theme probe’s schemes and the own furrow’s references, and faults their neighbours',
+    () =>
+      Effect.gen(function* () {
+        const all = [
+          { label: 'Genesis', drawn: true },
+          { label: 'Genesiss', drawn: false },
+          { label: 'Psalms 150', drawn: true },
+          { label: 'Psalms 151', drawn: false },
+          { label: 'Jude 1', drawn: true },
+          { label: 'Jude 2', drawn: false },
+          { label: 'Seven Churches', drawn: true },
+          { label: 'Seven Churchs', drawn: false },
+          { label: 'Plant Smyrna', drawn: true },
+          { label: 'Plant Smyrnaa', drawn: false },
+          { label: 'Open Smyrna', drawn: true },
+          { label: 'Open John 15:1-5', drawn: true },
+          { label: 'Remove John 15:1-5', drawn: true },
+          { label: 'Remove John 15:1-99', drawn: false },
+          { label: 'Plant Psalms 46:1-3', drawn: true },
+          { label: 'Start with Isaiah 41:10', drawn: true },
+          { label: 'Start with Isaiah 41:99', drawn: false },
+          { label: 'scheme dark', drawn: true },
+          { label: 'scheme dusk', drawn: false },
         ];
         const journey = yield* loaded(
           [

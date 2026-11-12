@@ -39,6 +39,7 @@ import { BIBLE_BOOKS, formatBibleReference, parseBibleQuery } from '@manna/core/
 import { Predicate } from 'effect';
 import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
+import { HANDBOOK } from '../src/handbook.ts';
 import { readVerses } from '../vite/passage.ts';
 import { app } from './sim-app.ts';
 
@@ -309,6 +310,17 @@ const isBookOrChapter = (label: string) => {
   });
 };
 
+/**
+ * The Handbook's section and list titles (`src/handbook.ts`'s `HANDBOOK`,
+ * decoded from `data/handbook.json`): the Add a list sheet's heads and offers, and a
+ * planted list's furrow, draw them from that file, never from a string of
+ * the sources.
+ */
+const handbookNames = (): ReadonlySet<string> =>
+  new Set(
+    HANDBOOK.flatMap((section) => [section.title, ...section.lists.map((list) => list.title)]),
+  );
+
 /** Whether the bundled KJV has the verse `at`. */
 const inKjv = (at: { readonly book: number; readonly chapter: number; readonly verse: number }) =>
   kjvVerses().has(`${at.book}:${at.chapter}:${at.verse}`);
@@ -335,7 +347,8 @@ export const holeFaults = (sources: ReadonlyArray<Source>): ReadonlyArray<string
  * numbers; a label they spell in any case, a template filled only by a
  * number, the journey's typed text or a word hole's words; a verse's
  * reference as the canon names it, alone or in a reference hole beside a
- * stage word; a book or a chapter of it as the canon names them.
+ * stage word; a book or a chapter of it as the canon names them; a
+ * Handbook section's or list's title, alone or in a reference hole.
  */
 export const undrawn = (
   journeys: ReadonlyArray<Journey>,
@@ -344,11 +357,17 @@ export const undrawn = (
   const from: Spelled = spelled(sources);
   const holes = wordHolesOf(sources);
   const stages = new Set(stagesOf(sources));
+  const handbook = handbookNames();
   const named = (value: string) =>
     isReference(value) ||
     isBookOrChapter(value) ||
+    handbook.has(value) ||
     REFERENCE_HOLES.some(({ parts }) =>
-      fillsTemplate(value, parts, (piece) => isReference(piece) || stages.has(piece)),
+      fillsTemplate(
+        value,
+        parts,
+        (piece) => isReference(piece) || stages.has(piece) || handbook.has(piece),
+      ),
     );
   return journeys.flatMap((journey) => {
     const fills: Fills = {
@@ -446,18 +465,10 @@ export const proseDrives = (file: string, text: string): ReadonlyArray<string> =
 
 /**
  * The files of verify-heartseed that still drive in prose, each with why:
- * the stage of hsjourneys that moves its drive into journeys, or, for
- * `SKILL.md`, that it documents the commands.
+ * `SKILL.md` alone, since it documents the commands.
  */
 export const LEGACY: ReadonlyMap<string, string> = new Map([
   ['SKILL.md', 'it documents the commands a journey and a by-hand step run'],
-  ['features/home.md', 'S5 moves home'],
-  ...['list', 'about', 'appearance', 'session', 'field'].map(
-    (name) => [`features/${name}.md`, 'S6 moves the field and its sheets'] as const,
-  ),
-  ...['passage', 'phrase', 'promise', 'handbook', 'wake'].map(
-    (name) => [`features/${name}.md`, 'S7 moves the drives that cross a 04:00'] as const,
-  ),
 ]);
 
 /** A feature file's stem: `first` of `features/first.md`. */
