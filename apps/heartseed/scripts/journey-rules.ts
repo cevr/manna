@@ -35,7 +35,7 @@ import {
   STRING,
   type WordHole,
 } from '@manna/sim/check';
-import { formatBibleReference, parseBibleQuery } from '@manna/core/bible';
+import { BIBLE_BOOKS, formatBibleReference, parseBibleQuery } from '@manna/core/bible';
 import { Predicate } from 'effect';
 import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
@@ -294,6 +294,21 @@ const isReference = (label: string) => {
   return inKjv(parsed.ref.start) && inKjv(parsed.ref.end);
 };
 
+/**
+ * Whether `label` is a book or one of its chapters as the passage chooser
+ * names them (`Genesis`, `Psalms 119`): the chooser draws both from the
+ * canon's books (`src/chooser/screen.tsx`), never from a string of its own.
+ */
+const isBookOrChapter = (label: string) => {
+  const chapter = /^(.+) (\d+)$/u.exec(label);
+  return BIBLE_BOOKS.some((book) => {
+    if (book.name === label) return true;
+    if (chapter === null || book.name !== chapter[1]) return false;
+    const at = Number(chapter[2]);
+    return at >= 1 && at <= book.chapters;
+  });
+};
+
 /** Whether the bundled KJV has the verse `at`. */
 const inKjv = (at: { readonly book: number; readonly chapter: number; readonly verse: number }) =>
   kjvVerses().has(`${at.book}:${at.chapter}:${at.verse}`);
@@ -320,7 +335,7 @@ export const holeFaults = (sources: ReadonlyArray<Source>): ReadonlyArray<string
  * numbers; a label they spell in any case, a template filled only by a
  * number, the journey's typed text or a word hole's words; a verse's
  * reference as the canon names it, alone or in a reference hole beside a
- * stage word.
+ * stage word; a book or a chapter of it as the canon names them.
  */
 export const undrawn = (
   journeys: ReadonlyArray<Journey>,
@@ -331,6 +346,7 @@ export const undrawn = (
   const stages = new Set(stagesOf(sources));
   const named = (value: string) =>
     isReference(value) ||
+    isBookOrChapter(value) ||
     REFERENCE_HOLES.some(({ parts }) =>
       fillsTemplate(value, parts, (piece) => isReference(piece) || stages.has(piece)),
     );
