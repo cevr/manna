@@ -1,0 +1,46 @@
+{
+  "feature": "phrase-said",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "whole-said-read",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "timeout": 90,
+      "expect": [{ "shows": "label=Listen" }, { "shows": "id=passage" }, { "hides": "id=reading" }],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-said-say",
+      "action": "tap",
+      "target": "label=Say it",
+      "timeout": 60,
+      "expect": [{ "shows": "label=Stage: seed" }, { "hides": "label=Say it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-said",
+      "action": "scroll",
+      "target": "label=Next",
+      "direction": "down",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Next" }, { "shows": "label=Again" }, { "shows": "label=Good" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-said-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "hides": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-field",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=John 3:16, seed" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

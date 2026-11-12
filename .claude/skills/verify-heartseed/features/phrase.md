@@ -69,48 +69,57 @@ whole verses, so an install of a build of `1064d4138` or later serves
 (`SKILL.md`, Launch); the JavaScript comes from the dev server. The garden
 must start empty: uninstall by udid as `first.md` says.
 
-1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-home`.
-2. `phrase-day-one`: on home,
-   `sim tap "id=add-list"`, `sim tap "label=Any passage"`,
-   `sim tap "label=John"`,
-   `sim tap "label=John 3"`, then `sim scroll screen down` until
-   `John 3:16` shows clear of the footer (a snapshot after each scroll),
-   `sim tap "label=John 3:16"`, `sim tap "label=Plant"`, `sim snapshot phrase-day-one-field` → the row
-   titles `Isaiah 41:10`, `John 3:16`, `Protection & Fear`; the button
-   `John 3:16, not planted`; no node whose label holds `[`; the Today
-   card's parts line holds no `1 new`. When the card offers `Start` (the
-   promise's review due), `sim tap "label=Start"`,
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot phrase-day-one` → no
-   `Listen`; then `sim tap "label=Your field"`.
+The taps are journeys beside this file, each one `sim journey` call:
+`phrase` (day one), `phrase-new`, `phrase-today`, `phrase-listen`,
+`phrase-said` and `phrase-migrate`. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels; ids, frames
+and the selected words are read in a raw snapshot (`first.md`, Driving
+it), and the summary `<k> of 25 words` in a receipt (its count is the
+recognizer's).
+
+1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
+   microphone, and the first minute to `first-home`.
+2. `phrase-day-one`: `sim journey phrase` → `"ok":true`: `Add a list`,
+   `Any passage`, `John`, `John 3`, a scroll to `John 3:16` (it waits for
+   the verse to show), `John 3:16`, `Plant`.
+   `phrase/phrase-day-one-field` → the row titles `Isaiah 41:10`,
+   `John 3:16`, `Protection & Fear`; the button `John 3:16, not planted`;
+   no node whose label holds `[`; the Today card's parts line holds no
+   `1 new`. When the card offers `Start` (the promise's review due),
+   `run.md`'s `run` holds that Today's lack of `Listen` (`run/run-due`).
 3. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
    the install.
 4. `whole-new`, the second session, after the next 04:00 local, with no
-   uninstall: `sim boot`, then `sim open / --expect "id=today-card"` → the Today
-   card's parts line holds `1 new`, with `Start`; `sim tap "label=Start"`,
-   `sim open / --expect "id=session" --no-relaunch`,
-   `sim snapshot whole-new` → the counts line holds `1 new`; when the
-   reference is `Isaiah 41:10` (its review due), run it through `Say it`
-   and `Next` first, then snapshot again → the reference `John 3:16`, its
-   words whole in `id=passage` as its three `line-<i>` texts, each below
-   the one before (more than 20 words, so in its lines,
-   `today.md`'s `lines-plain`), `Listen` before `Say it`. Then
-   `sim tap "label=Listen"`, then two raw snapshots about 1 s apart while
-   it reads (`light.md`, Driving it, and its step 6) → in each,
-   `id=reading` in place of `id=passage`, holding 25 `word-<i>` nodes,
-   `word-6` and `word-13` each at the view's left edge and lower than the
-   word before it, one or two `selected`, the second's first index greater than the
-   first's. Then `sim open / --expect "label=Listen" --no-relaunch` (a
-   wait for the finish), `sim tap "label=Say it"`, wait for the summary
-   (`sim snapshot whole-said` until it shows) → the summary
-   `<k> of 25 words`, the `Grade` group with one radio checked, `Next`;
-   then `sim tap "label=Next"`.
-5. `whole-field`: `sim tap "label=Your field"`, `sim snapshot
-   whole-field` → `John 3:16, seed` in the row `John 3:16`; no row title,
-   text or label in this or any earlier snapshot of the run matching
-   `\[\d+-\d+\]`; 14 `<reference>, not planted` buttons in the row
-   `Protection & Fear` (count them); `1 day sown` or more. Then
-   `sim doctor` and `sim down`.
+   uninstall: `sim boot`, then `sim journey phrase-new` → `"ok":true`.
+   `phrase-new/whole-new-home` → the Today card's parts line holds `1 new`,
+   with `Start`; `phrase-new/whole-new` → the counts line holds `1 new`;
+   when the reference is `Isaiah 41:10` (its review due), run `run.md`'s
+   `run-recite` and `run-next` first, then `sim journey phrase-new` again
+   → the reference `John 3:16`. On the first day, `sim journey
+   phrase-today` (the plant's tap on home) reaches the same Today:
+   `phrase-today/whole-today` → its words whole in `id=passage` as its
+   three `line-<i>` texts, each below the one before (more than 20 words,
+   so in its lines, `today.md`'s `lines-plain`), `Listen` before `Say it`.
+   Then `sim journey phrase-listen` → `"ok":true` (`Listen`, until
+   `id=reading` shows), then two raw snapshots about 1 s apart while it
+   reads (`light.md`, Driving it, and its step 6) → in each, `id=reading`
+   in place of `id=passage`, holding 25 `word-<i>` nodes, `word-6` and
+   `word-13` each at the view's left edge and lower than the word before
+   it, one or two `selected`, the second's first index greater than the
+   first's. Then `sim journey phrase-said` → `"ok":true`: it waits for the
+   finish (`Listen` back, `id=passage`), taps `Say it` and waits for the
+   result (`Stage: seed`, no `Say it`: `phrase-said/whole-said-say`, the
+   missed words as buttons `Missed word <i>`), then scrolls to `Next`,
+   below them. `phrase-said/whole-said` → the summary `<k> of 25 words`,
+   the `Grade` group with one radio `[checked]`, `Next`; the journey then
+   taps `Next`.
+5. `whole-field`: `phrase-said/whole-field`, after `Your field` →
+   `John 3:16, seed` in the row `John 3:16`; no row title, text or label
+   in this or any earlier receipt of the run matching `\[\d+-\d+\]`; 14
+   `<reference>, not planted` buttons in the row `Protection & Fear`
+   (count them, those below the fold in a raw snapshot); `1 day sown` or
+   more. Then `sim doctor` and `sim down`.
 
 ### The migration (`whole-migrate`)
 
@@ -118,24 +127,25 @@ On an install of its own, by the batch verifier, who holds two rifts:
 main's (`hymnapp-main` at `e27f247c9`, any build before this one) and the
 head's.
 
-1. Serve main's rift on `PORT`: `first.md` steps 1-7 to `first-home`, then
-   `home.md`'s `home-learn` as main drives it (a tap on
+1. Serve main's rift on `PORT`: main's own first-run drive to its home,
+   then main's `home.md` `home-learn` as main drives it (a tap on
    `Psalms 91:1, not planted`, then main's `Learn Psalms 91:1`) →
    `id=reference` `Psalms 91:1 [1-9]` (base red); `Say it`, a grade,
-   `Your field`; `sim snapshot whole-migrate-main` → record the days sown.
-2. `sim down`, keeping the install. Stop main's dev server; serve the
-   head's rift on the same `PORT`; `sim boot`, `sim open / --expect
-   "id=today-card"` (a relaunch, no uninstall); `sim scroll
-   "label=Psalms 91:1, not planted" down`, `sim snapshot
-   whole-migrate-home` → the button `Psalms 91:1, not planted`, the
-   caption `14 verses to learn`, the days sown as recorded in step 1, and
-   no node matching `\[\d+-\d+\]`.
-3. `sim tap "label=Psalms 91:1, not planted"` (one tap),
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot
-   whole-migrate-today` → `id=reference` `Psalms 91:1` and `Listen`.
-   `sim tap "label=Say it"` and the recital as `run.md`'s → the summary
-   `<k> of 19 words`; a grade; `sim tap "label=Your field"`, `sim scroll
-   "label=Psalms 91:1, seed" down`, `sim snapshot whole-migrate-after` →
+   `Your field`; a snapshot there → record the days sown. Main has no
+   journey files: its feature files say how.
+2. Main's `sim down`, keeping the install. Stop main's dev server; serve
+   the head's rift on the same `PORT`; `sim boot`, then
+   `sim journey phrase-migrate` → `"ok":true` (a relaunch, no uninstall).
+   `phrase-migrate/whole-migrate-home`, after the scroll to
+   `Psalms 91:1, not planted` → the button `Psalms 91:1, not planted`,
+   the caption `14 verses to learn`, the days sown as recorded in step 1,
+   and no node matching `\[\d+-\d+\]`.
+3. `phrase-migrate/whole-migrate-today`, after the one tap on
+   `Psalms 91:1, not planted` → `id=reference` `Psalms 91:1` and
+   `Listen`. The journey's `Say it` (the recital as `run.md`'s) and
+   `Good`: `phrase-migrate/whole-migrate-grade` → the summary
+   `<k> of 19 words`; then `Your field` and a scroll to
+   `Psalms 91:1, seed`: `phrase-migrate/whole-migrate-after` →
    `Psalms 91:1, seed` and `14 verses · 1 planted`. Then `sim doctor` and
    `sim down`.
 
