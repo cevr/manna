@@ -118,8 +118,12 @@ after its journey:
    report the counts and the `line-<i>` frames' x and y, never the words
    (a `break-<k>` is hidden from VoiceOver, so the tree holds none).
 2. `light.md`'s `lines-read` and `sayit.md`'s `lines-say` ride this Today
-   when their drives do (`light-lines`, `light-lines-done`,
-   `sayit-lines`).
+   when their drives do, in this order: `light-lines`,
+   `light-lines-done`, `sayit-lines`. A recital holds its result ahead
+   of any visit until `Next` (`run.md`), so `sayit-lines` ends with
+   `Next` (`lines-say-next`: no `Next` and no count left); without it,
+   step 3's tap on `Psalms 91:1, not planted` would land on the held
+   result.
 3. `sim journey today-short` → `"ok":true`: `Your field`,
    `Open Protection & Fear`, then `Psalms 91:1, not planted`; its last
    step, `lines-short`, shows `id=passage` and hides `id=line-0`. Its raw

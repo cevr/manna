@@ -104,9 +104,13 @@ drive:
    `light-lines-done`), `sim journey sayit-lines` → `"ok":true`: `Say it`,
    then the wait for the end (a tap on the count label, `7 of 38 words`:
    live at this head, the simulator's replay matched 7 of the 38 words). `sayit-lines/lines-say`: the
-   count `k`, the checked grade; then a raw snapshot for the frames of
-   `word-6`, `word-11`, `word-20`, `word-26` and `word-31`, each starting
-   a row.
+   count `k`, the checked grade; the frames of `word-6`, `word-11`,
+   `word-20`, `word-26` and `word-31`, each starting a row, are read as
+   below. The journey's last step, `lines-say-next`, taps `Next`, so the
+   held result lets go before `today.md`'s `today-short` runs. The
+   result's rows are gone after it, so the frames come from
+   `light.md`'s `lines-read` raw snapshots, which hold the same
+   `word-<i>` rows of the same view.
 7. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
 Every snapshot holds the passage's words: read each for the strings above,

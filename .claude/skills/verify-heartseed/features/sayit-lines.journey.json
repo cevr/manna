@@ -23,6 +23,13 @@
       "timeout": 30,
       "expect": [{ "shows": "label=Next" }, { "hides": "label=Listening" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "lines-say-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "hides": "label=Next" }, { "hides": "label=7 of 38 words" }],
+      "receipt": "none"
     }
   ]
 }
