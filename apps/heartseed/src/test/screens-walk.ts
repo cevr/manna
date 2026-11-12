@@ -5,7 +5,8 @@
  * `src/look/screens-dark.test.tsx` (dark) run, with the add's half in
  * `screens-b.test.tsx` and `screens-dark-b.test.tsx`, one scheme each, so each
  * part stays inside its time budget: the field (the launch's home), Today
- * by `Start` and home again by `Your field`, the chosen card, About (by
+ * by `Start` and home again by `Your field`, Today by a plant's tap and
+ * home again, About (by
  * home's `Settings` and the sheet's `About`, the sheet's frames held to
  * `sheetFaults`), the Add a list sheet with `Psalms` open (held to
  * `addSheetFaults` in the scheme shown, each of its controls pressed in
@@ -65,7 +66,8 @@ export const FIELD_PLACES = [
   'the field',
   'Today',
   'home from Today',
-  'the chosen card',
+  'Today by a plant',
+  'home from its Today',
   'every stage',
   'the list page',
   'the ask',
@@ -114,15 +116,12 @@ export const walkFieldScreens = async (scheme: Scheme) => {
   await held(rig, scheme, 'the field', report, presses);
   await step('Start', 'Today', 'Today');
   await step('Your field', 'Your field', 'home from Today');
-  const made = [...rig.host.querySelectorAll('[data-testid="field-plant"]')]
+  const bare = [...rig.host.querySelectorAll('[data-testid="field-plant"]')]
     .map((node) => node.getAttribute('aria-label') ?? '')
-    .find((name) => name.startsWith('Made 1:1, '));
-  if (made !== undefined && (await rig.tap(made))) {
-    if (await rig.until(() => rig.host.querySelector('[data-testid="chosen"]') !== null)) {
-      reached.push('the chosen card');
-      await held(rig, scheme, 'the chosen card', report, presses);
-    }
-    await rig.tap(made);
+    .find((name) => name.startsWith('Psalms 117:1, '));
+  if (bare !== undefined) {
+    await step(bare, 'Today', 'Today by a plant');
+    await step('Your field', 'Your field', 'home from its Today');
   }
   const drawn = new Set(
     [...rig.host.querySelectorAll('img')].flatMap(

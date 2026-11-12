@@ -1,41 +1,22 @@
 /**
- * Home's card, fixed above the scroll view under the greeting: one card,
- * or nothing. With no verse chosen it is the Today card (`id=today-card`):
- * the day's headline and parts once a plan is made, and its one filled,
- * full-width button, `Start` or `Practice anyway`, when it offers one.
- * With a verse chosen it is the chosen card (`<reference> · <stage
- * words>`) and, when a tap there starts something, `Practice this verse`
- * (named `Practice <reference>`) for a review or `Learn this verse` (named
- * `Learn <reference>`) for a verse learned new. So what starts a recital
- * sits in one place, first on the screen.
+ * Home's card, fixed above the scroll view under the greeting: the Today
+ * card (`id=today-card`), or nothing: the day's headline and parts once a
+ * plan is made, and its one filled, full-width button, `Start` or
+ * `Practice anyway`, when it offers one. A tap on a plant starts its verse
+ * at once (`./screen`), so no card stands between a plant and Today
+ * (owner, 2026-11-12), and what starts the day sits in one place, first on
+ * the screen.
  */
 
 import { Option } from 'effect';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { PlantStage } from '../field';
 import type { TodayCard } from '../home/today';
 import { themed, useThemed } from '../look';
 import { Control } from './plot';
 
-/** What the chosen card says of each stage. */
-const STAGE_WORDS: Readonly<Record<PlantStage, string>> = {
-  seed: 'a seed',
-  blade: 'a blade',
-  ear: 'an ear',
-  'full corn': 'full corn',
-  'not planted': 'not planted yet',
-};
-
-/** What a tap on the chosen verse starts: a review (`Practice`) or the verse learned new (`Learn`). */
+/** What a tap on a plant starts: a review (`Practice`) or the verse learned new (`Learn`). */
 export type StartKind = 'Practice' | 'Learn';
-
-/** The verse chosen on the field: its reference, its stage, and what a tap there starts, if anything. */
-export interface Chosen {
-  readonly reference: string;
-  readonly stage: PlantStage;
-  readonly starts: Option.Option<StartKind>;
-}
 
 /** The Today card: its lines once a plan is made, and `Start` or `Practice anyway` when it offers one; nothing when it holds neither. */
 export function TodayCardView({
@@ -101,37 +82,6 @@ function TodayAction({
       />
     );
   return false;
-}
-
-/** The chosen card: the verse and its stage, and `Practice this verse` or `Learn this verse` when a tap there starts it. */
-export function ChosenCard({
-  verse,
-  pending,
-  onStart,
-}: {
-  readonly verse: Chosen;
-  readonly pending: boolean;
-  readonly onStart: (verse: string) => void;
-}) {
-  const styles = useThemed(sheets);
-  return (
-    <View testID="chosen" style={styles.card}>
-      <Text style={styles.headline}>{`${verse.reference} · ${STAGE_WORDS[verse.stage]}`}</Text>
-      {Option.match(verse.starts, {
-        onNone: () => false,
-        onSome: (kind) => (
-          <Control
-            label={`${kind} ${verse.reference}`}
-            shown={`${kind} this verse`}
-            strong
-            wide
-            pending={pending}
-            onPress={() => onStart(verse.reference)}
-          />
-        ),
-      })}
-    </View>
-  );
 }
 
 const sheets = themed((color, face) =>

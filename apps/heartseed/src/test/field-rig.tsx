@@ -232,7 +232,7 @@ export const readField = (host: Element) => {
   };
 };
 
-/** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant, the furrows' captions, the Today card's or the chosen card's texts and the end rows' (none shown reads as no bound). */
+/** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles, any text in a plant, the furrows' captions, the Today card's texts and the end rows' (none shown reads as no bound). */
 export const readoutsOf = (host: Element) => {
   const { seen, styleOf } = fieldReader(host);
   const lowest = (id: string) =>
@@ -247,7 +247,7 @@ export const readoutsOf = (host: Element) => {
     titles: lowest('row-title'),
     numbers: lowest('field-plant'),
     captions: lowest('caption'),
-    card: Math.min(lowest('today-card'), lowest('chosen')),
+    card: lowest('today-card'),
     ends: lowest('end-row'),
   };
 };
@@ -283,7 +283,7 @@ const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
 export const selectedPlants = (host: Element) =>
   [...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]')].map(nameOf);
 
-/** Home's one card as a reader reads it: which card (`today-card` or `chosen`), its line (the Today card's headline and parts, or the chosen verse and its stage), and its controls' names. */
+/** Home's one card as a reader reads it: which card (`today-card`, or the old `chosen` should one show again), its line (the Today card's headline and parts, else the card's first text), and its controls' names. */
 export const cardOf = (host: Element) => {
   const card = host.querySelector('[data-testid="today-card"],[data-testid="chosen"]');
   const today = card?.getAttribute('data-testid') === 'today-card';
@@ -338,26 +338,19 @@ const furrowFaults = (row: Element) => {
   return shown === caption ? [] : [`a furrow showing ${shown} over ${caption}`];
 };
 
-/** What home's card shows wrong: more than one of the Today card and the chosen card, one inside the scroll view, a remove's ask on home at all (hslist L5), the chosen card without a chosen plant or a chosen plant with no chosen card, plants of two verses chosen, `Practice <reference>` or `Learn <reference>` outside the chosen card, or `Start` or `Practice anyway` outside the Today card. */
+/** What home's card shows wrong: more than one card, one inside the scroll view, a remove's ask on home at all (hslist L5), a chosen card or a plant shown selected at all (a tap on a plant starts its verse at once: owner, 2026-11-12), any `Practice <reference>` or `Learn <reference>`, or `Start` or `Practice anyway` outside the Today card. */
 const cardFaults = (host: Element, controls: readonly Element[]) => {
   const out: string[] = [];
   const cards = [...host.querySelectorAll('[data-testid="today-card"],[data-testid="chosen"]')];
   if (cards.length > 1) out.push(`${cards.length} cards`);
   for (const card of cards) if (scrolled(card)) out.push(`${idOf(card)} in a scroll view`);
   if (host.querySelector('[data-testid="ask"]') !== null) out.push('the ask on home');
-  const chosen = host.querySelectorAll('[data-testid="chosen"]').length;
-  const selected = [
-    ...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]'),
-  ].map((plant) => nameParts(nameOf(plant))?.reference);
-  if (chosen > 0 !== selected.length > 0)
-    out.push(`${chosen} chosen cards over ${selected.length} chosen plants`);
-  if (new Set(selected).size > 1) out.push(`${new Set(selected).size} verses chosen`);
+  if (host.querySelector('[data-testid="chosen"]') !== null) out.push('a chosen card on home');
+  if (selectedPlants(host).length > 0) out.push('a plant shown selected');
   for (const node of controls) {
     const name = nameOf(node);
-    const inChosen = node.closest('[data-testid="chosen"]') !== null;
     const inToday = node.closest('[data-testid="today-card"]') !== null;
-    if (/^(Practice|Learn) /u.test(name) && name !== 'Practice anyway' && !inChosen)
-      out.push(`${name} outside the chosen card`);
+    if (/^(Practice|Learn) /u.test(name) && name !== 'Practice anyway') out.push(`${name} on home`);
     if ((name === 'Start' || name === 'Practice anyway') && !inToday)
       out.push(`${name} outside the Today card`);
   }

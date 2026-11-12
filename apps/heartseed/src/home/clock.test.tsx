@@ -6,12 +6,12 @@
  * to home A's rules (`homeFaults`) and to the rule's field over the disk.
  * Each case names its expected values written out: the gold dot on a seed
  * at its due once the Minutes radio in the Settings sheet (from Today,
- * reached by `Practice`, by `Your field`) makes the plan again and on no
- * plant before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
+ * reached by a tap on its plant, by `Your field`) makes the plan again and
+ * on no plant before, filled `sun` at 3:1 against its plant's backdrop,
  * and `gold` nowhere on the field; the Today card's line and `Start`
  * leading to Today as the run stands, writing nothing; and the greeting by
  * the runtime's clock at each mount of home, in the reader's own zone. The layout
- * and the choice are `screen.test.tsx`'s.
+ * and a plant's tap are `screen.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -19,7 +19,7 @@ import passage from 'virtual:heartseed-passage';
 
 import { fillContrastOf } from '../test/contrast';
 import { recallOf } from '../test/field-model';
-import { cardOf, iconOf, mount, nameOf, record, selectedPlants, text } from '../test/field-rig';
+import { cardOf, iconOf, mount, nameOf, record, text } from '../test/field-rig';
 import { computed, setSystem } from '../test/look';
 import { device } from '../test/one';
 import { openSettings, tapInSheet } from '../test/settings-rig';
@@ -60,7 +60,7 @@ const SCHEMES: readonly Scheme[] = ['light', 'dark'];
 
 for (const scheme of SCHEMES)
   describe(`home A's field by the clock in ${scheme}`, () => {
-    it('marks a seed at its due after a Minutes tap with a gold dot filled sun, at 3:1 against its plant chosen or not, and its Start leads to Today writing nothing', async () => {
+    it('marks a seed at its due after a Minutes tap with a gold dot filled sun, at 3:1 against its plant, and its Start leads to Today writing nothing', async () => {
       setSystem(scheme);
       const time = { now: DAY + 9 * HOUR };
       device.launch([
@@ -75,7 +75,6 @@ for (const scheme of SCHEMES)
         0,
       ]);
       await app.tap(`${passage.reference}, seed`);
-      await app.tap(`Practice ${passage.reference}`);
       expect(
         await app.until(() => app.headings().includes('Today') && app.buttons().includes('Say it')),
       ).toBe(true);
@@ -93,14 +92,9 @@ for (const scheme of SCHEMES)
         line: '1 verse · about 1 min | 1 to review',
         controls: ['Start'],
       });
-      await app.tap(ready);
-      expect(selectedPlants(host)).toEqual([ready]);
-      expect(fillContrastOf(by(host, 'dot')[0] ?? host)).toBeGreaterThanOrEqual(3);
       const gold = computed(theme[scheme].gold);
       const goldAlone = gold !== computed(theme[scheme].sun);
       expect(goldAlone && paintsOf(host).has(gold)).toBe(false);
-      await app.tap(ready);
-      expect(selectedPlants(host)).toEqual([]);
 
       const sets = device.calls.set;
       await app.tap('Start');

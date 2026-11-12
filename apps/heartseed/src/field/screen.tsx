@@ -2,10 +2,8 @@
  * The field as home draws it, the app's home. Fixed above the scroll view
  * sit the greeting by the hour and one card (`./card`): the Today card
  * with the day's line and its one full-width button (`Start`, or
- * `Practice anyway` when nothing is due), or, with a verse chosen, the
- * chosen card with `Practice this verse` or `Learn this verse`. Nothing
- * else is fixed, so what starts a recital is the first and largest thing
- * on the screen.
+ * `Practice anyway` when nothing is due). Nothing else is fixed, so what
+ * starts the day is the first and largest thing on the screen.
  *
  * In the scroll view: the heading `Your field` with the days sown and the
  * harvest; the label `Lists` with `Add a list` while fewer than 3 passages
@@ -15,14 +13,15 @@
  * `Settings`, which opens the Settings sheet (`../settings/sheet`) over
  * home, and `How Heartseed works`, which shows About.
  *
- * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
- * lets it go, and a tap on another moves the choice: one verse at most, the
- * screen's own state, as is whether the sheet is open, both dropped when
- * the reader leaves. With the passages unread it offers no add. Home holds
- * no remove.
+ * A tap on a plant starts its verse at once, whatever its stage, and Today
+ * shows it, with no card between (owner, 2026-11-12: "If you wanna go
+ * back, you can easily go back from that page"); a tap on a plant nothing
+ * starts (before a plan) does nothing. Whether the sheet is open is the
+ * screen's own state, dropped when the reader leaves. With the passages
+ * unread it offers no add. Home holds no remove.
  */
 
-import { Array as Arr, Option } from 'effect';
+import { Option } from 'effect';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
@@ -35,7 +34,7 @@ import { themed, useThemed } from '../look';
 import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
 import { SettingsSheet } from '../settings/sheet';
-import { ChosenCard, TodayCardView, type Chosen, type StartKind } from './card';
+import { TodayCardView, type StartKind } from './card';
 import { Control, Furrows, Icon, Legend } from './plot';
 
 /** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held. */
@@ -91,28 +90,12 @@ function EndRow({ label, onPress }: { readonly label: string; readonly onPress: 
   );
 }
 
-/** The chosen verse as the chosen card shows it: none when no furrow holds it now. */
-const chosenIn = (
-  furrows: readonly Furrow[],
-  chosen: Option.Option<string>,
-  starts: (verse: string) => Option.Option<StartKind>,
-): Option.Option<Chosen> =>
-  Option.flatMap(chosen, (reference) =>
-    Option.map(
-      Arr.findFirst(
-        furrows.flatMap((furrow) => furrow.plants),
-        (plant) => plant.reference === reference,
-      ),
-      (plant): Chosen => ({ reference, stage: plant.stage, starts: starts(reference) }),
-    ),
-  );
-
 /**
  * The field screen over `field` (its days sown and harvest), its `furrows`
  * and the reader's `passages`, greeting by `greeting`; the Today card
- * `card`, and on a chosen verse what `starts` gives it. `onToday` is
- * `Start`'s way to Today, `onStart` the way `Practice anyway`, `Practice
- * this verse` and `Learn this verse` start a verse, `onAdd` the way to the
+ * `card`, and on a plant's verse what `starts` gives it. `onToday` is
+ * `Start`'s way to Today, `onStart` the way `Practice anyway` and a tap on
+ * a plant start a verse, `onAdd` the way to the
  * Add a list sheet, `onAbout` the way to About and `onOpen` the way to a
  * furrow's list view, by its id.
  */
@@ -144,17 +127,10 @@ export function FieldScreen({
   const look = useLook();
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
-  const [choice, setChoice] = useState<Option.Option<string>>(Option.none());
   const [settings, setSettings] = useState(false);
-  const chosen = chosenIn(furrows, choice, starts);
-  const shownChoice = Option.map(chosen, (verse) => verse.reference);
-  const onChoose = (reference: string) =>
-    setChoice(
-      Option.match(shownChoice, {
-        onNone: () => Option.some(reference),
-        onSome: (now) => Option.filter(Option.some(reference), (next) => next !== now),
-      }),
-    );
+  const onPlant = (reference: string) => {
+    if (Option.isSome(starts(reference))) onStart(reference);
+  };
   return (
     <View style={look.screen}>
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
@@ -162,12 +138,7 @@ export function FieldScreen({
           <Icon name={greeting.icon} size={28} />
           <Text style={styles.greetingText}>{greeting.words}</Text>
         </View>
-        {Option.match(chosen, {
-          onSome: (verse) => <ChosenCard verse={verse} pending={false} onStart={onStart} />,
-          onNone: () => (
-            <TodayCardView card={card} pending={false} onToday={onToday} onStart={onStart} />
-          ),
-        })}
+        <TodayCardView card={card} pending={false} onToday={onToday} onStart={onStart} />
       </View>
       <ScrollView
         style={styles.scroll}
@@ -189,7 +160,7 @@ export function FieldScreen({
           </Text>
         </View>
         <Lists passages={passages} onAdd={onAdd} />
-        <Furrows furrows={furrows} chosen={shownChoice} onChoose={onChoose} onOpen={onOpen} />
+        <Furrows furrows={furrows} onPlant={onPlant} onOpen={onOpen} />
         <Legend />
         <View style={styles.ends}>
           <EndRow label="Settings" onPress={() => setSettings(true)} />

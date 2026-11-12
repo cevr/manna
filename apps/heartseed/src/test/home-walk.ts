@@ -9,11 +9,11 @@
  * lands on home, and an unread garden's on Today with no `Your field`.
  * Its commands by screen:
  * - on home: a tap on a plant drawn from each class the field holds (a
- *   ready review, today's new piece, a verse whose open item is a phrase,
- *   a planted verse whose item is done, a planted verse not in the plan, a
- *   verse not planted, a loose verse), a tap on the chosen plant again (let
- *   go), `Practice <reference>` or `Learn <reference>` on the chosen card,
- *   `Start` (exactly when the model shows a verse, R3; with `waits`, after
+ *   ready review, today's new piece, a planted verse whose item is done, a
+ *   planted verse not in the plan, a verse not planted, a loose verse),
+ *   which starts its verse at once and shows Today, or does nothing when
+ *   nothing starts it (owner, 2026-11-12: no card between a plant and
+ *   Today), `Start` (exactly when the model shows a verse, R3; with `waits`, after
  *   a wait on home that keeps the plan, `waitBegin`), `Practice anyway`
  *   (exactly when no verse shows and a planted verse starts), with nothing
  *   held a landed remove (`Open <reference>`, then on its own page `Remove
@@ -27,18 +27,16 @@
  *   none offered on an unread garden, `Your field`, a relaunch).
  *
  * The oracle, apart from the app's code: the walk's plan, hold and visit
- * as `root-walk` keeps them; the chosen verse; the furrows as
- * `furrowsModel` gives them over `listsModel`'s lists and the disk's
- * recalls, ready by `readyModel` over the plan, each with its caption;
- * home's card: with a verse chosen the chosen card, its line and
- * `Practice <reference>` (a review) or `Learn <reference>` (a fresh item)
- * exactly when `startModel` starts something (the canon by `placesOf`);
- * else the Today card, its lines by `cardLineModel` with a plan made and
+ * as `root-walk` keeps them; the furrows as `furrowsModel` gives them over
+ * `listsModel`'s lists and the disk's recalls, ready by `readyModel` over
+ * the plan, each with its caption, no plant selected; home's one card,
+ * the Today card, its lines by `cardLineModel` with a plan made and
  * `Start` exactly with a verse shown, else `Practice anyway` exactly when
  * `weakestModel` names a verse (over unread passages `Start` alone, with
  * no lines); the greeting by `greetingModel` in the host's zone at the
- * clock's now. `Practice`, `Learn` and `Practice anyway` make the visit
- * the one verse `startModel` gives and keep the hold; a remove drops its
+ * clock's now. A plant's tap and `Practice anyway` make the visit the one
+ * verse `startModel` gives (the canon by `placesOf`) and keep the hold; a
+ * remove drops its
  * span and an add appends it (`addRule`), each making the plan again; a
  * return to the foreground comes after a drawn time away and, over a read
  * garden and passages, makes the plan again at the later instant. Each
@@ -51,7 +49,6 @@
 
 import { bookName, TARGETS } from './chooser-rig';
 import { cardOf, homeFaults, iconOf, nameOf, selectedPlants, text } from './field-rig';
-import type { ModelPlantStage } from './field-model';
 import { below, random } from './garden-model';
 import {
   cardLineModel,
@@ -81,14 +78,6 @@ import { activateSheet, tapSheet } from './shelves-rig';
 
 const CANON = new Set(placesOf(CORPUS).keys());
 
-const WORDS: Readonly<Record<ModelPlantStage, string>> = {
-  seed: 'a seed',
-  blade: 'a blade',
-  ear: 'an ear',
-  'full corn': 'full corn',
-  'not planted': 'not planted yet',
-};
-
 /** A verse started from home: its visit verse, whether it is learned new, and its estimate as the card counts it (one verse's recital is under a minute: 10 s and half a second a word). */
 type Started = ModelVisitVerse & { readonly fresh: boolean; readonly seconds: number };
 
@@ -103,7 +92,6 @@ const onField = (host: Element) =>
 /** One device's walk of the home over `root-walk`'s walk and its model. */
 class HomeWalk extends Walk {
   declare held: Held;
-  chosen: string | null = null;
   /** Whether an add or a remove landed, so the passages key holds `held`. */
   changed = false;
   /** The visit the last start from home made, while it is the visit. */
@@ -114,12 +102,6 @@ class HomeWalk extends Walk {
   /** Home's rules on every frame of the field. */
   override checks(host: Element) {
     return onField(host);
-  }
-
-  /** The launch, no plant chosen. */
-  override async launch() {
-    this.chosen = null;
-    await super.launch();
   }
 
   /** What the walk counts at each arrival on home: the dots, the card's action, and the greeting. */
@@ -184,23 +166,9 @@ class HomeWalk extends Walk {
     };
   }
 
-  /** The field the model gives: the furrows, the selection, home's card and the greeting. */
+  /** The field the model gives: the furrows, no plant selected, home's Today card and the greeting. */
   wantField() {
     const furrows = this.furrows();
-    const plants = furrows.flatMap((furrow) => furrow.plants);
-    const chosen = plants.find((plant) => plant.reference === this.chosen);
-    const started = chosen === undefined ? null : this.startOf(chosen.reference);
-    const card =
-      chosen === undefined
-        ? this.todayCard()
-        : {
-            card: 'chosen',
-            line: `${chosen.reference} · ${WORDS[chosen.stage]}`,
-            controls:
-              started === null
-                ? []
-                : [`${started.item.fresh ? 'Learn' : 'Practice'} ${chosen.reference}`],
-          };
     return {
       rows: furrows.map((furrow) => ({
         title: furrow.title.replace(/\s+/g, ' ').trim(),
@@ -208,10 +176,8 @@ class HomeWalk extends Walk {
         caption: furrow.caption,
         plants: furrow.plants.map((plant) => plant.label),
       })),
-      selected: plants
-        .filter((plant) => plant.reference === this.chosen)
-        .map((plant) => plant.label),
-      card,
+      selected: [],
+      card: this.todayCard(),
       greeting: greetingModel(Intl.DateTimeFormat().resolvedOptions().timeZone, this.time.now),
     };
   }
@@ -272,14 +238,13 @@ class HomeWalk extends Walk {
     return kept;
   }
 
-  /** Home from Today's `Your field`, no plant chosen; the visit and the hold kept for `Start`. */
+  /** Home from Today's `Your field`; the visit and the hold kept for `Start`. */
   override async field(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('field');
     if (!(await rig.tap('Your field'))) return 'no Your field';
     this.screen = 'home';
     await rig.until(() => rig.headings().includes('Your field'));
-    this.chosen = null;
     this.bump('field:opened');
     this.bump('root:back');
     if (this.visit.length > 0) this.bump('visit:kept-over-field');
@@ -290,12 +255,10 @@ class HomeWalk extends Walk {
   /** The class of `verse` on the field: its open plan item's kind, else how it lies. */
   classOf(verse: string, furrows: readonly ModelFurrow[]) {
     const open = this.plan.find(
-      (item) =>
-        this.recallsNow(item.reference) <= item.recalls && verseOfRule(item.reference) === verse,
+      (item) => this.recallsNow(item.reference) <= item.recalls && item.reference === verse,
     );
-    if (this.planned() && open !== undefined)
-      return open.reference !== verse ? 'phrase' : open.fresh ? 'new' : 'ready';
-    if (this.plan.some((item) => verseOfRule(item.reference) === verse)) return 'done';
+    if (this.planned() && open !== undefined) return open.fresh ? 'new' : 'ready';
+    if (this.plan.some((item) => item.reference === verse)) return 'done';
     const loose = furrows.some(
       (furrow) =>
         furrow.source.tag === 'Loose' && furrow.plants.some((plant) => plant.reference === verse),
@@ -322,21 +285,22 @@ class HomeWalk extends Walk {
     return this.tap(verse, kind);
   }
 
+  /** A tap on `verse`'s plant: what `startModel` starts on it, at once, Today shown; nothing at all when it starts nothing, home kept. */
   async tap(verse: string, kind: string): Promise<unknown> {
-    const label = this.furrows()
+    const plant = this.furrows()
       .flatMap((furrow) => furrow.plants)
-      .find((plant) => plant.reference === verse)?.label;
-    this.trail.push(`plant:${verse}`);
-    if (label === undefined || !(await this.launched.tap(label))) return `no plant ${label}`;
-    if (this.chosen === verse) {
-      this.chosen = null;
-      this.bump('home:letgo');
-      return null;
-    }
-    if (this.chosen !== null) this.bump('home:moved');
-    this.chosen = verse;
+      .find((each) => each.reference === verse);
+    if (plant === undefined) return `no plant ${verse}`;
     this.bump(`pick:${kind}`);
-    if (this.planned() && this.startOf(verse) === null) this.bump('start:none');
+    const started = this.startOf(verse);
+    if (started !== null) {
+      this.bump(`tap:${started.item.fresh ? 'learn' : 'practice'}`);
+      this.bump(`tap:${plant.stage}`);
+      return this.startVerse(verse, plant.label);
+    }
+    this.trail.push(`plant:${verse}`);
+    if (!(await this.launched.tap(plant.label))) return `no plant ${plant.label}`;
+    this.bump('tap:nothing');
     return null;
   }
 
@@ -367,20 +331,9 @@ class HomeWalk extends Walk {
     };
     this.visit = [item];
     this.started = [item];
-    this.chosen = null;
     this.screen = 'today';
     await rig.until(() => rig.headings().includes('Today'));
     return null;
-  }
-
-  /** `Practice <reference>` or `Learn <reference>` on the chosen card, by whether its start is new. */
-  async startHere(): Promise<unknown> {
-    const verse = this.chosen ?? '';
-    const started = this.startOf(verse);
-    if (started === null) return 'no start';
-    const kind = started.item.fresh ? 'Learn' : 'Practice';
-    this.bump(`card:${kind}`);
-    return this.startVerse(verse, `${kind} ${verse}`);
   }
 
   /** `Practice anyway` on the Today card: the weakest planted verse started as a tap on it would. */
@@ -391,10 +344,9 @@ class HomeWalk extends Walk {
     return this.startVerse(verse, 'Practice anyway');
   }
 
-  /** `Start` on home, which no choice may hide; the next arrival on home has none. */
+  /** `Start` on home. */
   override async begin(): Promise<unknown> {
     if (this.hold !== null) this.bump('home:begin-held');
-    this.chosen = null;
     return super.begin();
   }
 
@@ -454,8 +406,6 @@ class HomeWalk extends Walk {
         JSON.stringify(readRule(CORPUS, this.device.disk.get(KEY), 0)) ===
           JSON.stringify(this.held),
     );
-    if (this.chosen !== null) this.bump('remove:choice dropped by leaving');
-    this.chosen = null;
     return null;
   }
 
@@ -503,7 +453,6 @@ class HomeWalk extends Walk {
     this.held = held;
     this.changed = true;
     this.make();
-    this.chosen = null;
     this.bump('made:add');
     this.bump('home:add');
     await rig.until(() => rig.headings().includes('Your field'));
@@ -540,15 +489,14 @@ class HomeWalk extends Walk {
     const roll = below(this.next, 20);
     if (roll === 10 || roll === 11) return this.changeStep(roll);
     if (roll === 19) return this.wake();
-    if (roll < 2 && this.chosen !== null) return this.tap(this.chosen, 'again');
-    if (roll < 6 && this.chosen !== null && this.startOf(this.chosen) !== null)
-      return this.startHere();
-    if (roll < 8 && this.chosen === null && this.offersBegin())
-      return this.waits ? this.waitBegin() : this.begin();
+    if (roll < 4) return this.tapPlant();
+    if (roll < 8 && this.offersBegin()) return this.waits ? this.waitBegin() : this.begin();
     if (roll < 10)
-      return this.chosen === null && !this.offersBegin() && this.weakest() !== null
+      return !this.offersBegin() && this.weakest() !== null
         ? this.practiceAnyway()
         : this.relaunch();
+    if (this.offersBegin()) return this.waits ? this.waitBegin() : this.begin();
+    if (this.weakest() !== null && roll < 15) return this.practiceAnyway();
     return this.tapPlant();
   }
 

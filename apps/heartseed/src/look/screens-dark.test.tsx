@@ -1,7 +1,7 @@
 /* oxlint-disable effect/noAsyncFunction -- a React screen test: it awaits the screen walks' promise-based runs of the root. */
 
 /**
- * The field, About and the chosen card in dark, and across a flip of the
+ * The field, About and Today by a plant's tap in dark, and across a flip of the
  * system on each (`src/test/screens-walk.ts`), as `screens.test.tsx` holds
  * them in light: every frame held to the frame oracle for the system's
  * scheme at that frame and to the rigs' own rules, the field at every plant

@@ -10,5 +10,5 @@ import { describe } from 'bun:test';
 import { settingsCase } from '../test/settings-model';
 
 describe('the Settings sheet, walked further', () => {
-  settingsCase(2, [5, 6, 7, 8, 9], 6);
+  settingsCase(6, [5, 6, 7, 8, 9], 6);
 });

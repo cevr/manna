@@ -6,10 +6,10 @@
  * rules (`homeFaults`) beside its own, over a reader who holds a passage.
  * Each case names its expected values written out: what the fixed top and
  * the scroll view each hold, the Today card with `Practice anyway` when
- * nothing is due; the choice of a verse that lies in two furrows, let go
- * and moved; `Practice <reference>` on a planted verse and `Learn
- * <reference>` on one not planted, and Today showing the practiced verse
- * after it; `Start` then leading to Today as the run stands; nothing
+ * nothing is due; a tap on a plant opening Today on its verse at once (a
+ * seed in its second furrow, a verse not planted, another seed), with no
+ * plant left selected back on home; `Start` then leading to Today as the
+ * run stands; nothing
  * written by any of it; and no add, remove or limit line over unread
  * passages. The dot and the greeting, which turn
  * on the clock, are `clock.test.tsx`'s.
@@ -94,7 +94,7 @@ const SCHEMES: readonly Scheme[] = ['light', 'dark'];
 
 for (const scheme of SCHEMES)
   describe(`home A's field in ${scheme}`, () => {
-    it('lays out the fixed top and the scroll view, and lets a verse in two furrows be chosen, let go, moved and practiced there, then Start go on with it, writing nothing', async () => {
+    it('lays out the fixed top and the scroll view, and opens Today on a plant’s verse in one tap, a seed in either furrow or a verse not planted, then Start goes on with the last, writing nothing', async () => {
       setSystem(scheme);
       expect(systemScheme()).toBe(scheme);
       const time = { now: DAY + 15 * HOUR };
@@ -154,48 +154,29 @@ for (const scheme of SCHEMES)
         shown.ends >= AA,
         Number.isFinite(shown.card + shown.ends),
       ]).toEqual([true, true, true]);
-      await rig.tap('Isaiah 41:10, seed');
-      expect(readoutsOf(host).card >= AA).toBe(true);
-      expect([selectedPlants(host), cardOf(host)]).toEqual([
-        ['Isaiah 41:10, seed', 'Isaiah 41:10, seed'],
-        { card: 'chosen', line: 'Isaiah 41:10 · a seed', controls: ['Practice Isaiah 41:10'] },
-      ]);
-      await rig.tap('Isaiah 41:10, seed', 1);
-      expect([selectedPlants(host), cardOf(host)]).toEqual([
-        [],
-        {
-          card: 'today-card',
-          line: 'All tended for today | Nothing is due right now.',
-          controls: ['Practice anyway'],
-        },
-      ]);
-      await rig.tap('Isaiah 41:12, not planted');
-      expect([selectedPlants(host), cardOf(host)]).toEqual([
-        ['Isaiah 41:12, not planted'],
-        {
-          card: 'chosen',
-          line: 'Isaiah 41:12 · not planted yet',
-          controls: ['Learn Isaiah 41:12'],
-        },
-      ]);
-      await rig.tap('Isaiah 41:11, seed');
-      expect([selectedPlants(host), cardOf(host)]).toEqual([
-        ['Isaiah 41:11, seed'],
-        { card: 'chosen', line: 'Isaiah 41:11 · a seed', controls: ['Practice Isaiah 41:11'] },
-      ]);
-
-      await rig.tap('Practice Isaiah 41:11');
       const today = () =>
         [
           text(host.querySelector('[role="heading"]')),
           text(host.querySelector('[data-testid="reference"]')),
-          rig.control('Say it') !== undefined,
         ].join('|');
-      expect(await rig.until(() => today() === 'Today|Isaiah 41:11|true')).toBe(true);
-      await rig.tap('Your field');
+      const home = async () => {
+        await rig.tap('Your field');
+        expect(await rig.until(() => by(host, 'row').length === 2)).toBe(true);
+        expect(selectedPlants(host)).toEqual([]);
+      };
+      await rig.tap('Isaiah 41:10, seed', 1);
+      expect(await rig.until(() => today() === 'Today|Isaiah 41:10')).toBe(true);
+      await home();
+      await rig.tap('Isaiah 41:12, not planted');
+      expect(await rig.until(() => today() === 'Today|Isaiah 41:12')).toBe(true);
+      await home();
+      await rig.tap('Isaiah 41:11, seed');
+      expect(await rig.until(() => today() === 'Today|Isaiah 41:11')).toBe(true);
+      await home();
+      expect(readoutsOf(host).card >= AA).toBe(true);
       expect(await rig.until(() => cardOf(host).controls.includes('Start'))).toBe(true);
       await rig.tap('Start');
-      expect(await rig.until(() => today() === 'Today|Isaiah 41:11|true')).toBe(true);
+      expect(await rig.until(() => today() === 'Today|Isaiah 41:11')).toBe(true);
       await rig.until(() => false, 8);
       expect([device.calls.set - sets, rig.faults]).toEqual([0, []]);
       await rig.leave();

@@ -14,9 +14,10 @@
  * write lands unless the store refuses it; a refused choice holds for the
  * launch and the next launch reads the disk. Home's counts line and `Start`
  * follow the plan made at a Minutes tap's instant (the session's model,
- * `src/test/session-model.ts`, and the run's, `src/test/run-model.ts`), the
- * chosen card the plant tapped. Opening and closing write nothing, and
- * leaving home closes the sheet and lets the chosen plant go.
+ * `src/test/session-model.ts`, and the run's, `src/test/run-model.ts`); a
+ * plant's tap shows Today on its verse at once, bare of the sheet's
+ * choices. Opening and closing write nothing, and leaving home closes the
+ * sheet.
  *
  * A device holds the app's passage and a stored passage of 1-12 verses
  * (Psalm 119), every verse planted three days before the first launch, so
@@ -26,7 +27,7 @@
  * and no `Voice` on any screen, Today's included), and every document frame
  * holds the sheet's rule (`src/test/settings-rig.ts`) in the model's scheme.
  * After each command the sheet's checked minutes, `Voice`'s value and the
- * checked appearance, home's counts line, `Start`, the chosen card, the
+ * checked appearance, home's counts line, `Start`, home's one card, the
  * disk's keys and every write equal the model's, with no fault.
  */
 
@@ -43,7 +44,7 @@ import { MINUTES_KEY } from '../session/service';
 import type { Scheme } from '../theme';
 import { CHOICE_KEY, ENABLED_KEY } from '../voice';
 import { recallOf } from './field-model';
-import { cardOf, selectedPlants } from './field-rig';
+import { cardOf } from './field-rig';
 import { below, keyOf, pickOf, random } from './garden-model';
 import { setSystem } from './look';
 import { KEY as PASSAGES_KEY, storedText } from './passages-model';
@@ -227,7 +228,6 @@ interface Model {
   look: Look;
   system: Scheme;
   open: boolean;
-  chosen: string | null;
   /** Each landed write's key, in order. */
   writes: string[];
   /** Whether a Minutes or Voice tap came in this launch. */
@@ -292,8 +292,7 @@ const seen = (walk: Walk) => {
     headings: app.headings(),
     counts: app.homeCounts(),
     begin: app.has('Start'),
-    chosen: card.card === 'chosen' ? (card.line.split(' · ')[0] ?? '') : null,
-    selected: selectedPlants(app.host).map((name) => name.split(', ')[0]),
+    card: card.card,
     disk: {
       minutes: device.disk.get(MINUTES_KEY),
       voice: device.disk.get(CHOICE_KEY),
@@ -311,7 +310,6 @@ const wanted = (walk: Walk): ReturnType<typeof seen> => {
   const { m } = walk;
   const items = planNow(walk);
   const recallsNow = recallsNowOf(walk);
-  const unchosen = m.chosen === null;
   return {
     sheet: m.open
       ? {
@@ -321,10 +319,9 @@ const wanted = (walk: Walk): ReturnType<typeof seen> => {
         }
       : null,
     headings: ['Your field'],
-    counts: unchosen ? [cardLineModel(items, recallsNow)] : [],
-    begin: unchosen && shownModel(madeModel(NO_RUN, items, false), recallsNow) !== null,
-    chosen: m.chosen,
-    selected: unchosen ? [] : [m.chosen ?? ''],
+    counts: [cardLineModel(items, recallsNow)],
+    begin: shownModel(madeModel(NO_RUN, items, false), recallsNow) !== null,
+    card: 'today-card',
     disk: { ...m.disk },
     writes: m.writes,
     faults: [],
@@ -454,13 +451,12 @@ const systemCommand = async (walk: Walk) => {
     cover(walk, 'system:dark-sheet');
 };
 
-/** About from the sheet, then About's way back: home with the sheet closed and no plant chosen. */
+/** About from the sheet, then About's way back: home with the sheet closed. */
 const aboutCommand = async (walk: Walk) => {
   await ensureOpen(walk);
   expect(await tapInSheet('About')).toBe(true);
   expect(await walk.app.until(() => walk.app.headings().join('|') === 'About')).toBe(true);
   walk.m.open = false;
-  walk.m.chosen = null;
   expect({ at: walk.step, modal: modalOf(), faults: walk.app.faults }).toEqual({
     at: walk.step,
     modal: null,
@@ -476,30 +472,39 @@ const plantNames = (walk: Walk) =>
     (node) => node.getAttribute('aria-label') ?? '',
   );
 
-/** A tap on a plant, the sheet closed first: it chooses its verse, or lets the chosen one go. */
-const tapPlant = async (walk: Walk, name: string) => {
-  const reference = name.split(', ')[0] ?? '';
-  walk.m.chosen = walk.m.chosen === reference ? null : reference;
-  await walk.app.tap(name);
-  await check(walk, `plant ${reference}`);
-};
-
+/** A tap on a plant, the sheet closed first: Today on its verse at once, with no choice and no `Settings`; then back to home. */
 const plantCommand = async (walk: Walk) => {
   await ensureClosed(walk);
   const names = plantNames(walk);
-  const chosen = names.find((name) => name.startsWith(`${walk.m.chosen}, `));
-  const name =
-    chosen !== undefined && walk.next() < 0.3
-      ? chosen
-      : (names[below(walk.next, names.length)] ?? '');
-  await tapPlant(walk, name);
+  const name = names[below(walk.next, names.length)] ?? '';
+  const reference = name.split(', ')[0] ?? '';
+  await walk.app.tap(name);
+  expect(
+    await walk.app.until(
+      () =>
+        walk.app.headings().includes('Today') &&
+        walk.app.host.querySelector('[data-testid="reference"]')?.textContent?.trim() === reference,
+    ),
+  ).toBe(true);
+  expect({
+    at: walk.step,
+    choices: choicesOf(walk.app.host),
+    settings: walk.app.has('Settings'),
+    faults: walk.app.faults,
+  }).toEqual({
+    at: walk.step,
+    choices: { groups: 0, names: [], checked: [], voices: [] },
+    settings: false,
+    faults: [],
+  });
+  if (walk.m.tapped) cover(walk, 'plant:today-bare');
+  await walk.app.tap('Your field');
+  await check(walk, `plant ${reference} and back`);
 };
 
-/** `Start`, the sheet closed and any plant let go first: Today shows no choice and no `Settings`; then back to home. */
+/** `Start`, the sheet closed first: Today shows no choice and no `Settings`; then back to home. */
 const beginCommand = async (walk: Walk) => {
   await ensureClosed(walk);
-  const chosen = plantNames(walk).find((name) => name.startsWith(`${walk.m.chosen}, `));
-  if (chosen !== undefined) await tapPlant(walk, chosen);
   if (!wanted(walk).begin) return;
   await walk.app.tap('Start');
   expect(await walk.app.until(() => walk.app.headings().includes('Today'))).toBe(true);
@@ -535,7 +540,6 @@ const launchOver = async (walk: Walk, start: Start | null) => {
   m.voice = voiceRule(m.disk.voice, failed(CHOICE_KEY), m.disk.old, failed(ENABLED_KEY));
   m.look = lookRule(m.disk.look);
   m.open = false;
-  m.chosen = null;
   m.tapped = false;
   m.refused = false;
   cover(walk, `stored:minutes:${minutesClass(m.disk.minutes, failed(MINUTES_KEY))}`);
@@ -601,7 +605,7 @@ export const FLOORS: Readonly<Record<string, number>> = Object.fromEntries([
     'voice:refused',
     'appearance:refused',
     'relaunch:refused-forgotten',
-    'escape:plant-kept',
+    'plant:today-bare',
     'system:dark-sheet',
     'begin:today-bare',
   ].map((name) => [name, 1] as const),
@@ -615,11 +619,9 @@ const perform = async (walk: Walk, command: Command) => {
     await check(walk, 'open');
   } else if (command === 'done' || command === 'escape') {
     await ensureOpen(walk);
-    const kept = walk.m.chosen;
     expect(await closeSettings(walk.app, command === 'done' ? 'Done' : 'Escape')).toBe(true);
     walk.m.open = false;
     await check(walk, command);
-    if (command === 'escape' && kept !== null) cover(walk, 'escape:plant-kept');
   } else if (command === 'minutes') await minutesCommand(walk);
   else if (command === 'voice') await voiceCommand(walk);
   else if (command === 'appearance') await lookCommand(walk);
@@ -638,7 +640,7 @@ const TOWARD = new Map<string, (m: Model) => Command>([
   ['appearance:refused', () => 'appearance'],
   ['system:dark-sheet', () => 'system'],
   ['begin:today-bare', (m) => (m.tapped ? 'begin' : 'minutes')],
-  ['escape:plant-kept', (m) => (m.chosen === null ? 'plant' : 'escape')],
+  ['plant:today-bare', (m) => (m.tapped ? 'plant' : 'minutes')],
   ['relaunch:refused-forgotten', (m) => (m.refused ? 'relaunch' : 'voice')],
 ]);
 
@@ -683,7 +685,6 @@ const deviceRun = async (
     look: 'system',
     system: start.system,
     open: false,
-    chosen: null,
     writes: [],
     tapped: false,
     refused: false,

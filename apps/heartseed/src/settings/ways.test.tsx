@@ -16,7 +16,7 @@
  * sheet's `About` shows About, with no appearance and no foot of its own,
  * and no later frame shows the sheet; About's
  * way back shows home with the sheet closed, and a relaunch opens home.
- * `Done` and Escape each close it with the chosen plant kept and nothing
+ * `Done` and Escape each close it with home's card and field kept and nothing
  * written. A recital that starts while it is open brings Today, and no
  * sheet is left.
  */
@@ -31,7 +31,7 @@ import { press } from '../app';
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
 import { recallOf } from '../test/field-model';
-import { cardOf, record, selectedPlants } from '../test/field-rig';
+import { cardOf, record } from '../test/field-rig';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
 import {
@@ -179,17 +179,16 @@ describe('Settings, its ways', () => {
     await again.leave();
   });
 
-  it('closes by Done and by Escape, the chosen plant kept and nothing written', async () => {
+  it('closes by Done and by Escape, home’s card and field kept and nothing written', async () => {
     launchWith([record(recallOf(passage.reference, Date.UTC(2026, 9, 1), 3, 0))]);
     const sheet = watchSheet();
     const rig = await mountBar(0, false);
     await toField(rig);
-    const plant = [...rig.host.querySelectorAll('[data-testid="field-plant"]')]
-      .map(labelOf)
-      .find((label) => label.startsWith(`${passage.reference},`));
-    expect(await rig.tap(plant ?? '')).toBe(true);
-    const chosen = { card: cardOf(rig.host), plants: selectedPlants(rig.host) };
-    expect(chosen.card.line).toBe(`${passage.reference} · a seed`);
+    const plants = () => [...rig.host.querySelectorAll('[data-testid="field-plant"]')].map(labelOf);
+    const chosen = { card: cardOf(rig.host), plants: plants() };
+    expect(chosen.plants.some((label) => label.startsWith(`${passage.reference}, seed`))).toBe(
+      true,
+    );
     const start = new Map(device.disk);
     const kept: unknown[] = [];
     for (const way of ['Done', 'Escape'] as const) {
@@ -200,7 +199,7 @@ describe('Settings, its ways', () => {
         closed,
         modal: modalOf(),
         card: cardOf(rig.host),
-        plants: selectedPlants(rig.host),
+        plants: plants(),
       });
     }
     sheet.stop();

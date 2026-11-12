@@ -152,13 +152,7 @@ const checkFields = async (prefers: 'reduce' | 'no-preference') => {
       setSystem(scheme);
       root.render(
         <View style={{ backgroundColor: theme[scheme].ground }}>
-          <Furrows
-            key={turn}
-            furrows={furrows}
-            chosen={Option.none()}
-            onChoose={() => {}}
-            onOpen={() => {}}
-          />
+          <Furrows key={turn} furrows={furrows} onPlant={() => {}} onOpen={() => {}} />
         </View>,
       );
     });

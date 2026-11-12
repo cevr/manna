@@ -2,16 +2,16 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part a: device 0
- * of seed 572, eighteen commands from its launch on home, held to the
+ * of seed 10, eighteen commands from its launch on home, held to the
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
- * one, `Start`, a choice let go and moved, `Practice` on a phrase, on a
- * planted verse and over a result held, `Learn` on a verse not planted,
- * the Today card's `Practice anyway` in the done state, a landed remove,
- * a return to the foreground on home, the morning's and the evening's
- * greetings, Today's `Your field`, and a relaunch that lands on home.
- * Parts b to g walk other devices.
+ * one, `Start`, a plant's tap straight into Today on a plan item, on a
+ * planted verse and on a verse not planted (learned whole), the Today
+ * card's `Practice anyway` in the done state, a landed remove, returns to
+ * the foreground on home and on Today over an open visit and a result
+ * held, the morning's and the evening's greetings, Today's `Your field`,
+ * and a relaunch that lands on home. Parts b to g walk other devices.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -22,13 +22,9 @@ const FLOORS = [
   'home:dot',
   'home:no-dot',
   'home:begin',
-  'home:letgo',
-  'home:moved',
-  'start:begun',
-  'start:over-held',
   'start:plant',
   'start:learn',
-  'card:Learn',
+  'tap:not planted',
   'card:Practice anyway',
   'home:anyway',
   'root:no-begin',
@@ -40,11 +36,16 @@ const FLOORS = [
   'root:relaunch-home',
   'home:remove',
   'home:wake',
+  'start:plan',
+  'today:wake',
+  'wake:over-visit',
+  'wake:over-held',
+  'wake:today-over-visit',
 ];
 
 describe('home A, walked (a)', () => {
-  it('shows the furrows, the choice, the card and the greeting as the models give them', async () => {
-    const { failure, cover } = await walkHome(572, [0], 18);
+  it('shows the furrows, the card, a plant’s start and the greeting as the models give them', async () => {
+    const { failure, cover } = await walkHome(10, [0], 18);
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);
   });

@@ -8,7 +8,7 @@
  * names its expected screens and values: a read launch with the passage due, pending then home with its plan's counts in every
  * home frame; an unread garden on Today with no field; garbled passages,
  * home with `Start` alone; a held read, pending until its release; a
- * relaunch after a choice and a visit, which keeps neither; and home with
+ * relaunch after a visit a plant's tap opened, which keeps none; and home with
  * nothing due, whose `Practice anyway` opens Today on the passage and comes
  * back with the card as it was. The launches that hold a recital are
  * `root-say.test.tsx`'s.
@@ -117,14 +117,13 @@ describe('the root', () => {
     expect(await held.end()).toEqual([]);
   });
 
-  it('forgets the choice, the visit and the screen at a relaunch', async () => {
+  it('forgets the visit a plant’s tap opened and the screen at a relaunch', async () => {
     const time = { now: DAY + 15 * HOUR };
     device.launch([record(recallOf(passage.reference, time.now - 2 * MINUTE, 3, 0)), VOICE_OFF]);
     const first = await launch('read', undefined, time);
     expect(await first.app.until(first.home)).toBe(true);
     const plant = first.app.buttons().find((label) => label?.startsWith(`${passage.reference}, `));
     await first.app.tap(plant ?? `<no plant of ${passage.reference}>`);
-    await first.app.tap(`Practice ${passage.reference}`);
     expect(
       await first.app.until(
         () =>

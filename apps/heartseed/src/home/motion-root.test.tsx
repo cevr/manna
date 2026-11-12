@@ -128,7 +128,7 @@ describe('home motion through the root', () => {
       await rig.leave();
     }));
 
-  it('M3 keeps every control visible and enabled in the first frame, and a plant tap chooses it', () =>
+  it('M3 keeps every control visible and enabled in the first frame, and a plant tap opens Today on its verse', () =>
     under('no-preference', async () => {
       const rig = await home();
       const controls = [...rig.host.querySelectorAll(CONTROLS)];
@@ -145,10 +145,10 @@ describe('home motion through the root', () => {
         );
       });
       expect(
-        by(rig.host, 'field-plant')
-          .filter((node) => node.getAttribute('aria-selected') === 'true')
-          .map((node) => labelOf(node).replace(/, ready today$/u, '')),
-      ).toEqual([`${heldVerse(2)}, seed`]);
+        await rig.until(
+          () => text(rig.host.querySelector('[data-testid="reference"]')) === heldVerse(2),
+        ),
+      ).toBe(true);
       expect(rig.faults).toEqual([]);
       await rig.leave();
     }));

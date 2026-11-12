@@ -6,8 +6,8 @@
  * with a chevron hidden from the screen reader: its tap opens the list's
  * own page, where a held passage or Handbook list is removed. Under
  * it, its plants, then a soil line. Each plant is one button named
- * `<reference>, <stage>` (then `, ready today`), selected while its verse is
- * the one chosen; inside it, hidden from the screen reader, the gold dot of
+ * `<reference>, <stage>` (then `, ready today`), whose tap starts its verse
+ * (`./screen`); inside it, hidden from the screen reader, the gold dot of
  * a plant ready today, its stage drawn with the home's icons of the scheme
  * now (bare soil before planting), and no text. The legend draws
  * the four stages the same way, over Mark 4:28. Every text is a text role
@@ -122,13 +122,11 @@ function Drawing({ stage, motion }: { readonly stage: PlantStage; readonly motio
 function Plot({
   plant,
   motion,
-  chosen,
-  onChoose,
+  onPlant,
 }: {
   readonly plant: FurrowPlant;
   readonly motion: PlantMotion;
-  readonly chosen: boolean;
-  readonly onChoose: (reference: string) => void;
+  readonly onPlant: (reference: string) => void;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
@@ -137,9 +135,8 @@ function Plot({
       testID="field-plant"
       role="button"
       aria-label={plant.label}
-      aria-selected={chosen}
-      onPress={() => onChoose(plant.reference)}
-      style={({ pressed }) => [styles.plot, chosen && styles.chosenPlot, pressed && look.pressed]}
+      onPress={() => onPlant(plant.reference)}
+      style={({ pressed }) => [styles.plot, pressed && look.pressed]}
     >
       {plant.ready && <View aria-hidden testID="dot" style={[styles.dot, styles.ready]} />}
       {!plant.ready && <View aria-hidden style={styles.dot} />}
@@ -170,14 +167,12 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
 export function FurrowRow({
   furrow,
   motion,
-  chosen,
-  onChoose,
+  onPlant,
   onOpen,
 }: {
   readonly furrow: Furrow;
   readonly motion: FurrowMotion;
-  readonly chosen: Option.Option<string>;
-  readonly onChoose: (reference: string) => void;
+  readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
 }) {
   const styles = useThemed(sheets);
@@ -212,8 +207,7 @@ export function FurrowRow({
             key={index}
             plant={plant}
             motion={motion.plants[index] ?? STILL_PLANT}
-            chosen={Option.contains(chosen, plant.reference)}
-            onChoose={onChoose}
+            onPlant={onPlant}
           />
         ))}
       </View>
@@ -225,13 +219,11 @@ export function FurrowRow({
 /** The field's rows share one motion plan per furrows value; only their icon and plant images move. */
 export function Furrows({
   furrows,
-  chosen,
-  onChoose,
+  onPlant,
   onOpen,
 }: {
   readonly furrows: readonly Furrow[];
-  readonly chosen: Option.Option<string>;
-  readonly onChoose: (reference: string) => void;
+  readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
 }) {
   const motion = useMemo(() => motionOf(furrows), [furrows]);
@@ -240,8 +232,7 @@ export function Furrows({
       key={index}
       furrow={furrow}
       motion={motion[index] ?? { icon: Option.none(), plants: [] }}
-      chosen={chosen}
-      onChoose={onChoose}
+      onPlant={onPlant}
       onOpen={onOpen}
     />
   ));
@@ -307,7 +298,6 @@ const sheets = themed((color, face) =>
       paddingVertical: 4,
       borderRadius: 12,
     },
-    chosenPlot: { backgroundColor: color.card },
     dot: { width: 8, height: 8, borderRadius: 4 },
     ready: { backgroundColor: color.sun },
     bare: {
