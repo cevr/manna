@@ -5,7 +5,8 @@
  * a value a row reads from outside its item reaches the rows only if the
  * list is told. Each case changes one such value while the list is mounted
  * (`src/test/phone-list.tsx`) and holds the rows on screen to what a list
- * mounted under the new value draws.
+ * mounted under the new value draws; `setting` changes the appearance
+ * while the list's screen is paused, and reads its rows there.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -27,7 +28,7 @@ interface Seen {
   readonly fresh: Rows;
 }
 
-type Change = 'scheme' | 'fontScale' | 'hrefOf';
+type Change = 'scheme' | 'fontScale' | 'hrefOf' | 'setting';
 
 /** A search result's row: its name, its height, and how many found lines it draws. */
 interface Found {
@@ -71,10 +72,18 @@ const empty: Rows = { hymns: {}, topics: {} };
 describe('the phones’ hymn list, changed while mounted', () => {
   it('mounts and changes with nothing on its error stream', () => {
     expect(run.stderr).toBe('');
-    expect(Object.keys(seen)).toEqual(['about', 'scheme', 'fontScale', 'hrefOf', 'end', 'found']);
+    expect(Object.keys(seen)).toEqual([
+      'about',
+      'scheme',
+      'fontScale',
+      'hrefOf',
+      'setting',
+      'end',
+      'found',
+    ]);
   });
 
-  it.each<Change>(['scheme', 'fontScale', 'hrefOf'])(
+  it.each<Change>(['scheme', 'fontScale', 'hrefOf', 'setting'])(
     'draws its rows on screen after a change of %s as a list mounted under it does',
     (change) => {
       const rows = seen[change] ?? { before: empty, live: empty, fresh: empty };

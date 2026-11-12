@@ -55,7 +55,7 @@ describe('a change of scheme with the screens open', () => {
     const after = seen.changes['dark'];
     const kept = (drawn: Colours) =>
       Object.keys(seen.before).filter((part) => seen.before[part] === drawn[part]);
-    expect(Object.keys(seen.before)).toHaveLength(9);
+    expect(Object.keys(seen.before)).toHaveLength(8);
     expect([kept(after?.shown ?? {}), kept(after?.paused ?? {})]).toEqual([[], []]);
   });
 

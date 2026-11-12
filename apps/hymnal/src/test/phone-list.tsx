@@ -5,9 +5,12 @@
  * it, changes one value a row reads from outside its item while the list
  * stays mounted, and prints the rows on screen as JSON: before the change,
  * live after it, and freshly mounted under the new value. It does so for
- * each change in turn: `scheme` (light to dark), `fontScale` (1 to 1.5) and
- * `hrefOf` (a new link for each row), on the phone `phone.ts` stands in
- * for. It also prints, under `end`, the space each list keeps after its
+ * each change in turn: `scheme` (light to dark), `fontScale` (1 to 1.5),
+ * `hrefOf` (a new link for each row) and `setting` (the appearance setting
+ * to Dark while the stack pauses the list's screen: React's `Activity`
+ * hidden, as under another screen, read while paused), on the phone
+ * `phone.ts` stands in for. The list stands under the root's
+ * `SchemeProvider`, as in the app. It also prints, under `end`, the space each list keeps after its
  * last row at a bottom inset.
  *
  * Run as `bun phone-list.tsx cover`, it mounts the home list's top instead
@@ -42,10 +45,11 @@ if (covering) {
   });
 }
 
-const { act, createElement } = await import('react');
+const { act, Activity, createElement } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const Atom = await import('effect/reactivity/Atom');
 const { HymnList } = await import('../reader/HymnList.native');
+const { applyAppearance, SchemeProvider } = await import('../appearance.native');
 const { safeArea } = await import('./one');
 
 /** Forty hymns in two topics: more rows than the screen holds. */
@@ -99,9 +103,16 @@ const mount = async (hrefOf: (n: number) => string) => {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
-  const show = async (next: (n: number) => string) => {
+  const show = async (next: (n: number) => string, paused = false) => {
     await act(async () => {
-      root.render(createElement(HymnList, { hymns, hrefOf: next, offset, byTopic: true }));
+      root.render(
+        createElement(SchemeProvider, {
+          children: createElement(Activity, {
+            mode: paused ? 'hidden' : 'visible',
+            children: createElement(HymnList, { hymns, hrefOf: next, offset, byTopic: true }),
+          }),
+        }),
+      );
     });
   };
   await show(hrefOf);
@@ -128,10 +139,18 @@ const changes = {
     after: hrefs.first,
   },
   hrefOf: { make: (list: List) => list.show(hrefs.second), after: hrefs.second },
+  setting: {
+    make: async (list: List) => {
+      await list.show(hrefs.first, true);
+      await act(async () => applyAppearance('dark'));
+    },
+    after: hrefs.first,
+  },
 };
 
 /** The rows before `change`, live after it, and in a list mounted after it. */
 const observe = async (change: keyof typeof changes) => {
+  applyAppearance('system');
   device.set({ scheme: 'light', fontScale: 1 });
   const list = await mount(hrefs.first);
   const before = rowsOn(list.host);
@@ -321,6 +340,7 @@ process.stdout.write(
     scheme: await observe('scheme'),
     fontScale: await observe('fontScale'),
     hrefOf: await observe('hrefOf'),
+    setting: await observe('setting'),
     end: [
       await endOf(34, hymns, true),
       await endOf(0, hymns, true),
