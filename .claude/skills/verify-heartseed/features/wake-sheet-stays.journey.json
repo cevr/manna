@@ -1,0 +1,26 @@
+{
+  "feature": "wake-sheet-stays",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "wake-sheet-stays",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Done" }, { "shows": "label=5 min" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "wake-sheet-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=All tended for today" },
+        { "hides": "label=Start" },
+        { "hides": "label=5 min" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
