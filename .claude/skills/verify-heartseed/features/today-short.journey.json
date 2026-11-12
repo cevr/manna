@@ -1,0 +1,40 @@
+{
+  "feature": "today-short",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "today-short-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-short-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-short-list",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [{ "shows": "label=Psalms 91:1, not planted" }],
+      "receipt": "none"
+    },
+    {
+      "name": "lines-short",
+      "action": "tap",
+      "target": "label=Psalms 91:1, not planted",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "id=passage" },
+        { "shows": "label=Psalms 91:1" },
+        { "hides": "id=line-0" }
+      ],
+      "receipt": "none"
+    }
+  ]
+}

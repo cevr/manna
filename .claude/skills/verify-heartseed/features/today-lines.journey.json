@@ -1,0 +1,36 @@
+{
+  "feature": "today-lines",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "today-lines-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-lines-list",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [{ "shows": "label=Isaiah 43:2, not planted" }],
+      "receipt": "none"
+    },
+    {
+      "name": "lines-plain",
+      "action": "tap",
+      "target": "label=Isaiah 43:2, not planted",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "id=reference" },
+        { "shows": "label=Isaiah 43:2" },
+        { "shows": "id=line-0" },
+        { "shows": "id=line-4" },
+        { "shows": "label=Listen" },
+        { "hides": "id=line-6" }
+      ],
+      "receipt": "none"
+    }
+  ]
+}

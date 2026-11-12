@@ -86,68 +86,57 @@ per word, lit as read) in place of `id=passage` (`light.md`).
 After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
 waits for `label=Isaiah 41:10`) and `run.md` through `run-due` (the
 home `Continue` opens at `first-home` is the done state, with no
-`Start`, so it is not this row's start), its Drive's two commands are this feature's drive, the
-open waiting for the stage line (`id=stage`), which shows only once the
-garden is read and the run shows the passage:
-
-```bash
-sim open / --expect "id=stage" --no-relaunch
-sim snapshot today
-```
-
-→ `open` is ok, and the snapshot (`$EVIDENCE/snapshots/today.txt`) lists,
-under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`,
-37 word nodes each labelled one character (the first letters of the
-passage above, with no `¶`, `[`, `]`, `‹` or `›`) and no node holding the
-passage whole, a label starting `Stage: ` (after the first minute,
-`Stage: seed`),
-a node `Say it`, a node `Your field` and the counts line, with no
-`Minutes` radio, no `Voice`, no `Next`, no `Listening` and no grade
-(`Again`, `Hard`, `Good`, `Easy`). A short label can appear on two nodes, so check that the
-labels are present, not how many nodes carry them.
-Count those nodes, report the counts, then delete the snapshot: it holds
-the passage's words.
+`Start`, so it is not this row's start), `run.md`'s `run` journey is this
+feature's drive: its last step, `run-due`, waits for the stage line
+(`id=stage`), which shows only once the garden is read and the run shows
+the passage. Its receipt, `run/run-due`
+(`$EVIDENCE/snapshots/run-03-run-due.txt`), lists under
+`[application] "Heartseed"` the text nodes `Today`, `Isaiah 41:10`, 37
+word nodes each labelled one character (the first letters of the passage
+above, with no `¶`, `[`, `]`, `‹` or `›`) and no node holding the passage
+whole, a label starting `Stage: ` (after the first minute,
+`Stage: seed`), a node `Say it`, a node `Your field` and the counts line,
+with no `Minutes` radio, no `Voice`, no `Next`, no `Listening` and no
+grade (`Again`, `Hard`, `Good`, `Easy`). A short label can appear on two
+nodes, so check that the labels are present, not how many nodes carry
+them. Count those nodes, report the counts, then delete the receipt: it
+holds the passage's words.
 
 ## Lines drive (`lines-plain`, `lines-short`)
 
-From home, open the list and the two rows (`list.md`):
+From home (any home: the journeys start at the Today card), open the
+list and the two rows (`list.md`). A receipt holds no id and no frame, so
+each row's readout is a raw snapshot (`first.md`, Driving it) taken right
+after its journey:
 
-```bash
-sim tap "label=Open Protection & Fear"
-sim tap "label=Isaiah 43:2, not planted"
-sim open / --expect "id=session" --no-relaunch
-sim snapshot lines-plain
-```
+1. `sim journey today-lines` → `"ok":true`: `Open Protection & Fear`,
+   then `Isaiah 43:2, not planted`; its last step, `lines-plain`, shows
+   `id=reference` `Isaiah 43:2`, `id=line-0` and `id=line-4` and hides
+   `id=line-6` (the driver's wait did not find `line-5` live, though the
+   raw snapshot holds it hittable: the raw snapshot counts it). Its raw snapshot → the `lines-plain` readout above, from
+   the tree's ids and frames: count each `line-<i>`'s whitespace runs and
+   report the counts and the `line-<i>` frames' x and y, never the words
+   (a `break-<k>` is hidden from VoiceOver, so the tree holds none).
+2. `light.md`'s `lines-read` and `sayit.md`'s `lines-say` ride this Today
+   when their drives do (`light-lines`, `light-lines-done`,
+   `sayit-lines`).
+3. `sim journey today-short` → `"ok":true`: `Your field`,
+   `Open Protection & Fear`, then `Psalms 91:1, not planted`; its last
+   step, `lines-short`, shows `id=passage` and hides `id=line-0`. Its raw
+   snapshot → one `id=passage` text, no `line-` and no `break-`.
 
-→ the `lines-plain` readout above, from the tree's ids and frames: count
-each `line-<i>`'s whitespace runs and report the counts and the
-`line-<i>` frames' x and y, never the words (a `break-<k>` is hidden from
-VoiceOver, so the tree holds none). Then back home and to the short verse:
-
-```bash
-sim tap "label=Your field"
-sim tap "label=Open Protection & Fear"
-sim tap "label=Psalms 91:1, not planted"
-sim open / --expect "id=session" --no-relaunch
-sim snapshot lines-short
-```
-
-→ one `id=passage` text, no `line-` and no `break-`. Delete both snapshots:
-they hold verse words.
+Delete the raw snapshots: they hold verse words.
 
 ## Plant-set drive and receipt (`today-plantset`)
 
 Branch at `first-home` of the same fresh, verifier-owned drive used for
-`first-plantset`. After its doctor, tap and wait without relaunch:
-
-```bash
-sim tap "label=Isaiah 41:10, seed"
-sim open / --expect "id=session" --no-relaunch
-sim snapshot today-plantset
-```
+`first-plantset`. After its doctor, one tap on the plant, with no
+relaunch: `sim journey today-plantset` → `"ok":true`.
+`today-plantset/today-plantset`: Today, `Isaiah 41:10`, `Stage: seed`,
+`Say it` and `Your field`.
 
 Expect the row's labels and semantic parity above; report only counts,
-booleans and the reference, then delete the snapshot. Follow `run.md`
+booleans and the reference, then delete the receipt. Follow `run.md`
 and `grow.md` for due, recite, peek, Again and restart, only as their
 timing permits, without time or storage manipulation. No new overnight
 or full-corn drive is required. Doctor after and down at the end under

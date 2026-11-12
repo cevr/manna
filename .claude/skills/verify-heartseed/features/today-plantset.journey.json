@@ -1,0 +1,27 @@
+{
+  "feature": "today-plantset",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "today-plantset-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "none"
+    },
+    {
+      "name": "today-plantset",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
