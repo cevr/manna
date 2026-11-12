@@ -1,0 +1,57 @@
+{
+  "feature": "home-dot",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-dot-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-dot-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-dot-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=5 min" }, { "shows": "label=Done" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-dot-minutes",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "home-dot",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Start" },
+        { "shows": "label=Isaiah 41:10, seed, ready today" },
+        { "hides": "label=Begin" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-start-run",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
