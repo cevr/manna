@@ -151,6 +151,8 @@ const selectorsOf = (step: Step): ReadonlyArray<string> => {
 interface Spelled {
   readonly exact: ReadonlySet<string>;
   readonly templates: ReadonlyArray<ReadonlyArray<string>>;
+  /** What the journey types (`fill`): a label's hole may show it back (`No hymn matches “${q}”.`). */
+  readonly typed: ReadonlyArray<string>;
 }
 
 const STRING = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"/g;
@@ -163,7 +165,6 @@ const HOLE = /\$\{[^}]*\}/;
 const COMMENT = /\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm;
 /** A word of two letters or more: a template whose own text has none (`${a} ${b}`) names nothing. */
 const WORD = /\p{L}{2,}/u;
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** The strings, template literals and JSX texts of `sources`, their comments left out. */
 const spelled = (sources: ReadonlyArray<string>): Spelled => {
@@ -182,30 +183,52 @@ const spelled = (sources: ReadonlyArray<string>): Spelled => {
       else if (WORD.test(parts.join(' '))) templates.push(parts);
     }
   }
-  return { exact, templates };
+  return { exact, templates, typed: [] };
 };
 
 /**
  * Whether `value` is spelled whole, as a string, or fills a template. A
  * testID's hole holds numbers joined by `-` (`chord-${at}-${n}`, `at` being
- * `1-1`), so `hymn-${…}` gives
- * no word-named id; a label's hole holds any text, and a label matches in any
- * case, as agent-device matches it.
+ * `1-1`), so `hymn-${…}` gives no word-named id. A label's hole holds a
+ * number or one whole string the source spells (`{tab.name}` is `Sections`),
+ * never any text, so `Play ${n}` does not draw `Play hymn 100`; a label
+ * matches in any case, as agent-device matches it.
  */
 const isSpelled = (from: Spelled, value: string, by: 'id' | 'label') => {
   if (from.exact.has(value)) return true;
   const anyCase = by === 'label';
-  if (anyCase && [...from.exact].some((one) => one.toLowerCase() === value.toLowerCase()))
-    return true;
-  let hole = '\\d+(?:-\\d+)*';
-  let flags = 's';
-  if (anyCase) {
-    hole = '.+';
-    flags = 'is';
-  }
-  return from.templates.some((parts) =>
-    new RegExp(`^${parts.map(escape).join(hole)}$`, flags).test(value),
-  );
+  const fold = (text: string) => {
+    if (anyCase) return text.toLowerCase();
+    return text;
+  };
+  const known = new Set([...from.exact].map(fold));
+  const typed = new Set(from.typed.map(fold));
+  if (known.has(fold(value))) return true;
+  const fills = (piece: string) =>
+    ID_HOLE.test(piece) ||
+    (anyCase && (/^\d+$/.test(piece) || known.has(piece) || typed.has(piece)));
+  return from.templates.some((parts) => fillsTemplate(fold(value), parts.map(fold), fills));
+};
+
+/** A testID's hole: numbers joined by `-`. */
+const ID_HOLE = /^\d+(?:-\d+)*$/;
+
+/**
+ * Whether `value` is `parts` joined by holes, each hole a non-empty piece
+ * `fills` takes, trying every place a hole may end.
+ */
+const fillsTemplate = (
+  value: string,
+  parts: ReadonlyArray<string>,
+  fills: (piece: string) => boolean,
+): boolean => {
+  const [head = '', ...rest] = parts;
+  if (!value.startsWith(head)) return false;
+  const after = value.slice(head.length);
+  if (rest.length === 0) return after === '';
+  for (let end = 1; end <= after.length; end++)
+    if (fills(after.slice(0, end)) && fillsTemplate(after.slice(end), rest, fills)) return true;
+  return false;
 };
 
 /** The compiled data a label may come from: each hymn's title by number, and the topics' names. */
@@ -236,13 +259,18 @@ const drawable = (from: Spelled, data: Data, selector: string) => {
 
 /** The selectors of each journey the app cannot draw, as `<feature>/<step> <selector>`. */
 const undrawn = (journeys: ReadonlyArray<Journey>, from: Spelled, data: Data) =>
-  journeys.flatMap((journey) =>
-    journey.steps.flatMap((step) =>
+  journeys.flatMap((journey) => {
+    const typed = journey.steps.flatMap((step) => {
+      if (step.action !== 'fill') return [];
+      return [step.value];
+    });
+    const own: Spelled = { exact: from.exact, templates: from.templates, typed };
+    return journey.steps.flatMap((step) =>
       selectorsOf(step)
-        .filter((selector) => !drawable(from, data, selector))
+        .filter((selector) => !drawable(own, data, selector))
         .map((selector) => `${journey.feature}/${step.name} ${selector}`),
-    ),
-  );
+    );
+  });
 
 /**
  * The steps of an iOS journey that turn a page with a sideways `scroll
@@ -336,6 +364,9 @@ describe('verify-hymnal journey targets', () => {
           '/** The page\'s head, `id="hymn-head"`. */\nconst c = `hymn-${name}`;\n// it\'s "hymn-said"',
           'const d = `${a} ${b}`;',
           '<Text>{tab.name}, all at once</Text>',
+          "const tab = { name: 'Lists' };",
+          '<Text>{`Pause ${track.number}`}</Text>',
+          'const e = `No hymn matches “${query}”.`;',
         ]);
         const data: Data = {
           titles: new Map([[33, 'Song']]),
@@ -382,9 +413,15 @@ describe('verify-hymnal journey targets', () => {
                 { shows: 'id=PAGER-PAGE' },
                 { hides: 'label=Keep awake' },
                 { shows: 'label=Open the player' },
+                { shows: 'label=Pause 7' },
+                { shows: 'label=Pause hymn 7' },
+                { shows: 'label=Sections, all at once' },
+                { shows: 'label=No hymn matches “qq”.' },
+                { shows: 'label=No hymn matches “rr”.' },
               ],
             },
             { name: 'point', action: 'gesture', from: '3,437', dx: 10, dy: 0 },
+            { name: 'type', action: 'fill', target: 'id=pager-page', value: 'qq' },
           ],
         });
         const journey = yield* loadText('hymn-reader', text);
@@ -397,6 +434,9 @@ describe('verify-hymnal journey targets', () => {
           'hymn-reader/pan id=PAGER-PAGE',
           'hymn-reader/pan label=Keep awake',
           'hymn-reader/pan label=Open the player',
+          'hymn-reader/pan label=Pause hymn 7',
+          'hymn-reader/pan label=Sections, all at once',
+          'hymn-reader/pan label=No hymn matches “rr”.',
         ]);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
