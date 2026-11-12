@@ -1,0 +1,30 @@
+{
+  "feature": "home-motion",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-motion-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-motion-reach",
+      "action": "relaunch",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "shows": "label=Isaiah 41:10, seed, ready today" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-motion-reach-today",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed, ready today",
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Isaiah 41:10" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
