@@ -5610,3 +5610,33 @@ The form of an entry, each field on its own line:
 - **Wrong:** light.md's and sayit.md's drive steps asked for the `break-` ids in prose (`the break ids`, `the \`break-\` ids`) after their rows had moved to word frames, and the hidden-ids check read only numbered ids and targets.
 - **Cause:** The check matched the forms the first fix removed, not every way a step can ask for a hidden node.
 - **Guard:** code: `apps/heartseed/scripts/hidden-ids.test.ts` `faults a clause that asks for a hidden family’s or id’s nodes in any phrasing, unless it says they are hidden`; code: `apps/heartseed/scripts/hidden-ids.test.ts` `faults light.md’s and sayit.md’s drive steps as they read at round 2`
+
+### sim-scroll-swipes-from-a-fixed-footer
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "Psalms 119:30 clip scroll is non-hittable at the same y2952.33 on base/head; investigate the native driver's scroll targeting/movement. Guard: check actual scroll movement."
+- **Source:** hymnapp/batch-vb-21-findings.md o1 (On base / follow-ups, its first item)
+- **Wrong:** `sim scroll screen down` on Heartseed's chooser printed `ok` twelve times while Psalms 119 never moved, and a scroll to `Psalms 119:30` gave up, so the verse could not be reached.
+- **Cause:** agent-device's own scroll swipes the middle 65% of the whole screen (y 721 to 153 on an 874 pt iPhone); the verses' scroll view ends at y 704, so the swipe started on the fixed footer and moved nothing, and the driver never looked whether the content moved. The driver now pans inside the scroll view that scrolls that way and checks the content moved (`packages/sim/src/screen.ts`).
+- **Guard:** code: `packages/sim/src/screen.test.ts` `a scroll down pans inside the verses, from inside the view, never from the footer`; code: `packages/sim/src/sim.slow.test.ts` `a scroll whose pan leaves the content where it was, while the view hides more, fails ScrollStuck; at the end it is no fault`
+
+### sim-boot-server-dies-with-the-shell-call
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "verify-hymnal's dev server started by a foreground `sim boot` exited within minutes (as on verify-heartseed)"
+- **Source:** hymnapp/hymguards8/round-1-findings.md o2 (On base, its second item)
+- **Wrong:** A dev server that a short shell call's `sim boot` started died within about five minutes, silently; it stayed up only while a long-lived shell held the boot.
+- **Cause:** The server was started with `nohup` in the background of the caller's own process group, and the host's shell tool signals that group after the call ends. The start now leads a session and process group of its own (`packages/sim/src/os.ts`).
+- **Guard:** code: `packages/sim/src/os.slow.test.ts` `a command that spawns through the live Os leaves its child in a process group of its own, so a signal to the command's group (a shell ending the call) never reaches it`
+
+### sim-readout-lived-in-receipts
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "Promote the verse-free label/count readout into the existing sim tool rather than private verifier tooling."
+- **Source:** hymnapp/batch-vb-21-findings.md o4 (On base / follow-ups, its fourth item)
+- **Wrong:** Each Heartseed verifier wrote its own snapshot reader in its receipts to count labels and frames without printing a verse, each with its own allow list.
+- **Cause:** The shared driver had no reader that gives the screen as numbers; only the hymnal had one, in its own scripts. `sim read` now gives it (`packages/sim/src/screen.ts`).
+- **Guard:** code: `packages/sim/src/screen.test.ts` `carries no name the caller did not ask, and a value's digits alone`
