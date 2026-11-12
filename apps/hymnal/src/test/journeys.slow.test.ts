@@ -67,6 +67,7 @@ const playing = { playing: true } as const;
  */
 const SCENES = {
   about: {
+    start: home(),
     hymn: hymn(),
     'about-sheet': about,
     'about-close': hymn(),
@@ -104,6 +105,7 @@ const SCENES = {
     'tab-put-back': home(),
   },
   'chords-and-capo': {
+    start: home(),
     off: hymn(),
     chords: hymn(100, chords),
     'chords-key': hymn(100, dials),
@@ -147,6 +149,7 @@ const SCENES = {
     'chords-mode-kept-close': hymn(),
   },
   feel: {
+    start: home(),
     'feel-voice': hymn(),
     'chords-on': hymn(100, chords),
     dials: hymn(100, dials),
@@ -174,6 +177,7 @@ const SCENES = {
     close: hymn(),
   },
   follow: {
+    start: home(),
     hymn: hymn(),
     'sound-off': hymn(),
     'follow-play': hymn(100, playing),
@@ -199,6 +203,7 @@ const SCENES = {
     'list-tabs-gone': home(),
   },
   'hymn-reader': {
+    start: home(),
     'hymn-reader': hymn(),
     'scroll-end': hymn(),
     'scroll-back': hymn(),
