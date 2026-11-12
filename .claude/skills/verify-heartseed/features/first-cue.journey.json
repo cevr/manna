@@ -1,0 +1,28 @@
+{
+  "feature": "first-cue",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "first-cue-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-cue-skip",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-cue",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "shows": "label=Say it with help" }, { "shows": "label=Say it" }],
+      "receipt": "none"
+    }
+  ]
+}
