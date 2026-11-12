@@ -3,7 +3,8 @@
  * (`src/test/setup.ts`) in each of its rows, with a stand-in `#`. While the
  * drums are open, every view of the bar but the `#` lets a touch through to
  * the drums' backdrop beneath it, which closes the drums; with the drums
- * shut, the bar's controls take their touches.
+ * shut, the bar's controls take their touches. While the key button's wheel
+ * is open (`wheelOpen`) the bar fades and takes no touch at all.
  *
  * A view lets a touch through when its computed `pointer-events` is `none`:
  * react-native-web writes `box-none` as `none` on the view itself and `auto`
@@ -12,12 +13,14 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { RegistryProvider } from '@effect/atom-react';
+import { RegistryContext, RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
+import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Pressable, Text } from 'react-native';
 
+import { wheelOpen } from '~/player/bar';
 import { searchAt, type Searching, searchOpen } from '~/reader/place';
 
 import { FindBar } from './FindBar';
@@ -133,6 +136,42 @@ describe('the find bar over the open drums', () => {
     );
     expect(touchable(PAGE, searchAt(PAGE, 'field'), Tiles.Hidden(), false)).toEqual(
       expect.arrayContaining(['input#find-box', 'button#find-cancel']),
+    );
+  });
+});
+
+describe('the find bar under the key button’s wheel', () => {
+  it('fades to at most 0.35 and takes no touch while the wheel is open, and is whole again once it shuts', () => {
+    const registry = AtomRegistry.make();
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    act(() =>
+      root.render(
+        <RegistryContext value={registry}>
+          <FindBar path={PAGE} bottom={0} drums={<></>} drumsOpen={false} hash={hash} />
+        </RegistryContext>,
+      ),
+    );
+    const find = Option.getOrThrow(
+      Option.fromNullishOr(host.querySelector('[data-testid="find"]')),
+    );
+    const seen = () => Number.parseFloat(getComputedStyle(find).opacity || '1');
+    const taking = () =>
+      [find, ...find.querySelectorAll('*')]
+        .filter((view) => pointerEvents(view) !== 'none')
+        .map(named);
+    act(() => registry.set(wheelOpen, true));
+    const open = { seen: seen(), taking: taking() };
+    act(() => registry.set(wheelOpen, false));
+    const shut = { seen: seen(), taking: taking() };
+    act(() => root.unmount());
+    host.remove();
+    registry.dispose();
+    expect({ dim: open.seen <= 0.35, taking: open.taking }).toEqual({ dim: true, taking: [] });
+    expect(shut.seen).toBe(1);
+    expect(shut.taking).toEqual(
+      expect.arrayContaining(['button#find-search', 'button#find-number']),
     );
   });
 });

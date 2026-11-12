@@ -351,6 +351,13 @@ export const glideOf = (before: FindAt, after: FindAt): Glide => {
  */
 export const raised = Atom.make(0).pipe(Atom.keepAlive);
 
+/**
+ * Whether the key button's wheel is open over the bar (`useWheelOpen`):
+ * while it is, the find bar fades with the wheel's backdrop and takes no
+ * touch, and stays where it stands.
+ */
+export const wheelOpen = Atom.make(false).pipe(Atom.keepAlive);
+
 /** Where the reader is, for the find drums: the route shown, and where the `#` stands on it. */
 export interface FindPlace {
   readonly path: string;

@@ -55,7 +55,9 @@ under its number, and the refrain written out each time it is sung.
   Night field (2026-11-11, base C2): the night 42 % toward black as the
   page, the bar and lines mixed from it toward the sky, with the s1
   Analogous accents: a cyan for the numbers, the buttons and a chosen
-  tab, a lavender for the chords, each a fixed OKLCH value written as hex
+  tab, and a periwinkle for the chords a step dimmer and more coloured
+  than the words (owner, 2026-11-12: `oklch(0.75 0.13 283)`, so chords and
+  words part at the same weight), each a fixed OKLCH value written as hex
   in `theme.ts`. A
   screen reads a role, never a hex value. On
   iOS each role is a `DynamicColorIOS` (`src/color.native.ts`), on the web
@@ -210,18 +212,29 @@ sheet's key and capo dials (over the hymn's own page, the hymn having
 chords) and its `Chord placement` dial, and Settings' `Chord style`,
 `Chord placement` and `Tuner` (where the tuner has an ear). With chords
 off a hold of `Key` (350 ms) turns them on, as a tap does. With chords on,
-on a hymn with a printed key, the hold opens the key button's wheel
-around the press (`src/player/wheel.ts`, the rule; `KeyWheel.tsx`, its
-view): its items fan up and to the right, 140 points out and 26° apart,
-`Tuner` (with the ear) at 98°, `Key ♭` 72°, `Key ♯` 46°, `Reset` 20° and
-`Chords off` −6°, the origin held 84 points from the screen's left edge.
-Still holding, the finger slides; it is over an item beyond 34 points out
-and within 20° of the item's angle, which then grows on the button's fill
-with a tick (`choose`). Letting go over an item does it once: the tuner,
+on a hymn with a printed key, the hold opens the key button's wheel out of
+`Key` (`src/player/wheel.ts`, the rule; `wheelmotion.ts`, its motion;
+`KeyWheel.tsx`, its view). Its origin is fixed by the bar, 47 points from
+the screen's left edge on the bar row's centre line, and `Key` is its
+centre, ringed while the wheel is up; no dot marks it. Its items are
+112-point pills on the Arc, rows 58 points apart over the bar and centres
+on a quarter ellipse up and to the right: `Chords off` lowest, then
+`Reset`, `Key ♯`, `Key ♭` and `Tuner` (with the ear) highest, up and a
+little right, each in its own direction from `Key` (23°, 41°, 54°, 65° and
+75°), so no item touches another, the bar or the find bar at any width
+from 375 to 440 points. The items spring out of `Key` along their rays,
+the nearest first, and at a release fall back into it, the picked one
+last; with Reduce Motion they fade in and out in place. The page dims
+under them, and the bar's other controls and the find bar fade and take
+no touch (`wheelOpen`). Still holding, the finger slides; beyond 34 points
+out and above the bar it is over the item whose direction is nearest its
+own, which then lifts on the button's fill, with a dotted ray to it from
+`Key` and a tick (`choose`). Letting go over an item does it once: the tuner,
 the key a semitone down or up with the dials closed (`StepKey` in
 `thumb.ts`, whether they were open or not; a turn of the key dial itself
 keeps them open), the printed key with no capo, or chords
-off; letting go in the middle, or a cancelled touch, does nothing. A press
+off; letting go in the middle or over the bar, or a cancelled touch, does
+nothing. A press
 that drifts 10 points before its hold is the bar's swipe's or the page's.
 The wheel is hidden from VoiceOver, which reaches its items as `Key`'s
 actions (`Open tuner`, `Key down`, `Key up`, `Reset key`, and the
@@ -663,8 +676,8 @@ Android haptics only.
   to ±50 cents (`needleOf`), and lights a string after 8 frames in a row
   in tune on it (`latch`).
 - `src/tuner/Tuner.tsx` is the sheet at `/tuner`, opened by the chord
-  sheet's `Tuner` button, the key button's wheel's `Tuner` (and its `Open
-  tuner` action) and Settings' `Tuner` row, each shown only where the tuner
+  sheet's `Tuner` button, the key button's wheel's `Tuner` (its highest item, up and a
+  little right of `Key`, and its `Open tuner` action) and Settings' `Tuner` row, each shown only where the tuner
   has an ear (iOS); the wheel and the row only with chords on, and the chord sheet is reached from a
   chord, which shows only then. It says the reading at most once a second,
   shows `Open Settings` when the microphone is denied and `Tap to listen

@@ -8,7 +8,7 @@ import { useAtomSet } from '@effect/atom-react';
 import { Option } from 'effect';
 import { createContext, use, useLayoutEffect } from 'react';
 
-import { raised } from './bar';
+import { raised, wheelOpen } from './bar';
 import type { HymnPlayer } from './player';
 
 export const PlayerContext = createContext<Option.Option<HymnPlayer>>(Option.none());
@@ -31,5 +31,18 @@ export const useRaised = (open: boolean) => {
     if (!open) return;
     set((count) => count + 1);
     return () => set((count) => count - 1);
+  }, [open, set]);
+};
+
+/**
+ * Tells the find bar the key button's wheel is open (`wheelOpen`) while
+ * `open`, and shut again as it shuts or leaves the screen.
+ */
+export const useWheelOpen = (open: boolean) => {
+  const set = useAtomSet(wheelOpen);
+  useLayoutEffect(() => {
+    if (!open) return;
+    set(true);
+    return () => set(false);
   }, [open, set]);
 };

@@ -30,6 +30,8 @@
  * While the drums are open only the `#` takes a touch (`inReach`): every
  * other view of the bar, the capsule's own background too, lets a touch
  * through to the backdrop beneath it, which closes the drums.
+ * While the key button's wheel is open (`wheelOpen`) the whole bar fades
+ * with the wheel's backdrop and takes no touch, where it stands.
  */
 
 import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -56,6 +58,7 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -64,9 +67,10 @@ import Animated, {
 
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
-import { BAR_SPRING, FindAt, glideOf, HASH, HASH_GAP } from '~/player/bar';
+import { BAR_SPRING, FindAt, glideOf, HASH, HASH_GAP, wheelOpen } from '~/player/bar';
 import { MOST_SCALE } from '~/player/DialView';
 import { useReduceMotion } from '~/player/motion';
+import { BACKDROP, FADE, REDUCED } from '~/player/wheelmotion';
 import { modeAt, searchAt, searchOpen, searchQuery, type Searching } from '~/reader/place';
 
 import {
@@ -87,6 +91,8 @@ import { searchLabel } from './Results';
 const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
 /** The capsule while the drums are open: a touch on its own background passes through to the backdrop; its `#` still takes one. */
 const passThrough = { pointerEvents: 'box-none' } as const;
+/** The bar while the key button's wheel is open: no view of it takes a touch. */
+const untouched = { pointerEvents: 'none' } as const;
 
 /** The folded capsule's width: its two buttons side by side. */
 const FOLDED = 2 * HASH;
@@ -98,6 +104,13 @@ const GROWTH = { duration: 300, dampingRatio: 1 } as const;
 const GLIDE = { duration: 350, dampingRatio: 1 } as const;
 /** The chosen mark's fade as it shows over a control or leaves one with none chosen. */
 const MARK_FADE = { duration: 150 } as const;
+
+/** The fade as the key button's wheel opens (`open`) or shuts: the wheel's backdrop's own, on an ease-out in and a line out. */
+const dimOf = (open: boolean, reduced: boolean) => {
+  if (reduced) return { duration: (open && REDUCED.enter) || REDUCED.exit, easing: Easing.linear };
+  if (open) return { duration: BACKDROP.enter, easing: Easing.out(Easing.cubic) };
+  return { duration: BACKDROP.exit, easing: Easing.linear };
+};
 
 /** Cancel's work, for the bar's `Cancel` and Android's Back: the query cleared, the keyboard lowered, search off. */
 export const useCancelSearch = () => {
@@ -246,9 +259,18 @@ export function FindBar({
     seen.value = 0;
     seen.value = withTiming(1, { duration: 150 });
   }, [bottom, reduced, stand, seen]);
+  const wheel = useAtomValue(wheelOpen);
+  const dim = useSharedValue(0);
+  useEffect(() => {
+    dim.value = withTiming(Number(wheel) * BACKDROP.opacity, dimOf(wheel, reduced));
+  }, [wheel, reduced, dim]);
   const placed = useAnimatedStyle(() => {
     const lift = (keyboard.value > 0 && Math.max(0, keyboard.value + HASH_GAP - stand.value)) || 0;
-    return { bottom: stand.value, opacity: seen.value, transform: [{ translateY: -lift }] };
+    return {
+      bottom: stand.value,
+      opacity: seen.value * (1 - FADE * dim.value),
+      transform: [{ translateY: -lift }],
+    };
   });
   const open = Math.max(FOLDED, width - cancelWidth - CANCEL_GAP);
   const grown = useAnimatedStyle(() => {
@@ -271,12 +293,13 @@ export function FindBar({
     setSearching(opened);
   };
   const controls = drawn(row);
+  const reachable = (wheel && 'none') || 'box-none';
   return (
-    <Animated.View testID="find" pointerEvents="box-none" style={[styles.find, placed]}>
+    <Animated.View testID="find" pointerEvents={reachable} style={[styles.find, placed]}>
       {drums}
       <View
         testID="find-bar"
-        pointerEvents="box-none"
+        pointerEvents={reachable}
         style={styles.row}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       >
@@ -284,6 +307,7 @@ export function FindBar({
         {row !== 'tiles' && (
           <Animated.View
             {...(drumsOpen && passThrough)}
+            {...(wheel && untouched)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
             <Animated.View

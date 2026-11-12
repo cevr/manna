@@ -20,8 +20,11 @@
  * (`barSides`), so the grabber stands at the bar's centre; while it names a
  * hymn, the columns keep their own widths, so the title is not squeezed.
  * On a device with the ear, the key button's wheel holds the way to the
- * tuner (`KeyWheel`, drawn over the bar while a hold keeps it open, which
- * the bar tells the ear, `Ear`). The marks are tinted in the button's role.
+ * tuner (`KeyWheel`, drawn over the bar while a hold keeps it open and on
+ * through its exit, which the bar tells the ear, `Ear`). While the wheel is
+ * up the opener and the marks fade with its backdrop (`FADE`), the key
+ * button is ringed as its hub, and the find bar is told (`useWheelOpen`).
+ * The marks are tinted in the button's role.
  * A swipe up on the bar opens the sheet too. Over a hymn page, a pan from the docked bar's
  * left edge goes back, as the stack's own edge pan does above the bar
  * (`BackEdge`).
@@ -68,7 +71,7 @@ import {
   sounding,
   toldPlace,
 } from './bar';
-import { usePlayer, useRaised } from './context';
+import { usePlayer, useRaised, useWheelOpen } from './context';
 import { useShownPage } from './page';
 import { Command, type HymnPlayer, type Player, type Track } from './player';
 import { BarMark } from './BarMark';
@@ -76,7 +79,9 @@ import { buttonsOf } from './button';
 import { DialPopover } from './DialPanel';
 import { type BoundThumb, Dials, useThumb } from './Dials';
 import { KeyButton } from './KeyButton';
-import { Ear, KeyWheel, type Shown } from './KeyWheel';
+import { drawnAfter, Ear, KeyWheel, type WheelDrawn } from './KeyWheel';
+import { FADE } from './wheelmotion';
+import { useReduceMotion } from './motion';
 import { Seeker } from './Seeker';
 import { ThumbEvent } from './thumb';
 import { RecordingNotice } from './RecordingNotice';
@@ -271,7 +276,11 @@ function Frame({
 }) {
   const { track, state, page, shown, send, inset } = drawing;
   const [places, setPlaces] = useState(unplaced);
-  const [wheel, setWheel] = useState(Option.none<Shown>());
+  const [wheel, setWheel] = useState(Option.none<WheelDrawn>());
+  const dim = useSharedValue(0);
+  const reduced = useReduceMotion();
+  const fading = useAnimatedStyle(() => ({ opacity: 1 - FADE * dim.value }));
+  useWheelOpen(Option.exists(wheel, (drawn) => !drawn.closing));
   const ear = use(Ear);
   const named = !Option.exists(shown, (hymn) => hymn.number === track.number);
   const side = Option.match(barSides(!named, places.key.width, places.marks), {
@@ -334,17 +343,22 @@ function Frame({
                         thumb={bound}
                         ear={ear}
                         screenX={keyX}
-                        onWheel={setWheel}
+                        ringed={Option.isSome(wheel)}
+                        onWheel={(shown, picked) =>
+                          setWheel((was) => drawnAfter(was, shown, picked))
+                        }
                         onLayout={laid(({ x, y, width }) => ({ key: { x, y, width } }))}
                       />
                     </View>
                   ),
                 })}
-                <Opener track={track} state={state} href={sheet} named={named} />
+                <Animated.View style={[styles.opener, fading]}>
+                  <Opener track={track} state={state} href={sheet} named={named} />
+                </Animated.View>
                 <View testID="bar-side-marks" style={[styles.right, side]}>
-                  <View
+                  <Animated.View
                     testID="bar-marks"
-                    style={styles.marks}
+                    style={[styles.marks, fading]}
                     onLayout={laid(({ width }) => ({ marks: width }))}
                   >
                     {Option.match(page, {
@@ -353,7 +367,7 @@ function Frame({
                     })}
                     <Sound />
                     <Buttons track={track} state={state} send={send} />
-                  </View>
+                  </Animated.View>
                 </View>
               </View>
               {sounding(state) && (
@@ -372,8 +386,17 @@ function Frame({
       {drawing.docked && Option.isSome(shown) && <BackEdge />}
       {Option.match(wheel, {
         onNone: () => <></>,
-        onSome: (open) => (
-          <KeyWheel shown={open} at={{ x: keyX, y: places.column.y + places.key.y }} />
+        onSome: (drawn) => (
+          <KeyWheel
+            drawn={drawn}
+            at={{
+              x: keyX + drawn.shown.origin.x,
+              y: places.column.y + places.key.y + drawn.shown.origin.y,
+            }}
+            dim={dim}
+            reduced={reduced}
+            onClosed={() => setWheel((was) => Option.filter(was, (shut) => !shut.closing))}
+          />
         ),
       })}
     </View>
@@ -559,6 +582,7 @@ const styles = StyleSheet.create({
   },
   left: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' },
   right: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  opener: { flex: 1, flexDirection: 'row' },
   marks: { flexDirection: 'row', alignItems: 'center', gap: GAP },
   open: {
     flex: 1,

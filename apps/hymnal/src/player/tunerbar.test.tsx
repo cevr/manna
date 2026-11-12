@@ -17,7 +17,19 @@
  * - R7 the open dials hold no Tuner chip, and Reset still shows when moved;
  * - R8 VoiceOver's `tuner` opens the tuner, `keyUp` and `keyDown` move the key a semitone;
  * - R9 the item under the finger draws on the button's fill under its ink,
- *   the others on the panel under the ink in the edge.
+ *   the others on the panel under the ink in the edge;
+ * - R10 while the wheel is up the page dims, no dot marks its origin, `Key`
+ *   is ringed, the bar's other controls fade and the find bar is told
+ *   (`wheelOpen`), and all of it ends as the wheel shuts;
+ * - R11 the items come out of `Key`: at the hold at its centre, small and
+ *   unseen, and at their slots once the enter lands;
+ * - R12 a release keeps the wheel drawn through its exit, then it is gone,
+ *   and a pick acts at the release, not after the exit;
+ * - R13 with Reduce Motion each item stands at its slot from the first frame and only fades;
+ * - R14 without the ear the four items keep the slots they hold with it.
+ *
+ * The moves go to each item's slot from the wheel's origin, `ORIGIN_X`
+ * from the screen's left edge on the key button's middle (`wheel.ts`).
  *
  * A layout is told as the platform tells it, through each view's `onLayout`
  * (`src/test/props.ts`); a hold is played through its gesture's own
@@ -26,11 +38,12 @@
  */
 
 import { RegistryContext } from '@effect/atom-react';
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { Duration, Effect, Option, Stream } from 'effect';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AccessibilityInfo } from 'react-native';
 
 import { type Cue, CueProvider, plain } from '~/feel/cue';
 import { hymnAt } from '~/hymns/hymns';
@@ -40,12 +53,15 @@ import { fakeDevice } from '../test/device';
 import { longPress } from '../test/gesture';
 import { routed } from '../test/one';
 import { actionsOf, perform, propsWith } from '../test/props';
+import { holdAnimations, landAnimations, stepAnimations } from '../test/reanimated';
 import { readerOn } from '../test/reader';
+import { wheelOpen } from './bar';
 import { PlayerContext } from './context';
 import { ChordReaderContext } from './Dials';
 import { Ear } from './KeyWheel';
 import { Command, Player, playerOn } from './player';
 import { PageBar, PlayerBar } from './PlayerBar';
+import { type Item, itemsOf, ORIGIN_X, slotOf } from './wheel';
 
 const morning = Option.getOrThrow(hymnAt('100'));
 const other = Option.getOrThrow(hymnAt('225'));
@@ -54,6 +70,7 @@ const other = Option.getOrThrow(hymnAt('225'));
 const WIDTH = 393;
 
 interface Mounted {
+  readonly registry: AtomRegistry.AtomRegistry;
   readonly device: Map<string, string>;
   readonly cues: Array<Cue>;
   readonly get: (selector: string) => HTMLElement;
@@ -88,6 +105,7 @@ const mount = (screen: ReactNode, device: Map<string, string>, ear: boolean): Mo
   const find = (selector: string) =>
     Option.fromNullishOr(host.querySelector<HTMLElement>(selector));
   return {
+    registry,
     device,
     cues,
     find,
@@ -153,22 +171,48 @@ const grabberCentre = (page: Mounted) => {
   return (from + to) / 2;
 };
 
+/** Where the hold lands in the key button, in its own points. */
+const PRESS = { x: 90, y: 22 } as const;
+
+/** The wheel's origin in the key button's points: `ORIGIN_X` from the screen's edge, the button at the bar's 12-point padding, on its middle. */
+const ORIGIN = { x: ORIGIN_X - 12, y: 22 } as const;
+
 /** A hold on the key button at its middle, the finger kept there; the stand-in's hold is the handler's own time. */
 const hold = () => {
   let held = Option.none<ReturnType<typeof longPress>>();
-  act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
+  act(() => void (held = Option.some(longPress('key-hold', PRESS))));
   return {
     move: (dx: number, dy: number) => act(() => Option.map(held, (finger) => finger.move(dx, dy))),
     lift: () => act(() => Option.map(held, (finger) => finger.lift())),
   };
 };
 
-/** The finger's offset from the wheel's origin toward an item at `degrees`, `reach` points out. */
-const toward = (degrees: number, reach = 110) =>
-  [
-    reach * Math.cos((degrees * Math.PI) / 180),
-    -reach * Math.sin((degrees * Math.PI) / 180),
-  ] as const;
+/** The finger's move from where the hold landed to `item`'s slot. */
+const toSlot = (item: Item) =>
+  [ORIGIN.x + slotOf(item).x - PRESS.x, ORIGIN.y + slotOf(item).y - PRESS.y] as const;
+
+/** A view's drawn translate, scale and opacity, as its style writes them. */
+const drawnAt = (view: HTMLElement) => {
+  const style = getComputedStyle(view);
+  const number = (pattern: RegExp, otherwise: number) =>
+    Number.parseFloat(pattern.exec(style.transform)?.[1] ?? `${otherwise}`);
+  return {
+    x: number(/translateX\((-?[\d.e+-]+)px\)/, 0),
+    y: number(/translateY\((-?[\d.e+-]+)px\)/, 0),
+    scale: number(/scale\((-?[\d.e+-]+)\)/, 1),
+    opacity: Number.parseFloat(style.opacity || '1'),
+  };
+};
+
+/** Each item's place on the wheel as drawn. */
+const places = (page: Mounted, items: ReadonlyArray<Item>) =>
+  items.map((item) => ({ item, ...drawnAt(page.get(`[data-testid="key-wheel-place-${item}"]`)) }));
+
+/** Animations held until the `using` ends, then landed. */
+const animationsHeld = () => {
+  holdAnimations();
+  return { [Symbol.dispose]: () => act(() => landAnimations()) };
+};
 
 describe('R1: the bar’s sides', () => {
   const faces = [
@@ -237,7 +281,7 @@ describe('the key button’s wheel', () => {
     using page = onPage(chordsOn(), true);
     const held = hold();
     expect(Option.isSome(page.find('[data-testid="key-wheel"]'))).toBe(true);
-    held.move(0, -100);
+    held.move(...toSlot('tuner'));
     held.lift();
     expect(routed).toEqual(['push /tuner']);
     expect(page.device.get('chords')).toBe('true');
@@ -264,12 +308,12 @@ describe('the key button’s wheel', () => {
 
   describe('a key step from the wheel or VoiceOver turns one semitone with the dials closed', () => {
     const steps = [
-      { item: 'keyDown', angle: 72, key: 'C' },
-      { item: 'keyUp', angle: 46, key: 'D' },
+      { item: 'keyDown', key: 'C' },
+      { item: 'keyUp', key: 'D' },
     ] as const;
     const doors = (open: boolean) => (open && (['wheel', 'VoiceOver'] as const)) || ['wheel'];
     for (const open of [true, false]) {
-      for (const { item, angle, key } of steps) {
+      for (const { item, key } of steps) {
         for (const door of doors(open)) {
           it(`${item} by the ${door}, the dials ${(open && 'open') || 'shut'} before`, () => {
             using page = onPage(chordsOn(), true);
@@ -277,7 +321,7 @@ describe('the key button’s wheel', () => {
             expect(Option.isSome(page.find('[data-testid="dials"]'))).toBe(open);
             if (door === 'wheel') {
               const held = hold();
-              held.move(...toward(angle));
+              held.move(...toSlot(item));
               held.lift();
             } else perform(keyButton(page), item);
             expect({
@@ -305,7 +349,7 @@ describe('the key button’s wheel', () => {
   it('R5: a hold slid to Chords off turns chords off, as the old hold did', () => {
     using page = onPage(chordsOn(), true);
     const held = hold();
-    held.move(...toward(-6));
+    held.move(...toSlot('chords'));
     held.lift();
     expect(page.device.get('chords')).toBe('false');
     expect(page.cues).toEqual([plain('choose'), plain('chords-off')]);
@@ -374,7 +418,7 @@ describe('the key button’s wheel', () => {
     const role = (name: string) => `rgb(${roles.indexOf(name) + 1}, 3, 4)`;
     using page = onPage(chordsOn(), true);
     const held = hold();
-    held.move(...toward(46));
+    held.move(...toSlot('keyUp'));
     const drawn = (item: string) => {
       const pill = page.get(`[data-testid="key-wheel-${item}"]`);
       const word = Option.getOrThrow(
@@ -420,5 +464,155 @@ describe('the key button’s wheel', () => {
       turned: turned.length,
     }).toEqual({ small: true, upright: true, turned: 0 });
     held.lift();
+  });
+});
+
+/** Each item's place over the first five frames, 40 ms apart, of a hold of `Key` with the animations held. */
+const reducedFrames = (page: Mounted) => {
+  const items = itemsOf(true);
+  using _held = animationsHeld();
+  const finger = hold();
+  const frames = [places(page, items)];
+  for (let k = 0; k < 4; k += 1) {
+    act(() => void stepAnimations(40));
+    frames.push(places(page, items));
+  }
+  finger.lift();
+  return frames;
+};
+
+describe('the wheel’s look and motion', () => {
+  it('R10: the page dims, no dot marks the origin, Key is ringed, the marks fade and the find bar is told, until the wheel shuts', () => {
+    using page = onPage(chordsOn(), true);
+    const shown = () => ({
+      backdrop: Option.isSome(page.find('[data-testid="key-wheel-backdrop"]')),
+      hub: Option.isSome(page.find('[data-testid="key-wheel-hub"]')),
+      ring: Option.isSome(page.find('[data-testid="key-ring"]')),
+      faded:
+        Number.parseFloat(getComputedStyle(page.get('[data-testid="bar-marks"]')).opacity || '1') <=
+        0.35,
+      told: page.registry.get(wheelOpen),
+    });
+    const finger = hold();
+    const open = shown();
+    finger.lift();
+    expect({ open, shut: shown() }).toEqual({
+      open: { backdrop: true, hub: false, ring: true, faded: true, told: true },
+      shut: { backdrop: false, hub: false, ring: false, faded: false, told: false },
+    });
+  });
+
+  it('R11: held at the hold, the items stand at the origin, small and unseen; landed, at their slots', () => {
+    using page = onPage(chordsOn(), true);
+    const items = itemsOf(true);
+    using _held = animationsHeld();
+    const finger = hold();
+    for (const place of places(page, items))
+      expect({ ...place, small: place.scale <= 0.4 }).toEqual({
+        ...place,
+        x: 0,
+        y: 0,
+        small: true,
+        opacity: 0,
+      });
+    act(() => landAnimations());
+    for (const place of places(page, items)) {
+      const slot = slotOf(place.item);
+      expect({
+        item: place.item,
+        off: Math.hypot(place.x - slot.x, place.y - slot.y) <= 0.5,
+        whole: Math.abs(place.scale - 1) <= 0.01,
+        opacity: place.opacity,
+      }).toEqual({ item: place.item, off: true, whole: true, opacity: 1 });
+    }
+    finger.lift();
+  });
+
+  it('R12: a release keeps the wheel drawn through its exit, gone once it lands; a pick acts at the release', () => {
+    using page = onPage(chordsOn(), true);
+    using _held = animationsHeld();
+    const opened = () => {
+      const finger = hold();
+      act(() => landAnimations());
+      holdAnimations();
+      return finger;
+    };
+    const middle = opened();
+    middle.move(6, -8);
+    middle.lift();
+    const closing = {
+      wheel: Option.isSome(page.find('[data-testid="key-wheel"]')),
+      told: page.registry.get(wheelOpen),
+    };
+    act(() => void stepAnimations(16));
+    const tuner = drawnAt(page.get('[data-testid="key-wheel-place-tuner"]'));
+    act(() => landAnimations());
+    const shut = {
+      gone: Option.isNone(page.find('[data-testid="key-wheel"]')),
+      told: page.registry.get(wheelOpen),
+      routed: [...routed],
+    };
+    holdAnimations();
+    const pick = opened();
+    pick.move(...toSlot('tuner'));
+    pick.lift();
+    expect({
+      closing,
+      moving: Math.hypot(tuner.x, tuner.y) < Math.hypot(slotOf('tuner').x, slotOf('tuner').y),
+      shut,
+      picked: {
+        routed: [...routed],
+        closing: Option.isSome(page.find('[data-testid="key-wheel"]')),
+        lit: page.get('[data-testid="key-wheel-tuner"]').getAttribute('aria-selected'),
+      },
+    }).toEqual({
+      closing: { wheel: true, told: false },
+      moving: true,
+      shut: { gone: true, told: false, routed: [] },
+      picked: { routed: ['push /tuner'], closing: true, lit: 'true' },
+    });
+  });
+
+  it('R13: with Reduce Motion each item stands at its slot from the first frame, and only fades', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        // oxlint-disable-next-line effect/noModuleMocks -- the system's setting is React Native's own boundary, read by `useReduceMotion`; the spy stands in for the system and is put back as the test ends.
+        using _reduced = spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+        using page = onPage(chordsOn(), true);
+        yield* Effect.promise(() => act(() => Effect.runPromise(Effect.void)));
+        const frames = reducedFrames(page);
+        for (const frame of frames)
+          for (const place of frame) {
+            const slot = slotOf(place.item);
+            expect({
+              item: place.item,
+              off: Math.hypot(place.x - slot.x, place.y - slot.y) <= 0.01,
+              scale: place.scale,
+            }).toEqual({ item: place.item, off: true, scale: 1 });
+          }
+        expect(frames.map((frame) => Math.round((frame[0]?.opacity ?? 0) * 100))).toEqual([
+          0, 33, 67, 100, 100,
+        ]);
+      }),
+    ));
+
+  it('R14: without the ear four items stand at the slots they hold with it', () => {
+    const at = (ear: boolean) => {
+      using page = onPage(chordsOn(), ear);
+      const finger = hold();
+      const drawn = places(page, itemsOf(ear));
+      finger.lift();
+      return drawn;
+    };
+    const five = at(true);
+    const four = at(false);
+    expect(four.map((place) => place.item)).toEqual(['keyDown', 'keyUp', 'reset', 'chords']);
+    const atSlot = (drawn: typeof four) =>
+      drawn.map((place) => ({
+        item: place.item,
+        near: Math.hypot(place.x - slotOf(place.item).x, place.y - slotOf(place.item).y) <= 0.5,
+      }));
+    expect(atSlot(four)).toEqual(atSlot(five).filter(({ item }) => item !== 'tuner'));
+    expect(atSlot(five).every(({ near }) => near)).toBe(true);
   });
 });

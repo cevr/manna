@@ -9,30 +9,32 @@
  * done(action or none). After every event the two do the same, and:
  * - W1 a lift before the hold, having moved under `SLOP`, is one `Tap` and no item;
  * - W2 a still press held `HOLD` ms opens the wheel when offered, else is one `Hold`;
- * - W3 in the wheel the finger is over the nearest item within `REACH`
- *   degrees, beyond `DEAD` points from the origin, else over none;
+ * - W3 in the wheel the finger is over the item whose direction from the
+ *   origin is nearest its own (`overOf` of the finger less the origin),
+ *   beyond `DEAD` points from the origin and above the bar, else over none;
  * - W4 a lift in the wheel picks the item under the finger once, or none; a cancel none;
  * - W5 each move onto an item is one `Enter`; a move off to none is none;
- * - W6 the Tuner is an item exactly with the ear: 4 or 5 items, 26° apart;
- * - W7 a press that moves `SLOP` or more before its hold does nothing.
+ * - W6 the Tuner is an item exactly with the ear: 4 or 5 items, each at its own slot either way;
+ * - W7 a press that moves `SLOP` or more before its hold does nothing;
+ * - W8 the wheel opens at the origin the bar gives, wherever on the key button the press landed.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import {
-  ANGLES,
   DEAD as RULE_DEAD,
   HOLD as RULE_HOLD,
   idle,
   type Item,
   itemsOf,
-  originOf,
+  ORIGIN_X,
   Out,
-  REACH as RULE_REACH,
-  RADIUS as RULE_RADIUS,
+  overOf,
+  type Point,
   type Setup,
   SLOP as RULE_SLOP,
+  slotOf,
   step,
   type Wheel,
   WheelEvent,
@@ -54,21 +56,26 @@ const SEED = Number(process.env['WHEEL_SEED'] ?? 20261111);
 const RUNS = 400;
 const EVENTS = 30;
 
-/** The model's numbers, the spec's own: the hold, the drift, the dead centre, the reach and the radius. */
+/** The model's numbers, the spec's own: the hold, the drift, the dead centre, the bar's top over the origin, and how far out a finger goes. */
 const HOLD = 350;
 const SLOP = 10;
 const DEAD = 34;
-const REACH = 20;
-const RADIUS = 140;
+const BAR_TOP = -28;
+const FAR = 340;
 
-/** The model's own angles, read off the owner's page: 0° to the right, 90° up. */
-const MODEL_ANGLES: ReadonlyArray<readonly [Item, number]> = [
-  ['tuner', 98],
-  ['keyDown', 72],
-  ['keyUp', 46],
-  ['reset', 20],
-  ['chords', -6],
-];
+/** The model's own slots, the spec's Arc written here apart from the rule: rows 58 apart, centres on a quarter ellipse. */
+const MODEL_SLOTS: ReadonlyArray<readonly [Item, Point]> = (
+  ['tuner', 'keyDown', 'keyUp', 'reset', 'chords'] as const
+).map((item, index) => {
+  const fromBarTop = -36 - 58 * (4 - index);
+  const t = (20 - fromBarTop) / 320;
+  return [item, { x: 25 + 124 * Math.sqrt(1 - t * t), y: fromBarTop - 28 }] as const;
+});
+
+/** The model's angles: each slot's direction from the origin, 0° to the right, 90° up. */
+const MODEL_ANGLES: ReadonlyArray<readonly [Item, number]> = MODEL_SLOTS.map(
+  ([item, slot]) => [item, (Math.atan2(-slot.y, slot.x) * 180) / Math.PI] as const,
+);
 
 type Model =
   | { readonly kind: 'idle' }
@@ -96,19 +103,17 @@ const modelOver = (
   x: number,
   y: number,
 ): Item | 'none' => {
-  if (Math.sqrt((x - ox) ** 2 + (y - oy) ** 2) <= DEAD) return 'none';
+  if (Math.sqrt((x - ox) ** 2 + (y - oy) ** 2) <= DEAD || y - oy > BAR_TOP) return 'none';
   const degrees = (Math.atan2(oy - y, x - ox) * 180) / Math.PI;
   let best: Item | 'none' = 'none';
   let least = Number.POSITIVE_INFINITY;
   for (const [item, angle] of items) {
-    let off = Math.abs(degrees - angle) % 360;
-    if (off > 180) off = 360 - off;
+    const off = Math.abs(degrees - angle);
     if (off < least) {
       least = off;
       best = item;
     }
   }
-  if (least > REACH) return 'none';
   return best;
 };
 
@@ -134,8 +139,8 @@ const pressingStep = (model: Pressing, event: Ev): Stepped => {
     return openStep(
       {
         kind: 'wheel',
-        ox: Math.max(model.x, model.setup.left),
-        oy: Math.min(model.y, model.setup.bottom),
+        ox: model.setup.origin.x,
+        oy: model.setup.origin.y,
         items,
         over: 'none',
       },
@@ -198,7 +203,7 @@ const fingerAt = (random: () => number, at: { x: number; y: number }, reach: num
 /** One event of any kind at time `t`, a press's or a stray one. */
 const strayAt = (random: () => number, t: number, at: { x: number; y: number }): Ev => {
   const roll = random();
-  if (roll < 0.4) return WheelEvent.Move({ ...fingerAt(random, at, random() * (RADIUS + 40)), t });
+  if (roll < 0.4) return WheelEvent.Move({ ...fingerAt(random, at, random() * FAR), t });
   if (roll < 0.7) return WheelEvent.Up({ t });
   if (roll < 0.8) return WheelEvent.Cancel();
   return WheelEvent.Tick({ t });
@@ -227,9 +232,7 @@ const heldOf = (
   if (exactly) events.push(WheelEvent.Tick({ t: start + HOLD }));
   else if (random() < 0.5) events.push(WheelEvent.Tick({ t: clock.t }));
   for (let k = Math.floor(random() * 5); k > 0; k -= 1)
-    events.push(
-      WheelEvent.Move({ ...fingerAt(random, at, random() * (RADIUS + 40)), t: later(80) }),
-    );
+    events.push(WheelEvent.Move({ ...fingerAt(random, at, random() * FAR), t: later(80) }));
   events.push((random() < 0.85 && WheelEvent.Up({ t: later(80) })) || WheelEvent.Cancel());
   return events;
 };
@@ -248,15 +251,14 @@ const runOf = (random: () => number): ReadonlyArray<Ev> => {
     const setup: Setup = {
       wheel: random() < 0.7,
       ear: random() < 0.5,
-      left: random() * 90,
-      bottom: 10 + random() * 34,
+      origin: { x: ORIGIN_X - 12 - random() * 30, y: 22 },
     };
     const start = later(400);
     events.push(WheelEvent.Down({ ...at, t: start, setup }));
     for (let k = Math.floor(random() * 3); k > 0; k -= 1)
       events.push(WheelEvent.Move({ ...fingerAt(random, at, random() * 12), t: later(120) }));
     if (random() < 0.3) events.push(WheelEvent.Up({ t: later(200) }));
-    else events.push(...heldOf(random, clock, start, at));
+    else events.push(...heldOf(random, clock, start, setup.origin));
     if (random() < 0.3) events.push(strayAt(random, later(300), at));
   }
   return events;
@@ -324,31 +326,47 @@ const keepsPromises = (run: number, p: Press & { readonly how: string; readonly 
 };
 
 describe('the key button’s press', () => {
-  it('holds 350 ms, drifts under 10 points, opens 140 points out, and reaches 20° beyond 34 points', () => {
-    expect([RULE_HOLD, RULE_SLOP, RULE_RADIUS, RULE_REACH, RULE_DEAD]).toEqual([
-      HOLD,
-      SLOP,
-      RADIUS,
-      REACH,
-      DEAD,
+  it('holds 350 ms, drifts under 10 points, and picks beyond 34 points, from 47 points in', () => {
+    expect([RULE_HOLD, RULE_SLOP, RULE_DEAD, ORIGIN_X]).toEqual([HOLD, SLOP, DEAD, 47]);
+  });
+
+  it('W6: the Tuner is an item exactly with the ear, each item at the Arc’s slot either way', () => {
+    for (const ear of [true, false]) {
+      const items = itemsOf(ear);
+      expect({ tuner: items.includes('tuner'), count: items.length }).toEqual({
+        tuner: ear,
+        count: (ear && 5) || 4,
+      });
+      for (const item of items) {
+        const [, slot] = MODEL_SLOTS.find(([named]) => named === item) ?? [item, { x: 0, y: 0 }];
+        expect({ item, off: Math.hypot(slotOf(item).x - slot.x, slotOf(item).y - slot.y) }).toEqual(
+          {
+            item,
+            off: 0,
+          },
+        );
+      }
+    }
+    expect(MODEL_SLOTS.map(([, slot]) => [Math.round(slot.x), Math.round(slot.y)])).toEqual([
+      [79, -296],
+      [111, -238],
+      [130, -180],
+      [141, -122],
+      [147, -64],
     ]);
   });
 
-  it('W6: the Tuner is an item exactly with the ear, the items 26° apart', () => {
-    for (const ear of [true, false]) {
-      const items = itemsOf(ear);
-      const angles = items.map((item) => ANGLES[item]);
-      expect({
-        tuner: items.includes('tuner'),
-        count: items.length,
-        distinct: new Set(angles).size,
-        gaps: angles.slice(1).map((angle, k) => (angles[k] ?? 0) - angle),
-      }).toEqual({
-        tuner: ear,
-        count: (ear && 5) || 4,
-        distinct: items.length,
-        gaps: angles.slice(1).map(() => 26),
-      });
+  it('W8: the wheel opens at the origin the bar gives, wherever on the key button the press lands', () => {
+    const random = seeded(SEED + 8);
+    for (let n = 0; n < 200; n += 1) {
+      const origin = { x: 20 + random() * 30, y: 22 };
+      const setup: Setup = { wheel: true, ear: random() < 0.5, origin };
+      const at = { x: random() * 96, y: random() * 44 };
+      const opened = step(
+        step(idle, WheelEvent.Down({ ...at, t: 0, setup })).wheel,
+        WheelEvent.Tick({ t: HOLD }),
+      ).wheel;
+      expect({ n, origin: opened._tag === 'Open' && opened.origin }).toEqual({ n, origin });
     }
   });
 
@@ -387,7 +405,7 @@ describe('the key button’s press', () => {
   });
 
   it('W2: a still press held 350 ms opens the wheel when offered, and is one Hold when not', () => {
-    const setup: Setup = { wheel: true, ear: true, left: 84, bottom: 22 };
+    const setup: Setup = { wheel: true, ear: true, origin: { x: 35, y: 22 } };
     const t0 = 675.147208;
     const down = step(idle, WheelEvent.Down({ x: 20, y: 30, t: t0, setup }));
     const early = step(down.wheel, WheelEvent.Tick({ t: t0 + HOLD - 1 }));
@@ -398,7 +416,7 @@ describe('the key button’s press', () => {
       outs: [],
     });
     expect(Option.map(Option.some(opened.wheel), (w) => w._tag === 'Open' && w.origin)).toEqual(
-      Option.some(originOf({ x: 20, y: 30 }, setup)),
+      Option.some(setup.origin),
     );
     const off = step(
       step(idle, WheelEvent.Down({ x: 20, y: 30, t: 0, setup: { ...setup, wheel: false } })).wheel,
@@ -410,10 +428,38 @@ describe('the key button’s press', () => {
     });
   });
 
-  it('W3: a finger 100 points straight up from the origin is over the Tuner, and 20 points out over none', () => {
-    const setup: Setup = { wheel: true, ear: true, left: 0, bottom: 100 };
+  it('W3: over the bar, or within 34 points of the origin, the finger is over none, however far out', () => {
+    const setup: Setup = { wheel: true, ear: false, origin: { x: 35, y: 22 } };
     const open = step(
-      step(idle, WheelEvent.Down({ x: 100, y: 50, t: 0, setup })).wheel,
+      step(idle, WheelEvent.Down({ x: 35, y: 22, t: 0, setup })).wheel,
+      WheelEvent.Tick({ t: HOLD }),
+    ).wheel;
+    const steps = [
+      { x: 35 + 147, y: 22 - 64, over: 'chords' },
+      { x: 35 + 300, y: 22 - 20, over: 'none' },
+      { x: 35 + 600, y: 22 - 40, over: 'chords' },
+      { x: 35 + 20, y: 22 - 25, over: 'none' },
+      { x: 35, y: 22 - 400, over: 'keyDown' },
+    ];
+    for (const { x, y, over } of steps) {
+      const moved = step(open, WheelEvent.Move({ x, y, t: HOLD }));
+      expect({
+        x,
+        y,
+        over: moved.wheel._tag === 'Open' && Option.getOrElse(moved.wheel.over, () => 'none'),
+      }).toEqual({
+        x,
+        y,
+        over,
+      });
+    }
+    expect(Option.getOrElse(overOf(itemsOf(true), { x: 0, y: -100 }), () => 'none')).toBe('tuner');
+  });
+
+  it('W3: a finger 100 points straight up from the origin is over the Tuner, and 20 points out over none', () => {
+    const setup: Setup = { wheel: true, ear: true, origin: { x: 100, y: 50 } };
+    const open = step(
+      step(idle, WheelEvent.Down({ x: 90, y: 40, t: 0, setup })).wheel,
       WheelEvent.Tick({ t: HOLD }),
     ).wheel;
     const up = step(open, WheelEvent.Move({ x: 100, y: -50, t: HOLD }));

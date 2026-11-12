@@ -4,9 +4,11 @@
  * sounding key, or "CAPO n" over the key the chords are played in. A tap
  * opens the key and capo dials above the bar, and closes them. A hold
  * (`HOLD`, 350 ms) with chords on, on a hymn with a printed key, opens the
- * wheel around the press (`wheel.ts`, drawn by the bar as `KeyWheel`): the
- * finger slides to the Tuner (with the ear), Key ♭, Key ♯, Reset or Chords
- * off and lets go to do it, once; a tick marks each item it enters. Otherwise
+ * wheel out of the button (`wheel.ts`, drawn by the bar as `KeyWheel`), its
+ * origin fixed by the bar, not by the press, and the button ringed as its
+ * centre while it is open: the finger slides to the Tuner (with the ear),
+ * Key ♭, Key ♯, Reset or Chords off and lets go to do it, once; a tick
+ * marks each item it enters. Otherwise
  * a hold turns chords on or off, and no tap follows it. With chords off
  * it is the guitar's head alone, dim: the chords switch, on every hymn's
  * page, and a tap or a hold turns chords on and opens nothing. Its hint says
@@ -31,7 +33,7 @@
 import type * as Chord from '@manna/hymnal/chord';
 import { Match, Option } from 'effect';
 import { useRouter } from 'one';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
@@ -51,7 +53,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { color } from '~/color';
+import { color, useButton } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import { GuitarHead } from '~/reader/GuitarHead';
 
@@ -59,12 +61,9 @@ import type { BoundThumb } from './Dials';
 import type { Shown } from './KeyWheel';
 import { useReduceMotion } from './motion';
 import { type Face, faceOf, hintOf, saidOf, ThumbEvent } from './thumb';
-import { HOLD, idle, type Item, Out, SLOP, step, Wheel, WheelEvent } from './wheel';
+import { HOLD, idle, type Item, ORIGIN_X, Out, SLOP, step, Wheel, WheelEvent } from './wheel';
 
-/** The least distance of the wheel's origin from the screen's left edge, so the Tuner, at 98°, is not clipped. */
-export const WHEEL_LEFT = 84;
-
-/** The button's height: the wheel's origin is held no lower than its middle. */
+/** The button's height: the wheel's origin lies on its middle. */
 const HEIGHT = 44;
 
 /** How far the button presses in by the end of a hold: card J's. */
@@ -102,6 +101,10 @@ const shownOf = (wheel: Wheel): Option.Option<Shown> =>
     Open: ({ origin, items, over }) => Option.some({ origin, items, over }),
   });
 
+/** The item `outs` pick, if one does. */
+const pickedOf = (outs: ReadonlyArray<Out>): Option.Option<Item> =>
+  Option.map(Option.fromNullishOr(outs.find(Out.$is('Pick'))), (pick) => pick.item);
+
 /** Whether VoiceOver's action `name` is one of the wheel's items. */
 const isItem = (name: string): name is Item => ACTIONS.some((action) => action.name === name);
 
@@ -110,6 +113,7 @@ export function KeyButton({
   onLayout,
   ear = false,
   screenX = 0,
+  ringed = false,
   onWheel = () => {},
 }: {
   readonly thumb: BoundThumb;
@@ -117,10 +121,12 @@ export function KeyButton({
   readonly onLayout?: (event: LayoutChangeEvent) => void;
   /** Whether the device has the tuner's ear: the wheel offers the Tuner only then. */
   readonly ear?: boolean;
-  /** The button's left edge from the screen's, in points: the wheel's origin keeps `WHEEL_LEFT` from it. */
+  /** The button's left edge from the screen's, in points: the wheel's origin lies `ORIGIN_X` from the screen's. */
   readonly screenX?: number;
-  /** The wheel opened, its finger moved, or it shut: the bar draws it (`KeyWheel`). */
-  readonly onWheel?: (shown: Option.Option<Shown>) => void;
+  /** Whether the button draws its ring, as the hub of the wheel open over it. */
+  readonly ringed?: boolean;
+  /** The wheel opened, its finger moved, or it shut, with the item picked as it shut: the bar draws it (`KeyWheel`). */
+  readonly onWheel?: (shown: Option.Option<Shown>, picked: Option.Option<Item>) => void;
 }) {
   const { printed, state, send } = thumb;
   const reduced = useReduceMotion();
@@ -179,8 +185,15 @@ export function KeyButton({
     if (!Wheel.$is('Open')(was) && Wheel.$is('Open')(next.wheel)) springOut();
     for (const out of next.outs) run(out);
     if (Wheel.$is('Open')(was) || Wheel.$is('Open')(next.wheel))
-      now.current.onWheel(shownOf(next.wheel));
+      now.current.onWheel(shownOf(next.wheel), pickedOf(next.outs));
   };
+  useEffect(
+    () => () => {
+      if (Wheel.$is('Open')(wheel.current)) now.current.onWheel(Option.none(), Option.none());
+      wheel.current = idle;
+    },
+    [],
+  );
   // oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read for the hold's start and its tick, with no Effect run per touch event.
   const clock = () => performance.now();
   const setup = () => {
@@ -188,8 +201,7 @@ export function KeyButton({
     return {
       wheel: bound.state.chords && Option.isSome(bound.printed),
       ear: now.current.ear,
-      left: WHEEL_LEFT - now.current.screenX,
-      bottom: HEIGHT / 2,
+      origin: { x: ORIGIN_X - now.current.screenX, y: HEIGHT / 2 },
     };
   };
   const hold = usePanGesture({
@@ -270,6 +282,7 @@ export function KeyButton({
             pressed,
           ]}
         >
+          {ringed && <Ring />}
           <View style={!state.chords && styles.dim}>
             <GuitarHead on={state.chords} />
           </View>
@@ -282,6 +295,27 @@ export function KeyButton({
     </GestureDetector>
   );
 }
+
+/** The ring round the button while it is the open wheel's hub: `RING` points in the button's role outside a `RING_GAP`-point gap of the page. */
+function Ring() {
+  const button = useButton();
+  return (
+    <View
+      testID="key-ring"
+      aria-hidden
+      pointerEvents="none"
+      style={[styles.ring, { borderColor: button }]}
+    >
+      <View style={styles.ringGap} />
+    </View>
+  );
+}
+
+/** The ring's width, in points. */
+const RING = 2;
+
+/** The gap of the page between the button and its ring, in points. */
+const RING_GAP = 3;
 
 /** The small word over the key; nothing with chords off. */
 function Words({ face }: { readonly face: Face }) {
@@ -312,6 +346,21 @@ const styles = StyleSheet.create({
     borderColor: color.line,
   },
   dim: { opacity: 0.5 },
+  ring: {
+    position: 'absolute',
+    top: -RING - RING_GAP,
+    bottom: -RING - RING_GAP,
+    left: -RING - RING_GAP,
+    right: -RING - RING_GAP,
+    borderRadius: 22 + RING + RING_GAP,
+    borderWidth: RING,
+  },
+  ringGap: {
+    flex: 1,
+    borderRadius: 22 + RING_GAP,
+    borderWidth: RING_GAP,
+    borderColor: color.ground,
+  },
   words: { alignItems: 'flex-start' },
   over: {
     fontSize: 9.5,
