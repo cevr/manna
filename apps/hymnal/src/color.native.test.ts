@@ -46,7 +46,7 @@ describe('a change of scheme with the screens open', () => {
     expect(Object.keys(seen.before).filter((part) => seen.before[part] === live[part])).toEqual([]);
   });
 
-  test("no screen reads React Native's scheme but through `useScheme`, which hears the setting", () => {
+  test("no screen reads React Native's scheme but through useScheme, which hears the setting", () => {
     const readers = [...SOURCES.scanSync(ROOT)]
       .filter((file) => !/\.test\.|\.d\.ts$|^src\/test\//.test(file))
       .filter((file) => /\buseColorScheme\b/.test(readFileSync(`${ROOT}/${file}`, 'utf8')));

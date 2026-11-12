@@ -5650,3 +5650,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** The first-run and hidden-id rules of verify-heartseed were held by regular expressions over the prose steps of `SKILL.md` and `features/*.md`; a lower-case label, a scroll to a heading, an `agent-device` wait or press, and new wordings for a hidden family passed them, and some negations false-faulted.
 - **Cause:** A reader of prose covers only the phrasings it lists, and the domain of phrasings is open. The drives are now journeys (`features/*.journey.json`), and the rules are checks over their decoded steps (`apps/heartseed/scripts/journey-rules.ts`); the regex readers stay as tripwires, never extended.
 - **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `R1 and R2 name the steps their models name, over generated journeys`; code: `apps/heartseed/scripts/journeys.test.ts` `LEGACY lists exactly the files that still drive in prose, each with why`
+
+### hymnal-appearance-setting-redraws-open-screens
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "In-app Appearance switch leaves hook roles stale on mounted screens until relaunch"
+- **Source:** hymnapp/hympalette/round-1-findings.md o1 (its On base item 1)
+- **Wrong:** After Settings → Dark, the hymn list's numbers, the bar's button and every role a screen read through a hook kept the light scheme's colours until the app was relaunched.
+- **Cause:** The hooks read React Native's scheme hook, which hears the system's changes but not `Appearance.setColorScheme`'s: React Native's `Appearance` sets the scheme and tells no listener.
+- **Guard:** code: `apps/hymnal/src/color.native.test.ts` `the setting to Dark changes every colour the open screens draw`; code: `apps/hymnal/src/color.native.test.ts` `no screen reads React Native's scheme but through useScheme, which hears the setting`
+
+### hymnal-colour-rows-name-readable-nodes
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "Feature rows `list-colours` (`--id home`) and `browse-findbar-colour` (`--id find-bar` for the capsule) name nodes the readout cannot read a ground from"
+- **Source:** hymnapp/hympalette/round-1-findings.md o3 (its On base item 3)
+- **Wrong:** `list-colours` read the ground from `home`, a testID only the slow tests' stand-ins gave, and `browse-findbar-colour` read the glass from `find-bar`, a wrapper whose capsule child draws it; the readout reads a node's own style, so both read `none`.
+- **Cause:** The rows named the node a reader thinks of, not the element that draws the colour, and nothing tied a colour row's ids to the source.
+- **Guard:** code: `apps/hymnal/scripts/readout/colour-rows.test.ts` `every colour row of the verify-hymnal features names nodes the readout can read`
