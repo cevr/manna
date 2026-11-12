@@ -88,8 +88,8 @@ folder and the raw snapshots.
   snapshot needs no scroll, since the node holds the whole text.
 - `label=About` names the sheet's button on home and the licences' back
   on `Licences`; tap it only where the step says.
-- Their contrast, their one heading, the `Settings` row disabled while a
-  remove is pending, neither page shown while Say it listens, and the
+- Their contrast, their one heading, neither page shown while Say it
+  listens, and the
   rule that only `Licences` holds the licence are the tests'
   (`apps/heartseed/src/about/screen.test.tsx`,
   `apps/heartseed/src/about/rule.test.ts`,
