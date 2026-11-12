@@ -1,0 +1,73 @@
+{
+  "feature": "passage-clip",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-clip-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Chapters" }, { "shows": "label=Plant" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-chapters",
+      "action": "tap",
+      "target": "label=Chapters",
+      "expect": [{ "shows": "label=Books" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-books",
+      "action": "tap",
+      "target": "label=Books",
+      "expect": [{ "shows": "label=Psalms" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-psalms",
+      "action": "tap",
+      "target": "label=Psalms",
+      "expect": [{ "shows": "label=Psalms 1" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-scroll",
+      "action": "scroll",
+      "target": "label=Psalms 119",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-top",
+      "action": "tap",
+      "target": "label=Psalms 119",
+      "expect": [{ "shows": "label=Psalms 119:1" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-clip-first",
+      "action": "tap",
+      "target": "label=Psalms 119:1",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip-pan",
+      "action": "scroll",
+      "target": "label=Psalms 119:30",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-clip",
+      "action": "tap",
+      "target": "label=Psalms 119:30",
+      "expect": [
+        { "shows": "label=Psalms 119:1-20" },
+        { "shows": "label=20 verses" },
+        { "shows": "label=Plant" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
