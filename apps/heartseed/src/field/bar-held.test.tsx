@@ -8,7 +8,7 @@
  * unread ones.
  *
  * It catches a field blind to a stored list past the caps, and a `Remove`
- * on a row that is not a passage's.
+ * on the page of a list that is not a passage's.
  */
 
 import { expect, it } from 'bun:test';

@@ -21,7 +21,8 @@ its lists, each with its title, `<n> verses` (distinct verses) and
 `Plant <title>` or `In your field`. `Plant` stores the list's id once
 in the stored lists' key and leads home, where the list's furrow follows
 the reader's passages, titled by the list, every verse in Haskell's
-order, with `Remove <title>`. A verse already in the field keeps its one
+order, titled by the button `Open <title>`, whose page (`list.md`)
+holds `Remove <title>`. A verse already in the field keeps its one
 plant. Passages and lists count together toward the limit of 3
 (`passage.md`).
 
@@ -37,15 +38,17 @@ corpus gives) and `missing <n>`. A release build renders nothing on it.
   each with the note; `Seven Churches`' six lists with their counts;
   `Prophecy`'s one `Second Chapter of Daniel`.
 - `handbook-plant` (live): `Plant Smyrna` leads home with the `Smyrna`
-  furrow after the promise, its four plants and `Remove Smyrna`.
+  furrow after the promise (`Open Smyrna`), its four plants, and no
+  `Remove` on home.
 - `handbook-row` (live): after a relaunch the furrow shows again, and the
   offer reads `In your field`.
 - `handbook-one-plant` (live): `Promises of God` (87 verses) shows the
   promise's own verse at its one stage.
 - `handbook-limit` (live): a passage and two lists held show the limit
   line, no add.
-- `handbook-remove` (live): `Remove <title>` asks; `Keep` keeps; `Remove`
-  takes the furrow out, the plants kept.
+- `handbook-remove` (live): `Open <title>`, then the page's `Remove
+  <title>` asks; `Keep` keeps; `Remove` shows home without the furrow, the
+  plants kept.
 - `handbook-probe` (live): the probe shows `sections 25`, `lists 130`,
   `ranges 2528`, `verses 3542`, `resolved 3542` and `missing 0`.
 - `handbook-tests-only` (tests only): the generator's rules, the app's
@@ -60,7 +63,7 @@ corpus gives) and `missing <n>`. A release build renders nothing on it.
 
 - Home → `Add a list` → scroll the sheet past `Rest` → a Handbook shelf
   (`Seven Churches`, `Prophecy`, …) → `Plant <title>`.
-- Home → a list's furrow → `Remove <title>` → `Remove` or `Keep`.
+- Home → a list's `Open <title>` → `Remove <title>` → `Remove` or `Keep`.
 
 ## Driving it
 
@@ -105,11 +108,12 @@ driver cannot scroll is a finding to record.
    sim snapshot handbook-plant
    ```
 
-   → the heading `Your field`, no heading `Add a list`; the furrow titles
-   in order `Isaiah 41:10`, `Smyrna`, `Protection & Fear`; the caption
+   → the heading `Your field`, no heading `Add a list`; the furrow title
+   buttons in order `Open Isaiah 41:10`, `Open Smyrna`, `Open Protection
+   & Fear`; the caption
    `4 verses to learn`;
    the buttons `Revelation 2:8, not planted` to `Revelation 2:11, not
-   planted`; `Remove Smyrna`; `id=add-list` still.
+   planted`; no `Remove`; `id=add-list` still.
 
 4. `handbook-row`: `sim relaunch`, `sim open / --expect "id=today-card"`,
    snapshot → the `Smyrna` furrow in the same place. The sheet, `Seven
@@ -127,12 +131,14 @@ driver cannot scroll is a finding to record.
    the furrows `Isaiah 41:10`, `Psalms 46:1-3`, `Smyrna`, `Promises of
    God`, `Protection & Fear`; the text `3 passages or lists, the most for
    now. Remove one to add another.`; no `id=add-list`, no `id=add-row`;
-   exactly three `Remove <…>` buttons.
-7. `handbook-remove`: `sim tap "label=Remove Promises of God"` → `Remove
-   Promises of God? Its plants stay in your field.`, `Remove` and `Keep`.
-   `Keep` → as before. Again, then `sim tap "label=Remove"` → no `Promises
-   of God` furrow, `Add a list` back, no limit line, the own plant's
-   button name unchanged. `sim relaunch` → the same.
+   no button named `Remove` or starting `Remove `.
+7. `handbook-remove`: `sim tap "label=Open Promises of God"`, `sim tap
+   "label=Remove Promises of God"` → `id=ask` `Remove Promises of God? Its
+   plants stay in your field.`, `Remove` and `Keep`. `Keep` → `Remove
+   Promises of God` back, no `id=ask`. Again, then `sim tap
+   "label=Remove"` → home: no `Open Promises of God`, `Add a list` back,
+   no limit line, the own plant's button name unchanged. `sim relaunch`
+   → the same.
 8. `handbook-probe`:
 
    ```bash
@@ -166,5 +172,5 @@ The tests own each: a refused write and its alert; `Full` and `Held` by
 stale props; a double tap and the pending state; unread keys; an unknown
 stored id kept; the session's order over a list; the sheet and a list's
 furrow in dark and their contrast; whether a 64-character title fits a
-furrow's head beside `Remove`; Haskell's page itself (the drive reads
+furrow's head and a list page's heading; Haskell's page itself (the drive reads
 titles and counts only, never text).

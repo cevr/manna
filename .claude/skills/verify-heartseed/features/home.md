@@ -17,12 +17,13 @@ the run stands, else `Practice anyway` on the weakest planted verse, else
 none) or, with a plant chosen, the chosen card (`id=chosen`:
 `<reference> · <stage words>` and `Practice <reference>` on a planted
 verse or `Learn <reference>` on one not planted, which makes the verse
-the visit and opens Today on it), or a remove's ask; in the scroll view
+the visit and opens Today on it); in the scroll view
 the heading `Your field`, the days sown and the harvest, the label
 `Lists` with `Add a list` (`id=add-list`) or the limit line, one furrow
-per row (its icon, title, caption `<n> verse(s) · <r> ready today`, else
-`<n> verse(s) · <p> planted`, else `<n> verse(s) to learn`, a held
-passage's or Handbook list's `Remove`, and its plants as buttons named
+per row (its icon, its title as the button `Open <title>`, which opens
+the list's own page, `list.md`, a caption `<n> verse(s) · <r> ready
+today`, else `<n> verse(s) · <p> planted`, else `<n> verse(s) to
+learn`, and its plants as buttons named
 `<reference>, <stage>`, then `, ready today` with a gold dot when a plan
 item not done is on the verse, no number under any), the legend, then the
 rows `Settings` and `How Heartseed works`. A tap on a plant chooses its
@@ -84,7 +85,9 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   `Isaiah 41:10` with `Say it`.
 - `home-lists`: scrolled through, home holds the text `Lists`, one
   `id=add-list`, the captions `1 verse · 1 planted` and `14 verses to
-  learn`, 15 plant buttons and no text that is only a number.
+  learn`, the buttons `Open Isaiah 41:10` and `Open Protection & Fear`,
+  15 plant buttons, 0 buttons named `Remove` or starting `Remove `, and
+  no text that is only a number.
 - `home-furrows`: the field shows the greeting by the hour, the own
   furrow `Isaiah 41:10` (`1 verse · 1 planted`) with the plant button
   `Isaiah 41:10, seed`, the `Protection & Fear` furrow (`14 verses to
@@ -250,11 +253,12 @@ puts `Start` on the Today card), with the same variables:
    `sim snapshot home-lists` → the heading `Your field`; the text `Good morning`
    (0400-1159 by `date +%H%M`), `Good afternoon` (1200-1759) or
    `Good evening` (take `date` again when within a minute of an edge); the
-   text `Lists` and one button `id=add-list` (`Add a list`); the text
-   `Isaiah 41:10` and the caption `1 verse · 1 planted`; a button
-   `Isaiah 41:10, seed`; the text `Protection & Fear`, the caption
+   text `Lists` and one button `id=add-list` (`Add a list`); the button
+   `Open Isaiah 41:10` and the caption `1 verse · 1 planted`; a button
+   `Isaiah 41:10, seed`; the button `Open Protection & Fear`, the caption
    `14 verses to learn` and 14 buttons ending `, not planted` (15 plant
-   buttons in all); `1 day sown`; `0 verses at full corn`; the rows
+   buttons in all); 0 buttons named `Remove` or starting `Remove `;
+   `1 day sown`; `0 verses at full corn`; the rows
    `Settings` and `How Heartseed works` at the end; no text node that is
    only a number; no `When I need…`, no `id=add-verses`, no `id=add-row`,
    no `id=counts`; no `Today` heading, no button `Today`, no `Say it`, no
@@ -525,8 +529,8 @@ Report only the lines named above and the reference; delete the
   holds `onRequestClose` by Escape), what VoiceOver says of the modal
   beyond the snapshot, the `Settings` row's look and contrast
   (`test:home-screen`, `test:field-bar*`), the sheet's colours in dark
-  (`test:settings`, the walks), the sheet at large text sizes, the row
-  disabled while a remove is pending (`test:settings-ways`), a refused
+  (`test:settings`, the walks), the sheet at large text sizes, no
+  `Settings` on a list's page (`test:settings-ways`), a refused
   write (`test:settings-walk-*`), and Today with no choices when held,
   done or on an unread garden (the root's rule on every test frame).
 - What the simulator cannot show of motion (the driver reads the

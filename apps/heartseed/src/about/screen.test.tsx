@@ -4,8 +4,8 @@
  * About as a reader and a screen reader meet it, through the field bar's
  * rig (`src/test/bar-rig.tsx`), which holds every frame to the root's frame
  * rule and the screens' rules (one heading, no control but a list control
- * inside a scroll view, every text at AA, every field control disabled
- * while a remove is pending, `Listening` only on Today).
+ * inside a scroll view, every text at AA, every control of a list's page
+ * disabled while a remove is pending, `Listening` only on Today).
  *
  * The launch opens home: its Settings sheet (`src/test/settings-rig.ts`,
  * whose `watchSheet` holds the sheet's frames) holds one `About` button,

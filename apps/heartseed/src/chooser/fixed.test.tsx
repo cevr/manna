@@ -8,8 +8,9 @@
  * can hide on: Today by `Start` and a recital (`Say it`, `Listening`, the
  * grades and `Next` in the footer), the run's end that `Next` shows
  * (`The field is tended`, `1 grew a stage.` and the promise grown to a blade,
- * read exactly, its header `Your field` the way on), home's fixed top (the
- * ask and its `Remove` and `Keep`), the Add a list sheet's `Done`, the
+ * read exactly, its header `Your field` the way on), a held passage's own
+ * page (its `Your field` fixed, its ask with `Remove` and `Keep` in the
+ * scroll view among the list it changes), the Add a list sheet's `Done`, the
  * chooser's header (each step's back, the first `‹ Add verses` back to the
  * sheet) and footer (`Up to 20 verses` and `Plant` under Psalms 119's 176
  * verses), and About's `Your field`, reached by home's Settings row.

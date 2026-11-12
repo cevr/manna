@@ -1,15 +1,16 @@
 /* oxlint-disable effect/noAsyncFunction -- the walk drives the root through React's promise-based `act`, one awaited tap at a time. */
 
 /**
- * One change at a time on the field (hspassage C9) on generated readers
- * through `test/bar-walk.ts`: the ask's `Remove` tapped twice in one turn,
- * and with `Settings` or `Keep` in the same turn, each with its write
- * landing and refused, over lists with equal passages. Every frame holds
- * that while the ask's `Remove` is disabled, every other field control is
- * too. Its devices alone must reach those cases.
+ * One change at a time on a list's own page (hspassage C9, hslist L4) on
+ * generated readers through `test/bar-walk.ts`: the ask's `Remove` tapped
+ * twice in one turn, and with `Your field` or `Keep` in the same turn,
+ * each with its write landing and refused, over lists with equal
+ * passages. Every frame holds that while the ask's `Remove` is disabled,
+ * every other control of the page is too. Its devices alone must reach
+ * those cases.
  *
  * It catches a second tap that removes a second passage or answers over
- * the first, a `Settings` or `Keep` taken while a remove is pending,
+ * the first, a `Your field` or `Keep` taken while a remove is pending,
  * and a control that does nothing then but shows as live.
  */
 

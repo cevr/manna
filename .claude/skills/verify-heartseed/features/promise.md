@@ -10,8 +10,9 @@ promise is said as any verse is, on the plan, by `Practice anyway`, or by
 its plant and `Practice <reference>` or `Learn <reference>` (`home.md`).
 
 - **The field's row**: `Protection & Fear` after the passages held and
-  before the other plants, its 14 verses as plant buttons, with no
-  `Remove`.
+  before the other plants, titled by the button `Open Protection & Fear`,
+  its 14 verses as plant buttons; neither home nor its page (`list.md`)
+  offers a `Remove`.
 - **A visit** (a chosen verse's start, `home.md`) lives as the hold lives:
   a Minutes tap, a return to the foreground or a landed add or remove with
   no recital under way drops it; the field, About and back keep it; a
@@ -24,7 +25,8 @@ its plant and `Practice <reference>` or `Learn <reference>` (`home.md`).
 - `need-gone`: snapshots of home and Today hold no `When I need…`
   (count 0 in both).
 - `promise-field`: the field shows the row `Protection & Fear` with 14
-  `<reference>, not planted` plants and no `Remove`.
+  `<reference>, not planted` plants, its title the button `Open
+  Protection & Fear`, and no `Remove`.
 - `promise-relaunch`: a relaunch opens home, and no visit shows.
 - `promise-new` (the second session, after the next 04:00 local, no
   passage held, no uninstall): Today offers `Psalms 91:1 [1-9]` (the
@@ -58,7 +60,7 @@ must start empty: uninstall by udid as `first.md` says.
    `sim snapshot need-gone-today` → `When I need…` count 0; then
    `sim tap "label=Your field"`.
 3. `promise-field`: on the field, `sim snapshot promise-field` → the row
-   titles `Isaiah 41:10` then `Protection & Fear`; 14 buttons
+   title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14 buttons
    `<reference>, not planted` in that row (`Psalms 91:1` first,
    `Isaiah 41:13` last; count them); `Remove` nowhere.
 4. `promise-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,

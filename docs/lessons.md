@@ -5540,3 +5540,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A product that let the held item go at `Your field` was caught, with another item open after it, only by two run walks whose seeds happened to reach that hold; no floor named the case, so another seed could lose it with every part green.
 - **Cause:** The run walk counted a hold at `Your field` as one case, whatever followed it in the plan.
 - **Guard:** code: `apps/heartseed/src/run/end-b.test.tsx` `field:held:next:more`; code: `apps/heartseed/src/run/cues-b.test.tsx` `field:held:next:more`
+
+### heartseed-list-opens
+
+- **Date:** 2026-11-11
+- **Kind:** owner
+- **Said:** "also we should be able to press here to open to kind of see a more specific view for just this field quote unquote Right now it doesn't do anything"
+- **Source:** hymnapp/hsfirstrun/owner.md #4 (the scrawl of 2026-11-11 on home's `Isaiah 41:10 / 0 of 1 ripe` shelf title)
+- **Wrong:** A furrow's title on home looked like a door and did nothing, and its plants carried bare numbers with no page to say what they meant, while home carried each list's `Remove` and its ask.
+- **Cause:** Home grew one row per list with every action on it, and no rule held each furrow to one `Open <title>` and its own page.
+- **Guard:** code: `apps/heartseed/src/list/rule.test.ts` `names each clause a frame of home or of a list’s own page breaks`

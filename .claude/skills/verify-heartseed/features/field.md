@@ -27,7 +27,7 @@ caption (`<n> verse(s) · <r> ready today`, else `<n> verse(s) · <p>
 planted`, else `<n> verse(s) to learn`): the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
 chose, in the order chosen (`passage.md`), then the taught collection's
-row `Protection & Fear`, its 14 verses in order, with no `Remove`
+row `Protection & Fear`, its 14 verses in order
 (`promise.md`), then each other verse the garden holds, in the order
 first sown. A phrase is never a row or a plant: a verse with only its
 phrases planted shows `seed`, and a removed passage's phrases make one
@@ -35,9 +35,10 @@ row for their verse (`phrase.md`). Each plant is one button, labelled
 `<reference>, <stage>` (`seed`, `blade`, `ear`, `full corn` or
 `not planted`), then `, ready today` when a plan item not done is on it,
 its gold dot and drawing hidden inside it, no number under it; a tap
-chooses its verse (`home.md`). A furrow of a held passage holds its
-`Remove` (`passage.md`), a Handbook list's `Remove <title>`
-(`handbook.md`). A legend of the four stages and the caption `Mark 4:28`,
+chooses its verse (`home.md`). Each furrow's title is the button `Open
+<title>`, which opens the list's own page (`list.md`); home holds no
+`Remove`: a held passage's (`passage.md`) and a Handbook list's
+(`handbook.md`) lie on its page. A legend of the four stages and the caption `Mark 4:28`,
 then the rows `Settings` (`home.md`: the Settings sheet, with the
 `Minutes` radios, `Voice`, the appearance and `About`, which opens the
 About screen, `about.md`) and `How Heartseed works` (About) close the
@@ -45,9 +46,8 @@ scroll view. Above the scroll view, fixed, the greeting by the hour
 (`home.md`) and the Today card (`id=today-card`: its lines and `Start`,
 else `Practice anyway`) or, with a verse chosen, the chosen card
 (`<reference> · <stage words>` and `Practice <reference>`, or
-`Learn <reference>` on a verse not planted), or a remove's ask, and no
-`About`; like every field control each is disabled while a remove is
-pending, `Settings` too. Which screen shows is never stored:
+`Learn <reference>` on a verse not planted), and no
+`About`. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or home
 (Today on an unread garden).
 

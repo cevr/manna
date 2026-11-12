@@ -585,13 +585,15 @@ launch counts them.
   reader, over the caption `Mark 4:28`, then two rows the width of the
   field (testID `end-row`): `Settings` (Settings, below) and `How
   Heartseed works`, which opens About (About, below). A
-  furrow's head holds its icon (`furrow-icon`), its title (plain text,
-  never a heading, so a reference spelled `Your field` or `Today` adds
-  none), its caption (`captionOf`, `src/home.ts`, testID `caption`:
-  `<n> verse(s) · <r> ready today` when r > 0, else `<n> verse(s) · <p>
-  planted` when p > 0, else `<n> verse(s) to learn`) and, for a held
-  passage, `Remove <reference>`, for a held Handbook list, `Remove
-  <title>`; then its plants, then a soil line. Each
+  furrow's head holds its icon (`furrow-icon`), its title as one button
+  named `Open <title>`, at least 44 pt tall, showing the title and a `›`
+  hidden from the screen reader (never a heading, so a reference spelled
+  `Your field` or `Today` adds none), which opens the list's own page
+  (Lists, below), and its caption (`captionOf`, `src/home.ts`, testID
+  `caption`: `<n> verse(s) · <r> ready today` when r > 0, else `<n>
+  verse(s) · <p> planted` when p > 0, else `<n> verse(s) to learn`); then
+  its plants, then a soil line. Home holds no `Remove`: a list is removed
+  from its own page. Each
   plant (testID `field-plant`) is one button at least 44 × 44 pt named
   `<reference>, <stage>`, then `, ready today` for a verse of the plan's
   open items, with `aria-selected` while its verse is chosen; inside it,
@@ -607,8 +609,7 @@ launch counts them.
   this verse` (named `Practice <reference>`) on an item not fresh, or
   `Learn this verse` (named `Learn <reference>`) on a fresh one; it runs
   `startHere` and opens Today once it settles. At most one filled button
-  shows on home. Like every field control, the plants, the cards'
-  buttons and both end rows are disabled while a remove is pending.
+  shows on home.
 - **The choice** is a verse, never a cell: a tap on a plant chooses its
   verse (every cell of it shows selected), a tap on a plant of the chosen
   verse lets it go, and a tap on another moves it. It is the screen's own
@@ -648,8 +649,7 @@ Settings sheet.
 Home's scroll view ends with the row `Settings` (`src/field/screen.tsx`,
 testID `end-row`): a button the width of the field, at least 52 pt tall,
 its word and a `›`, at WCAG AA in both schemes. Nothing named `Settings`
-lies above the scroll view. Like every field control it is disabled while
-a remove is pending, and its tap clears a remove's alert. No other screen
+lies above the scroll view. No other screen
 has a control named `Settings`: not Today, the chooser, About, the first
 minute or an unread garden.
 
@@ -678,7 +678,7 @@ About, a recital that brings Today) or a relaunch closes it.
   dots and `Start` change under the open sheet. An appearance tap
   re-themes every screen, the sheet included. Opening or closing the sheet
   writes nothing; `Done`, the swipe down and Escape leave home as it was,
-  the chosen plant, the ask and the plan kept.
+  the chosen plant and the plan kept.
 - `src/settings/choices.tsx` holds the two controls the sheet shows, each
   under its line (`MinutesChoice`, `VoiceChoice`): the sheet is the only
   place a reader chooses the minutes and the voice.
@@ -781,46 +781,40 @@ and removes one.
 
 ## Choosing a passage
 
-The reader adds and removes passages from the field, plants a list from
-the Add a list sheet over home, and chooses any passage on the chooser,
-the root's third screen, in place like the field. The field's ask, the
-sheet's header and foot, the chooser's header and its footer are fixed
-outside the scroll views; `Add a list` and a row's `Remove` lie in the
-field's scroll view, among the lists they change.
+The reader adds passages from the field, plants a list from the Add a
+list sheet over home, chooses any passage on the chooser, the root's
+third screen, in place like the field, and removes a list from its own
+page (Lists, below). The sheet's header and foot, the chooser's header
+and its footer are fixed outside the scroll views; `Add a list` lies in
+the field's scroll view, among the lists it changes.
 
 - **The field's lists**: under the heading's days sown and harvest, the
-  label `Lists`, then, with the passages read and no ask showing,
+  label `Lists`, then, with the passages read,
   `Add a list` (testID `add-list`) while fewer than 3
   passages and lists are held together, else the limit line "3 passages or
   lists, the most for now. Remove one to add another." (testID `limit`),
   which a stored list of 4 or more
   shows too, so the field never offers an add the service would refuse.
-  `Add a list` opens the Add a list sheet over home, and its tap clears
-  the remove's alert. With the passages unread
-  it offers neither and no row offers `Remove`: the app never writes over
-  what it could not read.
+  `Add a list` opens the Add a list sheet over home. With the passages
+  unread it offers neither, and no list's page offers `Remove`: the app
+  never writes over what it could not read.
 - **The rows** are the promise's, then each passage held, in the order
   chosen, titled by its reference, then each list held, in the order
   planted, titled by its title, then each taught collection's
   (`Protection & Fear`), then every other plant as a passage of one verse,
-  a phrase's folded into its verse (Field, above). Each passage row holds
-  `Remove <its reference>`, which finds its passage by the row's range,
-  never by its place; each list row holds `Remove <its title>`, which
-  finds its list by its id (`removalOf`, `src/field/plot.tsx`, by the
-  row's source). The promise and the taught collections are not the
-  reader's choice and have none.
-- **Remove asks once**, fixed above the scroll view in the Today card's
-  place (or the chosen card's), with no `Add a list` or limit line while
-  it shows: "Remove <reference or title>? Its plants stay in your field." (testID
-  `ask`), with `Remove` and `Keep`. `Keep` closes it. `Remove` runs
-  `removePassage` (`uprootPassage`, `src/app.ts`) for a passage, or
-  `removeList` (`uprootList`) for a list; the service takes out
-  the first equal passage, so with equal rows either row's `Remove` takes
-  one, and every stored entry of the list's id. On `Removed` the row leaves and its plants stay, a planted verse
-  no other row names then a row of its own; on any other answer the row stays and the
-  field's top says "<reference or title> was not removed. Try again." (`role="alert"`). Another
-  row's `Remove` moves the ask; leaving the field drops the ask and the
-  alert, and the next tap of a field control clears the alert.
+  a phrase's folded into its verse (Field, above). A held passage's page
+  holds `Remove <its reference>`, which finds its passage by the row's
+  range, never by its place; a held list's page holds `Remove <its
+  title>`, which finds its list by its id (`removalOf`,
+  `src/field/plot.tsx`, by the row's source). The promise, the taught
+  collections and a loose verse are not the reader's choice and have
+  none. The ask, its answer and its alert are the page's (Lists, below):
+  `Remove` runs `removePassage` (`uprootPassage`, `src/app.ts`) for a
+  passage, or `removeList` (`uprootList`) for a list; the service takes
+  out the first equal passage, so with equal rows either row's `Remove`
+  takes one, and every stored entry of the list's id. On `Removed` home
+  shows without the row and its plants stay, a planted verse no other row
+  names then a row of its own.
 - **The Add a list sheet** (`src/shelves/sheet.tsx`, `AddSheet`) is a
   system `Modal` page sheet over home, as the Settings sheet is: the root's
   `add` screen keeps home in place under it. Its fixed header holds the one
@@ -867,12 +861,10 @@ field's scroll view, among the lists they change.
   answer "<reference> was not planted. Try again." (`role="alert"`). The
   range stays either way, so a retry is one tap, and the next tap on the
   chooser clears the line.
-- **One change at a time.** From a tap of `Plant`, or of the ask's
-  `Remove`, until its answer, a tap of `Plant`, the ask's `Remove` or
-  `Keep`, `Add a list`, a row's `Remove`, a plant, `Start`,
-  `Practice anyway`, `Practice`, `Learn`, `Settings`, `How Heartseed
-  works`, a verse or a back changes nothing, and each shows as disabled (no
-  `Add a list` shows while the ask shows). A ref, set in the tap's own turn,
+- **One change at a time.** From a tap of `Plant` until its answer, a
+  tap of `Plant`, a verse or a back changes nothing, and each shows as
+  disabled; from a tap of the ask's `Remove` on a list's page until its
+  answer, no control of the page changes anything (Lists, below). A ref, set in the tap's own turn,
   holds it, so two taps in one turn make one change: a double tap never
   stores a passage twice or removes two.
 - **Today after a change.** A landed add or remove is a making (Passages,
@@ -1013,7 +1005,7 @@ collection, free, after the reader's own passages.
   place there, its phrases under the passage's reference.
 - **The field's row.** Each taught collection is a row titled by its
   title, its plants its verses in order, after the passages held and
-  before the other plants, with no `Remove`. A verse is one plant
+  before the other plants; its page (Lists, below) has no `Remove`. A verse is one plant
   wherever it shows: a Fear verse in a held passage shows in both rows,
   and a removed passage's Fear verse stays in the Fear row. A Fear verse
   in phrases shows `seed` there, as in any row (Phrases, above).
@@ -1232,8 +1224,8 @@ after the 17 others, in the book's order, under Haskell's title with the
 note `S. N. Haskell, Bible Handbook (1919)`; each of its lists is an
 offer, planted whole (Choosing a passage, above), its id stored under
 `heartseed/lists` (Passages, above), its furrow on home after the
-passages, titled by the list, every verse in Haskell's order, with
-`Remove <title>`. A verse already in the field keeps its one plant, and
+passages, titled by the list, every verse in Haskell's order, its own
+page (Lists, below) holding `Remove <title>`. A verse already in the field keeps its one plant, and
 planting writes no recall. The development probe
 (`app/probe/handbook.tsx`, `heartseed://probe/handbook`) shows the data's
 counts.
@@ -1318,7 +1310,7 @@ opens on it:
 
 - **The opening.** A launch on a read garden with a plant opens home, and
   so does the first minute's `Continue`; a relaunch decides again, the
-  visit, the hold, the choice, the ask and the screen all gone. An unread
+  visit, the hold, the choice, the list shown and the screen all gone. An unread
   garden opens Today.
 - **Home's first frame.** Home shows the pending frame (the reference
   alone) until the garden, the passages, the taught collections, the
@@ -1434,7 +1426,7 @@ session (verify-heartseed, `features/home.md`).
   home, counted in reading order (spring and sway apart), and the first
   12 grown at the end; the rest are drawn at rest, so every entrance has
   ended by 1,620 ms. A moving node is an `aria-hidden` wrapper holding one
-  image and no text or control, so titles, counts, `Remove`, plant
+  image and no text or control, so titles, counts, plant
   buttons, the Today card, the end rows and the end's line and `Your field` stand
   still and answer a tap from home's first frame. The entrance plays at
   each mount of home (a sheet's close does not replay it). Every
@@ -1442,6 +1434,64 @@ session (verify-heartseed, `features/home.md`).
   Reduce Motion on, nothing enters, nothing is held unseen and full corn
   stands upright. The probe's `motion` line gives the plan over the live
   furrows.
+
+## Lists
+
+Each furrow on home opens its own page: a tap of its title, `Open
+<title>`, shows the list's page (`src/list/screen.tsx`, `ListScreen`) in
+the root's place, the root's screen `list` beside the furrow's id, the
+launch's state alone (never stored, never a route). When that id names no
+furrow any more, the root shows home. The page reads the same atoms as
+home and begins the session when shown, as home does.
+
+- **What starts** (`src/list.ts`, pure over the session's view and the
+  read garden; nothing stored). `listStartOf(view, garden, verses)` is
+  `None` before a plan; else `Open`, the plan's open items whose verse
+  (a phrase folded into its verse) is one of the list's, in plan order,
+  each exactly as planned; else `Weakest`, the weakest of the list's
+  planted verses that `startOf` starts, by the Today card's own order
+  (`weakestAmong`, `src/home/today.ts`: the lowest stage, then the
+  earlier last recall, then the reference); else `Learn`, the list's
+  first verse with no plant that `startOf` starts, as `startOf` starts
+  it; else `None`. `listLineOf` writes `<n> ready today · about <k> min`,
+  `Starts with <verse>, nothing is due` or `Starts with <verse>, new
+  today`; `listCaptionOf` writes `<n> verse(s) · none planted yet`, else
+  `<n> verse(s) · <p> planted`, then ` · <k> at full corn` when k > 0.
+- **Practice this list** runs `practiceList(verses)` (`src/app.ts`;
+  `Session.startList`): after the garden settles, with a plan made, what
+  `listStartOf` starts becomes the visit, replacing any before and
+  keeping the hold, the plan and the minutes; then Today shows. It lives
+  as `start`'s visit lives (Visits, above).
+- **The page.** Fixed above the scroll view (testID `list-screen` on the
+  root): `‹ Your field` (named `Your field`), the list's icon and its
+  title as the one heading, the caption (`list-caption`), and, unless
+  `listStartOf` is `None`, `Practice this list` (filled, full width) over
+  its line (`list-line`). In the scroll view one row per plant in the
+  furrow's order (`list-row`): its drawing, the reference
+  (`list-reference`), the stage in words (`A seed`, `A blade`, `An ear`,
+  `Full corn`, `Not planted yet`, then ` · ready today` and the gold dot)
+  (`list-stage`) and a chevron; a row is one button named as home's plant
+  (`<reference>, <stage>`, then `, ready today`) only while `startOf`
+  starts its verse, and its tap runs `startHere`, then Today. With the
+  passages unread, no remove; with no plan, no `Practice this list` and
+  no row button. Every text is at WCAG AA on what lies behind it in both
+  schemes.
+- **Remove** lies at the list's end, for a held passage or Handbook list
+  (`removalOf`) with the passages read: `Remove this list` (named `Remove
+  <reference>` or `Remove <title>`) in the scheme's `miss`, with `Its
+  plants stay in your field.` under it. Its tap puts the ask in its place:
+  "Remove <name>? Its plants stay in your field." (testID `ask`) with
+  `Remove` and `Keep`; `Keep` puts it back. From a tap of the ask's
+  `Remove` until its answer, every control of the page shows as disabled
+  and no tap changes anything, two in one turn included (a ref set in the
+  tap's turn). On `Removed` home shows without the list's row; on any
+  other answer the page stays, the ask goes, and "<name> was not removed.
+  Try again." (`role="alert"`, testID `remove-alert`) shows where it was
+  until the next tap. The ask, the alert and the pending state are the
+  page's own, dropped when it is left.
+- **Leaving.** `Your field` shows home; Today's way back shows home, not
+  the page. Whenever Say it listens the screen is Today, from a page as
+  from home.
 
 ## Natural voice
 
@@ -2289,18 +2339,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads,
     under the app's layer teaching the collections a test gives, none by
-    default, launched on home; every frame held to `rootFaults`, one heading, the
-    ask and the alert outside the scroll view, `Add a list` (`addFaults`)
+    default, launched on home; every frame held to `rootFaults`, one heading,
+    no remove, ask or alert on home, `Add a list` (`addFaults`)
     and the limit line under `Lists` inside it, no add beside the
-    limit line or at 3 held, nothing offered over unread passages, every
-    field control, `Settings` among them, disabled while a
-    remove is pending, and every seen text of the field and the chooser at
+    limit line, nothing offered over unread passages, a list's page's
+    `Remove <name>`, ask and alert in its scroll view, every control of
+    the page disabled while a remove is pending, and every seen text of
+    the field, the page and the chooser at
     AA): stored lists of 0-5 or more passages with equal ones, garbled
     values and 1-3 failed reads; a round trip to Today by `Start` (over
     unread passages `Start` must show), then
-    `Your field`; a row's `Remove`, then `Keep`, another row, leaving, or
-    the ask's `Remove` landing or refused, once, twice in one turn or with
-    `Keep` in the same turn;
+    `Your field`; a row's `Open <title>`, then its `Remove`, then `Keep`,
+    `Your field`, or the ask's `Remove` landing or refused, once, twice in
+    one turn or with `Keep` in the same turn;
     `Add a list` to the Add a list sheet and its `Any passage`, then left by
     `‹ Add verses` and the sheet's `Done`, or planted; after every tap the
     sheet against `sheetWant` (every shelf closed) or closed, the field, its
@@ -2313,11 +2364,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     promise planted, 0-2 stored passages (one now and then over a verse of
     a held list), 1-3 stored Handbook lists of at most 12 verses, now and
     then with an unknown id or an id stored twice, and a recall on a list's
-    verse; a list furrow's `Remove`, then `Keep` or the ask's `Remove`
-    (landing or refused, once or twice in one turn, a refusal retried), a
-    passage's `Remove`, `Add a list` and a small list's `Plant`, or a
-    relaunch; after every tap home's rows, add,
-    limit line, ask and alert against `fieldWant` over the lists held, both
+    verse; a list furrow's `Open <title>` and its page's `Remove`, then
+    `Keep` or the ask's `Remove` (landing or refused, once or twice in one
+    turn, a refusal retried), a passage's the same, `Add a list` and a
+    small list's `Plant`, or a relaunch; after every tap home's rows, add
+    and limit line, or the page's ask and alert, against `fieldWant` over
+    the lists held, both
     stored texts against `src/test/handbook-model.ts` (unknown ids kept in
     place), no recall written, and every frame held to the rig's rules;
     each file's floors met by its own devices.
@@ -2355,8 +2407,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the frame's own faults stay.
   - `test:settings-ways` and `test:settings-ways-b`:
     `src/settings/ways.test.tsx` and `ways-b.test.tsx`, fixed cases: the
-    `Settings` row disabled through a pending remove and two taps in one turn opening
-    nothing, its tap clearing a failed remove's alert; About from the sheet
+    no `Settings` on a list's own page, whose way back is disabled while a
+    remove is pending and changes nothing in the remove's turn, and a
+    failed remove's alert left behind with the page; About from the sheet
     and back with the sheet closed; `Done` and Escape closing with the
     chosen plant kept and nothing written; a recital started under the
     sheet bringing Today; a relaunch closing it; no `Settings` on Today,
@@ -2718,7 +2771,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `fieldPassagesOf` against `fieldRule`, a Fear verse in a held passage
     in both rows and a removed passage's Fear verse kept in the Fear row;
     `field.test.tsx`, the root's field with the Fear row after the held
-    passage and no `Remove` on it, and no taught row with the part left
+    passage and no `Remove` on its page, and no taught row with the part left
     out.
   - `test:handbook`: `src/handbook`. `content.test.ts`, the Handbook lists
     (`src/handbook.ts`) over the committed data through the app's corpus:
@@ -3168,7 +3221,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/look/screens.test.tsx` and `screens-b.test.tsx` (light),
     `screens-dark.test.tsx` and `screens-dark-b.test.tsx`
     (dark), each a walk of `src/test/screens-walk.ts`: the field (every
-    plant stage, a remove asked and pending), About (by `Settings`, the
+    plant stage, a list's page with a remove asked and pending), About (by `Settings`, the
     sheet's frames held to `sheetFaults`) in the
     first of each scheme; the Add a list sheet with `Psalms` open (held to
     `addSheetFaults` in the scheme shown), then the chooser by
@@ -3198,6 +3251,32 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     with it, and none under the test's clock, a `TestClock` or a logger on
     the test's clock; and `deadline`, which expires on elapsed time while
     the instant stands still and never because it jumps.
+  - `test:list`: `src/list.property.test.ts`, `listStartOf`,
+    `listLineOf` and `listCaptionOf` over the home model's generated
+    devices and over the real lists the field shows (`Open` exactly when
+    `readyOf` holds a verse of the list, its visit a sub-sequence of the
+    plan, `Weakest` and `Learn` as `startOf` gives them), and
+    `src/list/rule.test.ts`, the root rule's home and list-page clauses,
+    one offending frame per clause, each fault named.
+  - `test:list-screen`: `src/list/screen.test.tsx`, each list's own page
+    through the bar rig in light and dark (the promise, a held passage
+    part grown, the Fear collection, a held Handbook list, a loose verse):
+    its heading, caption, `Practice this list` and its line, its rows in
+    order with their names and stage words, row buttons only where a start
+    exists, `Remove <name>` only on the held passage and the Handbook list,
+    every text at AA; and over unread passages no remove, no
+    `Practice this list` and no row button.
+  - `test:list-walk` and `test:list-walk-b`: `src/list/walk-a.test.tsx`
+    (seeds 58, 23, 57) and `walk-b.test.tsx` (seeds 53, 17, 44), generated
+    readers through `src/test/list-walk.tsx` over the root rig: open a
+    list, `Your field`, `Practice this list`, a row's tap, Say it starting
+    to listen, a return to the foreground, `Remove <name>` then `Keep` or
+    the ask's `Remove` landing or refused (once, twice in one turn, or
+    with `Your field` in its turn), and Today's `Your field`; after every
+    step the screen against the model, the visit against `listStartOf`'s
+    or `startOf`'s at the tap, a removed list gone from home and every
+    other kept, and every frame held to the root rule, the bar's and the
+    page's pending rule (every control disabled or none).
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting

@@ -160,17 +160,20 @@ field, which is home, every launch's screen after the first minute: in
 its fixed top the Today card (`id=today-card`, its lines `id=today-headline`
 and `id=today-parts`, as Today's counts line is `id=session`) with one
 button, `Start` or `Practice anyway`, or with a plant chosen the chosen
-card (`id=chosen`) with `Practice <reference>` or `Learn <reference>`, or
-the ask's `Remove` and `Keep`; in its scroll view `Add a list`
-(`id=add-list`), in a furrow `Remove <reference>` (a Handbook list's
-`Remove <title>`) and its plants (`<reference>, <stage>`, then `, ready
+card (`id=chosen`) with `Practice <reference>` or `Learn <reference>`;
+in its scroll view `Add a list`
+(`id=add-list`), in a furrow `Open <title>` (its title, opening the
+list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready), and at its end the rows `Settings` and `How Heartseed
 works` (scroll to them first: `sim scroll "label=Settings" down`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
 `About`; in the Add a list sheet (`Add a list` opens it) `Done`, a
 shelf head by its title (`Any passage`, `Psalms`, …, `Seven Churches`) and an offer's
-`Plant <reference>` or `Plant <title>`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
+`Plant <reference>` or `Plant <title>`; on a list's own page
+(`id=list-screen`) `Your field`, `Practice this list`, its rows named as
+home's plants, `Remove <reference>` or `Remove <title>` (shown `Remove
+this list`, at the list's end) and the ask's `Remove` and `Keep`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Add verses`, shown `‹ Add verses`, back to the sheet, `Books`, `Chapters`); and on the home's
 development probe (`sim open probe/home --expect "label=Home probe"`,
 `apps/heartseed/app/probe/home.tsx`) its one button
@@ -244,7 +247,8 @@ Heartseed has no journey files yet. The features:
 - [features/passage.md](features/passage.md): choosing passages: the
   field's `Add a list` under `Lists` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
-  in a fixed footer), a row's `Remove` and its one ask, and Today over the
+  in a fixed footer), a passage's `Remove` and its one ask on its own
+  page, and Today over the
   passages chosen, the first day and after the next 04:00. Run it from
   `first.md`'s `first-home`; its second session comes after the next 04:00.
 - [features/wake.md](features/wake.md): a return to the foreground makes
@@ -285,7 +289,7 @@ Heartseed has no journey files yet. The features:
   Run it from `first.md`'s `first-home`.
 - [features/handbook.md](features/handbook.md): Haskell's Bible Handbook
   as 25 shelves of the Add a list sheet after `Rest`, each list planted whole into
-  a furrow titled by the list with `Remove <title>`, one plant per verse,
+  a furrow titled by the list, its own page holding `Remove <title>`, one plant per verse,
   the limit of 3 over passages and lists, and its development probe
   (`apps/heartseed/app/probe/handbook.tsx`): the sections, lists, ranges
   and verses, every verse resolved in the device's corpus. Run it from
@@ -306,6 +310,12 @@ Heartseed has no journey files yet. The features:
   `Settings` row at the field's end (the sheet with Minutes, Voice, the
   appearance and About; Today with no choices). Run it from `first.md` (`first-planted` or
   `first-home`).
+- [features/list.md](features/list.md): each list's own page, opened by
+  its furrow's `Open <title>` on home: its heading, caption, `Practice
+  this list` and its line, its rows in order with their stage words, a
+  row's tap and `Practice this list` starting Today, the way back, and a
+  held list's `Remove` with its ask, `Keep` and the landed remove. Run
+  it from `first.md`'s `first-home`.
 - [features/doctor.md](features/doctor.md): `sim doctor` against an
   installed build older than the served JavaScript: the row
   `doctor-native-stale` (a native contract changed in the working tree,
