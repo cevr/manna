@@ -29,6 +29,7 @@ import { HymnPage } from '~/reader/HymnPage';
 import { Shown } from '~/reader/screen';
 import { StackHeader } from '~/test/stack';
 
+import { toSlot } from '../test/bar';
 import { fakeDevice } from '../test/device';
 import { drag, gestureOf, type Held, longPress, touchDown, touchUp } from '../test/gesture';
 import { animations, holdAnimations, landAnimations } from '../test/reanimated';
@@ -235,15 +236,15 @@ const turn = (page: Page, label: string, way: 'increment' | 'decrement' = 'incre
   perform(Option.getOrThrow(dial(page, label)), way);
 /**
  * The key button held until chords turn to `to`, then let go: with chords
- * on, the hold opens the wheel and the finger slides to Chords off (−6°,
- * 120 points out); with chords off, the hold itself turns them on. The hold
- * is the gesture handler's, played through its callbacks.
+ * on, the hold opens the wheel and the finger slides to Chords off's slot
+ * (`toSlot`); with chords off, the hold itself turns them on. The hold is
+ * the gesture handler's, played through its callbacks.
  */
 const hold = (page: Page, to: boolean) =>
   Effect.gen(function* () {
     let held = Option.none<Held>();
     act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
-    if (!to) act(() => void Option.map(held, (finger) => finger.move(119.3, 12.5)));
+    if (!to) act(() => void Option.map(held, (finger) => finger.move(...toSlot('chords'))));
     act(() => void Option.map(held, (finger) => finger.lift()));
     yield* page.untilChords(to);
   });
@@ -905,7 +906,7 @@ describe('the Tuner on the key button’s wheel', () => {
       expect(page.all('[data-testid="dials-tuner"]')).toHaveLength(0);
       let held = Option.none<Held>();
       act(() => void (held = Option.some(longPress('key-hold', { x: 90, y: 22 }))));
-      act(() => void Option.map(held, (finger) => finger.move(0, -100)));
+      act(() => void Option.map(held, (finger) => finger.move(...toSlot('tuner'))));
       act(() => void Option.map(held, (finger) => finger.lift()));
       expect(Option.isNone(page.find('[data-testid="dials"]'))).toBe(true);
       expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
