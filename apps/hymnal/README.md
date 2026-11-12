@@ -193,6 +193,15 @@ under its number, and the refrain written out each time it is sung.
   `HYMNAL_LIST_SEED` reaches the browser tests through
   turbo's `test:slow`.
 
+- `bun run test:slow` runs each `test:slow:<group>` script, then
+  `test:browser`, through `scripts/slow.ts`: every one runs whatever the one
+  before it answered, and the run ends with a line naming each that failed
+  (exit 1 when any did). A group is one `bun test` over the slow files that
+  may share a process; a file that mocks a module or counts draws has a
+  group of its own. `scripts/slow.test.ts` holds every `*.slow.test.*`
+  under `src`, `infra` and `scripts` to one group. `bun run test:offline`
+  runs the two offline groups alone.
+
 - `bun run test:browser` (`test/browser/`) renders the home screen's list and
   its search results on a server, hydrates them in Playwright's Chromium, and drives
   them: hydration keeps the server's list and a scroll made before it (the
@@ -368,7 +377,7 @@ wiring, not real reader gestures. The default route renders nothing unless
 `typeof __DEV__ !== 'undefined' && __DEV__`; the slow hold acceptance renders
 that guard and the fixture controls. The six numeric-only by-hand rows in
 `.claude/skills/verify-hymnal/features/scrub.md` have no journey. Both slow
-acceptance files are explicit in `test:slow`, outside every fast part.
+acceptance files are named in `test:slow:` groups, outside every fast part.
 The held reader below is the reader's one use of this seam. `seek-targets.test.ts` belongs to
 `test:follow`; `seek-targets.property.slow.test.ts` independently enumerates
 every corpus stanza subset, occurrence and word and generated numeric scores.
@@ -431,7 +440,7 @@ away, and the phone's recognizer and the web's armed candidate read the
 same value.
 
 `test:seek` holds the fast traces; `word-seek.property.slow.test.tsx`,
-appended alone to `test:slow`, runs seeded histories over the web, native
+alone in `test:slow:player-word-seek`, runs seeded histories over the web, native
 and steps surfaces against an independent reference: words drawn plain, as
 syllables and boxed under chords, every reading setting, measures that
 answer late in any order, a landing held back, the `#` coming and going,

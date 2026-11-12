@@ -15,8 +15,9 @@ const app = join(import.meta.dir, '../..');
 const scripts: Record<string, string> = JSON.parse(
   readFileSync(join(app, 'package.json'), 'utf8'),
 ).scripts;
-const listed =
-  `${scripts['test:slow']} ${scripts['test:offline']}`.match(/\.\/[\w./-]+\.tsx?\b/g) ?? [];
+const listed = Object.entries(scripts)
+  .filter(([name]) => name.startsWith('test:slow:'))
+  .flatMap(([, script]) => script.match(/\.\/[\w./-]+\.tsx?\b/g) ?? []);
 const browser = [...new Bun.Glob('test/browser/**/*.{ts,tsx}').scanSync({ cwd: app })].map(
   (file) => `./${file}`,
 );
@@ -25,7 +26,7 @@ const files = [...new Set([...listed, ...browser])];
 const bareSpawn = /Bun\.spawnSync\(\s*\[\s*['"`]bun['"`]/;
 
 describe('the slow tests’ scripts', () => {
-  it('are read from test:slow, test:offline and test/browser', () => {
+  it('are read from the test:slow: scripts and test/browser', () => {
     expect(files.length).toBeGreaterThanOrEqual(20);
     expect(files).toContain('./src/reader/HymnList.native.slow.test.ts');
   });
