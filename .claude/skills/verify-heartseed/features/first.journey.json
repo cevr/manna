@@ -1,0 +1,139 @@
+{
+  "feature": "first",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "first-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [
+        { "shows": "label=Begin" },
+        { "shows": "label=Skip" },
+        { "shows": "label=Isaiah 41:10" },
+        { "hides": "label=Listen" },
+        { "hides": "label=Next" },
+        { "hides": "label=Say it" },
+        { "hides": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-welcome-still",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-grows",
+      "action": "tap",
+      "target": "label=Begin",
+      "expect": [
+        { "shows": "label=Every verse is a plant" },
+        { "shows": "label=Plant your first verse" },
+        { "shows": "label=Mark 4:28" },
+        { "hides": "label=Begin" },
+        { "hides": "label=Skip" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-grows-plant",
+      "action": "tap",
+      "target": "label=Plant your first verse",
+      "expect": [{ "shows": "label=Hear it" }, { "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-skip",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Begin" }, { "shows": "label=Skip" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-launch",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [
+        { "shows": "label=Hear it" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Listen" },
+        { "shows": "label=Next" },
+        { "hides": "label=Today" },
+        { "hides": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-hear",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }, { "hides": "label=Listen" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-letters",
+      "action": "tap",
+      "target": "label=Say it with help",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Say it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-letters-said",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "first-alone",
+      "action": "tap",
+      "target": "label=Say it alone",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Say it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-alone-said",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "first-planted",
+      "action": "tap",
+      "target": "label=Planted",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Stage: seed" }, { "shows": "label=Continue" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-tips",
+      "action": "tap",
+      "target": "label=Continue",
+      "expect": [
+        { "shows": "id=tip-1" },
+        { "shows": "id=tip-2" },
+        { "shows": "id=tip-3" },
+        { "shows": "label=Got it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-home",
+      "action": "tap",
+      "target": "label=Got it",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Your field" },
+        { "shows": "label=Practice anyway" },
+        { "hides": "id=tip-1" },
+        { "hides": "label=Got it" },
+        { "hides": "label=Start" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
