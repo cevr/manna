@@ -529,7 +529,7 @@ const actionOf = (listening: boolean, done: boolean) => {
 const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
-/** What a start on a chosen verse is to the reader: learning it new for a fresh item, else practising it. */
+/** What a tap on a plant starts on its verse, to the reader: learning it new for a fresh item, else practising it. */
 const startKindOf = (visit: VisitVerse): StartKind => {
   if (visit.item.fresh) return 'Learn';
   return 'Practice';
@@ -544,8 +544,8 @@ const startKindOf = (visit: VisitVerse): StartKind => {
  * has not read, a frame without the reader's rows, or a run before the plan
  * that decides it. Its furrows' ready marks are the plan's open verses;
  * the Today card is `todayOf`'s: `Start` opens Today, writing nothing, and
- * `Practice anyway`, `Practice this verse` and `Learn this verse` make
- * what `startOf` starts on their verse the session's visit, then show
+ * `Practice anyway` and a tap on a plant make what `startOf` starts on
+ * their verse the session's visit, then show
  * Today once it is made (or failed), so Today never shows the plan's item
  * first. While `adding`, the Add a list sheet shows over it on the same
  * field, in the same place in the tree, so home's own state stays while
@@ -718,14 +718,16 @@ const screenAt = (shown: Opening): Screen => {
  * recall of any verse, home when it holds one, and Today in an unread
  * garden. The opening is decided once per launch, at the read: planting the
  * seed inside the first minute keeps Planted on until Continue, which shows
- * home. After it, the root shows one of four screens in place: home (back
+ * home. After it, the root shows one screen in place: home (back
  * from Today's `Your field`), with the Add a list sheet over it from home's
- * `Add a list` until the sheet's `Done` or a landed plant, Today (from the
- * Today card's `Start` or `Practice anyway`, or the chosen card's
- * `Practice` or `Learn`), the chooser (from the sheet's `Any passage`, back
- * to the sheet from its first back, home once a passage is added) and
- * About (from the `About` of home's Settings sheet, back to home), whose
- * `Licences` shows the licences (back to About).
+ * `Add a list` until the sheet's `Done` or a landed plant, a list's own
+ * page (from its furrow's `Open <title>`, back to home), Today (from the
+ * Today card's `Start` or `Practice anyway`, a tap on a plant, or a list
+ * page's `Practice this list` or a tap on its row), the chooser (from the
+ * sheet's `Any passage`, back to the sheet from its first back, home once
+ * a passage is added) and About (from the `About` of home's Settings
+ * sheet, back to home), whose `Licences` shows the licences (back to
+ * About).
  * Beside the screen it holds the tour (`../src/first/tour`): Planted's
  * `Continue` shows home with its tips; home's `How Heartseed works` and
  * the sheet's `Show the welcome again` replay the welcome and how a verse

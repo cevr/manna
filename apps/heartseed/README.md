@@ -99,7 +99,9 @@ A sought reading that finishes ends hear as Listen's own does.
   gap between lines is 10 pt (`look.lineBreak` with the row gaps,
   `src/sayit/draw.tsx`). Nothing read aloud, heard, matched or kept
   changes: the voice and Dictation are handed `piece.text`. The first
-  minute's verse stays one line.
+  minute (`src/first/screen.tsx`) draws its verse in the same lines: in
+  hear, whole and read aloud, and in letters and alone, a `break-<k>`
+  before each line after the first, a sibling of the words.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `seek`, `pause`,
   `resume`, `stop`, `choose`, and the `view` a screen shows (`choice`,
@@ -2236,12 +2238,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (the growing seed's plan over generated clocks, and the points the
     adapter reads equal to `growthAt`), `rule.test.ts` (hsintro's frame
     rule, `introRuleFaults` in `src/test/root-rule.ts`, one offending
-    frame per clause) and `intro.test.tsx` (both screens mounted, first
+    frame per clause), `intro.test.tsx` (both screens mounted, first
     run and replay, in both schemes: their heading, controls outside the
-    scroll view, drawings, reference, `Mark 4:28`, no verse words, AA).
+    scroll view, drawings, reference, `Mark 4:28`, no verse words, AA) and
+    `tour-edges.test.tsx` (through the root over the bar rig: a recital
+    that starts listening during the replay forces Today and ends the
+    tour; with three lists held the tips hold no `tip-2`).
   - `test:growing`: `src/first/growing.test.tsx`, the growing seed
     mounted: `growthAt(at)` on a driven clock in both schemes, full corn
-    still under Reduce Motion, the loop's first frame with motion on, an
+    still under Reduce Motion, the loop's first frame with motion on, the
+    loop's clock starting over past its first cycle on driven frames, an
     unmount mid-loop, and the welcome's other nodes the same in every
     frame.
   - `test:tour-walk`: `src/first/tour-walk.test.tsx` (a fresh device
@@ -3380,7 +3386,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     continued over lines with a backslash), held to the literal
     skeleton of a text the probe's sources write, `…` ending an elided line
     and a tag opening a log line; generated probes and feature files hold
-    the reader, so `test:infra`'s inputs take `.claude/skills/verify-heartseed`) and
+    the reader, so `test:infra`'s inputs take `.claude/skills/verify-heartseed`),
+    `scripts/first-run.test.ts` (no `sim open … --expect` in those files
+    waits for a heading of the first minute's verse without
+    `--no-relaunch`, since every launch with no recall opens the welcome) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
     parameter found by name, the pin, the part's files, the search over a
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,

@@ -8,8 +8,8 @@
  * every other verse the garden holds is a passage of one verse, in the
  * order first sown: by its earliest recall, then by its reference in code
  * units. References match exactly. A passage the reader chose carries its
- * range to its row, so the row's `Remove` names that range and never finds
- * it by the row's place.
+ * range to its row, so its list page's `Remove this list` names that range
+ * and never finds it by the row's place.
  *
  * The pieces of verses an earlier build kept (`src/phrase.ts`) fold into
  * their verse: a piece is never a row or a plant here, and its stage is

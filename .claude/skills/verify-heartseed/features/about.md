@@ -20,8 +20,7 @@ the natural voice's vendored code. Its one way back is the button `About`
 About again.
 
 Both pages show in place in the root route: no route, no link, no tab.
-Like every field control, `Settings` is disabled while a remove is
-pending, and neither page is shown while Say it listens. Neither has a
+Neither page is shown while Say it listens. Neither has a
 foot or the `Appearance` radios (the Settings sheet holds them:
 `appearance.md` drives them); neither writes anything, and a launch never
 opens on either.
