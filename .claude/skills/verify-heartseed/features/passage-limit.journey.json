@@ -1,0 +1,110 @@
+{
+  "feature": "passage-limit",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-limit-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=Open Psalms 23:1-6"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-sheet-again",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [
+        {
+          "shows": "label=Any passage"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-books-again",
+      "action": "tap",
+      "target": "label=Any passage",
+      "expect": [
+        {
+          "shows": "label=Add a passage"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-romans-scroll",
+      "action": "scroll",
+      "target": "label=Romans",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-romans",
+      "action": "tap",
+      "target": "label=Romans",
+      "expect": [
+        {
+          "shows": "label=Romans 8"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-chapter",
+      "action": "tap",
+      "target": "label=Romans 8",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-verse-scroll",
+      "action": "scroll",
+      "receipt": "none",
+      "target": "label=Romans 8:28",
+      "direction": "down",
+      "expect": [
+        {
+          "shows": "label=Romans 8:28"
+        }
+      ]
+    },
+    {
+      "name": "passage-limit-verse",
+      "action": "tap",
+      "target": "label=Romans 8:28",
+      "expect": [
+        {
+          "shows": "label=1 verse"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit",
+      "action": "tap",
+      "target": "label=Plant",
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=Open Romans 8:28"
+        },
+        {
+          "shows": "label=Open Psalms 23:1-6"
+        },
+        {
+          "hides": "id=add-list"
+        }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
