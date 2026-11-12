@@ -3393,11 +3393,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     empty garden, no wait for a heading of the first minute's verse comes
     before the welcome's `Begin` and then its `Skip` or `Plant your first
     verse`, and no `sim open` waits for one without `--no-relaunch`, since
-    every launch with no recall opens the welcome),
+    every launch with no recall opens the welcome; a command is read
+    however a step reaches the helper, `sim`, `bun run --cwd
+    apps/heartseed sim`, its `scripts/sim.ts` or `xcrun simctl`, by its
+    shell words),
     `scripts/hidden-ids.test.ts` (no step of those files names an id the
     app's sources hide from VoiceOver, `aria-hidden` with a `testID`, as
     one to find in the tree: neither `id=<id>` nor a numbered one of a
-    family such as `break-8`; a row reads lines from the words' frames) and
+    family such as `break-8`, nor a clause asking for a hidden family's
+    ids, nodes or elements or reading them unless it says they are hidden;
+    a row reads lines from the words' frames) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
     parameter found by name, the pin, the part's files, the search over a
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,

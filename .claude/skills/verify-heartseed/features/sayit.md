@@ -103,7 +103,8 @@ drive:
    `lines-say`, in a sitting of its own: `today.md`'s Lines drive to
    `Isaiah 43:2`, `sim tap "label=Say it"`, the wait for a label ending
    ` of 38 words`, then `sim snapshot lines-say` → the readout above (the
-   count `k`, the checked grade, the `break-` ids).
+   count `k`, the checked grade, and the frames of `word-6`, `word-11`,
+   `word-20`, `word-26` and `word-31`, each starting a row).
 7. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
 Every snapshot holds the passage's words: read each for the strings above,

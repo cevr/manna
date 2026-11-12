@@ -128,12 +128,15 @@ over `[voice]`, from `START`.
    or `phrase.md`'s `whole-new`), `sim tap "label=Listen"` and two raw
    snapshots about 1 s apart → `id=reading` with one `word-<i>` per word of
    the piece (count them), one or two `selected` moving forward, no
-   `id=passage`, and the `break-<k>` ids `light-today` names. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
+   `id=passage`, and the row starts `light-today` names (John 3:16's
+   `word-6` and `word-13`, each at the view's left edge and below the word
+   before, from the frames). Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
    finish) and `sim snapshot light-today-done` → `id=passage`, no
    `id=reading`.
    `lines-read`: the same on `Isaiah 43:2` (reached as `today.md`'s Lines
-   drive), reading the break ids and the frames of the five words after
-   them (x at the view's left edge, y below the word before).
+   drive), reading the frames of `word-6`, `word-11`, `word-20`, `word-26`
+   and `word-31`, the five words that start a line (x at the view's left
+   edge, y below the word before).
 7. `light-natural`: with the natural voice ready (the second container of
    `natural.md`'s Today rows, voice Her, its model server running),
    `sim open probe/light --expect "label=Light probe"`,
