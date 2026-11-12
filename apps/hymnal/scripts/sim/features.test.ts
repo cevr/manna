@@ -10,13 +10,11 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Hymn } from '@manna/hymnal/hymn';
-import { Drive, type DriveMembers, type Place } from '@manna/sim/drive';
-import { HOLD_SETTLE, loadJourney, panStart } from '@manna/sim/journey';
+import { type Journey, loadJourneys, loadJourneyText } from '@manna/sim/check';
+import { HOLD_SETTLE, panStart } from '@manna/sim/journey';
 import { Effect, Exit, FileSystem, Match, Option, Path, Schema } from 'effect';
 
 import { app } from '../sim-app.ts';
-
-const SUFFIX = '.journey.json';
 
 /**
  * Seconds after `sim hold` returns by which its press has landed: SKILL.md's
@@ -24,77 +22,11 @@ const SUFFIX = '.journey.json';
  */
 const HOLD_LANDS = 9;
 
-type Journey = Effect.Success<ReturnType<typeof loadJourney>>['journey'];
-
-const PROBE = '/nonexistent/loop-probe-x';
-
-const noStep = () => Effect.die('a journey file is only loaded here, never driven');
-
-/** The drive `sim journey` loads a journey on: a booted iOS session, and no step taken. */
-const booted: DriveMembers = {
-  readSession: () =>
-    Effect.succeed({
-      platform: 'ios',
-      out: `${PROBE}/out`,
-      port: app.ports.default,
-      serverPid: 1,
-      udid: 'STAND-IN',
-      bootedAt: '2026-10-30T00:00:00.000Z',
-    }),
-  boot: noStep,
-  install: noStep,
-  open: noStep,
-  tap: noStep,
-  fill: noStep,
-  back: noStep,
-  scroll: noStep,
-  shot: noStep,
-  snapshot: noStep,
-  read: noStep,
-  record: noStep,
-  log: noStep,
-  doctor: noStep,
-  down: noStep,
-  sees: noStep,
-  gesture: noStep,
-  pinch: noStep,
-  hold: noStep,
-  relaunch: noStep,
-  clean: noStep,
-};
-
-/** The journey file of `feature` in `dir`, loaded as `sim journey <feature>` loads it. */
-const load = (dir: string, feature: string) => {
-  const place: Place = {
-    app: `${PROBE}/app`,
-    state: `${PROBE}/state`,
-    script: `${PROBE}/app/scripts/sim.ts`,
-    features: dir,
-    warm: [],
-    config: app,
-  };
-  return loadJourney(place, feature).pipe(
-    Effect.map(({ journey }) => journey),
-    Effect.provideService(Drive, booted),
-  );
-};
-
 /** Load each journey file in `dir`, by feature, or fail on the first file refused. */
-const decodeAll = Effect.fn('decodeAll')(function* (dir: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const files = (yield* fs.readDirectory(dir)).filter((name) => name.endsWith(SUFFIX)).sort();
-  return yield* Effect.forEach(files, (name) => load(dir, name.slice(0, -SUFFIX.length)));
-});
+const decodeAll = (dir: string) => loadJourneys(app, dir);
 
-/** `text` as the journey file of `feature`, loaded as `sim journey` loads it. */
-const loadText = (feature: string, text: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const dir = yield* fs.makeTempDirectoryScoped();
-    yield* fs.writeFileString(path.join(dir, `${feature}${SUFFIX}`), text);
-    return yield* load(dir, feature);
-  });
+/** `text` as the hymnal's journey file of `feature`, loaded as `sim journey` loads it. */
+const loadText = (feature: string, text: string) => loadJourneyText(app, feature, text);
 
 /**
  * The holds that check for a target gone before the press can have landed:

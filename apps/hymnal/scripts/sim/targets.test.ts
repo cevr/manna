@@ -9,18 +9,28 @@
  * where a `gesture` pan of the same length turns it every time.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { Drive, type DriveMembers, type Place } from '@manna/sim/drive';
-import { loadJourney, panStart } from '@manna/sim/journey';
-import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
+import {
+  type Fills,
+  isSpelled,
+  type Journey,
+  loadJourneys,
+  loadJourneyText,
+  parseSelector,
+  selectorsOf,
+  type Source,
+  type Spelled,
+  spelled,
+  staleHoles,
+  STRING,
+  type WordHole,
+} from '@manna/sim/check';
+import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 
 import { beatOf } from '../../src/player/tempo.ts';
 import { shelvesOf } from '../../src/reader/lists.ts';
 import { app } from '../sim-app.ts';
 
-const SUFFIX = '.journey.json';
-const PROBE = '/nonexistent/loop-probe-x';
 const ROOT = import.meta.dir + '/../../../..';
 const FEATURES = `${ROOT}/.claude/skills/verify-hymnal/features`;
 const HYMNS = `${ROOT}/packages/hymnal/data/sdah-1985`;
@@ -37,18 +47,6 @@ const SOURCES = ['src', 'app'];
 const RUNTIME_LABELS = new Map([
   ['Sheet Grabber', "UIKit's grabber on a form sheet with `sheetGrabberVisible`"],
 ]);
-
-/**
- * A label template whose hole holds a word: the file that spells it, its
- * parts between holes, and the words its holes take, read from the module
- * that names them. No other source string fills it, so renaming the word
- * where it is named fails, though the word is spelled elsewhere.
- */
-interface WordHole {
-  readonly file: string;
-  readonly parts: ReadonlyArray<string>;
-  readonly words: ReadonlyArray<string>;
-}
 
 /** The meters a hymn may beat in: simple and compound, over each note the dial names. */
 const METERS = [1, 2, 4, 8, 16].flatMap((denominator) =>
@@ -93,226 +91,8 @@ const GONE_IDS = new Map([
   ['find-play', 'browse-number: the drums hold `Open` alone, no Play (browse.md, by hand 11)'],
 ]);
 
-const noStep = () => Effect.die('a journey file is only loaded here, never driven');
-
-/** The drive `sim journey` loads a journey on: a booted iOS session, and no step taken. */
-const booted: DriveMembers = {
-  readSession: () =>
-    Effect.succeed({
-      platform: 'ios',
-      out: `${PROBE}/out`,
-      port: app.ports.default,
-      serverPid: 1,
-      udid: 'STAND-IN',
-      bootedAt: '2026-10-30T00:00:00.000Z',
-    }),
-  boot: noStep,
-  install: noStep,
-  open: noStep,
-  tap: noStep,
-  fill: noStep,
-  back: noStep,
-  scroll: noStep,
-  shot: noStep,
-  snapshot: noStep,
-  read: noStep,
-  record: noStep,
-  log: noStep,
-  doctor: noStep,
-  down: noStep,
-  sees: noStep,
-  gesture: noStep,
-  pinch: noStep,
-  hold: noStep,
-  relaunch: noStep,
-  clean: noStep,
-};
-
-/** The journey file of `feature` in `dir`, loaded as `sim journey <feature>` loads it. */
-const load = (dir: string, feature: string) =>
-  loadJourney(
-    {
-      app: `${PROBE}/app`,
-      state: `${PROBE}/state`,
-      script: `${PROBE}/app/scripts/sim.ts`,
-      features: dir,
-      warm: [],
-      config: app,
-    } satisfies Place,
-    feature,
-  ).pipe(
-    Effect.map(({ journey }) => journey),
-    Effect.provideService(Drive, booted),
-  );
-
-type Journey = Effect.Success<ReturnType<typeof load>>;
-type Step = Journey['steps'][number];
-
-/** Every journey file in `dir`, loaded. */
-const loadAll = Effect.fn('loadAll')(function* (dir: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const files = (yield* fs.readDirectory(dir)).filter((name) => name.endsWith(SUFFIX)).sort();
-  return yield* Effect.forEach(files, (name) => load(dir, name.slice(0, -SUFFIX.length)));
-});
-
-/** `text` as the journey file of `feature`, loaded. */
-const loadText = (feature: string, text: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const dir = yield* fs.makeTempDirectoryScoped();
-    yield* fs.writeFileString(path.join(dir, `${feature}${SUFFIX}`), text);
-    return yield* load(dir, feature);
-  });
-
-/** A selector as `sim` reads it (`parseTarget` in `@manna/sim/drive`): `id=`, `label=`, or a bare label. */
-const parse = (text: string) => {
-  const rest = /^role=\w+ (.*)$/s.exec(text)?.[1] ?? text;
-  const unquote = (value: string) => value.replace(/^"(.*)"$/s, '$1');
-  if (rest.startsWith('id=')) return { by: 'id' as const, value: unquote(rest.slice(3)) };
-  if (rest.startsWith('label=')) return { by: 'label' as const, value: unquote(rest.slice(6)) };
-  return { by: 'label' as const, value: rest };
-};
-
-/** The selectors a step names: its target, its pan's start when not a point, and each expect's. */
-const selectorsOf = (step: Step): ReadonlyArray<string> => {
-  const own: Array<string> = [];
-  if ('target' in step && step.target !== 'screen') own.push(step.target);
-  let start = '';
-  if ('from' in step) start = step.from;
-  if ('at' in step) start = step.at;
-  own.push(...Option.toArray(Option.filter(panStart(start), Predicate.isString)));
-  for (const expect of step.expect) {
-    if ('shows' in expect) own.push(expect.shows);
-    else own.push(expect.hides);
-  }
-  return own;
-};
-
-/** What the app's sources spell: exact strings, and template literals as their parts between holes. */
-interface Spelled {
-  readonly exact: ReadonlySet<string>;
-  readonly templates: ReadonlyArray<Template>;
-}
-
-/** A template literal or JSX text: the file that spells it, and its parts between holes. */
-interface Template {
-  readonly file: string;
-  readonly parts: ReadonlyArray<string>;
-}
-
-/** What a hole may hold besides a number: the journey's typed text and the word holes' words. */
-interface Fills {
-  /** What the journey types (`fill`): a label's hole may show it back (`No hymn matches “${q}”.`). */
-  readonly typed: ReadonlyArray<string>;
-  readonly holes: ReadonlyArray<WordHole>;
-}
-
-const STRING = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"/g;
-const TEMPLATE = /`((?:[^`\\]|\\.)*)`/g;
-/** A JSX text between tags, its `{…}` expressions its holes. */
-const JSX_TEXT = />((?:[^<>{}]|\{[^{}]*\})+)</g;
-const JSX_HOLE = /\{[^{}]*\}/;
-const HOLE = /\$\{[^}]*\}/;
-/** Comments, taken out first: an apostrophe in one would pair with a quote in the code. */
-const COMMENT = /\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm;
-/**
- * A word of two letters or more: a template whose own text has none (`${a}
- * ${b}`) names nothing, unless `wordHolesOf` gives its holes their words.
- */
-const WORD = /\p{L}{2,}/u;
-
-/** A source file: its path from the app's folder (`src/…`, `app/…`) and its text. */
-type Source = readonly [file: string, text: string];
-
-/** The strings, template literals and JSX texts of `sources`, their comments left out. */
-const spelled = (sources: ReadonlyArray<Source>): Spelled => {
-  const exact = new Set<string>();
-  const templates: Array<Template> = [];
-  for (const [file, text] of sources) {
-    const source = text.replace(COMMENT, '');
-    for (const match of source.matchAll(STRING)) exact.add(match[1] ?? match[2] ?? '');
-    for (const match of source.matchAll(JSX_TEXT)) {
-      const parts = (match[1] ?? '').trim().split(JSX_HOLE);
-      if (parts.length === 1) exact.add(parts[0] ?? '');
-      else templates.push({ file, parts });
-    }
-    for (const match of source.matchAll(TEMPLATE)) {
-      const parts = (match[1] ?? '').split(HOLE);
-      if (parts.length === 1) exact.add(parts[0] ?? '');
-      else templates.push({ file, parts });
-    }
-  }
-  return { exact, templates };
-};
-
-/** Whether two templates' parts are the same. */
-const sameParts = (one: ReadonlyArray<string>, other: ReadonlyArray<string>) =>
-  one.length === other.length && one.every((part, at) => part === other[at]);
-
-/**
- * Whether `value` is spelled whole, as a string, or fills a template. A
- * testID's hole holds numbers joined by `-` (`chord-${at}-${n}`, `at` being
- * `1-1`), so `hymn-${…}` gives no word-named id. A label's hole holds a
- * number, the journey's typed text, or, in a template `wordHolesOf` lists for
- * its file, one of that entry's words: never any other text, so `Play ${n}`
- * does not draw `Play hymn 100`, and `${name}, see all` draws `Recent, see
- * all` only while the shelf is named `Recent`. A label matches in any case,
- * as agent-device matches it.
- */
-const isSpelled = (from: Spelled, fills: Fills, value: string, by: 'id' | 'label') => {
-  if (from.exact.has(value)) return true;
-  const worded = (parts: ReadonlyArray<string>) => WORD.test(parts.join(' '));
-  if (by === 'id')
-    return from.templates.some(
-      ({ parts }) => worded(parts) && fillsTemplate(value, parts, (piece) => ID_HOLE.test(piece)),
-    );
-  const fold = (text: string) => text.toLowerCase();
-  if ([...from.exact].some((one) => fold(one) === fold(value))) return true;
-  const typed = new Set(fills.typed.map(fold));
-  return from.templates.some(({ file, parts }) => {
-    const listed = fills.holes.filter((hole) => hole.file === file && sameParts(hole.parts, parts));
-    if (listed.length === 0 && !worded(parts)) return false;
-    const words = new Set(listed.flatMap((hole) => hole.words.map(fold)));
-    const fill = (piece: string) => NUMBER.test(piece) || typed.has(piece) || words.has(piece);
-    return fillsTemplate(fold(value), parts.map(fold), fill);
-  });
-};
-
-/** The `wordHolesOf` entries whose file no longer spells their template, as `<file> <parts>`. */
-const staleHoles = (from: Spelled, holes: ReadonlyArray<WordHole>) =>
-  holes
-    .filter(
-      (hole) =>
-        !from.templates.some(
-          (template) => template.file === hole.file && sameParts(template.parts, hole.parts),
-        ),
-    )
-    .map((hole) => `${hole.file} ${hole.parts.join('…')}`);
-
-/** A testID's hole: numbers joined by `-`. */
-const ID_HOLE = /^\d+(?:-\d+)*$/;
-
-/** A label's number hole. */
-const NUMBER = /^\d+$/;
-
-/**
- * Whether `value` is `parts` joined by holes, each hole a non-empty piece
- * `fills` takes, trying every place a hole may end.
- */
-const fillsTemplate = (
-  value: string,
-  parts: ReadonlyArray<string>,
-  fills: (piece: string) => boolean,
-): boolean => {
-  const [head = '', ...rest] = parts;
-  if (!value.startsWith(head)) return false;
-  const after = value.slice(head.length);
-  if (rest.length === 0) return after === '';
-  for (let end = 1; end <= after.length; end++)
-    if (fills(after.slice(0, end)) && fillsTemplate(after.slice(end), rest, fills)) return true;
-  return false;
-};
+/** `text` as the hymnal's journey file of `feature`, loaded as `sim journey` loads it. */
+const loadText = (feature: string, text: string) => loadJourneyText(app, feature, text);
 
 /** The compiled data a label may come from: each hymn's title by number, and the topics' names. */
 interface Data {
@@ -330,7 +110,7 @@ const ROW = /^(\d+), (.+)$/s;
  * topic's name, or a name iOS gives.
  */
 const drawable = (from: Spelled, fills: Fills, data: Data, selector: string) => {
-  const { by, value } = parse(selector);
+  const { by, value } = parseSelector(selector);
   if (by === 'id') return GONE_IDS.has(value) || isSpelled(from, fills, value, 'id');
   const row = ROW.exec(value);
   if (row) return data.titles.get(Number(row[1])) === row[2];
@@ -422,7 +202,7 @@ const rowNumbers = (journeys: ReadonlyArray<Journey>) =>
     journey.steps.flatMap((step) =>
       selectorsOf(step).flatMap((selector) =>
         Option.toArray(
-          Option.map(Option.fromNullishOr(ROW.exec(parse(selector).value)), (row) =>
+          Option.map(Option.fromNullishOr(ROW.exec(parseSelector(selector).value)), (row) =>
             Number(row[1]),
           ),
         ),
@@ -435,7 +215,7 @@ const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 describe('verify-hymnal journey targets', () => {
   it.effect('every target a shipped journey names is one the app can draw', () =>
     Effect.gen(function* () {
-      const journeys = yield* loadAll(FEATURES);
+      const journeys = yield* loadJourneys(app, FEATURES);
       const sources = yield* readSources;
       const from = spelled(sources);
       const holes = wordHolesOf(sources);
@@ -565,32 +345,9 @@ describe('verify-hymnal journey targets', () => {
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
-  test('a template is filled only by non-empty holes that end where the value ends', () => {
-    let seed = 7;
-    const next = (below: number) => {
-      seed = (seed * 1103515245 + 12345) % 2147483648;
-      return seed % below;
-    };
-    const pick = <A>(from: ReadonlyArray<A>): A => from[next(from.length)] as A;
-    const PIECES = ['', 'a', 'b', 'ab', ' ', 'a b'];
-    const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const disagree: Array<string> = [];
-    for (let round = 0; round < 400; round++) {
-      const parts = Array.from({ length: 2 + next(3) }, () => pick(PIECES));
-      const holes = parts.slice(1).map(() => pick(PIECES));
-      const value = parts.reduce((text, part, at) => text + (holes[at - 1] ?? '') + part, '');
-      const suffixed = value + pick(PIECES);
-      const oracle = new RegExp(`^${parts.map(escape).join('(.+)')}$`, 's');
-      for (const one of [value, suffixed])
-        if (fillsTemplate(one, parts, () => true) !== oracle.test(one))
-          disagree.push(`${toJson(parts)} ${toJson(one)}`);
-    }
-    expect(disagree.slice(0, 5)).toEqual([]);
-  });
-
   it.effect('no shipped iOS journey turns a page with a sideways scroll of the screen', () =>
     Effect.gen(function* () {
-      const journeys = yield* loadAll(FEATURES);
+      const journeys = yield* loadJourneys(app, FEATURES);
       expect(journeys.flatMap(sidewaysScreenScrolls)).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
   );
