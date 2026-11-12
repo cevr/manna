@@ -117,6 +117,12 @@ summary names in `failedStep` and `failedName`. The journeys:
   [features/hymn-reader.journey.json](features/hymn-reader.journey.json), [features/player.journey.json](features/player.journey.json), [features/search.journey.json](features/search.journey.json),
   [features/settings.journey.json](features/settings.journey.json).
 
+Each journey's first step is a relaunch, so it starts on the home list at its top with only the stored
+choices kept, whatever ran before it (a journey that opened `/` first failed after `hymn-list`, which
+leaves the list screens down). A journey that starts on a hymn relaunches in a step `start` that waits
+for the tab row, then opens its link. `apps/hymnal/scripts/sim/targets.test.ts` names a journey whose
+first step is no relaunch.
+
 For the held seek, the development-only silent fixture (`hymnal://probe/scrub`)
 and the reader's own (a hold on a playing hymn's words; no button), use
 [features/scrub.md](features/scrub.md): thirteen by-hand numeric rows, no journey.

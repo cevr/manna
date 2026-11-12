@@ -4,8 +4,8 @@
   "steps": [
     {
       "name": "browse-tabs",
-      "action": "open",
-      "link": "/",
+      "action": "relaunch",
+      "timeout": 30,
       "expect": [
         { "shows": "label=Sections" },
         { "shows": "label=Lists" },

@@ -4,8 +4,8 @@
   "steps": [
     {
       "name": "hymn-list",
-      "action": "open",
-      "link": "/",
+      "action": "relaunch",
+      "timeout": 30,
       "expect": [
         { "shows": "role=link label=1, Praise to the Lord" },
         { "shows": "role=link label=2, All Creatures of Our God and King" }

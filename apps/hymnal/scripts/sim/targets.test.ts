@@ -6,7 +6,8 @@
  * drive with `TargetMissing`. And no iOS journey turns a hymn page with a
  * sideways `scroll screen`: agent-device's scroll drags with its controlled
  * scroll profile, which the pager at times does not take (the page stays),
- * where a `gesture` pan of the same length turns it every time.
+ * where a `gesture` pan of the same length turns it every time. And each
+ * journey starts with a relaunch, so it passes after any other journey.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -157,6 +158,17 @@ const sidewaysScreenScrolls = (journey: Journey) => {
     )
     .map((step) => `${journey.feature}/${step.name}`);
 };
+
+/**
+ * The journeys whose first step is no relaunch. A journey that opens a link
+ * first starts wherever the journey before it left the app: the home list
+ * screens down, a sheet up, a hymn's stack under the page; a relaunch starts
+ * it at the list's top, with only the stored choices kept, whatever ran before.
+ */
+const unstarted = (journeys: ReadonlyArray<Journey>) =>
+  journeys
+    .filter((journey) => journey.steps[0]?.action !== 'relaunch')
+    .map((journey) => journey.feature);
 
 const Title = Schema.Struct({ number: Schema.Int, title: Schema.String });
 const decodeTitle = Schema.decodeUnknownEffect(Schema.fromJsonString(Title));
@@ -370,5 +382,33 @@ describe('verify-hymnal journey targets', () => {
         const journey = yield* loadText('hymn-reader', text);
         expect(sidewaysScreenScrolls(journey)).toEqual(['hymn-reader/next', 'hymn-reader/back']);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('every shipped journey starts with a relaunch', () =>
+    Effect.gen(function* () {
+      const journeys = yield* loadJourneys(app, FEATURES);
+      expect(unstarted(journeys)).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('a journey that opens a link or taps first is named; one that relaunches is not', () =>
+    Effect.gen(function* () {
+      const journeyOf = (feature: string, first: Readonly<Record<string, string>>) =>
+        loadText(
+          feature,
+          toJson({
+            feature,
+            platform: 'ios',
+            steps: [first, { name: 'next', action: 'back' }],
+          }),
+        );
+      const journeys = [
+        yield* journeyOf('search', { name: 'home', action: 'open', link: '/' }),
+        yield* journeyOf('about', { name: 'hymn', action: 'open', link: 'hymns/100' }),
+        yield* journeyOf('browse', { name: 'tab', action: 'tap', target: 'label=Topics' }),
+        yield* journeyOf('player', { name: 'start', action: 'relaunch' }),
+      ];
+      expect(unstarted(journeys)).toEqual(['search', 'about', 'browse']);
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 });

@@ -4,8 +4,8 @@
   "steps": [
     {
       "name": "home",
-      "action": "open",
-      "link": "/",
+      "action": "relaunch",
+      "timeout": 30,
       "expect": [{ "shows": "role=button label=Settings" }],
       "receipt": "none"
     },

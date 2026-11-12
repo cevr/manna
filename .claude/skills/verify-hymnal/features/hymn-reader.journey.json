@@ -3,6 +3,13 @@
   "platform": "ios",
   "steps": [
     {
+      "name": "start",
+      "action": "relaunch",
+      "timeout": 30,
+      "expect": [{ "shows": "role=other label=Sections" }],
+      "receipt": "none"
+    },
+    {
       "name": "hymn-reader",
       "action": "open",
       "link": "hymns/100",
