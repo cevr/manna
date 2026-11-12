@@ -222,6 +222,37 @@ for what an expect cannot say. The journeys:
   model server's port, 8281.
 - [features/dictation.journey.json](features/dictation.journey.json), run by `dictation.md`;
   [features/doctor.journey.json](features/doctor.journey.json) and `doctor-stale`, run by `doctor.md`.
+- [features/home.journey.json](features/home.journey.json) (the probe) and `home-field`,
+  `home-dot`, `home-relaunch`, `home-motion`, `home-settings`, `home-renew`,
+  `home-end` and `home-add`, run by `home.md`.
+- [features/list.journey.json](features/list.journey.json), `list-practice` and `list-remove`, run by
+  `list.md`; [features/about.journey.json](features/about.journey.json), run by `about.md`;
+  [features/appearance.journey.json](features/appearance.journey.json), `appearance-dark`,
+  `appearance-choice` and `appearance-kept`, run by `appearance.md`.
+- [features/session.journey.json](features/session.journey.json) and `session-choose`,
+  `session-restore`, `session-welcome`, `session-field`, `session-voice-kept`
+  and `session-done`, run by `session.md`;
+  [features/field.journey.json](features/field.journey.json), `field-grow`, `field-again` and
+  `field-relaunch`, run by `field.md`.
+- [features/passage.journey.json](features/passage.journey.json) and `passage-clip`, `passage-plant`,
+  `passage-limit-psalm`, `passage-limit`, `passage-keep`, `passage-remove`,
+  `passage-relaunch` and `passage-new`, run by `passage.md`;
+  [features/phrase.journey.json](features/phrase.journey.json) and `phrase-new`, `phrase-today`,
+  `phrase-listen`, `phrase-said` and `phrase-migrate`, run by `phrase.md`;
+  [features/promise.journey.json](features/promise.journey.json) and `promise-new`, run by
+  `promise.md`.
+- [features/handbook.journey.json](features/handbook.journey.json) and `handbook-row`,
+  `handbook-one-plant`, `handbook-limit`, `handbook-remove` and
+  `handbook-probe`, run by `handbook.md`;
+  [features/wake.journey.json](features/wake.journey.json) and `wake-sheet-stays`, `wake-due` and
+  `wake-result`, run by `wake.md`.
+
+A feature file gives its journeys in the order they run, and that order
+is what a live drive follows: a journey that leaves app state behind (a
+recital's held result, a planted verse, an open visit) is followed only by
+journeys that start from it. A journey that must leave the app clean for
+the next ends with the step that does so (`sayit-lines` ends with
+`Next`).
 
 A journey's `open` relaunches the app only when its first `shows` is
 missing (its retry); a step that must start a launch (a new plan, a
