@@ -1,0 +1,35 @@
+{
+  "feature": "list-practice",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "list-practice-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-practice-page",
+      "action": "tap",
+      "target": "label=Open Isaiah 41:10",
+      "expect": [{ "shows": "label=Isaiah 41:10, seed, ready today" }, { "shows": "id=list-line" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-practice",
+      "action": "tap",
+      "target": "label=Practice this list",
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Isaiah 41:10" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-practice-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    }
+  ]
+}
