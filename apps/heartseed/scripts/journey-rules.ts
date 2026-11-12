@@ -389,8 +389,8 @@ const drivesIn = (code: string): ReadonlyArray<string> => {
   });
 };
 
-/** A fenced block: its body. */
-const FENCE = /^```[^\n]*\n([\s\S]*?)^```/gmu;
+/** A fenced block, indented in a list item or not: its body. */
+const FENCE = /^[ \t]*```[^\n]*\n([\s\S]*?)^[ \t]*```/gmu;
 /** Inline code, over line breaks. */
 const INLINE = /`([^`]+)`/gu;
 

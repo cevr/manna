@@ -648,6 +648,10 @@ describe('verify-heartseed journeys', () => {
           ['`./scripts/sim.ts -- relaunch` and `myscripts/sim.ts open /`', 2],
           ['`agent-device snapshot -i`; `agent-device press @e3`', 1],
           ['A `sim\n  tap "label=Begin"` over two lines.', 1],
+          [
+            '1. A step:\n\n   ```bash\n   sim open probe/home --expect "label=Home probe"\n   sim snapshot home-probe\n   ```\n\n   then `sim tap "label=Continue"` and `sim tap "label=Got it"`.',
+            3,
+          ],
         ] as const;
         for (const [text, want] of fixed)
           expect([text, proseDrives('a.md', text).length]).toEqual([text, want]);
