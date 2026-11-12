@@ -151,18 +151,46 @@ const meet = (a: Rect, b: Rect) => {
   return Option.liftPredicate({ x, y, width, height }, () => width > 0 && height > 0);
 };
 
-/** A scroll view on screen: its frame, the part of it on screen, and its content's frame. */
+/**
+ * A scroll view on screen: its frame, the part of it on screen, its
+ * content's frame, its place in tree order (`index`), and how many scroll
+ * views hold it (`depth`): a pager and the page it shows can share one
+ * frame, and only the depth tells them apart.
+ */
 export interface Area {
   readonly frame: Rect;
   readonly visible: Rect;
   readonly content: Rect;
+  readonly index: number;
+  readonly depth: number;
 }
+
+const isArea = (node: Node) => AREAS.has(node.type ?? '') || node.kind === 'scroll-area';
+
+/** How many scroll views hold `node`, by its parents' chain in `byIndex`. */
+const depthOf = (node: Node, byIndex: ReadonlyMap<number, Node>) => {
+  let depth = 0;
+  let parent = Option.flatMap(Option.fromUndefinedOr(node.parentIndex), (at) =>
+    Option.fromUndefinedOr(byIndex.get(at)),
+  );
+  while (Option.isSome(parent)) {
+    if (isArea(parent.value)) depth += 1;
+    parent = Option.flatMap(Option.fromUndefinedOr(parent.value.parentIndex), (at) =>
+      Option.fromUndefinedOr(byIndex.get(at)),
+    );
+  }
+  return depth;
+};
 
 /** The scroll views of `nodes` on screen, each with its content (its first child with a frame). */
 const areasOf = (nodes: ReadonlyArray<Node>): ReadonlyArray<Area> => {
   const screen = screenOf(nodes);
   if (Option.isNone(screen)) return [];
-  const isArea = (node: Node) => AREAS.has(node.type ?? '') || node.kind === 'scroll-area';
+  const byIndex = new Map(
+    nodes.flatMap((node) =>
+      Option.toArray(Option.map(Option.fromUndefinedOr(node.index), (at) => [at, node] as const)),
+    ),
+  );
   return nodes.filter(isArea).flatMap((node) =>
     Option.toArray(
       Option.gen(function* () {
@@ -174,7 +202,7 @@ const areasOf = (nodes: ReadonlyArray<Node>): ReadonlyArray<Area> => {
             Option.filter(Option.fromUndefinedOr(child.rect), () => child.parentIndex === index),
           ),
         );
-        return { frame, visible, content } satisfies Area;
+        return { frame, visible, content, index, depth: depthOf(node, byIndex) } satisfies Area;
       }),
     ),
   );
@@ -199,14 +227,16 @@ export const hides = (area: Area, direction: Direction) => {
 
 /**
  * The scroll view a scroll in `direction` moves: of those on screen whose
- * content runs past the frame along that axis, the one with the most of
- * itself on screen. None when no such view shows.
+ * content runs past the frame along that axis, the frontmost, the last in
+ * tree order. A sheet comes after the page it covers, and a page after the
+ * pager that holds it, so a scroll on a sheet moves the sheet, never the
+ * page the tree still lists under it. None when no such view shows.
  */
 export const areaFor = (nodes: ReadonlyArray<Node>, direction: Direction) =>
   Option.fromUndefinedOr(
     areasOf(nodes)
       .filter((area) => overflows(area, direction))
-      .toSorted((a, b) => b.visible.width * b.visible.height - a.visible.width * a.visible.height)
+      .toSorted((a, b) => b.index - a.index)
       .at(0),
   );
 
@@ -243,19 +273,25 @@ export const panFor = (area: Area, direction: Direction): Pan => {
 };
 
 /**
- * Whether the content of `area` moved between its snapshot and `after`:
- * the scroll view with the same frame shows its content elsewhere along the
- * axis of `direction`, or no longer shows (the screen changed).
+ * Whether the content of `area` moved between its snapshot and `after`: the
+ * same scroll view (its frame and its depth among scroll views, the nearest
+ * in tree order when more than one match) shows its content elsewhere along
+ * the axis of `direction`, or no longer shows (the screen changed). A pager
+ * sharing its page's frame is never taken for the page.
  */
 export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Direction) => {
   const same = Option.fromUndefinedOr(
-    areasOf(after).find(
-      (each) =>
-        Math.abs(each.frame.x - area.frame.x) < 1 &&
-        Math.abs(each.frame.y - area.frame.y) < 1 &&
-        Math.abs(each.frame.width - area.frame.width) < 1 &&
-        Math.abs(each.frame.height - area.frame.height) < 1,
-    ),
+    areasOf(after)
+      .filter(
+        (each) =>
+          each.depth === area.depth &&
+          Math.abs(each.frame.x - area.frame.x) < 1 &&
+          Math.abs(each.frame.y - area.frame.y) < 1 &&
+          Math.abs(each.frame.width - area.frame.width) < 1 &&
+          Math.abs(each.frame.height - area.frame.height) < 1,
+      )
+      .toSorted((a, b) => Math.abs(a.index - area.index) - Math.abs(b.index - area.index))
+      .at(0),
   );
   return Option.match(same, {
     onNone: () => true,

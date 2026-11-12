@@ -135,8 +135,10 @@ The recipe beside each says what to read in its receipts and which steps stay by
 - `sim open <link> --expect <target>`: `hymnal://hymns/100` on iOS, `http://127.0.0.1:$PORT/hymns/100` on
   the web. On iOS it answers the "Open in “Hymnal”?" prompt with Open (`detail.prompts`).
 - `sim tap <target>`, `sim fill <target> <text>`, `sim back`, and
-  `sim scroll <target|screen> <up|down|left|right>`. On iOS a scroll pans inside the scroll view that
-  scrolls that way, never from a fixed header or footer around it, and checks its content moved:
+  `sim scroll <target|screen> <up|down|left|right>`. On iOS a scroll pans inside the frontmost scroll view
+  that scrolls that way (the last in the tree: a sheet's, not the page the tree still lists under it),
+  never from a fixed header or footer around it, and checks that same view's content moved (a hymn
+  page's pager shares the page's frame and is never taken for it):
   `detail.moved` (false at the content's end), or `ScrollStuck` when a pan moved nothing while the view
   hides more. A target scroll pans until the target's centre is on screen and hittable
   (`detail.passes`), else `TargetMissing`.
