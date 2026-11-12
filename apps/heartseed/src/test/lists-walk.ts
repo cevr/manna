@@ -14,12 +14,14 @@
  * (one of them now and then over a verse of a held list), 1-3 stored lists
  * of at most 12 verses, now and then with an id this build does not know
  * or an id stored twice, and a recall on a verse of a held list now and
- * then. Its launch lands on home. Each step: a list furrow's `Remove`, then
- * `Keep` or the ask's `Remove` (its write landing or refused; once or twice
- * in one turn; a refusal retried in half); a passage's `Remove` and the
- * ask's `Remove`; `Add verses`, a small list's shelf and its `Plant`; or a
- * relaunch. After every tap home's rows, add, limit, ask and alert are the
- * model's, the sheet is closed, both stored texts are the start's until a
+ * then. Its launch lands on home. Each step: a list furrow's `Open
+ * <title>` and on its own page `Remove <title>` (hslist L4; back by `Your
+ * field` first from another list's page), then `Keep` or the ask's
+ * `Remove` (its write landing or refused; once or twice in one turn; a
+ * refusal retried in half); a passage's `Open` and `Remove` and the ask's
+ * `Remove`; `Add verses`, a small list's shelf and its `Plant`; or a
+ * relaunch. After every tap the screen is the model's (home's rows, add
+ * and limit, or the list page's rows, remove, ask and alert), the sheet is closed, both stored texts are the start's until a
  * change lands and the model's after (unknown ids in place), no other key
  * is written or removed (no recall), and every frame kept the root's rule
  * and the bar's.
@@ -43,7 +45,17 @@ import passage from 'virtual:heartseed-passage';
 
 import { START } from './clock';
 
-import { fieldWant, notRemoved, QUIET, type Asking, type FieldSeen } from './choose-model';
+import {
+  fieldWant,
+  homeWant,
+  listRow,
+  notRemoved,
+  openOf,
+  passageRow,
+  QUIET,
+  type Asking,
+  type FieldSeen,
+} from './choose-model';
 import { record } from './field-rig';
 import { heldOn, recallOf } from './field-model';
 import { below, DAY, random } from './garden-model';
@@ -173,13 +185,16 @@ export const walkListBar = async (seed: number, steps: number) => {
   const held = () => heldLists(stored());
   const count = () => passages().length + held().length;
   const want = () => fieldWant(heldOn(device.disk), PROMISE, heldOf(model), bar);
+  const homeNow = () => homeWant(heldOn(device.disk), PROMISE, heldOf(model));
   const planted = () => new Set(heldOn(device.disk).map((recall) => recall.reference));
   const settle = async (step: string) => {
     if (faults.length > 0) return;
     log.push(step);
     const goal = want();
-    if (goal.limit !== undefined && held().length > 0) reached.add('limit:with a list held');
-    if (shared(goal, planted())) reached.add('shared verse');
+    const home = homeNow();
+    if (bar.open === undefined && home.limit !== undefined && held().length > 0)
+      reached.add('limit:with a list held');
+    if (shared(home, planted())) reached.add('shared verse');
     const got = await rig.settle(goal);
     if (got !== undefined)
       faults.push(
@@ -203,11 +218,30 @@ export const walkListBar = async (seed: number, steps: number) => {
       if (!device.disk.has(key)) faults.push(`${step}: the key ${key} removed`);
     faults.push(...rig.faults.splice(0).map((fault) => `${step}: ${fault}`));
   };
-  /** Taps the `Remove` of the held list `id` and settles on its ask. */
+  /** From a list's own page, `Your field` back to home; nothing on home. */
+  const home = async (label: string) => {
+    if (bar.open === undefined) return;
+    if (!(await rig.tap('Your field'))) faults.push(`${label}: no Your field`);
+    bar = QUIET;
+    await settle(`${label}: Your field`);
+  };
+  /** Opens the field's row `row` by its `Open <title>`, from home (going back there first from another list's page). */
+  const open = async (row: number | undefined) => {
+    if (row === undefined) return faults.push('no row to open');
+    if (bar.open === row) return;
+    await home('to another list');
+    const { label, nth } = openOf(heldOn(device.disk), PROMISE, heldOf(model), row);
+    if (!(await rig.tap(label, nth))) faults.push(`no ${label}`);
+    bar = { open: row, ask: undefined, alert: undefined };
+    await settle(label);
+  };
+  /** Opens the held list `id`'s own page, taps its `Remove` and settles on its ask. */
   const ask = async (id: string) => {
     const title = titleOf(id);
+    const row = listRow(heldOf(model), id);
+    await open(row);
     if (!(await rig.tap(`Remove ${title}`))) faults.push(`no Remove ${title}`);
-    bar = { ask: title, alert: undefined };
+    bar = { open: row, ask: title, alert: undefined };
     await settle(`ask ${title}`);
   };
   /** The ask's `Remove` for the list `id`, its write refused or not, tapped twice in one turn when `twice`. */
@@ -216,7 +250,9 @@ export const walkListBar = async (seed: number, steps: number) => {
     const before = model;
     const limited = count() >= 3;
     const loose = [...planted()].filter((verse) => {
-      const rows = want().rows.filter((row) => row.plants.some((p) => p.startsWith(`${verse}, `)));
+      const rows = homeNow().rows.filter((row) =>
+        row.plants.some((p) => p.startsWith(`${verse}, `)),
+      );
       return rows.length === 1 && rows[0]?.title === title;
     });
     device.fail('set', refused ? 1 : 0);
@@ -234,9 +270,9 @@ export const walkListBar = async (seed: number, steps: number) => {
       wroteL = true;
       bar = QUIET;
       if (limited && count() < 3) reached.add('limit lifted by an uproot');
-      if (loose.some((verse) => want().rows.some((row) => row.title === verse)))
+      if (loose.some((verse) => homeNow().rows.some((row) => row.title === verse)))
         reached.add('uproot:a loose row returns');
-    } else bar = { ask: undefined, alert: notRemoved(title) };
+    } else bar = { open: bar.open, ask: undefined, alert: notRemoved(title) };
     await settle(`remove ${title}${twice ? ' twice' : ''}${refused ? ', refused' : ''}`);
     device.fail('set', 0);
     return step.answer;
@@ -247,7 +283,7 @@ export const walkListBar = async (seed: number, steps: number) => {
     if (below(next, 5) === 0) {
       reached.add('uproot:Keep');
       await rig.tap('Keep');
-      bar = QUIET;
+      bar = { open: bar.open, ask: undefined, alert: undefined };
       await settle('keep');
       return;
     }
@@ -259,15 +295,17 @@ export const walkListBar = async (seed: number, steps: number) => {
   };
   const removePassage = async () => {
     const span = pick(next, passages());
+    const row = passageRow(passages().indexOf(span));
+    await open(row);
     if (!(await rig.tap(`Remove ${spanRef(span)}`))) faults.push(`no Remove ${spanRef(span)}`);
-    bar = { ask: span, alert: undefined };
+    bar = { open: row, ask: span, alert: undefined };
     await settle(`ask ${spanRef(span)}`);
     await rig.tap('Remove');
     const step = removeStep(model, span, false);
     reached.add(`passage:${step.answer}`);
     model = step.model;
     wroteP = wroteP || step.landed;
-    bar = QUIET;
+    bar = step.landed ? QUIET : { open: row, ask: undefined, alert: notRemoved(spanRef(span)) };
     await settle(`remove ${spanRef(span)}`);
   };
   const relaunch = async () => {
@@ -281,13 +319,16 @@ export const walkListBar = async (seed: number, steps: number) => {
   /** `Add verses`, the shelf of a small list home does not show whole, and its `Plant`; a relaunch when none may be planted. */
   const plantThrough = async () => {
     const shown = new Set(
-      want().rows.flatMap((row) => row.plants.map((plant) => plant.slice(0, plant.indexOf(', ')))),
+      homeNow().rows.flatMap((row) =>
+        row.plants.map((plant) => plant.slice(0, plant.indexOf(', '))),
+      ),
     );
     const choices = SMALL_LISTS.filter(
       (list) => !held().includes(list.id) && !list.verses.every((verse) => shown.has(verse)),
     );
     if (model.tag === 'Unread' || count() >= 3 || choices.length === 0) return relaunch();
     const list = pick(next, choices);
+    await home('add');
     if (!(await rig.tapId('add-list'))) faults.push('no add-list');
     if (!(await activateSheet(rig.until))) faults.push('the sheet never became active');
     if (!(await tapSheet(list.section))) faults.push(`no shelf ${list.section}`);

@@ -14,16 +14,17 @@
  * rule (`footerFaults`: no control but a missed word's mark inside the scroll
  * view) and no node of the field or the chooser; off Today (the end of a
  * run, `The field is tended`, among them), no control but a
- * list control (a book, a chapter, a verse, a plant, a row's own `Remove`,
- * `Add a list`, the end rows `Settings` and `How Heartseed works`) and no
- * alert inside a scroll view;
+ * list control (a book, a chapter, a verse, a plant, a furrow's `Open …`,
+ * `Add a list`, the end rows `Settings` and `How Heartseed works`; on a
+ * list's own page its rows, its `Remove …`, the ask's `Remove` and `Keep`)
+ * and no alert inside a scroll view but a list page's;
  * `Plant` only over a shown reference of 1-20 verses; never `Add a list`
- * beside the limit line or with 3 rows' `Remove`s, and at most one; over
+ * beside the limit line, and at most one; over
  * unread passages, no add, remove, `Keep`, `Plant` or limit line; while
- * the ask's `Remove` is disabled (a remove pending), every other field
- * control (`Settings`, `How Heartseed works`, `Keep`, a row's `Remove`,
- * every plant, `Start`, `Practice …`, `Learn …`) disabled too and no
- * `Add a list`; `Listening` only on Today; on
+ * the ask's `Remove` is disabled (a remove pending), every other
+ * control (`Settings`, `How Heartseed works`, `Keep`, `Your field`, a
+ * `Remove …` or `Open …`, every plant and list row, `Start`, `Practice …`,
+ * `Learn …`) disabled too and no `Add a list`; `Listening` only on Today; on
  * the field, home A's layout rules (`homeFaults`); and every seen text of
  * every screen but Today (the field, the chooser, the end of a run) at WCAG
  * AA against what lies behind it.
@@ -43,7 +44,7 @@ import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
-import type { FieldSeen } from './choose-model';
+import type { FieldSeen, ListSeen } from './choose-model';
 import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
 import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
@@ -57,12 +58,14 @@ const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"
 
 const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
 
-/** A list control: a book, a chapter, a verse, a plant, a row's own `Remove`, `Add a list`, or an end row of the field; these scroll with their list by nature. */
+/** A list control: a book, a chapter, a verse, a plant, a furrow's `Open …`, `Add a list`, an end row of the field, or on a list's own page a row, its `Remove …` and the ask's `Remove` and `Keep`; these scroll with their list by nature. */
 const listed = (node: Element) => {
   const id = idOf(node);
   if (['book', 'chapter', 'verse', 'field-plant', 'add-list'].includes(id)) return true;
   if (END_ROWS.includes(labelOf(node))) return true;
-  return /^(Open|Remove) /u.test(labelOf(node)) && node.closest('[data-testid="row"]') !== null;
+  if (node.closest('[data-testid="list-screen"]') !== null)
+    return id === 'list-row' || /^Remove( |$)|^Keep$/u.test(labelOf(node));
+  return labelOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null;
 };
 
 const disabled = (node: Element) => node.getAttribute('aria-disabled') === 'true';
@@ -76,16 +79,32 @@ const ADD = 'Add a list';
 
 const END_ROWS = ['Settings', 'How Heartseed works'];
 
-/** The field as the reader gets it, or the heading shown (`no heading` before one) off the field. */
-export const readBar = (host: Element): FieldSeen | string => {
-  const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
-  if (headings.join('|') !== 'Your field') return headings.join('|') || 'no heading';
+/** A list's own page as the reader gets it: its heading, its rows' references, its `Remove <name>`, the ask and the alert. */
+const readList = (host: Element, one: (id: string) => string | undefined): ListSeen => {
+  const alerts = [...host.querySelectorAll('[role="alert"]')].map(text);
+  const remove = [...host.querySelectorAll(CONTROL)]
+    .map(labelOf)
+    .filter((label) => label.startsWith('Remove '));
+  return {
+    list: [...host.querySelectorAll('[role="heading"]')].map(text).join('|'),
+    rows: [...host.querySelectorAll('[data-testid="list-reference"]')].map(text),
+    remove: remove.length === 0 ? undefined : remove.join(' | '),
+    ask: one('ask'),
+    alert: alerts.length === 0 ? undefined : alerts.join(' | '),
+  };
+};
+
+/** The field as the reader gets it, a list's own page, or the heading shown (`no heading` before one) off both. */
+export const readBar = (host: Element): FieldSeen | ListSeen | string => {
   const one = (id: string) => {
     const nodes = host.querySelectorAll(`[data-testid="${id}"]`);
     if (nodes.length === 0) return undefined;
     if (nodes.length > 1) return `<${nodes.length} ${id}>`;
     return text(nodes[0]);
   };
+  if (host.querySelector('[data-testid="list-screen"]') !== null) return readList(host, one);
+  const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
+  if (headings.join('|') !== 'Your field') return headings.join('|') || 'no heading';
   const alerts = [...host.querySelectorAll('[role="alert"]')].map(text);
   return {
     rows: [...host.querySelectorAll('[data-testid="row"]')].map((row) => ({
@@ -94,7 +113,7 @@ export const readBar = (host: Element): FieldSeen | string => {
         unready(plant.getAttribute('aria-label') ?? '<no label>'),
       ),
       controls: [...row.querySelectorAll(CONTROL)]
-        .filter((node) => idOf(node) !== 'field-plant' && !labelOf(node).startsWith('Open '))
+        .filter((node) => idOf(node) !== 'field-plant')
         .map(labelOf),
     })),
     add: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === ADD).length,
@@ -112,7 +131,8 @@ const scrollFaults = (host: Element, on: string, controls: readonly Element[]) =
     .filter((node) => !listed(node) && scrolled(node))
     .map((node) => `the control ${labelOf(node)} inside a scroll view on ${on}`);
   for (const node of host.querySelectorAll('[role="alert"]'))
-    if (scrolled(node)) out.push(`the line ${text(node).slice(0, 30)} inside a scroll view`);
+    if (scrolled(node) && node.closest('[data-testid="list-screen"]') === null)
+      out.push(`the line ${text(node).slice(0, 30)} inside a scroll view`);
   return out;
 };
 
@@ -120,16 +140,14 @@ const scrollFaults = (host: Element, on: string, controls: readonly Element[]) =
 const changes = (label: string) =>
   [ADD, 'Plant', 'Keep', 'Remove'].includes(label) || label.startsWith('Remove ');
 
-/** What the field offers wrong: an add beside the limit line, with 3 rows' `Remove`s or more than once, and anything offered over unread passages. */
-const offerFaults = (host: Element, on: string, unread: boolean, controls: readonly Element[]) => {
+/** What the field offers wrong: an add beside the limit line or more than once, and anything offered over unread passages. */
+const offerFaults = (host: Element, unread: boolean, controls: readonly Element[]) => {
   const out: string[] = [];
   const labels = controls.map(labelOf);
   const limit = host.querySelector('[data-testid="limit"]');
   const added = controls.filter((node) => labelOf(node) === ADD);
   const adds = added.length > 0;
   if (adds && limit !== null) out.push('Add a list beside the limit line');
-  const removes = controls.filter((node) => listed(node) && labelOf(node).startsWith('Remove '));
-  if (on === 'Your field' && adds && removes.length >= 3) out.push('Add a list with 3 held');
   if (added.length > 1) out.push(`${added.length} Add a list`);
   const offered = labels.filter(changes);
   if (unread && (offered.length > 0 || limit !== null))
@@ -137,11 +155,12 @@ const offerFaults = (host: Element, on: string, unread: boolean, controls: reado
   return out;
 };
 
-/** A field control S7 holds while a remove is pending: an end row, `Keep`, `Start`, a row's `Remove …`, `Practice …`, `Learn …` or a plant. */
+/** A control S7 and hslist L4 hold while a remove is pending: an end row, `Keep`, `Start`, the way back `Your field`, a `Remove …`, `Practice …`, `Learn …` or `Open …`, a plant or a list's row. */
 const held = (node: Element) => {
   const label = labelOf(node);
-  if ([...END_ROWS, 'Keep', 'Start'].includes(label)) return true;
-  return /^(Remove|Practice|Learn|Open) /u.test(label) || idOf(node) === 'field-plant';
+  if ([...END_ROWS, 'Keep', 'Start', 'Your field'].includes(label)) return true;
+  if (['field-plant', 'list-row'].includes(idOf(node))) return true;
+  return /^(Remove|Practice|Learn|Open) /u.test(label);
 };
 
 /** While the ask's `Remove` is disabled (a remove pending): every other field control disabled, and no add. */
@@ -176,7 +195,7 @@ export const barFaults = (host: Element, unread: boolean, known: Map<string, boo
   const controls = [...host.querySelectorAll(CONTROL)];
   const faults = [
     ...scrollFaults(host, on, controls),
-    ...offerFaults(host, on, unread, controls),
+    ...offerFaults(host, unread, controls),
     ...pendingFaults(controls),
   ];
   faults.push(...plantFaults(host));
@@ -294,7 +313,7 @@ export const mountBar = async (
     return true;
   };
   /** Waits for the screen `want`; answers the screen read when it never came. */
-  const settle = async (want: FieldSeen | string) => {
+  const settle = async (want: FieldSeen | ListSeen | string) => {
     const goal = JSON.stringify(want);
     if (await until(() => JSON.stringify(readBar(host)) === goal)) return undefined;
     return readBar(host);

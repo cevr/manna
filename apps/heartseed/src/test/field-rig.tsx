@@ -300,12 +300,12 @@ export const STARTS = /^(Start|Practice anyway|Practice .+|Learn .+)$/su;
 /** The controls of the field's end rows. */
 const END_ROWS = new Set(['Settings', 'How Heartseed works']);
 
-/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Open …` or `Remove …`, `Add a list` and the end rows. */
+/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Open …`, `Add a list` and the end rows. */
 const listed = (node: Element) =>
   idOf(node) === 'field-plant' ||
   idOf(node) === 'add-list' ||
   END_ROWS.has(nameOf(node)) ||
-  (/^(Open|Remove) /u.test(nameOf(node)) && node.closest('[data-testid="row"]') !== null);
+  (nameOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null);
 
 /** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, more than one image or one of the other scheme. */
 const plantFaults = (plant: Element) => {
@@ -338,22 +338,18 @@ const furrowFaults = (row: Element) => {
   return shown === caption ? [] : [`a furrow showing ${shown} over ${caption}`];
 };
 
-/** What home's card shows wrong: more than one of the Today card, the chosen card and a remove's ask, one inside the scroll view, the chosen card without a chosen plant or a chosen plant with no ask and no chosen card, plants of two verses chosen, `Practice <reference>` or `Learn <reference>` outside the chosen card, or `Start` or `Practice anyway` outside the Today card. */
+/** What home's card shows wrong: more than one of the Today card and the chosen card, one inside the scroll view, a remove's ask on home at all (hslist L5), the chosen card without a chosen plant or a chosen plant with no chosen card, plants of two verses chosen, `Practice <reference>` or `Learn <reference>` outside the chosen card, or `Start` or `Practice anyway` outside the Today card. */
 const cardFaults = (host: Element, controls: readonly Element[]) => {
   const out: string[] = [];
-  const cards = [
-    ...host.querySelectorAll('[data-testid="today-card"],[data-testid="chosen"]'),
-    ...[...host.querySelectorAll('[data-testid="ask"]')].map((ask) => ask.parentElement ?? ask),
-  ];
+  const cards = [...host.querySelectorAll('[data-testid="today-card"],[data-testid="chosen"]')];
   if (cards.length > 1) out.push(`${cards.length} cards`);
-  for (const card of cards)
-    if (scrolled(card)) out.push(`${idOf(card) || 'the ask'} in a scroll view`);
+  for (const card of cards) if (scrolled(card)) out.push(`${idOf(card)} in a scroll view`);
+  if (host.querySelector('[data-testid="ask"]') !== null) out.push('the ask on home');
   const chosen = host.querySelectorAll('[data-testid="chosen"]').length;
   const selected = [
     ...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]'),
   ].map((plant) => nameParts(nameOf(plant))?.reference);
-  const asking = host.querySelector('[data-testid="ask"]') !== null;
-  if (chosen > 0 !== (selected.length > 0 && !asking))
+  if (chosen > 0 !== selected.length > 0)
     out.push(`${chosen} chosen cards over ${selected.length} chosen plants`);
   if (new Set(selected).size > 1) out.push(`${new Set(selected).size} verses chosen`);
   for (const node of controls) {
@@ -399,7 +395,7 @@ const greetingFaults = (host: Element) => {
 
 /**
  * What a field frame shows wrong of home's layout: other than one heading,
- * `Your field`; a control in a scroll view but a plant, a furrow's `Remove
+ * `Your field`; a control in a scroll view but a plant, a furrow's `Open
  * …`, `Add a list` and the end rows `Settings` and `How Heartseed works`;
  * a control under 44 tall; a plant's faults (`plantFaults`); a furrow's
  * caption off its plants (`furrowFaults`); the card's faults (`cardFaults`); `Add a

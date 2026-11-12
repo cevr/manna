@@ -188,20 +188,21 @@ const endFaults = (
   return out;
 };
 
-/** What `Your field` shows wrong on the screen `on`: off its screens, on an unread garden, on Today while listening, missing from Today or the end, not one, or in a scroll view. */
+/** What `Your field` shows wrong on the screen `on` (`list` when it is a list's own page): off its screens, on an unread garden, on Today while listening, missing from Today, the end or a list's page, not one, or in a scroll view. */
 const backFaults = (
   on: string,
   garden: 'read' | 'unread',
   backs: readonly Element[],
   listening: boolean,
+  list: boolean,
 ) => {
   const out: string[] = [];
   const offered = backs.length > 0;
-  const allowed = on === 'Today' || on === END || BACKS.has(on);
+  const allowed = on === 'Today' || on === END || BACKS.has(on) || list;
   if (offered && !allowed) out.push(`Your field on ${on}`);
   if (offered && garden === 'unread') out.push(`Your field on an unread garden (${on})`);
   if (on === 'Today' && offered && listening) out.push('Your field on Today while listening');
-  const owed = on === END || (on === 'Today' && garden === 'read' && !listening);
+  const owed = on === END || list || (on === 'Today' && garden === 'read' && !listening);
   if (owed && !offered) out.push(`no Your field on ${on}`);
   if (backs.length > 1) out.push(`${backs.length} Your field controls on ${on}`);
   if (backs.some(scrolled)) out.push(`Your field inside a scroll view on ${on}`);
@@ -229,7 +230,11 @@ const PRIMARY = /^(Start|Practice .+|Learn .+)$/u;
  * of home's old nodes (`home's old <id>`), at most one `Add a list` (`<n>
  * Add a list controls`), at most one primary action (`<n> primary actions:
  * <names>`), which lies outside the scroll view (`<name> inside the scroll
- * view`), and no plant showing a number (`a number in <name>`). Off home it
+ * view`), no plant showing a number (`a number in <name>`), and with
+ * hslist L5 no control named `Remove` or starting `Remove ` (`<name> on
+ * home`), exactly one `Open <title>` in each furrow's row (`<n> Open
+ * <title> in its row`) and no other `Open …` (`<n> Open controls for <k>
+ * rows`). Off home it
  * holds nothing; `When I need…` on any screen and `Settings` outside the
  * scroll view are `rootFaults`'s own clauses.
  */
@@ -246,6 +251,47 @@ export const homeRuleFaults = (on: string, host: Element, controls: readonly Ele
   for (const plant of host.querySelectorAll('[data-testid="field-plant"]'))
     if ([plant, ...plant.querySelectorAll('*')].some((node) => /^\d+$/u.test(text(node))))
       out.push(`a number in ${nameOf(plant)}`);
+  for (const node of controls)
+    if (/^Remove( |$)/u.test(nameOf(node))) out.push(`${nameOf(node)} on home`);
+  const rows = [...host.querySelectorAll('[data-testid="row"]')];
+  for (const row of rows) {
+    const title = text(row.querySelector('[data-testid="row-title"]'));
+    const opens = [...row.querySelectorAll(CONTROLS)].filter(
+      (node) => nameOf(node).replace(/\s+/g, ' ').trim() === `Open ${title}`.trim(),
+    );
+    if (opens.length !== 1) out.push(`${opens.length} Open ${title} in its row`);
+  }
+  const opens = controls.filter((node) => nameOf(node).startsWith('Open ')).length;
+  if (opens !== rows.length) out.push(`${opens} Open controls for ${rows.length} rows`);
+  return out;
+};
+
+/** The nodes of home a list's own page never shows, by test id. */
+const HOME_ON_LIST = ['today-card', 'chosen', 'add-list'];
+
+/**
+ * hslist's list rule over a frame (`list` being whether it shows a list's
+ * own page, found by `id=list-screen`, since its heading is the list's
+ * title): on the page, at most one `Practice this list`, outside the scroll
+ * view (`<n> Practice this list`, `Practice this list inside the scroll
+ * view`), every `Remove <name>` and the ask inside it (`<name> outside the
+ * scroll view`, `the ask outside the scroll view`), and none of home's
+ * `today-card`, `chosen` or `add-list` (`home's <id> on a list`); off it,
+ * no `Practice this list` (`Practice this list on <screen>`). Its one
+ * heading, its one `Your field` outside the scroll view and the absence
+ * of Today's actions and nodes are `rootFaults`'s own clauses.
+ */
+const listRuleFaults = (on: string, list: boolean, host: Element, controls: readonly Element[]) => {
+  const practices = controls.filter((node) => nameOf(node) === 'Practice this list');
+  if (!list) return practices.map(() => `Practice this list on ${on}`);
+  const out = ids(host, HOME_ON_LIST).map((id) => `home's ${id} on a list`);
+  if (practices.length > 1) out.push(`${practices.length} Practice this list`);
+  if (practices.some(scrolled)) out.push('Practice this list inside the scroll view');
+  for (const node of controls)
+    if (nameOf(node).startsWith('Remove ') && !scrolled(node))
+      out.push(`${nameOf(node)} outside the scroll view`);
+  for (const node of host.querySelectorAll('[data-testid="ask"]'))
+    if (!scrolled(node)) out.push('the ask outside the scroll view');
   return out;
 };
 
@@ -298,7 +344,8 @@ const listeningFaults = (host: Element) =>
  * read completes. A frame shows one screen, by its one heading, or the
  * pending frame (no heading), which holds the reference alone. `Your field`
  * is a way back from Today (on a read garden while nothing listens, and then
- * always), the end of a run `The field is tended` (always) and About,
+ * always), the end of a run `The field is tended` (always), a list's own
+ * page (always; `listRuleFaults` holds the rest of that page) and About,
  * never in a scroll view,
  * and nowhere else: never on home, never on the chooser's `Add a passage`,
  * never on an unread garden (`backFaults`). The chooser's `Add a passage`
@@ -347,7 +394,8 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   const out: string[] = [];
   if (headings.length > 1) out.push(`the headings ${headings.join('|')}`);
   const on = headings[0] ?? '';
-  out.push(...backFaults(on, garden, named('Your field'), listening));
+  const list = host.querySelector('[data-testid="list-screen"]') !== null;
+  out.push(...backFaults(on, garden, named('Your field'), listening, list));
   out.push(
     ...addBackFaults(
       on,
@@ -365,6 +413,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   out.push(...endFaults(host, on, garden, controls));
   out.push(...settingsFaults(on, named('Settings')));
   out.push(...homeRuleFaults(on, host, controls));
+  out.push(...listRuleFaults(on, list, host, controls));
   out.push(...choicesFaults(on, host, controls));
   out.push(...reach);
   return out;

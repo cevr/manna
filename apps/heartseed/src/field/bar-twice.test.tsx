@@ -23,8 +23,8 @@ it('makes one change for two taps in one turn, and takes no other tap while it i
   const floors = [
     'remove:twice:Removed',
     'remove:twice:Failed',
-    'remove:then Settings:Removed',
-    'remove:then Settings:Failed',
+    'remove:then Your field:Removed',
+    'remove:then Your field:Failed',
     'remove:then Keep:Removed',
     'remove:then Keep:Failed',
   ];

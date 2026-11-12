@@ -212,10 +212,11 @@ export const launchRoot = async (
     return true;
   };
   const controls = () => [...host.querySelectorAll(CONTROLS)];
-  const named = (label: string) => controls().find((node) => nameOf(node) === label);
-  /** Taps the control named `label`; false when none shows. */
-  const tap = async (label: string) => {
-    const node = named(label);
+  const named = (label: string, nth = 0) =>
+    controls().filter((node) => nameOf(node) === label)[nth];
+  /** Taps the `nth` control named `label` (from 0); false when none shows. */
+  const tap = async (label: string, nth = 0) => {
+    const node = named(label, nth);
     if (node === undefined) return false;
     await act(async () => {
       node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));

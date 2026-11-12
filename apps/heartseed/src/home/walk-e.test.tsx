@@ -2,7 +2,9 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part e: device 0
- * of seed 444, eighteen commands from its launch on home, held to the
+ * of seed 444, eighteen commands from its launch on home, and device 20,
+ * six (its remove, from the list's own page, drops the choice, so the
+ * moved choice comes from the second), each held to the
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
@@ -39,8 +41,11 @@ const FLOORS = [
 
 describe('home A, walked (e)', () => {
   it('shows the furrows, the choice, the card and the greeting as the models give them', async () => {
-    const { failure, cover } = await walkHome(444, [0], 18);
-    expect(failure).toBeNull();
-    expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);
+    const long = await walkHome(444, [0], 18);
+    const short = await walkHome(444, [20], 6);
+    expect(long.failure).toBeNull();
+    expect(short.failure).toBeNull();
+    const reached = (kind: string) => (long.cover[kind] ?? 0) + (short.cover[kind] ?? 0) >= 1;
+    expect(FLOORS.filter(reached)).toEqual(FLOORS);
   });
 });

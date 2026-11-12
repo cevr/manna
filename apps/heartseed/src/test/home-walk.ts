@@ -16,7 +16,8 @@
  *   `Start` (exactly when the model shows a verse, R3; with `waits`, after
  *   a wait on home that keeps the plan, `waitBegin`), `Practice anyway`
  *   (exactly when no verse shows and a planted verse starts), with nothing
- *   held a landed `Remove <reference>` then `Remove`, a landed add (`Add a
+ *   held a landed remove (`Open <reference>`, then on its own page `Remove
+ *   <reference>` and `Remove`, which shows home), a landed add (`Add a
  *   list`, the sheet's `Any passage`, a verse of a drawn chapter, `Plant`),
  *   a return to the foreground, a relaunch the next morning; while a visit
  *   is open or an item held, an add takes a remove's turn;
@@ -426,7 +427,7 @@ class HomeWalk extends Walk {
     return this.begin();
   }
 
-  /** A landed remove of a held passage drawn from those held: its span dropped, the plan made again. */
+  /** A landed remove of a held passage drawn from those held, from its own page (`Open <reference>`, the last of that name, which is a held passage's and not the promise's, then `Remove <reference>` and the ask's `Remove`): its span dropped, the plan made again, home shown. */
   async remove(): Promise<unknown> {
     const rig = this.launched;
     if (this.held.tag !== 'Read') return 'no passages';
@@ -435,6 +436,8 @@ class HomeWalk extends Walk {
     if (span === undefined) return 'no passage';
     const reference = spanRef(span);
     this.trail.push(`remove:${reference}`);
+    const opens = rig.names().filter((name) => name === `Open ${reference}`).length;
+    if (!(await rig.tap(`Open ${reference}`, opens - 1))) return `no Open ${reference}`;
     if (!(await rig.tap(`Remove ${reference}`))) return `no Remove ${reference}`;
     if (!(await rig.tap('Remove'))) return 'no ask';
     this.held = {
@@ -448,11 +451,12 @@ class HomeWalk extends Walk {
     await rig.until(
       () =>
         by(rig.host, 'ask').length === 0 &&
+        by(rig.host, 'list-screen').length === 0 &&
         JSON.stringify(readRule(CORPUS, this.device.disk.get(KEY), 0)) ===
           JSON.stringify(this.held),
     );
-    const plants = this.furrows().flatMap((furrow) => furrow.plants);
-    if (!plants.some((plant) => plant.reference === this.chosen)) this.chosen = null;
+    if (this.chosen !== null) this.bump('remove:choice dropped by leaving');
+    this.chosen = null;
     return null;
   }
 

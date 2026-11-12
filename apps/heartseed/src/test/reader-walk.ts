@@ -28,8 +28,10 @@
  * Minutes trip (`Your field`, `<n> min` in home's Settings sheet, `Done`,
  * then home's way to Today), or a relaunch after the next 04:00 local. A
  * tap of a control that does not show is a fault. Home: `Start` (a
- * relaunch after the next 04:00 local when home offers none), a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
- * once or twice in one turn), or an add (the bar's `Add verses`, the
+ * relaunch after the next 04:00 local when home offers none), a remove on the passage's own page (`Open <reference>`, `Remove
+ * <reference>`, then `Keep`, the ask moved to another passage's page, or
+ * the ask's `Remove` landing or refused, once or twice in one turn; a page left
+ * showing is left by `Your field` before the next command on home), or an add (the bar's `Add verses`, the
  * Add verses sheet over home with every shelf closed, then its
  * `Any passage`): a target chapter (Psalms 119 and
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
@@ -65,6 +67,8 @@ import {
   notPlanted,
   notRemoved,
   OPENED,
+  openOf,
+  passageRow,
   QUIET,
   tapRule,
   type Asking,
@@ -311,9 +315,9 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   };
   /** R3: home offers `Start` exactly when the model shows a verse, or over unread passages (the app's own passage, unplanned). */
   const offersBegin = () => held.tag === 'Unread' || shownModel(run, recallsNow) !== null;
-  /** Home settled: the field and its bar, and the Today card unless an ask holds its place: its line over read passages and `Start` by R3. */
+  /** Home settled: the field and its bar, and the Today card unless a list's own page shows: its line over read passages and `Start` by R3. */
   const homeWant = () => {
-    const card = bar.ask === undefined;
+    const card = bar.open === undefined;
     return {
       field: fieldWant(heldOn(device.disk), PROMISE, held, bar),
       counts:
@@ -458,6 +462,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const today = async () => {
     if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
+    await toHome('to Today');
     if (!offersBegin()) {
       reached.add('home:no-begin');
       return relaunch();
@@ -553,7 +558,14 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     await settle(`${step}, Start`);
   };
 
-  /** Taps the `Remove` of held passage `at`, by its place among the rows of equal title. */
+  /** From a list's own page, `Your field` back to home; nothing on home. */
+  const toHome = async (step: string) => {
+    if (bar.open === undefined) return;
+    await tap('Your field');
+    bar = QUIET;
+    await settle(`${step}: Your field`);
+  };
+  /** Opens held passage `at`'s own page by its `Open <reference>` (from home, back there first from another list's page), by its place among the rows of equal title, and taps its `Remove`. */
   const ask = async (at: number) => {
     const span = passages()[at] as Span;
     const nth = passages()
@@ -561,8 +573,16 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       .filter((each) => sameSpan(each, span)).length;
     if (bar.ask !== undefined) reached.add('ask:moved');
     if (bar.alert !== undefined) reached.add('alert:cleared by a tap');
-    await tap(`Remove ${spanRef(span)}`, nth);
-    bar = { ask: span, alert: undefined };
+    const row = passageRow(at);
+    if (bar.open !== row) {
+      await toHome('to another list');
+      const open = openOf(heldOn(device.disk), PROMISE, held, row);
+      await tap(open.label, open.nth);
+      bar = { open: row, ask: undefined, alert: undefined };
+      await settle(`${open.label}#${open.nth}`);
+    }
+    await tap(`Remove ${spanRef(span)}`);
+    bar = { open: row, ask: span, alert: undefined };
     await settle(`ask ${spanRef(span)}#${nth}`);
     return span;
   };
@@ -582,7 +602,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       written = true;
       bar = QUIET;
       made('remove');
-    } else bar = { ask: undefined, alert: notRemoved(spanRef(span)) };
+    } else bar = { open: bar.open, ask: undefined, alert: notRemoved(spanRef(span)) };
     await settle(`remove ${spanRef(span)}${twice ? ' twice' : ''}${refused ? ', refused' : ''}`);
     keyFaults.refuse = false;
     return answer.outcome;
@@ -593,8 +613,9 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     if (roll === 0) {
       reached.add('remove:Keep');
       await tap('Keep');
-      bar = QUIET;
-      return settle('Keep');
+      bar = { open: bar.open, ask: undefined, alert: undefined };
+      await settle('Keep');
+      return toHome('kept');
     }
     const asked = roll === 1 ? await ask(below(next, passages().length)) : span;
     if ((await confirm(asked)) === 'Failed' && below(next, 2) === 0) {
@@ -691,6 +712,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     }
   };
   const add = async () => {
+    if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
+    await toHome('to add');
     await click((app as Launch).host.querySelector('[data-testid="add-list"]') ?? undefined);
     bar = QUIET;
     await toSheet('Add verses');

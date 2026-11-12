@@ -184,8 +184,9 @@ export const askText = (name: string) => `Remove ${name}? Its plants stay in you
 /** C5, with hshandbook R13: the remove's alert over `name`. */
 export const notRemoved = (name: string) => `${name} was not removed. Try again.`;
 
-/** C5: the field's bar as the model holds it: the passage (a span) or the planted list (its title) asked about, and the remove's alert, each `undefined` for none. */
+/** C5, with hslist L4: the remove as the model holds it: the place among the field's rows of the list whose own page shows (`undefined` for home), the passage (a span) or the planted list (its title) asked about there, and the remove's alert, each `undefined` for none. */
 export interface Asking {
+  readonly open?: number;
   readonly ask: Span | string | undefined;
   readonly alert: string | undefined;
 }
@@ -210,6 +211,41 @@ export interface FieldSeen {
   readonly alert: string | undefined;
 }
 
+/** hslist L3, L4: a list's own page as the reader gets it: its heading, each row's reference, its `Remove <name>` while it shows, the ask and the alert, `undefined` for none. */
+export interface ListSeen {
+  readonly list: string;
+  readonly rows: ReadonlyArray<string>;
+  readonly remove: string | undefined;
+  readonly ask: string | undefined;
+  readonly alert: string | undefined;
+}
+
+/** The place among the field's rows of held passage `at` (the promise's row first). */
+export const passageRow = (at: number) => 1 + at;
+
+/** The place among the field's rows of the held list `id`, after the promise's and every held passage's; `undefined` when the field shows no such list. */
+export const listRow = (held: Held, id: string) => {
+  if (held.tag !== 'Read') return undefined;
+  const known = (held.lists ?? []).filter((each) => HANDBOOK_MODEL.has(each));
+  const at = known.indexOf(id);
+  return at < 0 ? undefined : 1 + held.passages.length + at;
+};
+
+/** hslist L5: the `Open <title>` that opens the field's row `row`, and its place among the rows of equal title (from 0), over the same records, promise and held as `fieldWant`. */
+export const openOf = (
+  records: ReadonlyArray<Recall>,
+  promise: string,
+  held: Held,
+  row: number,
+) => {
+  const { rows } = homeWant(records, promise, held);
+  const title = rows[row]?.title ?? '';
+  return {
+    label: `Open ${title}`,
+    nth: rows.slice(0, row).filter((each) => each.title === title).length,
+  };
+};
+
 /** C4: a passage's verses' references, first to last. */
 const versesOfSpan = (span: Span) =>
   Array.from({ length: span.last - span.first + 1 }, (_, index) =>
@@ -223,22 +259,41 @@ const versesOfSpan = (span: Span) =>
  * in the order chosen, then each held list's (`held.lists`: known ids,
  * once, in stored order; its title and its verses in Haskell's order, from
  * `handbook-model.ts`), then every other plant (hsfield's rule), each
- * phrase folded into its verse (H7); each held passage's row holds one
- * `Remove <reference>`, each held list's one `Remove <title>`, and no other
- * row a `Remove`. With the passages read, the card's place holds the ask
- * while there is one, and `Lists` offers `Add a list` under 3 passages and
- * lists held together, else the limit line, neither while the ask shows;
- * unread, it holds neither and no row a `Remove`. The Today card shows
- * exactly while no ask does (hsstart T3): with the passages read a plan is
- * made at home's first show, so it has its lines, and over unread passages
- * it offers `Start`.
+ * phrase folded into its verse (H7); every row holds one control, `Open
+ * <title>` (hslist L5), and none a `Remove`. With the passages read,
+ * `Lists` offers `Add a list` under 3 passages and lists held together,
+ * else the limit line; unread, it holds neither. Home holds no ask and no
+ * alert; the Today card always shows (hsstart T3): with the passages read
+ * a plan is made at home's first show, so it has its lines, and over
+ * unread passages it offers `Start`.
+ *
+ * While a list's own page shows (`bar.open`), it is that page instead
+ * (hslist L3, L4): the row's title as its heading, its plants' references
+ * in order, and, with the passages read, for a held passage or list, the
+ * ask while there is one, else `Remove <title>`; then the alert.
  */
 export const fieldWant = (
   records: ReadonlyArray<Recall>,
   promise: string,
   held: Held,
   bar: Asking,
-): FieldSeen => {
+): FieldSeen | ListSeen => {
+  const { rows, count } = foldOf(records, promise, held);
+  const opened = bar.open === undefined ? undefined : rows[bar.open];
+  if (opened === undefined || bar.open === undefined) return homeWant(records, promise, held);
+  const ours = held.tag === 'Read' && bar.open >= 1 && bar.open <= count;
+  const asking = ours ? bar.ask : undefined;
+  return {
+    list: opened.title,
+    rows: opened.plants.map((plant) => plant.reference),
+    remove: ours && asking === undefined ? `Remove ${opened.title}` : undefined,
+    ask: asking === undefined ? undefined : askText(askedName(asking)),
+    alert: bar.alert,
+  };
+};
+
+/** The field's rows (`fieldFoldRule` over the promise, the held passages and the known held lists) and how many passages and lists are held. */
+const foldOf = (records: ReadonlyArray<Recall>, promise: string, held: Held) => {
   const passages = held.tag === 'Read' ? held.passages : [];
   const lists = (held.tag === 'Read' ? (held.lists ?? []) : []).flatMap((id) => {
     const list = HANDBOOK_MODEL.get(id);
@@ -252,20 +307,28 @@ export const fieldWant = (
       ...lists,
     ],
   );
+  return { rows: rule.rows, count: passages.length + lists.length };
+};
+
+/** Home as `fieldWant` holds it, with no list's own page shown. */
+export const homeWant = (
+  records: ReadonlyArray<Recall>,
+  promise: string,
+  held: Held,
+): FieldSeen => {
+  const { rows, count } = foldOf(records, promise, held);
   const read = held.tag === 'Read';
-  const asking = read ? bar.ask : undefined;
-  const count = passages.length + lists.length;
   return {
-    rows: rule.rows.map((row, index) => ({
+    rows: rows.map((row) => ({
       title: row.title,
       plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
-      controls: index >= 1 && index <= count ? [`Remove ${row.title}`] : [],
+      controls: [`Open ${row.title}`],
     })),
-    add: read && asking === undefined && count < 3 ? 1 : 0,
-    card: asking === undefined ? 1 : 0,
-    limit: read && asking === undefined && count >= 3 ? LIMIT : undefined,
-    ask: asking === undefined ? undefined : askText(askedName(asking)),
-    alert: bar.alert,
+    add: read && count < 3 ? 1 : 0,
+    card: 1,
+    limit: read && count >= 3 ? LIMIT : undefined,
+    ask: undefined,
+    alert: undefined,
   };
 };
 

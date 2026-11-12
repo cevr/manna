@@ -11,7 +11,7 @@
  * collections none, Fear, or several in any order.
  *
  * It catches a taught row before the passages or missing, a taught row
- * carrying a range (so a `Remove`), a verse twice in its row, a Fear verse
+ * carrying a range (so a `Remove` on its own page), a verse twice in its row, a Fear verse
  * in a held passage shown once, and a removed passage's Fear verse leaving
  * the Fear row for a row of its own.
  */

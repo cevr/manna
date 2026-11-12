@@ -379,6 +379,7 @@ export const walkRoot = async (seed: number) => {
   const homeSeen = () => {
     const seen = readBar(rig.host);
     if (typeof seen === 'string') return seen;
+    if ('list' in seen) return `the list ${seen.list}`;
     return seen.rows.map((row) => ({ title: row.title, plants: row.plants }));
   };
   const home = async (step: string, held: Held) => {
@@ -413,9 +414,9 @@ export const walkRoot = async (seed: number) => {
   /** Home's `Add a list`, or none over unread passages and at 3 held. */
   const adds = (step: string, want: number) => {
     const seen = readBar(rig.host);
-    if (typeof seen === 'string' || seen.add !== want)
+    if (typeof seen === 'string' || 'list' in seen || seen.add !== want)
       fail(
-        `${step}: home offers ${typeof seen === 'string' ? seen : seen.add} Add a list, not ${want}`,
+        `${step}: home offers ${typeof seen === 'string' || 'list' in seen ? JSON.stringify(seen) : seen.add} Add a list, not ${want}`,
       );
   };
   let held: Held = script.held;

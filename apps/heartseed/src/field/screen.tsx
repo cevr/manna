@@ -3,35 +3,30 @@
  * sit the greeting by the hour and one card (`./card`): the Today card
  * with the day's line and its one full-width button (`Start`, or
  * `Practice anyway` when nothing is due), or, with a verse chosen, the
- * chosen card with `Practice this verse` or `Learn this verse`, or, while
- * a furrow's `Remove` (a held passage's or a planted list's) asks, the ask
- * with `Remove` and `Keep`; a remove that does not land leaves an alert
- * under it. Nothing else is fixed, so what starts a recital is the first
- * and largest thing on the screen.
+ * chosen card with `Practice this verse` or `Learn this verse`. Nothing
+ * else is fixed, so what starts a recital is the first and largest thing
+ * on the screen.
  *
  * In the scroll view: the heading `Your field` with the days sown and the
  * harvest; the label `Lists` with `Add a list` while fewer than 3 passages
  * and lists are held together, else the limit line; one furrow per row
- * (`./plot`); the legend under Mark 4:28; then the rows `Settings`, which
- * opens the Settings sheet (`../settings/sheet`) over home, and `How
- * Heartseed works`, which shows About.
+ * (`./plot`), whose title (`Open <title>`) opens the list's own page,
+ * where a held list is removed; the legend under Mark 4:28; then the rows
+ * `Settings`, which opens the Settings sheet (`../settings/sheet`) over
+ * home, and `How Heartseed works`, which shows About.
  *
  * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
  * lets it go, and a tap on another moves the choice: one verse at most, the
- * screen's own state, as are the ask, the alert and whether the sheet is
- * open, all dropped when the reader leaves. With the passages unread it
- * offers no add and no remove. From a tap of the ask's `Remove` until its
- * answer, no tap of a field control changes anything, even two in one
- * turn, and each shows as disabled.
+ * screen's own state, as is whether the sheet is open, both dropped when
+ * the reader leaves. With the passages unread it offers no add. Home holds
+ * no remove.
  */
 
-import { useAtomSet } from '@effect/atom-react';
-import { Array as Arr, Match, Option } from 'effect';
-import { useRef, useState } from 'react';
+import { Array as Arr, Option } from 'effect';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
-import { uprootList, uprootPassage } from '../app';
 import { LIMIT_LINE } from '../chooser';
 import { harvestText, sownText, type Field } from '../field';
 import type { Furrow, Greeting } from '../home';
@@ -41,75 +36,23 @@ import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
 import { SettingsSheet } from '../settings/sheet';
 import { ChosenCard, TodayCardView, type Chosen, type StartKind } from './card';
-import { Control, Furrows, Icon, Legend, type Removal } from './plot';
+import { Control, Furrows, Icon, Legend } from './plot';
 
-/** The screen's remove state: the passage or list a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
-interface Bar {
-  readonly ask: Option.Option<Removal>;
-  readonly alert: Option.Option<string>;
-  readonly pending: boolean;
-}
-
-const IDLE: Bar = { ask: Option.none(), alert: Option.none(), pending: false };
-
-/** The alert a remove's answer leaves: none once `Removed`, else that the passage or list was not removed. */
-const alertAfter = (answer: string, removal: Removal): Option.Option<string> => {
-  if (answer === 'Removed') return Option.none();
-  return Option.some(`${removal.name} was not removed. Try again.`);
-};
-
-/** Whether the field offers `Add a list`: the passages read, no ask showing, and fewer than 3 passages and lists held together. */
-const offersAdd = (passages: PassagesView, bar: Bar) =>
-  passages._tag === 'Read' && Option.isNone(bar.ask) && heldCount(passages) < MOST_PASSAGES;
-
-/** The ask a furrow's `Remove` puts in the card's place, with `Remove` and `Keep`. */
-function Ask({
-  removal,
-  pending,
-  onConfirm,
-  onKeep,
-}: {
-  readonly removal: Removal;
-  readonly pending: boolean;
-  readonly onConfirm: (removal: Removal) => void;
-  readonly onKeep: () => void;
-}) {
-  const styles = useThemed(sheets);
-  return (
-    <View style={styles.ask}>
-      <Text testID="ask" style={styles.line}>
-        {`Remove ${removal.name}? Its plants stay in your field.`}
-      </Text>
-      <View style={styles.answers}>
-        <Control
-          label="Remove"
-          shown="Remove"
-          pending={pending}
-          onPress={() => onConfirm(removal)}
-        />
-        <Control label="Keep" shown="Keep" pending={pending} onPress={onKeep} />
-      </View>
-    </View>
-  );
-}
-
-/** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held, else nothing while an ask shows. */
+/** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held. */
 function Lists({
   passages,
-  bar,
   onAdd,
 }: {
   readonly passages: PassagesView;
-  readonly bar: Bar;
   readonly onAdd: () => void;
 }) {
   const styles = useThemed(sheets);
-  const full =
-    passages._tag === 'Read' && Option.isNone(bar.ask) && heldCount(passages) >= MOST_PASSAGES;
+  const offers = passages._tag === 'Read' && heldCount(passages) < MOST_PASSAGES;
+  const full = passages._tag === 'Read' && heldCount(passages) >= MOST_PASSAGES;
   return (
     <View style={styles.lists}>
       <Text style={styles.label}>Lists</Text>
-      {offersAdd(passages, bar) && (
+      {offers && (
         <Control
           testID="add-list"
           label="Add a list"
@@ -129,15 +72,7 @@ function Lists({
 }
 
 /** A row at the field's end: a button the width of the field, named and showing `label`. */
-function EndRow({
-  label,
-  pending,
-  onPress,
-}: {
-  readonly label: string;
-  readonly pending: boolean;
-  readonly onPress: () => void;
-}) {
+function EndRow({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
   const look = useLook();
   const styles = useThemed(sheets);
   return (
@@ -145,9 +80,8 @@ function EndRow({
       testID="end-row"
       role="button"
       aria-label={label}
-      disabled={pending}
       onPress={onPress}
-      style={({ pressed }) => [styles.endRow, pressed && look.pressed, pending && look.disabled]}
+      style={({ pressed }) => [styles.endRow, pressed && look.pressed]}
     >
       <Text style={styles.endText}>{label}</Text>
       <Text aria-hidden style={styles.endText}>
@@ -179,7 +113,8 @@ const chosenIn = (
  * `card`, and on a chosen verse what `starts` gives it. `onToday` is
  * `Start`'s way to Today, `onStart` the way `Practice anyway`, `Practice
  * this verse` and `Learn this verse` start a verse, `onAdd` the way to the
- * Add a list sheet and `onAbout` the way to About.
+ * Add a list sheet, `onAbout` the way to About and `onOpen` the way to a
+ * furrow's list view, by its id.
  */
 export function FieldScreen({
   field,
@@ -209,49 +144,17 @@ export function FieldScreen({
   const look = useLook();
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
-  const [bar, setBar] = useState<Bar>(IDLE);
   const [choice, setChoice] = useState<Option.Option<string>>(Option.none());
   const [settings, setSettings] = useState(false);
-  const busy = useRef(false);
-  const uproot = useAtomSet(uprootPassage, { mode: 'promise' });
-  const uprootPlanted = useAtomSet(uprootList, { mode: 'promise' });
-  /** The remove `removal` names, run by its kind: a passage by its range, a list by its id. */
-  const removeOf = Match.type<Removal>().pipe(
-    Match.tagsExhaustive({
-      Passage: ({ range }): Promise<string> => uproot(range),
-      Handbook: ({ id }): Promise<string> => uprootPlanted(id),
-    }),
-  );
   const chosen = chosenIn(furrows, choice, starts);
   const shownChoice = Option.map(chosen, (verse) => verse.reference);
-  /** A tap of a field control: nothing while a remove is pending, else the alert clears and `then` runs. */
-  const tapped = (then: () => void) => {
-    if (busy.current) return;
-    setBar((now) => ({ ...now, alert: Option.none() }));
-    then();
-  };
   const onChoose = (reference: string) =>
-    tapped(() =>
-      setChoice(
-        Option.match(shownChoice, {
-          onNone: () => Option.some(reference),
-          onSome: (now) => Option.filter(Option.some(reference), (next) => next !== now),
-        }),
-      ),
+    setChoice(
+      Option.match(shownChoice, {
+        onNone: () => Option.some(reference),
+        onSome: (now) => Option.filter(Option.some(reference), (next) => next !== now),
+      }),
     );
-  const onRemove = (removal: Removal) =>
-    tapped(() => setBar({ ask: Option.some(removal), alert: Option.none(), pending: false }));
-  const onConfirm = (removal: Removal) => {
-    if (busy.current) return;
-    busy.current = true;
-    setBar((now) => ({ ...now, pending: true }));
-    const settle = (answer: string) => {
-      busy.current = false;
-      setBar({ ask: Option.none(), alert: alertAfter(answer, removal), pending: false });
-    };
-    void removeOf(removal).then(settle, () => settle('Failed'));
-  };
-  const start = (verse: string) => tapped(() => onStart(verse));
   return (
     <View style={look.screen}>
       <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
@@ -259,34 +162,10 @@ export function FieldScreen({
           <Icon name={greeting.icon} size={28} />
           <Text style={styles.greetingText}>{greeting.words}</Text>
         </View>
-        {Option.match(bar.ask, {
-          onSome: (removal) => (
-            <Ask
-              removal={removal}
-              pending={bar.pending}
-              onConfirm={onConfirm}
-              onKeep={() => tapped(() => setBar(IDLE))}
-            />
-          ),
-          onNone: () =>
-            Option.match(chosen, {
-              onSome: (verse) => <ChosenCard verse={verse} pending={bar.pending} onStart={start} />,
-              onNone: () => (
-                <TodayCardView
-                  card={card}
-                  pending={bar.pending}
-                  onToday={() => tapped(onToday)}
-                  onStart={start}
-                />
-              ),
-            }),
-        })}
-        {Option.match(bar.alert, {
-          onNone: () => false,
-          onSome: (alert) => (
-            <Text role="alert" testID="remove-alert" style={styles.line}>
-              {alert}
-            </Text>
+        {Option.match(chosen, {
+          onSome: (verse) => <ChosenCard verse={verse} pending={false} onStart={onStart} />,
+          onNone: () => (
+            <TodayCardView card={card} pending={false} onToday={onToday} onStart={onStart} />
           ),
         })}
       </View>
@@ -309,27 +188,12 @@ export function FieldScreen({
             {harvestText(field.harvest)}
           </Text>
         </View>
-        <Lists passages={passages} bar={bar} onAdd={() => tapped(onAdd)} />
-        <Furrows
-          furrows={furrows}
-          chosen={shownChoice}
-          pending={bar.pending}
-          onChoose={onChoose}
-          onOpen={(id) => tapped(() => onOpen(id))}
-          onRemove={onRemove}
-        />
+        <Lists passages={passages} onAdd={onAdd} />
+        <Furrows furrows={furrows} chosen={shownChoice} onChoose={onChoose} onOpen={onOpen} />
         <Legend />
         <View style={styles.ends}>
-          <EndRow
-            label="Settings"
-            pending={bar.pending}
-            onPress={() => tapped(() => setSettings(true))}
-          />
-          <EndRow
-            label="How Heartseed works"
-            pending={bar.pending}
-            onPress={() => tapped(onAbout)}
-          />
+          <EndRow label="Settings" onPress={() => setSettings(true)} />
+          <EndRow label="How Heartseed works" onPress={onAbout} />
         </View>
       </ScrollView>
       {settings && <SettingsSheet onDone={() => setSettings(false)} onAbout={onAbout} />}
@@ -342,9 +206,6 @@ const sheets = themed((color, face) =>
     top: { paddingHorizontal: 24, paddingBottom: 8, gap: 12 },
     scroll: { flex: 1 },
     content: { gap: 16 },
-    line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
-    ask: { gap: 8 },
-    answers: { flexDirection: 'row', gap: 8 },
     greeting: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     greetingText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.sun },
     head: { gap: 6 },

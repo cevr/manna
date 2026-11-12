@@ -156,10 +156,8 @@ const checkFields = async (prefers: 'reduce' | 'no-preference') => {
             key={turn}
             furrows={furrows}
             chosen={Option.none()}
-            pending={false}
             onChoose={() => {}}
             onOpen={() => {}}
-            onRemove={() => {}}
           />
         </View>,
       );

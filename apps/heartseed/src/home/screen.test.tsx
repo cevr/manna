@@ -135,7 +135,7 @@ for (const scheme of SCHEMES)
               icon: 'scroll',
               title: 'Isaiah 41:10-12',
               caption: '3 verses · 2 planted',
-              controls: ['Open Isaiah 41:10-12', 'Remove Isaiah 41:10-12'],
+              controls: ['Open Isaiah 41:10-12'],
               plants: ['Isaiah 41:10, seed', 'Isaiah 41:11, seed', 'Isaiah 41:12, not planted'],
               numbers: 0,
             },

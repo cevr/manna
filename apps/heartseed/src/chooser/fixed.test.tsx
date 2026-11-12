@@ -66,8 +66,10 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
     grown: [`${passage.reference}, blade`],
   });
   await step('Your field', 'Add a list');
+  await step('Open John 15:1-5', 'Remove John 15:1-5');
   await step('Remove John 15:1-5', 'Keep');
-  await step('Keep', 'Add a list');
+  await step('Keep', 'Remove John 15:1-5');
+  await step('Your field', 'Add a list');
   expect(await rig.tapId('add-list')).toBe(true);
   expect(await activateSheet(rig.until)).toBe(true);
   seen.push('Add verses');
@@ -93,6 +95,6 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   expect(await rig.until(() => rig.control('Your field') !== undefined)).toBe(true);
   await step('Your field', 'Add a list');
   await rig.leave();
-  expect(seen).toHaveLength(18);
+  expect(seen).toHaveLength(20);
   expect(rig.faults).toEqual([]);
 });

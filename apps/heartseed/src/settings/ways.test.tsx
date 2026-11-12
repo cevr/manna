@@ -7,9 +7,12 @@
  * `Settings` on home outside the scroll view, none elsewhere) and to the
  * sheet's rule (`src/test/settings-rig.ts`).
  *
- * While a remove is pending the gear is disabled in every frame, and a tap
- * of it in the remove's turn opens nothing; a remove that does not land
- * leaves its alert, which the gear's tap clears as it opens the sheet. The
+ * A list's own page, where a remove is asked (hslist L4), holds no gear;
+ * while its remove is pending its way back `Your field` is disabled in
+ * every frame, and a tap of it in the remove's turn changes nothing; a
+ * remove that does not land leaves its alert on the page, which leaving
+ * drops; one that lands shows home without its row, and the gear opens the
+ * sheet there. The
  * sheet's `About` shows About, with no appearance and no foot of its own,
  * and no later frame shows the sheet; About's
  * way back shows home with the sheet closed, and a relaunch opens home.
@@ -73,7 +76,7 @@ const writtenSince = (start: ReadonlyMap<string, string | null>) =>
   [...device.disk].filter(([key, value]) => start.get(key) !== value);
 
 describe('Settings, its ways', () => {
-  it('is disabled while a remove is pending, opens nothing in the remove’s turn, and its tap clears a failed remove’s alert', async () => {
+  it('is on no list’s own page, whose way back is disabled while a remove is pending and changes nothing in the remove’s turn; a failed remove’s alert is left behind with the page', async () => {
     launchWith([
       [
         KEY,
@@ -89,30 +92,44 @@ describe('Settings, its ways', () => {
     const watch = new MutationObserver(() => {
       if (named(rig, 'Remove')[0]?.getAttribute('aria-disabled') !== 'true') return;
       seen.pending += 1;
-      if (named(rig, 'Settings')[0]?.getAttribute('aria-disabled') !== 'true') seen.live += 1;
+      if (named(rig, 'Your field')[0]?.getAttribute('aria-disabled') !== 'true') seen.live += 1;
     });
     watch.observe(rig.host, { subtree: true, childList: true, attributes: true });
     await toField(rig);
-    const rowRemove = () =>
-      [...rig.host.querySelectorAll('[data-testid="row"] [role="button"]')]
-        .map(labelOf)
-        .find((label) => label.startsWith('Remove ')) ?? '';
-    expect(await rig.tap(rowRemove())).toBe(true);
-    expect(await rig.until(() => named(rig, 'Remove').length === 1)).toBe(true);
-    expect(await rig.tapBoth('Remove', 'Settings')).toBe(true);
-    expect(await rig.until(() => named(rig, 'Remove').length === 0)).toBe(true);
-    expect({ modal: modalOf(), pending: seen.pending > 0, live: seen.live }).toEqual({
-      modal: null,
-      pending: true,
-      live: 0,
-    });
-
+    const ask = async (reference: string) => {
+      expect(await rig.tap(`Open ${reference}`)).toBe(true);
+      expect(await rig.until(() => headings(rig).join('|') === reference)).toBe(true);
+      expect(named(rig, 'Settings')).toEqual([]);
+      expect(await rig.tap(`Remove ${reference}`)).toBe(true);
+      expect(await rig.until(() => named(rig, 'Remove').length === 1)).toBe(true);
+    };
+    await ask('Psalms 23:1-2');
     device.fail('set', 1);
-    expect(await rig.tap(rowRemove())).toBe(true);
-    expect(await rig.until(() => named(rig, 'Remove').length === 1)).toBe(true);
-    expect(await rig.tap('Remove')).toBe(true);
+    expect(await rig.tapBoth('Remove', 'Your field')).toBe(true);
     expect(await rig.until(() => rig.host.querySelector('[role="alert"]') !== null)).toBe(true);
     device.fail('set', 0);
+    expect({
+      on: headings(rig),
+      modal: modalOf(),
+      pending: seen.pending > 0,
+      live: seen.live,
+    }).toEqual({ on: ['Psalms 23:1-2'], modal: null, pending: true, live: 0 });
+    expect(await rig.tap('Your field')).toBe(true);
+    await toField(rig);
+    expect(rig.host.querySelector('[role="alert"]')).toBeNull();
+
+    await ask('Psalms 121:1-2');
+    expect(await rig.tapBoth('Remove', 'Your field')).toBe(true);
+    await toField(rig);
+    expect({
+      modal: modalOf(),
+      opens: [...rig.host.querySelectorAll(CONTROL)]
+        .map(labelOf)
+        .filter((label) => label.startsWith('Open ')),
+    }).toEqual({
+      modal: null,
+      opens: [`Open ${passage.reference}`, 'Open Psalms 23:1-2', 'Open Made 1:1'],
+    });
     await openSettings(rig);
     expect({
       alert: rig.host.querySelector('[role="alert"]'),

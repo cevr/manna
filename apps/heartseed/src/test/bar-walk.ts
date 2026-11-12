@@ -11,11 +11,13 @@
  * value, or 1-6 passages with equal ones, overlaps, one over the promise's
  * verse and a Psalms 119 range past 20 verses), a verse of some held
  * passages planted, and 0-3 failed reads of the passages' key alone. Its
- * launch lands on home. Each step, over passages read: a row's `Remove`
- * (any of equal rows), then `Keep`, another row's `Remove`, leaving, or the
- * ask's `Remove` (its write landing or refused; once, twice in one turn, or
- * with the end row `Settings` or `Keep` in the same turn; a refusal
- * retried in half); a round trip; or `Add a list`, the
+ * launch lands on home. Each step, over passages read: a row's `Open
+ * <reference>` (any of equal rows) and on its own page `Remove
+ * <reference>` (hslist L4), then `Keep`, another row's (back by `Your
+ * field` and open it), leaving, or the ask's `Remove` (its write landing
+ * or refused; once, twice in one turn, or with the way back `Your field`
+ * or `Keep` in the same turn; a refusal retried in half); a round trip; or
+ * `Add a list`, the
  * Add a list sheet over the field with every shelf closed, then
  * `Any passage`, then back to the sheet by `Add verses` and to the field by
  * `Done`, or a verse planted. Over unread passages, a round trip. A
@@ -30,7 +32,7 @@
 
 import passage from 'virtual:heartseed-passage';
 
-import { fieldWant, notRemoved, QUIET, type Asking } from './choose-model';
+import { fieldWant, notRemoved, openOf, passageRow, QUIET, type Asking } from './choose-model';
 import { bookName, TARGETS } from './chooser-rig';
 import { START } from './clock';
 import { record } from './field-rig';
@@ -174,7 +176,23 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     faults.push(...rig.faults.splice(0).map((fault) => `${step}: ${fault}`));
   };
   const passages = () => (held.tag === 'Read' ? held.passages : []);
-  /** Taps the `Remove` of held passage `at`, by its place among the rows of equal title. */
+  /** From a list's own page, `Your field` back to home; nothing on home. */
+  const home = async (label: string) => {
+    if (bar.open === undefined) return;
+    await rig.tap('Your field');
+    bar = QUIET;
+    await settle(`${label}: Your field`);
+  };
+  /** Opens the field's row `row` by its `Open <title>`, from home (going back there first from another list's page). */
+  const open = async (row: number) => {
+    if (bar.open === row) return;
+    await home('to another list');
+    const { label, nth } = openOf(heldOn(device.disk), PROMISE, held, row);
+    await rig.tap(label, nth);
+    bar = { open: row, ask: undefined, alert: undefined };
+    await settle(`${label}#${nth}`);
+  };
+  /** Opens held passage `at`'s own page, by its place among the rows of equal title, and taps its `Remove`. */
   const ask = async (at: number) => {
     const span = passages()[at] as Span;
     const nth = passages()
@@ -183,16 +201,19 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     if (nth > 0) reached.add('ask:a later equal row');
     if (bar.ask !== undefined) reached.add('ask:moved');
     if (bar.alert !== undefined) reached.add('alert:cleared by a tap');
-    await rig.tap(`Remove ${spanRef(span)}`, nth);
-    bar = { ask: span, alert: undefined };
+    await open(passageRow(at));
+    await rig.tap(`Remove ${spanRef(span)}`);
+    bar = { open: passageRow(at), ask: span, alert: undefined };
     await settle(`ask ${spanRef(span)}#${nth}`);
     return span;
   };
-  /** Leaves home and comes back by `Your field`: by `Start` when home offers it, else by `Practice anyway` (Today then shows `Say it` or `Next`); over unread passages `Start` is owed (rq1 (a)), and one of the two always (hsstart T1). */
+  /** Leaves home and comes back by `Your field`: by `Start` when home offers it, else by `Practice anyway` (Today then shows `Say it` or `Next`); over unread passages `Start` is owed (rq1 (a)), and one of the two always (hsstart T1). From a list's own page it goes home first, and leaves by `How Heartseed works` while an ask showed. */
   const round = async (label: string) => {
-    if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
+    const asked = bar.ask !== undefined;
+    if (asked) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
-    if (bar.ask !== undefined) {
+    await home(label);
+    if (asked) {
       reached.add('round:by How Heartseed works');
       await rig.tap('How Heartseed works');
       screen = 'About';
@@ -228,11 +249,11 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       .map((recall) => recall.reference)
       .filter((reference) => named([span], reference));
     device.fail('set', refused ? 1 : 0);
-    const ways = ['once', 'twice', 'then Settings', 'then Keep'] as const;
+    const ways = ['once', 'twice', 'then Your field', 'then Keep'] as const;
     const way = ways[how] ?? 'once';
     if (way === 'once') await rig.tap('Remove');
     if (way === 'twice') await rig.tap('Remove', 0, true);
-    if (way === 'then Settings') await rig.tapBoth('Remove', 'Settings');
+    if (way === 'then Your field') await rig.tapBoth('Remove', 'Your field');
     if (way === 'then Keep') await rig.tapBoth('Remove', 'Keep');
     const answer = removeRule(held, span, refused);
     reached.add(`remove:${answer.outcome}`);
@@ -245,7 +266,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       bar = QUIET;
       if (planted.some((reference) => !named(passages(), reference)))
         reached.add('removed:a planted verse as its own row');
-    } else bar = { ask: undefined, alert: notRemoved(spanRef(span)) };
+    } else bar = { open: bar.open, ask: undefined, alert: notRemoved(spanRef(span)) };
     await settle(`remove ${spanRef(span)} ${way}${refused ? ', refused' : ''}`);
     device.fail('set', 0);
     return answer.outcome;
@@ -257,7 +278,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     if (roll === 0) {
       reached.add('remove:Keep');
       await rig.tap('Keep');
-      bar = QUIET;
+      bar = { open: bar.open, ask: undefined, alert: undefined };
       await settle('keep');
       return;
     }
@@ -277,6 +298,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   };
   const add = async () => {
     if (bar.alert !== undefined) reached.add('alert:cleared by a tap');
+    await home('add');
     reached.add('add:by add-list');
     await rig.tapId('add-list');
     if (!(await activateSheet(rig.until))) faults.push('Add a list: no sheet came');

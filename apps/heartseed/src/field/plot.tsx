@@ -1,9 +1,10 @@
 /**
  * The field's furrows as home A draws them. A furrow's head holds its icon,
- * its title (plain text, never a heading: a reference may spell `Your field`
- * or `Today`, and the field holds one heading, its own), its caption
- * (`captionOf`) and, for a passage or a Handbook list the reader holds,
- * its `Remove` (`Remove <reference>`, `Remove <title>`); under
+ * then its title (never a heading: a reference may spell `Your field` or
+ * `Today`, and the field holds one heading, its own) and its caption
+ * (`captionOf`) inside one button, `Open <title>`, at least 44 pt tall,
+ * with a chevron hidden from the screen reader: its tap opens the list's
+ * own page, where a held passage or Handbook list is removed. Under
  * it, its plants, then a soil line. Each plant is one button named
  * `<reference>, <stage>` (then `, ready today`), selected while its verse is
  * the one chosen; inside it, hidden from the screen reader, the gold dot of
@@ -122,13 +123,11 @@ function Plot({
   plant,
   motion,
   chosen,
-  pending,
   onChoose,
 }: {
   readonly plant: FurrowPlant;
   readonly motion: PlantMotion;
   readonly chosen: boolean;
-  readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
 }) {
   const look = useLook();
@@ -139,14 +138,8 @@ function Plot({
       role="button"
       aria-label={plant.label}
       aria-selected={chosen}
-      disabled={pending}
       onPress={() => onChoose(plant.reference)}
-      style={({ pressed }) => [
-        styles.plot,
-        chosen && styles.chosenPlot,
-        pressed && look.pressed,
-        pending && look.disabled,
-      ]}
+      style={({ pressed }) => [styles.plot, chosen && styles.chosenPlot, pressed && look.pressed]}
     >
       {plant.ready && <View aria-hidden testID="dot" style={[styles.dot, styles.ready]} />}
       {!plant.ready && <View aria-hidden style={styles.dot} />}
@@ -155,12 +148,12 @@ function Plot({
   );
 }
 
-/** What a furrow's `Remove` takes away, named as its ask names it: a held passage by its range, or a planted Handbook list by its id. */
+/** What a list view's `Remove this list` takes away, named as its ask names it: a held passage by its range, or a planted Handbook list by its id. */
 export type Removal =
   | { readonly _tag: 'Passage'; readonly name: string; readonly range: Range }
   | { readonly _tag: 'Handbook'; readonly name: string; readonly id: string };
 
-/** The removal a furrow's `Remove` offers, by its source: a passage named by its reference, a Handbook list by its title, and none for any other furrow. */
+/** The removal a list view's `Remove this list` offers, by its furrow's source: a passage named by its reference, a Handbook list by its title, and none for any other furrow. */
 export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
   Match.value(furrow.source).pipe(
     Match.tagsExhaustive({
@@ -173,23 +166,19 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
     }),
   );
 
-/** One furrow: its head (icon, title, caption and, on a held passage or list, `Remove`), its plants, and its soil line. */
+/** One furrow: its head (icon, then its title and caption as one button, `Open <title>`, with a chevron, which opens its list view), its plants, and its soil line. */
 export function FurrowRow({
   furrow,
   motion,
   chosen,
-  pending,
   onChoose,
   onOpen,
-  onRemove,
 }: {
   readonly furrow: Furrow;
   readonly motion: FurrowMotion;
   readonly chosen: Option.Option<string>;
-  readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
   readonly onOpen: (id: string) => void;
-  readonly onRemove: (removal: Removal) => void;
 }) {
   const styles = useThemed(sheets);
   return (
@@ -201,7 +190,6 @@ export function FurrowRow({
         <Pressable
           role="button"
           aria-label={`Open ${furrow.title}`}
-          disabled={pending}
           onPress={() => onOpen(furrow.id)}
           style={({ pressed }) => [styles.open, pressed && styles.openPressed]}
         >
@@ -217,17 +205,6 @@ export function FurrowRow({
             ›
           </Text>
         </Pressable>
-        {Option.match(removalOf(furrow), {
-          onNone: () => false,
-          onSome: (removal) => (
-            <Control
-              label={`Remove ${removal.name}`}
-              shown="Remove"
-              pending={pending}
-              onPress={() => onRemove(removal)}
-            />
-          ),
-        })}
       </View>
       <View style={styles.plots}>
         {furrow.plants.map((plant, index) => (
@@ -236,7 +213,6 @@ export function FurrowRow({
             plant={plant}
             motion={motion.plants[index] ?? STILL_PLANT}
             chosen={Option.contains(chosen, plant.reference)}
-            pending={pending}
             onChoose={onChoose}
           />
         ))}
@@ -250,17 +226,13 @@ export function FurrowRow({
 export function Furrows({
   furrows,
   chosen,
-  pending,
   onChoose,
   onOpen,
-  onRemove,
 }: {
   readonly furrows: readonly Furrow[];
   readonly chosen: Option.Option<string>;
-  readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
   readonly onOpen: (id: string) => void;
-  readonly onRemove: (removal: Removal) => void;
 }) {
   const motion = useMemo(() => motionOf(furrows), [furrows]);
   return furrows.map((furrow, index) => (
@@ -269,10 +241,8 @@ export function Furrows({
       furrow={furrow}
       motion={motion[index] ?? { icon: Option.none(), plants: [] }}
       chosen={chosen}
-      pending={pending}
       onChoose={onChoose}
       onOpen={onOpen}
-      onRemove={onRemove}
     />
   ));
 }

@@ -5,8 +5,8 @@
  * system on each (`src/test/screens-walk.ts`): every frame held to the
  * frame oracle for the system's scheme at that frame and to the rigs' own
  * rules. The field shows every plant stage (a verse not planted and the
- * legend's four) and a reader's passage whose remove is asked and then
- * pending. The Add a list sheet and the
+ * legend's four) and a reader's passage opened on its own page, whose
+ * remove is asked there and then pending. The Add a list sheet and the
  * chooser in light are `screens-b.test.tsx`; the same in dark is
  * `screens-dark.test.tsx`.
  */

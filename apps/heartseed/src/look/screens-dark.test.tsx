@@ -5,7 +5,7 @@
  * system on each (`src/test/screens-walk.ts`), as `screens.test.tsx` holds
  * them in light: every frame held to the frame oracle for the system's
  * scheme at that frame and to the rigs' own rules, the field at every plant
- * stage with a remove asked and pending. The
+ * stage and a passage's own page with a remove asked and pending. The
  * Add a list sheet and the chooser in dark are `screens-dark-b.test.tsx`.
  */
 

@@ -67,9 +67,11 @@ export const FIELD_PLACES = [
   'home from Today',
   'the chosen card',
   'every stage',
+  'the list page',
   'the ask',
-  'a remove landed',
+  'a remove refused',
   'a remove pending',
+  'a remove landed',
   'About',
   'the field again',
 ];
@@ -130,16 +132,24 @@ export const walkFieldScreens = async (scheme: Scheme) => {
   );
   if (rig.host.querySelectorAll('[data-testid="plant-soil"]').length > 0) drawn.add('soil');
   if (drawn.size >= 5) reached.push('every stage');
-  await step('Remove Psalms 117:1-2', 'Your field', 'the ask');
+  await step('Open Psalms 117:1-2', 'Psalms 117:1-2', 'the list page');
+  await step('Remove Psalms 117:1-2', 'Psalms 117:1-2', 'the ask');
   const pending = { frames: 0 };
   const watch = new MutationObserver(() => {
     const keep = rig.control('Keep');
     if (keep?.getAttribute('aria-disabled') === 'true') pending.frames += 1;
   });
   watch.observe(rig.host, { subtree: true, attributes: true, childList: true });
-  await step('Remove', 'Your field', 'a remove landed');
+  device.fail('set', 1);
+  await step('Remove', '', 'a remove refused', async () => {
+    if (!(await rig.tap('Remove'))) return false;
+    return rig.until(() => rig.host.querySelector('[data-testid="remove-alert"]') !== null);
+  });
   watch.disconnect();
+  device.fail('set', 0);
   if (pending.frames > 0) reached.push('a remove pending');
+  await rig.tap('Remove Psalms 117:1-2');
+  await step('Remove', 'Your field', 'a remove landed');
   const sheet = watchSheet(() => scheme);
   await step('About', 'About', 'About', async () => {
     await openSettings(rig);
