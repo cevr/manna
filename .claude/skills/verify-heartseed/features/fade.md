@@ -27,9 +27,12 @@ first minute. The replay always misses word 11, so every recital ends
 
 - `fade-letters` (live at `run-due`): at a seed, 37 `word-<i>` nodes, each
   label exactly one character, and no node holding the passage whole.
-- `lines-letters` (live at `run-due`): the same 37 `word-<i>`, and among
-  them `break-8`, `break-16`, `break-20` and `break-25`, and no other
-  `break-` (Isaiah 41:10's lines by `linesOf`, the README's **Lines**).
+- `lines-letters` (live at `run-due`): the same 37 `word-<i>` in Isaiah
+  41:10's lines (`linesOf`, the README's **Lines**): `word-8`, `word-16`,
+  `word-20` and `word-25` each start a row at the words' left edge, a
+  line's step below the row before, taller than a wrapped row's step. A
+  `break-<k>` is hidden from VoiceOver, so the tree holds none; the breaks
+  themselves are the unit tests'.
 - `fade-cued` (live at `run-listening`): while the recital under letters
   listens, every word node not yet lit is labelled with one character.
 - `fade-blade` (live at `run-recite`): that recital gives `Stage: blade`,
@@ -60,8 +63,11 @@ server). With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 1. `run.md`, Driving it, steps 1-3 (the first minute, then `run-due`).
 2. `fade-letters`: `run-due`'s snapshot → `Stage: seed`; 37 `word-<i>`
    nodes, each label exactly one character; no node holding the passage
-   whole. `lines-letters`: in the same snapshot's tree, the `break-` ids
-   are exactly `break-8`, `break-16`, `break-20`, `break-25`.
+   whole. `lines-letters`: in the same snapshot, the `word-<i>` whose
+   frame starts at the words' least x, each with its y step from the row
+   before: `word-8`, `word-16`, `word-20` and `word-25` each a line's step
+   (about 46 pt in the first minute), any other a wrap's (about 39 pt);
+   frames only, never labels.
 3. `fade-cued`: `run-listening`'s raw snapshot (`run.md` step 4) →
    `Listening`; every word node not yet lit labelled with one character.
    Keep only counts and booleans.

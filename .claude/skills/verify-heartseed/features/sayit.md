@@ -46,8 +46,10 @@ first minute.
 - `lines-say`: on `Isaiah 43:2` (`today.md`'s Lines drive), `Say it` (the
   simulator's replay), then the result → the summary reads `<k> of 38
   words` with the `k` the r1 head (`258e6c82d`) gives for the same replay;
-  the grades as base; `break-6`, `break-11`, `break-20`, `break-26`,
-  `break-31` and no other `break-` while the marks show. The lines change
+  the grades as base; while the marks show, `word-6`, `word-11`,
+  `word-20`, `word-26` and `word-31` each start a row at the view's left
+  edge, a line's step below the row before (the breaks are hidden from the
+  tree). The lines change
   the drawing alone: what is heard, matched and kept is as before
   (`src/sayit/lines-grade.test.tsx`).
 

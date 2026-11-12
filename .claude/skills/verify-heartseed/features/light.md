@@ -52,14 +52,15 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
   `passage-new`, or `phrase.md`'s `whole-new` for John 3:16):
   `id=reading` with one `word-<i>` per word, one or two `selected` moving
   forward between two snapshots, and no `id=passage`; for a verse of more
-  than 20 words, a `break-<k>` before each line's first word by `linesOf`
-  (John 3:16: `break-6`, `break-13`, and no other). After the finish,
+  than 20 words, a `break-<k>` before each line's first word by `linesOf`,
+  hidden from the tree, so read from the frames (John 3:16: `word-6` and
+  `word-13` each start a row at the view's left edge, a line's step below
+  the row before). After the finish,
   `id=passage` is whole again (its `line-<i>` texts for a lined verse) and
   `Listen` is back.
 - `lines-read`: `Isaiah 43:2` (`today.md`'s `lines-plain`): `Listen`; two
   raw snapshots about 1 s apart → `id=reading` with 38 `word-<i>`, one or
-  two `selected` moving forward, and `break-6`, `break-11`, `break-20`,
-  `break-26`, `break-31` and no other; `word-6`, `word-11`, `word-20`,
+  two `selected` moving forward; `word-6`, `word-11`, `word-20`,
   `word-26`, `word-31` each at the view's left edge and lower than the word
   before it; after the finish `id=passage` with its six `line-<i>` again.
   The light probe's verse is drawn on one line, as before.
