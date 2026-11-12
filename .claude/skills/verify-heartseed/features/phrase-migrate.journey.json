@@ -1,0 +1,97 @@
+{
+  "feature": "phrase-migrate",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "whole-migrate-start",
+      "action": "open",
+      "link": "/",
+      "expect": [
+        {
+          "shows": "label=Your field"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-migrate-launch",
+      "action": "relaunch",
+      "expect": [
+        {
+          "shows": "id=today-card"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-migrate-home",
+      "action": "scroll",
+      "target": "label=Psalms 91:1, not planted",
+      "direction": "down",
+      "expect": [
+        {
+          "shows": "label=Psalms 91:1, not planted"
+        }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-migrate-today",
+      "action": "tap",
+      "target": "label=Psalms 91:1, not planted",
+      "expect": [
+        {
+          "shows": "id=session"
+        },
+        {
+          "shows": "label=Psalms 91:1"
+        },
+        {
+          "shows": "label=Listen"
+        }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-migrate-say",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "whole-migrate-grade",
+      "action": "tap",
+      "target": "label=Good",
+      "timeout": 30,
+      "expect": [
+        {
+          "shows": "label=Next"
+        }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-migrate-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [
+        {
+          "shows": "id=today-card"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-migrate-after",
+      "action": "scroll",
+      "target": "label=Psalms 91:1, seed",
+      "direction": "down",
+      "expect": [
+        {
+          "shows": "label=Psalms 91:1, seed"
+        }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
