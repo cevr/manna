@@ -1,0 +1,28 @@
+{
+  "feature": "first-reading",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "first-reading-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-reading-skip",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-reading",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "none"
+    }
+  ]
+}
