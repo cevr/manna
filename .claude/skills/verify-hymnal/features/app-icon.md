@@ -63,9 +63,9 @@ owner's look on his phone.
    appearance and one with `UIAppearanceDark`. Each component × 255,
    rounded, gives the hex; write both to `"$EVIDENCE/splash-colours.txt"`.
    → `#f1f0e6` (red 0.945, green 0.941, blue 0.902) and `#142420` (red
-   0.078, green 0.141, blue 0.125). The launch storyboard prebuild writes,
-   `apps/hymnal/ios/Hymnal/LaunchScreen.storyboard`, draws `image="Splash"`
-   on the colour `name="SplashBackground"`. Red on a build before
+   0.078, green 0.141, blue 0.125). The launch storyboard prebuild writes in the
+   app's git-ignored `ios` folder draws `image="Splash"` on the colour
+   `name="SplashBackground"`. Red on a build before
    Heartseed's colours: `#f7f9fb` and `#0a1f2d` (or an older prebuild's
    `#12354e`).
 4. **The name (`icon-name`).** `plutil -p "$APP/Info.plist"`. →
