@@ -363,31 +363,36 @@ describe('the build walk', () => {
       const { stills } = yield* readRecord(app);
       const dist = yield* fs.makeTempDirectoryScoped({ prefix: 'dist-' });
       const next = draws(47);
-      const put = (file: string, bytes: Uint8Array) =>
-        Effect.gen(function* () {
-          yield* fs.makeDirectory(path.dirname(path.join(dist, file)), { recursive: true });
-          yield* fs.writeFile(path.join(dist, file), bytes);
-        });
+      const files: Array<readonly [string, Uint8Array]> = [];
       const expected: Array<{ readonly image: string; readonly format: Format }> = [];
       for (let i = 0; i < 240; i += 1) {
         const format = FORMATS[i % FORMATS.length] ?? FORMATS[0];
         const raw = imageOf(format, next);
         const bytes = pick(next, [raw, raw, raw, raw, raw, raw, Bun.gzipSync(new Uint8Array(raw))]);
         const file = pathOf(next, i);
-        yield* put(file, bytes);
+        files.push([file, bytes]);
         expected.push({ image: file, format });
       }
       const held = [...Object.keys(stills), ...OUTSIDE.map(({ image }) => image)];
       for (const [i, source] of held.entries())
-        yield* put(pathOf(next, 1000 + i), yield* fs.readFile(path.join(APP, source)));
+        files.push([pathOf(next, 1000 + i), yield* fs.readFile(path.join(APP, source))]);
       for (const [i, [, given]] of NOT_IMAGES.entries())
-        yield* put(pathOf(next, 2000 + i, PLAIN_EXTENSIONS), given);
+        files.push([pathOf(next, 2000 + i, PLAIN_EXTENSIONS), given]);
       for (let i = 0; i < 40; i += 1) {
         const file = pathOf(next, 3000 + i, IMAGE_EXTENSIONS);
         const [, given] = NOT_IMAGES[i % NOT_IMAGES.length] ?? ['', new Uint8Array()];
-        yield* put(file, given);
+        files.push([file, given]);
         expected.push({ image: file, format: 'unknown' });
       }
+      yield* Effect.forEach(
+        files,
+        ([file, bytes]) =>
+          Effect.andThen(
+            fs.makeDirectory(path.dirname(path.join(dist, file)), { recursive: true }),
+            fs.writeFile(path.join(dist, file), bytes),
+          ),
+        { concurrency: 16, discard: true },
+      );
       const refused = yield* unapprovedBuilt(app, dist);
       expect(refused).toEqual(
         expected.toSorted(Order.mapInput(Order.String, ({ image }) => image)),
