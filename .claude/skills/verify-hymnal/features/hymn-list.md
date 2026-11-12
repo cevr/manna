@@ -45,9 +45,9 @@ By hand (these change the app's data; the lists stay until the app is reinstalle
 
 1. **Favourite.** Open hymn 3, `sim tap "role=button label=Favourite"` → `Favourite` `[selected]`. `sim back` → the list starts `Recent`, then `3, …, favourite`; no row named `Favourites`. Under its topic the row is `3, …, favourite` too, and `sim shot` shows a star at its right end, as tall as the number.
 2. **Recent, five.** Open hymns 1, 2, 4, 5 and 6 from the list, each with `sim back`. → `Recent` lists `6, …`, `5, …`, `4, …`, `2, …`, `1, …`; hymn 3 not among them, its row under its topic still starred. `sim relaunch` → the same.
-3. **A list's pager.** Press the `5, …` row under `Recent` by its ref (`agent-device press @eN --session verify-hymnal`: the label also names the row under its topic), then `sim scroll screen right`. → hymn 6, the next in number order, not 4.
+3. **A list's pager.** Press the `5, …` row under `Recent` by its ref (`agent-device press @eN --session verify-hymnal`: the label also names the row under its topic), then a page turn on (SKILL.md: `sim gesture pan 332,437 -262 0 --ms 400`). → hymn 6, the next in number order, not 4.
 4. **Place with a new Recent row.** Deep in the list, read a row's `y`, open a hymn not yet in Recent, `sim back`. → the row's `y` unchanged; from the top, the new hymn first under `Recent`.
-5. **See all.** `sim tap "role=button label=Recent, see all"`. → the header `Recent`; every hymn opened, most recent first, hymn 3 starred. Press its `4, …` row, `sim scroll screen right` → hymn 2; twice more → 1, then 3. `sim gesture edge-pan` → the Recent screen, led by the hymn last shown. `sim back` → home.
+5. **See all.** `sim tap "role=button label=Recent, see all"`. → the header `Recent`; every hymn opened, most recent first, hymn 3 starred. Press its `4, …` row, a page turn on → hymn 2; twice more → 1, then 3. `sim gesture edge-pan` → the Recent screen, led by the hymn last shown. `sim back` → home.
 6. **The pin (`list-tabs-pin`).** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers): the pinned topic row off by no more than 1 pt in any frame, flush under the shown tab row. Without a recording, `pin.test.ts` holds the rule and `HymnList.native.slow.test.ts` holds the pin to the tab row's cover.
 
 ## Gotchas

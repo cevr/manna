@@ -85,16 +85,20 @@
     },
     {
       "name": "swipe-next",
-      "action": "scroll",
-      "target": "screen",
-      "direction": "right",
+      "action": "gesture",
+      "from": "332,437",
+      "dx": -262,
+      "dy": 0,
+      "ms": 400,
       "expect": [{ "shows": "label=Play hymn 34" }]
     },
     {
       "name": "swipe-back",
-      "action": "scroll",
-      "target": "screen",
-      "direction": "left",
+      "action": "gesture",
+      "from": "70,437",
+      "dx": 262,
+      "dy": 0,
+      "ms": 400,
       "expect": [{ "shows": "label=Play hymn 33" }]
     },
     {

@@ -133,10 +133,15 @@ The recipe beside each says what to read in its receipts and which steps stay by
 - `sim open <link> --expect <target>`: `hymnal://hymns/100` on iOS, `http://127.0.0.1:$PORT/hymns/100` on
   the web. On iOS it answers the "Open in “Hymnal”?" prompt with Open (`detail.prompts`).
 - `sim tap <target>`, `sim fill <target> <text>`, `sim back`, and
-  `sim scroll <target|screen> <up|down|left|right>` (`screen right` turns a hymn page on).
+  `sim scroll <target|screen> <up|down|left|right>`.
 - `sim gesture pan <from> <dx> <dy> [--ms 900]` pans from a target's centre. From `id=dial-key`,
   `dx -52` at 900 ms turns one detent; 300 ms glides past two; 1500 ms stops surest.
-- `sim gesture edge-pan` is the back pan from the screen's left edge; a leftward swipe turns the pager on.
+- **A page turn** is a pan mid-screen: `sim gesture pan 332,437 -262 0 --ms 400` turns a hymn page on,
+  `sim gesture pan 70,437 262 0 --ms 400` back. Never `sim scroll screen right` or `left`:
+  agent-device's scroll drags with its controlled-scroll profile, which the pager at times does not
+  take (the page stays; 2 of 7 on 2026-11-12), where the same drag as a pan turned 8 of 8. The
+  journey check `apps/hymnal/scripts/sim/targets.test.ts` refuses a sideways `scroll screen`.
+- `sim gesture edge-pan` is the back pan from the screen's left edge.
 - `sim gesture pinch <at> <scale>` pinches two fingers about a point (`x,y`) or a target's centre: a scale
   below 1 closes the fingers (a pinch in), above 1 spreads them, at most 4. agent-device sets the pinch's
   speed, so there is no `--ms`. On iOS the home list has no testID in the tree: pinch it at a point
@@ -145,8 +150,10 @@ The recipe beside each says what to read in its receipts and which steps stay by
   waits; leave 10 s between two holds, or they read as one. `sim relaunch` starts the app afresh.
 - A target is `label=<accessible name>` or `id=<testID>`, matched whole. Where a name matches twice, put
   the role first: `role=link label=100, Great Is Thy Faithfulness`, `role=button label=Search`. Name a
-  target, never a coordinate or a style; the edge pan, and a pinch where no target covers the place, alone
-  start at a point.
+  target, never a coordinate or a style; the edge pan, a page turn (the pager's pages repeat every name
+  and id), and a pinch where no target covers the place, alone start at a point. Every target a journey
+  names is one the app can draw (its source, its compiled hymns and topics, or iOS's own: the journey
+  check `targets.test.ts`), so a renamed testID or label fails the gate first.
 - Reach a state the way a reader does: a tap, a scroll, a deep link the app answers. Never write the
   app's storage or call its atoms to get there.
 
@@ -177,6 +184,16 @@ What the drivers do that a step does not show:
   `bun .claude/skills/verify-hymnal/scripts/knob.ts <video.mp4> [from] [to]` prints the seeker knob's
   centre `x` while the bar stands tall. Fit the knob's `x` to the clock to prove the seeker moves on
   time (`player-spring`, `chords-sound`).
+- **The numeric readout** reads the tree as numbers, never words, from `apps/hymnal`:
+  `bun scripts/readout.ts read --state <state> [--id <testID>]… [--label <name>]…` prints one JSON
+  line: each asked testID's shown nodes (`chord-*` reads every id it begins) with frame, enabled,
+  selected and the numerals of its value; each named chrome node (`Pause hymn 100`); the silent
+  switches (`Sound`, `Sounds and haptics`, `Chords`); the page's hymn number; the bar's play button
+  and `Position`. `press --target <id=…|label=…> [--settle 700] [--load 12]` is the paced press:
+  it waits for a 1-minute load at most `--load`, presses the shown node by its ref (a Switch, then
+  a Button), settles and prints the readout. `colours --port $PORT [--id <testID>]…` reads each
+  testID's style colours and its texts' ink counts through Argent's `debugger-evaluate`. Its tests:
+  `apps/hymnal/scripts/readout.test.ts`. Use it, not a receipt's own snapshot script.
 
 ## Argent
 
@@ -283,7 +300,9 @@ commands: `boot`, `install`, `doctor`, `journey`, `open`, `tap`, `back`,
 `boot` starts). Its tests: the driver's in `packages/sim/src` (a stand-in
 Drive or host, no device; `sim.slow.test.ts` and
 `app.property.slow.test.ts` run by its `test:slow`), and the hymnal's
-journey files' in `apps/hymnal/scripts/sim/features.test.ts`.
+journey files' in `apps/hymnal/scripts/sim/features.test.ts` and
+`apps/hymnal/scripts/sim/targets.test.ts` (every target drawable, no
+sideways `scroll screen`).
 
 `apps/hymnal/scripts/sticky.ts` checks the home list's pinned topic row in
 every frame of a recording: from `apps/hymnal`, on a booted `verify-hymnal`
