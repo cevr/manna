@@ -1,0 +1,20 @@
+{
+  "feature": "light-lines-done",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "light-today-done",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "timeout": 60,
+      "expect": [
+        { "shows": "label=Listen" },
+        { "shows": "id=passage" },
+        { "shows": "id=line-4" },
+        { "hides": "id=reading" }
+      ],
+      "receipt": "none"
+    }
+  ]
+}

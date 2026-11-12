@@ -1,0 +1,21 @@
+{
+  "feature": "light-lines",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "light-lines-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Isaiah 43:2" }, { "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "lines-read",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "none"
+    }
+  ]
+}

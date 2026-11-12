@@ -1,0 +1,28 @@
+{
+  "feature": "light-scroll",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "light-scroll-probe",
+      "action": "open",
+      "link": "probe/light",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Light probe" }, { "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "light-scroll-read",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "light-probe-scroll",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "receipt": "snapshot"
+    }
+  ]
+}

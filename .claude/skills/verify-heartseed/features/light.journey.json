@@ -1,0 +1,21 @@
+{
+  "feature": "light",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "light-probe",
+      "action": "open",
+      "link": "probe/light",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Light probe" }, { "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "light-probe-read",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "none"
+    }
+  ]
+}

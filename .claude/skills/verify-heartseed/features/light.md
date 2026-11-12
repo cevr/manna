@@ -45,7 +45,7 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
   the selection moves forward from the target.
 - `light-probe-seek-forward`: `Forward 3`: `lit` jumps to the target, with
   a new `speak` line.
-- `light-probe-scroll`: while reading, `sim scroll` over the words: the
+- `light-probe-scroll`: while reading, a scroll over the words: the
   probe scrolls, the status stays `reading` (never `paused`), and no new
   `speak` line appears. A swipe never holds.
 - `light-today`: Today's `Listen` on a new piece (`passage.md`'s
@@ -105,42 +105,54 @@ A raw snapshot is `agent-device snapshot --json --raw --observe-only
 delete it. The log is `first.md`'s `xcrun simctl spawn <udid> log show`
 over `[voice]`, from `START`.
 
+The taps are journeys beside this file, each run in one `sim journey`
+call; the raw snapshots and the log lie between them. A receipt
+(`<journey>/<step>`, as `first.md` names it) holds the visible labels,
+the status line `lit <k>/<n> <status>` among them, but no id, frame or
+`selected`: the selection's indexes are read in raw snapshots.
+
 1. `first.md` steps 1-7 to `first-home` (or any later home).
-2. `light-probe-read`: `sim open probe/light --expect "label=Light probe"`,
-   `sim tap "label=Listen"`, then two raw snapshots about 1 s apart → in
-   each, `id=reading`, no `id=passage`, one or two `word-<i>` nodes
-   `selected`, all of one run, the second's first index greater than the
-   first's; `id=light-status` reads `lit <k>/<n> reading`, `k` growing;
-   the log holds one new `[voice] speak utterance=<u>` line.
-3. `light-probe-seek-back`: raw snapshots until the status's `lit` is 6
-   or more (`k`), then `sim tap "label=Back 3"` and a raw snapshot → the
-   status's `lit` is `k − 3` or a little more (the pacer goes on), the
-   selection at or after `k − 3`; a second raw snapshot shows it moving
-   forward; the log holds a new `speak` line with an utterance above `u`.
-4. `light-probe-seek-forward`: `sim tap "label=Forward 3"` and a raw
-   snapshot → `lit` at the target (the last `lit` plus 3, at most `n − 1`)
-   or a little more, with a new `speak` line.
-5. `light-probe-scroll`: `sim tap "label=Listen"` if the reading ended,
-   then `sim scroll screen down` over the words and a raw snapshot → the
-   heading `Light probe` has moved up or gone (the probe scrolled), the
-   status still ends `reading`, and the log holds no new `speak` line.
-6. `light-today`: on Today with a new piece (`passage.md`'s `passage-new`,
-   or `phrase.md`'s `whole-new`), `sim tap "label=Listen"` and two raw
-   snapshots about 1 s apart → `id=reading` with one `word-<i>` per word of
-   the piece (count them), one or two `selected` moving forward, no
-   `id=passage`, and the row starts `light-today` names (John 3:16's
-   `word-6` and `word-13`, each at the view's left edge and below the word
-   before, from the frames). Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
-   finish) and `sim snapshot light-today-done` → `id=passage`, no
-   `id=reading`.
-   `lines-read`: the same on `Isaiah 43:2` (reached as `today.md`'s Lines
-   drive), reading the frames of `word-6`, `word-11`, `word-20`, `word-26`
-   and `word-31`, the five words that start a line (x at the view's left
-   edge, y below the word before).
+2. `light-probe-read`: `sim journey light` → `"ok":true`: the probe
+   (`heartseed://probe/light`, its open waiting for `Listen`, so no
+   reading is under way), then `Listen`, until
+   `id=reading` shows. Then two raw snapshots about 1 s apart → in each,
+   `id=reading`, no `id=passage`, one or two `word-<i>` nodes `selected`,
+   all of one run, the second's first index greater than the first's;
+   `id=light-status` reads `lit <k>/<n> reading`, `k` growing; the log
+   holds one new `[voice] speak utterance=<u>` line.
+3. `light-probe-seek-back`: `sim journey light-seek` → `"ok":true`: the
+   probe at rest, `Listen`, `Back 3`, then `Forward 3`, each tap's
+   receipt taken as its step ends. `light-seek/light-seek-read`: the
+   status's `lit` `k`, 6 or more (else the reading outran the drive: run
+   the journey again). `light-seek/light-probe-seek-back`: `lit` is
+   `k − 3` or a little more (the pacer goes on), still `reading`; the log
+   holds a new `speak` line with an utterance above `u`.
+4. `light-probe-seek-forward`: `light-seek/light-probe-seek-forward`:
+   `lit` at the last `lit` plus 3 (at most `n − 1`) or a little more, with
+   a new `speak` line. Then a raw snapshot → the selection moving forward
+   from the target. The journey waits for nothing after `Forward 3`: on a
+   loaded host the reading may end before the receipt (`lit 0/25 idle`),
+   and then the forward seek is unproven in that run: run it again.
+5. `light-probe-scroll`: `sim journey light-scroll` → `"ok":true`: the
+   probe at rest, `Listen`, then a scroll of the screen down over the
+   words. `light-scroll/light-scroll-read` holds the heading
+   `Light probe`; `light-scroll/light-probe-scroll`: the heading has moved
+   up or gone (the probe scrolled), the status still ends `reading`; the
+   log holds no `speak` line after the scroll's.
+6. `light-today` and `lines-read`: on Today at `Isaiah 43:2`, a new piece
+   (`today.md`'s Lines drive, step 1), `sim journey light-lines` →
+   `"ok":true`: `Listen`, until `id=reading` shows. Two raw snapshots
+   about 1 s apart → `id=reading` with one `word-<i>` per word (38), one
+   or two `selected` moving forward, no `id=passage`, and the frames of
+   `word-6`, `word-11`, `word-20`, `word-26` and `word-31`, the five words
+   that start a line (x at the view's left edge, y below the word
+   before). Then `sim journey light-lines-done` → `"ok":true`: the wait
+   for the finish, `Listen` back, `id=passage` with its `line-<i>`, no
+   `id=reading`. John 3:16's rows (`word-6` and `word-13`) ride
+   `phrase.md`'s `whole-new` drive, from the same raw snapshots.
 7. `light-natural`: with the natural voice ready (the second container of
    `natural.md`'s Today rows, voice Her, its model server running),
-   `sim open probe/light --expect "label=Light probe"`,
-   `sim tap "label=Listen"`, then raw snapshots about 1 s apart until the
+   `sim journey light`, then raw snapshots about 1 s apart until the
    finish → `id=reading`, the selection moving forward, `lit <k>/25 reading`
    growing, and at least one snapshot whose `lit` equals the one before
    between two that move (a rest); the log over `[natural]` and `[voice]`
@@ -150,9 +162,10 @@ over `[voice]`, from `START`.
    `[voice] speak`.
 8. `light-natural-him`: the probe's route is the app's own, which the
    natural probe does not take. With the natural voice ready, set
-   `Voice: Him` (the Settings sheet's pill, as `natural.md`'s `today-him`),
-   then `sim open probe/light --expect "label=Light probe"` and
-   `sim tap "label=Listen"`, raw snapshots until the finish → the log holds
+   `Voice: Him` (the Settings sheet's pill, as `natural.md`'s `today-him`:
+   `sim journey natural-sheet`, then `sim journey natural-voice` until its
+   receipt reads `Him`), then `sim journey light`, raw snapshots until the
+   finish → the log holds
    `[natural] load … voice=bm_george.bin`, four prosody lines
    `ids=32,40,53,30` at `speed=0.9` (the British list's plan; base:
    `ids=32,38,52,30`, red at chunks 1 and 2), play lines
@@ -161,9 +174,10 @@ over `[voice]`, from `START`.
    falling), and after the finish `lit 0/25 idle` with `id=passage` whole
    again and no `id=reading` (the probe clears its lighting once the
    reading ends). The seek row below reads in whichever natural voice is set.
-9. `light-natural-seek`: `sim tap "label=Listen"` again, raw snapshots until
-   `lit` is 6 or more, `sim tap "label=Back 3"`, a raw snapshot, then
-   `sim tap "label=Forward 3"` and a raw snapshot → after each tap a new
+9. `light-natural-seek`: `sim journey light-seek` (`Listen` again,
+   `Back 3`, then `Forward 3`, each with its receipt), then raw snapshots
+   until the finish → `light-seek/light-seek-read` has `lit` 6 or more
+   (else run it again), and after each tap a new
    utterance's `[natural] render utterance=<u> chunk=0` (the tail planned
    from the target word's phrase), `lit` at the target or a little past it,
    the selection moving on in order by its native ids to `word-24`, and

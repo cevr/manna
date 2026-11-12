@@ -1,0 +1,34 @@
+{
+  "feature": "light-seek",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "light-seek-probe",
+      "action": "open",
+      "link": "probe/light",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Light probe" }, { "shows": "label=Listen" }],
+      "receipt": "none"
+    },
+    {
+      "name": "light-seek-read",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [{ "shows": "id=reading" }, { "hides": "id=passage" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "light-probe-seek-back",
+      "action": "tap",
+      "target": "label=Back 3",
+      "expect": [{ "shows": "id=reading" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "light-probe-seek-forward",
+      "action": "tap",
+      "target": "label=Forward 3",
+      "receipt": "snapshot"
+    }
+  ]
+}
