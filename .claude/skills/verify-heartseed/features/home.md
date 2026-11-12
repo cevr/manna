@@ -145,7 +145,8 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   and `About`; `Done` closes it to home.
 - `home-settings-minutes`: `10 min` chosen in the sheet stays selected
   across a relaunch.
-- `home-settings-about`: the sheet's `About` opens About, whose
+- `home-settings-about`: the sheet's `About` opens About (`about.md`:
+  the name, the version and `Licences`, no licence), whose
   `Your field` returns to home with the sheet closed.
 - `home-settings-today`: Today holds no `Minutes` radio, no `Voice` and
   no `Settings`.
@@ -373,7 +374,8 @@ the same variables:
    "label=Done"` (restored).
 3. `home-settings-about`: `sim scroll "label=Settings" down`, `sim tap "label=Settings"`,
    `sim tap "label=About"`, `sim snapshot home-settings-about` → the
-   heading `About`, a label equal to `CREDITS`, and no radio `System`.
+   heading `About`, the button `Licences`, no label equal to `CREDITS`,
+   and no radio `System`.
    `sim tap "label=Your field"`, `sim snapshot home-settings-back` → the
    heading `Your field`, and no heading `Settings`.
 4. `home-settings-today`: home after the first minute is in the done

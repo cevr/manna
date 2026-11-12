@@ -245,9 +245,10 @@ Heartseed has no journey files yet. The features:
   the Today card's `Start` to Today: a furrow per passage with its caption, a
   plant button per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
-- [features/about.md](features/about.md): the About screen, from the
-  `About` of home's Settings sheet: the natural voice's credits and the
-  Apache License 2.0 whole, and the way back to the field.
+- [features/about.md](features/about.md): the About page, from the
+  `About` of home's Settings sheet: the name, the version and the row
+  `Licences`, whose page holds the natural voice's credits and the Apache
+  License 2.0 whole; the ways back.
 - [features/passage.md](features/passage.md): choosing passages: the
   field's `Add a list` under `Lists` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`

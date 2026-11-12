@@ -650,16 +650,24 @@ launch counts them.
 ## About
 
 `About` in home's Settings sheet (Settings, below), and nothing else,
-opens the About screen
-(`src/about/screen.tsx`, `AboutScreen({ onField })`): a bar fixed above a
-scroll view holding the way back, `Your field` (shown `‹ Your field`),
-which returns to the field with the sheet closed; in the scroll view the
-one heading `About`, the natural voice's credits (`CREDITS`, one
-paragraph, `about-credits`) and the Apache License 2.0 whole
-(`about-licence`), which the bundle owes for the natural voice's vendored
-code. Every text is the scheme's ink, at WCAG AA on the ground. About has
-no foot and writes nothing: the reader's appearance is chosen in the
-Settings sheet.
+opens the About page (`src/about/screen.tsx`, `AboutScreen({ onField,
+onLicences })`): a bar holding the way back, `Your field` (shown `‹ Your
+field`), which returns to the field with the sheet closed; under it the
+one heading `About`, the app's name `Heartseed` (`about-name`), its
+version `Version <x.y.z>` (`about-version`, `package.json`'s `version`,
+which the bundle reads) and one row, the button `Licences`. `Licences`,
+and nothing else, opens the licences (`LicencesScreen({ onAbout })`): a
+bar fixed above a scroll view holding the way back, `About` (shown
+`‹ About`), which shows About again; in the scroll view the one heading
+`Licences`, the natural voice's credits (`CREDITS`, one paragraph,
+`about-credits`) and the Apache License 2.0 whole (`about-licence`), which
+the bundle owes for the natural voice's vendored code. No row lands on the
+licences straight (owner, 2026-11-12): the root's rule
+(`licenceFaults`, `src/test/root-rule.ts`) holds the credits and the
+licence to `Licences` alone, the `Licences` row to About and the back
+`About` to `Licences`. Every text is the scheme's ink, at WCAG AA on the
+ground. Neither page has a foot or writes anything: the reader's
+appearance is chosen in the Settings sheet.
 
 - The licence is `native/natural/kokoro/LICENSE` byte for byte, never
   trimmed or reflowed, served as the virtual module
@@ -2413,13 +2421,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     each file's floors met by its own devices.
   - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
     from home by `Settings` then the sheet's `About` (a button 44 pt tall,
-    the sheet's frames held to `sheetFaults`), About's one heading, the
-    credits word for word, the licence equal to the file, every text at
+    the sheet's frames held to `sheetFaults`), About's one heading, name,
+    version and `Licences` row with no licence; `Licences`' one heading,
+    the credits word for word, the licence equal to the file and its back
+    to About; every text at
     AA, the way back, nothing written and a relaunch on home; About with
     no `Appearance` group and no foot, and home's fixed top with no
     `About`; a
     recital started while About shows brings Today; and the plugin serving
     `virtual:heartseed-licence` as `vite/licence.ts` prints it.
+    `src/about/rule.test.ts`: the licences' clause of the root's rule
+    (`licenceFaults`) on frames built by hand, one fault per clause broken.
   - `test:settings`: `src/settings/sheet.test.tsx` and `rule.test.ts`.
     The sheet through the bar rig (`src/test/settings-rig.ts`:
     `watchSheet` holds every frame of the document to `sheetFaults`, the
