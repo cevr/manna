@@ -1,0 +1,21 @@
+{
+  "feature": "session-done",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-done-sheet",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Voice" }, { "shows": "label=Done" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Voice" }],
+      "receipt": "none"
+    }
+  ]
+}

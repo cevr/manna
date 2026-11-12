@@ -1,0 +1,28 @@
+{
+  "feature": "session-field",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-field-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-field-today",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [{ "shows": "id=session" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-field",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

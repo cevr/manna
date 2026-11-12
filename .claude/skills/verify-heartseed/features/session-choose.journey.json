@@ -1,0 +1,80 @@
+{
+  "feature": "session-choose",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-choose-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=Voice" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-him",
+      "action": "tap",
+      "target": "label=Voice",
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-off",
+      "action": "tap",
+      "target": "label=Voice",
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-minutes",
+      "action": "tap",
+      "target": "label=20 min",
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose-again",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "session-choose",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=20 min" }, { "shows": "label=Voice" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

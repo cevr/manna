@@ -110,40 +110,44 @@ from the dev server. The garden must start empty: uninstall by udid as
 `first.md` says. Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md`
 sets them.
 
-1. `first.md` steps 1-6. Before each of `first-launch`, `first-letters`,
-   `first-alone` and `first-planted`, check the snapshot for
+The taps are journeys beside this file, each one `sim journey` call:
+`session`, `session-choose`, `session-restore`, `session-welcome`,
+`session-field` and `session-voice-kept`, with `natural.md`'s
+`natural-sheet` (home's Settings sheet) and `natural-voice` (one tap on
+`Voice`). A receipt (`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`,
+cited as `<journey>/<step>`) holds the visible nodes' types and labels,
+with a radio's `[checked]`; the `Voice` button's choice is its `value`
+(`Her`, `Him` or `Off`) and a node's rect is a frame, both read in a raw
+snapshot (`first.md`, Driving it) taken between journeys.
+
+1. `first.md`'s `sim journey first`. Its receipts before `first-launch`,
+   `first-letters`, `first-alone` and `first-planted` hold none of
    `session-first`'s absences. Note `PLANTED` (`date`).
-2. `session-first` and `session-header`: `first.md` step 7 (`first-home`),
-   then `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim snapshot session-first-sheet`,
-   and:
-   - check the snapshot for the sheet's nodes above;
-   - take a raw snapshot (`agent-device snapshot --json --raw --observe-only
-     --force-full --session verify-heartseed`) and read the rects of the
-     radios, the `Voice` button and the window, keeping only numbers;
-   - `sim tap "label=10 min"`, then `sim snapshot session-header` →
-     `10 min` checked; `sim tap "label=5 min"` (restored),
-     `sim tap "label=Done"`.
-     Then `sim tap "label=Isaiah 41:10, seed"`,
-     `sim open / --expect "id=session" --no-relaunch`, `sim snapshot session-first` →
-     `Nothing to tend now`, and no `Minutes`, `5 min` or `Voice`.
-3. `session-choose`: `sim tap "label=Your field"`,
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, two `sim tap "label=Voice"` (Her → Him →
-   Off), `sim tap "label=20 min"`, `sim tap "label=Done"`, `sim relaunch`,
-   `sim open / --expect "id=today-card"` (home), `sim scroll "label=Settings" down`, `sim tap "label=Settings"`,
-   `sim snapshot session-choose` and a raw snapshot → `20 min` checked,
-   `Voice` valued `Off`. Turn the voice back to `Her` with one
-   `sim tap "label=Voice"`, pick `5 min` again, then `sim tap
-   "label=Done"`.
+2. `session-first` and `session-header`: `sim journey session` →
+   `"ok":true`.
+   - `session/session-first-sheet` holds the sheet's nodes above;
+   - the rects of the radios, the `Voice` button and the window, keeping
+     only numbers, come from step 3's raw snapshot (the same sheet, open);
+   - `session/session-header` → `10 min` `[checked]`; the journey taps
+     `5 min` (restored) and `Done`;
+   - `session/session-first`, after the tap on `Isaiah 41:10, seed` →
+     `Nothing to tend now`, and no `Minutes`, `5 min`, `Voice` or
+     `Settings`.
+3. `session-choose`: `sim journey session-choose` → `"ok":true`: from
+   Today, `Your field`, the sheet, two taps on `Voice` (Her → Him → Off),
+   `20 min`, `Done`, a relaunch, the sheet again.
+   `session-choose/session-choose` → `20 min` `[checked]`; a raw snapshot
+   → `Voice` valued `Off`. Then `sim journey session-restore` →
+   `"ok":true`: one tap on `Voice` (back to `Her`), `5 min`, `Done`.
 4. (`session-listening` is `run.md`'s `run-listening`.)
-   `settings-welcome`: `sim scroll "label=Settings" down`, `sim tap
-   "label=Settings"`, `sim snapshot settings-welcome-sheet`; `sim tap
-   "label=Show the welcome again"`, `sim snapshot settings-welcome`;
-   `sim tap "label=Skip"`, `sim open / --expect "id=today-card"
-   --no-relaunch`, `sim snapshot settings-welcome-home`.
-5. `session-field`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Your field"`, `sim snapshot session-field` → the
-   heading `Your field`, the Today card's `1 verse · about <k> min` and
-   `1 to review`, and `Start` (the visit open).
+   `settings-welcome`: `sim journey session-welcome` → `"ok":true`.
+   `session-welcome/settings-welcome-sheet`, `session-welcome/settings-welcome`
+   (the welcome, `Begin` and `Skip`) and
+   `session-welcome/settings-welcome-home` (home after `Skip`).
+5. `session-field`: `sim journey session-field` → `"ok":true`.
+   `session-field/session-field` → the heading `Your field`, the Today
+   card's `1 verse · about <k> min` and `1 to review`, and `Start` (the
+   visit open).
 6. `session-due` and `session-tend` are `run.md`'s `run-due`, `run-recite`
    and `run-next`: go on with `run.md`, Driving it, from step 3.
 
@@ -151,8 +155,8 @@ Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw
 snapshots.
 
-Red on base (before the Settings sheet): `sim tap "label=Settings"` finds
-no element, and base's Today shows `5 min` and `Voice`.
+Red on base (before the Settings sheet): the tap on `Settings` finds no
+element (`session`), and base's Today shows `5 min` and `Voice`.
 
 ### The voice's choice across builds
 
@@ -164,23 +168,23 @@ its `value`), and the store from a copy, as `field.md`'s `field-record`
 does (`sqlite3 -readonly` on the copy, never the container): `SELECT key,
 value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
 
-1. Base half, from B (`sim boot` there): B's `first.md` steps 1-7, whose
-   `Continue` opens Today there; tap the old switch off with `agent-device press
-   'role=switch label="Voice"' --settle --session verify-heartseed` in the
-   drive's HOME (there `sim tap "label=Voice"` fails `AMBIGUOUS_MATCH`:
-   the switch's text node is labelled `Voice` too); a store copy → the old
-   switch row `false` and no choice row; `sim down`.
-2. `voice-migrate`, from the head: `sim boot`, `sim relaunch`,
-   `sim open / --expect "id=today-card"` (home), `sim scroll "label=Settings" down`, `sim tap "label=Settings"`;
-   a raw snapshot and a store copy → `Voice` valued `Off`, no choice row.
-   `sim tap "label=Voice"`; a raw snapshot and a store copy → `Her`, the
-   choice row `her`, the old switch row still `false`.
-3. `voice-cycle`: three `sim tap "label=Voice"`, a raw snapshot after each
-   → `Him`, `Off`, `Her`; one more tap, `sim tap "label=Done"`,
-   `sim relaunch`, `sim open / --expect "id=today-card"`,
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw snapshot and a store copy → `Him`,
-   the choice row `him`. Two taps bring it back to `Her`; then
-   `sim tap "label=Done"`.
+1. Base half, from B (its own helper booted there): B's first-run drive
+   to Today, then the old switch turned off. Its row is a switch whose
+   text node is labelled `Voice` too, so a tap by that label is ambiguous
+   (`AMBIGUOUS_MATCH`): press it by role, the `switch` named `Voice`,
+   through agent-device in the drive's HOME. A store copy → the old switch
+   row `false` and no choice row; then B's helper's down.
+2. `voice-migrate`, from the head: boot, then `sim journey
+   natural-relaunch` (a relaunch onto the field) and `sim journey
+   natural-sheet`; a raw snapshot and a store copy → `Voice` valued `Off`,
+   no choice row. `sim journey natural-voice`; a raw snapshot and a store
+   copy → `Her`, the choice row `her`, the old switch row still `false`.
+3. `voice-cycle`: three `sim journey natural-voice`, a raw snapshot after
+   each → `Him`, `Off`, `Her`; one more, then
+   `sim journey session-voice-kept` (`Done`, a relaunch, the sheet again);
+   a raw snapshot and a store copy → `Him`, the choice row `him`. Two
+   more `sim journey natural-voice` bring it back to `Her`; then
+   `session-voice-kept`'s `Done` again, or `session-restore`.
 4. Then `session-choose` (step 3 above) runs from here.
 
 Report only values, booleans and the store's rows (the keys and their

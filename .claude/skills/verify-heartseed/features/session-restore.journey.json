@@ -1,0 +1,33 @@
+{
+  "feature": "session-restore",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-restore-sheet",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Voice" }, { "shows": "label=5 min" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-restore-voice",
+      "action": "tap",
+      "target": "label=Voice",
+      "receipt": "none"
+    },
+    {
+      "name": "session-restore-minutes",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "session-restore",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Voice" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

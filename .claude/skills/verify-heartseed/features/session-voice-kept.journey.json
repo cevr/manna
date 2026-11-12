@@ -1,0 +1,41 @@
+{
+  "feature": "session-voice-kept",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-voice-kept-sheet",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Voice" }, { "shows": "label=Done" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-voice-kept-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-voice-kept-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-voice-kept-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "session-voice-kept",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=Voice" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

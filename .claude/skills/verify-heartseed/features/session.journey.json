@@ -1,0 +1,67 @@
+{
+  "feature": "session",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "session-first-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [
+        { "shows": "label=Done" },
+        { "shows": "label=2 min" },
+        { "shows": "label=5 min" },
+        { "shows": "label=10 min" },
+        { "shows": "label=20 min" },
+        { "shows": "label=Voice" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "session-header",
+      "action": "tap",
+      "target": "label=10 min",
+      "receipt": "snapshot"
+    },
+    {
+      "name": "session-header-restore",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "session-header-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=2 min" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-first",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "hides": "label=5 min" },
+        { "hides": "label=Voice" },
+        { "hides": "label=Settings" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
