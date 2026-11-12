@@ -1,0 +1,75 @@
+{
+  "feature": "phrase",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "phrase-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-books",
+      "action": "tap",
+      "target": "label=Any passage",
+      "expect": [{ "shows": "label=Add a passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-john-scroll",
+      "action": "scroll",
+      "target": "label=John",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-john",
+      "action": "tap",
+      "target": "label=John",
+      "expect": [{ "shows": "label=John 3" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-chapter",
+      "action": "tap",
+      "target": "label=John 3",
+      "expect": [{ "shows": "label=John 3:1" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-verse-scroll",
+      "action": "scroll",
+      "target": "label=John 3:16",
+      "direction": "down",
+      "expect": [{ "shows": "label=John 3:16" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-verse",
+      "action": "tap",
+      "target": "label=John 3:16",
+      "expect": [{ "shows": "label=1 verse" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-day-one-field",
+      "action": "tap",
+      "target": "label=Plant",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open John 3:16" },
+        { "shows": "label=John 3:16, not planted" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
