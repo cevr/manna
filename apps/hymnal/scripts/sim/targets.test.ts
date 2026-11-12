@@ -223,14 +223,19 @@ const decodeTitle = Schema.decodeUnknownEffect(Schema.fromJsonString(Title));
 const Topics = Schema.Struct({ topics: Schema.Array(Schema.Struct({ name: Schema.String })) });
 const decodeTopics = Schema.decodeUnknownEffect(Schema.fromJsonString(Topics));
 
-/** The app's non-test sources under `SOURCES`, read. */
+/**
+ * The app's sources under `SOURCES`, read: no test and no declaration file,
+ * since the dev server writes `app/routes.d.ts`, which git ignores and the
+ * task's hash leaves out.
+ */
 const readSources = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const texts: Array<string> = [];
   for (const root of SOURCES) {
     const names = yield* fs.readDirectory(root, { recursive: true });
-    for (const name of names.filter((one) => /\.tsx?$/.test(one) && !/\.test\./.test(one)).sort())
+    const own = (one: string) => /\.tsx?$/.test(one) && !/\.test\.|\.d\.ts$/.test(one);
+    for (const name of names.filter(own).sort())
       texts.push(yield* fs.readFileString(path.join(root, name)));
   }
   return texts;
