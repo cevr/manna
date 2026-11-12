@@ -2218,8 +2218,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     unmount mid-loop, and the welcome's other nodes the same in every
     frame.
   - `test:tour-walk`: `src/first/tour-walk.test.tsx` (a fresh device
-    through Planted's `Continue`) and `tour-walk-planted.test.tsx` (two
-    planted ones), the tour through the root over the bar rig on
+    through Planted's `Continue`) and `tour-walk-planted.test.tsx` (a
+    planted one, opening on a verse chosen and two replays), the tour through the root over the bar rig on
     generated commands (`src/test/tour-walk.ts`): after every step the
     screen and the tips equal `tourStep`'s, and across each replay the
     field (the chosen verse's card among it) and the disk are as before.

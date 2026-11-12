@@ -6,7 +6,7 @@
  * model, over the field bar's rig (`src/test/bar-rig.tsx`, whose every
  * frame holds the root's rule, hsintro's clauses among them). One device
  * starts fresh and goes through the first minute to Planted's `Continue`;
- * the others start on a planted garden. Generated commands, each offered
+ * another starts on a planted garden (`CHOSEN_REPLAY` first). Generated commands, each offered
  * only where its screen shows it: `How Heartseed works`, the Settings
  * sheet's `Show the welcome again`, `Begin`, `Skip`, `See your field`,
  * `Got it`, the card's button to Today and `Your field` back, `Open
@@ -275,9 +275,24 @@ export const FLOORS = [
   'tips>off',
 ] as const;
 
-/** One device: `steps` generated commands from its launch; answers each move of the tour it made. */
-export const walkDevice = async (seed: number, steps: number, fresh: boolean) => {
-  const next = random(seed);
+/**
+ * The rolls that open a walk on a verse chosen, then replay twice: a plant
+ * chosen, `How Heartseed works`, `Begin`, `See your field`, then the
+ * Settings sheet, `Show the welcome again` and `Skip`; each replay must
+ * leave the chosen card as it was.
+ */
+export const CHOSEN_REPLAY = [0.8, 0.1, 0.1, 0.1, 0.6, 0.1, 0.6] as const;
+
+/** One device: the rolls of `script`, then `steps` generated commands, from its launch; answers each move of the tour it made. */
+export const walkDevice = async (
+  seed: number,
+  steps: number,
+  fresh: boolean,
+  script: readonly number[] = [],
+) => {
+  const generated = random(seed);
+  const rolls = [...script];
+  const next = () => rolls.shift() ?? generated();
   if (fresh) device.launch([['heartseed/voice/enabled', 'false']]);
   else PLANTED();
   const walk: Walk = {
@@ -293,7 +308,7 @@ export const walkDevice = async (seed: number, steps: number, fresh: boolean) =>
     tapTour(walk, 'Continue');
   }
   await check(walk, 'launch');
-  for (let step = 0; step < steps; step++) await command(walk, next());
+  for (let step = 0; step < script.length + steps; step++) await command(walk, next());
   await walk.rig.leave();
   return walk.moves;
 };
