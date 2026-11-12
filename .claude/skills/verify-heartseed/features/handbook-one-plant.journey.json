@@ -1,0 +1,44 @@
+{
+  "feature": "handbook-one-plant",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "handbook-one-plant-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-one-plant-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-one-plant-scroll",
+      "action": "scroll",
+      "target": "label=Promises of God",
+      "direction": "down",
+      "expect": [{ "shows": "label=Promises of God" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-one-plant-offer",
+      "action": "tap",
+      "target": "label=Promises of God",
+      "expect": [{ "shows": "label=Plant Promises of God" }, { "shows": "label=87 verses" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-one-plant",
+      "action": "tap",
+      "target": "label=Plant Promises of God",
+      "timeout": 60,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Promises of God" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

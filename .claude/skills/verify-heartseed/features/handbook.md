@@ -71,85 +71,79 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 `sim` = `bun run --cwd apps/heartseed sim`. Nothing native changes: the
 installed Debug build of `verify-heartseed`, or `--app` with a build of the
 head's native code, serves; the JavaScript comes from the dev server. The
-sheet holds 42 heads: `sim scroll screen down`, with a `sim snapshot`
-after each scroll, before a tap on a head below the screen; a sheet the
-driver cannot scroll is a finding to record.
+sheet holds 42 heads: a journey scrolls to a head below the screen before
+its tap; a sheet the driver cannot scroll is a finding to record.
 
-1. On a fresh install, `first.md` steps 1-7, to `first-home`: the own
-   furrow and `Protection & Fear` on home.
-2. `handbook-shelf`: `sim tap "id=add-list"`, then scroll to the
-   sheet's end. After `Rest`, the buttons in order: `The Word of God`,
-   `Duty`, `Second Advent of Christ`, `Ministry of Angels`, `The
-   Sanctuary`, `Passover`, `The Family`, `Prayer`, `The Bible Sabbath`,
-   `The Law of God`, `Nature of Man`, `The Great Adversary`, `Holy
-   Spirit`, `Prophecy`, `Seven Churches`, `The Twelfth Chapter of Daniel`,
-   `Armageddon`, `Spirit of Prophecy`, `The Conscience`, `Faith`,
-   `Ordinances of the Church`, `Promises of God`, `Temptation`, `Lessons
-   From Nature`, `How Long Was Christ In The Grave?`, each with the text
+The taps are journeys beside this file, each one `sim journey` call, in
+this order: `handbook`, `handbook-row`, `handbook-one-plant`,
+`handbook-limit`, `handbook-remove` and `handbook-probe`. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels; a list below
+the fold is read in a raw snapshot (`first.md`, Driving it) taken where a
+journey leaves the screen.
+
+1. On a fresh install, `first.md`'s `sim journey first`, to `first-home`:
+   the own furrow and `Protection & Fear` on home.
+2. `handbook-shelf`: `sim journey handbook` → `"ok":true` (steps 2-3).
+   `handbook/handbook-shelf-scroll`, after `Add a list` and the scroll to
+   `Seven Churches` (with a raw snapshot there for the rest of the
+   order): after `Rest`, the buttons in order: `The Word of God`, `Duty`,
+   `Second Advent of Christ`, `Ministry of Angels`, `The Sanctuary`,
+   `Passover`, `The Family`, `Prayer`, `The Bible Sabbath`,
+   `The Law of God`, `Nature of Man`, `The Great Adversary`,
+   `Holy Spirit`, `Prophecy`, `Seven Churches`,
+   `The Twelfth Chapter of Daniel`, `Armageddon`, `Spirit of Prophecy`,
+   `The Conscience`, `Faith`, `Ordinances of the Church`,
+   `Promises of God`, `Temptation`, `Lessons From Nature`,
+   `How Long Was Christ In The Grave?`, each with the text
    `S. N. Haskell, Bible Handbook (1919)`; no node's text holds `octrine`.
-
-   ```bash
-   sim tap "label=Seven Churches"
-   sim snapshot handbook-shelf
-   ```
-
-   → `Ephesus` `7 verses`, `Smyrna` `4 verses`, `Pergamos` `6 verses`,
-   `Thyatira` `12 verses`, `Sardis` `6 verses`, `Philadelphia` `8
-   verses`, and a button `Plant <title>` for each. Then `sim tap
-   "label=Prophecy"` and a snapshot → the text `Second Chapter of Daniel`
-   once, no `Second Chapter of Daniel (2)`, and no `Plant Ephesus`.
-
-3. `handbook-plant`:
-
-   ```bash
-   sim tap "label=Seven Churches"
-   sim tap "label=Plant Smyrna"
-   sim open / --expect "id=today-card" --no-relaunch
-   sim snapshot handbook-plant
-   ```
-
-   → the heading `Your field`, no heading `Add a list`; the furrow title
-   buttons in order `Open Isaiah 41:10`, `Open Smyrna`, `Open Protection
-   & Fear`; the caption
-   `4 verses to learn`;
-   the buttons `Revelation 2:8, not planted` to `Revelation 2:11, not
-   planted`; no `Remove`; `id=add-list` still.
-
-4. `handbook-row`: `sim relaunch`, `sim open / --expect "id=today-card"`,
-   snapshot → the `Smyrna` furrow in the same place. The sheet, `Seven
-   Churches` → `In your field`, no `Plant Smyrna`, `Plant Ephesus` still.
-   `Done`.
+   `handbook/handbook-shelf`, after `Seven Churches` → `Ephesus`
+   `7 verses`, `Smyrna` `4 verses`, `Pergamos` `6 verses`, `Thyatira`
+   `12 verses`, `Sardis` `6 verses`, `Philadelphia` `8 verses`, and a
+   button `Plant <title>` for each. `handbook/handbook-prophecy`, after
+   `Prophecy` → the text `Second Chapter of Daniel` once, no
+   `Second Chapter of Daniel (2)`, and no `Plant Ephesus`.
+3. `handbook-plant`: `handbook/handbook-plant`, after `Seven Churches` and
+   `Plant Smyrna` → the heading `Your field`, no heading `Add a list`;
+   the furrow title buttons in order `Open Isaiah 41:10`, `Open Smyrna`,
+   `Open Protection & Fear`; the caption `4 verses to learn`; the buttons
+   `Revelation 2:8, not planted` to `Revelation 2:11, not planted`; no
+   `Remove`; `id=add-list` still.
+4. `handbook-row`: `sim journey handbook-row` → `"ok":true`.
+   `handbook-row/handbook-row`, after a relaunch → the `Smyrna` furrow in
+   the same place. `handbook-row/handbook-row-offer`, the sheet's
+   `Seven Churches` → `In your field`, no `Plant Smyrna`, `Plant Ephesus`
+   still. Then `Done`.
 5. `handbook-one-plant`: record the own plant's button name
-   (`Isaiah 41:10, <stage>`). The sheet, `Promises of God` → `87 verses`,
-   `Plant Promises of God`; tap it → home with the furrow `Promises of
-   God` after `Smyrna`, its caption `87 verses · 1 planted` (or
-   `87 verses · 1 ready today` while the own verse is due), the own plant's button name
-   unchanged in every furrow that shows the verse, no `Isaiah 41:10, not
-   planted`. Record the seconds from the tap to home, and whether home
-   still scrolls and answers a tap on a plant.
-6. `handbook-limit`: the sheet, `Psalms` → `Plant Psalms 46:1-3` → home:
-   the furrows `Isaiah 41:10`, `Psalms 46:1-3`, `Smyrna`, `Promises of
-   God`, `Protection & Fear`; the text `3 passages or lists, the most for
-   now. Remove one to add another.`; no `id=add-list`, no `id=add-row`;
+   (`Isaiah 41:10, <stage>`) from `handbook-one-plant/handbook-one-plant-home`.
+   `sim journey handbook-one-plant` → `"ok":true`.
+   `handbook-one-plant/handbook-one-plant-offer` → `87 verses`,
+   `Plant Promises of God`. `handbook-one-plant/handbook-one-plant`, after
+   the tap → home with the furrow `Promises of God` after `Smyrna`, its
+   caption `87 verses · 1 planted` (or `87 verses · 1 ready today` while
+   the own verse is due), the own plant's button name unchanged in every
+   furrow that shows the verse, no `Isaiah 41:10, not planted`. Record the
+   tap step's `ms` (its line in `$EVIDENCE/results.jsonl`), and whether
+   home still scrolls and answers a tap on a plant (the next journeys).
+6. `handbook-limit`: `sim journey handbook-limit` → `"ok":true`: the
+   sheet, `Psalms`, `Plant Psalms 46:1-3`. `handbook-limit/handbook-limit`
+   → home: the furrows `Isaiah 41:10`, `Psalms 46:1-3`, `Smyrna`,
+   `Promises of God`, `Protection & Fear`; the text `3 passages or lists,
+   the most for now. Remove one to add another.`; no `id=add-list`, no
+   `id=add-row` (gone from the sources: read it as absent in the receipt);
    no button named `Remove` or starting `Remove `.
-7. `handbook-remove`: `sim tap "label=Open Promises of God"`, `sim tap
-   "label=Remove Promises of God"` → `id=ask` `Remove Promises of God? Its
-   plants stay in your field.`, `Remove` and `Keep`. `Keep` → `Remove
-   Promises of God` back, no `id=ask`. Again, then `sim tap
-   "label=Remove"` → home: no `Open Promises of God`, `Add a list` back,
-   no limit line, the own plant's button name unchanged. `sim relaunch`
-   → the same.
-8. `handbook-probe`:
-
-   ```bash
-   sim open / --expect "id=today-card" --no-relaunch
-   sim open probe/handbook --expect "label=resolved 3542"
-   sim snapshot handbook-probe
-   ```
-
-   → the text nodes `sections 25`, `lists 130`, `ranges 2528`,
-   `verses 3542`, `resolved 3542` and `missing 0`.
-
+7. `handbook-remove`: `sim journey handbook-remove` → `"ok":true`.
+   `handbook-remove/handbook-remove-ask` → `id=ask`
+   `Remove Promises of God? Its plants stay in your field.`, `Remove` and
+   `Keep`. The journey's `Keep` brings `Remove Promises of God` back with
+   no `id=ask`; again, then `Remove`: `handbook-remove/handbook-remove` →
+   home: no `Open Promises of God`, `Add a list` back, no limit line, the
+   own plant's button name unchanged. After a relaunch,
+   `handbook-remove/handbook-remove-relaunch` → the same.
+8. `handbook-probe`: `sim journey handbook-probe` → `"ok":true`.
+   `handbook-probe/handbook-probe` → the text nodes `sections 25`,
+   `lists 130`, `ranges 2528`, `verses 3542`, `resolved 3542` and
+   `missing 0`.
 9. Regressions on the same install: `home.md`'s `home-add` and its probe
    line `shelves 42`; `passage.md`'s `passage-limit`. Then `sim doctor`
    (record `head` and `timingsHold`) and `sim down`.

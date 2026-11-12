@@ -1,0 +1,63 @@
+{
+  "feature": "handbook",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "handbook-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }, { "shows": "label=Done" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-shelf-scroll",
+      "action": "scroll",
+      "target": "label=Seven Churches",
+      "direction": "down",
+      "expect": [{ "shows": "label=Seven Churches" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-shelf",
+      "action": "tap",
+      "target": "label=Seven Churches",
+      "expect": [{ "shows": "label=Plant Ephesus" }, { "shows": "label=Plant Smyrna" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-prophecy",
+      "action": "tap",
+      "target": "label=Prophecy",
+      "expect": [{ "shows": "label=Second Chapter of Daniel" }, { "hides": "label=Plant Ephesus" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-plant-open",
+      "action": "tap",
+      "target": "label=Seven Churches",
+      "expect": [{ "shows": "label=Plant Smyrna" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-plant",
+      "action": "tap",
+      "target": "label=Plant Smyrna",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open Smyrna" },
+        { "shows": "id=add-list" },
+        { "hides": "label=Any passage" },
+        { "hides": "label=Remove" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}

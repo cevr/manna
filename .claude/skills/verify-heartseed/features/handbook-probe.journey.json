@@ -1,0 +1,23 @@
+{
+  "feature": "handbook-probe",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "handbook-probe-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-probe",
+      "action": "open",
+      "link": "probe/handbook",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=resolved 3542" }, { "shows": "label=missing 0" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

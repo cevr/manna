@@ -1,0 +1,79 @@
+{
+  "feature": "handbook-remove",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "handbook-remove-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove-scroll",
+      "action": "scroll",
+      "target": "label=Open Promises of God",
+      "direction": "down",
+      "expect": [{ "shows": "label=Open Promises of God" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove-page",
+      "action": "tap",
+      "target": "label=Open Promises of God",
+      "expect": [{ "shows": "label=Practice this list" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove-end",
+      "action": "scroll",
+      "target": "label=Remove Promises of God",
+      "direction": "down",
+      "expect": [{ "shows": "label=Remove Promises of God" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove-ask",
+      "action": "tap",
+      "target": "label=Remove Promises of God",
+      "expect": [{ "shows": "id=ask" }, { "shows": "label=Remove" }, { "shows": "label=Keep" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-remove-keep",
+      "action": "tap",
+      "target": "label=Keep",
+      "expect": [{ "shows": "label=Remove Promises of God" }, { "hides": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove-ask-again",
+      "action": "tap",
+      "target": "label=Remove Promises of God",
+      "expect": [{ "shows": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-remove",
+      "action": "tap",
+      "target": "label=Remove",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "hides": "label=Open Promises of God" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-remove-relaunch",
+      "action": "relaunch",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "hides": "label=Open Promises of God" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}

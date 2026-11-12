@@ -1,0 +1,52 @@
+{
+  "feature": "handbook-row",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "handbook-row-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-row",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Smyrna" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-row-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-row-scroll",
+      "action": "scroll",
+      "target": "label=Seven Churches",
+      "direction": "down",
+      "expect": [{ "shows": "label=Seven Churches" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-row-offer",
+      "action": "tap",
+      "target": "label=Seven Churches",
+      "expect": [
+        { "shows": "label=In your field" },
+        { "shows": "label=Plant Ephesus" },
+        { "hides": "label=Plant Smyrna" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-row-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Any passage" }],
+      "receipt": "none"
+    }
+  ]
+}
