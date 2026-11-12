@@ -689,22 +689,29 @@ Android haptics only.
 
 The app is named Hymnal, and its icon is one blade of wheat:
 `assets/icon/wheat.svg` is the one shape. `bun run icon`
-(`scripts/icon.ts`) redraws every icon from it in the brand's colours
-(`PALETTE` in `@manna/brand`):
+(`scripts/icon.ts`) redraws every icon from it in Heartseed's colours, so the
+two apps read as one family. `src/icon-colours.ts` holds them, copied from
+`apps/heartseed/src/theme.ts`; the script, `vite/app.ts` and the icon test
+read them there:
 
-- iOS: light (the night's blade on the wheat), dark (the wheat's blade on
-  the night) and tinted (white on black), in `assets/icon/`.
-- Android: the adaptive icon's foreground (the night) and monochrome
-  (white) layers, on a wheat ground the launcher draws.
-- Web: `public/favicon.svg` (the wheat's blade on the night in dark mode),
+- iOS: light (Heartseed's gold blade `#d4a640` on its garden ink
+  `#2c4542`), dark (the gold blade on its night ground `#142420`) and
+  tinted (white on black), in `assets/icon/`.
+- Android: the adaptive icon's foreground (the gold) and monochrome (white)
+  layers, on a garden-ink ground the launcher draws.
+- Web: `public/favicon.svg` (the dark icon's colours in dark mode),
   `favicon-32.png`, `apple-touch-icon.png`, and the manifest's icons, one of
-  them maskable. The manifest's ground is the app's light ground, the sky's white.
-- The launch screen: `public/splash.png` (the night's blade) and
-  `splash-dark.png` (the wheat's), each on a transparent square the launch
-  screen centres 200 points wide on the app's own ground (the sky's white, and
-  the Night field, the night 42 % toward black, in dark mode), so the first screen follows with no change of
-  colour. One's prebuild trims an opaque ground away, so the ground is the
-  config's `backgroundColor`, not the PNG's.
+  them maskable. The manifest's ground is the light launch screen's.
+- The launch screen: `public/splash.png` (the ink's blade) and
+  `splash-dark.png` (the gold's), each on a transparent square the launch
+  screen centres 200 points wide on Heartseed's page grounds (`#f1f0e6`, and
+  `#142420` in dark mode). The hymn list that follows keeps the app's own
+  grounds, the sky's white and the Night field, so the screen steps to them
+  in one frame. One's prebuild trims an opaque ground away, so the ground is
+  the config's `backgroundColor`, not the PNG's.
+
+Every face's mark stands at 4.5:1 or more on its ground (the icon test); the
+light icon's gold on the ink is 4.58:1, so a deeper gold falls under it.
 
 `vite/app.ts` holds the native app's name, icons and launch screen; `vite.config.ts` passes
 it to One. A native build reads new icons only after
