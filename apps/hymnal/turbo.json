@@ -82,6 +82,7 @@
     },
     "test:player": {
       "dependsOn": ["^transit"],
+      "env": ["WHEEL_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -114,6 +115,7 @@
     },
     "test:reader": {
       "dependsOn": ["^transit"],
+      "env": ["HYMNAL_ROWS_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -176,6 +178,7 @@
     },
     "test:tuner": {
       "dependsOn": ["^transit"],
+      "env": ["TUNER_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -210,7 +213,13 @@
       ]
     },
     "test:slow": {
-      "passThroughEnv": ["HYMNAL_LIST_SEED"]
+      "passThroughEnv": [
+        "HYMNAL_LIST_SEED",
+        "HYMNAL_SEARCH_SEED",
+        "HYMNAL_STALE_ROOT",
+        "WORLD_FROM",
+        "WORLD_SEEDS"
+      ]
     },
     "test": {
       "dependsOn": [

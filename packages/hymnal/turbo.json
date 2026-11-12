@@ -2,6 +2,9 @@
   "$schema": "https://turborepo.dev/schema.json",
   "extends": ["//"],
   "tasks": {
+    "test": {
+      "env": ["TOPICS_SEED"]
+    },
     "test:slow": {
       "passThroughEnv": ["HYMN_RENDER_CACHE"]
     }

@@ -333,7 +333,7 @@ that lists it. Each set is uploaded by the app's `audio:upload`
 
 The cache is `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`).
 `keys.slow.test.ts` reads it too, and turbo hands it to `test:slow`
-(`turbo.json`'s `passThroughEnv`, held by `scripts/render/env.test.ts`). The
+(`turbo.json`'s `passThroughEnv`, held by the gate's `packages/scripts/src/env-pass.ts`). The
 set goes to `sets/<set>/` there unless `--out` names a folder: `<n>.mp3`,
 `<n>.json` (its checks, memory, times and resume key) and `manifest.json`.
 `--set <name>` (default `warm-1`) names a set of `RECORDING_SETS`; the run

@@ -24,6 +24,9 @@
         "$TURBO_ROOT$/packages/**/*.slow.test.*",
         "$TURBO_ROOT$/apps/animations/series/*/scripts/*.md"
       ]
+    },
+    "test:slow": {
+      "passThroughEnv": ["TEST_BUDGET_SEED", "TMPDIR"]
     }
   }
 }

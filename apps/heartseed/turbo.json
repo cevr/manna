@@ -4551,6 +4551,7 @@
     },
     "test:rest": {
       "dependsOn": ["^transit"],
+      "env": ["CORE_IMPORT_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",

@@ -5,6 +5,9 @@
     "test": {
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
     },
+    "test:slow": {
+      "passThroughEnv": ["BIBLE_MODEL_CACHE"]
+    },
     "transit": {
       "inputs": ["$TURBO_DEFAULT$", "dist-native/**"]
     }
