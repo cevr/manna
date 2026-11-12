@@ -1,0 +1,50 @@
+{
+  "feature": "promise",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "need-gone-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open Isaiah 41:10" },
+        { "shows": "label=Open Protection & Fear" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "need-gone-home-end",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "expect": [{ "shows": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "need-gone-today",
+      "action": "tap",
+      "target": "label=Practice anyway",
+      "expect": [{ "shows": "id=session" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "promise-field",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Psalms 91:1, not planted" },
+        { "hides": "label=Remove" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "promise-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "id=session" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
