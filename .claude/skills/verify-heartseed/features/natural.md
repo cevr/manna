@@ -322,8 +322,10 @@ container's store (as `field.md`'s `field-record` does) and run
 `sqlite3 -readonly <copy> "SELECT key, value FROM one_kv WHERE key LIKE 'heartseed/natural/%' OR key = 'heartseed/voice/choice'"`.
 
 `today-mirror`: a fresh container (uninstall by udid, install, revoke the
-microphone), then `sim open / --expect "label=Hear it"`, the first
-minute's `Listen`, and `first.md`'s steps 3-7 to Today, then home's
+microphone), then `sim open / --expect "label=Begin"` (the welcome a fresh
+install opens on), `sim tap "label=Skip"`, `sim open / --expect
+"label=Hear it" --no-relaunch`, the first minute's `Listen`, and
+`first.md`'s steps 3-7 to Today, then home's
 Settings sheet; snapshots for 60 s:
 
 → the line is `Natural voice: waiting for a connection`, or
@@ -388,11 +390,12 @@ tap, `[natural] install … missing=11` (the 28 files before it kept), `[natural
 no line.
 
 The second container (uninstall, install, revoke; `sim open / --expect
-"label=Hear it"`; store the base as above; `sim relaunch`; `sim open /
---expect "label=Hear it"`): the launch downloads and loads, the module
+"label=Begin"`; store the base as above; `sim relaunch`; `sim open /
+--expect "label=Begin"`): the launch downloads and loads, the module
 logging `[natural] install done` and `load … voice=af_heart.bin stages=loaded`.
 
-`today-read`: the first minute's `sim tap "label=Listen"`, then
+`today-read`: the welcome's `sim tap "label=Skip"`, `sim open / --expect
+"label=Hear it" --no-relaunch`, the first minute's `sim tap "label=Listen"`, then
 `sim tap "label=Say it with help" --timeout 60`; the log:
 
 → `[natural] load … voice=af_heart.bin stages=kept`, and per chunk a
@@ -400,9 +403,12 @@ logging `[natural] install done` and `load … voice=af_heart.bin stages=loaded`
 `[voice] speak`; the reading finished (the first minute goes on by
 itself).
 
-`today-fuse`: `sim relaunch`, `sim open / --expect "label=Hear it"`,
+`today-fuse`: `sim relaunch`, `sim open / --expect "label=Begin"` (the
+garden still holds no recall, so the launch opens the welcome again),
+`sim tap "label=Skip"`, `sim open / --expect "label=Hear it" --no-relaunch`,
 Listen, and at once `xcrun simctl terminate <udid> app.heartseed`;
-`sim open /`; store copy; Listen; the log. Then `first.md`'s steps 3-7 to
+`sim open / --expect "label=Begin"`, `sim tap "label=Skip"`; store copy;
+Listen; the log. Then `first.md`'s steps 3-7 to
 Today and home's Settings sheet; snapshot; `sim tap "label=Voice"` (Him),
 snapshot, store copy; twice more (Off, Her), snapshot, store copy;
 `sim relaunch`; the sheet; snapshot:
