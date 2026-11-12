@@ -1,0 +1,33 @@
+{
+  "feature": "wake",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "wake-stays",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=All tended for today" },
+        { "shows": "label=Practice anyway" },
+        { "hides": "label=Start" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "wake-sheet-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "wake-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=Done" }, { "shows": "label=5 min" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
