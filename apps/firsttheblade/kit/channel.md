@@ -18,7 +18,7 @@ The kit is drawn by `bun run kit` in `apps/firsttheblade` (the Moonlit wheat pal
 
 - **Colours:** the Moonlit wheat palette: the wheat `#ffefae` on the night `#12354e`. By day the text is the night's ink `#12354e` on the paper `#fff9e0`, and the darker wheat `#7a6813` carries “the” and the wheat.
 - **Type:** Newsreader, weight 500, for the name and every headline. The name is in small capitals; “the” is italic weight 400, not in small capitals, in the darker wheat by day and in the wheat on the night.
-- **The mark:** the bare wheat, the site's blade (`src/art/wheat.svg`; the hymnal's icon is a different shape, its ear). It stands alone: no disc, no paper behind it.
+- **The mark:** the bare wheat, the same blade as the hymnal's. It stands alone: no disc, no paper behind it.
 - **Thumbnails:** the film's own painting fills the frame. The night washes in from the left, and the question sits on it in the wheat, in two short lines at most. Every figure keeps its arms in sleeves.
 
 ## The text to paste

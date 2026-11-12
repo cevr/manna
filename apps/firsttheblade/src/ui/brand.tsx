@@ -1,6 +1,6 @@
 /**
  * The channel's name as it is drawn: lockup D, “Small capitals”. The bare
- * wheat (`../art/wheat.svg`, the site's own blade; the hymnal's icon is an ear) beside the
+ * wheat (`../art/wheat.svg`, the hymnal's blade, the same shape) beside the
  * wordmark, Newsreader 500 in small capitals with “the” in italic. The wheat
  * is laid in the page as markup, so it takes the colour of the ground it
  * stands on: the deep wheat on the paper and the sky, the wheat by night.
