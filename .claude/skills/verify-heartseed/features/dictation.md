@@ -50,16 +50,17 @@ plutil -extract NSSpeechRecognitionUsageDescription raw apps/heartseed/ios/Heart
 
 `dictation-script`, with the microphone revoked
 (`xcrun simctl privacy <udid> revoke microphone app.heartseed` before the
-opens). The revoke stops the app, so open the root first: it launches the app
-afresh, and a link opened into a running app reaches its route (Gotchas):
+opens). The revoke stops the app, so the journey opens the root first: it
+launches the app afresh, and a link opened into a running app reaches its
+route (Gotchas). The probe's three scripts are one journey,
+`dictation.journey.json` beside this file, each probe opened after the
+root, with no relaunch, and kept as a snapshot receipt
+(`dictation/<step>`, as `first.md` names it):
 
-```bash
-sim open / --expect "label=Isaiah 41:10"
-sim open probe/dictation --expect "label=ended finished"
-sim snapshot dictation
-```
+`sim journey dictation` → `"ok":true`, each probe showing `ended finished`
+and its `script`.
 
-→ the snapshot has the text nodes `script exact`, `said 0`, `matched 36`, `missed 1`,
+→ `dictation/dictation-script` has the text nodes `script exact`, `said 0`, `matched 36`, `missed 1`,
 `tentative 0`, `pending 0`, `extra 0`, `grade 2` and `timed 36` (the
 passage has 37 words), and one node each starting `analyzer `,
 `dictation ` and `recognizer ` with a status (`ready`, `missing` or
@@ -72,22 +73,16 @@ module logs with `NSLog`, which the dev server's log does not carry):
 xcrun simctl spawn <udid> log show --last 10m --style compact --predicate 'eventMessage CONTAINS "[dictation]" AND process == "Heartseed"'
 ```
 
-Report counts only, then delete the snapshot.
+Report counts only.
 
 `dictation-hear`, the same way (microphone revoked, the root first):
+`dictation/dictation-hear` → the text nodes `script hear`, `said 7`,
+`matched 36`, `missed 1`, `tentative 0`, `pending 0`, `extra 0`,
+`grade 2` and `timed 36`: the seven archaic words said as their hearings
+light as said exactly.
 
-```bash
-sim open / --expect "label=Isaiah 41:10"
-sim open "probe/dictation?script=hear" --expect "label=ended finished"
-sim snapshot dictation-hear
-```
-
-→ the text nodes `script hear`, `said 7`, `matched 36`, `missed 1`,
-`tentative 0`, `pending 0`, `extra 0`, `grade 2` and `timed 36`: the
-seven archaic words said as their hearings light as said exactly.
-
-`dictation-modern`: the same with `script=modern` and
-`sim snapshot dictation-modern` → `script modern`, `said 8`,
+`dictation-modern`: the same with `script=modern`:
+`dictation/dictation-modern` → `script modern`, `said 8`,
 `matched 28`, `missed 9`, `extra 8`, `grade 1` and `timed 28`: a
 modernized word is another word, never a hearing.
 
@@ -99,12 +94,12 @@ then delete the snapshots.
 ## Gotchas
 
 - **A link that launches the app lands on the root's screen** (home, or
-  the first minute on a fresh install). `sim open probe/dictation`
-  into a stopped app shows that screen, and so does its one retry, which stops
+  the first minute on a fresh install). The probe's link opened into a
+  stopped app shows that screen, and so does its one retry, which stops
   the app again; into the running app it shows the probe. One reads a
   launch link with a 150 ms limit (`getInitialURL` in its native linking),
   the likely cause. Revoking a permission stops the app. Open `/` first,
-  then the probe.
+  then the probe, with no relaunch (an open's retry would stop the app).
 - One open may log the replay twice, each `session=1`: a development build
   runs the probe's effect, cleans it up and runs it again, and each run
   builds its own service, whose sessions start at 1.

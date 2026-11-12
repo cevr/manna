@@ -1,0 +1,57 @@
+{
+  "feature": "dictation",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "dictation-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "dictation-script",
+      "action": "open",
+      "link": "probe/dictation",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=ended finished" }, { "shows": "label=script exact" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "dictation-hear-root",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "dictation-hear",
+      "action": "open",
+      "link": "probe/dictation?script=hear",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=ended finished" }, { "shows": "label=script hear" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "dictation-modern-root",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "dictation-modern",
+      "action": "open",
+      "link": "probe/dictation?script=modern",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=ended finished" }, { "shows": "label=script modern" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
