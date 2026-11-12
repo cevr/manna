@@ -145,11 +145,35 @@ describe('the button stands apart', () => {
       expect(contrast(roles.button, roles.bar)).toBeGreaterThanOrEqual(3);
     });
     test(`${scheme}: the chord is at least 0.06 from the button in OKLab`, () => {
-      const [chord, button] = [oklab(theme[scheme].chord), oklab(theme[scheme].button)];
-      const distance = Math.hypot(...chord.map((value, k) => value - (button[k] ?? 0)));
-      expect(distance).toBeGreaterThanOrEqual(0.06);
+      expect(apart(theme[scheme].chord, theme[scheme].button)).toBeGreaterThanOrEqual(0.06);
     });
   }
+});
+
+/** Two colours' distance in OKLab. */
+const apart = (a: string, b: string) => {
+  const [one, other] = [oklab(a), oklab(b)];
+  return Math.hypot(...one.map((value, k) => value - (other[k] ?? 0)));
+};
+
+/**
+ * By night the chords part from the words they stand over (owner,
+ * 2026-11-12: "no differentiation between chords and text"): at least 0.20
+ * from the ink in OKLab, at the same weight, and apart from the sung
+ * syllable (`accent`, 0.12) and the sung line (`muted`, 0.08), so a sung
+ * word never reads as a chord.
+ */
+describe('dark: the chords stand apart from the words', () => {
+  const night = theme.dark;
+  const least = [
+    ['ink', 0.2],
+    ['accent', 0.12],
+    ['muted', 0.08],
+  ] as const;
+  for (const [role, distance] of least)
+    test(`the chord is at least ${distance} from ${role} in OKLab`, () => {
+      expect(apart(night.chord, night[role])).toBeGreaterThanOrEqual(distance);
+    });
 });
 
 /**
@@ -231,7 +255,7 @@ test('the roles are the owner’s picks', () => {
       button: '#66d0df',
       onButton: PALETTE.night,
       selected: '#155159',
-      chord: '#d1d3ff',
+      chord: '#a3a2fd',
       soft: PALETTE.nightPanel,
       onAccent: PALETTE.night,
       pressed: '#42b0bf',

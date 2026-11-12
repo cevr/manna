@@ -28,9 +28,12 @@
  * `oklch(0.70 0.100 208)` (set by hand, not mixed from the accent and the
  * ground), and a chosen tab's fill `oklch(0.40 0.060 208)`, under ink only.
  * Chords take the night's other side, 40° toward periwinkle,
- * `oklch(0.88 0.061 283)`, so they never read as buttons (`theme.test.ts`
- * holds their OKLab distance from the button at 0.06 or more). Each is
- * written here as its sRGB hex.
+ * `oklch(0.75 0.13 283)`: a step dimmer and more coloured than the words, so
+ * chords and words part by lightness and chroma at the same weight, and away
+ * from the teal the numbers, the buttons and the sung syllable share, so
+ * they never read as buttons (`theme.test.ts` holds their OKLab distances:
+ * 0.20 or more from the ink, 0.12 from the accent, 0.06 from the button and
+ * 0.08 from muted). Each is written here as its sRGB hex.
  *
  * Text on a fill (`onAccent`, `onButton`, `onPressed`, `onPill`,
  * `onChosen`, `onGlassChosen`) is the night where it meets AA on the fill,
@@ -229,8 +232,8 @@ const nightField = mix(PALETTE.night, '#000000', 0.42);
 const night = {
   /** `oklch(0.84 0.070 207)`: the hymn numbers, the tint. */
   number: '#94d8e2',
-  /** `oklch(0.88 0.061 283)`: the chords. */
-  chord: '#d1d3ff',
+  /** `oklch(0.75 0.13 283)`: the chords, a step dimmer and more coloured than the words, at 7.3:1 on the page and 4.6:1 on the panel. */
+  chord: '#a3a2fd',
   /** `oklch(0.80 0.100 208)`: the buttons. */
   button: '#66d0df',
   /** `oklch(0.70 0.100 208)`: a pressed button. */
