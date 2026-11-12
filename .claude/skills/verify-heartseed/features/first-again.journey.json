@@ -1,0 +1,40 @@
+{
+  "feature": "first-again",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "first-again-open",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-again-launch",
+      "action": "relaunch",
+      "expect": [
+        { "shows": "label=Isaiah 41:10" },
+        { "hides": "label=Begin" },
+        { "hides": "label=Skip" },
+        { "hides": "label=Hear it" },
+        { "hides": "label=Say it with help" },
+        { "hides": "label=Say it alone" },
+        { "hides": "label=Planted" },
+        { "hides": "id=tip-1" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-again",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Your field" },
+        { "hides": "label=Got it" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
