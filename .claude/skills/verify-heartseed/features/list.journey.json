@@ -1,0 +1,115 @@
+{
+  "feature": "list",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "list-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-open",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [
+        { "shows": "label=Protection & Fear" },
+        { "shows": "id=list-caption" },
+        { "shows": "id=list-line" },
+        { "shows": "label=Practice this list" },
+        { "shows": "label=Psalms 91:1, not planted" },
+        { "shows": "label=Your field" },
+        { "hides": "id=today-card" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-weakest",
+      "action": "tap",
+      "target": "label=Open Isaiah 41:10",
+      "expect": [
+        { "shows": "label=Isaiah 41:10, seed" },
+        { "shows": "label=Practice this list" },
+        { "shows": "id=list-line" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-weakest-today",
+      "action": "tap",
+      "target": "label=Practice this list",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-weakest-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-learn-page",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [{ "shows": "label=Practice this list" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-learn",
+      "action": "tap",
+      "target": "label=Practice this list",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Psalms 91:1" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-learn-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Practice this list" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-verse-page",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [{ "shows": "label=Psalms 91:2, not planted" }],
+      "receipt": "none"
+    },
+    {
+      "name": "list-verse",
+      "action": "tap",
+      "target": "label=Psalms 91:2, not planted",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Psalms 91:2" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "list-verse-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    }
+  ]
+}
