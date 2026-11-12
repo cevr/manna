@@ -40,9 +40,10 @@ Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
 of `first-planted`. **Away** means: record the app's pid
 (`xcrun simctl spawn <udid> launchctl list | grep app.heartseed`), send the
 app to the background with `xcrun simctl launch <udid>
-com.apple.Preferences`, wait 5 s, then bring it back with
-`sim open / --expect "id=today-card" --no-relaunch` from home, or
-`sim open / --expect "id=session" --no-relaunch` from Today. The pid read again must be
+com.apple.Preferences`, wait 5 s, then bring it back with the row's
+journey, whose first step opens `/` where the app is, with no relaunch,
+and waits for the screen it left (`id=today-card` from home,
+`id=session` from Today, `Done` on the sheet). The pid read again must be
 the same: a different pid means the app was relaunched, and the row
 proves nothing.
 
@@ -96,31 +97,44 @@ or `--app` with a build of `d19c8ed2e` or later. The garden must start
 empty: uninstall by udid as `first.md` says. Set `RUN`, `EVIDENCE`, `PORT`
 and `START` as `first.md` sets them.
 
-1. `first.md` steps 1-7. Note `PLANTED` (`date`).
-2. `run.md`'s `run-done-first` (its step 2). Then `wake-stays`: **away**,
-   `sim snapshot wake-stays`.
-   Then `wake-sheet-stays`: record the pid; `sim scroll "label=Settings" down`, `sim tap "label=Settings"`
-   and a raw snapshot (the heading `Settings`, `Done`, `5 min` alone
-   selected); send the app away with `xcrun simctl launch <udid>
-   com.apple.Preferences`, wait 5 s, bring it back with `xcrun simctl
-   launch <udid> app.heartseed` (a running app comes to the foreground;
-   no link, so the route does not move); `sim snapshot wake-sheet-stays`
-   and a raw snapshot (the heading `Settings` and `Done` still, `5 min`
-   alone selected, the same pid); `sim tap "label=Done"`,
-   `sim snapshot wake-sheet-done` (the heading `Your field`, no heading
-   `Settings`, `All tended for today`, no `Start`).
+The taps are the journeys `wake`, `wake-sheet-stays`, `wake-due` and
+`wake-result` beside this file, each one `sim journey` call; **away**
+(Sub-features) runs between them by `xcrun simctl`, and each journey's
+first step is the way back. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels, with a
+radio's `[checked]`; rects are read in a raw snapshot (`first.md`, Driving
+it).
+
+1. `first.md`'s `sim journey first`. Note `PLANTED` (`date`).
+2. `run.md`'s `run-done-first` (its step 2). Then **away**, and
+   `sim journey wake` → `"ok":true`. `wake-stays`: `wake/wake-stays` →
+   the done state, with the same pid. `wake-sheet-stays`, first half:
+   `wake/wake-sheet`, after the scroll and `Settings` → the heading
+   `Settings`, `Done`, `5 min` alone `[checked]`. Record the pid; send the
+   app away with `xcrun simctl launch <udid> com.apple.Preferences`, wait
+   5 s, bring it back with `xcrun simctl launch <udid> app.heartseed` (a
+   running app comes to the foreground; no link, so the route does not
+   move); then `sim journey wake-sheet-stays` → `"ok":true`:
+   `wake-sheet-stays/wake-sheet-stays` → the heading `Settings` and `Done`
+   still, `5 min` alone `[checked]`, the same pid;
+   `wake-sheet-stays/wake-sheet-done`, after `Done` → the heading
+   `Your field`, no heading `Settings`, `All tended for today`, no
+   `Start`.
 3. `wake-due`: wait until 7 minutes after `PLANTED`, **away** (from
-   home), then `sim snapshot wake-due-home`; `sim tap "label=Start"`,
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot wake-due`, plus a
-   raw snapshot
-   (`agent-device snapshot --json --raw --observe-only --force-full
-   --session verify-heartseed`) for `run.md`'s `run-due` rects. When
-   `PLANTED` was in the evening, record `All tended for today` and stop
-   here: only tests reach the rest.
-4. `run.md` steps 4-5 (`run-listening`, `run-recite`, `run-held-field`).
-5. `wake-result`: **away** (from Today), `sim snapshot wake-result`. This takes the
-   place of `run.md`'s step 6 in this drive: its end state is the done
-   state `run-next` shows, and `run-next` stays owned by
+   home), then `sim journey wake-due` → `"ok":true`.
+   `wake-due/wake-due-home` → as the row says; `wake-due/wake-due`, after
+   `Start` → Today, plus a raw snapshot for `run.md`'s `run-due` rects.
+   When `PLANTED` was in the evening, record `All tended for today` and
+   stop here: only tests reach the rest.
+4. `run.md`'s `run-recite` (`run-listening`, `run-recite`), then
+   `field.md`'s `sim journey field-grow` (its last step is
+   `run-held-field`: `Your field`, then `Start`, the held result with
+   `Next`).
+5. `wake-result`: **away** (from Today), then `sim journey wake-result` →
+   `"ok":true`. `wake-result/wake-result` → the done state. This takes
+   the place of `run.md`'s `run-next` in this drive: its end state is the
+   done state `run-next` shows, and `run-next` stays owned by
    `apps/heartseed/src/run/*.test.tsx`.
 6. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
@@ -154,8 +168,9 @@ the raw snapshots.
     short (no reader can make one; `test:session-cells`, and the phrase walks at
     the session seam);
   - each launch's AppState subscription, removed when the launch ends.
-- `sim open /` on a running app brings it to the foreground; it does not
-  relaunch it (the pid check proves it). `sim relaunch` is a relaunch, which
+- A journey's open of `/` with no relaunch, on a running app, brings it to
+  the foreground; it does not relaunch it (the pid check proves it). A
+  `relaunch` step is a relaunch, which
   makes a new plan as on base, so it proves nothing here.
 - Opening Settings with `xcrun simctl launch` touches no Heartseed state and
   grants nothing. Never change a privacy setting there.

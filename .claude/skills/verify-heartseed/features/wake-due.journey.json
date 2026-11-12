@@ -1,0 +1,29 @@
+{
+  "feature": "wake-due",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "wake-due-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Start" },
+        { "shows": "label=Isaiah 41:10, seed, ready today" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "wake-due",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
