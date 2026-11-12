@@ -272,16 +272,10 @@ export const panFor = (area: Area, direction: Direction): Pan => {
   }[direction];
 };
 
-/**
- * Whether the content of `area` moved between its snapshot and `after`: the
- * same scroll view (its frame and its depth among scroll views, the nearest
- * in tree order when more than one match) shows its content elsewhere along
- * the axis of `direction`, or no longer shows (the screen changed). A pager
- * sharing its page's frame is never taken for the page.
- */
-export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Direction) => {
-  const same = Option.fromUndefinedOr(
-    areasOf(after)
+/** The scroll view of `nodes` that is `area`: its frame and depth, the nearest in tree order. */
+const sameIn = (area: Area, nodes: ReadonlyArray<Node>) =>
+  Option.fromUndefinedOr(
+    areasOf(nodes)
       .filter(
         (each) =>
           each.depth === area.depth &&
@@ -293,14 +287,40 @@ export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Directi
       .toSorted((a, b) => Math.abs(a.index - area.index) - Math.abs(b.index - area.index))
       .at(0),
   );
-  return Option.match(same, {
+
+/**
+ * Whether the content of `area` moved between its snapshot and `after`: the
+ * same scroll view (its frame and its depth among scroll views, the nearest
+ * in tree order when more than one match) shows its content elsewhere along
+ * the axis of `direction`, or no longer shows (the screen changed). A pager
+ * sharing its page's frame is never taken for the page.
+ */
+export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Direction) =>
+  Option.match(sameIn(area, after), {
     onNone: () => true,
     onSome: (now) => {
       if (VERTICAL.has(direction)) return Math.abs(now.content.y - area.content.y) >= 1;
       return Math.abs(now.content.x - area.content.x) >= 1;
     },
   });
-};
+
+/**
+ * Whether the content of `area` has come to rest between two snapshots
+ * taken after a pan, `earlier` and `later`: the same view's content lies at
+ * the same place in both, or the view no longer shows in `earlier`. A pan's
+ * fling carries the content on for a second or two after the finger lifts,
+ * and a tap on content still moving only stops it.
+ */
+export const settled = (
+  area: Area,
+  earlier: ReadonlyArray<Node>,
+  later: ReadonlyArray<Node>,
+  direction: Direction,
+) =>
+  Option.match(sameIn(area, earlier), {
+    onNone: () => true,
+    onSome: (then) => !moved(then, later, direction),
+  });
 
 /**
  * Whether a node that answers the target (`id` or `label`, matched whole, of

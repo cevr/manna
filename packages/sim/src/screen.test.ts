@@ -21,6 +21,7 @@ import {
   nodesOf,
   panFor,
   readout,
+  settled,
   shows,
 } from './screen.ts';
 
@@ -164,6 +165,16 @@ describe('the scroll view on the hymnal’s screens', () => {
         expect(moved(page, hymnPage(116), 'down')).toBe(false);
         expect(moved(page, hymnPage(-506), 'down')).toBe(true);
       }),
+  );
+
+  it.effect('the page is at rest only once two looks find its content in one place', () =>
+    Effect.sync(() => {
+      const page = area(hymnPage(116), 'down');
+      expect(settled(page, hymnPage(-400), hymnPage(-450), 'down')).toBe(false);
+      expect(settled(page, hymnPage(-450), hymnPage(-450), 'down')).toBe(true);
+      expect(settled(page, hymnPage(-450, Option.some(495)), hymnPage(-450), 'down')).toBe(true);
+      expect(settled(page, chooser(0), hymnPage(-450), 'down')).toBe(true);
+    }),
   );
 
   it.effect(

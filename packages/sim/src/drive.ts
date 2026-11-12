@@ -55,6 +55,7 @@ import {
   type Pan as ScreenPan,
   panFor,
   readout,
+  settled,
   shows,
 } from './screen.ts';
 import { acquire, release } from './holder.ts';
@@ -941,9 +942,15 @@ const nodesNow = (app: App, udid: string) =>
     ),
   );
 
-/** How long a scroll's pan takes, and how long the content has to come to rest after it. */
+/**
+ * How long a scroll's pan takes, how long before the first look after it,
+ * and, while the pan's fling still carries the content, how long between
+ * looks and how many looks at most.
+ */
 const PAN_MS = 600;
 const REST = Duration.millis(700);
+const LOOK = Duration.millis(250);
+const MAX_LOOKS = 12;
 
 /** The most pans a scroll to a target makes before it fails `TargetMissing`. */
 const MAX_PASSES = 40;
@@ -952,9 +959,10 @@ const panText = (pan: ScreenPan) => `${pan.x},${pan.y} by ${pan.dx},${pan.dy}`;
 
 /**
  * One pan of `area` in `direction`, inside the part of it on screen
- * (`panFor`), then the screen's nodes once the content has come to rest; it
- * fails `ScrollStuck` when the content stayed where it was while the view
- * still hid more of it that way.
+ * (`panFor`), then the screen's nodes once the content has come to rest
+ * (two looks in a row with it in one place, `settled`, so the next tap lands
+ * on still content); it fails `ScrollStuck` when the content stayed where it
+ * was while the view still hid more of it that way.
  */
 const panArea = Effect.fn('Sim.panArea')(function* (
   app: App,
@@ -970,7 +978,14 @@ const panArea = Effect.fn('Sim.panArea')(function* (
     ...[pan.x, pan.y, pan.dx, pan.dy, PAN_MS].map(String),
   ]);
   yield* Effect.sleep(REST);
-  const after = yield* nodesNow(app, udid);
+  let after = yield* nodesNow(app, udid);
+  for (let look = 0; look < MAX_LOOKS; look += 1) {
+    yield* Effect.sleep(LOOK);
+    const next = yield* nodesNow(app, udid);
+    const still = settled(area, after, next, direction);
+    after = next;
+    if (still) break;
+  }
   const went = moved(area, after, direction);
   if (!went && hides(area, direction))
     return yield* ScrollStuck.make({ target: text, direction, pan: panText(pan) });

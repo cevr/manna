@@ -576,7 +576,28 @@ describe('sim commands', () => {
           'agent-device snapshot --json --raw',
           'agent-device gesture pan 201 598 0 -317 600',
           'agent-device snapshot --json --raw',
+          'agent-device snapshot --json --raw',
         ]);
+      }).pipe(Effect.provide(Host)),
+  );
+
+  it.scopedLive(
+    "a scroll waits for the pan's fling to bring the content to rest, and judges the screen at rest",
+    () =>
+      Effect.gen(function* () {
+        const flung = screensIn([chooser(0), chooser(200), chooser(317), chooser(317)]);
+        const screen = yield* sim(['scroll', 'screen', 'down'], flung, Option.some('ios'));
+        expect(Exit.isSuccess(screen.exit)).toBe(true);
+        expect(driven(flung).filter((line) => line.includes('snapshot'))).toHaveLength(4);
+        const toward = screensIn([chooser(0), chooser(2000), chooser(2400), chooser(2400)]);
+        const row = yield* sim(
+          ['scroll', 'label=Psalms 119:30', 'down'],
+          toward,
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(row.exit)).toBe(true);
+        expect(row.printed[0]).toMatchObject({ ok: true, detail: { passes: 1 } });
+        expect(driven(toward).filter((line) => line.includes('gesture pan'))).toHaveLength(1);
       }).pipe(Effect.provide(Host)),
   );
 
@@ -614,7 +635,7 @@ describe('sim commands', () => {
     'a scroll to a target pans until its row shows, then stops; one past the content fails TargetMissing',
     () =>
       Effect.gen(function* () {
-        const answers = screensIn([chooser(0), chooser(1300), chooser(2400)]);
+        const answers = screensIn([chooser(0), chooser(1300), chooser(1300), chooser(2400)]);
         const { exit, printed } = yield* sim(
           ['scroll', 'label=Psalms 119:30', 'down'],
           answers,
