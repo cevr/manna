@@ -12,7 +12,7 @@ const Rect = Schema.Struct({
   width: Schema.Finite,
   height: Schema.Finite,
 });
-export type Rect = typeof Rect.Type;
+type Rect = typeof Rect.Type;
 
 /** A node of the raw snapshot, with the fields a reader of the screen reads. */
 const Node = Schema.Struct({
@@ -60,7 +60,7 @@ const onScreen = (node: Node, screen: Rect) =>
   });
 
 /** The app's own frame: the first application or window node's, else none. */
-export const screenOf = (nodes: ReadonlyArray<Node>) =>
+const screenOf = (nodes: ReadonlyArray<Node>) =>
   Option.fromUndefinedOr(
     nodes.find((node) => node.type === 'Application' || node.type === 'Window')?.rect,
   );
@@ -135,7 +135,7 @@ export const readout = (nodes: ReadonlyArray<Node>, ask: Ask) => {
   return { nodes: nodes.length, types, ids, labels };
 };
 
-export type Direction = 'up' | 'down' | 'left' | 'right';
+type Direction = 'up' | 'down' | 'left' | 'right';
 
 const VERTICAL: ReadonlySet<Direction> = new Set(['up', 'down']);
 
