@@ -1,0 +1,9 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test:slow": {
+      "passThroughEnv": ["HYMN_RENDER_CACHE"]
+    }
+  }
+}

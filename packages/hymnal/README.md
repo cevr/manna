@@ -331,8 +331,10 @@ that lists it. Each set is uploaded by the app's `audio:upload`
   the threshold (2026-10-22).
   Measure the six again before changing the silence check or the sound.
 
-The cache is `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`), and
-the set goes to `sets/<set>/` there unless `--out` names a folder: `<n>.mp3`,
+The cache is `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`).
+`keys.slow.test.ts` reads it too, and turbo hands it to `test:slow`
+(`turbo.json`'s `passThroughEnv`, held by `scripts/render/env.test.ts`). The
+set goes to `sets/<set>/` there unless `--out` names a folder: `<n>.mp3`,
 `<n>.json` (its checks, memory, times and resume key) and `manifest.json`.
 `--set <name>` (default `warm-1`) names a set of `RECORDING_SETS`; the run
 refuses a set the app does not play and a `--hymns` hymn the set does not
