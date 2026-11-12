@@ -11,7 +11,8 @@ icon (the dark one when the system is dark), and the page names a touch icon
 and a web manifest. The launch screen shows the same blade, 200 points wide,
 centred on Heartseed's page grounds: the ink (`#2c4542`) on `#f1f0e6` in
 light mode, the gold (`#d4a640`) on `#142420` in dark mode. The hymn list
-that follows keeps the hymnal's own grounds (`#f7f9fb`, `#0a1f2d`).
+that follows stands on the same grounds (`list-colours` in `hymn-list.md`),
+so the open has no step.
 
 This feature takes no screenshot, recording or pixel capture on the
 simulator (the owner's rule), so the rows read the build's asset catalog and
@@ -63,11 +64,12 @@ owner's look on his phone.
    appearance and one with `UIAppearanceDark`. Each component × 255,
    rounded, gives the hex; write both to `"$EVIDENCE/splash-colours.txt"`.
    → `#f1f0e6` (red 0.945, green 0.941, blue 0.902) and `#142420` (red
-   0.078, green 0.141, blue 0.125). The launch storyboard prebuild writes in the
+   0.078, green 0.141, blue 0.125), each equal to the ground `list-colours`
+   reads. The launch storyboard prebuild writes in the
    app's git-ignored `ios` folder draws `image="Splash"` on the colour
    `name="SplashBackground"`. Red on a build before
-   Heartseed's colours: `#f7f9fb` and `#0a1f2d` (or an older prebuild's
-   `#12354e`).
+   Heartseed's colours: the hymnal's former grounds, `#f7f9fb` and
+   `#0a1f2d` (or an older prebuild's `#12354e`).
 4. **The name (`icon-name`).** `plutil -p "$APP/Info.plist"`. →
    `CFBundleDisplayName` `Hymnal` and `UILaunchStoryboardName`
    `LaunchScreen`.

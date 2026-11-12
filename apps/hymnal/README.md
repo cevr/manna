@@ -34,11 +34,12 @@ under its number, and the refrain written out each time it is sung.
   `virtual:hymnal` plugin (`vite/hymnal.ts`) derives them when the app is
   bundled, for the web and the native bundle alike, so the app opens offline
   and no derived file is committed.
-- The colours are the brand's, Moonlit wheat (the wheat on the night), from
-  its one source, `@manna/brand` (`packages/brand`), which the First the
-  Blade site reads too, as the owner's pick "sky" (2026-10-25): the brand's
-  painted sky as the second colour. `src/theme.ts` draws two families of
-  roles from it in light and dark. The opaque roles: ground, ink, muted,
+- The colours are Heartseed's (owner, 2026-11-12), so the hymnal reads as
+  its family as the icon and the launch screen do. `src/theme.ts` copies the
+  Heartseed roles it draws from (`apps/heartseed/src/theme.ts`) once, in
+  `garden`, and `src/theme.test.ts` holds the copy equal to Heartseed's
+  own. It draws two families of roles from them in light and dark. The
+  opaque roles: ground, ink, muted,
   line, accent, chord (the chords and the dials' current stop), soft,
   onAccent (the text on an accent fill), pressed and onPressed (a held
   accent fill and its text), panel and edge (the open dials' panel and its
@@ -46,20 +47,22 @@ under its number, and the refrain written out each time it is sung.
   lit pill and the dials' Reset, and their ink), and chosen and onChosen (a
   checked chip's fill and its ink), button and onButton (a filled
   control: the bar's marks and play, the wheel's lit item, the find bar's
-  chosen disk), and selected (a chosen tab's fill). The glass roles, laid
+  chosen disk), selected (a chosen tab's fill), alert (Delete downloads
+  and its confirm) and shadow (the dials' panel's and the KEY wheel's
+  shadow, and the wheel's backdrop). The glass roles, laid
   over any opaque role under the find bar's capsule: glass (soft at 85 %),
   onGlass (its words), onGlassMuted (its placeholder), and glassChosen and
   onGlassChosen (the disk behind its chosen control, on the button's fill,
-  and that control's ink). Light is a cool white page under the night's
-  ink, with the dusk's gold deepened for the chords; dark is the owner's
-  Night field (2026-11-11, base C2): the night 42 % toward black as the
-  page, the bar and lines mixed from it toward the sky, with the s1
-  Analogous accents: a cyan for the numbers, the buttons and a chosen
-  tab, and a periwinkle for the chords a step dimmer and more coloured
-  than the words (owner, 2026-11-12: `oklch(0.75 0.13 283)`, so chords and
-  words part at the same weight), each a fixed OKLCH value written as hex
-  in `theme.ts`. A
-  screen reads a role, never a hex value. On
+  and that control's ink). In both schemes the page and the bar are
+  Heartseed's ground, the panel its card, the words its ink and quiet; the
+  ink is also the hymn numbers, the sung syllable and the buttons, with
+  Heartseed's ground on them; the chords are Heartseed's gold ink (`sun`,
+  the gold itself by night), the one warm hue on a hymn's page, held apart
+  from the words in OKLab by day and by night; alert is Heartseed's `miss`.
+  Soft, line, edge and pressed are mixed from Heartseed's roles by the
+  rules `theme.ts` states. A screen reads a role, never a hex value. A
+  layer's shadow reads the showing scheme's plain hex (`useShadow`), since
+  a dynamic colour there does not follow a change of scheme. On
   iOS each role is a `DynamicColorIOS` (`src/color.native.ts`), on the web
   a CSS `light-dark()` property (`src/color.ts`). Android keeps the
   system's colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
@@ -713,9 +716,9 @@ read them there:
 - The launch screen: `public/splash.png` (the ink's blade) and
   `splash-dark.png` (the gold's), each on a transparent square the launch
   screen centres 200 points wide on Heartseed's page grounds (`#f1f0e6`, and
-  `#142420` in dark mode). The hymn list that follows keeps the app's own
-  grounds, the sky's white and the Night field, so the screen steps to them
-  in one frame. One's prebuild trims an opaque ground away, so the ground is
+  `#142420` in dark mode). The hymn list that follows stands on the same
+  grounds (`src/theme.ts`), so the launch hands off to it with no step
+  (`src/theme.test.ts` holds the two equal). One's prebuild trims an opaque ground away, so the ground is
   the config's `backgroundColor`, not the PNG's.
 
 Every face's mark stands at 4.5:1 or more on its ground (the icon test); the

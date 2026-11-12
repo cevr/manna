@@ -16,6 +16,7 @@ played on, as their licences ask; the app's version is not shown.
 
 - `settings-appearance`: a radio group `Appearance` of `System`, `Light`, `Dark`; a press chooses one.
 - `settings-kept`: the choice holds after leaving the tab and after a relaunch.
+- `settings-colours`: Settings with at least one recording downloaded (else report `TargetMissing` with that reason, never passed another way): `bun scripts/readout.ts colours --port $PORT --id downloads-delete` → `Delete downloads` draws `alert`, Heartseed's alert (`#a04a34` by day, `#f09982` by night); so does `Confirm delete downloads`, while `Keep downloads` and `Download all recordings` keep the accent (`apps/hymnal/src/offline/Downloads.test.tsx`).
 - `settings-chords-switch`: under the heading `Chords`, after `Appearance`, the switch `Chords`, off (`0`) at first: no `Chord style`, no `Chord placement`, no `Tuner`. A press turns it on (`1`): `Chord style` (`Simple`, `Advanced`) and `Chord placement` show, and `Tuner` on a device with the ear. A press again hides them. It is the same setting as the bar's `Key` and the player sheet's `Chords`, kept after a relaunch.
 - `chords-placement-global`: with chords on, the radio group `Chord placement` offers `On the beat`, `Simpler`, `As the file plays`; `On the beat` is checked on a fresh install. A change applies immediately to every inheriting hymn.
 - `chords-placement-kept`: the global choice and each hymn override survive a relaunch. A hymn with an override keeps it when the global choice changes.
