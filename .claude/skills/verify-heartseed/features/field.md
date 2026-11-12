@@ -87,46 +87,50 @@ free `PORT` of 8280-8289, `sim` = `bun run --cwd apps/heartseed sim`, and
 field, so an install of a build of `c65e0f162` or later serves (`SKILL.md`,
 Launch); the JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-home`.
-2. `field-first`: in `first-home`'s snapshot, the heading `Your field`;
-   the text `Isaiah 41:10`; a button `Isaiah 41:10, seed`; the text
+The taps are the journeys `field`, `field-grow`, `field-again` and
+`field-relaunch` beside this file, each one `sim journey` call. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels; a count
+line or a node below the fold is read there or in a raw snapshot
+(`first.md`, Driving it).
+
+1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
+   microphone, and the first minute to `first-home`.
+2. `sim journey field` → `"ok":true` (steps 2-4). `field-first`:
+   `field/field-first` → the heading `Your field`; the text
+   `Isaiah 41:10`; a button `Isaiah 41:10, seed`; the text
    `Protection & Fear` and 14 buttons ending `, not planted`
    (`promise.md`'s `promise-field`); `1 day sown`;
    `0 verses at full corn`; a button `Practice anyway`; no button
-   `When I need…`; no `Today` heading,
-   no button `Today`, no `Say it`, no label starting `Stage:`.
-3. `field-control`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim open / --expect "id=session" --no-relaunch`,
-   `sim snapshot field-control` → the
-   heading `Today`, `Isaiah 41:10`, `Say it` and a button `Your field`.
-4. `field-back`: `sim tap "label=Your field"`, `sim snapshot field-back-home`
-   → the heading `Your field` and `Start` on the Today card (the visit open);
-   `sim tap "label=Start"`, `sim open / --expect "id=session" --no-relaunch`,
-   `sim snapshot field-back` → the heading `Today`, `Isaiah 41:10` and
-   `Say it` (as it was), `Your field`.
+   `When I need…`; no `Today` heading, no button `Today`, no `Say it`, no
+   label starting `Stage:`.
+3. `field-control`: `field/field-control` → the heading `Today`,
+   `Isaiah 41:10`, `Say it` and a button `Your field`.
+4. `field-back`: `field/field-back-home` → the heading `Your field` and
+   `Start` on the Today card (the visit open); `field/field-back`, after
+   `Start` → the heading `Today`, `Isaiah 41:10` and `Say it` (as it
+   was), `Your field`.
 5. `field-listening` and `field-grow`, at the first wait: `run.md` steps
    3-4. `run-listening`'s raw snapshot → `Listening` present and no
    `Your field` (keep only booleans). After `run-recite`,
-   `sim tap "label=Your field"`, `sim snapshot field-grow` →
+   `sim journey field-grow` → `"ok":true`. `field-grow/field-grow` →
    `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 04:00 local
    fell between the planting and this recital: compare `START` with the
-   time now, local), `0 verses at full corn`; then `sim tap "label=Start"`
-   is `run.md` step 5 (`run-held-field`).
+   time now, local), `0 verses at full corn`; its last step taps `Start`,
+   which brings back the held result with `Next` (`run.md` step 5).
 6. (`field-listening` is in step 5.)
 7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
-   `Next`, `sim tap "label=Again"`, then `sim tap "label=Your field"`,
-   `sim snapshot field-again` → a button whose label starts
+   `Next`, `sim journey field-again` → `"ok":true`: `Again`, then
+   `Your field`. `field-again/field-again` → a button whose label starts
    `Isaiah 41:10, seed` (`, ready today` follows while its item is open),
-   the same days sown as
-   step 5; then `sim tap "label=Start"` (the result held, with `Next`).
-   Otherwise the tests own it.
-8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
-   41:10"` (the pending frame) and at once
-   `sim snapshot field-relaunch-launch` → no `Your field` heading, no label
-   ending `sown` or `full corn`; then
-   `sim open / --expect "id=today-card" --no-relaunch`,
-   `sim snapshot field-relaunch` → the heading `Your field`, no heading
+   the same days sown as step 5; its last step taps `Start` (the result
+   held, with `Next`). Otherwise the tests own it.
+8. `field-relaunch`: `sim journey field-relaunch` → `"ok":true`.
+   `field-relaunch/field-relaunch-launch`, the receipt taken as soon as the
+   pending frame shows `Isaiah 41:10` → no `Your field` heading, no label
+   ending `sown` or `full corn` (a receipt that already holds home is no
+   proof either way: record it and run the journey again);
+   `field-relaunch/field-relaunch` → the heading `Your field`, no heading
    `Today`, and the same plants and days as step 7 (step 5 when step 7
    did not run).
 9. `field-record`: `C=$(xcrun simctl get_app_container verify-heartseed
@@ -160,7 +164,7 @@ delete the `snapshots` folder and the raw snapshot.
 - After a `Minutes` tap (in home's Settings sheet) a ready plant's label ends `, ready today`, so
   `label=Isaiah 41:10, seed` no longer matches it: tap it by its full
   label.
-- `Your field` never needs a `sim scroll`: it is in Today's header, outside
+- `Your field` never needs a scroll step: it is in Today's header, outside
   the scroll view. Tap it as it is; a scroll just before a tap can leave the
   scroll view moving, and a tap then may stop the scroll instead of pressing.
   The field's Today card likewise sits fixed above the scroll view; its

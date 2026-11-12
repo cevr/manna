@@ -1,0 +1,34 @@
+{
+  "feature": "field-again",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "field-again-grades",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Again" }, { "shows": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "field-again-grade",
+      "action": "tap",
+      "target": "label=Again",
+      "receipt": "none"
+    },
+    {
+      "name": "field-again",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-again-held",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Next" }],
+      "receipt": "none"
+    }
+  ]
+}
