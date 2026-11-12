@@ -53,28 +53,35 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 About: `--app` with a build of the head's native code serves; the
 JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7, to `first-home`.
-2. `about-page`: on home, `sim scroll "label=Settings" down`, `sim tap
-   "label=Settings"`, `sim tap "label=About"`, `sim snapshot about` and a
-   raw snapshot (`agent-device snapshot --json --raw --observe-only
-   --force-full --session verify-heartseed`) → as the row says; from the
-   raw snapshot, booleans only: a label `Heartseed`, a label starting
-   `Version `, no label starting `Apache License`.
-3. `about-credits`: `sim tap "label=Licences"`, `sim snapshot licences`
-   and a raw snapshot → the heading `Licences`, the button `About`, no
-   `Voice`; three booleans: a label equal to `CREDITS`, a label starting
+The taps are the journey `about` beside this file (`about.journey.json`),
+one `sim journey about` call; its receipts are
+`$EVIDENCE/snapshots/about-<nn>-<step>.txt`, cited as `about/<step>`. The
+licence's text, the version line and other run-time labels are read in a
+raw snapshot (`first.md`, Driving it) taken by hand where a step says, as
+booleans only.
+
+1. `first.md`'s `sim journey first`, to `first-home`.
+2. `sim journey about` → `"ok":true`.
+3. `about-page`: `about/about`, after the scroll to `Settings`, the sheet
+   and `About` → as the row says. A raw snapshot here (a second run of the
+   journey up to this step, or by hand after step 6 below) gives three
+   booleans: a label `Heartseed`, a label starting `Version `, no label
+   starting `Apache License`.
+4. `about-credits`: `about/licences` → the heading `Licences`, the button
+   `About`, no `Voice`; from a raw snapshot taken on `Licences`, three
+   booleans: a label equal to `CREDITS`, a label starting
    `Apache License`, a label ending `limitations under the License.`.
-   `sim tap "label=About"`, `sim snapshot about-again` → the heading
-   `About`, no label starting `Apache License`.
-4. `sim tap "label=Your field"` → the heading `Your field`, no heading
-   `Settings`. Then `sim scroll "label=Settings" down`, `sim tap
-   "label=Settings"`, `sim tap "label=About"`, `sim relaunch`, `sim open /
-   --expect "id=today-card"` → the heading `Your field` (home), no heading
-   `About`.
-5. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+   `about/about-again` → the heading `About`, no label starting
+   `Apache License`.
+5. `about/about-home-again` → the heading `Your field`, no heading
+   `Settings`. Then the journey opens About again through `Settings` and
+   relaunches: `about/about-relaunch` → the heading `Your field` (home), no
+   heading `About`.
+6. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Red on base (e27f247c9): the sheet's `About` shows the licence at once,
-with no `Licences` button and no `Version ` line.
+with no `Licences` button, so the journey's `about` step fails
+`TargetMissing` on `label=Licences`, and no `Version ` line.
 
 Report only booleans and the labels named above; delete the `snapshots`
 folder and the raw snapshots.
@@ -82,12 +89,12 @@ folder and the raw snapshots.
 ## Gotchas
 
 - Home's `Settings` and `How Heartseed works` rows lie at the field's end:
-  `sim scroll "label=Settings" down` first. `About` in the sheet is
+  the journey scrolls to `Settings` first. `About` in the sheet is
   outside its scroll view; `Your field` sits in About's bar and `About` in
   the licences' bar. The licence is long; reading it from the raw
   snapshot needs no scroll, since the node holds the whole text.
 - `label=About` names the sheet's button on home and the licences' back
-  on `Licences`; tap it only where the step says.
+  on `Licences`; a step taps it only where it stands.
 - Their contrast, their one heading, neither page shown while Say it
   listens, and the
   rule that only `Licences` holds the licence are the tests'

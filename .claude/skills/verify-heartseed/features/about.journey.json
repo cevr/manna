@@ -1,0 +1,83 @@
+{
+  "feature": "about",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "about-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "about-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "about-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=About" }],
+      "receipt": "none"
+    },
+    {
+      "name": "about",
+      "action": "tap",
+      "target": "label=About",
+      "expect": [{ "shows": "label=Licences" }, { "shows": "label=Your field" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "licences",
+      "action": "tap",
+      "target": "label=Licences",
+      "expect": [{ "shows": "label=About" }, { "hides": "label=Voice" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "about-again",
+      "action": "tap",
+      "target": "label=About",
+      "expect": [{ "shows": "label=Licences" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "about-home-again",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Licences" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "about-relaunch-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "about-relaunch-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=About" }],
+      "receipt": "none"
+    },
+    {
+      "name": "about-relaunch-page",
+      "action": "tap",
+      "target": "label=About",
+      "expect": [{ "shows": "label=Licences" }],
+      "receipt": "none"
+    },
+    {
+      "name": "about-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Licences" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
