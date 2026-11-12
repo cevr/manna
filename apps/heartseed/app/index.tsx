@@ -1,7 +1,7 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
-import { Match, Option } from 'effect';
+import { Array as Arr, Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
@@ -19,6 +19,7 @@ import {
   next,
   passagesView,
   peek,
+  practiceList,
   press,
   readingAloud,
   sayItView,
@@ -31,7 +32,10 @@ import {
 import { AboutScreen } from '../src/about/screen';
 import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
+import { removalOf } from '../src/field/plot';
 import { FieldScreen } from '../src/field/screen';
+import { listStartOf } from '../src/list';
+import { ListScreen } from '../src/list/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
 import { themed, useThemed } from '../src/look';
 import { FirstMinute } from '../src/first/screen';
@@ -529,6 +533,7 @@ function FieldOf({
   onAddDone,
   onAny,
   onAbout,
+  onOpen,
 }: {
   readonly adding: boolean;
   readonly onToday: () => void;
@@ -536,6 +541,7 @@ function FieldOf({
   readonly onAddDone: () => void;
   readonly onAny: () => void;
   readonly onAbout: () => void;
+  readonly onOpen: (id: string) => void;
 }) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const passages = AsyncResult.value(useAtomValue(passagesView));
@@ -569,6 +575,7 @@ function FieldOf({
             onStart={onStart}
             onAdd={onAdd}
             onAbout={onAbout}
+            onOpen={onOpen}
           />
           {adding && (
             <AddSheet
@@ -580,6 +587,70 @@ function FieldOf({
             />
           )}
         </>
+      );
+    },
+  });
+}
+
+/**
+ * A list's own page (`ListScreen`) over the furrow of id `id` as home
+ * draws it now: the same garden read, passages, collections taught and
+ * session's view as home, read the same way, its first show beginning the
+ * session as home's does. `Practice this list` makes what `listStartOf`
+ * starts the session's visit and a row's tap what `startOf` starts, then
+ * each shows Today once it is made (or failed); `Your field` and a landed
+ * remove show home. While any of these is unknown it shows the pending
+ * frame; once the id names no furrow (its list removed) it shows `home`
+ * in its place, whose every way on sets the root's screen anew.
+ */
+function ListOf({
+  id,
+  home,
+  onField,
+  onToday,
+}: {
+  readonly id: string;
+  readonly home: ReactNode;
+  readonly onField: () => void;
+  readonly onToday: () => void;
+}) {
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const passages = AsyncResult.value(useAtomValue(passagesView));
+  const taught = AsyncResult.value(useAtomValue(taughtView));
+  const session = AsyncResult.value(useAtomValue(sessionView));
+  const practice = useAtomSet(practiceList, { mode: 'promise' });
+  const start = useAtomSet(startHere, { mode: 'promise' });
+  useSessionBegunWhenShown(Option.isSome(garden));
+  const known = Option.filter(
+    Option.all({ garden, passages, taught, session }),
+    (each) => each.passages._tag === 'Unread' || Option.isSome(each.session.plan),
+  );
+  const furrow = Option.flatMap(known, (each) =>
+    Arr.findFirst(
+      furrowsOf(
+        each.garden,
+        fieldPassagesOf(PASSAGES, each.passages, each.taught),
+        readyOf(each.session.plan, each.garden),
+      ),
+      (row) => row.id === id,
+    ),
+  );
+  if (Option.isSome(known) && Option.isNone(furrow)) return home;
+  return Option.match(Option.all({ known, furrow }), {
+    onNone: () => <Pending />,
+    onSome: ({ known: each, furrow: row }) => {
+      const verses = row.plants.map((plant) => plant.reference);
+      return (
+        <ListScreen
+          furrow={row}
+          start={listStartOf(each.session, each.garden, verses)}
+          starts={(verse) => Option.isSome(startOf(each.session, each.garden, verse))}
+          removal={Option.filter(removalOf(row), () => each.passages._tag === 'Read')}
+          onField={onField}
+          onPractice={() => void practice(verses).then(onToday, onToday)}
+          onStart={(verse) => void start(verse).then(onToday, onToday)}
+          onRemoved={onField}
+        />
       );
     },
   });
@@ -598,8 +669,8 @@ function Pending() {
   );
 }
 
-/** The root's screens once the launch has opened, home being `field`, and `add` home with the Add verses sheet open. */
-type Screen = 'today' | 'field' | 'add' | 'choose' | 'about';
+/** The root's screens once the launch has opened, home being `field`, `add` home with the Add verses sheet open, and `list` the list view of the furrow last opened. */
+type Screen = 'today' | 'field' | 'add' | 'choose' | 'about' | 'list';
 
 /** The screen an opening shows first: home for `home`, else Today. */
 const screenAt = (shown: Opening): Screen => {
@@ -633,6 +704,7 @@ export default function Root() {
   const read = Option.match(appearance, { onNone: (): Opening => 'pending', onSome: () => garden });
   const [decided, setDecided] = useState<Opening>('pending');
   const [screen, setScreen] = useState<Screen>('field');
+  const [list, setList] = useState('');
   useAppearanceShown(Option.getOrElse(appearance, (): AppearanceChoice => 'system'));
   if (decided === 'pending' && read !== 'pending') {
     setDecided(read);
@@ -643,28 +715,37 @@ export default function Root() {
     setDecided('home');
     setScreen(screenAt('home'));
   };
+  const toField = () => setScreen('field');
+  const toToday = () => setScreen('today');
   switch (shownOpening(decided, read)) {
     case 'pending':
       return <Pending />;
     case 'first':
       return <FirstMinute onContinue={onContinue} />;
     case 'home':
-    case 'today':
-      if (screen === 'about') return <AboutScreen onField={() => setScreen('field')} />;
+    case 'today': {
+      const home = (
+        <FieldOf
+          adding={screen === 'add'}
+          onToday={toToday}
+          onAdd={() => setScreen('add')}
+          onAddDone={toField}
+          onAny={() => setScreen('choose')}
+          onAbout={() => setScreen('about')}
+          onOpen={(id) => {
+            setList(id);
+            setScreen('list');
+          }}
+        />
+      );
+      if (screen === 'list')
+        return <ListOf id={list} home={home} onField={toField} onToday={toToday} />;
+      if (screen === 'about') return <AboutScreen onField={toField} />;
       if (screen === 'choose')
-        return <ChooserScreen onBack={() => setScreen('add')} onAdded={() => setScreen('field')} />;
-      if (screen === 'field' || screen === 'add')
-        return (
-          <FieldOf
-            adding={screen === 'add'}
-            onToday={() => setScreen('today')}
-            onAdd={() => setScreen('add')}
-            onAddDone={() => setScreen('field')}
-            onAny={() => setScreen('choose')}
-            onAbout={() => setScreen('about')}
-          />
-        );
-      return <Today onField={() => setScreen('field')} />;
+        return <ChooserScreen onBack={() => setScreen('add')} onAdded={toField} />;
+      if (screen === 'field' || screen === 'add') return home;
+      return <Today onField={toField} />;
+    }
   }
 }
 

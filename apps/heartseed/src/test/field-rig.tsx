@@ -300,12 +300,12 @@ export const STARTS = /^(Start|Practice anyway|Practice .+|Learn .+)$/su;
 /** The controls of the field's end rows. */
 const END_ROWS = new Set(['Settings', 'How Heartseed works']);
 
-/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Remove …`, `Add a list` and the end rows. */
+/** Whether a reader may have to scroll to `node`: a plant, a furrow's `Open …` or `Remove …`, `Add a list` and the end rows. */
 const listed = (node: Element) =>
   idOf(node) === 'field-plant' ||
   idOf(node) === 'add-list' ||
   END_ROWS.has(nameOf(node)) ||
-  (nameOf(node).startsWith('Remove ') && node.closest('[data-testid="row"]') !== null);
+  (/^(Open|Remove) /u.test(nameOf(node)) && node.closest('[data-testid="row"]') !== null);
 
 /** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, more than one image or one of the other scheme. */
 const plantFaults = (plant: Element) => {

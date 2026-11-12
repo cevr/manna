@@ -62,7 +62,7 @@ const listed = (node: Element) => {
   const id = idOf(node);
   if (['book', 'chapter', 'verse', 'field-plant', 'add-list'].includes(id)) return true;
   if (END_ROWS.includes(labelOf(node))) return true;
-  return labelOf(node).startsWith('Remove ') && node.closest('[data-testid="row"]') !== null;
+  return /^(Open|Remove) /u.test(labelOf(node)) && node.closest('[data-testid="row"]') !== null;
 };
 
 const disabled = (node: Element) => node.getAttribute('aria-disabled') === 'true';
@@ -94,7 +94,7 @@ export const readBar = (host: Element): FieldSeen | string => {
         unready(plant.getAttribute('aria-label') ?? '<no label>'),
       ),
       controls: [...row.querySelectorAll(CONTROL)]
-        .filter((node) => idOf(node) !== 'field-plant')
+        .filter((node) => idOf(node) !== 'field-plant' && !labelOf(node).startsWith('Open '))
         .map(labelOf),
     })),
     add: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === ADD).length,
@@ -141,7 +141,7 @@ const offerFaults = (host: Element, on: string, unread: boolean, controls: reado
 const held = (node: Element) => {
   const label = labelOf(node);
   if ([...END_ROWS, 'Keep', 'Start'].includes(label)) return true;
-  return /^(Remove|Practice|Learn) /u.test(label) || idOf(node) === 'field-plant';
+  return /^(Remove|Practice|Learn|Open) /u.test(label) || idOf(node) === 'field-plant';
 };
 
 /** While the ask's `Remove` is disabled (a remove pending): every other field control disabled, and no add. */

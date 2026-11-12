@@ -192,6 +192,7 @@ export function FieldScreen({
   onStart,
   onAdd,
   onAbout,
+  onOpen,
 }: {
   readonly field: Field;
   readonly furrows: readonly Furrow[];
@@ -203,6 +204,7 @@ export function FieldScreen({
   readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
+  readonly onOpen: (id: string) => void;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
@@ -313,6 +315,7 @@ export function FieldScreen({
           chosen={shownChoice}
           pending={bar.pending}
           onChoose={onChoose}
+          onOpen={(id) => tapped(() => onOpen(id))}
           onRemove={onRemove}
         />
         <Legend />

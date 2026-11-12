@@ -158,6 +158,7 @@ const checkFields = async (prefers: 'reduce' | 'no-preference') => {
             chosen={Option.none()}
             pending={false}
             onChoose={() => {}}
+            onOpen={() => {}}
             onRemove={() => {}}
           />
         </View>,

@@ -180,6 +180,7 @@ export function FurrowRow({
   chosen,
   pending,
   onChoose,
+  onOpen,
   onRemove,
 }: {
   readonly furrow: Furrow;
@@ -187,6 +188,7 @@ export function FurrowRow({
   readonly chosen: Option.Option<string>;
   readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
+  readonly onOpen: (id: string) => void;
   readonly onRemove: (removal: Removal) => void;
 }) {
   const styles = useThemed(sheets);
@@ -196,14 +198,25 @@ export function FurrowRow({
         <EnteringIcon delay={motion.icon}>
           <Icon testID="furrow-icon" name={furrow.icon} size={28} />
         </EnteringIcon>
-        <View style={styles.names}>
-          <Text testID="row-title" style={styles.title}>
-            {furrow.title}
+        <Pressable
+          role="button"
+          aria-label={`Open ${furrow.title}`}
+          disabled={pending}
+          onPress={() => onOpen(furrow.id)}
+          style={({ pressed }) => [styles.open, pressed && styles.openPressed]}
+        >
+          <View style={styles.names}>
+            <Text testID="row-title" style={styles.title}>
+              {furrow.title}
+            </Text>
+            <Text testID="caption" style={styles.furrowCaption}>
+              {furrow.caption}
+            </Text>
+          </View>
+          <Text aria-hidden style={styles.chevron}>
+            ›
           </Text>
-          <Text testID="caption" style={styles.furrowCaption}>
-            {furrow.caption}
-          </Text>
-        </View>
+        </Pressable>
         {Option.match(removalOf(furrow), {
           onNone: () => false,
           onSome: (removal) => (
@@ -239,12 +252,14 @@ export function Furrows({
   chosen,
   pending,
   onChoose,
+  onOpen,
   onRemove,
 }: {
   readonly furrows: readonly Furrow[];
   readonly chosen: Option.Option<string>;
   readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
+  readonly onOpen: (id: string) => void;
   readonly onRemove: (removal: Removal) => void;
 }) {
   const motion = useMemo(() => motionOf(furrows), [furrows]);
@@ -256,6 +271,7 @@ export function Furrows({
       chosen={chosen}
       pending={pending}
       onChoose={onChoose}
+      onOpen={onOpen}
       onRemove={onRemove}
     />
   ));
@@ -299,7 +315,17 @@ const sheets = themed((color, face) =>
     strongText: { color: color.onInk },
     furrow: { gap: 8 },
     head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    open: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 44,
+      borderRadius: 12,
+    },
+    openPressed: { backgroundColor: color.card },
     names: { flex: 1, gap: 2 },
+    chevron: { fontFamily: face, fontSize: 22, fontWeight: '600', color: color.quiet },
     title: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     furrowCaption: { fontFamily: face, fontSize: 13, color: color.quiet },
     plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
