@@ -27,7 +27,7 @@ type Spawns = ChildProcessSpawner.ChildProcessSpawner;
 
 /** What the drive asks of the host's processes. */
 interface OsMembers {
-  /** Start `argv` as a process of its own that outlives the command: its pid and start time. */
+  /** Start `argv` as a process of its own, in a process group of its own, that outlives the command: its pid and start time. */
   readonly spawn: (
     argv: ReadonlyArray<string>,
     options: { readonly cwd: string; readonly env?: Vars },
@@ -121,7 +121,10 @@ const identified = (line: Option.Option<string>) => {
 };
 
 /**
- * Start `argv` as a process of its own that outlives this command. The
+ * Start `argv` as a process of its own that outlives this command, in a
+ * session and process group of its own (`exchange`'s `detached`): a shell
+ * tool that signals the group of the call that ran this command, once the
+ * call ends, never reaches it. The
  * child becomes `argv` only after its identity is read here and answered;
  * a typed failure or an interruption before the answer leaves its input
  * closed unanswered, and it ends itself, so a failed spawn leaves nothing
@@ -133,7 +136,7 @@ const spawnLive = Effect.fn('Sim.Os.spawn')(function* (
   options: { readonly cwd: string; readonly env?: Vars },
 ) {
   const [tool, ...args] = startCommand(argv);
-  return yield* exchange(tool, args, short, options, (line) =>
+  return yield* exchange(tool, args, short, { ...options, detached: true }, (line) =>
     Option.match(identified(line), {
       onNone: () =>
         Effect.fail(

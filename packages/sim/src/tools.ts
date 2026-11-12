@@ -140,24 +140,31 @@ const encoder = new TextEncoder();
  * An interruption that arrives after the answer is written lands on the
  * caller, so a caller that must keep what the answer let happen runs this
  * uninterruptibly.
+ *
+ * With `detached`, the tool leads a session and process group of its own,
+ * and what it starts stays in them, so a signal to the caller's group (a
+ * shell ending the call that ran this command) never reaches it. The
+ * spawner leaves that group alone once the tool exits 0; a tool that exits
+ * non-zero has its group ended with it.
  */
 export const exchange = <A, E>(
   tool: string,
   args: ReadonlyArray<string>,
   limit: Duration.Duration,
-  options: Launch,
+  options: Launch & { readonly detached?: boolean },
   reply: (line: Option.Option<string>) => Effect.Effect<readonly [answer: string, value: A], E>,
 ) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const env = yield* envOf(tool, options);
     const failed = toolError(tool, args);
+    const detached = options.detached === true;
     return yield* Effect.scoped(
       Effect.gen(function* () {
         const handle = yield* spawner
           .spawn(
             ChildProcess.make(tool, [...args], {
-              detached: false,
+              detached,
               cwd: options.cwd,
               ...Option.match(env, {
                 onNone: () => ({}),
@@ -166,6 +173,7 @@ export const exchange = <A, E>(
             }),
           )
           .pipe(Effect.mapError(failed));
+        if (detached) yield* Effect.asVoid(handle.unref.pipe(Effect.mapError(failed)));
         const unanswered = Effect.ignore(Stream.run(Stream.empty, handle.stdin));
         return yield* Effect.uninterruptibleMask((restore) =>
           Effect.gen(function* () {

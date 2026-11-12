@@ -5,7 +5,8 @@
  * locale; the stop rule leaves a process alive under a wrong recorded start
  * and ends it under the right one; `self` answers this test's own process;
  * a command that spawns (`fixtures/spawner.ts`) ends while its sleep runs
- * on, the sleep holding no file but `/dev/null` on fds 0-2; and the gap
+ * on, the sleep holding no file but `/dev/null` on fds 0-2, in a process
+ * group other than the test's; and the gap
  * from the start-time read to the signal it allows, over many stops, is
  * printed. Every tool runs through a spawner that records it, and
  * every `kill` it ran named a pid this test's own spawn returned.
@@ -95,6 +96,12 @@ const sleeper = (into: Seen) =>
     yield* Effect.addFinalizer(() => Effect.ignore(stop(owned).pipe(through(into))));
     return owned;
   });
+
+/** The process group `pid` belongs to, as `ps` prints it. */
+const groupOf = (pid: number) =>
+  Effect.map(attempt('ps', ['-o', 'pgid=', '-p', String(pid)], Duration.seconds(30)), (done) =>
+    done.output.trim(),
+  );
 
 /** `ps`'s raw start time of `pid` as the caller's environment prints it. */
 const rawStart = (pid: number) =>
@@ -342,6 +349,32 @@ describe('the live Os', () => {
           [1, '/dev/null'],
           [2, '/dev/null'],
         ]);
+        expect(killed(into)).toEqual([]);
+      }),
+    SPAWNS_MS,
+  );
+
+  it.scopedLive.layer(BunServices.layer)(
+    "a command that spawns through the live Os leaves its child in a process group of its own, so a signal to the command's group (a shell ending the call) never reaches it",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const os = yield* Os;
+        const into = seen();
+        const cwd = yield* fs.makeTempDirectoryScoped();
+        const script = path.join(import.meta.dirname, 'fixtures', 'spawner.ts');
+        const done = yield* attempt('bun', [script, cwd, OUTLIVES], Duration.seconds(60)).pipe(
+          through(into),
+        );
+        expect(done.exitCode).toBe(0);
+        const owned = yield* decodeIdentity(done.output.trim());
+        into.spawned.add(owned.pid);
+        yield* Effect.addFinalizer(() => Effect.ignore(stop(owned).pipe(through(into))));
+        const self = yield* os.self.pipe(through(into));
+        const child = yield* groupOf(owned.pid).pipe(through(into));
+        expect(child).not.toBe(yield* groupOf(self.pid).pipe(through(into)));
+        expect(child).not.toBe('');
         expect(killed(into)).toEqual([]);
       }),
     SPAWNS_MS,
