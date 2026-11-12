@@ -1,0 +1,50 @@
+{
+  "feature": "field",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "field-first",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Practice anyway" },
+        { "shows": "label=Isaiah 41:10, seed" },
+        { "hides": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-control",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-back-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-back",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
