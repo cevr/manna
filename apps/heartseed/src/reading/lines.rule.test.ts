@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noGlobals -- a frame-rule table: it builds happy-dom nodes by hand in the document the rule reads. */
-
 /**
  * The lines' clause of the root's frame rule (`src/test/root-rule.ts`,
  * hspiece L3), one offending frame per clause: a break outside a verse

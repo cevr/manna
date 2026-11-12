@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a view test: it mounts Today's verse in happy-dom's document through React's promise-based `act`, one drawing after another, draws its verses and marks with plain branches, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a view test: it mounts Today's verse in happy-dom's document through React's promise-based `act`, one drawing after another, draws its verses and marks with plain branches, and reads nodes whose absent attributes are null. */
 
 /**
  * The drawings agree (hspiece L2, L3): Today's verse (`Verse`,
