@@ -149,7 +149,7 @@ The recipe beside each says what to read in its receipts and which steps stay by
   (so the next tap lands on still content), and checks that same view's content moved (a hymn
   page's pager shares the page's frame and is never taken for it):
   `detail.moved` (false at the content's end), or `ScrollStuck` when a pan moved nothing while the view
-  hides more. A target scroll pans until the target's centre is on screen and hittable
+  hides more. A target scroll pans until the target's centre is on screen, inside each scroll view that holds it (a row past a sheet's top edge is clipped, not shown), and hittable
   (`detail.passes`), else `TargetMissing`.
 - `sim read [name] [--id <testID>]… [--label <name>]…` (iOS) reads the screen as numbers, never words:
   for each asked testID (a trailing `*` reads every id it begins) and name, its nodes' frames, states

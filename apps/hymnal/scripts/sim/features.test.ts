@@ -120,6 +120,54 @@ const pansOffScreen = (journey: Journey, screen: Screen) => {
   });
 };
 
+/**
+ * What a shipped scroll to a target may expect to show beside its target,
+ * as `<feature>/<step> <selector>`, each with why it shows wherever the
+ * scroll stops.
+ */
+const BESIDE_TARGET = new Map([
+  [
+    'about/about-tunes id=about-topic-0',
+    'the target heads the last group, so the scroll stops at the content’s end, the topics in view above it',
+  ],
+  [
+    'hymn-reader/reading-controls label=Text size',
+    '`Keep screen on` ends the sheet, so the scroll stops at the content’s end, `Text size` in view above it',
+  ],
+  [
+    'player/player-reading label=Text size',
+    '`Keep screen on` ends the sheet, so the scroll stops at the content’s end, `Text size` in view above it',
+  ],
+  ['player/stanzas-scroll id=stanzas', 'the group holds the target'],
+  ['player/player-start id=start', 'the group holds the target'],
+  ['player/player-start role=switch label=Intro', 'the switch beside the target in its group'],
+  ['settings/kept-feel label=Sounds and haptics', 'the target switch’s own name'],
+]);
+
+/**
+ * The scrolls to a target in an iOS journey that expect another row to show,
+ * by step and selector, past those `beside` gives. A scroll stops once its
+ * target's centre is in the view, wherever the last pan's fling left the
+ * content (each pan crosses most of the view), so a row a few rows from the
+ * target may lie past either edge; each row a step reads is scrolled to on
+ * its own.
+ */
+const scrollsShowingOthers = (
+  journey: Journey,
+  beside: ReadonlyMap<string, string> = BESIDE_TARGET,
+) => {
+  if (journey.platform !== 'ios') return [];
+  return journey.steps.flatMap((step) => {
+    if (step.action !== 'scroll' || step.target === 'screen') return [];
+    return step.expect.flatMap((expect) => {
+      if (!('shows' in expect) || expect.shows === step.target) return [];
+      const named = `${journey.feature}/${step.name} ${expect.shows}`;
+      if (beside.has(named)) return [];
+      return [named];
+    });
+  });
+};
+
 const FEATURES = import.meta.dir + '/../../../../.claude/skills/verify-hymnal/features';
 
 /** The compiled hymns, one `<nnn>.json` each, as `vite/words.ts` reads them. */
@@ -349,6 +397,55 @@ describe('verify-hymnal journey files', () => {
           'feel/wide',
           'feel/off',
           'feel/below',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('no shipped scroll to a target expects another target to show', () =>
+    Effect.gen(function* () {
+      const journeys = yield* decodeAll(FEATURES);
+      expect(journeys.flatMap((journey) => scrollsShowingOthers(journey))).toEqual([]);
+      const all = new Set(journeys.flatMap((journey) => scrollsShowingOthers(journey, new Map())));
+      expect([...BESIDE_TARGET.keys()].filter((named) => !all.has(named))).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'a scroll to a target that expects another row shown is named; its own target, a hides and a screen scroll are not',
+    () =>
+      Effect.gen(function* () {
+        const scroll = { action: 'scroll', direction: 'down' };
+        const text = toJson({
+          feature: 'chords-and-capo',
+          platform: 'ios',
+          steps: [
+            {
+              ...scroll,
+              name: 'dials',
+              target: 'id=dial-placement',
+              expect: [
+                { shows: 'role=switch label=Chords' },
+                { shows: 'id=dial-placement' },
+                { hides: 'id=dial-size' },
+              ],
+            },
+            {
+              ...scroll,
+              name: 'switch',
+              target: 'role=switch label=Chords',
+              expect: [{ shows: 'role=switch label=Chords' }, { hides: 'id=dial-key' }],
+            },
+            {
+              ...scroll,
+              name: 'screen',
+              target: 'screen',
+              expect: [{ shows: 'id=dial-size' }],
+            },
+          ],
+        });
+        const journey = yield* loadText('chords-and-capo', text);
+        expect(scrollsShowingOthers(journey)).toEqual([
+          'chords-and-capo/dials role=switch label=Chords',
         ]);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
