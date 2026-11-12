@@ -76,6 +76,7 @@ import {
   type Launch,
 } from './run-rig';
 import { cardLineModel } from './home-model';
+import { passageTextIn } from './passage-text';
 import { END, homeLines, rootFaults } from './root-rule';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
@@ -279,8 +280,8 @@ const wordCode = (node: Element | null, word: string, index: number) => {
 
 /** The verse of `piece` as Today draws it, in `verseModel`'s codes: words all whole, marks or peeks read `R`, a recital's own. */
 const verseSeen = (host: Element, piece: TextPiece) => {
-  const whole = host.querySelector('[data-testid="passage"]');
-  if (whole !== null) return (whole.textContent ?? '') === piece.text ? 'W' : 'X';
+  const whole = passageTextIn(host);
+  if (whole !== null) return whole === piece.text ? 'W' : 'X';
   const codes = sourceWords(piece.text).map((word, index) =>
     wordCode(host.querySelector(`[data-testid="word-${index}"]`), word, index),
   );

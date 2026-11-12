@@ -32,7 +32,7 @@ describe('Today’s Say it', () => {
     );
     expect(await today.until(() => today.label() === 'Say it')).toBe(true);
     expect(today.button()).toHaveLength(1);
-    expect(today.one('[data-testid="passage"]')?.textContent).toBe(passage.text);
+    expect(today.passageText()).toBe(passage.text);
     expect(today.all('[data-testid^="word-"]')).toHaveLength(0);
     expect(today.radios()).toHaveLength(0);
     await today.click(today.button()[0]);
@@ -188,7 +188,7 @@ describe('Today’s Say it', () => {
       await today.click(today.button()[0]);
       expect(await today.until(() => today.all('[role="alert"]').length === 1)).toBe(true);
       expect(today.one('[role="alert"]')?.textContent?.includes(says)).toBe(true);
-      expect(today.one('[data-testid="passage"]')?.textContent).toBe(passage.text);
+      expect(today.passageText()).toBe(passage.text);
       expect(today.radios()).toHaveLength(0);
       expect(today.label()).toBe('Say it');
       expect(today.ticks.n).toBe(0);

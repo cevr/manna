@@ -23,6 +23,7 @@ import Root from '../app/index';
 import { runtime } from './app';
 import { clockOf, START } from './test/clock';
 import { deadline } from './test/elapsed';
+import { passageTextIn } from './test/passage-text';
 import { device } from './test/one';
 import { watchRoot } from './test/root-rule';
 
@@ -98,7 +99,7 @@ describe('Today', () => {
   it('shows Isaiah 41:10 and its KJV text, word for word', async () => {
     await shown;
     expect(host.querySelector('[data-testid="reference"]')?.textContent).toBe(REFERENCE);
-    expect(host.querySelector('[data-testid="passage"]')?.textContent).toBe(WORDS);
+    expect(passageTextIn(host)).toBe(WORDS);
   });
 
   it('holds neither the reference nor the words in the app’s own sources', () => {

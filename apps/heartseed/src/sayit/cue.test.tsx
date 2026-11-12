@@ -39,7 +39,7 @@ describe('Today’s cue, by the stage the garden reads', () => {
         true,
       );
       expect([
-        today.one('[data-testid="passage"]')?.textContent === passage.text,
+        today.passageText() === passage.text,
         today.all('[data-testid^="word-"]').length,
         today.runsElsewhere(),
         today.faint(),
@@ -70,7 +70,7 @@ describe('Today’s cue, by the stage the garden reads', () => {
       { cue: 'full' },
     );
     expect(await today.until(() => today.label() === 'Say it')).toBe(true);
-    expect(today.one('[data-testid="passage"]')?.textContent).toBe(passage.text);
+    expect(today.passageText()).toBe(passage.text);
     await today.click(today.button()[0]);
     expect(await today.until(() => today.one('[data-testid="summary"]') !== null)).toBe(true);
     expect([

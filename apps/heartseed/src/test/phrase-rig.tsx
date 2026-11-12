@@ -83,6 +83,7 @@ import {
   type Span,
 } from './passages-model';
 import { CORPUS } from './passages-rig';
+import { passageTextIn } from './passage-text';
 import { oldPiecesRule, phraseOfRule, pieceRule, verseOfRule, wholeCueRule } from './phrase-model';
 import { piecesModel } from './promise-model';
 import {
@@ -330,8 +331,8 @@ type SeenVerse =
 
 /** The words Today shows under its cue in `host`. */
 const verseIn = (host: Element): SeenVerse => {
-  const whole = host.querySelector('[data-testid="passage"]');
-  if (whole !== null) return { cue: 'full', text: digest(textOf(whole)) };
+  const whole = passageTextIn(host);
+  if (whole !== null) return { cue: 'full', text: digest(collapsed(whole)) };
   const nodes = [...host.querySelectorAll('[data-testid^="word-"]')];
   if (nodes.length === 0) return null;
   if (nodes.every((node) => node.getAttribute('aria-hidden') === 'true'))

@@ -48,6 +48,7 @@ import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
 import { END, endShown, watchRoot } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
+import { passageTextIn } from './passage-text';
 import { renewBySettings } from './settings-rig';
 
 export const WORDS = sourceWords(passage.text);
@@ -587,6 +588,10 @@ export const mount = async (
     Option.flatMap(MutableRef.get(latest), (view) =>
       Option.filter(Option.some(view.cue), () => view.startedAt !== null),
     );
+  /** The plain verse's text as Today shows it: a lined verse's `line-<i>` texts joined by a space, else the whole-text node's; none while no plain verse shows. */
+  const passageText = () => passageTextIn(host);
+  /** Say it's view as Today last read it, none before one. */
+  const sayIt = () => MutableRef.get(latest);
   /** How many runs of three of the verse's words, as written, show in any text or label outside the word nodes and the whole-text node. */
   const runsElsewhere = () => {
     const inVerse = (node: Node) =>
@@ -620,6 +625,8 @@ export const mount = async (
   return {
     host,
     show,
+    passageText,
+    sayIt,
     verseShown,
     faint,
     one,

@@ -85,6 +85,29 @@ export const linesOf = (text: string): ReadonlyArray<Line> => {
   return [...lines, { first, last: count - 1 }];
 };
 
+/** Where line `at` of `lines` starts in `text`: its first word's run, the text's start for the first line, the text's end past the words. */
+const lineStart = (
+  text: string,
+  spans: ReturnType<typeof wordSpans>,
+  lines: ReadonlyArray<Line>,
+  at: number,
+) => {
+  if (at === 0) return 0;
+  if (at >= lines.length) return text.length;
+  return spans[lines[at]?.first ?? spans.length]?.start ?? text.length;
+};
+
+/** Each line's text: the verse's own characters from its line's start to the next line's, trimmed, each whitespace run one space, so the texts joined by a space are the verse's text with its whitespace made single. */
+export const lineTextsOf = (text: string, lines: ReadonlyArray<Line>): readonly string[] => {
+  const spans = wordSpans(text);
+  return lines.map((_, at) =>
+    text
+      .slice(lineStart(text, spans, lines, at), lineStart(text, spans, lines, at + 1))
+      .trim()
+      .replace(/\s+/gu, ' '),
+  );
+};
+
 /** The word numbers that start a line after the first: where Today draws a break. */
 export const breaksOf = (lines: ReadonlyArray<Line>): ReadonlySet<number> =>
   new Set(lines.slice(1).map((line) => line.first));

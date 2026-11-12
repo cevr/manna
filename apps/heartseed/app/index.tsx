@@ -67,7 +67,8 @@ import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
-import { ReadingView, type Hold } from '../src/reading/view';
+import { breaksOf, lineTextsOf, linesOf } from '../src/reading/lines';
+import { breakBefore, ReadingView, type Hold } from '../src/reading/view';
 import { Tended } from '../src/run/tended';
 
 /** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
@@ -85,9 +86,12 @@ const PASSAGES: readonly FieldPassage[] = [
  * shown; else one element per word, each its own accessibility element, a
  * word the recital shown has reached as `wordOf` shows it and every other
  * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
- * or an empty slot.
+ * or an empty slot. All three draw the verse's lines (`linesOf`): a verse of
+ * one line as one run, a longer one with a `break-<k>` row before each line
+ * after the first, its plain text as one `line-<i>` text per line. Exported
+ * for the test that holds the three drawings to one set of lines.
  */
-function Verse({
+export function Verse({
   text,
   marks,
   cue,
@@ -104,22 +108,41 @@ function Verse({
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
+  const lines = linesOf(text);
+  const breaks = breaksOf(lines);
   const reading = Option.filter(voice, (view) => readingAloud(view) && view.verse === text);
   if (Option.isNone(marks) && Option.isSome(reading))
-    return <ReadingView key={text} text={text} view={reading.value} hold={hold} />;
-  if (Option.isNone(marks) && cue === 'full')
+    return <ReadingView key={text} text={text} view={reading.value} hold={hold} lines={lines} />;
+  if (Option.isNone(marks) && cue === 'full' && breaks.size === 0)
     return (
       <Text testID="passage" style={styles.words}>
         {text}
       </Text>
     );
+  if (Option.isNone(marks) && cue === 'full')
+    return (
+      <View testID="passage" style={look.verse}>
+        {lineTextsOf(text, lines).flatMap((line, at) => [
+          ...breakBefore(breaks, lines[at]?.first ?? 0),
+          <Text key={at} testID={`line-${at}`} style={styles.words}>
+            {line}
+          </Text>,
+        ])}
+      </View>
+    );
   return (
     <View style={look.verse}>
-      {sourceWords(text).map((word, index) => {
+      {sourceWords(text).flatMap((word, index) => {
         const mark = Option.flatMap(marks, (all) => Option.fromNullishOr(all[index]));
         if (Option.isNone(mark) || mark.value.status === 'pending')
-          return <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />;
-        return <Word key={index} shown={wordOf(mark.value, word)} onPeek={onPeek} />;
+          return [
+            ...breakBefore(breaks, index),
+            <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />,
+          ];
+        return [
+          ...breakBefore(breaks, index),
+          <Word key={index} shown={wordOf(mark.value, word)} onPeek={onPeek} />,
+        ];
       })}
     </View>
   );

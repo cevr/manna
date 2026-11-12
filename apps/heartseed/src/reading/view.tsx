@@ -1,6 +1,9 @@
 /**
  * The reading view: a verse the voice reads, one `word-<i>` text per word
- * (`shownWordsOf`), each a direct child of the view with its own layout.
+ * (`shownWordsOf`), each a direct child of the view with its own layout. A
+ * lined verse (`linesOf`) starts each line after the first on its own row
+ * after a `break-<k>` sibling (`LineBreak`), so the words keep their
+ * numbers and their layouts in the view's coordinates.
  * The words before the read point are in `ink` and the rest in `quiet`,
  * and the selected words carry `aria-selected` on the `hearing` ground:
  * the held word while a finger holds the view, else the words the voice
@@ -22,13 +25,14 @@
  */
 
 import { Option } from 'effect';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import type { VoiceView } from '../voice';
+import { breaksOf, type Line } from './lines';
 import { shownWordsOf, wordAt, type Box } from './words';
 
 /** How long a finger rests still on the words before the hold takes it, in milliseconds. */
@@ -65,18 +69,48 @@ const selectedOf = (view: VoiceView, held: Option.Option<number>): Option.Option
     onSome: (word) => Option.some({ first: word, last: word }),
   });
 
-/** The verse `text` as the voice's reading `view` lights it, under the hold `hold`. */
+/**
+ * The space before the first word of a line after the first (`k`, its word
+ * number): a full-width row the line gap tall, a sibling of the words so
+ * each word's layout stays in its view's own coordinates. It has no text
+ * and no role, and VoiceOver passes over it.
+ */
+export function LineBreak({ word }: { readonly word: number }) {
+  const look = useLook();
+  return (
+    <View
+      testID={`break-${word}`}
+      aria-hidden
+      importantForAccessibility="no-hide-descendants"
+      style={look.lineBreak}
+    />
+  );
+}
+
+/** The break before word `index`, when a line starts there after the first; none else. */
+export const breakBefore = (
+  breaks: ReadonlySet<number>,
+  index: number,
+): readonly ReactElement[] => {
+  if (!breaks.has(index)) return [];
+  return [<LineBreak key={`break-${index}`} word={index} />];
+};
+
+/** The verse `text` as the voice's reading `view` lights it, under the hold `hold`, its words in `lines` (one line unless given). */
 export function ReadingView({
   text,
   view,
   hold,
+  lines = [],
 }: {
   readonly text: string;
   readonly view: VoiceView;
   readonly hold: Hold;
+  readonly lines?: ReadonlyArray<Line>;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
+  const breaks = breaksOf(lines);
   const boxes = useRef(new Map<number, Box>());
   const held = useRef<Option.Option<number>>(Option.none());
   const live = useRef(hold);
@@ -122,12 +156,13 @@ export function ReadingView({
   return (
     <GestureDetector gesture={pan}>
       <View testID="reading" style={[look.verse, styles.reading]}>
-        {shownWordsOf(text).map((word, index) => {
+        {shownWordsOf(text).flatMap((word, index) => {
           const isSelected = Option.exists(
             selected,
             (range) => index >= range.first && index <= range.last,
           );
-          return (
+          return [
+            ...breakBefore(breaks, index),
             <Text
               key={index}
               testID={`word-${index}`}
@@ -145,8 +180,8 @@ export function ReadingView({
               ]}
             >
               {word}
-            </Text>
-          );
+            </Text>,
+          ];
         })}
       </View>
     </GestureDetector>

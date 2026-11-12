@@ -205,6 +205,12 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
   return <Animated.View aria-hidden style={[look.ring, ring]} />;
 }
 
+/** The space between two rows of one line of a verse, in points. */
+const ROW_GAP = 2;
+
+/** The space between two lines of a lined verse, in points: a break row and the row gap on either side of it. */
+const LINE_GAP = 10;
+
 /** The styles every screen shares, in each scheme. */
 const looks = themed((color, face) =>
   StyleSheet.create({
@@ -212,7 +218,8 @@ const looks = themed((color, face) =>
     content: { paddingHorizontal: 24, gap: 28 },
     title: { fontFamily: face, fontSize: 34, fontWeight: '700', color: color.ink },
     reference: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.quiet },
-    verse: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 7, rowGap: 2 },
+    verse: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 7, rowGap: ROW_GAP },
+    lineBreak: { width: '100%', height: LINE_GAP - 2 * ROW_GAP },
     word: { fontFamily: face, fontSize: 24, lineHeight: 36 },
     lit: { color: color.ink },
     hearing: { color: color.quiet, backgroundColor: color.hearing, borderRadius: 4 },
