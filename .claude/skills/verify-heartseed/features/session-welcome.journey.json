@@ -1,0 +1,42 @@
+{
+  "feature": "session-welcome",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "session-welcome-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "session-welcome-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "settings-welcome-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=Show the welcome again" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "settings-welcome",
+      "action": "tap",
+      "target": "label=Show the welcome again",
+      "expect": [{ "shows": "label=Skip" }, { "shows": "label=Begin" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "settings-welcome-home",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Begin" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
