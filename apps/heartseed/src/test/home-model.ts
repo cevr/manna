@@ -22,11 +22,11 @@
  *   other verse as a `Loose` list (`verse:<reference>`); each its kind and
  *   icon by its source (a passage's icon by its book), its caption
  *   (`captionModel`), and each plant's stage, ready mark and label.
- * - H2 ready: the verse (a phrase's verse for a phrase) of each item whose
+ * - H2 ready: the verse of each item whose
  *   plant holds no more recalls than the item's baseline.
  * - H5 the greeting by the local hour and minute: morning 04:00-11:59,
  *   afternoon 12:00-17:59, evening else.
- * - H9 what grew: in plan order, the verse (a phrase's verse for a phrase)
+ * - H9 what grew: in plan order, the verse
  *   of each done item whose stage over all its recalls ranks above its
  *   stage over its first `recalls` recalls (none ranking below a seed),
  *   each verse once, with the verse's stage on the field now.
@@ -62,7 +62,7 @@ import {
   type ModelTextPiece,
   type Span,
 } from './passages-model';
-import { expandRule, fieldFoldRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { fieldFoldRule, oldPiecesRule, verseOfRule } from './phrase-model';
 import { DAY, planModel } from './session-model';
 
 /** A verse's place as the model holds it. */
@@ -370,15 +370,15 @@ const textOf = (next: () => number, count: number) =>
     (_, n) => `w${n + 1}${pickOf(next, ['', '', '', ',', '.'] as const)}`,
   ).join(' ');
 
-/** A verse of made-up text, two in three long enough to be cut into phrases. */
+/** A verse of made-up text, whole, two in three long enough that main kept it in pieces. */
 const pieceOf = (next: () => number, k: number): ModelTextPiece => {
   const words = below(next, 3) > 0 ? 13 + below(next, 30) : 1 + below(next, 12);
-  return withPhrasesRule({
+  return {
     reference: `Psalms ${k}:${1 + below(next, 9)}`,
     text: textOf(next, words),
     words,
     group: pickOf(next, ['a', 'b', 'c'] as const),
-  });
+  };
 };
 
 /** A garden's records being sown before `at`, each start its own. */
@@ -392,27 +392,24 @@ const sowerOf = (at: number) => {
   return { records, sow };
 };
 
-/** Sows `piece`'s history before `at`: none, some of its phrases, every phrase ripe, or the verse whole (a verse with no phrases is whole or none). */
+/** Sows `piece`'s history before `at`: none, some of the old pieces main kept of it, every old piece ripe, those and the verse whole, or the verse whole (a short verse is whole or none). */
 const sowPiece = (
   next: () => number,
   sow: ReturnType<typeof sowerOf>['sow'],
   at: number,
   piece: ModelTextPiece,
 ) => {
-  const phrases = piece.phrases ?? [];
-  const history = pickOf(next, ['none', 'phrases', 'ripe', 'whole'] as const);
+  const old = oldPiecesRule(piece.reference, piece.words);
+  const history = pickOf(next, ['none', 'pieces', 'ripe', 'joined', 'whole'] as const);
   if (history === 'none') return;
-  if (history === 'whole' || phrases.length === 0) {
+  if (history === 'pieces' && old.length > 0)
+    for (const each of old.slice(0, 1 + below(next, old.length)))
+      sow(each, at - (1 + below(next, 20)) * DAY, pickOf(next, [1, 3, 3] as const));
+  if ((history === 'ripe' || history === 'joined') && old.length > 0)
+    for (const each of old) for (const back of [30, 26, 21]) sow(each, at - back * DAY, 3);
+  if (history === 'whole' || history === 'joined' || old.length === 0)
     for (let n = 1 + below(next, 3); n > 0; n--)
       sow(piece.reference, at - n * 3 * DAY, pickOf(next, [1, 3, 3, 4] as const));
-    return;
-  }
-  if (history === 'phrases')
-    for (const phrase of phrases.slice(0, 1 + below(next, phrases.length)))
-      sow(phrase.reference, at - (1 + below(next, 20)) * DAY, pickOf(next, [1, 3, 3] as const));
-  if (history === 'ripe')
-    for (const phrase of phrases)
-      for (const back of [30, 26, 21]) sow(phrase.reference, at - back * DAY, 3);
 };
 
 /** An item of a plan as the home's rules read it. */
@@ -424,10 +421,11 @@ export interface ModelPlanItem {
 }
 
 /**
- * A plan case before any recital: one to four pieces of made-up text
- * (phrased or not), each with a history (none, some phrases, every phrase
- * ripe, the verse whole) sown before `at`, and the plan `planModel` makes
- * over them at `at` (phrases, joins, the new piece).
+ * A plan case before any recital: one to four verses of made-up text,
+ * whole, each with a history (none, some old pieces main kept of it, every
+ * old piece ripe, those and the verse, the verse alone) sown before `at`,
+ * and the plan `planModel` makes over them at `at` (reviews and the new
+ * piece, never an old piece).
  */
 export const plannedOf = (next: () => number) => {
   const at = Date.UTC(2026, below(next, 12), 1 + below(next, 28), below(next, 24));
@@ -443,7 +441,7 @@ export const plannedOf = (next: () => number) => {
     plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
   const plan = planModel({
     plants,
-    pieces: expandRule(pieces, plants),
+    pieces,
     at,
     offset: 0,
     minutes: pickOf(next, [2, 5, 10, 20] as const),

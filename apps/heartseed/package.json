@@ -169,7 +169,7 @@
     "test:home-motion-root": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/motion-root.test.tsx",
     "test:home-motion-drawn": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/motion-drawn.test.tsx",
     "test:plantset": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/plantset.test.tsx",
-    "test:phrase": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase.property.test.ts ./src/phrase/census.test.ts ./src/phrase/voice.test.ts",
+    "test:phrase": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase.property.test.ts",
     "test:phrase-walk-a": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase/walk-a.test.tsx",
     "test:phrase-walk-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase/walk-b.test.tsx ./src/phrase/walk-b2.test.tsx",
     "test:phrase-walk-c": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/phrase/walk-c.test.tsx",

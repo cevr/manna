@@ -1,7 +1,8 @@
 /* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals -- the generator draws its gardens in plain branches over undefined and tallies its kinds in a plain map, apart from the field's Option code, and compares two fields as JSON text. */
 
 /**
- * The field folds phrases into their verse (hsphrase H7), at the pure seam:
+ * The field folds the old pieces an earlier build kept into their verse
+ * (hsphrase H7, and hspiece's rule M with the owner's q87 (b)), at the pure seam:
  * `fieldOf` over generated gardens against `test/phrase-model.ts`'s
  * `fieldFoldRule`, written plainly over the records and ts-fsrs's stages.
  *
@@ -14,8 +15,8 @@
  * them: near misses of the reference form (`[0-3]`, `[3-1]`, no space),
  * which are rows of their own.
  *
- * It catches a phrase shown as a row or a plant, a verse in phrases shown
- * `not planted`, a removed verse's phrases dropped or ordered by its own
+ * It catches a phrase shown as a row or a plant, a verse in phrases alone
+ * shown at any stage but `not planted`, a removed verse's phrases dropped or ordered by its own
  * plant alone, days that skip a phrase's recalls, a harvest that counts a
  * phrase at full corn, and a near miss read as a phrase.
  */
@@ -135,13 +136,13 @@ const tallyField = (each: Case, want: ReturnType<typeof fieldFoldRule>, tally: T
   want.rows.forEach((row) => {
     for (const plant of row.plants) {
       const phrased = phrasesOf(plant.reference).length > 0;
-      if (plant.stage === 'seed' && !byReference.has(plant.reference) && phrased)
+      if (plant.stage === 'not planted' && phrased)
         bump(
           tally,
           held.has(plant.reference) ? 'field:verse-in-phrases' : 'field:other-verse-from-phrases',
         );
       if (byReference.has(plant.reference) && phrased) bump(tally, 'field:joined');
-      if (row.title === 'Protection & Fear' && plant.stage === 'seed' && phrased)
+      if (row.title === 'Protection & Fear' && plant.stage === 'not planted' && phrased)
         bump(tally, 'field:taught-in-phrases');
       if (plant.stage === 'full corn' && phrased) bump(tally, 'field:joined-full-corn');
     }
@@ -188,8 +189,8 @@ const seenOf = (field: {
     harvest: field.harvest,
   });
 
-describe('the field folds phrases into their verse', () => {
-  it('shows a verse in phrases as a seed, a removed verse’s phrases as its row, and counts phrase days but no phrase harvest, as H7 makes them, over generated gardens', () => {
+describe('the field folds old pieces into their verse', () => {
+  it('shows a verse in old pieces alone as not planted, a removed verse’s phrases as its row, and counts phrase days but no phrase harvest, as H7 makes them, over generated gardens', () => {
     const next = random(7_007);
     const tally: Tally = new Map();
     const wrong: string[] = [];
@@ -220,7 +221,7 @@ describe('the field folds phrases into their verse', () => {
     expect(short.map(([kind, floor]) => `${kind} ${tally.get(kind) ?? 0} < ${floor}`)).toEqual([]);
   });
 
-  it('folds a verse’s first phrase into a seed on its row, and a removed verse’s phrases into its own row', () => {
+  it('shows a verse whose only plant is an old piece not planted on its row, and a removed verse’s old pieces as its own row, their days still sown', () => {
     const recall = (reference: string, startedAt: number): Recall => ({
       reference,
       startedAt,
@@ -250,8 +251,8 @@ describe('the field folds phrases into their verse', () => {
       JSON.stringify({
         rows: [
           [PROMISE, [[PROMISE, 'seed']]],
-          ['John 3:16', [['John 3:16', 'seed']]],
-          ['John 15:2', [['John 15:2', 'seed']]],
+          ['John 3:16', [['John 3:16', 'not planted']]],
+          ['John 15:2', [['John 15:2', 'not planted']]],
         ],
         sown: 3,
         harvest: 0,

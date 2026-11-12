@@ -6,13 +6,14 @@
  * model's stage rule over ts-fsrs over the first k recalls in time order.
  *
  * Each case is a plan `planModel` makes over pieces with histories
- * (phrases, joins, the new piece), then a run over it: each item left, its
- * recital refused (nothing kept), or kept at any grade, Again included,
- * helped by a peek or not.
+ * (whole verses, old pieces stored beside some, the new piece), then a run
+ * over it: each item left, its recital refused (nothing kept), or kept at
+ * any grade, Again included, helped by a peek or not; no plan holds an old
+ * piece.
  *
  * It catches Again or an equal stage counted as growth, a verse planted
- * from nothing left out, a verse listed twice for two of its phrases, a
- * phrase's own stage shown for its verse, and an item not done counted.
+ * from nothing left out, an old piece's stage shown for its verse, and an
+ * item not done counted.
  *
  * The end of a run (`tendedOf`, H9) is held against `test/run-model.ts`'s
  * `tendedModel` over session views: a plan case with a visit of none, one
@@ -58,7 +59,6 @@ const gardenOf = (records: readonly Recall[]): ReadGarden => {
 const runOf = (next: () => number, tally: Tally) => {
   const { at, records, items } = plannedOf(next);
   const after = [...records];
-  const done: string[] = [];
   items.forEach((item, index) => {
     const what = pickOf(next, ['left', 'refused', 'kept', 'kept', 'kept'] as const);
     if (what === 'left') return;
@@ -69,13 +69,11 @@ const runOf = (next: () => number, tally: Tally) => {
     const grade = pickOf(next, [1, 1, 2, 3, 3, 4] as const);
     const peeked = pickOf(next, [0, 0, 0, 1] as const);
     after.push(recallOf(item.reference, at + (index + 1) * MINUTE, grade, peeked));
-    done.push(verseOfRule(item.reference));
     if (grade === 1 && item.recalls > 0) bump(tally, 'Again drop');
     if (item.recalls === 0) bump(tally, 'planted from nothing');
     if (item.fresh) bump(tally, 'done new piece');
-    if (verseOfRule(item.reference) !== item.reference) bump(tally, 'done phrase');
+    if (verseOfRule(item.reference) !== item.reference) bump(tally, 'planned old piece');
   });
-  if (new Set(done).size < done.length) bump(tally, 'a verse done twice');
   return { items, records: after };
 };
 
@@ -95,13 +93,12 @@ describe('what grew', () => {
         bump(tally, 'some did not grow');
     }
     expect(wrong).toEqual([]);
+    expect(tally.get('planned old piece') ?? 0).toBe(0);
     for (const [kind, floor] of [
       ['Again drop', 20],
       ['planted from nothing', 10],
       ['done new piece', 20],
-      ['done phrase', 20],
       ['refused', 20],
-      ['a verse done twice', 10],
       ['some grew', 30],
       ['some did not grow', 30],
     ] as const)
@@ -270,9 +267,6 @@ const endFaults = (
   if (names.some((name) => !planVerses.has(name))) bump(tally, 'grown in the visit alone');
   if (one.visit.some((item) => planVerses.has(item.reference)))
     bump(tally, 'a verse in visit and plan');
-  const folded = one.run.filter((item) => verseOfRule(item.reference) !== item.reference);
-  if (folded.some((item) => names.includes(verseOfRule(item.reference))))
-    bump(tally, 'a phrase folded');
   return wrong;
 };
 
@@ -296,7 +290,6 @@ describe('the end of a run', () => {
       ['end: 2', 10],
       ['grown in the visit alone', 5],
       ['a verse in visit and plan', 5],
-      ['a phrase folded', 5],
     ] as const)
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);
   });

@@ -12,10 +12,10 @@
  *   against `furrowsModel` over the phrase model's fold of the field;
  * - `kindOf` and `iconOf` over the four sources and a passage of each of
  *   the 66 books;
- * - `readyOf` over plans `planModel` makes (phrases, joins, the new piece,
- *   each item done or not) and over arbitrary items (a done new piece, a
- *   phrase beside its verse, a reference the garden lacks), against
- *   `readyModel`;
+ * - `readyOf` over plans `planModel` makes (whole verses, old pieces
+ *   stored beside some, the new piece, each item done or not; none plans
+ *   an old piece) and over arbitrary items (a done new piece, an old piece
+ *   beside its verse, a reference the garden lacks), against `readyModel`;
  * - `greetingAt` at every minute of a generated day in each of the 15
  *   zones and across each daylight-saving change of New York, Berlin,
  *   Sydney and Lord Howe, against the wall clock `Intl` reads in that zone;
@@ -260,11 +260,7 @@ const planCaseOf = (next: () => number, tally: Tally) => {
     if (item.fresh) bump(tally, 'done new piece');
   });
   for (const item of items)
-    if (
-      verseOfRule(item.reference) !== item.reference &&
-      after.filter((r) => r.reference === item.reference).length <= item.recalls
-    )
-      bump(tally, 'open phrase item');
+    if (verseOfRule(item.reference) !== item.reference) bump(tally, 'planned old piece');
   return { items, records: after };
 };
 
@@ -311,8 +307,8 @@ describe('ready', () => {
       if (readyOf(Option.none(), garden).size > 0) wrong.push(`run ${run}: ready with no plan`);
     }
     expect(wrong).toEqual([]);
+    expect(tally.get('planned old piece') ?? 0).toBe(0);
     for (const [kind, floor] of [
-      ['open phrase item', 20],
       ['done new piece', 20],
       ['phrase beside its verse', 20],
       ['not in the garden', 20],

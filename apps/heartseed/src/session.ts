@@ -8,10 +8,12 @@
  * - A plant is due at FSRS's due, except a verse planted in the evening
  *   (18:00 to 03:59:59.999 by its one recall's own offset), which is due no
  *   earlier than the 04:00 that ends the day it was planted in.
- * - The pieces are expanded first: a long verse unplanted is its phrases,
- *   then itself (the join) once each phrase is at an ear or better.
+ * - Every piece is a whole verse, planned under its own reference alone. A
+ *   plant kept under another reference (a piece of a verse an earlier build
+ *   kept under a word range, `src/phrase.ts`) is never planned, reviewed or
+ *   offered; its verse is offered new while it has no plant of its own.
  * - The new piece is the first piece with no plant, offered unless a plant
- *   (a phrase's included) was first recalled today (one new piece a day).
+ *   (any reference's) was first recalled today (one new piece a day).
  * - A recital is estimated at 10 s and half a second a word. The new piece's
  *   time is reserved, then the due reviews are taken, the earliest due first,
  *   while they fit the minutes; the first is always taken.
@@ -21,26 +23,23 @@
 import { Array as Arr, Option, Order } from 'effect';
 
 import { dayOf } from './day';
-import { stageOf, type Plant, type ReadGarden } from './garden';
+import type { Plant, ReadGarden } from './garden';
 
 /** The lengths a reader can choose for a session, in minutes. */
 export const MINUTES = [2, 5, 10, 20] as const;
 
 export type Minutes = (typeof MINUTES)[number];
 
-/** A verse the app holds text for: its reference, its word count, and the passage or promise collection it belongs to. */
+/** A verse the app holds text for, whole: its reference, its word count, and the passage or promise collection it belongs to. */
 export interface Piece {
   readonly reference: string;
   readonly words: number;
   readonly group: string;
-  /** A long verse's phrases (`src/phrase.ts`), in order, each a piece of the verse's group with none of its own; absent on a verse learned whole. */
-  readonly phrases?: readonly Piece[];
 }
 
 /** A piece with its text, which Today shows and a recital of it is said against. */
 export interface TextPiece extends Piece {
   readonly text: string;
-  readonly phrases?: readonly TextPiece[];
 }
 
 /** One verse of a session: a review, or the new piece (`fresh`), with the recalls its plant held when the plan was made and its estimate in seconds. */
@@ -136,43 +135,13 @@ const mixed = (taken: readonly Due[]) => {
   return placed;
 };
 
-/** The piece of `reference` among `pieces`, else among their phrases: a phrase item's piece is its phrase, never its verse. */
+/** The piece of `reference` among `pieces`. */
 export const pieceAt = (
   pieces: readonly TextPiece[],
   reference: string,
-): Option.Option<TextPiece> =>
-  Option.orElse(
-    Arr.findFirst(pieces, (piece) => piece.reference === reference),
-    () =>
-      Arr.findFirst(
-        pieces.flatMap((piece) => piece.phrases ?? []),
-        (phrase) => phrase.reference === reference,
-      ),
-  );
+): Option.Option<TextPiece> => Arr.findFirst(pieces, (piece) => piece.reference === reference);
 
-/** Whether the plant at `reference` is at an ear or full corn: a phrase ripe for its join. */
-const isRipe = (garden: ReadGarden, reference: string) =>
-  Option.exists(Option.fromNullishOr(garden.plants.get(reference)), (plant) => {
-    const stage = stageOf(plant);
-    return stage === 'ear' || stage === 'full corn';
-  });
-
-/**
- * The pieces a plan is made over, in the app's order: a planted piece, or
- * one with no phrases, is itself; a verse in phrases is its phrases, then
- * the verse (its join) once every phrase is at an ear or full corn. A
- * verse's phrases leave once it is planted, so they are never reviewed or
- * offered again; their records stay.
- */
-const expanded = (pieces: readonly Piece[], garden: ReadGarden): readonly Piece[] =>
-  pieces.flatMap((piece) => {
-    const phrases = piece.phrases ?? [];
-    if (garden.plants.has(piece.reference) || !Arr.isReadonlyArrayNonEmpty(phrases)) return [piece];
-    if (phrases.every((phrase) => isRipe(garden, phrase.reference))) return [...phrases, piece];
-    return phrases;
-  });
-
-/** The session for `garden` at the instant `at`, the device `offset` minutes east of UTC, in `minutes`, over `pieces` expanded into their phrases and joins. */
+/** The session for `garden` at the instant `at`, the device `offset` minutes east of UTC, in `minutes`, over `pieces`, each reference once. */
 export const planOf = (input: {
   readonly garden: ReadGarden;
   readonly pieces: readonly Piece[];
@@ -181,10 +150,7 @@ export const planOf = (input: {
   readonly minutes: Minutes;
 }): Plan => {
   const { garden, at } = input;
-  const pieces = expanded(
-    Arr.dedupeWith(input.pieces, (a, b) => a.reference === b.reference),
-    garden,
-  );
+  const pieces = Arr.dedupeWith(input.pieces, (a, b) => a.reference === b.reference);
   const today = dayOf({ startedAt: at, offset: input.offset });
   const plantedToday = Arr.some(
     [...garden.plants.values()],

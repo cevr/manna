@@ -1,407 +1,497 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the generator draws its gardens in plain branches over undefined and tallies its kinds in plain maps, apart from the plan's and the cue's Option code. */
+/* oxlint-disable effect/noGlobals, effect/noTernary, effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop -- the walk plays each generated device's steps one after another through promise-run calls, over a disk in a plain map, switches the host's zone through `process.env.TZ` and puts it back, writes expected values as plain branches, and compares values as JSON text. */
 
 /**
- * Phrases first, then the join, then the verse alone (hsphrase H4-H6, H9's
- * known), at the pure seam: `planOf` and `cueIn` over generated gardens,
- * against `test/phrase-model.ts`'s expansion and join cue with
- * `test/session-model.ts`'s plan.
+ * The migration, rule M (hspiece), at the session seam: generated stores
+ * written as main wrote them, recalls under verses and under the pieces of
+ * verses main cut (`<verse> [<first>-<last>]`), at any stage and date,
+ * some joined (the verse planted beside its pieces), some a piece first
+ * recalled today, some a piece of a verse no list holds; then generated
+ * launches, Minutes taps, taps on a verse (`Session.start`), recitals of
+ * what Today shows and days passing, on this build, in five zones.
  *
- * Each case is the app's own long verse (never phrased) and one to four
- * verses of made-up text (three in four long, cut by the model's H1), one
- * sometimes twice under another group, each with one history: none,
- * some phrases, a gap among them, every phrase ripe (each at an ear or
- * full corn, some with a fresh Again on one), joined (its phrases' records kept), whole, or a stale
- * `[1-3]`; with a stray phrase of a verse in no piece, phrases first
- * recalled today or one evening, in fifteen zones, at every minutes
- * choice.
- *
- * It catches a join offered before every phrase is at an ear (or at a
- * blade) or held back until every phrase is at full corn, kept once a
- * phrase falls back, or offered with its phrases;
- * phrases kept after the join, offered out of order or more than one a day;
- * a phrase planted today that does not hold back the day's new piece; a
- * join cued with the full text or nothing, or a planted verse cued as a
- * join; and a verse counted known by its phrases.
+ * After every step: every record of the first disk is still stored, byte
+ * for byte; every new record is under a verse's own reference; no plan
+ * item, visit verse or its piece, hold, held piece or shown item names a
+ * piece; a fresh item is cued with the full text; at each making the plan
+ * equals `planModel` over whole verses (so no old piece is planned, and a
+ * piece first recalled today still spends the day's one new piece); each
+ * verse's field stage is its own plant's, else `not planted` whatever
+ * pieces of it are stored (the owner's q87 (b), by `fieldFoldRule`); and
+ * days sown never fall.
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Clock, Context, Effect, Exit, Layer, Logger, Option, Scope } from 'effect';
+import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
-import { cueIn, plantOf, type ReadGarden } from '../garden';
-import type { Recall } from '../sayit';
-import { MINUTES, planOf, type Minutes } from '../session';
-import { below, pickOf, random, referenceStage } from '../test/garden-model';
-import type { ModelTextPiece } from '../test/passages-model';
-import {
-  expandRule,
-  joinCueRule,
-  phraseOfRule,
-  verseOfRule,
-  withPhrasesRule,
-} from '../test/phrase-model';
-import { DAY, dueModel, HOUR, localDay, MINUTE, planModel } from '../test/session-model';
-import { offsetIn, ZONES } from '../test/zone';
+import { readPassage } from '../../vite/passage';
+import { Dictation } from '../dictation';
+import { initial } from '../dictation/attempt';
+import { fieldOf } from '../field';
+import { Chime, cueIn, Garden, layer as gardenLayer, type ReadGarden } from '../garden';
+import { sourceWords } from '../matcher/words';
+import { layer as passagesLayer, type Passages } from '../passages';
+import { COLLECTIONS } from '../promises';
+import { collectionsOf } from '../promises/taught';
+import { Recalls, type Grade, type Recall } from '../sayit';
+import { MINUTES, type Minutes } from '../session';
+import { below, keyOf, pickOf, PREFIX, random } from '../test/garden-model';
+import { KEY, type Held, type ModelTextPiece, type Span, storedText } from '../test/passages-model';
+import { CORPUS } from '../test/passages-rig';
+import { fieldFoldRule, oldPiecesRule, phraseOfRule, verseOfRule } from '../test/phrase-model';
+import { fieldPassagesModel, piecesModel, promiseVerses } from '../test/promise-model';
+import { DAY, HOUR, localDay, MINUTE, planModel } from '../test/session-model';
+import { hostZone, offsetIn, restore, travel } from '../test/zone';
+import { shownOf } from './run';
+import { layer as sessionLayer, Session, type SessionView } from './service';
 
-const CASES = 900;
+const DEVICES = 28;
+const STEPS = 18;
+const TAUGHT_IDS = ['protection'];
+const ZONES = ['UTC', 'America/Los_Angeles', 'Asia/Kathmandu', 'Pacific/Chatham', 'Europe/Berlin'];
 
-type Tally = Map<string, number>;
-
-const bump = (tally: Tally, kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
-
-const GROUPS = ['Psalms 91:1-4', 'John 3:16-18', 'Protection & Fear'] as const;
-
-const HISTORIES = ['none', 'phrases', 'gap', 'ripe', 'joined', 'whole', 'stale'] as const;
-
-type History = (typeof HISTORIES)[number];
-
-/** A made-up verse text of `count` words, a comma, a strong stop or nothing after each. */
-const textOf = (next: () => number, count: number) => {
-  const words: string[] = [];
-  for (let n = 1; n <= count; n++) {
-    const roll = below(next, 20);
-    const mark = roll < 4 ? ',' : roll < 6 ? '.' : roll === 6 ? ';' : '';
-    words.push(`w${n}${mark}`);
-  }
-  return words.join(' ');
+const PROMISE_TEXT = readPassage();
+const words = (text: string) => sourceWords(text).length;
+const PROMISE: ModelTextPiece = {
+  reference: PROMISE_TEXT.reference,
+  text: PROMISE_TEXT.text,
+  words: words(PROMISE_TEXT.text),
+  group: PROMISE_TEXT.reference,
 };
+const OWN = [PROMISE];
 
-const pieceOf = (reference: string, text: string, group: string): ModelTextPiece =>
-  withPhrasesRule({ reference, text, words: text.split(' ').length, group });
+/** A verse no list holds, and its words, for a loose old piece. */
+const LOOSE = { reference: 'Psalms 23:4', words: 20 };
 
-/** The app's own verse: long, yet never phrased (H3). */
-const OWN: ModelTextPiece = {
-  reference: 'Isaiah 41:10',
-  text: 'o '.repeat(25).trim(),
-  words: 25,
-  group: 'Isaiah 41:10',
-};
+/** Passages a device may hold: over Fear's verses, or another chapter. */
+const OVER: readonly [Span, ...Span[]] = [
+  { book: 19, chapter: 91, first: 1, last: 4 },
+  { book: 23, chapter: 43, first: 1, last: 3 },
+];
 
-interface Case {
-  readonly zone: string;
-  readonly at: number;
-  readonly minutes: Minutes;
-  readonly pieces: readonly ModelTextPiece[];
-  readonly histories: ReadonlyMap<string, History>;
-  readonly plants: Map<string, Recall[]>;
+const FEAR_PIECES = piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words);
+const FEAR = (COLLECTIONS.find((each) => each.id === 'protection')?.promises ?? []).flatMap(
+  promiseVerses,
+);
+
+const json = <A>(value: A) => JSON.stringify(value);
+
+const HISTORIES = ['none', 'pieces', 'joined', 'whole', 'piece today'] as const;
+
+interface Device {
+  readonly disk: Map<string, string>;
+  now: number;
 }
 
-/** The ways a case's recalls are sown on `plants`, in `zone`, before `at`. */
-const sowerOf = (next: () => number, zone: string, at: number, plants: Map<string, Recall[]>) => {
-  const sow = (reference: string, startedAt: number, grade: Recall['grade'], peeked = 0) => {
-    const recall: Recall = {
-      reference,
-      startedAt,
-      offset: offsetIn(zone, startedAt),
-      grade,
-      suggested: 3,
-      words: 9,
-      missed: 0,
-      peeked,
-      extra: 0,
-    };
-    plants.set(reference, [...(plants.get(reference) ?? []), recall]);
-  };
-  /** One to three recalls, the first `back` days before `at`, a few days apart. */
-  const recalls = (reference: string, back: number) => {
-    let when = at - back * DAY - below(next, 12) * HOUR;
-    for (let n = 1 + below(next, 3); n > 0 && when < at; n--) {
-      sow(reference, when, pickOf(next, [1, 3, 3, 3, 4] as const), below(next, 3) === 0 ? 1 : 0);
-      when += (1 + below(next, 5)) * DAY;
-    }
-  };
-  /** Three clean recalls days apart: a seed, a blade under first letters, then an ear (one or two days apart) or full corn (four, then five); the first two alone for a `blade`. */
-  const ripe = (reference: string, blade = false) => {
-    const back = 12 + below(next, 90);
-    const [first, second] =
-      below(next, 3) === 0 ? [1 + below(next, 2), 1 + below(next, 2)] : [4, 5];
-    const days = blade ? [back, back - first] : [back, back - first, back - first - second];
-    for (const day of days) sow(reference, at - day * DAY, 3);
-  };
-  /** One recall today, or one last evening (held to the morning). */
-  const recent = (reference: string) => {
-    if (below(next, 2) === 0) sow(reference, at - below(next, 3) * HOUR - MINUTE, 3);
-    else sow(reference, at - (8 + below(next, 6)) * HOUR, 3);
-  };
-  return { sow, recalls, ripe, recent };
-};
+const storeOf = (device: Device) =>
+  KeyValueStore.makeStringOnly({
+    get: (key) => Effect.sync(() => device.disk.get(key)),
+    set: (key, value) => Effect.sync(() => void device.disk.set(key, value)),
+    remove: (key) => Effect.sync(() => void device.disk.delete(key)),
+    clear: Effect.sync(() => device.disk.clear()),
+    size: Effect.sync(() => device.disk.size),
+    keys: Effect.sync(() => [...device.disk.keys()]),
+  });
 
-type Sower = ReturnType<typeof sowerOf>;
+const nanos = (millis: number) => BigInt(millis) * 1_000_000n;
 
-/** Sows `piece`'s history: some of its phrases (the first left out for a gap, the last today or last evening in a third), all ripe (one fallen back in a third), joined, whole, or a stale phrase. */
-const sowHistory = (
-  next: () => number,
-  sower: Sower,
-  at: number,
-  piece: ModelTextPiece,
-  history: History,
-  tally: Tally,
-) => {
-  const phrases = piece.phrases ?? [];
-  if (history === 'whole') sower.recalls(piece.reference, 1 + below(next, 40));
-  if (history === 'stale')
-    sower.sow(`${piece.reference} [1-3]`, at - (1 + below(next, 20)) * DAY, 3);
-  if (history === 'phrases' || history === 'gap') {
-    const upTo = 1 + below(next, Math.max(1, phrases.length - 1));
-    phrases.slice(0, upTo).forEach((phrase, index) => {
-      if (history === 'gap' && index === 0 && upTo > 1) return;
-      if (index === upTo - 1 && below(next, 3) === 0) sower.recent(phrase.reference);
-      else sower.recalls(phrase.reference, 1 + below(next, 30));
-    });
-  }
-  if (history !== 'ripe' && history !== 'joined') return;
-  const blade = history === 'ripe' && below(next, 4) === 0 ? below(next, phrases.length) : -1;
-  if (blade >= 0) bump(tally, 'gen:ripe-but-one-blade');
-  phrases.forEach((phrase, index) => sower.ripe(phrase.reference, index === blade));
-  if (history === 'joined') sower.recalls(piece.reference, 1 + below(next, 10));
-  else if (below(next, 3) === 0) {
-    const fallen = pickOf(next, phrases as [ModelTextPiece, ...ModelTextPiece[]]);
-    sower.sow(fallen.reference, at - (1 + below(next, 20)) * HOUR, 1);
-    bump(tally, 'gen:ripe-then-again');
-  }
-};
-
-/** A verse of made-up text, three in four long. */
-const verseOf = (next: () => number, k: number) => {
-  const words = below(next, 4) > 0 ? 13 + below(next, 40) : 1 + below(next, 12);
-  return pieceOf(
-    `Psalms ${k}:${1 + below(next, 9)}`,
-    textOf(next, words),
-    pickOf(next, [...GROUPS]),
-  );
-};
-
-const caseOf = (next: () => number, tally: Tally): Case => {
-  const zone = pickOf(next, [...ZONES]);
-  const at = Date.UTC(2026, below(next, 12), 1 + below(next, 28), below(next, 24), below(next, 60));
-  const minutes = pickOf(next, [...MINUTES]);
-  const plants = new Map<string, Recall[]>();
-  const sower = sowerOf(next, zone, at, plants);
-  sower.sow(OWN.reference, at - (1 + below(next, 30)) * DAY, 3);
-  const pieces: ModelTextPiece[] = [OWN];
-  const histories = new Map<string, History>();
-  const count = 1 + below(next, 4);
-  for (let k = 1; k <= count; k++) {
-    const piece = verseOf(next, k);
-    pieces.push(piece);
-    const history: History =
-      (piece.phrases ?? []).length === 0
-        ? pickOf(next, ['none', 'whole', 'stale'] as const)
-        : pickOf(next, [...HISTORIES]);
-    histories.set(piece.reference, history);
-    bump(tally, `gen:${history}`);
-    sowHistory(next, sower, at, piece, history, tally);
-  }
-  if (pieces.length > 2 && below(next, 6) === 0) {
-    const again = pieces[1] as ModelTextPiece;
-    pieces.push({ ...again, group: 'again' });
-    bump(tally, 'gen:a piece twice');
-  }
-  if (below(next, 3) === 0) sower.sow('Psalms 150:6 [1-4]', at - (2 + below(next, 20)) * DAY, 3);
-  return { zone, at, minutes, pieces, histories, plants };
-};
-
-const gardenOf = (plants: ReadonlyMap<string, readonly Recall[]>): ReadGarden => ({
-  _tag: 'Read',
-  plants: new Map(
-    [...plants].map(([reference, recalls]) => [
-      reference,
-      plantOf(recalls.toSorted((a, b) => a.startedAt - b.startedAt) as [Recall, ...Recall[]]),
-    ]),
-  ),
+const clockOf = (device: Device): Clock.Clock => ({
+  currentTimeMillisUnsafe: () => device.now,
+  currentTimeMillis: Effect.sync(() => device.now),
+  currentTimeNanosUnsafe: () => nanos(device.now),
+  currentTimeNanos: Effect.sync(() => nanos(device.now)),
+  monotonicTimeNanosUnsafe: () => nanos(device.now),
+  monotonicTimeNanos: Effect.sync(() => nanos(device.now)),
+  sleep: () => Effect.void,
 });
 
-const isRipe = (recalls: readonly Recall[] | undefined) =>
-  recalls !== undefined &&
-  (referenceStage(recalls) === 'ear' || referenceStage(recalls) === 'full corn');
+/** The session teaching Fear, the passages and the garden over the device, as `appLayer` builds them. */
+const layerOf = (device: Device) =>
+  sessionLayer(OWN, collectionsOf(TAUGHT_IDS)).pipe(
+    Layer.provideMerge(passagesLayer),
+    Layer.provideMerge(
+      gardenLayer.pipe(Layer.provide(Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })))),
+    ),
+    Layer.provide(Layer.mock(Dictation)({ view: Effect.succeed(initial.view) })),
+    Layer.provide(Layer.succeed(KeyValueStore.KeyValueStore, storeOf(device))),
+    Layer.provideMerge(Layer.merge(Layer.succeed(Clock.Clock, clockOf(device)), Logger.layer([]))),
+  );
 
-/** The kinds a verse in phrases reaches in a case's plan: its join new, its join reviewed, its phrases due after the join. */
-const tallyJoin = (
-  each: Case,
-  items: ReturnType<typeof planModel>,
-  piece: ModelTextPiece,
-  tally: Tally,
-) => {
-  const phrases = piece.phrases ?? [];
-  if (phrases.length === 0) return;
-  const fresh = items.items.find((item) => item.fresh);
-  if (fresh?.reference === piece.reference) {
-    bump(tally, 'plan:join');
-    const stages = phrases.map((phrase) => referenceStage(each.plants.get(phrase.reference) ?? []));
-    if (stages.includes('ear')) bump(tally, 'plan:join-with-a-phrase-at-ear');
-    if (stages.every((stage) => stage === 'full corn')) bump(tally, 'plan:join-at-full-corn');
-  }
-  if (items.items.some((item) => !item.fresh && item.reference === piece.reference))
-    bump(tally, 'plan:joined-review');
-  const due = phrases.some((phrase) => {
-    const recalls = each.plants.get(phrase.reference);
-    return recalls !== undefined && dueModel(recalls) <= each.at;
-  });
-  if (each.plants.has(piece.reference) && due) bump(tally, 'plan:phrases-left');
+const recallOf = (next: () => number, reference: string, startedAt: number, zone: string) =>
+  ({
+    reference,
+    startedAt,
+    offset: offsetIn(zone, startedAt),
+    grade: pickOf<Grade>(next, [1, 3, 3, 4, 4]),
+    suggested: pickOf<Recall['suggested']>(next, [1, 2, 3]),
+    words: 1 + below(next, 40),
+    missed: below(next, 3),
+    peeked: below(next, 2),
+    extra: 0,
+  }) satisfies Recall;
+
+const recordsOf = (disk: ReadonlyMap<string, string>): Recall[] =>
+  [...disk]
+    .filter(([key]) => key.startsWith(PREFIX))
+    .map(([, value]) => JSON.parse(value) as Recall);
+
+const plantsOf = (disk: ReadonlyMap<string, string>) => {
+  const plants = new Map<string, Recall[]>();
+  for (const recall of recordsOf(disk))
+    plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
+  return plants;
 };
 
-/** The kinds a case's plan reaches, by the model. */
-const tallyPlan = (each: Case, items: ReturnType<typeof planModel>, tally: Tally) => {
-  const { plants, at } = each;
-  const offset = offsetIn(each.zone, at);
-  const today = localDay(at, offset);
-  const fresh = items.items.find((item) => item.fresh);
-  const phraseNames = new Set(
-    each.pieces.flatMap((piece) => (piece.phrases ?? []).map((phrase) => phrase.reference)),
-  );
-  if (fresh !== undefined && phraseNames.has(fresh.reference)) bump(tally, 'plan:phrase-new');
-  if (items.items.some((item) => !item.fresh && phraseNames.has(item.reference)))
-    bump(tally, 'plan:phrase-review');
-  const ripening = each.pieces.some(
-    (piece) =>
-      !plants.has(piece.reference) &&
-      (piece.phrases ?? []).length > 0 &&
-      (piece.phrases ?? []).every((phrase) => plants.has(phrase.reference)) &&
-      !(piece.phrases ?? []).every((phrase) => isRipe(plants.get(phrase.reference))),
-  );
-  if (ripening) bump(tally, 'plan:join-waits');
-  for (const piece of each.pieces) tallyJoin(each, items, piece, tally);
-  if (fresh !== undefined && phraseNames.has(fresh.reference) && ripening)
-    bump(tally, 'plan:next-phrase-while-one-ripens');
-  for (const [reference, recalls] of plants) {
-    if (phraseOfRule(reference) === undefined) continue;
-    const first = recalls.toSorted((a, b) => a.startedAt - b.startedAt)[0] as Recall;
-    if (localDay(first.startedAt, first.offset) === today && items.fresh === 'planted today')
-      bump(tally, 'plan:phrase-planted-today');
-  }
-};
-
-/** The kinds a reference's cue reaches, by the model: a join under first letters (with a phrase at an ear, or over a stale phrase only), a joined verse's own cue. */
-const tallyCue = (
-  each: Case,
+/** Plants `reference` with one to four recalls, the first `back` days before `now`, a few days apart. */
+const plant = (
+  next: () => number,
+  disk: Map<string, string>,
   reference: string,
-  wanted: ReturnType<typeof joinCueRule>,
-  tally: Tally,
+  at: { readonly now: number; readonly back: number; readonly zone: string },
 ) => {
-  const phrased = [...each.plants].filter(
-    ([key]) => key !== reference && verseOfRule(key) === reference,
-  );
-  if (!each.plants.has(reference) && wanted === 'initials') {
-    bump(tally, 'cue:join-letters');
-    if (phrased.some(([, recalls]) => referenceStage(recalls) === 'ear'))
-      bump(tally, 'cue:join-letters-at-ear');
-    if (phrased.every(([key]) => key.endsWith('[1-3]'))) bump(tally, 'cue:stale-letters');
+  const count = 1 + below(next, 4);
+  for (let n = 0; n < count; n++) {
+    const recall = recallOf(
+      next,
+      reference,
+      at.now - at.back * DAY + n * Math.floor((at.back * DAY) / (count + 1)),
+      at.zone,
+    );
+    disk.set(keyOf(recall), json(recall));
   }
-  if (each.plants.has(reference) && phrased.length > 0) bump(tally, `cue:joined-${wanted}`);
 };
 
-describe('phrases first, then the join, then the verse alone', () => {
-  it('plans over the pieces expanded into phrases and joins, and cues a join under first letters, as H4-H6 make them, over generated gardens', () => {
-    const next = random(4_242);
-    const tally: Tally = new Map();
-    const wrong: string[] = [];
-    for (let n = 0; n < CASES && wrong.length < 3; n++) {
-      const each = caseOf(next, tally);
-      const garden = gardenOf(each.plants);
-      const offset = offsetIn(each.zone, each.at);
-      const got = planOf({
-        garden,
-        pieces: each.pieces,
-        at: each.at,
-        offset,
-        minutes: each.minutes,
-      });
-      const want = planModel({
-        plants: each.plants,
-        pieces: expandRule(each.pieces, each.plants),
-        at: each.at,
-        offset,
-        minutes: each.minutes,
-      });
-      const items = (
-        list: readonly { reference: string; fresh: boolean; recalls: number; seconds: number }[],
-      ) =>
-        JSON.stringify(
-          list.map(({ reference, fresh, recalls, seconds }) => [
-            reference,
-            fresh,
-            recalls,
-            seconds,
-          ]),
-        );
-      if (items(got.items) !== items(want.items))
-        wrong.push(`case ${n} plan ${items(got.items)} where H4 has ${items(want.items)}`);
-      tallyPlan(each, want, tally);
-      const named = new Set([
-        ...each.pieces.flatMap((piece) => [
-          piece.reference,
-          ...(piece.phrases ?? []).map((phrase) => phrase.reference),
-        ]),
-        ...each.plants.keys(),
-        'Psalms 150:6',
-      ]);
-      for (const reference of named) {
-        const cue = cueIn(garden, reference);
-        const wanted = joinCueRule(each.plants, reference);
-        if (cue !== wanted)
-          wrong.push(`case ${n} cue of ${reference}: ${cue} where H6 has ${wanted}`);
-        tallyCue(each, reference, wanted, tally);
-      }
-    }
-    expect(wrong).toEqual([]);
-    const floors: readonly (readonly [string, number])[] = [
-      ['plan:phrase-new', 150],
-      ['plan:phrase-review', 150],
-      ['plan:join', 30],
-      ['plan:join-with-a-phrase-at-ear', 25],
-      ['plan:join-at-full-corn', 10],
-      ['plan:joined-review', 30],
-      ['plan:join-waits', 30],
-      ['plan:phrases-left', 50],
-      ['plan:phrase-planted-today', 10],
-      ['plan:next-phrase-while-one-ripens', 10],
-      ['gen:ripe-then-again', 20],
-      ['gen:ripe-but-one-blade', 20],
-      ['gen:a piece twice', 20],
-      ['cue:join-letters', 100],
-      ['cue:join-letters-at-ear', 90],
-      ['cue:stale-letters', 10],
-      ['cue:joined-initials', 10],
-      ['cue:joined-none', 10],
-    ];
-    console.log(`coverage ${floors.map(([kind]) => `${kind}=${tally.get(kind) ?? 0}`).join(' ')}`);
-    expect(floors.filter(([kind, floor]) => (tally.get(kind) ?? 0) < floor)).toEqual([]);
-  });
+/** Main's records of one Fear verse, by `history`: none, the verse whole, some of its old pieces, both, or its first piece today. */
+const plantHistory = (
+  next: () => number,
+  disk: Map<string, string>,
+  piece: { readonly reference: string; readonly words: number },
+  history: string,
+  at: { readonly now: number; readonly zone: string },
+) => {
+  const { now, zone } = at;
+  const old = oldPiecesRule(piece.reference, piece.words);
+  const some = old.slice(0, 1 + below(next, old.length));
+  if (history === 'whole' || history === 'joined')
+    plant(next, disk, piece.reference, { now, back: 1 + below(next, 20), zone });
+  if (history === 'pieces' || history === 'joined')
+    for (const reference of some)
+      plant(next, disk, reference, { now, back: 21 + below(next, 40), zone });
+  if (history !== 'piece today') return;
+  const recall = recallOf(next, old[0] ?? piece.reference, now - below(next, 3) * HOUR, zone);
+  if (localDay(recall.startedAt, recall.offset) === localDay(now, offsetIn(zone, now)))
+    disk.set(keyOf(recall), json(recall));
+};
 
-  it('offers the join once every phrase is at an ear, takes it back when one falls to a seed, and drops the phrases once the verse is planted', () => {
-    const at = Date.UTC(2026, 5, 10, 15);
-    const verse = pieceOf('Psalms 4:8', textOf(random(7), 20), 'Psalms 4:8');
-    const phrases = verse.phrases ?? [];
-    const plants = new Map<string, Recall[]>();
-    const sow = (reference: string, days: number, grade: Recall['grade']) =>
-      plants.set(reference, [
-        ...(plants.get(reference) ?? []),
-        {
-          reference,
-          startedAt: at - days * DAY,
-          offset: 0,
-          grade,
-          suggested: 3,
-          words: 9,
-          missed: 0,
-          peeked: 0,
-          extra: 0,
-        },
-      ]);
-    const plan = () =>
-      planOf({ garden: gardenOf(plants), pieces: [verse], at, offset: 0, minutes: 20 }).items.map(
-        (item) => `${item.reference}${item.fresh ? ' new' : ''}`,
-      );
-    expect(phrases.length).toBeGreaterThan(1);
-    for (const phrase of phrases) for (const days of [30, 29, 28]) sow(phrase.reference, days, 3);
-    expect(phrases.map((phrase) => referenceStage(plants.get(phrase.reference) ?? []))).toEqual(
-      phrases.map(() => 'ear'),
+/** A device's first disk as main wrote it: each Fear verse with one history, sometimes a loose old piece, and the passages. */
+const diskOf = (next: () => number, now: number, zone: string, bump: (kind: string) => void) => {
+  const disk = new Map<string, string>();
+  plant(next, disk, PROMISE.reference, { now, back: 1 + below(next, 20), zone });
+  for (const piece of FEAR_PIECES) {
+    const old = oldPiecesRule(piece.reference, piece.words);
+    const history = old.length === 0 ? pickOf(next, ['none', 'whole']) : pickOf(next, HISTORIES);
+    bump(`gen:${history}`);
+    plantHistory(next, disk, piece, history, { now, zone });
+  }
+  if (below(next, 3) === 0) {
+    const [first] = oldPiecesRule(LOOSE.reference, LOOSE.words);
+    if (first !== undefined) plant(next, disk, first, { now, back: 3 + below(next, 30), zone });
+    bump('gen:loose');
+  }
+  const stored = below(next, 2) === 0 ? [pickOf(next, [...OVER])] : [];
+  disk.set(KEY, storedText(stored));
+  return { disk, stored };
+};
+
+const isPiece = (reference: string) => phraseOfRule(reference) !== undefined;
+
+/** Whether `verse` has an old piece stored. */
+const begunIn = (plants: ReadonlyMap<string, readonly Recall[]>, verse: string) =>
+  [...plants.keys()].some((key) => key !== verse && verseOfRule(key) === verse);
+
+/** One device's walk: the device, the live launch and the models beside it. */
+class Walk {
+  readonly failures: string[] = [];
+  readonly trail: string[] = [];
+  readonly first: ReadonlyMap<string, string>;
+  scope = Scope.makeUnsafe();
+  services!: Context.Context<Session | Passages | Recalls | Garden>;
+  minutes: Minutes = 5;
+  sown = 0;
+
+  constructor(
+    readonly seed: number,
+    readonly next: () => number,
+    readonly tally: Map<string, number>,
+    readonly zone: string,
+    readonly device: Device,
+    readonly held: Held,
+  ) {
+    this.first = new Map(device.disk);
+  }
+
+  bump(kind: string) {
+    this.tally.set(kind, (this.tally.get(kind) ?? 0) + 1);
+  }
+
+  fail(message: string) {
+    this.failures.push(
+      `seed ${this.seed}: ${message}\n  after: ${this.trail.slice(-6).join(' | ')}`,
     );
-    expect(plan().at(-1)).toBe(`${verse.reference} new`);
-    expect(cueIn(gardenOf(plants), verse.reference)).toBe('initials');
-    sow((phrases[0] as ModelTextPiece).reference, 2, 1);
-    expect(plan().filter((item) => item === `${verse.reference} new`)).toEqual([]);
-    sow((phrases[0] as ModelTextPiece).reference, 1, 3);
-    sow(verse.reference, 1, 3);
-    expect(plan().every((item) => phraseOfRule(item) === undefined)).toBe(true);
-    expect(cueIn(gardenOf(plants), verse.reference)).toBe('initials');
+  }
+
+  run<A>(effect: Effect.Effect<A, never, Session | Passages | Recalls | Garden>) {
+    return Effect.runPromise(Effect.provideContext(effect, this.services));
+  }
+
+  get session() {
+    return Context.get(this.services, Session);
+  }
+
+  /** A launch over the device's disk as it is now, the old launch closed. */
+  async launch() {
+    await Effect.runPromise(Scope.close(this.scope, Exit.void));
+    this.scope = Scope.makeUnsafe();
+    this.services = await Effect.runPromise(Layer.buildWithScope(layerOf(this.device), this.scope));
+    await this.run(this.session.begin);
+    this.minutes = (await this.run(this.session.view)).minutes;
+    await this.making('launch');
+  }
+
+  async close() {
+    await Effect.runPromise(Scope.close(this.scope, Exit.void));
+  }
+
+  async garden(): Promise<ReadGarden | null> {
+    const garden = await this.run(Effect.flatMap(Garden, (each) => each.view));
+    return garden._tag === 'Unread' ? null : garden;
+  }
+
+  /** The plan just made, against the model over whole verses. */
+  async making(step: string) {
+    const view = await this.run(this.session.view);
+    const plants = plantsOf(this.device.disk);
+    const pieces = piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words);
+    const want = planModel({
+      plants,
+      pieces,
+      at: this.device.now,
+      offset: offsetIn(this.zone, this.device.now),
+      minutes: this.minutes,
+    });
+    const got = Option.match(view.plan, {
+      onNone: () => null,
+      onSome: (plan) => plan.items.map((item) => [item.reference, item.fresh, item.recalls]),
+    });
+    const items = want.items.map((item) => [item.reference, item.fresh, item.recalls]);
+    if (json(got) !== json(items)) this.fail(`${step}: plan ${json(got)}, model ${json(items)}`);
+    const today = localDay(this.device.now, offsetIn(this.zone, this.device.now));
+    const pieceToday = [...plants].some(
+      ([reference, recalls]) =>
+        isPiece(reference) &&
+        recalls.every((recall) => localDay(recall.startedAt, recall.offset) === today),
+    );
+    if (want.fresh === 'planted today' && pieceToday) this.bump('plan:held back by a piece today');
+    for (const item of want.items)
+      if (item.fresh && begunIn(plants, item.reference))
+        this.bump('plan:new verse begun in pieces');
+    for (const item of want.items)
+      if (!item.fresh && begunIn(plants, item.reference))
+        this.bump('plan:review beside old pieces');
+    await this.check(step);
+  }
+
+  async check(step: string) {
+    this.trail.push(step);
+    const view: SessionView = await this.run(this.session.view);
+    this.checkNames(step, view);
+    this.checkDisk(step);
+    const garden = await this.garden();
+    if (garden === null) return this.fail(`${step}: the garden unread`);
+    this.checkShown(step, view, garden);
+    this.checkField(step, garden);
+  }
+
+  /** The session names verses alone, and no piece carries pieces. */
+  checkNames(step: string, view: SessionView) {
+    const named = [
+      ...Option.match(view.plan, { onNone: () => [], onSome: (plan) => plan.items }).map(
+        (item) => item.reference,
+      ),
+      ...view.visit.flatMap((verse) => [verse.item.reference, verse.piece.reference]),
+      ...Option.toArray(view.held).map((item) => item.reference),
+      ...Option.toArray(view.heldPiece).map((piece) => piece.reference),
+      ...view.pieces.map((piece) => piece.reference),
+    ];
+    const pieces = named.filter(isPiece);
+    if (pieces.length > 0) this.fail(`${step}: the session names old pieces ${json(pieces)}`);
+    if (view.pieces.some((piece) => 'phrases' in piece))
+      this.fail(`${step}: a piece carries pieces`);
+  }
+
+  /** Every stored record is kept as main wrote it, and each new one is under a verse's own reference. */
+  checkDisk(step: string) {
+    for (const [key, value] of this.first)
+      if (this.device.disk.get(key) !== value) this.fail(`${step}: the stored ${key} changed`);
+    for (const [key, value] of this.device.disk)
+      if (key.startsWith(PREFIX) && !this.first.has(key)) {
+        const { reference } = JSON.parse(value) as Recall;
+        if (verseOfRule(reference) !== reference || isPiece(reference))
+          this.fail(`${step}: a new record under ${reference}`);
+      }
+  }
+
+  /** Today shows a verse, and a verse not planted under its full text. */
+  checkShown(step: string, view: SessionView, garden: ReadGarden) {
+    const shown = shownOf(view, Option.some(garden));
+    if (shown._tag !== 'Item') return;
+    if (isPiece(shown.item.reference) || isPiece(shown.piece.reference))
+      this.fail(`${step}: Today shows ${shown.piece.reference}`);
+    const cue = cueIn(garden, shown.item.reference);
+    if (!garden.plants.has(shown.item.reference) && cue !== 'full')
+      this.fail(`${step}: a fresh ${shown.item.reference} cued ${cue}`);
+  }
+
+  /** The field as the fold rule gives it, a verse by its own plant alone, and the days sown never falling. */
+  checkField(step: string, garden: ReadGarden) {
+    const passages = fieldPassagesModel(
+      [{ title: PROMISE.reference, verses: [PROMISE.reference] }],
+      this.held,
+      TAUGHT_IDS,
+    );
+    const field = fieldOf(garden, passages);
+    const want = fieldFoldRule(recordsOf(this.device.disk), passages);
+    const rowsOf = (rows: typeof want.rows) =>
+      json(rows.map((row) => [row.title, row.plants.map((each) => [each.reference, each.stage])]));
+    if (rowsOf(field.rows) !== rowsOf(want.rows) || field.sown !== want.sown)
+      this.fail(
+        `${step}: field ${rowsOf(field.rows)} ${field.sown}, model ${rowsOf(want.rows)} ${want.sown}`,
+      );
+    const plants = plantsOf(this.device.disk);
+    for (const row of field.rows)
+      for (const each of row.plants) {
+        if (!begunIn(plants, each.reference)) continue;
+        this.bump(
+          plants.has(each.reference)
+            ? 'field:begun verse at its own stage'
+            : 'field:begun verse not planted',
+        );
+        if (!plants.has(each.reference) && each.stage !== 'not planted')
+          this.fail(`${step}: ${each.reference} shows ${each.stage} by its old pieces`);
+      }
+    if (field.sown < this.sown)
+      this.fail(`${step}: days sown fell from ${this.sown} to ${field.sown}`);
+    this.sown = field.sown;
+  }
+
+  /** A tap on a Fear verse, a begun one first in half. */
+  async tap() {
+    const plants = plantsOf(this.device.disk);
+    const begun = FEAR.filter((verse) => begunIn(plants, verse));
+    const pool = begun.length > 0 && below(this.next, 2) === 0 ? begun : FEAR;
+    const verse = pool[below(this.next, pool.length)] ?? '';
+    await this.run(this.session.start(verse));
+    const view = await this.run(this.session.view);
+    const [started] = view.visit;
+    if (started !== undefined && started.item.reference !== verse)
+      this.fail(`tap(${verse}): started ${started.item.reference}`);
+    if (started?.item.fresh === true && begunIn(plants, verse))
+      this.bump('tap:begun verse learned');
+    await this.check(`tap(${verse})`);
+  }
+
+  /** A recital of what Today shows, kept, then Next. */
+  async say() {
+    const view = await this.run(this.session.view);
+    const garden = await this.garden();
+    if (garden === null) return;
+    const shown = shownOf(view, Option.some(garden));
+    if (shown._tag !== 'Item') return this.bump('say:done');
+    const { item } = shown;
+    const plants = plantsOf(this.device.disk);
+    if (item.fresh && begunIn(plants, item.reference)) this.bump('say:begun verse said whole');
+    await this.run(this.session.hold(item));
+    this.device.now += MINUTE;
+    const recalls = Context.get(this.services, Recalls);
+    await this.run(recalls.keep(recallOf(this.next, item.reference, this.device.now, this.zone)));
+    this.device.now += MINUTE;
+    await this.check(`say(${item.reference})`);
+    await this.run(this.session.next);
+    await this.check('next');
+  }
+
+  async step() {
+    const roll = below(this.next, 12);
+    if (roll < 3) return this.tap();
+    if (roll < 8) return this.say();
+    if (roll < 9) {
+      this.minutes = pickOf<Minutes>(this.next, [...MINUTES]);
+      await this.run(this.session.choose(this.minutes));
+      return this.making(`minutes(${this.minutes})`);
+    }
+    if (roll < 10) {
+      this.bump('relaunch');
+      return this.launch();
+    }
+    this.device.now += (1 + below(this.next, 3)) * DAY + below(this.next, 6) * HOUR;
+    this.bump('day');
+    await this.run(this.session.wake);
+    return this.making('wake');
+  }
+}
+
+const playDevice = async (seed: number, tally: Map<string, number>) => {
+  const next = random(seed);
+  const zone = pickOf(next, ZONES as [string, ...string[]]);
+  travel(zone);
+  const now = Date.UTC(2026, below(next, 12), 1 + below(next, 28), below(next, 24));
+  const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
+  const { disk, stored } = diskOf(next, now, zone, bump);
+  const walk = new Walk(seed, next, tally, zone, { disk, now }, { tag: 'Read', passages: stored });
+  await walk.launch();
+  for (let step = 0; step < STEPS && walk.failures.length === 0; step++) await walk.step();
+  await walk.close();
+  return walk.failures;
+};
+
+/** Each case the walk must reach, and how many times at least. */
+const FLOORS: ReadonlyArray<readonly [string, number]> = [
+  ['gen:pieces', 40],
+  ['gen:joined', 40],
+  ['gen:piece today', 40],
+  ['gen:loose', 5],
+  ['plan:held back by a piece today', 20],
+  ['plan:new verse begun in pieces', 30],
+  ['plan:review beside old pieces', 100],
+  ['tap:begun verse learned', 25],
+  ['say:begun verse said whole', 15],
+  ['field:begun verse not planted', 1500],
+  ['field:begun verse at its own stage', 1000],
+  ['relaunch', 25],
+  ['day', 45],
+];
+
+/** Plays every device, the host's zone put back once they end, however they end. */
+const playAll = (tally: Map<string, number>) => {
+  const before = hostZone();
+  const play = async () => {
+    const failures: string[] = [];
+    for (let seed = 1; seed <= DEVICES && failures.length === 0; seed++)
+      failures.push(...(await playDevice(seed * 6151, tally)));
+    return failures;
+  };
+  return play().finally(() => restore(before));
+};
+
+describe('the migration of old pieces (rule M)', () => {
+  it('keeps every stored record, plans, shows and stores whole verses alone, and shows a verse by its own plant alone, over stores main wrote', async () => {
+    const tally = new Map<string, number>();
+    const failures = await playAll(tally);
+    expect(failures.slice(0, 2)).toEqual([]);
+    console.log(`coverage ${FLOORS.map(([kind]) => `${kind}=${tally.get(kind) ?? 0}`).join(' ')}`);
+    const short = FLOORS.filter(([kind, floor]) => (tally.get(kind) ?? 0) < floor).map(
+      ([kind, floor]) => `${kind} ${tally.get(kind) ?? 0} < ${floor}`,
+    );
+    expect(short).toEqual([]);
   });
 });

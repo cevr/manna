@@ -263,7 +263,7 @@ const taughtPlaces = (taught: readonly string[]): Placed[] => {
  * verses in Haskell's order (grouped by its title), then each taught
  * collection's (grouped by its title), each reference kept at its first
  * place only; an unread view gives the own alone. Each verse's text comes
- * from `corpus`, its words by `words`, its phrases by `phrased`.
+ * from `corpus` and its words by `words`; each verse is one piece, whole.
  */
 export const piecesWithListsModel = (
   corpus: Corpus,
@@ -271,14 +271,11 @@ export const piecesWithListsModel = (
   held: Held,
   taught: readonly string[],
   words: (text: string) => number,
-  phrased: (piece: ModelTextPiece) => ModelTextPiece,
 ): ModelTextPiece[] => {
   const all: ModelTextPiece[] = [...own];
   const push = ([book, chapter, verse, group]: Placed) => {
     const text = versesIn(corpus, book, chapter)[verse - 1] ?? '';
-    all.push(
-      phrased({ reference: verseRef(book, chapter, verse), text, words: words(text), group }),
-    );
+    all.push({ reference: verseRef(book, chapter, verse), text, words: words(text), group });
   };
   if (held.tag === 'Read')
     for (const placed of [

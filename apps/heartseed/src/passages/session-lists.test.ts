@@ -42,7 +42,6 @@ import { keyOf, PREFIX } from '../test/garden-model';
 import { HANDBOOK_MODEL, piecesWithListsModel } from '../test/handbook-model';
 import type { Held, ModelTextPiece, Span } from '../test/passages-model';
 import { CORPUS } from '../test/passages-rig';
-import { withPhrasesRule } from '../test/phrase-model';
 
 const words = (text: string) => sourceWords(text).length;
 
@@ -135,7 +134,7 @@ const sessionNow = Effect.flatMap(Session, (session) => session.view);
 /** The pieces the model wants with `lists` held beside the passage. */
 const wanted = (lists: readonly string[]) => {
   const held: Held = { tag: 'Read', passages: [OVER], lists };
-  return piecesWithListsModel(CORPUS, [PROMISE], held, TAUGHT, words, withPhrasesRule);
+  return piecesWithListsModel(CORPUS, [PROMISE], held, TAUGHT, words);
 };
 
 const recallsOn = (disk: ReadonlyMap<string, string>) =>

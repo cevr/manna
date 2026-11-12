@@ -3,9 +3,10 @@
 /**
  * Start here (hshomebase H4) at the session seam: generated devices, each
  * the promise planted days back, the Fear collection's verses planted at a
- * share with phrase plants, other collections' promises planted whole,
- * zero to two held passages, and in a quarter a join made ready (every
- * piece before the first verse in phrases planted, its phrases ripe), in
+ * share with plants of the old pieces main kept of them, other
+ * collections' promises planted whole, zero to two held passages, and in a
+ * quarter a verse begun in old pieces made the new piece (every piece
+ * before the first long verse planted, that verse's old pieces ripe), in
  * five zones, the session teaching Fear. Each device walks generated
  * steps: `start` on a verse drawn from one of the spec's classes, Say it's
  * hold on the item shown (kept, refused or left under way), `Next`, a
@@ -14,8 +15,8 @@
  *
  * After every step the session is held to the models apart from it: the
  * plan to `planModel`, the hold, the visit to `startModel` (or
- * `visitModel` after a promise's tap) with each verse's piece (the phrase's
- * own for a phrase item, the corpus text grouped by the verse for a verse
+ * `visitModel` after a promise's tap) with each verse's piece (the verse's
+ * own, whole, never an old piece's; the corpus text grouped by the verse for a verse
  * in no piece), what `shownOf` shows to `shownModel`, the counts line to
  * `countsModel`, and the disk byte for byte the same across every start.
  */
@@ -51,12 +52,11 @@ import {
 } from '../test/passages-model';
 import { choosableOf, CORPUS } from '../test/passages-rig';
 import {
-  joinCueRule,
+  oldPiecesRule,
   phraseOfRule,
   pieceRule,
   verseOfRule,
-  expandRule,
-  withPhrasesRule,
+  wholeCueRule,
 } from '../test/phrase-model';
 import {
   needModel,
@@ -78,7 +78,7 @@ import {
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
 
 const DEVICES = 60;
-const STEPS = 16;
+const STEPS = 22;
 const TAUGHT_IDS = ['protection'];
 
 const ZONES = [
@@ -119,11 +119,12 @@ const UNKNOWN = ['', 'Done', 'Unplanned', 'verse', 'Heartseed 1:1', 'Psalms 151:
 
 const json = <A>(value: A) => JSON.stringify(value);
 
-/** Each Fear verse's phrase references, by verse, by the model's cut. */
+/** Each Fear verse's old piece references, by verse, as main kept them. */
 const FEAR_PHRASES = new Map(
-  piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words, withPhrasesRule).map(
-    (piece) => [piece.reference, (piece.phrases ?? []).map((phrase) => phrase.reference)],
-  ),
+  piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words).map((piece) => [
+    piece.reference,
+    oldPiecesRule(piece.reference, piece.words),
+  ]),
 );
 
 /** The device: its disk, Dictation's status, whether the store refuses a recall's write or fails every list of its keys, and the clock's instant. */
@@ -234,7 +235,7 @@ const plant = (
   }
 };
 
-/** Three clean recalls days apart, so the plant is at an ear or full corn: a ripe phrase. */
+/** Three clean recalls days apart, so the plant is at an ear or full corn: a ripe old piece, which main would have joined. */
 const plantRipe = (
   next: () => number,
   disk: Map<string, string>,
@@ -249,7 +250,7 @@ const plantRipe = (
   }
 };
 
-/** Fear's verses planted at a share, and a third of them with their phrases planted before. */
+/** Fear's verses planted at a share, and a third of them with their old pieces planted before. */
 const plantFear = (next: () => number, disk: Map<string, string>, now: number, zone: string) => {
   const share = pickOf(next, [0, 0.3, 0.7, 1]);
   for (const range of FEAR[0]?.promises ?? [])
@@ -261,29 +262,23 @@ const plantFear = (next: () => number, disk: Map<string, string>, now: number, z
     }
 };
 
-/** A join made ready: every piece before the first verse in phrases planted whole, and that verse's phrases ripe with the verse itself not planted. */
-const readyJoin = (
+/** A verse begun in old pieces made the new piece: every piece before the first long verse not planted planted whole, and that verse's old pieces ripe with the verse itself not planted. */
+const readyBegun = (
   next: () => number,
   disk: Map<string, string>,
   stored: readonly Span[],
   now: number,
   zone: string,
 ) => {
-  const pieces = piecesModel(
-    CORPUS,
-    OWN,
-    { tag: 'Read', passages: stored },
-    TAUGHT_IDS,
-    words,
-    withPhrasesRule,
-  );
+  const pieces = piecesModel(CORPUS, OWN, { tag: 'Read', passages: stored }, TAUGHT_IDS, words);
   for (const piece of pieces) {
     const planted = plantsOf(disk);
-    if ((piece.phrases ?? []).length > 0 && !planted.has(piece.reference)) {
-      for (const phrase of piece.phrases ?? []) {
+    const old = oldPiecesRule(piece.reference, piece.words);
+    if (old.length > 0 && !planted.has(piece.reference)) {
+      for (const each of old) {
         for (const key of [...disk.keys()])
-          if (key.startsWith(`${PREFIX}${phrase.reference}/`)) disk.delete(key);
-        plantRipe(next, disk, phrase.reference, now, zone);
+          if (key.startsWith(`${PREFIX}${each}/`)) disk.delete(key);
+        plantRipe(next, disk, each, now, zone);
       }
       return true;
     }
@@ -293,7 +288,7 @@ const readyJoin = (
   return false;
 };
 
-/** A device's first disk: the promise, Fear's verses at a share, other collections' promises whole, the passages, and in a quarter a join made ready. */
+/** A device's first disk: the promise, Fear's verses at a share, other collections' promises whole, the passages, and in a quarter a verse begun in old pieces made the new piece. */
 const diskOf = (next: () => number, now: number, zone: string, tally: Map<string, number>) => {
   const disk = new Map<string, string>();
   plant(next, disk, PROMISE.reference, now, pickOf(next, [1, 2, 6, 20]), zone);
@@ -308,8 +303,8 @@ const diskOf = (next: () => number, now: number, zone: string, tally: Map<string
   for (let n = below(next, 3); n > 0; n--)
     stored.push(below(next, 2) === 0 ? pickOf(next, [...OVER]) : choosableOf(next, stored)[1]);
   disk.set(KEY, storedText(stored));
-  if (below(next, 2) === 0 && readyJoin(next, disk, stored, now, zone))
-    tally.set('gen:join ready', (tally.get('gen:join ready') ?? 0) + 1);
+  if (below(next, 2) === 0 && readyBegun(next, disk, stored, now, zone))
+    tally.set('gen:begun ready', (tally.get('gen:begun ready') ?? 0) + 1);
   return { disk, stored };
 };
 
@@ -356,8 +351,8 @@ type Making = (typeof MAKINGS)[number];
 const CLASSES = [
   'review open',
   'new piece',
-  'phrase open',
-  'join open',
+  'begun new',
+  'planted beside old pieces',
   'planted done',
   'planted not in plan',
   'planted in no piece',
@@ -370,7 +365,7 @@ const CLASSES = [
 type VerseClass = (typeof CLASSES)[number];
 
 /** The classes a plan holds only for a while (the new piece until a planting, an open item until its recital), drawn first in half the starts. */
-const RARE: readonly VerseClass[] = ['new piece', 'join open', 'planted done'];
+const RARE: readonly VerseClass[] = ['new piece', 'begun new', 'planted done'];
 
 /** Near-misses of a verse reference: none is a canon reference. */
 const nearMisses = (verse: string): string[] => [
@@ -419,7 +414,7 @@ class Walk {
     this.device = device;
     this.services = services;
     this.passages = { tag: 'Read', passages: stored };
-    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
+    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
     this.plan = this.modelPlan();
     this.trail.push(`launch(${zone},${new Date(device.now).toISOString()},${json(stored)})`);
   }
@@ -447,10 +442,9 @@ class Walk {
   }
 
   modelPlan(): readonly ModelItem[] {
-    const plants = plantsOf(this.device.disk);
     return planModel({
-      plants,
-      pieces: expandRule(this.pieces, plants),
+      plants: plantsOf(this.device.disk),
+      pieces: this.pieces,
       at: this.device.now,
       offset: offsetIn(this.zone, this.device.now),
       minutes: this.minutes,
@@ -519,7 +513,7 @@ class Walk {
       this.fail(`${step}: Today shows ${textOf(seen.shown)}, model ${want}`);
     const plants = plantsOf(this.device.disk);
     for (const verse of view.visit) {
-      const ladder = joinCueRule(plants, verse.item.reference);
+      const ladder = wholeCueRule(plants, verse.item.reference);
       const cue = cueIn(seen.garden, verse.item.reference);
       if (cue !== ladder)
         this.fail(`${step}: visit verse ${verse.item.reference} cued ${cue}, the model ${ladder}`);
@@ -549,37 +543,23 @@ class Walk {
     const pieceRefs = new Set(this.pieces.map((piece) => piece.reference));
     const plantedVerses = [...plants.keys()].filter((key) => CANON.has(key));
     const phraseKeys = [...plants.keys()].filter((key) => phraseOfRule(key) !== undefined);
-    const withPhrases = (reference: string) =>
-      (pieceRule(this.pieces, reference)?.phrases ?? []).length > 0;
-    const firstOpen = (verse: string) => open.find((item) => verseOfRule(item.reference) === verse);
+    const begun = (verse: string) => phraseKeys.some((key) => verseOfRule(key) === verse);
     const out = new Map<VerseClass, string[]>();
     out.set(
       'review open',
-      open
-        .filter((item) => !item.fresh && verseOfRule(item.reference) === item.reference)
-        .map((item) => item.reference)
-        .filter((verse) => firstOpen(verse)?.reference === verse),
+      open.filter((item) => !item.fresh).map((item) => item.reference),
     );
     out.set(
       'new piece',
-      open
-        .filter((item) => item.fresh && verseOfRule(item.reference) === item.reference)
-        .map((item) => item.reference)
-        .filter((verse) => firstOpen(verse)?.reference === verse),
+      open.filter((item) => item.fresh).map((item) => item.reference),
     );
     out.set(
-      'phrase open',
-      open
-        .filter((item) => verseOfRule(item.reference) !== item.reference)
-        .map((item) => verseOfRule(item.reference))
-        .filter((verse) => firstOpen(verse)?.reference !== verse),
+      'begun new',
+      open.filter((item) => item.fresh && begun(item.reference)).map((item) => item.reference),
     );
     out.set(
-      'join open',
-      open
-        .filter((item) => withPhrases(item.reference) && !plants.has(item.reference))
-        .map((item) => item.reference)
-        .filter((verse) => firstOpen(verse)?.reference === verse),
+      'planted beside old pieces',
+      plantedVerses.filter((verse) => begun(verse)),
     );
     out.set(
       'planted done',
@@ -778,7 +758,7 @@ class Walk {
     const landed = want.outcome === 'Added' || want.outcome === 'Removed';
     if (landed) {
       this.passages = want.held;
-      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
+      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
     }
     return landed;
   }
@@ -883,7 +863,7 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['make:after start:idle:dropped', 5],
   ['say:started kept', 10],
   ['visit', 10],
-  ['gen:join ready', 5],
+  ['gen:begun ready', 5],
 ];
 
 /** Plays every device, the host's zone put back once they end, however they end. */
@@ -919,7 +899,6 @@ const briefOf = (view: SessionView) => {
   const textless = (piece: TextPiece): TextPiece => ({
     ...piece,
     text: `${piece.text.length}#${Bun.hash(piece.text).toString(36)}`,
-    phrases: piece.phrases?.map(textless),
   });
   return json({
     ...view,

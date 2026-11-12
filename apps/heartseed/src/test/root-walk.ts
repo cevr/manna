@@ -5,7 +5,9 @@
  * generated devices, the layer teaching Fear; the base of the home walk
  * (`home-walk.ts`), which adds home's own commands. Each device: a day of 2026 at 06:00-21:59 host time; the promise
  * planted 0, 1, 2 or 6 days back (0 is the first minute's day); Fear's
- * verses planted at a share of none, 30 %, 70 % or all; one to three
+ * verses planted at a share of none, 30 %, 70 % or all; in half the
+ * devices, old pieces of long Fear verses as main kept them (hspiece M);
+ * one to three
  * promises of other collections planted whole (half of them of two or
  * three verses) and sometimes one verse alone of a longer one; sometimes
  * `Genesis 1:1`; zero to two held passages over Fear's verses, the
@@ -31,8 +33,8 @@
  * after every command:
  * - Today: its reference is `shownModel`'s over the hold, the visit
  *   (`visitModel`, each baseline the count at the tap) and the plan
- *   (`planModel` at each making over `piecesModel`'s pieces with their
- *   phrases, expanded by `phrase-model.ts`'s `expandRule`), its counts line
+ *   (`planModel` at each making over `piecesModel`'s pieces, each verse
+ *   whole, the old pieces' plants never planned), its counts line
  *   `countsModel`'s over the plan alone, its action `Say it`, `Next` or
  *   none, no `Listen` on a review, and `Your field`
  *   exactly on a read garden; at the end of a run (the visit's verses then
@@ -59,9 +61,17 @@ import type { Recall } from '../sayit';
 import { MINUTES, type Minutes } from '../session';
 import { MINUTES_KEY } from '../session/service';
 import type { Time } from './clock';
-import { below, keyOf, pickOf, PREFIX } from './garden-model';
+import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
 import { launchRoot, type RootDevice, type RootLaunch } from './root-rig';
-import { KEY, readRule, spanRef, storedText, type Held, type Span } from './passages-model';
+import {
+  KEY,
+  readRule,
+  spanRef,
+  storedText,
+  versesIn,
+  type Held,
+  type Span,
+} from './passages-model';
 import { CORPUS } from './passages-rig';
 import {
   fieldPassagesModel,
@@ -69,7 +79,7 @@ import {
   promiseVerses,
   type ModelVisitVerse,
 } from './promise-model';
-import { expandRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { oldPiecesRule, verseOfRule } from './phrase-model';
 import { END } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from './session-model';
@@ -171,6 +181,25 @@ const plantPromises = (next: () => number, disk: Map<string, string>, now: numbe
   if (below(next, 4) === 0) plant(next, disk, 'Genesis 1:1', now, 1 + below(next, 20));
 };
 
+/**
+ * Plants on `disk`, in half the devices, old pieces of long Fear verses as
+ * main kept them (`oldPiecesRule`): for about a third of those verses its
+ * first piece or more, 21 to 40 days back, beside the verse's own plant or
+ * not. It draws from its own stream, so the device's other draws stay as
+ * they were.
+ */
+const plantOldPieces = (next: () => number, disk: Map<string, string>, now: number) => {
+  if (below(next, 2) === 0) return;
+  for (const range of FEAR?.promises ?? [])
+    for (const [index, reference] of promiseVerses(range).entries()) {
+      const text = versesIn(CORPUS, range.book, range.chapter)[range.first + index - 1] ?? '';
+      const old = oldPiecesRule(reference, words(text));
+      if (old.length === 0 || below(next, 3) > 0) continue;
+      for (const piece of old.slice(0, 1 + below(next, old.length)))
+        plant(next, disk, piece, now, 21 + below(next, 20));
+    }
+};
+
 /** Stores on `disk` zero to two passages from `OVER`, none twice. */
 const storePassages = (next: () => number, disk: Map<string, string>) => {
   const stored: Span[] = [];
@@ -218,6 +247,7 @@ export class Walk {
     if (back === 0) disk.set(keyOf(first), JSON.stringify(first));
     else plant(next, disk, passage.reference, now, back);
     plantPromises(next, disk, now);
+    plantOldPieces(random(now >>> 0), disk, now);
     this.unread = below(next, 8) === 0;
     if (this.unread) {
       this.bump('gen:unread-passages');
@@ -248,9 +278,9 @@ export class Walk {
     return !this.device.unread && this.held.tag === 'Read';
   }
 
-  /** The session's pieces over the passages held, with their phrases, as `piecesModel` gives them. */
+  /** The session's pieces over the passages held, each verse whole, as `piecesModel` gives them. */
   piecesNow() {
-    return piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words, withPhrasesRule);
+    return piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words);
   }
 
   /** The plan made now over the disk, as `planModel` makes it. */
@@ -261,11 +291,9 @@ export class Walk {
       this.plan = [];
       return;
     }
-    const pieces = this.piecesNow();
-    const plants = plantsOf(this.device.disk);
     this.plan = planModel({
-      plants,
-      pieces: expandRule(pieces, plants),
+      plants: plantsOf(this.device.disk),
+      pieces: this.piecesNow(),
       at: this.time.now,
       offset: hostOffset(this.time.now),
       minutes: this.minutes,
@@ -446,9 +474,13 @@ export class Walk {
       return { said: shown.reference, before, after: this.recallsNow(shown.reference) };
     this.bump('today:said');
     if (visiting) this.bump('visit:said');
-    const verse = verseOfRule(shown.reference);
-    if (FEAR?.promises.some((range) => promiseVerses(range).includes(verse)))
-      this.bump(verse === shown.reference ? 'today:shown-fear' : 'today:shown-fear-phrase');
+    if (FEAR?.promises.some((range) => promiseVerses(range).includes(shown.reference))) {
+      this.bump('today:shown-fear');
+      const old = [...plantsOf(this.device.disk).keys()].some(
+        (key) => key !== shown.reference && verseOfRule(key) === shown.reference,
+      );
+      if (old) this.bump('today:shown-fear-begun-in-pieces');
+    }
     if (below(this.next, 10) < 3) {
       this.bump('today:held');
       return null;

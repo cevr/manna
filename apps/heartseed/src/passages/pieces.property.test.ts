@@ -11,9 +11,9 @@
  * It catches the app's own not first, a passage's verses out of order or one
  * off, a verse's group as its own reference, its words or its text from
  * another verse, a reference kept twice or kept at its later place,
- * unread passages giving any verse, and a long passage verse without its
- * phrases (hsphrase H3, `withPhrasesRule`), with phrases on the app's own,
- * or with a phrase's group not its verse's. It misses when the session takes the
+ * unread passages giving any verse, and any verse, long or short, that
+ * carries pieces of itself (hspiece W2: a `phrases` key, or any key but a
+ * whole verse's). It misses when the session takes the
  * pieces: that is `session.test.ts`'s.
  */
 
@@ -32,7 +32,6 @@ import {
   type Span,
 } from '../test/passages-model';
 import { CORPUS, chapterOf, choosableOf, countIn } from '../test/passages-rig';
-import { withPhrasesRule } from '../test/phrase-model';
 
 const PROMISE_TEXT = readPassage();
 
@@ -92,12 +91,30 @@ const viewOf = (held: Held): PassagesView => {
   return { _tag: 'Read', passages: held.passages, lists: [] };
 };
 
-/** Tallies each passage verse as long (with phrases) or short. */
+/** Tallies each passage verse as long (more than 12 words, which main kept in pieces) or short. */
 const tallyLengths = (verses: readonly ModelTextPiece[], bump: (kind: string) => void) => {
   for (const piece of verses) {
-    if (piece.phrases === undefined) bump('a short verse');
+    if (piece.words <= 12) bump('a short verse');
     else bump('a long verse');
   }
+};
+
+/** Each piece that carries pieces of itself, named. */
+const carriers = (pieces: ReturnType<typeof piecesOf>) =>
+  pieces
+    .filter((piece) => 'phrases' in piece)
+    .map((piece) => `${piece.reference} carries pieces of itself`);
+
+/** Tallies whether a read run's pieces shared a reference (fewer than the verses held) or none. */
+const tallyShared = (
+  own: number,
+  passages: readonly Span[],
+  pieces: number,
+  bump: (kind: string) => void,
+) => {
+  const all = own + passages.reduce((sum, span) => sum + span.last - span.first + 1, 0);
+  if (pieces < all) bump('a reference shared');
+  if (own > 0 && pieces === all) bump('nothing shared');
 };
 
 describe('the pieces over the reader’s passages', () => {
@@ -115,11 +132,10 @@ describe('the pieces over the reader’s passages', () => {
       bump(`passages:${held.tag}`);
       if (held.tag === 'Read') for (const kind of kinds) bump(kind);
       const got = piecesOf(own, viewOf(held));
-      const want = piecesRule(CORPUS, own, held, words, withPhrasesRule);
+      const want = piecesRule(CORPUS, own, held, words);
+      wrong.push(...carriers(got));
       tallyLengths(want.slice(own.length), bump);
-      const all = own.length + passages.reduce((sum, span) => sum + span.last - span.first + 1, 0);
-      if (held.tag === 'Read' && want.length < all) bump('a reference shared');
-      if (held.tag === 'Read' && own.length > 0 && want.length === all) bump('nothing shared');
+      if (held.tag === 'Read') tallyShared(own.length, passages, want.length, bump);
       if (JSON.stringify(got) !== JSON.stringify(want))
         wrong.push(`${JSON.stringify(own.map((p) => p.reference))} ${JSON.stringify(held)}`);
     }
@@ -168,20 +184,14 @@ describe('the pieces over the reader’s passages', () => {
     ]);
     expect(pieces[0]).toEqual(PROMISE);
     expect(pieces[1]?.words).toBeGreaterThan(0);
-    expect(withPhrasesRule(PROMISE).phrases?.length).toBeGreaterThan(0);
-    expect(
-      pieces.filter((piece) => piece.phrases !== undefined).map((piece) => piece.reference),
-    ).toEqual(
-      pieces
-        .slice(1)
-        .filter((piece) => withPhrasesRule(piece).phrases !== undefined)
-        .map((piece) => piece.reference),
+    expect(pieces.filter((piece) => piece.words > 12).length).toBeGreaterThan(0);
+    expect(pieces.filter((piece) => 'phrases' in piece).map((piece) => piece.reference)).toEqual(
+      [],
     );
     expect(
-      pieces
-        .filter((piece) => piece.phrases !== undefined)
-        .flatMap((piece) => piece.phrases ?? [])
-        .every((phrase) => phrase.group === 'Isaiah 41:9-11' || phrase.group === spanRef(john)),
+      pieces.every(
+        (piece) => JSON.stringify(Object.keys(piece)) === '["reference","text","words","group"]',
+      ),
     ).toBe(true);
     expect(piecesOf([PROMISE], { _tag: 'Unread' })).toEqual([PROMISE]);
     expect(

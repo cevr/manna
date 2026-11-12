@@ -3,10 +3,10 @@
 /**
  * A list's `Practice this list` (hslist L1) at its pure seam, against the
  * model of `test/list-model.ts` written apart from the app: generated
- * devices from `test/home-model.ts`'s plan cases (pieces of made-up text
- * over canon references, phrased or whole, with histories of none, some
- * phrases, every phrase ripe or the verse whole, and the plan `planModel`
- * makes over them), a run over the plan (each item left or kept), two
+ * devices from `test/home-model.ts`'s plan cases (whole verses of made-up
+ * text over canon references, with histories of none, some old pieces
+ * stored, every old piece ripe or the verse joined, and the plan
+ * `planModel` makes over them), a run over the plan (each item left or kept), two
  * planted canon verses outside the pieces whose last recalls are equal in
  * some, the view drawn as the plan made, no plan over passages read, or
  * no plan over passages unread, and lists of those verses, other canon
@@ -202,8 +202,11 @@ const claimFaults = (
 const tallyStart = (tally: Tally, start: ListStart, tie: boolean, garden: ReadGarden) => {
   bump(tally, start._tag);
   const references = startText(start).visit.map((each) => each.reference);
-  if (start._tag === 'Open' && new Set(references.map(verseOf)).size < references.length)
-    bump(tally, 'open:folded');
+  const begun = (verse: string) =>
+    [...garden.plants.keys()].some((key) => key !== verse && verseOf(key) === verse);
+  if (start._tag === 'Open' && references.some(begun)) bump(tally, 'open:begun in pieces');
+  if (references.some((reference) => verseOf(reference) !== reference))
+    bump(tally, 'start:old piece');
   if (start._tag === 'Open' && references.length === 1) bump(tally, 'open:one');
   if (
     start._tag === 'Learn' &&
@@ -240,12 +243,13 @@ describe('Practice this list over generated devices', () => {
       ['Weakest', 60],
       ['Learn', 60],
       ['None', 30],
-      ['open:folded', 10],
+      ['open:begun in pieces', 10],
       ['open:one', 20],
       ['learn:begun in pieces', 5],
       ['weakest:tie', 5],
       ['view:unread', 30],
     ];
+    expect(tally.get('start:old piece') ?? 0).toBe(0);
     expect(
       floors
         .filter(([kind, floor]) => (tally.get(kind) ?? 0) < floor)

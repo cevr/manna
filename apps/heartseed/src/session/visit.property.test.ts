@@ -65,13 +65,13 @@ import {
   visitModel,
   type ModelVisitVerse,
 } from '../test/promise-model';
-import { expandRule, verseOfRule, withPhrasesRule } from '../test/phrase-model';
+import { oldPiecesRule, verseOfRule } from '../test/phrase-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
 import { shownOf, type Shown } from './run';
 import { layer as sessionLayer, Session, type SessionView } from './service';
 
-const DEVICES = 70;
+const DEVICES = 76;
 const STEPS = 16;
 const TAUGHT_IDS = ['protection'];
 
@@ -108,11 +108,12 @@ const OTHERS = COLLECTIONS.filter((collection) => collection.id !== 'protection'
 
 const json = <A>(value: A) => JSON.stringify(value);
 
-/** Each Fear verse's phrase references, by verse, by the model's cut. */
+/** Each Fear verse's old piece references, by verse, as main kept them. */
 const FEAR_PHRASES = new Map(
-  piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words, withPhrasesRule).map(
-    (piece) => [piece.reference, (piece.phrases ?? []).map((phrase) => phrase.reference)],
-  ),
+  piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words).map((piece) => [
+    piece.reference,
+    oldPiecesRule(piece.reference, piece.words),
+  ]),
 );
 
 /** The device: its disk, Dictation's status, whether the store refuses a recall's write, and the clock's instant. */
@@ -208,7 +209,7 @@ const plant = (
   }
 };
 
-/** Fear's verses planted at a share, and a third of them with their phrases planted before. */
+/** Fear's verses planted at a share, and a third of them with the old pieces main kept of them planted before. */
 const plantFear = (next: () => number, disk: Map<string, string>, now: number, zone: string) => {
   const share = pickOf(next, [0, 0.3, 0.7, 1]);
   for (const range of FEAR[0]?.promises ?? [])
@@ -302,7 +303,7 @@ class Walk {
     this.device = device;
     this.services = services;
     this.passages = { tag: 'Read', passages: stored };
-    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
+    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
     this.plan = this.modelPlan();
     this.trail.push(`launch(${zone},${new Date(device.now).toISOString()},${json(stored)})`);
   }
@@ -330,10 +331,9 @@ class Walk {
   }
 
   modelPlan(): readonly ModelItem[] {
-    const plants = plantsOf(this.device.disk);
     return planModel({
-      plants,
-      pieces: expandRule(this.pieces, plants),
+      plants: plantsOf(this.device.disk),
+      pieces: this.pieces,
       at: this.device.now,
       offset: offsetIn(this.zone, this.device.now),
       minutes: this.minutes,
@@ -509,11 +509,12 @@ class Walk {
       this.visitFresh = new Map(items.map((item) => [item.reference, item.fresh]));
       this.visitFrom = 'list';
       if (want.tag === 'Open' && items.some((item) => item.fresh)) this.bump('list:open new piece');
-      if (
-        want.tag === 'Open' &&
-        new Set(items.map((item) => verseOfRule(item.reference))).size < items.length
-      )
-        this.bump('list:open phrases folded');
+      const begun = (verse: string) =>
+        [...plantsOf(this.device.disk).keys()].some(
+          (key) => key !== verse && verseOfRule(key) === verse,
+        );
+      if (items.some((item) => item.fresh && begun(item.reference)))
+        this.bump('list:new verse begun in pieces');
     }
     await this.check(`startList(${verses.length} verses ${want.tag})`);
   }
@@ -593,7 +594,7 @@ class Walk {
     const landed = want.outcome === 'Added' || want.outcome === 'Removed';
     if (landed) {
       this.passages = want.held;
-      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
+      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
     }
     return landed;
   }
@@ -715,7 +716,7 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['list:over held', 10],
   ['list:over open visit', 20],
   ['list:open new piece', 5],
-  ['list:open phrases folded', 3],
+  ['list:new verse begun in pieces', 3],
 ];
 
 /** Plays every device, the host's zone put back once they end, however they end. */

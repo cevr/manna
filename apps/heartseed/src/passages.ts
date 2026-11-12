@@ -17,8 +17,8 @@
  * changes the view only once its write has landed. No change touches a
  * recall: a removed passage's or list's plants stay in the garden. The
  * session plans over the app's own pieces, then each passage's verses,
- * then each list's, then the taught collections' verses (`piecesOf`); each long verse after
- * the app's own carries its phrases (`src/phrase.ts`).
+ * then each list's, then the taught collections' verses (`piecesOf`), each
+ * verse one piece, whole, however long.
  */
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
@@ -39,7 +39,6 @@ import * as Semaphore from 'effect/Semaphore';
 import { HANDBOOK_LISTS, handbookListOf, handbookTitle } from './handbook';
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
-import { cutOf, phraseReference, type Phrase } from './phrase';
 import type { Collection } from './promises';
 import type { TextPiece } from './session';
 
@@ -113,61 +112,33 @@ export type RemoveAnswer = 'Removed' | 'Absent' | 'Unread' | 'Failed';
 /** A plant's answer, in the order a plant judges them: `Unread`, `Invalid`, `Held`, `Full`, then `Added` or `Failed` by its write. */
 export type PlantAnswer = 'Added' | 'Held' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 
-/** `piece` and its phrases under `group`. */
-const groupedAs = (piece: TextPiece, group: string): TextPiece => {
-  const { phrases, ...verse } = piece;
-  const regrouped = { ...verse, group };
-  return Option.match(Option.fromUndefinedOr(phrases), {
-    onNone: () => regrouped,
-    onSome: (each) => ({ ...regrouped, phrases: each.map((phrase) => ({ ...phrase, group })) }),
-  });
-};
+/** A verse as a piece, whole: its reference, text and words, and its group. */
+const verseAsPiece = (reference: string, text: string, group: string): TextPiece => ({
+  reference,
+  text,
+  words: sourceWords(text).length,
+  group,
+});
 
-/** Each verse text's cut, kept once made: the corpus never changes, and every making builds its passages' pieces again. */
-const cuts = new Map<string, ReadonlyArray<Phrase>>();
-
-/** The cut of `text`, made once per text. */
-const cutOnce = (text: string): ReadonlyArray<Phrase> =>
-  Option.getOrElse(Option.fromUndefinedOr(cuts.get(text)), () => {
-    const cut = cutOf(text);
-    cuts.set(text, cut);
-    return cut;
-  });
-
-/** A verse as a piece: its reference, text and words, its group, and its phrases when it is long (`cutOf`), each of the verse's group. */
-const verseAsPiece = (reference: string, text: string, group: string): TextPiece => {
-  const piece = { reference, text, words: sourceWords(text).length, group };
-  const phrases = cutOnce(text).map((phrase) => ({
-    reference: phraseReference(reference, phrase),
-    text: phrase.text,
-    words: phrase.last - phrase.first + 1,
-    group,
-  }));
-  if (phrases.length === 0) return piece;
-  return { ...piece, phrases };
-};
-
-/** A passage's verses as pieces: each its verse's reference and corpus text, its words counted as the matcher counts them, its passage's reference as its group, and a long verse's phrases. */
-const piecesIn = (range: Range): readonly TextPiece[] => {
-  const group = passageReference(range);
-  return versesOf(range.book, range.chapter)
+/** A passage's verses as pieces: each its verse's reference and corpus text, whole, its words counted as the matcher counts them, and `group` (the passage's reference by default). */
+const piecesIn = (range: Range, group = passageReference(range)): readonly TextPiece[] =>
+  versesOf(range.book, range.chapter)
     .slice(range.first - 1, range.last)
     .map((text, index) =>
       verseAsPiece(verseReference(range.book, range.chapter, range.first + index), text, group),
     );
-};
 
 /** The verses of the passages held, in passage order and verse order; none when unread. */
 const heldPieces = (view: PassagesView): readonly TextPiece[] => {
   if (view._tag === 'Unread') return [];
-  return view.passages.flatMap(piecesIn);
+  return view.passages.flatMap((range) => piecesIn(range));
 };
 
-/** The verses of `collection` as pieces, promise by promise and verse by verse, each and its phrases grouped by `title`. */
+/** The verses of `collection` as pieces, promise by promise and verse by verse, each grouped by `title`. */
 const piecesOfCollection = (collection: Collection, title: string): readonly TextPiece[] =>
-  collection.promises.flatMap((range) => piecesIn(range).map((piece) => groupedAs(piece, title)));
+  collection.promises.flatMap((range) => piecesIn(range, title));
 
-/** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each and its phrases grouped by its collection's title. */
+/** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each grouped by its collection's title. */
 export const collectionPieces = (collections: readonly Collection[]): readonly TextPiece[] =>
   collections.flatMap((collection) => piecesOfCollection(collection, collection.title));
 

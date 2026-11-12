@@ -222,7 +222,7 @@ const settingsFaults = (on: string, rows: readonly Element[]) => {
 /** Home's old nodes, by test id, which no frame of home may show again. */
 const OLD_HOME = ['counts', 'add-verses', 'add-row'];
 
-/** Home's one primary action by name: the Today card's `Start` or `Practice anyway`, the chosen card's `Practice <reference>` or `Learn <reference>`. */
+/** Home's one primary action by name: the Today card's `Start` or `Practice anyway`; a `Practice <reference>` or `Learn <reference>` counts too, so a second card beside it shows as two. */
 const PRIMARY = /^(Start|Practice .+|Learn .+)$/u;
 
 /**
@@ -338,6 +338,31 @@ const listeningFaults = (host: Element) =>
     .filter((name) => name !== undefined)
     .map((name) => `${name} in reach while listening`);
 
+/** A word range as main's build named a piece of a verse: `[<first>-<last>]`. */
+const WORD_RANGE = /\[\d+-\d+\]/u;
+
+/**
+ * hspiece's clause over every frame, the pending one included: no text node
+ * and no accessible name (`aria-label`) under the host holds a word range,
+ * each `a word range <range> in a text` or `… in a name`, naming the range
+ * alone and never the words around it.
+ */
+const rangeFaults = (host: Element) => {
+  const out: string[] = [];
+  if (WORD_RANGE.test(host.textContent ?? '')) {
+    const walker = host.ownerDocument.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    for (let at = walker.nextNode(); at !== null; at = walker.nextNode()) {
+      const found = WORD_RANGE.exec(at.textContent ?? '')?.[0];
+      if (found !== undefined) out.push(`a word range ${found} in a text`);
+    }
+  }
+  for (const node of host.querySelectorAll('[aria-label]')) {
+    const found = WORD_RANGE.exec(node.getAttribute('aria-label') ?? '')?.[0];
+    if (found !== undefined) out.push(`a word range ${found} in a name`);
+  }
+  return out;
+};
+
 /**
  * The root's frame rule (hshomeroot), for every rig that mounts the root:
  * what one frame shows wrong, `garden` being whether the launch's garden
@@ -381,14 +406,15 @@ const listeningFaults = (host: Element) =>
  * <first 80>`), and a read garden (`the end on an unread garden`); Today's
  * action and nodes there are faults as on any screen but Today. Any other
  * screen showing a node of the end is the fault `the end's <id> on
- * <screen>`, found by one query a frame.
+ * <screen>`, found by one query a frame. On every frame, the pending one
+ * too, no text and no accessible name holds a word range (`rangeFaults`).
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
   const controls = [...host.querySelectorAll(CONTROLS)];
   const named = (name: string) => controls.filter((node) => nameOf(node) === name);
   const listening = named('Listening').length > 0;
-  const reach: string[] = [];
+  const reach: string[] = rangeFaults(host);
   if (listening) reach.push(...listeningFaults(host));
   if (headings.length === 0) return [...pendingFaults(host, controls), ...reach];
   const out: string[] = [];

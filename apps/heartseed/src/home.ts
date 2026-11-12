@@ -157,14 +157,14 @@ export const furrowsOf = (
     };
   });
 
-/** The verse a plant's reference belongs to: a phrase's verse, else the reference itself. */
+/** The verse a plant's reference belongs to: an earlier build's piece's verse (`src/phrase.ts`), else the reference itself. */
 export const verseOf = (reference: string) =>
   Option.match(phraseOf(reference), {
     onNone: () => reference,
     onSome: (phrase) => phrase.verse,
   });
 
-/** The verses today's plan holds open: each verse (a phrase's folded into it) of an item not yet done; none before a plan is made. */
+/** The verses today's plan holds open: the verse of each item not yet done; none before a plan is made. */
 export const readyOf = (plan: Option.Option<Plan>, garden: ReadGarden): ReadonlySet<string> =>
   new Set(
     Option.match(plan, {

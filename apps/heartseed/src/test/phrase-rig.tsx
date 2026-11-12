@@ -1,19 +1,22 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop, effect/noTryCatch -- the phrases' rendered walk: it mounts the root route in happy-dom's document through React's promise-based `act`, handing each turn over until the frame it waits on lands, at most 3 s; the disk, the clock and the zone are plain values the steps change (the zone in `process.env.TZ`, put back in a `finally`), and the model reads its undefined and null as none. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop, effect/noTryCatch -- the long verses' rendered walk: it mounts the root route in happy-dom's document through React's promise-based `act`, handing each turn over until the frame it waits on lands, at most 3 s; the disk, the clock and the zone are plain values the steps change (the zone in `process.env.TZ`, put back in a `finally`), and the model reads its undefined and null as none. */
 
 /**
- * Today over days with long verses learned as phrases (hsphrase H4-H6, H8,
- * H10), walked through the root route over the app's own layer, for the
- * parts `src/phrase/walk-*.test.tsx`. A generated device lies in one of
- * five zones (Lord Howe and Chatham among them), holds one to three
- * passages from a pool of long-only, mixed and over-the-promise ranges
- * (none or one when its layer teaches Fear, every third device), and
- * starts with the promise planted and each other verse's history sown in
- * one of these: none, some phrases, every phrase ripe (three clean recalls
- * days apart), or joined (ripe phrases and the verse's own recalls). It
+ * Today over days with long verses learned whole (hspiece W2 and M) over
+ * gardens that hold the pieces main's build cut them into, walked through
+ * the root route over the app's own layer, for the parts
+ * `src/phrase/walk-*.test.tsx`. A generated device lies in one of five
+ * zones (Lord Howe and Chatham among them), holds one to three passages
+ * from a pool of long-only, mixed and over-the-promise ranges (none or one
+ * when its layer teaches Fear, every third device), and starts with the
+ * promise planted and each other verse's history sown as main kept it, in
+ * one of these: none, some old pieces, every old piece ripe (three clean
+ * recalls days apart), or joined (ripe old pieces and the verse's own
+ * recalls); in half the Fear devices every piece before Fear's first verse
+ * of 35 words or more is planted, so that long verse is the new piece. It
  * then lives four days, launched each morning after 04:00 local at an hour
  * up to 22:00, tending up to six items a day, and on half its days
  * launched again one to three hours later to tend up to two more (no new
- * piece on a day one was said, a phrase's included). Each launch lands on
+ * piece on a day one was said). Each launch lands on
  * home, whose first show makes the plan: with an item shown, home shows
  * the model's counts line and `Start`, which the walk takes to Today; with
  * none, home shows the done state's counts line and no `Start`, no other
@@ -35,15 +38,16 @@
  * The oracle, apart from the app's code: Today's reference, counts line,
  * action, `Listen` and the words under the cue are `run-model.ts`'s run
  * over `session-model.ts`'s plan of the pieces (`passages-model.ts`'s or
- * `promise-model.ts`'s, phrased and expanded by `phrase-model.ts`), each
- * cue `joinCueRule`'s, held after every step. Once every item of a run
- * not empty is done, Today is the end: the heading `The field is tended`,
- * no counts line, and the grew line and grown names by `tendedModel` over
- * the run's baselines (a phrase's verse listed once, at the verse's stage
- * on the field), tallied `end:none`, `end:one` or `end:many`, and
- * `end:phrase` when a phrase alone put its verse on the list; home's
- * counts line stays the plan's. The disk keeps every start
- * key but the minutes after a tap, and gains only each recital's record.
+ * `promise-model.ts`'s, whole verses), each cue `wholeCueRule`'s (the full
+ * text until a verse's own plant, whatever old pieces of it are stored),
+ * held after every step; an item named as an old piece fails the walk.
+ * Once every item of a run not empty is done, Today is the end: the
+ * heading `The field is tended`, no counts line, and the grew line and
+ * grown names by `tendedModel` over the run's baselines, tallied
+ * `end:none`, `end:one` or `end:many`, and `end:begun` when a verse with
+ * old pieces stored grew onto the list; home's counts line stays the
+ * plan's. The disk keeps every start key but the minutes after a tap, and
+ * gains only each recital's record, under the verse's own reference.
  * Every frame of every launch holds to the root's frame rule (`watchRoot`,
  * the garden read), checked after every step and at each launch's leave.
  */
@@ -79,14 +83,7 @@ import {
   type Span,
 } from './passages-model';
 import { CORPUS } from './passages-rig';
-import {
-  expandRule,
-  joinCueRule,
-  phraseOfRule,
-  pieceRule,
-  wordsOf,
-  withPhrasesRule,
-} from './phrase-model';
+import { oldPiecesRule, phraseOfRule, pieceRule, verseOfRule, wholeCueRule } from './phrase-model';
 import { piecesModel } from './promise-model';
 import {
   actionModel,
@@ -137,7 +134,43 @@ const POOL: readonly [Span, ...Span[]] = [
   { book: 45, chapter: 8, first: 28, last: 28 },
 ];
 
-const HISTORIES = ['none', 'phrases', 'ripe', 'ripe', 'joined'] as const;
+const HISTORIES = ['none', 'pieces', 'ripe', 'ripe', 'joined'] as const;
+
+/** The fewest words of a verse the walk calls long: Fear's three longest verses (35 to 41 words). */
+const LONG = 35;
+
+const SPLIT_WORD = /\s/u;
+const WORDY = /[\p{L}\p{N}]/u;
+
+/** One word of a text: its whitespace run's span (UTF-16), and where its first letter or number sits. */
+interface ModelWord {
+  readonly start: number;
+  readonly end: number;
+  readonly wordyStart: number;
+}
+
+/** The text's words: each whitespace run holding a letter or number, found code point by code point. */
+const wordsOf = (text: string): ModelWord[] => {
+  const found: ModelWord[] = [];
+  let at = 0;
+  while (at < text.length) {
+    const char = String.fromCodePoint(text.codePointAt(at) ?? 0);
+    if (SPLIT_WORD.test(char)) {
+      at += char.length;
+      continue;
+    }
+    const start = at;
+    let wordyStart = -1;
+    while (at < text.length) {
+      const inner = String.fromCodePoint(text.codePointAt(at) ?? 0);
+      if (SPLIT_WORD.test(inner)) break;
+      if (WORDY.test(inner) && wordyStart < 0) wordyStart = at;
+      at += inner.length;
+    }
+    if (wordyStart >= 0) found.push({ start, end: at, wordyStart });
+  }
+  return found;
+};
 const GRADES = ['Again', 'Hard', 'Good', 'Easy'] as const;
 
 export type Coverage = Record<string, number>;
@@ -459,7 +492,7 @@ class PhraseWalk {
   } | null = null;
   app: Mounted | null = null;
   failure: string | null = null;
-  /** Whether the day's new piece was said today, and whether it was a phrase; null before it is. */
+  /** Whether the day's new piece was said today, and whether old pieces of it are stored; null before it is. */
   sownFresh: boolean | null = null;
 
   constructor(
@@ -478,7 +511,14 @@ class PhraseWalk {
     const day = Date.UTC(2026, below(next, 12), 1 + below(next, 28));
     this.time.now = wallAt(this.zone, day, 0, 6) + below(next, 15 * 60) * MINUTE;
     this.sow(OWN.reference, this.time.now - (1 + below(next, 6)) * DAY, 3);
-    for (const piece of this.pieces().slice(1)) this.sowHistory(piece);
+    const pieces = this.pieces().slice(1);
+    const long = pieces.findIndex((piece) => piece.words >= LONG);
+    const ahead = teaches && long >= 0 && below(next, 2) === 0 ? long : 0;
+    if (ahead > 0) bump(this.cover, 'gen:long-next');
+    for (const [index, piece] of pieces.entries()) {
+      if (index < ahead) this.sow(piece.reference, this.time.now - (1 + below(next, 3)) * DAY, 3);
+      else this.sowHistory(piece, index === ahead && ahead > 0);
+    }
     this.start = new Map(this.disk);
   }
 
@@ -505,25 +545,37 @@ class PhraseWalk {
       this.sow(reference, this.time.now - days * DAY, 3);
   }
 
-  /** Sows `piece`'s history, one of `HISTORIES`: the phrases' for a phrased verse, its own for a whole one. */
-  sowHistory(piece: ModelTextPiece) {
-    const history = pickOf(this.next, HISTORIES);
-    const phrases = piece.phrases ?? [];
-    bump(this.cover, `gen:${phrases.length > 0 ? 'phrased' : 'whole'}-${history}`);
+  /**
+   * Sows `piece`'s history as main's build kept it, one of `HISTORIES`: for
+   * a verse main cut, some of its old pieces, every one ripe, or every one
+   * ripe and the verse joined (its own plant); for a short one, its own
+   * plant. `unplanted` keeps the verse itself unplanted, so it is the new piece.
+   */
+  sowHistory(piece: ModelTextPiece, unplanted = false) {
+    const history = unplanted
+      ? pickOf(this.next, ['none', 'pieces', 'ripe'] as const)
+      : pickOf(this.next, HISTORIES);
+    const old = oldPiecesRule(piece.reference, piece.words);
+    bump(this.cover, `gen:${old.length > 0 ? 'long' : 'short'}-${history}`);
     if (history === 'none') return;
-    if (phrases.length === 0) {
+    if (old.length === 0) {
       this.sow(piece.reference, this.time.now - (1 + below(this.next, 20)) * DAY, 3);
       return;
     }
-    if (history === 'phrases') {
-      const upTo = 1 + below(this.next, phrases.length - 1);
-      for (const phrase of phrases.slice(0, upTo))
-        this.sow(phrase.reference, this.time.now - (1 + below(this.next, 9)) * DAY, 3);
+    if (history === 'pieces') {
+      const upTo = 1 + below(this.next, old.length - 1);
+      for (const reference of old.slice(0, upTo))
+        this.sow(reference, this.time.now - (1 + below(this.next, 9)) * DAY, 3);
       return;
     }
-    for (const phrase of phrases) this.ripe(phrase.reference);
+    for (const reference of old) this.ripe(reference);
     if (history === 'joined')
       this.sow(piece.reference, this.time.now - (1 + below(this.next, 5)) * DAY, 3);
+  }
+
+  /** Whether an old piece of `verse` is stored. */
+  begun(verse: string) {
+    return [...this.plants().keys()].some((key) => key !== verse && verseOfRule(key) === verse);
   }
 
   plants() {
@@ -536,22 +588,21 @@ class PhraseWalk {
 
   recallsNow = (reference: string) => this.plants().get(reference)?.length ?? 0;
 
-  /** The pieces the model makes over the disk's passages: hskjv's, or hspromise's with Fear taught, each phrased by H3. */
+  /** The pieces the model makes over the disk's passages: hskjv's, or hspromise's with Fear taught, each a whole verse. */
   pieces(): ModelTextPiece[] {
     if (this.cache.pieces !== null) return this.cache.pieces;
     const held = readRule(CORPUS, this.disk.get(KEY), 0);
     this.cache.pieces =
       this.taught.length > 0
-        ? piecesModel(CORPUS, [OWN], held, this.taught, words, withPhrasesRule)
-        : piecesRule(CORPUS, [OWN], held, words, withPhrasesRule);
+        ? piecesModel(CORPUS, [OWN], held, this.taught, words)
+        : piecesRule(CORPUS, [OWN], held, words);
     return this.cache.pieces;
   }
 
   planNow() {
-    const plants = this.plants();
     return planModel({
-      plants,
-      pieces: expandRule(this.pieces(), plants),
+      plants: this.plants(),
+      pieces: this.pieces(),
       at: this.time.now,
       offset: offsetIn(this.zone, this.time.now),
       minutes: this.minutes,
@@ -609,7 +660,7 @@ class PhraseWalk {
           ? null
           : action === 'Next'
             ? RESULT
-            : verseWant(piece.text, joinCueRule(this.plants(), shown.reference)),
+            : verseWant(piece.text, wholeCueRule(this.plants(), shown.reference)),
       grew: tended === null ? [] : [grewLine(tended.length)],
       grown: tended === null ? [] : tended.map((each) => `${each.reference}, ${each.stage}`),
     };
@@ -652,20 +703,12 @@ class PhraseWalk {
     return this.failure === null;
   }
 
-  /** An end settled, by how many verses grew (`end:none`, `end:one`, `end:many`), and `end:phrase` when a phrase of the run grew its verse onto the end's list. */
+  /** An end settled, by how many verses grew (`end:none`, `end:one`, `end:many`), and `end:begun` when a verse with old pieces stored grew onto the end's list. */
   tallyEnd() {
     const tended = this.tended();
     if (tended === null) return;
     bump(this.cover, END_FLOORS[Math.min(tended.length, 2)] ?? 'end:many');
-    const verses = new Set(tended.map((each) => each.reference));
-    const plan = this.run.plan ?? [];
-    const folded = plan.some((item) => {
-      const verse = phraseOfRule(item.reference)?.verse;
-      return (
-        verse !== undefined && verses.has(verse) && !plan.some((other) => other.reference === verse)
-      );
-    });
-    if (folded) bump(this.cover, 'end:phrase');
+    if (tended.some((each) => this.begun(each.reference))) bump(this.cover, 'end:begun');
   }
 
   /** The launch under way left, its frames' root faults failing the walk first. */
@@ -728,8 +771,8 @@ class PhraseWalk {
     return false;
   }
 
-  /** H8: Listen reads the piece's own text, and each word named by its UTF-16 span within it lights alone, in order. */
-  async listen(piece: ModelTextPiece, phrase: boolean) {
+  /** Listen reads the verse's whole text, and each word named by its UTF-16 span within it lights alone, in order. */
+  async listen(piece: ModelTextPiece, kind: string) {
     const app = this.mounted;
     const before = app.voice.spoken.length;
     if (!(await app.tap('Listen'))) return this.fail(`no Listen on ${piece.reference}`);
@@ -760,7 +803,7 @@ class PhraseWalk {
         );
     }
     await app.voice.send({ utterance: said.utterance, kind: 'finish', location: 0, length: 0 });
-    bump(this.cover, phrase ? 'listen:phrase' : 'listen:verse');
+    bump(this.cover, `listen:${kind}`);
     return this.settle(`listened ${piece.reference}`);
   }
 
@@ -774,11 +817,13 @@ class PhraseWalk {
       this.fail(`an item of no piece: ${shown.reference}`);
       return false;
     }
-    const phrase = phraseOfRule(shown.reference) !== undefined;
-    this.tally(shown, piece, phrase);
+    if (phraseOfRule(shown.reference) !== undefined || piece.reference !== shown.reference)
+      return this.fail(`Today offers an old piece: ${shown.reference}`);
+    const kind = piece.words >= LONG ? 'long' : 'verse';
+    this.tally(shown, piece);
     const roll = below(this.next, 10);
     if (shown.fresh && roll < 8) {
-      await this.listen(piece, phrase);
+      await this.listen(piece, kind);
       if (this.failure !== null) return false;
     }
     const app = this.mounted;
@@ -793,7 +838,7 @@ class PhraseWalk {
     if (!(await app.tap('Say it'))) return this.fail(`no Say it on ${shown.reference}`);
     if (!(await app.until(() => app.today().action.includes('Listening'))))
       return this.fail(`${shown.reference} never listened`);
-    if (below(this.next, 4) === 0) await this.makeWhileListening(phrase);
+    if (below(this.next, 4) === 0) await this.makeWhileListening(kind);
     if (!(await app.tap('Listening'))) return this.fail(`no Listening on ${shown.reference}`);
     if (!(await app.until(() => app.summary() !== '' && app.today().action.includes('Next'))))
       return this.fail(`${shown.reference}: no result`);
@@ -803,12 +848,12 @@ class PhraseWalk {
         `${shown.reference}: the summary reads ${summary.replace(/[^\d ofwrds]/g, '')} over ${n} words, ${skip.length} unheard`,
       );
     if (!(await this.keep(shown.reference, key, n))) return false;
-    bump(this.cover, phrase ? 'record:phrase' : 'record:verse');
-    if (shown.fresh) this.sownFresh = phrase;
+    bump(this.cover, `record:${kind}`);
+    if (shown.fresh) this.sownFresh = this.begun(shown.reference);
     if (!(await this.settle(`said ${shown.reference}`))) return false;
     if (!(await app.tap('Next'))) return this.fail(`no Next on ${shown.reference}`);
     this.run = nextModel(this.run);
-    if (phrase) bump(this.cover, 'next:after-phrase');
+    if (kind === 'long') bump(this.cover, 'next:after-long');
     return this.settle(`next after ${shown.reference}`);
   }
 
@@ -835,7 +880,7 @@ class PhraseWalk {
   }
 
   /** A Minutes making while the held item's recital listens, at the session seam (no reader reaches it: the sheet is on home, and Today shows no `Your field` while a recital listens): the plan made again, the item still held and shown. */
-  async makeWhileListening(phrase: boolean) {
+  async makeWhileListening(kind: string) {
     const choice = pickOf(
       this.next,
       MINUTES.filter((each) => each !== this.minutes) as unknown as [Minutes, ...Minutes[]],
@@ -849,27 +894,16 @@ class PhraseWalk {
     const seen = this.mounted.today().references;
     if (held === undefined || seen.length !== 1 || seen[0] !== held)
       this.fail(`a making under way showed ${seen.join('|')} where ${held} is held`);
-    bump(this.cover, phrase ? 'held:phrase-made' : 'held:verse-made');
+    bump(this.cover, `held:${kind}-made`);
   }
 
-  tally(
-    shown: { readonly fresh: boolean; readonly reference: string },
-    piece: ModelTextPiece,
-    phrase: boolean,
-  ) {
-    const plants = this.plants();
-    const fear = piece.group === FEAR_TITLE;
-    if (phrase) {
-      bump(this.cover, shown.fresh ? 'today:phrase-new' : 'today:phrase-review');
-      if (fear) bump(this.cover, 'today:fear-phrase');
-      return;
-    }
-    if ((piece.phrases ?? []).length === 0) return;
-    if (fear) bump(this.cover, 'today:fear-join');
-    if (!shown.fresh) return bump(this.cover, 'today:joined-review');
-    bump(this.cover, 'today:join');
-    if (joinCueRule(plants, piece.reference) === 'initials')
-      bump(this.cover, 'today:join-under-letters');
+  /** The kinds of an item Today shows: a verse main cut (begun in old pieces or not), new or reviewed, Fear's long verses. */
+  tally(shown: { readonly fresh: boolean; readonly reference: string }, piece: ModelTextPiece) {
+    const age = shown.fresh ? 'new' : 'review';
+    if (piece.words > 12) bump(this.cover, `today:cut-${age}`);
+    if (this.begun(piece.reference)) bump(this.cover, `today:begun-${age}`);
+    if (piece.words >= LONG) bump(this.cover, `today:long-${age}`);
+    if (piece.words >= LONG && piece.group === FEAR_TITLE) bump(this.cover, 'today:fear-long');
   }
 
   /** A launch named `day`, then up to `items` items tended. */
@@ -885,7 +919,7 @@ class PhraseWalk {
     if (this.failure !== null || below(this.next, 2) === 0) return;
     this.time.now += (1 + below(this.next, 3)) * HOUR;
     if (this.sownFresh !== null)
-      bump(this.cover, this.sownFresh ? 'day:later-after-new-phrase' : 'day:later-after-new');
+      bump(this.cover, this.sownFresh ? 'day:later-after-new-begun' : 'day:later-after-new');
     await this.session(`${day}, later`, 2);
   }
 

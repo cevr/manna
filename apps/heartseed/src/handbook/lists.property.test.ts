@@ -53,7 +53,7 @@ import {
 import { below, random } from '../test/garden-model';
 import type { Held, ModelTextPiece, Span } from '../test/passages-model';
 import { CORPUS, choosableOf, countIn } from '../test/passages-rig';
-import { verseOfRule, withPhrasesRule } from '../test/phrase-model';
+import { verseOfRule } from '../test/phrase-model';
 
 const words = (text: string) => sourceWords(text).length;
 
@@ -195,14 +195,7 @@ describe('the field and the session over held lists', () => {
       if (JSON.stringify(gotLists) !== JSON.stringify(wantLists))
         wrong.push(`lists ${JSON.stringify(drawn.held)} ${JSON.stringify(drawn.taught)}`);
       const got = piecesOf(drawn.own, drawn.view, collectionPieces(collections));
-      const want = piecesWithListsModel(
-        CORPUS,
-        drawn.own,
-        drawn.held,
-        drawn.taught,
-        words,
-        withPhrasesRule,
-      );
+      const want = piecesWithListsModel(CORPUS, drawn.own, drawn.held, drawn.taught, words);
       if (JSON.stringify(got) !== JSON.stringify(want))
         wrong.push(`pieces ${JSON.stringify(drawn.held)} ${JSON.stringify(drawn.taught)}`);
       const listed = drawn.lists.flatMap((id) => planted(id)?.verses ?? []);

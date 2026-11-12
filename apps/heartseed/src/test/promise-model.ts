@@ -18,9 +18,7 @@
  *   the passage's reference), then each taught collection's verses in the
  *   order the ids are given, promise by promise (group: its title), each
  *   reference kept at its first place; with the passages unread, the app's
- *   own alone. Each verse after the app's own carries the phrases a
- *   `phrased` argument gives it (hsphrase H9: `withPhrasesRule`), under its
- *   own group.
+ *   own alone. Each verse is one piece, whole (hspiece W2).
  * - F1 the field's passages: the app's own row, each held passage (none
  *   while unread), then each taught collection as one row of its verses
  *   in order, each once.
@@ -106,21 +104,18 @@ export const needModel = (planted: ReadonlySet<string>, taught: readonly string[
   return cards;
 };
 
-/** T1: the pieces over the app's `own`, the passages `held` and the collections `taught`, each verse's text from `corpus`, its words by `words`, and its phrases by `phrased` (none by default), given the verse with its group. */
+/** T1: the pieces over the app's `own`, the passages `held` and the collections `taught`, each verse whole, its text from `corpus` and its words by `words`. */
 export const piecesModel = (
   corpus: Corpus,
   own: readonly ModelTextPiece[],
   held: Held,
   taught: readonly string[],
   words: (text: string) => number,
-  phrased: (piece: ModelTextPiece) => ModelTextPiece = (piece) => piece,
 ): ModelTextPiece[] => {
   const all: ModelTextPiece[] = [...own];
   const push = (book: number, chapter: number, verse: number, group: string) => {
     const text = versesIn(corpus, book, chapter)[verse - 1] ?? '';
-    all.push(
-      phrased({ reference: verseRef(book, chapter, verse), text, words: words(text), group }),
-    );
+    all.push({ reference: verseRef(book, chapter, verse), text, words: words(text), group });
   };
   if (held.tag === 'Read') {
     for (const span of held.passages)

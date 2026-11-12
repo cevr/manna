@@ -104,7 +104,7 @@ import {
   tendedModel,
 } from './run-model';
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
-import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { pieceRule, verseOfRule } from './phrase-model';
 import { cardLineModel } from './home-model';
 import { END, homeLines, rootFaults } from './root-rule';
 import { closeSettings, openSettings, tapInSheet, watchSheet } from './settings-rig';
@@ -263,13 +263,12 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   let mornings = 0;
   let addedOnPlantedDay = false;
 
-  const pieces = () =>
-    piecesRule(CORPUS, [PASSAGE], held, (text) => sourceWords(text).length, withPhrasesRule);
+  const pieces = () => piecesRule(CORPUS, [PASSAGE], held, (text) => sourceWords(text).length);
   const recallsNow = (reference: string) => plantsIn(device.disk).get(reference)?.length ?? 0;
   const planOf = () =>
     planModel({
       plants: plantsIn(device.disk),
-      pieces: expandRule(pieces(), plantsIn(device.disk)),
+      pieces: pieces(),
       at: time.now,
       offset: offsetIn(zone, time.now),
       minutes,
@@ -421,8 +420,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     const shown = shownModel(run, recallsNow);
     if (shown === null || shown.reference === PROMISE || !isPassageVerse(shown.reference)) return;
     reached.add(shown.fresh ? 'today:fresh-passage-verse' : 'today:review-passage-verse');
-    if (shown.reference !== verseOfRule(shown.reference))
-      reached.add(shown.fresh ? 'today:fresh-phrase' : 'today:review-phrase');
+    if ((pieceRule(pieces(), shown.reference)?.words ?? 0) > 12)
+      reached.add(shown.fresh ? 'today:fresh-long-verse' : 'today:review-long-verse');
     if (shown.fresh && mornings > 0 && addedOnPlantedDay)
       reached.add('day:new-after-a-planted-day');
   };

@@ -11,19 +11,21 @@
  * range to its row, so the row's `Remove` names that range and never finds
  * it by the row's place.
  *
- * Phrases fold into their verse: a phrase is never a row or a plant here. A
- * verse with no plant of its own but a plant of a phrase of it shows `seed`;
- * a phrase plant whose verse no passage holds makes a row for that verse
- * among the other plants, first sown by the earliest recall of the verse and
- * its phrases.
+ * The pieces of verses an earlier build kept (`src/phrase.ts`) fold into
+ * their verse: a piece is never a row or a plant here, and its stage is
+ * never its verse's. A verse with no plant of its own is `not planted`
+ * whatever pieces of it are planted, until it is said whole (owner,
+ * 2026-11-12); a piece's plant whose verse no passage holds makes a row for
+ * that verse among the other plants, first sown by the earliest recall of
+ * the verse and its pieces.
  *
  * Days sown is the number of distinct days (`dayOf`: the reader's local day
  * from 04:00 by each record's own stored offset, or the UTC date of a record
  * kept before offsets were stored) on which any recall of any verse or
- * phrase was kept. A recall's day is a function of its record alone, so the
+ * piece was kept. A recall's day is a function of its record alone, so the
  * same disk shows the same count in every time zone, and as the garden never
  * removes a recall and a rewrite keeps its start and offset, the count never
- * falls. The harvest is the number of verses (never phrases) at full corn
+ * falls. The harvest is the number of verses (never pieces) at full corn
  * now.
  */
 
@@ -64,7 +66,7 @@ export interface Field {
   readonly harvest: number;
 }
 
-/** A verse the field shows outside the passages, and its earliest recall among its own plant and its phrases'. */
+/** A verse the field shows outside the passages, and its earliest recall among its own plant and its old pieces'. */
 interface Sown {
   readonly verse: string;
   readonly first: number;
@@ -76,7 +78,7 @@ const firstSown: Order.Order<Sown> = Order.combine(
   Order.mapInput(Order.String, (sown: Sown) => sown.verse),
 );
 
-/** The verse a plant's reference belongs to: a phrase's verse, else the reference itself. */
+/** The verse a plant's reference belongs to: an old piece's verse, else the reference itself. */
 const verseOf = (reference: string) =>
   Option.match(phraseOf(reference), {
     onNone: () => reference,
@@ -85,7 +87,7 @@ const verseOf = (reference: string) =>
 
 const isPhrase = (plant: Plant) => Option.isSome(phraseOf(plant.reference));
 
-/** Each verse no passage holds, with its earliest recall: phrase plants fold into their verse. */
+/** Each verse no passage holds, with its earliest recall: old pieces' plants fold into their verse. */
 const othersOf = (plants: ReadonlyArray<Plant>, taught: ReadonlySet<string>) => {
   const firsts = new Map<string, number>();
   for (const plant of plants) {
@@ -101,18 +103,13 @@ const othersOf = (plants: ReadonlyArray<Plant>, taught: ReadonlySet<string>) => 
   );
 };
 
-/** The field of a read garden over the passages the app teaches, each phrase folded into its verse. */
+/** The field of a read garden over the passages the app teaches, each old piece folded into its verse. */
 export const fieldOf = (garden: ReadGarden, passages: ReadonlyArray<FieldPassage>): Field => {
   const plants = [...garden.plants.values()];
   const taught = new Set(passages.flatMap((passage) => passage.verses));
-  const inPhrases = new Set(plants.filter(isPhrase).map((plant) => verseOf(plant.reference)));
-  const unplanted = (reference: string): PlantStage => {
-    if (inPhrases.has(reference)) return 'seed';
-    return 'not planted';
-  };
   const stageAt = (reference: string): PlantStage =>
     Option.match(Option.fromNullishOr(garden.plants.get(reference)), {
-      onNone: () => unplanted(reference),
+      onNone: () => 'not planted',
       onSome: stageOf,
     });
   const days = new Set(plants.flatMap((plant) => plant.recalls.map(dayOf)));

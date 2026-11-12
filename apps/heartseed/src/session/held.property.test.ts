@@ -47,14 +47,7 @@ import {
   storedText,
 } from '../test/passages-model';
 import { choosableOf, CORPUS } from '../test/passages-rig';
-import {
-  expandRule,
-  phraseOfRule,
-  pieceRule,
-  referencesRule,
-  verseOfRule,
-  withPhrasesRule,
-} from '../test/phrase-model';
+import { oldPiecesRule, phraseOfRule, pieceRule, verseOfRule } from '../test/phrase-model';
 import { DAY, MINUTE, planModel } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
 import { shownOf, type Shown } from './run';
@@ -178,19 +171,17 @@ const diskOf = (next: () => number, now: number, zone: string) => {
   disk.set(KEY, storedText(stored));
   const promise = recallOf(next, PROMISE.reference, now - (2 + below(next, 38)) * DAY, zone);
   disk.set(keyOf(promise), json(promise));
-  for (const piece of piecesRule(
-    CORPUS,
-    [],
-    { tag: 'Read', passages: stored },
-    words,
-    withPhrasesRule,
-  )) {
-    const phrase = piece.phrases?.[0];
-    const roll = below(next, 3);
-    const planted = roll === 0 ? piece : roll === 1 ? phrase : undefined;
-    if (planted === undefined) continue;
-    const recall = recallOf(next, planted.reference, now - (8 + below(next, 60)) * DAY, zone);
-    disk.set(keyOf(recall), json(recall));
+  for (const piece of piecesRule(CORPUS, [], { tag: 'Read', passages: stored }, words)) {
+    const [old] = oldPiecesRule(piece.reference, piece.words);
+    const roll = below(next, 4);
+    const planted = [
+      ...(roll === 0 || roll === 3 ? [piece.reference] : []),
+      ...(roll >= 2 && old !== undefined ? [old] : []),
+    ];
+    for (const reference of planted) {
+      const recall = recallOf(next, reference, now - (8 + below(next, 60)) * DAY, zone);
+      disk.set(keyOf(recall), json(recall));
+    }
   }
   return { disk, stored };
 };
@@ -252,7 +243,7 @@ class Walk {
     this.device = device;
     this.services = services;
     this.held = { tag: 'Read', passages: stored };
-    this.pieces = piecesRule(CORPUS, OWN, this.held, words, withPhrasesRule);
+    this.pieces = piecesRule(CORPUS, OWN, this.held, words);
     this.plan = this.modelPlan();
     this.trail.push(`launch(${zone},${new Date(device.now).toISOString()},${json(stored)})`);
   }
@@ -276,10 +267,9 @@ class Walk {
   }
 
   modelPlan(): ItemText[] {
-    const plants = plantsOf(this.device.disk);
     return planModel({
-      plants,
-      pieces: expandRule(this.pieces, plants),
+      plants: plantsOf(this.device.disk),
+      pieces: this.pieces,
       at: this.device.now,
       offset: offsetIn(this.zone, this.device.now),
       minutes: 5,
@@ -371,7 +361,14 @@ class Walk {
       Option.fromNullishOr(made.items.find((each) => each.reference === item.reference)),
     );
     const piece = pieceRule(this.pieces, item.reference);
-    if (phraseOfRule(item.reference) !== undefined) this.bump(`phrase:${kindOf(item)}`);
+    if (phraseOfRule(item.reference) !== undefined)
+      this.fail(`hold: the plan offers an old piece ${item.reference}`);
+    if (
+      [...plantsOf(this.device.disk).keys()].some(
+        (key) => phraseOfRule(key)?.verse === item.reference,
+      )
+    )
+      this.bump(`begun in pieces:${kindOf(item)}`);
     if (Option.isNone(planned) || piece === undefined) {
       this.fail(`hold: ${item.reference} not in the session's plan`);
       return null;
@@ -424,12 +421,12 @@ class Walk {
     this.held = want.held;
     if (want.outcome === 'Added' || want.outcome === 'Removed') {
       this.device.disk.set(KEY, storedText(this.held.tag === 'Read' ? this.held.passages : []));
-      this.pieces = piecesRule(CORPUS, OWN, this.held, words, withPhrasesRule);
+      this.pieces = piecesRule(CORPUS, OWN, this.held, words);
       this.plan = this.modelPlan();
       if (recital === 'finished') this.holding = null;
     }
-    const now = referencesRule(this.pieces);
-    const gone = referencesRule(before).filter((each) => !now.includes(each));
+    const now = this.pieces.map((piece) => piece.reference);
+    const gone = before.map((piece) => piece.reference).filter((each) => !now.includes(each));
     const left = gone.includes(item.reference);
     this.bump(`kind:${kindOf(item)}`);
     this.bump(`recital:${recital}`);
@@ -499,8 +496,8 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['left the pieces:finished', 8],
   ['left the pieces:new', 8],
   ['left the pieces:review', 6],
-  ['phrase:new', 20],
-  ['phrase:review', 5],
+  ['begun in pieces:new', 20],
+  ['begun in pieces:review', 5],
 ];
 
 /** Plays every device, the host's zone put back once they end, however they end. */

@@ -133,3 +133,38 @@ describe("home's rule", () => {
     ).toEqual(today([]));
   });
 });
+
+describe('the word range clause (hspiece)', () => {
+  it('names a word range in a text and in an accessible name on any screen, the pending frame too, and nothing for a reference alone', () => {
+    const today = (nodes: readonly Element[]) =>
+      faultsOf('Today', [element('button', 'Your field'), ...nodes], []);
+    const reference = (words: string) => tagged('reference', words);
+    expect(today([reference('Psalms 91:1 [1-9]')])).toEqual(
+      [...today([reference('Psalms 91:1')]), 'a word range [1-9] in a text'].toSorted(),
+    );
+    expect(today([element('img', 'Psalms 91:1 [10-19], seed', '')])).toEqual(
+      [
+        ...today([element('img', 'Psalms 91:1, seed', '')]),
+        'a word range [10-19] in a name',
+      ].toSorted(),
+    );
+    expect(home([], [plant('Psalms 91:2 [7-13]')])).toEqual(['a word range [7-13] in a text']);
+    const named = plant('');
+    named.setAttribute('aria-label', 'Psalms 91:2 [7-13], seed');
+    expect(home([], [named])).toEqual(['a word range [7-13] in a name']);
+    const pending = (words: string) => {
+      const host = document.createElement('div');
+      host.append(reference(words));
+      document.body.append(host);
+      const faults = rootFaults(host, 'read');
+      host.remove();
+      return faults;
+    };
+    expect(pending('Psalms 91:1 [1-9]')).toEqual([
+      ...pending('Psalms 91:1'),
+      'a word range [1-9] in a text',
+    ]);
+    const near = today([element('img', 'Psalms 91:1 [x-9]', '[1–9] [1 - 9] 1-9')]);
+    expect(near.filter((fault) => fault.startsWith('a word range'))).toEqual([]);
+  });
+});

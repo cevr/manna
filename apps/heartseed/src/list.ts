@@ -1,7 +1,7 @@
 /**
  * What a list's own page offers (hslist L1), pure: `Practice this list`
  * starts the plan's open items on the list's verses, in plan order and
- * exactly as planned (a phrase folded into its verse), so a verse said
+ * exactly as planned, so a verse said
  * through it is done in the plan too; with none open, the list's weakest
  * planted verse by the order Today card uses (`weakestAmong`); with none
  * planted that starts, its first verse to learn in the list's order; else
@@ -27,7 +27,7 @@ export type ListStart =
 
 const NONE: ListStart = { _tag: 'None' };
 
-/** The plan's items not done on `verses` (a phrase folded into its verse), in plan order, each with its piece; an item with no piece is left out. */
+/** The plan's items not done on `verses`, in plan order, each with its piece; an item with no piece is left out. */
 const openOn = (
   view: SessionView,
   garden: ReadGarden,

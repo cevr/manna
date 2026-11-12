@@ -55,7 +55,6 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { NEW_CARD, review, type Card } from './fsrs';
 import type { Cue } from './matcher';
-import { phraseOf } from './phrase';
 import { Recalls, type Recall } from './sayit';
 
 export const STAGES = ['seed', 'blade', 'ear', 'full corn'] as const;
@@ -156,24 +155,14 @@ export const stageOf = (plant: Plant): Stage => {
   return nextStage(folded.stage, Arr.lastNonEmpty(recalls), plant.card.stability);
 };
 
-/** Whether the garden holds a plant of a phrase of the verse at `reference`. */
-const hasPhrasePlant = (garden: ReadGarden, reference: string) =>
-  Arr.some([...garden.plants.keys()], (key) =>
-    Option.exists(phraseOf(key), (phrase) => phrase.verse === reference),
-  );
-
 /**
  * The cue the piece at `reference` is said under next in a read garden: its
- * stage's cue once planted; before that first letters when a phrase of it
- * is planted (a join is planted under first letters, since its words are
- * known), else the full text.
+ * own plant's stage's cue once planted, else the full text, whatever plants
+ * of pieces of it an earlier build kept.
  */
 export const cueIn = (garden: ReadGarden, reference: string): Cue =>
   Option.match(Option.fromNullishOr(garden.plants.get(reference)), {
-    onNone: (): Cue => {
-      if (hasPhrasePlant(garden, reference)) return 'initials';
-      return 'full';
-    },
+    onNone: (): Cue => 'full',
     onSome: (plant) => cueAt(stageOf(plant)),
   });
 

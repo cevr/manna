@@ -3,9 +3,9 @@
 /**
  * The Today card (hsstart T1) at its pure seam, against a model written
  * here apart from the app: generated devices from `test/home-model.ts`'s
- * plan cases (pieces of made-up text over canon references, phrased or
- * whole, with histories of none, some phrases, every phrase ripe or the
- * verse whole, and the plan `planModel` makes over them), then a run over
+ * plan cases (whole verses of made-up text over canon references, with
+ * histories of none, some old pieces stored, every old piece ripe or the
+ * verse joined, and the plan `planModel` makes over them), then a run over
  * the plan (each item left or kept), and the view drawn as: the plan made,
  * no plan over passages read, or no plan over passages unread; a hold of
  * a done item in some.
@@ -16,7 +16,7 @@
  * `parts` never counts more verses than the headline; a count of one
  * reads `1 verse`, never `1 verses`. It catches the strongest verse taken
  * for the weakest, the later recall on a tie of stage, pieces counted for
- * verses (a verse's phrases counted apart), a hold's item left out of an
+ * verses, a hold's item left out of an
  * empty count, and `Start` offered with nothing open.
  */
 
@@ -192,8 +192,13 @@ const tallyOf = (tally: Tally, device: Device, seen: Seen) => {
   else if (device.held !== undefined) bump(tally, 'held');
   if (seen.headline?.startsWith('1 verse ·') === true) bump(tally, 'one verse');
   if (device.unread) bump(tally, 'unread');
-  if ((device.items ?? []).some((item) => verseOfRule(item.reference) !== item.reference))
-    bump(tally, 'phrased plan');
+  const begun = new Set(
+    device.records
+      .filter((recall) => verseOfRule(recall.reference) !== recall.reference)
+      .map((recall) => verseOfRule(recall.reference)),
+  );
+  if ((device.items ?? []).some((item) => begun.has(item.reference)))
+    bump(tally, 'plan over old pieces');
 };
 
 const FLOORS = [
@@ -205,7 +210,7 @@ const FLOORS = [
   'one verse',
   'held',
   'unread',
-  'phrased plan',
+  'plan over old pieces',
 ];
 
 describe('the Today card', () => {
