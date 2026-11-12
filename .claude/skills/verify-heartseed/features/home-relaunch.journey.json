@@ -1,0 +1,117 @@
+{
+  "feature": "home-relaunch",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-relaunch-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Say it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-how-scroll",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-how",
+      "action": "tap",
+      "target": "label=How Heartseed works",
+      "expect": [{ "shows": "label=Begin" }, { "shows": "label=Skip" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-how-grows",
+      "action": "tap",
+      "target": "label=Begin",
+      "expect": [{ "shows": "label=See your field" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-how-tips",
+      "action": "tap",
+      "target": "label=See your field",
+      "expect": [{ "shows": "label=Got it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-how-done",
+      "action": "tap",
+      "target": "label=Got it",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Got it" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-how-skip-scroll",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-how-skip-open",
+      "action": "tap",
+      "target": "label=How Heartseed works",
+      "expect": [{ "shows": "label=Skip" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-how-skip",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "hides": "label=Begin" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-tips-scroll",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-tips-open",
+      "action": "tap",
+      "target": "label=How Heartseed works",
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-tips-begin",
+      "action": "tap",
+      "target": "label=Begin",
+      "expect": [{ "shows": "label=See your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-tips-field",
+      "action": "tap",
+      "target": "label=See your field",
+      "expect": [{ "shows": "label=Practice anyway" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-tips-today",
+      "action": "tap",
+      "target": "label=Practice anyway",
+      "expect": [{ "shows": "id=session" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-tips-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
