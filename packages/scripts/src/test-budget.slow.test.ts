@@ -2,12 +2,10 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import {
   Array as Arr,
-  Clock,
   Config,
   Effect,
   Fiber,
   FileSystem,
-  Option,
   Path,
   Schedule,
   Schema,
@@ -348,13 +346,9 @@ const sameDuring: Foreign = {
   ms: 7_000,
 };
 
-/** The seed of the generated cases: `TEST_BUDGET_SEED` when set, else the clock. */
+/** The seed of the generated cases: a constant, so a run is the same run each time; `TEST_BUDGET_SEED` draws others. */
 const seed = Effect.gen(function* () {
-  const given = yield* Config.option(Config.Int('TEST_BUDGET_SEED'));
-  return yield* Option.match(given, {
-    onNone: () => Clock.currentTimeMillis,
-    onSome: (value) => Effect.succeed(value),
-  });
+  return yield* Config.Int('TEST_BUDGET_SEED').pipe(Config.withDefault(20261112));
 }).pipe(Effect.orDie);
 
 describe("test:budget's run summaries on a shared machine", () => {

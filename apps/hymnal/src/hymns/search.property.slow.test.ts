@@ -32,7 +32,7 @@ const rng = (seed: number) => () => {
 };
 
 // oxlint-disable-next-line effect/noGlobals -- the run's seed comes from its shell, outside any Effect.
-const seed = Number(process.env['HYMNAL_SEARCH_SEED'] ?? Date.now() % 1_000_000);
+const seed = Number(process.env['HYMNAL_SEARCH_SEED'] ?? 20261112);
 
 interface Line {
   readonly hymn: number;
@@ -192,7 +192,7 @@ describe('search swept over the hymnal', () => {
     });
   });
 
-  it(`ranks every hymn holding each word of a run of 2 or 3 words above every hymn a typo finds one in (seed ${seed})`, () => {
+  it(`ranks every hymn holding each word of a run of 2 or 3 words above every hymn a typo finds one in (HYMNAL_SEARCH_SEED=${seed})`, () => {
     const r = rng(seed);
     const draw = drawOf(r, () => true);
     /** The hymns holding `word` as itself or its kin, or, as the last word, a word it starts. */
@@ -220,7 +220,7 @@ describe('search swept over the hymnal', () => {
     expect({ most: runs.length > 1800, misses: misses.length }).toEqual({ most: true, misses: 0 });
   });
 
-  it(`shows under a right first result the line typed, unless its title holds every word (seed ${seed})`, () => {
+  it(`shows under a right first result the line typed, unless its title holds every word (HYMNAL_SEARCH_SEED=${seed})`, () => {
     const draw = drawOf(rng(seed), () => true);
     /** The words a query word stands for: itself and its kin. */
     const kinOf = (word: string) => KIN.find((group) => group.includes(word)) ?? [word];
@@ -249,7 +249,7 @@ describe('search swept over the hymnal', () => {
     expect({ seed, wrong: wrong.length }).toEqual({ seed, wrong: 0 });
   });
 
-  it(`finds seeded half-remembered lines in the first 5, 97% of each kind (seed ${seed})`, () => {
+  it(`finds seeded half-remembered lines in the first 5, 97% of each kind (HYMNAL_SEARCH_SEED=${seed})`, () => {
     const r = rng(seed);
     const rates = Object.entries(kinds(r)).map(([kind, change]) => {
       const draw = drawOf(r, fitFor[kind as keyof typeof fitFor]);

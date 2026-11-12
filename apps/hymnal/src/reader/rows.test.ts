@@ -22,7 +22,7 @@ const rng = (seed: number) => () => {
 };
 
 // oxlint-disable-next-line effect/noGlobals -- the run's seed comes from its shell, outside any Effect.
-const seed = Number(process.env['HYMNAL_ROWS_SEED'] ?? Date.now() % 1_000_000);
+const seed = Number(process.env['HYMNAL_ROWS_SEED'] ?? 20261112);
 const cases = 300;
 
 const names = [
@@ -87,7 +87,7 @@ const seenOf = (row: Row<Fixture>): Seen => {
 };
 
 describe('the hymn rows', () => {
-  it(`hold one topic row before each run of one topic (seed ${seed})`, () => {
+  it(`hold one topic row before each run of one topic (HYMNAL_ROWS_SEED=${seed})`, () => {
     const r = rng(seed);
     for (let k = 0; k < cases; k++) {
       const list = draw(r, k);
@@ -182,7 +182,7 @@ describe('the reader’s shelves above the topics', () => {
 });
 
 describe('a favourite’s rows', () => {
-  it(`are starred wherever the hymn shows, Recent and its topic alike, and no row is added (seed ${seed})`, () => {
+  it(`are starred wherever the hymn shows, Recent and its topic alike, and no row is added (HYMNAL_ROWS_SEED=${seed})`, () => {
     const r = rng(seed);
     for (let k = 0; k < cases; k++) {
       const list = draw(r, k);

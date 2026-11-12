@@ -218,8 +218,9 @@ under its number, and the refrain written out each time it is sung.
   how many were); the search field keeps the reader's focus;
   and a row is a real link. Its cases are drawn from that whole domain by a
   seeded sampler (`test/browser/visits.ts`), every pair of values meeting in
-  each run and each visit leaving from its own offset; the run prints its
-  seed, and `HYMNAL_LIST_SEED=<seed>` runs its cases again. It needs
+  each run and each visit leaving from its own offset; its seed is a
+  constant unless `HYMNAL_LIST_SEED=<seed>` names another, and the run
+  prints it. It needs
   Chromium installed once (`bunx playwright install chromium`).
 
 ## Chords

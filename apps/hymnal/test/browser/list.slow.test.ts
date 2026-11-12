@@ -24,7 +24,7 @@
  * The visits and the cold loads are drawn from the property's whole domain
  * by a seeded sampler (`visits.ts`): every pair of values it names meets in
  * each run, and the seed, printed once a run and with every miss, decides the rest
- * (`HYMNAL_LIST_SEED=<seed>` runs a run's cases again).
+ * (a constant, unless `HYMNAL_LIST_SEED=<seed>` names another).
  * A row is a real link: Enter opens it inside the app, and a Cmd- or
  * Ctrl-click leaves it to the browser, which opens the hymn in a new tab.
  *
@@ -374,9 +374,8 @@ afterAll(async () => {
   await server?.stop(true);
 });
 
-/** This run's seed: `HYMNAL_LIST_SEED=<seed>` runs its cases again. */
-const seed = ((given) =>
-  given !== undefined && given !== '' ? Number(given) >>> 0 : Math.floor(Math.random() * 2 ** 32))(
+/** This run's seed: a constant, so a run is the same run each time; `HYMNAL_LIST_SEED=<seed>` draws other cases. */
+const seed = ((given) => (given !== undefined && given !== '' ? Number(given) >>> 0 : 20261112))(
   process.env['HYMNAL_LIST_SEED'],
 );
 console.log(`hymnal browser test: HYMNAL_LIST_SEED=${seed}`);
