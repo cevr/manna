@@ -1,0 +1,35 @@
+{
+  "feature": "phrase-listen",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "whole-listen-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        {
+          "shows": "label=John 3:16"
+        },
+        {
+          "shows": "label=Listen"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-listen",
+      "action": "tap",
+      "target": "label=Listen",
+      "expect": [
+        {
+          "shows": "id=reading"
+        },
+        {
+          "hides": "label=Listen"
+        }
+      ],
+      "receipt": "none"
+    }
+  ]
+}
