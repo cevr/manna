@@ -359,9 +359,25 @@ export const settled = (
   });
 
 /**
+ * Whether `node`'s centre lies inside the frame of every scroll view that
+ * holds it: a row scrolled past a sheet's top edge is clipped there, though
+ * its centre is still on screen.
+ */
+const insideViews = (node: Node, byIndex: ReadonlyMap<number, Node>) =>
+  holdersOf(node, byIndex)
+    .filter(isArea)
+    .every((view) =>
+      Option.match(Option.fromUndefinedOr(view.rect), {
+        onNone: () => true,
+        onSome: (frame) => onScreen(node, frame),
+      }),
+    );
+
+/**
  * Whether a node that answers the target (`id` or `label`, matched whole, of
  * type `role` when given, matched without case) shows: its centre on the
- * screen, and the tree calls it hittable.
+ * screen and inside every scroll view that holds it, and the tree calls it
+ * hittable.
  */
 export const shows = (
   nodes: ReadonlyArray<Node>,
@@ -373,6 +389,7 @@ export const shows = (
 ) => {
   const screen = screenOf(nodes);
   const key = ({ id: 'identifier', label: 'label' } as const)[target.by];
+  const byIndex = indexed(nodes);
   return nodes.some(
     (node) =>
       node[key] === target.value &&
@@ -381,6 +398,7 @@ export const shows = (
         onSome: (role) => (node.type ?? '').toLowerCase() === role.toLowerCase(),
       }) &&
       node.hittable !== false &&
-      Option.exists(screen, (frame) => onScreen(node, frame)),
+      Option.exists(screen, (frame) => onScreen(node, frame)) &&
+      insideViews(node, byIndex),
   );
 };

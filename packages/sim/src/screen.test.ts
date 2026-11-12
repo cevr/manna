@@ -5,7 +5,8 @@
  * across the fixed footer agent-device's own swipe starts on, and in the
  * frontmost view, a sheet over a page; it sees whether the content of that
  * same view moved, though a pager shares the page's frame, and whether more
- * is hidden; a target shows only when its centre is on screen and hittable;
+ * is hidden; a target shows only when its centre is on screen, inside each
+ * scroll view that holds it, and hittable;
  * and the readout carries numbers, states and the asked names alone.
  */
 import { describe, expect, it } from 'effect-bun-test';
@@ -141,6 +142,40 @@ describe('the screen a scroll pans', () => {
       expect(shows([...chooser(0), below, across], label('Far'))).toBe(false);
       expect(shows([...chooser(0), below, across], label('Beside'))).toBe(false);
     }),
+  );
+
+  it.effect(
+    'a row scrolled past a full sheet’s top edge does not show, though its centre is on screen',
+    () =>
+      Effect.sync(() => {
+        const sheet = (switchY: number): ReadonlyArray<Node> => [
+          { index: 0, type: 'Application', rect: { x: 0, y: 0, width: 402, height: 874 } },
+          {
+            index: 1,
+            parentIndex: 0,
+            type: 'ScrollView',
+            rect: { x: 0, y: 62, width: 402, height: 812 },
+          },
+          {
+            index: 2,
+            parentIndex: 1,
+            type: 'Other',
+            rect: { x: 0, y: -532, width: 402, height: 1406 },
+          },
+          {
+            index: 3,
+            parentIndex: 2,
+            type: 'Switch',
+            label: 'Chords',
+            rect: { x: 315, y: switchY, width: 63, height: 28 },
+            hittable: true,
+          },
+        ];
+        const chords = { ...label('Chords'), role: Option.some('switch') };
+        expect(shows(sheet(31), chords)).toBe(false);
+        expect(shows(sheet(400), chords)).toBe(true);
+        expect(shows(sheet(52), chords)).toBe(true);
+      }),
   );
 });
 
