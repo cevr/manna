@@ -5580,3 +5580,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Home's `How Heartseed works` and the Settings sheet's `About` both opened the licence text at once, so a reader looking for what the app is landed on eleven thousand characters of Apache License.
 - **Cause:** About was one screen that held the credits and the licence, and no rule held the licence to a page of its own behind its own row.
 - **Guard:** code: `apps/heartseed/src/about/rule.test.ts` `names one fault for each clause a frame breaks`
+
+### heartseed-fresh-install-steps-through-the-welcome
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "the check does not hold its rule, \"a fresh-install journey starts through the welcome\""
+- **Source:** hymnapp/hsguards9/round-1-findings.md M1
+- **Wrong:** The first-run check faulted only a `sim open` that waited for a first-minute heading without `--no-relaunch`, so a fresh-install step that dropped the welcome's `Begin` and `Skip` but kept `--no-relaunch` passed.
+- **Cause:** The check read each command alone, never the steps before it.
+- **Guard:** code: `apps/heartseed/scripts/first-run.test.ts` `fault natural.md’s today-mirror with its welcome steps taken out`; code: `apps/heartseed/scripts/first-run.test.ts` `no feature file or SKILL.md waits for a first-minute heading where the welcome shows`

@@ -3104,7 +3104,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     CSS animation or React Native `Animated`, `entering` only on an
     `aria-hidden` element, both sheets slide, exactly two `useEffect`s
     (the sway's, in `src/field/moves.tsx`, and the growing seed's, in
-    `src/first/growing.tsx`), no `setTimeout`, `setInterval`,
+    `src/first/growing.tsx`), each of their `withRepeat` loops endless (a
+    count of `-1`), no `setTimeout`, `setInterval`,
     `requestAnimationFrame`, `Date` or `performance` in the growing seed's
     two files, and seeded bad sources each named by file, line and rule.
   - `test:home-motion-root`: `src/home/motion-root.test.tsx`, motion
@@ -3387,9 +3388,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     skeleton of a text the probe's sources write, `…` ending an elided line
     and a tag opening a log line; generated probes and feature files hold
     the reader, so `test:infra`'s inputs take `.claude/skills/verify-heartseed`),
-    `scripts/first-run.test.ts` (no `sim open … --expect` in those files
-    waits for a heading of the first minute's verse without
-    `--no-relaunch`, since every launch with no recall opens the welcome) and
+    `scripts/first-run.test.ts` (those files read as steps in order, section
+    by section: after an uninstall, a `sim install` or a launch on an
+    empty garden, no wait for a heading of the first minute's verse comes
+    before the welcome's `Begin` and then its `Skip` or `Plant your first
+    verse`, and no `sim open` waits for one without `--no-relaunch`, since
+    every launch with no recall opens the welcome),
+    `scripts/hidden-ids.test.ts` (no step of those files names an id the
+    app's sources hide from VoiceOver, `aria-hidden` with a `testID`, as
+    one to find in the tree: neither `id=<id>` nor a numbered one of a
+    family such as `break-8`; a row reads lines from the words' frames) and
     `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
     parameter found by name, the pin, the part's files, the search over a
     fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,
