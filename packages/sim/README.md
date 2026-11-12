@@ -13,7 +13,10 @@ journey open step's `relaunch: false`, fails the missing target as it is.
 The driver holds no app of its own. An app gives its values as an `App`
 record (`src/app.ts`): its simulator, device type, bundle id, URL scheme,
 driver session, port range, readiness target, platforms, native project,
-open prompt and the build output `down --clean` deletes. `defineApp` checks
+open prompt and the build output `down --clean` deletes, and whether it is
+quiet: a quiet app's journey takes no video, `--skip-video` given or not,
+and a step whose receipt is `both` or `shot` (the default is `both`) is
+refused as `BadJourney`, so each step keeps a snapshot or none. `defineApp` checks
 the record where the app declares it, and `runSim` checks it again before
 any step.
 
@@ -33,6 +36,7 @@ verify-heartseed skill drives through them.
 | `src/drive.ts`                   | The `Drive` service and `DriveLive`, every step reading the place's app |
 | `src/host.ts`                    | The contained host every step and command reaches files and tools by    |
 | `src/journey.ts`                 | `sim journey`: a feature's journey file, run step by step               |
+| `src/check.ts`                   | `@manna/sim/check`: journey files loaded and read as data, for tests    |
 | `src/screen.ts`                  | The iOS screen as numbers: `sim read`'s readout, the view a scroll pans |
 | `src/errors.ts`, `src/result.ts` | The tagged errors and the JSON results                                  |
 | `src/tools.ts`                   | Running a tool to its end, and the readiness wait                       |

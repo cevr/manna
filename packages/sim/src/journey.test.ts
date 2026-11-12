@@ -8,6 +8,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
 
+import type { App } from './app.ts';
 import { runSim } from './command.ts';
 import { Drive, type DriveMembers, type Outcome, type Place } from './drive.ts';
 import { TargetMissing } from './errors.ts';
@@ -107,7 +108,12 @@ const journey = {
 const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 /** Write `text` as `features/chords.journey.json` and run `sim <args>` over the stand-in. */
-const runJourney = (text: string, args: ReadonlyArray<string>, missing: ReadonlyArray<string>) =>
+const runJourney = (
+  text: string,
+  args: ReadonlyArray<string>,
+  missing: ReadonlyArray<string>,
+  config: App = probeApp,
+) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -124,7 +130,7 @@ const runJourney = (text: string, args: ReadonlyArray<string>, missing: Readonly
       script: path.join(app, 'scripts', 'sim.ts'),
       features,
       warm: ['/nonexistent/loop-probe-x'],
-      config: probeApp,
+      config,
     };
     const calls: Array<Call> = [];
     const printed: Array<string> = [];
@@ -382,6 +388,37 @@ describe('sim journey', () => {
       });
       expect(run.lines[4]).toMatchObject({ failedStep: 4, failedName: 'panel-gone' });
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped(
+    'a quiet app runs a journey with no video, flag or none, and refuses one that keeps a shot',
+    () =>
+      Effect.gen(function* () {
+        const quiet = { ...probeApp, quiet: true };
+        const still = {
+          ...journey,
+          steps: journey.steps.map((step) => ({ ...step, receipt: 'snapshot' })),
+        };
+        for (const args of [
+          ['journey', 'chords'],
+          ['journey', 'chords', '--skip-video'],
+        ]) {
+          const run = yield* runJourney(toJson(still), args, ['id=key-panel'], quiet);
+          expect(Exit.isSuccess(run.exit)).toBe(true);
+          expect(ops(run.calls)).not.toContain('record');
+          expect(ops(run.calls)).not.toContain('shot');
+        }
+        const run = yield* runJourney(toJson(journey), ['journey', 'chords'], [], quiet);
+        expect(Exit.isFailure(run.exit)).toBe(true);
+        expect(run.calls).toEqual([]);
+        expect(run.lines[0]).toMatchObject({
+          ok: false,
+          error: {
+            _tag: 'BadJourney',
+            issue: expect.stringContaining('open-100 (receipt both), panel-gone (receipt shot)'),
+          },
+        });
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.scoped('runs nothing for a journey file that is missing or names another feature', () =>

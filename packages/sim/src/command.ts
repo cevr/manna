@@ -599,7 +599,7 @@ const simCommand = (place: Place) => {
       ),
       skipVideo: Flag.Boolean('skip-video').pipe(
         Flag.withDefault(false),
-        Flag.withDescription('take no video of the journey'),
+        Flag.withDescription('take no video of the journey (a quiet app never takes one)'),
       ),
       state,
     },
@@ -609,7 +609,7 @@ const simCommand = (place: Place) => {
         Effect.gen(function* () {
           const { journey, session } = yield* refused('journey', loadJourney(here, flags.feature));
           yield* admit(session.out);
-          return yield* runJourney(here, journey, session, !flags.skipVideo);
+          return yield* runJourney(here, journey, session, !flags.skipVideo && app.quiet !== true);
         }),
       );
     },

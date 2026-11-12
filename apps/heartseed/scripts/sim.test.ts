@@ -1,8 +1,9 @@
 /**
  * Heartseed's `sim`, over a stand-in Drive: the adapter holds the values the
  * verify-heartseed skill drives by; a web ask or a port outside 8280-8289 is
- * refused before any step, while 8280 and 8289 reach `boot`; and `install`
- * unasked waits for Today showing its reference.
+ * refused before any step, while 8280 and 8289 reach `boot`; `install`
+ * unasked waits for Today showing its reference; and the app is quiet, so a
+ * journey keeps no shot and takes no video.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -107,7 +108,7 @@ const refused = (args: ReadonlyArray<string>) =>
 
 describe("Heartseed's sim", () => {
   it.effect(
-    'drives verify-heartseed, an iPhone 17 running app.heartseed, on 8280-8289, iOS alone',
+    'drives verify-heartseed, an iPhone 17 running app.heartseed, on 8280-8289, iOS alone, quiet',
     () =>
       Effect.sync(() =>
         expect(app).toMatchObject({
@@ -128,6 +129,7 @@ describe("Heartseed's sim", () => {
           },
           openPrompt: 'label="Open in “Heartseed”?"',
           cleanPaths: ['ios/build'],
+          quiet: true,
         }),
       ),
   );

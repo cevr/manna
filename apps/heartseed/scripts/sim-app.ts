@@ -3,7 +3,8 @@
  * iPhone 17), the `app.heartseed` bundle and its `heartseed://` links, ports
  * 8280-8289, Today showing its reference as the sign the passage has bundled
  * and drawn, iOS alone, the native project One's prebuild writes under
- * `ios/`, and the build folder `down --clean` deletes.
+ * `ios/`, the build folder `down --clean` deletes, and quiet: a journey
+ * keeps no screenshot and takes no video.
  */
 import { defineApp } from '@manna/sim/app';
 
@@ -26,4 +27,5 @@ export const app = defineApp({
   },
   openPrompt: 'label="Open in “Heartseed”?"',
   cleanPaths: ['ios/build'],
+  quiet: true,
 });

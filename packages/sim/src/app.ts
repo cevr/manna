@@ -91,6 +91,8 @@ export const App = Schema.Struct({
   openPrompt: Text,
   /** What `down --clean` deletes under the app, for good. */
   cleanPaths: Schema.Array(AppPath),
+  /** Whether a journey keeps no picture of the screen: no video, and no step whose receipt is a shot. */
+  quiet: Schema.optionalKey(Schema.Boolean),
 });
 export interface App extends Schema.Schema.Type<typeof App> {}
 

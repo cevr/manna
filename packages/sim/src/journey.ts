@@ -186,7 +186,7 @@ export const openOnce = (
     );
   });
 
-/** A journey ready to run: its file decoded, for the booted iOS drive. */
+/** A journey ready to run: its file decoded, for the booted iOS drive; a quiet app's refused if a step keeps a shot. */
 export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place, feature: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -202,6 +202,13 @@ export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place,
     return yield* BadJourney.make({
       file,
       issue: `its feature is ${journey.feature}, not ${feature}`,
+    });
+  }
+  const loud = journey.steps.filter((step) => step.receipt === 'both' || step.receipt === 'shot');
+  if (place.config.quiet === true && loud.length > 0) {
+    return yield* BadJourney.make({
+      file,
+      issue: `${place.config.displayName} keeps no shot: ${loud.map((step) => `${step.name} (receipt ${step.receipt})`).join(', ')} must keep a snapshot or none`,
     });
   }
   const session = yield* (yield* Drive).readSession(place);
