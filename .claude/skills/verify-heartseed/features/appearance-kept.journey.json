@@ -1,0 +1,72 @@
+{
+  "feature": "appearance-kept",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "appearance-kept-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept",
+      "action": "open",
+      "link": "probe/theme",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=scheme light" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "appearance-kept-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=System" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept-system",
+      "action": "tap",
+      "target": "label=System",
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-kept-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-system-again",
+      "action": "open",
+      "link": "probe/theme",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=scheme dark" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

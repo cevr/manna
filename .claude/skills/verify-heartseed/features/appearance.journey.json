@@ -1,0 +1,23 @@
+{
+  "feature": "appearance",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "appearance-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "appearance-light",
+      "action": "open",
+      "link": "probe/theme",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=scheme light" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

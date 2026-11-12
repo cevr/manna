@@ -1,0 +1,15 @@
+{
+  "feature": "appearance-dark",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "appearance-dark",
+      "action": "open",
+      "link": "probe/theme",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=scheme dark" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

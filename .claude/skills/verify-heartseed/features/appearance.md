@@ -63,80 +63,52 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 build of the head's native code serves; the JavaScript comes from the dev
 server.
 
-1. `first.md` steps 1-7, to `first-home`.
-2. `appearance-system`, light:
+The taps are the journeys `appearance`, `appearance-dark`,
+`appearance-choice` and `appearance-kept` beside this file, each one
+`sim journey` call; the simulator's appearance changes between them by
+`xcrun simctl ui <udid> appearance …`. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the probe's text nodes; a radio's selected state
+is its `[checked]` there, or a raw snapshot (`first.md`, Driving it).
 
-   ```bash
-   xcrun simctl ui <udid> appearance light
-   sim open / --expect "id=today-card" --no-relaunch
-   sim open probe/theme --expect "label=scheme light"
-   sim snapshot appearance-light
-   ```
-
-   → the snapshot has the text nodes `system light`, `scheme light`,
-   `ground #f1f0e6` and `face ui-rounded`.
-
-3. Dark, with the probe shown and no tap:
-
-   ```bash
-   xcrun simctl ui <udid> appearance dark
-   sim snapshot appearance-dark
-   ```
-
-   → the text nodes `system dark`, `scheme dark` and `ground #142420`
-   (take the snapshot again once after a second when it still shows
-   light: the system announces the change to the app asynchronously).
-
+1. `first.md`'s `sim journey first`, to `first-home`.
+2. `appearance-system`, light: `xcrun simctl ui <udid> appearance light`,
+   then `sim journey appearance` → `"ok":true` (home, then the probe
+   waiting for `scheme light`). `appearance/appearance-light` → the text
+   nodes `system light`, `scheme light`, `ground #f1f0e6` and
+   `face ui-rounded`.
+3. Dark, with the probe shown: `xcrun simctl ui <udid> appearance dark`,
+   then `sim journey appearance-dark` → `"ok":true` (it waits up to 30 s
+   for `scheme dark`: the system announces the change to the app
+   asynchronously). `appearance-dark/appearance-dark` → the text nodes
+   `system dark`, `scheme dark` and `ground #142420`.
 4. `appearance-choice`, the simulator still dark:
-
-   ```bash
-   sim open / --expect "id=today-card" --no-relaunch
-   sim scroll "label=Settings" down
-   sim tap "label=Settings"
-   agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
-   sim tap "label=Light"
-   agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
-   sim tap "label=Done"
-   sim open probe/theme --expect "label=scheme light"
-   sim snapshot appearance-chosen
-   ```
-
-   → the first raw snapshot has the radios `System`, `Light`, `Dark`,
-   `System` alone selected; the second `Light` alone selected; the probe's
-   text nodes `system dark`, `stored light`, `native light`,
-   `scheme light` and `ground #f1f0e6`.
-
-5. `appearance-kept`:
-
-   ```bash
-   sim relaunch
-   sim open / --expect "id=today-card"
-   sim open probe/theme --expect "label=scheme light"
-   sim open / --expect "id=today-card" --no-relaunch
-   sim scroll "label=Settings" down
-   sim tap "label=Settings"
-   sim tap "label=System"
-   sim tap "label=Done"
-   sim open probe/theme --expect "label=scheme dark"
-   sim snapshot appearance-system-again
-   ```
-
-   → `scheme light` after the relaunch; then the text nodes
+   `sim journey appearance-choice` → `"ok":true`.
+   `appearance-choice/appearance-choice-sheet` → the radios `System`,
+   `Light`, `Dark`, `System` alone `[checked]`;
+   `appearance-choice/appearance-choice-light` → `Light` alone
+   `[checked]`; `appearance-choice/appearance-chosen` → the probe's text
+   nodes `system dark`, `stored light`, `native light`, `scheme light`
+   and `ground #f1f0e6`.
+5. `appearance-kept`: `sim journey appearance-kept` → `"ok":true`: a
+   relaunch, the probe still `scheme light`
+   (`appearance-kept/appearance-kept`), then `Settings`, `System` and
+   `Done`. `appearance-kept/appearance-system-again` → the text nodes
    `stored system`, `native dark` and `scheme dark`.
-
 6. Put the appearance back: `xcrun simctl ui <udid> appearance light`.
    Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report the probe's lines and the radios' labels and selected states only;
 delete the `snapshots` folder and the raw snapshots.
 
-Red on base (before the Settings sheet): `sim tap "label=Settings"` finds
-no element (`appearance-choice`, `appearance-kept`).
+Red on base (before the Settings sheet): the tap on `Settings` finds no
+element (`appearance-choice`, `appearance-kept`).
 
 ## Gotchas
 
 - **A link that launches the app lands on home** (`dictation.md`,
-  Gotchas): open `/` first, then the probe.
+  Gotchas): each journey opens `/` first where it may launch, then the
+  probe.
 - `xcrun simctl ui <udid> appearance` changes the whole simulator's
   appearance, which outlives the drive: always put it back to light.
 - The stored appearance outlives the drive too: step 5 leaves `system`
