@@ -5590,3 +5590,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** The first-run check faulted only a `sim open` that waited for a first-minute heading without `--no-relaunch`, so a fresh-install step that dropped the welcome's `Begin` and `Skip` but kept `--no-relaunch` passed.
 - **Cause:** The check read each command alone, never the steps before it.
 - **Guard:** code: `apps/heartseed/scripts/first-run.test.ts` `fault natural.md’s today-mirror with its welcome steps taken out`; code: `apps/heartseed/scripts/first-run.test.ts` `no feature file or SKILL.md waits for a first-minute heading where the welcome shows`
+
+### heartseed-step-reader-reads-every-command-form
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "SKILL.md writes every step in full, `bun run --cwd apps/heartseed sim …` … so a full-form step is never read"
+- **Source:** hymnapp/hsguards9/round-2-findings.md M1
+- **Wrong:** The first-run reader read a step only when its code began with `sim` or `xcrun simctl`, so SKILL.md's full-form launch could wait for `Hear it` through a relaunch with the check green.
+- **Cause:** The reader matched the commands' usual short form instead of finding where each command starts inside a step and reading its words.
+- **Guard:** code: `apps/heartseed/scripts/first-run.test.ts` `fault SKILL.md’s launch step waiting for Hear it in its own full form`; code: `apps/heartseed/scripts/first-run.test.ts` `read a command however a step invokes it: in full through bun run, by the helper’s file, chained, continued over fenced lines, its target quoted, single-quoted or bare`
+
+### heartseed-drive-steps-ask-no-hidden-node
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "three driving steps still tell the driver to read break ids"
+- **Source:** hymnapp/hsguards9/round-2-findings.md M2
+- **Wrong:** light.md's and sayit.md's drive steps asked for the `break-` ids in prose (`the break ids`, `the \`break-\` ids`) after their rows had moved to word frames, and the hidden-ids check read only numbered ids and targets.
+- **Cause:** The check matched the forms the first fix removed, not every way a step can ask for a hidden node.
+- **Guard:** code: `apps/heartseed/scripts/hidden-ids.test.ts` `faults a clause that asks for a hidden family’s or id’s nodes in any phrasing, unless it says they are hidden`; code: `apps/heartseed/scripts/hidden-ids.test.ts` `faults light.md’s and sayit.md’s drive steps as they read at round 2`
