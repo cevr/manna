@@ -15,7 +15,9 @@
 #    the cores, and a watchdog ends the run with 124 when a task's process
 #    outlives 60 s, naming it (`gate-tests/bound.ts`).
 # 4. The env pass-through (`env-pass.ts`): each variable a test file reads
-#    (`process.env`, `Bun.env`, a `Config` constructor) is one turbo hands
+#    (`process.env`, `Bun.env`, a `Config` constructor), itself or through a
+#    module of the repo it imports that the product does not run (a rig, a
+#    fixture), is one turbo hands
 #    every task that runs the file (`passThroughEnv`, `env`), read every run
 #    for the reason the ledger is: the tests and the `turbo.json`s lie in
 #    every workspace. Turbo hands a task no other variable, so one left out

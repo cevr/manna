@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Option } from 'effect';
-import { gapsOf } from './gaps.ts';
-import { envReads } from './reads.ts';
+import { gapsOf, splitReported } from './gaps.ts';
+import { isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
+import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
 
 /** A call of `Config.<key>` with the variable `name` at its name's place, other arguments plain values. */
@@ -112,10 +113,152 @@ describe('env-pass', () => {
             file: 'packages/a/x.test.ts',
             dir: 'packages/a',
             tasks: ['test', 'test:slow'],
-            reads: ['HOME', 'SEED'],
+            reads: new Map([
+              ['HOME', 'packages/a/x.test.ts'],
+              ['SEED', 'packages/a/x.test.ts'],
+            ]),
           },
         ]),
-      ).toEqual([{ dir: 'packages/a', task: 'test', file: 'packages/a/x.test.ts', name: 'SEED' }]);
+      ).toEqual([
+        {
+          dir: 'packages/a',
+          task: 'test',
+          file: 'packages/a/x.test.ts',
+          name: 'SEED',
+          by: 'packages/a/x.test.ts',
+        },
+      ]);
+    }),
+  );
+
+  it.effect('takes the modules a module loads, and no type-only import', () =>
+    Effect.sync(() => {
+      const text = [
+        "import { a, type B } from './a.ts';",
+        "import type { C } from './c.ts';",
+        "import './side.ts';",
+        "import D, {\n  e,\n} from '@manna/core/search';",
+        "export * from './all.js';",
+        "export { f } from '../f';",
+        "export type { G } from './g.ts';",
+        "const h = await import('./h.tsx');",
+      ].join('\n');
+      expect(importsOf(text)).toEqual([
+        './a.ts',
+        './side.ts',
+        '@manna/core/search',
+        './all.js',
+        '../f',
+        './h.tsx',
+      ]);
+    }),
+  );
+
+  it.effect("resolves a relative import and a workspace package's export to the repo's file", () =>
+    Effect.sync(() => {
+      const resolve = resolverOf(
+        new Set([
+          'packages/a/src/x.test.ts',
+          'packages/a/src/rig.ts',
+          'packages/a/src/lib/index.ts',
+          'packages/core/src/search/index.ts',
+          'packages/core/src/part/one.ts',
+          'packages/b/src/x.ts',
+        ]),
+        [
+          {
+            name: '@manna/core',
+            dir: 'packages/core',
+            exports: {
+              './search': './src/search/index.ts',
+              './part/*': './src/part/*.ts',
+            },
+          },
+          { name: '@manna/b', dir: 'packages/b', exports: {} },
+        ],
+      );
+      const from = 'packages/a/src/x.test.ts';
+      expect(
+        [
+          './rig.js',
+          './rig',
+          './lib',
+          '@manna/core/search',
+          '@manna/core/part/one',
+          '@manna/b/src/x',
+        ]
+          .map((specifier) => resolve(from, specifier))
+          .map(Option.getOrElse(() => 'none')),
+      ).toEqual([
+        'packages/a/src/rig.ts',
+        'packages/a/src/rig.ts',
+        'packages/a/src/lib/index.ts',
+        'packages/core/src/search/index.ts',
+        'packages/core/src/part/one.ts',
+        'packages/b/src/x.ts',
+      ]);
+      expect(
+        ['effect', 'node:fs', './missing', '../../../../out'].map((specifier) =>
+          Option.isNone(resolve(from, specifier)),
+        ),
+      ).toEqual([true, true, true, true]);
+    }),
+  );
+
+  it.effect(
+    'a test that imports a helper reading a variable turbo does not pass is a gap; the product’s own settings are not',
+    () =>
+      Effect.sync(() => {
+        const graph = new Map([
+          [
+            'a/x.test.ts',
+            { reads: [], deps: ['a/walk.ts', 'a/service.ts', 'a/cli.ts'], entry: false },
+          ],
+          ['a/walk.ts', { reads: ['WALK_SEED'], deps: ['a/test/rig.ts'], entry: false }],
+          ['a/test/rig.ts', { reads: ['RIG_DUMP'], deps: [], entry: false }],
+          ['a/service.ts', { reads: ['API_KEY'], deps: [], entry: false }],
+          ['a/main.ts', { reads: [], deps: ['a/service.ts'], entry: false }],
+          ['a/cli.ts', { reads: ['ADMIN_TOKEN'], deps: [], entry: true }],
+        ]);
+        const product = productOf(
+          graph,
+          (file) => file.endsWith('.test.ts') || isTestSupport(file),
+        );
+        expect([...product].toSorted()).toEqual(['a/cli.ts', 'a/main.ts', 'a/service.ts']);
+        const reads = readsThrough('a/x.test.ts', graph, product);
+        expect([...reads]).toEqual([
+          ['WALK_SEED', 'a/walk.ts'],
+          ['RIG_DUMP', 'a/test/rig.ts'],
+        ]);
+        expect(
+          gapsOf({ tasks: { test: { env: ['RIG_DUMP'] } } }, new Map(), [
+            { file: 'a/x.test.ts', dir: 'a', tasks: ['test'], reads },
+          ]),
+        ).toEqual([
+          { dir: 'a', task: 'test', file: 'a/x.test.ts', name: 'WALK_SEED', by: 'a/walk.ts' },
+        ]);
+      }),
+  );
+
+  it.effect('reports a known gap, and names a known one that is no gap any more', () =>
+    Effect.sync(() => {
+      const gap = {
+        dir: 'f',
+        task: 'test:slow',
+        file: 'f/a.test.ts',
+        name: 'X',
+        by: 'f/a.test.ts',
+      };
+      const split = splitReported(
+        [gap, { ...gap, name: 'Y' }],
+        [
+          { dir: 'f', task: 'test:slow', name: 'X' },
+          { dir: 'f', task: 'test:slow', name: 'GONE' },
+        ],
+      );
+      expect(split.open.map(({ name }) => name)).toEqual(['Y']);
+      expect(split.reported.map(({ name }) => name)).toEqual(['X']);
+      expect(split.stale.map(({ name }) => name)).toEqual(['GONE']);
     }),
   );
 });

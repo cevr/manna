@@ -9,15 +9,18 @@ interface ReadingTest {
   readonly dir: string;
   /** The tasks of its workspace whose run takes it (`test`, a part, `test:slow`). */
   readonly tasks: ReadonlyArray<string>;
-  readonly reads: ReadonlyArray<string>;
+  /** Each variable it reads, by itself or a module it imports, with the module that reads it. */
+  readonly reads: ReadonlyMap<string, string>;
 }
 
 /** A variable a test reads that turbo does not hand the task that runs it. */
-interface Gap {
+export interface Gap {
   readonly dir: string;
   readonly task: string;
   readonly file: string;
   readonly name: string;
+  /** The module that reads it: the test, or one it imports. */
+  readonly by: string;
 }
 
 /**
@@ -34,8 +37,29 @@ export const gapsOf = (
   tests.flatMap(({ file, dir, tasks, reads }) =>
     tasks.flatMap((task) => {
       const declared = declaredFor(root, Option.fromUndefinedOr(turbos.get(dir)), task);
-      return reads
-        .filter((name) => !passes(declared, name))
-        .map((name) => ({ dir, task, file, name }));
+      return [...reads]
+        .filter(([name]) => !passes(declared, name))
+        .map(([name, by]) => ({ dir, task, file, name, by }));
     }),
   );
+
+/** A gap known and left to its owner: a workspace's task and the variable. */
+export interface Reported {
+  readonly dir: string;
+  readonly task: string;
+  readonly name: string;
+}
+
+/**
+ * The gaps split by `known`: those it does not name (`open`), those it
+ * names (`reported`), and each entry of it that names no gap (`stale`).
+ */
+export const splitReported = (gaps: ReadonlyArray<Gap>, known: ReadonlyArray<Reported>) => {
+  const names = (gap: Reported) => (entry: Reported) =>
+    entry.dir === gap.dir && entry.task === gap.task && entry.name === gap.name;
+  return {
+    open: gaps.filter((gap) => !known.some(names(gap))),
+    reported: gaps.filter((gap) => known.some(names(gap))),
+    stale: known.filter((entry) => !gaps.some(names(entry))),
+  };
+};

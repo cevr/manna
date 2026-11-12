@@ -76,6 +76,9 @@ const configName = (node: Node): Option.Option<string> => {
   );
 };
 
+/** A cheap first look: a file that holds none of these words reads no variable `envReads` finds. */
+const MAY_READ = /\benv\b|\bConfig\./;
+
 /**
  * The variables a file reads from the environment its process was started
  * with: each it reads by `process.env`, `Bun.env` or `import.meta.env` (a
@@ -86,6 +89,7 @@ const configName = (node: Node): Option.Option<string> => {
  * read in a string or a comment, is none of them.
  */
 export const envReads = (file: string, text: string): ReadonlyArray<string> => {
+  if (!MAY_READ.test(text)) return [];
   const parsed = parseSync(file, text);
   if (parsed.errors.length > 0) return [];
   const read = new Set<string>();
@@ -118,3 +122,23 @@ export const envReads = (file: string, text: string): ReadonlyArray<string> => {
   }).visit(parsed.program);
   return [...read].filter((name) => !own.has(name)).toSorted();
 };
+
+/**
+ * A module's static and literal dynamic imports and re-exports, by a scan
+ * of its text: `import … from 'x'`, `import 'x'`, `export … from 'x'`,
+ * `import('x')`; `import type` and `export type` load nothing and are
+ * skipped. A scan, not a parse (the AST of every module of the repo costs
+ * the gate seconds): an import written inside a string is taken too, which
+ * can only add a module to follow.
+ */
+const IMPORT =
+  /\b(?:import|export)\s+(?!type\b)(?:[\w*{}\s,$]+?\s+from\s+)?['"]([^'"\n]+)['"]|\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g;
+
+/** The specifiers a module imports (`IMPORT`), each once, in order. */
+export const importsOf = (text: string): ReadonlyArray<string> => [
+  ...new Set(
+    Array.from(text.matchAll(IMPORT), ([, statics, dynamic]) => statics ?? dynamic ?? '').filter(
+      (specifier) => specifier !== '',
+    ),
+  ),
+];

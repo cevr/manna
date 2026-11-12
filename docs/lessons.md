@@ -1331,6 +1331,16 @@ The form of an entry, each field on its own line:
 - **Cause:** Turbo's strict mode hands a task only the variables its `turbo.json`s name, and each guard was written for one package and one list of readers. The repo's check (`packages/scripts/src/env-pass.ts`) now reads every test file of every workspace, every `Config` constructor the installed effect exports and `process.env`, `Bun.env` and `import.meta.env`, against the tasks that run each file.
 - **Guard:** code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads every constructor the installed effect/Config exports that takes a name`; code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads Config.Int and Config.Port, which the old reader missed`; code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock`
 
+### test-variables-read-through-rigs
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "a variable a test reads through a module it imports is never checked, and Heartseed's tests read seven such variables that turbo does not hand them."
+- **Source:** hymnapp/envpass/round-1-findings.md M1
+- **Wrong:** The env pass-through check read only each test file's own text, so `HSFIRST_WALK_*`, `HSRUN_WALK_*` and `HSWAKE_WALK_*`, read by Heartseed's walk rigs under `src/test/`, were dropped by turbo while the check printed no gap; a walk run under turbo with `HSFIRST_WALK_DEVICES=0` walked its default five devices.
+- **Cause:** The check took a test's reads to be its own lines, where a test process runs every module it imports. It now follows each test's imports through the repo's modules (relative and workspace-package imports) and counts the reads of every module the product does not itself run.
+- **Guard:** code: `packages/scripts/src/env-pass/env-pass.test.ts` `a test that imports a helper reading a variable turbo does not pass is a gap; the product’s own settings are not`
+
 ### gate-not-ci
 
 - **Date:** 2026-10-19

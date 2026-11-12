@@ -5,10 +5,20 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
 import { Clock, Console, Effect, FileSystem, Option, Path, Schema, Stdio } from 'effect';
 
-import { gapsOf } from './env-pass/gaps.ts';
-import { envReads } from './env-pass/reads.ts';
+import { type Gap, type Reported, gapsOf, splitReported } from './env-pass/gaps.ts';
+import {
+  type Module,
+  type Package,
+  isModule,
+  isTestSupport,
+  productOf,
+  readsThrough,
+  resolverOf,
+} from './env-pass/graph.ts';
+import { envReads, importsOf } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
 import { reachesIn, repoTests } from './test-budget/reach.ts';
+import { gateFiles } from './guard/files.ts';
 import { commandsOf } from './test-budget/shell.ts';
 
 const RootManifest = Schema.fromJsonString(
@@ -28,8 +38,25 @@ const TurboParts = Schema.Struct({
 /** The tasks turbo runs a workspace's tests in, besides its unit-test parts: `bun run gate`'s, `test:slow`'s and `test:perf`'s. */
 const TEST_TASKS = ['test', 'test:slow', 'test:perf'];
 
-/** A cheap first look: a file that holds neither word reads no variable `envReads` finds. */
-const MAY_READ = /\benv\b|\bConfig\./;
+/** What this reads of a workspace's `package.json`: the name and the `exports` other modules import it by. */
+const Manifest = Schema.fromJsonString(
+  Schema.Struct({
+    name: Schema.optionalKey(Schema.String),
+    exports: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  }),
+);
+
+/**
+ * The gaps in the films' workspaces, each a task and a variable: the films
+ * lane owns `packages/film` and `apps/animations`, so the check reports
+ * these each run and does not fail on them, and fails when one is no gap
+ * any more, so the list never outlives its gaps.
+ */
+const REPORTED: ReadonlyArray<Reported> = [
+  { dir: 'packages/film', task: 'test:slow', name: 'FILM_E2E_CPU_THROTTLE' },
+  { dir: 'packages/film', task: 'test:slow', name: 'FILM_TEST_BUNDLES' },
+  { dir: 'packages/film', task: 'test:slow', name: 'TMPDIR' },
+];
 
 /**
  * The other package scripts a task's script runs by naming them to a runner
@@ -96,10 +123,48 @@ Effect.gen(function* () {
     );
     return { ...workspace, units: [...new Set([...runs.values()].flat())], runs };
   });
+  const packages = yield* Effect.forEach(dirs, (dir) =>
+    Effect.map(
+      Effect.flatMap(
+        fs.readFileString(path.join(root, dir, 'package.json')),
+        Schema.decodeEffect(Manifest),
+      ),
+      ({ name, exports = {} }): ReadonlyArray<Package> =>
+        Option.toArray(
+          Option.map(Option.fromUndefinedOr(name), (named) => ({ name: named, dir, exports })),
+        ),
+    ),
+  );
+  const files = yield* gateFiles(root);
+  const resolve = resolverOf(new Set(files), packages.flat());
+  const texts = new Map(repo.tests.map(({ file, text }) => [file, text]));
+  const graph = new Map(
+    yield* Effect.forEach(
+      files.filter((file) => isModule(file) && !file.split('/').includes('node_modules')),
+      (file) =>
+        Effect.map(
+          Option.match(Option.fromUndefinedOr(texts.get(file)), {
+            onNone: () => fs.readFileString(path.join(root, file)),
+            onSome: (held) => Effect.succeed(held),
+          }),
+          (text): readonly [string, Module] => [
+            file,
+            {
+              reads: envReads(file, text),
+              entry: /\bimport\.meta\.main\b/.test(text),
+              deps: importsOf(text).flatMap((specifier) =>
+                Option.toArray(resolve(file, specifier)),
+              ),
+            },
+          ],
+        ),
+      { concurrency: 16 },
+    ),
+  );
+  const product = productOf(graph, (file) => texts.has(file) || isTestSupport(file));
   const reading = repo.tests
-    .filter(({ text }) => MAY_READ.test(text))
-    .map((test) => ({ ...test, reads: envReads(test.file, test.text) }))
-    .filter(({ reads }) => reads.length > 0);
+    .map((test) => ({ ...test, reads: readsThrough(test.file, graph, product) }))
+    .filter(({ reads }) => reads.size > 0);
   const readsOf = new Map(reading.map(({ file, reads }) => [file, reads]));
   const reached = reachesIn(workspaces, reading).flatMap(({ file, units: scripts }) =>
     Option.match(
@@ -117,27 +182,49 @@ Effect.gen(function* () {
             tasks: [...runs]
               .filter(([, held]) => held.some((script) => scripts.includes(script)))
               .map(([task]) => task),
-            reads: readsOf.get(file) ?? [],
+            reads: readsOf.get(file) ?? new Map<string, string>(),
           },
         ],
       },
     ),
   );
-  const gaps = gapsOf(rootTurbo, turbos, reached);
+  const { open, reported, stale } = splitReported(gapsOf(rootTurbo, turbos, reached), REPORTED);
+  const said = (gap: Gap) => {
+    const through = [gap.by].filter((by) => by !== gap.file).map((by) => ` through ${by}`);
+    return `${gap.dir}#${gap.task}: ${gap.file} reads ${gap.name}${through.join('')}`;
+  };
 
   yield* Effect.forEach(
-    gaps,
-    ({ dir, task, file, name }) =>
+    open,
+    (gap) =>
       Console.log(
-        `env-pass ${dir}#${task}: ${file} reads ${name}, which turbo does not hand the task (add it to its passThroughEnv or env)`,
+        `env-pass ${said(gap)}, which turbo does not hand the task (add it to its passThroughEnv or env)`,
       ),
+    { discard: true },
+  );
+  yield* Effect.forEach(
+    REPORTED.filter((entry) => !stale.includes(entry)),
+    ({ dir, task, name }) => {
+      const files = reported.filter(
+        (gap) => gap.dir === dir && gap.task === task && gap.name === name,
+      );
+      return Console.log(
+        `env-pass reported (the films lane's to close) ${dir}#${task} ${name}: ${files.length} test file(s), as ${files.map(said).slice(0, 1).join('')}`,
+      );
+    },
+    { discard: true },
+  );
+  yield* Effect.forEach(
+    stale,
+    ({ dir, task, name }) =>
+      Console.log(`env-pass stale: REPORTED names ${dir}#${task} ${name}, which is no gap now`),
     { discard: true },
   );
   const ended = yield* Clock.currentTimeMillis;
   yield* Console.log(
-    `env-pass: ${reached.length} test file(s) read variables, ${gaps.length} gap(s), ${ended - started} ms`,
+    `env-pass: ${reached.length} test file(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${ended - started} ms`,
   );
   yield* Effect.sync(() => {
-    process.exitCode = Math.min(gaps.length, 1);
+    process.exitCode = Math.min(open.length + stale.length, 1);
   });
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer), BunRuntime.runMain);
