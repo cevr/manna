@@ -5670,3 +5670,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `list-colours` read the ground from `home`, a testID only the slow tests' stand-ins gave, and `browse-findbar-colour` read the glass from `find-bar`, a wrapper whose capsule child draws it; the readout reads a node's own style, so both read `none`.
 - **Cause:** The rows named the node a reader thinks of, not the element that draws the colour, and nothing tied a colour row's ids to the source.
 - **Guard:** code: `apps/hymnal/scripts/readout/colour-rows.test.ts` `every colour row of the verify-hymnal features names nodes the readout can read`
+
+### sim-scroll-judged-the-pager-and-the-page-under-a-sheet
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "Find the area again by its node (index or ref and parent chain), not its frame, and compare that node's content."
+- **Source:** hymnapp/hsguards10/round-1-findings.md B1; hymnapp/hsguards10/round-1-findings.md B2
+- **Wrong:** Every vertical scroll on a hymnal hymn page failed `ScrollStuck` though the page moved 622 pt, and a scroll on the About or Settings sheet panned the hymn page under it; hymn-reader and about failed on main.
+- **Cause:** After a pan the driver found the scroll view again by its frame alone, and a hymn page's pager has the page's frame, so it read the pager, which never moves vertically; and it chose the scroll view with the most of itself on screen, which is the page under a sheet. It now chooses the frontmost, the last in tree order, and finds it again by its frame and its depth among scroll views (`packages/sim/src/screen.ts`).
+- **Guard:** code: `packages/sim/src/screen.test.ts` `property: of scroll views nested in one frame, moved names the one whose content moved, and only it, though nodes before them came or went`; code: `packages/sim/src/screen.test.ts` `property: a scroll view listed after others takes the scroll, wherever it lies and however small`
