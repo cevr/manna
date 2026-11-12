@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop, effect/noGlobals -- a drawing test: it mounts the growing seed and the welcome through React's promise-based act in happy-dom, yields to Reanimated's animation frame, drives the host's `performance.now` that Reanimated's frames read, and reads DOM absence as null. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop -- a drawing test: it mounts the growing seed and the welcome through React's promise-based act in happy-dom, yields to Reanimated's animation frame, stands in for the global frame scheduler and timestamp Reanimated's frames read, and reads DOM absence as null. */
 
 /**
  * The welcome's growing seed (`./growing`) mounted in happy-dom. With its
@@ -85,6 +85,36 @@ const clockOf = (host: Element): number => {
   };
   walk(rootFiberOf(host));
   return found[0] ?? Number.NaN;
+};
+
+/**
+ * Reanimated's frames on a clock the test drives, from `start`: its
+ * animations start at `_getAnimationTimestamp()` and step in
+ * `requestAnimationFrame` callbacks at the frame's time, so both stand in
+ * here. `at(ms)` runs the frames queued so far at `ms`; `restore` puts the
+ * host's back.
+ */
+const drivenFrames = (start: number) => {
+  const host = {
+    frame: globalThis.requestAnimationFrame,
+    stamp: Reflect.get(globalThis, '_getAnimationTimestamp'),
+  };
+  const state = { now: start, queued: [] as FrameRequestCallback[] };
+  globalThis.requestAnimationFrame = (callback) => state.queued.push(callback);
+  Reflect.set(globalThis, '_getAnimationTimestamp', () => state.now);
+  return {
+    at: (ms: number) => {
+      state.now = ms;
+      const due = state.queued.splice(0);
+      return act(async () => {
+        for (const callback of due) callback(ms);
+      });
+    },
+    restore: () => {
+      globalThis.requestAnimationFrame = host.frame;
+      Reflect.set(globalThis, '_getAnimationTimestamp', host.stamp);
+    },
+  };
 };
 
 const rounded = (frame: GrowthFrame) => frame.map((each) => Math.round(each * 1000) / 1000);
@@ -197,24 +227,20 @@ describe('the growing seed', () => {
 
   it('loops with motion on: driven past its first cycle, its clock starts over and the seed, the blade, the ear and full corn each show alone again, the clock never past one cycle on from its start', () =>
     under('no-preference', async () => {
-      const real = performance.now();
-      const frames = { now: real };
-      // oxlint-disable-next-line effect/noModuleMocks -- Reanimated's web frames read the host's `performance.now` alone, a host boundary no layer stands in for; the test drives it past one cycle
-      const time = spyOn(performance, 'now').mockImplementation(() => frames.now);
+      const frames = drivenFrames(1_000);
       const drawn = await mount(<GrowingSeed />);
       const step = 250;
       const alone = new Set<number>();
       let most = 0;
       for (let at = step; at <= 2 * GROWTH.cycle; at += step) {
-        frames.now = real + at;
-        await nextFrame();
+        await frames.at(1_000 + at);
         const clock = clockOf(drawn.host);
         most = Math.max(most, clock);
         const shown = growthAt(clock);
         if (at > GROWTH.cycle + GROWTH.fade && shown.includes(1)) alone.add(shown.indexOf(1));
       }
       await drawn.leave();
-      time.mockRestore();
+      frames.restore();
       expect({ alone: [...alone].toSorted(), over: most > GROWTH_START + GROWTH.cycle }).toEqual({
         alone: [0, 1, 2, 3],
         over: false,
