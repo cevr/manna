@@ -1,0 +1,49 @@
+{
+  "feature": "passage-remove",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-remove-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Romans 8:28" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-remove-page",
+      "action": "tap",
+      "target": "label=Open Romans 8:28",
+      "expect": [{ "shows": "label=Remove Romans 8:28" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-remove-ask",
+      "action": "tap",
+      "target": "label=Remove Romans 8:28",
+      "expect": [{ "shows": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-remove",
+      "action": "tap",
+      "target": "label=Remove",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "shows": "label=Open John 15:1-5" },
+        { "shows": "label=Open Psalms 23:1-6" },
+        { "hides": "label=Open Romans 8:28" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-day-one",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
