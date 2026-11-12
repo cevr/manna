@@ -88,7 +88,8 @@ in the bundle.
   `wake-listen` live, and its phone follow-up (the voice handing over to
   the recognizer after `Listen`).
 - `passage-launch-time`: the time from launch to the pending frame
-  (`sim open / --expect "label=Isaiah 41:10"`), on base and on head, three
+  (`passage-relaunch`'s relaunches, each waiting for `Isaiah 41:10`), on
+  base and on head, three
   runs each: the corpus's cost in the dev bundle. Hermes on a phone is the
   phone build's check.
 - `passage-fail` (tests only: a refused write cannot be driven):
@@ -119,83 +120,90 @@ passages, so an install of a build of `69d70a02d` or later serves
 (`SKILL.md`, Launch); the JavaScript comes from the dev server. The garden
 must start empty: uninstall by udid as `first.md` says.
 
-1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-home`.
-2. `passage-bar`: on home, `sim snapshot passage-bar`
-   → the text `Lists`, one button `Add a list` (`id=add-list`), no
-   `When I need…` and no `Add verses`, the heading `Your field`, the row
-   `Isaiah 41:10` (the button `Open Isaiah 41:10`) and no `Remove`, no
-   button `Today`.
-3. `passage-books`: `sim tap "id=add-list"`, `sim tap "label=Any
-   passage"`, `sim snapshot passage-books` → the heading `Add a passage`,
-   the button `Add verses` showing `‹ Add verses`, no button `Your field`, the texts `Old Testament` and
-   `New Testament`, and the buttons `Genesis` and `Revelation`.
-4. `passage-range`: `sim tap "label=John"`, `sim tap "label=John 15"`,
-   `sim tap "label=John 15:1"`, `sim tap "label=John 15:5"`,
-   `sim snapshot passage-range` → the heading `John 15`, `John 15:1-5`,
-   `5 verses`, `Up to 20 verses`, a button `Plant`; a raw snapshot →
-   `Plant`'s rect inside the window and above the home indicator's area.
-5. `passage-clip`: `sim tap "label=Chapters"`, `sim tap "label=Books"`,
-   `sim tap "label=Psalms"`, then `sim scroll screen down` until
-   `Psalms 119` shows (a snapshot after each scroll), `sim tap
-   "label=Psalms 119"`, `sim snapshot passage-clip-top` → `Psalms 119:1`
-   the first verse shown, with nothing hidden above it (each step opens at
-   its top, whatever the last step's scroll), `sim tap "label=Psalms
-   119:1"`, then `sim scroll "label=Psalms 119:30" down` (it pans inside
-   the verses, between the fixed header and footer, until that verse is
-   on screen and hittable: `detail.passes`), `sim tap "label=Psalms
-   119:30"`, `sim read passage-clip --id verse --label "Psalms 119:1-20"
-   --label "20 verses" --label Plant` → `Psalms 119:1-20` and `20 verses`
-   each shown, a shown `Plant`, and 20 of the `verse` nodes `checked`.
-6. Back to John 15:1-5: `sim tap "label=Chapters"`,
-   `sim tap "label=Books"`, then step 4's taps from `John`.
-7. `passage-plant`: `sim tap "label=Plant"`, `sim snapshot passage-plant` →
-   the heading `Your field`; the buttons `Open Isaiah 41:10` then
-   `Open John 15:1-5`; five buttons `John 15:<n>, not planted` (n 1-5); no
-   button named `Remove` or starting `Remove `; one `Add a list`.
-8. `passage-limit`: two more passages through `sim tap "id=add-list"`
-   and `sim tap "label=Any passage"` (for example `Psalms` → `Psalms 23` → `Psalms 23:1`, then `sim scroll screen
-   down` until `Psalms 23:6` shows clear of the footer (it can sit partly
-   under it), `Psalms 23:6`, `Plant`; then on the books `sim scroll screen
-   down` until `Romans` shows, `Romans` → `Romans 8` → `Romans 8:28`,
-   `Plant`; a snapshot after each scroll, then the tap),
-   `sim snapshot passage-limit` → the buttons `Open John 15:1-5`,
+The taps are journeys beside this file, each one `sim journey` call, in
+this order: `passage`, `passage-clip`, `passage-plant`,
+`passage-limit-psalm`, `passage-limit`, `passage-keep`, `passage-remove`,
+`passage-relaunch`, and on another day `passage-new`. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels, with a
+checkbox's `[checked]`; a rect is read in a raw snapshot (`first.md`,
+Driving it) taken where a journey leaves the screen.
+
+1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
+   microphone, and the first minute to `first-home`.
+2. `passage-bar`: `sim journey passage` → `"ok":true` (steps 2-4).
+   `passage/passage-bar` → the text `Lists`, one button `Add a list`
+   (`id=add-list`), no `When I need…` and no `Add verses`, the heading
+   `Your field`, the row `Isaiah 41:10` (the button `Open Isaiah 41:10`)
+   and no `Remove`, no button `Today`.
+3. `passage-books`: `passage/passage-books`, after `Add a list` and
+   `Any passage` → the heading `Add a passage`, the button `Add verses`
+   showing `‹ Add verses`, no button `Your field`, the texts
+   `Old Testament` and `New Testament`, and the buttons `Genesis` and
+   (in a raw snapshot) `Revelation`.
+4. `passage-range`: `passage/passage-range`, after `John`, `John 15`,
+   `John 15:1` and `John 15:5` → the heading `John 15`, `John 15:1-5`,
+   `5 verses`, `Up to 20 verses`, a button `Plant`; a raw snapshot after
+   the journey → `Plant`'s rect inside the window and above the home
+   indicator's area.
+5. `passage-clip`: `sim journey passage-clip` → `"ok":true`: `Chapters`,
+   `Books`, `Psalms`, a scroll to `Psalms 119` and its tap.
+   `passage-clip/passage-clip-top` → `Psalms 119:1` the first verse
+   shown, with nothing hidden above it (each step opens at its top,
+   whatever the last step's scroll). Then `Psalms 119:1`, a scroll to
+   `Psalms 119:30` (it pans inside the verses, between the fixed header
+   and footer) and its tap: `passage-clip/passage-clip` →
+   `Psalms 119:1-20` and `20 verses` each shown, a shown `Plant`, and 20
+   of the verse nodes `[checked]` (those off screen in a raw snapshot).
+6. Back to John 15:1-5 and `passage-plant`: `sim journey passage-plant` →
+   `"ok":true`: `Chapters`, `Books`, step 4's taps from `John`, then
+   `Plant`. `passage-plant/passage-plant` → the heading `Your field`; the
+   buttons `Open Isaiah 41:10` then `Open John 15:1-5`; five buttons
+   `John 15:<n>, not planted` (n 1-5); no button named `Remove` or
+   starting `Remove `; one `Add a list`.
+7. (Step 6 is `passage-plant`.)
+8. `passage-limit`: two more passages. `sim journey passage-limit-psalm`
+   → `"ok":true`: `Psalms` → `Psalms 23` → `Psalms 23:1`, a pan up from
+   `Psalms 23:4` until `Psalms 23:6` shows clear of the footer (a scroll
+   to it can leave it under the footer, where a tap misses), `Psalms 23:6`,
+   `Plant`. Then `sim journey passage-limit` → `"ok":true`: `Romans` →
+   `Romans 8` → a scroll to `Romans 8:28` → `Romans 8:28`, `Plant`.
+   `passage-limit/passage-limit` → the buttons `Open John 15:1-5`,
    `Open Psalms 23:1-6` and `Open Romans 8:28`, no `Remove`, no
    `Add a list`, and the limit line's text.
-9. `passage-keep`: `sim tap "label=Open Psalms 23:1-6"`, `sim tap
-   "label=Remove Psalms 23:1-6"`, `sim snapshot passage-ask` → `id=ask`
-   with the ask's text, `Remove`, `Keep`; then `sim tap "label=Keep"` →
-   `Remove Psalms 23:1-6` back and no `id=ask`; `sim tap "label=Your
-   field"`, `sim snapshot passage-keep` → as step 8.
-10. `passage-remove`: `sim tap "label=Open Romans 8:28"`, `sim tap
-    "label=Remove Romans 8:28"`, `sim tap "label=Remove"`, `sim snapshot
-    passage-remove` → home: no `Open Romans 8:28`, the buttons `Open John
-    15:1-5` and `Open Psalms 23:1-6`, no `Remove`, one `Add a list`.
-11. `passage-day-one`: on home, `sim snapshot passage-day-one` → the
-    Today card's parts line holds no `1 new`. When the card offers `Start`
-    (the promise's review due), `sim tap "label=Start"`,
-    `sim open / --expect "id=session" --no-relaunch`, `sim snapshot passage-day-one-today`
-    → no `Listen`; then `sim tap "label=Your field"`.
-12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,
-    `sim snapshot passage-relaunch` → the heading `Your field` and the rows'
-    buttons `Open Isaiah 41:10`, `Open John 15:1-5`, `Open Psalms 23:1-6`,
-    in that order.
-13. `passage-launch-time`: three times, `sim relaunch` then
-    `sim open / --expect "label=Isaiah 41:10"`, recording each line's `ms`,
-    with `sim doctor`'s `timingsHold`; then the same three on a worktree of
-    `69d70a02d`, on its own port. Report the six numbers and the load.
+9. `passage-keep`: `sim journey passage-keep` → `"ok":true`.
+   `passage-keep/passage-ask` → `id=ask` with the ask's text, `Remove`,
+   `Keep`; the journey's `Keep` brings `Remove Psalms 23:1-6` back with no
+   `id=ask`; `passage-keep/passage-keep`, after `Your field` → as step 8.
+10. `passage-remove`: `sim journey passage-remove` → `"ok":true`.
+    `passage-remove/passage-remove` → home: no `Open Romans 8:28`, the
+    buttons `Open John 15:1-5` and `Open Psalms 23:1-6`, no `Remove`, one
+    `Add a list`.
+11. `passage-day-one`: `passage-remove/passage-day-one` → the Today
+    card's parts line holds no `1 new`. When the card offers `Start` (the
+    promise's review due), the tap on it and Today's lack of `Listen` are
+    `run.md`'s `run` (`run/run-due`).
+12. `passage-relaunch`: `sim journey passage-relaunch` → `"ok":true`.
+    `passage-relaunch/passage-relaunch` → the heading `Your field` and the
+    rows' buttons `Open Isaiah 41:10`, `Open John 15:1-5`,
+    `Open Psalms 23:1-6`, in that order.
+13. `passage-launch-time`: the same journey's three relaunches, each
+    waiting for `Isaiah 41:10`: record each step's `ms` (its line in
+    `$EVIDENCE/results.jsonl`) with `sim doctor`'s `timingsHold`; then the
+    same three on a worktree of `69d70a02d`, on its own port. Report the
+    six numbers and the load.
 14. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
     the install.
 15. `passage-new`, the second session, after the next 04:00 local, with no
-    uninstall: `sim boot`, then `sim open / --expect "id=today-card"` → the Today
-    card's parts line holds `1 new`, with `Start`; `sim tap "label=Start"`,
-    `sim open / --expect "id=session" --no-relaunch`,
-    `sim snapshot passage-new` → the counts line holds `1 new`; when the
-    reference is `Isaiah 41:10` (its review due), run it through `Say it`
-    and `Next` first, then snapshot again → the reference `John 15:1`,
-    `Listen` before `Say it`. Tap `Listen` and record whether the voice
-    hands over to the recognizer when `Say it` follows (on the phone; the
-    simulator's voice is silent). Then `sim doctor` and `sim down`.
+    uninstall: `sim boot`, then `sim journey passage-new` → `"ok":true`.
+    `passage-new/passage-new-home` → the Today card's parts line holds
+    `1 new`, with `Start`; `passage-new/passage-new` → the counts line
+    holds `1 new`; when the reference is `Isaiah 41:10` (its review due),
+    run `run.md`'s `run-recite` and `run-next` first, then
+    `sim journey passage-new` again → the reference `John 15:1`, `Listen`
+    before `Say it`. Tap `Listen` and record whether the voice hands over
+    to the recognizer when `Say it` follows (on the phone; the simulator's
+    voice is silent). Then `sim doctor` and `sim down`.
 
 Report only counts, booleans, rect numbers, the labels named above, the
 counts line and the references; delete the `snapshots` folder and the raw
@@ -205,7 +213,7 @@ snapshots.
 
 - The chooser's verses are one scroll view of the whole chapter (176
   verses in Psalms 119), never a virtualized list: a verse below the
-  window needs a `sim scroll`, and `Plant` never does. So do a book past
+  window needs a scroll step, and `Plant` never does. So do a book past
   the first screen of the books (`Romans`), a chapter past the first
   screen of a book's chapters (`Psalms 119`), and a verse partly under the
   footer (`Psalms 23:6`). Each step opens at its top, so a scroll on one

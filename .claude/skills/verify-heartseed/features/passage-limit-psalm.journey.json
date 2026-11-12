@@ -1,0 +1,123 @@
+{
+  "feature": "passage-limit-psalm",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-limit-psalm-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=Open John 15:1-5"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [
+        {
+          "shows": "label=Any passage"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-books",
+      "action": "tap",
+      "target": "label=Any passage",
+      "expect": [
+        {
+          "shows": "label=Add a passage"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-psalms-scroll",
+      "action": "scroll",
+      "target": "label=Psalms",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-psalms",
+      "action": "tap",
+      "target": "label=Psalms",
+      "expect": [
+        {
+          "shows": "label=Psalms 1"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-psalm-scroll",
+      "action": "scroll",
+      "target": "label=Psalms 23",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-psalm",
+      "action": "tap",
+      "target": "label=Psalms 23",
+      "expect": [
+        {
+          "shows": "label=Psalms 23:1"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-first",
+      "action": "tap",
+      "target": "label=Psalms 23:1",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-last-scroll",
+      "action": "gesture",
+      "from": "label=Psalms 23:4",
+      "dx": 0,
+      "dy": -300,
+      "expect": [
+        {
+          "shows": "label=Psalms 23:6"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-last",
+      "action": "tap",
+      "target": "label=Psalms 23:6",
+      "expect": [
+        {
+          "shows": "label=Psalms 23:1-6"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-plant-psalm",
+      "action": "tap",
+      "target": "label=Plant",
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=Open Psalms 23:1-6"
+        }
+      ],
+      "receipt": "none"
+    }
+  ]
+}
