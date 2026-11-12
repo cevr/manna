@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test:host": "bun test --path-ignore-patterns='**/*.slow.test.*' ./src/host.test.ts",
     "test:drive": "bun test --parallel=3 --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/host.test.ts ./src",
-    "test:slow": "bun test .slow.test."
+    "test:slow": "bun test .slow.test.",
+    "census:slow": "bun src/census-run.ts"
   },
   "dependencies": {
     "@effect/platform-bun": "catalog:",
