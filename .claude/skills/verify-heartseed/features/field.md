@@ -6,8 +6,8 @@ verse a plant (Mark 4:28: seed, then blade, then ear, then full corn). It is
 the app's home: every launch on a read garden opens it, and so does the
 first minute's `Continue`, in place in the root route: no route, no link,
 no tab. Today is reached from it by the Today card's `Start` or
-`Practice anyway`, or the chosen card's `Practice <reference>` (or
-`Learn <reference>` on a verse not planted), and left by the button
+`Practice anyway`, or one tap on a plant (its verse, whole), and left by
+the button
 `Your field` (shown
 `‹ Your field`), which leads back to home. Today offers it only once the
 garden's read of the device's store completes, and never while Say it
@@ -19,7 +19,7 @@ named `Today`. Its heading is `Your field`; under it, the days sown
 on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
-`1 verse at full corn`: the verses at full corn now, never a phrase, so
+`1 verse at full corn`: the verses at full corn now, never an old piece, so
 Again takes a verse out). After them the label `Lists` with `Add a list`
 (`id=add-list`; it opens the Add a list sheet over home, `home.md`) or
 the limit line, then one furrow per row, each with its icon, title and
@@ -29,9 +29,9 @@ even before its first recall, as bare soil), then each passage the reader
 chose, in the order chosen (`passage.md`), then the taught collection's
 row `Protection & Fear`, its 14 verses in order
 (`promise.md`), then each other verse the garden holds, in the order
-first sown. A phrase is never a row or a plant: a verse with only its
-phrases planted shows `seed`, and a removed passage's phrases make one
-row for their verse (`phrase.md`). Each plant is one button, labelled
+first sown. An old piece is never a row or a plant: a verse whose only
+plants are old pieces shows `not planted`, and a removed passage's old
+pieces make one row for their verse (`phrase.md`). Each plant is one button, labelled
 `<reference>, <stage>` (`seed`, `blade`, `ear`, `full corn` or
 `not planted`), then `, ready today` when a plan item not done is on it,
 its gold dot and drawing hidden inside it, no number under it; a tap
@@ -44,9 +44,7 @@ then the rows `Settings` (`home.md`: the Settings sheet, with the
 About screen, `about.md`) and `How Heartseed works` (About) close the
 scroll view. Above the scroll view, fixed, the greeting by the hour
 (`home.md`) and the Today card (`id=today-card`: its lines and `Start`,
-else `Practice anyway`) or, with a verse chosen, the chosen card
-(`<reference> · <stage words>` and `Practice <reference>`, or
-`Learn <reference>` on a verse not planted), and no
+else `Practice anyway`), and no
 `About`. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or home
 (Today on an unread garden).
@@ -78,7 +76,7 @@ every launch opens on the pending frame, then the first minute or home
 ## How to get to it (user POV)
 
 - Open the app: home is the field. From Today, tap `Your field`; tap
-  `Start` (or `Practice anyway`, or a plant and `Practice <reference>` or `Learn <reference>`) to go to Today.
+  `Start` (or `Practice anyway`, or a plant) to go to Today.
 
 ## Driving it
 
@@ -98,7 +96,6 @@ Launch); the JavaScript comes from the dev server.
    `When I need…`; no `Today` heading,
    no button `Today`, no `Say it`, no label starting `Stage:`.
 3. `field-control`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Practice Isaiah 41:10"`,
    `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot field-control` → the
    heading `Today`, `Isaiah 41:10`, `Say it` and a button `Your field`.

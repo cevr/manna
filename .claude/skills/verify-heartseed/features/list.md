@@ -41,7 +41,8 @@ holds no `Remove`: a held passage's or Handbook list's remove lives here.
 - `list-weakest`: before the seed is due, `Open Isaiah 41:10` offers
   `Practice this list` on the planted verse.
 - `list-learn`: Fear's `Practice this list` opens Today on its first
-  verse's first phrase; Today's `Your field` leads home.
+  verse, whole (`Psalms 91:1`), its line `Starts with Psalms 91:1, new
+  today`; Today's `Your field` leads home.
 - `list-verse`: a row's tap opens Today on that verse.
 - `list-practice`: with the seed due, the page's line counts it ready.
 - `list-remove`: a held passage's page asks, keeps, and removes.
@@ -81,15 +82,16 @@ Report labels, counts and booleans only, never a verse's words.
    `sim tap "label=Practice this list"`, `sim open / --expect "id=session"
    --no-relaunch` → `id=reference` `Isaiah 41:10`, `Say it`. `sim tap
    "label=Your field"`.
-5. `list-learn`: `sim tap "label=Open Protection & Fear"`, `sim tap
+5. `list-learn`: `sim tap "label=Open Protection & Fear"` → the line
+   `Starts with Psalms 91:1, new today`; `sim tap
    "label=Practice this list"`, `sim open / --expect "id=session"
-   --no-relaunch` → `id=reference` `Psalms 91:1 [1-9]` (its first phrase,
-   `phrase.md`); `Say it` (`Listen` too while the voice is on). `sim tap
+   --no-relaunch` → `id=reference` `Psalms 91:1`, whole (`phrase.md`);
+   `Say it` (`Listen` too while the voice is on). `sim tap
    "label=Your field"` → home (the heading `Your field`, `id=today-card`),
    not the page.
 6. `list-verse`: `sim tap "label=Open Protection & Fear"`, `sim tap
    "label=Psalms 91:2, not planted"`, `sim open / --expect "id=session"
-   --no-relaunch` → `id=reference` `Psalms 91:2` or its first phrase;
+   --no-relaunch` → `id=reference` `Psalms 91:2`;
    `Say it`. `sim tap "label=Your field"`.
 7. `list-practice`, only in `home.md`'s `home-today` state (7 minutes
    after planting, `5 min` in Settings): `sim tap "label=Open Isaiah

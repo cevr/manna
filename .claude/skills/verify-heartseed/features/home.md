@@ -4,7 +4,7 @@ The home's rules (`apps/heartseed/README.md`, Home): the greeting by the
 reader's local hour, the furrows (one per row of the field, each its list's
 kind, icon and caption, each plant's stage and ready mark), the lists
 the field holds, the shelves the Add a list sheet offers, and a start on a
-verse (`Practice` or `Learn`) that makes it the session's visit. The field
+verse (a tap on its plant) that makes it the session's visit. The field
 (`apps/heartseed/src/field/screen.tsx`, `field.md`) is the app's home:
 every launch on a read garden opens it, and so does the first minute's
 `Continue`; Today's `Your field` leads back to it. It draws them in this
@@ -14,10 +14,7 @@ afternoon` or `Good evening`, with a sun or a moon), then the Today card
 parts `<r> to review · 1 new`, or `All tended for today` and `Nothing is
 due right now.`, and one full-width button: `Start`, which opens Today as
 the run stands, else `Practice anyway` on the weakest planted verse, else
-none) or, with a plant chosen, the chosen card (`id=chosen`:
-`<reference> · <stage words>` and `Practice <reference>` on a planted
-verse or `Learn <reference>` on one not planted, which makes the verse
-the visit and opens Today on it); in the scroll view
+none); in the scroll view
 the heading `Your field`, the days sown and the harvest, the label
 `Lists` with `Add a list` (`id=add-list`) or the limit line, one furrow
 per row (its icon, its title as the button `Open <title>`, which opens
@@ -26,8 +23,10 @@ today`, else `<n> verse(s) · <p> planted`, else `<n> verse(s) to
 learn`, and its plants as buttons named
 `<reference>, <stage>`, then `, ready today` with a gold dot when a plan
 item not done is on the verse, no number under any), the legend, then the
-rows `Settings` and `How Heartseed works`. A tap on a plant chooses its
-verse, a second tap lets it go. The `Settings` row opens the Settings
+rows `Settings` and `How Heartseed works`. A tap on a plant goes straight
+into Today on its verse, whole (a review of a planted verse, or a verse
+not planted learned fresh), with no card between (owner, 2026-11-12);
+Today's `Your field` comes back. The `Settings` row opens the Settings
 sheet (`apps/heartseed/src/settings/sheet.tsx`): the heading `Settings`
 and `Done`, then the `Minutes` radios, `Voice`, the `Appearance` radios
 and `About`; `How Heartseed works` opens About. Today holds no `Minutes`
@@ -68,7 +67,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-motion-reach`: at once after a relaunch, while the drawings still
   enter, home holds every control: `Practice anyway`, `Add a list`,
   `Settings`, `How Heartseed works`, the own plant's button and the 14
-  not planted, and a tap on the own plant chooses it.
+  not planted, and a tap on the own plant opens Today on it.
 - `home-open`: the first minute's `Continue` opens home in the done
   state: the heading `Your field`, the greeting, the Today card with
   `All tended for today`, `Nothing is due right now.` and `Practice
@@ -94,17 +93,16 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   learn`) with 14 plant buttons not planted, the Today card with
   `Practice anyway` and no `About`, and at the field's end the rows
   `Settings` and `How Heartseed works`.
-- `home-choose`: a tap on a plant chooses it (`Isaiah 41:10 · a seed`
-  and `Practice Isaiah 41:10`, the Today card gone), a second tap lets it
-  go (the Today card back), and a verse not planted offers
-  `Learn <reference>` (`Psalms 91:1 · not planted yet`,
-  `Learn Psalms 91:1`).
-- `home-learn`: `Learn Psalms 91:1` opens Today on `Psalms 91:1` with
-  `Listen` offered; after `Say it` and a grade, `Your field` shows the
-  button `Psalms 91:1, seed` and the caption `14 verses · 1 planted`.
-- `home-start`: `Practice Isaiah 41:10` opens Today on that verse.
+- `home-learn`: one tap on `Psalms 91:1, not planted` opens Today on
+  `Psalms 91:1` (no card, no `Learn` button between) with `Listen`
+  offered; after `Say it` the summary reads `<k> of 19 words`; after a
+  grade, `Your field` shows the button `Psalms 91:1, seed` and the
+  caption `14 verses · 1 planted`.
+- `home-start`: one tap on `Isaiah 41:10, seed` opens Today on that
+  verse; home holds no `id=chosen` and no button starting `Practice ` or
+  `Learn ` but `Practice anyway`.
 - `home-back`: Today's `Your field` (shown `‹ Your field`) leads to home,
-  the choice gone and `Start` on the Today card while the visit is open;
+  no plant selected and `Start` on the Today card while the visit is open;
   Today holds no `When I need…`.
 - `home-begin`: with the started visit open the Today card offers
   `Start`, which opens Today on it.
@@ -263,35 +261,26 @@ puts `Start` on the Today card), with the same variables:
    only a number; no `When I need…`, no `id=add-verses`, no `id=add-row`,
    no `id=counts`; no `Today` heading, no button `Today`, no `Say it`, no
    label starting `Stage:`. `sim scroll "label=Isaiah 41:10, seed" up`.
-4. `home-choose`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim snapshot home-choose` → the text `Isaiah 41:10 · a seed`, the
-   button `Practice Isaiah 41:10`, no `id=today-card`, no `Start` and no
-   `Practice anyway` (record how the snapshot shows the plant's
-   selection: `selected` or nothing). Then
-   `sim tap "label=Isaiah 41:10, seed"` again, `sim snapshot
-   home-choose-letgo` → `id=today-card` back with `Practice anyway`, and no
-   label starting `Practice Isaiah`. Then
-   `sim tap "label=Psalms 91:1, not planted"`, `sim snapshot
-   home-choose-unplanted` → the text `Psalms 91:1 · not planted yet` and
-   the button `Learn Psalms 91:1`. `sim tap "label=Psalms 91:1, not
-   planted"` again (let go).
+4. (No step: home has no chosen card; `home-start` below is the plant's
+   tap.)
 5. `home-start` and `home-back`: `sim tap "label=Isaiah 41:10, seed"`
-   (chosen), `sim tap "label=Practice Isaiah 41:10"`,
+   (one tap), `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot home-back-today` → the heading `Today`, the reference
    `Isaiah 41:10`, `Say it`, `Stage: seed`, a button `Your field`, and no
    `When I need…`. Then `sim tap "label=Your field"`,
-   `sim snapshot home-back` → the heading `Your field`, no text
-   `Isaiah 41:10 · a seed` (the choice gone), and on the Today card
-   `1 verse · about 1 min`, `1 to review` and `Start` (the started visit
-   is open).
+   `sim snapshot home-back` → the heading `Your field`, no `id=chosen`,
+   no button starting `Practice Isaiah` or `Learn `, and on the Today
+   card `1 verse · about 1 min`, `1 to review` and `Start` (the started
+   visit is open).
 6. `home-begin`: `sim tap "label=Start"`, `sim snapshot home-begin-today`
    → the heading `Today`, `Isaiah 41:10`, `Say it`.
 7. `home-learn`: `sim tap "label=Your field"`,
-   `sim tap "label=Psalms 91:1, not planted"`,
-   `sim tap "label=Learn Psalms 91:1"`, `sim open / --expect "id=session"
-   --no-relaunch`, `sim snapshot home-learn-today` → `Psalms 91:1` and a
-   button `Listen`. Then `sim tap "label=Say it"` and say it (or, on the
-   simulator, as `run.md`'s recital), tap a grade when one shows, then
+   `sim tap "label=Psalms 91:1, not planted"` (one tap),
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot
+   home-learn-today` → `id=reference` `Psalms 91:1` and a button
+   `Listen`. Then `sim tap "label=Say it"` and say it (or, on the
+   simulator, as `run.md`'s recital) → the summary `<k> of 19 words`;
+   tap a grade when one shows, then
    `sim tap "label=Your field"`, `sim scroll "label=Psalms 91:1, seed" down`, `sim snapshot home-learn` → the button `Psalms 91:1, seed` and
    the caption `14 verses · 1 planted`.
 8. `home-add-places`: `sim tap "id=add-list"` → the heading `Add a list`;
@@ -320,8 +309,8 @@ puts `Start` on the Today card), with the same variables:
     (its label starts `Isaiah 41:10, seed`; it ends `, ready today` when
     step 9 ran) and the buttons ending `, not planted`. Then at once tap
     that plant by the label the snapshot gave, and `sim snapshot
-    home-motion-reach-chosen` → `Isaiah 41:10 · a seed` and
-    `Practice Isaiah 41:10`. Record the seconds between the relaunch and
+    home-motion-reach-today` → the heading `Today` and the reference
+    `Isaiah 41:10`. Record the seconds between the relaunch and
     each snapshot.
 12. Regression on the same install: `field.md`'s `field-first`,
     `field-control` and `field-back` (the plants as buttons), and
@@ -361,7 +350,7 @@ the same variables:
    heading `Your field`, and no heading `Settings`.
 4. `home-settings-today`: home after the first minute is in the done
    state, so no `Start`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Practice Isaiah 41:10"`, `sim open / --expect
+   `sim open / --expect
    "id=session" --no-relaunch`, `sim snapshot home-settings-today` and a raw snapshot →
    the heading `Today`, `‹ Your field` (label `Your field`), and no radio
    `2 min`, `5 min`, `10 min` or `20 min`, no `Minutes` group, no `Voice`
@@ -397,9 +386,8 @@ need…`, `id=add-verses`, `id=add-row`, `id=counts` and no
 `id=today-card`, so every `--expect "id=today-card"` times out
 (`home-open`, `home-relaunch`, `home-dot`); the captions read
 `<k> of <n> ripe` and the plants show numbers (`home-lists`); a verse not
-planted offers no button (`home-choose`, `home-learn`);
-`sim tap "label=Practice Isaiah 41:10"` and `"label=Practice anyway"`
-find no element (`home-start`, `home-anyway`); the sheet's heading is
+planted starts nothing (`home-learn`); `sim tap "label=Practice anyway"`
+finds no element (`home-anyway`); the sheet's heading is
 `Add verses` (`home-add-places`); `Settings` is a gear in the fixed bar
 (`home-settings`).
 
@@ -513,12 +501,12 @@ Report only the lines named above and the reference; delete the
   `test:dark-screens-dark-b`), the icons' look, whether a long title fits,
   and what VoiceOver says of the modal beyond the snapshot.
 - What the simulator cannot show, the tests own: the greeting at other
-  hours and in other zones (`test:home-clock`), a phrase start
-  (`test:home-walk-a`), a remove's effect on the furrows (`passage.md`
+  hours and in other zones (`test:home-clock`), a start on a verse with
+  old pieces stored (`test:home-walk-a`, `test:home-start`), a remove's effect on the furrows (`passage.md`
   covers the remove), the 3-held limit (`passage.md`), several verses
   grown in one run (`test:run-cues-b`, `src/run/tended.test.tsx`), a
   visit's growth beside a plan (`test:home`, `test:home-walk-b`), a
-  making while the end shows (`test:wake-end`), the end over an unread garden (`src/run/rule.test.ts`), how VoiceOver speaks the selection, and
+  making while the end shows (`test:wake-end`), the end over an unread garden (`src/run/rule.test.ts`), and
   how each icon looks: its colours and contrast as drawn
   (`test:home-pixels`, `test:theme`), the dot's colour and its 3:1
   (`test:home-clock`), the dark set under a dark system, whether furrow

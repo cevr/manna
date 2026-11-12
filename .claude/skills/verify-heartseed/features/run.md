@@ -1,12 +1,12 @@
 # The run: Today one piece at a time
 
 Today (`apps/heartseed/app/index.tsx`) runs the session's plan
-(`session.md`) one piece at a time: a verse, or a phrase of a long verse
+(`session.md`) one piece at a time: a verse, whole, long or short
 (`phrase.md`). It shows the held item if any, else
 the first verse not done of a visit (a verse started from home by
-`Practice anyway`, `Practice <reference>` or `Learn <reference>`,
+`Practice anyway` or a tap on its plant,
 `home.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
-piece, first letters for a join or at a seed, nothing from a blade on), its stage line,
+piece, first letters at a seed, nothing from a blade on), its stage line,
 and `Say it`. Once the recital's recall is kept, the result and the grades
 stay, and the button reads `Next`. `Next` moves on to the next item. After
 the last item's `Next`, Today shows the end of the run: the heading
@@ -28,20 +28,19 @@ them. A recital that is not heard, or whose write is refused, leaves
 A plan is made when home or Today first shows in a launch, and again at
 each `Minutes` tap (in home's Settings sheet). Today is reached from home by the Today card's `Start` (shown exactly
 when the plan or a visit holds an item) or `Practice anyway`, or by a
-chosen verse's `Practice <reference>` (or `Learn <reference>` on a verse
-not planted), and left by `Your field`. A tap made with no recital under way starts the run again at
+tap on a verse's plant, and left by `Your field`. A tap made with no recital under way starts the run again at
 the new plan's first item, and an earlier result is gone. A reader cannot
 make a `Minutes` tap while a recital listens, since the sheet is on home
 alone and Today shows no `Your field` then; the session keeps the verse
 for such a making (`apps/heartseed/src/session/cells.property.test.ts`;
-the phrase walks make that making at the session seam too, a phrase's
-recital listening, `apps/heartseed/src/test/phrase-rig.tsx`),
+the phrase walks make that making at the session seam too, a long
+verse's recital listening, `apps/heartseed/src/test/phrase-rig.tsx`),
 and a return to the foreground while it listens keeps the verse
 (`wake.md`). Nothing of the run is stored. A relaunch makes a new plan.
 
 The app holds Isaiah 41:10, then the reader's passages (`passage.md`),
-then the Fear collection's verses (`promise.md`), each long verse as its
-phrases, then its join (`phrase.md`). On the first minute's
+then the Fear collection's verses (`promise.md`), each verse whole, long
+or short (`phrase.md`). On the first minute's
 day no new piece is offered, so this drive's plan holds at most one
 item: Isaiah 41:10. After the first minute's alone recital (the replay suggests Hard),
 the passage is due again 6 minutes later. That is FSRS's step. A planting
@@ -116,7 +115,7 @@ sets them.
 2. `run-done-first`: `sim snapshot run-done-first` → the nodes above. Then
    `session.md`'s `session-first`, `session-header` and `session-choose`
    (steps 2-3) and `session-field` (step 5), on the Today that
-   `Practice Isaiah 41:10` opens.
+   a tap on `Isaiah 41:10, seed` opens.
 3. `run-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
    `sim open / --expect "id=today-card"` → the Today card's
    `1 verse · about 1 min`, `1 to review` and `Start`; `sim tap "label=Start"`, `sim open / --expect
@@ -159,8 +158,8 @@ snapshots.
   passage's due time. Tests alone own:
   - many verses in one run, the mixed order, and a new verse under its full
     text (`apps/heartseed/src/run/*.test.tsx`);
-  - phrases over days, a join under first letters and a held phrase
-    (`apps/heartseed/src/phrase/walk-*.test.tsx`);
+  - long verses over days, whole, beside old pieces, and a held long
+    verse (`apps/heartseed/src/phrase/walk-*.test.tsx`);
   - the hold across a Minutes making while a recital listens or finishes,
     which no reader can make from the screen
     (`apps/heartseed/src/session/cells.property.test.ts`);

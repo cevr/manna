@@ -49,7 +49,7 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
   probe scrolls, the status stays `reading` (never `paused`), and no new
   `speak` line appears. A swipe never holds.
 - `light-today`: Today's `Listen` on a new piece (`passage.md`'s
-  `passage-new`, or `phrase.md`'s `phrase-say` for John 3:16 [1-6]):
+  `passage-new`, or `phrase.md`'s `whole-new` for John 3:16):
   `id=reading` with one `word-<i>` per word, one or two `selected` moving
   forward between two snapshots, and no `id=passage`. After the finish,
   `id=passage` is whole again and `Listen` is back.
@@ -114,7 +114,7 @@ over `[voice]`, from `START`.
    heading `Light probe` has moved up or gone (the probe scrolled), the
    status still ends `reading`, and the log holds no new `speak` line.
 6. `light-today`: on Today with a new piece (`passage.md`'s `passage-new`,
-   or `phrase.md`'s `phrase-say`), `sim tap "label=Listen"` and two raw
+   or `phrase.md`'s `whole-new`), `sim tap "label=Listen"` and two raw
    snapshots about 1 s apart → `id=reading` with one `word-<i>` per word of
    the piece (count them), one or two `selected` moving forward, and no
    `id=passage`. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the

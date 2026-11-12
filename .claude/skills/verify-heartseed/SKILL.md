@@ -141,8 +141,8 @@ bun run --cwd apps/heartseed sim snapshot today
 the target. Into the running app already on `/`, it is a wait: the root
 keeps the screen it shows (home, Today), so a feature file
 writes `sim open / --expect "id=session" --no-relaunch` after a tap that
-opens Today and `--expect "id=today-card" --no-relaunch` for home (no
-plant chosen); a wait for
+opens Today (a plant's tap among them) and `--expect "id=today-card"
+--no-relaunch` for home; a wait for
 Today that lands on home is a finding to record, not a step to retry.
 Without `--no-relaunch` a missing target terminates the app and opens once
 more, and every launch opens home, so a wait for home would pass on a tap
@@ -159,12 +159,11 @@ word's mark, `Next` and `Your field` (back to home); on the
 field, which is home, every launch's screen after the first minute: in
 its fixed top the Today card (`id=today-card`, its lines `id=today-headline`
 and `id=today-parts`, as Today's counts line is `id=session`) with one
-button, `Start` or `Practice anyway`, or with a plant chosen the chosen
-card (`id=chosen`) with `Practice <reference>` or `Learn <reference>`;
+button, `Start` or `Practice anyway`;
 in its scroll view `Add a list`
 (`id=add-list`), in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
-today` when ready), and at its end the rows `Settings` and `How Heartseed
+today` when ready; one tap opens Today on that verse, whole), and at its end the rows `Settings` and `How Heartseed
 works` (scroll to them first: `sim scroll "label=Settings" down`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
@@ -188,11 +187,11 @@ Heartseed has no journey files yet. The features:
   in the done state (`first-home`). Run it first: the other features
   start from its `first-home`. Today is reached from home by `Start` once
   a verse is due (after a `sim relaunch`), else by `Practice anyway` or a
-  plant and `Practice Isaiah 41:10`. Its `first-plantset` row pairs native
+  tap on the plant `Isaiah 41:10, seed`. Its `first-plantset` row pairs native
   semantic parity with same-head mounted-image receipts; AX cannot
   identify the hidden hand-drawn seed.
 - [features/run.md](features/run.md): Today runs the session's plan one
-  piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
+  piece (a verse, whole) at a time: the verse under its cue, `Say it`, the result, `Next`,
   and the end (`The field is tended`, what grew, `Your field` the way on)
   with no `Say it`; the action button and the grades in
   a fixed footer; the verse due again after the first minute, through a
@@ -258,16 +257,18 @@ Heartseed has no journey files yet. The features:
   `first.md`'s `first-home`, in place of `run.md` step 6.
 - [features/promise.md](features/promise.md): the promise collections:
   the Fear collection's row on the field, no `When I need…` on home or
-  Today (`need-gone`), and the first Fear phrase after the next 04:00.
+  Today (`need-gone`), and the first Fear verse, whole, after the next 04:00.
   Run it from `first.md`'s `first-home`; its second session comes after
   the next 04:00.
-- [features/phrase.md](features/phrase.md): long verses learned as
-  phrases first, then joined: John 3:16 planted as a passage, its first
-  phrase `John 3:16 [1-6]` new after the next 04:00 with `Listen` and
-  `Say it` over its six words, and the field folding the phrase into
-  `John 3:16, seed`. Run it from `first.md`'s `first-home`; its second session
-  comes after the next 04:00 (`passage.md`'s `passage-new` with John 3:16
-  in place of John 15:1-5).
+- [features/phrase.md](features/phrase.md): long verses learned whole and
+  the old pieces an earlier build kept: John 3:16 planted as a passage,
+  new after the next 04:00 under its own reference with `Listen` and
+  `Say it` over its 25 words, `John 3:16, seed` on the field, no word
+  range on any screen; and `whole-migrate`, a garden kept by main's build
+  read on the head (`Psalms 91:1, not planted`, then one tap to Today on
+  the whole verse). Run it from `first.md`'s `first-home`; its second
+  session comes after the next 04:00 (`passage.md`'s `passage-new` with
+  John 3:16 in place of John 15:1-5).
 - [features/light.md](features/light.md): each word lit as the voice
   reads it, in the reading view (`id=reading`, a `word-<i>` node per
   word), on the light probe (`apps/heartseed/app/probe/light.tsx`: John

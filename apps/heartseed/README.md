@@ -8,7 +8,7 @@ Field and Home, below): a row per passage, a plant per verse, the days
 sown and the harvest, and fixed at its top the Today card that says what
 the day's plan holds (`src/home/today.ts` over `src/session.ts`, below)
 with one `Start`, or `Practice anyway` when nothing is due. `Start`,
-`Practice anyway` or a chosen verse's `Practice` or `Learn` opens Today
+`Practice anyway` or a tap on a verse's plant opens Today
 (`app/index.tsx`), which shows the
 passage the reader is learning, its stage in the garden, and one big
 button, Say it, which hears the reader recite it; the word matcher
@@ -365,8 +365,8 @@ words (named `Stage: <stage>` for the screen reader), with a small plant
 beside it from the hand-drawn set, and, while a finished recital is
 on the screen, how that recital grew it (`Grew to an ear.`). Cues fade
 across days by stage, the ladder (`cueAt`, `cueIn`): a passage not yet
-planted shows and is said under the full text (under first letters when a
-phrase of it is planted: its join, Phrases, below), a seed under its first
+planted shows and is said under the full text (whatever old pieces of it
+are planted: Old pieces, below), a seed under its first
 letters, a blade, an ear and full corn under nothing; Again makes a seed,
 so the letters come back. In an unread garden Today shows the verse whole
 and it is said with nothing, claiming no stage. Until the
@@ -494,7 +494,7 @@ heading, outside the scroll view, so however much a recital adds (the
 recap, the grades, the growth line, an alert) it is on screen without a
 scroll and clear of the home indicator. Home has no control named `Today`:
 it opens Today by the Today card's `Start` or `Practice anyway`, or a
-chosen verse's `Practice` or `Learn`, and
+tap on a verse's plant, and
 Today then shows as it was (a held result kept). Home, Today, the chooser
 (Choosing a passage, below) and About (below) are in
 place in the root route (`app/index.tsx`): no route, no link, no tab.
@@ -517,19 +517,19 @@ launch counts them.
   passage is a `List` (`listsOf`, `src/lists.ts`; Home, below). The field
   shows once the garden's and the passages' views and the taught part are
   known. The passages come first,
-  each verse a plant at `stageOf` its plant, `seed` while it has no plant
-  of its own but a plant of a phrase of it, or `not planted` before its
-  first recall (drawn as bare soil); a verse is one plant wherever it
-  shows; then each other verse the garden
+  each verse a plant at `stageOf` its own plant, or `not planted` before
+  its first whole recital (drawn as bare soil, whatever old pieces of it
+  are planted); a verse is one plant wherever it shows; then each other
+  verse the garden
   holds, alone, in the order first sown: by its earliest recall's
-  `startedAt`, then by its reference in code units. A phrase is never a
-  row or a plant: its plant folds into its verse's (Phrases, above), and
-  counts toward that verse's first recall. References match
+  `startedAt`, then by its reference in code units. An old piece is never
+  a row or a plant: its plant folds into its verse's row (Old pieces,
+  below), and counts toward that verse's first recall. References match
   exactly (`Isaiah 41:1`, `Isaiah 41:100` and `Isaiah 41:10 ` are three
   other verses).
 - Days sown (`1 day sown`, `<n> days sown`) is the number of distinct days
   (`dayOf`, `src/day.ts`) among every recall the read holds, of any verse
-  or phrase.
+  or old piece.
   A record with an `offset` counts for the reader's local day by that
   stored offset, starting at 04:00 (Anki's rollover, the day hsdaily's
   session uses): `floor((startedAt + offset × 60 000 − 4 h) / 86 400 000)`,
@@ -551,7 +551,7 @@ launch counts them.
   zone (Hermes may, until a relaunch), a record's day is that old zone's.
 - The harvest (`1 verse at full corn`, `<n> verses at full corn`) is the
   number of verses whose own plant's stage is full corn now (stability of
-  21 days or more; a phrase never counts), derived, never stored: Again on
+  21 days or more; an old piece never counts), derived, never stored: Again on
   a verse at full corn takes it out.
 - Nothing is stored for the field itself: no key, no value, no setting;
   it reads only the garden's and the passages' views, and writes only
@@ -561,8 +561,7 @@ launch counts them.
   below), its furrows and legend in `src/field/plot.tsx` and its cards in
   `src/field/card.tsx`. Fixed above the scroll view: the greeting (testID
   `greeting`, the sun or the moon, then its words in `sun`, plain text),
-  then one card: the Today card, or with a verse chosen the chosen card,
-  or a remove's ask (Choosing a passage, below), and under it a remove's
+  then one card: the Today card, or a remove's ask (Choosing a passage, below), and under it a remove's
   alert. Nothing else: no `When I need…`, no gear, no add. It holds no way
   back: home is the root. The Today card (testID `today-card`, the rule
   `todayOf` in `src/home/today.ts`) holds once a plan is made its headline
@@ -575,8 +574,8 @@ launch counts them.
   passages the first piece to say), which opens Today and writes nothing;
   else `Practice anyway` while `weakestOf` names a verse (the planted
   verse `startOf` starts at the lowest stage, then the earlier last
-  recall, then the reference), which starts it as a chosen verse's
-  `Practice` does; else no button. With no plan and no button the card
+  recall, then the reference), which starts it as a tap on its plant
+  does; else no button. With no plan and no button the card
   is absent. In the scroll view: the heading `Your field`, the days sown
   and the harvest, the label `Lists` with `Add a list` (testID
   `add-list`, opening the Add a list sheet over home: Choosing a passage)
@@ -596,25 +595,21 @@ launch counts them.
   from its own page. Each
   plant (testID `field-plant`) is one button at least 44 × 44 pt named
   `<reference>, <stage>`, then `, ready today` for a verse of the plan's
-  open items, with `aria-selected` while its verse is chosen; inside it,
+  open items, never shown selected; inside it,
   hidden, the gold dot (testID `dot`, filled `sun`, at least 3:1 on the
-  ground and on a chosen plant's card) when ready, the stage's image
+  ground) when ready, the stage's image
   (`seed`, `blade`, `ear` or `corn` from `ICON_IMAGES`, of the scheme
   now) or bare soil (`plant-soil`) for a verse not planted, and no number.
   Every icon is hidden from the screen reader; nothing moves.
-  Every text is in a text role at WCAG AA on what lies behind it. With a
-  verse chosen, the chosen card (`chosen`: `<reference> · a seed`,
-  `a blade`, `an ear`, `full corn` or `not planted yet`) stands in the
-  Today card's place with, while `startOf` starts something, `Practice
-  this verse` (named `Practice <reference>`) on an item not fresh, or
-  `Learn this verse` (named `Learn <reference>`) on a fresh one; it runs
-  `startHere` and opens Today once it settles. At most one filled button
-  shows on home.
-- **The choice** is a verse, never a cell: a tap on a plant chooses its
-  verse (every cell of it shows selected), a tap on a plant of the chosen
-  verse lets it go, and a tap on another moves it. It is the screen's own
-  state, never stored, dropped when the field closes or when no furrow
-  holds the verse any more.
+  Every text is in a text role at WCAG AA on what lies behind it. At most
+  one filled button shows on home.
+- **A tap on a plant** goes straight into Today on its verse, whole, with
+  no card between (owner, 2026-11-12: "If you wanna go back, you can
+  easily go back from that page anywhere"): while `startOf` starts
+  something on the verse (a review of a planted verse, the plan's own
+  item on it, or a canon verse not planted learned fresh) it runs
+  `startHere` and opens Today once it settles; before a plan, when nothing
+  starts, the tap does nothing. Home holds no choice and no chosen card.
 - **The greeting** reads the runtime's `Clock` when home shows
   (`greetingNow`, `src/app.ts`, over `greetingAt`), in the reader's zone,
   and again at each return to the foreground while home shows (Session,
@@ -659,7 +654,7 @@ The row opens the Settings sheet (`src/settings/sheet.tsx`,
 only with it), `onRequestClose` (the swipe down, the web's Escape) and its
 backdrop the scheme's ground, so no white container shows in dark. Home
 mounts it only while open; the open state is home's own, never stored and
-never a route, so leaving home (Start, Practice, Learn, Add a list,
+never a route, so leaving home (Start, a plant's tap, Add a list,
 About, a recital that brings Today) or a relaunch closes it.
 
 - **The header,** fixed above the sheet's scroll view, holds the one
@@ -678,7 +673,7 @@ About, a recital that brings Today) or a relaunch closes it.
   dots and `Start` change under the open sheet. An appearance tap
   re-themes every screen, the sheet included. Opening or closing the sheet
   writes nothing; `Done`, the swipe down and Escape leave home as it was,
-  the chosen plant and the plan kept.
+  the plan kept.
 - `src/settings/choices.tsx` holds the two controls the sheet shows, each
   under its line (`MinutesChoice`, `VoiceChoice`): the sheet is the only
   place a reader chooses the minutes and the voice.
@@ -763,7 +758,7 @@ and removes one.
   (`appLayer`'s `pieces`, the promise by default), then each passage's
   verses in passage and verse order, each with its corpus text, its words
   counted as the matcher counts them and its passage's reference as its
-  group, and a long verse its phrases (Phrases, below), then each held
+  group, each verse one piece, whole (Old pieces, below), then each held
   list's verses in Haskell's order, grouped by the list's title (The
   Handbook lists, below), then the taught
   collections' verses (Promises, below). Each
@@ -802,7 +797,7 @@ the field's scroll view, among the lists it changes.
   chosen, titled by its reference, then each list held, in the order
   planted, titled by its title, then each taught collection's
   (`Protection & Fear`), then every other plant as a passage of one verse,
-  a phrase's folded into its verse (Field, above). A held passage's page
+  an old piece's folded into its verse (Field, above). A held passage's page
   holds `Remove <its reference>`, which finds its passage by the row's
   range, never by its place; a held list's page holds `Remove <its
   title>`, which finds its list by its id (`removalOf`,
@@ -869,98 +864,68 @@ the field's scroll view, among the lists it changes.
   stores a passage twice or removes two.
 - **Today after a change.** A landed add or remove is a making (Passages,
   above), so home's Today card and Today's run show the new plan: its reference, the
-  counts line and `Listen` on a new piece. On a day a verse or a phrase
-  was first planted (the first minute's day among them) no new piece
+  counts line and `Listen` on a new piece. On a day a verse or an old
+  piece was first planted (the first minute's day among them) no new piece
   shows; after the next 04:00 local, the first piece no plant names is
-  new: a long verse's first phrase (Phrases, below), a short verse whole.
+  new: a verse, whole, long or short.
 - Nothing else is stored: opening and closing the sheet, its shelves,
   `Any passage`, stepping, tapping verses, backing out, `Keep` and unread
   passages write nothing, and there is no route or key of the sheet's or
   the chooser's own.
 
-## Phrases
+## Old pieces
 
-A long verse is learned as phrases first, then joined. `src/phrase.ts` is
-the cut and the reference form, pure; the session, the cue and the field
-apply them.
+A verse is the one thing a reader plants, learns, practises and sees,
+whole, under its plain reference (owner, 2026-11-12: "verses are wholes,
+right? Or should be whole"). An earlier build cut each verse of more than
+12 words into pieces of 4-12 words and planted them one a day before the
+verse itself; nothing cuts or plants a piece now, and the records it kept
+stay as they are (rule M). `src/phrase.ts` reads them.
 
-- **The cut** (`cutOf`). A verse of 12 words or fewer (the matcher's
-  words: whitespace runs that hold a letter or a number) is learned whole.
-  A longer one is cut into consecutive phrases of 4-12 words that cover
-  every word. The gap after a word is the text from its last letter or
-  number to the next word's first, mark-only runs (`—`, `¶`, `...`)
-  included: strong when it holds one of `.;:?!`, comma when it holds `,`
-  and none of those, else plain. The cut takes, in order, the fewest cuts
-  at a plain gap, the fewest phrases, the fewest cuts at a comma gap, the
-  least sum of squared sizes, then the earliest cuts. A phrase's text runs
-  from its first word's run (the verse's start, for the first) to the next
-  phrase's first run (the verse's end, for the last), trimmed, so the
-  punctuation before a cut stays with the phrase said before it. Over the
-  whole KJV: 28,417 of 31,102 verses are cut, into 85,244 phrases, with
-  8,041 cuts at a plain gap and 31,282 at a comma; John 3:16 is
-  `[1-6]`, `[7-13]`, `[14-25]`.
-- **The reference** (`phraseReference`) is the verse's, a space, then the
-  word numbers from 1 in brackets: `John 3:16 [1-6]`. A phrase's recall is
-  an ordinary recall record under that reference, so there is no new
-  field, key prefix or migration. `phraseOf` reads it back only from that
-  exact form (a verse part with no bracket, two whole numbers from 1 with
-  no sign or leading zero, the first no later than the last, nothing
-  after `]`); any other reference, a verse's among them, names no phrase.
-- **Which pieces carry phrases.** Each long verse of a held passage and of
-  a taught collection carries its phrases (`Piece.phrases`, each a
-  `TextPiece` with its reference, text, word count and the verse's group:
-  a passage's reference, or a collection's title), built with the pieces
-  (`piecesOf`, `collectionPieces`), each verse text cut once per process.
-  The app's own pieces never do: Isaiah 41:10, the first minute's verse,
-  is learned whole, even inside a passage over it, since a reference keeps
-  its first place. A phrase carries no phrases. A verse of 12 words or
-  fewer has no `phrases` key at all.
-- **Phrases, then the join** (`planOf`). The plan is made over the pieces
-  expanded in the app's order: a planted piece, or one with no phrases, is
-  itself; an unplanted long verse is its phrases in order, then the verse
-  itself (the join) once every phrase is at an ear or full corn. The join
-  leaves the plan again if a phrase falls below an ear before it is
-  planted. The rest of the plan is unchanged: the new piece is the first
-  expanded piece no plant names, none on a day any plant (a phrase's
-  among them) was first recalled, so a verse's phrases come one a day;
-  while they ripen the next verse's first phrase may come, and the join
-  takes its place in order once ready. Phrase reviews mix by group as any
-  review does.
-- **The join's cue** (`cueIn`). A planted reference keeps its ladder. An
-  unplanted verse is shown and recited under first letters when the
-  garden holds a plant of any of its phrases, else under the full text, so
-  a join is planted under letters: its words are already known.
-- **Phrases leave** once their verse has a plant: they are no longer
-  pieces, so they are never offered or reviewed again. Their records stay,
-  and the field folds them.
-- **The field** never shows a phrase as a row or a plant. A verse with no
-  plant of its own and a plant of any of its phrases shows `seed`; once it
-  is planted, its own stage. A phrase plant whose verse no row holds (a
-  removed passage's) makes one row for that verse among the other plants,
-  first sown by the earliest recall of the verse and its phrases. Days
-  sown count every recall, phrases' included; the harvest counts verses'
-  own plants only.
-- **Today on a phrase** shows the phrase's reference and its own text
-  under its cue. `Listen` (a new piece only) reads that text, and the word
-  marks light its words by their UTF-16 spans within it; nothing is
-  precomputed per verse. `Say it` recites the phrase: the summary reads
-  `<k> of <n> words` over the phrase's n, and the recall is kept under the
-  phrase's reference with its word count. Today, the hold and the recital
-  find a phrase item's piece among the pieces' phrases (`pieceAt`), after
-  the hold and the visit.
-- **Known and visits.** A phrase plant never makes a verse known: a
-  promise is known only when each of its verses has its own plant
-  (Visits, below). A visit says a known verse whole, under its own
-  ladder, whatever phrase plants it has.
-- **A rollback** to a build before phrases reads each phrase record as a
-  plant no piece names: a row of its own on the field, never offered or
-  reviewed. Nothing is lost.
-- The tests: `test:phrase` (the cut against `src/test/phrase-model.ts`,
-  the reference form, the census, the natural voice's plan over phrases),
-  `src/session/phrases.property.test.ts` in `test:session` (the expansion
-  and the join's cue), `src/field/phrases.test.ts` in `test:field` (the
-  fold), and `test:phrase-walk-a`, `-b` and `-c` (Today over days through
-  the root): Tests, below.
+- **The reference** of an old piece is the verse's, a space, then the
+  word numbers from 1 in brackets (`<verse> [<first>-<last>]`). Its
+  recalls are ordinary recall records under that reference. `phraseOf`
+  reads it back only from that exact form (a verse part with no bracket,
+  two whole numbers from 1 with no sign or leading zero, the first no
+  later than the last, nothing after `]`); any other reference, a verse's
+  among them, names no piece.
+- **Nothing is written for them.** No stored record is changed, moved or
+  deleted, and no new record is stored under a piece's reference: the
+  session's pieces are whole verses (`verseAsPiece` gives no `phrases`),
+  so a plan item, a visit, a hold, `shownOf` and every recital name a
+  verse.
+- **Never planned.** An old piece's plant is a plant no piece names: it
+  is never the new piece, never reviewed and never shown. It still counts
+  among the plants first recalled today, so an old piece planted today
+  spends the day's one new piece as any plant would.
+- **Its verse is a verse to learn.** A verse whose only plants are old
+  pieces is `not planted` on the field (owner, 2026-11-12, q87 (b): it
+  reads as bare soil until it is said whole), the plan's new piece in its
+  list's turn, and a fresh start at a tap, under the full text with
+  `Listen`. From its first whole recital its stage and its review dates
+  are its own plant's alone; an old piece's stage is never carried to its
+  verse.
+- **The field** never shows an old piece as a row or a plant. A piece's
+  plant whose verse no row holds (a removed passage's) still makes one
+  row for that verse among the other plants, `not planted`, first sown by
+  the earliest recall of the verse and its pieces. Days sown count every
+  recall, old pieces' included; the harvest counts verses' own plants
+  only.
+- **Known and visits.** An old piece never makes a verse known: a promise
+  is known only when each of its verses has its own plant (Visits,
+  below).
+- **No bracket on a screen.** The root's rule (`src/test/root-rule.ts`)
+  holds every frame of every rig to no text and no accessible name with a
+  word range (`[<n>-<n>]`).
+- **A rollback** to a build before this one reads a verse planted whole
+  here as a planted verse, and its old pieces leave that build's plan as
+  they did there for a planted verse; a long verse not yet said whole is
+  offered in pieces again there. Nothing is lost.
+- The tests: `test:phrase` (`phraseOf` and the reference form), the
+  migration test `src/session/phrases.property.test.ts` in
+  `test:session`, `src/field/phrases.test.ts` in `test:field` (the fold),
+  and `test:phrase-walk-a`, `-b`, `-c` and `-c2` (Today over days through
+  the root on gardens with old pieces): Tests, below.
 
 ## Promises
 
@@ -997,18 +962,17 @@ collection, free, after the reader's own passages.
   plant names, so a reader with passages to learn learns them first, and
   Fear's verses fill the days after them (from the second day for a
   reader with none); the reviews mix across passages and the collection
-  by their groups. A long Fear verse is learned as phrases first, then
-  joined, as a passage's is (Phrases, above), its phrases grouped by the
-  collection's title too: Fear's 14 verses come as 34 phrases, 13 joins
-  and Psalms 56:3 whole (10 words), its first new piece
-  `Psalms 91:1 [1-9]`. A Fear verse inside a held passage keeps its first
-  place there, its phrases under the passage's reference.
+  by their groups. Each Fear verse is one piece, whole, long or short, as
+  a passage's is (Old pieces, above): Fear's 14 verses are 14 pieces, its
+  first new piece `Psalms 91:1` (19 words). A Fear verse inside a held
+  passage keeps its first place there.
 - **The field's row.** Each taught collection is a row titled by its
   title, its plants its verses in order, after the passages held and
   before the other plants; its page (Lists, below) has no `Remove`. A verse is one plant
   wherever it shows: a Fear verse in a held passage shows in both rows,
   and a removed passage's Fear verse stays in the Fear row. A Fear verse
-  in phrases shows `seed` there, as in any row (Phrases, above).
+  whose only plants are old pieces shows `not planted` there, as in any
+  row (Old pieces, above).
 
 ## Session
 
@@ -1034,13 +998,13 @@ an unread garden, which has no home and so no Settings; its stored
 choices still rule its Listen). At the top of Today's scroll view, above the
 reference, the counts line (`testID="session"`) says what the plan holds.
 
-Today runs the plan one piece (a verse or a phrase) at a time. In a read
+Today runs the plan one piece (a verse, whole) at a time. In a read
 garden with a plan it shows one item: the held one if any, else the
 visit's first item not done (Visits, below), else the plan's first
 item not done.
 It shows the item's reference (`testID="reference"`), its words under its
-cue (`cueIn`: the full text for a new piece, first letters for a join,
-its stage's cue for a review), its stage
+cue (`cueIn`: the full text for a new piece, its stage's cue for a
+review), its stage
 line, and the action button. A press of `Say it` recites that item's own
 piece and holds the item. Once the item is done (its plant holds a recall
 more than at the plan's making, read from the garden, never from the
@@ -1095,7 +1059,7 @@ marks. The alert stays in the scroll.
   pieces the app holds text for (`appLayer`'s `pieces`, by default
   Today's passage alone, then the reader's passages' verses, then the
   held lists', then the taught collections': Passages and Promises, above; each its reference, its word count and its group,
-  and a long verse its phrases; `TextPiece` adds its text), the instant, the zone's offset at it
+  each a whole verse; `TextPiece` adds its text), the instant, the zone's offset at it
   and the minutes. `isDone` reads an item's done from the garden.
   - A plant is due at FSRS's due. While it holds one recall that carries
     an offset and started from 18:00 to 03:59:59.999 by that offset's local
@@ -1103,11 +1067,10 @@ marks. The alert stays in the scroll.
     (`dayOf`, `src/day.ts`): plant at night, recall in the morning, and
     travel moves no due instant. A record kept before recalls carried an
     offset keeps FSRS's due.
-  - The pieces are expanded first (Phrases, above): an unplanted long
-    verse is its phrases, then its join once every phrase is at an ear or
-    full corn; a planted verse is itself, its phrases gone.
-  - The new piece is the first expanded piece, in the app's order, with no
-    plant. None is offered when any plant (a phrase's among them) was
+  - The pieces are planned as given, each a whole verse; an old piece's
+    plant (Old pieces, above) is a plant no piece names.
+  - The new piece is the first piece, in the app's order, with no
+    plant. None is offered when any plant (an old piece's among them) was
     first recalled today, or when every piece is planted. A plant no piece
     names is never offered, and a reference in two pieces counts once, as
     the first.
@@ -1173,9 +1136,9 @@ marks. The alert stays in the scroll.
 - `src/session/run.ts` is `shownOf(view, garden)`, what Today shows of the
   run, pure: `Unplanned` (no plan: the first piece), the `Item` with its
   piece, whether it is held and whether it is done, or `Done`: the held
-  item, else the visit's first not done, else the plan's. A phrase item's
-  piece is its phrase, found among the pieces' phrases (`pieceAt`,
-  `src/session.ts`), as the hold finds it. A held item
+  item, else the visit's first not done, else the plan's. An item's piece
+  is the piece of its verse (`pieceAt`, `src/session.ts`), as the hold
+  finds it. A held item
   shows with the piece it was held with (the view's `heldPiece`, kept
   beside the hold and dropped with it), never `Done`, even when a making
   took its verse out of the pieces: a remove of its passage while its
@@ -1187,15 +1150,15 @@ marks. The alert stays in the scroll.
 ## Visits
 
 A visit is verses said now, ahead of the plan, each a review. Home starts
-one verse as a visit (`Practice anyway`, `Practice <reference>` or
-`Learn <reference>`, Home, below). There is no `When I need…`: its screen,
+one verse as a visit (`Practice anyway` or a tap on a verse's plant,
+Home, below). There is no `When I need…`: its screen,
 its rule and its root state are gone (owner, 2026-11-11), and no screen
 names it.
 
 - **`Session.visit`** (`src/session/service.ts`) takes a promise's verses,
   in order, as the visit, each a review (`fresh: false`) whose baseline is
   its plant's recalls at the call (read behind every keep handed in before
-  it), its piece the verse whole, never its phrases: the corpus text
+  it), its piece the verse whole: the corpus text
   grouped by the collection's title. No screen calls it now; the session's
   tests hold it. A new visit replaces the one before; nothing is made
   before the first plan or in an unread garden.
@@ -1203,7 +1166,7 @@ names it.
   a held result), else the visit's first verse not done (done: its plant
   holds more recalls than its baseline), else the plan's first item not
   done. `Say it` recites the verse under the ladder's cue for its own
-  plant's stage (whatever phrase plants it has) and keeps the recall under
+  plant's stage (whatever old pieces of it are planted) and keeps the recall under
   the verse with its word count, as any of Today's, so FSRS schedules from
   it. Its result, grades and `Next` are Today's, and
   `Next` shows the visit's next verse. A visit verse that is also a plan
@@ -1310,7 +1273,7 @@ opens on it:
 
 - **The opening.** A launch on a read garden with a plant opens home, and
   so does the first minute's `Continue`; a relaunch decides again, the
-  visit, the hold, the choice, the list shown and the screen all gone. An unread
+  visit, the hold, the list shown and the screen all gone. An unread
   garden opens Today.
 - **Home's first frame.** Home shows the pending frame (the reference
   alone) until the garden, the passages, the taught collections, the
@@ -1321,8 +1284,8 @@ opens on it:
 - **The ways to Today** are four, each writing nothing but what its
   session command writes: `Start` (`beginsOf`: while the run shows an
   item, or over unread passages with the first piece to say),
-  `Practice anyway` (the weakest planted verse), and a chosen verse's
-  `Practice <reference>` or `Learn <reference>`. Today goes back
+  `Practice anyway` (the weakest planted verse), and a tap on a verse's
+  plant (or a list page's verse row). Today goes back
   by `‹ Your field`; no screen has
   a control named `Today`, and whenever Say it listens the screen is Today.
 
@@ -1332,11 +1295,11 @@ session (verify-heartseed, `features/home.md`).
 
 - **Verses and lists** (`src/lists.ts`; owner, 2026-11-09: one Verse type
   and one List type). A verse is its reference as `verseReference` writes
-  it, and its plant is the garden's plant at that key; a phrase's plant
-  folds into its verse's. No list owns a plant or is stored beside one, so
+  it, and its plant is the garden's plant at that key; an old piece's
+  plant folds into its verse's row (Old pieces, above). No list owns a plant or is stored beside one, so
   a verse in several lists shows one stage and one ready mark in each.
   `placeOf(reference)` gives the verse's book, chapter and verse only for a
-  canon verse that round-trips exactly (no phrase, no trailing space, no
+  canon verse that round-trips exactly (no word range, no trailing space, no
   abbreviation, no verse 0 or past the chapter's end). A `List` is a
   `FieldPassage` with an `id` and a `source`: `Own` (the app's own row,
   `own:<title>`), `Passage` (a range in one chapter, carrying its `range`,
@@ -1373,25 +1336,24 @@ session (verify-heartseed, `features/home.md`).
   probe. Today's stage line
   and the first minute's Planted use `PlantImage` (`src/home/plant.tsx`)
   from the same set (Garden, above).
-- **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses (a
-  phrase's folded in) of the plan's items not done; none before a plan, and
+- **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses of the
+  plan's items not done; none before a plan, and
   a visit marks nothing.
 - **The greeting** (`greetingAt(at)`, `src/home.ts`): by the local minute
   (`minuteOf`, the zone's offset at the instant), `Good morning` from
   04:00 and `Good afternoon` from 12:00 with the sun, `Good evening` from
   18:00 to 03:59 with the moon.
 - **A start on a verse** (`startOf`, `src/home/start.ts`; `Session.start`,
-  `startHere` in `src/app.ts`), which `Practice anyway`, `Practice
-  <reference>` and `Learn <reference>` run. A verse starts, in order:
-  nothing before a plan; the plan's earliest open item on the verse,
-  exactly as planned (a phrase starts its phrase, the new piece stays
-  fresh); a review of a planted canon verse from its recalls now, its
-  piece the session's or the corpus text; a canon verse with no plant as
-  a fresh item (`recalls: 0`) on the piece the plan would teach first for
-  it (the first of the session's pieces whose verse it is and that has no
-  plant, so a long verse starts at its first phrase not planted; else the
-  corpus text); else nothing (a reference outside the canon). The chosen
-  card names a fresh start `Learn` and any other `Practice`.
+  `startHere` in `src/app.ts`), which `Practice anyway`, a plant's tap
+  and a list page's verse row run. A verse starts, in order: nothing
+  before a plan; the plan's earliest open item whose reference is the
+  verse, exactly as planned (the new piece stays fresh); a review of a
+  planted canon verse from its own plant's recalls now, its piece the
+  session's or the corpus text; a canon verse with no plant of its own as
+  a fresh item (`recalls: 0`, `10 + words / 2` seconds) on the verse's own
+  piece (the session's, else the corpus text), whatever old pieces of it
+  are planted; else nothing (a reference outside the canon). The item's
+  reference and its piece's are always the verse's.
 - **The Today card** (`todayOf`, `weakestOf`, `beginsOf`,
   `src/home/today.ts`; Field and Home, above): pure over the session's
   view, the read garden and whether the passages are unread. `beginsOf`
@@ -1447,7 +1409,7 @@ home and begins the session when shown, as home does.
 - **What starts** (`src/list.ts`, pure over the session's view and the
   read garden; nothing stored). `listStartOf(view, garden, verses)` is
   `None` before a plan; else `Open`, the plan's open items whose verse
-  (a phrase folded into its verse) is one of the list's, in plan order,
+  is one of the list's, in plan order,
   each exactly as planned; else `Weakest`, the weakest of the list's
   planted verses that `startOf` starts, by the Today card's own order
   (`weakestAmong`, `src/home/today.ts`: the lowest stage, then the
@@ -2086,7 +2048,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   the dark Today walk (`src/look/today.test.tsx`) and the wake walk
   (`src/test/wake-walk.ts`, its Minutes and its Voice both chosen in the
   sheet). `phrase-rig.tsx` mounts `<Root />` too, and makes its one
-  Minutes making, while a phrase's recital listens, at the session seam
+  Minutes making, while a long verse's recital listens, at the session seam
   (`Session.choose` on the mounted layer's session), since no reader
   reaches the sheet then.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
@@ -2237,12 +2199,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     record after every keep, never falling but in the one excused history
     (a stored key whose stamp read failed while its write landed); and
     `src/field/phrases.test.ts`,
-    the field with phrases folded into their verses against `fieldFoldRule`
-    (`src/test/phrase-model.ts`) over 600 generated gardens (held, removed
-    and taught rows, phrases sown none, some, joined or stale, near-miss
-    references, every zone): `seed` for a verse in phrases, a removed
-    passage's phrases as their verse's row by first recall, days sown over
-    every recall and the harvest over verses alone.
+    the field with old pieces folded into their verses against
+    `fieldFoldRule` (`src/test/phrase-model.ts`) over 600 generated gardens
+    (held, removed and taught rows, old pieces sown none, some, beside a
+    verse said whole or stale, near-miss references, every zone): `not
+    planted` for a verse whose only plants are old pieces, a removed
+    passage's old pieces as their verse's row by first recall, days sown
+    over every recall and the harvest over verses alone.
   - `test:field-reach`: `src/field/reach.test.tsx`, Today's `Your field`
     outside its scroll view before and after a recital that grows the
     passage; a recital started in the turn of a tap on `Your field`, which
@@ -2274,7 +2237,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `id=counts`, `add-verses` or `add-row`, at most one `Add a list`, at most
     one of `Start`, `Practice anyway`, `Practice <reference>` and
     `Learn <reference>`, outside the scroll view, and no number in a
-    plant), and no `Minutes` group, `<n> min` or `Voice` on any
+    plant), no text and no accessible name with a word range
+    (`[<n>-<n>]`), and no `Minutes` group, `<n> min` or `Voice` on any
     screen, and home's and Today's nodes only under their headings; and
     while the host shows `Listening`, nothing that makes the plan in reach
     anywhere in the document, the sheet's portal included: no control named
@@ -2410,8 +2374,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     no `Settings` on a list's own page, whose way back is disabled while a
     remove is pending and changes nothing in the remove's turn, and a
     failed remove's alert left behind with the page; About from the sheet
-    and back with the sheet closed; `Done` and Escape closing with the
-    chosen plant kept and nothing written; a recital started under the
+    and back with the sheet closed; `Done` and Escape closing with home's
+    card and field kept and nothing written; a recital started under the
     sheet bringing Today; a relaunch closing it; no `Settings` on Today,
     the chooser, About, the first minute or an unread
     garden's Today, which shows no choices either; and a `10 min` and a
@@ -2424,9 +2388,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     stored texts drawn from each key's classes, commands opening and
     closing the sheet (`Done`, Escape), Minutes, Voice and appearance taps
     (each refused 1 in 5), a flip of the system, About and back, a plant's
-    tap, `Start` and back, and a relaunch the next morning; after each, the
-    sheet's checked values, home's Today card and `Start` by the plan made
-    at the tap, the chosen card, the disk and its writes against the model,
+    tap (Today on its verse, bare of the sheet's choices) and back, `Start`
+    and back, and a relaunch the next morning; after each, the sheet's
+    checked values, home's Today card and `Start` by the plan made at the
+    tap, home's one card, the disk and its writes against the model,
     and no root, rig or sheet fault; each part's floors met by its seeds.
   - `test:session`: `src/session.property.test.ts`, the daily plan
     (`planOf`) and Today's counts line (`countsOf`) against the rules
@@ -2438,13 +2403,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     generated launches hold the stored minutes (the four texts, bad texts,
     failed reads, refused writes, nothing written at launch) and the
     plan's moment (Today's first `begin`, each tap) to the same model; and
-    `src/session/phrases.property.test.ts`, the plan over long verses'
-    phrases and joins against `planModel` over `expandRule`
-    (`src/test/phrase-model.ts`) and `cueIn` against `joinCueRule`, over
-    900 generated gardens (each verse's phrases sown none, some, ripe,
-    ripe then Again, joined, whole or stale, a stray phrase plant, a piece
-    twice, fifteen zones, morning and evening plantings, every minutes
-    value).
+    `src/session/phrases.property.test.ts`, the migration of old pieces
+    (Old pieces, above) at the session seam, model-based: 28 generated
+    stores written as an earlier build wrote them (recalls under verses
+    and under old pieces, at any stage and date, a piece planted today, a
+    piece whose verse no list holds), then 18 generated launches, Minutes
+    taps, taps on a verse, recitals and days each; after every step every
+    stored record of the start is still stored byte for byte, every new
+    record's reference is a verse's, no plan item, visit, hold or shown
+    item names a piece, each verse's field stage is its own plant's, else
+    `not planted`, and days sown never fall.
   - `test:header`, `test:header-c`, `test:header-b` and `test:header-d`:
     `src/session/header.test.tsx` and `header-c.test.tsx` (devices 1-2 and
     3-4, the four valid stored minutes), `header-b.test.tsx` (devices 0
@@ -2679,9 +2647,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     read faults, adds and removes (`test/passages-rig.tsx`), judged against
     `test/passages-model.ts` at every step; and
     `src/passages/pieces.property.test.ts`, the pieces over generated lists
-    of the app's own pieces and of passages, against the model's, each
-    long passage verse with its phrases (`withPhrasesRule`,
-    `src/test/phrase-model.ts`) and the app's own with none.
+    of the app's own pieces and of passages, against the model's, every
+    piece a whole verse of its range with no `phrases` key, long verses
+    among them.
   - `test:passages-lists`: `src/passages/lists.test.ts`, 700 generated
     devices of both stored texts (the passages' and the lists'), read faults
     per key, adds, removes, plants and uproots, alone and at once, with
@@ -2803,10 +2771,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     holds, unread gardens and items with no piece.
     `src/home/rule.test.ts`: home's rule (`homeRuleFaults`, the guard of
     `docs/lessons.md`'s `heartseed-home-one-start`) fed one offending frame
-    per clause, each fault named, a clean home and other screens none.
+    per clause, each fault named, a clean home and other screens none;
+    and the root rule's word-range clause (the guard of `docs/lessons.md`'s
+    `heartseed-verses-whole`): a frame with a word range in a text and in an
+    accessible name, each fault named, on any screen and the pending frame
+    too, and none for a reference alone.
   - `test:home-today`: `src/home/today.property.test.ts`, the Today card
-    (`todayOf`) over `src/test/home-model.ts`'s generated devices (phrases
-    folded in, passages read and unread, every stage, equal last recalls):
+    (`todayOf`) over `src/test/home-model.ts`'s generated devices (old
+    pieces stored beside verses, passages read and unread, every stage, equal last recalls):
     `Start` exactly when `beginsOf`, `Practice anyway` on the weakest
     planted verse, a planted canon verse never leaving no button, `parts`
     never counting more verses than the headline, and the singulars.
@@ -2887,22 +2859,23 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (`src/test/promise-model.ts`), its piece, `shownOf`, the counts and the
     disk, byte for byte the same across every `start`; each verse class's
     floor met, and a start before `begin` and over an unread garden; a
-    bare canon verse starting fresh on its first piece not planted (a long
-    verse's first phrase), the plan's own fresh item returned unchanged,
-    and no second fresh item for that piece once its recall lands.
+    bare canon verse starting fresh, whole, under its own reference, old
+    pieces of it planted or not, the plan's own fresh item returned
+    unchanged, and no second fresh item for that verse once its recall
+    lands.
   - `test:home-screen`: `src/home/screen.test.tsx`, the field in home's
     layout through `src/test/bar-rig.tsx` (launched on home, every frame
     also held to `homeFaults`), in light and in dark, its expected values written out:
     the fixed top and the scroll view and what each holds, the Today card
     and the end rows at AA, the
-    furrows' icons of the scheme, a verse in two furrows chosen, let go and
-    moved, `Practice <reference>` only where a start is offered and
-    Today showing that verse after it, `Start` then on to Today, nothing
+    furrows' icons of the scheme, one tap on a plant opening Today on its
+    verse (a seed in its second furrow, a verse not planted, another seed),
+    no plant left selected back on home, `Start` then on to Today, nothing
     written; and no add, remove or limit line over unread passages.
   - `test:home-clock`: `src/home/clock.test.tsx`, the field by the
     runtime's clock in light and in dark: a seed at its due after a
-    Minutes tap marked with a dot filled `sun` at 3:1 against its plant
-    chosen or not, `gold` nowhere, the Today card and `Start` leading to
+    Minutes tap marked with a dot filled `sun` at 3:1 against its plant,
+    `gold` nowhere, the Today card and `Start` leading to
     Today writing nothing; and the greeting at each show of home at 11:59,
     12:00 and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
   - `test:home-root` and `test:home-root-say`: the root's opening and its
@@ -2918,8 +2891,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     on Today with no field in any frame; garbled passages on home with
     `Start` alone and no card lines, `Start` opening Today
     on the app's passage; a held read on pending frames, then home; a
-    relaunch after a choice, `Practice` and `Your field` on home with no
-    choice and `Start` as the fresh plan gives it; and `Practice anyway` on
+    relaunch after a plant's tap and `Your field`, on home with no plant
+    selected and `Start` as the fresh plan gives it; and `Practice anyway` on
     home with nothing due, opening Today on the passage, then home again as
     it was. `src/home/root-say.test.tsx`, a fresh install's
     first minute through `Continue` to home in the done state (no `Start`,
@@ -2946,8 +2919,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:home-walk-a` to `test:home-walk-h`:
     `src/home/walk-{a,b,c,d,e,f,g,h}.test.tsx`, home walked through the
     root (`src/test/home-walk.ts`, a `root-walk` `Walk` over the root's
-    screens: on home a tap on a plant of each class, a tap again,
-    `Practice`, `Learn`, `Start` when the model offers it, else
+    screens: on home a tap on a plant of each class, straight into Today
+    on its verse when `startModel` starts it (a review or a verse learned
+    fresh) and else nothing, `Start` when the model offers it, else
     `Practice anyway`, a Minutes tap, a landed remove, a landed add (`Add
     a list`, `Any passage`, a verse, `Plant`), a return to the foreground
     (the root rig's host sends `background` then `active`) and a
@@ -2955,7 +2929,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     to the foreground; each add or return makes the plan again and drops
     the visit and the hold, and parts reach both over an open visit and
     over a result held), one device each
-    of seeds 572, 282, 10, 636, 444, 1, 309 and 166, part f's in the unread class
+    of seeds 10, 5, 94, 223, 205, 1, 38 and 15, part f's in the unread class
     (every listing fails: Today alone, with no `Your field`), held after
     every command, on the screen the model names, to `furrowsModel` and
     `readyModel` (full labels with `, ready today`), the Today card's
@@ -2964,8 +2938,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     frame to `rootFaults` and every home frame to `homeFaults`; each part's
     floors met (part f's Today checked to offer no minutes choice, no
     `Settings` and no `<n> min`, a minutes choice made being
-    another part's floor on a read garden; parts a's and e's `Learn` on a
-    verse not planted, its recall planting it). Part h alone
+    another part's floor on a read garden; a tap on a verse not planted
+    learning it, its recall planting it). Part h alone
     (`walkHome`'s `waits`) puts a wait of one to thirty hours on home
     before each `Start` (`waitBegin`), so parts a-g draw as before; its
     floor `home:wait-begin` is a wait, no visit or hold kept, after which a
@@ -3028,39 +3002,30 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     furrow, at most 60 springs and 12 sways), no motion fault and every
     plant button named; under Reduce Motion
     nothing enters or is unseen and every sway rests at `rotate(0deg)`.
-  - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
-    `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
-    and its brute force over every partition for 13-22 words, for generated
-    texts of 0-90 words (five scripts, astral letters, combining marks,
-    numbers, every mark before and after a word, mark-only runs between
-    words, every kind of whitespace), and `phraseReference` with `phraseOf`
-    over round trips, near misses and generated strings;
-    `src/phrase/census.test.ts`, the cut over all 31,102 verses: 28,417
-    phrased into 85,244 phrases, 8,041 cuts at a plain gap and 31,282 at a
-    comma, each phrase 4-12 words holding its own words, and the pinned
-    digest of every phrased verse's ranges; `src/phrase/voice.test.ts`, the
-    natural voice's `planOf` over a seeded sample of 700 verses' phrases,
-    each phrase planned whenever its verse is, one mark per word at its
-    UTF-16 run within the phrase's text.
+  - `test:phrase`: the old pieces' reference form (`src/phrase.ts`).
+    `src/phrase.property.test.ts`, `phraseReference` with `phraseOf`
+    against `src/test/phrase-model.ts`'s reader over round trips, near
+    misses and generated strings.
   - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`,
     `test:phrase-walk-c2`: `src/phrase/walk-a.test.tsx`, `walk-b.test.tsx`
     with `walk-b2.test.tsx`, `walk-c.test.tsx`, and `walk-c2.test.tsx`,
-    Today over four days (seven for `walk-b2`) with long verses learned
-    as phrases, walked through the root (`src/test/phrase-rig.tsx`, each
-    launch on home, held to the model's counts and `Start`, then `Start`),
-    one generated device per file (devices 1-5, devices 2 and 5 teaching
-    Fear), each starting with its verses' phrases sown none,
-    some, ripe or joined: Listen reads the piece's own text and lights each
-    of its words by its UTF-16 span, Say it's summary and record carry the
-    piece's word count under its own reference, a held phrase survives a
-    Minutes making while its recital listens (made at the session seam,
-    `Session.choose`, the effect the Settings sheet's radio runs, since no
-    reader reaches the sheet while a recital listens; the screen still
-    checked after it), each tap of an absent control fails the walk, and
-    Next goes on, held after
-    every step to `shownModel`, `countsModel` and `joinCueRule` over
-    `planModel` of the expanded pieces, and to the disk's rule, each part's
-    floors met.
+    Today over four days with long verses learned whole over gardens that
+    hold the old pieces an earlier build kept (Old pieces, above), walked
+    through the root (`src/test/phrase-rig.tsx`, each launch on home, held
+    to the model's counts and `Start`, then `Start`), one generated device
+    per file (devices 1, 2, 8, 4 and 5; every third device teaching Fear),
+    each starting with its verses' old pieces sown none, some, ripe or
+    beside the verse said whole: Listen reads the verse's own text and
+    lights each of its words by its UTF-16 span, Say it's summary and
+    record carry the verse's word count under its own reference, a held
+    verse survives a Minutes making while its recital listens (made at the
+    session seam, `Session.choose`, the effect the Settings sheet's radio
+    runs, since no reader reaches the sheet while a recital listens; the
+    screen still checked after it), each tap of an absent control fails
+    the walk, an item named as an old piece fails it, and Next goes on,
+    held after every step to `shownModel`, `countsModel` and
+    `wholeCueRule` over `planModel` of the whole verses, and to the disk's
+    rule, each part's floors met.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf`, `startsOf`, `cutOf` and
     `startsWithin` against a model written in the test over a small

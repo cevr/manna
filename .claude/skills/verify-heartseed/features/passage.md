@@ -17,7 +17,7 @@ in the bundle.
   the order chosen, titled by its reference (the button `Open
   <reference>`), each verse a plant button
   labelled `<verse reference>, <stage>`, then every other plant, one verse each, in
-  the order first sown; a phrase folds into its verse (`phrase.md`). Home
+  the order first sown; an old piece folds into its verse (`phrase.md`). Home
   holds no `Remove`: each passage's own page (`list.md`), and no other
   passage-like page, holds `Remove <its reference>` (shown `Remove this
   list`) at the list's end.
@@ -49,8 +49,7 @@ in the bundle.
 - **Today** makes its plan again at each landed add or remove: on a day a
   verse was first planted (the first minute's day among them) no new piece
   shows; after the next 04:00 local the first piece no plant names is new,
-  with `Listen` and `Say it`: a short verse whole, a long verse's first
-  phrase (`phrase.md`). A verse whose recital is under way when its
+  with `Listen` and `Say it`: a verse, whole, long or short (`phrase.md`). A verse whose recital is under way when its
   passage is removed stays on Today until `Next`.
 - Nothing is stored but the reader's passages, at a landed add or remove
   (their key: `apps/heartseed/README.md`, Passages).
@@ -83,8 +82,8 @@ in the bundle.
 - `passage-relaunch`: a relaunch opens home, and the field shows the
   passages kept.
 - `passage-new` (the second session, after the next 04:00 local, with no
-  uninstall): Today offers `John 15:1` whole (11 words, so never cut into
-  phrases; after the promise's review, if due) with `1 new`, `Listen` and
+  uninstall): Today offers `John 15:1` whole (11 words; after the
+  promise's review, if due) with `1 new`, `Listen` and
   `Say it`. This is `wake.md`'s
   `wake-listen` live, and its phone follow-up (the voice handing over to
   the recognizer after `Listen`).

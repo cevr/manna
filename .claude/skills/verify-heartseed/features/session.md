@@ -30,7 +30,7 @@ made when home or Today first shows in a launch, again
 at each Minutes tap in the sheet (home's Today card changes under the
 open sheet), at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
-(`passage.md`). An item is done once its piece (a verse or a phrase,
+(`passage.md`). An item is done once its piece (a verse, whole,
 `phrase.md`) holds a new recall.
 Today runs the plan one piece at a time (`run.md`): after a run's last
 `Next` it shows the end (`The field is tended` and what grew); when the
@@ -46,14 +46,13 @@ minute's alone recital (the replay suggests Hard), the passage is due again
 
 Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
 of `first-planted`. After the first minute home offers no `Start` (the
-done state), so these rows reach Today by `Practice Isaiah 41:10`
-(tap `Isaiah 41:10, seed` first), whose visit leaves the counts line the
-plan's.
+done state), so these rows reach Today by one tap on `Isaiah 41:10, seed`,
+whose visit leaves the counts line the plan's.
 
 - `session-first`: after the first minute, home's `Settings` shows the
   group `Minutes` with four radios `2 min`, `5 min`, `10 min` and
   `20 min`, `5 min` alone checked, and the button `Voice` valued `Her`.
-  Today (by `Practice Isaiah 41:10`) shows `Nothing to tend now` and no `Minutes` or
+  Today (by a tap on `Isaiah 41:10, seed`) shows `Nothing to tend now` and no `Minutes` or
   `Voice`. No snapshot of the first minute (`first-launch` to
   `first-planted`) holds `Minutes`, `Voice`, `Settings`, `to tend` or
   `Nothing to tend`.
@@ -93,8 +92,8 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 ## How to get to it (user POV)
 
 - Go through the first minute and tap `Continue`. On home, the `Settings` row
-  `Settings` shows the minutes and the voice; `Practice anyway`, a plant
-  and `Practice <reference>` (or `Start` once a verse is due) opens Today, whose line under the
+  `Settings` shows the minutes and the voice; `Practice anyway` or a
+  plant (or `Start` once a verse is due) opens Today, whose line under the
   header shows what to tend.
 
 ## Driving it
@@ -120,7 +119,6 @@ sets them.
      `10 min` checked; `sim tap "label=5 min"` (restored),
      `sim tap "label=Done"`.
      Then `sim tap "label=Isaiah 41:10, seed"`,
-     `sim tap "label=Practice Isaiah 41:10"`,
      `sim open / --expect "id=session" --no-relaunch`, `sim snapshot session-first` →
      `Nothing to tend now`, and no `Minutes`, `5 min` or `Voice`.
 3. `session-choose`: `sim tap "label=Your field"`,
@@ -133,7 +131,6 @@ sets them.
    "label=Done"`.
 4. (`session-listening` is `run.md`'s `run-listening`.)
 5. `session-field`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Practice Isaiah 41:10"`,
    `sim tap "label=Your field"`, `sim snapshot session-field` → the
    heading `Your field`, the Today card's `1 verse · about <k> min` and
    `1 to review`, and `Start` (the visit open).

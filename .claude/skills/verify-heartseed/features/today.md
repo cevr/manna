@@ -2,8 +2,8 @@
 
 Today is the run (`apps/heartseed/app/index.tsx`), reached from home
 (`home.md`, the screen Heartseed opens on once the garden holds a recall)
-by the Today card's `Start` or `Practice anyway`, or a chosen verse's
-`Practice <reference>` (or `Learn <reference>` on a verse not planted); a
+by the Today card's `Start` or `Practice anyway`, or one tap on a verse's
+plant (its verse, whole); a
 fresh install opens the first minute first (`first.md`), whose `Continue`
 opens home. An unread garden opens Today, with no `Your field`. It shows the passage the
 reader is learning: the header `Today`, then the
@@ -51,7 +51,7 @@ per word, lit as read) in place of `id=passage` (`light.md`).
   Today shows that text whole only before the passage is planted, which no
   live drive reaches.
 - `today-plantset`: from `first.md`'s `first-home`, the passage's seed
-  reached by choosing its plant and `Practice Isaiah 41:10`, with no relaunch. Today,
+  reached by one tap on its plant, with no relaunch. Today,
   `Isaiah 41:10`, `Stage: seed`, `Say it` and `Your field` remain present,
   with no exposed image, plant name or control added. The stage's still
   hand-drawn asset is seed, blade, ear or corn (full corn), at 28 × 28 pt,
@@ -100,7 +100,6 @@ Branch at `first-home` of the same fresh, verifier-owned drive used for
 
 ```bash
 sim tap "label=Isaiah 41:10, seed"
-sim tap "label=Practice Isaiah 41:10"
 sim open / --expect "id=session" --no-relaunch
 sim snapshot today-plantset
 ```

@@ -5550,3 +5550,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A furrow's title on home looked like a door and did nothing, and its plants carried bare numbers with no page to say what they meant, while home carried each list's `Remove` and its ask.
 - **Cause:** Home grew one row per list with every action on it, and no rule held each furrow to one `Open <title>` and its own page.
 - **Guard:** code: `apps/heartseed/src/list/rule.test.ts` `names each clause a frame of home or of a list’s own page breaks`
+
+### heartseed-verses-whole
+
+- **Date:** 2026-11-12
+- **Kind:** owner
+- **Said:** "verses are wholes, right? Or should be whole"
+- **Source:** hymnapp/hspiece/owner.md (the chat note of 2026-11-12, after "when I press this and I say learn this verse, it doesn't actually give me that verse")
+- **Wrong:** A tap on a long verse's `Learn this verse` started a piece of it under a word range (`<verse> [<first>-<last>]`), and the session planned, showed and stored long verses in pieces, so a reader never saw the verse he chose.
+- **Cause:** hsstart's rule started the first piece of a verse with no plant, and the session cut every verse of more than 12 words into pieces of its own, each a plan item, a reference and a plant.
+- **Guard:** code: `apps/heartseed/src/home/rule.test.ts` `names a word range in a text and in an accessible name on any screen, the pending frame too, and nothing for a reference alone`; code: `apps/heartseed/src/passages/pieces.property.test.ts` `give John 15:1-5 after the promise, grouped as the passage, and share the promise’s plant inside Isaiah 41`

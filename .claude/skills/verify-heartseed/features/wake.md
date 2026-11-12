@@ -18,8 +18,8 @@ changes at a return:
   A pull of the notification center or Control Center (`inactive` with no
   `background`) is not a return.
 
-A new piece (a verse or a phrase the plan offers to plant, shown under its
-full text, or a join under first letters, `phrase.md`) also
+A new piece (a verse the plan offers to plant, whole, shown under its
+full text, `phrase.md`) also
 offers `Listen` while `Voice` is not `Off` (`Her` or `Him`). It sits in the fixed footer
 before `Say it`. `Listen` has the voice read that piece's own text. While the voice
 reads, `Listen` is gone, and `Say it` stops the voice before it listens; a
@@ -31,7 +31,7 @@ A review, `Next`, the done state and an unread garden never show `Listen`.
 The first minute plants Isaiah 41:10, and no new piece is offered on its
 day, so a new piece shows live only on the second day: `passage.md`'s
 `passage-new` (a passage's first verse), `promise.md`'s `promise-new`
-(the Fear collection's first phrase) and `phrase.md`'s `phrase-say`
+(the Fear collection's first verse) and `phrase.md`'s `whole-new`
 drive `Listen` then.
 
 ## Sub-features
@@ -150,8 +150,8 @@ the raw snapshots.
   - an unread garden offering no `Settings`, `Voice` or Minutes (it needs
     a failed store read; the wake walk's `minutes:none-unread` and
     `voice:none-unread`);
-  - a Minutes making while a recital listens or finishes, phrase or verse
-    (no reader can make one; `test:session-cells`, and the phrase walks at
+  - a Minutes making while a recital listens or finishes, long verse or
+    short (no reader can make one; `test:session-cells`, and the phrase walks at
     the session seam);
   - each launch's AppState subscription, removed when the launch ends.
 - `sim open /` on a running app brings it to the foreground; it does not
