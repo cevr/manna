@@ -1,0 +1,444 @@
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish -- the rules read the app's sources from disk, synchronously, as the tests that call them do, and an absent parser node or regular-expression group is nullish. */
+
+/**
+ * The rules verify-heartseed's journeys hold, each a pure function over the
+ * journeys as `sim journey` loads them (`@manna/sim/check`), each fault a
+ * string that starts `<feature>/<step> `:
+ *
+ * - R1 `firstRunFaults`: a first-minute heading is waited for only after the
+ *   welcome is left, in that launch;
+ * - R2 `hiddenFaults`: no selector names a node hidden from VoiceOver;
+ * - R3 `startFaults`: a journey proves its start, an `open` that shows;
+ * - R4 `undrawn`: every selector is one the app's sources can draw;
+ * - R5 `proseDrives` and `LEGACY`: the driving commands a markdown text
+ *   holds, and the files still allowed to hold them;
+ * - R6 `ownerFaults` and `citeFaults`: each journey is run by its feature
+ *   file, and each cite of a step names one that ships.
+ */
+
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import {
+  type Fills,
+  fillsTemplate,
+  isSpelled,
+  type Journey,
+  loadJourneys,
+  loadJourneyText,
+  parseSelector,
+  selectorsOf,
+  type Source,
+  type Spelled,
+  spelled,
+  staleHoles,
+  type Step,
+  STRING,
+  type WordHole,
+} from '@manna/sim/check';
+import { formatBibleReference, parseBibleQuery } from '@manna/core/bible';
+import { Predicate } from 'effect';
+import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
+
+import { app } from './sim-app.ts';
+
+const APP = join(import.meta.dir, '..');
+/** verify-heartseed's feature files and the journeys beside them. */
+const FEATURES = join(APP, '../../.claude/skills/verify-heartseed/features');
+
+/** The headings of the first minute's verse, each shown only after the welcome in its launch, folded. */
+const PHASES = ['hear it', 'say it with help', 'say it alone', 'planted'];
+
+/** The welcome's ways on, folded: `Skip`, and `Begin`'s `Plant your first verse`. */
+const LEAVES = ['skip', 'plant your first verse'];
+
+/** A selector's label, folded as agent-device matches it; none (empty) for an id. */
+const labelOf = (selector: string) => {
+  const { by, value } = parseSelector(selector);
+  if (by === 'label') return value.toLowerCase();
+  return '';
+};
+
+/** The selectors a step acts on: its target and its pan's or pinch's start, before its expects. */
+const actedOn = (step: Step) => {
+  const all = selectorsOf(step);
+  return all.slice(0, all.length - step.expect.length);
+};
+
+/** The selectors a step waits to show: what it acts on, and each `shows`. */
+const waitsFor = (step: Step) => [
+  ...actedOn(step),
+  ...step.expect.flatMap((expect) => {
+    if ('shows' in expect) return [expect.shows];
+    return [];
+  }),
+];
+
+/** Whether a step starts a launch: a `relaunch`, or an `open` whose retry may terminate the app. */
+const launches = (step: Step) =>
+  step.action === 'relaunch' || (step.action === 'open' && step.relaunch !== false);
+
+/**
+ * R1. The steps that wait for a heading of the first minute's verse in a
+ * launch the welcome has not been left in. A launch starts at the journey's
+ * start, at a `relaunch` and at an `open` whose `relaunch` is not false,
+ * before the step's own selectors are judged; a tap on `Skip` or `Plant your
+ * first verse` leaves the welcome, before the tap's expects are judged. A
+ * wait is a selector the step acts on or a `shows`; a `hides` is none.
+ */
+export const firstRunFaults = (journey: Journey): ReadonlyArray<string> => {
+  let left = false;
+  const faults: Array<string> = [];
+  for (const step of journey.steps) {
+    if (launches(step)) left = false;
+    if (step.action === 'tap' && LEAVES.includes(labelOf(step.target))) left = true;
+    const headings = waitsFor(step).filter((selector) => PHASES.includes(labelOf(selector)));
+    if (!left && headings.length > 0)
+      faults.push(
+        `${journey.feature}/${step.name} waits for ${headings.join(', ')} before the welcome is left in its launch`,
+      );
+  }
+  return faults;
+};
+
+/** The ids hidden from VoiceOver: whole ids, and the openings of numbered families. */
+export interface Hidden {
+  readonly ids: ReadonlySet<string>;
+  readonly families: ReadonlySet<string>;
+}
+
+/** A hidden family's number: numbers joined by `-`. */
+const NUMBERED = /^\d+(?:-\d+)*$/;
+
+/** Whether `id` is a hidden id, or a hidden family's opening followed by its number. */
+const isHidden = (hidden: Hidden, id: string) =>
+  hidden.ids.has(id) ||
+  [...hidden.families].some(
+    (family) => id.startsWith(family) && NUMBERED.test(id.slice(family.length)),
+  );
+
+/** R2. Each selector of a step, a `hides` too, that names a node hidden from VoiceOver by its id. */
+export const hiddenFaults = (journey: Journey, hidden: Hidden): ReadonlyArray<string> =>
+  journey.steps.flatMap((step) =>
+    selectorsOf(step)
+      .filter((selector) => {
+        const { by, value } = parseSelector(selector);
+        return by === 'id' && isHidden(hidden, value);
+      })
+      .map((selector) => `${journey.feature}/${step.name} ${selector} is hidden from VoiceOver`),
+  );
+
+const attribute = (attributes: ReadonlyArray<JSXAttribute>, name: string) =>
+  attributes.findLast((each) => each.name.type === 'JSXIdentifier' && each.name.name === name);
+
+const valueOf = (each: JSXAttribute | undefined): Node | null | undefined => {
+  if (each?.value?.type === 'JSXExpressionContainer') return each.value.expression;
+  return each?.value;
+};
+
+/**
+ * The hidden ids one source declares: each JSX element that carries
+ * `aria-hidden` (bare or `true`) and a `testID` names that id, or, for a
+ * template, every id its literal opening starts (`break-${word}` gives the
+ * family `break-`).
+ */
+export const hiddenIn = (path: string, text: string): Hidden => {
+  const ids = new Set<string>();
+  const families = new Set<string>();
+  new Visitor({
+    JSXOpeningElement: (node) => {
+      const attributes = node.attributes.filter(
+        (each): each is JSXAttribute => each.type === 'JSXAttribute',
+      );
+      const hidden = attribute(attributes, 'aria-hidden');
+      const flag = valueOf(hidden);
+      if (hidden === undefined) return;
+      if (
+        flag != null &&
+        !(flag.type === 'Literal' && (flag.value === true || flag.value === 'true'))
+      )
+        return;
+      const id = valueOf(attribute(attributes, 'testID'));
+      if (id?.type === 'Literal' && Predicate.isString(id.value)) ids.add(id.value);
+      if (id?.type === 'TemplateLiteral' && id.expressions.length > 0) {
+        const opening = id.quasis[0]?.value.cooked ?? '';
+        if (opening !== '') families.add(opening);
+      }
+    },
+  }).visit(parseSync(path, text, { sourceType: 'module' }).program);
+  return { ids, families };
+};
+
+/** The hidden ids of every product source of the app (`src`, `app`; tests and `src/test` left out). */
+export const hiddenOfApp = (): Hidden => {
+  const sources = ['src', 'app'].flatMap((folder) =>
+    readdirSync(join(APP, folder), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && /\.tsx$/u.test(entry.name))
+      .map((entry) => relative(APP, join(entry.parentPath, entry.name)))
+      .filter((path) => !/\.test\.tsx$/u.test(path) && !path.startsWith('src/test/')),
+  );
+  const each = sources.map((path) => hiddenIn(path, readFileSync(join(APP, path), 'utf8')));
+  return {
+    ids: new Set(each.flatMap((hidden) => [...hidden.ids])),
+    families: new Set(each.flatMap((hidden) => [...hidden.families])),
+  };
+};
+
+/** The app's product sources (`src`, `app`; no test, no `test` folder, no declaration file), as `<folder>/<path>` and text. */
+export const sourcesOfApp = (): ReadonlyArray<Source> =>
+  ['src', 'app'].flatMap((folder) =>
+    readdirSync(join(APP, folder), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && /\.tsx?$/u.test(entry.name))
+      .map((entry) => relative(APP, join(entry.parentPath, entry.name)))
+      .filter((path) => !/\.test\.|\.d\.ts$|(^|\/)test\//u.test(path))
+      .sort()
+      .map((path): Source => [path, readFileSync(join(APP, path), 'utf8')]),
+  );
+
+/** R3. A journey whose first step is no `open` with a `shows`: it cannot prove the screen it starts on. */
+export const startFaults = (journey: Journey): ReadonlyArray<string> => {
+  const [first] = journey.steps;
+  if (first === undefined) return [`${journey.feature} has no step`];
+  if (first.action === 'open' && first.expect.some((expect) => 'shows' in expect)) return [];
+  return [`${journey.feature}/${first.name} is no open that shows where the journey starts`];
+};
+
+/**
+ * The strings of the array `export const <name> = [...]` in `file` of
+ * `sources`, read from its text; none when it is gone or moved.
+ */
+const constStrings = (sources: ReadonlyArray<Source>, file: string, name: string) => {
+  const text = sources.find(([one]) => one === file)?.[1] ?? '';
+  const array = new RegExp(`export const ${name} = \\[([^\\]]*)\\]`).exec(text)?.[1] ?? '';
+  return [...array.matchAll(STRING)].map((match) => match[1] ?? match[2] ?? '');
+};
+
+/** The stage words a stage hole takes: `src/garden.ts`'s `STAGES`, and `not planted`. */
+const stagesOf = (sources: ReadonlyArray<Source>) => [
+  ...constStrings(sources, 'src/garden.ts', 'STAGES'),
+  'not planted',
+];
+
+/**
+ * Heartseed's label templates whose hole holds a word, each filled from the
+ * module that names the words: Today's stage line takes a stage word.
+ */
+export const wordHolesOf = (sources: ReadonlyArray<Source>): ReadonlyArray<WordHole> => [
+  { file: 'app/index.tsx', parts: ['Stage: ', ''], words: stagesOf(sources) },
+];
+
+/**
+ * Heartseed's label templates whose holes hold a verse's reference or a
+ * stage word: a plant's name on home and on the end of a session
+ * (`<reference>, <stage>`, then `, ready today` when ready).
+ */
+const REFERENCE_HOLES: ReadonlyArray<Pick<WordHole, 'file' | 'parts'>> = [
+  { file: 'src/home.ts', parts: ['', ', ', ''] },
+  { file: 'src/home.ts', parts: ['', ', ', ', ready today'] },
+  { file: 'src/run/tended.tsx', parts: ['', ', ', ''] },
+];
+
+/**
+ * Whether `label` is a verse or a verse range as the canon names it
+ * (`Isaiah 41:10`, `John 15:1-5`): the app draws a passage's reference from
+ * the bundled corpus (`vite/passage.ts`), never from a string of its own.
+ */
+const isReference = (label: string) => {
+  const parsed = parseBibleQuery(label);
+  if (parsed._tag !== 'single' && parsed._tag !== 'verseRange') return false;
+  return formatBibleReference(parsed.ref) === label;
+};
+
+/** The word holes and reference holes whose file no longer spells their template, as `<file> <parts>`. */
+export const holeFaults = (sources: ReadonlyArray<Source>): ReadonlyArray<string> =>
+  staleHoles(spelled(sources), [
+    ...wordHolesOf(sources),
+    ...REFERENCE_HOLES.map((hole) => ({ ...hole, words: [] })),
+  ]);
+
+/**
+ * R4. The selectors of each journey the app cannot draw, as `<feature>/<step>
+ * <selector>`: an `id` its sources give as a string or a template filled by
+ * numbers; a label they spell in any case, a template filled only by a
+ * number, the journey's typed text or a word hole's words; a verse's
+ * reference as the canon names it, alone or in a reference hole beside a
+ * stage word.
+ */
+export const undrawn = (
+  journeys: ReadonlyArray<Journey>,
+  sources: ReadonlyArray<Source>,
+): ReadonlyArray<string> => {
+  const from: Spelled = spelled(sources);
+  const holes = wordHolesOf(sources);
+  const stages = new Set(stagesOf(sources));
+  const named = (value: string) =>
+    isReference(value) ||
+    REFERENCE_HOLES.some(({ parts }) =>
+      fillsTemplate(value, parts, (piece) => isReference(piece) || stages.has(piece)),
+    );
+  return journeys.flatMap((journey) => {
+    const fills: Fills = {
+      typed: journey.steps.flatMap((step) => {
+        if (step.action === 'fill') return [step.value];
+        return [];
+      }),
+      holes,
+    };
+    return journey.steps.flatMap((step) =>
+      selectorsOf(step)
+        .filter((selector) => {
+          const { by, value } = parseSelector(selector);
+          if (by === 'label' && named(value)) return false;
+          return !isSpelled(from, fills, value, by);
+        })
+        .map((selector) => `${journey.feature}/${step.name} ${selector}`),
+    );
+  });
+};
+
+/** Every shipped journey of verify-heartseed, loaded as `sim journey` loads it, in file-name order. */
+export const shippedJourneys = loadJourneys(app, FEATURES);
+
+/** `text` as Heartseed's journey file of `feature`, loaded as `sim journey` loads it: quiet, so a step that keeps a shot is refused. */
+export const journeyOfText = (feature: string, text: string) => loadJourneyText(app, feature, text);
+
+/** `sim`'s verbs that drive the app; every other (`boot`, `install`, `snapshot`, `read`, `journey`, …) does not. */
+const SIM_DRIVES = new Set([
+  'open',
+  'tap',
+  'fill',
+  'back',
+  'scroll',
+  'gesture',
+  'pinch',
+  'hold',
+  'relaunch',
+]);
+
+/** One shell word (quotes and escapes kept together), or a run of shell operators. */
+const WORD = /(?:"[^"]*"|'[^']*'|\\.|[^\s"'\\;&|()])+|[;&|()]+/gu;
+const OPERATOR = /^[;&|()]+$/u;
+
+/** Whether a word starts a command of the helper: `sim`, or its file by any path. */
+const isHelper = (word: string) => word === 'sim' || word.endsWith('scripts/sim.ts');
+
+/** Whether a tool's verb drives the app: one of `sim`'s driving verbs, or any of `agent-device`'s but `snapshot`. */
+const drivesBy = (helper: boolean, verb: string) => {
+  if (helper) return SIM_DRIVES.has(verb);
+  return verb !== '' && verb !== 'snapshot';
+};
+
+/** The driving commands of one piece of code, each from its tool to the next shell operator. */
+const drivesIn = (code: string): ReadonlyArray<string> => {
+  const words = Array.from(code.matchAll(WORD), ([word]) => word);
+  return words.flatMap((word, at) => {
+    const helper = isHelper(word);
+    if (!helper && word !== 'agent-device') return [];
+    const rest = words.slice(at + 1);
+    const end = rest.findIndex((each) => OPERATOR.test(each));
+    let own = rest;
+    if (end >= 0) own = rest.slice(0, end);
+    const verb = own.find((each) => !each.startsWith('-')) ?? '';
+    if (!drivesBy(helper, verb)) return [];
+    return [[word, ...own].join(' ')];
+  });
+};
+
+/** A fenced block: its body. */
+const FENCE = /^```[^\n]*\n([\s\S]*?)^```/gmu;
+/** Inline code, over line breaks. */
+const INLINE = /`([^`]+)`/gu;
+
+/**
+ * R5. The commands of a markdown text that drive the app, as `<file>:
+ * <command>`. A command is read in inline code or on a fenced line (a line
+ * ending `\` joined to the next), from the helper (`sim`, or a word ending
+ * `scripts/sim.ts`, at the code's start or after white space or `;&|(`,
+ * however it is reached) or `agent-device`; its verb is the next word that
+ * is no option. `sim`'s `open`, `tap`, `fill`, `back`, `scroll`, `gesture`,
+ * `pinch`, `hold` and `relaunch` drive; every `agent-device` verb but
+ * `snapshot` drives. Prose is not read: "tap Skip" in a sentence is no command.
+ */
+export const proseDrives = (file: string, text: string): ReadonlyArray<string> => {
+  const fenced = Array.from(text.matchAll(FENCE), ([, body]) =>
+    (body ?? '').replace(/\\\n\s*/gu, ' ').split('\n'),
+  ).flat();
+  const prose = text.replace(FENCE, '');
+  const inline = Array.from(prose.matchAll(INLINE), ([, code]) =>
+    (code ?? '').replace(/\s+/gu, ' '),
+  );
+  return [...fenced, ...inline].flatMap(drivesIn).map((command) => `${file}: ${command}`);
+};
+
+/**
+ * The files of verify-heartseed that still drive in prose, each with why:
+ * the stage of hsjourneys that moves its drive into journeys, or, for
+ * `SKILL.md`, that it documents the commands.
+ */
+export const LEGACY: ReadonlyMap<string, string> = new Map([
+  ['SKILL.md', 'it documents the commands a journey and a by-hand step run'],
+  ...['run', 'grow', 'sayit', 'today', 'light'].map(
+    (name) =>
+      [
+        `features/${name}.md`,
+        "S3 moves Today's drives (run.md and the rows that ride it)",
+      ] as const,
+  ),
+  ...['natural', 'dictation', 'doctor'].map(
+    (name) => [`features/${name}.md`, 'S4 moves the probes'] as const,
+  ),
+  ['features/home.md', 'S5 moves home'],
+  ...['list', 'about', 'appearance', 'session', 'field'].map(
+    (name) => [`features/${name}.md`, 'S6 moves the field and its sheets'] as const,
+  ),
+  ...['passage', 'phrase', 'promise', 'handbook', 'wake'].map(
+    (name) => [`features/${name}.md`, 'S7 moves the drives that cross a 04:00'] as const,
+  ),
+]);
+
+/** A feature file's stem: `first` of `features/first.md`. */
+const stemOf = (file: string) => /^features\/(.+)\.md$/u.exec(file)?.[1] ?? '';
+
+/**
+ * R6. Each journey's owner: its feature is `<stem>` or `<stem>-<slug>` of a
+ * `features/<stem>.md` among `files`, and that file runs it in a `sim journey
+ * <feature>` command. A journey no such file runs is a fault.
+ */
+export const ownerFaults = (
+  journeys: ReadonlyArray<Journey>,
+  files: ReadonlyMap<string, string>,
+): ReadonlyArray<string> =>
+  journeys.flatMap((journey) => {
+    const owners = [...files].filter(([file, text]) => {
+      const stem = stemOf(file);
+      const owns =
+        stem !== '' && (journey.feature === stem || journey.feature.startsWith(`${stem}-`));
+      return owns && new RegExp(`\\bsim journey ${journey.feature}(?![\\w-])`, 'u').test(text);
+    });
+    if (owners.length > 0) return [];
+    return [`${journey.feature} is run by no features/<stem>.md of its name`];
+  });
+
+/** A cite of a journey's step in inline code: `<journey>/<step>`. */
+const CITE = /`([a-z0-9]+(?:-[a-z0-9]+)*)\/([a-z0-9]+(?:-[a-z0-9]+)*)`/gu;
+
+/**
+ * R6. In each file off the legacy list, each inline `<journey>/<step>` whose
+ * journey ships and names no such step, as `<file>: <journey>/<step>`.
+ */
+export const citeFaults = (
+  journeys: ReadonlyArray<Journey>,
+  files: ReadonlyMap<string, string>,
+): ReadonlyArray<string> => {
+  const steps = new Map(
+    journeys.map((journey) => [journey.feature, new Set(journey.steps.map((step) => step.name))]),
+  );
+  return [...files]
+    .filter(([file]) => !LEGACY.has(file))
+    .flatMap(([file, text]) =>
+      Array.from(text.matchAll(CITE)).flatMap(([, feature = '', step = '']) => {
+        const names = steps.get(feature);
+        if (names === undefined || names.has(step)) return [];
+        return [`${file}: ${feature}/${step} names no step of ${feature}`];
+      }),
+    );
+};

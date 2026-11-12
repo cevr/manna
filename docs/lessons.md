@@ -5640,3 +5640,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Each Heartseed verifier wrote its own snapshot reader in its receipts to count labels and frames without printing a verse, each with its own allow list.
 - **Cause:** The shared driver had no reader that gives the screen as numbers; only the hymnal had one, in its own scripts. `sim read` now gives it (`packages/sim/src/screen.ts`).
 - **Guard:** code: `packages/sim/src/screen.test.ts` `carries no name the caller did not ask, and a value's digits alone`
+
+### heartseed-drives-read-from-prose
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "write the first-minute and Lines drives as `*.journey.json` steps decoded by `@manna/sim`'s schema, and check their targets and order as `apps/hymnal/scripts/sim/targets.test.ts` does, leaving prose to say why."
+- **Source:** hymnapp/hsguards9/round-3-findings.md T1 (with T2 and T3, Test strength)
+- **Wrong:** The first-run and hidden-id rules of verify-heartseed were held by regular expressions over the prose steps of `SKILL.md` and `features/*.md`; a lower-case label, a scroll to a heading, an `agent-device` wait or press, and new wordings for a hidden family passed them, and some negations false-faulted.
+- **Cause:** A reader of prose covers only the phrasings it lists, and the domain of phrasings is open. The drives are now journeys (`features/*.journey.json`), and the rules are checks over their decoded steps (`apps/heartseed/scripts/journey-rules.ts`); the regex readers stay as tripwires, never extended.
+- **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `R1 and R2 name the steps their models name, over generated journeys`; code: `apps/heartseed/scripts/journeys.test.ts` `LEGACY lists exactly the files that still drive in prose, each with why`

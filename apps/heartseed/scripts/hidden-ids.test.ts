@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish -- the test reads the app's sources and verify-heartseed's feature files from disk, synchronously, as `probe-lines.test.ts` does; absent parser nodes are nullish. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish -- the test reads verify-heartseed's feature files from disk, synchronously, as `probe-lines.test.ts` does; an absent match is nullish. */
 
 /**
  * A drive reads the simulator's accessibility tree, and a node hidden from
@@ -13,77 +13,20 @@
  * the tree does hold (the words' frames), or leaves it to the unit tests,
  * naming the family alone (`break-<k>`, `no break-`).
  *
- * The hidden ids come from the app's sources (`src`, `app`, tests left
- * out): each JSX element that carries `aria-hidden` (bare or `true`) and a
- * `testID` names that id, or, for a template, every id its literal opening
- * starts (`break-${word}` gives the family `break-`).
+ * The hidden ids come from the app's sources (`hiddenOfApp`,
+ * `journey-rules.ts`, whose `hiddenFaults` holds the same rule over the
+ * journeys' selectors). This reader of prose is a tripwire over the files'
+ * words, never extended to a new phrasing.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { Predicate } from 'effect';
-import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
+import { join } from 'node:path';
+
+import { type Hidden, hiddenIn, hiddenOfApp } from './journey-rules.ts';
 
 const APP = join(import.meta.dir, '..');
 const SKILL = join(APP, '../../.claude/skills/verify-heartseed');
-
-/** The ids hidden from VoiceOver: whole ids, and the openings of numbered families. */
-interface Hidden {
-  readonly ids: ReadonlySet<string>;
-  readonly families: ReadonlySet<string>;
-}
-
-const attribute = (attributes: readonly JSXAttribute[], name: string) =>
-  attributes.findLast((each) => each.name.type === 'JSXIdentifier' && each.name.name === name);
-
-const valueOf = (each: JSXAttribute | undefined): Node | null | undefined => {
-  if (each?.value?.type === 'JSXExpressionContainer') return each.value.expression;
-  return each?.value;
-};
-
-/** The hidden ids one source declares. */
-const hiddenIn = (path: string, text: string): Hidden => {
-  const ids = new Set<string>();
-  const families = new Set<string>();
-  new Visitor({
-    JSXOpeningElement: (node) => {
-      const attributes = node.attributes.filter(
-        (each): each is JSXAttribute => each.type === 'JSXAttribute',
-      );
-      const hidden = attribute(attributes, 'aria-hidden');
-      const flag = valueOf(hidden);
-      if (hidden === undefined) return;
-      if (
-        flag != null &&
-        !(flag.type === 'Literal' && (flag.value === true || flag.value === 'true'))
-      )
-        return;
-      const id = valueOf(attribute(attributes, 'testID'));
-      if (id?.type === 'Literal' && Predicate.isString(id.value)) ids.add(id.value);
-      if (id?.type === 'TemplateLiteral' && id.expressions.length > 0) {
-        const opening = id.quasis[0]?.value.cooked ?? '';
-        if (opening !== '') families.add(opening);
-      }
-    },
-  }).visit(parseSync(path, text, { sourceType: 'module' }).program);
-  return { ids, families };
-};
-
-/** The hidden ids of every product source of the app. */
-const hiddenOfApp = (): Hidden => {
-  const sources = ['src', 'app'].flatMap((folder) =>
-    readdirSync(join(APP, folder), { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile() && /\.tsx$/u.test(entry.name))
-      .map((entry) => relative(APP, join(entry.parentPath, entry.name)))
-      .filter((path) => !/\.test\.tsx$/u.test(path) && !path.startsWith('src/test/')),
-  );
-  const each = sources.map((path) => hiddenIn(path, readFileSync(join(APP, path), 'utf8')));
-  return {
-    ids: new Set(each.flatMap((hidden) => [...hidden.ids])),
-    families: new Set(each.flatMap((hidden) => [...hidden.families])),
-  };
-};
 
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 
