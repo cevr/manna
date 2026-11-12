@@ -1,0 +1,47 @@
+{
+  "feature": "passage-keep",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-keep-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Psalms 23:1-6" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-keep-page",
+      "action": "tap",
+      "target": "label=Open Psalms 23:1-6",
+      "expect": [{ "shows": "label=Remove Psalms 23:1-6" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-ask",
+      "action": "tap",
+      "target": "label=Remove Psalms 23:1-6",
+      "expect": [{ "shows": "id=ask" }, { "shows": "label=Remove" }, { "shows": "label=Keep" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-keep-kept",
+      "action": "tap",
+      "target": "label=Keep",
+      "expect": [{ "shows": "label=Remove Psalms 23:1-6" }, { "hides": "id=ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-keep",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open Psalms 23:1-6" },
+        { "shows": "label=Open Romans 8:28" },
+        { "hides": "id=add-list" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
