@@ -293,6 +293,17 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   process, every signal follows a read of that
   process's start time, no `*.json` is replaced, and each undisturbed
   command ends as the reference model says.
+- `bun run census:slow`: the slow tests once, each case's time read from
+  bun's JUnit report and held to 1 s (`src/census.ts`, its unit test
+  `census.test.ts`). It exits 0 when every case is under 1 s, 1 when one is
+  over on a quiet host (a one-minute load of at most 5 before and after) or a
+  test fails, and 2 when one is over on a loaded host, unjudged. The slow
+  cases stay under it without waiting on the real clock: a command over
+  stand-in tools sleeps on the fast clock (`src/fixtures/fast-clock.ts`,
+  every sleep 20 times shorter), the models' link reads are the kernel's
+  lstat and readlink at once (`src/fixtures/quick-links.ts`), and the live
+  `Os` tests look for a process every 50 ms and hold a start's own `ps`
+  until the test lets it go.
 
 The package's tests use a probe app (`src/fixtures/probe.ts`) whose every
 value differs from every other and from any real app's; the contained

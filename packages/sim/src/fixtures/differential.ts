@@ -28,6 +28,7 @@ import { hostError } from '../errors.ts';
 import { contain } from '../host.ts';
 import { APP } from './contain.ts';
 import { land, LOOP, treeEscapes } from './oracle.ts';
+import { quickLinks } from './quick-links.ts';
 
 /** The same LCG for every run: world `n` is the same world on every run. */
 const random = (seed: number) => {
@@ -148,10 +149,10 @@ const build = (base: string, world: World) => {
 
 const under = (file: string, dir: string) => file === dir || file.startsWith(`${dir}/`);
 
-/** The platform the host is built over: the real one's looks, and a recorder for each call it is handed. */
+/** The platform the host is built over: the real one's looks (its link reads the kernel's at once, `quick-links.ts`), and a recorder for each call it is handed. */
 const platform = (seen: Array<string>) =>
   Effect.gen(function* () {
-    const real = yield* FileSystem.FileSystem;
+    const real = quickLinks(yield* FileSystem.FileSystem);
     const fs: FileSystem.FileSystem = {
       ...real,
       readFileString: (file) => Effect.sync(() => void seen.push(file)).pipe(Effect.as('')),

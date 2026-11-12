@@ -259,6 +259,16 @@ const world = (setup: Partial<World>): World => ({
 
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.toType(Schema.Unknown)));
 
+/** The no-op filesystem's answer to every link read (no name is a link), made once: the contained host reads a link at each component of each path. */
+const NO_LINK = Effect.fail(
+  PlatformError.systemError({
+    _tag: 'NotFound',
+    module: 'FileSystem',
+    method: 'readLink',
+    description: 'No such file or directory',
+  }),
+);
+
 /** The host every step of every case runs on: one spawner, filesystem and dev server, each reading the step's world. */
 const standInHost = () => {
   const host = { world: world({}) };
@@ -326,6 +336,7 @@ const standInHost = () => {
         touch('link', to);
       }),
     lstat: () => Effect.succeed(DIRECTORY),
+    readLink: () => NO_LINK,
     chmod: (path) => Effect.sync(() => touch('chmod', path)),
     exists: (path) =>
       Effect.sync(() => {

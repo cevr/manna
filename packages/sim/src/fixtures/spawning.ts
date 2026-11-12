@@ -2,7 +2,8 @@
  * The live `Os.spawn` (`os.ts`) under `boot` and `down`, over a model host:
  * a stand-in spawner that plays the processes the start makes, a real
  * scratch state folder, and a stand-in dev server that answers while a
- * model server runs. Nothing executes; model pids lie above 4,000,000.
+ * model server runs, each command on the fast clock (`fast-clock.ts`).
+ * Nothing executes; model pids lie above 4,000,000.
  *
  * The model plays both starts a drive has used: the start that prints the
  * new process's pid and leaves its start time to a `ps` of its own, and the
@@ -40,6 +41,7 @@ import { ChildProcessSpawner } from 'effect/process';
 import { runSim } from '../command.ts';
 import { DriveLive, type Place } from '../drive.ts';
 import { APP } from './contain.ts';
+import { fast } from './fast-clock.ts';
 import { dispose, scratch, world } from './life.ts';
 
 /** The steps of one start, in order. */
@@ -335,6 +337,7 @@ export const bootThenDown = (fault: Option.Option<Fault>) =>
           runSim(place, [...args, '--state', place.state]).pipe(
             Effect.provide(Layer.provideMerge(DriveLive, services)),
             Effect.provideService(Console.Console, quiet),
+            fast,
           );
         const booting = yield* Effect.forkChild(
           command(['boot', '--platform', 'web', '--port', String(PORT), '--timeout', '1']),

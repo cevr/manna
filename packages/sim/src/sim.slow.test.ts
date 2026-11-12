@@ -27,6 +27,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { runSim } from './command.ts';
 import { DriveLive, type Place } from './drive.ts';
+import { fast } from './fixtures/fast-clock.ts';
 import { decodeResult } from './fixtures/lines.ts';
 import { probeApp } from './fixtures/probe.ts';
 import { chooser, snapshotOf, VERSES } from './fixtures/screens.ts';
@@ -141,8 +142,8 @@ const ServerUp = Layer.succeed(
  * Run `sim <args>` over the stand-in, in a state folder of its own (with
  * `drive` as its session when given, and the dev server's log `serverLog`
  * and error output `serverErrors` in its output folder; `{state}` in an
- * argument names the folder), against `server`: the lines it printed and its
- * exit.
+ * argument names the folder), against `server`, its sleeps on the fast clock
+ * (`fixtures/fast-clock.ts`): the lines it printed and its exit.
  */
 const sim = (
   args: ReadonlyArray<string>,
@@ -183,6 +184,7 @@ const sim = (
     const exit = yield* Effect.exit(
       runSim(place, [...args.map((arg) => arg.replace('{state}', state)), '--state', state]).pipe(
         Effect.provideService(Console.Console, console),
+        fast,
       ),
     );
     return { exit, printed: printed.map((line) => decodeResult(line)) };

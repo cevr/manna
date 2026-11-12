@@ -4,7 +4,8 @@
  * command runs through `runSim` over `DriveLive`, given only a recording
  * platform FileSystem, a stand-in spawner whose tools do their file work
  * through `node:fs` (following links, as real tools do; nothing runs and no
- * signal is sent) and a stand-in HTTP client, on a real scratch tree.
+ * signal is sent) and a stand-in HTTP client, on a real scratch tree, on the
+ * fast clock (`fast-clock.ts`) held at one instant.
  *
  * A first run of each command records every path its calls and tools name.
  * Then a link is planted at each component of each of those paths below a
@@ -33,7 +34,9 @@ import type { App } from '../app.ts';
 import { runSim } from '../command.ts';
 import { DriveLive, type Place } from '../drive.ts';
 import { Escaped } from '../errors.ts';
+import { fast } from './fast-clock.ts';
 import { land, LOOP, treeEscapes } from './oracle.ts';
+import { quickLinks } from './quick-links.ts';
 import { snapshotOf } from './screens.ts';
 
 /** The hymnal's App record, written out here. */
@@ -261,10 +264,13 @@ const refusal = (run: Run, operation: string, file: string) => {
   });
 };
 
-const platformFs = Effect.runSync(
-  Effect.gen(function* () {
-    return yield* FileSystem.FileSystem;
-  }).pipe(Effect.provide(BunServices.layer)),
+/** The platform FileSystem, its link reads answered at once (`quick-links.ts`). */
+const platformFs = quickLinks(
+  Effect.runSync(
+    Effect.gen(function* () {
+      return yield* FileSystem.FileSystem;
+    }).pipe(Effect.provide(BunServices.layer)),
+  ),
 );
 
 /** The platform FileSystem, each call judged as it is made. */
@@ -724,9 +730,12 @@ const runCase = async (
     Effect.provide(Layer.provideMerge(DriveLive, host)),
     Effect.provideService(Console.Console, capture(run)),
     Effect.provide(BunServices.layer),
-    Effect.timeoutOrElse({ duration: '20 seconds', orElse: () => Effect.die('timed out') }),
   );
-  const exit = await Effect.runPromiseExit(fixedClock(program));
+  const exit = await Effect.runPromiseExit(
+    fixedClock(fast(program)).pipe(
+      Effect.timeoutOrElse({ duration: '20 seconds', orElse: () => Effect.die('timed out') }),
+    ),
+  );
   const after = outsideState(layout);
   for (const line of new Set([...before, ...after]))
     if (!before.includes(line) || !after.includes(line))

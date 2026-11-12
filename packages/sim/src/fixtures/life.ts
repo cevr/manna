@@ -39,9 +39,7 @@ import { join } from 'node:path';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Cause,
-  Clock,
   Console,
-  Duration,
   Effect,
   Exit,
   Fiber,
@@ -60,6 +58,8 @@ import { DriveLive, type Place } from '../drive.ts';
 import { ToolFailed } from '../errors.ts';
 import { Os } from '../os.ts';
 import { APP } from './contain.ts';
+import { fast } from './fast-clock.ts';
+import { quickLinks } from './quick-links.ts';
 
 export type StateKey = 'a' | 'b';
 type Kind = 'server' | 'command' | 'foreign';
@@ -483,10 +483,13 @@ const host = <A, E>(
 const REPLACING = new Set(['rename', 'copy', 'copyFile']);
 const WRITING = new Set(['writeFile', 'writeFileString']);
 
-const platformFs: FileSystem.FileSystem = Effect.runSync(
-  Effect.gen(function* () {
-    return yield* FileSystem.FileSystem;
-  }).pipe(Effect.provide(BunServices.layer)),
+/** The platform FileSystem, its link reads answered at once (`quick-links.ts`). */
+const platformFs: FileSystem.FileSystem = quickLinks(
+  Effect.runSync(
+    Effect.gen(function* () {
+      return yield* FileSystem.FileSystem;
+    }).pipe(Effect.provide(BunServices.layer)),
+  ),
 );
 
 /** A write that would replace a `*.json` file already there. */
@@ -708,29 +711,11 @@ const httpFor = (c: Ctx) =>
 
 const quiet: Console.Console = { ...globalThis.console, log: () => {}, error: () => {} };
 
-/** How much shorter every sleep of a command is than its real one (waits, retries, time limits). */
-const SPEED = 20;
-
-/** The commands' clock: real time, every sleep `SPEED` times shorter. */
-const fast = <A, E, R>(program: Effect.Effect<A, E, R>) =>
-  Effect.clockWith((real) => {
-    const clock: Clock.Clock = {
-      currentTimeMillisUnsafe: () => real.currentTimeMillisUnsafe(),
-      currentTimeMillis: real.currentTimeMillis,
-      currentTimeNanosUnsafe: () => real.currentTimeNanosUnsafe(),
-      currentTimeNanos: real.currentTimeNanos,
-      monotonicTimeNanosUnsafe: () => real.monotonicTimeNanosUnsafe(),
-      monotonicTimeNanos: real.monotonicTimeNanos,
-      sleep: (duration) => real.sleep(Duration.millis(Duration.toMillis(duration) / SPEED)),
-    };
-    return Effect.provideService(program, Clock.Clock, clock);
-  });
-
 /**
  * The `--timeout` every boot and driver step is given, in seconds: 10, or
- * half a second of real time at `SPEED`, so a loaded host's slow scratch
- * filesystem does not run out a readiness wait or a tool's time limit that a
- * quiet one meets.
+ * half a second of real time on the fast clock (`fast-clock.ts`), so a
+ * loaded host's slow scratch filesystem does not run out a readiness wait or
+ * a tool's time limit that a quiet one meets.
  */
 const TIMEOUT = '10';
 

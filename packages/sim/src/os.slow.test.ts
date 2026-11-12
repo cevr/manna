@@ -17,7 +17,8 @@ import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option, Path, Sche
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { type Identity, Os, stop } from './os.ts';
-import { attempt, ready, type Vars } from './tools.ts';
+import { ReadinessTimedOut } from './errors.ts';
+import { attempt, type Vars } from './tools.ts';
 
 /** The timeout of a test that spawns `sh`, `ps` and `kill`: a loaded machine's spawns are slow (effect/requireSpawnBudget). */
 const SPAWNS_MS = 120_000;
@@ -148,16 +149,25 @@ const runs = (mark: string) =>
     done.output.split('\n').some((line) => line.includes(mark)),
   );
 
-/** Wait, at most `seconds`, until `runs(mark)` answers `wanted`. */
+/** How long `until` waits between two looks. */
+const LOOK = Duration.millis(50);
+
+/** Wait, at most `seconds`, until `runs(mark)` answers `wanted`, looking every `LOOK`. */
 const until = (mark: string, wanted: boolean, seconds: number) =>
-  ready(
-    `a process with ${mark} to ${String(wanted)}`,
-    seconds,
-    Effect.filterOrFail(
-      runs(mark),
-      (now) => now === wanted,
-      () => 'not yet',
-    ),
+  Effect.filterOrFail(
+    runs(mark),
+    (now) => now === wanted,
+    () => 'not yet',
+  ).pipe(
+    Effect.tapError(() => Effect.sleep(LOOK)),
+    Effect.eventually,
+    Effect.timeoutOrElse({
+      duration: Duration.seconds(seconds),
+      orElse: () =>
+        Effect.fail(
+          ReadinessTimedOut.make({ what: `a process with ${mark} to ${String(wanted)}`, seconds }),
+        ),
+    }),
   );
 
 /** How long the sleep a spawning command starts runs: far past the bound that command has to end in. */
@@ -308,13 +318,17 @@ describe('the live Os', () => {
       Effect.gen(function* () {
         const os = yield* Os;
         const into = seen();
+        const fs = yield* FileSystem.FileSystem;
         const mark = yield* marked;
-        const stub = yield* stubPs('/bin/sleep 1\nexec /bin/ps "$@"');
+        const stub = yield* stubPs(
+          'while [ ! -e "$(dirname "$0")/go" ]; do /bin/sleep 0.02; done\nexec /bin/ps "$@"',
+        );
         const spawning = yield* Effect.forkChild(
           os.spawn(['/bin/sleep', mark], { cwd: stub.dir, env: { PATH: stub.path } }),
         );
         yield* until(mark, true, 10).pipe(through(into));
         yield* Fiber.interrupt(spawning);
+        yield* fs.writeFileString(`${stub.dir}/go`, '');
         yield* until(mark, false, 10).pipe(through(into));
         expect(killed(into)).toEqual([]);
       }),
