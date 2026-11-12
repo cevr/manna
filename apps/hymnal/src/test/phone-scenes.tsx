@@ -8,21 +8,43 @@
  * chords, a search typed, the drums, the tiles, a dial, a hymn playing).
  * The scenes come as JSON in the first argument, each with the names a
  * journey asks of it; it prints, as JSON, the names each scene draws among
- * those asked: a testID (`data-testid`), or an accessible name (an
- * `aria-label`, a placeholder, or a text with no element in it, as iOS
- * names a text). Only names asked are printed, so no hymn's words are.
+ * those asked, as iOS's accessibility tree holds them (`exposure.ts`): a
+ * testID, or an element's name. Only names asked are printed, so no
+ * hymn's words are.
  */
 
 import type * as Atom from 'effect/reactivity/Atom';
 import type * as Registry from 'effect/reactivity/AtomRegistry';
 
+import { exposeAsIOS, exposedIn } from './exposure';
 import type { Scene } from './scene';
 import { phone } from './phone';
 
 phone({ nativeList: true });
 
+/**
+ * The phones' own files that change what iOS's tree holds, by the
+ * web file under `src/` each is loaded in place of, as Metro picks them: the page's touch (no focusable region), the sung
+ * line's state, the player's button (a native button named by its label),
+ * the scrubber, and the web's own search field (none). The phones' marks (`Gear`, `BarMark`,
+ * `StarMark`, `Magnifier`) draw One's native images, which no test has;
+ * their buttons are named by their own labels, so their web marks stand in.
+ */
+const PHONE_FILES = new Map([
+  ['reader/WordSeek', 'reader/WordSeek.native.tsx'],
+  ['follow/current', 'follow/current.native.ts'],
+  ['player/AccentButton', 'player/AccentButton.ios.tsx'],
+  ['player/Scrubber', 'player/Scrubber.ios.tsx'],
+  ['web/SearchField', 'web/SearchField.native.tsx'],
+]);
+
+/** The web files `PHONE_FILES` loads the phones' files in place of. */
+const PHONE_STEMS =
+  /\/src\/(reader\/WordSeek|follow\/current|player\/AccentButton|player\/Scrubber|web\/SearchField)\.tsx?$/;
+
 {
   const { plugin } = await import('bun');
+  const src = `${Bun.resolveSync('../store.ts', import.meta.dir).replace(/store\.ts$/, '')}`;
   const native = Bun.resolveSync('../tuner/native.ts', import.meta.dir);
   plugin({
     name: 'hymnal-phone-ear',
@@ -31,13 +53,19 @@ phone({ nativeList: true });
         contents: `export * from ${JSON.stringify(native)}; export const available = true;`,
         loader: 'js',
       }));
+      build.onLoad({ filter: PHONE_STEMS }, ({ path }) => {
+        const own = PHONE_FILES.get(path.slice(src.length).replace(/\.tsx?$/, ''));
+        if (own === undefined) return undefined;
+        return { contents: `export * from ${JSON.stringify(`${src}${own}`)};`, loader: 'js' };
+      });
     },
   });
 }
 
 const { act, createElement: h } = await import('react');
-const { AccessibilityInfo } = await import('react-native');
+const { AccessibilityInfo, Text, View } = await import('react-native');
 Object.assign(AccessibilityInfo, { sendAccessibilityEvent: () => {} });
+exposeAsIOS([View, Text]);
 const { createRoot } = await import('react-dom/client');
 const { RegistryContext } = await import('@effect/atom-react');
 const { Duration, Effect, Option } = await import('effect');
@@ -71,23 +99,6 @@ const tick = () => act(() => Effect.runPromise(Effect.sleep(Duration.millis(10))
 /** Waits until `holds` is true, for two seconds at most. */
 const waitFor = async (holds: () => boolean) => {
   for (let i = 0; i < 200 && !holds(); i++) await tick();
-};
-
-/** The testIDs and the accessible names the document draws under `host`. */
-const drawnIn = (host: HTMLElement) => {
-  const ids = new Set<string>();
-  const labels = new Set<string>();
-  for (const element of host.querySelectorAll('*')) {
-    const id = element.getAttribute('data-testid');
-    if (id !== null) ids.add(id);
-    for (const name of ['aria-label', 'placeholder']) {
-      const value = element.getAttribute(name);
-      if (value !== null) labels.add(value);
-    }
-    const text = element.textContent?.trim() ?? '';
-    if (element.children.length === 0 && text !== '') labels.add(text);
-  }
-  return { ids, labels };
 };
 
 /**
@@ -287,6 +298,20 @@ interface Asked {
   readonly labels: ReadonlyArray<string>;
 }
 
+/**
+ * The topic a list opened at names, in a scene that opens it at one. The
+ * phones draw the list scrolled to the topic, its row in iOS's tree under
+ * the pinned header; the stand-in draws only the list's first screen, so
+ * the pinned header (hidden from iOS, `HymnList.native`) names the row.
+ */
+const pinnedTopics = (scene: Scene, host: Element): ReadonlyArray<string> => {
+  const topic = scene.topic?.toLowerCase();
+  if (topic === undefined) return [];
+  return [...host.querySelectorAll('[aria-hidden="true"] [role="heading"][aria-label]')]
+    .map((heading) => heading.getAttribute('aria-label') ?? '')
+    .filter((name) => name.toLowerCase() === topic);
+};
+
 /** The start of the report's line: what the screens log may come before it. */
 const MARK = 'scenes ';
 
@@ -296,8 +321,10 @@ const out: Array<{ readonly ids: ReadonlyArray<string>; readonly labels: Readonl
 for (const { scene, ids, labels } of asked) {
   const held = registryOf(scene);
   const shown = await draw(held.registry, scene);
-  const drawn = drawnIn(shown.host);
-  const folded = new Set([...drawn.labels].map((label) => label.toLowerCase()));
+  const drawn = exposedIn(shown.host);
+  const folded = new Set(
+    [...drawn.labels, ...pinnedTopics(scene, shown.host)].map((label) => label.toLowerCase()),
+  );
   out.push({
     ids: ids.filter((id) => drawn.ids.has(id)),
     labels: labels.filter((label) => folded.has(label.toLowerCase())),
