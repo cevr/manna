@@ -1,0 +1,34 @@
+{
+  "feature": "home-end",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-end-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Next" }, { "shows": "label=Stage: blade" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-end",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "shows": "label=The field is tended" }, { "shows": "label=1 grew a stage." }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-end-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=All tended for today" },
+        { "shows": "label=Practice anyway" },
+        { "shows": "label=Isaiah 41:10, blade" },
+        { "hides": "label=Start" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
