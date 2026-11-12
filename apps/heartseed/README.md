@@ -2929,7 +2929,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     to the foreground; each add or return makes the plan again and drops
     the visit and the hold, and parts reach both over an open visit and
     over a result held), one device each
-    of seeds 10, 5, 94, 223, 205, 1, 38 and 15, part f's in the unread class
+    of seeds 10, 110, 94, 68, 250, 1, 38 and 15, part f's in the unread class
     (every listing fails: Today alone, with no `Your field`), held after
     every command, on the screen the model names, to `furrowsModel` and
     `readyModel` (full labels with `, ready today`), the Today card's
@@ -3006,9 +3006,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/phrase.property.test.ts`, `phraseReference` with `phraseOf`
     against `src/test/phrase-model.ts`'s reader over round trips, near
     misses and generated strings.
-  - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`,
-    `test:phrase-walk-c2`: `src/phrase/walk-a.test.tsx`, `walk-b.test.tsx`
-    with `walk-b2.test.tsx`, `walk-c.test.tsx`, and `walk-c2.test.tsx`,
+  - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-b2`,
+    `test:phrase-walk-c`, `test:phrase-walk-c2`: `src/phrase/walk-a.test.tsx`,
+    `walk-b.test.tsx`, `walk-b2.test.tsx`, `walk-c.test.tsx` and
+    `walk-c2.test.tsx`,
     Today over four days with long verses learned whole over gardens that
     hold the old pieces an earlier build kept (Old pieces, above), walked
     through the root (`src/test/phrase-rig.tsx`, each launch on home, held

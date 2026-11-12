@@ -2,15 +2,14 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part b: device 0
- * of seed 5, eighteen commands from its launch on home, held to the
+ * of seed 110, eighteen commands from its launch on home, held to the
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
- * one, `Start`, a plant's tap on a plan item, on a seed, on a planted
- * verse, on a verse not planted and over a result held, a minutes choice
- * made in the Settings sheet, `Your field` with a result held and then
- * `Start`, a landed add over a result held and over an open visit, a
- * return to the foreground on Today, and the morning's and evening's
+ * one, `Start`, a plant's tap on a plan item, on a seed, on a verse not
+ * planted and over a result held, `Your field` with a result held and then
+ * `Start`, returns to the foreground on Today over an open visit, a
+ * relaunch that lands on home, and the morning's and afternoon's
  * greetings.
  */
 
@@ -22,28 +21,26 @@ const FLOORS = [
   'home:dot',
   'home:no-dot',
   'home:begin',
-  'start:over-held',
-  'start:plant',
   'tap:not planted',
   'greeting:morning',
-  'greeting:evening',
   'root:begin',
   'root:start',
   'root:back',
+  'root:relaunch-home',
   'start:plan',
+  'today:wake',
+  'wake:over-visit',
+  'wake:today-over-visit',
+  'start:over-held',
   'tap:seed',
   'root:back-held',
   'home:begin-held',
-  'made:minutes',
-  'home:add',
-  'today:wake',
-  'add:over-held',
-  'add:over-visit',
+  'greeting:afternoon',
 ];
 
 describe('home A, walked (b)', () => {
   it('shows the furrows, the card, a plant’s start and the greeting as the models give them', async () => {
-    const { failure, cover } = await walkHome(5, [0], 18);
+    const { failure, cover } = await walkHome(110, [0], 18);
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);
   });
