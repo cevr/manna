@@ -9,12 +9,7 @@
 
 import type { Recall } from '../sayit';
 import { weakestModel } from './home-model';
-import {
-  startModel,
-  type ModelLearnPiece,
-  type ModelStart,
-  type ModelStartItem,
-} from './promise-model';
+import { startModel, type ModelStart, type ModelStartItem } from './promise-model';
 
 /** What `Practice this list` starts, as the model holds it. */
 export type ModelListStart<I extends ModelStartItem> =
@@ -36,7 +31,6 @@ export const listStartModel = <I extends ModelStartItem>(
   plants: ReadonlyMap<string, readonly Recall[]>,
   canon: ReadonlySet<string>,
   verseOf: (reference: string) => string,
-  pieces: readonly ModelLearnPiece[],
 ): ModelListStart<I> => {
   if (plan === null) return { tag: 'None' };
   const recallsNow = (reference: string) => plants.get(reference)?.length ?? 0;
@@ -45,7 +39,7 @@ export const listStartModel = <I extends ModelStartItem>(
     (item) => recallsNow(item.reference) <= item.recalls && own.has(verseOf(item.reference)),
   );
   if (open.length > 0) return { tag: 'Open', items: open };
-  const start = (verse: string) => startModel(plan, verse, recallsNow, canon, verseOf, pieces);
+  const start = (verse: string) => startModel(plan, verse, recallsNow, canon);
   const mine = new Map([...plants].filter(([reference]) => own.has(reference)));
   const weakest = weakestModel(mine, (reference) => start(reference) !== null);
   const weak = weakest === null ? null : start(weakest);

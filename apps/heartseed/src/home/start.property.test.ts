@@ -647,19 +647,13 @@ class Walk {
     const before = diskText(this.device.disk);
     await this.run(this.session.start(verse));
     if (diskText(this.device.disk) !== before) this.fail(`start(${json(verse)}): the disk changed`);
-    const started = startModel(
-      this.plan,
-      verse,
-      (reference) => this.recallsNow(reference),
-      CANON,
-      verseOfRule,
-      this.pieces,
-    );
+    const started = startModel(this.plan, verse, (reference) => this.recallsNow(reference), CANON);
     if (started !== null) {
       const piece = this.startPiece(started.item.reference);
       if (started.from === 'learn') {
         this.learned.add(started.item.reference);
-        if (started.item.reference !== verse) this.bump('learn:phrase');
+        if ((FEAR_PHRASES.get(verse) ?? []).some((phrase) => this.recallsNow(phrase) > 0))
+          this.bump('learn:begun in pieces');
       }
       if (
         started.from === 'plan' &&
@@ -881,7 +875,7 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['start:from plan', 20],
   ['start:from plant', 20],
   ['start:from learn', 20],
-  ['learn:phrase', 5],
+  ['learn:begun in pieces', 5],
   ['learn:remade after kept', 5],
   ['start:plan new as planned', 5],
   ['start:none', 20],
@@ -957,7 +951,7 @@ const startsEvery = async (seed: number, failKeys: boolean, begins: boolean) => 
 };
 
 describe('Start here', () => {
-  it('starts the plan’s open item on the verse as planned, else a review of the planted verse, else a canon verse not planted learned fresh on its first piece, as the visit, keeping the hold, the plan and the disk, over generated devices', async () => {
+  it('starts the plan’s open item on the verse as planned, else a review of the planted verse, else a canon verse not planted learned fresh, whole, as the visit, keeping the hold, the plan and the disk, over generated devices', async () => {
     const tally = new Map<string, number>();
     const failures = await playAll(tally);
     expect(failures.slice(0, 2)).toEqual([]);

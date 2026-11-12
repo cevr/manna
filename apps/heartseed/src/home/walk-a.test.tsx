@@ -24,7 +24,7 @@ const FLOORS = [
   'home:begin',
   'home:letgo',
   'home:moved',
-  'start:phrase',
+  'start:begun',
   'start:over-held',
   'start:plant',
   'start:learn',

@@ -29,10 +29,10 @@
  * - V2 what Today shows: the held verse if any; else the visit's first
  *   verse whose recalls are not past its baseline; else the plan's first
  *   item not done; else the done state.
- * - H4 (hshomebase) Start here: before a plan, nothing; else the plan's
- *   first item not done on the verse (a phrase's verse for a phrase) as
- *   planned; else a planted canon verse as a review from its recalls now;
- *   else nothing.
+ * - H4 (hshomebase, hspiece W1) Start here: before a plan, nothing; else
+ *   the plan's first item not done on the verse itself as planned; else a
+ *   planted canon verse as a review from its recalls now; else a canon
+ *   verse learned whole; else nothing.
  */
 
 import type { Range } from '../passages';
@@ -180,46 +180,30 @@ export type ModelStart<I extends ModelStartItem> =
   | { readonly from: 'plant'; readonly item: ModelStartItem }
   | { readonly from: 'learn'; readonly item: ModelStartItem };
 
-/** A piece as the learn rule reads it: its reference and its phrases. */
-export interface ModelLearnPiece {
-  readonly reference: string;
-  readonly phrases?: readonly ModelLearnPiece[];
-}
-
 /**
- * H4 (hshomebase) and hsstart T2: what a tap on `verse` starts, over the
+ * H4 (hshomebase) and hspiece W1: what a tap on `verse` starts, over the
  * plan's items (null before a plan), each reference's recall count now (0
- * when not planted), the canon's verses, the verse a reference belongs to
- * and the session's pieces: none before a plan; the plan's first item
- * whose recalls are not past its baseline and whose verse is `verse`, as
- * planned; else, for a canon verse with recalls of its own, a review from
- * its recalls now; else, for a canon verse with none, a fresh item of no
- * recalls on the first piece (each piece's phrases, then the piece) whose
- * verse is `verse` and that has no recalls, else on the verse itself;
- * else none.
+ * when not planted) and the canon's verses: none before a plan; the plan's
+ * first item whose recalls are not past its baseline and whose reference
+ * is `verse` itself, as planned; else, for a canon verse with recalls of
+ * its own, a review from its recalls now; else, for a canon verse with
+ * none, the verse itself, fresh, with no recalls, whatever pieces of it
+ * hold recalls; else none.
  */
 export const startModel = <I extends ModelStartItem>(
   plan: readonly I[] | null,
   verse: string,
   recallsNow: (reference: string) => number,
   canon: ReadonlySet<string>,
-  verseOf: (reference: string) => string,
-  pieces: readonly ModelLearnPiece[],
 ): ModelStart<I> | null => {
   if (plan === null) return null;
   for (const item of plan)
-    if (recallsNow(item.reference) <= item.recalls && verseOf(item.reference) === verse)
+    if (recallsNow(item.reference) <= item.recalls && item.reference === verse)
       return { from: 'plan', item };
   if (!canon.has(verse)) return null;
   if (recallsNow(verse) > 0)
     return { from: 'plant', item: { reference: verse, fresh: false, recalls: recallsNow(verse) } };
-  const first = pieces
-    .flatMap((piece) => [...(piece.phrases ?? []), piece])
-    .find((each) => verseOf(each.reference) === verse && recallsNow(each.reference) === 0);
-  return {
-    from: 'learn',
-    item: { reference: first?.reference ?? verse, fresh: true, recalls: 0 },
-  };
+  return { from: 'learn', item: { reference: verse, fresh: true, recalls: 0 } };
 };
 
 /** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */

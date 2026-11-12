@@ -22,7 +22,7 @@ const FLOORS = [
   'home:begin',
   'home:letgo',
   'start:plan',
-  'start:phrase',
+  'start:begun',
   'card:Learn',
   'greeting:morning',
   'greeting:evening',

@@ -142,7 +142,7 @@ const wantText = (
   verses: readonly string[],
 ) => {
   const plants = plantsOf(records);
-  const want = listStartModel(items, verses, plants, CANON, verseOfRule, pieces);
+  const want = listStartModel(items, verses, plants, CANON, verseOfRule);
   const line = listLineModel(want, verseOfRule);
   const visit =
     want.tag === 'Open'
@@ -198,14 +198,18 @@ const claimFaults = (
   return out;
 };
 
-/** Tallies a start's kind and the cases the floors ask for: phrases folded, one verse open, a learn by its phrase, the tie settled by reference. */
-const tallyStart = (tally: Tally, start: ListStart, tie: boolean) => {
+/** Tallies a start's kind and the cases the floors ask for: phrases folded, one verse open, a learn of a verse begun in pieces, the tie settled by reference. */
+const tallyStart = (tally: Tally, start: ListStart, tie: boolean, garden: ReadGarden) => {
   bump(tally, start._tag);
   const references = startText(start).visit.map((each) => each.reference);
   if (start._tag === 'Open' && new Set(references.map(verseOf)).size < references.length)
     bump(tally, 'open:folded');
   if (start._tag === 'Open' && references.length === 1) bump(tally, 'open:one');
-  if (start._tag === 'Learn' && references[0] !== start.verse) bump(tally, 'learn:phrase');
+  if (
+    start._tag === 'Learn' &&
+    [...garden.plants.keys()].some((key) => key !== start.verse && verseOf(key) === start.verse)
+  )
+    bump(tally, 'learn:begun in pieces');
   if (start._tag === 'Weakest' && tie && start.verse === APART[0]) bump(tally, 'weakest:tie');
 };
 
@@ -227,7 +231,7 @@ describe('Practice this list over generated devices', () => {
           );
         for (const fault of claimFaults(view, garden, verses, start))
           failures.push(`seed ${seed} ${json(verses)}: ${fault}`);
-        tallyStart(tally, start, device.tie);
+        tallyStart(tally, start, device.tie, garden);
       }
     }
     expect(failures.slice(0, 2)).toEqual([]);
@@ -238,7 +242,7 @@ describe('Practice this list over generated devices', () => {
       ['None', 30],
       ['open:folded', 10],
       ['open:one', 20],
-      ['learn:phrase', 5],
+      ['learn:begun in pieces', 5],
       ['weakest:tie', 5],
       ['view:unread', 30],
     ];

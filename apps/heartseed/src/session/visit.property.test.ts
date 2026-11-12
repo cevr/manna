@@ -501,14 +501,7 @@ class Walk {
     if (json([...this.device.disk]) !== before) this.fail(`startList: the disk changed`);
     const view = await this.view();
     if (view.minutes !== minutes) this.fail(`startList: the minutes ${view.minutes}`);
-    const want = listStartModel(
-      this.plan,
-      verses,
-      plantsOf(this.device.disk),
-      CANON,
-      verseOfRule,
-      this.pieces,
-    );
+    const want = listStartModel(this.plan, verses, plantsOf(this.device.disk), CANON, verseOfRule);
     this.bump(`list:${want.tag}`);
     if (want.tag !== 'None') {
       const items = want.tag === 'Open' ? want.items : [want.start.item];

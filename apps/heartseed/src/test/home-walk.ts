@@ -152,14 +152,7 @@ class HomeWalk extends Walk {
 
   /** What a tap on `verse` starts, as `startModel` gives it. */
   startOf(verse: string) {
-    return startModel(
-      this.planned() ? this.plan : null,
-      verse,
-      this.recallsNow,
-      CANON,
-      verseOfRule,
-      this.piecesNow(),
-    );
+    return startModel(this.planned() ? this.plan : null, verse, this.recallsNow, CANON);
   }
 
   /** The verse `Practice anyway` starts, as `weakestModel` names it. */
@@ -356,7 +349,13 @@ class HomeWalk extends Walk {
     if (!(await rig.tap(label))) return `no ${label}`;
     this.bump(`start:${started.from}`);
     this.bump('root:start');
-    if (started.item.reference !== verse) this.bump('start:phrase');
+    if (
+      started.from === 'learn' &&
+      this.records().some(
+        (recall) => recall.reference !== verse && verseOfRule(recall.reference) === verse,
+      )
+    )
+      this.bump('start:begun');
     if (this.hold !== null) this.bump('start:over-held');
     if (this.visit.some((each) => this.recallsNow(each.reference) <= each.recalls))
       this.bump('start:over-visit');
