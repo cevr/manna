@@ -1,0 +1,32 @@
+{
+  "feature": "field-grow",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "field-grow-today",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Stage: blade" }],
+      "receipt": "none"
+    },
+    {
+      "name": "field-grow",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, blade" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-grow-held",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Next" },
+        { "shows": "label=Stage: blade" }
+      ],
+      "receipt": "none"
+    }
+  ]
+}
