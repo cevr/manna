@@ -176,20 +176,34 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 home's rules: `--app` with a build of the head's native code serves; the
 JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7, to `first-home`.
-2. `home-probe`:
+The taps are journeys beside this file, each one `sim journey` call:
+`home` (the probe), `home-field`, `home-dot`, `home-relaunch`,
+`home-motion`, `home-settings`, `home-renew`, `home-end` and `home-add`
+(`home.journey.json`, `home-<segment>.journey.json`). Their `shows` and
+`hides` hold what a selector can say. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited below as
+`<journey>/<step>`) holds the visible nodes' types and labels, with a
+radio's `[checked]`; a probe line, the greeting, a count built at run
+time and a node's frame are read there or in a raw snapshot (`first.md`,
+Driving it), taken by hand between journeys. Each journey's first step
+opens `/` (or the probe) and shows where it starts, so a journey run on
+the wrong screen fails there.
 
-   ```bash
-   date +%H%M
-   sim open probe/home --expect "label=Home probe"
-   sim snapshot home-probe
-   ```
-
-   → the text nodes:
+1. `first.md`'s `sim journey first`, to `first-home`.
+2. `home-probe`, `home-icons` and `home-probe-motion`: `date +%H%M`, then
+   `sim journey home` → `"ok":true` (home first, then the probe, waiting
+   for `Home probe` and `icons loaded 24 of 24`). `home/home-probe` (the
+   probe's top) and `home/home-probe-scroll` (after the scroll to the
+   button) have, between them, the text nodes:
    - `greeting Good morning sun` for 0400-1159 by `date +%H%M`,
      `greeting Good afternoon sun` for 1200-1759, else
-     `greeting Good evening moon` (take `date` again after the snapshot
+     `greeting Good evening moon` (take `date` again after the journey
      when the first read was within a minute of an edge);
+   - `icons loaded 24 of 24`, no node starting `icons failed …`, and 24
+     nodes named `icon <name> <scheme>`, one for each of add, blade, bow,
+     corn, ear, gear, harp, lamp, moon, scroll, seed and sun in `light` and
+     in `dark` (record the role the snapshot gives them, expected `image`
+     on those it nests one in);
    - `furrow Isaiah 41:10 · own · bow · 1 verse · 1 planted`, or
      `furrow Isaiah 41:10 · own · bow · 1 verse · 1 ready today` when the
      counts line says `1 to tend`;
@@ -200,147 +214,104 @@ JavaScript comes from the dev server.
    - `plant Isaiah 41:10, seed`, ending `, ready today` exactly when the
      counts line says `1 to tend`;
    - 14 nodes `plant <reference>, not planted`;
+   - `motion icons 0 90 · springs 70 · sways 0` (read, not waited for: its
+     holes are not one number each, so no selector can vouch for it);
    - `lists 2`;
    - `shelves 42` and
      `shelf Psalms · harp · Songs to carry through the day · 6 lists`;
-   - a button `Start with Isaiah 41:10`.
-
-3. The tap:
-
-   ```bash
-   sim tap "label=Start with Isaiah 41:10"
-   sim snapshot home-probe-start
-   ```
-
-   → `visit Isaiah 41:10 fresh false` and `today shows Isaiah 41:10`.
-
-4. `home-icons`:
-
-   ```bash
-   sim open probe/home --expect "label=icons loaded 24 of 24"
-   sim snapshot home-icons
-   ```
-
-   → the text `icons loaded 24 of 24`, no node starting `icons failed`,
-   and 24 nodes named `icon <name> <scheme>`, one for each of add, blade,
-   bow, corn, ear, gear, harp, lamp, moon, scroll, seed and sun in `light` and in
-   `dark` (record the role the snapshot gives them, expected `image`); the
-   `home-probe` lines of step 2 still as listed there.
-
-5. `home-probe-motion`:
-
-   ```bash
-   sim open probe/home --expect "label=motion icons 0 90 · springs 70 · sways 0"
-   sim snapshot home-probe-motion
-   ```
-
-   → that line, and the `home-probe` lines of step 2 still as listed
-   there.
-
+   - `visit none` and `today shows Done`, and a button
+     `Start with Isaiah 41:10`.
+3. The tap, `home/home-probe-start` → `visit Isaiah 41:10 fresh false` and
+   `today shows Isaiah 41:10`.
+4. (The icons are step 2's: the probe draws them at its top, and a link to
+   the probe it already shows keeps its scroll, so the journey reads them
+   before it scrolls.)
+5. (The motion line is step 2's too.)
 6. Regression: `field.md`'s `field-first` and `field-back` on the same
    install pass unchanged.
 7. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
-Red on base: `sim open probe/home --expect "label=Home probe"` times out
-(`ReadinessTimedOut`): base has no such route. For `home-icons`, the
-`--expect "label=icons loaded 24 of 24"` times out on a base whose probe has
-no icon lines, or no `gear`. For `home-probe-motion`, the `--expect` times
-out (`ReadinessTimedOut`) on a base (`55f2bad31`) whose probe has no
-`motion` line.
+Red on base: the journey's probe open times out (`TargetMissing`): base
+has no such route. On a base whose probe has no icon lines, or no `gear`,
+`home-probe`'s wait for `icons loaded 24 of 24` times out; on a base
+(`55f2bad31`) whose probe has no `motion` line, the receipts lack it.
 
 ### The field in its layout
 
 On an install of its own (the probe's `Start with` leaves a visit, which
 puts `Start` on the Today card), with the same variables:
 
-1. `first.md` steps 1-6, to `first-planted`; note `PLANTED` (`date`) and
-   `date +%H%M`.
-2. `home-open` and `home-anyway`: `sim tap "label=Continue"`,
-   `sim tap "label=Got it"`,
-   `sim open / --expect "id=today-card" --no-relaunch`, `sim snapshot
-   home-open` → the heading `Your field`; the greeting by `date +%H%M`, as
-   `home-furrows` takes it; the texts `All tended for today` and
-   `Nothing is due right now.`; one button `Practice anyway`, no `Start`,
-   no `Begin` and no `About` in the fixed top; no `When I need…`; the
-   button `Isaiah 41:10, seed`; no heading `Today`, no button `Today`, no
+1. `first.md`'s `sim journey first`, to `first-home`; note `PLANTED`
+   (`date`) and `date +%H%M`.
+2. `home-open`, `home-anyway`, `home-furrows` and `home-lists`:
+   `sim journey home-field` → `"ok":true`; it goes on to steps 5-8 below.
+   `home-field/home-open` → the heading `Your field`; the greeting by
+   `date +%H%M` (`Good morning` 0400-1159, `Good afternoon` 1200-1759,
+   else `Good evening`; take `date` again when within a minute of an
+   edge); the texts `All tended for today` and `Nothing is due right
+   now.`; one button `Practice anyway`, no `Start`, no `Begin` and no
+   `About` in the fixed top; no `When I need…`; the button
+   `Isaiah 41:10, seed`; no heading `Today`, no button `Today`, no
    `Say it`, no label starting `Stage:`.
-3. `home-furrows` and `home-lists`: on the same screen, `sim snapshot
-   home-furrows`, then `sim scroll "label=How Heartseed works" down` and
-   `sim snapshot home-lists` → the heading `Your field`; the text `Good morning`
-   (0400-1159 by `date +%H%M`), `Good afternoon` (1200-1759) or
-   `Good evening` (take `date` again when within a minute of an edge); the
-   text `Lists` and one button `id=add-list` (`Add a list`); the button
+3. `home-field/home-lists`, after the scroll to `How Heartseed works` →
+   the text `Lists` and one button `Add a list`; the button
    `Open Isaiah 41:10` and the caption `1 verse · 1 planted`; a button
    `Isaiah 41:10, seed`; the button `Open Protection & Fear`, the caption
    `14 verses to learn` and 14 buttons ending `, not planted` (15 plant
-   buttons in all); 0 buttons named `Remove` or starting `Remove `;
-   `1 day sown`; `0 verses at full corn`; the rows
-   `Settings` and `How Heartseed works` at the end; no text node that is
-   only a number; no `When I need…`, no `id=add-verses`, no `id=add-row`,
-   no `id=counts`; no `Today` heading, no button `Today`, no `Say it`, no
-   label starting `Stage:`. `sim scroll "label=Isaiah 41:10, seed" up`.
+   buttons in all; a raw snapshot holds those above the fold); 0 buttons
+   named `Remove` or starting `Remove `; `1 day sown`; `0 verses at full
+   corn`; the rows `Settings` and `How Heartseed works` at the end; no
+   text node that is only a number; no `When I need…`; no `Today`
+   heading, no button `Today`, no `Say it`, no label starting `Stage:`. A
+   raw snapshot after the journey: one `id=add-list`, no `id=add-verses`,
+   `id=add-row` or `id=counts`.
 4. (No step: home has no chosen card; `home-start` below is the plant's
    tap.)
-5. `home-start` and `home-back`: `sim tap "label=Isaiah 41:10, seed"`
-   (one tap), `sim open / --expect "id=session" --no-relaunch`,
-   `sim snapshot home-back-today` → the heading `Today`, the reference
-   `Isaiah 41:10`, `Say it`, `Stage: seed`, a button `Your field`, and no
-   `When I need…`. Then `sim tap "label=Your field"`,
-   `sim snapshot home-back` → the heading `Your field`, no `id=chosen`,
-   no button starting `Practice Isaiah` or `Learn `, and on the Today
-   card `1 verse · about 1 min`, `1 to review` and `Start` (the started
-   visit is open).
-6. `home-begin`: `sim tap "label=Start"`, `sim snapshot home-begin-today`
-   → the heading `Today`, `Isaiah 41:10`, `Say it`.
-7. `home-learn`: `sim tap "label=Your field"`,
-   `sim tap "label=Psalms 91:1, not planted"` (one tap),
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot
-   home-learn-today` → `id=reference` `Psalms 91:1` and a button
-   `Listen`. Then `sim tap "label=Say it"` and say it (or, on the
-   simulator, as `run.md`'s recital) → the summary `<k> of 19 words`;
-   tap a grade when one shows, then
-   `sim tap "label=Your field"`, `sim scroll "label=Psalms 91:1, seed" down`, `sim snapshot home-learn` → the button `Psalms 91:1, seed` and
-   the caption `14 verses · 1 planted`.
-8. `home-add-places`: `sim tap "id=add-list"` → the heading `Add a list`;
-   `sim tap "label=Done"` → the heading `Your field` again.
+5. `home-start` and `home-back`: `home-field/home-back-today` → the
+   heading `Today`, the reference `Isaiah 41:10`, `Say it`,
+   `Stage: seed`, a button `Your field`, and no `When I need…`.
+   `home-field/home-back` → the heading `Your field`, no button starting
+   `Practice Isaiah` or `Learn `, and on the Today card `1 verse · about 1
+   min`, `1 to review` and `Start` (the started visit is open).
+6. `home-begin`: `home-field/home-begin-today` → the heading `Today`,
+   `Isaiah 41:10`, `Say it`.
+7. `home-learn`: `home-field/home-learn-today` → `Psalms 91:1` and a
+   button `Listen`; then `Say it` (on the simulator, the replay of
+   `run.md`'s recital) and `Good` once the grades show:
+   `home-field/home-learn-grade` → the summary `<k> of 19 words`;
+   `home-field/home-learn` → the button `Psalms 91:1, seed` and the
+   caption `14 verses · 1 planted`.
+8. `home-add-places`: the journey's last steps open `Add a list` (its
+   `Any passage` and `Done`) and close it with `Done`, on home again.
 9. `home-dot` and `home-today`, only when `PLANTED` was 0400-1759 local
    (an evening planting is due the next morning; otherwise record
    `All tended for today` and skip, as `run.md` step 3 does): wait until 7
-   minutes after `PLANTED`, on home
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim tap "label=5 min"` (the plan made
-   again at the tap; the idle visit dropped), `sim tap "label=Done"`, with
-   no trip to Today, `sim open / --expect "id=today-card" --no-relaunch`,
-   `sim snapshot home-dot` → one `id=today-card` with the texts
-   `1 verse · about 1 min` and `1 to review` and one button `Start`; the
-   button `Isaiah 41:10, seed, ready today`; no `Begin`, `When I need…`,
-   `id=add-verses`, `id=add-row` or `id=counts`. Then `home-start-run`:
-   `sim tap "label=Start"`, `sim open / --expect "id=session"
-   --no-relaunch`, `sim snapshot home-start-run` → `Isaiah 41:10` and
-   `Say it`.
-10. `home-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,
-    `sim snapshot home-relaunch` → the heading `Your field`, the greeting,
-    the Today card, and no heading `Today`.
-    `home-how`: record `id=sown`, `id=harvest` and every plant button's
-    name; `sim scroll "label=How Heartseed works" down`, `sim tap
-    "label=How Heartseed works"`, `sim snapshot home-how`; `sim tap
-    "label=Begin"`, `sim snapshot home-how-grows`; `sim tap "label=See
-    your field"`, `sim snapshot home-how-tips`; then `sim doctor`.
-    `home-how-skip`: `sim tap "label=Got it"`, the row again, `sim tap
-    "label=Skip"`, `sim snapshot home-how-skip`.
-    `home-tips-leave`: the row, `Begin`, `See your field`; `sim tap
-    "label=Practice anyway"`, `sim open / --expect "id=session"
-    --no-relaunch`, `sim snapshot home-tips-today`; `sim tap "label=Your
-    field"`, `sim snapshot home-tips-back`.
-11. `home-motion-reach` (a keep-guard): `sim relaunch`,
-    `sim open / --expect "id=today-card"`, at once `sim snapshot
-    home-motion-reach` → the heading `Your field`, the Today card's button
-    (`Start` or `Practice anyway`), `Add a list`, the own plant's button
-    (its label starts `Isaiah 41:10, seed`; it ends `, ready today` when
-    step 9 ran) and the buttons ending `, not planted`. Then at once tap
-    that plant by the label the snapshot gave, and `sim snapshot
-    home-motion-reach-today` → the heading `Today` and the reference
-    `Isaiah 41:10`. Record the seconds between the relaunch and
-    each snapshot.
+   minutes after `PLANTED`, then `sim journey home-dot` → `"ok":true`: on
+   home, `Settings`, `5 min` (the plan made again at the tap; the idle
+   visit dropped), `Done`, with no trip to Today. `home-dot/home-dot` →
+   one Today card with the texts `1 verse · about 1 min` and `1 to review`
+   and one button `Start`; the button `Isaiah 41:10, seed, ready today`;
+   no `Begin` or `When I need…`. Then `home-start-run`:
+   `home-dot/home-start-run` → `Isaiah 41:10` and `Say it`.
+10. `home-relaunch`, `home-how`, `home-how-skip` and `home-tips-leave`:
+    `sim journey home-relaunch` → `"ok":true`. `home-relaunch/home-relaunch`
+    → the heading `Your field`, the greeting, the Today card, and no
+    heading `Today`; record `1 day sown`, `0 verses at full corn` and
+    every plant button's name. `home-relaunch/home-how`,
+    `home-relaunch/home-how-grows` and `home-relaunch/home-how-tips`: the
+    welcome, its grows page and the tips, from the row. Then `Got it`, the
+    row again and `Skip`: `home-relaunch/home-how-skip`. Then the row,
+    `Begin`, `See your field` and `Practice anyway`:
+    `home-relaunch/home-tips-today` (Today) and, after `Your field`,
+    `home-relaunch/home-tips-back`. Then `sim doctor`.
+11. `home-motion-reach` (a keep-guard): `sim journey home-motion` →
+    `"ok":true`: a relaunch, then at once a tap on the own plant.
+    `home-motion/home-motion-reach` → the heading `Your field`, the Today
+    card's button (`Start` or `Practice anyway`), `Add a list`, the own
+    plant's button `Isaiah 41:10, seed, ready today` (step 9 ran) and the
+    buttons ending `, not planted`. `home-motion/home-motion-reach-today`
+    → the heading `Today` and the reference `Isaiah 41:10`. Record the
+    seconds the journey took (`ms`).
 12. Regression on the same install: `field.md`'s `field-first`,
     `field-control` and `field-back` (the plants as buttons), and
     `about.md`'s way to About through `Settings`. Then `sim doctor` (record
@@ -348,157 +319,140 @@ puts `Start` on the Today card), with the same variables:
 
 ### The Settings sheet
 
-On an install of its own, from `first.md` steps 1-7 to `first-home`, with
-the same variables:
+On an install of its own, from `first.md`'s `sim journey first` to
+`first-home`, with the same variables, `sim journey home-settings` →
+`"ok":true` (steps 1-4), then, by the clock, `sim journey home-renew`
+(step 5):
 
-1. `home-settings`: `sim snapshot home-settings-top` before the tap →
-   no control named `Settings` above the scroll view's top (record each
-   `Settings` node's y beside the scroll view's); then
-   `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, `sim snapshot home-settings`, and a raw snapshot (`agent-device snapshot --json --raw
-   --observe-only --force-full --session verify-heartseed`) → the heading
-   `Settings` and the button `Done`; the line `A day's tending` over the
-   radios `2 min`, `5 min`, `10 min`, `20 min`, `5 min` alone selected;
-   the line `Reads new verses aloud` over the button `Voice`, valued
-   `Her` (raw); the radios `System`, `Light`, `Dark`, `System` selected;
-   the button `About`. Record whether home's nodes (`Your field`, the
-   furrows, the Today card) appear in the same snapshot: that is the
-   modality as the accessibility tree holds it. Then `sim tap
-   "label=Done"`, `sim snapshot home-settings-done` → the heading
-   `Your field`, no heading `Settings`, a button `Settings`, and no
-   button `About`.
-2. `home-settings-minutes`: `sim scroll "label=Settings" down`, `sim tap "label=Settings"`,
-   `sim tap "label=10 min"`, a raw snapshot → `10 min` alone selected.
-   `sim tap "label=Done"`, `sim relaunch`, `sim open / --expect
-   "id=today-card"`, `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw snapshot → `10 min`
-   still alone selected. Then `sim tap "label=5 min"`, `sim tap
-   "label=Done"` (restored).
-3. `home-settings-about`: `sim scroll "label=Settings" down`, `sim tap "label=Settings"`,
-   `sim tap "label=About"`, `sim snapshot home-settings-about` → the
+1. `home-settings`: `home-settings/home-settings-top` → no control named
+   `Settings` above the scroll view's top (a raw snapshot taken before the
+   journey gives each `Settings` node's y beside the scroll view's).
+   `home-settings/home-settings`, after the scroll and the tap → the
+   heading `Settings` and the button `Done`; the line `A day's tending`
+   over the radios `2 min`, `5 min`, `10 min`, `20 min`, `5 min` alone
+   `[checked]`; the line `Reads new verses aloud` over the button
+   `Voice`, valued `Her` (a raw snapshot); the radios `System`, `Light`,
+   `Dark`, `System` `[checked]`; the button `About`. Record whether home's
+   nodes (`Your field`, the furrows, the Today card) appear in the same
+   receipt: that is the modality as the accessibility tree holds it.
+   `home-settings/home-settings-done` → the heading `Your field`, no
+   heading `Settings`, a button `Settings`, and no button `About`.
+2. `home-settings-minutes`: `home-settings/home-settings-minutes` →
+   `10 min` alone `[checked]`; after `Done` and a relaunch,
+   `home-settings/home-settings-kept` → `10 min` still alone `[checked]`.
+   Then the journey taps `5 min` and `Done` (restored).
+3. `home-settings-about`: `home-settings/home-settings-about` → the
    heading `About`, the button `Licences`, no label equal to `CREDITS`,
-   and no radio `System`.
-   `sim tap "label=Your field"`, `sim snapshot home-settings-back` → the
+   and no radio `System`. `home-settings/home-settings-back` → the
    heading `Your field`, and no heading `Settings`.
 4. `home-settings-today`: home after the first minute is in the done
-   state, so no `Start`: `sim tap "label=Isaiah 41:10, seed"`,
-   `sim open / --expect
-   "id=session" --no-relaunch`, `sim snapshot home-settings-today` and a raw snapshot →
-   the heading `Today`, `‹ Your field` (label `Your field`), and no radio
-   `2 min`, `5 min`, `10 min` or `20 min`, no `Minutes` group, no `Voice`
-   and no `Settings`.
+   state, so no `Start`: `home-settings/home-settings-today` (and a raw
+   snapshot after the journey) → the heading `Today`, `‹ Your field`
+   (label `Your field`), and no radio `2 min`, `5 min`, `10 min` or
+   `20 min`, no `Minutes` group, no `Voice` and no `Settings`.
 5. `home-renew`, only when `PLANTED` was 0400-1752 local (otherwise record
-   `All tended for today` and skip, as `home-dot` does). From Today of
-   step 4, the visit open: `sim tap "label=Your field"`, `sim snapshot
-   home-renew-back` → the heading `Your field`, no heading `Settings`, no
-   `Minutes` radio. Wait until 7 minutes after `PLANTED`, with no relaunch
-   and no trip away from the app; `sim scroll "label=Settings" down`, `sim tap "label=Settings"`, a raw
-   snapshot → `5 min` alone selected; `sim tap "label=5 min"` (the radio
-   already selected: the plan made again at the tap, the visit dropped);
-   `sim tap "label=Done"`; `sim snapshot home-renew-home` → no heading
-   `Settings`, the button `Isaiah 41:10, seed, ready today`, the Today
-   card's `1 verse · about 1 min`, `1 to review` and `Start`. Then
-   `sim tap "label=Start"` (the card is fixed: no scroll),
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot home-renew` → the
-   heading `Today`, `Isaiah 41:10`, `Stage: seed`, `Say it`,
+   `All tended for today` and skip, as `home-dot` does).
+   `home-settings/home-renew-back` (the journey's last step, from Today of
+   step 4, the visit open) → the heading `Your field`, no heading
+   `Settings`, no `Minutes` radio. Wait until 7 minutes after `PLANTED`,
+   with no relaunch and no trip away from the app; then
+   `sim journey home-renew` → `"ok":true`. `home-renew/home-renew-sheet`
+   → `5 min` alone `[checked]`; the journey taps `5 min` (the radio
+   already selected: the plan made again at the tap, the visit dropped)
+   and `Done`. `home-renew/home-renew-home` → no heading `Settings`, the
+   button `Isaiah 41:10, seed, ready today`, the Today card's
+   `1 verse · about 1 min`, `1 to review` and `Start`.
+   `home-renew/home-renew`, after `Start` (the card is fixed: no scroll)
+   → the heading `Today`, `Isaiah 41:10`, `Stage: seed`, `Say it`,
    `1 to tend · about 1 min`, and no `Minutes` radio, `Voice` or
    `Settings`.
-6. Regression: `home-open` and `home-relaunch` of the field drive above.
+6. Regression: `home-field/home-open` and `home-relaunch/home-relaunch`.
    Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
-Red on base (before the sheet): `sim tap "label=Settings"` finds no
-element (`home-settings*`, `home-dot`, `home-renew`); base's Today shows
-`5 min` and `Voice` (`home-settings-today`); `icons loaded 24 of 24`
-times out (`home-icons`). `home-renew` changes no product: it is green
-at `b79e5b66d`, the base of the rigs that take its trip, by design.
+Red on base (before the sheet): the tap on `Settings` finds no element
+(`home-settings*`, `home-dot`, `home-renew`); base's Today shows `5 min`
+and `Voice` (`home-settings-today`); `icons loaded 24 of 24` times out
+(`home-icons`). `home-renew` changes no product: it is green at
+`b79e5b66d`, the base of the rigs that take its trip, by design.
 
-Red on base (`7cd3cfa9b`, before the Today card): `sim snapshot` at
-`first-home` holds `label=Begin` (with a visit open), `label=When I
-need…`, `id=add-verses`, `id=add-row`, `id=counts` and no
-`id=today-card`, so every `--expect "id=today-card"` times out
-(`home-open`, `home-relaunch`, `home-dot`); the captions read
-`<k> of <n> ripe` and the plants show numbers (`home-lists`); a verse not
-planted starts nothing (`home-learn`); `sim tap "label=Practice anyway"`
-finds no element (`home-anyway`); the sheet's heading is
-`Add verses` (`home-add-places`); `Settings` is a gear in the fixed bar
-(`home-settings`).
+Red on base (`7cd3cfa9b`, before the Today card): at `first-home` the tree
+holds `label=Begin` (with a visit open), `label=When I need…`,
+`id=add-verses`, `id=add-row`, `id=counts` and no `id=today-card`, so
+every journey that waits for the Today card times out (`home-open`,
+`home-relaunch`, `home-dot`); the captions read `<k> of <n> ripe` and the
+plants show numbers (`home-lists`); a verse not planted starts nothing
+(`home-learn`); the tap on `Practice anyway` finds no element
+(`home-anyway`); the sheet's heading is `Add verses` (`home-add-places`);
+`Settings` is a gear in the fixed bar (`home-settings`).
 
 ### The end of a run
 
 Daytime only, as `run.md`'s `run-due`. From `run.md`'s drive, after
-`run-recite` (`Grew to a blade.`), in place of its step 6:
+`run-recite` (`Grew to a blade.`), in place of `run-next`:
 
-1. `home-end`: `sim tap "label=Next"`, `sim snapshot home-end` → the
-   nodes of the row above; record how the tree shows `role="img"`.
-2. `sim tap "label=Your field"`, `sim snapshot home-end-home` → the
-   heading `Your field`, `All tended for today` and `Practice anyway`, no
-   `Start`, the plant button `Isaiah 41:10, blade`.
+1. `home-end`: `sim journey home-end` → `"ok":true`. `home-end/home-end`
+   → the nodes of the row above; record how the tree shows `role="img"`.
+2. `home-end/home-end-home` → the heading `Your field`,
+   `All tended for today` and `Practice anyway`, no `Start`, the plant
+   button `Isaiah 41:10, blade`.
 
-Red on base (`c7bce58da`, before the end): after `Next` the snapshot
-holds the heading `Today` and `Nothing to tend now`, and no
-`1 grew a stage.`.
+Red on base (`c7bce58da`, before the end): after `Next` the receipt holds
+the heading `Today` and `Nothing to tend now`, and no `1 grew a stage.`.
 
 ### The Add a list sheet
 
-On a fresh install of its own, from `first.md` steps 1-7 to `first-home`
-(the first minute done, the own furrow and `Protection & Fear` on home),
-with the same variables:
+On a fresh install of its own, from `first.md`'s `sim journey first` to
+`first-home` (the first minute done, the own furrow and
+`Protection & Fear` on home), with the same variables,
+`sim journey home-add` → `"ok":true`:
 
-1. `home-add`: `sim tap "id=add-list"`, `sim snapshot home-add-sheet`
-   → the heading `Add a list` and a button `Done`; the buttons
-   `Any passage`, `Psalms`, `Proverbs`, `The Gospel of John`,
-   `Forgiveness`, `Peace in Anxiety`, `Strength`, `Provision`,
-   `Guidance & Wisdom`, `Temptation & Victory`, `The Holy Spirit`,
-   `Healing`, `Comfort in Grief`, `Salvation & Assurance`,
-   `Christ’s Return`, `Prayer Answered`, `Rest`, in that order (`sim
-   scroll` as needed; record how the tree shows `aria-expanded`). Record
-   whether home's nodes show in the same snapshot (the modality as the
-   tree holds it).
-2. `sim tap "label=Proverbs"`, `sim snapshot home-add-proverbs` →
-   `Proverbs 4:23`, `Proverbs 15:1`, `Proverbs 16:3`, `Proverbs 18:10` and
-   `Proverbs 22:6`, each with `1 verse`; the buttons
-   `Plant Proverbs 4:23`, `Plant Proverbs 15:1`, `Plant Proverbs 16:3` and
-   `Plant Proverbs 22:6`; the text `In your field` and no
-   `Plant Proverbs 18:10` (it is in `Protection & Fear`, taught on the
-   device).
-3. `sim tap "label=Psalms"`, `sim tap "label=Plant Psalms 46:1-3"`,
-   `sim open / --expect "id=today-card" --no-relaunch`, `sim snapshot
-   home-add-planted` → the heading `Your field` and no heading
-   `Add a list`; the furrow titles in order `Isaiah 41:10`,
-   `Psalms 46:1-3`, `Protection & Fear`; the caption `3 verses to learn`,
-   and the buttons `Psalms 46:1, not planted`, `Psalms 46:2, not planted`
-   and `Psalms 46:3, not planted`; a button with `id=add-list` still.
-4. `home-add-any`: `sim tap "id=add-list"`, `sim tap "label=Any
-   passage"`, `sim snapshot home-add-any` → the heading `Add a passage`
+1. `home-add`: `home-add/home-add-sheet` → the heading `Add a list` and a
+   button `Done`; the buttons `Any passage`, `Psalms`, `Proverbs`,
+   `The Gospel of John`, `Forgiveness`, `Peace in Anxiety`, `Strength`,
+   `Provision`, `Guidance & Wisdom`, `Temptation & Victory`,
+   `The Holy Spirit`, `Healing`, `Comfort in Grief`,
+   `Salvation & Assurance`, `Christ’s Return`, `Prayer Answered`, `Rest`,
+   in that order (those below the fold in a raw snapshot taken after the
+   journey's last step is undone, or the order in the tests; record how
+   the tree shows `aria-expanded`). Record whether home's nodes show in the
+   same receipt (the modality as the tree holds it).
+2. `home-add/home-add-proverbs` → `Proverbs 4:23`, `Proverbs 15:1`,
+   `Proverbs 16:3`, `Proverbs 18:10` and `Proverbs 22:6`, each with
+   `1 verse`; the buttons `Plant Proverbs 4:23`, `Plant Proverbs 15:1`,
+   `Plant Proverbs 16:3` and `Plant Proverbs 22:6`; the text
+   `In your field` and no `Plant Proverbs 18:10` (it is in
+   `Protection & Fear`, taught on the device).
+3. `home-add/home-add-planted`, after `Psalms` and `Plant Psalms 46:1-3`
+   → the heading `Your field` and no heading `Add a list`; the furrow
+   titles in order `Isaiah 41:10`, `Psalms 46:1-3`, `Protection & Fear`;
+   the caption `3 verses to learn`, and the buttons
+   `Psalms 46:1, not planted`, `Psalms 46:2, not planted` and
+   `Psalms 46:3, not planted`; the button `Add a list` still.
+4. `home-add-any`: `home-add/home-add-any` → the heading `Add a passage`
    and a button `Add verses` showing `‹ Add verses`, with no button
-   `Your field`. `sim tap "label=Add verses"` → the heading `Add a list`
-   again, with `Psalms` not expanded. `sim tap "label=Done"` → the heading
-   `Your field`.
-5. `home-add-places`: step 8 of the field drive above.
+   `Your field`. The journey's `Add verses` brings back `Add a list`
+   (record `Psalms` not expanded in a raw snapshot when wanted), and its
+   `Done` brings back `Your field`.
+5. `home-add-places`: `home-field`'s last two steps (the field drive
+   above).
 6. Regressions on the same install: `passage.md`'s `passage-books`,
    `passage-range` and `passage-plant`, through `Any passage`; this file's
    `home-settings` and `home-settings-today`. Then `sim doctor` (record
    `head` and `timingsHold`) and `sim down`.
 
-Red on base (`7cd3cfa9b`): `sim tap "id=add-list"` finds no element (the
+Red on base (`7cd3cfa9b`): the tap on `id=add-list` finds no element (the
 sheet opened from `id=add-verses`, its heading `Add verses`).
 
 ### A wait that stays
 
 `home-wait-stays`: a wait in the running app fails where it is, and never
-relaunches onto home. From `first-home` with a verse due (after a
-`sim relaunch` the next morning, or any install whose home offers
-`Start`), with the same variables:
-
-1. `sim tap "label=Start"`, `sim open / --expect "id=session" --no-relaunch`
-   → ok, `detail.retried` false.
-2. `sim open / --expect "id=today-card" --timeout 15 --no-relaunch` → exit 1,
-   `TargetMissing`, in about 15 s.
-3. `sim snapshot home-wait-stays` → still Today: `id=session`, the same
-   reference, and no relaunch in the log.
-
-Nothing native changes: an installed Debug build serves
-(`sim install --app <copy>`). Red on base: `--no-relaunch` is
-`BadArguments`. Base's own step, with no flag, is ok with
-`detail.retried` true on home, and the visit gone.
+relaunches onto home. A journey's `open` with `relaunch: false` is that
+wait, and `packages/sim/src/journey.test.ts`'s `an open step with relaunch
+false fails a missing target after one open, terminating nothing` holds
+it: one open, `TargetMissing`, no terminate. Live, every journey above
+whose first open waits where the app is (`home-dot`, `home-renew`,
+`home-end`) fails at that step when the screen is not the one it names,
+and the app stays where it was.
 
 Report only the lines named above and the reference; delete the
 `snapshots` folder.
@@ -513,9 +467,9 @@ Report only the lines named above and the reference; delete the
 - On the day of a planting there is no new piece, so the started visit's
   `fresh` is false whether it came from the plan's review item (the seed
   due) or from a review of the plant's recalls (nothing open).
-- `icons loaded` counts each `<name> <scheme>` once, however often its
+- `icons loaded …` counts each `<name> <scheme>` once, however often its
   image reloads, so a count short of 24 that never moves is a PNG One's
-  asset registry did not serve; an `icons failed` line names it. A dev
+  asset registry did not serve; an `icons failed …` line names it. A dev
   bundle that fails to load at all (before hsdevbundle) shows neither.
 - Home's add is `Add a list` (`id=add-list`), in the scroll view under
   `Lists`; the `Settings` and `How Heartseed works` rows lie at the
