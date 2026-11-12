@@ -239,8 +239,9 @@ const stagesOf = (sources: ReadonlyArray<Source>) => [
 /**
  * Heartseed's label templates whose hole holds a word, each filled from the
  * module that names the words: Today's stage line takes a stage word, a
- * furrow's `Open` a collection's title, and the dictation probe's lines a
- * dictation's ending (or `none`) and its script.
+ * furrow's `Open` a collection's title, the dictation probe's lines a
+ * dictation's ending (or `none`) and its script, and the theme probe's
+ * `scheme` line a scheme.
  */
 export const wordHolesOf = (sources: ReadonlyArray<Source>): ReadonlyArray<WordHole> => [
   { file: 'app/index.tsx', parts: ['Stage: ', ''], words: stagesOf(sources) },
@@ -255,17 +256,29 @@ export const wordHolesOf = (sources: ReadonlyArray<Source>): ReadonlyArray<WordH
     parts: ['script ', ''],
     words: unionStrings(sources, 'app/probe/dictation.tsx', 'Script'),
   },
+  {
+    file: 'app/probe/theme.tsx',
+    parts: ['scheme ', ''],
+    words: unionStrings(sources, 'src/theme.ts', 'Scheme'),
+  },
 ];
 
 /**
  * Heartseed's label templates whose holes hold a verse's reference or a
  * stage word: a plant's name on home and on the end of a session
- * (`<reference>, <stage>`, then `, ready today` when ready).
+ * (`<reference>, <stage>`, then `, ready today` when ready), a one-passage
+ * offer's `Plant <reference>` in the Add a list sheet, an own furrow's
+ * `Open <reference>` and its list's `Remove <reference>`, and the home
+ * probe's `Start with <reference>`.
  */
 const REFERENCE_HOLES: ReadonlyArray<Pick<WordHole, 'file' | 'parts'>> = [
   { file: 'src/home.ts', parts: ['', ', ', ''] },
   { file: 'src/home.ts', parts: ['', ', ', ', ready today'] },
   { file: 'src/run/tended.tsx', parts: ['', ', ', ''] },
+  { file: 'src/shelves/sheet.tsx', parts: ['Plant ', ''] },
+  { file: 'app/probe/home.tsx', parts: ['Start with ', ''] },
+  { file: 'src/field/plot.tsx', parts: ['Open ', ''] },
+  { file: 'src/list/screen.tsx', parts: ['Remove ', ''] },
 ];
 
 /**
