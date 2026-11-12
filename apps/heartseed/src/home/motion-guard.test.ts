@@ -156,6 +156,15 @@ const inspect = ({ path, text }: Source) => {
       system(node.arguments[0])
     );
   };
+  const endless = (value: Node | undefined | null): boolean => {
+    const node = resolve(value);
+    return (
+      node?.type === 'UnaryExpression' &&
+      node.operator === '-' &&
+      node.argument.type === 'Literal' &&
+      node.argument.value === 1
+    );
+  };
   const rootKeyframe = (node: Node): Node | undefined => {
     if (node.type === 'NewExpression' && nameOf(node.callee) === 'Keyframe') return node;
     if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression')
@@ -242,6 +251,8 @@ const inspect = ({ path, text }: Source) => {
       if (name === 'withRepeat') repeats++;
       if (OPTIONS_CALLS.includes(name) && !systemOptions(node.arguments[1]))
         fault(node, 'options-system');
+      if (name === 'withRepeat' && EFFECTS.includes(path) && !endless(node.arguments[1]))
+        fault(node, 'endless-loop');
       const position = POSITIONAL_CALLS.get(name);
       if (position !== undefined && !system(node.arguments[position]))
         fault(node, 'argument-system');
@@ -359,6 +370,18 @@ const BAD = [
     MOVES,
     3,
   ),
+  seed('endless-loop', 'withRepeat(animation, 2, false, undefined, ReduceMotion.System);', GROWING),
+  seed(
+    'endless-loop',
+    'const times = 1;\nwithRepeat(animation, times, false, undefined, ReduceMotion.System);',
+    MOVES,
+    3,
+  ),
+  seed(
+    'endless-loop',
+    'withRepeat(animation, -2, false, undefined, ReduceMotion.System);',
+    GROWING,
+  ),
   ...HOST_CLOCKS.map((clock) => seed('no-host-clock', `${clock}.call(undefined);`, GROWING)),
   seed('no-host-clock', 'const now = Date.now();', 'src/first/growth.ts'),
   ...SHEETS.flatMap((path) => [
@@ -374,7 +397,7 @@ const BAD = [
   ]),
 ];
 
-it('keeps scoped drawings on explicit System motion, both sheets sliding, the sway’s and the growing seed’s one effect each, and no host clock in the growing seed', () => {
+it('keeps scoped drawings on explicit System motion, both sheets sliding, the sway’s and the growing seed’s one effect each, each of their loops endless (a count of -1), and no host clock in the growing seed', () => {
   const sources = [
     ...['home', 'field', 'settings', 'shelves', 'run', 'first'].flatMap((folder) =>
       sourcesUnder(`src/${folder}`),
@@ -389,7 +412,7 @@ it('keeps scoped drawings on explicit System motion, both sheets sliding, the sw
 });
 
 it('rejects every seeded motion violation by file, line and rule', () => {
-  expect(BAD).toHaveLength(53);
+  expect(BAD).toHaveLength(56);
   for (const [index, source] of BAD.entries()) {
     const report = inspect({ ...source, text: `\n${source.text}` });
     expect(report.faults, `seed ${index}: ${source.rule}`).toContain(
