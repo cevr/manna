@@ -4518,6 +4518,36 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:list-screen": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:list-walk": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:list-walk-b": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test": {
       "dependsOn": [
         "$TURBO_EXTENDS$",
@@ -4698,6 +4728,9 @@
         "test:dark-screens-dark-b",
         "test:clock",
         "test:list",
+        "test:list-screen",
+        "test:list-walk",
+        "test:list-walk-b",
         "test:rest",
         "test:infra",
         "test:icon",

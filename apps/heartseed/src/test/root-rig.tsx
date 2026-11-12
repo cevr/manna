@@ -24,7 +24,7 @@
 import { RegistryProvider } from '@effect/atom-react';
 import { Effect, Layer, Logger, Option, Queue, Stream } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
@@ -44,10 +44,11 @@ import { END, rootFaults } from './root-rule';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
-/** The device's disk, which outlives every launch, and whether every listing fails (an unread garden). */
+/** The device's disk, which outlives every launch, whether every listing fails (an unread garden), and how many of its next writes fail (none when absent). */
 export interface RootDevice {
   readonly disk: Map<string, string>;
   unread: boolean;
+  refuse?: number;
 }
 
 const failure = (method: string, key: string) =>
@@ -58,7 +59,13 @@ const storeOf = (device: RootDevice) =>
     KeyValueStore.KeyValueStore,
     KeyValueStore.makeStringOnly({
       get: (key) => Effect.sync(() => device.disk.get(key)),
-      set: (key, value) => Effect.sync(() => void device.disk.set(key, value)),
+      set: (key, value) =>
+        Effect.suspend(() => {
+          if ((device.refuse ?? 0) === 0)
+            return Effect.sync(() => void device.disk.set(key, value));
+          device.refuse = (device.refuse ?? 0) - 1;
+          return Effect.fail(failure('set', key));
+        }),
       remove: (key) => Effect.fail(failure('remove', key)),
       clear: Effect.fail(failure('clear', '')),
       size: Effect.sync(() => device.disk.size),
@@ -150,13 +157,14 @@ const foregroundOf = (host: Host) =>
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
-/** A launch of the root over `device` at `time.now` on Effect's clock, the layer teaching `promises` (the part left out when null), the recital's words `pace` ms apart, every frame also held to `check` (none by default). */
+/** A launch of the root over `device` at `time.now` on Effect's clock, the layer teaching `promises` (the part left out when null), the recital's words `pace` ms apart, every frame also held to `check` (none by default), `beside` rendered next to the root under the same registry. */
 export const launchRoot = async (
   device: RootDevice,
   time: Time,
   promises: readonly string[] | null = TAUGHT,
   pace = 1,
   check: (host: Element) => readonly string[] = () => [],
+  beside: ReactNode = null,
 ) => {
   for (const left of [...mounted]) await left();
   const foreground: Host = { live: Option.none(), offered: 0, pulls: 0 };
@@ -199,6 +207,7 @@ export const launchRoot = async (
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
         <Root />
+        {beside}
       </RegistryProvider>,
     ),
   );
