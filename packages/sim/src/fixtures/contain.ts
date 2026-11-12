@@ -34,6 +34,7 @@ import { runSim } from '../command.ts';
 import { DriveLive, type Place } from '../drive.ts';
 import { Escaped } from '../errors.ts';
 import { land, LOOP, treeEscapes } from './oracle.ts';
+import { snapshotOf } from './screens.ts';
 
 /** The hymnal's App record, written out here. */
 export const APP: App = {
@@ -369,6 +370,8 @@ const tool = (
   const after = (flag: string) => args[args.indexOf(flag) + 1] ?? '';
   const last = args.at(-1) ?? '';
   const joined = args.join(' ');
+  if (command === 'agent-device' && args.includes('snapshot') && args.includes('--raw'))
+    return { exitCode: 0, stdout: snapshotOf([]) };
   if (command === 'xcrun' && joined === 'simctl list devices -j')
     return { exitCode: 0, stdout: devices };
   if (command === 'xcrun' && joined === 'simctl list runtimes -j')
