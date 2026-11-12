@@ -1,0 +1,14 @@
+{
+  "feature": "doctor",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "doctor-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    }
+  ]
+}

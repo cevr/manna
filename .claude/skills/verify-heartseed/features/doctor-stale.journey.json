@@ -1,0 +1,28 @@
+{
+  "feature": "doctor-stale",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "doctor-stale-root",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "doctor-stale-probe",
+      "action": "open",
+      "link": "probe/natural?base=http://localhost:8281/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Install" }],
+      "receipt": "none"
+    },
+    {
+      "name": "doctor-native-stale",
+      "action": "tap",
+      "target": "label=Load",
+      "receipt": "none"
+    }
+  ]
+}

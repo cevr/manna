@@ -32,26 +32,22 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 (`sim install`, or `--app` with a build whose native code is the head's),
 and start the model server as `natural.md` does (`MPORT`).
 
-1. `sim boot`, `sim open / --expect "label=Isaiah 41:10"`, `sim doctor` →
-   `ok: true`.
+The taps are two journeys beside this file: `doctor` (the root, until
+`label=Isaiah 41:10` shows) and `doctor-stale` (the root, the natural
+probe as `natural.md` opens it, with the base on port 8281, then `Load`).
+
+1. `sim boot`, `sim journey doctor`, `sim doctor` → `ok: true`.
 2. `doctor-native-stale`: in the working tree only (never committed), give
    an exported method of `apps/heartseed/native/natural/Natural.swift` one
-   more parameter. `sim down`, `sim boot`, then open the natural probe
-   (`apps/heartseed/app/probe/natural.tsx`) as `natural.md` opens it:
-
-   ```bash
-   sim open / --expect "label=Isaiah 41:10"
-   sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Install"
-   sim tap Load
-   sim doctor
-   ```
+   more parameter. `sim down`, `sim boot`, then `sim journey doctor-stale`
+   (`apps/heartseed/app/probe/natural.tsx`'s `Load`) and `sim doctor`
 
    → `ok: false`, `error._tag` `Unhealthy`, `check: native-source`, its
    reason naming `natural.Natural` and `sim install`.
 
 3. `doctor-native-fresh`: restore `Natural.swift` (`git diff` on it prints
-   nothing), `sim down`, `sim boot`, `sim open / --expect "label=Isaiah 41:10"`,
-   `sim doctor` → `ok: true`.
+   nothing), `sim down`, `sim boot`, `sim journey doctor`, `sim doctor` →
+   `ok: true`.
 4. `sim down`.
 
 Red on base: the same steps print `ok: true` at step 2, while `sim log`'s
