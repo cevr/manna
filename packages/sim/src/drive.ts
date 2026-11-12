@@ -407,7 +407,7 @@ const driverEnv = Effect.fn('Sim.driverEnv')(function* (place: Place) {
 const holding = <A, E, R>(place: Place, use: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(acquire(place.state), () => use, release);
 
-interface Target {
+export interface Target {
   readonly by: 'id' | 'label';
   readonly value: string;
   /** The element's role, when a name alone matches more than one (`link`, `button`). */
@@ -419,7 +419,7 @@ interface Target {
  * A leading `role=<role> ` narrows it to elements of that role, as
  * `role=link label=100, Great Is Thy Faithfulness`.
  */
-const parseTarget = (text: string): Target => {
+export const parseTarget = (text: string): Target => {
   const unquote = (value: string) => value.replace(/^"(.*)"$/s, '$1');
   const narrowed = /^role=(\w+) (.*)$/s.exec(text);
   const role = Option.fromNullishOr(narrowed?.[1]);

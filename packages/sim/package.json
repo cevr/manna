@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./app": "./src/app.ts",
+    "./check": "./src/check.ts",
     "./command": "./src/command.ts",
     "./drive": "./src/drive.ts",
     "./errors": "./src/errors.ts",
