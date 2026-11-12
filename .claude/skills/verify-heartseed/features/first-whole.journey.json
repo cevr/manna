@@ -1,0 +1,21 @@
+{
+  "feature": "first-whole",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "first-whole-welcome",
+      "action": "open",
+      "link": "/",
+      "timeout": 20,
+      "expect": [{ "shows": "label=Begin" }],
+      "receipt": "none"
+    },
+    {
+      "name": "first-whole",
+      "action": "tap",
+      "target": "label=Skip",
+      "expect": [{ "shows": "label=Listen" }, { "shows": "label=Next" }, { "hides": "id=reading" }],
+      "receipt": "none"
+    }
+  ]
+}
