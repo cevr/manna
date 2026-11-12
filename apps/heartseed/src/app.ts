@@ -308,6 +308,12 @@ export const startHere = runtime.fn(
   { concurrent: true },
 );
 
+/** `Practice this list`, a tap on a list view over its `verses`: what `listStartOf` starts becomes the visit Today shows ahead of the plan; the hold stays. */
+export const practiceList = runtime.fn(
+  (verses: readonly string[]) => Effect.flatMap(Session, (session) => session.startList(verses)),
+  { concurrent: true },
+);
+
 /** The home's greeting by the runtime's clock, read when a screen first shows it, again at each later show once none showed it in between, and again at each return to the foreground while one shows it (`Returns`); never in between. */
 export const greetingNow = runtime.atom(
   Stream.unwrap(

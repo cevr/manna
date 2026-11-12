@@ -4508,6 +4508,16 @@
       "outputs": [],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json"]
     },
+    "test:list": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test": {
       "dependsOn": [
         "$TURBO_EXTENDS$",
@@ -4687,6 +4697,7 @@
         "test:dark-screens-dark",
         "test:dark-screens-dark-b",
         "test:clock",
+        "test:list",
         "test:rest",
         "test:infra",
         "test:icon",

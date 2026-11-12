@@ -46,23 +46,38 @@ const weakest = Order.combineAll<Candidate>([
   Order.mapInput(Order.String, (each: Candidate) => each.verse),
 ]);
 
-/** The weakest planted verse a tap could start: the lowest stage, then the earlier last recall, then the reference; none when no plant starts. */
-export const weakestOf = (view: SessionView, garden: ReadGarden): Option.Option<string> =>
+/** The weakest of `verses` with a plant of its own that a tap could start: the lowest stage, then the earlier last recall, then the reference; none when no such plant starts. The one order Today card and a list's `Practice this list` share. */
+export const weakestAmong = (
+  view: SessionView,
+  garden: ReadGarden,
+  verses: Iterable<string>,
+): Option.Option<string> =>
   Option.map(
     Arr.head(
       Arr.sort(
-        [...garden.plants]
-          .filter(([verse]) => Option.isSome(startOf(view, garden, verse)))
-          .map(([verse, plant]): Candidate => ({
-            verse,
-            rank: STAGES.indexOf(stageOf(plant)),
-            last: Arr.lastNonEmpty(plant.recalls).startedAt,
-          })),
+        [...verses].flatMap((verse) =>
+          Option.toArray(
+            Option.map(
+              Option.filter(Option.fromUndefinedOr(garden.plants.get(verse)), () =>
+                Option.isSome(startOf(view, garden, verse)),
+              ),
+              (plant): Candidate => ({
+                verse,
+                rank: STAGES.indexOf(stageOf(plant)),
+                last: Arr.lastNonEmpty(plant.recalls).startedAt,
+              }),
+            ),
+          ),
+        ),
         weakest,
       ),
     ),
     (each) => each.verse,
   );
+
+/** The weakest planted verse a tap could start: the lowest stage, then the earlier last recall, then the reference; none when no plant starts. */
+export const weakestOf = (view: SessionView, garden: ReadGarden): Option.Option<string> =>
+  weakestAmong(view, garden, garden.plants.keys());
 
 const versesText = (n: number) => {
   if (n === 1) return '1 verse';

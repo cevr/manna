@@ -7,7 +7,10 @@
  * two or three verses) and sometimes one verse alone of a longer one, zero
  * to two held passages over Fear's verses, the promise's or any chapter,
  * in five zones, the session teaching Fear. Each device walks generated
- * steps: a tap on a known promise (`visit`, whatever is held or open), Say
+ * steps: a tap on a known promise (`visit`, whatever is held or open), a
+ * list view's `Practice this list` (`startList`) on one of the field's
+ * lists or on a few of its verses in any order (whatever is held or open,
+ * a recital under way or not), Say
  * it's hold on the item shown with its recall kept, refused by the store or
  * left under way, `Next`, a Minutes tap, a return, a landed add or remove
  * (each with or without a recital under way), or time passing.
@@ -16,7 +19,10 @@
  * plan to `planModel` (`test/session-model.ts`) at each making, the pieces
  * to `piecesModel`, the visit to `visitModel` (each verse's baseline its
  * recall count at the tap, its piece the corpus's text grouped by the
- * collection's title), what `shownOf` shows to `shownModel` (the held
+ * collection's title; after `startList`, to `listStartModel` at the tap,
+ * each item as planned or as a start, its piece its own, with the plan,
+ * the minutes, the hold and the disk unchanged by it), what `shownOf`
+ * shows to `shownModel` (the held
  * verse, else the visit's first not done, else the plan's), and the counts
  * line to `countsModel` over the plan alone.
  */
@@ -48,7 +54,10 @@ import {
   versesIn,
 } from '../test/passages-model';
 import { choosableOf, CORPUS } from '../test/passages-rig';
+import { placesOf } from '../test/home-model';
+import { listStartModel } from '../test/list-model';
 import {
+  fieldPassagesModel,
   needModel,
   piecesModel,
   promiseVerses,
@@ -91,6 +100,8 @@ const PROMISE: ModelTextPiece = {
   group: PROMISE_TEXT.reference,
 };
 const OWN = [PROMISE];
+
+const CANON: ReadonlySet<string> = new Set(placesOf(CORPUS).keys());
 
 const FEAR = COLLECTIONS.filter((collection) => collection.id === 'protection');
 const OTHERS = COLLECTIONS.filter((collection) => collection.id !== 'protection');
@@ -269,6 +280,10 @@ class Walk {
   plan: readonly ModelItem[];
   visit: ModelVisitVerse[] = [];
   visitGroup = '';
+  /** What made the visit: a known promise's tap, or a list's `Practice this list` (whose items keep the plan's `fresh` and pieces). */
+  visitFrom: 'promise' | 'list' = 'promise';
+  /** Each list visit verse's `fresh`, by reference. */
+  visitFresh = new Map<string, boolean>();
   held: string | null = null;
 
   constructor(
@@ -352,6 +367,15 @@ class Walk {
     }));
     if (json(visit) !== json(this.visit))
       this.fail(`${step}: visit ${json(visit)}, model ${json(this.visit)}`);
+    if (this.visitFrom === 'list') {
+      for (const verse of view.visit) {
+        if (verse.item.fresh !== this.visitFresh.get(verse.item.reference))
+          this.fail(`${step}: list visit verse ${verse.item.reference} fresh ${verse.item.fresh}`);
+        if (verse.piece.reference !== verse.item.reference)
+          this.fail(`${step}: list visit verse ${verse.item.reference} pieced as another`);
+      }
+      return;
+    }
     for (const verse of view.visit) {
       if (verse.item.fresh) this.fail(`${step}: visit verse ${verse.item.reference} is fresh`);
       if (verse.piece.reference !== verse.item.reference || verse.piece.group !== this.visitGroup)
@@ -394,7 +418,7 @@ class Walk {
     if (textOf(seen.shown) !== want)
       this.fail(`${step}: Today shows ${textOf(seen.shown)}, model ${want}`);
     const plants = plantsOf(this.device.disk);
-    for (const verse of view.visit) {
+    for (const verse of this.visitFrom === 'promise' ? view.visit : []) {
       const own = plants.get(verse.item.reference);
       const ladder = own === undefined ? 'full' : referenceCue(own);
       const cue = cueIn(seen.garden, verse.item.reference);
@@ -448,7 +472,57 @@ class Walk {
     await this.run(this.session.visit({ id: card.id, title: card.title }, range));
     this.visit = visitModel(range, (reference) => this.recallsNow(reference));
     this.visitGroup = card.title;
+    this.visitFrom = 'promise';
     await this.check(`visit(${card.id} ${json(range)})`);
+  }
+
+  /** The lists the field shows by the model: the promise's own row, the passages held, then Fear. */
+  lists() {
+    return fieldPassagesModel(
+      [{ title: PROMISE.reference, verses: [PROMISE.reference] }],
+      this.passages,
+      TAUGHT_IDS,
+    );
+  }
+
+  /** `Practice this list` on one of the field's lists, or on a few of its verses in any order: the visit becomes what `listStartModel` starts, the plan, the minutes, the hold and the disk unchanged. */
+  async tapList() {
+    const lists = this.lists();
+    const every = lists.flatMap((list) => list.verses);
+    const verses =
+      below(this.next, 3) === 0
+        ? [...every].sort(() => this.next() - 0.5).slice(0, 1 + below(this.next, 4))
+        : (pickOf(this.next, lists as [(typeof lists)[number], ...typeof lists]).verses ?? []);
+    if (this.visitOpen()) this.bump('list:over open visit');
+    if (this.held !== null) this.bump('list:over held');
+    const before = json([...this.device.disk]);
+    const minutes = this.minutes;
+    await this.run(this.session.startList(verses));
+    if (json([...this.device.disk]) !== before) this.fail(`startList: the disk changed`);
+    const view = await this.view();
+    if (view.minutes !== minutes) this.fail(`startList: the minutes ${view.minutes}`);
+    const want = listStartModel(
+      this.plan,
+      verses,
+      plantsOf(this.device.disk),
+      CANON,
+      verseOfRule,
+      this.pieces,
+    );
+    this.bump(`list:${want.tag}`);
+    if (want.tag !== 'None') {
+      const items = want.tag === 'Open' ? want.items : [want.start.item];
+      this.visit = items.map((item) => ({ reference: item.reference, recalls: item.recalls }));
+      this.visitFresh = new Map(items.map((item) => [item.reference, item.fresh]));
+      this.visitFrom = 'list';
+      if (want.tag === 'Open' && items.some((item) => item.fresh)) this.bump('list:open new piece');
+      if (
+        want.tag === 'Open' &&
+        new Set(items.map((item) => verseOfRule(item.reference))).size < items.length
+      )
+        this.bump('list:open phrases folded');
+    }
+    await this.check(`startList(${verses.length} verses ${want.tag})`);
   }
 
   async keep(reference: string, refused: boolean) {
@@ -575,15 +649,19 @@ class Walk {
 
   async step() {
     if (this.held !== null && below(this.next, 2) === 0) return this.letGo();
-    const roll = below(this.next, 20);
+    const roll = below(this.next, 23);
     const visiting = this.visitOpen();
+    if (roll >= 20) return this.tapList();
     if (roll < 4) return this.tapVisit();
     if (roll < (visiting ? 13 : 9)) {
       const underWay = await this.say();
       if (!underWay) return;
-      await (below(this.next, 3) === 0
+      const during = below(this.next, 6);
+      await (during === 0
         ? this.tapVisit()
-        : this.make(pickOf(this.next, [...MAKINGS])));
+        : during === 1
+          ? this.tapList()
+          : this.make(pickOf(this.next, [...MAKINGS])));
       return this.endRecital();
     }
     if (roll < 15) return this.letGo();
@@ -638,6 +716,13 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['make:remove:idle:visit dropped', 5],
   ['make:remove:under way:visit kept', 2],
   ['gen:one verse alone', 10],
+  ['list:Open', 40],
+  ['list:Weakest', 10],
+  ['list:Learn', 6],
+  ['list:over held', 10],
+  ['list:over open visit', 20],
+  ['list:open new piece', 5],
+  ['list:open phrases folded', 3],
 ];
 
 /** Plays every device, the host's zone put back once they end, however they end. */

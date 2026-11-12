@@ -33,7 +33,9 @@
  * hold. The visit lives as the hold lives: a making drops both unless a
  * recital is under way, and `next` keeps it. Nothing of either is stored.
  * A tap on a verse of the home (`start`) makes the one verse `startOf`
- * starts the visit, as a promise's tap does.
+ * starts the visit, as a promise's tap does, and a list view's `Practice
+ * this list` (`startList`) makes what `listStartOf` starts the visit: the
+ * plan's open items on the list exactly as planned, else one verse.
  */
 
 import {
@@ -57,6 +59,7 @@ import { Dictation } from '../dictation';
 import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
 import { startOf } from '../home/start';
+import { listStartOf } from '../list';
 import { collectionPieces, Passages, piecesOf, type PassagesView, type Range } from '../passages';
 import type { Collection } from '../promises';
 import { pieceAt, planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
@@ -87,7 +90,7 @@ export interface SessionView {
   readonly held: Option.Option<Item>;
   /** The held item's piece as the hold took it, kept and dropped with `held`, so Today shows the verse recited even after a making took it out of `pieces` (a remove of its passage while the recital is under way). */
   readonly heldPiece: Option.Option<TextPiece>;
-  /** The visit Today shows ahead of the plan, in the promise's verse order; empty when none. */
+  /** The visit Today shows ahead of the plan: a promise's verses in its order, a list's open items in plan order, or one verse started; empty when none. */
   readonly visit: readonly VisitVerse[];
 }
 
@@ -119,6 +122,8 @@ export class Session extends Context.Service<
     ) => Effect.Effect<void>;
     /** Start here, a tap on `verse` of the home: what `startOf` starts becomes the visit, replacing any before and keeping the hold, the plan and the minutes; nothing before the first plan, with the garden unread, or when nothing starts. */
     readonly start: (verse: string) => Effect.Effect<void>;
+    /** `Practice this list`, a tap on the list view of `verses`: what `listStartOf` starts becomes the visit, replacing any before and keeping the hold, the plan and the minutes; nothing before the first plan, with the garden unread, or when nothing starts. */
+    readonly startList: (verses: readonly string[]) => Effect.Effect<void>;
     /** A return to the foreground: a plan made in this launch is made again and the hold dropped, unless a recital is under way or the garden or the passages are unread. */
     readonly wake: Effect.Effect<void>;
     /** An add or a remove of a passage landed: a plan made in this launch is made again over the passages now, unless the garden or the passages are unread, and the hold dropped unless a recital is under way. */
@@ -344,6 +349,16 @@ export const layer = (
               return publish;
             }),
           ).pipe(Effect.withSpan('Session.start')),
+        startList: (verses: readonly string[]) =>
+          Effect.flatMap(garden.settled, (seen) =>
+            Effect.suspend(() => {
+              if (seen._tag === 'Unread') return Effect.void;
+              const started = listStartOf(MutableRef.get(held), seen, verses);
+              if (started._tag === 'None') return Effect.void;
+              MutableRef.update(held, (now) => ({ ...now, visit: started.visit }));
+              return publish;
+            }),
+          ).pipe(Effect.withSpan('Session.startList')),
         next: Effect.suspend(() => {
           MutableRef.update(held, (now) => ({
             ...now,
