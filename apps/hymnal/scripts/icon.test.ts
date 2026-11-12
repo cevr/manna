@@ -1,22 +1,22 @@
 /**
  * The app icon, held to its config and to its one shape: the native config
- * names icons that exist at their sizes, in the brand's colours; every
- * pixel of every icon is the ground, the wheat or a blend of the two; the
- * Android layers stay inside the launcher's safe circle; and every committed
- * file is what `bun run icon` draws from `assets/icon/wheat.svg` now.
+ * names icons that exist at their sizes, in Heartseed's colours; every
+ * pixel of every icon is the ground, the wheat or a blend of the two; every
+ * face's mark reads on its ground; the Android layers stay inside the
+ * launcher's safe circle; and every committed file is what `bun run icon`
+ * draws from `assets/icon/wheat.svg` now.
  *
- * The expected colours come from the brand (`@manna/brand`) and the theme,
- * not from the script's table, so a wrong row in the table is red too.
+ * The expected colours come from `src/icon-colours.ts`, not from the
+ * script's table, so a wrong row in the table is red too.
  */
 
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { PALETTE } from '@manna/brand';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { validateNativeApp } from 'one/native';
 import sharp from 'sharp';
 
-import { theme } from '../src/theme.ts';
+import { type Face, icon, launch } from '../src/icon-colours.ts';
 import { app } from '../vite/app.ts';
 import { WebManifestJson, draw, faviconSvg, icons, manifest, wheatOf } from './icon.ts';
 
@@ -55,19 +55,32 @@ const decode = (file: string) => pixels(`${ROOT}/${file}`);
 
 const meta = (file: string) => Effect.promise(() => sharp(`${ROOT}/${file}`).metadata());
 
-const NIGHT = PALETTE.night;
-const WHEAT = PALETTE.wheat;
-
 /** Each opaque two-colour icon's ground and wheat. */
 const opaque: ReadonlyArray<readonly [string, string, string]> = [
-  ['assets/icon/ios-light.png', WHEAT, NIGHT],
-  ['assets/icon/ios-dark.png', NIGHT, WHEAT],
-  ['public/apple-touch-icon.png', WHEAT, NIGHT],
-  ['public/icon-192.png', WHEAT, NIGHT],
-  ['public/icon-512.png', WHEAT, NIGHT],
-  ['public/icon-maskable-512.png', WHEAT, NIGHT],
-  ['public/favicon-32.png', WHEAT, NIGHT],
+  ['assets/icon/ios-light.png', icon.light.ground, icon.light.mark],
+  ['assets/icon/ios-dark.png', icon.dark.ground, icon.dark.mark],
+  ['public/apple-touch-icon.png', icon.light.ground, icon.light.mark],
+  ['public/icon-192.png', icon.light.ground, icon.light.mark],
+  ['public/icon-512.png', icon.light.ground, icon.light.mark],
+  ['public/icon-maskable-512.png', icon.light.ground, icon.light.mark],
+  ['public/favicon-32.png', icon.light.ground, icon.light.mark],
 ];
+
+/** A colour's relative luminance, WCAG 2. */
+const luminance = (hex: string) => {
+  const [r, g, b] = rgb(hex).map((v) => {
+    const c = v / 255;
+    if (c <= 0.040_45) return c / 12.92;
+    return ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+};
+
+/** WCAG 2 contrast of a face's mark on its ground, unrounded. */
+const contrast = (face: Face) => {
+  const [hi, lo] = [luminance(face.ground), luminance(face.mark)].toSorted((a, b) => b - a);
+  return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+};
 
 const corners = (p: Pixels) =>
   [0, p.width - 1, (p.height - 1) * p.width, p.height * p.width - 1].map((n) => n * p.channels);
@@ -207,15 +220,32 @@ describe('the app icon', () => {
       });
     }));
 
-  test('takes its colours from the brand, and the launch screen the app’s ground', () =>
+  test('takes the icon’s and the launch screen’s grounds from their colours', () =>
     Effect.sync(() => {
-      expect(app.icon.backgroundColor).toBe(WHEAT);
-      expect(app.icon.dark.backgroundColor).toBe(NIGHT);
-      expect(app.android.adaptiveIcon.backgroundColor).toBe(WHEAT);
+      expect(app.icon.backgroundColor).toBe(icon.light.ground);
+      expect(app.icon.dark.backgroundColor).toBe(icon.dark.ground);
+      expect(app.icon.tinted.backgroundColor).toBe(icon.tinted.ground);
+      expect(app.android.adaptiveIcon.backgroundColor).toBe(icon.light.ground);
       expect([app.splash.backgroundColor, app.splash.dark.backgroundColor]).toEqual([
-        theme.light.ground,
-        theme.dark.ground,
+        launch.light.ground,
+        launch.dark.ground,
       ]);
+    }));
+
+  test('draws every face’s mark at 4.5:1 or more on its ground', () =>
+    Effect.sync(() => {
+      const faces = [
+        ...Object.entries(icon).map(([scheme, face]) => [`icon.${scheme}`, face] as const),
+        ...Object.entries(launch).map(([scheme, face]) => [`launch.${scheme}`, face] as const),
+      ];
+      expect(faces.map(([name]) => name)).toEqual([
+        'icon.light',
+        'icon.dark',
+        'icon.tinted',
+        'launch.light',
+        'launch.dark',
+      ]);
+      expect(faces.filter(([, face]) => contrast(face) < 4.5).map(([name]) => name)).toEqual([]);
     }));
 
   test('draws every opaque pixel as ground, wheat or a blend of the two', () =>
@@ -271,8 +301,8 @@ describe('the app icon', () => {
 
   test('keeps the Android layers in their colour and inside the safe circle', () => {
     const layers: ReadonlyArray<readonly [string, Rgb]> = [
-      [app.android.adaptiveIcon.foreground, rgb(NIGHT)],
-      [app.android.adaptiveIcon.monochrome, rgb('#ffffff')],
+      [app.android.adaptiveIcon.foreground, rgb(icon.light.mark)],
+      [app.android.adaptiveIcon.monochrome, rgb(icon.tinted.mark)],
     ];
     return Effect.forEach(
       layers,
@@ -312,16 +342,16 @@ describe('the app icon', () => {
   test('keeps the maskable icon inside the W3C safe circle', () =>
     decode('public/icon-maskable-512.png').pipe(
       Effect.map((p) => {
-        const ground = rgb(WHEAT);
+        const ground = rgb(icon.light.ground);
         expect(outside(p, 0.4, (i) => !exact(p.data, i, ground))).toBe('none');
       }),
     ));
 
-  test('draws the launch screen as the wheat on the app’s ground, light and dark', () => {
+  test('draws the launch screen as the wheat on its ground, light and dark', () => {
     const { splash } = app;
     const screens: ReadonlyArray<readonly [string, string, string, string]> = [
-      [splash.source, splash.backgroundColor, theme.light.ground, NIGHT],
-      [splash.dark.source, splash.dark.backgroundColor, theme.dark.ground, WHEAT],
+      [splash.source, splash.backgroundColor, launch.light.ground, launch.light.mark],
+      [splash.dark.source, splash.dark.backgroundColor, launch.dark.ground, launch.dark.mark],
     ];
     return Effect.forEach(
       screens,
@@ -401,7 +431,9 @@ describe('the app icon', () => {
         { concurrency: 10 },
       );
       expect(drifts.filter(([, worst]) => worst > 8)).toEqual([]);
-      expect(yield* fs.readFileString(`${ROOT}/public/favicon.svg`)).toBe(faviconSvg(wheat));
+      expect(yield* fs.readFileString(`${ROOT}/public/favicon.svg`)).toBe(
+        faviconSvg(wheat, icon.light, icon.dark),
+      );
       expect(yield* fs.readFileString(`${ROOT}/public/manifest.webmanifest`)).toBe(manifest);
     }));
 });

@@ -1,8 +1,8 @@
 /**
  * `bun run icon`: draws every app icon from the one wheat blade,
- * `assets/icon/wheat.svg`, in the brand's Moonlit wheat (`@manna/brand`):
- * the night's blade on the wheat by day, the wheat's blade on the night by
- * night.
+ * `assets/icon/wheat.svg`, in Heartseed's colours (`src/icon-colours.ts`):
+ * its gold blade on its garden ink by day and on its night ground by night,
+ * and the launch screen's blade in its ink and its gold.
  *
  * Each row of `icons` is one PNG: its size, its layout (how large the wheat
  * sits on the square), the wheat's colour, and its ground, or none for the
@@ -11,18 +11,17 @@
  * as an SVG and sharp renders it (`draw`). An icon with a ground is opaque,
  * with no alpha channel. An icon with no ground is the wheat's colour in
  * every pixel, with the shape in the alpha channel alone. The run also writes
- * the web's `favicon.svg` (the night's blade on the wheat, the wheat's on the
- * night in dark mode) and `manifest.webmanifest`.
+ * the web's `favicon.svg` (the light icon's colours, the dark icon's in dark
+ * mode) and `manifest.webmanifest`.
  *
  * A native build reads the new icons only after `bun run prebuild:native`.
  */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { PALETTE } from '@manna/brand';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import sharp from 'sharp';
 
-import { theme } from '../src/theme.ts';
+import { type Face, icon as faces, launch } from '../src/icon-colours.ts';
 
 /**
  * How the wheat sits on its square, centred on the shape's box:
@@ -46,91 +45,34 @@ export interface Icon {
   readonly ground: Option.Option<string>;
 }
 
-const white = '#ffffff';
-const black = '#000000';
-
-const on = (ground: string) => Option.some(ground);
-const clear = Option.none<string>();
+/** A face drawn whole: its mark on its ground. */
+const on = (face: Face) => ({ wheat: face.mark, ground: Option.some(face.ground) });
+/** A face's mark alone, on the transparent ground its launcher or launch screen fills. */
+const cut = (wheat: string) => ({ wheat, ground: Option.none<string>() });
 
 export const icons: ReadonlyArray<Icon> = [
-  {
-    file: 'assets/icon/ios-light.png',
-    size: 1024,
-    layout: 'full',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
-  {
-    file: 'assets/icon/ios-dark.png',
-    size: 1024,
-    layout: 'full',
-    wheat: PALETTE.wheat,
-    ground: on(PALETTE.night),
-  },
-  {
-    file: 'assets/icon/ios-tinted.png',
-    size: 1024,
-    layout: 'full',
-    wheat: white,
-    ground: on(black),
-  },
+  { file: 'assets/icon/ios-light.png', size: 1024, layout: 'full', ...on(faces.light) },
+  { file: 'assets/icon/ios-dark.png', size: 1024, layout: 'full', ...on(faces.dark) },
+  { file: 'assets/icon/ios-tinted.png', size: 1024, layout: 'full', ...on(faces.tinted) },
   {
     file: 'assets/icon/android-foreground.png',
     size: 1024,
     layout: 'adaptive',
-    wheat: PALETTE.night,
-    ground: clear,
+    ...cut(faces.light.mark),
   },
   {
     file: 'assets/icon/android-monochrome.png',
     size: 1024,
     layout: 'adaptive',
-    wheat: white,
-    ground: clear,
+    ...cut(faces.tinted.mark),
   },
-  { file: 'public/splash.png', size: 1024, layout: 'full', wheat: PALETTE.night, ground: clear },
-  {
-    file: 'public/splash-dark.png',
-    size: 1024,
-    layout: 'full',
-    wheat: PALETTE.wheat,
-    ground: clear,
-  },
-  {
-    file: 'public/apple-touch-icon.png',
-    size: 180,
-    layout: 'full',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
-  {
-    file: 'public/icon-192.png',
-    size: 192,
-    layout: 'full',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
-  {
-    file: 'public/icon-512.png',
-    size: 512,
-    layout: 'full',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
-  {
-    file: 'public/icon-maskable-512.png',
-    size: 512,
-    layout: 'maskable',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
-  {
-    file: 'public/favicon-32.png',
-    size: 32,
-    layout: 'favicon',
-    wheat: PALETTE.night,
-    ground: on(PALETTE.wheat),
-  },
+  { file: 'public/splash.png', size: 1024, layout: 'full', ...cut(launch.light.mark) },
+  { file: 'public/splash-dark.png', size: 1024, layout: 'full', ...cut(launch.dark.mark) },
+  { file: 'public/apple-touch-icon.png', size: 180, layout: 'full', ...on(faces.light) },
+  { file: 'public/icon-192.png', size: 192, layout: 'full', ...on(faces.light) },
+  { file: 'public/icon-512.png', size: 512, layout: 'full', ...on(faces.light) },
+  { file: 'public/icon-maskable-512.png', size: 512, layout: 'maskable', ...on(faces.light) },
+  { file: 'public/favicon-32.png', size: 32, layout: 'favicon', ...on(faces.light) },
 ];
 
 /** The wheat's path and the box its `viewBox` draws tight around it. */
@@ -245,11 +187,11 @@ export const draw = (wheat: Wheat, icon: Icon): Effect.Effect<Buffer, DrawFailed
   });
 };
 
-/** The tab's icon: the night's blade on the wheat, and the wheat's on the night when the system is dark. */
-export const faviconSvg = (wheat: Wheat): string =>
+/** The tab's icon: the light icon's colours, and the dark icon's when the system is dark. */
+export const faviconSvg = (wheat: Wheat, light: Face, dark: Face): string =>
   [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">',
-    `<style>rect{fill:${PALETTE.wheat}}path{fill:${PALETTE.night}}@media (prefers-color-scheme: dark){rect{fill:${PALETTE.night}}path{fill:${PALETTE.wheat}}}</style>`,
+    `<style>rect{fill:${light.ground}}path{fill:${light.mark}}@media (prefers-color-scheme: dark){rect{fill:${dark.ground}}path{fill:${dark.mark}}}</style>`,
     '<rect width="32" height="32"/>',
     placed(wheat, 'favicon', 32, ''),
     '</svg>',
@@ -280,7 +222,7 @@ export const manifest = `${Schema.encodeSync(WebManifestJson)({
   name: 'Hymnal',
   short_name: 'Hymnal',
   start_url: '/',
-  background_color: theme.light.ground,
+  background_color: launch.light.ground,
   icons: [
     { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -303,7 +245,7 @@ const run = Effect.gen(function* () {
       ),
     { concurrency: 4 },
   );
-  yield* fs.writeFileString(at('public/favicon.svg'), faviconSvg(wheat));
+  yield* fs.writeFileString(at('public/favicon.svg'), faviconSvg(wheat, faces.light, faces.dark));
   yield* fs.writeFileString(at('public/manifest.webmanifest'), manifest);
   yield* Console.log('[icon] public/favicon.svg, public/manifest.webmanifest');
 });
