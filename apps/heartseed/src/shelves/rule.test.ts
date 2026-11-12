@@ -144,7 +144,10 @@ describe("the root's rule at the Add verses sheet's seams", () => {
   it('faults Your field on Add a passage, and keeps it on About', () => {
     const cells = {
       adding: faultsWith(ADDING, [addBack(), element('button', 'Your field', '‹ Your field')]),
-      about: faultsWith('About', [element('button', 'Your field', '‹ Your field')]),
+      about: faultsWith('About', [
+        element('button', 'Your field', '‹ Your field'),
+        element('button', 'Licences', 'Licences ›'),
+      ]),
     };
     expect(cells).toEqual({ adding: [`Your field on ${ADDING}`], about: [] });
     expect(Object.keys(cells).length).toBe(2);

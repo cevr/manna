@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, eslint/no-await-in-loop -- the walk drives the root through React's promise-based act, one device after another. */
+/* oxlint-disable effect/noAsyncFunction -- the walk drives the root through React's promise-based act. */
 
 import { describe, expect, it } from 'bun:test';
 

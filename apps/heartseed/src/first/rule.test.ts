@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noGlobals -- a frame-rule table: it builds happy-dom nodes by hand in the document the rule reads. */
-
 /**
  * hsintro's rule (`introRuleFaults` in `src/test/root-rule.ts`) as
  * `rootFaults` holds every frame of every rig to it, with no app: bare
@@ -195,7 +193,7 @@ describe('the rule of the screens before the first verse and of home’s tips', 
       ],
       [
         'Got it on About',
-        faultsOf('About', [], [button('Got it'), button('Your field')]),
+        faultsOf('About', [], [button('Got it'), button('Your field'), button('Licences')]),
         ['Got it on About'],
       ],
       [

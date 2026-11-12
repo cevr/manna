@@ -304,6 +304,31 @@ const INTRO = new Map<string, readonly string[]>([
 /** The names only those two screens offer. */
 const INTRO_NAMES = new Set([...INTRO.values()].flat());
 
+/**
+ * What the licences show wrong on the screen `on`: the credits or the
+ * licence on any screen but `Licences` (so no row lands on them straight),
+ * on `Licences` not one of each; a `Licences` row anywhere but About, and
+ * not exactly one there; the back `About` anywhere but `Licences`, not
+ * exactly one there, or inside its scroll view.
+ */
+export const licenceFaults = (on: string, host: Element, controls: readonly Element[]) => {
+  const out: string[] = [];
+  const at = on === 'Licences';
+  for (const id of ['about-credits', 'about-licence']) {
+    const count = host.querySelectorAll(`[data-testid="${id}"]`).length;
+    if (!at && count > 0) out.push(`${id} on ${on}`);
+    if (at && count !== 1) out.push(`${count} ${id} on Licences`);
+  }
+  const rows = controls.filter((node) => nameOf(node) === 'Licences');
+  if (on !== 'About' && rows.length > 0) out.push(`Licences on ${on}`);
+  if (on === 'About' && rows.length !== 1) out.push(`${rows.length} Licences on About`);
+  const backs = controls.filter((node) => nameOf(node) === 'About');
+  if (!at && backs.length > 0) out.push(`the About back on ${on}`);
+  if (at && backs.length !== 1) out.push(`${backs.length} About backs on Licences`);
+  if (backs.some(scrolled)) out.push('the About back inside a scroll view');
+  return out;
+};
+
 /** The tips' ids. */
 const TIP_IDS = ['tip-1', 'tip-2', 'tip-3'];
 
@@ -545,6 +570,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   out.push(...homeRuleFaults(on, host, controls));
   out.push(...listRuleFaults(on, list, host, controls));
   out.push(...introRuleFaults(on, host, controls));
+  out.push(...licenceFaults(on, host, controls));
   out.push(...choicesFaults(on, host, controls));
   out.push(...reach);
   return out;

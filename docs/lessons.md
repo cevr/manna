@@ -5570,3 +5570,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The first open taught the recital and never said what the app is, what a plant means, or what a list and adding one are.
 - **Cause:** The first minute began at `Hear it`, and no rule held a fresh install to a screen that names the app before the verse, or home to tips that point at its card, `Add a list` and a list's name.
 - **Guard:** code: `apps/heartseed/src/first/rule.test.ts` `names one fault for each clause a frame breaks`
+
+### heartseed-licences-own-page
+
+- **Date:** 2026-11-12
+- **Kind:** owner
+- **Said:** "Right now, the settings goes, or the about at the bottom beneath the settings goes straight to license. I think that should be under another. Um, menu item somewhere in the settings."
+- **Source:** hymnapp/hsintro/decisions.md (the owner in chat, 2026-11-12, phone build 97c44ecad)
+- **Wrong:** Home's `How Heartseed works` and the Settings sheet's `About` both opened the licence text at once, so a reader looking for what the app is landed on eleven thousand characters of Apache License.
+- **Cause:** About was one screen that held the credits and the licence, and no rule held the licence to a page of its own behind its own row.
+- **Guard:** code: `apps/heartseed/src/about/rule.test.ts` `names one fault for each clause a frame breaks`

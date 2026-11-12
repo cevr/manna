@@ -29,7 +29,7 @@ import {
   taughtView,
   voiceView,
 } from '../src/app';
-import { AboutScreen } from '../src/about/screen';
+import { AboutScreen, LicencesScreen } from '../src/about/screen';
 import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
 import { removalOf } from '../src/field/plot';
@@ -681,7 +681,7 @@ function Pending() {
 }
 
 /** The root's screens once the launch has opened, home being `field`, `add` home with the Add verses sheet open, and `list` the list view of the furrow last opened. */
-type Screen = 'today' | 'field' | 'add' | 'choose' | 'about' | 'list';
+type Screen = 'today' | 'field' | 'add' | 'choose' | 'about' | 'licences' | 'list';
 
 /** The screen an opening shows first: home for `home`, else Today. */
 const screenAt = (shown: Opening): Screen => {
@@ -701,7 +701,8 @@ const screenAt = (shown: Opening): Screen => {
  * Today card's `Start` or `Practice anyway`, or the chosen card's
  * `Practice` or `Learn`), the chooser (from the sheet's `Any passage`, back
  * to the sheet from its first back, home once a passage is added) and
- * About (from the `About` of home's Settings sheet, back to home).
+ * About (from the `About` of home's Settings sheet, back to home), whose
+ * `Licences` shows the licences (back to About).
  * Beside the screen it holds the tour (`../src/first/tour`): Planted's
  * `Continue` shows home with its tips; home's `How Heartseed works` and
  * the sheet's `Show the welcome again` replay the welcome and how a verse
@@ -776,11 +777,16 @@ export default function Root() {
       );
       if (screen === 'list')
         return <ListOf id={list} home={home} onField={toField} onToday={toToday} />;
-      if (screen === 'about') return <AboutScreen onField={toField} />;
-      if (screen === 'choose')
-        return <ChooserScreen onBack={() => show('add')} onAdded={toField} />;
+      const pages: Partial<Record<Screen, () => ReactNode>> = {
+        about: () => <AboutScreen onField={toField} onLicences={() => show('licences')} />,
+        licences: () => <LicencesScreen onAbout={() => show('about')} />,
+        choose: () => <ChooserScreen onBack={() => show('add')} onAdded={toField} />,
+      };
       if (screen === 'field' || screen === 'add') return home;
-      return <Today onField={toField} />;
+      return Option.match(Option.fromUndefinedOr(pages[screen]), {
+        onSome: (page) => page(),
+        onNone: () => <Today onField={toField} />,
+      });
     }
   }
 }

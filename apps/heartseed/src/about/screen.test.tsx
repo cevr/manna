@@ -43,6 +43,11 @@ import { CREDITS } from './screen';
 const PARAGRAPH =
   'Natural voice: Kokoro-82M by hexgrad (Apache-2.0), with its voices af_heart and bm_george. Core ML conversion by laishere (kokoro-coreml, Apache-2.0), packaged by FluidInference (FluidAudio, Apache-2.0). Pronunciations from Misaki by hexgrad (Apache-2.0).';
 
+/** The app's version as `package.json` holds it, read apart from the screen. */
+const VERSION = String(
+  JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version,
+);
+
 const LICENCE = readFileSync(
   new URL('../../native/natural/kokoro/LICENSE', import.meta.url),
   'utf8',
@@ -116,6 +121,36 @@ describe('About', () => {
     ).toEqual([{ role: 'button', tall: true, words: 'About', disabled: null }]);
 
     await toAbout(rig);
+    const backOf = (name: string) =>
+      named(rig, name).map((node) => ({
+        role: node.getAttribute('role'),
+        scrolled: scrolled(node),
+        words: text(node),
+      }));
+    expect({
+      headings: headings(rig),
+      name: text(rig.host.querySelector('[data-testid="about-name"]')),
+      version: text(rig.host.querySelector('[data-testid="about-version"]')),
+      controls: [...rig.host.querySelectorAll(CONTROL)].map(labelOf),
+      row: named(rig, 'Licences').map((node) => parseFloat(getComputedStyle(node).minHeight) >= 44),
+      licence: rig.host.querySelectorAll(
+        '[data-testid="about-licence"],[data-testid="about-credits"]',
+      ).length,
+      back: backOf('Your field'),
+      faint: faint(rig.host),
+    }).toEqual({
+      headings: ['About'],
+      name: 'Heartseed',
+      version: `Version ${VERSION}`,
+      controls: ['Your field', 'Licences'],
+      row: [true],
+      licence: 0,
+      back: [{ role: 'button', scrolled: false, words: '‹ Your field' }],
+      faint: [],
+    });
+
+    await rig.tap('Licences');
+    expect(await rig.until(() => headings(rig).join('|') === 'Licences')).toBe(true);
     const credits = [...rig.host.querySelectorAll('[data-testid="about-credits"]')];
     const licences = [...rig.host.querySelectorAll('[data-testid="about-licence"]')];
     expect({
@@ -124,23 +159,23 @@ describe('About', () => {
       exported: CREDITS,
       licence: licences.map((node) => node.textContent === LICENCE),
       length: licences.map((node) => (node.textContent ?? '').length),
-      back: named(rig, 'Your field').map((node) => ({
-        role: node.getAttribute('role'),
-        scrolled: scrolled(node),
-        words: text(node),
-      })),
+      controls: [...rig.host.querySelectorAll(CONTROL)].map(labelOf),
+      back: backOf('About'),
       voice: rig.host.querySelectorAll('[aria-label="Voice"]').length,
       faint: faint(rig.host),
     }).toEqual({
-      headings: ['About'],
+      headings: ['Licences'],
       credits: [PARAGRAPH],
       exported: PARAGRAPH,
       licence: [true],
       length: [11_357],
-      back: [{ role: 'button', scrolled: false, words: '‹ Your field' }],
+      controls: ['About'],
+      back: [{ role: 'button', scrolled: false, words: '‹ About' }],
       voice: 0,
       faint: [],
     });
+    await rig.tap('About');
+    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
 
     await rig.tap('Your field');
     await toField(rig);
@@ -161,7 +196,7 @@ describe('About', () => {
     expect(new Map(device.disk)).toEqual(start);
   });
 
-  it('holds no appearance and no foot of its own, home’s Today card holds no About, and only the way back is a control', async () => {
+  it('holds no appearance and no foot of its own, home’s Today card holds no About, and its controls are the way back and Licences', async () => {
     launchWith();
     const rig = await mountBar(0, false);
     await toField(rig);
@@ -181,7 +216,7 @@ describe('About', () => {
       foot: [['Start']],
       groups: [],
       aboutFoot: 0,
-      controls: ['Your field'],
+      controls: ['Your field', 'Licences'],
       modal: null,
       faults: [],
     });
