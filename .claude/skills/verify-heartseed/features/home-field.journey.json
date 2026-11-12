@@ -1,0 +1,127 @@
+{
+  "feature": "home-field",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-open",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Practice anyway" },
+        { "shows": "label=Isaiah 41:10, seed" },
+        { "hides": "label=Start" },
+        { "hides": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-lists",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "expect": [{ "shows": "label=Settings" }, { "shows": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-lists-up",
+      "action": "scroll",
+      "target": "label=Isaiah 41:10, seed",
+      "direction": "up",
+      "receipt": "none"
+    },
+    {
+      "name": "home-back-today",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Start" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-begin-today",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-learn-home",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-learn-today",
+      "action": "tap",
+      "target": "label=Psalms 91:1, not planted",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Psalms 91:1" },
+        { "shows": "label=Listen" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-learn-say",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "home-learn-grade",
+      "action": "tap",
+      "target": "label=Good",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Next" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-learn-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-learn",
+      "action": "scroll",
+      "target": "label=Psalms 91:1, seed",
+      "direction": "down",
+      "expect": [{ "shows": "label=Psalms 91:1, seed" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-add-places",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }, { "shows": "label=Done" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-add-places-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Any passage" }],
+      "receipt": "none"
+    }
+  ]
+}
