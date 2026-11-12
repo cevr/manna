@@ -1,14 +1,14 @@
 # App icon
 
-The app is named `Hymnal` on the home screen, under one blade of wheat, in
+The app is named `Hymnal` on the home screen, under one ear of wheat, in
 Heartseed's colours (`apps/heartseed/src/theme.ts`), so the two apps read as
-one family: Heartseed's gold blade (`#d4a640`) on its garden ink (`#2c4542`)
-in light mode, the gold blade on its night ground (`#142420`) in dark mode,
-and a white blade the system tints in the tinted style. On Android the blade
+one family: Heartseed's gold ear (`#d4a640`) on its garden ink (`#2c4542`)
+in light mode, the gold ear on its night ground (`#142420`) in dark mode,
+and a white ear the system tints in the tinted style. On Android the ear
 is the adaptive icon's foreground in the gold, on the garden ink, with a
 white monochrome layer for themed icons. On the web the tab shows the light
 icon (the dark one when the system is dark), and the page names a touch icon
-and a web manifest. The launch screen shows the same blade, 200 points wide,
+and a web manifest. The launch screen shows the same ear, 200 points wide,
 centred on Heartseed's page grounds: the ink (`#2c4542`) on `#f1f0e6` in
 light mode, the gold (`#d4a640`) on `#142420` in dark mode. The hymn list
 that follows keeps the hymnal's own grounds (`#f7f9fb`, `#0a1f2d`).
@@ -21,13 +21,13 @@ owner's look on his phone.
 
 ## Sub-features
 
-- `icon-light`: the light icon, the gold blade on the garden ink.
-- `icon-dark`: the dark icon, the gold blade on the night ground.
-- `icon-tinted`: the tinted icon, a white blade on black for the system's tint.
+- `icon-light`: the light icon, the gold ear on the garden ink.
+- `icon-dark`: the dark icon, the gold ear on the night ground.
+- `icon-tinted`: the tinted icon, a white ear on black for the system's tint.
 - `icon-name`: the name under the icon reads `Hymnal`.
 - `icon-web`: the favicons, touch icon and manifest the page links, each served.
-- `splash-light`: the launch screen in light mode, the ink's blade on `#f1f0e6`.
-- `splash-dark`: the launch screen in dark mode, the gold blade on `#142420`.
+- `splash-light`: the launch screen in light mode, the ink's ear on `#f1f0e6`.
+- `splash-dark`: the launch screen in dark mode, the gold ear on `#142420`.
 
 ## How to get to it (user POV)
 

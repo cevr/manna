@@ -687,22 +687,22 @@ Android haptics only.
 
 ## App icon
 
-The app is named Hymnal, and its icon is one blade of wheat:
-`assets/icon/wheat.svg` is the one shape. `bun run icon`
+The app is named Hymnal, and its icon is one ear of wheat, seven rounded
+grains on a stem with a leaf: `assets/icon/ear.svg` is the one shape. `bun run icon`
 (`scripts/icon.ts`) redraws every icon from it in Heartseed's colours, so the
 two apps read as one family. `src/icon-colours.ts` holds them, copied from
 `apps/heartseed/src/theme.ts`; the script, `vite/app.ts` and the icon test
 read them there:
 
-- iOS: light (Heartseed's gold blade `#d4a640` on its garden ink
-  `#2c4542`), dark (the gold blade on its night ground `#142420`) and
+- iOS: light (Heartseed's gold ear `#d4a640` on its garden ink
+  `#2c4542`), dark (the gold ear on its night ground `#142420`) and
   tinted (white on black), in `assets/icon/`.
 - Android: the adaptive icon's foreground (the gold) and monochrome (white)
   layers, on a garden-ink ground the launcher draws.
 - Web: `public/favicon.svg` (the dark icon's colours in dark mode),
   `favicon-32.png`, `apple-touch-icon.png`, and the manifest's icons, one of
   them maskable. The manifest's ground is the light launch screen's.
-- The launch screen: `public/splash.png` (the ink's blade) and
+- The launch screen: `public/splash.png` (the ink's ear) and
   `splash-dark.png` (the gold's), each on a transparent square the launch
   screen centres 200 points wide on Heartseed's page grounds (`#f1f0e6`, and
   `#142420` in dark mode). The hymn list that follows keeps the app's own
@@ -716,7 +716,7 @@ light icon's gold on the ink is 4.58:1, so a deeper gold falls under it.
 `vite/app.ts` holds the native app's name, icons and launch screen; `vite.config.ts` passes
 it to One. A native build reads new icons only after
 `bun run prebuild:native`. `scripts/icon.test.ts` goes red when a drawn file
-no longer matches the script, so an edit to `wheat.svg` needs `bun run icon`.
+no longer matches the script, so an edit to `ear.svg` needs `bun run icon`.
 
 ## Recordings: R2 at hymns.cvr.im
 
