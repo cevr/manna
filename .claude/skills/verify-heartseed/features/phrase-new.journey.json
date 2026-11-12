@@ -1,0 +1,31 @@
+{
+  "feature": "phrase-new",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "whole-new-home",
+      "action": "open",
+      "link": "/",
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=Start"
+        }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "whole-new",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        {
+          "shows": "id=session"
+        }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
