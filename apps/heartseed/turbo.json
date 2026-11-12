@@ -152,6 +152,32 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:sayit-today": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{clock,field.property,core-import.property,core-import,dictation.property,display,zone,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
+        "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/sayit/{guard,screen,source,cue,cue-held,cue-say,cue-say-letters}.test.*",
+        "!src/{promises,reading}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/shelves/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/settings/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:sayit": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -165,6 +191,7 @@
         "!src/passages/**/*.test.*",
         "!src/{clock,field.property,core-import.property,core-import,dictation.property,display,zone,yield-points,matcher.property,matcher,fsrs.property,garden.property,store,today,voice.property,session.property,theme}.test.*",
         "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/sayit/today.test.*",
         "!src/{promises,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
@@ -4491,6 +4518,7 @@
         "test:reading-today",
         "test:dictation",
         "test:sayit",
+        "test:sayit-today",
         "test:cue",
         "test:cue-say",
         "test:cue-held",

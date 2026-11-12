@@ -2065,8 +2065,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `changes` through a 10,000-input burst keeping at most the window and
     ending at the current view).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
-    and `src/sayit` but its cue tests (Today's Say it in happy-dom through
-    `src/test/today-rig.tsx`, the source Say it hears, and its guards).
+    and `src/sayit` but its cue tests and Today's (the source Say it
+    hears, and its guards).
+  - `test:sayit-today`: `src/sayit/today.test.tsx`, Today's Say it in
+    happy-dom through `src/test/today-rig.tsx`.
   - `test:cue`: `src/sayit/cue.test.tsx`, and `test:cue-say`:
     `src/sayit/cue-say.test.tsx` and
     `src/sayit/cue-say-letters.test.tsx`, Today's cue in happy-dom through
