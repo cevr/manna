@@ -29,7 +29,11 @@ not planted learned fresh), with no card between (owner, 2026-11-12);
 Today's `Your field` comes back. The `Settings` row opens the Settings
 sheet (`apps/heartseed/src/settings/sheet.tsx`): the heading `Settings`
 and `Done`, then the `Minutes` radios, `Voice`, the `Appearance` radios
-and `About`; `How Heartseed works` opens About. Today holds no `Minutes`
+and `About`; `How Heartseed works` replays the welcome and how a verse
+grows in home's place (`first.md`; no `Your first verse`, no reference,
+the second screen's button `See your field`, which shows home with its
+three tips and `Got it`; the welcome's `Skip` shows home with none).
+Leaving home for Today or a list ends the tips. Today holds no `Minutes`
 and no `Voice`. `Add a list` opens the Add a list sheet
 (`apps/heartseed/src/shelves/sheet.tsx`) over home: the heading
 `Add a list` and `Done`, then a shelf head per shelf (`Any passage`, which
@@ -68,7 +72,19 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   enter, home holds every control: `Practice anyway`, `Add a list`,
   `Settings`, `How Heartseed works`, the own plant's button and the 14
   not planted, and a tap on the own plant opens Today on it.
-- `home-open`: the first minute's `Continue` opens home in the done
+- `home-how`: at `first-home`, `How Heartseed works` shows the heading
+  `Heartseed`, `Plant a verse. Say it from memory. Watch it grow.`,
+  `Begin` and `Skip`, no `Your first verse` and no `Isaiah 41:10`;
+  `Begin` shows `Every verse is a plant` with the one button `See your
+  field`; that shows home with the three tips and `Got it`, `id=sown`,
+  `id=harvest` and the plant buttons as before the tap, and no `[voice]
+  speak` line since it.
+- `home-how-skip`: after `Got it`, `How Heartseed works` then `Skip`
+  shows home, `id=today-card`, no tip and no `Got it`.
+- `home-tips-leave`: with the tips shown again (`How Heartseed works`,
+  `Begin`, `See your field`), `Practice anyway` opens Today with no tip
+  and no `Got it`; its `Your field` shows home with none.
+- `home-open`: the first minute's `Continue`, then `Got it`, opens home in the done
   state: the heading `Your field`, the greeting, the Today card with
   `All tended for today`, `Nothing is due right now.` and `Practice
   anyway`, no `Start`, no `When I need…`; no Today.
@@ -239,6 +255,7 @@ puts `Start` on the Today card), with the same variables:
 1. `first.md` steps 1-6, to `first-planted`; note `PLANTED` (`date`) and
    `date +%H%M`.
 2. `home-open` and `home-anyway`: `sim tap "label=Continue"`,
+   `sim tap "label=Got it"`,
    `sim open / --expect "id=today-card" --no-relaunch`, `sim snapshot
    home-open` → the heading `Your field`; the greeting by `date +%H%M`, as
    `home-furrows` takes it; the texts `All tended for today` and
@@ -302,6 +319,17 @@ puts `Start` on the Today card), with the same variables:
 10. `home-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,
     `sim snapshot home-relaunch` → the heading `Your field`, the greeting,
     the Today card, and no heading `Today`.
+    `home-how`: record `id=sown`, `id=harvest` and every plant button's
+    name; `sim scroll "label=How Heartseed works" down`, `sim tap
+    "label=How Heartseed works"`, `sim snapshot home-how`; `sim tap
+    "label=Begin"`, `sim snapshot home-how-grows`; `sim tap "label=See
+    your field"`, `sim snapshot home-how-tips`; then `sim doctor`.
+    `home-how-skip`: `sim tap "label=Got it"`, the row again, `sim tap
+    "label=Skip"`, `sim snapshot home-how-skip`.
+    `home-tips-leave`: the row, `Begin`, `See your field`; `sim tap
+    "label=Practice anyway"`, `sim open / --expect "id=session"
+    --no-relaunch`, `sim snapshot home-tips-today`; `sim tap "label=Your
+    field"`, `sim snapshot home-tips-back`.
 11. `home-motion-reach` (a keep-guard): `sim relaunch`,
     `sim open / --expect "id=today-card"`, at once `sim snapshot
     home-motion-reach` → the heading `Your field`, the Today card's button

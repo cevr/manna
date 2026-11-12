@@ -56,6 +56,11 @@ whose visit leaves the counts line the plan's.
   `Voice`. No snapshot of the first minute (`first-launch` to
   `first-planted`) holds `Minutes`, `Voice`, `Settings`, `to tend` or
   `Nothing to tend`.
+- `settings-welcome`: at `first-home`, the sheet holds `Show the welcome
+  again` and `About`, in that order, at its end; `Show the welcome again`
+  shows the heading `Heartseed` with `Begin` and `Skip`, and no `Done` and
+  no `Minutes` radio in the tree (the sheet closed in the tap); its `Skip`
+  shows home, `id=today-card`, and no tip.
 - `session-header`: in a raw snapshot of the open sheet, each radio and
   the `Voice` button lies wholly inside the window and clear of the bottom
   safe area. A tap on `10 min` with no scroll checks it.
@@ -130,6 +135,11 @@ sets them.
    `sim tap "label=Voice"`, pick `5 min` again, then `sim tap
    "label=Done"`.
 4. (`session-listening` is `run.md`'s `run-listening`.)
+   `settings-welcome`: `sim scroll "label=Settings" down`, `sim tap
+   "label=Settings"`, `sim snapshot settings-welcome-sheet`; `sim tap
+   "label=Show the welcome again"`, `sim snapshot settings-welcome`;
+   `sim tap "label=Skip"`, `sim open / --expect "id=today-card"
+   --no-relaunch`, `sim snapshot settings-welcome-home`.
 5. `session-field`: `sim tap "label=Isaiah 41:10, seed"`,
    `sim tap "label=Your field"`, `sim snapshot session-field` → the
    heading `Your field`, the Today card's `1 verse · about <k> min` and

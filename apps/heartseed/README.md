@@ -1,9 +1,10 @@
 # Heartseed
 
 Scripture memorization on One (React Native on iOS, react-native-web on the
-web). A fresh install opens the first minute (`src/first`, below): hear
-the passage, say it with first letters, say it alone, and its first seed is
-planted. Every later launch opens on home, the field (`src/field.ts`,
+web). A fresh install opens the first minute (`src/first`, below): a
+welcome that says what the app is, how a verse grows, then hear the
+passage, say it with first letters, say it alone, and its first seed is
+planted; home then shows three tips once. Every later launch opens on home, the field (`src/field.ts`,
 Field and Home, below): a row per passage, a plant per verse, the days
 sown and the harvest, and fixed at its top the Today card that says what
 the day's plan holds (`src/home/today.ts` over `src/session.ts`, below)
@@ -303,8 +304,8 @@ and keeps nothing. Say it reads no word aloud.
 
 ## First minute
 
-One promise, the passage, in three phases, then its seed; no sign-up and
-no setting. The root route (`app/index.tsx`) decides once per launch, at
+Two screens that say what the app is, then one promise, the passage, in
+three phases, then its seed; no sign-up and no setting. The root route (`app/index.tsx`) decides once per launch, at
 the garden's read, what it shows in place (no navigation, no other route):
 
 - While the read runs (a held store, its retries), a pending frame with the
@@ -317,9 +318,37 @@ the garden's read, what it shows in place (no navigation, no other route):
   show.
 - Planting the seed does not swap the screen: Planted shows until
   `Continue`, which opens home, its plan made with the new seed in it (in
-  the done state, `Nothing to tend now`).
+  the done state, `Nothing to tend now`), with its three tips (Home,
+  below).
 - `Root` takes no props: the garden's read alone decides the opening, in
   the tests as on the device, so no test opens Today on a read garden.
+
+Before the phases, two screens (`src/first/intro.tsx`), each one heading
+over a scroll view of its words, its controls fixed under it, no phase
+bar, no word of the verse, and nothing written, read aloud, heard,
+sounded or ticked:
+
+- The welcome, `Heartseed`: the growing seed, `Plant a verse. Say it
+  from memory. Watch it grow.`, `Your first verse` over the passage's
+  reference (its own node, `id=reference`, the simulator's ready
+  target), the filled `Begin` and the quiet `Skip`, which goes straight
+  to `Hear it`.
+- How a verse grows, `Every verse is a plant`: the four stages' still
+  40 pt drawings over their names (`seed`, `blade`, `ear`, `full corn`),
+  `Say it from memory and it grows. Each day the app brings back the
+  ones that are ready.`, `Mark 4:28`, and `Plant your first verse`.
+
+The growing seed (`src/first/growing.tsx` over the pure plan
+`src/first/growth.ts`) stacks the four drawings, each 112 pt in one
+120 pt place hidden from the screen reader, and moves their opacity
+alone: the seed holds 1.1 s, cross-fades over 0.5 s to the blade, the
+ear, full corn, which rests 1.6 s, then back to the seed, a cycle of
+6.9 s with at most two neighbouring stages showing and nothing cut. One
+Reanimated shared value is its clock, on the UI thread (`withRepeat` of
+a linear `withTiming`, `ReduceMotion.System`); it starts at full corn's
+end, so the first frame is full corn as the fade into the seed begins,
+and under Reduce Motion the repeat ends at once on that frame, full corn
+still. Its `at` draws one instant still: the tests' clock.
 
 The phases (`src/first/screen.tsx`, with the phase bar, the large round
 button and the Georgia verse of the prototype):
@@ -350,12 +379,14 @@ button and the Georgia verse of the prototype):
 
 The flow's rules are a pure reducer, `src/first/flow.ts`: `openingOf` the
 garden's view decides the opening (`pending`, `first`, `home` or
-`today`) and `shownOpening` holds it for the launch; `step` moves each phase on only at its own input (Next, the
+`today`) and `shownOpening` holds it for the launch; `begin` starts at
+the welcome, whose `Begin` shows how a verse grows and whose `Skip` shows
+hear, as does `Plant your first verse`; `step` moves each phase on only at its own input (Next, the
 voice's ending, a recital of the phase's own, the garden's plant), and no
 phase moves back. A recital is the phase's own when Say it's `startedAt`
 differs from the one the phase began with. Nothing of the flow is stored
 but the alone recital's recall, so a relaunch mid-flow starts again at
-`Hear it`, and the runtime's close stops a reading under way.
+the welcome, and the runtime's close stops a reading under way.
 
 ## Garden
 
@@ -583,7 +614,7 @@ launch counts them.
   legend of the four stages (testID `legend`), hidden from the screen
   reader, over the caption `Mark 4:28`, then two rows the width of the
   field (testID `end-row`): `Settings` (Settings, below) and `How
-  Heartseed works`, which opens About (About, below). A
+  Heartseed works`, which replays the welcome (Home, below: the tour). A
   furrow's head holds its icon (`furrow-icon`), its title as one button
   named `Open <title>`, at least 44 pt tall, showing the title and a `›`
   hidden from the screen reader (never a heading, so a reference spelled
@@ -618,8 +649,8 @@ launch counts them.
 
 ## About
 
-`About` in home's Settings sheet (Settings, below), and home's `How
-Heartseed works` row, open the About screen
+`About` in home's Settings sheet (Settings, below), and nothing else,
+opens the About screen
 (`src/about/screen.tsx`, `AboutScreen({ onField })`): a bar fixed above a
 scroll view holding the way back, `Your field` (shown `‹ Your field`),
 which returns to the field with the sheet closed; in the scroll view the
@@ -649,7 +680,7 @@ has a control named `Settings`: not Today, the chooser, About, the first
 minute or an unread garden.
 
 The row opens the Settings sheet (`src/settings/sheet.tsx`,
-`SettingsSheet({ onDone, onAbout })`): React Native's `Modal`, `slide`,
+`SettingsSheet({ onDone, onWelcome, onAbout })`): React Native's `Modal`, `slide`,
 `pageSheet`, `allowSwipeDismissal` (iOS lets a page sheet be swiped down
 only with it), `onRequestClose` (the swipe down, the web's Escape) and its
 backdrop the scheme's ground, so no white container shows in dark. Home
@@ -663,7 +694,9 @@ About, a recital that brings Today) or a relaunch closes it.
   group `Minutes` (`2 min`, `5 min`, `10 min`, `20 min`; Session, below);
   `Reads new verses aloud` over the `Voice` button (Voice, above, and
   Session); `Appearance` over the appearance's radio group (Look, below);
-  then `About` (About, above). Each choice shows once its stored choice is
+  then `Show the welcome again`, whose tap closes the sheet in the same
+  turn and replays the welcome in home's place (Home, below: the tour),
+  and `About` (About, above), both in one style. Each choice shows once its stored choice is
   read. Every control is at least 44 pt tall, and every text is in a text
   role at WCAG AA on the sheet's ground, in both schemes.
 - **A tap** goes through the app's own atoms (`chooseMinutes`,
@@ -1275,6 +1308,24 @@ opens on it:
   so does the first minute's `Continue`; a relaunch decides again, the
   visit, the hold, the list shown and the screen all gone. An unread
   garden opens Today.
+- **The tour** (`src/first/tour.ts`, the root's state for the launch,
+  never stored, `off` at every launch). Planted's `Continue` shows home
+  with three tips (`src/field/tips.tsx`): `tip-1` under the card,
+  `Come back each day and tap Start. It brings what is ready.`; `tip-2`
+  under the `Lists` row while `Add a list` shows, `Add a psalm, a
+  passage or a set of promises when you want more.`; `tip-3` under the
+  first furrow's row, `A list is a set of verses. Tap its name to open
+  it.` Each is text in the page's flow, `onInk` on `ink` after a numbered
+  badge hidden from the screen reader, and no control; `Got it`, the
+  quiet pill fixed under the scroll view (home's only foot, there only
+  with the tips), ends them. `How Heartseed works` and the Settings
+  sheet's `Show the welcome again` replay the welcome and how a verse
+  grows in home's place (no `Your first verse`, no reference; the second
+  screen's button `See your field`, which shows home with the tips); the
+  replay's `Skip` shows home with none. Leaving home for any other
+  screen, Say it's forced Today among them, ends the tour. The replay
+  writes nothing, reads nothing aloud and leaves the plan, the visit and
+  the hold as they were.
 - **Home's first frame.** Home shows the pending frame (the reference
   alone) until the garden, the passages, the taught collections, the
   session and the greeting are known and, over read passages, the
@@ -2142,7 +2193,28 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Planted's drawing subtree and the hear phase's `reading` view named
     explicitly). Every frame is held to `rootFaults` and the first rig's
     image invariant: only Planted owes the large seed, not a named wrapper
-    alone; pending, hear, letters, alone and failed writes owe none.
+    alone; pending, hear, letters, alone and failed writes owe none. The
+    welcome and how a verse grows owe their four drawings and their own
+    controls alone (`introFaults` of `src/test/plant-image-rule.ts`).
+  - `test:intro`: `src/first/tour.test.ts` (the tour's whole table and
+    3,000 generated tap sequences against it), `growth.property.test.ts`
+    (the growing seed's plan over generated clocks, and the points the
+    adapter reads equal to `growthAt`), `rule.test.ts` (hsintro's frame
+    rule, `introRuleFaults` in `src/test/root-rule.ts`, one offending
+    frame per clause) and `intro.test.tsx` (both screens mounted, first
+    run and replay, in both schemes: their heading, controls outside the
+    scroll view, drawings, reference, `Mark 4:28`, no verse words, AA).
+  - `test:growing`: `src/first/growing.test.tsx`, the growing seed
+    mounted: `growthAt(at)` on a driven clock in both schemes, full corn
+    still under Reduce Motion, the loop's first frame with motion on, an
+    unmount mid-loop, and the welcome's other nodes the same in every
+    frame.
+  - `test:tour-walk`: `src/first/tour-walk.test.tsx` (a fresh device
+    through Planted's `Continue`) and `tour-walk-planted.test.tsx` (two
+    planted ones), the tour through the root over the bar rig on
+    generated commands (`src/test/tour-walk.ts`): after every step the
+    screen and the tips equal `tourStep`'s, and across each replay the
+    field (the chosen verse's card among it) and the disk are as before.
   - `test:root`: `src/first/root.test.tsx` and `root-b.test.tsx`, the root
     route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
@@ -2223,7 +2295,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     whose every record read fails, while writes work: its finished recital
     is written with its zone's offset and the next healthy launch counts
     its day.
-  - `test:field-screen`: `src/field/screen.test.tsx`, a launch on home,
+  - `test:field-screen`: `src/field/tips.test.tsx`, each of home's tips
+    in both schemes (its words, `onInk` on `ink`, a hidden badge, no
+    control); `src/field/screen.test.tsx`, a launch on home,
     `Start` to Today, then home by Today's `Your field` and back by
     `Start`, in happy-dom over the real store on the device through
     `src/test/field-rig.tsx` (the rig lands on home, and holds every frame
@@ -2979,12 +3053,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     image) over hosts built by hand, one cell per fault, and the preload's
     preference for reduced motion; `src/home/motion-guard.test.ts`, M7's
     source guard read with oxc-parser over `src/home`, `src/field`,
-    `src/settings`, `src/shelves`, `src/run` and `app/index.tsx`: every
+    `src/settings`, `src/shelves`, `src/run`, `src/first` and
+    `app/index.tsx`: every
     entering value and Reanimated call passes `ReduceMotion.System`, no
     CSS animation or React Native `Animated`, `entering` only on an
-    `aria-hidden` element, both sheets slide, one `useEffect` (the sway's,
-    in `src/field/moves.tsx`), and seeded bad sources each named by file,
-    line and rule.
+    `aria-hidden` element, both sheets slide, exactly two `useEffect`s
+    (the sway's, in `src/field/moves.tsx`, and the growing seed's, in
+    `src/first/growing.tsx`), no `setTimeout`, `setInterval`,
+    `requestAnimationFrame`, `Date` or `performance` in the growing seed's
+    two files, and seeded bad sources each named by file, line and rule.
   - `test:home-motion-root`: `src/home/motion-root.test.tsx`, motion
     through the root with motion on (`under` of `src/test/motion.ts`, which
     sets happy-dom's preference and mounts a `ReducedMotionConfig` of

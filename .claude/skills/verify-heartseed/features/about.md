@@ -2,9 +2,10 @@
 
 The About screen (`apps/heartseed/src/about/screen.tsx`) holds the natural
 voice's credits and the Apache License 2.0 whole, which the app owes for
-the natural voice's vendored code. It is reached from home by the row `How
-Heartseed works` at the field's end, or by the `Settings` row there, then
-the button `About` in the Settings sheet,
+the natural voice's vendored code. It is reached from home by the
+`Settings` row at the field's end, then the button `About` in the
+Settings sheet, and by no other way (`How Heartseed works` replays the
+welcome, `first.md`),
 and left by the button `Your field` (shown `‹ Your field`) in its bar,
 fixed above its scroll view, which returns to home with the sheet closed;
 in place in the root route: no route, no link, no tab. Like every field
@@ -29,8 +30,8 @@ drives them); it writes nothing, and a launch never opens on it.
 
 ## How to get to it (user POV)
 
-- From home, scroll to the field's end and tap `How Heartseed works`, or
-  `Settings` then `About` in the sheet; tap
+- From home, scroll to the field's end and tap `Settings`, then `About`
+  in the sheet; tap
   `Your field` to come back.
 
 ## Driving it

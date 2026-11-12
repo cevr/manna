@@ -41,7 +41,8 @@ chooses its verse (`home.md`). Each furrow's title is the button `Open
 (`handbook.md`) lie on its page. A legend of the four stages and the caption `Mark 4:28`,
 then the rows `Settings` (`home.md`: the Settings sheet, with the
 `Minutes` radios, `Voice`, the appearance and `About`, which opens the
-About screen, `about.md`) and `How Heartseed works` (About) close the
+About screen, `about.md`) and `How Heartseed works` (the welcome
+replayed, `home.md`'s `home-how`) close the
 scroll view. Above the scroll view, fixed, the greeting by the hour
 (`home.md`) and the Today card (`id=today-card`: its lines and `Start`,
 else `Practice anyway`), and no

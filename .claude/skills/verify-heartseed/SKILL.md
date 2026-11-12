@@ -81,8 +81,8 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    that folder's Heartseed/Info.plist (`detail.schemeAdded`), builds Debug for the simulator (arm64 only, its
    derived data in the `build` folder of the app's `ios`), installs,
    launches, and waits for `label=Isaiah 41:10`, the reference the
-   launch's pending frame, the first minute, home (its furrow's title)
-   and Today all show
+   launch's pending frame, the first minute's welcome and phases, home
+   (its furrow's title) and Today all show
    (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
    ends `** BUILD SUCCEEDED **`, and `detail.buildMs` is the build's time.
    Cold, a build took 397 s on a loaded host; a later one is incremental.
@@ -102,8 +102,9 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    ```
 
    The revoke stops the running app, and a link that launches the app
-   lands on the screen the launch opens (the first minute on a fresh
-   install, else home), so a drive's first step after it is `sim open /`.
+   lands on the screen the launch opens (the first minute's welcome,
+   `Heartseed`, on a fresh install, else home), so a drive's first step
+   after it is `sim open /`.
 
 ## Doctor
 
@@ -152,8 +153,10 @@ still be launching. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
-the hymnal's skill describes; in the first minute a reader taps `Listen`,
-`Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
+the hymnal's skill describes; in the first minute a reader taps the
+welcome's `Begin` or `Skip`, `Plant your first verse`, `Listen`,
+`Next`, `Say it` and `Continue`, then home's `Got it` under its tips
+(`id=tip-1` … `id=tip-3`); on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
 word's mark, `Next` and `Your field` (back to home); on the
 field, which is home, every launch's screen after the first minute: in
@@ -164,10 +167,11 @@ in its scroll view `Add a list`
 (`id=add-list`), in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready; one tap opens Today on that verse, whole), and at its end the rows `Settings` and `How Heartseed
-works` (scroll to them first: `sim scroll "label=Settings" down`); in the Settings sheet `Done`, a `Minutes`
+works` (scroll to them first: `sim scroll "label=Settings" down`; the
+second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
-raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
-`About`; in the Add a list sheet (`Add a list` opens it) `Done`, a
+raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`),
+`Show the welcome again` and `About`; in the Add a list sheet (`Add a list` opens it) `Done`, a
 shelf head by its title (`Any passage`, `Psalms`, …, `Seven Churches`) and an offer's
 `Plant <reference>` or `Plant <title>`; on a list's own page
 (`id=list-screen`) `Your field`, `Practice this list`, its rows named as
@@ -182,9 +186,10 @@ development probe (`sim open probe/home --expect "label=Home probe"`,
 Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
-  install opens on: hear it (the voice's lit words, silent on the
+  install opens on: the welcome and how a verse grows (or `Skip`), hear
+  it (the voice's lit words, silent on the
   simulator), say it with first letters, say it alone, Planted, then home
-  in the done state (`first-home`). Run it first: the other features
+  with its three tips and, after `Got it`, in the done state (`first-home`). Run it first: the other features
   start from its `first-home`. Today is reached from home by `Start` once
   a verse is due (after a `sim relaunch`), else by `Practice anyway` or a
   tap on the plant `Isaiah 41:10, seed`. Its `first-plantset` row pairs native

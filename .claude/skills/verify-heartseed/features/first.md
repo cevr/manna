@@ -2,8 +2,19 @@
 
 A launch whose garden read completes and holds no recall of any verse
 opens the first minute (`apps/heartseed/src/first/screen.tsx`, rendered in
-place by the root route `apps/heartseed/app/index.tsx`), not Today. It is
-one promise in three phases, then the seed:
+place by the root route `apps/heartseed/app/index.tsx`), not Today. Two
+screens say what the app is (`apps/heartseed/src/first/intro.tsx`):
+
+- The welcome, the heading `Heartseed`: a seed that grows to full corn and
+  begins again (still at full corn under Reduce Motion; its four drawings
+  are hidden, so the tree names no stage and no image), `Plant a verse.
+  Say it from memory. Watch it grow.`, `Your first verse` over
+  `Isaiah 41:10`, `Begin` and `Skip`. `Skip` goes straight to `Hear it`.
+- `Begin` shows `Every verse is a plant`: the texts `seed`, `blade`,
+  `ear` and `full corn` under four still drawings, its line, `Mark 4:28`,
+  and one button, `Plant your first verse`, which shows `Hear it`.
+
+Then it is one promise in three phases, then the seed:
 
 1. `Hear it`: the verse whole, one node per word (`word-<i>`). `Listen`
    (only while the voice's choice is not Off and it is not reading) has the voice
@@ -25,12 +36,14 @@ one promise in three phases, then the seed:
 4. `Planted`, once the garden's read holds that recall: `Stage: seed`, the
    still hand-drawn seed at 112 × 112 pt in its 120 pt place, and
    `Continue`, which opens home (the field) in the
-   done state.
+   done state with three tips (`id=tip-1` under the card, `id=tip-2` under
+   `Lists`, `id=tip-3` under the first furrow) and `Got it`, which ends
+   them. A relaunch shows none.
 
 Until the read completes the launch shows only the reference: no heading,
 no button. A garden holding any verse's recall opens home; an unread
 garden opens Today, with no `Your field`.
-A relaunch mid-flow starts again at `Hear it`: nothing of the flow is stored
+A relaunch mid-flow starts again at the welcome: nothing of the flow is stored
 but the one recall. There is no sign-up and no setting.
 
 On the simulator the voice makes no sound: the module logs
@@ -42,7 +55,20 @@ word 11 and the seed is graded Hard.
 
 ## Sub-features
 
-- `first-launch`: a fresh install opens `Hear it`, with `Isaiah 41:10`,
+- `first-welcome`: a fresh install opens the welcome: the one heading
+  `Heartseed`, the texts `Plant a verse. Say it from memory. Watch it
+  grow.`, `Your first verse` and `Isaiah 41:10`, the buttons exactly
+  `Begin` and `Skip`, the same nodes in snapshots 3 s apart while the seed
+  grows, no node named for a stage or an image, no `word-<i>`, `Listen`,
+  `Next`, `Say it` or `Your field`.
+- `first-grows`: `Begin` shows `Every verse is a plant` with `seed`,
+  `blade`, `ear`, `full corn` and `Mark 4:28`, one button and no `Begin`
+  or `Skip`; `Plant your first verse` shows `Hear it` with `Listen`,
+  `Next` and 37 word nodes.
+- `first-skip`: a relaunch at `Hear it` shows the welcome again; its
+  `Skip` shows `Hear it` with `Listen` and `Next`, and nothing spoke
+  before the first `Listen` tap.
+- `first-launch`: from `first-skip`'s `Hear it`: `Isaiah 41:10`,
   `Listen` and `Next`, the word nodes, and no `Today`, no `Stage:` label
   and no `Say it`.
 - `first-hear`: `Listen` reads: `id=reading` holding the word nodes, one
@@ -59,7 +85,15 @@ word 11 and the seed is graded Hard.
   `Stage:`; its recital plants the seed.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
-- `first-home`: `Continue` opens home in the done state (`home.md`'s
+- `first-tips`: `Continue` opens home with `id=tip-1`, `id=tip-2` and
+  `id=tip-3`, each once, and `Got it`; after `Got it`, `id=today-card`
+  with `Practice anyway` and none of the four; after a relaunch, none
+  again.
+- `first-still` (**phone only**, the owner's hand): with Reduce Motion on
+  in iOS Settings, a fresh install's welcome shows full corn, still; with
+  it off, a seed that grows to full corn and begins again, gently. The
+  simulator's tree shows neither.
+- `first-home`: after `Got it`, home in the done state (`home.md`'s
   `home-open`): the heading `Your field`, on the Today card
   `All tended for today` and `Practice anyway` with no `Start`, and no
   heading `Today`, no label
@@ -101,10 +135,19 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Uninstall as above, then
    the install, then `xcrun simctl privacy <udid> revoke microphone
    app.heartseed`.
-2. `first-launch`: `sim open / --expect "label=Hear it"`, `sim snapshot
-   first-launch` → the heading `Hear it`, `Isaiah 41:10`, the buttons
-   `Listen` and `Next`; no `Today`, no label starting `Stage:`, no
-   `Say it`; 37 word nodes (count them, never print them).
+2. `first-welcome`: `sim install` answers `detail.expect`
+   `label=Isaiah 41:10`; `sim open / --expect "label=Begin"`, `sim snapshot
+   first-welcome` → as the row says; `sim open / --expect "label=Isaiah
+   41:10" --no-relaunch` answers within 5 s; two more snapshots 3 s apart
+   hold the same nodes.
+   `first-grows`: `sim tap "label=Begin"`, `sim snapshot first-grows`,
+   `sim tap "label=Plant your first verse"` → `Hear it`.
+   `first-skip`: `sim relaunch`, `sim open / --expect "label=Begin"`
+   (record `retried`), `sim tap "label=Skip"`.
+   `first-launch`: `sim open / --expect "label=Hear it" --no-relaunch`,
+   `sim snapshot first-launch` → the heading `Hear it`, `Isaiah 41:10`,
+   the buttons `Listen` and `Next`; no `Today`, no label starting
+   `Stage:`, no `Say it`; 37 word nodes (count them, never print them).
 3. `first-hear`: `sim tap "label=Listen"`, then at once two raw snapshots
    about 1 s apart (`agent-device snapshot --json --raw --observe-only
    --force-full --session verify-heartseed`, in the drive's HOME) → in each,
@@ -122,8 +165,11 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    "label=Planted" --timeout 30`.
 6. `first-planted`: `sim snapshot first-planted` → `Planted`,
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
-7. `first-home`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=today-card" --no-relaunch`, `sim snapshot first-home` → the heading `Your field`;
+7. `first-tips`: `sim tap "label=Continue"`, `sim open / --expect
+   "id=tip-1" --no-relaunch`, `sim snapshot first-tips` → `id=tip-1`,
+   `id=tip-2`, `id=tip-3` and `Got it`. `first-home`: `sim tap "label=Got
+   it"`, `sim open / --expect "id=today-card" --no-relaunch`, `sim
+   snapshot first-home` → no tip and no `Got it`; the heading `Your field`;
    on the Today card `All tended for today`, `Nothing is due right now.`
    and `Practice anyway`, no `Start` and no `About`; the buttons
    `Settings` and `How Heartseed works` (at the scroll view's end) and no
@@ -132,8 +178,8 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    label, no `Say it` and no `Next` (the done state).
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once `sim snapshot
-   first-again-launch` → no `Hear it`, `Say it with help`, `Say it alone`
-   or `Planted`. Then `sim open / --expect "id=today-card" --no-relaunch`,
+   first-again-launch` → no `Heartseed`, `Hear it`, `Say it with help`,
+   `Say it alone` or `Planted`, and no tip. Then `sim open / --expect "id=today-card" --no-relaunch`,
    `sim snapshot first-again` → the heading `Your field`, no first-minute
    heading, and the done state, as in step 7. Once the passage is due,
    `run.md`'s `run-due` shows `today-passage` (`today.md`).
@@ -184,6 +230,8 @@ phone prototype is part of this row. `today.md`'s `today-plantset` and
 - A `Your field` heading on a fresh install means the app was not
   uninstalled first; a `Today` means the garden's read failed (an unread
   garden opens Today, claiming no stage).
-- No relaunch mid-flow is driven live: the unit tests own it
+- No relaunch mid-flow is driven live past `first-skip`'s: the unit tests own it
   (`src/first/screen.test.tsx`), and the voice-off hear phase, since no
   screen of the first minute sets the voice's choice.
+- A `Hear it` as a fresh install's first heading means the build predates
+  the welcome.
