@@ -74,37 +74,39 @@ drive:
 1. The app is booted with the garden holding the passage's seed and the
    microphone revoked, and the passage due (`run.md`, Driving it, steps
    1-3).
-2. `run-due`'s snapshot → `today-passage` holds in the form its stage
-   gives (`today.md`: at a seed, its words in letters), a node `Say it`
-   exists, no `Listening`, no grade label. Record the role the snapshot
-   gives the `Today` node.
-3. `sayit-ended`: `run.md` step 4 (`run-recite`): `sim tap "label=Say it"`
-   → ok, a raw snapshot at once (record whether `Listening` is present),
-   the wait for the end with `sim tap "label=36 of 37 words" --timeout 30`
-   (a tap on the count does nothing), then `sim snapshot run-recite` → the
-   label `36 of 37 words`; exactly one distinct label matching
-   `^Missed word [0-9]+$`, and it is `Missed word 11`; `Suggested: Hard`;
-   the labels `Again`, `Hard`, `Good` and `Easy`, every `Hard` line
-   `[checked]` and no `Again`, `Good` or `Easy` line `[checked]`; `Next`
-   and no `Say it` or `Listening`; no line with the role `alert`. Then
-   `xcrun simctl spawn <udid> log show --last 10m --style compact
-   --predicate 'eventMessage CONTAINS "[dictation]" AND process ==
-   "Heartseed"'` holds `[dictation] replay session=` and no
-   `[dictation] listen`.
-4. `sayit-grade`: `sim tap "label=Good"`, then `sim snapshot sayit-good`
-   → every `Good` line `[checked]`, no `Hard` line `[checked]`, and
-   `Suggested: Hard` still present.
-5. `sayit-peek`: `sim tap "label=Missed word 11"`, then
-   `sim snapshot sayit-peek` → no label matching `^Missed word`; the label
+2. `run/run-due` → `today-passage` holds in the form its stage gives
+   (`today.md`: at a seed, its words in letters), a node `Say it` exists,
+   no `Listening`, no grade label. Record the role the receipt gives the
+   `Today` node.
+3. `sayit-ended`: `run.md` step 4 (`sim journey run-recite`): the tap on
+   `Say it`, then the wait for the end (a tap on `36 of 37 words` does
+   nothing). `run-recite/run-listening`: whether `Listening` is present.
+   `run-recite/run-recite`: the label `36 of 37 words`; exactly one
+   distinct label matching `^Missed word [0-9]+$`, and it is
+   `Missed word 11`; `Suggested: Hard`; the labels `Again`, `Hard`, `Good`
+   and `Easy`, every `Hard` line `[checked]` and no `Again`, `Good` or
+   `Easy` line `[checked]`; `Next` and no `Say it` or `Listening`; no line
+   with the role `alert`. Then `xcrun simctl spawn <udid> log show --last
+   10m --style compact --predicate 'eventMessage CONTAINS "[dictation]"
+   AND process == "Heartseed"'` holds `[dictation] replay session=` and
+   no `[dictation] listen`.
+4. `sayit-grade`: `run.md` step 5 (`sim journey run-next`) taps `Good`
+   first. `run-next/sayit-grade`: every `Good` line `[checked]`, no `Hard`
+   line `[checked]`, and `Suggested: Hard` still present.
+5. `sayit-peek`: its next tap is `Missed word 11`.
+   `run-next/sayit-peek`: no label matching `^Missed word`; the label
    `36 of 37 words, 1 peeked`; exactly one distinct label ending
    `, peeked`; every `Good` line still `[checked]`; `Next`. When `grow.md`
-   runs in the same drive, this tap is its `grow-peek` too.
-6. `sayit-again`: tests only (above). Go on with `run.md` step 5.
-   `lines-say`, in a sitting of its own: `today.md`'s Lines drive to
-   `Isaiah 43:2`, `sim tap "label=Say it"`, the wait for a label ending
-   ` of 38 words`, then `sim snapshot lines-say` → the readout above (the
-   count `k`, the checked grade, and the frames of `word-6`, `word-11`,
-   `word-20`, `word-26` and `word-31`, each starting a row).
+   rides the same drive, this tap is its `grow-peek` too.
+6. `sayit-again`: tests only (above). `run-next` goes on with `run.md`
+   steps 5-6. `lines-say`, in a sitting of its own: on Today at
+   `Isaiah 43:2` (`today.md`'s Lines drive, after `light.md`'s
+   `light-lines-done`), `sim journey sayit-lines` → `"ok":true`: `Say it`,
+   then the wait for the end (a tap on the count label, `7 of 38 words`:
+   live at this head, the simulator's replay matched 7 of the 38 words). `sayit-lines/lines-say`: the
+   count `k`, the checked grade; then a raw snapshot for the frames of
+   `word-6`, `word-11`, `word-20`, `word-26` and `word-31`, each starting
+   a row.
 7. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
 Every snapshot holds the passage's words: read each for the strings above,
