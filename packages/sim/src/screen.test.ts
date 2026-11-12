@@ -146,10 +146,12 @@ describe('the screen a scroll pans', () => {
 
 /** A small seeded generator, so each property's cases are the same on every run. */
 const seeded = (seed: number) => {
-  let state = seed;
+  let state = seed >>> 0;
   return (below: number) => {
-    state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
-    return state % below;
+    state = (state + 0x6d_2b_79_f5) >>> 0;
+    let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return Math.floor((((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296) * below);
   };
 };
 
@@ -190,6 +192,19 @@ describe('the scroll view on the hymnal’s screens', () => {
         }
         expect(moved(sheet, hymnPage(-506, Option.some(495)), 'down')).toBe(false);
         expect(moved(sheet, hymnPage(116, Option.some(200)), 'down')).toBe(true);
+      }),
+  );
+
+  it.effect(
+    'with a sheet whose content fits over the page, a scroll down owns the sheet and finds it at its end, never the page under it',
+    () =>
+      Effect.sync(() => {
+        const covered = hymnPage(116, Option.some(495), SHEET.height);
+        const sheet = area(covered, 'down');
+        expect(sheet.frame).toEqual(SHEET);
+        expect(hides(sheet, 'down')).toBe(false);
+        expect(moved(sheet, hymnPage(-506, Option.some(495), SHEET.height), 'down')).toBe(false);
+        expect(area(hymnPage(116), 'down').frame).toEqual(PAGE);
       }),
   );
 
@@ -245,31 +260,89 @@ describe('the scroll view on the hymnal’s screens', () => {
   );
 
   it.effect(
-    'property: a scroll view listed after others takes the scroll, wherever it lies and however small',
+    'property: the scroll goes to the frontmost view at its pan’s start, its content overflowing or fitting, never to one a later view lies over there',
     () =>
       Effect.sync(() => {
         const next = seeded(11);
-        for (let run = 0; run < CASES; run += 1) {
-          const pages = 1 + next(3);
-          const frames = Array.from({ length: pages + 1 }, () => {
+        const directions = ['up', 'down', 'left', 'right'] as const;
+        let fitting = 0;
+        let covered = 0;
+        for (let run = 0; run < CASES * 2; run += 1) {
+          const direction = directions[next(4)] ?? 'down';
+          const vertical = direction === 'up' || direction === 'down';
+          const views = Array.from({ length: 2 + next(4) }, (_, at) => {
             const width = 60 + next(342);
             const height = 60 + next(700);
-            return { x: next(402 - width + 1), y: next(874 - height + 1), width, height };
+            const rect = { x: next(402 - width + 1), y: next(874 - height + 1), width, height };
+            const grows = next(2) === 1;
+            const content = {
+              ...rect,
+              width: width * (1 + 2 * Number(grows && !vertical)),
+              height: height * (1 + 2 * Number(grows && vertical)),
+            };
+            const nested = at > 0 && next(4) === 0;
+            return {
+              at,
+              rect,
+              content,
+              grows,
+              hittable: next(5) > 0,
+              parent: Number(nested) * at - 1,
+            };
           });
           const nodes: ReadonlyArray<Node> = [
             { index: 0, type: 'Application', rect: { x: 0, y: 0, width: 402, height: 874 } },
-            ...frames.flatMap((rect, at): ReadonlyArray<Node> => [
-              { index: 1 + at * 2, parentIndex: 0, type: 'ScrollView', rect, hittable: true },
+            ...views.flatMap((view): ReadonlyArray<Node> => [
               {
-                index: 2 + at * 2,
-                parentIndex: 1 + at * 2,
+                index: 1 + view.at * 2,
+                parentIndex: Math.max(0, 2 + view.parent * 2),
+                type: 'ScrollView',
+                rect: view.rect,
+                hittable: view.hittable,
+              },
+              {
+                index: 2 + view.at * 2,
+                parentIndex: 1 + view.at * 2,
                 type: 'Other',
-                rect: { ...rect, height: rect.height * 3 },
+                rect: view.content,
               },
             ]),
           ];
-          expect(area(nodes, 'down').index).toBe(1 + pages * 2);
+          const inside = (view: number, outer: number): boolean => {
+            const parent = views[view]?.parent ?? -1;
+            return parent >= 0 && (parent === outer || inside(parent, outer));
+          };
+          const growing = views.filter((view) => view.grows);
+          const got = areaFor(nodes, direction);
+          if (growing.length === 0) {
+            expect(Option.isNone(got)).toBe(true);
+            continue;
+          }
+          const chosen = Option.getOrThrow(got);
+          const view = (chosen.index - 1) / 2;
+          const frontmost = Math.max(...growing.map((each) => each.at));
+          expect(view).toBeGreaterThanOrEqual(frontmost);
+          const start = panFor(chosen, direction);
+          const over = views.filter(
+            (other) =>
+              other.at > view &&
+              other.hittable &&
+              !inside(other.at, view) &&
+              start.x >= other.rect.x &&
+              start.x <= other.rect.x + other.rect.width &&
+              start.y >= other.rect.y &&
+              start.y <= other.rect.y + other.rect.height,
+          );
+          expect(over).toEqual([]);
+          if (view !== frontmost) {
+            expect(views[view]?.hittable).toBe(true);
+            expect(inside(view, frontmost)).toBe(false);
+          }
+          if (!(views[view]?.grows ?? true)) fitting += 1;
+          if (view !== frontmost) covered += 1;
         }
+        expect(fitting).toBeGreaterThan(20);
+        expect(covered).toBeGreaterThan(20);
       }),
   );
 });

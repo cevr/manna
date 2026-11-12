@@ -167,30 +167,38 @@ export interface Area {
 
 const isArea = (node: Node) => AREAS.has(node.type ?? '') || node.kind === 'scroll-area';
 
-/** How many scroll views hold `node`, by its parents' chain in `byIndex`. */
-const depthOf = (node: Node, byIndex: ReadonlyMap<number, Node>) => {
-  let depth = 0;
+/** Each node of `nodes` by its index. */
+const indexed = (nodes: ReadonlyArray<Node>): ReadonlyMap<number, Node> =>
+  new Map(
+    nodes.flatMap((node) =>
+      Option.toArray(Option.map(Option.fromUndefinedOr(node.index), (at) => [at, node] as const)),
+    ),
+  );
+
+/** The nodes that hold `node`, nearest first, by its parents' chain in `byIndex`. */
+const holdersOf = (node: Node, byIndex: ReadonlyMap<number, Node>): ReadonlyArray<Node> => {
+  const holders: Array<Node> = [];
   let parent = Option.flatMap(Option.fromUndefinedOr(node.parentIndex), (at) =>
     Option.fromUndefinedOr(byIndex.get(at)),
   );
-  while (Option.isSome(parent)) {
-    if (isArea(parent.value)) depth += 1;
+  while (Option.isSome(parent) && !holders.includes(parent.value)) {
+    holders.push(parent.value);
     parent = Option.flatMap(Option.fromUndefinedOr(parent.value.parentIndex), (at) =>
       Option.fromUndefinedOr(byIndex.get(at)),
     );
   }
-  return depth;
+  return holders;
 };
+
+/** How many scroll views hold `node`. */
+const depthOf = (node: Node, byIndex: ReadonlyMap<number, Node>) =>
+  holdersOf(node, byIndex).filter(isArea).length;
 
 /** The scroll views of `nodes` on screen, each with its content (its first child with a frame). */
 const areasOf = (nodes: ReadonlyArray<Node>): ReadonlyArray<Area> => {
   const screen = screenOf(nodes);
   if (Option.isNone(screen)) return [];
-  const byIndex = new Map(
-    nodes.flatMap((node) =>
-      Option.toArray(Option.map(Option.fromUndefinedOr(node.index), (at) => [at, node] as const)),
-    ),
-  );
+  const byIndex = indexed(nodes);
   return nodes.filter(isArea).flatMap((node) =>
     Option.toArray(
       Option.gen(function* () {
@@ -225,21 +233,6 @@ export const hides = (area: Area, direction: Direction) => {
   }[direction];
 };
 
-/**
- * The scroll view a scroll in `direction` moves: of those on screen whose
- * content runs past the frame along that axis, the frontmost, the last in
- * tree order. A sheet comes after the page it covers, and a page after the
- * pager that holds it, so a scroll on a sheet moves the sheet, never the
- * page the tree still lists under it. None when no such view shows.
- */
-export const areaFor = (nodes: ReadonlyArray<Node>, direction: Direction) =>
-  Option.fromUndefinedOr(
-    areasOf(nodes)
-      .filter((area) => overflows(area, direction))
-      .toSorted((a, b) => b.index - a.index)
-      .at(0),
-  );
-
 /** A one-finger pan: from (`x`, `y`), by `dx` and `dy` points. */
 export interface Pan {
   readonly x: number;
@@ -270,6 +263,49 @@ export const panFor = (area: Area, direction: Direction): Pan => {
     right: { x: far(x, width), y: middle.y, dx: -reach(width), dy: 0 },
     left: { x: near(x, width), y: middle.y, dx: reach(width), dy: 0 },
   }[direction];
+};
+
+/** Whether the point (`x`, `y`) lies inside `rect`. */
+const holdsPoint = (rect: Rect, x: number, y: number) =>
+  x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
+
+/**
+ * The scroll view a scroll in `direction` moves. Of the views on screen whose
+ * content runs past the frame along that axis, frontmost (last in tree
+ * order) first, the first whose pan would start on itself; when a view later
+ * in the tree, hittable and not inside it, lies over that start (a sheet over
+ * the page), the frontmost such view instead, whether or not its own content
+ * fits, and so on while a later view lies over that one's start. So a scroll on a sheet moves the sheet, or finds it at its end, and
+ * never pans the page the tree still lists under it. None when no view
+ * overflows that way.
+ */
+export const areaFor = (nodes: ReadonlyArray<Node>, direction: Direction) => {
+  const byIndex = indexed(nodes);
+  const areas = areasOf(nodes).toSorted((a, b) => b.index - a.index);
+  const holds = (outer: Area, inner: Area) =>
+    Option.match(Option.fromUndefinedOr(byIndex.get(inner.index)), {
+      onNone: () => false,
+      onSome: (node) => holdersOf(node, byIndex).some((each) => each.index === outer.index),
+    });
+  const hittable = (area: Area) => byIndex.get(area.index)?.hittable !== false;
+  const over = (area: Area) => {
+    const start = panFor(area, direction);
+    return Option.fromUndefinedOr(
+      areas.find(
+        (other) =>
+          other.index > area.index &&
+          hittable(other) &&
+          !holds(area, other) &&
+          holdsPoint(other.visible, start.x, start.y),
+      ),
+    );
+  };
+  const owner = (area: Area): Area =>
+    Option.match(over(area), { onNone: () => area, onSome: owner });
+  return Option.map(
+    Option.fromUndefinedOr(areas.find((area) => overflows(area, direction))),
+    owner,
+  );
 };
 
 /** The scroll view of `nodes` that is `area`: its frame and depth, the nearest in tree order. */

@@ -5689,4 +5689,14 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hsguards10/round-1-findings.md B1; hymnapp/hsguards10/round-1-findings.md B2
 - **Wrong:** Every vertical scroll on a hymnal hymn page failed `ScrollStuck` though the page moved 622 pt, and a scroll on the About or Settings sheet panned the hymn page under it; hymn-reader and about failed on main.
 - **Cause:** After a pan the driver found the scroll view again by its frame alone, and a hymn page's pager has the page's frame, so it read the pager, which never moves vertically; and it chose the scroll view with the most of itself on screen, which is the page under a sheet. It now chooses the frontmost, the last in tree order, and finds it again by its frame and its depth among scroll views (`packages/sim/src/screen.ts`).
-- **Guard:** code: `packages/sim/src/screen.test.ts` `property: of scroll views nested in one frame, moved names the one whose content moved, and only it, though nodes before them came or went`; code: `packages/sim/src/screen.test.ts` `property: a scroll view listed after others takes the scroll, wherever it lies and however small`
+- **Guard:** code: `packages/sim/src/screen.test.ts` `property: of scroll views nested in one frame, moved names the one whose content moved, and only it, though nodes before them came or went`; code: `packages/sim/src/screen.test.ts` `property: the scroll goes to the frontmost view at its pan’s start, its content overflowing or fitting, never to one a later view lies over there`
+
+### sim-scroll-passed-over-a-sheet-whose-content-fits
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "Choose the frontmost view among those that hold the pan's start point, whether or not it overflows."
+- **Source:** hymnapp/hsguards10/round-2-findings.md M1 (repeat of round-1-findings.md B2)
+- **Wrong:** With Heartseed's Settings sheet open, whose content fits, `sim scroll screen up` panned the field under the sheet and failed `ScrollStuck`.
+- **Cause:** The driver chose the frontmost of the scroll views that overflow, so a sheet whose content fits never took part and the page under it won. The property guarding the choice generated only overflowing views, and its seeded generator took the low bits of a linear congruential state, so its cases repeated a few shapes. The driver now hands the scroll to the frontmost hittable view that lies over the pan's start, overflowing or not (`packages/sim/src/screen.ts` `areaFor`), and the generator mixes its bits.
+- **Guard:** code: `packages/sim/src/screen.test.ts` `property: the scroll goes to the frontmost view at its pan’s start, its content overflowing or fitting, never to one a later view lies over there`; code: `packages/sim/src/sim.slow.test.ts` `a scroll over a sheet whose content fits pans the sheet and finds it at its end; one to a target past it fails TargetMissing, never ScrollStuck`

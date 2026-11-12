@@ -142,7 +142,9 @@ The recipe beside each says what to read in its receipts and which steps stay by
   the web. On iOS it answers the "Open in “Hymnal”?" prompt with Open (`detail.prompts`).
 - `sim tap <target>`, `sim fill <target> <text>`, `sim back`, and
   `sim scroll <target|screen> <up|down|left|right>`. On iOS a scroll pans inside the frontmost scroll view
-  that scrolls that way (the last in the tree: a sheet's, not the page the tree still lists under it),
+  that scrolls that way (the last in the tree), or, when a later view lies where that pan would start
+  (a sheet over the page), in that view, even when its content fits, so it finds the sheet at its end
+  and never pans the page the tree still lists under it,
   never from a fixed header or footer around it, waits for the pan's fling to bring the content to rest
   (so the next tap lands on still content), and checks that same view's content moved (a hymn
   page's pager shares the page's frame and is never taken for it):

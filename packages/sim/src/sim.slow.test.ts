@@ -30,7 +30,7 @@ import { DriveLive, type Place } from './drive.ts';
 import { fast } from './fixtures/fast-clock.ts';
 import { decodeResult } from './fixtures/lines.ts';
 import { probeApp } from './fixtures/probe.ts';
-import { chooser, snapshotOf, VERSES } from './fixtures/screens.ts';
+import { chooser, hymnPage, SHEET, snapshotOf, VERSES } from './fixtures/screens.ts';
 import type { Session } from './result.ts';
 import type { Node } from './screen.ts';
 
@@ -630,6 +630,31 @@ describe('sim commands', () => {
         );
         expect(Exit.isSuccess(again.exit)).toBe(true);
         expect(again.printed[0]).toMatchObject({ ok: true, detail: { moved: false } });
+      }).pipe(Effect.provide(Host)),
+  );
+
+  it.scopedLive(
+    'a scroll over a sheet whose content fits pans the sheet and finds it at its end; one to a target past it fails TargetMissing, never ScrollStuck',
+    () =>
+      Effect.gen(function* () {
+        const fits = hymnPage(116, Option.some(495), SHEET.height);
+        const screen = yield* sim(
+          ['scroll', 'screen', 'down'],
+          screensIn([fits, fits]),
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(screen.exit)).toBe(true);
+        expect(screen.printed[0]).toMatchObject({
+          ok: true,
+          detail: { moved: false, pan: '201,792 by 0,-223' },
+        });
+        const target = yield* sim(
+          ['scroll', 'label=Nowhere', 'down'],
+          screensIn([fits]),
+          Option.some('ios'),
+        );
+        expect(Exit.isFailure(target.exit)).toBe(true);
+        expect(target.printed[0]).toMatchObject({ ok: false, error: { _tag: 'TargetMissing' } });
       }).pipe(Effect.provide(Host)),
   );
 

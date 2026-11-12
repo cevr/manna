@@ -87,11 +87,13 @@ export const SHEET = { x: 8, y: 495, width: 386, height: 371 } as const;
  * scroll view and the shown page's share `PAGE`; the page's content sits at
  * `pageY`, its neighbours lie off screen across; with `sheetY`, the About
  * sheet's scroll view, later in the tree, covers the page's lower half with
- * its content at `sheetY`.
+ * its content at `sheetY`, `sheetHeight` tall (the About sheet's 1103 runs
+ * past the sheet; a height up to `SHEET`'s fits).
  */
 export const hymnPage = (
   pageY: number,
   sheetY: Option.Option<number> = Option.none(),
+  sheetHeight = 1103,
 ): ReadonlyArray<Node> => [
   { index: 0, type: 'Application', rect: { x: 0, y: 0, width: 402, height: 874 } },
   {
@@ -130,7 +132,7 @@ export const hymnPage = (
       rect: SHEET,
       hittable: true,
     },
-    { index: 2762, parentIndex: 2761, type: 'Other', rect: { ...SHEET, y, height: 1103 } },
+    { index: 2762, parentIndex: 2761, type: 'Other', rect: { ...SHEET, y, height: sheetHeight } },
   ]),
 ];
 
