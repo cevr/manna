@@ -1,8 +1,8 @@
 /**
- * `bun run icon`: draws every app icon from the one ear of wheat,
- * `assets/icon/ear.svg`, in Heartseed's colours (`src/icon-colours.ts`):
- * its gold ear on its garden ink by day and on its night ground by night,
- * and the launch screen's ear in its ink and its gold.
+ * `bun run icon`: draws every app icon from the one wheat blade,
+ * `assets/icon/wheat.svg`, in Heartseed's colours (`src/icon-colours.ts`):
+ * its gold blade on its garden ink by day and on its night ground by night,
+ * and the launch screen's blade in its ink and its gold.
  *
  * Each row of `icons` is one PNG: its size, its layout (how large the wheat
  * sits on the square), the wheat's colour, and its ground, or none for the
@@ -84,15 +84,12 @@ export interface Wheat {
   readonly height: number;
 }
 
-/** The master every icon is drawn from, under the app's root. */
-export const MASTER = 'assets/icon/ear.svg';
-
-/** The master had no `viewBox` of four numbers with a width and height, or no path. */
+/** `wheat.svg` had no `viewBox` of four numbers with a width and height, or no path. */
 export class WheatUnreadable extends Schema.TaggedError<WheatUnreadable>()('WheatUnreadable', {
   reason: Schema.String,
 }) {
   override get message() {
-    return `${MASTER}: ${this.reason}`;
+    return `assets/icon/wheat.svg: ${this.reason}`;
   }
 }
 
@@ -108,7 +105,7 @@ const boxOf = (svg: string) =>
     ),
   );
 
-/** Reads the shape out of the master's text. */
+/** Reads the shape out of `wheat.svg`'s text. */
 export const wheatOf = (svg: string): Effect.Effect<Wheat, WheatUnreadable> =>
   Effect.gen(function* () {
     const box = yield* Effect.fromOption(boxOf(svg)).pipe(
@@ -238,7 +235,7 @@ const run = Effect.gen(function* () {
   const path = yield* Path.Path;
   const root = path.resolve(import.meta.dir, '..');
   const at = (file: string) => path.join(root, file);
-  const wheat = yield* wheatOf(yield* fs.readFileString(at(MASTER)));
+  const wheat = yield* wheatOf(yield* fs.readFileString(at('assets/icon/wheat.svg')));
   yield* Effect.forEach(
     icons,
     (icon) =>

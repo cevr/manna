@@ -4,7 +4,7 @@
  * pixel of every icon is the ground, the wheat or a blend of the two; every
  * face's mark reads on its ground; the Android layers stay inside the
  * launcher's safe circle; and every committed file is what `bun run icon`
- * draws from `assets/icon/ear.svg` now.
+ * draws from `assets/icon/wheat.svg` now.
  *
  * The expected colours come from `src/icon-colours.ts`, not from the
  * script's table, so a wrong row in the table is red too.
@@ -18,7 +18,7 @@ import sharp from 'sharp';
 
 import { type Face, icon, launch } from '../src/icon-colours.ts';
 import { app } from '../vite/app.ts';
-import { MASTER, WebManifestJson, draw, faviconSvg, icons, manifest, wheatOf } from './icon.ts';
+import { WebManifestJson, draw, faviconSvg, icons, manifest, wheatOf } from './icon.ts';
 
 const test = it.effect.layer(BunServices.layer);
 
@@ -406,7 +406,7 @@ describe('the app icon', () => {
   test('commits what bun run icon draws from the wheat now', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const wheat = yield* wheatOf(yield* fs.readFileString(`${ROOT}/${MASTER}`));
+      const wheat = yield* wheatOf(yield* fs.readFileString(`${ROOT}/assets/icon/wheat.svg`));
       const worstOf = (kept: Buffer, fresh: Buffer) =>
         Effect.all([pixels(kept), pixels(fresh)], { concurrency: 2 }).pipe(
           Effect.map(([a, b]) => {
