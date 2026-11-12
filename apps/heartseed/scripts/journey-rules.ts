@@ -39,6 +39,7 @@ import { formatBibleReference, parseBibleQuery } from '@manna/core/bible';
 import { Predicate } from 'effect';
 import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
+import { readVerses } from '../vite/passage.ts';
 import { app } from './sim-app.ts';
 
 const APP = join(import.meta.dir, '..');
@@ -245,7 +246,22 @@ const REFERENCE_HOLES: ReadonlyArray<Pick<WordHole, 'file' | 'parts'>> = [
 const isReference = (label: string) => {
   const parsed = parseBibleQuery(label);
   if (parsed._tag !== 'single' && parsed._tag !== 'verseRange') return false;
-  return formatBibleReference(parsed.ref) === label;
+  if (formatBibleReference(parsed.ref) !== label) return false;
+  if (parsed._tag === 'single') return inKjv(parsed.ref);
+  return inKjv(parsed.ref.start) && inKjv(parsed.ref.end);
+};
+
+/** Whether the bundled KJV has the verse `at`. */
+const inKjv = (at: { readonly book: number; readonly chapter: number; readonly verse: number }) =>
+  kjvVerses().has(`${at.book}:${at.chapter}:${at.verse}`);
+
+let kjv: ReadonlySet<string> = new Set();
+
+/** Every verse of the bundled KJV (`vite/passage.ts`'s corpus) as `<book>:<chapter>:<verse>`, read once per process. */
+const kjvVerses = () => {
+  if (kjv.size === 0)
+    kjv = new Set(readVerses().map((row) => `${row.book}:${row.chapter}:${row.verse}`));
+  return kjv;
 };
 
 /** The word holes and reference holes whose file no longer spells their template, as `<file> <parts>`. */

@@ -34,6 +34,8 @@ import {
   undrawn,
   wordHolesOf,
 } from './journey-rules.ts';
+import { formatBibleReference, Reference } from '@manna/core/bible';
+import { readVerses } from '../vite/passage.ts';
 import { app } from './sim-app.ts';
 
 const SKILL = join(import.meta.dir, '../../../.claude/skills/verify-heartseed');
@@ -443,6 +445,60 @@ describe('verify-heartseed journeys', () => {
           const got = stepsOf(firstRunFaults(yield* loaded(quiet)));
           expect([toJson(steps), got]).toEqual([toJson(steps), [...want]]);
         }
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'R4 takes a reference only of the bundled KJV: past a chapter’s last verse it faults, alone, ending a range or in a reference hole, and its neighbours pass, over generated chapters',
+    () =>
+      Effect.gen(function* () {
+        const verses = readVerses();
+        const last = new Map<string, number>();
+        for (const row of verses) last.set(`${row.book}:${row.chapter}`, row.verse);
+        const chapters = [...last].filter((_, at) => at % 113 === 7);
+        expect(chapters.length).toBeGreaterThan(8);
+        const cases = chapters.flatMap(([key, end]) => {
+          const [book = 0, chapter = 0] = key.split(':').map(Number);
+          const named = (verse: number) =>
+            formatBibleReference(Reference.verse(book, chapter, verse));
+          const past = named(end + 1);
+          const ranged = (to: number) =>
+            formatBibleReference(
+              Reference.range(
+                Reference.verse(book, chapter, 1),
+                Reference.verse(book, chapter, to),
+              ),
+            );
+          return [
+            { label: named(end), drawn: true },
+            { label: past, drawn: false },
+            { label: ranged(end), drawn: true },
+            { label: ranged(end + 1), drawn: false },
+            { label: `${named(1)}, seed`, drawn: true },
+            { label: `${past}, seed, ready today`, drawn: false },
+          ];
+        });
+        const all = [
+          ...cases,
+          { label: 'Mark 4:99', drawn: false },
+          { label: 'Isaiah 41:99', drawn: false },
+          { label: 'Isaiah 41:20', drawn: true },
+        ];
+        const journey = yield* loaded(
+          [
+            {
+              name: 'gen-open',
+              action: 'open',
+              link: '/',
+              receipt: 'none',
+              expect: all.map(({ label }) => ({ shows: `label=${label}` })),
+            },
+          ],
+          'gen',
+        );
+        expect(undrawn([journey], sources)).toEqual(
+          all.filter(({ drawn }) => !drawn).map(({ label }) => `gen/gen-open label=${label}`),
+        );
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
