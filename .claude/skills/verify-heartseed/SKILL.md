@@ -208,7 +208,7 @@ snapshot) stays a by-hand step of the feature file, between two journeys
 feature file reads the receipts, `$EVIDENCE/snapshots/<feature>-<nn>-<step>.txt`,
 for what an expect cannot say. The journeys:
 
-- `features/first.journey.json`, and its segments `first-whole`,
+- [features/first.journey.json](features/first.journey.json), and its segments `first-whole`,
   `first-cue`, `first-reading` and `first-again`, run by `first.md`.
 
 A receipt holds the visible nodes' types and labels, no id and no frame:

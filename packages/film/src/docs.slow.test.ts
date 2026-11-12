@@ -522,6 +522,20 @@ const anchorDrift = (
       }),
     ]);
 
+/** A verify skill's cite of a journey's step, `<journey>/<step>` in kebab case, as its journey rules write it. */
+const JOURNEY_CITE = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const JourneySteps = Schema.fromJsonString(
+  Schema.Struct({ steps: Schema.Array(Schema.Struct({ name: Schema.String })) }),
+);
+
+/** The step names of a journey file's text; none when it is no journey. */
+const journeyStepsOf = (text: string): ReadonlyArray<string> =>
+  Option.match(Schema.decodeOption(JourneySteps)(text), {
+    onNone: () => [],
+    onSome: (journey) => journey.steps.map((step) => step.name),
+  });
+
 /**
  * Each anchor looked up under the doc's bases: the first base that has its
  * first directory reads it. Under none, it is another tree's path, unless the
@@ -540,6 +554,10 @@ const anchorDrift = (
  * `ios/build`). Named by none, it lies under ignored output no checkout can
  * judge (`tmp/<typo>`, `ios/Podz`). An installed package's path
  * (`node_modules/effect`) is looked up like the tree's.
+ *
+ * A verify skill's `<journey>/<step>` names a step of the journey file
+ * beside the doc (`first/first-welcome`, `first.journey.json`'s step): it
+ * is found when that file holds the step, and read as a path otherwise.
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
@@ -564,6 +582,18 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       (installed) => installed || PACKAGE_NAME.test(anchor.path) || rules.has(anchor.path),
     );
   const anchors = anchorsIn(doc);
+  /** The journey file beside the doc whose steps hold the step `anchor` cites as `<journey>/<step>`; none when it names no such step. */
+  const journeyOf = (anchor: Anchor) => {
+    if (!JOURNEY_CITE.test(anchor.written)) return Effect.succeed(Option.none<string>());
+    const [journey = '', step = ''] = anchor.written.split('/');
+    const file = path.join(path.dirname(doc.path), `${journey}.journey.json`);
+    return Effect.map(Effect.option(fs.readFileString(path.join(root, file))), (text) =>
+      Option.filter(
+        Option.map(text, () => file),
+        () => Option.exists(text, (t) => journeyStepsOf(t).includes(step)),
+      ),
+    );
+  };
   const candidatesOf = (anchor: Anchor) =>
     doc.bases.map((base) => ({ base, at: path.join(base, anchor.path).replace(/\/$/, '') }));
   const under = yield* ignoredUnder(
@@ -592,6 +622,16 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
           anchor,
           ours: true,
           file: Option.liftPredicate(at, () => there),
+          text: Option.none(),
+          stray: Option.none(),
+        } satisfies Found;
+      }
+      const journey = yield* journeyOf(anchor);
+      if (Option.isSome(journey)) {
+        return {
+          anchor,
+          ours: true,
+          file: journey,
           text: Option.none(),
           stray: Option.none(),
         } satisfies Found;
@@ -1765,6 +1805,38 @@ describe('the docs', () => {
           'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/log lies under the ignored tmp/, and no .gitignore or script names it',
+        ]);
+      }).pipe(Effect.scoped),
+    SPAWNS_MS,
+  );
+
+  it.effect.layer(BunServices.layer)(
+    'read `<journey>/<step>` as a cite of a step of the journey file beside the doc, and as a path when no such journey or step is there',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped();
+        yield* fs.makeDirectory(`${root}/skill/features`, { recursive: true });
+        yield* fs.makeDirectory(`${root}/app/src`, { recursive: true });
+        yield* fs.writeFileString(`${root}/app/src/kept.ts`, 'export const kept = 1;\n');
+        yield* fs.writeFileString(
+          `${root}/skill/features/first.journey.json`,
+          '{ "feature": "first", "steps": [{ "name": "first-welcome" }] }',
+        );
+        const doc: Doc = {
+          path: 'skill/features/first.md',
+          bases: ['', 'app'],
+          whole: true,
+          text: [
+            'The receipt `first/first-welcome`, beside `src/kept.ts`.',
+            'A step the journey lacks: `first/first-gone`; a journey not there: `second/first-welcome`;',
+            'a file gone: `src/gone.ts`.',
+          ].join('\n'),
+        };
+        expect(yield* anchorsDrift(root, [doc])).toEqual([
+          'skill/features/first.md: path first/first-gone does not exist',
+          'skill/features/first.md: path second/first-welcome does not exist',
+          'skill/features/first.md: path src/gone.ts does not exist',
         ]);
       }).pipe(Effect.scoped),
     SPAWNS_MS,
