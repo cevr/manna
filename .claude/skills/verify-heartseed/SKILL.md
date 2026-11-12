@@ -34,7 +34,9 @@ The owner's rules:
 - Never drive the owner's previews on ports 8191 and 8095.
 - No screenshot, no recording and no sound: the screen is read from the
   accessibility tree, by the helper's snapshot. Never ask the helper for a
-  shot, a video or a journey that records one.
+  shot or a video. Heartseed is a quiet app (`quiet` in `sim-app.ts`): a
+  journey takes no video, and one with a step whose receipt is `both` or
+  `shot` is refused as `BadJourney`.
 - The microphone stays revoked.
 
 Run every command from the repo root of a worktree of the commit under
@@ -193,7 +195,32 @@ development probe (`sim open probe/home --expect "label=Home probe"`,
 `Start with <reference>`; and on the light probe (`sim open probe/light
 --expect "label=Light probe"`, `apps/heartseed/app/probe/light.tsx`)
 `Listen`, `Back 3` and `Forward 3`.
-Heartseed has no journey files yet. The features:
+
+A feature's taps run as journeys: `sim journey <feature>` runs
+`features/<feature>.journey.json`, its steps in order, each with the
+`shows` and `hides` it expects and a snapshot receipt or none, and prints a
+line per step and a summary (`"ok":true`, or `failedName` and the step's
+error). A journey's first step is an `open` that shows where it starts, so
+it fails there on the wrong screen. What a journey cannot do (uninstall,
+install, the microphone revoke, a wait for a verse to fall due, a raw
+snapshot) stays a by-hand step of the feature file, between two journeys
+(`<feature>.journey.json` and `<feature>-<segment>.journey.json`), and the
+feature file reads the receipts, `$EVIDENCE/snapshots/<feature>-<nn>-<step>.txt`,
+for what an expect cannot say. The journeys:
+
+- `features/first.journey.json`, and its segments `first-whole`,
+  `first-cue`, `first-reading` and `first-again`, run by `first.md`.
+
+A receipt holds the visible nodes' types and labels, no id and no frame:
+a count of `word-<i>` nodes, a frame, or a node below the scroll view's
+fold is read in a raw snapshot taken by hand between two journeys
+(`first.md`, Driving it).
+
+`apps/heartseed/scripts/journeys.test.ts` holds every journey to the rules
+of `apps/heartseed/scripts/journey-rules.ts` (a first-minute heading only
+after the welcome is left, no node hidden from VoiceOver, an open that
+shows first, every selector one the app can draw), and every feature file
+not yet moved to journeys to its `LEGACY` entry. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
   install opens on: the welcome and how a verse grows (or `Skip`), hear

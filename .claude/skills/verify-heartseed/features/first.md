@@ -58,9 +58,9 @@ word 11 and the seed is graded Hard.
 - `first-welcome`: a fresh install opens the welcome: the one heading
   `Heartseed`, the texts `Plant a verse. Say it from memory. Watch it
   grow.`, `Your first verse` and `Isaiah 41:10`, the buttons exactly
-  `Begin` and `Skip`, the same nodes in snapshots 3 s apart while the seed
-  grows, no node named for a stage or an image, no `word-<i>`, `Listen`,
-  `Next`, `Say it` or `Your field`.
+  `Begin` and `Skip`, the same nodes in snapshots taken seconds apart while
+  the seed grows, no node named for a stage or an image, no `word-<i>`,
+  `Listen`, `Next`, `Say it` or `Your field`.
 - `first-grows`: `Begin` shows `Every verse is a plant` with `seed`,
   `blade`, `ear`, `full corn` and `Mark 4:28`, one button and no `Begin`
   or `Skip`; `Plant your first verse` shows `Hear it` with `Listen`,
@@ -129,6 +129,23 @@ word 11 and the seed is graded Hard.
 
 ## Driving it
 
+The taps are five journeys beside this file, `first-whole.journey.json`,
+`first-cue.journey.json`, `first-reading.journey.json`,
+`first.journey.json` and `first-again.journey.json`, each run in one
+`sim journey` call; their `shows` and `hides` hold what a selector can
+say. What lies between them is by hand: emptying the garden, the
+microphone revoke, and the raw snapshots. A snapshot receipt,
+`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, named below as
+`<journey>/<step>`, holds the visible nodes' types and labels, no id and
+no frame, and a text node repeats its parent's label; so a label, its
+prefix and the buttons are read there, and the word nodes' counts and
+frames, the tips and what lies below the scroll view's fold are read in
+a raw snapshot (`agent-device snapshot --json --raw --observe-only
+--force-full --session verify-heartseed`, run with `HOME` set to the
+drive's home, `paths.home` of `sim boot`), taken right after the journey
+that stops on that screen. Heartseed is quiet: a journey keeps no
+screenshot and takes no video.
+
 This feature changes nothing native, so the drive needs no prebuild: an
 incremental `sim install` of the head (a build of `d19c8ed2e` or later
 already holds the voice, dictation and growth modules), under
@@ -140,61 +157,66 @@ by its udid (`xcrun simctl uninstall <udid> app.heartseed`), never with
 With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 8280-8289, and `START` the time the drive starts:
 
-1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Uninstall as above, then
-   the install, then `xcrun simctl privacy <udid> revoke microphone
+1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Uninstall as above,
+   then `sim install`, then `xcrun simctl privacy <udid> revoke microphone
    app.heartseed`.
-2. `first-welcome`: `sim install` answers `detail.expect`
-   `label=Isaiah 41:10`; `sim open / --expect "label=Begin"`, `sim snapshot
-   first-welcome` → as the row says; `sim open / --expect "label=Isaiah
-   41:10" --no-relaunch` answers within 5 s; two more snapshots 3 s apart
-   hold the same nodes.
-   `first-grows`: `sim tap "label=Begin"`, `sim snapshot first-grows`,
-   `sim tap "label=Plant your first verse"` → `Hear it`.
-   `first-skip`: `sim relaunch`, `sim open / --expect "label=Begin"`
-   (record `retried`), `sim tap "label=Skip"`.
-   `first-launch`: `sim open / --expect "label=Hear it" --no-relaunch`,
-   `sim snapshot first-launch` → the heading `Hear it`, `Isaiah 41:10`,
-   the buttons `Listen` and `Next`; no `Today`, no label starting
-   `Stage:`, no `Say it`; 37 word nodes (count them, never print them).
-   `first-lines`, here and in the snapshots of steps 3-4: the `word-<i>`
+2. The hear phase whole and in letters, each journey followed at once by
+   one raw snapshot; each journey's first step opens `/` and waits for the
+   welcome, so on a phase the journey before left it terminates the app
+   once and opens again (`detail.retried`):
+   - `sim journey first-whole` → `"ok":true` (welcome, `Skip`: `Hear it`
+     whole, no `id=reading`). Its raw snapshot: 37 `word-<i>` nodes (count
+     them, never print them), and `first-lines`' frames as below.
+   - `sim journey first-cue` → `"ok":true` (welcome, `Skip`, `Next`:
+     `Say it with help`). Its raw snapshot: 37 `word-<i>` nodes, the count
+     of those whose label is longer than one character 0 (`first-letters`),
+     and `first-lines`' frames.
+   - `sim journey first-reading` → `"ok":true`: it opens the welcome, skips
+     it and taps `Listen`, and `id=reading` shows: the reading is under
+     way.
+
+   `first-lines`, in each raw snapshot of steps 2 and 3: the `word-<i>`
    whose frame starts at the words' least x, with each one's y step from
    the row before: `word-8`, `word-16`, `word-20` and `word-25` each about
    46 pt, any other about 39 pt (frames only, never labels).
-3. `first-hear`: `sim tap "label=Listen"`, then at once two raw snapshots
-   about 1 s apart (`agent-device snapshot --json --raw --observe-only
-   --force-full --session verify-heartseed`, in the drive's HOME) → in each,
-   `id=reading` and one or two `word-<i>` nodes `selected`, all of one run; the second's
-   first index greater than the first's; no `Listen`. Then `sim tap
-   "label=Say it with help" --timeout 30` (a tap on a heading does
-   nothing; it waits for the reading's end). Keep only indexes and
-   booleans from the raw snapshots, then delete them.
-4. `first-letters`: `sim snapshot first-letters` → `Say it with help`,
-   `Say it`; the count of word nodes whose label is longer than one
-   character is 0. `sim tap "label=Say it"`, `sim tap "label=Say it alone"
-   --timeout 30`.
-5. `first-alone`: `sim snapshot first-alone` → `Say it alone`, `Say it`, no
-   word label, no `Stage:`. `sim tap "label=Say it"`, `sim tap
-   "label=Planted" --timeout 30`.
-6. `first-planted`: `sim snapshot first-planted` → `Planted`,
-   `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
-7. `first-tips`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=tip-1" --no-relaunch`, `sim snapshot first-tips` → `id=tip-1`,
-   `id=tip-2`, `id=tip-3` and `Got it`. `first-home`: `sim tap "label=Got
-   it"`, `sim open / --expect "id=today-card" --no-relaunch`, `sim
-   snapshot first-home` → no tip and no `Got it`; the heading `Your field`;
-   on the Today card `All tended for today`, `Nothing is due right now.`
-   and `Practice anyway`, no `Start` and no `About`; the buttons
-   `Settings` and `How Heartseed works` (at the scroll view's end) and no
-   `When I need…`; no heading `Today`, no button `Today`, no label
-   starting `Stage:` or `Grew to`, no label ending `words`, no grade
-   label, no `Say it` and no `Next` (the done state).
-8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
-   41:10"` (the pending frame) and at once `sim snapshot
-   first-again-launch` → no `Heartseed`, `Hear it`, `Say it with help`,
-   `Say it alone` or `Planted`, and no tip. Then `sim open / --expect "id=today-card" --no-relaunch`,
-   `sim snapshot first-again` → the heading `Your field`, no first-minute
-   heading, and the done state, as in step 7. Once the passage is due,
-   `run.md`'s `run-due` shows `today-passage` (`today.md`).
+
+3. `first-hear`, at once: two raw snapshots about 1 s apart → in each,
+   `id=reading` and one or two `word-<i>` nodes `selected`, all of one
+   run; the second's first index greater than the first's; no `Listen`.
+   Keep only indexes and booleans, then delete every raw snapshot. The
+   garden is still empty: nothing of the flow is stored.
+4. `sim journey first` → its last line `"ok":true`, every step `ok`, to
+   `first-home`. Its first step opens `/` and waits for the welcome, so on
+   a garden that holds a recall it fails there, `TargetMissing`. Read its
+   receipts:
+   - `first/first-welcome` and `first/first-welcome-still`, seconds apart:
+     the same nodes; the heading `Heartseed`, the texts the row names, the
+     buttons exactly `Begin` and `Skip`, no node named for a stage or an
+     image.
+   - `first/first-grows`: `seed`, `blade`, `ear` and `full corn`, one
+     button.
+   - `first/first-launch`: the heading `Hear it`, no label starting
+     `Stage:`.
+5. `first/first-alone`: no label of one character (no word), no label
+   starting `Stage:`.
+6. `first/first-planted`: `Planted` and one `Stage: seed` (its node and
+   the text node under it that repeats it); the log holds no `[growth]
+   play` line.
+7. `first/first-tips`: the journey's `shows` hold `id=tip-1`, `id=tip-2`
+   and `id=tip-3`; the receipt holds one `Got it`.
+   `first/first-home`: no `Got it`; on the Today card
+   `All tended for today`, `Nothing is due right now.` and `Practice
+   anyway`, no `Start` and no `About`; no heading `Today`, no button
+   `Today`, no label starting `Stage:` or `Grew to`, no label ending
+   `words`, no grade label, no `Say it` and no `Next` (the done state).
+   Below the fold, in a raw snapshot taken now: the buttons `Settings` and
+   `How Heartseed works` at the scroll view's end, no `When I need…` and
+   no `Got it`.
+8. `first-again`: `sim journey first-again` → `"ok":true`: from home, a
+   relaunch whose launch frame shows `Isaiah 41:10` and no first-minute
+   heading or tip, then home again. Read `first-again/first-again` as
+   `first/first-home`. Once the passage is due, `run.md`'s `run-due` shows
+   `today-passage` (`today.md`).
 9. From this home run `run.md`, Driving it, from step 2: `fade.md`,
    `grow.md` and `sayit.md` name the steps of it that are theirs. Then
    `sim doctor` (record `head` and `timingsHold`) and `sim down`. A drive
