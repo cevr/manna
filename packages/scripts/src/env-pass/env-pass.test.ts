@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Option } from 'effect';
 import { gapsOf } from './gaps.ts';
-import { CONFIG_NAME_AT, envReads } from './reads.ts';
+import { envReads } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
 
 /** A call of `Config.<key>` with the variable `name` at its name's place, other arguments plain values. */
@@ -22,18 +22,27 @@ describe('env-pass', () => {
 
   it.effect('reads every constructor the installed effect/Config exports that takes a name', () =>
     Effect.sync(() => {
-      const named = Object.entries(Config).filter(([, value]) =>
-        /^[^(]*\([^)]*\b(?:name|path|pathOrOptions)\b/.test(String(value)),
-      );
+      const named = Object.entries(Config).flatMap(([key, value]) => {
+        const parameters = (/^[^(]*\(([^)]*)\)/.exec(String(value))?.[1] ?? '')
+          .split(',')
+          .map((parameter) => parameter.trim());
+        const at = parameters.findIndex((parameter) =>
+          ['name', 'path', 'pathOrOptions'].includes(parameter),
+        );
+        if (at < 0) return [];
+        return [[key, at] as const];
+      });
       expect(named.map(([key]) => key)).toEqual(
         expect.arrayContaining(['String', 'Int', 'Port', 'Literal', 'Record', 'schema']),
       );
-      expect(Object.keys(CONFIG_NAME_AT).toSorted()).toEqual(named.map(([key]) => key).toSorted());
-      for (const [key, at] of Object.entries(CONFIG_NAME_AT))
+      for (const [key, at] of named)
         expect(envReads('a.ts', configCall(key, at, `P_${key.toUpperCase()}`))).toEqual([
           `P_${key.toUpperCase()}`,
         ]);
       expect(envReads('a.ts', "Config.Literal('prod', 'STAGE')")).toEqual(['STAGE']);
+      expect(envReads('a.ts', "Config.succeed('NOT_READ'); Config.nested(c, 'PREFIX')")).toEqual(
+        [],
+      );
     }),
   );
 

@@ -65,16 +65,19 @@ describe('the TypeScript files a shell file runs', () => {
       }),
   );
 
-  it.effect("gate.sh's text runs the lint, the ledger's check and the unit tests", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const text = yield* fs.readFileString(path.join(import.meta.dir, '../gate.sh'));
-      expect(shellRuns(text)).toEqual([
-        'packages/scripts/src/lint-gate.ts',
-        'packages/scripts/src/lessons/check.ts',
-        'packages/scripts/src/gate-tests.ts',
-      ]);
-    }).pipe(Effect.provide(BunServices.layer)),
+  it.effect(
+    "gate.sh's text runs the lint, the ledger's check, the env pass-through and the unit tests",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const text = yield* fs.readFileString(path.join(import.meta.dir, '../gate.sh'));
+        expect(shellRuns(text)).toEqual([
+          'packages/scripts/src/lint-gate.ts',
+          'packages/scripts/src/lessons/check.ts',
+          'packages/scripts/src/env-pass.ts',
+          'packages/scripts/src/gate-tests.ts',
+        ]);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 });

@@ -46,7 +46,7 @@ const parametersOf = (source: string) =>
  * 'X')`). Read from the package itself, so a constructor effect adds is
  * read the day it is installed.
  */
-export const CONFIG_NAME_AT: Readonly<Record<string, number>> = Object.fromEntries(
+const CONFIG_NAME_AT: Readonly<Record<string, number>> = Object.fromEntries(
   Object.entries(Config).flatMap(([key, value]) => {
     if (!Predicate.isFunction(value)) return [];
     const at = parametersOf(Function.prototype.toString.call(value)).findIndex((parameter) =>
