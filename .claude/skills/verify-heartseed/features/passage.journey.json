@@ -1,0 +1,76 @@
+{
+  "feature": "passage",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-bar",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=add-list" },
+        { "shows": "label=Open Isaiah 41:10" },
+        { "hides": "label=Remove Isaiah 41:10" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-sheet",
+      "action": "tap",
+      "target": "id=add-list",
+      "expect": [{ "shows": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-books",
+      "action": "tap",
+      "target": "label=Any passage",
+      "expect": [
+        { "shows": "label=Add a passage" },
+        { "shows": "label=Add verses" },
+        { "shows": "label=Genesis" },
+        { "hides": "label=Your field" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-john-scroll",
+      "action": "scroll",
+      "target": "label=John",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-john",
+      "action": "tap",
+      "target": "label=John",
+      "expect": [{ "shows": "label=John 15" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-chapter",
+      "action": "tap",
+      "target": "label=John 15",
+      "expect": [{ "shows": "label=John 15:1" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-first",
+      "action": "tap",
+      "target": "label=John 15:1",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-range",
+      "action": "tap",
+      "target": "label=John 15:5",
+      "expect": [
+        { "shows": "label=John 15:1-5" },
+        { "shows": "label=5 verses" },
+        { "shows": "label=Plant" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
