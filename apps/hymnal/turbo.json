@@ -193,7 +193,11 @@
     "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/src/theme.ts"
+      ]
     },
     "test:infra": {
       "dependsOn": ["^transit"],

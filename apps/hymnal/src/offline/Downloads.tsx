@@ -124,7 +124,9 @@ export function Downloads() {
           onPress={() => confirm(true)}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
-          <Text style={[styles.label, { color: accent }]}>Delete downloads</Text>
+          <Text testID="downloads-delete" style={[styles.label, styles.alert]}>
+            Delete downloads
+          </Text>
         </Pressable>
         {confirming && (
           <View style={styles.summary}>
@@ -140,7 +142,7 @@ export function Downloads() {
               }}
               style={styles.row}
             >
-              <Text style={[styles.label, { color: accent }]}>Confirm delete downloads</Text>
+              <Text style={[styles.label, styles.alert]}>Confirm delete downloads</Text>
             </Pressable>
             <Pressable
               role="button"
@@ -175,6 +177,7 @@ const styles = StyleSheet.create({
     borderTopColor: color.line,
   },
   label: { fontSize: 17, color: color.ink },
+  alert: { color: color.alert },
   detail: { fontSize: 13, color: color.muted },
   pressed: { backgroundColor: color.soft },
 });

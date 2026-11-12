@@ -8,6 +8,6 @@ test('the phone colours load on Android, where DynamicColorIOS throws', () => {
   });
   expect(run.stderr.toString()).toBe('');
   expect(run.stdout.toString()).toBe(
-    'ground ink muted line soft panel edge chord bar pill onPill chosen onChosen glass onGlass onGlassMuted glassChosen onGlassChosen',
+    'ground ink muted line soft panel edge chord bar pill onPill chosen onChosen alert glass onGlass onGlassMuted glassChosen onGlassChosen',
   );
 });

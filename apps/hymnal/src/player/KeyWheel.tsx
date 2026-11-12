@@ -3,7 +3,7 @@
  * on through its exit (`WheelDrawn`, closing). Its items are pills on the Arc,
  * up and to the right of the key button, which is the wheel's centre: there
  * is no mark of the origin. The page under them dims (`key-wheel-backdrop`,
- * the night at `BACKDROP.opacity`) and the bar's other controls fade with it
+ * the theme's `shadow` at `BACKDROP.opacity`) and the bar's other controls fade with it
  * (`dim`, which the bar reads). The item under the finger lifts: it draws
  * on the button's fill under its ink (`button`, `onButton`), grows to `LIFT`
  * on a deeper shadow, and a dotted ray in the button's role runs to it from
@@ -34,7 +34,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { color, useButton, useOnButton } from '~/color';
+import { color, useButton, useOnButton, useShadow } from '~/color';
 import { available } from '~/tuner/native';
 
 import { TunerMark } from './TunerMark';
@@ -89,9 +89,6 @@ export const drawnAfter = (
     onSome: (open) => Option.some({ shown: open, closing: false, picked: Option.none() }),
     onNone: () => Option.map(was, (drawn) => ({ ...drawn, closing: true, picked })),
   });
-
-/** The backdrop's colour: the night at its deepest, by day and by night. */
-const NIGHT = '#02080e';
 
 /** How far a word may grow with the reader's text size and stay on one line in its pill. */
 const MOST_WORD_SCALE = 1.15;
@@ -181,6 +178,7 @@ export function KeyWheel({
     },
   );
   const { height } = useWindowDimensions();
+  const shadow = useShadow();
   const backdrop = useAnimatedStyle(() => ({ opacity: dim.value }));
   return (
     <View
@@ -193,7 +191,7 @@ export function KeyWheel({
       <Animated.View
         testID="key-wheel-backdrop"
         pointerEvents="none"
-        style={[styles.backdrop, { top: -height, height }, backdrop]}
+        style={[styles.backdrop, { top: -height, height, backgroundColor: shadow }, backdrop]}
       />
       {Option.match(lit, {
         onNone: () => <></>,
@@ -306,6 +304,7 @@ const RAY_SEEN = 0.45;
 function Pill({ item, lit }: { readonly item: Item; readonly lit: boolean }) {
   const button = useButton();
   const onButton = useOnButton();
+  const shadow = useShadow();
   const ink = Match.value(lit).pipe(
     Match.when(true, () => onButton),
     Match.orElse(() => color.ink),
@@ -316,6 +315,7 @@ function Pill({ item, lit }: { readonly item: Item; readonly lit: boolean }) {
       aria-selected={lit}
       style={[
         styles.pill,
+        { shadowColor: shadow },
         Match.value(lit).pipe(
           Match.when(true, () => [styles.lit, { backgroundColor: button, borderColor: button }]),
           Match.orElse(() => styles.rest),
@@ -335,7 +335,7 @@ function Pill({ item, lit }: { readonly item: Item; readonly lit: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { position: 'absolute', left: 0, right: 0, backgroundColor: NIGHT },
+  backdrop: { position: 'absolute', left: 0, right: 0 },
   ray: { position: 'absolute', height: RAY, borderTopWidth: RAY, borderStyle: 'dotted' },
   box: {
     position: 'absolute',
@@ -354,7 +354,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    shadowColor: NIGHT,
     shadowOpacity: 0.45,
     shadowRadius: 7,
     shadowOffset: { width: 0, height: 4 },

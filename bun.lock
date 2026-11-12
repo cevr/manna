@@ -132,7 +132,6 @@
       "dependencies": {
         "@effect/atom-react": "catalog:",
         "@legendapp/list": "3.7.2",
-        "@manna/brand": "workspace:*",
         "@manna/core": "workspace:*",
         "@manna/hymnal": "workspace:*",
         "@react-navigation/native": "8.0.0-alpha.51",

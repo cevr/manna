@@ -35,6 +35,7 @@ export const color = Platform.select({
     onPill: dynamic('onPill'),
     chosen: dynamic('chosen'),
     onChosen: dynamic('onChosen'),
+    alert: dynamic('alert'),
     glass: dynamic('glass'),
     onGlass: dynamic('onGlass'),
     onGlassMuted: dynamic('onGlassMuted'),
@@ -55,6 +56,7 @@ export const color = Platform.select({
     onPill: PlatformColor('?android:attr/colorForeground'),
     chosen: PlatformColor('?android:attr/colorForeground'),
     onChosen: PlatformColor('?android:attr/colorBackground'),
+    alert: PlatformColor('?android:attr/colorForeground'),
     glass: PlatformColor('?android:attr/colorControlHighlight'),
     onGlass: PlatformColor('?android:attr/colorForeground'),
     onGlassMuted: PlatformColor('?android:attr/colorForeground'),
@@ -63,8 +65,16 @@ export const color = Platform.select({
   }),
 })() satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
-/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, and the selected fill. */
-type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed' | 'button' | 'onButton' | 'selected';
+/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, the selected fill, and the shadow. */
+type Fill =
+  | 'accent'
+  | 'onAccent'
+  | 'pressed'
+  | 'onPressed'
+  | 'button'
+  | 'onButton'
+  | 'selected'
+  | 'shadow';
 
 /** The theme's roles in the scheme showing now. */
 const useRoles = (): Roles =>
@@ -93,6 +103,13 @@ export const usePressed = () => {
   const roles = useRoles();
   return { fill: roles.pressed, text: roles.onPressed };
 };
+
+/**
+ * A raised surface's shadow in the scheme showing now, as a plain hex: a
+ * layer resolves its shadow's colour once, so a dynamic colour there would
+ * not follow a change of scheme, and a worklet takes only a plain string.
+ */
+export const useShadow = (): string => useRoles().shadow;
 
 /** The web's CSS: a phone writes none. */
 export const webColors = '';

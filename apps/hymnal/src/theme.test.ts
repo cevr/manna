@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { PALETTE } from '@manna/brand';
 import { Match } from 'effect';
 
-import { onColor, type Roles, theme } from './theme';
+import { theme as heartseed } from '../../heartseed/src/theme';
+import { launch } from './icon-colours';
+import { garden, onColor, type Roles, theme } from './theme';
+
+const schemes = ['light', 'dark'] as const;
 
 /** A hex colour's red, green and blue, parsed here apart from the theme's own mixing. */
 const rgb = (hex: string) =>
@@ -32,22 +35,48 @@ const contrast = (a: string, b: string) => {
 };
 
 /**
+ * The palette is Heartseed's: each hex `garden` copies is the Heartseed
+ * role of its name (`apps/heartseed/src/theme.ts`), so a change there shows
+ * here (`turbo.json` hashes that file for this part).
+ */
+describe('the garden is Heartseed’s palette', () => {
+  for (const scheme of schemes)
+    test(`${scheme}: every role garden copies equals Heartseed’s`, () => {
+      const { ground, card, ink, quiet, soft, sun, miss, shadow } = heartseed[scheme];
+      const copied: Readonly<Record<string, string>> = garden[scheme];
+      expect(copied).toEqual({ ground, card, ink, quiet, soft, sun, miss, shadow });
+    });
+});
+
+/** The launch screen hands off to the hymn list with no step: one ground. */
+test('the launch grounds are the theme’s grounds', () => {
+  expect([launch.light.ground, launch.dark.ground]).toEqual([
+    theme.light.ground,
+    theme.dark.ground,
+  ]);
+});
+
+/**
  * Every text role on every role it is drawn on, with WCAG AA's least ratio
  * for its smallest size there: all are body sizes (13 to 17 points), so 4.5.
  * The player draws on the ground: its title in ink, its caption and times
  * in muted, the hymn number in accent; the web's and Android's play button
  * is an accent fill under onAccent, and while pressed a pressed fill under
  * onPressed. A button's fill carries onButton, a chosen tab's fill the ink.
- * The chords stand on the page, and the search field's placeholder on soft.
+ * The chords stand on the page, the panel and the bar, the search field's
+ * placeholder on soft, and Delete downloads (alert) on the page, a pressed
+ * row and a panel.
  */
 const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['ink', 'ground'],
   ['muted', 'ground'],
   ['accent', 'ground'],
   ['chord', 'ground'],
+  ['alert', 'ground'],
   ['ink', 'soft'],
   ['accent', 'soft'],
   ['muted', 'soft'],
+  ['alert', 'soft'],
   ['onAccent', 'accent'],
   ['onPressed', 'pressed'],
   ['onButton', 'button'],
@@ -57,15 +86,17 @@ const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['muted', 'panel'],
   ['accent', 'panel'],
   ['chord', 'panel'],
+  ['alert', 'panel'],
   ['onPill', 'pill'],
   ['onChosen', 'chosen'],
+  ['onGlassChosen', 'glassChosen'],
   ['ink', 'bar'],
   ['muted', 'bar'],
   ['accent', 'bar'],
 ];
 
 describe('the palette meets WCAG AA', () => {
-  for (const scheme of ['light', 'dark'] as const) {
+  for (const scheme of schemes) {
     for (const [text, on] of pairs) {
       test(`${scheme}: ${text} on ${on} is at least 4.5:1`, () => {
         const roles = theme[scheme];
@@ -78,43 +109,39 @@ describe('the palette meets WCAG AA', () => {
 /**
  * The panel the open dials stand on reads against the page under it: its
  * edge is a control's boundary, at 3.5:1 on the ground (WCAG 1.4.11's 3:1,
- * with the margin the panel's shadow takes from the ground beside it: barfix
- * measured 2.88:1 there for an edge at 3.13:1 on the plain ground). Its fill
- * is a tone of its own: by day the sky a step deeper than the page, by
- * night the night raised, each at least 1.05:1 off the ground.
+ * with the margin the panel's shadow takes from the ground beside it). Its
+ * fill is Heartseed's card, lighter than the page in both schemes and at
+ * least 1.05:1 off it.
  */
 describe('the dials’ panel stands off the page', () => {
-  for (const scheme of ['light', 'dark'] as const) {
+  for (const scheme of schemes) {
     test(`${scheme}: the edge is at least 3.5:1 on the ground`, () => {
       const roles = theme[scheme];
       expect(contrast(roles.edge, roles.ground)).toBeGreaterThanOrEqual(3.5);
     });
-    test(`${scheme}: the fill is at least 1.05:1 off the ground`, () => {
+    test(`${scheme}: the fill is lighter than the page and at least 1.05:1 off it`, () => {
       const roles = theme[scheme];
+      expect(luminance(roles.panel)).toBeGreaterThan(luminance(roles.ground));
       expect(contrast(roles.panel, roles.ground)).toBeGreaterThanOrEqual(1.05);
     });
   }
-  test('light: the fill is deeper than the page, and dark: lighter', () => {
-    expect(luminance(theme.light.panel)).toBeLessThan(luminance(theme.light.ground));
-    expect(luminance(theme.dark.panel)).toBeGreaterThan(luminance(theme.dark.ground));
-  });
 });
 
 /**
  * A checked chip's chosen mark is a state, not text: a fill that must read on
  * the pill at WCAG 1.4.11's 3:1. The accent where it does (by day, the
- * night), else the pill's ink (by night, where the number reads 1.13:1 on
- * the button's pill). The find bar's glass is held in
+ * ink on Heartseed's soft), else the pill's ink (by night the pill is the
+ * accent itself, so the ground). The find bar's glass is held in
  * `home/findglass.test.tsx`.
  */
 describe('the chosen mark reads on the pill', () => {
-  for (const scheme of ['light', 'dark'] as const) {
+  for (const scheme of schemes) {
     test(`${scheme}: chosen is at least 3:1 on the pill`, () => {
       const roles = theme[scheme];
       expect(contrast(roles.chosen, roles.pill)).toBeGreaterThanOrEqual(3);
     });
   }
-  test('dark: the number fails on the pill, so the chosen mark is the night', () => {
+  test('dark: the accent is the pill, so the chosen mark is the pill’s ink', () => {
     expect(contrast(theme.dark.accent, theme.dark.pill)).toBeLessThan(3);
     expect(theme.dark.chosen).toBe(theme.dark.onPill);
   });
@@ -133,145 +160,142 @@ const oklab = (hex: string) => {
   ];
 };
 
-/**
- * Buttons are told from what they stand on and from the chords: the play
- * and Sound marks on the bar at WCAG 1.4.11's 3:1, and the chords at least
- * 0.06 from the button in OKLab, so a chord never reads as a button.
- */
-describe('the button stands apart', () => {
-  for (const scheme of ['light', 'dark'] as const) {
-    test(`${scheme}: the button is at least 3:1 on the bar`, () => {
-      const roles = theme[scheme];
-      expect(contrast(roles.button, roles.bar)).toBeGreaterThanOrEqual(3);
-    });
-    test(`${scheme}: the chord is at least 0.06 from the button in OKLab`, () => {
-      expect(apart(theme[scheme].chord, theme[scheme].button)).toBeGreaterThanOrEqual(0.06);
-    });
-  }
-});
-
 /** Two colours' distance in OKLab. */
 const apart = (a: string, b: string) => {
   const [one, other] = [oklab(a), oklab(b)];
   return Math.hypot(...one.map((value, k) => value - (other[k] ?? 0)));
 };
 
-/**
- * By night the chords part from the words they stand over (owner,
- * 2026-11-12: "no differentiation between chords and text"): at least 0.20
- * from the ink in OKLab, at the same weight, and apart from the sung
- * syllable (`accent`, 0.12) and the sung line (`muted`, 0.08), so a sung
- * word never reads as a chord.
- */
-describe('dark: the chords stand apart from the words', () => {
-  const night = theme.dark;
-  const least = [
-    ['ink', 0.2],
-    ['accent', 0.12],
-    ['muted', 0.08],
-  ] as const;
-  for (const [role, distance] of least)
-    test(`the chord is at least ${distance} from ${role} in OKLab`, () => {
-      expect(apart(night.chord, night[role])).toBeGreaterThanOrEqual(distance);
+/** Buttons are told from what they stand on: the play and Sound marks on the bar at WCAG 1.4.11's 3:1. */
+describe('the button stands on the bar', () => {
+  for (const scheme of schemes)
+    test(`${scheme}: the button is at least 3:1 on the bar`, () => {
+      const roles = theme[scheme];
+      expect(contrast(roles.button, roles.bar)).toBeGreaterThanOrEqual(3);
     });
 });
 
 /**
- * Every fill whose channels step by 17 (`#000` to `#fff`, 4096 of them), and
- * the brand's own colours, among them its accent and the wheat, which the
- * theme fills with.
+ * By day and by night the chords part from the words they stand over
+ * (owner, 2026-11-12: "no differentiation between chords and text"): at
+ * least 0.17 from the ink in OKLab, at the same weight, and apart from the
+ * sung syllable (`accent`, 0.12), the sung line (`muted`, 0.08) and a button
+ * (0.06), so a sung word never reads as a chord, nor a chord as a button.
  */
-const fills = [
+describe('the chords stand apart from the words', () => {
+  const least = [
+    ['ink', 0.17],
+    ['accent', 0.12],
+    ['muted', 0.08],
+    ['button', 0.06],
+  ] as const;
+  for (const scheme of schemes)
+    for (const [role, distance] of least)
+      test(`${scheme}: the chord is at least ${distance} from ${role} in OKLab`, () => {
+        expect(apart(theme[scheme].chord, theme[scheme][role])).toBeGreaterThanOrEqual(distance);
+      });
+});
+
+/** Every fill whose channels step by 17 (`#000` to `#fff`, 4096 of them), and the garden's own colours. */
+const fills = (scheme: (typeof schemes)[number]) => [
   ...Array.from({ length: 4096 }, (_, index) =>
     [index >> 8, (index >> 4) & 15, index & 15]
       .map((digit) => digit.toString(16).repeat(2))
       .reduce((hex, pair) => `${hex}${pair}`, '#'),
   ),
-  ...Object.values(PALETTE),
+  ...Object.values(garden[scheme]),
 ];
 
-test('text on any fill, as onColor picks it, meets WCAG AA', () => {
-  const under = fills.filter((fill) => contrast(onColor(fill), fill) < 4.5);
-  expect(under).toEqual([]);
-  expect([onColor(PALETTE.wheat), onColor(PALETTE.accent), onColor('#099197')]).toEqual([
-    PALETTE.night,
-    '#ffffff',
-    '#000000',
-  ]);
+describe('text on any fill, as onColor picks it, meets WCAG AA', () => {
+  for (const scheme of schemes)
+    test(`${scheme}: every fill`, () => {
+      const under = fills(scheme).filter(
+        (fill) => contrast(onColor(fill, garden[scheme]), fill) < 4.5,
+      );
+      expect(under).toEqual([]);
+    });
+  test('the ground first, then the ink, then white, then black', () => {
+    expect([
+      onColor(garden.light.ink, garden.light),
+      onColor(garden.dark.ink, garden.dark),
+      onColor(garden.light.ground, garden.light),
+      onColor('#707070', garden.light),
+      onColor('#099197', garden.light),
+    ]).toEqual([garden.light.ground, garden.dark.ground, garden.light.ink, '#ffffff', '#000000']);
+  });
 });
 
 test('the contrast ratio is WCAG 2’s', () => {
   expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
   expect(contrast('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
-  expect(contrast('#12354e', '#fff9e0')).toBeCloseTo(12.08, 2);
+  expect(contrast('#2c4542', '#f1f0e6')).toBeCloseTo(9.01, 2);
 });
 
 /**
- * The roles as the owner's picks draw them. Light is "sky" (2026-10-25):
- * each role the prototype named is its value there, or within 2 of it per
- * channel where a mix of the brand's colours draws it (muted, panel and
- * soft), but the edge, moved until it reads at 3.5:1 (the prototype's was
- * 1.6:1); the button is the accent and a chosen tab's fill is soft, so
- * light draws as before. Dark is the Night field with lifted panels (C2)
- * under the analogous accents (system 1), each role the value the pick's
- * pages show. A change to the brand, the mixing or a channel's order shows
- * here.
+ * The roles as Heartseed's palette maps them (the owner, 2026-11-12, variant
+ * A: gold chords, ink numbers): each is a garden role, or the stated rule
+ * over garden roles drawn to its hex. A change to the garden, the mixing or
+ * a channel's order shows here.
  */
-test('the roles are the owner’s picks', () => {
+test('the roles are Heartseed’s palette, as the mapping draws it', () => {
   expect(theme).toEqual({
     light: {
-      ground: '#f7f9fb',
-      ink: PALETTE.night,
-      muted: '#526b7d',
-      line: '#dfe6ee',
-      accent: PALETTE.night,
-      button: PALETTE.night,
-      onButton: '#ffffff',
-      selected: '#e1e8f0',
-      chord: PALETTE.duskDeep,
-      soft: '#e1e8f0',
-      onAccent: '#ffffff',
-      pressed: '#405c71',
-      onPressed: '#ffffff',
-      panel: '#ebeff5',
-      edge: '#6e869c',
-      bar: '#f7f9fb',
-      pill: PALETTE.sky,
-      onPill: PALETTE.night,
-      chosen: PALETTE.night,
-      onChosen: '#ffffff',
-      glass: '#e1e8f0d9',
-      onGlass: PALETTE.night,
-      onGlassMuted: '#3b596e',
-      glassChosen: PALETTE.night,
-      onGlassChosen: '#ffffff',
+      ground: garden.light.ground,
+      ink: garden.light.ink,
+      muted: garden.light.quiet,
+      line: '#cfdcc4',
+      accent: garden.light.ink,
+      button: garden.light.ink,
+      onButton: garden.light.ground,
+      selected: '#dde4d2',
+      chord: garden.light.sun,
+      soft: '#dde4d2',
+      onAccent: garden.light.ground,
+      pressed: '#536763',
+      onPressed: garden.light.ground,
+      panel: garden.light.card,
+      edge: '#6d8474',
+      bar: garden.light.ground,
+      pill: garden.light.soft,
+      onPill: garden.light.ink,
+      chosen: garden.light.ink,
+      onChosen: garden.light.ground,
+      alert: garden.light.miss,
+      shadow: garden.light.shadow,
+      glass: '#dde4d2d9',
+      onGlass: garden.light.ink,
+      onGlassMuted: '#415853',
+      glassChosen: garden.light.ink,
+      onGlassChosen: garden.light.ground,
     },
     dark: {
-      ground: '#0a1f2d',
-      ink: '#f3f5f9',
-      muted: '#99adc2',
-      line: '#233745',
-      accent: '#94d8e2',
-      button: '#66d0df',
-      onButton: PALETTE.night,
-      selected: '#155159',
-      chord: '#a3a2fd',
-      soft: PALETTE.nightPanel,
-      onAccent: PALETTE.night,
-      pressed: '#42b0bf',
-      onPressed: PALETTE.night,
-      panel: PALETTE.nightPanel,
-      edge: '#647686',
-      bar: '#081722',
-      pill: '#66d0df',
-      onPill: PALETTE.night,
-      chosen: PALETTE.night,
-      onChosen: '#ffffff',
-      glass: `${PALETTE.nightPanel}d9`,
-      onGlass: '#f3f5f9',
-      onGlassMuted: '#cad3dc',
-      glassChosen: '#66d0df',
-      onGlassChosen: PALETTE.night,
+      ground: garden.dark.ground,
+      ink: garden.dark.ink,
+      muted: garden.dark.quiet,
+      line: '#2d463c',
+      accent: garden.dark.ink,
+      button: garden.dark.ink,
+      onButton: garden.dark.ground,
+      selected: garden.dark.soft,
+      chord: garden.dark.sun,
+      soft: '#263d35',
+      onAccent: garden.dark.ground,
+      pressed: '#bcc6b6',
+      onPressed: garden.dark.ground,
+      panel: garden.dark.card,
+      edge: '#627c6e',
+      bar: garden.dark.ground,
+      pill: garden.dark.ink,
+      onPill: garden.dark.ground,
+      chosen: garden.dark.ground,
+      onChosen: garden.dark.ink,
+      alert: garden.dark.miss,
+      shadow: garden.dark.shadow,
+      glass: '#263d35d9',
+      onGlass: garden.dark.ink,
+      onGlassMuted: '#bec9b8',
+      glassChosen: garden.dark.ink,
+      onGlassChosen: garden.dark.ground,
     },
   });
 });

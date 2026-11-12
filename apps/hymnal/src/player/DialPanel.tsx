@@ -33,7 +33,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { color } from '~/color';
+import { color, useShadow } from '~/color';
 
 import { DETENT } from './dial';
 import { useReduceMotion } from './motion';
@@ -50,8 +50,9 @@ export function DialPanel({
   readonly testID?: string;
   readonly children: ReactNode;
 }) {
+  const shadow = useShadow();
   return (
-    <View testID={testID} style={styles.panel}>
+    <View testID={testID} style={[styles.panel, { shadowColor: shadow }]}>
       {children}
     </View>
   );
@@ -112,6 +113,7 @@ export function DialPopover({
     if (open) last.current = children;
   });
   const reduced = useReduceMotion();
+  const shadow = useShadow();
   const { width } = useWindowDimensions();
   const progress = useSharedValue(0);
   const size = useSharedValue({
@@ -176,7 +178,7 @@ export function DialPopover({
       testID="dials-panel"
       pointerEvents={(open && 'auto') || 'none'}
       onLayout={measured}
-      style={[styles.panel, drawn]}
+      style={[styles.panel, { shadowColor: shadow }, drawn]}
     >
       <Staggered value={!reduced}>{(open && children) || last.current}</Staggered>
     </Animated.View>
@@ -223,7 +225,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.edge,
     backgroundColor: color.panel,
-    shadowColor: '#000',
     shadowOpacity: 0.14,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },

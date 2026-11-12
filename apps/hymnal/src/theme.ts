@@ -1,61 +1,3 @@
-/**
- * The app's colours: twenty-five roles in light and dark. Light is drawn
- * from the brand (`@manna/brand`, the one source the First the Blade site
- * reads too) as the owner's pick of 2026-10-25, "sky": the brand's painted
- * sky as the second colour, the night as the ink. Dark is the owner's pick
- * of 2026-11-11, the Night field with lifted panels and the analogous
- * accents. A screen reads a role (`color.ts` on the web, `color.native.ts`
- * on a phone), never a hex value.
- *
- * Light is a cool white page (the sky tinted 88% toward white) under the
- * night's ink, with the night for the accent too (the hymn numbers, the
- * tint) and for the buttons (`button`: the play button, the find bar's
- * chosen disk), and the dusk's gold deepened for the chords (`chord`).
- * Panels, pressed rows and a chosen tab (`selected`) are the sky tinted
- * less far toward white, the rules a step deeper, and the key button's lit
- * pill the sky itself under the night (`pill`, `onPill`).
- *
- * Dark is the Night field: the page is the night 42 % toward black, panels
- * and pressed rows the night raised (`nightPanel`), the ink the sky 82 %
- * toward white, quiet text the sky moved toward the panel as far as AA holds
- * on the page and the panel, and the docked bar the page a quarter toward
- * black. Its accents are analogous about the night's OKLCH hue, 243°: every
- * one stays within 40° of it, so the page carries no warm hue. Numbers and
- * buttons sit 35° toward teal (hue 208), sharing a hue and differing in
- * lightness and chroma: the number `oklch(0.84 0.070 207)`, the button
- * `oklch(0.80 0.100 208)` (the key button's pill, every pill, the play and
- * Sound marks, the find bar's chosen disk), a pressed button
- * `oklch(0.70 0.100 208)` (set by hand, not mixed from the accent and the
- * ground), and a chosen tab's fill `oklch(0.40 0.060 208)`, under ink only.
- * Chords take the night's other side, 40° toward periwinkle,
- * `oklch(0.75 0.13 283)`: a step dimmer and more coloured than the words, so
- * chords and words part by lightness and chroma at the same weight, and away
- * from the teal the numbers, the buttons and the sung syllable share, so
- * they never read as buttons (`theme.test.ts` holds their OKLab distances:
- * 0.20 or more from the ink, 0.12 from the accent, 0.06 from the button and
- * 0.08 from muted). Each is written here as its sRGB hex.
- *
- * Text on a fill (`onAccent`, `onButton`, `onPressed`, `onPill`,
- * `onChosen`, `onGlassChosen`) is the night where it meets AA on the fill,
- * else white, else black (`onColor`). A checked chip stands on the accent
- * where the accent reads at 3:1 on the pill, else on the pill's ink
- * (`chosen`; by night the number does not, so the night). The find bar's
- * capsule is glass: `soft` at 85 % (`glass`), laid over whatever scrolls
- * under the bar, with the ink for its words (`onGlass`) and its chosen
- * control on a disk of the button (`glassChosen`). Its placeholder is the
- * ink moved toward `soft` as far as AA holds over every opaque role with the
- * glass laid on it (`onGlassMuted`). By day a pressed button is a fill of
- * its own (`pressed`), the night a fifth toward the page.
- * The open dials stand on an opaque panel (`panel`), so no page word shows
- * through it; its edge (`edge`) is the sky moved toward the night by day and
- * the page toward the sky by night, until it reads at 3.5:1 on the ground:
- * WCAG 1.4.11's 3:1 for a control's boundary, with the margin the shadow
- * under the panel takes from the ground around it. Every text role keeps
- * WCAG AA on every role it is drawn on (`theme.test.ts`).
- */
-
-import { PALETTE } from '@manna/brand';
-
 /** The roles drawn opaque: every role a screen can show under the find bar's glass. */
 interface OpaqueRoles {
   /** The screen's background. */
@@ -76,15 +18,15 @@ interface OpaqueRoles {
   readonly selected: string;
   /** A chord's symbol over the words, and the dials' current stop and notch. */
   readonly chord: string;
-  /** A pressed row, a selection, the search field: under ink, accent and muted text. */
+  /** A pressed row, a selection, the search field: under ink, accent, muted and alert text. */
   readonly soft: string;
   /** Text drawn on an accent fill: the play button's label on the web and Android. */
   readonly onAccent: string;
-  /** A button's fill while it is pressed: by day the night mixed a fifth toward the ground, by night set by hand. */
+  /** A button's fill while it is pressed: the button a fifth toward the ground. */
   readonly pressed: string;
   /** Text drawn on the pressed fill, picked for it as `onAccent` is for the accent. */
   readonly onPressed: string;
-  /** A surface over the page, the open dials' panel. */
+  /** A surface over the page: the open dials' panel, the KEY wheel's resting items. */
   readonly panel: string;
   /** The panel's edge: a control's boundary, at least 3.5:1 on the ground. */
   readonly edge: string;
@@ -98,6 +40,10 @@ interface OpaqueRoles {
   readonly chosen: string;
   /** Text and marks drawn on the chosen mark. */
   readonly onChosen: string;
+  /** A destructive action's words: Delete downloads and its confirm. */
+  readonly alert: string;
+  /** A raised surface's shadow: the dials' panel, the KEY wheel's pills and backdrop; not text. */
+  readonly shadow: string;
 }
 
 /** The find bar's glass, laid over whatever the page shows under the bar. */
@@ -116,6 +62,53 @@ interface GlassRoles {
 
 export interface Roles extends OpaqueRoles, GlassRoles {}
 
+/** Heartseed's roles the hymnal draws from, in one scheme. */
+interface Garden {
+  /** Heartseed's `ground`: the page. */
+  readonly ground: string;
+  /** Heartseed's `card`: field rows, results, pills. */
+  readonly card: string;
+  /** Heartseed's `ink`: text, the big button. */
+  readonly ink: string;
+  /** Heartseed's `quiet`: references, unread words. */
+  readonly quiet: string;
+  /** Heartseed's `soft`: lines, progress segments. */
+  readonly soft: string;
+  /** Heartseed's `sun`: the gold ink. */
+  readonly sun: string;
+  /** Heartseed's `miss`: a missed word, alerts. */
+  readonly miss: string;
+  /** Heartseed's `shadow`: the big button's shadow. */
+  readonly shadow: string;
+}
+
+/**
+ * Heartseed's palette, each hex the Heartseed role it copies
+ * (`apps/heartseed/src/theme.ts`; `theme.test.ts` holds them equal).
+ */
+export const garden = {
+  light: {
+    ground: '#f1f0e6',
+    card: '#f9f8f1',
+    ink: '#2c4542',
+    quiet: '#5a6761',
+    soft: '#b9cfae',
+    sun: '#80641f',
+    miss: '#a04a34',
+    shadow: '#2c4542',
+  },
+  dark: {
+    ground: '#142420',
+    card: '#1d322c',
+    ink: '#e6eedb',
+    quiet: '#a0b4a7',
+    soft: '#3d5c4f',
+    sun: '#d4a640',
+    miss: '#f09982',
+    shadow: '#000000',
+  },
+} as const satisfies { readonly light: Garden; readonly dark: Garden };
+
 type Rgb = readonly [number, number, number];
 
 const channel = (hex: string, at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
@@ -132,7 +125,7 @@ const hex = (channels: Rgb) =>
     )
     .join('')}`;
 
-/** `a` mixed `t` of the way toward `b`, per sRGB channel, as the palette page mixes. */
+/** `a` mixed `t` of the way toward `b`, per sRGB channel, as Heartseed's theme mixes. */
 const mix = (a: string, b: string, t: number): string => {
   const [r, g, bl] = rgb(a);
   const [r2, g2, b2] = rgb(b);
@@ -158,13 +151,19 @@ const contrast = (a: string, b: string) => {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
 
+/** `from` moved toward `to` in steps of a hundredth: the first step that reads at `least`:1 on `on`, else `to`. */
+const firstAt = (from: string, to: string, on: string, least: number) =>
+  Array.from({ length: 101 }, (_, step) => mix(from, to, step / 100)).find(
+    (tone) => contrast(tone, on) >= least,
+  ) ?? to;
+
 /**
- * Text on a fill of `fill`: the night where it meets WCAG AA (4.5:1), else
- * white where it does, else black. White and black between them meet AA on
- * every fill.
+ * Text on a fill of `fill` in a scheme: the scheme's ground where it meets
+ * WCAG AA (4.5:1), else its ink where it does, else white, else black.
+ * White and black between them meet AA on every fill.
  */
-export const onColor = (fill: string) =>
-  [PALETTE.night, '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
+export const onColor = (fill: string, scheme: { readonly ground: string; readonly ink: string }) =>
+  [scheme.ground, scheme.ink, '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
 
 /**
  * The chosen mark on a pill of `pill`: the `accent` where it reads as a state
@@ -173,13 +172,6 @@ export const onColor = (fill: string) =>
 const chosenOn = (accent: string, pill: string, onPill: string) => {
   if (contrast(accent, pill) >= 3) return accent;
   return onPill;
-};
-
-/** The roles a lit pill-shaped button draws with: the key button with chords on, a checked chip. */
-const onPillRoles = (accent: string, pill: string) => {
-  const onPill = onColor(pill);
-  const chosen = chosenOn(accent, pill, onPill);
-  return { pill, onPill, chosen, onChosen: onColor(chosen) };
 };
 
 /** The glass's alpha: 0xd9 of 0xff, 85 %. */
@@ -206,79 +198,99 @@ const glassRoles = (opaque: OpaqueRoles) => {
     onGlass: opaque.ink,
     onGlassMuted: steps.findLast(holds) ?? opaque.ink,
     glassChosen: opaque.button,
-    onGlassChosen: onColor(opaque.button),
+    onGlassChosen: onColor(opaque.button, opaque),
   };
 };
 
-/** A scheme's roles: its opaque roles and the glass laid over them. */
-const withGlass = <const T extends OpaqueRoles>(opaque: T) => ({
-  ...opaque,
-  ...glassRoles(opaque),
-});
+/** How a scheme draws its roles from the garden's. */
+interface Drawn {
+  /** How far `soft` is the ground moved toward Heartseed's soft. */
+  readonly softness: number;
+  /** A chosen tab's fill: the hymnal's own `soft`, or Heartseed's. */
+  readonly selected: 'mixed' | 'garden';
+  /** The key button's lit fill: Heartseed's soft, or the button (Heartseed's ink). */
+  readonly pill: 'soft' | 'ink';
+}
 
-const white = '#ffffff';
+/** A scheme's roles from Heartseed's, drawn as `drawn` says. */
+const scheme = (from: Garden, { softness, selected, pill }: Drawn) => {
+  const soft = mix(from.ground, from.soft, softness);
+  const button = from.ink;
+  const pressed = mix(button, from.ground, 0.2);
+  const pillFill = from[pill];
+  const onPill = onColor(pillFill, from);
+  const chosen = chosenOn(from.ink, pillFill, onPill);
+  const opaque = {
+    ground: from.ground,
+    ink: from.ink,
+    muted: from.quiet,
+    line: mix(from.ground, from.soft, 0.6),
+    accent: from.ink,
+    button,
+    onButton: onColor(button, from),
+    selected: { mixed: soft, garden: from.soft }[selected],
+    chord: from.sun,
+    soft,
+    onAccent: onColor(from.ink, from),
+    pressed,
+    onPressed: onColor(pressed, from),
+    panel: from.card,
+    edge: firstAt(from.soft, from.ink, from.ground, 3.5),
+    bar: from.ground,
+    pill: pillFill,
+    onPill,
+    chosen,
+    onChosen: onColor(chosen, from),
+    alert: from.miss,
+    shadow: from.shadow,
+  } satisfies OpaqueRoles;
+  return { ...opaque, ...glassRoles(opaque) };
+};
 
-/** The sky tinted `t` of the way toward white. */
-const skyTint = (t: number) => mix(PALETTE.sky, white, t);
-
-const lightGround = skyTint(0.88);
-const lightSoft = skyTint(0.57);
-const lightPressed = mix(PALETTE.night, lightGround, 0.2);
-
-/** The Night field's page: the night 42 % toward black. */
-const nightField = mix(PALETTE.night, '#000000', 0.42);
-
-/** The analogous accents by night, each its OKLCH value in sRGB hex. */
-const night = {
-  /** `oklch(0.84 0.070 207)`: the hymn numbers, the tint. */
-  number: '#94d8e2',
-  /** `oklch(0.75 0.13 283)`: the chords, a step dimmer and more coloured than the words, at 7.3:1 on the page and 4.6:1 on the panel. */
-  chord: '#a3a2fd',
-  /** `oklch(0.80 0.100 208)`: the buttons. */
-  button: '#66d0df',
-  /** `oklch(0.70 0.100 208)`: a pressed button. */
-  pressed: '#42b0bf',
-  /** `oklch(0.40 0.060 208)`: a chosen tab's fill. */
-  selected: '#155159',
-} as const;
-
+/**
+ * The app's colours: twenty-seven roles in light and dark, drawn from
+ * Heartseed's palette (`apps/heartseed/src/theme.ts`), so the hymnal reads
+ * as Heartseed's family as its icon and launch screen do. Heartseed's roles
+ * it draws from are written once, in `garden`; every role here is one of
+ * them or a rule over them, so a change of palette edits `garden` alone
+ * (`theme.test.ts` holds `garden` to Heartseed's own). A screen reads a role
+ * (`color.ts` on the web, `color.native.ts` on a phone), never a hex value.
+ *
+ * The page and the docked bar are Heartseed's ground, a surface over the
+ * page (the open dials' panel, the KEY wheel's resting items) its card, and
+ * the text its ink and quiet. The ink is also the accent (the hymn numbers,
+ * the tint, links, the sung syllable) and the button (the play and Sound
+ * marks, the find bar's chosen disk), as Heartseed's big button is. Chords
+ * are Heartseed's gold ink (`sun`; by night the gold itself): the only warm
+ * hue on a hymn's page, so they part from the words, the sung syllable and
+ * the buttons (`theme.test.ts` holds their OKLab distances). Delete
+ * downloads draws in Heartseed's alert (`miss`), and the dials' panel and
+ * the KEY wheel cast Heartseed's shadow.
+ *
+ * Mixed tones are Heartseed's ground moved toward its soft, per sRGB
+ * channel: a pressed row, the search field and the glass (`soft`) 35 % by
+ * day and 45 % by night, the rules (`line`) 60 %. A chosen tab (`selected`)
+ * is that `soft` by day and Heartseed's soft by night, under ink only. The
+ * panel's edge (`edge`) is Heartseed's soft moved toward the ink in steps of
+ * a hundredth until it reads at 3.5:1 on the ground: WCAG 1.4.11's 3:1 for a
+ * control's boundary, with the margin the shadow under the panel takes from
+ * the ground around it. A pressed button is the button a fifth toward the
+ * ground. The key button's lit pill is Heartseed's soft by day and the
+ * button by night.
+ *
+ * Text on a fill (`onAccent`, `onButton`, `onPressed`, `onPill`,
+ * `onChosen`, `onGlassChosen`) is the scheme's ground where it meets AA on
+ * the fill (Heartseed's `onInk`), else its ink, else white, else black
+ * (`onColor`). A checked chip stands on the accent where the accent reads
+ * at 3:1 on the pill, else on the pill's ink (`chosen`). The find bar's
+ * capsule is glass: `soft` at 85 % (`glass`), laid over whatever scrolls
+ * under the bar, with the ink for its words (`onGlass`) and its chosen
+ * control on a disk of the button (`glassChosen`). Its placeholder is the
+ * ink moved toward `soft` as far as AA holds over every opaque role with the
+ * glass laid on it (`onGlassMuted`). Every text role keeps WCAG AA on every
+ * role it is drawn on (`theme.test.ts`).
+ */
 export const theme = {
-  light: withGlass({
-    ground: lightGround,
-    ink: PALETTE.night,
-    muted: mix(PALETTE.night, white, 0.268),
-    line: skyTint(0.529),
-    accent: PALETTE.night,
-    button: PALETTE.night,
-    onButton: onColor(PALETTE.night),
-    selected: lightSoft,
-    chord: PALETTE.duskDeep,
-    soft: lightSoft,
-    onAccent: onColor(PALETTE.night),
-    pressed: lightPressed,
-    onPressed: onColor(lightPressed),
-    panel: skyTint(0.709),
-    edge: mix(PALETTE.sky, PALETTE.night, 0.45),
-    bar: lightGround,
-    ...onPillRoles(PALETTE.night, PALETTE.sky),
-  }),
-  dark: withGlass({
-    ground: nightField,
-    ink: skyTint(0.82),
-    muted: mix(PALETTE.sky, PALETTE.nightPanel, 0.21),
-    line: mix(nightField, PALETTE.sky, 0.14),
-    accent: night.number,
-    button: night.button,
-    onButton: onColor(night.button),
-    selected: night.selected,
-    chord: night.chord,
-    soft: PALETTE.nightPanel,
-    onAccent: onColor(night.number),
-    pressed: night.pressed,
-    onPressed: onColor(night.pressed),
-    panel: PALETTE.nightPanel,
-    edge: mix(nightField, PALETTE.sky, 0.51),
-    bar: mix(nightField, '#000000', 0.25),
-    ...onPillRoles(night.number, night.button),
-  }),
+  light: scheme(garden.light, { softness: 0.35, selected: 'mixed', pill: 'soft' }),
+  dark: scheme(garden.dark, { softness: 0.45, selected: 'garden', pill: 'ink' }),
 } as const satisfies { readonly light: Roles; readonly dark: Roles };

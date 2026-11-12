@@ -21,8 +21,8 @@ export const icon = {
  * The launch screen's colours, on Heartseed's page grounds as the owner asked
  * (2026-11-12): its garden ink (`ink`, `#2c4542`) on its light page
  * (`ground`, `#f1f0e6`), and its gold (`#d4a640`) on its night ground
- * (`dark.ground`, `#142420`). The hymn list that follows keeps the hymnal's
- * own grounds, so the launch steps to it in one frame.
+ * (`dark.ground`, `#142420`). The hymn list that follows stands on the same
+ * grounds (`theme.ts`), so the launch hands off to it with no step.
  */
 export const launch = {
   light: { ground: '#f1f0e6', mark: '#2c4542' },

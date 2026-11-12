@@ -29,6 +29,8 @@ const roles = [
   'onPill',
   'chosen',
   'onChosen',
+  'alert',
+  'shadow',
   'glass',
   'onGlass',
   'onGlassMuted',
@@ -50,6 +52,7 @@ export const color = {
   onPill: 'var(--onPill)',
   chosen: 'var(--chosen)',
   onChosen: 'var(--onChosen)',
+  alert: 'var(--alert)',
   glass: 'var(--glass)',
   onGlass: 'var(--onGlass)',
   onGlassMuted: 'var(--onGlassMuted)',
@@ -57,8 +60,16 @@ export const color = {
   onGlassChosen: 'var(--onGlassChosen)',
 } satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
-/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, and the selected fill. */
-type Fill = 'accent' | 'onAccent' | 'pressed' | 'onPressed' | 'button' | 'onButton' | 'selected';
+/** The roles a screen reads through a hook: the accent, the button and their fills' text, pressed or not, the selected fill, and the shadow. */
+type Fill =
+  | 'accent'
+  | 'onAccent'
+  | 'pressed'
+  | 'onPressed'
+  | 'button'
+  | 'onButton'
+  | 'selected'
+  | 'shadow';
 
 /** The accent in the scheme showing now. */
 export const useAccent = (): ColorValue => 'var(--accent)';
@@ -80,6 +91,9 @@ export const usePressed = () => ({
   fill: 'var(--pressed)',
   text: 'var(--onPressed)',
 });
+
+/** A raised surface's shadow in the scheme showing now. */
+export const useShadow = (): string => 'var(--shadow)';
 
 export const webColors = `
 :root {
