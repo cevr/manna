@@ -335,7 +335,9 @@ at 1536 px (no larger night exists), turns each pixel near the sky's hue
 above the near field about the OKLab lightness axis, so the moon, the stars,
 the land and the field keep their place, light and chroma, and writes the
 two stills; it never reads its own output, so a second run writes the same
-bytes. The wheat (`src/art/wheat.svg`) is the hymnal's blade, the same path.
+bytes. The wheat (`src/art/wheat.svg`) is the site's own blade, one filled
+path; the hymnal's icon draws another shape, its bolder ear of seven grains
+(`apps/hymnal/assets/icon/ear.svg`).
 The series marks (`src/art/emblem-*.svg`) are fine lines in a 48-unit box,
 stroked in the darker wheat and drawn in the wheat's hand: each stroke
 swells in its body and comes to a point at its ends, as the wheat's blades
