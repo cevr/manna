@@ -1,0 +1,151 @@
+{
+  "feature": "home-settings",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-settings-top",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [
+        { "shows": "label=Done" },
+        { "shows": "label=A day's tending" },
+        { "shows": "label=2 min" },
+        { "shows": "label=20 min" },
+        { "shows": "label=Voice" },
+        { "shows": "label=System" },
+        { "shows": "label=About" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=About" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-minutes-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-minutes-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=10 min" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-minutes",
+      "action": "tap",
+      "target": "label=10 min",
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-minutes-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-minutes-launch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-kept-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-kept",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=10 min" }, { "shows": "label=Done" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-restore",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-restored",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-about-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-about-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=About" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-settings-about",
+      "action": "tap",
+      "target": "label=About",
+      "expect": [{ "shows": "label=Licences" }, { "hides": "label=System" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Licences" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-today",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Your field" },
+        { "hides": "label=5 min" },
+        { "hides": "label=Voice" },
+        { "hides": "label=Settings" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-renew-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=5 min" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
