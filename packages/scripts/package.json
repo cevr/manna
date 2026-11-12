@@ -9,7 +9,7 @@
   "scripts": {
     "build:webster": "bun src/webster-compiler/main.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo && bun src/typecheck-coverage.ts",
-    "test": "bun test --parallel=4 --path-ignore-patterns='**/*.slow.test.*' src lint",
+    "test": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' src lint",
     "test:slow": "bun test --parallel=4 .slow.test.",
     "build:topics": "bun src/topics-compiler/main.ts",
     "build:vectors": "bun src/vector-compiler/main.ts",

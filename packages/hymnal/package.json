@@ -18,7 +18,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test --path-ignore-patterns='**/*.slow.test.*'",
+    "test": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*'",
     "test:slow": "bun test .slow.test.",
     "align": "bun scripts/align.ts",
     "chart": "bun scripts/chart.ts",
