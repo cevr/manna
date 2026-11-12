@@ -1,0 +1,6 @@
+<!--
+  The hymnal's ear of wheat: the one shape every app icon is drawn from (scripts/icon.ts).
+  Drawn by hand to Heartseed's weight (owner's pick, 2026-11-12, "D · Harvest, bolder ear"):
+  one upright ear of seven rounded grains, a stem and a leaf.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="104 24 392 916"><path fill="currentColor" fill-rule="evenodd" d="M300 26A92 50 -90 1 0 300 210A92 50 -90 1 0 300 26ZM159 214.1A90 56 -120 1 0 249 369.9A90 56 -120 1 0 159 214.1ZM441 214.1A90 56 -60 1 0 351 369.9A90 56 -60 1 0 441 214.1ZM159 380.1A90 56 -120 1 0 249 535.9A90 56 -120 1 0 159 380.1ZM441 380.1A90 56 -60 1 0 351 535.9A90 56 -60 1 0 441 380.1ZM159 546.1A90 56 -120 1 0 249 701.9A90 56 -120 1 0 159 546.1ZM441 546.1A90 56 -60 1 0 351 701.9A90 56 -60 1 0 441 546.1ZM281 250C281 230 319 230 319 250L319 920C319 944 281 944 281 920ZM264 872C208 866 150 836 112 778C104 764 118 754 130 764C176 800 230 822 266 834C278 840 276 874 264 872Z"/></svg>

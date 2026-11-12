@@ -2,8 +2,8 @@
  * The native app's manifest, which One's prebuild reads (`vite.config.ts`
  * passes it as `native.app`). It lives here so a unit test reads it without
  * loading `one/vite`. The icons are drawn by `bun run icon`
- * (`scripts/icon.ts`) from `assets/icon/wheat.svg`, in Heartseed's colours
- * (`src/icon-colours.ts`): its gold blade on its garden ink, and on its night
+ * (`scripts/icon.ts`) from `assets/icon/ear.svg`, in Heartseed's colours
+ * (`src/icon-colours.ts`): its gold ear on its garden ink, and on its night
  * ground in dark. The launch screen stands on Heartseed's page grounds.
  */
 import type { NativeAppManifest } from 'one/native';
