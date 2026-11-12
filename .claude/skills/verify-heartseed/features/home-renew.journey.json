@@ -1,0 +1,59 @@
+{
+  "feature": "home-renew",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-renew-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-renew-scroll",
+      "action": "scroll",
+      "target": "label=Settings",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "home-renew-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=5 min" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-renew-minutes",
+      "action": "tap",
+      "target": "label=5 min",
+      "receipt": "none"
+    },
+    {
+      "name": "home-renew-home",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Start" },
+        { "shows": "label=Isaiah 41:10, seed, ready today" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-renew",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Say it" },
+        { "hides": "label=5 min" },
+        { "hides": "label=Voice" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
