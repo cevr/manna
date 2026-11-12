@@ -50,40 +50,47 @@ promises, so an install of a build of `1064d4138` or later serves
 (`SKILL.md`, Launch); the JavaScript comes from the dev server. The garden
 must start empty: uninstall by udid as `first.md` says.
 
-1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-home`.
-2. `need-gone`: `sim snapshot need-gone-home`, `sim scroll "label=How Heartseed works" down` and
-   `sim snapshot need-gone-home-end` → `When I need…` count 0 in both;
-   then `sim tap "label=Practice anyway"`,
-   `sim open / --expect "id=session" --no-relaunch`,
-   `sim snapshot need-gone-today` → `When I need…` count 0; then
-   `sim tap "label=Your field"`.
-3. `promise-field`: on the field, `sim snapshot promise-field` → the row
-   title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14 buttons
-   `<reference>, not planted` in that row (`Psalms 91:1` first,
-   `Isaiah 41:13` last; count them); `Remove` nowhere.
-4. `promise-relaunch`: `sim relaunch`, `sim open / --expect "id=today-card"`,
-   `sim snapshot promise-relaunch` → the heading `Your field`, no heading
-   `Today`, and no `Start` unless the plan holds an item (the done state
-   on the first day: `All tended for today` and `Practice anyway`).
+The taps are the journeys `promise` and `promise-new` beside this file,
+each one `sim journey` call. A receipt
+(`$EVIDENCE/snapshots/<journey>-<nn>-<step>.txt`, cited as
+`<journey>/<step>`) holds the visible nodes' types and labels. `When I
+need…` is gone from the app's sources, so no selector may name it (R4):
+its absence is a count of 0 read in each receipt.
+
+1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
+   microphone, and the first minute to `first-home`.
+2. `sim journey promise` → `"ok":true` (steps 2-4). `need-gone`:
+   `promise/need-gone-home`, `promise/need-gone-home-end` (after the
+   scroll to `How Heartseed works`) and `promise/need-gone-today` (after
+   `Practice anyway`) → `When I need…` count 0 in each.
+3. `promise-field`: `promise/promise-field`, after `Your field` → the row
+   title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14
+   buttons `<reference>, not planted` in that row (`Psalms 91:1` first,
+   `Isaiah 41:13` last; count them, those below the fold in a raw
+   snapshot, `first.md`, Driving it); `Remove` nowhere.
+4. `promise-relaunch`: `promise/promise-relaunch` → the heading
+   `Your field`, no heading `Today`, and `Start` only when the plan holds
+   an item (here the visit `Practice anyway` opened; with none, the done
+   state of the first day: `All tended for today` and `Practice anyway`).
 5. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
    the install.
 6. `promise-new`, the second session, after the next 04:00 local, with no
    passage added and no uninstall: `sim boot`, then
-   `sim open / --expect "id=today-card"` → the Today card's parts line
-   holds `1 new`, with `Start`; `sim tap "label=Start"`,
-   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot promise-new` → the
-   counts line holds `1 new`; when the reference is `Isaiah 41:10` (its
-   review due), run it through `Say it` and `Next` first, then snapshot
-   again → the reference `Psalms 91:1`, its words whole in one
-   `id=passage` node (the reading view draws words only while `Listen`
-   reads, `light.md`), `Listen` before `Say it`. Then `sim doctor` and `sim down`.
+   `sim journey promise-new` → `"ok":true`.
+   `promise-new/promise-new-home` → the Today card's parts line holds
+   `1 new`, with `Start`; `promise-new/promise-new` → the counts line
+   holds `1 new`; when the reference is `Isaiah 41:10` (its review due),
+   run `run.md`'s `run-recite` and `run-next` first, then
+   `sim journey promise-new` again → the reference `Psalms 91:1`, its
+   words whole in one `id=passage` node (the reading view draws words
+   only while `Listen` reads, `light.md`), `Listen` before `Say it`. Then
+   `sim doctor` and `sim down`.
 
 Report only counts, booleans, the labels named above, the counts line and
 the references; delete the `snapshots` folder and the raw snapshots.
 
-Red on base (`7cd3cfa9b`): `need-gone-home` holds `When I need…` once a
-plan is made.
+Red on base (`7cd3cfa9b`): `promise/need-gone-home` holds `When I need…`
+once a plan is made.
 
 ## Gotchas
 
