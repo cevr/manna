@@ -29,9 +29,10 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Duration, Effect, Option, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 
+import { nodesOf } from '@manna/sim/screen';
 import { succeed } from '@manna/sim/tools';
 import { app } from './sim-app.ts';
-import { calm, type Ask, nodesOf, pressTarget, readout, SCREEN_WIDTH } from './readout/frames.ts';
+import { calm, type Ask, pressTarget, readout, SCREEN_WIDTH } from './readout/frames.ts';
 
 const DRIVER_LIMIT = Duration.seconds(60);
 const UDID_LIMIT = Duration.seconds(30);

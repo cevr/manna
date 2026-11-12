@@ -397,6 +397,34 @@ const simCommand = (place: Place) => {
       ),
   ).pipe(Command.withDescription("Save the screen's accessibility tree under <out>/snapshots"));
 
+  const readCommand = Command.make(
+    'read',
+    {
+      name: Argument.String('name').pipe(
+        Argument.optional,
+        Argument.withDescription('the file name, without .json'),
+      ),
+      ids: Flag.String('id').pipe(
+        Flag.atLeast(0),
+        Flag.withDescription('a testID to read; a trailing * reads every id it begins'),
+      ),
+      labels: Flag.String('label').pipe(
+        Flag.atLeast(0),
+        Flag.withDescription("a name of the app's own to read, matched whole (never its words)"),
+      ),
+      state,
+    },
+    (flags) =>
+      report(
+        'read',
+        drive((d) => d.read(at(flags.state), flags.name, { ids: flags.ids, labels: flags.labels })),
+      ),
+  ).pipe(
+    Command.withDescription(
+      "Read the screen as numbers (iOS): each asked testID's and name's nodes, their frames and states, under <out>/reads; their counts in detail",
+    ),
+  );
+
   const recordCommand = Command.make(
     'record',
     {
@@ -609,6 +637,7 @@ const simCommand = (place: Place) => {
       scrollCommand,
       shotCommand,
       snapshotCommand,
+      readCommand,
       recordCommand,
       logCommand,
       doctorCommand,

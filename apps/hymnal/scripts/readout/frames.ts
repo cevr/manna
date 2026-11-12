@@ -1,7 +1,7 @@
 /**
  * The numbers a verifier reads off the hymnal's accessibility tree, and
  * never its words: from agent-device's raw snapshot (`snapshot --json
- * --raw`), the frames, states and numerals of the nodes asked for by testID
+ * --raw`, its nodes as the shared driver decodes them, `@manna/sim/screen`), the frames, states and numerals of the nodes asked for by testID
  * or by a name the caller gives (the app's chrome: `Pause hymn 100`,
  * `Open player`), the switches the silent rule reads, the hymn page shown and
  * the bar's Play or Pause. A node's own label or value reaches the readout
@@ -9,36 +9,7 @@
  */
 import { Clock, Duration, Effect, Option, Schema } from 'effect';
 
-const Rect = Schema.Struct({
-  x: Schema.Finite,
-  y: Schema.Finite,
-  width: Schema.Finite,
-  height: Schema.Finite,
-});
-
-/** A node of the raw snapshot, with the fields a readout reads. */
-const Node = Schema.Struct({
-  ref: Schema.optionalKey(Schema.String),
-  type: Schema.optionalKey(Schema.String),
-  identifier: Schema.optionalKey(Schema.String),
-  label: Schema.optionalKey(Schema.String),
-  value: Schema.optionalKey(Schema.Union([Schema.String, Schema.Finite, Schema.Boolean])),
-  rect: Schema.optionalKey(Rect),
-  enabled: Schema.optionalKey(Schema.Boolean),
-  selected: Schema.optionalKey(Schema.Boolean),
-});
-export type Node = typeof Node.Type;
-
-const Snapshot = Schema.Struct({
-  data: Schema.Struct({ nodes: Schema.Array(Node) }),
-});
-
-/** The nodes of agent-device's `snapshot --json --raw` answer. */
-export const nodesOf = (json: string) =>
-  Effect.map(
-    Schema.decodeEffect(Schema.fromJsonString(Snapshot))(json),
-    (snapshot) => snapshot.data.nodes,
-  );
+import type { Node } from '@manna/sim/screen';
 
 /** The screen's width in points: the verify-hymnal simulator's iPhone. */
 export const SCREEN_WIDTH = 402;

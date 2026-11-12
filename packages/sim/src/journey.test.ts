@@ -70,6 +70,7 @@ const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>
     scroll: step('scroll'),
     shot: receipt('shot', 'png'),
     snapshot: receipt('snapshot', 'txt'),
+    read: step('read'),
     record: step('record'),
     log: step('log'),
     doctor: step('doctor'),

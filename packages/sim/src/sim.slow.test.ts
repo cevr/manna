@@ -29,7 +29,9 @@ import { runSim } from './command.ts';
 import { DriveLive, type Place } from './drive.ts';
 import { decodeResult } from './fixtures/lines.ts';
 import { probeApp } from './fixtures/probe.ts';
+import { chooser, snapshotOf, VERSES } from './fixtures/screens.ts';
 import type { Session } from './result.ts';
+import type { Node } from './screen.ts';
 
 /** How the stand-in answers one run: its exit code and stdout, or a run that never ends. */
 type Answer =
@@ -512,8 +514,9 @@ describe('sim commands', () => {
       const answers = standIn((line) => {
         if (line.startsWith('xcrun simctl list devices')) return ok(devices);
         if (line.startsWith('agent-device open')) opened = true;
-        if (line.startsWith('agent-device scroll') && !opened)
+        if (line.startsWith('agent-device snapshot') && !opened)
           return failed('SESSION_NOT_FOUND: no session named probe-session');
+        if (line.startsWith('agent-device snapshot')) return ok(snapshotOf([]));
         return ok();
       });
       const { exit, printed } = yield* sim(
@@ -526,11 +529,109 @@ describe('sim commands', () => {
       expect(
         answers.runs.filter((run) => run.line.startsWith('agent-device')).map((run) => run.line),
       ).toEqual([
-        'agent-device scroll down --settle --session probe-session',
+        'agent-device snapshot --json --raw --session probe-session',
         `agent-device open app.probe.drive --platform ios --udid ${UDID} --session probe-session`,
+        'agent-device snapshot --json --raw --session probe-session',
         'agent-device scroll down --settle --session probe-session',
       ]);
     }).pipe(Effect.provide(Host)),
+  );
+
+  /** A booted simulator whose snapshots answer, in turn, each of `screens` (the last again once they run out). */
+  const screensIn = (screens: ReadonlyArray<ReadonlyArray<Node>>) => {
+    let shown = 0;
+    return standIn((line) => {
+      if (line.startsWith('xcrun simctl list devices'))
+        return ok(
+          encodeJson({ devices: { ios: [{ name: 'probe-sim', udid: UDID, state: 'Booted' }] } }),
+        );
+      if (!line.startsWith('agent-device snapshot')) return ok();
+      const screen = screens[Math.min(shown, screens.length - 1)] ?? [];
+      shown += 1;
+      return ok(snapshotOf(screen));
+    });
+  };
+
+  const driven = (answers: ReturnType<typeof standIn>) =>
+    answers.runs
+      .filter((run) => run.line.startsWith('agent-device'))
+      .map((run) => run.line.replace(' --session probe-session', ''));
+
+  it.scopedLive(
+    'a scroll of the screen pans inside its scroll view, not from the fixed footer, and says the content moved',
+    () =>
+      Effect.gen(function* () {
+        const answers = screensIn([chooser(0), chooser(317)]);
+        const { exit, printed } = yield* sim(
+          ['scroll', 'screen', 'down'],
+          answers,
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(printed[0]).toMatchObject({
+          ok: true,
+          detail: { target: 'screen', direction: 'down', moved: true, pan: '201,598 by 0,-317' },
+        });
+        expect(driven(answers)).toEqual([
+          'agent-device snapshot --json --raw',
+          'agent-device gesture pan 201 598 0 -317 600',
+          'agent-device snapshot --json --raw',
+        ]);
+      }).pipe(Effect.provide(Host)),
+  );
+
+  it.scopedLive(
+    'a scroll whose pan leaves the content where it was, while the view hides more, fails ScrollStuck; at the end it is no fault',
+    () =>
+      Effect.gen(function* () {
+        const stuck = yield* sim(
+          ['scroll', 'screen', 'down'],
+          screensIn([chooser(0), chooser(0)]),
+          Option.some('ios'),
+        );
+        expect(Exit.isFailure(stuck.exit)).toBe(true);
+        expect(stuck.printed[0]).toMatchObject({
+          ok: false,
+          error: { _tag: 'ScrollStuck', target: 'screen', direction: 'down' },
+        });
+        const top = yield* sim(
+          ['scroll', 'screen', 'up'],
+          screensIn([chooser(400), chooser(0), chooser(0)]),
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(top.exit)).toBe(true);
+        const again = yield* sim(
+          ['scroll', 'screen', 'up'],
+          screensIn([chooser(0), chooser(0)]),
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(again.exit)).toBe(true);
+        expect(again.printed[0]).toMatchObject({ ok: true, detail: { moved: false } });
+      }).pipe(Effect.provide(Host)),
+  );
+
+  it.scopedLive(
+    'a scroll to a target pans until its row shows, then stops; one past the content fails TargetMissing',
+    () =>
+      Effect.gen(function* () {
+        const answers = screensIn([chooser(0), chooser(1300), chooser(2400)]);
+        const { exit, printed } = yield* sim(
+          ['scroll', 'label=Psalms 119:30', 'down'],
+          answers,
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(printed[0]).toMatchObject({ ok: true, detail: { passes: 2 } });
+        expect(driven(answers).filter((line) => line.includes('gesture pan'))).toHaveLength(2);
+        const end = 8 + 176 * 88 - VERSES.height;
+        const past = yield* sim(
+          ['scroll', 'label=Psalms 120:1', 'down'],
+          screensIn([chooser(end - 300), chooser(end)]),
+          Option.some('ios'),
+        );
+        expect(Exit.isFailure(past.exit)).toBe(true);
+        expect(past.printed[0]).toMatchObject({ ok: false, error: { _tag: 'TargetMissing' } });
+      }).pipe(Effect.provide(Host)),
   );
 
   it.scoped('a target with a role clicks only elements of that role', () =>

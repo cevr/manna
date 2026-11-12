@@ -50,6 +50,7 @@ const booted: DriveMembers = {
   scroll: noStep,
   shot: noStep,
   snapshot: noStep,
+  read: noStep,
   record: noStep,
   log: noStep,
   doctor: noStep,

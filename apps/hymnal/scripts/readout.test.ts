@@ -9,7 +9,9 @@ import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Exit, Option, Ref, Schema } from 'effect';
 
-import { calm, type Node, nodesOf, pressTarget, readout } from './readout/frames.ts';
+import { type Node, nodesOf } from '@manna/sim/screen';
+
+import { calm, pressTarget, readout } from './readout/frames.ts';
 
 /** Words standing in for a hymn's: no readout may hold them. */
 const WORDS = 'Alpha bravo charlie';

@@ -70,6 +70,7 @@ const standIn = (
     scroll: step('scroll'),
     shot: step('shot'),
     snapshot: step('snapshot'),
+    read: step('read'),
     record: step('record'),
     log: step('log'),
     doctor: step('doctor'),

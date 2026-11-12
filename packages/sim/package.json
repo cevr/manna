@@ -10,6 +10,7 @@
     "./drive": "./src/drive.ts",
     "./errors": "./src/errors.ts",
     "./result": "./src/result.ts",
+    "./screen": "./src/screen.ts",
     "./tools": "./src/tools.ts",
     "./journey": "./src/journey.ts"
   },

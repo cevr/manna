@@ -46,6 +46,18 @@ export class TargetMissing extends Schema.TaggedError<TargetMissing>()('TargetMi
   }
 }
 
+/** A scroll's pan left the content where it was while its scroll view still hides more of it that way. */
+export class ScrollStuck extends Schema.TaggedError<ScrollStuck>()('ScrollStuck', {
+  target: Schema.String,
+  direction: Schema.String,
+  /** The pan, as `<x>,<y> by <dx>,<dy>`. */
+  pan: Schema.String,
+}) {
+  override get message() {
+    return `scroll ${this.direction} (${this.target}) moved nothing: the pan from ${this.pan} left the content where it was, and its scroll view hides more that way`;
+  }
+}
+
 /** A tool the command runs is not installed. */
 export class ToolMissing extends Schema.TaggedError<ToolMissing>()('ToolMissing', {
   tool: Schema.String,
@@ -199,6 +211,7 @@ export const SimError = Schema.Union([
   SimulatorDown,
   ReadinessTimedOut,
   TargetMissing,
+  ScrollStuck,
   ToolMissing,
   ToolFailed,
   NotOnPlatform,

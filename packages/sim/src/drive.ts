@@ -40,10 +40,23 @@ import {
   NoSession,
   Unhealthy,
   NotOnPlatform,
+  ScrollStuck,
   SimulatorDown,
   TargetMissing,
   ToolFailed,
 } from './errors.ts';
+import {
+  type Area,
+  areaFor,
+  type Ask,
+  hides,
+  moved,
+  nodesOf,
+  type Pan as ScreenPan,
+  panFor,
+  readout,
+  shows,
+} from './screen.ts';
 import { acquire, release } from './holder.ts';
 import { nativeRefusals } from './native-source.ts';
 import { either, holds, type Identity, Os, stop } from './os.ts';
@@ -74,14 +87,17 @@ export interface Place {
 export interface Outcome {
   readonly platform: Platform;
   readonly paths: Record<string, string>;
-  readonly detail: Record<string, string | number | boolean>;
+  readonly detail: Detail;
 }
 
-const outcome = (
-  platform: Platform,
-  paths: Record<string, string>,
-  detail: Record<string, string | number | boolean>,
-): Outcome => ({ platform, paths, detail });
+/** What a step saw, in short. */
+type Detail = Record<string, string | number | boolean>;
+
+const outcome = (platform: Platform, paths: Record<string, string>, detail: Detail): Outcome => ({
+  platform,
+  paths,
+  detail,
+});
 
 const SessionJson = Schema.fromJsonString(Session);
 
@@ -908,10 +924,116 @@ const scrollScript = (direction: Direction) => {
   ].join('\n');
 };
 
+const RAW = ['snapshot', '--json', '--raw'] as const;
+
+/** The screen's nodes now, from agent-device's raw snapshot (iOS). */
+const nodesNow = (app: App, udid: string) =>
+  Effect.flatMap(inApp(app, udid, RAW), (json) =>
+    nodesOf(json).pipe(
+      Effect.mapError(() =>
+        ToolFailed.make({
+          tool: 'agent-device',
+          args: [...RAW],
+          exitCode: 0,
+          output: `not a snapshot: ${json.slice(0, 400)}`,
+        }),
+      ),
+    ),
+  );
+
+/** How long a scroll's pan takes, and how long the content has to come to rest after it. */
+const PAN_MS = 600;
+const REST = Duration.millis(700);
+
+/** The most pans a scroll to a target makes before it fails `TargetMissing`. */
+const MAX_PASSES = 40;
+
+const panText = (pan: ScreenPan) => `${pan.x},${pan.y} by ${pan.dx},${pan.dy}`;
+
+/**
+ * One pan of `area` in `direction`, inside the part of it on screen
+ * (`panFor`), then the screen's nodes once the content has come to rest; it
+ * fails `ScrollStuck` when the content stayed where it was while the view
+ * still hid more of it that way.
+ */
+const panArea = Effect.fn('Sim.panArea')(function* (
+  app: App,
+  udid: string,
+  area: Area,
+  direction: Direction,
+  text: string,
+) {
+  const pan = panFor(area, direction);
+  yield* inApp(app, udid, [
+    'gesture',
+    'pan',
+    ...[pan.x, pan.y, pan.dx, pan.dy, PAN_MS].map(String),
+  ]);
+  yield* Effect.sleep(REST);
+  const after = yield* nodesNow(app, udid);
+  const went = moved(area, after, direction);
+  if (!went && hides(area, direction))
+    return yield* ScrollStuck.make({ target: text, direction, pan: panText(pan) });
+  return { after, went, pan };
+});
+
+/**
+ * Scroll the screen one step on iOS: a pan inside the scroll view that
+ * scrolls that way (`areaFor`), so a fixed header or footer around it never
+ * takes the finger. With no such view on screen, agent-device's own scroll.
+ */
+const scrollScreenIos = Effect.fn('Sim.scrollScreenIos')(function* (
+  app: App,
+  udid: string,
+  direction: Direction,
+) {
+  const area = areaFor(yield* nodesNow(app, udid), direction);
+  if (Option.isNone(area)) {
+    yield* inApp(app, udid, ['scroll', direction, '--settle']);
+    return Option.none<Detail>();
+  }
+  const { went, pan } = yield* panArea(app, udid, area.value, direction, 'screen');
+  return Option.some<Detail>({ moved: went, pan: panText(pan) });
+});
+
+/**
+ * Scroll on iOS until the target shows (`shows`): a pan at a time, each
+ * checked to move the content, at most `MAX_PASSES`. With no scroll view on
+ * screen that scrolls that way, agent-device's own `scroll --until`.
+ */
+const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
+  app: App,
+  session: Session,
+  udid: string,
+  text: string,
+  direction: Direction,
+) {
+  const target = parseTarget(text);
+  const missing = (driver: string) =>
+    TargetMissing.make({ target: text, platform: session.platform, driver });
+  let nodes = yield* nodesNow(app, udid);
+  for (let passes = 0; passes <= MAX_PASSES; passes += 1) {
+    if (shows(nodes, target)) return Option.some<Detail>({ passes });
+    const area = areaFor(nodes, direction);
+    if (Option.isNone(area) && passes === 0) {
+      yield* inApp(app, udid, ['scroll', direction, '--until', iosSelector(target)]).pipe(
+        Effect.catchTag('ToolFailed', missingFrom(session, text)),
+      );
+      return Option.none<Detail>();
+    }
+    if (Option.isNone(area)) return yield* missing(`no scroll view scrolls ${direction} now`);
+    if (!hides(area.value, direction))
+      return yield* missing(`the scroll view's content ends after ${passes} pans ${direction}`);
+    nodes = (yield* panArea(app, udid, area.value, direction, text)).after;
+  }
+  return yield* missing(`not shown after ${MAX_PASSES} pans ${direction}`);
+});
+
 /**
  * Scroll the screen one step in `direction` (target `screen`), or until the
- * target shows: on iOS by scrolling `direction` until it does, on the web by
- * scrolling it into view.
+ * target shows: on iOS by pans inside the scroll view, each checked to move
+ * its content (`detail.moved`; `ScrollStuck` when one moved nothing while the
+ * view hid more), on the web by scrolling it into view.
  */
 const scroll = Effect.fn('Sim.scroll')(function* (
   place: Place,
@@ -921,22 +1043,34 @@ const scroll = Effect.fn('Sim.scroll')(function* (
 ) {
   const app = place.config;
   const session = yield* readSession(place);
+  let seen = Option.none<Detail>();
   if (session.platform === 'ios') {
     const udid = yield* booted(app, session);
-    if (text === 'screen') yield* inApp(app, udid, ['scroll', direction, '--settle']);
+    if (text === 'screen') seen = yield* scrollScreenIos(app, udid, direction);
     else
-      yield* inApp(
-        app,
-        udid,
-        ['scroll', direction, '--until', iosSelector(parseTarget(text))],
-        Duration.seconds(seconds + 30),
-      ).pipe(Effect.catchTag('ToolFailed', missingFrom(session, text)));
+      seen = yield* scrollToIos(app, session, udid, text, direction).pipe(
+        Effect.timeoutOrElse({
+          duration: Duration.seconds(seconds + 30),
+          orElse: () =>
+            Effect.fail(
+              TargetMissing.make({
+                target: text,
+                platform: session.platform,
+                driver: `not shown within ${seconds + 30} s`,
+              }),
+            ),
+        }),
+      );
   } else if (text === 'screen') yield* browser(app, ['eval', scrollScript(direction)]);
   else {
     yield* present(app, session, text, seconds);
     yield* browser(app, ['scrollintoview', webSelector(parseTarget(text))]);
   }
-  return outcome(session.platform, {}, { target: text, direction });
+  return outcome(
+    session.platform,
+    {},
+    { target: text, direction, ...Option.getOrElse(seen, () => ({})) },
+  );
 });
 
 const shot = Effect.fn('Sim.shot')(function* (place: Place, name: Option.Option<string>) {
@@ -965,6 +1099,41 @@ const snapshot = Effect.fn('Sim.snapshot')(function* (place: Place, name: Option
   const tree = yield* driver(place.config, session.platform)(['snapshot']);
   yield* fs.writeFileString(file, tree);
   return outcome(session.platform, { snapshot: file }, { lines: lines(tree) });
+});
+
+const encodeReadout = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+
+/**
+ * Read the screen as numbers and the caller's own names (iOS): `readout`
+ * of the raw snapshot for `ask`, saved as `<out>/reads/<name>.json`, with
+ * the count of nodes and of each asked testID's and name's nodes in
+ * `detail` (`id=<asked>`, `label=<asked>`). No app's words reach either.
+ */
+const read = Effect.fn('Sim.read')(function* (place: Place, name: Option.Option<string>, ask: Ask) {
+  const fs = yield* FileSystem.FileSystem;
+  const session = yield* readSession(place);
+  if (session.platform !== 'ios')
+    return yield* NotOnPlatform.make({ command: 'read', platform: session.platform });
+  const udid = yield* booted(place.config, session);
+  const seen = readout(yield* nodesNow(place.config, udid), ask);
+  const dir = `${session.out}/reads`;
+  yield* fs.makeDirectory(dir, { recursive: true });
+  const taken = yield* fs.readDirectory(dir);
+  const file = `${dir}/${Option.getOrElse(name, () => `read-${taken.length + 1}`)}.json`;
+  yield* fs.writeFileString(file, `${encodeReadout(seen)}\n`);
+  return outcome(
+    session.platform,
+    { read: file },
+    {
+      nodes: seen.nodes,
+      ...Object.fromEntries(
+        Object.entries(seen.ids).map(([asked, found]) => [`id=${asked}`, found.length]),
+      ),
+      ...Object.fromEntries(
+        Object.entries(seen.labels).map(([asked, found]) => [`label=${asked}`, found.length]),
+      ),
+    },
+  );
 });
 
 /** What `record` does: start a video, or stop and save it. */
@@ -1456,6 +1625,7 @@ export interface DriveMembers {
   readonly scroll: Hosted<typeof scroll>;
   readonly shot: Hosted<typeof shot>;
   readonly snapshot: Hosted<typeof snapshot>;
+  readonly read: Hosted<typeof read>;
   readonly record: Hosted<typeof record>;
   readonly log: Hosted<typeof log>;
   readonly doctor: Hosted<typeof doctor>;
@@ -1513,6 +1683,7 @@ export const DriveLive = Layer.effect(
       scroll: driving(scroll),
       shot: driving(shot),
       snapshot: driving(snapshot),
+      read: driving(read),
       record: driving(record),
       log: driving(log),
       doctor: hosted(doctor),
