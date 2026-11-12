@@ -1,0 +1,37 @@
+{
+  "feature": "home",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-probe-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-probe",
+      "action": "open",
+      "link": "probe/home",
+      "relaunch": false,
+      "timeout": 30,
+      "expect": [{ "shows": "label=Home probe" }, { "shows": "label=icons loaded 24 of 24" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-probe-scroll",
+      "action": "scroll",
+      "target": "label=Start with Isaiah 41:10",
+      "direction": "down",
+      "expect": [{ "shows": "label=Start with Isaiah 41:10" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-probe-start",
+      "action": "tap",
+      "target": "label=Start with Isaiah 41:10",
+      "receipt": "snapshot"
+    }
+  ]
+}
