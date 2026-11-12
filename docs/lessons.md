@@ -1321,6 +1321,16 @@ The form of an entry, each field on its own line:
 
 ## Gate and review
 
+### test-variables-reach-through-turbo
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "the guard reads only `Config.String`, `Number`, `Integer` and `Boolean`. So a slow test that reads its variable through any other `Config` constructor is never held to `passThroughEnv`."
+- **Source:** hymnapp/slowfix/round-2-findings.md M1 (and its follow-up: `@manna/core#test:slow` does not pass `BIBLE_MODEL_CACHE` through; hymnapp/guards-backlog.md)
+- **Wrong:** A test that read a variable turbo does not hand its task (core's `BIBLE_MODEL_CACHE` in `test:slow`, a property test's seed in a cached part) read it as unset under turbo and ran on its default, and the one package's guard read only four `Config` constructors, one of them (`Config.Integer`) not in effect 4.
+- **Cause:** Turbo's strict mode hands a task only the variables its `turbo.json`s name, and each guard was written for one package and one list of readers. The repo's check (`packages/scripts/src/env-pass.ts`) now reads every test file of every workspace, every `Config` constructor the installed effect exports and `process.env`, `Bun.env` and `import.meta.env`, against the tasks that run each file.
+- **Guard:** code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads every constructor the installed effect/Config exports that takes a name`; code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads Config.Int and Config.Port, which the old reader missed`; code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock`
+
 ### gate-not-ci
 
 - **Date:** 2026-10-19
@@ -1939,7 +1949,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-testspeed/findings.md F2
 - **Wrong:** The gate was red in 10 of 10 runs: a case took ten times its time alone (0.47 s alone, 6.1 s in the gate) past its 5 s limit.
 - **Cause:** `turbo run gate test` ran every workspace's tests in parallel beside the typechecks, builds and Selah's native gate, each test runner one worker per core.
-- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock` (the gate runs no typecheck, build or native gate beside the tests), `packages/scripts/src/gate.test.ts` `is test-slow.sh: typecheck, builds and each test:slow one at a time under the lock`
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock` (the gate runs no typecheck, build or native gate beside the tests), `packages/scripts/src/gate.test.ts` `is test-slow.sh: typecheck, builds and each test:slow one at a time under the lock`
 
 ### test-git-turns-maintenance-off
 
@@ -4079,7 +4089,7 @@ The form of an entry, each field on its own line:
 - **Source:** in-its-order-2/review-r3.md F1
 - **Wrong:** The cast test was renamed, and the ledger entry `cast-reference-tracked` still named its old title, so the ledger's slow test and `test:slow` were red.
 - **Cause:** The rename changed the test file but not the entry whose guard names it, and the gate did not run the ledger's slow test.
-- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock`, `checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit`: the gate and the pre-commit run the ledger's check (`packages/scripts/src/lessons/check.ts`).
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock`, `checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit`: the gate and the pre-commit run the ledger's check (`packages/scripts/src/lessons/check.ts`).
 
 ### review-finding-gets-its-entry
 

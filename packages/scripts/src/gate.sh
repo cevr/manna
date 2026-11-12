@@ -1,5 +1,5 @@
 #!/bin/sh
-# `bun run gate`: did a change break something plain? Three legs, side by side:
+# `bun run gate`: did a change break something plain? Four legs, side by side:
 #
 # 1. The lint (`lint-gate.ts`): every deterministic rule. The native rules run
 #    over every file; the JS plugins' rules only over the files whose content
@@ -14,6 +14,12 @@
 #    the cores' count of tasks at once, so the tasks' bun workers stay within
 #    the cores, and a watchdog ends the run with 124 when a task's process
 #    outlives 60 s, naming it (`gate-tests/bound.ts`).
+# 4. The env pass-through (`env-pass.ts`): each variable a test file reads
+#    (`process.env`, `Bun.env`, a `Config` constructor) is one turbo hands
+#    every task that runs the file (`passThroughEnv`, `env`), read every run
+#    for the reason the ledger is: the tests and the `turbo.json`s lie in
+#    every workspace. Turbo hands a task no other variable, so one left out
+#    reads as unset under turbo and the test falls back to its default.
 #
 # The typecheck and the format run in pre-commit (`lefthook.yml`), on what a
 # commit touches. Builds, browser checks, the slow tests, the full lint and
@@ -30,12 +36,16 @@ bun packages/scripts/src/lint-gate.ts &
 lint_pid=$!
 bun packages/scripts/src/lessons/check.ts &
 ledger_pid=$!
+bun packages/scripts/src/env-pass.ts &
+envpass_pid=$!
 bun packages/scripts/src/gate-tests.ts
 tests=$?
 wait "$lint_pid"
 lint=$?
 wait "$ledger_pid"
 ledger=$?
+wait "$envpass_pid"
+envpass=$?
 
-echo "gate: lint exited $lint, ledger $ledger, tests $tests, $(($(now) - started)) ms"
-[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$tests" -eq 0 ]
+echo "gate: lint exited $lint, ledger $ledger, env-pass $envpass, tests $tests, $(($(now) - started)) ms"
+[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$envpass" -eq 0 ] && [ "$tests" -eq 0 ]

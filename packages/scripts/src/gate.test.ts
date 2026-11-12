@@ -134,7 +134,7 @@ const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWi
 
 describe('the gate', () => {
   it.effect(
-    'is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock',
+    'is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock',
     () =>
       Effect.gen(function* () {
         const { scripts, gate } = yield* laid;
@@ -143,7 +143,8 @@ describe('the gate', () => {
           expect.arrayContaining([
             'bun packages/scripts/src/lint-gate.ts &',
             'bun packages/scripts/src/lessons/check.ts &',
-            '[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$tests" -eq 0 ]',
+            'bun packages/scripts/src/env-pass.ts &',
+            '[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$envpass" -eq 0 ] && [ "$tests" -eq 0 ]',
           ]),
         );
         expect(gate).toContain('bun packages/scripts/src/gate-tests.ts');
