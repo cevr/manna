@@ -1,0 +1,44 @@
+{
+  "feature": "phrase-today",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "whole-today-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [
+        {
+          "shows": "id=today-card"
+        },
+        {
+          "shows": "label=John 3:16, not planted"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "whole-today",
+      "action": "tap",
+      "target": "label=John 3:16, not planted",
+      "expect": [
+        {
+          "shows": "id=session"
+        },
+        {
+          "shows": "label=John 3:16"
+        },
+        {
+          "shows": "id=passage"
+        },
+        {
+          "shows": "id=line-0"
+        },
+        {
+          "shows": "label=Listen"
+        }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
