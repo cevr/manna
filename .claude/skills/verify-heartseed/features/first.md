@@ -85,8 +85,12 @@ word 11 and the seed is graded Hard.
   `Stage:`; its recital plants the seed.
 - `first-lines`: hear (whole, and read in `id=reading`), letters and
   alone draw Isaiah 41:10 in the lines Today draws it in (`fade.md`'s
-  `lines-letters`): among the 37 `word-<i>`, `break-8`, `break-16`,
-  `break-20` and `break-25`, and no other `break-`.
+  `lines-letters`): a `break-<k>` before words 8, 16, 20 and 25 and no
+  other. A break is hidden from VoiceOver, so the simulator's tree holds
+  no `break-`; there each of `word-8`, `word-16`, `word-20` and `word-25`
+  starts a row at the words' left edge, about 46 pt below the row above
+  (a wrapped row sits about 39 pt below). Alone shows no word, so its
+  breaks are the unit tests' (`src/first/screen-b.test.tsx`).
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
 - `first-tips`: `Continue` opens home with `id=tip-1`, `id=tip-2` and
@@ -152,8 +156,10 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    `sim snapshot first-launch` → the heading `Hear it`, `Isaiah 41:10`,
    the buttons `Listen` and `Next`; no `Today`, no label starting
    `Stage:`, no `Say it`; 37 word nodes (count them, never print them).
-   `first-lines`, here and in each snapshot of steps 3-5: the `break-` ids
-   in the tree are exactly `break-8`, `break-16`, `break-20`, `break-25`.
+   `first-lines`, here and in the snapshots of steps 3-4: the `word-<i>`
+   whose frame starts at the words' least x, with each one's y step from
+   the row before: `word-8`, `word-16`, `word-20` and `word-25` each about
+   46 pt, any other about 39 pt (frames only, never labels).
 3. `first-hear`: `sim tap "label=Listen"`, then at once two raw snapshots
    about 1 s apart (`agent-device snapshot --json --raw --observe-only
    --force-full --session verify-heartseed`, in the drive's HOME) → in each,
