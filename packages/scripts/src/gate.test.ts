@@ -228,7 +228,13 @@ describe('the slow suite', () => {
         const runs = turboRuns(slow);
         expect(runs).toHaveLength(1);
         expect(runs[0]).toEqual(
-          expect.arrayContaining(['typecheck', 'build', 'test:slow', '--concurrency=1']),
+          expect.arrayContaining([
+            'typecheck',
+            'build',
+            'test:slow',
+            '--concurrency=1',
+            '--continue=dependencies-successful',
+          ]),
         );
         expect(slow).toEqual(
           expect.arrayContaining(['bun run lint', 'bun run fmt:check', 'bun run dead-exports']),

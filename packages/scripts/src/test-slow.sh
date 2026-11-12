@@ -7,7 +7,9 @@
 #    `test:slow` (its `*.slow.test.*` files and its own slow checks: browser
 #    tests, the site's built-page checks, Selah's native gate, the film's e2e),
 #    one task at a time: the browser checks hold time limits that hold only
-#    with nothing else beside them.
+#    with nothing else beside them. A failed task stops only the tasks that
+#    depend on it (`--continue=dependencies-successful`), so one run names
+#    every failing workspace.
 # 2. The full lint (`bun run lint`): the judged rules, then every rule over
 #    every file, no file kept.
 # 3. The format check and the dead exports.
@@ -27,7 +29,7 @@ if [ "${MANNA_TEST_SLOW_LOCKED:-}" != 1 ]; then
   exec lockf -k "$LOCK" sh "$0" "$@"
 fi
 
-node_modules/.bin/turbo run typecheck build test:slow --concurrency=1 --ui=stream --output-logs=errors-only
+node_modules/.bin/turbo run typecheck build test:slow --concurrency=1 --continue=dependencies-successful --ui=stream --output-logs=errors-only
 turbo=$?
 bun run lint
 lint=$?
