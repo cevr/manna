@@ -8,7 +8,7 @@
 
 import { type ColorValue, DynamicColorIOS, Platform, PlatformColor } from 'react-native';
 
-import { useScheme } from './appearance.native';
+import { useShownScheme } from './appearance.native';
 import { type Roles, theme } from './theme';
 
 const dynamic = (role: keyof Roles) =>
@@ -71,7 +71,7 @@ type Fill =
   | 'shadow';
 
 /** The theme's roles in the scheme showing now, redrawn when the appearance setting or the system changes it. */
-const useRoles = (): Roles => theme[useScheme()];
+const useRoles = (): Roles => theme[useShownScheme()];
 
 /** The accent in the scheme showing now. */
 export const useAccent = (): ColorValue => useRoles().accent;

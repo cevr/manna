@@ -63,10 +63,11 @@ under its number, and the refrain written out each time it is sung.
   rules `theme.ts` states. A screen reads a role, never a hex value. A
   layer's shadow reads the showing scheme's plain hex (`useShadow`), since
   a dynamic colour there does not follow a change of scheme. A role read
-  through a hook follows the scheme through `useScheme`
-  (`src/appearance.native.ts`), which hears the Appearance setting as
-  well as the system, so a screen already open redraws when either
-  changes. On
+  through a hook follows the scheme the root layout hands down
+  (`SchemeProvider`, `src/appearance.native.ts`), which hears the
+  Appearance setting as well as the system, so a screen already open
+  redraws when either changes, one the stack has paused under another
+  too. On
   iOS each role is a `DynamicColorIOS` (`src/color.native.ts`), on the web
   a CSS `light-dark()` property (`src/color.ts`). Android keeps the
   system's colours. `src/theme.test.ts` holds every text role to WCAG AA on what it

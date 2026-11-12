@@ -64,14 +64,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import {
-  type ColorValue,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useCue } from '~/feel/cue';
 import type { Opening } from '~/home/opening';
@@ -123,10 +116,12 @@ const heightOf = (drawn: Drawn, fontScale: number) => {
 /**
  * What a row reads from outside its item. The list draws a row again only
  * when its item or this changes, so a row reads nothing else: `drawRow`
- * sits outside the component and sees its item and this alone.
+ * sits outside the component and sees its item and this alone. The accent
+ * is the one exception, read by each row's own hook: a scheme changed
+ * while the stack pauses the list's screen reaches its rows through the
+ * root's scheme, where the list itself tells them nothing until it shows.
  */
 interface Look {
-  readonly accent: ColorValue;
   readonly hymnHeight: number;
   readonly foundHeight: number;
   readonly topicHeight: number;
@@ -166,7 +161,6 @@ const drawRow = ({
         href={item.href}
         height={extraData.topicHeight}
         gutter={extraData.gutter}
-        accent={extraData.accent}
       />
     );
   return (
@@ -181,7 +175,6 @@ const drawRow = ({
         onSome: () => extraData.foundHeight,
       })}
       gutter={extraData.gutter}
-      accent={extraData.accent}
       opening={extraData.opening}
     />
   );
@@ -256,7 +249,6 @@ export function HymnList({
   readonly onGroup?: () => void;
 }) {
   const { fontScale, height: viewport } = useWindowDimensions();
-  const accent = useAccent();
   const { rows, sticky } = useMemo(() => {
     if (grouped) return groupRowsOf(grouped.name, grouped.groups, hymns, favourites);
     if (byTopic) return rowsOf(hymns, shelves, favourites);
@@ -321,7 +313,6 @@ export function HymnList({
   const gutter = GUTTER * Math.min(1, marks.length);
   const look = useMemo(
     (): Look => ({
-      accent,
       hymnHeight,
       foundHeight,
       topicHeight,
@@ -330,7 +321,7 @@ export function HymnList({
       onGroup: Option.fromNullishOr(onGroup),
       opening: Option.fromNullishOr(rowOpening),
     }),
-    [accent, hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup, rowOpening],
+    [hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup, rowOpening],
   );
   const dialled = useAtomValue(find);
   const wanted = useSharedValue(-1);
@@ -596,14 +587,13 @@ function ShelfHeader({
   href,
   height,
   gutter,
-  accent,
 }: {
   readonly name: string;
   readonly href: string;
   readonly height: number;
   readonly gutter: number;
-  readonly accent: ColorValue;
 }) {
+  const accent = useAccent();
   const link = useLinkTo({ href });
   return (
     <Pressable
@@ -645,7 +635,6 @@ function HymnRow({
   line: found,
   height,
   gutter,
-  accent,
   opening,
 }: {
   readonly hymn: HymnText;
@@ -656,9 +645,9 @@ function HymnRow({
   readonly height: number;
   /** The room at the right edge the row, its star and its separator end before. */
   readonly gutter: number;
-  readonly accent: ColorValue;
   readonly opening: Option.Option<RowOpening>;
 }) {
+  const accent = useAccent();
   const how = Option.match(opening, {
     onNone: (): Opening => 'push',
     onSome: (asked) => asked.of(hymn.number),

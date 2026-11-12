@@ -3,7 +3,7 @@ import { Slot, useServerHeadInsertion } from 'one';
 import { useEffect } from 'react';
 import { AppRegistry, Platform } from 'react-native';
 
-import { applyAppearance } from '~/appearance';
+import { applyAppearance, SchemeProvider } from '~/appearance';
 import { FeelProvider } from '~/feel/FeelProvider';
 import { settings } from '~/store';
 import { webColors } from '~/color';
@@ -52,9 +52,11 @@ export default function Layout() {
   return (
     <RegistryProvider>
       <AppearanceFollower />
-      <FeelProvider>
-        <Slot />
-      </FeelProvider>
+      <SchemeProvider>
+        <FeelProvider>
+          <Slot />
+        </FeelProvider>
+      </SchemeProvider>
     </RegistryProvider>
   );
 }

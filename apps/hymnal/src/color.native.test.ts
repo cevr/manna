@@ -17,10 +17,18 @@ test('the phone colours load on Android, where DynamicColorIOS throws', () => {
 
 type Colours = Readonly<Record<string, string>>;
 
-/** What `test/phone-appearance.tsx` prints: the colours before any change, then live and fresh after each. */
+/** The colours after one change: the shown screen's, the paused one's, the paused one's once shown again, and a fresh one's. */
+interface After {
+  readonly shown: Colours;
+  readonly paused: Colours;
+  readonly back: Colours;
+  readonly fresh: Colours;
+}
+
+/** What `test/phone-appearance.tsx` prints: the colours before any change, then after each. */
 interface Seen {
   readonly before: Colours;
-  readonly changes: Readonly<Record<string, { readonly live: Colours; readonly fresh: Colours }>>;
+  readonly changes: Readonly<Record<string, After>>;
 }
 
 const ROOT = `${import.meta.dir}/..`;
@@ -33,23 +41,34 @@ describe('a change of scheme with the screens open', () => {
   const seen: Seen = { before, changes };
 
   test.each(['dark', 'system', 'system dark'])(
-    'after %s, the open list and every hook role draw what screens opened after it draw',
+    'after %s, the shown and the paused screens draw what a screen opened after it draws',
     (change) => {
       expect(run.stderr).toBe('');
-      expect(seen.changes[change]?.live).toEqual(seen.changes[change]?.fresh ?? {});
+      const after = seen.changes[change];
+      expect(after?.shown).toEqual(after?.fresh ?? {});
+      expect(after?.paused).toEqual(after?.fresh ?? {});
+      expect(after?.back).toEqual(after?.fresh ?? {});
     },
   );
 
-  test('the setting to Dark changes every colour the open screens draw', () => {
-    const live = seen.changes['dark']?.live ?? {};
+  test('the setting to Dark changes every colour the shown and the paused screens draw', () => {
+    const after = seen.changes['dark'];
+    const kept = (drawn: Colours) =>
+      Object.keys(seen.before).filter((part) => seen.before[part] === drawn[part]);
     expect(Object.keys(seen.before)).toHaveLength(9);
-    expect(Object.keys(seen.before).filter((part) => seen.before[part] === live[part])).toEqual([]);
+    expect([kept(after?.shown ?? {}), kept(after?.paused ?? {})]).toEqual([[], []]);
   });
 
-  test("no screen reads React Native's scheme but through useScheme, which hears the setting", () => {
+  test("no screen reads React Native's scheme hook, which misses the setting", () => {
     const readers = [...SOURCES.scanSync(ROOT)]
       .filter((file) => !/\.test\.|\.d\.ts$|^src\/test\//.test(file))
       .filter((file) => /\buseColorScheme\b/.test(readFileSync(`${ROOT}/${file}`, 'utf8')));
     expect(readers).toEqual([]);
+  });
+
+  test("the phone's root layout hands the scheme to every screen", () => {
+    const layout = readFileSync(`${ROOT}/app/_layout.tsx`, 'utf8');
+    const phone = layout.slice(layout.lastIndexOf('return ('));
+    expect(phone).toMatch(/<SchemeProvider>[\s\S]*<Slot \/>[\s\S]*<\/SchemeProvider>/);
   });
 });

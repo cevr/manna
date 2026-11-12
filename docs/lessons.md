@@ -5657,9 +5657,9 @@ The form of an entry, each field on its own line:
 - **Kind:** review
 - **Said:** "In-app Appearance switch leaves hook roles stale on mounted screens until relaunch"
 - **Source:** hymnapp/hympalette/round-1-findings.md o1 (its On base item 1)
-- **Wrong:** After Settings → Dark, the hymn list's numbers, the bar's button and every role a screen read through a hook kept the light scheme's colours until the app was relaunched.
-- **Cause:** The hooks read React Native's scheme hook, which hears the system's changes but not `Appearance.setColorScheme`'s: React Native's `Appearance` sets the scheme and tells no listener.
-- **Guard:** code: `apps/hymnal/src/color.native.test.ts` `the setting to Dark changes every colour the open screens draw`; code: `apps/hymnal/src/color.native.test.ts` `no screen reads React Native's scheme but through useScheme, which hears the setting`
+- **Wrong:** After Settings → Dark over a hymn, the hymn list under it kept the light scheme's accent (its numbers, its tab row's fill), read while its screen was paused.
+- **Cause:** The hooks each subscribed to React Native's scheme hook: the native stack pauses a screen under another (React's `Activity`, its effects cleaned up), so its subscriptions were gone, and the list's rows took the accent through the list, which tells them nothing while paused. React Native's `Appearance.setColorScheme` also tells no JS listener itself; only the native event does.
+- **Guard:** code: `apps/hymnal/src/color.native.test.ts` `the setting to Dark changes every colour the shown and the paused screens draw`; code: `apps/hymnal/src/color.native.test.ts` `no screen reads React Native's scheme hook, which misses the setting`; code: `apps/hymnal/src/color.native.test.ts` `the phone's root layout hands the scheme to every screen`
 
 ### hymnal-colour-rows-name-readable-nodes
 

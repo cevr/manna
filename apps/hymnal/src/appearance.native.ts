@@ -1,11 +1,11 @@
 /**
  * The appearance setting shown on a phone: the app's interface style, which
  * the system bars and the theme's dynamic colours follow, and the scheme
- * the hook roles read (`useScheme`).
+ * the hook roles read (`useShownScheme`).
  */
 
 import { Match } from 'effect';
-import { useSyncExternalStore } from 'react';
+import { createContext, createElement, type ReactNode, use, useSyncExternalStore } from 'react';
 import { Appearance as RN } from 'react-native';
 
 import type { Appearance } from './settings';
@@ -40,9 +40,29 @@ const showing = () =>
   );
 
 /**
- * The scheme showing now. React Native's own scheme hook hears the
- * system's changes but not `setColorScheme`'s (its `Appearance` sets the
- * scheme and tells no listener), so a screen open while the setting changed
- * would keep the old scheme's colours: this hears both.
+ * The scheme showing now, heard as it changes. React Native's own scheme
+ * hook hears the system's changes but not `setColorScheme`'s (its
+ * `Appearance` sets the scheme and tells no listener): this hears both.
  */
-export const useScheme = (): 'light' | 'dark' => useSyncExternalStore(follow, showing);
+const useScheme = (): 'light' | 'dark' => useSyncExternalStore(follow, showing);
+
+/** The scheme the root hands down, or `unset` under no `SchemeProvider`. */
+const Scheme = createContext<'light' | 'dark' | 'unset'>('unset');
+
+/**
+ * Hands the showing scheme to every screen below it. A screen the stack
+ * pauses (one under another, its effects cleaned up) hears no store, so a
+ * scheme read there alone would keep the old colours until it shows again;
+ * a change of this context reaches it, paused or not.
+ */
+export const SchemeProvider = ({ children }: { readonly children: ReactNode }) =>
+  createElement(Scheme, { value: useScheme() }, children);
+
+/** The scheme showing now: the root's, else this reader's own. */
+export const useShownScheme = (): 'light' | 'dark' => {
+  const own = useScheme();
+  return Match.value(use(Scheme)).pipe(
+    Match.when('unset', () => own),
+    Match.orElse((handed) => handed),
+  );
+};
