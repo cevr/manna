@@ -5589,7 +5589,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hsguards9/round-1-findings.md M1
 - **Wrong:** The first-run check faulted only a `sim open` that waited for a first-minute heading without `--no-relaunch`, so a fresh-install step that dropped the welcome's `Begin` and `Skip` but kept `--no-relaunch` passed.
 - **Cause:** The check read each command alone, never the steps before it.
-- **Guard:** code: `apps/heartseed/scripts/first-run.test.ts` `fault natural.md’s today-mirror with its welcome steps taken out`; code: `apps/heartseed/scripts/first-run.test.ts` `no feature file or SKILL.md waits for a first-minute heading where the welcome shows`
+- **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `the Today and probe journeys name their mutants: a skipped welcome, a break, a list title, a probe line`; code: `apps/heartseed/scripts/first-run.test.ts` `no feature file or SKILL.md waits for a first-minute heading where the welcome shows`
 
 ### heartseed-step-reader-reads-every-command-form
 

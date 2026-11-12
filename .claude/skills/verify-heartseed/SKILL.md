@@ -210,6 +210,22 @@ for what an expect cannot say. The journeys:
 
 - [features/first.journey.json](features/first.journey.json), and its segments `first-whole`,
   `first-cue`, `first-reading` and `first-again`, run by `first.md`.
+- [features/run.journey.json](features/run.journey.json) and `run-recite`, `run-next`, `run-second`
+  and `run-held`, run by `run.md`; `grow-restart` and `grow-again` by
+  `grow.md`; `sayit-lines` by `sayit.md`; `today-plantset`, `today-lines`
+  and `today-short` by `today.md`. `fade.md` rides `run.md`'s.
+- [features/light.journey.json](features/light.journey.json) and `light-seek`, `light-scroll`,
+  `light-lines` and `light-lines-done`, run by `light.md`.
+- [features/natural.journey.json](features/natural.journey.json) and its segments (`natural-base`,
+  `natural-remove`, `natural-load`, `natural-read`, `natural-sheet`,
+  `natural-voice`, … ), run by `natural.md`; their probe links name the
+  model server's port, 8281.
+- [features/dictation.journey.json](features/dictation.journey.json), run by `dictation.md`;
+  [features/doctor.journey.json](features/doctor.journey.json) and `doctor-stale`, run by `doctor.md`.
+
+A journey's `open` relaunches the app only when its first `shows` is
+missing (its retry); a step that must start a launch (a new plan, a
+launch frame) is a `relaunch`.
 
 A receipt holds the visible nodes' types and labels, no id and no frame:
 a count of `word-<i>` nodes, a frame, or a node below the scroll view's

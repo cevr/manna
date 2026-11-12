@@ -319,12 +319,18 @@ describe('verify-heartseed journeys', () => {
     () =>
       Effect.gen(function* () {
         const journeys = yield* shippedJourneys;
-        expect(journeys.map((journey) => journey.feature)).toEqual([
-          'first-again',
-          'first-cue',
-          'first-reading',
-          'first-whole',
+        expect([
+          ...new Set(journeys.map((journey) => journey.feature.split('-')[0] ?? '')),
+        ]).toEqual([
+          'dictation',
+          'doctor',
           'first',
+          'grow',
+          'light',
+          'natural',
+          'run',
+          'sayit',
+          'today',
         ]);
         const files = markdown();
         expect(
@@ -575,6 +581,54 @@ describe('verify-heartseed journeys', () => {
         'features/first.md: first/first-lines names no step of first',
       ]);
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'the Today and probe journeys name their mutants: a skipped welcome, a break, a list title, a probe line',
+    () =>
+      Effect.gen(function* () {
+        const journeys = yield* shippedJourneys;
+        const named = (feature: string) =>
+          journeys.find((journey) => journey.feature === feature)?.steps ?? [];
+        const changed = (
+          feature: string,
+          change: (steps: ReadonlyArray<Step>) => ReadonlyArray<Raw | Step>,
+        ) => loaded(change(named(feature)), feature);
+        const unskipped = yield* changed('natural-hear', (all) =>
+          all.filter((step) => step.name !== 'natural-hear-skip'),
+        );
+        expect(stepsOf(firstRunFaults(unskipped))).toEqual(['today-read']);
+        const showing = (name: string, more: RawExpect) => (all: ReadonlyArray<Step>) =>
+          all.map((step) => {
+            if (step.name !== name) return step;
+            return { ...step, expect: [...step.expect, more] };
+          });
+        const read = yield* changed('light-lines', showing('lines-read', { shows: 'id=break-6' }));
+        expect(stepsOf(hiddenFaults(read, hidden))).toEqual(['lines-read']);
+        const said = yield* changed('sayit-lines', showing('lines-say', { hides: 'id=break-26' }));
+        expect(stepsOf(hiddenFaults(said, hidden))).toEqual(['lines-say']);
+        const listed = yield* changed(
+          'today-lines',
+          showing('lines-plain', { shows: 'label=Open Protection & Fears' }),
+        );
+        expect(undrawn([listed], sources)).toEqual([
+          'today-lines/lines-plain label=Open Protection & Fears',
+        ]);
+        const ended = yield* changed(
+          'dictation',
+          showing('dictation-hear', { shows: 'label=ended finishing' }),
+        );
+        expect(undrawn([ended], sources)).toEqual([
+          'dictation/dictation-hear label=ended finishing',
+        ]);
+        const scripted = yield* changed(
+          'dictation',
+          showing('dictation-hear', { shows: 'label=script heard' }),
+        );
+        expect(undrawn([scripted], sources)).toEqual([
+          'dictation/dictation-hear label=script heard',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect(

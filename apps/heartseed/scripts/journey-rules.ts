@@ -213,6 +213,23 @@ const constStrings = (sources: ReadonlyArray<Source>, file: string, name: string
   return [...array.matchAll(STRING)].map((match) => match[1] ?? match[2] ?? '');
 };
 
+/** The strings of the union `type <name> = '<a>' | '<b>' …` in `file` of `sources`; none when it is gone or moved. */
+const unionStrings = (sources: ReadonlyArray<Source>, file: string, name: string) => {
+  const text = sources.find(([one]) => one === file)?.[1] ?? '';
+  const union = new RegExp(`type ${name} =([^;]*);`, 'u').exec(text)?.[1] ?? '';
+  if (!/^(\s*\|?\s*'[^']*')+\s*$/u.test(union)) return [];
+  return [...union.matchAll(STRING)].map((match) => match[1] ?? match[2] ?? '');
+};
+
+/** The collections' titles, each the second string of an entry of `src/promises.ts`'s `LIST`: `[ '<id>', '<title>', [rows] ]`. */
+const titlesOf = (sources: ReadonlyArray<Source>) => {
+  const text = sources.find(([one]) => one === 'src/promises.ts')?.[1] ?? '';
+  return Array.from(
+    text.matchAll(/^ {2}\[\n {4}'[a-z-]+',\n {4}'([^'\n]+)',$/gmu),
+    (match) => match[1] ?? '',
+  );
+};
+
 /** The stage words a stage hole takes: `src/garden.ts`'s `STAGES`, and `not planted`. */
 const stagesOf = (sources: ReadonlyArray<Source>) => [
   ...constStrings(sources, 'src/garden.ts', 'STAGES'),
@@ -221,10 +238,23 @@ const stagesOf = (sources: ReadonlyArray<Source>) => [
 
 /**
  * Heartseed's label templates whose hole holds a word, each filled from the
- * module that names the words: Today's stage line takes a stage word.
+ * module that names the words: Today's stage line takes a stage word, a
+ * furrow's `Open` a collection's title, and the dictation probe's lines a
+ * dictation's ending (or `none`) and its script.
  */
 export const wordHolesOf = (sources: ReadonlyArray<Source>): ReadonlyArray<WordHole> => [
   { file: 'app/index.tsx', parts: ['Stage: ', ''], words: stagesOf(sources) },
+  { file: 'src/field/plot.tsx', parts: ['Open ', ''], words: titlesOf(sources) },
+  {
+    file: 'app/probe/dictation.tsx',
+    parts: ['ended ', ''],
+    words: [...unionStrings(sources, 'src/dictation/attempt.ts', 'Ending'), 'none'],
+  },
+  {
+    file: 'app/probe/dictation.tsx',
+    parts: ['script ', ''],
+    words: unionStrings(sources, 'app/probe/dictation.tsx', 'Script'),
+  },
 ];
 
 /**
@@ -392,16 +422,6 @@ export const proseDrives = (file: string, text: string): ReadonlyArray<string> =
  */
 export const LEGACY: ReadonlyMap<string, string> = new Map([
   ['SKILL.md', 'it documents the commands a journey and a by-hand step run'],
-  ...['run', 'grow', 'sayit', 'today', 'light'].map(
-    (name) =>
-      [
-        `features/${name}.md`,
-        "S3 moves Today's drives (run.md and the rows that ride it)",
-      ] as const,
-  ),
-  ...['natural', 'dictation', 'doctor'].map(
-    (name) => [`features/${name}.md`, 'S4 moves the probes'] as const,
-  ),
   ['features/home.md', 'S5 moves home'],
   ...['list', 'about', 'appearance', 'session', 'field'].map(
     (name) => [`features/${name}.md`, 'S6 moves the field and its sheets'] as const,
@@ -428,7 +448,9 @@ export const ownerFaults = (
       const stem = stemOf(file);
       const owns =
         stem !== '' && (journey.feature === stem || journey.feature.startsWith(`${stem}-`));
-      return owns && new RegExp(`\\bsim journey ${journey.feature}(?![\\w-])`, 'u').test(text);
+      return (
+        owns && new RegExp(`\\bsim\\s+journey\\s+${journey.feature}(?![\\w-])`, 'u').test(text)
+      );
     });
     if (owners.length > 0) return [];
     return [`${journey.feature} is run by no features/<stem>.md of its name`];

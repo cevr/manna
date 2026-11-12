@@ -319,16 +319,6 @@ describe('verify-heartseed’s first-run steps', () => {
     ]);
   });
 
-  it('fault natural.md’s today-mirror with its welcome steps taken out', () => {
-    const text = readFileSync(join(SKILL, 'features/natural.md'), 'utf8');
-    const welcome =
-      '`sim open / --expect "label=Begin"` (the welcome a fresh\ninstall opens on), `sim tap "label=Skip"`, ';
-    expect(text.includes(welcome)).toBe(true);
-    expect(firstRunFaults('features/natural.md', text.replace(welcome, ''))).toEqual([
-      'features/natural.md: `sim open / --expect "label=Hear it" --no-relaunch` waits for Hear it on an empty garden before the welcome\'s Skip',
-    ]);
-  });
-
   it('no feature file or SKILL.md waits for a first-minute heading where the welcome shows', () => {
     const files = [
       'SKILL.md',
