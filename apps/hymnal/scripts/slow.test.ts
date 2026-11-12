@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'bun:test';
 import { Effect } from 'effect';
+import { it as test } from 'effect-bun-test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -31,6 +32,35 @@ const fake = (codes: Record<string, number>) => {
     });
   return { seen, run };
 };
+
+/** The runner run as `test:slow` runs it, over `names`: its exit code and its closing line. */
+const cli = (names: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const run = Bun.spawn(['bun', join(import.meta.dir, 'slow.ts'), ...names], {
+      cwd: app,
+      stdout: 'pipe',
+      stderr: 'ignore',
+      timeout: 4_000,
+      killSignal: 'SIGKILL',
+    });
+    const [code, out] = yield* Effect.all(
+      [Effect.promise(() => run.exited), Effect.promise(() => new Response(run.stdout).text())],
+      { concurrency: 2 },
+    );
+    return { code, last: out.trim().split('\n').at(-1) };
+  });
+
+describe('the slow tests’ runner, run as a command', () => {
+  test.effect('exits 1 when a script it runs fails, and 0 when none did', () =>
+    Effect.map(
+      Effect.all([cli(['test:no-such-script']), cli([])], { concurrency: 2 }),
+      ([failing, passing]) => {
+        expect(failing).toEqual({ code: 1, last: '  exit 1: bun run test:no-such-script' });
+        expect(passing).toEqual({ code: 0, last: 'slow: all 0 scripts passed' });
+      },
+    ),
+  );
+});
 
 describe('the slow tests’ runner', () => {
   it('runs every script after one that fails, and names each failed one', () => {
