@@ -5720,3 +5720,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** With Heartseed's Settings sheet open, whose content fits, `sim scroll screen up` panned the field under the sheet and failed `ScrollStuck`.
 - **Cause:** The driver chose the frontmost of the scroll views that overflow, so a sheet whose content fits never took part and the page under it won. The property guarding the choice generated only overflowing views, and its seeded generator took the low bits of a linear congruential state, so its cases repeated a few shapes. The driver now hands the scroll to the frontmost hittable view that lies over the pan's start, overflowing or not (`packages/sim/src/screen.ts` `areaFor`), and the generator mixes its bits.
 - **Guard:** code: `packages/sim/src/screen.test.ts` `property: the scroll goes to the frontmost view at its pan’s start, its content overflowing or fitting, never to one a later view lies over there`; code: `packages/sim/src/sim.slow.test.ts` `a scroll over a sheet whose content fits pans the sheet and finds it at its end; one to a target past it fails TargetMissing, never ScrollStuck`
+
+### test-seeds-are-constants
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "`apps/hymnal/src/reader/rows.test.ts` and `search.property.slow.test.ts` seed from `Date.now()`, inside a cached part."
+- **Source:** hymnapp/batch-vb-38-findings.md o1 (its On base item 1)
+- **Wrong:** The hymnal's rows and search properties, the browser list test and test:budget's generated cases took their seed from the clock or `Math.random()` when no variable named one, so a cached green said nothing about the seed that ran.
+- **Cause:** A seed from the clock was meant to explore a new sample each run, but turbo caches a test task on its inputs and its env, never on the clock, and no check refused such a seed.
+- **Guard:** lint:manna/seed-from-clock, proof `packages/scripts/lint/fixtures/seed-from-clock.ts` `RED manna/seed-from-clock`; code: `packages/scripts/lint/seed-from-clock.test.ts` `reports each seed its fixture marks RED, and nothing else`

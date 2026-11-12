@@ -9,7 +9,8 @@
   "jsPlugins": [
     "oxlint-plugin-effect/plugin",
     "./packages/film/lint/plugin.ts",
-    "./packages/scripts/lint/judged.ts"
+    "./packages/scripts/lint/judged.ts",
+    "./packages/scripts/lint/plugin.ts"
   ],
   "rules": {
     "typescript/no-explicit-any": "error",
@@ -1928,6 +1929,15 @@
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": {
         "film/test-git-config": "error"
+      }
+    },
+    {
+      // A test's seed is a constant by default, overridden by a variable the
+      // workspace's turbo.json hands its task, so a cached green names the
+      // seed that ran (packages/scripts/lint/seed-from-clock.ts).
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/test/**/*.ts", "**/test/**/*.tsx"],
+      "rules": {
+        "manna/seed-from-clock": "error"
       }
     },
     {
