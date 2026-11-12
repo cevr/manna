@@ -407,7 +407,7 @@ const driverEnv = Effect.fn('Sim.driverEnv')(function* (place: Place) {
 const holding = <A, E, R>(place: Place, use: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(acquire(place.state), () => use, release);
 
-export interface Target {
+interface Target {
   readonly by: 'id' | 'label';
   readonly value: string;
   /** The element's role, when a name alone matches more than one (`link`, `button`). */

@@ -113,7 +113,7 @@ export interface Spelled {
 }
 
 /** A template literal or JSX text: the file that spells it, and its parts between holes. */
-export interface Template {
+interface Template {
   readonly file: string;
   readonly parts: ReadonlyArray<string>;
 }
