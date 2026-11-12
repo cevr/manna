@@ -306,6 +306,7 @@ export function FindBar({
         {row === 'tiles' && hash(hashLookOf(row, chosen))}
         {row !== 'tiles' && (
           <Animated.View
+            testID="find-capsule"
             {...(drumsOpen && passThrough)}
             {...(wheel && untouched)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}

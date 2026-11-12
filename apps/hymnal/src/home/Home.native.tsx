@@ -83,7 +83,7 @@ export function Home() {
     Option.map(({ stood }) => stood),
   );
   return (
-    <GestureHandlerRootView style={styles.screen}>
+    <GestureHandlerRootView testID="home" style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
         <TabList
           title={title}

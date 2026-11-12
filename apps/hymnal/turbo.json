@@ -205,7 +205,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
-        "$TURBO_ROOT$/.claude/skills/verify-hymnal/features/*.journey.json"
+        "$TURBO_ROOT$/.claude/skills/verify-hymnal/features/*.journey.json",
+        "$TURBO_ROOT$/.claude/skills/verify-hymnal/features/*.md"
       ]
     },
     "test:slow": {
