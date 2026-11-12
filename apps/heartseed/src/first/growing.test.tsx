@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop -- a drawing test: it mounts the growing seed and the welcome through React's promise-based act in happy-dom, yields to Reanimated's animation frame, and reads DOM absence as null. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop, effect/noGlobals -- a drawing test: it mounts the growing seed and the welcome through React's promise-based act in happy-dom, yields to Reanimated's animation frame, drives the host's `performance.now` that Reanimated's frames read, and reads DOM absence as null. */
 
 /**
  * The welcome's growing seed (`./growing`) mounted in happy-dom. With its
@@ -10,8 +10,10 @@
  * Under the preload's Reduce Motion with no `at`: `GROWTH_STILL` in the
  * first frame and every frame after, and no node animated. With motion on
  * and no `at`: the first frame is the loop's start, full corn alone as the
- * fade back to the seed begins (the test reads nothing of the host's time).
- * An unmount mid-loop logs no error. And across the welcome's frames, its
+ * fade back to the seed begins (the test reads nothing of the host's time);
+ * with the frames' time driven past one cycle, the loop's clock starts over
+ * and never passes one cycle on from its start, so each stage shows alone
+ * again. An unmount mid-loop logs no error. And across the welcome's frames, its
  * heading, texts and controls are the same nodes in every frame.
  */
 
@@ -19,10 +21,12 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { View } from 'react-native';
+import { isSharedValue } from 'react-native-reanimated';
 
 import { setSystem } from '../test/look';
 import { moving, under } from '../test/motion';
 import { assetOf } from '../test/plant-image-rule';
+import { type Fiber, fiberProps, rootFiberOf } from '../test/voiceover';
 import { theme, type Scheme } from '../theme';
 import { GrowingSeed } from './growing';
 import { GROWTH, GROWTH_START, GROWTH_STILL, growthAt, type GrowthFrame } from './growth';
@@ -62,6 +66,26 @@ const opacities = (host: Element) =>
     const wrapper = image.parentElement;
     return Math.round(Number(getComputedStyle(wrapper ?? image).opacity) * 1000) / 1000;
   });
+
+/**
+ * The adapter's clock now: the shared value its drawings take as `clock`,
+ * read from React's tree. Its opacities are `growthAt` of it (the points
+ * are `growthAt`'s, `growth.property.test.ts`), but without the worklets'
+ * Babel plugin react-native-web never runs the drawings' styles again once
+ * mounted, so a moving clock is read here and not in their styles.
+ */
+const clockOf = (host: Element): number => {
+  const found: number[] = [];
+  const walk = (fiber: Fiber | null | undefined) => {
+    for (let each = fiber; each; each = each.sibling) {
+      const clock = fiberProps(each)['clock'];
+      if (isSharedValue<number>(clock)) found.push(clock.value);
+      walk(each.child);
+    }
+  };
+  walk(rootFiberOf(host));
+  return found[0] ?? Number.NaN;
+};
 
 const rounded = (frame: GrowthFrame) => frame.map((each) => Math.round(each * 1000) / 1000);
 
@@ -169,6 +193,32 @@ describe('the growing seed', () => {
         errors: 0,
       });
       errors.mockRestore();
+    }));
+
+  it('loops with motion on: driven past its first cycle, its clock starts over and the seed, the blade, the ear and full corn each show alone again, the clock never past one cycle on from its start', () =>
+    under('no-preference', async () => {
+      const real = performance.now();
+      const frames = { now: real };
+      // oxlint-disable-next-line effect/noModuleMocks -- Reanimated's web frames read the host's `performance.now` alone, a host boundary no layer stands in for; the test drives it past one cycle
+      const time = spyOn(performance, 'now').mockImplementation(() => frames.now);
+      const drawn = await mount(<GrowingSeed />);
+      const step = 250;
+      const alone = new Set<number>();
+      let most = 0;
+      for (let at = step; at <= 2 * GROWTH.cycle; at += step) {
+        frames.now = real + at;
+        await nextFrame();
+        const clock = clockOf(drawn.host);
+        most = Math.max(most, clock);
+        const shown = growthAt(clock);
+        if (at > GROWTH.cycle + GROWTH.fade && shown.includes(1)) alone.add(shown.indexOf(1));
+      }
+      await drawn.leave();
+      time.mockRestore();
+      expect({ alone: [...alone].toSorted(), over: most > GROWTH_START + GROWTH.cycle }).toEqual({
+        alone: [0, 1, 2, 3],
+        over: false,
+      });
     }));
 
   it('keeps the welcome’s heading, texts and controls the same nodes in every frame while the seed grows', () =>
