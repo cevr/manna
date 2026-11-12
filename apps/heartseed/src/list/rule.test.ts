@@ -70,7 +70,12 @@ const home = (rows: readonly Element[], scrolled: readonly Element[] = []) =>
   faultsOf([
     element('heading', 'Your field'),
     element('button', 'Start'),
-    scrollOf([...rows, element('button', 'Settings'), ...scrolled]),
+    scrollOf([
+      ...rows,
+      element('button', 'Settings'),
+      element('button', 'How Heartseed works'),
+      ...scrolled,
+    ]),
   ]);
 
 const opened = () => row(TITLE, [element('button', `Open ${TITLE}`)]);

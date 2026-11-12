@@ -5560,3 +5560,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A tap on a long verse's `Learn this verse` started a piece of it under a word range (`<verse> [<first>-<last>]`), and the session planned, showed and stored long verses in pieces, so a reader never saw the verse he chose.
 - **Cause:** hsstart's rule started the first piece of a verse with no plant, and the session cut every verse of more than 12 words into pieces of its own, each a plan item, a reference and a plant.
 - **Guard:** code: `apps/heartseed/src/home/rule.test.ts` `names a word range in a text and in an accessible name on any screen, the pending frame too, and nothing for a reference alone`; code: `apps/heartseed/src/passages/pieces.property.test.ts` `give John 15:1-5 after the promise, grouped as the passage, and share the promise’s plant inside Isaiah 41`
+
+### heartseed-first-open
+
+- **Date:** 2026-11-11
+- **Kind:** owner
+- **Said:** "add a verse yeah I'm thinking as we and as we kind of like improve these things we should be able to we probably need like an onboarding experience when first opening the app"
+- **Source:** hymnapp/hsfirstrun/owner.md #8 (the scrawl of 2026-11-11 on home's bottom `Add verses` and the seed, blade, ear and full corn legend)
+- **Wrong:** The first open taught the recital and never said what the app is, what a plant means, or what a list and adding one are.
+- **Cause:** The first minute began at `Hear it`, and no rule held a fresh install to a screen that names the app before the verse, or home to tips that point at its card, `Add a list` and a list's name.
+- **Guard:** code: `apps/heartseed/src/first/rule.test.ts` `names one fault for each clause a frame breaks`

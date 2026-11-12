@@ -32,7 +32,7 @@ import { clockOf, START } from '../test/clock';
 import { deadline } from '../test/elapsed';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { device } from '../test/one';
-import { plantFaults } from '../test/plant-image-rule';
+import { introFaults, plantFaults } from '../test/plant-image-rule';
 import { cardLine, watchRoot } from '../test/root-rule';
 import type { Scheme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
@@ -124,6 +124,7 @@ const mount = async (scheme: Scheme, held: boolean) => {
   /** The plant the phase `name` owes in `scheme` (`plantFaults`): Planted's 112 pt seed of that scheme, home its own, every other phase none. */
   const drawing = (name: string, scheme: Scheme) => {
     if (name === 'home') return [];
+    if (name === 'welcome' || name === 'grows') return introFaults(host, name, scheme);
     if (name === 'planted')
       return plantFaults(host, { asset: `assets/home/seed-${scheme}.png`, size: 112 });
     return plantFaults(host, null);
@@ -152,6 +153,12 @@ describe('the first minute in dark and across flips of the system', () => {
   it('holds every frame of hear while the voice reads and of the letters while their recital listens to the oracle', async () => {
     const first = await mount('dark', true);
     const shown: string[] = [];
+    if (await first.until(() => first.heading() === 'Heartseed')) shown.push('welcome');
+    await first.phase('welcome');
+    await first.tap('Begin');
+    if (await first.until(() => first.heading() === 'Every verse is a plant')) shown.push('grows');
+    await first.phase('grows');
+    await first.tap('Plant your first verse');
     if (await first.until(() => first.heading() === 'Hear it')) shown.push('hear');
     await first.phase('hear');
     await first.tap('Listen');
@@ -169,7 +176,7 @@ describe('the first minute in dark and across flips of the system', () => {
     if (await first.until(() => first.has('Listening'))) shown.push('listening');
     await first.phase('letters while listening');
     expect({ shown, ...(await first.leave()) }).toMatchObject({
-      shown: ['hear', 'letters', 'listening'],
+      shown: ['welcome', 'grows', 'hear', 'letters', 'listening'],
       report: [],
       frames: [],
       root: [],
@@ -179,6 +186,8 @@ describe('the first minute in dark and across flips of the system', () => {
   it('holds every frame of alone, its recital and Planted to the oracle, and home’s done state after Continue', async () => {
     const first = await mount('dark', false);
     const shown: string[] = [];
+    await first.until(() => first.heading() === 'Heartseed');
+    await first.tap('Skip');
     await first.until(() => first.heading() === 'Hear it');
     await first.tap('Next');
     await first.until(() => first.heading() === 'Say it with help');

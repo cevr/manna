@@ -29,6 +29,8 @@ describe('the root around a recital', () => {
     device.launch([VOICE_OFF]);
     const fresh = await launch();
     const at = (heading: string) => fresh.app.until(() => fresh.app.headings().includes(heading));
+    expect(await at('Heartseed')).toBe(true);
+    await fresh.app.tap('Skip');
     expect(await at('Hear it')).toBe(true);
     await fresh.app.tap('Next');
     expect(await at('Say it with help')).toBe(true);

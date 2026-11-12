@@ -240,7 +240,7 @@ describe('the first minute', () => {
     device.launch([]);
     const open = scriptedSource([{ at: 600_000, final: false, runs: [] }]);
     const first = await mount(Promise.resolve(), open);
-    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    expect(await first.past()).toBe(true);
     const reference = first.host.querySelector('[data-testid="reference"]');
     expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
     await first.click('Listen');
@@ -270,7 +270,7 @@ describe('the first minute', () => {
       Promise.resolve(),
       scriptedSource([{ at: 600_000, final: false, runs: [] }]),
     );
-    expect(await held.until(() => held.heading() === 'Hear it')).toBe(true);
+    expect(await held.past()).toBe(true);
     looks.hear = lookOf(held.host);
     await held.click('Listen');
     await held.send({ kind: 'range', location: SPANS[0]?.start ?? 0, length: 1 });
@@ -285,7 +285,7 @@ describe('the first minute', () => {
     await held.leave();
     device.launch([]);
     const said = await mount();
-    expect(await said.until(() => said.heading() === 'Hear it')).toBe(true);
+    expect(await said.past()).toBe(true);
     await said.click('Next');
     expect(await said.until(() => said.heading() === 'Say it with help')).toBe(true);
     await said.click('Say it');

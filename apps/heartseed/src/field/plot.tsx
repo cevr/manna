@@ -15,7 +15,7 @@
  */
 
 import { Match, Option } from 'effect';
-import { useMemo } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { PlantStage } from '../field';
@@ -216,25 +216,29 @@ export function FurrowRow({
   );
 }
 
-/** The field's rows share one motion plan per furrows value; only their icon and plant images move. */
+/** The field's rows share one motion plan per furrows value; only their icon and plant images move. `underFirst` sits directly under the first row. */
 export function Furrows({
   furrows,
   onPlant,
   onOpen,
+  underFirst,
 }: {
   readonly furrows: readonly Furrow[];
   readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
+  readonly underFirst?: ReactNode;
 }) {
   const motion = useMemo(() => motionOf(furrows), [furrows]);
   return furrows.map((furrow, index) => (
-    <FurrowRow
-      key={index}
-      furrow={furrow}
-      motion={motion[index] ?? { icon: Option.none(), plants: [] }}
-      onPlant={onPlant}
-      onOpen={onOpen}
-    />
+    <Fragment key={index}>
+      <FurrowRow
+        furrow={furrow}
+        motion={motion[index] ?? { icon: Option.none(), plants: [] }}
+        onPlant={onPlant}
+        onOpen={onOpen}
+      />
+      {index === 0 && underFirst}
+    </Fragment>
   ));
 }
 

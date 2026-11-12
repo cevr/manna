@@ -145,6 +145,8 @@ describe('the foreground at Today’s edges', () => {
         await app.tap('Listening');
         await app.until(() => !app.has('Listening'));
       };
+      await phase('Heartseed');
+      await app.tap('Skip');
       await phase('Hear it');
       await app.tap('Next');
       await phase('Say it with help');

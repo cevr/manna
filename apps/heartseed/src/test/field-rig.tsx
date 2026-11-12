@@ -186,7 +186,18 @@ const plantRead = (plant: Element, seen: Seen) => ({
     .join(''),
 });
 
-const ALLOWED = ['row-title', 'field-plant', 'sown', 'harvest', 'caption', 'today-card', 'chosen']
+const ALLOWED = [
+  'row-title',
+  'field-plant',
+  'sown',
+  'harvest',
+  'caption',
+  'today-card',
+  'chosen',
+  'tip-1',
+  'tip-2',
+  'tip-3',
+]
   .map((id) => `[data-testid="${id}"]`)
   .join(',');
 

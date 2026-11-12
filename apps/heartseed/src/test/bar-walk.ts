@@ -21,7 +21,7 @@
  * Add a list sheet over the field with every shelf closed, then
  * `Any passage`, then back to the sheet by `Add verses` and to the field by
  * `Done`, or a verse planted. Over unread passages, a round trip. A
- * round trip leaves by `How Heartseed works` (About) while an ask shows,
+ * round trip leaves by `How Heartseed works` (the welcome, left by its `Skip`) while an ask shows,
  * else by `Start` when home offers it, else by `Practice anyway`, Today then showing `Say it` or `Next`, and comes back by
  * `Your field`; over unread passages `Start` is owed, and one of the two
  * always. After every tap the screen is the model's,
@@ -141,7 +141,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   let held: Held = readRule(CORPUS, raw, reads);
   let written = false;
   let bar: Asking = QUIET;
-  let screen: 'field' | 'sheet' | 'Today' | 'About' | 'Add a passage' = 'field';
+  let screen: 'field' | 'sheet' | 'Today' | 'Heartseed' | 'Add a passage' = 'field';
   const reached = launchCases(drawn, held);
   const faults: string[] = [];
   const log: string[] = [];
@@ -207,7 +207,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     await settle(`ask ${spanRef(span)}#${nth}`);
     return span;
   };
-  /** Leaves home and comes back by `Your field`: by `Start` when home offers it, else by `Practice anyway` (Today then shows `Say it` or `Next`); over unread passages `Start` is owed (rq1 (a)), and one of the two always (hsstart T1). From a list's own page it goes home first, and leaves by `How Heartseed works` while an ask showed. */
+  /** Leaves home and comes back by `Your field`: by `Start` when home offers it, else by `Practice anyway` (Today then shows `Say it` or `Next`); over unread passages `Start` is owed (rq1 (a)), and one of the two always (hsstart T1). From a list's own page it goes home first, and leaves by `How Heartseed works` and the welcome's `Skip` while an ask showed. */
   const round = async (label: string) => {
     const asked = bar.ask !== undefined;
     if (asked) reached.add('ask:dropped by leaving');
@@ -216,12 +216,12 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     if (asked) {
       reached.add('round:by How Heartseed works');
       await rig.tap('How Heartseed works');
-      screen = 'About';
+      screen = 'Heartseed';
       await settle(`${label}: How Heartseed works`);
-      await rig.tap('Your field');
+      await rig.tap('Skip');
       screen = 'field';
       bar = QUIET;
-      await settle(`${label}: the field from About`);
+      await settle(`${label}: the field from the welcome's Skip`);
       return;
     }
     const begins = rig.control('Start') !== undefined;

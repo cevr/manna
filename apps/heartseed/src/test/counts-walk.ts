@@ -653,6 +653,8 @@ const command = async (run: Run, c: number) => {
 /** The first minute through to home: Next, Say it with help, Say it alone, then Continue, a second between each recital. */
 const firstMinute = async (run: Run) => {
   const { app, time } = run;
+  expect(await app.until(() => app.headings().includes('Heartseed'))).toBe(true);
+  await app.tap('Skip');
   expect(await app.until(() => app.headings().includes('Hear it'))).toBe(true);
   await app.tap('Next');
   for (const heading of ['Say it with help', 'Say it alone']) {

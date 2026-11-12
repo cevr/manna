@@ -51,8 +51,15 @@ import { END, homeLines, watchRoot } from './root-rule';
 /** The four radios' names, in the order the group shows them. */
 export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
 
-/** The first minute's headings. */
-const FIRST_MINUTE = new Set(['Hear it', 'Say it with help', 'Say it alone', 'Planted']);
+/** The first minute's headings, the two screens before its first verse among them. */
+const FIRST_MINUTE = new Set([
+  'Heartseed',
+  'Every verse is a plant',
+  'Hear it',
+  'Say it with help',
+  'Say it alone',
+  'Planted',
+]);
 
 /** The session's nodes, which only Today shows. */
 const SESSION_NODES =

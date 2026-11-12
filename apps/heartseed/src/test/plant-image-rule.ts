@@ -105,6 +105,73 @@ const imageFaults = (
   return out;
 };
 
+/** The four stages' drawings in the order the welcome and how a verse grows draw them, written apart from the product: seed, blade, ear, full corn as `corn`. */
+const FOUR = ['seed', 'blade', 'ear', 'corn'];
+
+/** What each screen before the first verse owes: the welcome its growing seed, four drawings 112 pt in one hidden place; how a verse grows its four stills, 40 pt. */
+const INTRO = {
+  welcome: { size: 112, place: true },
+  grows: { size: 40, place: false },
+} as const;
+
+/**
+ * What a screen before the first verse (`welcome` or `grows`) draws wrong
+ * in `scheme`: its plant assets, read from every image, not exactly the
+ * four stages' drawings of the scheme in order; any `plant` wrapper; an
+ * image not hidden from the screen reader or not its size square; on the
+ * welcome, an image outside its one hidden `growing` place, or text or a
+ * control in that place; and on either, a drawing that is animated,
+ * transformed or hidden to enter (the growing seed changes opacity alone).
+ */
+export const introFaults = (
+  top: Element,
+  screen: keyof typeof INTRO,
+  scheme: 'light' | 'dark',
+): string[] => {
+  const owed = INTRO[screen];
+  const want = FOUR.map((name) => `assets/home/${name}-${scheme}.png`);
+  const images = [...top.querySelectorAll('img')].filter((image) => isPlantAsset(assetOf(image)));
+  const got = images.map(assetOf);
+  const out: string[] = [];
+  if (got.join() !== want.join()) out.push(`the ${screen} draws ${got.join('|') || 'nothing'}`);
+  const plants = top.querySelectorAll('[data-testid="plant"]').length;
+  if (plants > 0) out.push(`${plants} plants on the ${screen}`);
+  for (const image of images) out.push(...introImageFaults(top, image, screen, owed.size));
+  if (!owed.place) return out;
+  return [...out, ...growingPlaceFaults(top, images)];
+};
+
+/** One drawing of a screen before the first verse: exposed, not `size` square, or moved on its way up to `top`. */
+const introImageFaults = (top: Element, image: Element, screen: string, size: number) => {
+  const out: string[] = [];
+  if (image.closest('[aria-hidden="true"]') === null)
+    out.push(`an exposed drawing on the ${screen}`);
+  const { width, height } = getComputedStyle(image.parentElement ?? image);
+  if (width !== `${size}px` || height !== `${size}px`)
+    out.push(`a drawing ${width}×${height} on the ${screen}, not ${size}px`);
+  for (let node: Element | null = image; node !== null && node !== top; node = node.parentElement) {
+    const moved = motionOf(node);
+    if (moved !== null) out.push(`a drawing ${moved} on the ${screen}`);
+  }
+  return out;
+};
+
+/** The welcome's growing place: exactly one, hidden, holding every drawing and no text or control. */
+const growingPlaceFaults = (top: Element, images: readonly Element[]) => {
+  const out: string[] = [];
+  const places = [...top.querySelectorAll('[data-testid="growing"]')];
+  const place = places[0];
+  if (places.length !== 1 || place === undefined)
+    return [...out, `${places.length} growing places`];
+  if (place.getAttribute('aria-hidden') !== 'true') out.push('the growing place exposed');
+  if (images.some((image) => !place.contains(image)))
+    out.push('a drawing outside the growing place');
+  if ((place.textContent ?? '').trim() !== '') out.push('text in the growing place');
+  if (place.matches(CONTROLS) || place.querySelector(CONTROLS) !== null)
+    out.push('a control in the growing place');
+  return out;
+};
+
 /**
  * What `top` draws wrong against the one plant it owes: `want` an asset
  * and its size in points, or null for none. Owed none, any plant asset or

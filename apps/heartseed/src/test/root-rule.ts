@@ -295,6 +295,108 @@ const listRuleFaults = (on: string, list: boolean, host: Element, controls: read
   return out;
 };
 
+/** Each screen before the first verse, by heading, with the controls it may offer: the welcome's `Begin` and `Skip`, how a verse grows' one button. */
+const INTRO = new Map<string, readonly string[]>([
+  ['Heartseed', ['Begin', 'Skip']],
+  ['Every verse is a plant', ['Plant your first verse', 'See your field']],
+]);
+
+/** The names only those two screens offer. */
+const INTRO_NAMES = new Set([...INTRO.values()].flat());
+
+/** The tips' ids. */
+const TIP_IDS = ['tip-1', 'tip-2', 'tip-3'];
+
+/** What a screen before the first verse shows wrong: on the welcome not exactly one `Begin` and at most one `Skip`; on how a verse grows not exactly one control of its two names; on either a control inside the scroll view or one of another name; a word node, `id=reading`, a recital node, or a node of Today or home. */
+const introOnFaults = (on: string, host: Element, controls: readonly Element[]) => {
+  const names = controls.map(nameOf);
+  const own = INTRO.get(on) ?? [];
+  const out = names.filter((name) => !own.includes(name)).map((name) => `${name} on ${on}`);
+  if (on === 'Heartseed') {
+    const begins = names.filter((name) => name === 'Begin').length;
+    const skips = names.filter((name) => name === 'Skip').length;
+    if (begins !== 1) out.push(`${begins} Begin on Heartseed`);
+    if (skips > 1) out.push(`${skips} Skip on Heartseed`);
+  } else if (controls.length !== 1) out.push(`${controls.length} controls on ${on}`);
+  for (const node of controls)
+    if (scrolled(node)) out.push(`${nameOf(node)} inside the scroll view`);
+  const strays = host.querySelectorAll(
+    '[data-testid^="word-"],[data-testid="reading"],[data-testid="stage"],[data-testid="summary"],[data-testid="session"]',
+  );
+  if (strays.length > 0) out.push(`a node of the verse's phases or Today on ${on}`);
+  return out;
+};
+
+/**
+ * hsintro's rule over a frame: the screens before the first verse
+ * (`introOnFaults`), and their four control names (`Begin`, `Skip`,
+ * `Plant your first verse`, `See your field`) on no other screen (`<name>
+ * on <screen>`). Home's tips (`[data-testid^="tip-"]`) and `Got it` show
+ * on `Your field` alone (`a tip on <screen>`, `Got it on <screen>`); at
+ * most three tips, ids distinct among `tip-1` to `tip-3` (`the tips
+ * <ids>`); exactly one `Got it` while a tip shows and none otherwise (`<n>
+ * Got it for <k> tips`), outside the scroll view (`Got it inside the
+ * scroll view`); `tip-1` outside the scroll view and `tip-2` and `tip-3`
+ * inside (`<id> …the scroll view`); `tip-2` only beside `id=add-list`
+ * (`tip-2 without Add a list`); no tip is or holds a control (`a control in
+ * <id>`). Home holds exactly one `How Heartseed works`, inside the scroll
+ * view (`<n> How Heartseed works on Your field`, `How Heartseed works
+ * outside the scroll view`).
+ */
+export const introRuleFaults = (on: string, host: Element, controls: readonly Element[]) => {
+  const tips = [...host.querySelectorAll('[data-testid^="tip-"]')];
+  const gotIt = controls.filter((node) => nameOf(node) === 'Got it');
+  if (INTRO.has(on)) return [...introOnFaults(on, host, controls), ...strayTips(on, tips, gotIt)];
+  const out = controls
+    .filter((node) => INTRO_NAMES.has(nameOf(node)))
+    .map((node) => `${nameOf(node)} on ${on}`);
+  if (on !== 'Your field') return [...out, ...strayTips(on, tips, gotIt)];
+  return [...out, ...tipFaults(host, tips, gotIt), ...howFaults(controls)];
+};
+
+/** Off home: any tip, and any `Got it`. */
+const strayTips = (on: string, tips: readonly Element[], gotIt: readonly Element[]) => [
+  ...tips.slice(0, 1).map(() => `a tip on ${on}`),
+  ...gotIt.slice(0, 1).map(() => `Got it on ${on}`),
+];
+
+/** On home: the tips' ids, `Got it` beside them, and each tip's place, neighbour and controls. */
+const tipFaults = (host: Element, tips: readonly Element[], gotIt: readonly Element[]) => {
+  const out: string[] = [];
+  const tipIds = tips.map((node) => node.getAttribute('data-testid') ?? '');
+  const distinct = new Set(tipIds).size === tipIds.length;
+  if (tips.length > 3 || !distinct || tipIds.some((id) => !TIP_IDS.includes(id)))
+    out.push(`the tips ${tipIds.join('|')}`);
+  if (gotIt.length !== Math.min(tips.length, 1))
+    out.push(`${gotIt.length} Got it for ${tips.length} tips`);
+  if (gotIt.some(scrolled)) out.push('Got it inside the scroll view');
+  for (const node of tips) out.push(...oneTipFaults(host, node));
+  return out;
+};
+
+/** One tip: tip-1 outside the scroll view, the others inside, tip-2 beside `Add a list`, and no control. */
+const oneTipFaults = (host: Element, node: Element) => {
+  const out: string[] = [];
+  const id = node.getAttribute('data-testid') ?? '';
+  const inside = scrolled(node);
+  if (id === 'tip-1' && inside) out.push('tip-1 inside the scroll view');
+  if (id !== 'tip-1' && !inside) out.push(`${id} outside the scroll view`);
+  if (id === 'tip-2' && host.querySelector('[data-testid="add-list"]') === null)
+    out.push('tip-2 without Add a list');
+  if (node.matches(CONTROLS) || node.querySelector(CONTROLS) !== null)
+    out.push(`a control in ${id}`);
+  return out;
+};
+
+/** On home: exactly one `How Heartseed works`, inside the scroll view. */
+const howFaults = (controls: readonly Element[]) => {
+  const how = controls.filter((node) => nameOf(node) === 'How Heartseed works');
+  const out: string[] = [];
+  if (how.length !== 1) out.push(`${how.length} How Heartseed works on Your field`);
+  if (how.some((node) => !scrolled(node))) out.push('How Heartseed works outside the scroll view');
+  return out;
+};
+
 const CHOICE_NAME = /^(\d+ min|Voice)$/;
 
 /** What the reader's choices show wrong on the screen `on`: a `Minutes` group, an `<n> min` control or a `Voice` control under the host, on every screen. */
@@ -384,7 +486,9 @@ const rangeFaults = (host: Element) => {
  * view, and none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
  * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`; home holds home's rule
  * (`homeRuleFaults`: one primary action, outside the scroll view, no old
- * node, one `Add a list`, no number in a plant). The
+ * node, one `Add a list`, no number in a plant). The screens before the
+ * first verse, home's tips and `How Heartseed works` hold hsintro's rule
+ * (`introRuleFaults`). The
  * Settings sheet lies outside the host, so its nodes are the sheet rule's
  * (`settings-rig.ts`). While the host shows `Listening`, on any frame,
  * nothing that makes the plan is in reach anywhere in the host's document,
@@ -440,6 +544,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   out.push(...settingsFaults(on, named('Settings')));
   out.push(...homeRuleFaults(on, host, controls));
   out.push(...listRuleFaults(on, list, host, controls));
+  out.push(...introRuleFaults(on, host, controls));
   out.push(...choicesFaults(on, host, controls));
   out.push(...reach);
   return out;

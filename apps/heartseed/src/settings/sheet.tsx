@@ -10,9 +10,10 @@
  * session's minutes (`MinutesChoice`), the voice (`VoiceChoice`, with the
  * natural voice's status line and its `Try again` under the pill) and the
  * appearance (`AppearanceChoice`), each with its line once its stored
- * choice is read, and last `About`. A tap of a choice goes through the
- * app's own atoms, so it shows at once, here and under the sheet, and is
- * stored; opening or closing the sheet writes nothing.
+ * choice is read, and last `Show the welcome again`, then `About`. A tap
+ * of a choice goes through the app's own atoms, so it shows at once, here
+ * and under the sheet, and is stored; opening or closing the sheet writes
+ * nothing.
  */
 
 import { useAtomValue } from '@effect/atom-react';
@@ -44,12 +45,14 @@ function SheetButton({ label, onPress }: { readonly label: string; readonly onPr
   );
 }
 
-/** The Settings sheet, open while mounted: `onDone` closes it (`Done`, the swipe down, Escape), `onAbout` shows About. */
+/** The Settings sheet, open while mounted: `onDone` closes it (`Done`, the swipe down, Escape), `onWelcome` replays the welcome (`Show the welcome again`), `onAbout` shows About. */
 export function SettingsSheet({
   onDone,
+  onWelcome,
   onAbout,
 }: {
   readonly onDone: () => void;
+  readonly onWelcome: () => void;
   readonly onAbout: () => void;
 }) {
   const look = useLook();
@@ -89,6 +92,7 @@ export function SettingsSheet({
             </View>
           )}
           <View style={styles.about}>
+            <SheetButton label="Show the welcome again" onPress={onWelcome} />
             <SheetButton label="About" onPress={onAbout} />
           </View>
         </ScrollView>
@@ -116,7 +120,7 @@ const sheets = themed((color, face) =>
     content: { paddingTop: 8 },
     section: { gap: 10 },
     line: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
-    about: { alignItems: 'flex-start' },
+    about: { alignItems: 'flex-start', gap: 12 },
     button: {
       minHeight: 44,
       paddingHorizontal: 18,

@@ -28,6 +28,7 @@ const relaunch = (launch: LaunchKind = LAUNCH_OK): Command => ({ _tag: 'Relaunch
 const NEXT: Command = { _tag: 'Next' };
 const LATER: Command = { _tag: 'Later', launch: LAUNCH_OK };
 const BEGIN: Command = { _tag: 'Begin' };
+const SKIP: Command = { _tag: 'Intro', tap: 'Skip' };
 
 describe('the root route on fixed devices, unheard, refused and unread', () => {
   it('stays in letters and in alone after every unheard ending, each showing the alert', async () => {
@@ -40,6 +41,7 @@ describe('the root route on fixed devices, unheard, refused and unread', () => {
       recital({ skip: ALL, close: 'unavailable' }),
     ];
     const m = await play(FRESH, [
+      SKIP,
       NEXT,
       ...unheard.map((each) => sayOf(each)),
       sayOf(recital()),
@@ -50,6 +52,7 @@ describe('the root route on fixed devices, unheard, refused and unread', () => {
 
   it('shows no seed while the write is refused or the device is down, and plants it once a write lands', async () => {
     const m = await play(FRESH, [
+      SKIP,
       NEXT,
       sayOf(recital()),
       sayOf(recital(), 'refused'),
@@ -69,17 +72,19 @@ describe('the root route on fixed devices, unheard, refused and unread', () => {
     expect([due.screen, due.passage, due.plan?.passage]).toEqual(['today', 1, true]);
   });
 
-  it('cancels a recital held open when the app relaunches, in letters and in alone, and starts again at hear', async () => {
+  it('cancels a recital held open when the app relaunches, in letters and in alone, and starts again at the welcome', async () => {
     const m = await play(FRESH, [
+      SKIP,
       NEXT,
       sayOf(recital({ cut: 2 })),
       relaunch(),
+      SKIP,
       NEXT,
       sayOf(recital()),
       sayOf(recital({ cut: 4 })),
       relaunch({ read: 'ok', held: true, voices: 1 }),
       { _tag: 'Resolve' },
     ]);
-    expect([m.screen, m.passage, m.disk.size]).toEqual(['hear', 0, 0]);
+    expect([m.screen, m.passage, m.disk.size]).toEqual(['welcome', 0, 0]);
   });
 });

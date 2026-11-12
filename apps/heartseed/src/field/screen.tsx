@@ -11,7 +11,12 @@
  * (`./plot`), whose title (`Open <title>`) opens the list's own page,
  * where a held list is removed; the legend under Mark 4:28; then the rows
  * `Settings`, which opens the Settings sheet (`../settings/sheet`) over
- * home, and `How Heartseed works`, which shows About.
+ * home, and `How Heartseed works`, which replays the welcome.
+ *
+ * While the root's tour shows the tips (`./tips`): `tip-1` fixed under the
+ * card, `tip-2` under `Lists` while `Add a list` shows, `tip-3` under the
+ * first furrow's row, and the quiet `Got it` fixed under the scroll view;
+ * home has no fixed foot otherwise.
  *
  * A tap on a plant starts its verse at once, whatever its stage, and Today
  * shows it, with no card between (owner, 2026-11-12: "If you wanna go
@@ -33,16 +38,20 @@ import type { TodayCard } from '../home/today';
 import { themed, useThemed } from '../look';
 import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
+import { Pill } from '../first/intro';
 import { SettingsSheet } from '../settings/sheet';
 import { TodayCardView, type StartKind } from './card';
 import { Control, Furrows, Icon, Legend } from './plot';
+import { Tip } from './tips';
 
 /** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held. */
 function Lists({
   passages,
+  tips,
   onAdd,
 }: {
   readonly passages: PassagesView;
+  readonly tips: boolean;
   readonly onAdd: () => void;
 }) {
   const styles = useThemed(sheets);
@@ -61,6 +70,7 @@ function Lists({
           onPress={onAdd}
         />
       )}
+      {offers && tips && <Tip n={2} />}
       {full && (
         <Text testID="limit" style={styles.limit}>
           {LIMIT_LINE}
@@ -95,9 +105,12 @@ function EndRow({ label, onPress }: { readonly label: string; readonly onPress: 
  * and the reader's `passages`, greeting by `greeting`; the Today card
  * `card`, and on a plant's verse what `starts` gives it. `onToday` is
  * `Start`'s way to Today, `onStart` the way `Practice anyway` and a tap on
- * a plant start a verse, `onAdd` the way to the
- * Add a list sheet, `onAbout` the way to About and `onOpen` the way to a
- * furrow's list view, by its id.
+ * a plant start a verse, `onAdd` the way to the Add a list sheet,
+ * `onAbout` the Settings sheet's way to About, `onHow` the replay of the
+ * welcome (`How Heartseed works`, and the sheet's `Show the welcome
+ * again`, which closes the sheet in the same turn) and `onOpen` the way to
+ * a furrow's list view, by its id. While `tips`, home shows its three tips
+ * and `Got it` (`onGotIt`) fixed under the scroll view.
  */
 export function FieldScreen({
   field,
@@ -106,10 +119,13 @@ export function FieldScreen({
   greeting,
   card,
   starts,
+  tips,
   onToday,
   onStart,
   onAdd,
   onAbout,
+  onHow,
+  onGotIt,
   onOpen,
 }: {
   readonly field: Field;
@@ -118,10 +134,13 @@ export function FieldScreen({
   readonly greeting: Greeting;
   readonly card: TodayCard;
   readonly starts: (verse: string) => Option.Option<StartKind>;
+  readonly tips: boolean;
   readonly onToday: () => void;
   readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
+  readonly onHow: () => void;
+  readonly onGotIt: () => void;
   readonly onOpen: (id: string) => void;
 }) {
   const look = useLook();
@@ -139,6 +158,7 @@ export function FieldScreen({
           <Text style={styles.greetingText}>{greeting.words}</Text>
         </View>
         <TodayCardView card={card} pending={false} onToday={onToday} onStart={onStart} />
+        {tips && <Tip n={1} />}
       </View>
       <ScrollView
         style={styles.scroll}
@@ -159,15 +179,34 @@ export function FieldScreen({
             {harvestText(field.harvest)}
           </Text>
         </View>
-        <Lists passages={passages} onAdd={onAdd} />
-        <Furrows furrows={furrows} onPlant={onPlant} onOpen={onOpen} />
+        <Lists passages={passages} tips={tips} onAdd={onAdd} />
+        <Furrows
+          furrows={furrows}
+          onPlant={onPlant}
+          onOpen={onOpen}
+          underFirst={tips && <Tip n={3} />}
+        />
         <Legend />
         <View style={styles.ends}>
           <EndRow label="Settings" onPress={() => setSettings(true)} />
-          <EndRow label="How Heartseed works" onPress={onAbout} />
+          <EndRow label="How Heartseed works" onPress={onHow} />
         </View>
       </ScrollView>
-      {settings && <SettingsSheet onDone={() => setSettings(false)} onAbout={onAbout} />}
+      {tips && (
+        <View style={[styles.foot, { paddingBottom: insets.bottom + 12 }]}>
+          <Pill label="Got it" onPress={onGotIt} />
+        </View>
+      )}
+      {settings && (
+        <SettingsSheet
+          onDone={() => setSettings(false)}
+          onAbout={onAbout}
+          onWelcome={() => {
+            setSettings(false);
+            onHow();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -184,6 +223,7 @@ const sheets = themed((color, face) =>
     label: { fontFamily: face, fontSize: 13, fontWeight: '600', color: color.ink },
     limit: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.ink },
     ends: { gap: 8, marginTop: 8 },
+    foot: { paddingHorizontal: 24, paddingTop: 12 },
     endRow: {
       flexDirection: 'row',
       alignItems: 'center',

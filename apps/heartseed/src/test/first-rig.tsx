@@ -96,7 +96,7 @@ import { deadline } from './elapsed';
 import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
 import { device } from './one';
-import { plantFaults, STAGE_IMAGE } from './plant-image-rule';
+import { introFaults, plantFaults, STAGE_IMAGE } from './plant-image-rule';
 import { voiceOverFaults } from './voiceover';
 import { cardLineModel } from './home-model';
 import { cardLine, END, endShown, watchRoot } from './root-rule';
@@ -129,7 +129,19 @@ const GRAMS = new Set(
 );
 /** A word the verse does not hold, said as an extra word. */
 export const EXTRA = 'zebra';
+/** The two screens before the first verse, by heading. */
+const INTRO_HEADINGS: Readonly<Record<'welcome' | 'grows', string>> = {
+  welcome: 'Heartseed',
+  grows: 'Every verse is a plant',
+};
+/** Each screen before the first verse's controls, by name, exactly. */
+const INTRO_CONTROLS: Readonly<Record<'welcome' | 'grows', readonly string[]>> = {
+  welcome: ['Begin', 'Skip'],
+  grows: ['Plant your first verse'],
+};
 const HEADINGS = [
+  INTRO_HEADINGS.welcome,
+  INTRO_HEADINGS.grows,
   'Hear it',
   'Say it with help',
   'Say it alone',
@@ -152,6 +164,8 @@ const boxOf = (index: number) => ({
 
 export type Screen =
   | 'pending'
+  | 'welcome'
+  | 'grows'
   | 'hear'
   | 'letters'
   | 'alone'
@@ -161,6 +175,8 @@ export type Screen =
   | 'unread';
 const HEADING: Readonly<Record<Screen, string | null>> = {
   pending: null,
+  welcome: INTRO_HEADINGS.welcome,
+  grows: INTRO_HEADINGS.grows,
   hear: 'Hear it',
   letters: 'Say it with help',
   alone: 'Say it alone',
@@ -220,6 +236,17 @@ export interface LaunchKind {
 /** How a finger's hold on the hear phase's reading view ends: lifted (a seek to the held word), canceled (a resume), or still down while the reading finishes or Next is tapped, its end coming late. */
 export type HoldEnd = 'release' | 'cancel' | 'finish' | 'next';
 
+/** A tap on a screen before the first verse, by the control's name. */
+export type IntroTap = 'Begin' | 'Skip' | 'Plant your first verse';
+
+/** Where an intro tap leads from the screen it is tapped on, by the hsintro spec's table (O1), written apart from the flow: a tap off its own screen leads nowhere. */
+const introOn = (screen: Screen, tap: string): Screen => {
+  if (screen === 'welcome' && tap === 'Begin') return 'grows';
+  if (screen === 'welcome' && tap === 'Skip') return 'hear';
+  if (screen === 'grows' && tap === 'Plant your first verse') return 'hear';
+  return screen;
+};
+
 export type Command =
   | { readonly _tag: 'Resolve' }
   | {
@@ -233,6 +260,8 @@ export type Command =
   | { readonly _tag: 'Range'; readonly kind: RangeKind; readonly step: number }
   | { readonly _tag: 'Voice'; readonly kind: VoiceKind; readonly stale: boolean }
   | { readonly _tag: 'Next' }
+  /** A tap on a screen before the first verse: the welcome's `Begin` or `Skip`, or `Plant your first verse`. */
+  | { readonly _tag: 'Intro'; readonly tap: IntroTap }
   | {
       readonly _tag: 'Batch';
       readonly labels: readonly string[];
@@ -707,6 +736,61 @@ const drawingFaults = (
   want: { readonly asset: string; readonly size: number } | null,
 ) => plantFaults(host, want).map((fault) => `frame: ${where} draws ${fault}`);
 
+/** The screen before the first verse a heading names, or null for any other. */
+const introOf = (heading: string): 'welcome' | 'grows' | null => {
+  if (heading === INTRO_HEADINGS.welcome) return 'welcome';
+  if (heading === INTRO_HEADINGS.grows) return 'grows';
+  return null;
+};
+
+/**
+ * What a frame of a screen before the first verse shows wrong: controls
+ * other than exactly its own; a word node, the reading view, a stage, a
+ * summary or an alert; a setting word; its drawings (`introFaults`); and
+ * the reference: on the welcome exactly one node of the passage's
+ * reference, on how a verse grows none.
+ */
+const introFrameFaults = (
+  host: Element,
+  intro: 'welcome' | 'grows',
+  buttons: readonly (string | null)[],
+): string[] => {
+  const out = introFaults(host, intro, systemScheme()).map((fault) => `frame: ${fault}`);
+  const named = [...buttons].toSorted().join('|');
+  if (named !== [...INTRO_CONTROLS[intro]].toSorted().join('|'))
+    out.push(`frame: the ${intro} offers ${named}`);
+  if (
+    host.querySelector(
+      '[data-testid^="word-"],[data-testid="reading"],[data-testid="stage"],[data-testid="summary"],[role="alert"]',
+    ) !== null
+  )
+    out.push(`frame: a node of the verse's phases on the ${intro}`);
+  if (SETTING.test(textOutsideAlerts(host))) out.push(`frame: a setting word on the ${intro}`);
+  const references = [...host.querySelectorAll('[data-testid="reference"]')].map(
+    (node) => node.textContent ?? '',
+  );
+  const want = intro === 'welcome' ? [passage.reference] : [];
+  if (references.join('|') !== want.join('|'))
+    out.push(`frame: ${references.length} references on the ${intro}`);
+  return out;
+};
+
+/** What the pending frame shows wrong: shown after the launch decided, offering a button, claiming a stage or a plant, or drawing one. */
+const pendingFrameFaults = (
+  host: Element,
+  buttons: readonly (string | null)[],
+  allowed: Allowed,
+): string[] => {
+  const out: string[] = [];
+  if (!allowed.pending) out.push('frame: no heading after the launch decided');
+  if (buttons.length > 0) out.push('frame: a pending frame offers a button');
+  if (host.querySelector('[data-testid="stage"],[data-testid="plant"],[role="alert"]') !== null)
+    out.push('frame: a pending frame claims a stage');
+  if (CLAIM.test(host.textContent ?? '')) out.push('frame: a pending frame claims');
+  out.push(...drawingFaults(host, 'the pending frame', null));
+  return out;
+};
+
 /** What one frame shows wrong: more than one heading; a pending frame after the launch decided, or one offering a button, a stage or a plant image; a heading the command cannot reach; Planted with no recall on the disk or without its one hidden seed image; Today's drawing not its stage line's; and the phases' own faults, a plant image among them. */
 const frameFaults = (
   host: Element,
@@ -718,16 +802,10 @@ const frameFaults = (
   const out: string[] = shown.length > 1 ? [`frame: ${shown.length} headings`] : [];
   const heading = shown[0];
   out.push(...sessionFaults(host, heading));
-  if (heading === undefined) {
-    if (!allowed.pending) out.push('frame: no heading after the launch decided');
-    if (buttons.length > 0) out.push('frame: a pending frame offers a button');
-    if (host.querySelector('[data-testid="stage"],[data-testid="plant"],[role="alert"]') !== null)
-      out.push('frame: a pending frame claims a stage');
-    if (CLAIM.test(host.textContent ?? '')) out.push('frame: a pending frame claims');
-    out.push(...drawingFaults(host, 'the pending frame', null));
-    return out;
-  }
+  if (heading === undefined) return [...out, ...pendingFrameFaults(host, buttons, allowed)];
   if (!allowed.headings.has(heading)) out.push(`frame: heading ${heading} not allowed now`);
+  const intro = introOf(heading);
+  if (intro !== null) return [...out, ...introFrameFaults(host, intro, buttons)];
   if (heading === 'Planted') {
     if (!hasPassageRecall(device.disk))
       out.push('frame: Planted while the disk holds no recall of the passage');
@@ -1224,7 +1302,7 @@ export const session = (count: (key: string) => void) => {
 
   const opening = (): Screen => {
     if (m.unread) return 'unread';
-    return m.recalls > 0 ? 'home' : 'hear';
+    return m.recalls > 0 ? 'home' : 'welcome';
   };
 
   /** A making of Today's plan: one with no recital under way lets the held passage go, its recital's result with it. */
@@ -1262,6 +1340,8 @@ export const session = (count: (key: string) => void) => {
     const want = headingOf(m);
     if (r.heading() !== want) return false;
     if (m.screen === 'pending') return true;
+    if (m.screen === 'welcome' || m.screen === 'grows')
+      return INTRO_CONTROLS[m.screen].every((name) => r.buttons().includes(name));
     if (m.screen === 'hear') return r.buttons().includes('Listen') === (m.voiceOn && !m.reading);
     if (m.screen === 'planted') return true;
     if (m.screen === 'home') return r.home().counts !== '';
@@ -1434,6 +1514,10 @@ export const session = (count: (key: string) => void) => {
       expect([r.buttons().length, device.calls.keys], `${here}: the pending frame`).toEqual([0, 0]);
       return;
     }
+    if (m.screen === 'welcome' || m.screen === 'grows') {
+      checkIntro(r, here);
+      return;
+    }
     if (m.screen === 'hear') checkHear(r, here);
     checkHome(r, here);
     checkRun(r, here);
@@ -1488,6 +1572,44 @@ export const session = (count: (key: string) => void) => {
       ),
       begin: run !== 'done',
     });
+  };
+
+  /** A screen before the first verse at rest: in this launch no write, no speak, pause, resume or stop of the voice, no listen or cancel of the recognizer, no chime and no tick, and its controls exactly its own (tallied `intro:<screen>`). */
+  const checkIntro = (r: Rig, here: string) => {
+    count(`intro:${m.screen}`);
+    expect(
+      {
+        sets: device.calls.set,
+        voice: [
+          r.voice.calls.speaks,
+          r.voice.calls.pauses,
+          r.voice.calls.resumes,
+          r.voice.calls.stops,
+        ],
+        recognizer: [r.dictation.state.listens, r.dictation.state.cancels],
+        chimes: r.chimes.length,
+        ticks: r.felt.ticks,
+        buttons: [...r.buttons()].toSorted(),
+      },
+      `${here}: ${m.screen} touches nothing`,
+    ).toEqual({
+      sets: 0,
+      voice: [0, 0, 0, 0],
+      recognizer: [0, 0],
+      chimes: 0,
+      ticks: 0,
+      buttons: [...INTRO_CONTROLS[m.screen as 'welcome' | 'grows']].toSorted(),
+    });
+  };
+
+  /** A tap on a screen before the first verse: the model moves by `introOn`, the reader taps the control. */
+  const intro = async (tap: IntroTap) => {
+    const before = m.screen;
+    const screen = introOn(before, tap);
+    count(`intro:${tap}@${before}`);
+    if (screen === 'hear') count(`intro:hear-by-${tap === 'Skip' ? 'skip' : 'plant'}`);
+    go(before, screen);
+    await rig().click(tap);
   };
 
   /** Hear at rest: Listen iff the voice is on and idle, Next, the reading view iff the voice reads, the inked words the model's lit ones and the selected ones its current range. */
@@ -1865,7 +1987,8 @@ export const session = (count: (key: string) => void) => {
     let screen = before;
     let skipped = false;
     for (const label of labels) {
-      if (label === 'Next' && screen === 'hear') {
+      if (introOn(screen, label) !== screen) screen = introOn(screen, label);
+      else if (label === 'Next' && screen === 'hear') {
         skipped = true;
         m.reading = false;
         screen = 'letters';
@@ -1963,6 +2086,15 @@ export const session = (count: (key: string) => void) => {
     go(m.screen, m.screen);
   };
 
+  /** The commands that take no part of the step's own bookkeeping: an intro tap, the device's recovery and a new plan by Settings. */
+  const quiet = async (
+    command: Extract<Command, { readonly _tag: 'Intro' | 'Recover' | 'Renew' }>,
+  ) => {
+    if (command._tag === 'Intro') await intro(command.tap);
+    if (command._tag === 'Recover') recover();
+    if (command._tag === 'Renew') await renew();
+  };
+
   /** One command to the app and the model, then the settle's oracles. */
   const run = async (command: Command) => {
     const before = m.screen;
@@ -2016,16 +2148,10 @@ export const session = (count: (key: string) => void) => {
       case 'Grade':
         await grade(command.grade, command.write);
         break;
-      case 'Recover':
-        recover();
-        break;
       case 'Continue':
         count('home:after-continue');
         go(before, 'home');
         await r.click('Continue');
-        break;
-      case 'Renew':
-        await renew();
         break;
       case 'Begin':
         go(before, 'today');
@@ -2036,6 +2162,8 @@ export const session = (count: (key: string) => void) => {
         await leave();
         await launch(command.launch);
         return;
+      default:
+        await quiet(command);
     }
     await settle();
     r.phase.said = m.said !== 'none' || m.refused;
@@ -2092,6 +2220,8 @@ export const nameOf = (command: Command) => {
       return `Voice:${command.kind}${command.stale ? ':stale' : ''}`;
     case 'Listen':
       return `Listen:${command.speak}`;
+    case 'Intro':
+      return `Intro:${command.tap}`;
     case 'More':
     case 'Finish':
     case 'Peek':
@@ -2394,6 +2524,43 @@ const offerHear = ({ m, choose, add, late }: Offering) => {
   late();
 };
 
+/** The coverage keys the way past the screens before the first verse leads toward: the first minute's own. */
+const ONWARD_HEAR = ['relaunch:hear:idle', ...READING_ON, ...LETTERS_ON];
+
+/** The welcome: Begin, Skip, two taps queued before a render, and a late event; how a verse grows: Plant your first verse, two of it queued, and a late event. */
+const offerIntro = ({ m, add, late }: Offering) => {
+  if (m.screen === 'welcome') {
+    add('begin', ['intro:Begin@welcome', 'relaunch:grows:idle', 'intro:hear-by-plant'], () => ({
+      _tag: 'Intro',
+      tap: 'Begin',
+    }));
+    add('skip', ['intro:hear-by-skip', ...ONWARD_HEAR], () => ({ _tag: 'Intro', tap: 'Skip' }), 2);
+    for (const labels of [
+      ['Begin', 'Begin'],
+      ['Skip', 'Skip'],
+      ['Begin', 'Skip'],
+    ])
+      add(`batch:${labels.join('-')}`, `batch:${labels.join('-')}@welcome`, () => ({
+        _tag: 'Batch',
+        labels,
+        speak: 'lands',
+      }));
+  } else {
+    add(
+      'plant',
+      ['intro:hear-by-plant', ...ONWARD_HEAR],
+      () => ({ _tag: 'Intro', tap: 'Plant your first verse' }),
+      2,
+    );
+    add('plant-twice', 'batch:Plant your first verse-Plant your first verse@grows', () => ({
+      _tag: 'Batch',
+      labels: ['Plant your first verse', 'Plant your first verse'],
+      speak: 'lands',
+    }));
+  }
+  late();
+};
+
 /** Planted: Continue, two Continue taps, and a late event. */
 const offerPlanted = ({ add, late }: Offering) => {
   add(
@@ -2498,6 +2665,7 @@ const offerHome = ({ m, pick, choose, add, late }: Offering) => {
 
 /** The offer of the model's screen and activity. */
 const offerOf = (m: Model) => {
+  if (m.screen === 'welcome' || m.screen === 'grows') return offerIntro;
   if (m.screen === 'hear') return m.reading ? offerReading : offerHear;
   if (m.screen === 'planted') return offerPlanted;
   if (m.screen === 'home') return offerHome;
@@ -2608,7 +2776,7 @@ const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
           'write:today:lands',
           'ending:today:finished',
         ];
-      return [key, 'open:hear', 'relaunch:hear:idle', ...READING_ON, ...LETTERS_ON];
+      return [key, 'open:welcome', 'relaunch:hear:idle', ...READING_ON, ...LETTERS_ON];
     },
   );
   const parts: Part[] = [];
@@ -2633,7 +2801,7 @@ const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
       read: choose('first-read', ['ok', 'ok', 'ok', 'retry1', 'unread'] as const, String, (each) =>
         each === 'unread'
           ? ['launch:unread', 'open:unread', 'relaunch:unread:idle', 'write:unread:lands']
-          : [`launch:${each}`, 'open:hear', ...READING_ON, ...LETTERS_ON],
+          : [`launch:${each}`, 'open:welcome', ...READING_ON, ...LETTERS_ON],
       ),
     },
   };
@@ -2690,7 +2858,9 @@ export const FLOORS = {
     /^launch:unread$/u,
     /^launch:held$/u,
     /^launch:voice-off$/u,
-    /^open:hear$/u,
+    /^open:welcome$/u,
+    /^intro:hear-by-skip$/u,
+    /^intro:hear-by-plant$/u,
     /^open:home$/u,
     /^open:unread$/u,
   ],
@@ -2703,6 +2873,8 @@ export const FLOORS = {
   ],
   relaunch: [
     /^relaunch:pending:idle$/u,
+    /^relaunch:welcome:idle$/u,
+    /^relaunch:grows:idle$/u,
     /^relaunch:hear:idle$/u,
     /^relaunch:hear:reading$/u,
     /^relaunch:letters:idle$/u,
@@ -2734,6 +2906,7 @@ export const FLOORS = {
     /^batch:Listen-Next@hear$/u,
     /^batch:Next-Listen@hear$/u,
     /^batch:Listen-Listen@hear$/u,
+    /^batch:Begin-Skip@welcome$/u,
   ],
   light: [
     ...HOLD_ENDS.map((end) => new RegExp(`^hold:${end}$`, 'u')),
@@ -2908,7 +3081,8 @@ export const screenLaunch = async (
       if (buttons().length > 0) frames.pendingOffers += 1;
     }
     const firstMinute = shown.some(
-      (text) => !['Planted', 'Today', END, 'Your field'].includes(text),
+      (text) =>
+        !['Planted', 'Today', END, 'Your field', ...Object.values(INTRO_HEADINGS)].includes(text),
     );
     if (
       firstMinute &&
@@ -2968,6 +3142,12 @@ export const screenLaunch = async (
     counts: cardLine(host),
     begin: buttons().includes('Start'),
   });
+  /** The way past the welcome to the first verse: the welcome, then its `Skip`, then `Hear it`; whether each came. */
+  const past = async () => {
+    if (!(await until(() => heading() === INTRO_HEADINGS.welcome))) return false;
+    await click('Skip');
+    return until(() => heading() === 'Hear it');
+  };
   /** Holds every frame of the launch to the root's rule: no fault, and on an unread garden no `Your field` heading in any frame. */
   const leave = async () => {
     rule.stop();
@@ -2995,6 +3175,7 @@ export const screenLaunch = async (
     buttons,
     stage,
     actions,
+    past,
     leave,
   };
 };

@@ -7,6 +7,10 @@
  * garden) into both and compares the phase, and which recital the screen
  * may show as the phase's own, after each event.
  *
+ * - The flow begins at the welcome (hsintro O1). Its `Begin` shows how a
+ *   verse grows and its `Skip` shows hear; how a verse grows' `Plant your
+ *   first verse` shows hear. Nothing the voice, Say it or the garden does
+ *   moves either screen, and their taps are offered only on them.
  * - Hear goes on to letters at Next, or when a reading ends finished; a
  *   reading that ends any other way stays (rows 6 and 7).
  * - Letters goes on to alone once a recital pressed in letters ends
@@ -19,17 +23,20 @@
  *   no phase's own.
  */
 
-export type ModelPhase = 'hear' | 'letters' | 'alone' | 'planted';
+export type ModelPhase = 'welcome' | 'grows' | 'hear' | 'letters' | 'alone' | 'planted';
 
 export type ModelEnding = 'finished' | 'stopped' | 'off' | 'interrupted' | 'failed';
 
 export type WorldEvent =
+  | { readonly t: 'begin' }
+  | { readonly t: 'skip' }
+  | { readonly t: 'plant' }
   | { readonly t: 'next' }
   | { readonly t: 'read' }
   | { readonly t: 'voiceEnd'; readonly ending: ModelEnding }
   | { readonly t: 'press' }
   | { readonly t: 'end'; readonly finished: boolean }
-  | { readonly t: 'plant' };
+  | { readonly t: 'garden' };
 
 /** What the screen sees of the world: the voice's last ending, Say it's latest recital, and the garden. */
 export interface World {
@@ -40,7 +47,7 @@ export interface World {
 }
 
 export class FirstModel {
-  phase: ModelPhase = 'hear';
+  phase: ModelPhase = 'welcome';
   /** The phase each recital was pressed in, by its `startedAt`; one from before the flow has none. */
   private readonly pressedIn = new Map<number, ModelPhase>();
   private clock = 0;
@@ -57,8 +64,10 @@ export class FirstModel {
     return at !== null && this.pressedIn.get(at) === this.phase;
   }
 
-  /** The events the screen can meet now: Next only in hear, Say it only in letters and alone, the rest anywhere. */
+  /** The events the screen can meet now: Begin and Skip only on the welcome, Plant your first verse only on how a verse grows, Next only in hear, Say it only in letters and alone, the rest anywhere. */
   offers(event: WorldEvent): boolean {
+    if (event.t === 'begin' || event.t === 'skip') return this.phase === 'welcome';
+    if (event.t === 'plant') return this.phase === 'grows';
     if (event.t === 'next') return this.phase === 'hear';
     if (event.t === 'press') return this.phase === 'letters' || this.phase === 'alone';
     return true;
@@ -67,6 +76,13 @@ export class FirstModel {
   apply(event: WorldEvent): void {
     const world = this.world;
     switch (event.t) {
+      case 'begin':
+        this.phase = 'grows';
+        break;
+      case 'skip':
+      case 'plant':
+        this.phase = 'hear';
+        break;
       case 'next':
         this.phase = 'letters';
         break;
@@ -85,7 +101,7 @@ export class FirstModel {
       case 'end':
         world.finished = event.finished;
         break;
-      case 'plant':
+      case 'garden':
         world.planted = true;
         break;
     }

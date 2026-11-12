@@ -670,6 +670,8 @@ const holdThenRelease = async (app: Launch, step: string) => {
 /** A first-minute launch: no frame up to the hear phase shows a choice, and no sheet shows. */
 const firstMinute = async (app: Launch, step: string) => {
   app.release();
+  expect(await app.until(() => app.headings().includes('Heartseed'))).toBe(true);
+  await app.tap('Skip');
   expect(await app.until(() => app.headings().includes('Hear it'))).toBe(true);
   expect({
     step,

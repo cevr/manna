@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { FirstModel, type ModelEnding, type WorldEvent } from '../test/first-model';
-import { begin, isOwn, observe, step, type Flow } from './flow';
+import { begin, isOwn, observe, step, type Flow, type Input } from './flow';
 
 const random = (seed: number) => {
   let s = seed >>> 0;
@@ -27,6 +27,10 @@ const random = (seed: number) => {
 const ENDINGS: readonly ModelEnding[] = ['finished', 'stopped', 'off', 'interrupted', 'failed'];
 
 const eventOf = (next: () => number): WorldEvent => {
+  const tap = next();
+  if (tap < 0.1) return { t: 'begin' };
+  if (tap < 0.17) return { t: 'skip' };
+  if (tap < 0.27) return { t: 'plant' };
   const r = next();
   if (r < 0.12) return { t: 'next' };
   if (r < 0.27) return { t: 'read' };
@@ -34,13 +38,33 @@ const eventOf = (next: () => number): WorldEvent => {
     return { t: 'voiceEnd', ending: ENDINGS[Math.floor(next() * ENDINGS.length)] ?? 'finished' };
   if (r < 0.65) return { t: 'press' };
   if (r < 0.92) return { t: 'end', finished: next() < 0.6 };
-  return { t: 'plant' };
+  return { t: 'garden' };
 };
 
-/** The flow after the screen meets `event`: a tap of Next is the flow's own input, the rest it sees in the world's views. */
+/** Each tap's input to the flow, by the model's event: Begin, Skip, Plant your first verse and Next are the flow's own. */
+const TAPS: Readonly<Partial<Record<WorldEvent['t'], Input>>> = {
+  begin: { _tag: 'Begin' },
+  skip: { _tag: 'Skip' },
+  plant: { _tag: 'Plant' },
+  next: { _tag: 'Next' },
+};
+
+/** The flow after the screen meets `event`: a tap is the flow's own input, the rest it sees in the world's views. */
 const play = (flow: Flow, event: WorldEvent, model: FirstModel): Flow => {
-  const tapped = event.t === 'next' ? step(flow, { _tag: 'Next' }) : flow;
+  const input = TAPS[event.t];
+  const tapped = input === undefined ? flow : step(flow, input);
   return observe(tapped, model.world);
+};
+
+/** Counts one more `key`. */
+const tally = (reached: Map<string, number>, key: string) =>
+  reached.set(key, (reached.get(key) ?? 0) + 1);
+
+/** Applies `event` to the model, counting each way into hear as `<from>>hear`. */
+const applyCounting = (model: FirstModel, event: WorldEvent, reached: Map<string, number>) => {
+  const was = model.phase;
+  model.apply(event);
+  if (was !== model.phase && model.phase === 'hear') tally(reached, `${was}>hear`);
 };
 
 describe('the first minute’s flow', () => {
@@ -59,22 +83,32 @@ describe('the first minute’s flow', () => {
         const event = eventOf(next);
         if (!model.offers(event)) continue;
         trail.push(JSON.stringify(event));
-        model.apply(event);
+        applyCounting(model, event, reached);
         flow = play(flow, event, model);
         const where = trail.join(' ');
         expect(flow.phase, where).toBe(model.phase);
         if (flow.phase === 'letters' || flow.phase === 'alone')
           expect(isOwn(flow, model.world.startedAt), where).toBe(model.own());
-        reached.set(flow.phase, (reached.get(flow.phase) ?? 0) + 1);
-        if (event.t === 'press')
-          reached.set(`press@${flow.phase}`, (reached.get(`press@${flow.phase}`) ?? 0) + 1);
+        tally(reached, flow.phase);
+        if (event.t === 'press') tally(reached, `press@${flow.phase}`);
       }
     }
-    for (const key of ['hear', 'letters', 'alone', 'planted', 'press@letters', 'press@alone'])
+    for (const key of [
+      'welcome',
+      'grows',
+      'hear',
+      'letters',
+      'alone',
+      'planted',
+      'press@letters',
+      'press@alone',
+    ])
       expect(reached.get(key) ?? 0, key).toBeGreaterThan(500);
+    for (const key of ['welcome>hear', 'grows>hear'])
+      expect(reached.get(key) ?? 0, key).toBeGreaterThan(300);
   });
 
-  it('goes from hear to letters to alone to Planted on the passage’s first-minute journey, and never back', () => {
+  it('goes from the welcome, Begin, how a verse grows and Plant your first verse to hear, then letters, alone and Planted on the passage’s first-minute journey, and never back', () => {
     const at = (flow: Flow, seen: Partial<Parameters<typeof observe>[1]>) =>
       observe(flow, {
         voiceEnded: null,
@@ -84,7 +118,13 @@ describe('the first minute’s flow', () => {
         ...seen,
       });
     let flow = at(begin(null), {});
+    expect(flow.phase).toBe('welcome');
+    flow = at(step(flow, { _tag: 'Begin' }), { voiceEnded: 'interrupted' });
+    expect(flow.phase).toBe('grows');
+    expect(step(flow, { _tag: 'Skip' }).phase).toBe('grows');
+    flow = at(step(flow, { _tag: 'Plant' }), {});
     expect(flow.phase).toBe('hear');
+    expect(step(flow, { _tag: 'Begin' }).phase).toBe('hear');
     flow = at(flow, { voiceEnded: 'interrupted' });
     expect(flow.phase).toBe('hear');
     flow = at(flow, { voiceEnded: 'finished' });

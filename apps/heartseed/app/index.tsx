@@ -38,7 +38,9 @@ import { listStartOf } from '../src/list';
 import { ListScreen } from '../src/list/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
 import { themed, useThemed } from '../src/look';
+import { Grows, Welcome } from '../src/first/intro';
 import { FirstMinute } from '../src/first/screen';
+import { tourStep, type Tour, type TourTap } from '../src/first/tour';
 import {
   cueIn,
   growthOf,
@@ -528,19 +530,25 @@ const startKindOf = (visit: VisitVerse): StartKind => {
  */
 function FieldOf({
   adding,
+  tips,
   onToday,
   onAdd,
   onAddDone,
   onAny,
   onAbout,
+  onHow,
+  onGotIt,
   onOpen,
 }: {
   readonly adding: boolean;
+  readonly tips: boolean;
   readonly onToday: () => void;
   readonly onAdd: () => void;
   readonly onAddDone: () => void;
   readonly onAny: () => void;
   readonly onAbout: () => void;
+  readonly onHow: () => void;
+  readonly onGotIt: () => void;
   readonly onOpen: (id: string) => void;
 }) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
@@ -571,10 +579,13 @@ function FieldOf({
             greeting={known.greeting}
             card={todayOf(known.session, known.garden, known.passages._tag === 'Unread')}
             starts={(verse) => Option.map(startOf(known.session, known.garden, verse), startKindOf)}
+            tips={tips}
             onToday={onToday}
             onStart={onStart}
             onAdd={onAdd}
             onAbout={onAbout}
+            onHow={onHow}
+            onGotIt={onGotIt}
             onOpen={onOpen}
           />
           {adding && (
@@ -691,6 +702,11 @@ const screenAt = (shown: Opening): Screen => {
  * `Practice` or `Learn`), the chooser (from the sheet's `Any passage`, back
  * to the sheet from its first back, home once a passage is added) and
  * About (from the `About` of home's Settings sheet, back to home).
+ * Beside the screen it holds the tour (`../src/first/tour`): Planted's
+ * `Continue` shows home with its tips; home's `How Heartseed works` and
+ * the sheet's `Show the welcome again` replay the welcome and how a verse
+ * grows in home's place; and every change of the screen away from home,
+ * the forced Today among them, ends the tour.
  * Which one shows is the launch's state, never stored and with no route of
  * its own, so every launch opens as above. Whenever Say it listens the
  * screen is Today. The root holds Say it's view, so Today comes back as it
@@ -710,13 +726,24 @@ export default function Root() {
     setDecided(read);
     setScreen(screenAt(read));
   }
-  if (screen !== 'today' && listening) setScreen('today');
+  const [tour, setTour] = useState<Tour>('off');
+  const tapTour = (tap: TourTap) => setTour((now) => tourStep(now, tap));
+  if (screen !== 'today' && listening) {
+    setScreen('today');
+    tapTour('Leave');
+  }
+  /** Shows `next`; any screen but home ends the tour. */
+  const show = (next: Screen) => {
+    setScreen(next);
+    if (next !== 'field' && next !== 'add') tapTour('Leave');
+  };
   const onContinue = () => {
     setDecided('home');
-    setScreen(screenAt('home'));
+    show(screenAt('home'));
+    tapTour('Continue');
   };
-  const toField = () => setScreen('field');
-  const toToday = () => setScreen('today');
+  const toField = () => show('field');
+  const toToday = () => show('today');
   switch (shownOpening(decided, read)) {
     case 'pending':
       return <Pending />;
@@ -724,17 +751,26 @@ export default function Root() {
       return <FirstMinute onContinue={onContinue} />;
     case 'home':
     case 'today': {
+      if (screen === 'field' && tour === 'welcome')
+        return (
+          <Welcome run="replay" onBegin={() => tapTour('Begin')} onSkip={() => tapTour('Skip')} />
+        );
+      if (screen === 'field' && tour === 'grows')
+        return <Grows run="replay" onOn={() => tapTour('See')} />;
       const home = (
         <FieldOf
           adding={screen === 'add'}
+          tips={tour === 'tips'}
           onToday={toToday}
-          onAdd={() => setScreen('add')}
+          onAdd={() => show('add')}
           onAddDone={toField}
-          onAny={() => setScreen('choose')}
-          onAbout={() => setScreen('about')}
+          onAny={() => show('choose')}
+          onAbout={() => show('about')}
+          onHow={() => tapTour('How')}
+          onGotIt={() => tapTour('GotIt')}
           onOpen={(id) => {
             setList(id);
-            setScreen('list');
+            show('list');
           }}
         />
       );
@@ -742,7 +778,7 @@ export default function Root() {
         return <ListOf id={list} home={home} onField={toField} onToday={toToday} />;
       if (screen === 'about') return <AboutScreen onField={toField} />;
       if (screen === 'choose')
-        return <ChooserScreen onBack={() => setScreen('add')} onAdded={toField} />;
+        return <ChooserScreen onBack={() => show('add')} onAdded={toField} />;
       if (screen === 'field' || screen === 'add') return home;
       return <Today onField={toField} />;
     }

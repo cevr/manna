@@ -63,11 +63,12 @@ const faultsOf = (screen: string, fixed: readonly Element[], scrolled: readonly 
 };
 
 const settings = () => element('button', 'Settings');
+const how = () => element('button', 'How Heartseed works');
 const start = () => element('button', 'Start');
 
 /** Home's bare frame: `Start` fixed, a plant and the `Settings` row scrolled, with `fixed` and `scrolled` beside them. */
 const home = (fixed: readonly Element[] = [], scrolled: readonly Element[] = []) =>
-  faultsOf('Your field', [start(), ...fixed], [plant(''), settings(), ...scrolled]);
+  faultsOf('Your field', [start(), ...fixed], [plant(''), settings(), how(), ...scrolled]);
 
 const PRIMARY = ['Start', 'Practice anyway', 'Practice Isaiah 41:10', 'Learn Psalms 91:1'];
 
@@ -78,7 +79,7 @@ describe("home's rule", () => {
 
   it('names one fault for each clause a frame of home breaks', () => {
     const bare = (fixed: readonly Element[], scrolled: readonly Element[]) =>
-      faultsOf('Your field', fixed, [plant(''), settings(), ...scrolled]);
+      faultsOf('Your field', fixed, [plant(''), settings(), how(), ...scrolled]);
     const cells = [
       { frame: home([element('button', 'When I need…')]), fault: 'When I need… on Your field' },
       { frame: home([tagged('counts', '1 to tend')]), fault: "home's old counts" },
@@ -99,11 +100,11 @@ describe("home's rule", () => {
         fault: `${name} inside the scroll view`,
       })),
       {
-        frame: faultsOf('Your field', [start(), settings()], [plant('')]),
+        frame: faultsOf('Your field', [start(), settings()], [plant(''), how()]),
         fault: 'Settings outside the scroll view',
       },
       {
-        frame: faultsOf('Your field', [start()], [plant('10'), settings()]),
+        frame: faultsOf('Your field', [start()], [plant('10'), settings(), how()]),
         fault: 'a number in Made 1:1, seed',
       },
     ];

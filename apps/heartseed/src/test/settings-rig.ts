@@ -84,7 +84,7 @@ const groupFaults = (modal: Element, name: string, names: readonly string[]) => 
   return out;
 };
 
-/** The sheet's parts in its order, those shown: the heading, `Done`, each line over its choice, then `About`. */
+/** The sheet's parts in its order, those shown: the heading, `Done`, each line over its choice, then `Show the welcome again` and `About`. */
 const partsOf = (modal: Element, root: Element) => {
   const group = (name: string) =>
     modal.querySelector(`[role="radiogroup"][aria-label="${name}"]`) ?? undefined;
@@ -97,6 +97,7 @@ const partsOf = (modal: Element, root: Element) => {
     ['Voice', sheetControl('Voice')],
     [LINES[2], lineOf(root, LINES[2] ?? '')],
     ['Appearance', group('Appearance')],
+    ['Show the welcome again', sheetControl('Show the welcome again')],
     ['About', sheetControl('About')],
   ] as const;
 };

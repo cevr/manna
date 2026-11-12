@@ -14,10 +14,14 @@
  * Heartseed works`, showing its name with no image, at least 52 tall. Its
  * tap opens the sheet: the heading `Settings`, `Done`
  * outside the scroll view, then each line over its choice (the minutes
- * read, the voice read, the appearance read) and `About`; the sheet holds
+ * read, the voice read, the appearance read), `Show the welcome again`
+ * and `About`; the sheet holds
  * its look after a flip of the system, `Done` closes it, and nothing is
  * written. In the first launch the sheet's `About` then shows About with
- * no radio group and no foot of its own, and its way back shows home. A failed read of a key is the walk's (`walk-*.test.tsx`), whose
+ * no radio group and no foot of its own, and its way back shows home.
+ * `Show the welcome again` closes the sheet in its tap and shows the
+ * welcome, from home with and without the tips; its `Skip` shows home
+ * with none. A failed read of a key is the walk's (`walk-*.test.tsx`), whose
  * store fails a key's read.
  */
 
@@ -176,6 +180,7 @@ const SHOWN = [
   'System',
   'Light',
   'Dark',
+  'Show the welcome again',
   'About',
 ];
 
@@ -263,4 +268,42 @@ describe('Settings', () => {
       await rig.leave();
       setSystem('light');
     });
+
+  it('replays the welcome from its row, closing the sheet in the same tap, from home with and without the tips', async () => {
+    setSystem('light');
+    device.launch([record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0))]);
+    const start = new Map(device.disk);
+    const rig = await mountBar(0, false);
+    const heading = () => text(rig.host.querySelector('[role="heading"]'));
+    const tips = () => rig.host.querySelectorAll('[data-testid^="tip-"]').length;
+    const replay = async () => {
+      await openSettings(rig);
+      expect(await tapInSheet('Show the welcome again')).toBe(true);
+      expect(await rig.until(() => heading() === 'Heartseed')).toBe(true);
+      expect({
+        sheet: modalOf(),
+        radios: document.querySelectorAll('[role="radio"]').length,
+      }).toEqual({
+        sheet: null,
+        radios: 0,
+      });
+    };
+    expect(await rig.until(() => heading() === 'Your field')).toBe(true);
+    await replay();
+    await rig.tap('Begin');
+    expect(await rig.until(() => heading() === 'Every verse is a plant')).toBe(true);
+    await rig.tap('See your field');
+    expect(await rig.until(() => heading() === 'Your field' && tips() === 3)).toBe(true);
+    await replay();
+    await rig.tap('Skip');
+    expect(await rig.until(() => heading() === 'Your field')).toBe(true);
+    expect({
+      tips: tips(),
+      gotIt: [...rig.host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === 'Got it')
+        .length,
+      rig: rig.faults,
+      written: [...device.disk].filter(([key, value]) => start.get(key) !== value),
+    }).toEqual({ tips: 0, gotIt: 0, rig: [], written: [] });
+    await rig.leave();
+  });
 });

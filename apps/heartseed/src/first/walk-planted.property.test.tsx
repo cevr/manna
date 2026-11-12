@@ -7,4 +7,4 @@
 
 import { walkPart } from '../test/first-rig';
 
-walkPart('planted', 18, 5);
+walkPart('planted', 39, 5);

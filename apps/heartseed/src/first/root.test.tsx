@@ -28,10 +28,15 @@ const relaunch = (launch: LaunchKind = LAUNCH_OK): Command => ({ _tag: 'Relaunch
 const NEXT: Command = { _tag: 'Next' };
 const listen: Command = { _tag: 'Listen', speak: 'lands' };
 const range: Command = { _tag: 'Range', kind: 'next', step: 0 };
+const SKIP: Command = { _tag: 'Intro', tap: 'Skip' };
+const BEGIN: Command = { _tag: 'Intro', tap: 'Begin' };
+const PLANT: Command = { _tag: 'Intro', tap: 'Plant your first verse' };
 
 describe('the root route on fixed devices', () => {
   it('walks the whole first minute: an interrupted reading, a skip, queued taps, each recital, the seed, Continue and an unread launch', async () => {
     const m = await play(FRESH, [
+      BEGIN,
+      PLANT,
       listen,
       range,
       { _tag: 'Voice', kind: 'interrupt', stale: false },
@@ -40,10 +45,13 @@ describe('the root route on fixed devices', () => {
       NEXT,
       sayOf(recital({ skip: ALL, close: 'denied' })),
       relaunch(),
+      SKIP,
       { _tag: 'Batch', labels: ['Listen', 'Next'], speak: 'lands' },
       relaunch(),
+      SKIP,
       { _tag: 'Batch', labels: ['Next', 'Listen'], speak: 'lands' },
       relaunch(),
+      SKIP,
       listen,
       range,
       range,
@@ -63,6 +71,7 @@ describe('the root route on fixed devices', () => {
 
   it('goes on from letters and plants the seed after recitals with every word missed', async () => {
     const m = await play(FRESH, [
+      SKIP,
       NEXT,
       sayOf(recital({ skip: ALL })),
       sayOf(recital({ skip: ALL })),
@@ -76,12 +85,13 @@ describe('the root route on fixed devices', () => {
   });
 
   it('stops a reading at Next without touching the stored switch', async () => {
-    const m = await play(FRESH, [listen, range, range, NEXT]);
+    const m = await play(FRESH, [SKIP, listen, range, range, NEXT]);
     expect([m.screen, m.speaks, m.disk.size]).toEqual(['letters', 1, 0]);
   });
 
   it('reads the verse once for two Listen taps queued before a render', async () => {
     const m = await play(FRESH, [
+      SKIP,
       { _tag: 'Batch', labels: ['Listen', 'Listen'], speak: 'lands' },
       range,
       { _tag: 'Voice', kind: 'finish', stale: false },

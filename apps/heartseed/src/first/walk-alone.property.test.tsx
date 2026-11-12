@@ -8,4 +8,4 @@
 
 import { walkPart } from '../test/first-rig';
 
-walkPart('alone', 30, 5);
+walkPart('alone', 38, 5);

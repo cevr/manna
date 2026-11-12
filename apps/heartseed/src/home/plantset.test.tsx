@@ -484,7 +484,7 @@ describe('Today and Planted under a stored appearance over the other system', ()
         device.launch([[APPEARANCE_KEY, stored]]);
         const opened = await screenLaunch();
         left.leaves.push(opened.leave);
-        expect(await opened.until(() => opened.heading() === 'Hear it')).toBe(true);
+        expect(await opened.past()).toBe(true);
         await opened.click('Next');
         expect(await opened.until(() => opened.heading() === 'Say it with help')).toBe(true);
         await opened.click('Say it');

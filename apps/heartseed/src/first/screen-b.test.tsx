@@ -31,7 +31,7 @@ describe('the first minute', () => {
   it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens home in its done state, and the next launch at the seed’s due opens home, whose Begin opens Today at a seed', async () => {
     device.launch([]);
     const first = await mount();
-    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    expect(await first.past()).toBe(true);
     expect([first.buttons(), first.voice.calls.speaks]).toEqual([['Listen', 'Next'], 0]);
     expect(WORDS.every((text, index) => first.word(index)?.textContent === text)).toBe(true);
     await first.click('Listen');
@@ -103,7 +103,7 @@ describe('the first minute', () => {
   it('with the voice off: offers no Listen and never speaks, and Next goes on', async () => {
     device.launch([[SWITCH, 'false']]);
     const first = await mount();
-    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    expect(await first.past()).toBe(true);
     expect(first.buttons()).toEqual(['Next']);
     await first.click('Next');
     expect(await first.until(() => first.heading() === 'Say it with help')).toBe(true);
@@ -114,7 +114,7 @@ describe('the first minute', () => {
   it('stops a reading under way at Next, and keeps nothing at a relaunch mid-flow, which starts again at hear', async () => {
     device.launch([]);
     const first = await mount();
-    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    expect(await first.past()).toBe(true);
     await first.click('Listen');
     await first.click('Next');
     expect(await first.until(() => first.heading() === 'Say it with help')).toBe(true);
@@ -124,7 +124,7 @@ describe('the first minute', () => {
     await first.leave();
     device.launch();
     const again = await mount();
-    expect(await again.until(() => again.heading() === 'Hear it')).toBe(true);
+    expect(await again.past()).toBe(true);
     expect(recallKeys()).toEqual([]);
     await again.leave();
   });
@@ -150,7 +150,7 @@ describe('the first minute', () => {
       passage.reference,
     );
     gate.resolve();
-    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    expect(await first.past()).toBe(true);
     expect(first.frames).toMatchObject({ pendingOffers: 0, many: 0 });
     await first.leave();
   });

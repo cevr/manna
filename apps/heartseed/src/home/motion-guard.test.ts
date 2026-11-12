@@ -8,6 +8,12 @@ import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
 const APP = join(import.meta.dir, '..', '..');
 const MOVES = 'src/field/moves.tsx';
+const GROWING = 'src/first/growing.tsx';
+/** The drawing adapters, each owning exactly one effect: the sway's and the growing seed's. */
+const EFFECTS = [MOVES, GROWING];
+/** The growing seed's files, which name no host clock: its loop runs on Reanimated's clock alone. */
+const CLOCKLESS = [GROWING, 'src/first/growth.ts'];
+const HOST_CLOCKS = ['setTimeout', 'setInterval', 'requestAnimationFrame', 'Date', 'performance'];
 const SHEETS = ['src/settings/sheet.tsx', 'src/shelves/sheet.tsx'];
 const MOTION_PROPS = ['entering', 'exiting', 'layout'];
 const OPTIONS_CALLS = ['withTiming', 'withSpring'];
@@ -41,13 +47,19 @@ const sourcesUnder = (folder: string): readonly Source[] =>
 /** One diagnostic carries the source, its line and the independent motion rule. */
 const diagnostic = (site: Site, rule: string) => `${site.path}:${site.line}: M7/${rule}`;
 
-/** Every effect belongs to the drawing adapter, and its sway has exactly one. */
+/** Every effect belongs to a drawing adapter, and the sway and the growing seed have exactly one each. */
 const effectFaults = (effects: readonly Site[]): readonly string[] => {
-  if (effects.length === 0) return [diagnostic({ path: MOVES, line: 1 }, 'one-effect')];
-  return effects.flatMap((site, index) => {
-    if (site.path !== MOVES || index > 0) return [diagnostic(site, 'one-effect')];
+  const missing = EFFECTS.filter((path) => !effects.some((site) => site.path === path)).map(
+    (path) => diagnostic({ path, line: 1 }, 'one-effect'),
+  );
+  const owned = new Set<string>();
+  const extra = effects.flatMap((site) => {
+    if (!EFFECTS.includes(site.path) || owned.has(site.path))
+      return [diagnostic(site, 'one-effect')];
+    owned.add(site.path);
     return [];
   });
+  return [...missing, ...extra];
 };
 
 const attributeValue = (attribute: JSXAttribute | undefined): Node | null | undefined => {
@@ -191,6 +203,7 @@ const inspect = ({ path, text }: Source) => {
     Identifier: (node) => {
       const name = nameOf(node);
       if (['ReducedMotionConfig', 'useReducedMotion'].includes(name)) fault(node, 'system-only');
+      if (CLOCKLESS.includes(path) && HOST_CLOCKS.includes(node.name)) fault(node, 'no-host-clock');
     },
     JSXIdentifier: (node) => {
       if (nameOf(node) === 'ReducedMotionConfig') fault(node, 'system-only');
@@ -346,6 +359,8 @@ const BAD = [
     MOVES,
     3,
   ),
+  ...HOST_CLOCKS.map((clock) => seed('no-host-clock', `${clock}.call(undefined);`, GROWING)),
+  seed('no-host-clock', 'const now = Date.now();', 'src/first/growth.ts'),
   ...SHEETS.flatMap((path) => [
     seed('slide-sheet', '<Modal animationType="fade" />;', path),
     seed('slide-sheet', '<Modal />;', path),
@@ -359,9 +374,9 @@ const BAD = [
   ]),
 ];
 
-it('keeps scoped drawings on explicit System motion, both sheets sliding and the one sway effect', () => {
+it('keeps scoped drawings on explicit System motion, both sheets sliding, the sway’s and the growing seed’s one effect each, and no host clock in the growing seed', () => {
   const sources = [
-    ...['home', 'field', 'settings', 'shelves', 'run'].flatMap((folder) =>
+    ...['home', 'field', 'settings', 'shelves', 'run', 'first'].flatMap((folder) =>
       sourcesUnder(`src/${folder}`),
     ),
     { path: 'app/index.tsx', text: readFileSync(join(APP, 'app/index.tsx'), 'utf8') },
@@ -374,7 +389,7 @@ it('keeps scoped drawings on explicit System motion, both sheets sliding and the
 });
 
 it('rejects every seeded motion violation by file, line and rule', () => {
-  expect(BAD).toHaveLength(47);
+  expect(BAD).toHaveLength(53);
   for (const [index, source] of BAD.entries()) {
     const report = inspect({ ...source, text: `\n${source.text}` });
     expect(report.faults, `seed ${index}: ${source.rule}`).toContain(
@@ -384,25 +399,38 @@ it('rejects every seeded motion violation by file, line and rule', () => {
 });
 
 it('rejects missing, misplaced and second product effects with their source locations', () => {
+  const growing = { path: GROWING, text: '\nuseEffect(() => {});' };
   const cases = [
-    { sources: [], faults: [`${MOVES}:1: M7/one-effect`] },
+    { sources: [], faults: [`${MOVES}:1: M7/one-effect`, `${GROWING}:1: M7/one-effect`] },
     {
-      sources: [{ path: MOVES, text: '\nuseEffect(() => {});\nuseEffect(() => {});' }],
+      sources: [{ path: MOVES, text: '\nuseEffect(() => {});\nuseEffect(() => {});' }, growing],
       faults: [`${MOVES}:3: M7/one-effect`],
     },
     {
-      sources: [{ path: 'src/run/tended.tsx', text: '\nuseEffect(() => {});' }],
-      faults: ['src/run/tended.tsx:2: M7/one-effect'],
+      sources: [{ path: 'src/run/tended.tsx', text: '\nuseEffect(() => {});' }, growing],
+      faults: [`${MOVES}:1: M7/one-effect`, 'src/run/tended.tsx:2: M7/one-effect'],
     },
     {
       sources: [
         { path: MOVES, text: '\nuseEffect(() => {});' },
+        growing,
         { path: 'src/home/extra.tsx', text: '\nReact.useEffect(() => {});' },
       ],
       faults: ['src/home/extra.tsx:2: M7/one-effect'],
     },
+    {
+      sources: [
+        { path: MOVES, text: '\nuseEffect(() => {});' },
+        { path: GROWING, text: '\nuseEffect(() => {});\n\nuseEffect(() => {});' },
+      ],
+      faults: [`${GROWING}:4: M7/one-effect`],
+    },
+    {
+      sources: [{ path: MOVES, text: '\nuseEffect(() => {});' }],
+      faults: [`${GROWING}:1: M7/one-effect`],
+    },
   ];
-  expect(cases).toHaveLength(4);
+  expect(cases).toHaveLength(6);
   for (const cell of cases)
     expect(effectFaults(cell.sources.flatMap((source) => inspect(source).effects))).toEqual(
       cell.faults,
@@ -425,7 +453,7 @@ delay(70, animation, Motion.System);
 `,
   });
   expect(report.faults).toEqual([]);
-  expect(effectFaults(report.effects)).toEqual([]);
+  expect(effectFaults([...report.effects, { path: GROWING, line: 2 }])).toEqual([]);
   expect(report.entering).toBe(1);
   expect(report.repeats).toBe(1);
   for (const path of SHEETS)

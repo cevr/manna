@@ -1,8 +1,12 @@
 /**
- * The first minute's flow as a pure reducer: hear, then letters, then
- * alone, then Planted. Its state is the screen's for the launch; nothing of
- * it is stored, so a relaunch starts again at hear.
+ * The first minute's flow as a pure reducer: the welcome, then how a verse
+ * grows, then hear, letters, alone and Planted. Its state is the screen's
+ * for the launch; nothing of it is stored, so a relaunch starts again at
+ * the welcome.
  *
+ * - The welcome goes on to how a verse grows at `Begin`, or straight to
+ *   hear at `Skip`; how a verse grows goes on to hear at `Plant`. No other
+ *   input moves either, and these three move no other phase.
  * - Hear goes on to letters at `Next`, or by itself once the voice's
  *   reading ends `finished`; any other ending stays.
  * - Letters goes on to alone once a recital of its own ends finished, with
@@ -44,7 +48,7 @@ export const shownOpening = (decided: Opening, read: Opening): Opening => {
   return read;
 };
 
-export type Phase = 'hear' | 'letters' | 'alone' | 'planted';
+export type Phase = 'welcome' | 'grows' | 'hear' | 'letters' | 'alone' | 'planted';
 
 export interface Flow {
   readonly phase: Phase;
@@ -52,8 +56,11 @@ export interface Flow {
   readonly since: OrNull<number>;
 }
 
-/** What the screen sees: a press of Next, how the voice's last reading ended, Say it's latest recital, and whether the garden's read holds the passage's plant. */
+/** What the screen sees: a press of Begin, Skip, Plant your first verse or Next, how the voice's last reading ended, Say it's latest recital, and whether the garden's read holds the passage's plant. */
 export type Input =
+  | { readonly _tag: 'Begin' }
+  | { readonly _tag: 'Skip' }
+  | { readonly _tag: 'Plant' }
   | { readonly _tag: 'Next' }
   | { readonly _tag: 'Voice'; readonly ended: OrNull<Ending> }
   | {
@@ -65,7 +72,7 @@ export type Input =
   | { readonly _tag: 'Garden'; readonly planted: boolean };
 
 /** The flow as it begins, with Say it's `startedAt` at that moment. */
-export const begin = (startedAt: OrNull<number>): Flow => ({ phase: 'hear', since: startedAt });
+export const begin = (startedAt: OrNull<number>): Flow => ({ phase: 'welcome', since: startedAt });
 
 /** Whether a recital Say it shows is the phase's own: one started after the phase began. */
 export const isOwn = (flow: Flow, startedAt: OrNull<number>): boolean =>
@@ -77,6 +84,18 @@ const enter = (phase: Phase, since: OrNull<number>): Flow => ({ phase, since });
 export const step = (flow: Flow, input: Input): Flow =>
   Match.type<Input>().pipe(
     Match.tagsExhaustive({
+      Begin: () => {
+        if (flow.phase !== 'welcome') return flow;
+        return enter('grows', flow.since);
+      },
+      Skip: () => {
+        if (flow.phase !== 'welcome') return flow;
+        return enter('hear', flow.since);
+      },
+      Plant: () => {
+        if (flow.phase !== 'grows') return flow;
+        return enter('hear', flow.since);
+      },
       Next: () => {
         if (flow.phase !== 'hear') return flow;
         return enter('letters', flow.since);

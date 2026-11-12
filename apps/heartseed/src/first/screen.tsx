@@ -18,7 +18,7 @@ import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
@@ -45,19 +45,23 @@ import { BigButton, Initial, Pulse, useLook, Word } from '../sayit/draw';
 import { screenOf, wordOf } from '../sayit/screen';
 import type { VoiceView } from '../voice';
 import { isActive } from '../voice/reading';
-import { begin, isOwn, observe, step, type Flow, type Phase } from './flow';
+import { begin, isOwn, observe, step, type Flow, type Input, type Phase } from './flow';
+import { Grows, Pill, Welcome } from './intro';
 
 const WORDS = sourceWords(passage.text);
 
 /** Each phase's heading and the line under it. */
-const COPY: Readonly<Record<Phase, { readonly heading: string; readonly line: string }>> = {
+const COPY: Readonly<Record<Shown, { readonly heading: string; readonly line: string }>> = {
   hear: { heading: 'Hear it', line: 'The voice reads it. Words light as they are read.' },
   letters: { heading: 'Say it with help', line: 'First letters stay. Tap the button and say it.' },
   alone: { heading: 'Say it alone', line: 'Only the line is left. Say it from memory.' },
   planted: { heading: 'Planted', line: 'Your first promise is a seed.' },
 };
 
-const PHASES: readonly Phase[] = ['hear', 'letters', 'alone', 'planted'];
+/** The phases of the verse itself, the ones the phase bar counts. */
+type Shown = Exclude<Phase, 'welcome' | 'grows'>;
+
+const PHASES: readonly Shown[] = ['hear', 'letters', 'alone', 'planted'];
 
 const ABSENT: OrNull<never> = Option.getOrNull(Option.none());
 
@@ -70,7 +74,7 @@ const pending = (index: number): Mark => ({
 });
 
 /** The four segments of the phase bar, those reached in ink; hidden from the screen reader, which reads the heading. */
-function PhaseBar({ phase }: { readonly phase: Phase }) {
+function PhaseBar({ phase }: { readonly phase: Shown }) {
   const styles = useThemed(sheets);
   const at = PHASES.indexOf(phase);
   return (
@@ -79,22 +83,6 @@ function PhaseBar({ phase }: { readonly phase: Phase }) {
         <View key={each} style={[styles.segment, index <= at && styles.reached]} />
       ))}
     </View>
-  );
-}
-
-/** A small round-cornered button, for Next and Continue. */
-function Pill({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  return (
-    <Pressable
-      role="button"
-      aria-label={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.pill, pressed && look.pressed]}
-    >
-      <Text style={styles.pillText}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -226,6 +214,10 @@ export function FirstMinute({ onContinue }: { readonly onContinue: () => void })
       if (!skipped.current) onLetGo();
     },
   };
+  const tap = (input: Input) => () => setHeld((now) => step(now, input));
+  if (phase === 'welcome')
+    return <Welcome run="first" onBegin={tap({ _tag: 'Begin' })} onSkip={tap({ _tag: 'Skip' })} />;
+  if (phase === 'grows') return <Grows run="first" onOn={tap({ _tag: 'Plant' })} />;
   return (
     <ScrollView
       scrollEnabled={Option.isNone(heldNow)}

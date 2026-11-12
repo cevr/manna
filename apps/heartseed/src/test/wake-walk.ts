@@ -1194,6 +1194,8 @@ class Walk {
   async firstMinute() {
     const app = this.screen;
     MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
+    if (!(await app.until(() => app.headings().includes('Heartseed')))) this.fail('no welcome');
+    await app.tap('Skip');
     await this.phase('Hear it');
     await this.press('Next');
     await this.phase('Say it with help');
