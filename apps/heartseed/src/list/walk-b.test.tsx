@@ -2,15 +2,17 @@
 
 /**
  * The lists' own pages walked through the root (`test/list-walk.tsx`), part
- * b: three more generated readers (seeds 53, 17 and 44, ten commands each),
- * as part a walks them. Its floors: `Practice this list` over a list's
- * first verse to learn and over its open items, a row's tap, Say it
+ * b: four more generated readers (seeds 53, 17, 44 and 56, ten commands
+ * each), as part a walks them. Its floors: `Practice this list` over a
+ * list's first verse to learn and over its open items, a tap on a list's
+ * first row and on a row after it (the visit then exactly what `startOf`
+ * gives the tapped row's verse), Say it
  * listening from a page, a return to the foreground on home and on a page,
  * and a remove refused once and with `Your field` in its turn, the page
  * kept with its alert.
  *
  * It catches a learn started on another verse than the list's first to
- * learn, a refused remove that leaves the page or loses its alert, and a
+ * learn, a row that starts another verse (the list's first, say), a refused remove that leaves the page or loses its alert, and a
  * way back taken while the remove is pending.
  */
 
@@ -21,7 +23,8 @@ import { walkLists } from '../test/list-walk';
 const FLOORS = [
   'practice:Learn',
   'practice:Open',
-  'row',
+  'row:first',
+  'row:not first',
   'back:list',
   'listen:from a list',
   'wake:home',
@@ -31,7 +34,7 @@ const FLOORS = [
 ];
 
 it('learns, starts and refuses removes on lists as the model does', async () => {
-  const { faults, reached } = await walkLists([53, 17, 44], 10);
+  const { faults, reached } = await walkLists([53, 17, 44, 56], 10);
   expect(faults).toEqual([]);
   expect(FLOORS.filter((floor) => !reached.has(floor))).toEqual([]);
 });

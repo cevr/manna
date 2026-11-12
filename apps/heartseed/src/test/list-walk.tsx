@@ -210,12 +210,13 @@ export const walkList = async (seed: number, steps: number) => {
     const node = rows[below(next, rows.length)];
     if (node === undefined) return back();
     const verse = text(node.querySelector('[data-testid="list-reference"]'));
+    const first = verses()[0];
     const start = Option.flatMap(
       Option.all({ view: spied.view, garden: spied.garden }),
       ({ view, garden }) => startOf(view, garden, verse),
     );
     if (Option.isNone(start)) return fault(`a row button on ${verse}, which starts nothing`);
-    reached.add('row');
+    reached.add(verse === first ? 'row:first' : 'row:not first');
     if (!(await tapAll(labelOf(node)))) return;
     screen = { at: 'Today' };
     await visitIs(`row ${verse}`, [start.value]);

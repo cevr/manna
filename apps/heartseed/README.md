@@ -3267,9 +3267,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     every text at AA; and over unread passages no remove, no
     `Practice this list` and no row button.
   - `test:list-walk` and `test:list-walk-b`: `src/list/walk-a.test.tsx`
-    (seeds 58, 23, 57) and `walk-b.test.tsx` (seeds 53, 17, 44), generated
-    readers through `src/test/list-walk.tsx` over the root rig: open a
-    list, `Your field`, `Practice this list`, a row's tap, Say it starting
+    (seeds 58, 23, 57) and `walk-b.test.tsx` (seeds 53, 17, 44, 56),
+    generated readers through `src/test/list-walk.tsx` over the root rig:
+    open a list, `Your field`, `Practice this list`, a row's tap (floors
+    on a list's first row and, in part b, on a row after it), Say it starting
     to listen, a return to the foreground, `Remove <name>` then `Keep` or
     the ask's `Remove` landing or refused (once, twice in one turn, or
     with `Your field` in its turn), and Today's `Your field`; after every

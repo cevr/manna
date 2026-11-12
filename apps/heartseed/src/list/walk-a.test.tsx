@@ -7,15 +7,15 @@
  * from a page, return to the foreground, and remove a held list or keep
  * it, each step against the walk's model and every frame against the
  * rules. Its floors: a held list and another opened, `Practice this list`
- * over a list's open items and over its weakest verse, a row's tap, `Your
+ * over a list's open items and over its weakest verse, a tap on a list's
+ * first row, `Your
  * field` from a page and from Today, Say it listening from a page, a
  * return to the foreground on home and on a page, and a remove kept,
  * landed (once, twice in one turn, and with `Your field` in its turn) and
  * refused twice in one turn.
  *
  * It catches `Practice this list` starting anything but what
- * `listStartOf` gives (the whole plan, say), a row that starts another
- * verse, a removed list's row left on home, a page kept while Say it
+ * `listStartOf` gives (the whole plan, say), a removed list's row left on home, a page kept while Say it
  * listens, and a control live beside a disabled one while a remove is
  * pending.
  */
@@ -29,7 +29,7 @@ const FLOORS = [
   'open:other',
   'practice:Open',
   'practice:Weakest',
-  'row',
+  'row:first',
   'back:list',
   'back:Today',
   'listen:from a list',
