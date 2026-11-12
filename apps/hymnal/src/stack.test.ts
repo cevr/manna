@@ -2,7 +2,8 @@
 
 /**
  * A screen opened while a sheet is up, on React Navigation's own
- * `StackRouter` with the stack's `cardsOutOfSheets` override: a screen drawn
+ * `StackRouter` with the app's own `sheetRouter`, built from the sheets
+ * table the layout draws its sheets from: a screen drawn
  * in the stack never lands over a screen drawn over it, since there it would
  * be drawn inside the sheet, over the docked bar and its `#`. Sheets and
  * modals opened over a sheet stay where they are.
@@ -13,14 +14,15 @@ import { CommonActions, StackActions, StackRouter } from '@react-navigation/nati
 import { Option } from 'effect';
 import { readFileSync } from 'node:fs';
 
-import { cardsOutOfSheets, drawnOver, outOfSheets } from './stack';
+import { sheetRouter } from './sheets';
+import { drawnOver, outOfSheets } from './stack';
 
 const HYMN = 'hymns/[number]';
 const routeNames = ['index', 'recent', HYMN, 'settings', 'player', 'chord', 'about', 'tuner'];
 const over = new Set(['settings', 'player', 'chord', 'about', 'tuner']);
 const options = { routeNames, routeParamList: {}, routeGetIdList: {} };
 const plain = StackRouter({});
-const router = { ...plain, ...cardsOutOfSheets(over)(plain) };
+const router = { ...plain, ...sheetRouter(plain) };
 
 /** The stack holding `names`, the last shown, keyed by their place. */
 const stackOf = (names: ReadonlyArray<string>) =>
@@ -86,10 +88,11 @@ describe('a screen opened while a sheet is up', () => {
     );
   });
 
-  it('the app’s stack runs on this router, its sheets told apart by their presentation', () => {
+  it('the app’s stack runs on this router, over the screens of the same sheets table', () => {
     const layout = readFileSync(`${import.meta.dir}/../app/(hymnal)/_layout.tsx`, 'utf8');
-    expect(layout).toContain('router={cardsOutOfSheets(over)}');
-    expect(layout).toMatch(/const over = new Set\([\s\S]*?drawnOver\(options\)/);
+    expect(layout).toContain('router={sheetRouter}');
+    expect(layout).toContain('Object.entries(sheets).map(');
+    expect(layout).toContain("import { sheetRouter, sheets } from '~/sheets';");
   });
 
   it('the sheets are told apart by how the stack presents them', () => {
