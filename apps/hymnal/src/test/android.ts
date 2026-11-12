@@ -22,7 +22,11 @@ plugin({
         export const DynamicColorIOS = () => {
           throw new Error('DynamicColorIOS is not available on this platform.');
         };
-        export const useColorScheme = () => 'light';
+        export const Appearance = {
+          getColorScheme: () => 'light',
+          setColorScheme: () => {},
+          addChangeListener: () => ({ remove: () => {} }),
+        };
       `,
       loader: 'js',
     }));

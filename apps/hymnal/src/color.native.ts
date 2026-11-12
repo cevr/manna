@@ -6,15 +6,9 @@
  * colour resources.
  */
 
-import { Match } from 'effect';
-import {
-  type ColorValue,
-  DynamicColorIOS,
-  Platform,
-  PlatformColor,
-  useColorScheme,
-} from 'react-native';
+import { type ColorValue, DynamicColorIOS, Platform, PlatformColor } from 'react-native';
 
+import { useScheme } from './appearance.native';
 import { type Roles, theme } from './theme';
 
 const dynamic = (role: keyof Roles) =>
@@ -76,12 +70,8 @@ type Fill =
   | 'selected'
   | 'shadow';
 
-/** The theme's roles in the scheme showing now. */
-const useRoles = (): Roles =>
-  Match.value(useColorScheme()).pipe(
-    Match.when('dark', () => theme.dark),
-    Match.orElse(() => theme.light),
-  );
+/** The theme's roles in the scheme showing now, redrawn when the appearance setting or the system changes it. */
+const useRoles = (): Roles => theme[useScheme()];
 
 /** The accent in the scheme showing now. */
 export const useAccent = (): ColorValue => useRoles().accent;

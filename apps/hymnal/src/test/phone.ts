@@ -4,7 +4,8 @@
  * A phone, as a script that mounts the phones' screens under happy-dom sees
  * it: `react-native` is react-native-web with iOS's rules (`Platform.select`
  * takes `ios`, a dynamic colour is its light value, the colour scheme and
- * the text size are the device's, which the script sets), a screen 390 by
+ * the text size are the device's, which the script sets, and `Appearance`
+ * sets the app's style as React Native's does), a screen 390 by
  * 800 points that every element measures as, `one` is `src/test/one.tsx`,
  * `react-native-gesture-handler` is `src/test/gesture.tsx`
  * and `~/color` is the phones' colour module. Each scroll view tells the
@@ -31,9 +32,15 @@ export interface Scrolls {
 export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } = {}) => {
   GlobalRegistrator.register({ url: 'http://localhost/' });
 
-  /** The phone's settings the stand-in reads, each told to the screens using it when set. */
+  /**
+   * The phone's settings the stand-in reads, each told to the screens using
+   * it when set. `scheme` is the system's; `style` is the app's own
+   * interface style, which `Appearance.setColorScheme` sets and, as React
+   * Native's does, tells no listener of.
+   */
   const device = {
     scheme: 'light' as 'light' | 'dark',
+    style: 'system' as 'system' | 'light' | 'dark',
     fontScale: 1,
     listeners: new Set<() => void>(),
     set(next: { readonly scheme?: 'light' | 'dark'; readonly fontScale?: number }) {
@@ -94,7 +101,18 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
           };
           export const DynamicColorIOS = ({ light }) => light;
           export const PlatformColor = (name) => name;
-          export const useColorScheme = () => useSyncExternalStore(subscribe, () => device.scheme);
+          export const Appearance = {
+            getColorScheme: () => (device.style === 'system' ? device.scheme : device.style),
+            setColorScheme: (style) => {
+              device.style = style === 'light' || style === 'dark' ? style : 'system';
+            },
+            addChangeListener: (listener) => {
+              const told = () => listener({ colorScheme: Appearance.getColorScheme() });
+              device.listeners.add(told);
+              return { remove: () => device.listeners.delete(told) };
+            },
+          };
+          export const useColorScheme = () => useSyncExternalStore(subscribe, Appearance.getColorScheme);
           const windowOf = (fontScale) => ({ width: 390, height: 800, scale: 3, fontScale });
           let shown = windowOf(device.fontScale);
           export const useWindowDimensions = () =>
