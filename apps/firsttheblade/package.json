@@ -7,7 +7,7 @@
     "build": "vite build && vite build --ssr src/prerender.tsx --outDir .prerender && bun .prerender/prerender.js && bun scripts/built.ts",
     "preview": "bun src/worker/preview.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' src scripts kit",
+    "test": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' src scripts kit",
     "test:slow": "bun scripts/promise.ts && bun run promise:census && bun run contrast && bun run computed && bun test .slow.test.",
     "contrast": "bun scripts/contrast.ts",
     "computed": "bun scripts/computed.ts",
