@@ -1,0 +1,73 @@
+{
+  "feature": "passage-plant",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-plant-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Chapters" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-chapters",
+      "action": "tap",
+      "target": "label=Chapters",
+      "expect": [{ "shows": "label=Books" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-books",
+      "action": "tap",
+      "target": "label=Books",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-john-scroll",
+      "action": "scroll",
+      "target": "label=John",
+      "direction": "down",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-john",
+      "action": "tap",
+      "target": "label=John",
+      "expect": [{ "shows": "label=John 15" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-chapter",
+      "action": "tap",
+      "target": "label=John 15",
+      "expect": [{ "shows": "label=John 15:1" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-first",
+      "action": "tap",
+      "target": "label=John 15:1",
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant-range",
+      "action": "tap",
+      "target": "label=John 15:5",
+      "expect": [{ "shows": "label=John 15:1-5" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-plant",
+      "action": "tap",
+      "target": "label=Plant",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open John 15:1-5" },
+        { "shows": "label=John 15:1, not planted" },
+        { "hides": "label=Remove John 15:1-5" }
+      ],
+      "receipt": "snapshot"
+    }
+  ]
+}
