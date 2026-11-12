@@ -82,31 +82,32 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 2. (retired: `grow-unplanted`)
 3. (now `first-planted`: `grow-seed`)
 4. `grow-blade`: `run.md` step 4 (`run-recite`) → `Stage: blade`,
-   `Grew to a blade.`. Then the log (below) holds exactly one
+   and in the raw snapshot `id=growth`'s `Grew to a blade.` (a receipt
+   leaves that node out). Then the log (below) holds exactly one
    `[growth] play` line, and it ends `skipped=simulator`.
-5. `grow-peek`, before `run.md` step 5: `sim tap "label=Missed word 11"`,
-   `sim snapshot grow-peek` → `Stage: blade`, `Grew to a blade.`, `Next`;
-   the log still holds one play line.
-6. `grow-restart`, after `run.md` step 7 (or step 6 when the second wait
-   does not run), or in a drive of its own with `Next` pending:
-   `sim relaunch`, then `sim open / --expect "label=Isaiah 41:10"` (the
-   pending frame shows the reference) and at once
-   `sim snapshot grow-restart-launch` → no `Stage: not planted` and no
-   `Stage:` other than the store's in that frame (the launch-frame probe),
-   no `Grew to`. Then `sim open / --expect "id=today-card" --no-relaunch`,
-   `sim snapshot grow-restart` → home: no `Grew to`, no grade, and the
-   done state (no `Start`), or `Start` when the Today card reads
-   `1 to review`; then `sim tap "label=Start"`,
-   `sim snapshot grow-restart-today` → the passage's stage line and
-   `Say it`. A store that failed to open opens Today with no counts line
-   at all, so the open times out, and that fails this row.
-7. `grow-again`: `run.md` step 7 (`run-second`) → `Stage: ear`,
-   `Grew to an ear.`; two play lines. Then, before its `Next`, `sim tap
-   "label=Again"`, `sim snapshot grow-again-graded` → `Stage: seed`, no
-   `Grew to`, `Next`; still two play lines.
-8. When `sayit.md` follows in the same drive (`first.md` step 9), run it
-   now; then `sim doctor` (record `head` and `timingsHold`), then
-   `sim down`.
+5. `grow-peek`: `run.md` step 5's `run-next/sayit-peek` is this row's
+   tap → `Next` in the receipt. The peeked word widens its line, which
+   pushes the stage lines below the fold, and a receipt holds visible
+   nodes only: `Stage: blade` is read in `run-next/sayit-grade`, the step
+   before, and `Grew to a blade.` after a peek is unproven live (the
+   tests own it). The log still holds one play line.
+6. `grow-restart`, after `run.md` step 6, before the verse is due again:
+   `sim journey grow-restart` → `"ok":true`: a relaunch whose pending frame
+   shows the reference, then home in the done state (no `Start`).
+   `grow-restart/grow-restart-launch`, the launch-frame probe: no
+   `Stage: not planted` and no `Stage:` other than the store's, no
+   `Grew to`. `grow-restart/grow-restart`: home, no `Grew to`, no grade. A
+   store that failed to open opens Today with no Today card, so the
+   journey fails at `grow-restart`, and that fails this row.
+7. `grow-again`, in a drive of its own (in place of `run.md` step 8):
+   `run.md` step 7 (`run-second`) → `Stage: ear`, and `id=growth`'s `Grew to an ear.` in
+   its raw snapshot; two
+   play lines. Then, before its `Next`, `sim journey grow-again` →
+   `"ok":true`: `Again`. `grow-again/grow-again`: `Stage: seed`, `Next`;
+   then a raw snapshot: no `id=growth`; still two play lines.
+8. When `sayit.md` follows in the same drive (`first.md` step 9), its rows
+   ride `run.md`'s journeys; then `sim doctor` (record `head` and
+   `timingsHold`), then `sim down`.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style compact
 --predicate 'eventMessage CONTAINS "[growth]" AND process == "Heartseed"'`.

@@ -1,0 +1,21 @@
+{
+  "feature": "grow-again",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "grow-again-start",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Next" }, { "shows": "label=Stage: ear" }],
+      "receipt": "none"
+    },
+    {
+      "name": "grow-again",
+      "action": "tap",
+      "target": "label=Again",
+      "expect": [{ "shows": "label=Stage: seed" }, { "shows": "label=Next" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

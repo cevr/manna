@@ -1,0 +1,28 @@
+{
+  "feature": "grow-restart",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "grow-restart-end",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "grow-restart-launch",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "grow-restart",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Start" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
