@@ -85,6 +85,21 @@ A sought reading that finishes ends hear as Listen's own does.
   `Forward 3`, for the simulator's drive, whose driver has no long-press
   drag (`.claude/skills/verify-heartseed/features/light.md`). It takes
   only `src/app.ts`'s atoms and renders nothing in a release build.
+- **Lines.** A verse of more than 20 words is drawn in its clauses
+  (`linesOf`, `src/reading/lines.ts`): over `wordSpans`' words, a line ends
+  at a strong mark (`. ; : ? !`) with at least 4 words on either side, or
+  at a comma with at least 6, never at a plain gap; a verse of 20 words or
+  fewer is one line and drawn exactly as before. Plain, `passage` holds one
+  `line-<i>` text per line with a `break-<k>` between (`k` the word the
+  next line starts at); read aloud, under a cue and under a recital's
+  marks, a `break-<k>` sits before word `k` as a sibling of the words
+  (`ReadingView`'s `lines` prop, one line by default). A break is an empty
+  full-width row, hidden from VoiceOver, with no role and no text, so word
+  numbers, the hold and the words VoiceOver reads stay as they were; the
+  gap between lines is 10 pt (`look.lineBreak` with the row gaps,
+  `src/sayit/draw.tsx`). Nothing read aloud, heard, matched or kept
+  changes: the voice and Dictation are handed `piece.text`. The first
+  minute's verse stays one line.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `seek`, `pause`,
   `resume`, `stop`, `choose`, and the `view` a screen shows (`choice`,
@@ -2121,7 +2136,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the model: a sought tail's ranges lighting the verse's words).
   - `test:reading`: `src/reading/words.property.test.ts` (the reading
     view's words: what each word shows over generated texts, and the word
-    under a finger over generated layouts and points, each against its rule)
+    under a finger over generated layouts and points, each against its rule),
+    `src/reading/lines.property.test.ts` (a verse's lines against a
+    reference of its own over generated texts and the real pieces),
+    `src/reading/lines.rule.test.ts` (the root rule's lines clause, one
+    offending frame each)
     and `src/reading/view.test.tsx` (the reading view mounted alone: each
     word's text, ink and selection over generated readings, and its hold
     through the gesture stand-in: the word held under the finger, one pause,
@@ -2130,6 +2149,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     view and hold through the root against the voice's model: the source's
     calls, one tick per hold, the reading view only while the piece is read,
     and the scroll view still exactly while held).
+  - `test:reading-drawn`: `src/reading/lines.drawn.test.tsx` (Today's
+    three drawings of a verse agree on its lines over generated verses and
+    three by reference, a one-line verse drawn as before, and the hold's
+    word under the finger over boxes laid out with break rows).
+  - `test:sayit-lines`: `src/sayit/lines-grade.test.tsx` (generated
+    recitals of the rig's lined verse: each mark, the summary, the
+    suggestion and the kept recall as Say it's own view gives them, word
+    number by word number, and Dictation handed the piece's text).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
     the hints, the native module's guards, and a held consumer of

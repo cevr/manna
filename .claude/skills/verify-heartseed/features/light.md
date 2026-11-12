@@ -51,8 +51,18 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
 - `light-today`: Today's `Listen` on a new piece (`passage.md`'s
   `passage-new`, or `phrase.md`'s `whole-new` for John 3:16):
   `id=reading` with one `word-<i>` per word, one or two `selected` moving
-  forward between two snapshots, and no `id=passage`. After the finish,
-  `id=passage` is whole again and `Listen` is back.
+  forward between two snapshots, and no `id=passage`; for a verse of more
+  than 20 words, a `break-<k>` before each line's first word by `linesOf`
+  (John 3:16: `break-6`, `break-13`, and no other). After the finish,
+  `id=passage` is whole again (its `line-<i>` texts for a lined verse) and
+  `Listen` is back.
+- `lines-read`: `Isaiah 43:2` (`today.md`'s `lines-plain`): `Listen`; two
+  raw snapshots about 1 s apart → `id=reading` with 38 `word-<i>`, one or
+  two `selected` moving forward, and `break-6`, `break-11`, `break-20`,
+  `break-26`, `break-31` and no other; `word-6`, `word-11`, `word-20`,
+  `word-26`, `word-31` each at the view's left edge and lower than the word
+  before it; after the finish `id=passage` with its six `line-<i>` again.
+  The light probe's verse is drawn on one line, as before.
 - `light-natural`: the probe's `Listen` read by the natural voice (Her):
   the selection moves forward, and `lit` holds through a rest between
   phrases, then moves on; one render and one play a phrase.
@@ -116,10 +126,13 @@ over `[voice]`, from `START`.
 6. `light-today`: on Today with a new piece (`passage.md`'s `passage-new`,
    or `phrase.md`'s `whole-new`), `sim tap "label=Listen"` and two raw
    snapshots about 1 s apart → `id=reading` with one `word-<i>` per word of
-   the piece (count them), one or two `selected` moving forward, and no
-   `id=passage`. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
+   the piece (count them), one or two `selected` moving forward, no
+   `id=passage`, and the `break-<k>` ids `light-today` names. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
    finish) and `sim snapshot light-today-done` → `id=passage`, no
    `id=reading`.
+   `lines-read`: the same on `Isaiah 43:2` (reached as `today.md`'s Lines
+   drive), reading the break ids and the frames of the five words after
+   them (x at the view's left edge, y below the word before).
 7. `light-natural`: with the natural voice ready (the second container of
    `natural.md`'s Today rows, voice Her, its model server running),
    `sim open probe/light --expect "label=Light probe"`,

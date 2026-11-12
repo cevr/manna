@@ -490,6 +490,55 @@ const rangeFaults = (host: Element) => {
   return out;
 };
 
+const WORD_RUN = /[\p{L}\p{N}]/u;
+
+/** How many words (whitespace runs holding a letter or number) `text` holds. */
+const wordCount = (text: string) => text.split(/\s+/u).filter((run) => WORD_RUN.test(run)).length;
+
+/** The verse view a break or line sits in, and its words: `passage` by its lines' text, `reading` or the cue's view by its `word-<i>` children; none for any other parent. */
+const verseViewOf = (node: Element): { readonly words: number } | null => {
+  const parent = node.parentElement;
+  if (parent === null) return null;
+  const id = parent.getAttribute('data-testid');
+  if (id === 'passage')
+    return {
+      words: wordCount(
+        [...parent.querySelectorAll('[data-testid^="line-"]')]
+          .map((line) => line.textContent ?? '')
+          .join(' '),
+      ),
+    };
+  const words = [...parent.children].filter((child) =>
+    (child.getAttribute('data-testid') ?? '').startsWith('word-'),
+  ).length;
+  if (id === 'reading' || words > 0) return { words };
+  return null;
+};
+
+/**
+ * The lines' clause (hspiece L3): each `break-<k>` lies in a verse view
+ * (`passage`, `reading` or the cue's view of `word-<i>`), with no text and
+ * no role, and never in a view of 20 words or fewer, which is one line;
+ * each `line-<i>` lies in `passage`. Its faults: `<id> outside a verse`,
+ * `<id> holds text`, `<id> has a role`, `<id> in a verse of <n> words`,
+ * `<id> outside passage`.
+ */
+const lineFaults = (host: Element) => {
+  const out: string[] = [];
+  for (const node of host.querySelectorAll('[data-testid^="break-"]')) {
+    const id = node.getAttribute('data-testid') ?? '';
+    const view = verseViewOf(node);
+    if (view === null) out.push(`${id} outside a verse`);
+    else if (view.words <= 20) out.push(`${id} in a verse of ${view.words} words`);
+    if ((node.textContent ?? '') !== '') out.push(`${id} holds text`);
+    if (node.getAttribute('role') !== null) out.push(`${id} has a role`);
+  }
+  for (const node of host.querySelectorAll('[data-testid^="line-"]'))
+    if (node.parentElement?.getAttribute('data-testid') !== 'passage')
+      out.push(`${node.getAttribute('data-testid') ?? ''} outside passage`);
+  return out;
+};
+
 /**
  * The root's frame rule (hshomeroot), for every rig that mounts the root:
  * what one frame shows wrong, `garden` being whether the launch's garden
@@ -536,14 +585,15 @@ const rangeFaults = (host: Element) => {
  * action and nodes there are faults as on any screen but Today. Any other
  * screen showing a node of the end is the fault `the end's <id> on
  * <screen>`, found by one query a frame. On every frame, the pending one
- * too, no text and no accessible name holds a word range (`rangeFaults`).
+ * too, no text and no accessible name holds a word range (`rangeFaults`),
+ * and a verse's breaks and lines are where its lines put them (`lineFaults`).
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
   const controls = [...host.querySelectorAll(CONTROLS)];
   const named = (name: string) => controls.filter((node) => nameOf(node) === name);
   const listening = named('Listening').length > 0;
-  const reach: string[] = rangeFaults(host);
+  const reach: string[] = [...rangeFaults(host), ...lineFaults(host)];
   if (listening) reach.push(...listeningFaults(host));
   if (headings.length === 0) return [...pendingFaults(host, controls), ...reach];
   const out: string[] = [];

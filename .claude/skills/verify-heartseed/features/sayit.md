@@ -43,6 +43,13 @@ first minute.
   new recital's own suggestion, `Hard`, is checked, with the mark back and
   no peek. A second press in one sitting needs the verse's due, which no
   live drive waits for.
+- `lines-say`: on `Isaiah 43:2` (`today.md`'s Lines drive), `Say it` (the
+  simulator's replay), then the result → the summary reads `<k> of 38
+  words` with the `k` the r1 head (`258e6c82d`) gives for the same replay;
+  the grades as base; `break-6`, `break-11`, `break-20`, `break-26`,
+  `break-31` and no other `break-` while the marks show. The lines change
+  the drawing alone: what is heard, matched and kept is as before
+  (`src/sayit/lines-grade.test.tsx`).
 
 ## How to get to it (user POV)
 
@@ -91,6 +98,10 @@ drive:
    `, peeked`; every `Good` line still `[checked]`; `Next`. When `grow.md`
    runs in the same drive, this tap is its `grow-peek` too.
 6. `sayit-again`: tests only (above). Go on with `run.md` step 5.
+   `lines-say`, in a sitting of its own: `today.md`'s Lines drive to
+   `Isaiah 43:2`, `sim tap "label=Say it"`, the wait for a label ending
+   ` of 38 words`, then `sim snapshot lines-say` → the readout above (the
+   count `k`, the checked grade, the `break-` ids).
 7. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
 Every snapshot holds the passage's words: read each for the strings above,

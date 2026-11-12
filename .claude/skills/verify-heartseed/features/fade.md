@@ -27,6 +27,9 @@ first minute. The replay always misses word 11, so every recital ends
 
 - `fade-letters` (live at `run-due`): at a seed, 37 `word-<i>` nodes, each
   label exactly one character, and no node holding the passage whole.
+- `lines-letters` (live at `run-due`): the same 37 `word-<i>`, and among
+  them `break-8`, `break-16`, `break-20` and `break-25`, and no other
+  `break-` (Isaiah 41:10's lines by `linesOf`, the README's **Lines**).
 - `fade-cued` (live at `run-listening`): while the recital under letters
   listens, every word node not yet lit is labelled with one character.
 - `fade-blade` (live at `run-recite`): that recital gives `Stage: blade`,
@@ -57,7 +60,8 @@ server). With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 1. `run.md`, Driving it, steps 1-3 (the first minute, then `run-due`).
 2. `fade-letters`: `run-due`'s snapshot → `Stage: seed`; 37 `word-<i>`
    nodes, each label exactly one character; no node holding the passage
-   whole.
+   whole. `lines-letters`: in the same snapshot's tree, the `break-` ids
+   are exactly `break-8`, `break-16`, `break-20`, `break-25`.
 3. `fade-cued`: `run-listening`'s raw snapshot (`run.md` step 4) →
    `Listening`; every word node not yet lit labelled with one character.
    Keep only counts and booleans.

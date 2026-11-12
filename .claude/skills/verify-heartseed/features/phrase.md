@@ -30,8 +30,10 @@ stored stay stored as they were (`apps/heartseed/README.md`, Old pieces).
 - `whole-new` (the second session, after the next 04:00 local, with no
   uninstall): the Today card's `Start` shows Today with `1 new`; after the
   promise's review if it is due, the reference is `John 3:16`, its 25
-  words whole (`id=passage`), with `Listen` before `Say it`; while
-  `Listen` reads, `id=reading` holds 25 `word-<i>` nodes; after `Say it`
+  words whole (`id=passage`, in its lines: `line-0` … `line-2` and
+  `break-6`, `break-13`), with `Listen` before `Say it`; while
+  `Listen` reads, `id=reading` holds 25 `word-<i>` nodes and the same two
+  breaks; after `Say it`
   the summary reads `<k> of 25 words`.
 - `whole-field`: then `Your field`: the field's row `John 3:16` holds
   `John 3:16, seed`; no node on any snapshot of the run matches
@@ -90,10 +92,13 @@ must start empty: uninstall by udid as `first.md` says.
    `sim snapshot whole-new` → the counts line holds `1 new`; when the
    reference is `Isaiah 41:10` (its review due), run it through `Say it`
    and `Next` first, then snapshot again → the reference `John 3:16`, its
-   words whole in one `id=passage` node, `Listen` before `Say it`. Then
+   words whole in `id=passage` as its three `line-<i>` texts with
+   `break-6` and `break-13` between (more than 20 words, so in its lines,
+   `today.md`'s `lines-plain`), `Listen` before `Say it`. Then
    `sim tap "label=Listen"`, then two raw snapshots about 1 s apart while
    it reads (`light.md`, Driving it, and its step 6) → in each,
-   `id=reading` in place of `id=passage`, holding 25 `word-<i>` nodes,
+   `id=reading` in place of `id=passage`, holding 25 `word-<i>` nodes and
+   `break-6`, `break-13`,
    one or two `selected`, the second's first index greater than the
    first's. Then `sim open / --expect "label=Listen" --no-relaunch` (a
    wait for the finish), `sim tap "label=Say it"`, wait for the summary

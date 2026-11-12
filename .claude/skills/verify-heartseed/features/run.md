@@ -59,8 +59,9 @@ of `first-planted`.
   local): 7 minutes after `PLANTED`, a relaunch makes a new plan. Home
   then offers `Start` with `1 verse · about 1 min` and `1 to review`, and `Start` shows
   Today with `1 to tend · about 1 min`, the reference
-  `Isaiah 41:10`, 37 `word-<i>` nodes in first letters (a seed), and
-  `Say it`. In a raw snapshot, `Say it` lies wholly inside the window,
+  `Isaiah 41:10`, 37 `word-<i>` nodes in first letters (a seed) with
+  `break-8`, `break-16`, `break-20` and `break-25` among them (its lines,
+  `fade.md`'s `lines-letters`), and `Say it`. In a raw snapshot, `Say it` lies wholly inside the window,
   below the last word node and clear of the bottom safe area.
 - `run-recite`: `Say it`, then the recital ends (`36 of 37 words`):
   `Stage: blade`, `Grew to a blade.`, the `Grade` group with one radio

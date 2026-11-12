@@ -45,7 +45,9 @@ per word, lit as read) in place of `id=passage` (`light.md`).
   label starting `Stage: `), one `Say it` button in the fixed footer under
   the scroll view, the button `Your field`, and its words under the cue
   its stage gives (`fade.md`): at a seed, 37 word nodes (`word-<i>`), each
-  labelled with its word's first letter as written. The words come from its
+  labelled with its word's first letter as written, with `break-8`,
+  `break-16`, `break-20` and `break-25` among them and no other `break-`
+  (its lines, `lines-letters` in `fade.md`). The words come from its
   KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
   Today shows that text whole only before the passage is planted, which no
@@ -59,6 +61,20 @@ per word, lit as read) in place of `id=passage` (`light.md`).
   crop, scale or extra soil; wrapper and image are hidden. Read/unplanted
   Today owes no image, unread/pending Today claims no stage or image, and
   bare done owes none. Mounted tests establish those hidden drawing clauses.
+- `lines-plain`: Today on `Isaiah 43:2` (`list.md`'s `Open Protection &
+  Fear`, then the row `Isaiah 43:2, not planted`), before `Listen`:
+  `id=reference` `Isaiah 43:2`; inside `id=passage` the texts `line-0` …
+  `line-5` and no `line-6`; `break-6`, `break-11`, `break-20`, `break-26`,
+  `break-31` and no other `break-`; each `line-<i>`'s frame starts at the
+  same x and below the one before; the six labels' word counts (whitespace
+  runs; write no words down) are 6, 5, 9, 6, 5, 7. A verse of more than 20
+  words is drawn in its clauses (`linesOf`, the README's **Lines**); the
+  break elements are absent from VoiceOver's order, `line-0` to `line-5`
+  read in turn. Base (r1) red: one `id=passage` text, no `line-0`, no
+  `break-`.
+- `lines-short`: Today on `Psalms 91:1` (the row `Psalms 91:1, not
+  planted`): `id=passage` one text, as before; no `line-` and no `break-`
+  anywhere.
 
 ## How to get to it (user POV)
 
@@ -92,6 +108,32 @@ a node `Say it`, a node `Your field` and the counts line, with no
 labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds
 the passage's words.
+
+## Lines drive (`lines-plain`, `lines-short`)
+
+From home, open the list and the two rows (`list.md`):
+
+```bash
+sim tap "label=Open Protection & Fear"
+sim tap "label=Isaiah 43:2, not planted"
+sim open / --expect "id=session" --no-relaunch
+sim snapshot lines-plain
+```
+
+→ the `lines-plain` readout above, from the tree's ids and frames: count
+each `line-<i>`'s whitespace runs and report the counts and the `break-`
+ids, never the words. Then back home and to the short verse:
+
+```bash
+sim tap "label=Your field"
+sim tap "label=Open Protection & Fear"
+sim tap "label=Psalms 91:1, not planted"
+sim open / --expect "id=session" --no-relaunch
+sim snapshot lines-short
+```
+
+→ one `id=passage` text, no `line-` and no `break-`. Delete both snapshots:
+they hold verse words.
 
 ## Plant-set drive and receipt (`today-plantset`)
 
