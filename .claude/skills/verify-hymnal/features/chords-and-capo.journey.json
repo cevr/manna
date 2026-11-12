@@ -216,17 +216,44 @@
       "receipt": "none"
     },
     {
+      "name": "chords-mode-on-switch",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Chords" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-on-capo",
+      "action": "scroll",
+      "target": "id=dial-capo",
+      "direction": "down",
+      "expect": [{ "shows": "id=dial-capo" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-on-key",
+      "action": "scroll",
+      "target": "id=dial-key",
+      "direction": "down",
+      "expect": [{ "shows": "id=dial-key" }],
+      "receipt": "none"
+    },
+    {
       "name": "chords-mode-on-dials",
       "action": "scroll",
       "target": "id=dial-placement",
       "direction": "down",
-      "expect": [
-        { "shows": "role=switch label=Chords" },
-        { "shows": "id=dial-key" },
-        { "shows": "id=dial-capo" },
-        { "shows": "id=dial-placement" }
-      ],
+      "expect": [{ "shows": "id=dial-placement" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-off-switch",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "up",
+      "expect": [{ "shows": "role=switch label=Chords" }],
+      "receipt": "none"
     },
     {
       "name": "chords-mode-off",
