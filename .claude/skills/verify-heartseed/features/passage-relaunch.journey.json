@@ -1,0 +1,42 @@
+{
+  "feature": "passage-relaunch",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "passage-relaunch-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-relaunch",
+      "action": "relaunch",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open Isaiah 41:10" },
+        { "shows": "label=Open John 15:1-5" },
+        { "shows": "label=Open Psalms 23:1-6" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "passage-launch-time-1",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-launch-time-2",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-launch-time-3",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "none"
+    }
+  ]
+}
