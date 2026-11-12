@@ -362,6 +362,7 @@
     },
     "test:first": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -466,6 +467,7 @@
     },
     "test:root": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -570,6 +572,7 @@
     },
     "test:walk-letters": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -596,6 +599,7 @@
     },
     "test:walk-alone": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -622,6 +626,7 @@
     },
     "test:walk-write": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -648,6 +653,7 @@
     },
     "test:walk-launch": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -674,6 +680,7 @@
     },
     "test:walk-disk": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -700,6 +707,7 @@
     },
     "test:walk-relaunch": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -726,6 +734,7 @@
     },
     "test:walk-planted": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -752,6 +761,7 @@
     },
     "test:walk-reading": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -778,6 +788,7 @@
     },
     "test:walk-light": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -804,6 +815,7 @@
     },
     "test:walk-today": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -830,6 +842,7 @@
     },
     "test:walk-taps": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -1925,6 +1938,7 @@
     },
     "test:run-walk": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -1951,6 +1965,7 @@
     },
     "test:run-hold": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -1977,6 +1992,7 @@
     },
     "test:run-hold-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2003,6 +2019,7 @@
     },
     "test:run-edges": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2029,6 +2046,7 @@
     },
     "test:run-done": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2055,6 +2073,7 @@
     },
     "test:run-end": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2081,6 +2100,7 @@
     },
     "test:run-end-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2107,6 +2127,7 @@
     },
     "test:run-end-c": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2133,6 +2154,7 @@
     },
     "test:run-cells": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2159,6 +2181,7 @@
     },
     "test:run-cells-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2185,6 +2208,7 @@
     },
     "test:run-cells-c": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2211,6 +2235,7 @@
     },
     "test:run-cues": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2237,6 +2262,7 @@
     },
     "test:run-cues-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2263,6 +2289,7 @@
     },
     "test:run-relaunch": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2289,6 +2316,7 @@
     },
     "test:run-relaunch-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSRUN_WALK_DEVICES", "HSRUN_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2341,6 +2369,7 @@
     },
     "test:wake-walk": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2367,6 +2396,7 @@
     },
     "test:wake-returns": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2393,6 +2423,7 @@
     },
     "test:wake-quiet": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2419,6 +2450,7 @@
     },
     "test:wake-quiet-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2445,6 +2477,7 @@
     },
     "test:wake-clocks": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2471,6 +2504,7 @@
     },
     "test:wake-clocks-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2497,6 +2531,7 @@
     },
     "test:wake-edges": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2523,6 +2558,7 @@
     },
     "test:wake-listen": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2549,6 +2585,7 @@
     },
     "test:wake-listen-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2575,6 +2612,7 @@
     },
     "test:wake-reading": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2601,6 +2639,7 @@
     },
     "test:wake-reading-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2627,6 +2666,7 @@
     },
     "test:wake-end": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2903,6 +2943,7 @@
     },
     "test:reader-today": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2928,6 +2969,7 @@
     },
     "test:reader-unread": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2953,6 +2995,7 @@
     },
     "test:reader-add": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -2978,6 +3021,7 @@
     },
     "test:reader-add-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -3003,6 +3047,7 @@
     },
     "test:reader-add-back": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -3028,6 +3073,7 @@
     },
     "test:reader-remove": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -3697,6 +3743,13 @@
     },
     "test:home-rigs": {
       "dependsOn": ["^transit"],
+      "env": [
+        "HSFIRST_WALK_DEVICES",
+        "HSFIRST_WALK_DUMP",
+        "HSFIRST_WALK_SEED",
+        "HSWAKE_WALK_DEVICES",
+        "HSWAKE_WALK_SEED"
+      ],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4024,6 +4077,7 @@
     },
     "test:plantset": {
       "dependsOn": ["^transit"],
+      "env": ["HSFIRST_WALK_DEVICES", "HSFIRST_WALK_DUMP", "HSFIRST_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4077,6 +4131,7 @@
     },
     "test:phrase-walk-a": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4101,6 +4156,7 @@
     },
     "test:phrase-walk-b": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4125,6 +4181,7 @@
     },
     "test:phrase-walk-b2": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4149,6 +4206,7 @@
     },
     "test:phrase-walk-c": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -4173,6 +4231,7 @@
     },
     "test:phrase-walk-c2": {
       "dependsOn": ["^transit"],
+      "env": ["HSWAKE_WALK_DEVICES", "HSWAKE_WALK_SEED"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",

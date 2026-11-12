@@ -1,0 +1,9 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test:slow": {
+      "passThroughEnv": ["UI_BROWSER_CPU_THROTTLE"]
+    }
+  }
+}
