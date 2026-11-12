@@ -1,0 +1,27 @@
+{
+  "feature": "field-relaunch",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "field-relaunch-start",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
+      "name": "field-relaunch-launch",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "field-relaunch",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "hides": "id=session" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
