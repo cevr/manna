@@ -9,7 +9,10 @@
  * one step back and the stage line, the moved line and home's plant say the
  * lower stage, and a relaunch reads it back. A refused write leaves the
  * alert and the stage; a seed offers no control; the plan's own item
- * (Today by `Start`) offers none; two taps of the ask's `Move back` in one
+ * (Today by `Start`) offers none; a recital waiting for `Next` hides it (no
+ * step back can land under a recall not yet written, and the root's rule
+ * faults any frame with it beside `Listening`, `Next` or the grades), and
+ * after `Your field` it shows again on the unchanged stage; two taps of the ask's `Move back` in one
  * turn move the verse once, with no alert.
  */
 
@@ -143,6 +146,31 @@ it('leaves the alert and the stage when the write is refused, and offers nothing
   expect([due.references(), due.has('Move back a stage')]).toEqual([[passage.reference], false]);
   expect(due.faults).toEqual([]);
   await due.leave();
+});
+
+it('hides Move back a stage while a recital waits for Next, and offers it again on the unchanged stage after Your field', async () => {
+  const device = rootDevice([...EAR]);
+  const recalls = () =>
+    [...device.disk.keys()].filter((key) => key.startsWith('heartseed/recall/'));
+  const before = recalls();
+  const rig = await launchRoot(device, { now: START + DAY });
+  await openVerse(rig, 'ear');
+  expect(rig.has('Move back a stage')).toBe(true);
+  await rig.tap('Say it');
+  expect(await rig.until(() => rig.has('Listening'))).toBe(true);
+  await rig.tap('Listening');
+  expect(await rig.until(() => rig.has('Next'))).toBe(true);
+  expect([rig.has('Move back a stage'), one(rig, 'back-ask')]).toEqual([false, null]);
+  await rig.tap('Your field');
+  await openVerse(rig, 'ear');
+  expect([stage(rig), rig.has('Move back a stage'), backs(device.disk), recalls()]).toEqual([
+    'Stage: ear',
+    true,
+    [],
+    before,
+  ]);
+  expect(rig.faults).toEqual([]);
+  await rig.leave();
 });
 
 it('moves the verse once for two taps of the ask’s Move back in one turn, with no alert', async () => {

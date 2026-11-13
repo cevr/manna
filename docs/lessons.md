@@ -5760,3 +5760,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** With a constant seed, `seed > 0 && performance.now() < 5_000`, `console.log(seed, Date.now())`, a `?:` on `seed > 0` with a timing branch and a property body that times itself were each reported as a seed from the clock; and a mutant that stopped reading a member's object left every test green while the rule missed `Number(process.env['X_SEED']?.trim()) || Date.now()`.
 - **Cause:** The rule took a read as a seed's when any enclosing node named a seed (a call's argument, a `&&`, any `?:`), not when the read's value made the seed's; and the property generated only bare variable reads, narrower than the forms the rule claims.
 - **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random read beside a constant seed whose value it does not make is never reported: a timing, a log, a check, a label`; code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
+
+### heartseed-move-back-beside-a-pending-recital
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "no test holds `Move back a stage` hidden while a recital waits for `Next`, the state this unit adds."
+- **Source:** hymnapp/hscancel/round-2-findings.md M1
+- **Wrong:** With `!each.recital && !each.done` removed from Today's `MoveBack` filter, Move back showed over a finished recital whose recall `Next` had yet to write, and every heartseed task stayed green.
+- **Cause:** Move back's tests never started a recital, and the root's frame rule said nothing of Move back, so the merge of hsstepback and hscancel left their meeting unchecked.
+- **Guard:** code: `apps/heartseed/src/test/root-rule.ts` `Move back beside`; code: `apps/heartseed/src/garden/back-today.test.tsx` `hides Move back a stage while a recital waits for Next, and offers it again on the unchanged stage after Your field`
