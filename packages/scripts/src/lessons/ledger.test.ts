@@ -37,20 +37,31 @@ const FILES = {
   'judged/warns.json': '{ "rule": "warns", "cases": [] }',
 };
 
-/** A scratch repo with `ledger` as its docs/lessons.md beside `FILES`, and its root. */
-const repoWith = (ledger: string) =>
+/** `files` written under `root`, each by its path from it. */
+const writeAll = (root: string, files: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const root = yield* fs.makeTempDirectoryScoped({ prefix: 'lessons-' });
-    yield* Effect.forEach(Object.entries({ ...FILES, 'docs/lessons.md': ledger }), ([file, text]) =>
+    yield* Effect.forEach(Object.entries(files), ([file, text]) =>
       Effect.gen(function* () {
         yield* fs.makeDirectory(path.dirname(path.join(root, file)), { recursive: true });
         yield* fs.writeFileString(path.join(root, file), text);
       }),
     );
+  });
+
+/** A scratch repo with `ledger` as its docs/lessons.md beside `FILES` and `more`, and its root. */
+const repoWith = (ledger: string, more: Readonly<Record<string, string>> = {}) =>
+  Effect.gen(function* () {
+    const root = yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped({
+      prefix: 'lessons-',
+    });
+    yield* writeAll(root, { ...FILES, 'docs/lessons.md': ledger, ...more });
     return root;
   });
+
+/** The ledger of the scratch repos whose entries are kept in their own files. */
+const PREAMBLE = `# Lessons\n\n## A section\n\n${entry('in-the-ledger', 'code: `src/thing.ts` `held`')}`;
 
 /** The problem of entry `id` whose guard quotes `words` that `file` no longer holds, with the rename rule. */
 const notHeld = (id: string, file: string, words: string) =>
@@ -407,6 +418,135 @@ describe('the lessons ledger', () => {
           ]);
         }),
       ),
+  );
+});
+
+/**
+ * git's settings for the scratch repo at `root`: its own `.git` whatever repo
+ * runs the test, no system or user config (so no hook and no signing), one author.
+ */
+const gitEnv = (root: string) => ({
+  GIT_DIR: `${root}/.git`,
+  GIT_WORK_TREE: root,
+  GIT_INDEX_FILE: `${root}/.git/index`,
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_AUTHOR_NAME: 'ledger',
+  GIT_AUTHOR_EMAIL: 'ledger@example.invalid',
+  GIT_COMMITTER_NAME: 'ledger',
+  GIT_COMMITTER_EMAIL: 'ledger@example.invalid',
+});
+
+/** `git <args>` in `root`: its exit code. */
+const git = (root: string, ...args: ReadonlyArray<string>) =>
+  Effect.scoped(
+    Effect.flatMap(
+      Effect.flatMap(ChildProcessSpawner, (spawner) =>
+        spawner.spawn(
+          ChildProcess.make('git', args, {
+            cwd: root,
+            env: gitEnv(root),
+            extendEnv: true,
+            stdout: 'ignore',
+            stderr: 'ignore',
+            forceKillAfter: '5 seconds',
+          }),
+        ),
+      ),
+      (child) => child.exitCode,
+    ),
+  ).pipe(Effect.map(Number));
+
+/** `git <args>` in `root`, failing the test, by the command, unless it exits 0. */
+const gitOk = (root: string, ...args: ReadonlyArray<string>) =>
+  Effect.map(git(root, ...args), (code) => {
+    expect({ git: args.join(' '), code }).toEqual({ git: args.join(' '), code: 0 });
+  });
+
+describe("the ledger's entries kept one to a file under docs/lessons/", () => {
+  it.effect(
+    'merges two branches that each add an entry from one base with no conflict, into a ledger the check holds',
+    () =>
+      Effect.gen(function* () {
+        const root = yield* repoWith(PREAMBLE);
+        yield* gitOk(root, 'init', '-q', '-b', 'main');
+        yield* gitOk(root, 'add', '-A');
+        yield* gitOk(root, 'commit', '-q', '-m', 'base');
+        const addOn = (branch: string, id: string) =>
+          Effect.gen(function* () {
+            yield* gitOk(root, 'checkout', '-q', '-b', branch, 'main');
+            yield* writeAll(root, {
+              [`docs/lessons/${id}.md`]: entry(id, 'code: `src/thing.ts` `held`'),
+            });
+            yield* gitOk(root, 'add', '-A');
+            yield* gitOk(root, 'commit', '-q', '-m', id);
+          });
+        yield* addOn('one', 'one-entry');
+        yield* addOn('two', 'two-entry');
+        expect(yield* git(root, 'merge', '-q', '--no-edit', 'one')).toBe(0);
+        expect(yield* ledgerProblems(root)).toEqual({ entries: 3, problems: [] });
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect("holds an entry's own file to its fields and its guard, as the ledger's", () =>
+    Effect.gen(function* () {
+      const root = yield* repoWith(PREAMBLE, {
+        'docs/lessons/held.md': entry('held', 'code: `src/thing.ts` `held`'),
+        'docs/lessons/lost.md': entry('lost', 'code: `src/thing.ts` `unheld`'),
+        'docs/lessons/no-cause.md': entry('no-cause', 'none: a reason').replace(
+          '- **Cause:** Not recorded.\n',
+          '',
+        ),
+      });
+      expect(yield* ledgerProblems(root)).toEqual({
+        entries: 4,
+        problems: [notHeld('lost', 'src/thing.ts', 'unheld'), 'no-cause: no Cause'],
+      });
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    "refuses an entry's file that is not its one entry headed by its name, an id given twice, and a conflict marker by its file's line",
+    () =>
+      Effect.gen(function* () {
+        const form =
+          "an entry's file holds that one entry, headed `### <id>` on its first line, and is named <id>.md";
+        const root = yield* repoWith(PREAMBLE, {
+          'docs/lessons/misnamed.md': entry('other-name', 'none: a reason'),
+          'docs/lessons/two.md': `${entry('two', 'none: a reason')}\n${entry('two-more', 'none: a reason')}`,
+          'docs/lessons/preamble.md': `Some words first.\n\n${entry('preamble', 'none: a reason')}`,
+          'docs/lessons/in-the-ledger.md': entry('in-the-ledger', 'none: a reason'),
+          'docs/lessons/marked.md': `${entry('marked', 'none: a reason')}<<<<<<< HEAD\n`,
+          'docs/lessons/notes.txt': entry('notes', 'none: a reason'),
+        });
+        expect((yield* ledgerProblems(root)).problems).toEqual([
+          'docs/lessons/marked.md:10: a conflict marker is left: <<<<<<< HEAD',
+          `docs/lessons/misnamed.md: ${form}`,
+          `docs/lessons/notes.txt: ${form}`,
+          `docs/lessons/preamble.md: ${form}`,
+          `docs/lessons/two.md: ${form}`,
+          'in-the-ledger: the id heads more than one entry',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect("routes a review's finding to the entry its own file keeps", () =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path;
+      const root = yield* repoWith(PREAMBLE, {
+        'docs/lessons/folded.md': entry(
+          'folded',
+          'none: a reason',
+          'review',
+          'p6-x/review-1.md F1',
+        ),
+        'tmp/p6-x/review-1.md': '### F1 High: a\nGuard class: none\nCheapest guard: none\n',
+      });
+      const routes = yield* reviewRoutes(root, [path.join(root, 'tmp/p6-x/review-1.md')]);
+      expect(
+        routes.map((route) => [route.ref, Option.getOrElse(route.by, () => 'unrouted')]),
+      ).toEqual([['p6-x/review-1.md F1', 'folded']]);
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 });
 

@@ -3802,7 +3802,9 @@ a small fast test shows is a unit test; one only a reader can see is a
 judged rule with its labelled corpus, run by `bun run test:slow`; one of
 taste or process that no item shows is a line in a skill. A mistake with no
 cheap check gets none: its review finding is classed `none`, and the ledger
-needs no entry for it. For example, a review found a `describe.skip` and a test's timeout
+needs no entry for it. A new entry goes in its own file,
+`docs/lessons/<id>.md`, so two units' entries merge with no conflict; the
+check reads those files and `docs/lessons.md` as one ledger. For example, a review found a `describe.skip` and a test's timeout
 raised to 120 s, which a tree shows, so `film/tests-keep-their-strength` is
 a rule of the house plugin (`lint/tests-keep-their-strength.ts`, its cases in
 `lint/fixtures/` held by `lint/plugin.slow.test.ts`, on in `.oxlintrc.json`). The

@@ -6,7 +6,7 @@
 #    no earlier run passed. The judged rules are not here: `bun run lint`
 #    runs them in the slow suite.
 # 2. The lessons ledger (`lessons/check.ts`): each entry of `docs/lessons.md`
-#    held to the files its guard names, read every run, since those files lie
+#    and of `docs/lessons/` held to the files its guard names, read every run, since those files lie
 #    anywhere in the repo and no workspace's cached inputs can list them.
 # 3. Every workspace's unit tests (`gate-tests.ts`: `turbo run test`), cached
 #    by turbo on each workspace's inputs (`turbo.json`): a workspace runs again

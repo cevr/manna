@@ -53,6 +53,13 @@ Guard field changes; the Date, Said, Source, Wrong and Cause stay as
 recorded, and a unit may make that one edit even where the ledger is
 otherwise outside its work.
 
+A new entry goes in a file of its own, `docs/lessons/<id>.md`, headed
+`### <id>` on its first line and holding that one entry, never appended
+here: two units that each add an entry then add two files, which git merges
+with no conflict, where two entries appended to this file conflict at every
+merge. The check reads this file's entries and each file of
+`docs/lessons/` as one ledger, and refuses an id that heads two entries.
+
 The form of an entry, each field on its own line:
 
 - **Date:** the day it was said (YYYY-MM-DD).

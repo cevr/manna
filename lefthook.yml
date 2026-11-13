@@ -18,7 +18,8 @@ pre-commit:
     - name: typecheck
       run: bun packages/scripts/src/precommit-typecheck.ts
 
-    # The lessons ledger (`docs/lessons.md`) held to the files its guards name
+    # The lessons ledger (`docs/lessons.md` and `docs/lessons/*.md`) held to
+    # the files its guards name
     # (packages/scripts/src/lessons/check.ts), on every commit and not on a
     # glob: a test renamed in any file can break an entry that names it. It
     # reads the working tree, as the typecheck does, in about 0.15 s.

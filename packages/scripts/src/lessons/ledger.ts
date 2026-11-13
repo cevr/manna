@@ -124,8 +124,14 @@ const rulesOnIn = (config: typeof LintConfig.Type): ReadonlySet<string> =>
 
 const Corpus = Schema.fromJsonString(Schema.Struct({ rule: Schema.String }));
 
-/** The ledger's path from the repo's root. */
+/** The ledger's path from the repo's root: its preamble and the entries kept in it. */
 const LEDGER = 'docs/lessons.md';
+/**
+ * The folder of the entries kept one to a file, `<id>.md` each, from the
+ * repo's root: two units that each add an entry add two files, which git
+ * merges with no conflict, where two entries appended to one file conflict.
+ */
+const ENTRIES = 'docs/lessons';
 
 /** `problem`, unless `holds`. */
 const unless = (holds: boolean, problem: string): ReadonlyArray<string> =>
@@ -227,24 +233,75 @@ const CONFLICT_MIDDLE = /^={7}$/;
  * Each conflict marker left in the ledger's text, by its line, so a bad rebase
  * cannot land one; a line of seven `=` counts only after a conflict opens.
  */
-const markersIn = (text: string): ReadonlyArray<string> => {
+const markersIn = (file: string, text: string): ReadonlyArray<string> => {
   const lines = text.split('\n').map((line) => line.replace(/\r$/, ''));
   const opened = lines.findIndex((line) => line.startsWith('<<<<<<<'));
   return lines.flatMap((line, i) =>
     unless(
       !CONFLICT_MARKER.test(line) && !(opened !== -1 && i > opened && CONFLICT_MIDDLE.test(line)),
-      `${LEDGER}:${i + 1}: a conflict marker is left: ${line}`,
+      `${file}:${i + 1}: a conflict marker is left: ${line}`,
     ),
   );
 };
 
-/** The ledger at `root`: how many entries it holds, and each problem with one (its fields, or a guard the repo does not hold). */
+/** One file of the ledger: its path from the root, its text, and the entries it holds. */
+interface Page {
+  readonly file: string;
+  readonly text: string;
+  readonly entries: ReadonlyArray<Entry>;
+}
+
+/**
+ * The ledger's files at `root`: `docs/lessons.md`, then each file of
+ * `docs/lessons/` by name, each read for the entries its `### <id>` lines
+ * head; with no folder, the ledger is its one file.
+ */
+const pagesAt = Effect.fn('lessons.pagesAt')(function* (root: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const names = yield* Effect.orElseSucceed(fs.readDirectory(path.join(root, ENTRIES)), () => []);
+  const files = [LEDGER, ...names.toSorted().map((name) => `${ENTRIES}/${name}`)];
+  return yield* Effect.forEach(files, (file) =>
+    Effect.map(fs.readFileString(path.join(root, file)), (text): Page => ({
+      file,
+      text,
+      entries: entriesOf(`\n${text}`),
+    })),
+  );
+});
+
+/**
+ * What is wrong with a file of `docs/lessons/`: a name not `<id>.md`, or not
+ * one entry headed `### <id>` on its first line, its id its name.
+ */
+const pageProblems = (page: Page): ReadonlyArray<string> => {
+  if (page.file === LEDGER) return [];
+  const id = /^docs\/lessons\/(.+)\.md$/.exec(page.file)?.[1] ?? '';
+  return unless(
+    id !== '' && page.entries.length === 1 && page.text.startsWith(`### ${id}\n`),
+    `${page.file}: an entry's file holds that one entry, headed \`### <id>\` on its first line, and is named <id>.md`,
+  );
+};
+
+/** Each id that heads more than one entry, across the ledger's files. */
+const idsTwice = (entries: ReadonlyArray<Entry>): ReadonlyArray<string> => {
+  const ids = entries.map((entry) => entry.id);
+  return [...new Set(ids.filter((id, at) => ids.indexOf(id) !== at))].map(
+    (id) => `${id}: the id heads more than one entry`,
+  );
+};
+
+/**
+ * The ledger at `root` (`docs/lessons.md` and each entry's file under
+ * `docs/lessons/`): how many entries it holds, and each problem with one (its
+ * fields, its file, an id given twice, or a guard the repo does not hold).
+ */
 export const ledgerProblems = Effect.fn('lessons.ledgerProblems')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const read = (file: string) => fs.readFileString(path.join(root, file)).pipe(Effect.option);
-  const text = yield* fs.readFileString(path.join(root, LEDGER));
-  const entries = entriesOf(text);
+  const pages = yield* pagesAt(root);
+  const entries = pages.flatMap((page) => page.entries);
   const config = yield* Schema.decodeUnknownEffect(LintConfig)(
     JSONC.parse(yield* fs.readFileString(path.join(root, '.oxlintrc.json'))),
   );
@@ -258,7 +315,14 @@ export const ledgerProblems = Effect.fn('lessons.ledgerProblems')(function* (roo
         [...fieldProblems(entry), ...claimed.flat()].map((what) => `${entry.id}: ${what}`),
     ),
   );
-  return { entries: entries.length, problems: [...markersIn(text), ...problems.flat()] };
+  return {
+    entries: entries.length,
+    problems: [
+      ...pages.flatMap((page) => [...markersIn(page.file, page.text), ...pageProblems(page)]),
+      ...idsTwice(entries),
+      ...problems.flat(),
+    ],
+  };
 });
 
 /**
@@ -308,7 +372,7 @@ export const reviewRoutes = Effect.fn('lessons.reviewRoutes')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const entries = entriesOf(yield* fs.readFileString(path.join(root, LEDGER)));
+  const entries = (yield* pagesAt(root)).flatMap((page) => page.entries);
   return yield* Effect.forEach(reviews, (review) =>
     Effect.map(fs.readFileString(review), (text) => {
       const cite = `${path.basename(path.dirname(path.resolve(review)))}/${path.basename(review)}`;
