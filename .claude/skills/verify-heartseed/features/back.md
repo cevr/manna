@@ -33,7 +33,8 @@ Garden).
 - `back-tests-only` (tests only, `test:back`, `test:back-today`;
   `apps/heartseed/README.md`, Tests): full corn and an ear moved back, the
   card's Again and its due, a relaunch reading the step back, a refused
-  write's alert, an unread garden, and no control on the plan's item.
+  write's alert, an unread garden, no control on the plan's item, and
+  two taps of `Move back` in one turn moving the verse once.
 
 ## How to get to it (user POV)
 

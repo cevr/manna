@@ -431,7 +431,10 @@ verse past a seed shows `Move back a stage` in the footer, outside the
 scroll view; a seed shows none, as no stage lies below it, and the plan's
 own items (Today by `Start`) show none. Its tap asks in place, `Move
 <reference> back to <stage>? It comes due again soon.`, with `Move back`
-and `Keep`. `Move back` keeps one record, `heartseed/back/<reference>/<at>`
+and `Keep`. `Move back` runs in a transition (both answers disabled
+until it lands) and asks the garden to move the verse from the stage the
+ask saw, so an ask answered twice moves it once. It keeps one record,
+`heartseed/back/<reference>/<at>`
 (`{ reference, at }`), that folds in among the verse's recalls at its
 instant: full corn to an ear, an ear to a blade, a blade to a seed, and
 its card takes an Again there, so it comes due within minutes (in a later
@@ -2240,13 +2243,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     rule written plainly over ts-fsrs: stage, card, cue and growth) and
     over the real store on the device (full corn to a seed one step at a
     time, each one record, due within ten minutes, read back at a
-    relaunch; a seed, a verse not planted, a failed write and an unread
-    garden answer `Failed` and write nothing).
+    relaunch; a seed, a verse not planted, a stage the verse no longer
+    stands at, a failed write and an unread garden answer `Failed` and
+    write nothing; one ask answered twice moves the verse once).
   - `test:back-today`: `src/garden/back-today.test.tsx`, Move back a stage
     through the root rig: a tapped ear's control outside the scroll view,
     the ask and `Keep`, `Move back` to a blade on Today and home, a
-    relaunch to a seed with no control, a refused write's alert, and none
-    on the plan's own item.
+    relaunch to a seed with no control, a refused write's alert, none on
+    the plan's own item, and two taps of `Move back` in one turn moving it
+    once with no alert.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
