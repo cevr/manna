@@ -276,7 +276,7 @@ describe('env-pass', () => {
           ['a/test/rig.ts', { reads: ['RIG_DUMP'], deps: [], entry: false }],
           ['a/service.ts', { reads: ['API_KEY'], deps: [], entry: false }],
           ['a/main.ts', { reads: [], deps: ['a/service.ts'], entry: false }],
-          ['a/cli.ts', { reads: ['ADMIN_TOKEN'], deps: [], entry: true }],
+          ['a/cli.ts', { reads: ['ADMIN_TOKEN'], deps: ['a/test/rig.ts'], entry: true }],
         ]);
         const product = productOf(
           graph,
@@ -294,6 +294,64 @@ describe('env-pass', () => {
           ]),
         ).toEqual([
           { dir: 'a', task: 'test', file: 'a/x.test.ts', name: 'WALK_SEED', by: 'a/walk.ts' },
+        ]);
+      }),
+  );
+
+  it.effect(
+    "a rig a test imports through its tsconfig's paths alias is a gap when it reads a variable turbo does not pass",
+    () =>
+      Effect.sync(() => {
+        const resolve = resolverOf({
+          files: new Set(['h/src/r.test.tsx', 'h/src/test/rig.ts']),
+          packages: [],
+          aliasesFor: aliasesFor(
+            new Map([['h/tsconfig.json', { compilerOptions: { paths: { '~/*': ['./src/*'] } } }]]),
+          ),
+          installed: () => false,
+          builtins: new Set(),
+        });
+        const imports = new Map([
+          ['h/src/r.test.tsx', ['~/test/rig']],
+          ['h/src/test/rig.ts', []],
+        ]);
+        const readsIn = new Map([['h/src/test/rig.ts', ['RIG_SEED']]]);
+        const graph = new Map(
+          [...imports].map(([file, specifiers]) => [
+            file,
+            {
+              reads: readsIn.get(file) ?? [],
+              entry: false,
+              deps: specifiers.flatMap((specifier) =>
+                Match.value(resolve(file, specifier)).pipe(
+                  Match.tag('Module', ({ file: dep }) => [dep]),
+                  Match.orElse(() => []),
+                ),
+              ),
+            },
+          ]),
+        );
+        const product = productOf(
+          graph,
+          (file) => file.endsWith('.test.tsx') || isTestSupport(file),
+        );
+        expect(
+          gapsOf({ tasks: { test: {} } }, new Map(), [
+            {
+              file: 'h/src/r.test.tsx',
+              dir: 'h',
+              tasks: ['test'],
+              reads: readsThrough('h/src/r.test.tsx', graph, product),
+            },
+          ]),
+        ).toEqual([
+          {
+            dir: 'h',
+            task: 'test',
+            file: 'h/src/r.test.tsx',
+            name: 'RIG_SEED',
+            by: 'h/src/test/rig.ts',
+          },
         ]);
       }),
   );
