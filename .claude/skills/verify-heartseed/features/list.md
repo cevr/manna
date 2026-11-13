@@ -103,7 +103,9 @@ snapshot (`first.md`, Driving it).
    Then `Your field`.
 7. `list-practice`, only in `home.md`'s `home-dot` state (7 minutes after
    planting, `5 min` in Settings; by the clock as `home.md` says):
-   `sim journey list-practice` → `"ok":true`.
+   `sim journey list-practice` → `"ok":true`. Its first open waits for
+   home and, on `home-dot`'s last screen (Today, after `Start`), opens the
+   app again onto home (`detail.retried`).
    `list-practice/list-practice-page` → the row
    `Isaiah 41:10, seed, ready today`; the line `1 ready today · about 1
    min`. `list-practice/list-practice` → `id=session` on `Isaiah 41:10`.

@@ -125,7 +125,10 @@ the status line `lit <k>/<n> <status>` among them, but no id, frame or
    `id=light-status` reads `lit <k>/<n> reading`, `k` growing; the log
    holds one new `[voice] speak utterance=<u>` line.
 3. `light-probe-seek-back`: `sim journey light-seek` → `"ok":true`: the
-   probe at rest, `Listen`, `Back 3`, then `Forward 3`, each tap's
+   probe at rest (its open waits up to 30 s for `id=passage`, so the
+   reading `light` left under way ends first; a `Listen` tapped during it
+   lets the passage show again within the 2 s `light-seek-read` checks),
+   `Listen`, `Back 3`, then `Forward 3`, each tap's
    receipt taken as its step ends. `light-seek/light-seek-read`: the
    status's `lit` `k`, 6 or more (else the reading outran the drive: run
    the journey again). `light-seek/light-probe-seek-back`: `lit` is

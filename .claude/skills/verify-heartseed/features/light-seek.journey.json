@@ -6,8 +6,12 @@
       "name": "light-seek-probe",
       "action": "open",
       "link": "probe/light",
-      "timeout": 20,
-      "expect": [{ "shows": "label=Light probe" }, { "shows": "label=Listen" }],
+      "timeout": 30,
+      "expect": [
+        { "shows": "label=Light probe" },
+        { "shows": "label=Listen" },
+        { "shows": "id=passage" }
+      ],
       "receipt": "none"
     },
     {

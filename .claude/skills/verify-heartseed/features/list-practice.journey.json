@@ -6,7 +6,6 @@
       "name": "list-practice-home",
       "action": "open",
       "link": "/",
-      "relaunch": false,
       "expect": [{ "shows": "id=today-card" }],
       "receipt": "none"
     },
