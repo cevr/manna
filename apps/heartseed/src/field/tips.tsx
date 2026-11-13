@@ -10,11 +10,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { themed, useThemed } from '../look';
 
-/** Each tip's words, by its number in the order home shows them: the card, `Add a list`, a list's name. */
+/** Each tip's words, by its number in the order home shows them down the page: the card, a list's name, `Add a list` at the Lists section's foot. */
 export const TIPS = {
   1: 'Come back each day and tap Start. It brings what is ready.',
-  2: 'Add a psalm, a passage or a set of promises when you want more.',
-  3: 'A list is a set of verses. Tap its name to open it.',
+  2: 'A list is a set of verses. Tap its name to open it.',
+  3: 'Add a psalm, a passage or a set of promises when you want more.',
 } as const;
 
 /** Tip `n`, `id=tip-<n>`. */

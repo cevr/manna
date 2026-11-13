@@ -643,11 +643,13 @@ launch counts them.
   recall, then the reference), which starts it as a tap on its plant
   does; else no button. With no plan and no button the card
   is absent. In the scroll view: the heading `Your field`, the days sown
-  and the harvest, the label `Lists` with `Add a list` (testID
-  `add-list`, opening the Add a list sheet over home: Choosing a passage)
-  or the limit line, one furrow per row (`furrowsOf`; testID `row`), a
-  legend of the four stages (testID `legend`), hidden from the screen
-  reader, over the caption `Mark 4:28`, then two rows the width of the
+  and the harvest, the label `Lists`, one furrow per row (`furrowsOf`;
+  testID `row`), a legend of the four stages (testID `legend`), hidden
+  from the screen reader, over the caption `Mark 4:28`, then at the Lists
+  section's foot `Add a list` (testID `add-list`, opening the Add a list
+  sheet over home: Choosing a passage) or the limit line, in every state,
+  first run included (owner, q97: "At the very bottom of Lists, under the
+  stage line, just above Settings."), then two rows the width of the
   field (testID `end-row`): `Settings` (Settings, below) and `How
   Heartseed works`, which replays the welcome (Home, below: the tour). A
   furrow's head holds its icon (`furrow-icon`), its title as one button
@@ -857,11 +859,11 @@ list sheet over home, chooses any passage on the chooser, the root's
 third screen, in place like the field, and removes a list from its own
 page (Lists, below). The sheet's header and foot, the chooser's header
 and its footer are fixed outside the scroll views; `Add a list` lies in
-the field's scroll view, among the lists it changes.
+the field's scroll view, at the foot of the lists it changes.
 
 - **The field's lists**: under the heading's days sown and harvest, the
-  label `Lists`, then, with the passages read,
-  `Add a list` (testID `add-list`) while fewer than 3
+  label `Lists`, the rows and the legend, then, with the passages read,
+  just above `Settings`, `Add a list` (testID `add-list`) while fewer than 3
   passages and lists are held together, else the limit line "3 passages or
   lists, the most for now. Remove one to add another." (testID `limit`),
   which a stored list of 4 or more
@@ -1355,10 +1357,10 @@ opens on it:
   never stored, `off` at every launch). Planted's `Continue` shows home
   with three tips (`src/field/tips.tsx`): `tip-1` under the card,
   `Come back each day and tap Start. It brings what is ready.`; `tip-2`
-  under the `Lists` row while `Add a list` shows, `Add a psalm, a
-  passage or a set of promises when you want more.`; `tip-3` under the
-  first furrow's row, `A list is a set of verses. Tap its name to open
-  it.` Each is text in the page's flow, `onInk` on `ink` after a numbered
+  under the first furrow's row, `A list is a set of verses. Tap its name
+  to open it.`; `tip-3` under `Add a list` while it shows, `Add a psalm, a
+  passage or a set of promises when you want more.`, numbered as they
+  read down the page. Each is text in the page's flow, `onInk` on `ink` after a numbered
   badge hidden from the screen reader, and no control; `Got it`, the
   quiet pill fixed under the scroll view (home's only foot, there only
   with the tips), ends them. `How Heartseed works` and the Settings
@@ -2273,7 +2275,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     scroll view, drawings, reference, `Mark 4:28`, no verse words, AA) and
     `tour-edges.test.tsx` (through the root over the bar rig: a recital
     that starts listening during the replay forces Today and ends the
-    tour; with three lists held the tips hold no `tip-2`).
+    tour; with three lists held the tips hold no `tip-3`).
   - `test:growing`: `src/first/growing.test.tsx`, the growing seed
     mounted: `growthAt(at)` on a driven clock in both schemes, full corn
     still under Reduce Motion, the loop's first frame with motion on, the
@@ -2381,8 +2383,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     scroll view and none elsewhere, home's rule (`homeRuleFaults`: none of
     `id=counts`, `add-verses` or `add-row`, at most one `Add a list`, at most
     one of `Start`, `Practice anyway`, `Practice <reference>` and
-    `Learn <reference>`, outside the scroll view, and no number in a
-    plant), no text and no accessible name with a word range
+    `Learn <reference>`, outside the scroll view, no number in a
+    plant, and `Add a list` or the limit line under every row and the
+    legend and above the end rows), no text and no accessible name with a word range
     (`[<n>-<n>]`), and no `Minutes` group, `<n> min` or `Voice` on any
     screen, and home's and Today's nodes only under their headings; and
     while the host shows `Listening`, nothing that makes the plan in reach
@@ -2920,7 +2923,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     holds, unread gardens and items with no piece.
     `src/home/rule.test.ts`: home's rule (`homeRuleFaults`, the guard of
     `docs/lessons.md`'s `heartseed-home-one-start`) fed one offending frame
-    per clause, each fault named, a clean home and other screens none;
+    per clause, each fault named (`Add a list` or the limit line above a
+    row or the legend or under an end row among them), a clean home and
+    other screens none;
     and the root rule's word-range clause (the guard of `docs/lessons.md`'s
     `heartseed-verses-whole`): a frame with a word range in a text and in an
     accessible name, each fault named, on any screen and the pending frame
@@ -3015,7 +3020,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:home-screen`: `src/home/screen.test.tsx`, the field in home's
     layout through `src/test/bar-rig.tsx` (launched on home, every frame
     also held to `homeFaults`), in light and in dark, its expected values written out:
-    the fixed top and the scroll view and what each holds, the Today card
+    the fixed top and the scroll view and what each holds (down it the
+    rows, the legend, `Add a list` and the end rows), the Today card
     and the end rows at AA, the
     furrows' icons of the scheme, one tap on a plant opening Today on its
     verse (a seed in its second furrow, a verse not planted, another seed),

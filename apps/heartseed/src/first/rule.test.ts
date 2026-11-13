@@ -71,7 +71,7 @@ const plant = () => {
   return node;
 };
 
-/** Home: `Start` and `fixed` above a scroll view of `Add a list`, a plant, the end rows and `scrolled`; with `tips`, tip-1 under `Start`, tip-2 and tip-3 in the scroll view and `Got it` fixed below. */
+/** Home: `Start` and `fixed` above a scroll view of a plant, `Add a list`, the end rows and `scrolled`; with `tips`, tip-1 under `Start`, tip-2 under the plant, tip-3 under `Add a list` and `Got it` fixed below. */
 const home = ({
   tips = false,
   fixed = [] as readonly Element[],
@@ -89,10 +89,10 @@ const home = ({
     ...when(tips, () => [tagged('tip-1', '1 Come back each day.')]),
     ...fixed,
     scrollOf([
-      ...when(add, () => [addList]),
-      ...when(tips && add, () => [tagged('tip-2', '2 Add a psalm.')]),
       plant(),
-      ...when(tips, () => [tagged('tip-3', '3 A list is a set of verses.')]),
+      ...when(tips, () => [tagged('tip-2', '2 A list is a set of verses.')]),
+      ...when(add, () => [addList]),
+      ...when(tips && add, () => [tagged('tip-3', '3 Add a psalm.')]),
       button('Settings'),
       ...Array.from({ length: how }, () => button('How Heartseed works')),
       ...scrolled,
@@ -225,9 +225,9 @@ describe('the rule of the screens before the first verse and of home’s tips', 
         ['tip-3 outside the scroll view'],
       ],
       [
-        'tip-2 at the limit',
-        home({ add: false, scrolled: [tagged('tip-2')], foot: [button('Got it')] }),
-        ['tip-2 without Add a list'],
+        'tip-3 at the limit',
+        home({ add: false, scrolled: [tagged('tip-3')], foot: [button('Got it')] }),
+        ['tip-3 without Add a list'],
       ],
       [
         'a control in a tip',

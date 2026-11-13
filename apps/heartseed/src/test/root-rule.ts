@@ -234,7 +234,8 @@ const PRIMARY = /^(Start|Practice .+|Learn .+)$/u;
  * hslist L5 no control named `Remove` or starting `Remove ` (`<name> on
  * home`), exactly one `Open <title>` in each furrow's row (`<n> Open
  * <title> in its row`) and no other `Open …` (`<n> Open controls for <k>
- * rows`). Off home it
+ * rows`), and `Add a list` or the limit line at the Lists section's foot
+ * (`footFaults`). Off home it
  * holds nothing; `When I need…` on any screen and `Settings` outside the
  * scroll view are `rootFaults`'s own clauses.
  */
@@ -263,6 +264,30 @@ export const homeRuleFaults = (on: string, host: Element, controls: readonly Ele
   }
   const opens = controls.filter((node) => nameOf(node).startsWith('Open ')).length;
   if (opens !== rows.length) out.push(`${opens} Open controls for ${rows.length} rows`);
+  return [...out, ...footFaults(host)];
+};
+
+/** The Lists section's parts by test id, as the field draws them down the page. */
+const LISTS_PARTS = ['row', 'legend', 'add-list', 'limit', 'end-row'];
+
+/**
+ * hsaddlist's place of the Lists section's foot (owner, q97): `Add a list`
+ * or the limit line under every furrow's row and the legend and above the
+ * end rows (`<id> above a row`, `<id> above the legend`, `<id> under an end
+ * row`), in document order.
+ */
+const footFaults = (host: Element) => {
+  const order = [
+    ...host.querySelectorAll(LISTS_PARTS.map((id) => `[data-testid="${id}"]`).join(',')),
+  ].map((node) => node.getAttribute('data-testid') ?? '');
+  const out: string[] = [];
+  for (const [at, id] of order.entries()) {
+    if (id !== 'add-list' && id !== 'limit') continue;
+    const after = order.slice(at + 1);
+    if (after.includes('row')) out.push(`${id} above a row`);
+    if (after.includes('legend')) out.push(`${id} above the legend`);
+    if (order.slice(0, at).includes('end-row')) out.push(`${id} under an end row`);
+  }
   return out;
 };
 
@@ -362,8 +387,8 @@ const introOnFaults = (on: string, host: Element, controls: readonly Element[]) 
  * <ids>`); exactly one `Got it` while a tip shows and none otherwise (`<n>
  * Got it for <k> tips`), outside the scroll view (`Got it inside the
  * scroll view`); `tip-1` outside the scroll view and `tip-2` and `tip-3`
- * inside (`<id> …the scroll view`); `tip-2` only beside `id=add-list`
- * (`tip-2 without Add a list`); no tip is or holds a control (`a control in
+ * inside (`<id> …the scroll view`); `tip-3` only beside `id=add-list`
+ * (`tip-3 without Add a list`); no tip is or holds a control (`a control in
  * <id>`). Home holds exactly one `How Heartseed works`, inside the scroll
  * view (`<n> How Heartseed works on Your field`, `How Heartseed works
  * outside the scroll view`).
@@ -399,15 +424,15 @@ const tipFaults = (host: Element, tips: readonly Element[], gotIt: readonly Elem
   return out;
 };
 
-/** One tip: tip-1 outside the scroll view, the others inside, tip-2 beside `Add a list`, and no control. */
+/** One tip: tip-1 outside the scroll view, the others inside, tip-3 beside `Add a list`, and no control. */
 const oneTipFaults = (host: Element, node: Element) => {
   const out: string[] = [];
   const id = node.getAttribute('data-testid') ?? '';
   const inside = scrolled(node);
   if (id === 'tip-1' && inside) out.push('tip-1 inside the scroll view');
   if (id !== 'tip-1' && !inside) out.push(`${id} outside the scroll view`);
-  if (id === 'tip-2' && host.querySelector('[data-testid="add-list"]') === null)
-    out.push('tip-2 without Add a list');
+  if (id === 'tip-3' && host.querySelector('[data-testid="add-list"]') === null)
+    out.push('tip-3 without Add a list');
   if (node.matches(CONTROLS) || node.querySelector(CONTROLS) !== null)
     out.push(`a control in ${id}`);
   return out;

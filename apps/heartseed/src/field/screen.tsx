@@ -6,17 +6,19 @@
  * starts the day is the first and largest thing on the screen.
  *
  * In the scroll view: the heading `Your field` with the days sown and the
- * harvest; the label `Lists` with `Add a list` while fewer than 3 passages
- * and lists are held together, else the limit line; one furrow per row
- * (`./plot`), whose title (`Open <title>`) opens the list's own page,
- * where a held list is removed; the legend under Mark 4:28; then the rows
+ * harvest; the label `Lists`; one furrow per row (`./plot`), whose title
+ * (`Open <title>`) opens the list's own page, where a held list is
+ * removed; the legend under Mark 4:28; at the Lists section's foot `Add a
+ * list` while fewer than 3 passages and lists are held together, else the
+ * limit line, first run included (owner, q97: "At the very bottom of
+ * Lists, under the stage line, just above Settings."); then the rows
  * `Settings`, which opens the Settings sheet (`../settings/sheet`) over
  * home, and `How Heartseed works`, which replays the welcome.
  *
- * While the root's tour shows the tips (`./tips`): `tip-1` fixed under the
- * card, `tip-2` under `Lists` while `Add a list` shows, `tip-3` under the
- * first furrow's row, and the quiet `Got it` fixed under the scroll view;
- * home has no fixed foot otherwise.
+ * While the root's tour shows the tips (`./tips`), numbered as they read
+ * down the page: `tip-1` fixed under the card, `tip-2` under the first
+ * furrow's row, `tip-3` under `Add a list` while it shows, and the quiet
+ * `Got it` fixed under the scroll view; home has no fixed foot otherwise.
  *
  * A tap on a plant starts its verse at once, whatever its stage, and Today
  * shows it, with no card between (owner, 2026-11-12: "If you wanna go
@@ -44,8 +46,8 @@ import { TodayCardView, type StartKind } from './card';
 import { Control, Furrows, Icon, Legend } from './plot';
 import { Tip } from './tips';
 
-/** The label `Lists` and what it offers with the passages read: `Add a list`, else the limit line at 3 held. */
-function Lists({
+/** What the Lists section offers at its foot with the passages read: `Add a list`, else the limit line at 3 held. Home draws it only over read passages. */
+function AddList({
   passages,
   tips,
   onAdd,
@@ -59,7 +61,6 @@ function Lists({
   const full = passages._tag === 'Read' && heldCount(passages) >= MOST_PASSAGES;
   return (
     <View style={styles.lists}>
-      <Text style={styles.label}>Lists</Text>
       {offers && (
         <Control
           testID="add-list"
@@ -70,7 +71,7 @@ function Lists({
           onPress={onAdd}
         />
       )}
-      {offers && tips && <Tip n={2} />}
+      {offers && tips && <Tip n={3} />}
       {full && (
         <Text testID="limit" style={styles.limit}>
           {LIMIT_LINE}
@@ -179,14 +180,15 @@ export function FieldScreen({
             {harvestText(field.harvest)}
           </Text>
         </View>
-        <Lists passages={passages} tips={tips} onAdd={onAdd} />
+        <Text style={styles.label}>Lists</Text>
         <Furrows
           furrows={furrows}
           onPlant={onPlant}
           onOpen={onOpen}
-          underFirst={tips && <Tip n={3} />}
+          underFirst={tips && <Tip n={2} />}
         />
         <Legend />
+        {passages._tag === 'Read' && <AddList passages={passages} tips={tips} onAdd={onAdd} />}
         <View style={styles.ends}>
           <EndRow label="Settings" onPress={() => setSettings(true)} />
           <EndRow label="How Heartseed works" onPress={onHow} />

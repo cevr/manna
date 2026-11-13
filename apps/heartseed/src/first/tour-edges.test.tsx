@@ -9,8 +9,8 @@
  *   forces Today and ends the tour, so `Your field` after it shows home,
  *   not the welcome again (a recital started from beside the root, as no
  *   control of home starts one);
- * - with three lists held, the replay's tips show `tip-1` and `tip-3` and
- *   no `tip-2`, which sits only beside `Add a list`.
+ * - with three lists held, the replay's tips show `tip-1` and `tip-2` and
+ *   no `tip-3`, which sits only beside `Add a list`.
  */
 
 import { useAtomSet } from '@effect/atom-react';
@@ -80,7 +80,7 @@ describe('the tour’s edges through the root', () => {
     await rig.leave();
   });
 
-  it('shows no tip-2 at the limit of three lists held, tip-1 and tip-3 beside the limit line', async () => {
+  it('shows no tip-3 at the limit of three lists held, tip-1 and tip-2 beside the limit line', async () => {
     device.launch([...PLANTED, ...THREE]);
     const rig = await mountBar(0, false);
     expect(await rig.until(() => headingsOf(rig.host).includes('Your field'))).toBe(true);
@@ -94,7 +94,7 @@ describe('the tour’s edges through the root', () => {
       limit: rig.host.querySelector('[data-testid="limit"]') !== null,
       add: rig.host.querySelector('[data-testid="add-list"]') !== null,
       faults: rig.faults,
-    }).toEqual({ tips: ['tip-1', 'tip-3'], limit: true, add: false, faults: [] });
+    }).toEqual({ tips: ['tip-1', 'tip-2'], limit: true, add: false, faults: [] });
     await rig.leave();
   });
 });

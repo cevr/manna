@@ -5,7 +5,8 @@
  * the bar rig (`src/test/bar-rig.tsx`), which holds every frame to home's
  * rules (`homeFaults`) beside its own, over a reader who holds a passage.
  * Each case names its expected values written out: what the fixed top and
- * the scroll view each hold, the Today card with `Practice anyway` when
+ * the scroll view each hold (down it the rows, the legend, `Add a list` and
+ * the end rows: hsaddlist), the Today card with `Practice anyway` when
  * nothing is due; a tap on a plant opening Today on its verse at once (a
  * seed in its second furrow, a verse not planted, another seed), with no
  * plant left selected back on home; `Start` then leading to Today as the
@@ -50,7 +51,10 @@ const by = (host: Element, id: string) => [...host.querySelectorAll(`[data-testi
 const placed = (host: Element, id: string) =>
   by(host, id).map((node) => `${placeOf(node)}:${text(node)}`);
 
-/** The field as home lays it out: what the fixed top and the scroll view each hold. */
+/** The scroll view's parts whose order down the page the layout names: the rows, the legend, `Add a list`, the end rows. */
+const ORDER = ['row', 'legend', 'add-list', 'end-row'];
+
+/** The field as home lays it out: what the fixed top and the scroll view each hold, and the order of `ORDER`'s parts. */
 const layoutOf = (host: Element) => {
   const controls = [...host.querySelectorAll(CONTROLS)];
   const greeting = by(host, 'greeting')[0];
@@ -86,6 +90,9 @@ const layoutOf = (host: Element) => {
         .filter((node) => placeOf(node) === 'scroll')
         .map(nameOf)
         .slice(-2),
+      order: [...host.querySelectorAll(ORDER.map((id) => `[data-testid="${id}"]`).join(','))].map(
+        (node) => node.getAttribute('data-testid'),
+      ),
     },
   };
 };
@@ -144,6 +151,7 @@ for (const scheme of SCHEMES)
           legendPlace: 'scroll',
           caption: 'Mark 4:28',
           ends: ['Settings', 'How Heartseed works'],
+          order: ['row', 'row', 'legend', 'add-list', 'end-row', 'end-row'],
         },
       });
       expect(by(host, 'dot')).toEqual([]);

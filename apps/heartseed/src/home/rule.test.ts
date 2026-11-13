@@ -10,7 +10,9 @@
  * (`counts`, `add-verses`, `add-row`), two `Add a list`, two primary
  * actions of each pair the cards can show (`Start`, `Practice anyway`,
  * `Practice <reference>`, `Learn <reference>`), each primary action inside
- * the scroll view, `Settings` outside it, and a number under a plant. Off
+ * the scroll view, `Settings` outside it, a number under a plant, and
+ * `Add a list` or the limit line above a row or the legend or under an end
+ * row (hsaddlist: the Lists section's foot, just above `Settings`). Off
  * home the same nodes are no home fault.
  *
  * It catches a home whose one action is doubled or scrolled away, a gear or
@@ -62,6 +64,13 @@ const faultsOf = (screen: string, fixed: readonly Element[], scrolled: readonly 
   return faults;
 };
 
+/** A furrow's row, `id=row`, titled `A` with its one `Open A`. */
+const row = () => {
+  const node = tagged('row');
+  node.append(tagged('row-title', 'A'), element('button', 'Open A'));
+  return node;
+};
+
 const settings = () => element('button', 'Settings');
 const how = () => element('button', 'How Heartseed works');
 const start = () => element('button', 'Start');
@@ -107,13 +116,24 @@ describe("home's rule", () => {
         frame: faultsOf('Your field', [start()], [plant('10'), settings(), how()]),
         fault: 'a number in Made 1:1, seed',
       },
+      ...(['add-list', 'limit'] as const).flatMap((id) => [
+        { frame: home([], [tagged(id), row()]), fault: `${id} above a row` },
+        { frame: home([], [tagged(id), tagged('legend')]), fault: `${id} above the legend` },
+        { frame: home([], [tagged('end-row'), tagged(id)]), fault: `${id} under an end row` },
+      ]),
     ];
     expect(
       cells
         .filter(({ frame, fault }) => JSON.stringify(frame) !== JSON.stringify([fault]))
         .map(({ frame, fault }) => `${fault}: ${frame.join('; ')}`),
     ).toEqual([]);
-    expect(cells).toHaveLength(17);
+    expect(cells).toHaveLength(23);
+  });
+
+  it('holds no fault with Add a list or the limit line under the rows and the legend and above the end rows', () => {
+    const foot = (id: string) =>
+      home([], [row(), row(), tagged('legend'), tagged(id), tagged('end-row'), tagged('end-row')]);
+    expect({ add: foot('add-list'), limit: foot('limit') }).toEqual({ add: [], limit: [] });
   });
 
   it('names When I need… on Today, and holds home’s clauses on no other screen', () => {
