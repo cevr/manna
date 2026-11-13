@@ -22,7 +22,7 @@ import { screenOf } from './screen';
 const AT = Date.UTC(2026, 10, 5, 15);
 
 describe('Today’s Say it', () => {
-  it('reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade, a peek, Next, and Say it again at the seed’s due', async () => {
+  it('reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek on the recall pending, Next keeping it alone, and Say it again at the seed’s due', async () => {
     const n = WORDS.length;
     const today = await mount(
       scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
@@ -64,7 +64,8 @@ describe('Today’s Say it', () => {
     expect(today.all('[role="alert"]')).toHaveLength(0);
     expect(today.actions()).toEqual(['Next']);
     expect(today.ticks.n).toBe(n - 1);
-    expect(today.kept.map((recall) => [recall.grade, recall.missed, recall.peeked])).toEqual([
+    expect(today.kept).toEqual([]);
+    expect(today.pending().map((recall) => [recall.grade, recall.missed, recall.peeked])).toEqual([
       [2, 1, 0],
     ]);
     await today.click(today.radios()[2]);
@@ -82,11 +83,9 @@ describe('Today’s Say it', () => {
       `${n - 1} of ${n} words, 1 peeked`,
     );
     expect(today.checked()).toEqual(['false', 'false', 'true', 'false']);
-    expect(today.kept.map((recall) => [recall.grade, recall.peeked])).toEqual([
-      [2, 0],
-      [3, 0],
-      [3, 1],
-    ]);
+    expect(today.kept).toEqual([]);
+    expect(await today.until(() => today.pending()[0]?.peeked === 1)).toBe(true);
+    expect(today.pending().map((recall) => [recall.grade, recall.peeked])).toEqual([[3, 1]]);
     expect(today.reached.get('matched') ?? 0).toBeGreaterThanOrEqual(3 * (n - 1));
     expect(today.reached.get('miss') ?? 0).toBeGreaterThanOrEqual(2);
     expect(today.reached.get('peek') ?? 0).toBeGreaterThanOrEqual(1);
@@ -95,7 +94,8 @@ describe('Today’s Say it', () => {
     expect(today.ends).toEqual([
       { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
     ]);
-    expect([today.actions(), today.radios().length, today.kept.length]).toEqual([['Say it'], 0, 3]);
+    expect(today.kept.map((recall) => [recall.grade, recall.peeked])).toEqual([[3, 1]]);
+    expect([today.actions(), today.radios().length, today.pending()]).toEqual([['Say it'], 0, []]);
     expect(today.all('[data-testid^="word-"]')).toHaveLength(n);
     expect(today.unsaid.get('initials') ?? 0).toBeGreaterThanOrEqual(n);
     await today.click(today.button()[0]);
@@ -107,13 +107,9 @@ describe('Today’s Say it', () => {
       ['false', 'true', 'false', 'false'],
       2 * (n - 1),
     ]);
-    expect(today.kept.map((recall) => [recall.grade, recall.peeked])).toEqual([
-      [2, 0],
-      [3, 0],
-      [3, 1],
-      [2, 0],
-    ]);
-    expect(today.kept[3]?.startedAt).toBe(today.time.now ?? 0);
+    expect(today.kept.map((recall) => [recall.grade, recall.peeked])).toEqual([[3, 1]]);
+    expect(today.pending().map((recall) => [recall.grade, recall.peeked])).toEqual([[2, 0]]);
+    expect(today.pending()[0]?.startedAt).toBe(today.time.now ?? 0);
     await today.leave();
   });
 
@@ -203,6 +199,7 @@ describe('Today’s Say it', () => {
       startedAt: 0,
       choice: null,
       cue: 'none',
+      pending: null,
     };
     expect(screenOf(Option.some(finishing))).toMatchObject({
       button: 'Listening',
@@ -219,6 +216,7 @@ describe('Today’s Say it', () => {
       startedAt: 0,
       choice: null,
       cue: 'none',
+      pending: null,
     };
     expect(screenOf(Option.some(cancelled))).toMatchObject({
       button: 'Say it',

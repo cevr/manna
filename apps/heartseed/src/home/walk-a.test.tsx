@@ -9,8 +9,7 @@
  * one, `Start`, a plant's tap straight into Today on a plan item, on a
  * planted verse and on a verse not planted (learned whole), the Today
  * card's `Practice anyway` in the done state, a landed remove, returns to
- * the foreground on home and on Today over an open visit and a result
- * held, the morning's and the evening's greetings, Today's `Your field`,
+ * the foreground on home and on Today over an open visit, the morning's and the evening's greetings, Today's `Your field`,
  * and a relaunch that lands on home. Parts b to g walk other devices.
  */
 
@@ -39,7 +38,6 @@ const FLOORS = [
   'start:plan',
   'today:wake',
   'wake:over-visit',
-  'wake:over-held',
   'wake:today-over-visit',
 ];
 

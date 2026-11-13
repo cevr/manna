@@ -48,6 +48,71 @@ const markedLines = (text: string) =>
     .split('\n')
     .flatMap((line, i) => [i + 1].filter(() => line.includes('RED manna/seed-from-clock')));
 
+/** A seed read by name with a fallback: `make(read, source)` writes the expression. */
+interface Fallback {
+  readonly read: string;
+  readonly source: string;
+  readonly make: (read: string, source: string) => string;
+}
+
+/** The ways a test turns a variable's text into a number. */
+const WRAPPERS: ReadonlyArray<(x: string) => string> = [
+  (x) => x,
+  (x) => `Number(${x})`,
+  (x) => `parseInt(${x}, 10)`,
+  (x) => `Math.trunc(${x})`,
+];
+
+/** The ways a seed's variable is read. */
+const READS = ["process.env['X_SEED']", 'process.env.X_SEED', 'Bun.env.X_SEED'];
+
+/** The ways a fallback is chosen when the variable is unset, given a wrapper. */
+const CHOICES: ReadonlyArray<
+  (wrap: (x: string) => string) => (read: string, source: string) => string
+> = [
+  (wrap) => (read, source) => `${wrap(read)} ?? ${source}`,
+  (wrap) => (read, source) => wrap(`${read} ?? ${source}`),
+  (wrap) => (read, source) => `${wrap(read)} || ${source}`,
+  (wrap) => (read, source) => wrap(`${read} || ${source}`),
+  (wrap) => (read, source) => `${read} ? ${wrap(read)} : ${source}`,
+  (wrap) => (read, source) => `${read} === undefined ? ${source} : ${wrap(read)}`,
+];
+
+/** The clock and random sources a fallback may read. */
+const SOURCES = [
+  'Date.now()',
+  'Math.random()',
+  'performance.now()',
+  'crypto.randomUUID()',
+  'crypto.getRandomValues(bytes)',
+  'Clock.currentTimeMillis',
+  'Clock.currentTimeNanos',
+  'new Date()',
+];
+
+/** What may hold the whole choice: nothing, the seeded generator, or a rounding. */
+const HOLDERS: ReadonlyArray<(x: string) => string> = [
+  (x) => x,
+  (x) => `random(${x})`,
+  (x) => `Math.floor(${x})`,
+];
+
+/** Every fallback form: each wrapper, read, choice, source and holder together. */
+const fallbacks = (): ReadonlyArray<Fallback> =>
+  WRAPPERS.flatMap((wrap) =>
+    READS.flatMap((read) =>
+      CHOICES.flatMap((choice) =>
+        SOURCES.flatMap((source) =>
+          HOLDERS.map((hold) => ({
+            read,
+            source,
+            make: (r: string, s: string) => hold(choice(wrap)(r, s)),
+          })),
+        ),
+      ),
+    ),
+  );
+
 const fixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -60,19 +125,40 @@ describe('manna/seed-from-clock', () => {
     Effect.gen(function* () {
       const { file, text } = yield* fixture;
       const marked = markedLines(text);
-      expect(marked.length).toBe(7);
+      expect(marked.length).toBe(11);
       expect(reportedLines(file, text)).toEqual(marked);
     }),
   );
 
-  it.effect('reports a clock read standing in for a seed read by name, whatever holds it', () =>
-    Effect.sync(() => {
-      const text = [
-        "const at = Number(process.env['HSWAKE_WALK_SEED'] ?? Date.now());",
-        'const from = Bun.env.WALK_SEED || new Date().getTime();',
-      ].join('\n');
-      expect(reportedLines('walk.ts', text)).toEqual([1, 2]);
-    }),
+  it.effect(
+    'property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not',
+    () =>
+      Effect.sync(() => {
+        const all = fallbacks();
+        const lines = (source: (line: Fallback) => string, read: (line: Fallback) => string) =>
+          all.map((line) => `const at = ${line.make(read(line), source(line))};`).join('\n');
+        const everyLine = all.map((_, i) => i + 1);
+        const named = lines(
+          (line) => line.source,
+          (line) => line.read,
+        );
+        const reported = new Set(reportedLines('walk.ts', named));
+        const missed = everyLine.filter((n) => !reported.has(n));
+        expect({ cases: all.length, missed: missed.map((n) => named.split('\n')[n - 1]) }).toEqual({
+          cases: 1728,
+          missed: [],
+        });
+        const constant = lines(
+          () => '20261112',
+          (line) => line.read,
+        );
+        expect(reportedLines('walk.ts', constant)).toEqual([]);
+        const unnamed = lines(
+          (line) => line.source,
+          (line) => line.read.replaceAll('X_SEED', 'X_PORT'),
+        );
+        expect(reportedLines('walk.ts', unnamed)).toEqual([]);
+      }),
   );
 
   it.effect(

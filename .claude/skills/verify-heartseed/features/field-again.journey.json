@@ -27,7 +27,7 @@
       "name": "field-again-held",
       "action": "tap",
       "target": "label=Start",
-      "expect": [{ "shows": "id=session" }, { "shows": "label=Next" }],
+      "expect": [{ "shows": "id=session" }, { "shows": "label=Say it" }, { "hides": "label=Next" }],
       "receipt": "none"
     }
   ]

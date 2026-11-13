@@ -378,8 +378,8 @@ const sameRecall = (a: Recall, b: Recall) => RECALL_FIELDS.every((field) => a[fi
 /** The views a held subscriber of `changes` keeps: past it, its oldest view slides out, so it always reaches the latest. */
 const WINDOW = 16;
 
-/** The view with `recall` kept in its verse's plant, replacing the one of the same recital. */
-const withRecall = (view: ReadGarden, recall: Recall): ReadGarden => {
+/** The view with `recall` kept in its verse's plant, replacing the one of the same recital: also what Today draws while a recall waits for `Next`. */
+export const withRecall = (view: ReadGarden, recall: Recall): ReadGarden => {
   const plants = new Map(view.plants);
   const recalls = Option.match(Option.fromNullishOr(plants.get(recall.reference)), {
     onNone: (): Arr.NonEmptyReadonlyArray<Recall> => [recall],

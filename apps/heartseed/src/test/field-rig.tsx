@@ -556,7 +556,7 @@ export const mount = async (
       ?.getAttribute('aria-label') ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
-  /** Says the passage to a new summary: in a read launch its recall is kept and the action reads `Next`; an unread one runs no plan, so it reads `Say it` again. */
+  /** Says the passage to a new summary: in a read launch its recall waits for `Next`, which the action reads; an unread one runs no plan and keeps it at once, so it reads `Say it` again. */
   const say = async () => {
     const before = host.querySelector('[data-testid="summary"]');
     const then = read ? 'Next' : 'Say it';
@@ -609,14 +609,18 @@ export const mount = async (
    * writes the minutes it shows); every home frame on the way is held to
    * the field's rules, the sheet's frames to its own with its look checked,
    * and the trip ends on Today, which offers Say it on the passage with no
-   * result. Answers the writes it made.
+   * result. `Next` writes the recall it keeps; answers the writes the trip
+   * made after it.
    */
   const renew = async () => {
-    const sets = device.calls.set;
-    if (button('Next') !== undefined) {
+    const kept = button('Next') === undefined ? 0 : 1;
+    if (kept > 0) {
+      const at = device.calls.set;
       await tap('Next');
+      expect(await until(() => device.calls.set === at + 1)).toBe(true);
       await ended();
     }
+    const sets = device.calls.set;
     toDue(time, passageRecalls());
     taps.minutes += 1;
     const trip = await renewBySettings({ host, until });
@@ -667,8 +671,9 @@ export const mount = async (
   const begin = () => still('Start', 'Today');
   /**
    * Goes back to Today by `Start`, which home offers because Today showed an
-   * action (`Say it` or `Next`) when `Your field` left it; Today shows that
-   * action again. The device takes no write, remove or clear, and keeps its disk.
+   * action (`Say it` or `Next`) when `Your field` left it; Today shows `Say
+   * it`, since leaving let the recital's pending recall go and the verse is
+   * as it was. The device takes no write, remove or clear, and keeps its disk.
    */
   const back = async () => {
     expect({ left: left.action, begin: button('Start') !== undefined }).toEqual({
@@ -676,7 +681,7 @@ export const mount = async (
       begin: true,
     });
     await begin();
-    expect({ back: action() }).toEqual({ back: left.action });
+    expect(await until(() => action() === 'Say it')).toBe(true);
   };
   /** What the disk shows wrong against the launch's: a key removed, a key other than the passage's recalls (and the minutes, once a Minutes radio was tapped) changed or added, or a passage recall that is not one. */
   const diskFaults = () => {
@@ -728,6 +733,7 @@ export const mount = async (
     stage,
     readouts,
     captions,
+    ended,
     leave,
   };
 };

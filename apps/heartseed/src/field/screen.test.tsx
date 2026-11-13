@@ -4,9 +4,10 @@
  * The field from Today, through the screen rig (`src/test/field-rig.tsx`),
  * which holds every frame to the root's and the field's rules: a launch on
  * home, `Start` to Today, and the way to the field by `Your field` and back
- * by `Start` through recitals, Again and a relaunch, Today coming back as it was and
- * the device untouched across each open and each way back, and every text
- * at AA contrast in every field frame. It counts words without printing one.
+ * by `Start` through recitals, Again and a relaunch, the device untouched
+ * across each open and each way back, a recital left before `Next` recording
+ * nothing (the verse as it was in the field and on Today), and every text at
+ * AA contrast in every field frame. It counts words without printing one.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -17,7 +18,7 @@ import { mount, record, wantField } from '../test/field-rig';
 import { device } from '../test/one';
 
 describe('the field from Today', () => {
-  it('opens from Today and comes back as Today was, through recitals, Again and a relaunch: the passage not planted beside other verses, then a blade (said under its letters at the seed’s due), then a seed, the UTC days sown and the harvest as the disk holds them, writing nothing', async () => {
+  it('opens from Today and back, through recitals, Again and a relaunch: the passage not planted beside other verses, then a seed still after a recital at its due left before Next, then a seed again after one graded Again and kept by Next, the UTC days sown and the harvest as the disk holds them, writing nothing on the way', async () => {
     const late = Date.UTC(2026, 9, 1, 23, 59, 59, 999);
     device.launch([
       record(recallOf('Made 1:1', late, 3, 0)),
@@ -54,20 +55,21 @@ describe('the field from Today', () => {
       { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
     ]);
     await app.say();
-    const shown = app.summary();
-    const grown = await app.field();
-    expect(grown.rows[0]?.plants[0]?.label).toBe(`${passage.reference}, blade`);
-    expect(grown).toEqual(wantField());
+    expect(app.stage()).toBe('Stage: blade');
+    const left = await app.field();
+    expect(left.rows[0]?.plants[0]?.label).toBe(`${passage.reference}, seed`);
+    expect(left).toEqual(wantField());
     await app.back();
-    expect([app.stage(), app.summary()]).toEqual(['Stage: blade', shown]);
+    expect(app.stage()).toBe('Stage: seed');
 
+    await app.say();
+    expect(await app.until(() => app.stage() === 'Stage: blade')).toBe(true);
     await app.tap('Again');
     expect(await app.until(() => app.stage() === 'Stage: seed')).toBe(true);
+    await app.tap('Next');
+    expect(await app.until(() => app.frames.end > 0)).toBe(true);
     const again = await app.field();
-    expect([again.rows[0]?.plants[0]?.label, again.sown]).toEqual([
-      `${passage.reference}, seed`,
-      grown.sown,
-    ]);
+    expect(again.rows[0]?.plants[0]?.label).toBe(`${passage.reference}, seed`);
     expect(again).toEqual(wantField());
     expect([app.frames.listening > 0, app.frames.end > 0, app.faults]).toEqual([true, true, []]);
     expect(await app.leave()).toEqual([]);

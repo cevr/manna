@@ -7,9 +7,10 @@
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
  * one, `Start`, a plant's tap on a verse not planted (learned whole), a
- * minutes choice made in the Settings sheet, `Your field` with a result
- * held and then `Start`, a landed add over a result held, returns to the
- * foreground on home and on Today over a result held, the morning's and
+ * minutes choice made in the Settings sheet, `Your field` over a result
+ * before `Next`, which lets it go unwritten, and then `Start`, a landed
+ * add, returns to the foreground on home and on Today over a result held,
+ * the morning's and
  * evening's greetings, and a relaunch that lands on home.
  */
 
@@ -18,6 +19,7 @@ import { describe, expect, it } from 'bun:test';
 import { walkHome } from '../test/home-walk';
 
 const FLOORS = [
+  'field:let-go',
   'home:dot',
   'home:no-dot',
   'home:begin',
@@ -32,11 +34,8 @@ const FLOORS = [
   'home:wake',
   'today:wake',
   'wake:over-held',
-  'root:back-held',
-  'home:begin-held',
   'made:minutes',
   'home:add',
-  'add:over-held',
 ];
 
 describe('home A, walked (e)', () => {

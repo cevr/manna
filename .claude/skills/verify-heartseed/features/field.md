@@ -62,14 +62,20 @@ every launch opens on the pending frame, then the first minute or home
   heading, no button `Today` and no `Say it`.
 - `field-back`: Today's `Your field` shows the field, and `Start` (when
   the field offers it) shows Today as it was.
-- `field-grow` (live at the first wait, `run.md`'s `run-recite` and
-  `run-held-field`): a recital under letters that grows the passage to a
-  blade shows on the field as `Isaiah 41:10, blade`.
+- `field-grow` (live at the first wait, after `run.md`'s `run-recite`): a
+  recital under letters that Today draws at `Stage: blade`, left by
+  `Your field` before `Next`, shows on the field unchanged, as
+  `Isaiah 41:10, seed`, and `Start` brings back `Say it` at
+  `Stage: seed` with no `Next`: nothing was recorded. Red on base, which
+  showed `Isaiah 41:10, blade` and the held result. Only `Next` keeps the
+  recall; the field then shows the blade (`home.md`'s `home-end`).
 - `field-listening` (live at `run.md`'s `run-listening`): while Say it
   listens, Today offers no `Your field`.
-- `field-again` (tests only: `src/field/walk-again.test.tsx`, unless the
-  second wait, `run.md`'s `run-second`, runs): Again takes the passage back
-  to a seed and never removes a day sown.
+- `field-again` (tests only: `src/field/walk-again.test.tsx` and
+  `src/field/screen.test.tsx`, unless the second wait, `run.md`'s
+  `run-second`, runs): Again on a recital pending for `Next` takes Today's
+  stage back to a seed; left by `Your field`, the field shows the passage
+  as it was before that recital, and `Start` offers `Say it` again.
 - `field-relaunch`: a relaunch opens home, and its first frame claims no
   count (that frame: tests only, `src/home/root.test.tsx`); the field then
   shows as before.
@@ -116,17 +122,19 @@ line or a node below the fold is read there or in a raw snapshot
    3-4. `run-listening`'s raw snapshot → `Listening` present and no
    `Your field` (keep only booleans). After `run-recite`,
    `sim journey field-grow` → `"ok":true`. `field-grow/field-grow` →
-   `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 04:00 local
-   fell between the planting and this recital: compare `START` with the
-   time now, local), `0 verses at full corn`; its last step taps `Start`,
-   which brings back the held result with `Next` (`run.md` step 5).
+   `Isaiah 41:10, seed` (no `Isaiah 41:10, blade`), `1 day sown`,
+   `0 verses at full corn`; its last step taps `Start`
+   (`field-grow/field-grow-held`: `Say it`, `Stage: seed`, no `Next`).
+   `run.md` step 5 then needs the result again: run `run.md`'s
+   `sim journey run-recite` once more first.
 6. (`field-listening` is in step 5.)
 7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
    `Next`, `sim journey field-again` → `"ok":true`: `Again`, then
    `Your field`. `field-again/field-again` → a button whose label starts
-   `Isaiah 41:10, seed` (`, ready today` follows while its item is open),
-   the same days sown as step 5; its last step taps `Start` (the result
-   held, with `Next`). Otherwise the tests own it.
+   `Isaiah 41:10, blade` (the passage as `run-next` kept it; `, ready
+   today` follows while its item is open), the same days sown as step 5;
+   its last step taps `Start` (`Say it`, no `Next`). Otherwise the tests
+   own it.
 8. `field-relaunch`: `sim journey field-relaunch` → `"ok":true`.
    `field-relaunch/field-relaunch-launch`, the receipt taken once
    `Isaiah 41:10` shows, holds home already (`Your field` and the counts):

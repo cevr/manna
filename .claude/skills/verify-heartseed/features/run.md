@@ -7,8 +7,14 @@ the first verse not done of a visit (a verse started from home by
 `Practice anyway` or a tap on its plant,
 `home.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
 piece, first letters at a seed, nothing from a blade on), its stage line,
-and `Say it`. Once the recital's recall is kept, the result and the grades
-stay, and the button reads `Next`. `Next` moves on to the next item. After
+and `Say it`. Once the recital finishes with a recall, the result and the
+grades stay, and the button reads `Next`. That recall waits: Today draws
+the verse as if it were kept (its stage, its growth line, its counts), a
+grade or a peek changes it, and only `Next` keeps it in the garden and
+moves on to the next item. Leaving Today before `Next` (by `Your field`,
+the app going to the background, or the app closing) records nothing:
+the verse stays as it was, and coming back offers `Say it` on it again
+(`apps/heartseed/src/run/footer.test.tsx`). After
 the last item's `Next`, Today shows the end of the run: the heading
 `The field is tended`, the header's `Your field` the only button, and in
 the scroll view a sun, the line `Nothing grew this time.`,
@@ -22,8 +28,8 @@ button.
 
 The action button (`Say it`, `Listening`, `Next`) and the `Grade` group sit
 in a fixed footer under the scroll view, so a reader never scrolls to reach
-them. A recital that is not heard, or whose write is refused, leaves
-`Say it` on the same verse.
+them. A recital that is not heard, or whose write `Next` makes is
+refused, leaves `Say it` on the same verse.
 
 A plan is made when home or Today first shows in a launch, and again at
 each `Minutes` tap (in home's Settings sheet). Today is reached from home by the Today card's `Start` (shown exactly
@@ -68,9 +74,12 @@ of `first-planted`.
   checked, and a button `Next` where `Say it` was, with no `Say it`. In a
   raw snapshot, `Next` and the four grade radios lie wholly inside the
   window, with no scroll.
-- `run-held-field`: `Your field`, then `Start`: the same result and
-  `Next`.
-- `run-next`: `Next` gives the end (`home.md`'s `home-end`): the heading
+- `run-held-field`: `Your field` before `Next`, then `Start`: Today shows
+  `Isaiah 41:10` at `Stage: seed` with `Say it`, and no `Next` and no
+  grade: leaving let the recital go, and nothing was recorded. Red on
+  base, which kept the recital and showed the result and `Next`.
+- `run-next`: a second recital (`36 of 37 words`, `Stage: blade`, `Next`),
+  then `Next` gives the end (`home.md`'s `home-end`): the heading
   `The field is tended` and no heading `Today`, the text
   `1 grew a stage.`, an image labelled `Isaiah 41:10, blade`, a button
   `Your field`, and no `Nothing to tend now`, `Say it`, `Next`, `Grade`,
@@ -90,12 +99,11 @@ of `first-planted`.
   `Next`: `Nothing grew this time.` and no image.
 - `run-held-settings` (only when the drive started before 16:00 local,
   after `run-second`'s recital, in place of its `Next`): `Your field`
-  shows home with the heading `Your field` and `Start` (the verse just
-  said is still held), and no heading `Settings`. In the sheet `5 min`
-  alone is selected; a tap of `5 min`, then `Done`, gives home with no
-  heading `Settings`, the Today card's `All tended for today` and no
-  `Start`: a making with no recital under way drops the hold, and the
-  verse just kept is not due.
+  shows home with the heading `Your field` and `Start` (the recital let
+  go, the verse still due), and no heading `Settings`. In the sheet
+  `5 min` alone is selected; a tap of `5 min`, then `Done`, gives home
+  with no heading `Settings`, the Today card and `Start`: the verse left
+  before `Next` was not kept, so it is still due.
 
 ## How to get to it (user POV)
 
@@ -155,7 +163,9 @@ the wrong screen fails there.
 5. `run-held-field` and `run-next`: `sim journey run-next` → `"ok":true`.
    Its first steps are `sayit.md`'s grade and peek (`run-next/sayit-grade`,
    `run-next/sayit-peek`); then `Your field` and `Start`
-   (`run-next/run-held-field`: the same result and `Next`).
+   (`run-next/run-held-field`: `Stage: seed`, `Say it`, no `Next`); then
+   `Say it` again and the wait for its end (`run-next/run-next-recite`:
+   `Stage: blade`, `Next`).
 6. `run-next/run-next`: the row's nodes; no `Grade`, `Settings`, `Minutes`
    or `Voice`; record how the line holds the image's `role="img"`.
    When `grow.md` rides this drive, its `grow-restart` journey runs now,
@@ -172,8 +182,8 @@ the wrong screen fails there.
    `sim journey run-held` → `"ok":true`. `run-held/run-held-home`: the
    heading `Your field` and `Start`; record the Today card's lines.
    `run-held/run-held-sheet`: `5 min` alone `[checked]`.
-   `run-held/run-held-settings`: no heading `Settings`, the Today card's
-   `All tended for today`, no `Start`. In a drive of its own, `grow.md`'s
+   `run-held/run-held-settings`: no heading `Settings`, the Today card and
+   `Start`. In a drive of its own, `grow.md`'s
    `grow-again` takes this step's place.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
@@ -201,7 +211,10 @@ snapshots.
     (`apps/heartseed/src/chooser/reader-today.test.tsx`);
   - unheard and refused recitals;
   - the unread garden;
-  - Again on a kept recall;
+  - Again on a recall pending for `Next`;
+  - a leave before `Next` by `Your field`, a return or a relaunch, with
+    nothing recorded (`apps/heartseed/src/run/footer.test.tsx`, the run
+    and wake walks);
   - a second recital in one sitting (`apps/heartseed/src/sayit/today.test.tsx`).
 - A return to the foreground makes the plan again too, and drops a shown
   result: `wake.md` drives it (`wake-due`, `wake-result`). A relaunch

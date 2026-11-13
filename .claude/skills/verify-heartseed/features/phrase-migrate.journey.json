@@ -71,6 +71,17 @@
       "receipt": "snapshot"
     },
     {
+      "name": "whole-migrate-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [
+        {
+          "hides": "label=Good"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
       "name": "whole-migrate-back",
       "action": "tap",
       "target": "label=Your field",

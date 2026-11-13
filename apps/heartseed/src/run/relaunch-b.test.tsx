@@ -8,7 +8,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('hold', 29, 1, [
+walkCase('hold', 17, 1, [
   'field:none',
   'relaunch:held',
   'say:unheard',
