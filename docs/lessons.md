@@ -5750,3 +5750,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `handbook-limit` and `passage-limit` ended with a scroll down to the limit line at home's foot, so `handbook-remove` and `passage-keep`, whose `open` keeps the running app's offset, did not find the furrows they wait for.
 - **Cause:** Moving `Add a list` to the field's foot added scrolls down to it, and nothing held a journey to scroll home back up before it ends; the rules looked at each journey alone, never at the state it hands on.
 - **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `each rule names its mutant of the first journey`; code: `apps/heartseed/scripts/journeys.test.ts` `every shipped journey holds R1-R4 and is run by its feature file, whose cites name its steps`
+
+### seed-from-clock-flagged-reads-beside-a-seed
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "the rule reports a clock read that no seed takes, whenever a seed's name sits beside it."
+- **Source:** hymnapp/seedfix/round-2-findings.md M1; hymnapp/seedfix/round-2-findings.md M2
+- **Wrong:** With a constant seed, `seed > 0 && performance.now() < 5_000`, `console.log(seed, Date.now())`, a `?:` on `seed > 0` with a timing branch and a property body that times itself were each reported as a seed from the clock; and a mutant that stopped reading a member's object left every test green while the rule missed `Number(process.env['X_SEED']?.trim()) || Date.now()`.
+- **Cause:** The rule took a read as a seed's when any enclosing node named a seed (a call's argument, a `&&`, any `?:`), not when the read's value made the seed's; and the property generated only bare variable reads, narrower than the forms the rule claims.
+- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random read beside a constant seed whose value it does not make is never reported: a timing, a log, a check, a label`; code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
