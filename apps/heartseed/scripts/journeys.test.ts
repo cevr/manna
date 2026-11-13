@@ -33,6 +33,7 @@ import {
   shippedJourneys,
   sourcesOfApp,
   startFaults,
+  footFaults,
   undrawn,
   wordHolesOf,
 } from './journey-rules.ts';
@@ -353,6 +354,7 @@ describe('verify-heartseed journeys', () => {
             ...firstRunFaults(journey),
             ...hiddenFaults(journey, hidden),
             ...startFaults(journey),
+            ...footFaults(journey),
           ]),
         ).toEqual([]);
         expect(undrawn(journeys, sources)).toEqual([]);
@@ -711,6 +713,27 @@ describe('verify-heartseed journeys', () => {
       expect(startFaults(headless)).toEqual([
         'first/first-start is no open that shows where the journey starts',
       ]);
+      const scrolling = (name: string, target: string, direction: string): Raw => ({
+        name,
+        action: 'scroll',
+        target,
+        direction,
+        receipt: 'none',
+      });
+      const footed = yield* mutant((all) => [
+        ...all,
+        scrolling('first-foot', 'id=add-list', 'down'),
+        { name: 'first-sheet', action: 'tap', target: 'id=add-list', receipt: 'none' },
+      ]);
+      expect(footFaults(footed)).toEqual(['first/first-foot leaves home at its foot']);
+      const limited = yield* mutant((all) => [...all, scrolling('first-line', 'id=limit', 'down')]);
+      expect(footFaults(limited)).toEqual(['first/first-line leaves home at its foot']);
+      const topped = yield* mutant((all) => [
+        ...all,
+        scrolling('first-foot', 'id=add-list', 'down'),
+        scrolling('first-top', 'label=Your field', 'up'),
+      ]);
+      expect(footFaults(topped)).toEqual([]);
       const last = steps.length - 1;
       const renamed = yield* mutant(adding(last, { shows: 'id=today-kard' }));
       expect(undrawn([renamed], sources)).toEqual(['first/first-home id=today-kard']);

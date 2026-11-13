@@ -13,7 +13,9 @@
  * - R5 `proseDrives` and `LEGACY`: the driving commands a markdown text
  *   holds, and the files still allowed to hold them;
  * - R6 `ownerFaults` and `citeFaults`: each journey is run by its feature
- *   file, and each cite of a step names one that ships.
+ *   file, and each cite of a step names one that ships;
+ * - R7 `footFaults`: a journey that scrolls home to its foot scrolls it back
+ *   up before it ends.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -202,6 +204,22 @@ export const startFaults = (journey: Journey): ReadonlyArray<string> => {
   if (first === undefined) return [`${journey.feature} has no step`];
   if (first.action === 'open' && first.expect.some((expect) => 'shows' in expect)) return [];
   return [`${journey.feature}/${first.name} is no open that shows where the journey starts`];
+};
+
+/** The targets at home's foot, under its lists: `Add a list` and the limit line. */
+const FOOT = new Set(['id=add-list', 'id=limit']);
+
+/**
+ * R7. A journey whose last scroll goes to home's foot (`id=add-list` or
+ * `id=limit`): it leaves home scrolled down, and the next journey in its
+ * feature file's order, whose `open` keeps the running app's offset, starts
+ * past the furrows it waits for. Such a journey ends with a scroll up to
+ * `label=Your field`.
+ */
+export const footFaults = (journey: Journey): ReadonlyArray<string> => {
+  const last = journey.steps.findLast((step) => step.action === 'scroll');
+  if (last === undefined || last.action !== 'scroll' || !FOOT.has(last.target)) return [];
+  return [`${journey.feature}/${last.name} leaves home at its foot`];
 };
 
 /**

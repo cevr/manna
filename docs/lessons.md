@@ -5730,3 +5730,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The hymnal's rows and search properties, the browser list test and test:budget's generated cases took their seed from the clock or `Math.random()` when no variable named one, so a cached green said nothing about the seed that ran.
 - **Cause:** A seed from the clock was meant to explore a new sample each run, but turbo caches a test task on its inputs and its env, never on the clock, and no check refused such a seed.
 - **Guard:** lint:manna/seed-from-clock, proof `packages/scripts/lint/fixtures/seed-from-clock.ts` `RED manna/seed-from-clock`; code: `packages/scripts/lint/seed-from-clock.test.ts` `reports each seed its fixture marks RED, and nothing else`
+
+### heartseed-journey-leaves-home-scrolled
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "the new `*-line` steps leave home at its foot, and the next journey in the written order starts there"
+- **Source:** hymnapp/hsaddlist/round-1-findings.md B2
+- **Wrong:** `handbook-limit` and `passage-limit` ended with a scroll down to the limit line at home's foot, so `handbook-remove` and `passage-keep`, whose `open` keeps the running app's offset, did not find the furrows they wait for.
+- **Cause:** Moving `Add a list` to the field's foot added scrolls down to it, and nothing held a journey to scroll home back up before it ends; the rules looked at each journey alone, never at the state it hands on.
+- **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `each rule names its mutant of the first journey`; code: `apps/heartseed/scripts/journeys.test.ts` `every shipped journey holds R1-R4 and is run by its feature file, whose cites name its steps`
