@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'effect-bun-test';
-import { Config, Effect, Option } from 'effect';
+import { Config, Effect, Match, Option } from 'effect';
 import { gapsOf, splitReported } from './gaps.ts';
-import { isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
+import { aliasesFor, isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
 import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
+
+/** A tsconfig as `aliasesFor` reads it. */
+type Tsconfig = Parameters<typeof aliasesFor>[0] extends ReadonlyMap<string, infer T> ? T : never;
 
 /** A call of `Config.<key>` with the variable `name` at its name's place, other arguments plain values. */
 const configCall = (key: string, at: number, name: string) =>
@@ -154,55 +157,110 @@ describe('env-pass', () => {
     }),
   );
 
-  it.effect("resolves a relative import and a workspace package's export to the repo's file", () =>
-    Effect.sync(() => {
-      const resolve = resolverOf(
-        new Set([
-          'packages/a/src/x.test.ts',
+  it.effect(
+    "resolves an import as bun does: relative, the nearest tsconfig's paths, a workspace package's export",
+    () =>
+      Effect.sync(() => {
+        const resolve = resolverOf({
+          files: new Set([
+            'packages/a/src/x.test.ts',
+            'packages/a/src/rig.ts',
+            'packages/a/src/view.tsx',
+            'packages/a/src/lib/index.ts',
+            'packages/a/src/data.json',
+            'packages/core/src/search/index.ts',
+            'packages/core/src/search/embedder-bun.ts',
+            'packages/core/src/part/one.ts',
+            'packages/b/src/x.ts',
+            'apps/h/src/reader/seek.test.tsx',
+            'apps/h/src/test/seek-page.ts',
+          ]),
+          packages: [
+            {
+              name: '@manna/core',
+              dir: 'packages/core',
+              exports: {
+                './search': './src/search/index.ts',
+                './search/bun': './src/search/embedder-bun.ts',
+                './part/*': './src/part/*.ts',
+              },
+            },
+            { name: '@manna/b', dir: 'packages/b', exports: {} },
+          ],
+          aliasesFor: aliasesFor(
+            new Map<string, Tsconfig>([
+              [
+                'tsconfig.json',
+                { compilerOptions: { paths: { '@manna/core/*': ['./packages/core/src/*'] } } },
+              ],
+              ['packages/a/tsconfig.json', { extends: '../../tsconfig.json' }],
+              [
+                'apps/h/tsconfig.json',
+                {
+                  extends: '../../tsconfig.json',
+                  compilerOptions: { paths: { '~/*': ['./src/*'] } },
+                },
+              ],
+            ]),
+          ),
+          installed: (_from, name) => name === 'effect',
+          builtins: new Set(['fs']),
+        });
+        const from = 'packages/a/src/x.test.ts';
+        const named = (at: string, specifier: string) =>
+          Match.value(resolve(at, specifier)).pipe(
+            Match.tag('Module', ({ file }) => file),
+            Match.orElse(({ _tag }) => _tag),
+          );
+        expect(
+          [
+            './rig.js',
+            './rig',
+            './view.js',
+            './lib',
+            './data.json',
+            '@manna/core/search',
+            '@manna/core/search/bun',
+            '@manna/core/part/one',
+            '@manna/b/src/x',
+            'effect',
+            'effect/Schema',
+            'fs',
+            'node:fs',
+            'bun:test',
+            './missing',
+            '../../../../out',
+            '@manna/core/nothing',
+            'not-installed',
+            '~/test/seek-page',
+          ].map((specifier) => named(from, specifier)),
+        ).toEqual([
           'packages/a/src/rig.ts',
+          'packages/a/src/rig.ts',
+          'packages/a/src/view.tsx',
           'packages/a/src/lib/index.ts',
+          'Other',
           'packages/core/src/search/index.ts',
+          'packages/core/src/search/embedder-bun.ts',
           'packages/core/src/part/one.ts',
           'packages/b/src/x.ts',
-        ]),
-        [
-          {
-            name: '@manna/core',
-            dir: 'packages/core',
-            exports: {
-              './search': './src/search/index.ts',
-              './part/*': './src/part/*.ts',
-            },
-          },
-          { name: '@manna/b', dir: 'packages/b', exports: {} },
-        ],
-      );
-      const from = 'packages/a/src/x.test.ts';
-      expect(
-        [
-          './rig.js',
-          './rig',
-          './lib',
-          '@manna/core/search',
-          '@manna/core/part/one',
-          '@manna/b/src/x',
-        ]
-          .map((specifier) => resolve(from, specifier))
-          .map(Option.getOrElse(() => 'none')),
-      ).toEqual([
-        'packages/a/src/rig.ts',
-        'packages/a/src/rig.ts',
-        'packages/a/src/lib/index.ts',
-        'packages/core/src/search/index.ts',
-        'packages/core/src/part/one.ts',
-        'packages/b/src/x.ts',
-      ]);
-      expect(
-        ['effect', 'node:fs', './missing', '../../../../out'].map((specifier) =>
-          Option.isNone(resolve(from, specifier)),
-        ),
-      ).toEqual([true, true, true, true]);
-    }),
+          'Other',
+          'Other',
+          'Other',
+          'Other',
+          'Other',
+          'Unresolved',
+          'Unresolved',
+          'Unresolved',
+          'Unresolved',
+          'Unresolved',
+        ]);
+        expect(
+          ['~/test/seek-page', '~/test/missing'].map((specifier) =>
+            named('apps/h/src/reader/seek.test.tsx', specifier),
+          ),
+        ).toEqual(['apps/h/src/test/seek-page.ts', 'Unresolved']);
+      }),
   );
 
   it.effect(

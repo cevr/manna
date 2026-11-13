@@ -38,9 +38,10 @@ const normal = (path: string): Option.Option<string> => {
 
 /** The first file of `files` a path names: itself, with an extension or an index, or a `.js` written for its `.ts`. */
 const fileAt = (files: ReadonlySet<string>, path: string): Option.Option<string> => {
-  const written = path.replace(/\.js$/, '.ts').replace(/\.jsx$/, '.tsx');
+  const stem = path.replace(/\.[cm]?jsx?$/, '');
+  const written = ['.ts', '.tsx', '.mts'].filter(() => stem !== path).map((ext) => `${stem}${ext}`);
   return Option.fromUndefinedOr(
-    [...SUFFIXES.map((suffix) => `${path}${suffix}`), written].find(
+    [...SUFFIXES.map((suffix) => `${path}${suffix}`), ...written].find(
       (candidate) => MODULE.test(candidate) && files.has(candidate),
     ),
   );
@@ -61,38 +62,178 @@ const exported = (exports: Readonly<Record<string, string>>, subpath: string) =>
   );
 
 /**
- * The repo's file an import names from `from` (a path from the root): a
- * relative one by its path, a workspace package's (`@manna/core/search`)
- * by its `exports`, or by its folder when it has none. None for a package
- * of `node_modules`, a builtin, or a file that is not a module bun runs.
+ * A tsconfig's `paths`, as bun reads them for the modules under it: each
+ * pattern (`~/*`) with its targets, and the folder from the root the
+ * targets lie in (its `baseUrl`, else the folder of the tsconfig that sets
+ * the `paths`).
+ */
+interface Aliases {
+  readonly base: string;
+  readonly paths: Readonly<Record<string, ReadonlyArray<string>>>;
+}
+
+/** What the resolver reads of a `tsconfig.json`: what it extends, and its `baseUrl` and `paths`. */
+interface TsconfigPaths {
+  readonly extends?: string;
+  readonly compilerOptions?: {
+    readonly baseUrl?: string;
+    readonly paths?: Readonly<Record<string, ReadonlyArray<string>>>;
+  };
+}
+
+/** The folder of a path from the root (`''` for a file at the root). */
+const folderOf = (file: string) => file.split('/').slice(0, -1).join('/');
+
+/**
+ * The `paths` bun resolves a module's imports by: those of the
+ * `tsconfig.json` nearest it (`tsconfigs`, by their paths from the root),
+ * or of the one it extends, transitively, when it sets none; a `paths`
+ * replaces the one it extends, as TypeScript reads it. None when no
+ * tsconfig above the module sets any.
+ */
+export const aliasesFor =
+  (tsconfigs: ReadonlyMap<string, TsconfigPaths>) =>
+  (from: string): Option.Option<Aliases> => {
+    const of = (file: string, seen: ReadonlySet<string>): Option.Option<Aliases> =>
+      Option.flatMap(
+        Option.filter(Option.fromUndefinedOr(tsconfigs.get(file)), () => !seen.has(file)),
+        (config) => {
+          const dir = folderOf(file);
+          const set = Option.flatMap(Option.fromUndefinedOr(config.compilerOptions), (options) =>
+            Option.flatMap(Option.fromUndefinedOr(options.paths), (paths) =>
+              Option.map(normal(`${dir}/${options.baseUrl ?? '.'}`), (base) => ({ base, paths })),
+            ),
+          );
+          return Option.orElse(set, () =>
+            Option.flatMap(
+              Option.flatMap(Option.fromUndefinedOr(config.extends), (parent) =>
+                normal(`${dir}/${parent}`),
+              ),
+              (parent) => of(parent, new Set([...seen, file])),
+            ),
+          );
+        },
+      );
+    const parts = folderOf(from)
+      .split('/')
+      .filter((part) => part !== '');
+    for (let depth = parts.length; depth >= 0; depth--) {
+      const file = [...parts.slice(0, depth), 'tsconfig.json'].join('/');
+      if (tsconfigs.has(file)) return of(file, new Set());
+    }
+    return Option.none();
+  };
+
+/** What an import names: a module of the repo, something else that is there (a builtin, an installed package, a data file), or nothing. */
+type Resolved =
+  | { readonly _tag: 'Module'; readonly file: string }
+  | { readonly _tag: 'Other' }
+  | { readonly _tag: 'Unresolved' };
+
+const OTHER: Resolved = { _tag: 'Other' };
+const UNRESOLVED: Resolved = { _tag: 'Unresolved' };
+
+/** What the resolver knows of the repo. */
+interface Repo {
+  /** Every file of the repo, from the root. */
+  readonly files: ReadonlySet<string>;
+  readonly packages: ReadonlyArray<Package>;
+  /** The `paths` of the tsconfig nearest a module, which bun resolves its imports by. */
+  readonly aliasesFor: (from: string) => Option.Option<Aliases>;
+  /** Whether a package of that name is installed where a module there finds it (a `node_modules` above it). */
+  readonly installed: (from: string, name: string) => boolean;
+  /** The runtime's own modules (`fs`, `path`), beside the `node:` and `bun:` ones. */
+  readonly builtins: ReadonlySet<string>;
+}
+
+/** What a path from the root names: a module (by bun's suffixes), another file of the repo, or nothing. */
+const atPath = (files: ReadonlySet<string>, path: string): Resolved =>
+  Option.match(fileAt(files, path), {
+    onSome: (file): Resolved => ({ _tag: 'Module', file }),
+    onNone: () => [OTHER].find(() => files.has(path)) ?? UNRESOLVED,
+  });
+
+/** What the first of `paths` that names something names, from `base`; nothing when none does. */
+const firstAt = (files: ReadonlySet<string>, base: string, paths: ReadonlyArray<string>) =>
+  paths
+    .map((target) =>
+      Option.match(normal(`${base}/${target}`), {
+        onNone: () => UNRESOLVED,
+        onSome: (path) => atPath(files, path),
+      }),
+    )
+    .find((resolved) => resolved._tag !== 'Unresolved') ?? UNRESOLVED;
+
+/** The targets a `paths` alias gives a specifier, `*` filled in; none when no pattern matches. */
+const aliased = (aliases: Aliases, specifier: string): Option.Option<ReadonlyArray<string>> =>
+  Option.firstSomeOf(
+    Object.entries(aliases.paths).map(([pattern, targets]) => {
+      const [head = '', tail, ...more] = pattern.split('*');
+      if (!Predicate.isString(tail)) return Option.liftPredicate(targets, () => specifier === head);
+      if (more.length > 0 || !specifier.startsWith(head) || !specifier.endsWith(tail))
+        return Option.none();
+      const star = specifier.slice(head.length, specifier.length - tail.length);
+      return Option.some(targets.map((target) => target.replaceAll('*', star)));
+    }),
+  );
+
+/** A bare specifier's package name: `@scope/name` or `name`. */
+const packageName = (specifier: string) =>
+  specifier
+    .split('/')
+    .slice(0, 1 + Number(specifier.startsWith('@')))
+    .join('/');
+
+/**
+ * What an import names from `from` (a path from the root), resolved as bun
+ * resolves it: a builtin (`node:`, `bun:`, `bun`, the runtime's own); a
+ * relative path; a `paths` alias of the tsconfig nearest `from`; a
+ * workspace package (`@manna/core/search`) by its `exports`, or its folder
+ * when it has none; an installed package. A specifier that none of these
+ * names is `Unresolved`, which the check fails on: an import it cannot
+ * follow is a module whose reads it cannot see.
  */
 export const resolverOf =
-  (files: ReadonlySet<string>, packages: ReadonlyArray<Package>) =>
-  (from: string, specifier: string): Option.Option<string> => {
-    if (specifier.startsWith('./') || specifier.startsWith('../'))
-      return Option.flatMap(
-        normal(`${from.split('/').slice(0, -1).join('/')}/${specifier}`),
-        (path) => fileAt(files, path),
-      );
-    return Option.flatMap(
-      Option.fromUndefinedOr(
-        packages.find(({ name }) => specifier === name || specifier.startsWith(`${name}/`)),
-      ),
-      ({ name, dir, exports }) => {
-        const subpath = `.${specifier.slice(name.length)}`;
-        const path = Option.match(
-          Option.liftPredicate(exports, (e) => Object.keys(e).length > 0),
-          {
-            onNone: () => Option.some(subpath),
-            onSome: (given) => exported(given, subpath),
-          },
-        );
-        return Option.flatMap(
-          Option.flatMap(path, (at) => normal(`${dir}/${at}`)),
-          (at) => fileAt(files, at),
-        );
-      },
+  (repo: Repo) =>
+  (from: string, written: string): Resolved => {
+    const specifier = written.split('?')[0] ?? '';
+    const folder = from.split('/').slice(0, -1).join('/');
+    if (
+      /^(?:node|bun):/.test(specifier) ||
+      specifier === 'bun' ||
+      repo.builtins.has(specifier) ||
+      /^[a-z][a-z0-9+.-]*:/.test(specifier) ||
+      specifier.startsWith('/')
+    )
+      return OTHER;
+    if (specifier.startsWith('./') || specifier.startsWith('../') || specifier === '.')
+      return Option.match(normal(`${folder}/${specifier}`), {
+        onNone: () => UNRESOLVED,
+        onSome: (path) => atPath(repo.files, path),
+      });
+    const alias = Option.flatMap(repo.aliasesFor(from), (aliases) =>
+      Option.map(aliased(aliases, specifier), (targets) => ({ base: aliases.base, targets })),
     );
+    const viaAlias = Option.match(alias, {
+      onNone: () => UNRESOLVED,
+      onSome: ({ base, targets }) => firstAt(repo.files, base, targets),
+    });
+    if (viaAlias._tag !== 'Unresolved') return viaAlias;
+    const workspace = repo.packages.find(
+      ({ name }) => specifier === name || specifier.startsWith(`${name}/`),
+    );
+    return Option.match(Option.fromUndefinedOr(workspace), {
+      onSome: (workspace) => {
+        const subpath = `.${specifier.slice(workspace.name.length)}`;
+        if (Object.keys(workspace.exports).length === 0)
+          return firstAt(repo.files, workspace.dir, [subpath]);
+        return Option.match(exported(workspace.exports, subpath), {
+          onNone: () => UNRESOLVED,
+          onSome: (target) => firstAt(repo.files, workspace.dir, [target]),
+        });
+      },
+      onNone: () => [OTHER].find(() => repo.installed(from, packageName(specifier))) ?? UNRESOLVED,
+    });
   };
 
 /** A module of the graph: the variables it reads, and the repo's modules it imports. */
@@ -148,6 +289,23 @@ export const productOf = (
   return product;
 };
 
+/** The modules of the repo `start` loads when it runs: itself, then what it imports, transitively, nearest first. */
+export const loadedBy = (start: string, graph: ReadonlyMap<string, Module>) => {
+  const seen = new Set([start]);
+  const queue = [start];
+  for (let at = 0; at < queue.length; at++) {
+    const file = queue[at] ?? '';
+    Option.map(Option.fromUndefinedOr(graph.get(file)), ({ deps }) => {
+      for (const dep of deps)
+        if (!seen.has(dep)) {
+          seen.add(dep);
+          queue.push(dep);
+        }
+    });
+  }
+  return queue;
+};
+
 /**
  * Each variable `start` reads when it runs, by itself or through any module
  * of the repo it imports, transitively, with the first module found to read
@@ -160,18 +318,12 @@ export const readsThrough = (
   product: ReadonlySet<string>,
 ): ReadonlyMap<string, string> => {
   const found = new Map<string, string>();
-  const seen = new Set([start]);
-  const queue = [start];
-  for (let at = 0; at < queue.length; at++) {
-    const file = queue[at] ?? '';
-    Option.map(Option.fromUndefinedOr(graph.get(file)), ({ reads, deps }) => {
-      if (!product.has(file)) for (const name of reads) if (!found.has(name)) found.set(name, file);
-      for (const dep of deps)
-        if (!seen.has(dep)) {
-          seen.add(dep);
-          queue.push(dep);
-        }
-    });
-  }
+  for (const file of loadedBy(start, graph))
+    if (!product.has(file))
+      for (const name of Option.match(Option.fromUndefinedOr(graph.get(file)), {
+        onNone: () => [],
+        onSome: ({ reads }) => reads,
+      }))
+        if (!found.has(name)) found.set(name, file);
   return found;
 };

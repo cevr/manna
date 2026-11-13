@@ -22,6 +22,9 @@
 #    for the reason the ledger is: the tests and the `turbo.json`s lie in
 #    every workspace. Turbo hands a task no other variable, so one left out
 #    reads as unset under turbo and the test falls back to its default.
+#    Imports resolve as bun resolves them (relative, the nearest tsconfig's
+#    `paths`, a workspace package's `exports`); one a test loads that names
+#    nothing fails the leg, since the check cannot see what it reads.
 #
 # The typecheck and the format run in pre-commit (`lefthook.yml`), on what a
 # commit touches. Builds, browser checks, the slow tests, the full lint and

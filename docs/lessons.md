@@ -1331,6 +1331,16 @@ The form of an entry, each field on its own line:
 - **Cause:** Turbo's strict mode hands a task only the variables its `turbo.json`s name, and each guard was written for one package and one list of readers. The repo's check (`packages/scripts/src/env-pass.ts`) now reads every test file of every workspace, every `Config` constructor the installed effect exports and `process.env`, `Bun.env` and `import.meta.env`, against the tasks that run each file.
 - **Guard:** code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads every constructor the installed effect/Config exports that takes a name`; code: `packages/scripts/src/env-pass/env-pass.test.ts` `reads Config.Int and Config.Port, which the old reader missed`; code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint, the lessons ledger and the env pass-through in the background beside the unit tests, under no lock`
 
+### test-imports-resolve-as-bun-does
+
+- **Date:** 2026-11-12
+- **Kind:** review
+- **Said:** "imports through a tsconfig path alias such as the hymnal's `~/test/seek-page` are never followed; a read of an unpassed name added there stays green."
+- **Source:** hymnapp/envpass/round-2-findings.md M1
+- **Wrong:** The env pass-through check followed relative and workspace-package imports only, and dropped any import it could not resolve without a word, so a helper reached through `~/…` read what it liked unseen.
+- **Cause:** The check resolved imports by its own short rule rather than bun's, and took "names nothing" as "not ours". It now resolves through the nearest tsconfig's `paths` (and what it extends) before the workspace packages, and fails on any import a test loads that names neither a repo file, a builtin nor an installed package.
+- **Guard:** code: `packages/scripts/src/env-pass/env-pass.test.ts` `resolves an import as bun does: relative, the nearest tsconfig's paths, a workspace package's export`
+
 ### test-variables-read-through-rigs
 
 - **Date:** 2026-11-12

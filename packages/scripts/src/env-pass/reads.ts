@@ -134,6 +134,34 @@ export const envReads = (file: string, text: string): ReadonlyArray<string> => {
 const IMPORT =
   /\b(?:import|export)\s+(?!type\b)(?:[\w*{}\s,$]+?\s+from\s+)?['"]([^'"\n]+)['"]|\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g;
 
+/**
+ * The specifiers a module imports as its parser reads it: each value
+ * import, re-export and `import()` of a literal, none written in a string
+ * or a comment. The check asks it only of a module whose scan (`importsOf`)
+ * found a specifier that names nothing, to tell an import from a string.
+ */
+export const parsedImports = (file: string, text: string): ReadonlySet<string> => {
+  const found = new Set<string>();
+  const parsed = parseSync(file, text);
+  new Visitor({
+    ImportDeclaration: (node) => {
+      if (node.importKind !== 'type') found.add(node.source.value);
+    },
+    ExportNamedDeclaration: (node) => {
+      Option.map(Option.fromNullOr(node.source), (source) => {
+        if (node.exportKind !== 'type') found.add(source.value);
+      });
+    },
+    ExportAllDeclaration: (node) => {
+      if (node.exportKind !== 'type') found.add(node.source.value);
+    },
+    ImportExpression: (node) => {
+      Option.map(keyOf(node.source, true), (specifier) => found.add(specifier));
+    },
+  }).visit(parsed.program);
+  return found;
+};
+
 /** The specifiers a module imports (`IMPORT`), each once, in order. */
 export const importsOf = (text: string): ReadonlyArray<string> => [
   ...new Set(

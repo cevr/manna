@@ -3,19 +3,22 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
+import { builtinModules } from 'node:module';
 import { Clock, Console, Effect, FileSystem, Option, Path, Schema, Stdio } from 'effect';
 
 import { type Gap, type Reported, gapsOf, splitReported } from './env-pass/gaps.ts';
 import {
   type Module,
   type Package,
+  aliasesFor,
   isModule,
+  loadedBy,
   isTestSupport,
   productOf,
   readsThrough,
   resolverOf,
 } from './env-pass/graph.ts';
-import { envReads, importsOf } from './env-pass/reads.ts';
+import { envReads, importsOf, parsedImports } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
 import { reachesIn, repoTests } from './test-budget/reach.ts';
 import { gateFiles } from './guard/files.ts';
@@ -45,6 +48,33 @@ const Manifest = Schema.fromJsonString(
     exports: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   }),
 );
+
+/** What this reads of a `tsconfig.json`: what bun resolves a module's `paths` aliases by. */
+const Tsconfig = Schema.Struct({
+  extends: Schema.optionalKey(Schema.String),
+  compilerOptions: Schema.optionalKey(
+    Schema.Struct({
+      baseUrl: Schema.optionalKey(Schema.String),
+      paths: Schema.optionalKey(Schema.Record(Schema.String, Schema.Array(Schema.String))),
+    }),
+  ),
+});
+
+/** The packages installed in a `node_modules` folder, `@scope/name` included; none when there is no such folder. */
+const installedIn = (folder: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const names = yield* Effect.orElseSucceed(fs.readDirectory(folder), () => []);
+    const scoped = yield* Effect.forEach(
+      names.filter((name) => name.startsWith('@')),
+      (scope) =>
+        Effect.map(
+          Effect.orElseSucceed(fs.readDirectory(`${folder}/${scope}`), () => []),
+          (inside) => inside.map((name) => `${scope}/${name}`),
+        ),
+    );
+    return new Set([...names, ...scoped.flat()]);
+  });
 
 /**
  * The gaps in the films' workspaces, each a task and a variable: the films
@@ -136,7 +166,37 @@ Effect.gen(function* () {
     ),
   );
   const files = yield* gateFiles(root);
-  const resolve = resolverOf(new Set(files), packages.flat());
+  const tsconfigs = new Map(
+    yield* Effect.forEach(
+      files.filter((file) => file.split('/').at(-1) === 'tsconfig.json'),
+      (file) =>
+        Effect.map(
+          Effect.flatMap(fs.readFileString(path.join(root, file)), (text) =>
+            Schema.decodeUnknownEffect(Tsconfig)(JSONC.parse(text)),
+          ),
+          (config) => [file, config] as const,
+        ),
+    ),
+  );
+  const modulesIn = new Map(
+    yield* Effect.forEach(['', ...dirs], (dir) =>
+      Effect.map(
+        installedIn(path.join(root, dir, 'node_modules')),
+        (names) => [dir, names] as const,
+      ),
+    ),
+  );
+  const resolve = resolverOf({
+    files: new Set(files),
+    packages: packages.flat(),
+    aliasesFor: aliasesFor(tsconfigs),
+    installed: (from, name) =>
+      [...modulesIn].some(
+        ([dir, names]) => (dir === '' || from.startsWith(`${dir}/`)) && names.has(name),
+      ),
+    builtins: new Set(builtinModules),
+  });
+  const scanned: Array<readonly [string, string]> = [];
   const texts = new Map(repo.tests.map(({ file, text }) => [file, text]));
   const graph = new Map(
     yield* Effect.forEach(
@@ -152,9 +212,12 @@ Effect.gen(function* () {
             {
               reads: envReads(file, text),
               entry: /\bimport\.meta\.main\b/.test(text),
-              deps: importsOf(text).flatMap((specifier) =>
-                Option.toArray(resolve(file, specifier)),
-              ),
+              deps: importsOf(text).flatMap((specifier) => {
+                const resolved = resolve(file, specifier);
+                if (resolved._tag === 'Module') return [resolved.file];
+                if (resolved._tag === 'Unresolved') scanned.push([file, specifier]);
+                return [];
+              }),
             },
           ],
         ),
@@ -220,11 +283,30 @@ Effect.gen(function* () {
       Console.log(`env-pass stale: REPORTED names ${dir}#${task} ${name}, which is no gap now`),
     { discard: true },
   );
+  const testSide = new Set(
+    repo.tests.flatMap(({ file }) => loadedBy(file, graph)).filter((file) => !product.has(file)),
+  );
+  const unresolved = (yield* Effect.forEach(
+    [...new Set(scanned.map(([file]) => file))].filter((file) => testSide.has(file)),
+    (file) =>
+      Effect.map(
+        Effect.map(fs.readFileString(path.join(root, file)), (text) => parsedImports(file, text)),
+        (real) => scanned.filter(([at, specifier]) => at === file && real.has(specifier)),
+      ),
+  )).flat();
+  yield* Effect.forEach(
+    unresolved,
+    ([file, specifier]) =>
+      Console.log(
+        `env-pass unresolved: ${file} imports '${specifier}', which names no module of the repo (relative, a tsconfig \`paths\` alias, a workspace package) and no builtin or installed package, so the check cannot see what it reads`,
+      ),
+    { discard: true },
+  );
   const ended = yield* Clock.currentTimeMillis;
   yield* Console.log(
-    `env-pass: ${reached.length} test file(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${ended - started} ms`,
+    `env-pass: ${reached.length} test file(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${unresolved.length} unresolved, ${ended - started} ms`,
   );
   yield* Effect.sync(() => {
-    process.exitCode = Math.min(open.length + stale.length, 1);
+    process.exitCode = Math.min(open.length + stale.length + unresolved.length, 1);
   });
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer), BunRuntime.runMain);
