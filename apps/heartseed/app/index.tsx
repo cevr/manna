@@ -50,6 +50,7 @@ import {
   type ReadGarden,
   type Stage,
 } from '../src/garden';
+import { MoveBack } from '../src/garden/back';
 import { furrowsOf, readyOf } from '../src/home';
 import { tendedOf } from '../src/home/grown';
 import { PlantImage } from '../src/home/plant';
@@ -369,7 +370,9 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * Today: its header (the heading and the way back to home, wrapping under
  * the heading when the text is large), fixed above a scroll view of the session's counts
  * line, the verse the run shows, its stage and the alert, and a footer
- * fixed under the scroll view: the result's grades, Listen on the plan's
+ * fixed under the scroll view: `Move back a stage` (`MoveBack`) on a planted
+ * verse of the visit, a tap's, at rest (no recital under way, held or done),
+ * the result's grades, Listen on the plan's
  * new piece while the voice is on and reads nothing, and the action button.
  * Its first show with the garden read makes the launch's plan, unless home
  * made it first; a later show finds it made. The run shows one item at a time:
@@ -490,6 +493,28 @@ function Today({ onField }: { readonly onField: () => void }) {
         onNone: () => false,
         onSome: (each) => (
           <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+            {Option.match(
+              Option.filter(
+                Option.flatMap(garden, (read) => plantIn(read, each.piece.reference)),
+                () =>
+                  !screen.listening &&
+                  !each.recital &&
+                  !each.done &&
+                  Option.exists(session, (view) =>
+                    view.visit.some((verse) => verse.piece.reference === each.piece.reference),
+                  ),
+              ),
+              {
+                onNone: () => false,
+                onSome: (plant) => (
+                  <MoveBack
+                    key={each.piece.reference}
+                    reference={each.piece.reference}
+                    stage={stageOf(plant)}
+                  />
+                ),
+              },
+            )}
             {Option.match(
               Option.filter(screen.result, () => recital),
               {

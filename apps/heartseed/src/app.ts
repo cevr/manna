@@ -42,7 +42,7 @@ import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
 import { type Foreground, Returns, wakeLayer } from './foreground';
 import { foregroundSource } from './foreground/source';
-import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
+import { Backs, cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
 import { greetingAt } from './home';
 import type { Cue } from './matcher';
@@ -296,6 +296,12 @@ export const plantPassage = runtime.fn((range: Range) => addPassage(range), { co
 export const uprootPassage = runtime.fn((range: Range) => removePassage(range), {
   concurrent: true,
 });
+
+/** The ask's `Move back` on Today: the verse of `reference` moves back a stage (`Backs.back`), answered `Moved` or `Failed`. Its control lets one run at a time, so each answer is its own tap's. */
+export const moveBack = runtime.fn(
+  (reference: string) => Effect.flatMap(Backs, (backs) => backs.back(reference)),
+  { concurrent: true },
+);
 
 /** A tap on Today's Next: the held item is let go. */
 export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {

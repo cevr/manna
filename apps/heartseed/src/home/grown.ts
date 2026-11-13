@@ -7,7 +7,7 @@
 
 import { Array as Arr, Option } from 'effect';
 
-import { plantOf, STAGES, stageOf, type Plant, type ReadGarden, type Stage } from '../garden';
+import { plantBefore, STAGES, stageOf, type Plant, type ReadGarden, type Stage } from '../garden';
 import { verseOf } from '../home';
 import { isDone, type Item, type Plan } from '../session';
 import type { SessionView } from '../session/service';
@@ -22,12 +22,8 @@ export interface Grown {
 const rankOf = (stage: Option.Option<Stage>) =>
   Option.match(stage, { onNone: () => -1, onSome: (some) => STAGES.indexOf(some) });
 
-/** The stage over the first `count` recalls of `plant`, none for none. */
-const stageOver = (plant: Plant, count: number) => {
-  const first = plant.recalls.slice(0, count);
-  if (!Arr.isReadonlyArrayNonEmpty(first)) return Option.none<Stage>();
-  return Option.some(stageOf(plantOf(first)));
-};
+/** The stage over the first `count` recalls of `plant` and its steps back before the next, none for none. */
+const stageOver = (plant: Plant, count: number) => Option.map(plantBefore(plant, count), stageOf);
 
 /** Whether `item`'s plant ranks higher over all its recalls than over the recalls it held when the plan was made. */
 const grew = (garden: ReadGarden, item: Item) =>

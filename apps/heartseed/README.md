@@ -423,6 +423,24 @@ failed, Today claims nothing: no stage, no plant, no growth, so a planted
 verse never reads as not planted. A growth plays one soft sound, which
 Silent mode mutes. Nothing leaves the device.
 
+**Move back a stage** (`src/garden/back.tsx`, `Backs` in
+`src/garden.ts`), for a verse the reader is no longer sure of: on Today
+opened on a verse by a tap (its row on a list's page, its plant on home,
+`Practice this list`), at rest (no recital under way, held or done), a
+verse past a seed shows `Move back a stage` in the footer, outside the
+scroll view; a seed shows none, as no stage lies below it, and the plan's
+own items (Today by `Start`) show none. Its tap asks in place, `Move
+<reference> back to <stage>? It comes due again soon.`, with `Move back`
+and `Keep`. `Move back` keeps one record, `heartseed/back/<reference>/<at>`
+(`{ reference, at }`), that folds in among the verse's recalls at its
+instant: full corn to an ear, an ear to a blade, a blade to a seed, and
+its card takes an Again there, so it comes due within minutes (in a later
+plan: the plan made at launch is not remade) and is said under its new
+stage's cue. The stage line, the line `Moved back to <stage>.`, home's
+plant and the list's row show the new stage; a write that fails leaves
+`<reference> was not moved back. Try again.` and the stage as it was.
+A later recital grows it again from there, with the chime.
+
 The still drawing (`PlantImage`, `src/home/plant.tsx`) uses the bundled
 `ICON_IMAGES` of the effective scheme now: seed, blade, ear and corn for
 full corn. Today uses 28 × 28 pt; the first minute's Planted alone uses
@@ -2215,6 +2233,18 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     blade and ear assets when read from disk, no forbidden image in any
     forbidden frame, nonzero forbidden frames and over ten observed looks;
     `test:today` observes all four stage assets.
+  - `test:back`: `src/garden/back.test.ts`, Move back a stage as a rule
+    (generated histories with steps back among the recalls, against the
+    rule written plainly over ts-fsrs: stage, card, cue and growth) and
+    over the real store on the device (full corn to a seed one step at a
+    time, each one record, due within ten minutes, read back at a
+    relaunch; a seed, a verse not planted, a failed write and an unread
+    garden answer `Failed` and write nothing).
+  - `test:back-today`: `src/garden/back-today.test.tsx`, Move back a stage
+    through the root rig: a tapped ear's control outside the scroll view,
+    the ask and `Keep`, `Move back` to a blade on Today and home, a
+    relaunch to a seed with no control, a refused write's alert, and none
+    on the plan's own item.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
