@@ -34,7 +34,7 @@
     "test:today-reads": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/today-reads.test.tsx",
     "test:today-reads-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/today-reads-b.test.tsx",
     "test:back": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/back.test.ts",
-    "test:back-today": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/back-today.test.tsx",
+    "test:back-today": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/back-today.test.tsx ./src/garden/back-asks.test.tsx",
     "test:first": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/flow.test.ts ./src/first/screen.test.tsx ./src/first/screen-b.test.tsx",
     "test:root": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/root.test.tsx ./src/first/root-b.test.tsx",
     "test:intro": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/tour.test.ts ./src/first/growth.property.test.ts ./src/first/rule.test.ts ./src/first/intro.test.tsx ./src/first/tour-edges.test.tsx",

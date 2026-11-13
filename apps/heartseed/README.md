@@ -2250,15 +2250,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     stands at, a failed write and an unread garden answer `Failed` and
     write nothing; one ask answered twice moves the verse once and gives
     one answer, a first save refused included).
-  - `test:back-today`: `src/garden/back-today.test.tsx`, Move back a stage
-    through the root rig: a tapped ear's control outside the scroll view,
-    the ask and `Keep`, `Move back` to a blade on Today and home, a
-    relaunch to a seed with no control, a refused write's alert, none on
-    the plan's own item, two taps of `Move back` in one turn moving it
-    once with no alert, and a generated run of asks (`Move back` once or
-    twice, then `Keep`, or `Keep`; first saves kept, refused or slow),
-    each moving the verse at most one stage, its line or alert and the
-    stage line matching the disk.
+  - `test:back-today`: `src/garden/back-today.test.tsx` and
+    `src/garden/back-asks.test.tsx` (their shared helpers in
+    `src/test/back-rig.ts`), Move back a stage through the root rig: a
+    tapped ear's control outside the scroll view, the ask and `Keep`,
+    `Move back` to a blade on Today and home, a relaunch to a seed with no
+    control, a refused write's alert, none on the plan's own item, two taps
+    of `Move back` in one turn moving it once with no alert, and a
+    generated run of asks (`Move back` once or twice, then `Keep`, or
+    `Keep`; first saves kept, refused or slow), each moving the verse at
+    most one stage, its line or alert and the stage line matching the
+    disk.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
