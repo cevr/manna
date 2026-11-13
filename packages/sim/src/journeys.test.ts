@@ -14,9 +14,8 @@ import * as TestClock from 'effect/testing/TestClock';
 import type { App } from './app.ts';
 import { runSim } from './command.ts';
 import { Drive, type DriveMembers, type Outcome, type Place } from './drive.ts';
-import { BadJourney, TargetMissing } from './errors.ts';
+import { TargetMissing } from './errors.ts';
 import { probeApp } from './fixtures/probe.ts';
-import { readJourneyLists } from './journeys.ts';
 
 interface Call {
   readonly op: string;
@@ -92,14 +91,24 @@ const decodeLine = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown
  * Run `sim <args>` over the stand-in with the fixture folder as the
  * features, the test clock moved on a minute at a time until it ends.
  */
-const runOver = (args: ReadonlyArray<string>, missing: ReadonlyArray<string>, config = stored) =>
+const runOver = (
+  args: ReadonlyArray<string>,
+  missing: ReadonlyArray<string>,
+  config = stored,
+  written: Option.Option<string> = Option.none(),
+) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const root = yield* fs.makeTempDirectoryScoped();
     const out = path.join(root, 'out');
     yield* fs.makeDirectory(out);
-    const features = yield* path.fromFileUrl(new URL('./fixtures/journeys', import.meta.url));
+    let features = yield* path.fromFileUrl(new URL('./fixtures/journeys', import.meta.url));
+    if (Option.isSome(written)) {
+      features = path.join(root, 'features');
+      yield* fs.makeDirectory(features);
+      yield* fs.writeFileString(path.join(features, 'probe.md'), written.value);
+    }
     const app = path.join(root, 'app');
     const place: Place = {
       app,
@@ -145,39 +154,7 @@ const runOver = (args: ReadonlyArray<string>, missing: ReadonlyArray<string>, co
 const ops = (calls: ReadonlyArray<Call>) => calls.map((call) => call.op);
 
 describe('sim journeys', () => {
-  it.effect('reads the lists of a feature file in their written order, and nothing else', () =>
-    Effect.gen(function* () {
-      const text = [
-        'Prose that names `sim journey zeta` is no list.',
-        '**Journeys in order:** from a fresh install: `alpha`, `beta`, then `gamma`.',
-        '- **Journeys in order:** from a relaunch, the store set to `chords=false`, `home.tab="Sections"`: `gamma`, `1 min`, `alpha`.',
-      ].join('\n');
-      const runs = yield* readJourneyLists('probe.md', text);
-      expect(runs).toEqual([
-        {
-          line: 2,
-          start: 'fresh install',
-          store: [],
-          items: ['alpha', 'beta', 'gamma'].map((feature) => ({ kind: 'journey', feature })),
-        },
-        {
-          line: 3,
-          start: 'relaunch',
-          store: [
-            ['chords', 'false'],
-            ['home.tab', '"Sections"'],
-          ],
-          items: [
-            { kind: 'journey', feature: 'gamma' },
-            { kind: 'wait', minutes: 1 },
-            { kind: 'journey', feature: 'alpha' },
-          ],
-        },
-      ]);
-    }),
-  );
-
-  it.effect('refuses a list it cannot read, naming its line', () =>
+  it.scoped('refuses a list it cannot read, naming its line, before any step', () =>
     Effect.gen(function* () {
       for (const [line, issue] of [
         ['**Journeys in order:** `alpha`', "no ':'"],
@@ -188,11 +165,23 @@ describe('sim journeys', () => {
         ['**Journeys in order:** from a relaunch, the store set to `chords`: `alpha`', 'key=value'],
         ['Only prose.', 'no **Journeys in order:** line'],
       ] as const) {
-        const refused = yield* Effect.flip(readJourneyLists('probe.md', `# Probe\n${line}`));
-        expect(refused).toBeInstanceOf(BadJourney);
-        expect(refused.issue).toContain(issue);
+        const run = yield* runOver(
+          ['journeys', 'probe.md'],
+          [],
+          stored,
+          Option.some(`# Probe\n${line}\n`),
+        );
+        expect(Exit.isFailure(run.exit)).toBe(true);
+        expect(run.calls).toEqual([]);
+        expect(run.lines).toMatchObject([
+          {
+            ok: false,
+            command: 'journeys',
+            error: { _tag: 'BadJourney', issue: expect.stringContaining(issue) },
+          },
+        ]);
       }
-    }),
+    }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.scoped(

@@ -135,7 +135,7 @@ const readLine = (text: string, line: number): Result.Result<Run, string> => {
 };
 
 /** Every journey list of a feature file's text, in written order; a file with none, or a bad one, is refused. */
-export const readJourneyLists = (file: string, text: string) =>
+const readJourneyLists = (file: string, text: string) =>
   Effect.gen(function* () {
     const runs: Array<Run> = [];
     for (const [index, line] of text.split('\n').entries()) {

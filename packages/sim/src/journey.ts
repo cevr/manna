@@ -382,7 +382,7 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
   });
 
 /** How a journey ended: the steps that ran, and the one that failed with its error. */
-export interface Played {
+interface Played {
   readonly ran: number;
   readonly failed: Option.Option<{ readonly step: Step; readonly error: SimError }>;
 }
