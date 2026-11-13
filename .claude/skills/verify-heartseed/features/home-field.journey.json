@@ -95,6 +95,13 @@
       "receipt": "snapshot"
     },
     {
+      "name": "home-learn-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "hides": "label=Good" }],
+      "receipt": "none"
+    },
+    {
       "name": "home-learn-back",
       "action": "tap",
       "target": "label=Your field",

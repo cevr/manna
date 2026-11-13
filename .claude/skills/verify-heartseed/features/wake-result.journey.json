@@ -9,9 +9,11 @@
       "relaunch": false,
       "expect": [
         { "shows": "id=session" },
-        { "shows": "label=Nothing to tend now" },
+        { "shows": "label=Isaiah 41:10" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Stage: seed" },
         { "hides": "label=Next" },
-        { "hides": "label=Say it" }
+        { "hides": "label=Nothing to tend now" }
       ],
       "receipt": "snapshot"
     }

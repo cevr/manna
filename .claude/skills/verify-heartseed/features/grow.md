@@ -8,8 +8,10 @@ passage's stage under its words, read from the garden
 the app's store on the device (`apps/heartseed/src/store.ts`: One's
 key-value store, a SQLite file on the phone), so a restart shows the same
 stage. When a recital grows the verse, Today says `Grew to a blade.`,
-`Grew to an ear.` or `Grew to full corn.`, and the growth sound plays once:
-a system sound, which the ring/silent switch mutes. On the simulator the
+`Grew to an ear.` or `Grew to full corn.` at once, drawing the recall that
+waits for `Next` (`run.md`), and the growth sound plays once, at the
+`Next` that keeps it (never when Today is left before `Next`): a system
+sound, which the ring/silent switch mutes. On the simulator the
 sound's module plays nothing and logs
 `[growth] play sound=grow skipped=simulator`.
 
@@ -44,20 +46,22 @@ unit tests own it (`src/garden/today.test.tsx`). Today runs the plan
 passage's due: every row below starts from `run.md`'s `run-due`, at
 `Stage: seed`.
 
-- `grow-blade` (live at `run-recite`): a second recital, under letters:
-  `Stage: blade`, `Grew to a blade.`, exactly one `[growth] play` line,
-  ending `skipped=simulator`.
+- `grow-blade` (live at `run-recite`, then `run-next`): a second recital,
+  under letters: `Stage: blade`, `Grew to a blade.`, and no
+  `[growth] play` line before `Next`; after `run-next`'s `Next`, exactly
+  one, ending `skipped=simulator`.
 - `grow-peek` (live at `run-recite`, a peek on the mark before `Next`):
-  `Stage: blade`, `Grew to a blade.`, still one `[growth] play` line.
-- `grow-restart`: the app restarted while `Next` is pending: no other stage
-  than the store's (`blade`) in the launch frame, no `Grew to` line, then
-  home's done state, or the passage at `Stage: blade` with `Say it` when the
-  new plan holds it.
+  `Stage: blade`, `Grew to a blade.`, no play line before `Next`.
+- `grow-restart`: the app restarted after `run-next`'s `Next`: no other
+  stage than the store's (`blade`) in the launch frame, no `Grew to` line,
+  then home's done state, or the passage at `Stage: blade` with `Say it`
+  when the new plan holds it. A restart before `Next` loses the recital
+  (`run.md`).
 - `grow-again`: a third recital (live at `run-second`, the second wait,
   only when the drive started before 16:00 local; else tests only:
-  `src/garden/today.test.tsx`): `Stage: ear`, `Grew to an ear.`, two
-  `[growth] play` lines; then `Again`: `Stage: seed`, no `Grew to` line,
-  still two.
+  `src/garden/today.test.tsx`): `Stage: ear`, `Grew to an ear.`, still one
+  `[growth] play` line (the blade's) before `Next`; then `Again`:
+  `Stage: seed`, no `Grew to` line, still one.
 
 ## How to get to it (user POV)
 
@@ -83,14 +87,16 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 3. (now `first-planted`: `grow-seed`)
 4. `grow-blade`: `run.md` step 4 (`run-recite`) → `Stage: blade`,
    and in the raw snapshot `id=growth`'s `Grew to a blade.` (a receipt
-   leaves that node out). Then the log (below) holds exactly one
-   `[growth] play` line, and it ends `skipped=simulator`.
+   leaves that node out). Then the log (below) holds no `[growth] play`
+   line: the sound waits for `Next`.
 5. `grow-peek`: `run.md` step 5's `run-next/sayit-peek` is this row's
    tap → `Next` in the receipt. The peeked word widens its line, which
    pushes the stage lines below the fold, and a receipt holds visible
    nodes only: `Stage: blade` is read in `run-next/sayit-grade`, the step
    before, and `Grew to a blade.` after a peek is unproven live (the
-   tests own it). The log still holds one play line.
+   tests own it). After the whole `run-next` journey (its second recital
+   and `Next`), the log holds exactly one play line, ending
+   `skipped=simulator`.
 6. `grow-restart`, after `run.md` step 6, before the verse is due again:
    `sim journey grow-restart` → `"ok":true`: a relaunch whose pending frame
    shows the reference, then home in the done state (no `Start`).
@@ -101,10 +107,10 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
    journey fails at `grow-restart`, and that fails this row.
 7. `grow-again`, in a drive of its own (in place of `run.md` step 8):
    `run.md` step 7 (`run-second`) → `Stage: ear`, and `id=growth`'s `Grew to an ear.` in
-   its raw snapshot; two
-   play lines. Then, before its `Next`, `sim journey grow-again` →
-   `"ok":true`: `Again`. `grow-again/grow-again`: `Stage: seed`, `Next`;
-   then a raw snapshot: no `id=growth`; still two play lines.
+   its raw snapshot; one play line (the blade's, from `run-next`). Then,
+   before its `Next`, `sim journey grow-again` → `"ok":true`: `Again`.
+   `grow-again/grow-again`: `Stage: seed`, `Next`; then a raw snapshot: no
+   `id=growth`; still one play line.
 8. When `sayit.md` follows in the same drive (`first.md` step 9), its rows
    ride `run.md`'s journeys; then `sim doctor` (record `head` and
    `timingsHold`), then `sim down`.
