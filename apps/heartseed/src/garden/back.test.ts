@@ -275,7 +275,9 @@ describe('a step back over the device', () => {
         const out: unknown[] = [stageIn(yield* garden.view)];
         for (let k = 0; k < 4; k += 1) {
           const at = yield* Clock.currentTimeMillis;
-          const answer = yield* backs.back(REFERENCE);
+          const from = stageIn(yield* garden.view);
+          if (from === 'unread' || from === 'unplanted') return out;
+          const answer = yield* backs.back({ reference: REFERENCE, from });
           const view = yield* garden.view;
           if (answer === 'Moved') times.push(at);
           out.push([answer, stageIn(view), dueIn(view) > at && dueIn(view) - at <= 10 * MINUTE]);
@@ -308,29 +310,50 @@ describe('a step back over the device', () => {
     expect(again).toBe('seed');
   });
 
-  it('answers Failed and writes nothing for a verse not planted, a failed write and an unread garden', async () => {
+  it('answers Failed and writes nothing for a verse not planted, a stage the verse does not stand at, a failed write and an unread garden', async () => {
     const ear = grownTo('ear');
     device.launch(ear.disk);
     const seen = await quietly(
       ear.after,
       Effect.gen(function* () {
         const { garden, backs } = yield* launch;
-        const other = yield* backs.back('Made 9:9');
+        const other = yield* backs.back({ reference: 'Made 9:9', from: 'ear' });
+        const stale = yield* backs.back({ reference: REFERENCE, from: 'blade' });
         device.fail('set', 1);
-        const refused = yield* backs.back(REFERENCE);
-        return [other, refused, stageIn(yield* garden.view)];
+        const refused = yield* backs.back({ reference: REFERENCE, from: 'ear' });
+        return [other, stale, refused, stageIn(yield* garden.view)];
       }),
     );
-    expect([seen, backKeys()]).toEqual([['Failed', 'Failed', 'ear'], []]);
+    expect([seen, backKeys()]).toEqual([['Failed', 'Failed', 'Failed', 'ear'], []]);
 
     device.launch(ear.disk).fail('keys', 3);
     const unread = await quietly(
       ear.after,
       Effect.gen(function* () {
         const { garden, backs } = yield* launch;
-        return [yield* backs.back(REFERENCE), stageIn(yield* garden.view)];
+        return [
+          yield* backs.back({ reference: REFERENCE, from: 'ear' }),
+          stageIn(yield* garden.view),
+        ];
       }),
     );
     expect([unread, backKeys()]).toEqual([['Failed', 'unread'], []]);
+  });
+
+  it('moves one ask answered twice once: the second finds the verse a stage lower and writes nothing', async () => {
+    const ear = grownTo('ear');
+    device.launch(ear.disk);
+    const seen = await quietly(
+      ear.after,
+      Effect.gen(function* () {
+        const { garden, backs } = yield* launch;
+        const ask = { reference: REFERENCE, from: 'ear' } as const;
+        const answers = yield* Effect.all([backs.back(ask), backs.back(ask)], {
+          concurrency: 'unbounded',
+        });
+        return [...answers, stageIn(yield* garden.view)];
+      }),
+    );
+    expect([seen, backKeys().length]).toEqual([['Moved', 'Failed', 'blade'], 1]);
   });
 });

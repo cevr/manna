@@ -5,26 +5,28 @@
  * `Move back a stage`; a seed offers none, as no stage lies below it.
  *
  * A tap puts the ask in its place, `Move <reference> back to <stage>? It
- * comes due again soon.`, with `Move back` and `Keep`. From a tap of the
- * ask's `Move back` until its answer, no tap of either changes anything and
- * each shows as disabled. `Moved` drops the ask and leaves the line `Moved
- * back to <stage>.` (`id=moved`), the stage line above it already the new
- * stage, with the control again while the verse stands past a seed; any
- * other answer drops the ask and leaves the alert `<reference> was not
- * moved back. Try again.` until the next tap. The ask, the line, the alert
- * and the pending state are the control's own, dropped when it leaves.
+ * comes due again soon.`, with `Move back` and `Keep`. The ask's `Move
+ * back` runs the step back in a transition: while it runs both answers
+ * show as disabled, and its answer lands as one event. `Moved` drops the
+ * ask and leaves the line `Moved back to <stage>.` (`id=moved`), the stage
+ * line above it already the new stage, with the control again while the
+ * verse stands past a seed; `Failed` drops the ask and leaves the alert
+ * `<reference> was not moved back. Try again.` until the next tap. An
+ * answer lands only on the ask it answers, and the garden moves a verse
+ * only from the stage the ask saw, so two taps in one turn move it once.
+ * The state is the control's own, dropped when it leaves.
  */
 
 import { useAtomSet } from '@effect/atom-react';
-import { Option } from 'effect';
-import { useRef, useState } from 'react';
+import { Exit, Option } from 'effect';
+import { useReducer, useTransition } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { moveBack } from '../app';
 import { Control } from '../field/plot';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
-import { backOf, type Stage } from '../garden';
+import { backOf, type BackAnswer, type Stage } from '../garden';
 
 /** Each stage as the ask and the moved line name it. */
 const NAMED: Readonly<Record<Stage, string>> = {
@@ -34,15 +36,38 @@ const NAMED: Readonly<Record<Stage, string>> = {
   'full corn': 'full corn',
 };
 
-/** The control's own state: whether the ask shows, the stage the last step back landed on, the alert of one that did not land, and whether one is pending. */
-interface Bar {
-  readonly asking: boolean;
-  readonly moved: Option.Option<Stage>;
-  readonly alert: Option.Option<string>;
-  readonly pending: boolean;
-}
+/** The control's state: at rest, asking, moved to a stage, or refused. */
+type Bar =
+  | { readonly status: 'Idle' }
+  | { readonly status: 'Asking' }
+  | { readonly status: 'Moved'; readonly stage: Stage }
+  | { readonly status: 'Refused' };
 
-const IDLE: Bar = { asking: false, moved: Option.none(), alert: Option.none(), pending: false };
+/** What happened to the control: its tap, the ask's `Keep`, or the garden's answer to the ask's `Move back`, which lands the verse at `landing`. */
+type Happened =
+  | { readonly type: 'opened' }
+  | { readonly type: 'kept' }
+  | { readonly type: 'answered'; readonly answer: BackAnswer; readonly landing: Stage };
+
+const IDLE: Bar = { status: 'Idle' };
+const ASKING: Bar = { status: 'Asking' };
+
+/** The state after `happened`: the ask opens from any state but itself, and `Keep` and an answer land only on the ask. */
+const barAfter = (bar: Bar, happened: Happened): Bar => {
+  switch (happened.type) {
+    case 'opened':
+      return ASKING;
+    case 'kept':
+      if (bar.status !== 'Asking') return bar;
+      return IDLE;
+    case 'answered':
+      if (bar.status !== 'Asking') return bar;
+      if (happened.answer === 'Moved') return { status: 'Moved', stage: happened.landing };
+      return { status: 'Refused' };
+  }
+  happened satisfies never;
+  return bar;
+};
 
 /** Move back a stage for the verse of `reference`, standing at `stage` now. */
 export function MoveBack({
@@ -54,52 +79,37 @@ export function MoveBack({
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
-  const [bar, setBar] = useState<Bar>(IDLE);
-  const busy = useRef(false);
-  const back = useAtomSet(moveBack, { mode: 'promise' });
-  const to = backOf(stage);
-  /** The ask's `Move back`: the step back runs once, nothing else answers until it does. */
-  const onConfirm = (landing: Stage) => {
-    if (busy.current) return;
-    busy.current = true;
-    setBar((now) => ({ ...now, pending: true }));
-    const settle = (answer: string) => {
-      busy.current = false;
-      if (answer === 'Moved') return setBar({ ...IDLE, moved: Option.some(landing) });
-      setBar({
-        ...IDLE,
-        alert: Option.some(`${reference} was not moved back. Try again.`),
+  const [bar, dispatch] = useReducer(barAfter, IDLE);
+  const [pending, startTransition] = useTransition();
+  const back = useAtomSet(moveBack, { mode: 'promiseExit' });
+  /** The ask's `Move back`: the step back from `stage`, its answer (`Failed` for a failure) landing as one event. */
+  const onConfirm = (landing: Stage) =>
+    /* oxlint-disable effect/noAsyncFunction -- a React action: the transition awaits the step back, so its pending state is React's, and the answer lands in the same action. */
+    startTransition(async () => {
+      const exit = await back({ reference, from: stage });
+      /* oxlint-enable effect/noAsyncFunction */
+      const answer = Exit.match(exit, {
+        onSuccess: (value): BackAnswer => value,
+        onFailure: (): BackAnswer => 'Failed',
       });
-    };
-    void back(reference).then(settle, () => settle('Failed'));
-  };
-  /** A tap of the control or of `Keep`: nothing while a step back is pending, else the line and the alert clear and `then` runs. */
-  const tapped = (then: () => void) => {
-    if (busy.current) return;
-    then();
-  };
+      dispatch({ type: 'answered', answer, landing });
+    });
   return (
     <View style={styles.back}>
-      {Option.match(bar.moved, {
-        onNone: () => false,
-        onSome: (landed) => (
-          <Text testID="moved" style={styles.line}>
-            {`Moved back to ${NAMED[landed]}.`}
-          </Text>
-        ),
-      })}
-      {Option.match(bar.alert, {
-        onNone: () => false,
-        onSome: (alert) => (
-          <Text role="alert" testID="back-alert" style={styles.line}>
-            {alert}
-          </Text>
-        ),
-      })}
-      {Option.match(to, {
+      {bar.status === 'Moved' && (
+        <Text testID="moved" style={styles.line}>
+          {`Moved back to ${NAMED[bar.stage]}.`}
+        </Text>
+      )}
+      {bar.status === 'Refused' && (
+        <Text role="alert" testID="back-alert" style={styles.line}>
+          {`${reference} was not moved back. Try again.`}
+        </Text>
+      )}
+      {Option.match(backOf(stage), {
         onNone: () => false,
         onSome: (landing) => {
-          if (bar.asking)
+          if (bar.status === 'Asking')
             return (
               <View style={styles.ask}>
                 <Text testID="back-ask" style={styles.line}>
@@ -109,14 +119,14 @@ export function MoveBack({
                   <Control
                     label="Move back"
                     shown="Move back"
-                    pending={bar.pending}
+                    pending={pending}
                     onPress={() => onConfirm(landing)}
                   />
                   <Control
                     label="Keep"
                     shown="Keep"
-                    pending={bar.pending}
-                    onPress={() => tapped(() => setBar(IDLE))}
+                    pending={pending}
+                    onPress={() => dispatch({ type: 'kept' })}
                   />
                 </View>
               </View>
@@ -125,7 +135,7 @@ export function MoveBack({
             <Pressable
               role="button"
               aria-label="Move back a stage"
-              onPress={() => tapped(() => setBar({ ...IDLE, asking: true }))}
+              onPress={() => dispatch({ type: 'opened' })}
               style={({ pressed }) => [styles.control, pressed && look.pressed]}
             >
               <Text style={styles.controlText}>Move back a stage</Text>

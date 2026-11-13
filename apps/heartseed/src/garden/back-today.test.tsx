@@ -9,10 +9,12 @@
  * one step back and the stage line, the moved line and home's plant say the
  * lower stage, and a relaunch reads it back. A refused write leaves the
  * alert and the stage; a seed offers no control; the plan's own item
- * (Today by `Start`) offers none.
+ * (Today by `Start`) offers none; two taps of the ask's `Move back` in one
+ * turn move the verse once, with no alert.
  */
 
 import { expect, it } from 'bun:test';
+import { act } from 'react';
 import passage from 'virtual:heartseed-passage';
 
 import { START } from '../test/clock';
@@ -141,4 +143,28 @@ it('leaves the alert and the stage when the write is refused, and offers nothing
   expect([due.references(), due.has('Move back a stage')]).toEqual([[passage.reference], false]);
   expect(due.faults).toEqual([]);
   await due.leave();
+});
+
+it('moves the verse once for two taps of the ask’s Move back in one turn, with no alert', async () => {
+  const device = rootDevice([...EAR]);
+  const rig = await launchRoot(device, { now: START + DAY });
+  await openVerse(rig, 'ear');
+  await rig.tap('Move back a stage');
+  const confirm = rig.host.querySelector('[aria-label="Move back"]');
+  await act(async () => {
+    for (const _ of [1, 2])
+      confirm?.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
+      );
+  });
+  expect(await rig.until(() => one(rig, 'moved') !== null)).toBe(true);
+  expect(await rig.until(() => false, 50)).toBe(false);
+  expect([
+    stage(rig),
+    textOf(one(rig, 'moved')),
+    one(rig, 'back-alert'),
+    backs(device.disk).length,
+  ]).toEqual(['Stage: blade', 'Moved back to a blade.', null, 1]);
+  expect(rig.faults).toEqual([]);
+  await rig.leave();
 });

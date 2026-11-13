@@ -43,7 +43,15 @@ import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
 import { type Foreground, Returns, wakeLayer } from './foreground';
 import { foregroundSource } from './foreground/source';
-import { Backs, cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
+import {
+  Backs,
+  cueIn,
+  Garden,
+  layer as gardenLayer,
+  type BackAsk,
+  type Chime,
+  type GardenView,
+} from './garden';
 import { liveChime } from './garden/chime';
 import { greetingAt } from './home';
 import type { Cue } from './matcher';
@@ -320,9 +328,9 @@ export const uprootPassage = runtime.fn((range: Range) => removePassage(range), 
   concurrent: true,
 });
 
-/** The ask's `Move back` on Today: the verse of `reference` moves back a stage (`Backs.back`), answered `Moved` or `Failed`. Its control lets one run at a time, so each answer is its own tap's. */
+/** The ask's `Move back` on Today: the verse moves back a stage from the stage it was asked from (`Backs.back`), answered `Moved` or `Failed`; a second answer to one ask finds the verse moved and writes nothing. */
 export const moveBack = runtime.fn(
-  (reference: string) => Effect.flatMap(Backs, (backs) => backs.back(reference)),
+  (ask: BackAsk) => Effect.flatMap(Backs, (backs) => backs.back(ask)),
   { concurrent: true },
 );
 

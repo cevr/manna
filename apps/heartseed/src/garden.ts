@@ -324,13 +324,19 @@ export class Garden extends Context.Service<
   }
 >()('heartseed/garden/Garden') {}
 
-/** A step back's answer: `Moved` once its record is written and the view shows the verse a stage lower, else `Failed` (the write failed, the garden is unread, or the verse is no plant past a seed). */
+/** A step back's answer: `Moved` once its record is written and the view shows the verse a stage lower, else `Failed` (the write failed, the garden is unread, or the verse is no plant standing at the stage asked from, past a seed). */
 export type BackAnswer = 'Moved' | 'Failed';
 
-/** Moving a verse back a stage: `back(reference)` keeps a step back of the verse at the clock's instant, after every keep handed to the garden before it. */
+/** A step back asked for: the verse, and the stage the reader saw it at when asking. */
+export interface BackAsk {
+  readonly reference: string;
+  readonly from: Stage;
+}
+
+/** Moving a verse back a stage: `back(ask)` keeps a step back of the verse at the clock's instant, after every keep handed to the garden before it, only while the verse still stands at `ask.from`, so an ask answered twice moves it once. */
 export class Backs extends Context.Service<
   Backs,
-  { readonly back: (reference: string) => Effect.Effect<BackAnswer> }
+  { readonly back: (ask: BackAsk) => Effect.Effect<BackAnswer> }
 >()('heartseed/garden/Backs') {}
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
@@ -616,16 +622,18 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
 
       /**
        * Keeps a step back of `reference` at the clock's instant: in a read
-       * garden whose plant of it stands past a seed, writes its record, then
-       * changes the view. A failed write changes nothing; an unread garden,
-       * a verse not planted and a seed write nothing. Each is `Failed`.
+       * garden whose plant of it stands at `from`, past a seed, writes its
+       * record, then changes the view. A failed write changes nothing; an
+       * unread garden, a verse not planted, a seed and a verse no longer at
+       * `from` write nothing. Each is `Failed`.
        */
-      const back = Effect.fn('Garden.back')(function* (reference: string) {
+      const back = Effect.fn('Garden.back')(function* ({ reference, from }: BackAsk) {
         const before = MutableRef.get(held);
         if (
           before._tag === 'Unread' ||
-          !Option.exists(Option.fromNullishOr(before.plants.get(reference)), (plant) =>
-            Option.isSome(backOf(stageOf(plant))),
+          !Option.exists(
+            Option.fromNullishOr(before.plants.get(reference)),
+            (plant) => stageOf(plant) === from && Option.isSome(backOf(from)),
           )
         ) {
           yield* Effect.logWarning('garden.back.refused').pipe(Effect.annotateLogs({ reference }));
@@ -664,10 +672,7 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
           Recalls,
           Recalls.of({ keep: (recall) => Semaphore.withPermits(lock, 1)(keep(recall)) }),
         ),
-        Context.add(
-          Backs,
-          Backs.of({ back: (reference) => Semaphore.withPermits(lock, 1)(back(reference)) }),
-        ),
+        Context.add(Backs, Backs.of({ back: (ask) => Semaphore.withPermits(lock, 1)(back(ask)) })),
       );
     }),
   );
