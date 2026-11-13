@@ -523,149 +523,151 @@ const readGarden = (store: KeyValueStore.KeyValueStore) =>
     Effect.catch(() => Effect.as(Effect.logWarning('garden.read.failed'), UNREAD)),
   );
 
+/** What the garden's layer gives: the garden, the recalls kept, and the steps back. */
+type Grounds = Garden | Recalls | Backs;
+
 /** The garden over the app's store, the `Recalls` Say it hands its recalls to, and the `Backs` a verse is moved back a stage by. Its build includes the read, so its view is `Read` or `Unread` from the start. */
-export const layer: Layer.Layer<
-  Garden | Recalls | Backs,
-  never,
-  KeyValueStore.KeyValueStore | Chime
-> = Layer.effectContext(
-  Effect.gen(function* () {
-    const store = yield* KeyValueStore.KeyValueStore;
-    const chime = yield* Chime;
-    const held = MutableRef.make(yield* readGarden(store));
-    const sounded = new Set<string>();
-    const views = yield* PubSub.sliding<GardenView>({ capacity: WINDOW, replay: 1 });
-    yield* PubSub.publish(views, MutableRef.get(held));
-    const lock = yield* Semaphore.make(1);
+export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Chime> =
+  Layer.effectContext(
+    Effect.gen(function* () {
+      const store = yield* KeyValueStore.KeyValueStore;
+      const chime = yield* Chime;
+      const held = MutableRef.make(yield* readGarden(store));
+      const sounded = new Set<string>();
+      const views = yield* PubSub.sliding<GardenView>({ capacity: WINDOW, replay: 1 });
+      yield* PubSub.publish(views, MutableRef.get(held));
+      const lock = yield* Semaphore.make(1);
 
-    /** Sounds the chime for the recital `recall` belongs to when it grew its verse in `garden` and has not sounded in this launch. */
-    const sound = Effect.fn('Garden.sound')(function* (garden: ReadGarden, recall: Recall) {
-      const key = recallKey(recall);
-      const plant = Option.fromNullishOr(garden.plants.get(recall.reference));
-      const growth = Option.flatMap(plant, (each) => growthOf(each, recall.startedAt));
-      if (sounded.has(key) || Option.isNone(growth)) return;
-      sounded.add(key);
-      const { from, to } = growth.value;
-      yield* Effect.logInfo('garden.grew').pipe(
-        Effect.annotateLogs({ reference: recall.reference, from, to }),
-      );
-      yield* chime.grow({ reference: recall.reference, startedAt: recall.startedAt, from, to });
-    });
+      /** Sounds the chime for the recital `recall` belongs to when it grew its verse in `garden` and has not sounded in this launch. */
+      const sound = Effect.fn('Garden.sound')(function* (garden: ReadGarden, recall: Recall) {
+        const key = recallKey(recall);
+        const plant = Option.fromNullishOr(garden.plants.get(recall.reference));
+        const growth = Option.flatMap(plant, (each) => growthOf(each, recall.startedAt));
+        if (sounded.has(key) || Option.isNone(growth)) return;
+        sounded.add(key);
+        const { from, to } = growth.value;
+        yield* Effect.logInfo('garden.grew').pipe(
+          Effect.annotateLogs({ reference: recall.reference, from, to }),
+        );
+        yield* chime.grow({ reference: recall.reference, startedAt: recall.startedAt, from, to });
+      });
 
-    /**
-     * The recall a key already holds: the read view's, or for an unread
-     * garden, which knows no history, the record read from the store at
-     * that key (a read that can fail).
-     */
-    const storedAt = (view: GardenView, recall: Recall) => {
-      if (view._tag === 'Read') return Effect.succeed(keptFor(view, recall));
-      const key = recallKey(recall);
-      return Effect.flatMap(store.get(key), (value) => recallIn(key, Option.fromNullishOr(value)));
-    };
+      /**
+       * The recall a key already holds: the read view's, or for an unread
+       * garden, which knows no history, the record read from the store at
+       * that key (a read that can fail).
+       */
+      const storedAt = (view: GardenView, recall: Recall) => {
+        if (view._tag === 'Read') return Effect.succeed(keptFor(view, recall));
+        const key = recallKey(recall);
+        return Effect.flatMap(store.get(key), (value) =>
+          recallIn(key, Option.fromNullishOr(value)),
+        );
+      };
 
-    /**
-     * Keeps one recall under the day stamp its key already holds
-     * (`stampedLike`): writes its record, then changes the view, then
-     * sounds a growth; a failed write changes nothing. When the read of
-     * that stamp fails, the keep writes as a key's first write, with the
-     * press's offset: a finished recital is never dropped for a stamp it
-     * could not read, and a key already stored under another stamp (a start
-     * reused after the clock went back) is the one whose day can then move.
-     * An unread garden
-     * still writes the record, but its view stays unread and it never
-     * sounds, as the history the growth is measured from is unknown.
-     */
-    const keep = Effect.fn('Garden.keep')(function* (given: Recall) {
-      const before = MutableRef.get(held);
-      const recall = yield* storedAt(before, given).pipe(
-        Effect.map((stored) => stampedLike(given, stored)),
-        Effect.catch(() =>
-          Effect.as(
-            Effect.logWarning('garden.keep.unstamped').pipe(
-              Effect.annotateLogs({ reference: given.reference, startedAt: given.startedAt }),
+      /**
+       * Keeps one recall under the day stamp its key already holds
+       * (`stampedLike`): writes its record, then changes the view, then
+       * sounds a growth; a failed write changes nothing. When the read of
+       * that stamp fails, the keep writes as a key's first write, with the
+       * press's offset: a finished recital is never dropped for a stamp it
+       * could not read, and a key already stored under another stamp (a start
+       * reused after the clock went back) is the one whose day can then move.
+       * An unread garden
+       * still writes the record, but its view stays unread and it never
+       * sounds, as the history the growth is measured from is unknown.
+       */
+      const keep = Effect.fn('Garden.keep')(function* (given: Recall) {
+        const before = MutableRef.get(held);
+        const recall = yield* storedAt(before, given).pipe(
+          Effect.map((stored) => stampedLike(given, stored)),
+          Effect.catch(() =>
+            Effect.as(
+              Effect.logWarning('garden.keep.unstamped').pipe(
+                Effect.annotateLogs({ reference: given.reference, startedAt: given.startedAt }),
+              ),
+              given,
             ),
-            given,
           ),
-        ),
-      );
-      if (
-        before._tag === 'Read' &&
-        Option.exists(keptFor(before, recall), (kept) => sameRecall(kept, recall))
-      )
-        return;
-      const written = yield* Schema.encodeEffect(RecallRecord)(recall).pipe(
-        Effect.flatMap((text) => store.set(recallKey(recall), text)),
-        Effect.as(true),
-        Effect.catch(() =>
-          Effect.as(
-            Effect.logWarning('garden.keep.failed').pipe(
-              Effect.annotateLogs({ reference: recall.reference, startedAt: recall.startedAt }),
-            ),
-            false,
-          ),
-        ),
-      );
-      if (!written || before._tag === 'Unread') return;
-      const after = withRecall(before, recall);
-      MutableRef.set(held, after);
-      yield* PubSub.publish(views, after);
-      yield* sound(after, recall);
-    });
-
-    /**
-     * Keeps a step back of `reference` at the clock's instant: in a read
-     * garden whose plant of it stands past a seed, writes its record, then
-     * changes the view. A failed write changes nothing; an unread garden,
-     * a verse not planted and a seed write nothing. Each is `Failed`.
-     */
-    const back = Effect.fn('Garden.back')(function* (reference: string) {
-      const before = MutableRef.get(held);
-      if (
-        before._tag === 'Unread' ||
-        !Option.exists(Option.fromNullishOr(before.plants.get(reference)), (plant) =>
-          Option.isSome(backOf(stageOf(plant))),
+        );
+        if (
+          before._tag === 'Read' &&
+          Option.exists(keptFor(before, recall), (kept) => sameRecall(kept, recall))
         )
-      ) {
-        yield* Effect.logWarning('garden.back.refused').pipe(Effect.annotateLogs({ reference }));
-        return 'Failed' as const;
-      }
-      const step: Back = { reference, at: yield* Clock.currentTimeMillis };
-      const written = yield* Schema.encodeEffect(BackRecord)(step).pipe(
-        Effect.flatMap((text) => store.set(backKey(step), text)),
-        Effect.as(true),
-        Effect.catch(() =>
-          Effect.as(
-            Effect.logWarning('garden.back.failed').pipe(Effect.annotateLogs({ reference })),
-            false,
+          return;
+        const written = yield* Schema.encodeEffect(RecallRecord)(recall).pipe(
+          Effect.flatMap((text) => store.set(recallKey(recall), text)),
+          Effect.as(true),
+          Effect.catch(() =>
+            Effect.as(
+              Effect.logWarning('garden.keep.failed').pipe(
+                Effect.annotateLogs({ reference: recall.reference, startedAt: recall.startedAt }),
+              ),
+              false,
+            ),
           ),
+        );
+        if (!written || before._tag === 'Unread') return;
+        const after = withRecall(before, recall);
+        MutableRef.set(held, after);
+        yield* PubSub.publish(views, after);
+        yield* sound(after, recall);
+      });
+
+      /**
+       * Keeps a step back of `reference` at the clock's instant: in a read
+       * garden whose plant of it stands past a seed, writes its record, then
+       * changes the view. A failed write changes nothing; an unread garden,
+       * a verse not planted and a seed write nothing. Each is `Failed`.
+       */
+      const back = Effect.fn('Garden.back')(function* (reference: string) {
+        const before = MutableRef.get(held);
+        if (
+          before._tag === 'Unread' ||
+          !Option.exists(Option.fromNullishOr(before.plants.get(reference)), (plant) =>
+            Option.isSome(backOf(stageOf(plant))),
+          )
+        ) {
+          yield* Effect.logWarning('garden.back.refused').pipe(Effect.annotateLogs({ reference }));
+          return 'Failed' as const;
+        }
+        const step: Back = { reference, at: yield* Clock.currentTimeMillis };
+        const written = yield* Schema.encodeEffect(BackRecord)(step).pipe(
+          Effect.flatMap((text) => store.set(backKey(step), text)),
+          Effect.as(true),
+          Effect.catch(() =>
+            Effect.as(
+              Effect.logWarning('garden.back.failed').pipe(Effect.annotateLogs({ reference })),
+              false,
+            ),
+          ),
+        );
+        if (!written) return 'Failed' as const;
+        const after = withBack(before, step);
+        MutableRef.set(held, after);
+        yield* PubSub.publish(views, after);
+        yield* Effect.logInfo('garden.back').pipe(Effect.annotateLogs({ reference }));
+        return 'Moved' as const;
+      });
+
+      const view = Effect.sync(() => MutableRef.get(held));
+
+      return Context.make(
+        Garden,
+        Garden.of({
+          view,
+          settled: Semaphore.withPermits(lock, 1)(view),
+          changes: Stream.fromPubSub(views),
+        }),
+      ).pipe(
+        Context.add(
+          Recalls,
+          Recalls.of({ keep: (recall) => Semaphore.withPermits(lock, 1)(keep(recall)) }),
+        ),
+        Context.add(
+          Backs,
+          Backs.of({ back: (reference) => Semaphore.withPermits(lock, 1)(back(reference)) }),
         ),
       );
-      if (!written) return 'Failed' as const;
-      const after = withBack(before, step);
-      MutableRef.set(held, after);
-      yield* PubSub.publish(views, after);
-      yield* Effect.logInfo('garden.back').pipe(Effect.annotateLogs({ reference }));
-      return 'Moved' as const;
-    });
-
-    const view = Effect.sync(() => MutableRef.get(held));
-
-    return Context.make(
-      Garden,
-      Garden.of({
-        view,
-        settled: Semaphore.withPermits(lock, 1)(view),
-        changes: Stream.fromPubSub(views),
-      }),
-    ).pipe(
-      Context.add(
-        Recalls,
-        Recalls.of({ keep: (recall) => Semaphore.withPermits(lock, 1)(keep(recall)) }),
-      ),
-      Context.add(
-        Backs,
-        Backs.of({ back: (reference) => Semaphore.withPermits(lock, 1)(back(reference)) }),
-      ),
-    );
-  }),
-);
+    }),
+  );
