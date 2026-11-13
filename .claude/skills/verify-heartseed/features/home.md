@@ -180,7 +180,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 
 **Journeys in order:** from a fresh install: `first`, `home`.
 
-**Journeys in order:** from a fresh install: `first`, `home-field`, `7 min`, `home-dot`, `home-relaunch`, `home-motion`.
+**Journeys in order:** from a fresh install: `first`, `home-field`, `home-relaunch`, `7 min`, `home-dot`, `home-motion`.
 
 **Journeys in order:** from a fresh install: `first`, `home-settings`, `7 min`, `home-renew`.
 
@@ -194,7 +194,7 @@ home's rules: `--app` with a build of the head's native code serves; the
 JavaScript comes from the dev server.
 
 The taps are journeys beside this file, each one `sim journey` call:
-`home` (the probe), `home-field`, `home-dot`, `home-relaunch`,
+`home` (the probe), `home-field`, `home-relaunch`, `home-dot`,
 `home-motion`, `home-settings`, `home-renew`, `home-end` and `home-add`
 (`home.journey.json`, `home-<segment>.journey.json`). Their `shows` and
 `hides` hold what a selector can say. A receipt
@@ -303,32 +303,34 @@ puts `Start` on the Today card), with the same variables:
 8. `home-add-places`: the journey's last steps scroll to `Add a list` at
    the field's foot, open it (its `Any passage` and `Done`) and close it
    with `Done`, on home again.
-9. `home-dot` and `home-today`, only when `PLANTED` was 0400-1759 local
-   (an evening planting is due the next morning; otherwise record
-   `All tended for today` and skip, as `run.md` step 3 does): wait until 7
-   minutes after `PLANTED`, then `sim journey home-dot` → `"ok":true`: on
-   home, `Settings`, `5 min` (the plan made again at the tap; the idle
-   visit dropped), `Done`, with no trip to Today. `home-dot/home-dot` →
-   one Today card with the texts `1 verse · about 1 min` and `1 to review`
-   and one button `Start`; the button `Isaiah 41:10, seed, ready today`;
-   no `Begin` or `When I need…`. Then `home-start-run`:
-   `home-dot/home-start-run` → `Isaiah 41:10` and `Say it`.
-10. `home-relaunch`, `home-how`, `home-how-skip` and `home-tips-leave`:
-    `sim journey home-relaunch` → `"ok":true`. `home-relaunch/home-relaunch`
-    → the heading `Your field`, the greeting, the Today card, and no
-    heading `Today`; record `1 day sown`, `0 verses at full corn` and
-    every plant button's name. `home-relaunch/home-how`,
-    `home-relaunch/home-how-grows` and `home-relaunch/home-how-tips`: the
-    welcome, its grows page and the tips, from the row. Then `Got it`, the
-    row again and `Skip`: `home-relaunch/home-how-skip`. Then the row,
-    `Begin`, `See your field` and `Practice anyway`:
-    `home-relaunch/home-tips-today` (Today) and, after `Your field`,
-    `home-relaunch/home-tips-back`. Then `sim doctor`.
+9. `home-relaunch`, `home-how`, `home-how-skip` and `home-tips-leave`,
+   before the seed is due (the Today card's button is `Practice anyway`;
+   after step 10 it is `Start`, and the journey fails at
+   `home-tips-field`): `sim journey home-relaunch` → `"ok":true`.
+   `home-relaunch/home-relaunch` → the heading `Your field`, the greeting,
+   the Today card, and no heading `Today`; record `1 day sown`,
+   `0 verses at full corn` and every plant button's name.
+   `home-relaunch/home-how`, `home-relaunch/home-how-grows` and
+   `home-relaunch/home-how-tips`: the welcome, its grows page and the
+   tips, from the row. Then `Got it`, the row again and `Skip`:
+   `home-relaunch/home-how-skip`. Then the row, `Begin`, `See your field`
+   and `Practice anyway`: `home-relaunch/home-tips-today` (Today) and,
+   after `Your field`, `home-relaunch/home-tips-back`. Then `sim doctor`.
+10. `home-dot` and `home-today`, only when `PLANTED` was 0400-1759 local
+    (an evening planting is due the next morning; otherwise record
+    `All tended for today` and skip, as `run.md` step 3 does): wait until 7
+    minutes after `PLANTED`, then `sim journey home-dot` → `"ok":true`: on
+    home, `Settings`, `5 min` (the plan made again at the tap; the idle
+    visit dropped), `Done`, with no trip to Today. `home-dot/home-dot` →
+    one Today card with the texts `1 verse · about 1 min` and `1 to review`
+    and one button `Start`; the button `Isaiah 41:10, seed, ready today`;
+    no `Begin` or `When I need…`. Then `home-start-run`:
+    `home-dot/home-start-run` → `Isaiah 41:10` and `Say it`.
 11. `home-motion-reach` (a keep-guard): `sim journey home-motion` →
     `"ok":true`: a relaunch, then at once a tap on the own plant.
     `home-motion/home-motion-reach` → the heading `Your field`, the Today
     card's button (`Start` or `Practice anyway`), `Open Isaiah 41:10`, the own
-    plant's button `Isaiah 41:10, seed, ready today` (step 9 ran) and the
+    plant's button `Isaiah 41:10, seed, ready today` (step 10 ran) and the
     buttons ending `, not planted`. `home-motion/home-motion-reach-today`
     → the heading `Today` and the reference `Isaiah 41:10`. Record the
     seconds the journey took (`ms`).

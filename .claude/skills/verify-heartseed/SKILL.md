@@ -232,7 +232,7 @@ for what an expect cannot say. The journeys:
 - [features/dictation.journey.json](features/dictation.journey.json), run by `dictation.md`;
   [features/doctor.journey.json](features/doctor.journey.json) and `doctor-stale`, run by `doctor.md`.
 - [features/home.journey.json](features/home.journey.json) (the probe) and `home-field`,
-  `home-dot`, `home-relaunch`, `home-motion`, `home-settings`, `home-renew`,
+  `home-relaunch`, `home-dot`, `home-motion`, `home-settings`, `home-renew`,
   `home-end` and `home-add`, run by `home.md`.
 - [features/list.journey.json](features/list.journey.json), `list-practice` and `list-remove`, run by
   `list.md`; [features/back.journey.json](features/back.journey.json), run by `back.md`;
