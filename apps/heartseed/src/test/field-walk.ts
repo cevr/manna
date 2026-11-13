@@ -6,14 +6,15 @@
  * rules. Each device starts from a generated disk (the passage's history or
  * none, other verses of any reference, a setting); each launch lands on home
  * and goes to Today by `Start` (`opened`), and the device plays opens of the
- * field by `Your field` and ways back by `Start`, recitals, Again, peeks and
- * relaunches in any order. The writes each
- * command may make are modelled apart from the app: a recital adds one
- * record of the passage (and, when Today offers no Say it, first makes a
- * new plan at the passage's due through the Settings sheet's Minutes radio,
- * by home and back, which writes the minutes once), Again and a peek each rewrite one (none when Again
- * is already chosen), and an open or a way back writes, removes and clears
- * nothing and leaves the whole disk as it was. Each launch ends with the disk
+ * field by `Your field` and ways back by `Start`, recitals, Again, peeks,
+ * `Next` and relaunches in any order. The writes each command may make are
+ * modelled apart from the app (`allowed`): a recital's recall, Again and a
+ * peek on it write nothing until `Next` adds the one record of the passage
+ * (when Today offers no Say it, a recital first makes a new plan at the
+ * passage's due through the Settings sheet's Minutes radio, by home and
+ * back, which writes the minutes once), and an open or a way back writes,
+ * removes and clears nothing, leaves the whole disk as it was, and lets the
+ * pending recall go, so Today offers Say it again. Each launch ends with the disk
  * showing no key removed and no key other than the passage's recalls changed
  * or added. The walk test files each play their own seeds through it.
  */
@@ -27,17 +28,18 @@ import { mount, record } from './field-rig';
 import { below, PREFIX, pickOf, random } from './garden-model';
 import { device } from './one';
 
-export type WalkCommand = 'field' | 'say' | 'again' | 'peek' | 'relaunch' | 'renew';
+export type WalkCommand = 'field' | 'say' | 'again' | 'peek' | 'next' | 'relaunch' | 'renew';
 
 type App = Awaited<ReturnType<typeof mount>>;
 
-/** What Today shows after the last command: a recital's result, and a missed word still to peek at. */
+/** What Today shows after the last command: a recital's result, a missed word still to peek at, and whether its recall waits for `Next`. */
 interface Shown {
   readonly result: boolean;
   readonly peekable: boolean;
+  readonly pending: boolean;
 }
 
-const NOTHING_SHOWN: Shown = { result: false, peekable: false };
+const NOTHING_SHOWN: Shown = { result: false, peekable: false, pending: false };
 
 /** The instant each device's first launch starts at on Effect's clock: after every day its disk's histories start on. */
 const START = Date.UTC(2026, 10, 5, 15);
@@ -45,11 +47,19 @@ const START = Date.UTC(2026, 10, 5, 15);
 const passageKeys = () =>
   [...device.disk.keys()].filter((key) => key.startsWith(`${PREFIX}${passage.reference}/`)).length;
 
-/** The writes and passage records a command may add, modelled apart from the app; a relaunch counts its writes from the new launch's zero. A recital when Today offers no Say it (its item done, or the done state) first makes a new plan at the passage's due, the Settings sheet's Minutes radio that writes the minutes once. */
-const allowed = (command: WalkCommand, againChosen: boolean, offered: boolean) => {
-  if (command === 'say') return { sets: offered ? 1 : 2, keys: 1 };
-  if (command === 'peek') return { sets: 1, keys: 0 };
-  if (command === 'again') return { sets: againChosen ? 0 : 1, keys: 0 };
+/**
+ * The writes and passage records a command may add, modelled apart from the
+ * app; a relaunch counts its writes from the new launch's zero. A recital's
+ * recall, and each grade or peek on it, waits for `Next`, which writes it
+ * once; an open, a relaunch or a recital's end write nothing. A recital when
+ * Today offers no Say it (its item done, or the done state) first taps `Next`
+ * when it shows and makes a new plan at the passage's due, the Settings
+ * sheet's Minutes radio that writes the minutes once.
+ */
+const allowed = (command: WalkCommand, pending: boolean, offered: boolean) => {
+  const kept = pending ? 1 : 0;
+  if (command === 'say') return offered ? { sets: 0, keys: 0 } : { sets: 1 + kept, keys: kept };
+  if (command === 'next') return { sets: kept, keys: kept };
   return { sets: 0, keys: 0 };
 };
 
@@ -90,29 +100,47 @@ const play = async (app: App, command: WalkCommand, shown: Shown, time: Time) =>
   if (command === 'field') {
     await app.field();
     await app.back();
-    return { app, shown };
+    const result = app.checked() !== null;
+    return { app, shown: { result, peekable: result && shown.peekable, pending: false } };
   }
   if (command === 'say') {
     if (!app.buttons().includes('Say it')) await app.renew();
     await app.say();
-    return { app, shown: { result: true, peekable: true } };
+    return { app, shown: { result: true, peekable: true, pending: true } };
   }
   if (command === 'again') {
     await app.tap('Again');
-    await app.until(() => app.stage() === 'Stage: seed');
+    if (shown.pending) await app.until(() => app.stage() === 'Stage: seed');
     await app.until(() => false, 8);
     return { app, shown };
   }
   if (command === 'peek') {
-    const sets = device.calls.set;
     await app.tap('Missed word 11');
-    expect(await app.until(() => device.calls.set === sets + 1)).toBe(true);
     await app.until(() => false, 8);
     return { app, shown: { ...shown, peekable: false } };
+  }
+  if (command === 'next') {
+    await app.tap('Next');
+    await app.ended();
+    return { app, shown: NOTHING_SHOWN };
   }
   expect({ faults: await app.leave() }).toEqual({ faults: [] });
   device.launch();
   return { app: await opened(time), shown: NOTHING_SHOWN };
+};
+
+/** The next command: the field (twice as likely) only while Today shows `Say it` or `Next`, Again over a result, a peek where one is offered, Next over a recall pending, and a relaunch. */
+const commandOf = (next: () => number, buttons: readonly (string | null)[], shown: Shown) => {
+  const acting = ['Say it', 'Next'].some((label) => buttons.includes(label));
+  const rest = [
+    ...(shown.result ? (['again'] as const) : []),
+    ...(shown.peekable ? (['peek'] as const) : []),
+    ...(shown.pending ? (['next'] as const) : []),
+    'relaunch',
+  ] as const;
+  return acting
+    ? pickOf(next, ['field', 'field', 'say', ...rest] as const)
+    : pickOf(next, ['say', ...rest] as const);
 };
 
 /** Plays one generated device per seed, `steps` commands each, and answers how often each command ran. */
@@ -132,18 +160,11 @@ export const walkField = async (seeds: readonly number[], steps: number) => {
     const time: Time = { now: START };
     let state = { app: await opened(time), shown: NOTHING_SHOWN };
     for (let step = 0; step < steps; step += 1) {
-      const command = pickOf(next, [
-        'field',
-        'field',
-        'say',
-        ...(state.shown.result ? (['again'] as const) : []),
-        ...(state.shown.peekable ? (['peek'] as const) : []),
-        'relaunch',
-      ] as const);
+      const command = commandOf(next, state.app.buttons(), state.shown);
       cover.set(command, (cover.get(command) ?? 0) + 1);
       const offered = state.app.buttons().includes('Say it');
       if (command === 'say' && !offered) cover.set('renew', (cover.get('renew') ?? 0) + 1);
-      const may = allowed(command, state.app.checked() === 'Again', offered);
+      const may = allowed(command, state.shown.pending, offered);
       const before = {
         sets: command === 'relaunch' ? 0 : device.calls.set,
         keys: passageKeys(),

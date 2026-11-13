@@ -7,7 +7,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('cells', 2, 1, [
+walkCase('cells', 107, 1, [
   'cell:after:heard:moved',
   'cell:after:unheard:kept',
   'cell:after:cancelled:kept',

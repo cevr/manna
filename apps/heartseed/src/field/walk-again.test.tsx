@@ -4,8 +4,8 @@
  * The field across generated sequences of commands (`src/test/field-walk.ts`),
  * over generated device 31, whose commands reach an open and its way back,
  * recitals, Again, a peek and a relaunch: each open and way back writes,
- * removes and clears nothing and leaves the whole disk, Again and a peek each
- * rewrite one record of the passage (Again none when already chosen), and
+ * removes and clears nothing and leaves the whole disk, Again and a peek
+ * write nothing before `Next`, which keeps the recall as they left it, and
  * each launch ends with no key removed and none but the passage's recalls
  * changed or added.
  */

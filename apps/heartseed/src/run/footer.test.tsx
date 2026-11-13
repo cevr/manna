@@ -3,7 +3,8 @@
 /**
  * Today's footer: the action button and the `Grade` group sit under the
  * scroll view, outside it, in every frame of a recital (before it, while it
- * listens, at its result, after a grade and after the field and back), so
+ * listens, at its result, after a grade, and Say it again after the field
+ * and back, which let the result go and wrote nothing), so
  * however much the verse and the result fill, the reader reaches them
  * without a scroll; the only control the scroll view holds is a missed
  * word's mark. The rig faults any other control in a scroll view, over the
@@ -63,7 +64,10 @@ describe('Today’s footer', () => {
     expect(await app.tap('Your field')).toBe(true);
     expect(await app.until(() => app.headings().includes('Your field'))).toBe(true);
     expect(await app.tap('Start')).toBe(true);
-    expect(await app.until(() => app.grades().length === 1)).toBe(true);
+    expect(await app.until(() => app.has('Say it') && app.grades().length === 0)).toBe(true);
+    expect([...device.disk.keys()]).toEqual([
+      keyOf({ reference: passage.reference, startedAt: T0 - 30 * DAY }),
+    ]);
     expect(app.frames.listening).toBeGreaterThan(0);
     expect(await app.leave()).toEqual([]);
   });

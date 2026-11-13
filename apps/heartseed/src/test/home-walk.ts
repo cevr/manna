@@ -238,11 +238,12 @@ class HomeWalk extends Walk {
     return kept;
   }
 
-  /** Home from Today's `Your field`; the visit and the hold kept for `Start`. */
+  /** Home from Today's `Your field`; the visit kept for `Start`, the hold and its pending recall let go (`leaveToday`). */
   override async field(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('field');
     if (!(await rig.tap('Your field'))) return 'no Your field';
+    this.leaveToday();
     this.screen = 'home';
     await rig.until(() => rig.headings().includes('Your field'));
     this.bump('field:opened');
@@ -320,7 +321,6 @@ class HomeWalk extends Walk {
       )
     )
       this.bump('start:begun');
-    if (this.hold !== null) this.bump('start:over-held');
     if (this.visit.some((each) => this.recallsNow(each.reference) <= each.recalls))
       this.bump('start:over-visit');
     const item: Started = {
@@ -342,12 +342,6 @@ class HomeWalk extends Walk {
     if (verse === null) return 'no weakest verse';
     this.bump('card:Practice anyway');
     return this.startVerse(verse, 'Practice anyway');
-  }
-
-  /** `Start` on home. */
-  override async begin(): Promise<unknown> {
-    if (this.hold !== null) this.bump('home:begin-held');
-    return super.begin();
   }
 
   /** Whether Today would show otherwise were the plan alone made at the clock's now, the visit and the hold kept. */

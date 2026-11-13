@@ -8,7 +8,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('edges', 14, 2, [
+walkCase('edges', 82, 2, [
   'done:after-minutes',
   'done:field',
   'end:none',

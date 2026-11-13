@@ -88,6 +88,7 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect(today.growth()).toBe('Grew to an ear.');
+    await today.next();
     expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
       [passage.reference, 'seed', 'blade'],
       [passage.reference, 'blade', 'ear'],

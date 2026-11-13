@@ -38,12 +38,15 @@
  * or `Voice` (the pill the cycle's next); `Done`, the sheet's frames
  * faultless; then `Start` and Today when the model shows an item, else
  * home's done state, which ends the launch. The commands: recitals; a
- * recital then a Minutes trip (`held`); Again; Minutes trips now and after
+ * recital then a Minutes trip (`held`; half the time, by the device's aside
+ * draw, `Next` first where the recital left it); Again; Minutes trips now and after
  * time passes; Voice trips; time; the field and back. A recital where the
  * model offers no Say it first taps Next, or, in the done state, moves the
- * clock to the passage's due and takes a Minutes trip. A heard recital
- * adds its recall to the disk; an unheard one, a refused listen and a
- * refused write add none, and Again rewrites the recall it grades.
+ * clock to the passage's due and takes a Minutes trip. A heard recital on
+ * a run's item leaves its recall pending, counted as kept, until `Next`
+ * adds it to the disk (a refused write adds none) or `Your field` lets it
+ * go; an unheard one and a refused listen add none, and Again changes the
+ * recall it grades.
  */
 
 import { expect, it } from 'bun:test';
@@ -153,12 +156,20 @@ interface Model {
   hold: ModelItem | null;
   zone: string;
   read: boolean;
+  /** The recall a finished recital of the held item leaves pending until `Next` keeps it (its write refused when `unwritten`), or a leave lets it go: its key. */
+  pending: { readonly key: string; readonly unwritten: boolean } | null;
 }
+
+/** Today left by `Your field`: the hold and the recall pending let go, nothing written. */
+const leaveToday = (m: Model) => {
+  m.hold = null;
+  m.pending = null;
+};
 
 /** The action Today offers at rest by the run's model: Say it always in an unread launch, which runs no plan; none in the done state. */
 const actionWant = (m: Model, device: Device) => {
   if (!m.read) return 'Say it';
-  return actionModel({ plan: m.plan, hold: m.hold }, recallsNow(device));
+  return actionModel({ plan: m.plan, hold: m.hold }, recallsNow(device, m));
 };
 
 const ACTIONS = ['Say it', 'Listening', 'Next'] as const;
@@ -184,22 +195,25 @@ const planNow = (run: Omit<Run, 'app' | 'step' | 'faults'>) =>
     minutes: run.m.minutes,
   }).items;
 
-const recallsNow = (device: Device) => {
+/** The recalls each reference's plant holds as Today counts them: the disk's, and the recall pending for the held item (the passage, the one piece). */
+const recallsNow = (device: Device, m: Model) => {
   const plants = plantsOn(device);
-  return (reference: string) => plants.get(reference)?.length ?? 0;
+  return (reference: string) =>
+    (plants.get(reference)?.length ?? 0) +
+    (m.pending !== null && m.hold !== null && m.hold.reference === reference ? 1 : 0);
 };
 
 /** The lines the screen must show now: the model's counts of the plan, none without one. */
 const wantOf = (run: Run) => {
   if (run.m.plan === null) return [];
-  return [countsModel(run.m.plan, recallsNow(run.device))];
+  return [countsModel(run.m.plan, recallsNow(run.device, run.m))];
 };
 
 /** The Today card's lines home must show now (`cardLineModel`, the held item counted when the plan holds none open), none without a plan. */
 const homeWantOf = (run: Run) => {
   const { m } = run;
   if (m.plan === null) return [];
-  const now = recallsNow(run.device);
+  const now = recallsNow(run.device, m);
   return [cardLineModel(m.plan, now, shownModel({ plan: m.plan, hold: m.hold }, now))];
 };
 
@@ -278,6 +292,7 @@ const sheetChecked = () => choicesOf(modalOf() ?? document.createElement('div'))
 const openTrip = async (run: Run) => {
   const { app, device, m, step } = run;
   await app.tap('Your field');
+  leaveToday(m);
   const want = {
     headings: ['Your field'],
     counts: homeWantOf(run),
@@ -405,6 +420,27 @@ const hearingOf = (how: How): Hearing => {
   return { kind: 'heard', skip: [] };
 };
 
+/** `Next`: the recall a recital left pending written (or its write refused), the hold let go. */
+const nextTap = async (run: Run) => {
+  const { app, device, m } = run;
+  const pending = m.pending;
+  if (pending?.unwritten === true) run.faults.refuse.add(pending.key);
+  await app.tap('Next');
+  m.hold = nextModel({ plan: m.plan, hold: m.hold }).hold;
+  m.pending = null;
+  if (pending !== null) {
+    const written = !pending.unwritten;
+    await app.until(() => device.disk.has(pending.key) === written);
+    expect({ step: `${run.step} Next`, written: device.disk.has(pending.key) }).toEqual({
+      step: `${run.step} Next`,
+      written,
+    });
+    run.faults.refuse.delete(pending.key);
+    cover(written ? 'next:kept' : 'next:unwritten');
+  }
+  cover('next');
+};
+
 /**
  * Where the run's model offers no Say it: `Next` when the shown item is
  * done (the hold let go), and in the done state the time moved to the
@@ -413,12 +449,8 @@ const hearingOf = (how: How): Hearing => {
  * the trip ended the launch on home.
  */
 const toSay = async (run: Run) => {
-  const { app, device, m } = run;
-  if (actionWant(m, device) === 'Next') {
-    await app.tap('Next');
-    m.hold = nextModel({ plan: m.plan, hold: m.hold }).hold;
-    cover('next');
-  }
+  const { device, m } = run;
+  if (actionWant(m, device) === 'Next') await nextTap(run);
   if (actionWant(m, device) === null) {
     await settle(run);
     const side = { ...run, next: run.aside ?? run.next };
@@ -446,14 +478,16 @@ const sayCommand = async (run: Run, how: How) => {
   if (how === 'unwritten') faults.refuse.add(key);
   MutableRef.set(app.hearing, hearingOf(how));
   await app.tap('Say it');
-  m.hold = startedModel({ plan: m.plan, hold: m.hold }, recallsNow(device)).hold;
+  m.hold = startedModel({ plan: m.plan, hold: m.hold }, recallsNow(device, m)).hold;
   if (how === 'refused') {
     await app.until(() => false, 3);
   } else {
     expect(await app.until(() => app.has('Listening'))).toBe(true);
     await app.tap('Listening');
   }
-  const written = how === 'heard' || how === 'missed';
+  const finished = how === 'heard' || how === 'missed' || how === 'unwritten';
+  if (finished && m.hold !== null) m.pending = { key, unwritten: how === 'unwritten' };
+  const written = (how === 'heard' || how === 'missed') && m.pending === null;
   await app.until(() => device.disk.has(key) === written);
   const then = actionWant(m, device);
   expect({
@@ -485,8 +519,9 @@ const againCommand = async (run: Run) => {
 const fieldCommand = async (run: Run) => {
   if (!run.m.read) return false;
   const acted = run.app.has('Say it') || run.app.has('Next');
-  const counts = homeWantOf(run);
   await run.app.tap('Your field');
+  leaveToday(run.m);
+  const counts = homeWantOf(run);
   expect(
     await run.app.until(
       () => run.app.headings().includes('Your field') && run.app.homeCounts().length > 0,
@@ -629,6 +664,14 @@ const command = async (run: Run, c: number) => {
     const how = pickOf(run.next, ['heard', 'heard', 'unheard'] as const);
     const n = pickOf(run.next, MINUTES);
     const said = await sayCommand(at, how);
+    const moved =
+      said === 'said' &&
+      actionWant(run.m, run.device) === 'Next' &&
+      (run.aside ?? run.next)() < 0.5;
+    if (moved) {
+      await nextTap(at);
+      cover('say:next-then-minutes');
+    }
     ended = said === 'ended' || (await minutesTrip(at, n));
     if (said === 'said' && run.m.read) cover('say:then-minutes');
   }
@@ -683,8 +726,8 @@ const fromHome = async (run: Run) => {
     await app.until(() => app.headings().includes('Your field') && app.homeCounts().length > 0),
   ).toBe(true);
   m.plan = planNow(run);
-  m.hold = null;
-  const begin = shownModel({ plan: m.plan, hold: m.hold }, recallsNow(device)) !== null;
+  leaveToday(m);
+  const begin = shownModel({ plan: m.plan, hold: m.hold }, recallsNow(device, m)) !== null;
   await app.until(() => app.has('Start') === begin);
   if (!begin) await app.until(() => false, 10);
   expect({
@@ -764,7 +807,7 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   m.minutes = minutesRule(m.stored, faults.failGet.has(MINUTES_KEY));
   m.read = faults.listing !== 'unread';
   m.plan = null;
-  m.hold = null;
+  leaveToday(m);
   if (!recalled) await firstMinute(run);
   const ended = m.read && (await fromHome(run));
   if (!m.read) {
@@ -860,7 +903,15 @@ const deviceRun = async (next: () => number, d: number) => {
   at = disk.at;
   const stored = pickOf(next, STORED);
   const device = deviceOf(stored === undefined ? entries : [...entries, [MINUTES_KEY, stored]]);
-  const m: Model = { stored, minutes: 5, plan: null, hold: null, zone, read: true };
+  const m: Model = {
+    stored,
+    minutes: 5,
+    plan: null,
+    hold: null,
+    zone,
+    read: true,
+    pending: null,
+  };
   const time = { now: at };
   const aside = random(0x5a1d + d);
   for (let l = 0; l < 3; l += 1) {

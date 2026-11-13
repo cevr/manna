@@ -2,13 +2,14 @@
 
 /**
  * Home A walked through the root (`test/home-walk.ts`), part b: device 0
- * of seed 110, eighteen commands from its launch on home, held to the
+ * of seed 21, eighteen commands from its launch on home, held to the
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
- * one, `Start`, a plant's tap on a plan item, on a seed, on a verse not
- * planted and over a result held, `Your field` with a result held and then
- * `Start`, returns to the foreground on Today over an open visit, a
+ * one, `Start`, a plant's tap on a plan item, on a seed and on a verse not
+ * planted, `Your field` over a result before `Next`, which lets it go
+ * unwritten, and then `Start`, returns to the foreground on Today over an
+ * open visit, a
  * relaunch that lands on home, and the morning's and afternoon's
  * greetings.
  */
@@ -18,6 +19,7 @@ import { describe, expect, it } from 'bun:test';
 import { walkHome } from '../test/home-walk';
 
 const FLOORS = [
+  'field:let-go',
   'home:dot',
   'home:no-dot',
   'home:begin',
@@ -31,16 +33,13 @@ const FLOORS = [
   'today:wake',
   'wake:over-visit',
   'wake:today-over-visit',
-  'start:over-held',
   'tap:seed',
-  'root:back-held',
-  'home:begin-held',
   'greeting:afternoon',
 ];
 
 describe('home A, walked (b)', () => {
   it('shows the furrows, the card, a plant’s start and the greeting as the models give them', async () => {
-    const { failure, cover } = await walkHome(110, [0], 18);
+    const { failure, cover } = await walkHome(21, [0], 18);
     expect(failure).toBeNull();
     expect(FLOORS.filter((kind) => (cover[kind] ?? 0) >= 1)).toEqual(FLOORS);
   });

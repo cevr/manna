@@ -14,7 +14,11 @@
  * its recall (the first suggestion, a changed grade, a later peek) is
  * handed to `Recalls` once, every one with the start and the zone's offset
  * read at its press, whatever zone the device is in by then. A recital that is not kept, and every other
- * ending, hands nothing over.
+ * ending, hands nothing over. A recital kept at `Next` (Today's run,
+ * `untilNext`) hands nothing over at its end: its recall waits in the view
+ * (`pending`), changed by each grade and peek, until `commit` hands it over
+ * (and every change after it) or `drop` lets it go, so a reader who leaves
+ * before `Next` records nothing.
  *
  * Each of `Dictation.changes` has the screen show Dictation's view as it is
  * then, and tick for the words it lights since the recital's own last view
@@ -74,18 +78,20 @@ export class Haptics extends Context.Service<Haptics, { readonly tick: Effect.Ef
   'heartseed/sayit/Haptics',
 ) {}
 
-/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, the grade chosen for it, and the cue it is said under (`none` before the first recital). */
+/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, the grade chosen for it, the cue it is said under (`none` before the first recital), and the recall a recital kept at `Next` waits to hand over (none once handed over or let go). */
 export interface SayItView {
   readonly dictation: DictationView;
   readonly startedAt: OrNull<number>;
   readonly choice: OrNull<Grade>;
   readonly cue: Cue;
+  readonly pending: OrNull<Recall>;
 }
 
-/** How a recital is said: the cue the matcher grades it under, and whether its recall is handed to `Recalls`. */
+/** How a recital is said: the cue the matcher grades it under, whether its recall is handed to `Recalls`, and whether that waits for `commit` (Today's `Next`) instead of its end. */
 export interface Recital {
   readonly cue: Cue;
   readonly keep: boolean;
+  readonly untilNext?: boolean;
 }
 
 /** Today's recital when the garden is unread: no cue, and kept. */
@@ -100,6 +106,10 @@ export class SayIt extends Context.Service<
     readonly press: Effect.Effect<void>;
     readonly peek: (index: number) => Effect.Effect<void>;
     readonly choose: (grade: Grade) => Effect.Effect<void>;
+    /** Today's `Next` on the verse of `reference`: the recall pending for it is handed to `Recalls`, and every change after it too; nothing when none is pending for it. */
+    readonly commit: (reference: string) => Effect.Effect<void>;
+    /** Today left before `Next`: the recall pending is let go, never handed over. */
+    readonly drop: Effect.Effect<void>;
     readonly view: Effect.Effect<SayItView>;
     readonly changes: Stream.Stream<SayItView>;
   }
@@ -155,7 +165,7 @@ const sameRecall = (a: Recall, b: Recall) => RECALL_FIELDS.every((field) => a[fi
 
 const isGrade = (grade: number): grade is Grade => GRADES.some((each) => each === grade);
 
-/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries its piece's reference, its start, the zone's offset at its press, and whether it is kept at all. */
+/** How far the current recital has gone: none yet, under way, ended unheard or let go before `Next`, or finished with its suggestion and the recall last kept; one under way or finished carries its piece's reference, its start, the zone's offset at its press, whether it is kept at all, and whether its hand-over still waits for `commit`. */
 type Progress =
   | { readonly _tag: 'None' }
   | {
@@ -164,6 +174,7 @@ type Progress =
       readonly startedAt: number;
       readonly offset: number;
       readonly keep: boolean;
+      readonly waits: boolean;
     }
   | { readonly _tag: 'Unheard' }
   | {
@@ -172,9 +183,34 @@ type Progress =
       readonly startedAt: number;
       readonly offset: number;
       readonly keep: boolean;
+      readonly waits: boolean;
       readonly suggested: SuggestedGrade;
       readonly kept: Option.Option<Recall>;
     };
+
+/** The recall a finished recital that waits for `commit` would hand over now, under `view`'s choice and matcher; none for any other recital. */
+const pendingOf = (recital: Progress, view: SayItView): OrNull<Recall> => {
+  const { matcher } = view.dictation;
+  if (recital._tag !== 'Finished' || !recital.keep || !recital.waits) return ABSENT;
+  if (view.choice === ABSENT || matcher === ABSENT) return ABSENT;
+  return recallOf(
+    recital.reference,
+    recital.startedAt,
+    recital.offset,
+    view.choice,
+    recital.suggested,
+    matcher,
+  );
+};
+
+/** The state with its view's `pending` read again, the view kept as it was when that recall is unchanged. */
+const withPending = (state: Held): Held => {
+  const pending = pendingOf(state.recital, state.view);
+  const was = state.view.pending;
+  if (pending === was) return state;
+  if (pending !== ABSENT && was !== ABSENT && sameRecall(pending, was)) return state;
+  return { ...state, view: { ...state.view, pending } };
+};
 
 /** Say it's state: the view, the current recital, the recitals started and the endings read, and the matcher view last shown of the current recital (none before its first). */
 interface Held {
@@ -196,7 +232,13 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
       /** The time of a press on the service's own clock, whoever runs the press. */
       const now = Effect.provideContext(Clock.currentTimeMillis, context);
       const held = MutableRef.make<Held>({
-        view: { dictation: yield* dictation.view, startedAt: ABSENT, choice: ABSENT, cue: 'none' },
+        view: {
+          dictation: yield* dictation.view,
+          startedAt: ABSENT,
+          choice: ABSENT,
+          cue: 'none',
+          pending: ABSENT,
+        },
         recital: { _tag: 'None' },
         started: 0,
         endings: 0,
@@ -205,21 +247,21 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
       const views = yield* PubSub.sliding<SayItView>({ capacity: WINDOW, replay: 1 });
       yield* PubSub.publish(views, MutableRef.get(held).view);
 
-      /** Changes the state at once, and publishes its view when that changed. */
+      /** Changes the state at once, its pending recall read again, and publishes its view when that changed. */
       const update = (change: (now: Held) => Held) =>
         Effect.suspend(() => {
           const before = MutableRef.get(held);
-          const next = change(before);
+          const next = withPending(change(before));
           MutableRef.set(held, next);
           if (next.view === before.view) return Effect.void;
           return Effect.asVoid(PubSub.publish(views, next.view));
         });
 
-      /** Hands the finished recital's recall to `Recalls` when the recital is kept, unless it is the one last kept for it; once marked kept, the hand-over is never cut off. */
+      /** Hands the finished recital's recall to `Recalls` when the recital is kept and waits for no `commit`, unless it is the one last kept for it; once marked kept, the hand-over is never cut off. */
       const keep = Effect.gen(function* () {
         const { recital, view } = MutableRef.get(held);
         const { matcher } = yield* dictation.view;
-        if (recital._tag !== 'Finished' || !recital.keep) return;
+        if (recital._tag !== 'Finished' || !recital.keep || recital.waits) return;
         if (view.choice === ABSENT || matcher === ABSENT) return;
         const recall = recallOf(
           recital.reference,
@@ -237,7 +279,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         yield* Effect.uninterruptible(recalls.keep(recall));
       });
 
-      /** Applies an ending to the recital under way: a finished one takes its suggestion as the choice and is kept if it is a kept recital; any other keeps nothing. */
+      /** Applies an ending to the recital under way: a finished one takes its suggestion as the choice and is kept if it is a kept recital that waits for no `commit`; any other keeps nothing. */
       const close = (ended: DictationView) =>
         Effect.gen(function* () {
           const { recital } = MutableRef.get(held);
@@ -255,6 +297,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
               startedAt: recital.startedAt,
               offset: recital.offset,
               keep: recital.keep,
+              waits: recital.waits,
               suggested,
               kept: Option.none(),
             },
@@ -318,9 +361,16 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           yield* update((now) => ({
             ...now,
             started: now.started + 1,
-            recital: { _tag: 'Open', reference, startedAt, offset, keep: how.keep },
+            recital: {
+              _tag: 'Open',
+              reference,
+              startedAt,
+              offset,
+              keep: how.keep,
+              waits: how.untilNext === true,
+            },
             shown: ABSENT,
-            view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue },
+            view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue, pending: ABSENT },
           }));
           yield* dictation.start(piece.text, how.cue);
         });
@@ -336,11 +386,29 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           );
         });
 
+      const commit = (reference: string) =>
+        Effect.suspend(() => {
+          const { recital } = MutableRef.get(held);
+          if (recital._tag !== 'Finished' || !recital.waits || recital.reference !== reference)
+            return Effect.void;
+          return Effect.andThen(
+            update((now) => ({ ...now, recital: { ...recital, waits: false } })),
+            keep,
+          );
+        });
+
+      const drop = update((now) => {
+        if (now.recital._tag !== 'Finished' || !now.recital.waits) return now;
+        return { ...now, recital: { _tag: 'Unheard' } };
+      });
+
       return SayIt.of({
         recite,
         press: recite(TODAY, passage),
         peek: (index) => Effect.andThen(dictation.peek(index), keep),
         choose,
+        commit,
+        drop,
         view: Effect.sync(() => MutableRef.get(held).view),
         changes: Stream.fromPubSub(views),
       });

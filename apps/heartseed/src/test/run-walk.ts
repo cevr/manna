@@ -17,10 +17,12 @@
  * done state's counts line and no `Start`, and the launch ends there, as it
  * does when the field is taken in the done state. On Today each launch runs
  * commands chosen by the screen the model expects: at Say
- * it a heard recital (a word skipped or not), an unheard one, a refused
- * write, a cancelled one, a recital then a Minutes trip with its item still
- * held, a Minutes trip, the field and back, a wait; at Next, Next, Again, a
- * peek, a Minutes trip, the field and a wait; at the done state a wait, a
+ * it a heard recital (a word skipped or not), an unheard one, one whose
+ * write `Next` makes is refused, a cancelled one, a recital then a Minutes
+ * trip, a Minutes trip, the field and back, a wait; at Next, Next (which
+ * writes the recall the recital left pending), Again, a peek, a Minutes
+ * trip, the field (which lets the pending recall go unwritten, the item
+ * open again) and a wait; at the done state a wait, a
  * Minutes trip and the field. A Minutes trip is the reader's: `Your field`,
  * home's Settings sheet, `<n> min` there, `Done`, then `Start` when home
  * offers it, else the launch ends on home's done state. An unread launch
@@ -39,9 +41,10 @@
  * not empty is done and none is held: no counts line, the line of what
  * grew and each grown verse's name by `tendedModel`, tallied `end:none`,
  * `end:one` or `end:many`), the done state's scroll text read exactly (the
- * counts line, or the end's line, alone), and the disk (the start's keys unchanged, plus each
- * kept recall's key under the piece said, and the minutes key after a
- * tap). Each recall a recital keeps holds the piece said, its reference and
+ * counts line, or the end's line, alone; a pending recall counted as kept
+ * on screen), and the disk (the start's keys unchanged, plus each recall
+ * key a `Next` kept under the piece said, and the minutes key after a
+ * tap). Each recall `Next` keeps holds the piece said, its reference and
  * word count, and a recital heard whole the matcher's suggestion under that
  * piece's own cue (Good under nothing, Hard under letters or the full text).
  */
@@ -307,16 +310,17 @@ const cellKey = (how: How, placed: Placed) => `cell:after:${how}:${placed}`;
 
 /**
  * Every cell of (ending × placed) a walk reaches after a recital, each a
- * floor of the cells' part. A recall just kept is not due at its own
- * instant, so a plan made right after a heard recital never shows its item
- * first again. The cells of a making while a recital listens or finishes
- * are `src/session/cells.property.test.ts`'s.
+ * floor of the cells' part. The trip's `Your field` lets a heard recital's
+ * pending recall go unwritten, so after any ending the plan the trip makes
+ * places the item as the plants before the recital do. The cells of a
+ * making while a recital listens or finishes are
+ * `src/session/cells.property.test.ts`'s.
  */
-export const CELLS: readonly Cell[] = (['heard', 'unheard', 'refused', 'cancelled'] as const)
-  .flatMap((how) =>
-    (['moved', 'kept'] as const).map((placed) => ({ key: cellKey(how, placed), how, placed })),
-  )
-  .filter((cell) => !(cell.how === 'heard' && cell.placed === 'kept'));
+export const CELLS: readonly Cell[] = (
+  ['heard', 'unheard', 'refused', 'cancelled'] as const
+).flatMap((how) =>
+  (['moved', 'kept'] as const).map((placed) => ({ key: cellKey(how, placed), how, placed })),
+);
 
 /**
  * How often each command is chosen at Say it, by steer: a recital heard
@@ -431,6 +435,13 @@ class Walk {
   ending: Exclude<How, 'heard'> | null = null;
   /** How the held item's last recital ended, any ending, until a making or Next lets the hold go. */
   heldEnd: How | null = null;
+  /** The recall a heard recital of the held item leaves pending until `Next` keeps it (its write refused when `refused`), or a leave lets it go; Today counts it as kept meanwhile. */
+  pending: {
+    readonly piece: TextPiece;
+    readonly startedAt: number;
+    readonly cue: 'full' | 'initials' | 'none' | null;
+    readonly refused: boolean;
+  } | null = null;
   app: Launch | null = null;
   /** Whether the launch under way ended on home's done state. */
   ended = false;
@@ -457,7 +468,15 @@ class Walk {
     return this.app;
   }
 
-  recallsNow = (reference: string) => plantsOf(this.device).get(reference)?.length ?? 0;
+  recallsNow = (reference: string) =>
+    (plantsOf(this.device).get(reference)?.length ?? 0) +
+    (this.pending !== null && this.pending.piece.reference === reference ? 1 : 0);
+
+  /** Today left (`Your field`, the first step of a Minutes trip): the hold and the recall pending let go, nothing written. */
+  leaveToday() {
+    this.run = nextModel(this.run);
+    this.pending = null;
+  }
 
   pieceOf(reference: string) {
     const piece = this.pieces.find((each) => each.reference === reference);
@@ -614,6 +633,7 @@ class Walk {
     this.app = await launch(this.device, this.faults, this.time, this.pieces);
     this.ended = false;
     this.run = NO_RUN;
+    this.pending = null;
     this.result = null;
     this.ending = null;
     this.heldEnd = null;
@@ -727,21 +747,33 @@ class Walk {
       app.hearing,
       how === 'unheard' ? { kind: 'unheard' } : { kind: 'heard', text: piece.text, skip },
     );
-    this.faults.refuse = how === 'refused';
     const startedAt = this.time.now;
     const cue = this.cueNow(piece);
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
     await this.recital(how);
-    const key = how === 'heard' ? this.expectRecall(piece, startedAt) : null;
-    this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
-    this.ending = how === 'heard' ? null : how;
-    this.heldEnd = this.unread ? null : how;
+    const key = this.recitalEnded(how, piece, startedAt, skip.length === 0 ? cue : null);
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     if (skip.length > 0) bump(this.coverage, 'say:skipped');
     this.tallyShown(piece, 'fresh' in shown && !this.unread ? shown.fresh : null);
     await this.settle(`say ${how}`);
-    this.faults.refuse = false;
     if (key !== null) this.checkRecall(key, piece, skip.length === 0 ? cue : null);
+  }
+
+  /** What a recital ended `how` leaves: in an unread garden its recall kept at once (its key answered); on a run's item its recall pending until `Next`, under `cue`; the result shown, and the ending held. */
+  recitalEnded(
+    how: How,
+    piece: TextPiece,
+    startedAt: number,
+    cue: 'full' | 'initials' | 'none' | null,
+  ) {
+    const finished = how === 'heard' || how === 'refused';
+    const key = finished && this.unread ? this.expectRecall(piece, startedAt) : null;
+    if (finished && !this.unread)
+      this.pending = { piece, startedAt, cue, refused: how === 'refused' };
+    this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
+    this.ending = finished ? null : how;
+    this.heldEnd = this.unread ? null : how;
+    return key;
   }
 
   /** The taps of one recital: Say it, then a cancel while it listens, or Listening, which finishes it. */
@@ -802,6 +834,7 @@ class Walk {
     const step = `${minutes} min`;
     if (!(await app.tap('Your field')))
       throw new Error(`after ${this.log.join(' > ')} > ${step}: no Your field`);
+    this.leaveToday();
     if (
       !(await app.until(
         () =>
@@ -904,18 +937,29 @@ class Walk {
     await this.settle('no minutes, unread');
   }
 
+  /** `Next`: the recall pending is kept (its write refused when the recital was), then the hold let go. */
   async nextTap() {
     const was = this.run.hold;
+    const pending = this.pending;
+    this.faults.refuse = pending?.refused === true;
+    const key =
+      pending === null || pending.refused
+        ? null
+        : this.expectRecall(pending.piece, pending.startedAt);
     await this.screen.tap('Next');
+    this.pending = null;
     this.run = nextModel(this.run);
     this.result = null;
     this.ending = null;
     this.heldEnd = null;
     bump(this.coverage, 'next');
+    if (pending?.refused === true) bump(this.coverage, 'next:refused');
     const now = shownModel(this.run, this.recallsNow);
     if (now === null) bump(this.coverage, 'done:after-next');
     else if (was !== null && now.group !== was.group) bump(this.coverage, 'next:another-group');
     await this.settle('Next');
+    this.faults.refuse = false;
+    if (key !== null && pending !== null) this.checkRecall(key, pending.piece, pending.cue);
     if (now !== null && !now.fresh) bump(this.coverage, `next:review:${this.drawnNow(now)}`);
   }
 
@@ -935,7 +979,7 @@ class Walk {
     await this.settle('peek');
   }
 
-  /** Today's `Your field`, then back by home's `Start` while Today showed an action; in the done state home shows the model's counts and no `Start`, and the launch ends there (`homeDone`). A hold kept there is tallied by what the model shows after it lets the item go (`field:held:last` none, `again` the held reference, `more` another), and as `field:held:next:<kind>` when Today showed `Next`. */
+  /** Today's `Your field`, then back by home's `Start` while Today showed an action; in the done state home shows the model's counts and no `Start`, and the launch ends there (`homeDone`). A hold there is tallied by what the model shows after `Your field` lets the item go (`field:held:last` none, `again` the held reference, `more` another), and as `field:held:next:<kind>` when Today showed `Next` (always `again`: the recital pending is let go unwritten, so the held item is offered again). */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
@@ -945,14 +989,18 @@ class Walk {
       throw new Error('no field');
     bump(this.coverage, this.run.hold === null ? 'field:none' : 'field:held');
     if (this.run.hold !== null) {
-      const after = shownModel(nextModel(this.run), this.recallsNow);
-      const kind =
-        after === null ? 'last' : after.reference === this.run.hold.reference ? 'again' : 'more';
+      const atNext = actionModel(this.run, this.recallsNow) === 'Next';
+      const held = this.run.hold;
+      this.leaveToday();
+      const after = shownModel(this.run, this.recallsNow);
+      const kind = after === null ? 'last' : after.reference === held.reference ? 'again' : 'more';
       bump(this.coverage, `field:held:${kind}`);
-      if (actionModel(this.run, this.recallsNow) === 'Next')
-        bump(this.coverage, `field:held:next:${kind}`);
+      if (atNext) bump(this.coverage, `field:held:next:${kind}`);
     }
-    if (this.run.hold === null && shownModel(this.run, this.recallsNow) === null) {
+    this.result = null;
+    this.ending = null;
+    this.heldEnd = null;
+    if (shownModel(this.run, this.recallsNow) === null) {
       bump(this.coverage, 'done:field');
       return this.homeDone('the field');
     }
@@ -1022,22 +1070,20 @@ class Walk {
   /**
    * Leaning to the endings: a recital aimed at a cell no trip has reached
    * yet, then a Minutes trip at the minutes whose plan places the shown
-   * item as the cell asks (a heard recital's trip is moved whatever the
-   * minutes, its recall just kept); none when no open cell is reachable
-   * here, `moved` cells first. The cell tallied is the one the trip
-   * reached, read from the model at its tap.
+   * item as the cell asks (whatever the ending, since the trip writes
+   * nothing of it); none when no open cell is reachable here, `moved`
+   * cells first. The cell tallied is the one the trip reached, read from
+   * the model at its tap.
    */
   aimed() {
     const shown = shownModel(this.run, this.recallsNow);
     if (shown === null) return null;
     const reach = CELLS.flatMap((cell) => {
       if ((this.coverage[cell.key] ?? 0) > 0) return [];
-      const minutes = MINUTES.filter(
-        (each) => cell.how === 'heard' || this.placedAt(shown, each) === cell.placed,
-      );
+      const minutes = MINUTES.filter((each) => this.placedAt(shown, each) === cell.placed);
       return minutes.length === 0 ? [] : [{ cell, minutes }];
     });
-    const moved = reach.filter((each) => each.cell.placed === 'moved' && each.cell.how !== 'heard');
+    const moved = reach.filter((each) => each.cell.placed === 'moved');
     const open = moved.length > 0 ? moved : this.next() < 0.5 ? reach : [];
     const aim = open[below(this.next, open.length)];
     if (aim === undefined) return null;

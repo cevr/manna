@@ -59,8 +59,10 @@
  * after which the new plan's first item shows, or bare `Today` over an
  * empty one), the done state's scroll text read exactly (the counts line,
  * or the end's line, alone), whether Listen shows
- * (`listenModel`), and the disk (the start's keys unchanged, plus each kept
- * recall's key, the minutes key after a Minutes trip and the voice's key
+ * (`listenModel`), and the disk (the start's keys unchanged, plus each
+ * recall key a `Next` kept, a finished recital's recall pending and
+ * counted as kept until then and let go unwritten by a return, `Your
+ * field` or a launch's end, the minutes key after a Minutes trip and the voice's key
  * after each Voice tap; a state sent and a Listen write nothing); every text the
  * voice's source was given, and whether it reads, against the walk's own;
  * every frame holds the root's frame rule (`rootFaults`), every Today
@@ -339,7 +341,24 @@ class Walk {
     return this.app;
   }
 
-  recallsNow = (reference: string) => plantsOf(this.device).get(reference)?.length ?? 0;
+  /** The recall a finished recital of the held item leaves pending until `Next` keeps it (its write refused when `refused`), or a leave or a return's making lets it go; Today counts it as kept meanwhile. */
+  pending: {
+    readonly piece: TextPiece;
+    readonly startedAt: number;
+    readonly refused: boolean;
+  } | null = null;
+
+  recallsNow = (reference: string) =>
+    (plantsOf(this.device).get(reference)?.length ?? 0) +
+    (this.pending !== null && this.pending.piece.reference === reference ? 1 : 0);
+
+  /** Today left by `Your field`: the hold, its result and the recall pending let go, nothing written. */
+  leaveToday() {
+    this.run = nextModel(this.run);
+    this.pending = null;
+    this.result = null;
+    this.ending = null;
+  }
 
   pieceOf(reference: string) {
     const piece = this.pieces.find((each) => each.reference === reference);
@@ -566,6 +585,7 @@ class Walk {
     if (this.returnsThisLaunch >= 3) bump(this.coverage, 'wake:many');
     for (let each = 0; each < returns; each += 1)
       this.run = wakeModel(this.run, () => this.planNow(), { unread: this.unread, underWay });
+    if (this.run.hold === null) this.pending = null;
     if (this.unread) {
       bump(this.coverage, 'wake:unread');
       if (this.result !== null) bump(this.coverage, 'wake:unread:result');
@@ -644,6 +664,29 @@ class Walk {
     this.expected.set(keyOf({ reference: piece.reference, startedAt }), null);
   }
 
+  /** Ends a recital that listens: cancelled, or by `Listening`, its end held back while `during` comes as it finishes. */
+  async endRecital(how: How, during?: During) {
+    const app = this.screen;
+    if (how === 'cancelled') return app.cancel();
+    if (during?.at !== 'finishing') return this.press('Listening');
+    app.deferEnd();
+    await this.press('Listening');
+    if (!(await app.until(() => app.status() === 'finishing'))) this.fail('never finishing');
+    await this.during(during);
+    if (app.status() !== 'finishing') this.fail('finished before its end was sent');
+    await app.release();
+  }
+
+  /** What a recital ended `how` leaves: in an unread garden its recall kept at once; on a held item its recall pending until `Next`; the result shown and the ending Listen reads. */
+  recitalEnded(how: How, piece: TextPiece, startedAt: number) {
+    const finished = how === 'heard' || how === 'refused';
+    if (finished && this.unread) this.expectRecall(piece, startedAt);
+    if (finished && !this.unread && this.run.hold !== null)
+      this.pending = { piece, startedAt, refused: how === 'refused' };
+    this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
+    this.ending = this.unread || finished ? null : how;
+  }
+
   /** A recital of the shown item, ended `how`, with `during` coming while it listens or finishes. */
   async say(how: How, during?: During) {
     const app = this.screen;
@@ -654,7 +697,6 @@ class Walk {
       app.hearing,
       how === 'unheard' ? { kind: 'unheard' } : { kind: 'heard', text: piece.text, skip: [] },
     );
-    this.faults.refuse = how === 'refused';
     const startedAt = this.time.now;
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
     const stopped = this.stopCheck();
@@ -662,24 +704,12 @@ class Walk {
     if (!(await app.until(() => app.has('Listening')))) this.fail('never listened');
     stopped();
     if (during?.at === 'listening') await this.during(during);
-    if (how === 'cancelled') await app.cancel();
-    else if (during?.at !== 'finishing') await this.press('Listening');
-    else {
-      app.deferEnd();
-      await this.press('Listening');
-      if (!(await app.until(() => app.status() === 'finishing'))) this.fail('never finishing');
-      await this.during(during);
-      if (app.status() !== 'finishing') this.fail('finished before its end was sent');
-      await app.release();
-    }
-    if (how === 'heard') this.expectRecall(piece, startedAt);
-    this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
-    this.ending = this.unread ? null : how;
+    await this.endRecital(how, during);
+    this.recitalEnded(how, piece, startedAt);
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     await this.settle(
       `say ${how}${during === undefined ? '' : ` with ${during.what} while ${during.at}`}`,
     );
-    this.faults.refuse = false;
     this.trail.push('say');
   }
 
@@ -765,6 +795,7 @@ class Walk {
   async toHome(step: string) {
     const app = this.screen;
     await this.press('Your field');
+    this.leaveToday();
     if (
       !(await app.until(
         () =>
@@ -956,13 +987,19 @@ class Walk {
     if (!this.home) await this.minutesTap();
   }
 
+  /** `Next`: the recall pending is kept (its write refused when the recital was, which leaves the item to say again), then the hold let go. */
   async nextTap() {
+    const pending = this.pending;
+    this.faults.refuse = pending?.refused === true;
+    if (pending !== null && !pending.refused) this.expectRecall(pending.piece, pending.startedAt);
     await this.press('Next');
+    this.pending = null;
     this.run = nextModel(this.run);
     this.result = null;
-    this.ending = null;
+    this.ending = pending?.refused === true ? 'refused' : null;
     bump(this.coverage, 'next');
     await this.settle('Next');
+    this.faults.refuse = false;
     this.trail.push('next');
   }
 
@@ -977,6 +1014,8 @@ class Walk {
   async field() {
     const app = this.screen;
     await this.press('Your field');
+    if (this.run.hold !== null) bump(this.coverage, 'field:held');
+    this.leaveToday();
     if (
       !(await app.until(() => app.headings().includes('Your field') && homeCounts(app).length > 0))
     )
@@ -1164,7 +1203,7 @@ class Walk {
     return this.wait();
   }
 
-  /** At Next: leaning to returns, the field or Again a third of the time; else Next, Again, an away, the field, a Minutes trip or a wait. */
+  /** At Next: leaning to returns, the field or Again a third of the time; else Next, Again, an away, the field, a Minutes trip or a wait (an away, the field and a Minutes trip each let the recital go, the item open again). */
   async atNext(roll: number) {
     if (this.steer === 'returns' && this.next() < 0.3)
       return this.next() < 0.5 ? this.field() : this.again();
@@ -1255,6 +1294,7 @@ class Walk {
     this.reading = null;
     this.spoken.length = 0;
     this.run = NO_RUN;
+    this.pending = null;
     this.result = null;
     this.ending = null;
     this.trail = [];

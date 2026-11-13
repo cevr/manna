@@ -9,14 +9,14 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('end', 33, 1, [
+walkCase('end', 27, 1, [
   'say:heard',
   'say:unheard',
   'say:cancelled',
   'minutes:after:unheard',
   'minutes:after:cancelled',
   'made:drops-hold',
-  'field:held:next:more',
+  'field:held:next:again',
   'cue:review:initials',
   'cue:review:none',
 ]);

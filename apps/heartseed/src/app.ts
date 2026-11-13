@@ -37,7 +37,8 @@ import {
   layer as appearanceLayer,
   type Choice as AppearanceChoice,
 } from './appearance';
-import { layer as dictationLayer, type DictationSource } from './dictation';
+import { Dictation, layer as dictationLayer, type DictationSource } from './dictation';
+import { isActive as isListening } from './dictation/attempt';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
 import { type Foreground, Returns, wakeLayer } from './foreground';
@@ -217,7 +218,7 @@ const todayCue = (view: GardenView, reference: string): Cue => {
  * one under way. A reading of Listen's under way stops first, so the voice
  * never reads into the microphone. In a run, `item` is the plan's item
  * shown, held in the same step as the recital starts, so it stays shown
- * until its `Next`.
+ * until its `Next`, and its recall is kept only at that `Next` (`nextItem`).
  */
 export const pressToday = (piece: Passage, item: Option.Option<Item> = Option.none()) =>
   Effect.gen(function* () {
@@ -228,8 +229,30 @@ export const pressToday = (piece: Passage, item: Option.Option<Item> = Option.no
     yield* voice.stop;
     const view = yield* garden.settled;
     if (Option.isSome(item)) yield* session.hold(item.value);
-    yield* sayIt.recite({ cue: todayCue(view, piece.reference), keep: TODAY.keep }, piece);
+    yield* sayIt.recite(
+      { cue: todayCue(view, piece.reference), keep: TODAY.keep, untilNext: Option.isSome(item) },
+      piece,
+    );
   });
+
+/** Today's `Next`: the held item's pending recall is kept (its write landed or failed), then the item is let go. */
+export const nextItem = Effect.gen(function* () {
+  const sayIt = yield* SayIt;
+  const session = yield* Session;
+  const { held } = yield* session.view;
+  if (Option.isSome(held)) yield* sayIt.commit(held.value.reference);
+  yield* session.next;
+});
+
+/** Today left by `Your field` before `Next`: the held item is let go and its pending recall with it, so nothing is recorded and the verse stays as it was; a recital under way (one started in the same turn as the tap) keeps both. */
+export const leaveToday = Effect.gen(function* () {
+  const sayIt = yield* SayIt;
+  const session = yield* Session;
+  const dictation = yield* Dictation;
+  if (isListening(yield* dictation.view)) return;
+  yield* sayIt.drop;
+  yield* session.next;
+});
 
 /** A press of Today's button on `piece`, the run's `item` when one is shown. Each command runs to its end, so a second tap never cuts off the first one's recall. */
 export const press = runtime.fn(
@@ -303,10 +326,11 @@ export const moveBack = runtime.fn(
   { concurrent: true },
 );
 
-/** A tap on Today's Next: the held item is let go. */
-export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {
-  concurrent: true,
-});
+/** A tap on Today's Next: the held item's pending recall is kept, then the item is let go (`nextItem`). */
+export const next = runtime.fn(() => nextItem, { concurrent: true });
+
+/** Today's `Your field`: the held item and its pending recall are let go (`leaveToday`). */
+export const leave = runtime.fn(() => leaveToday, { concurrent: true });
 
 /** Start here, a tap on a verse of the home: the verse `startOf` starts becomes the visit Today shows ahead of the plan; the hold stays. */
 export const startHere = runtime.fn(

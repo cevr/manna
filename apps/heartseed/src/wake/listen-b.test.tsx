@@ -9,7 +9,7 @@
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('listen', 12, 2, [
+wakeCase('listen', 928, 2, [
   'listen:offered',
   'listen:read',
   'listen:refused',

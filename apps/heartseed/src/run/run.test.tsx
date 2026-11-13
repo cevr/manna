@@ -9,7 +9,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('run', 5, 2, [
+walkCase('run', 88, 2, [
   'next',
   'next:another-group',
   'done:after-next',
@@ -23,5 +23,5 @@ walkCase('run', 5, 2, [
   'again',
   'pieces:many',
   'home:begin',
-  'field:held:next:last',
+  'field:held:next:again',
 ]);

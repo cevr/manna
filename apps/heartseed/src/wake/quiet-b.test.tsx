@@ -10,7 +10,7 @@
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('quiet', 7, 2, [
+wakeCase('quiet', 3827, 2, [
   'wake:under-way',
   'wake:under-way:differs',
   'held:return',

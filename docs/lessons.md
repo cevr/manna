@@ -5159,7 +5159,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/plan.md line 117 (the owner, 2026-10-19); hymnapp/hssayit/spec.md Today and Risks
 - **Wrong:** Nested words make the verse one accessibility element with no tappable mark; an unsaid or half-heard word read by the screen reader gives the recital away; a mark not named `Missed word <n>`, a grade group without its checked state, or an inexact count leaves VoiceOver and the drive without their target; and leaving Today could leave a recital listening.
 - **Cause:** The screen reader and the simulator driver read only the accessible names, roles and states, which no picture of the screen shows; and a recital's first views hold no half-heard word, so a test that reads only those never sees one exposed or an unsaid word drawn.
-- **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade, a peek, Next, and Say it again at the seed’s due`; `apps/heartseed/src/sayit/today.test.tsx` `hides each unsaid word from the screen reader and reads Listening while it listens, with no grade`; `apps/heartseed/src/sayit/today.test.tsx` `leaving mid-recital cancels it once and keeps nothing, with the registry still alive`; `apps/heartseed/src/sayit/screen.test.ts` `show and read as Today’s rules say, over all five statuses, every index to 63 and words with and without punctuation`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
+- **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek on the recall pending, Next keeping it alone, and Say it again at the seed’s due`; `apps/heartseed/src/sayit/today.test.tsx` `hides each unsaid word from the screen reader and reads Listening while it listens, with no grade`; `apps/heartseed/src/sayit/today.test.tsx` `leaving mid-recital cancels it once and keeps nothing, with the registry still alive`; `apps/heartseed/src/sayit/screen.test.ts` `show and read as Today’s rules say, over all five statuses, every index to 63 and words with and without punctuation`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
 
 ### heartseed-sayit-words-as-drawn
 
@@ -5169,7 +5169,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hssayit/round-2-findings.md M2; hymnapp/hssayit/round-1-findings.md M1
 - **Wrong:** A one-line change to how one kind of recital word is drawn (a lit or peeked word made transparent, a word being heard read by the screen reader, an unsaid word's text shown) passed every test, twice.
 - **Cause:** Each guard checked a decision about the word (first Today's branches, then `wordOf`'s ink), while a second mapping, from the ink to a style and its colour, lies between that decision and what the reader sees.
-- **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade, a peek, Next, and Say it again at the seed’s due`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
+- **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek on the recall pending, Next keeping it alone, and Say it again at the seed’s due`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
 
 ### heartseed-growth-silent-off-device
 
@@ -5569,7 +5569,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hssettings5/round-1-findings.md R3 (its Risk 3)
 - **Wrong:** A product that let the held item go at `Your field` was caught, with another item open after it, only by two run walks whose seeds happened to reach that hold; no floor named the case, so another seed could lose it with every part green.
 - **Cause:** The run walk counted a hold at `Your field` as one case, whatever followed it in the plan.
-- **Guard:** code: `apps/heartseed/src/run/end-b.test.tsx` `field:held:next:more`; code: `apps/heartseed/src/run/cues-b.test.tsx` `field:held:next:more`
+- **Guard:** code: `apps/heartseed/src/run/end-b.test.tsx` `field:held:next:again`; code: `apps/heartseed/src/run/cues-b.test.tsx` `field:held:next:again`
 
 ### heartseed-list-opens
 

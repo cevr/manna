@@ -39,7 +39,7 @@ import {
 } from '../test/stage-rig';
 
 describe('Today’s stage over the device’s store', () => {
-  it('reads not planted, then a seed, grows to a blade under its letters and then to a green ear at each due, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
+  it('reads not planted, then a seed, grows to a blade under its letters and then to a green ear at each due, a chime at each Next that keeps a growth, falls back to a blade at a peek, keeps it through a restart once Next kept it, falls to a seed at Again, and climbs back', async () => {
     device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9), OTHER))]);
     const chimes: Growth[] = [];
     const time = { now: AT };
@@ -59,21 +59,24 @@ describe('Today’s stage over the device’s store', () => {
       [],
     ]);
     expect(today.drawn()).toEqual(['assets/home/seed-light.png']);
-    expect(passageKeys()).toHaveLength(1);
+    expect(passageKeys()).toHaveLength(0);
 
     await today.renew();
+    expect(passageKeys()).toHaveLength(1);
     expect([today.stage(), today.growth()]).toEqual(['Stage: seed', null]);
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
-    expect([today.growth(), today.drawn()]).toEqual([
+    expect([today.growth(), today.drawn(), chimes, passageKeys().length]).toEqual([
       'Grew to a blade.',
       ['assets/home/blade-light.png'],
-    ]);
-    expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
-      [passage.reference, 'seed', 'blade'],
+      [],
+      1,
     ]);
 
     await today.renew();
+    expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
+      [passage.reference, 'seed', 'blade'],
+    ]);
     expect([today.ends, today.frames.end > 0]).toEqual([
       [
         { grew: ['1 grew a stage.'], grown: [`${passage.reference}, seed`] },
@@ -87,19 +90,18 @@ describe('Today’s stage over the device’s store', () => {
       'Grew to an ear.',
       ['assets/home/ear-light.png'],
     ]);
-    expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
-      [passage.reference, 'seed', 'blade'],
-      [passage.reference, 'blade', 'ear'],
-    ]);
+    expect(chimes.length).toBe(1);
 
     await today.click(today.one('[data-testid="word-10"]'));
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
     expect([today.growth(), chimes.length, passageKeys().length, today.drawn()]).toEqual([
       null,
+      1,
       2,
-      3,
       ['assets/home/blade-light.png'],
     ]);
+    await today.next();
+    expect([chimes.length, passageKeys().length]).toEqual([1, 3]);
     await today.leave();
 
     toDue(time, passageRecalls());
@@ -110,24 +112,25 @@ describe('Today’s stage over the device’s store', () => {
 
     await again.say();
     expect(await again.until(() => again.stage() === 'Stage: ear')).toBe(true);
-    expect(again.growth()).toBe('Grew to an ear.');
-    expect(chimes.map(({ from, to }) => [from, to])).toEqual([
-      ['seed', 'blade'],
-      ['blade', 'ear'],
-      ['blade', 'ear'],
-    ]);
+    expect([again.growth(), chimes.length]).toEqual(['Grew to an ear.', 1]);
 
     await again.click(again.radio('Again'));
     expect(await again.until(() => again.stage() === 'Stage: seed')).toBe(true);
-    expect([again.growth(), chimes.length]).toEqual([null, 3]);
+    expect([again.growth(), chimes.length]).toEqual([null, 1]);
 
     await again.click(again.radio('Good'));
     expect(await again.until(() => again.stage() === 'Stage: ear')).toBe(true);
     expect([again.growth(), chimes.length, passageKeys().length]).toEqual([
       'Grew to an ear.',
+      1,
       3,
-      4,
     ]);
+    await again.next();
+    expect(chimes.map(({ from, to }) => [from, to])).toEqual([
+      ['seed', 'blade'],
+      ['blade', 'ear'],
+    ]);
+    expect(passageKeys()).toHaveLength(4);
     await again.leave();
   });
 

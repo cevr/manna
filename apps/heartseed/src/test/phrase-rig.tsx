@@ -31,8 +31,9 @@
  * reader reaches it: the sheet is on home, and Today shows no `Your
  * field` while a recital listens); the recital heard with a
  * word skipped in three of ten; the summary reading `<heard> of <n> words`
- * over the piece's n; a grade in half; the record under the item's own
- * reference with its word count and the grade; then `Next`. A tap of a
+ * over the piece's n; a grade in half, nothing written yet; then `Next`,
+ * which writes the record under the item's own reference with its word
+ * count and the grade. A tap of a
  * control the step names fails the walk when the control is absent.
  *
  * The oracle, apart from the app's code: Today's reference, counts line,
@@ -587,7 +588,11 @@ class PhraseWalk {
     return plants;
   }
 
-  recallsNow = (reference: string) => this.plants().get(reference)?.length ?? 0;
+  /** The held verse whose finished recital's recall waits for `Next`; Today counts it as kept meanwhile. */
+  pending: string | null = null;
+
+  recallsNow = (reference: string) =>
+    (this.plants().get(reference)?.length ?? 0) + (this.pending === reference ? 1 : 0);
 
   /** The pieces the model makes over the disk's passages: hskjv's, or hspromise's with Fear taught, each a whole verse. */
   pieces(): ModelTextPiece[] {
@@ -835,7 +840,6 @@ class PhraseWalk {
     this.time.now += 30_000;
     const key = keyOf({ reference: shown.reference, startedAt: this.time.now });
     this.run = startedModel(this.run, this.recallsNow);
-    this.expected.add(key);
     if (!(await app.tap('Say it'))) return this.fail(`no Say it on ${shown.reference}`);
     if (!(await app.until(() => app.today().action.includes('Listening'))))
       return this.fail(`${shown.reference} never listened`);
@@ -848,25 +852,47 @@ class PhraseWalk {
       return this.fail(
         `${shown.reference}: the summary reads ${summary.replace(/[^\d ofwrds]/g, '')} over ${n} words, ${skip.length} unheard`,
       );
-    if (!(await this.keep(shown.reference, key, n))) return false;
+    const grade = await this.grade(shown.reference);
+    if (grade === false) return false;
+    this.pending = shown.reference;
+    if (!(await this.settle(`said ${shown.reference}`))) return false;
+    return this.nextAfter(shown, { key, n, grade, kind });
+  }
+
+  /** `Next` after a recital of `shown`: nothing on the disk before it, then its record kept under `key` (`n` words, the grade tapped), and the run moved on. */
+  async nextAfter(
+    shown: { readonly reference: string; readonly fresh: boolean },
+    said: {
+      readonly key: string;
+      readonly n: number;
+      readonly grade: number | null;
+      readonly kind: 'long' | 'verse';
+    },
+  ) {
+    const { key, n, grade, kind } = said;
+    if (this.disk.has(key)) return this.fail(`${shown.reference}: a record before Next`);
+    if (!(await this.mounted.tap('Next'))) return this.fail(`no Next on ${shown.reference}`);
+    if (!(await this.keep(shown.reference, key, n, grade))) return false;
+    this.pending = null;
+    this.expected.add(key);
     bump(this.cover, `record:${kind}`);
     if (shown.fresh) this.sownFresh = this.begun(shown.reference);
-    if (!(await this.settle(`said ${shown.reference}`))) return false;
-    if (!(await app.tap('Next'))) return this.fail(`no Next on ${shown.reference}`);
     this.run = nextModel(this.run);
     if (kind === 'long') bump(this.cover, 'next:after-long');
     return this.settle(`next after ${shown.reference}`);
   }
 
-  /** A grade tapped in half, then the record under `reference`'s own `key` with its `n` words and the grade. */
-  async keep(reference: string, key: string, n: number) {
+  /** A grade tapped in half on `reference`'s result: the grade, null with none tapped, false when the radio is absent. */
+  async grade(reference: string): Promise<number | null | false> {
+    if (below(this.next, 2) !== 0) return null;
+    const name = pickOf(this.next, GRADES);
+    if (!(await this.mounted.tap(name, 'radio'))) return this.fail(`no ${name} on ${reference}`);
+    return GRADES.indexOf(name) + 1;
+  }
+
+  /** After `Next`, the record under `reference`'s own `key` with its `n` words and the grade tapped. */
+  async keep(reference: string, key: string, n: number, grade: number | null) {
     const app = this.mounted;
-    let grade: number | null = null;
-    if (below(this.next, 2) === 0) {
-      const name = pickOf(this.next, GRADES);
-      grade = GRADES.indexOf(name) + 1;
-      if (!(await app.tap(name, 'radio'))) return this.fail(`no ${name} on ${reference}`);
-    }
     const kept = await app.until(() => {
       const raw = this.disk.get(key);
       return raw !== undefined && (grade === null || (JSON.parse(raw) as Recall).grade === grade);
