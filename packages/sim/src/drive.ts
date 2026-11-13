@@ -1437,6 +1437,75 @@ const relaunch = Effect.fn('Sim.relaunch')(function* (place: Place) {
   return outcome(session.platform, {}, {});
 });
 
+/** The app's container on the simulator: its installed bundle (`app`) or its data (`data`). */
+const containerOf = (app: App, udid: string, kind: 'app' | 'data') =>
+  Effect.map(
+    succeed('xcrun', ['simctl', 'get_app_container', udid, app.bundleId, kind], short),
+    (text) => text.trim(),
+  );
+
+/**
+ * Install the build already installed afresh (iOS): a copy of it is taken
+ * into the drive's output, the app is uninstalled, which drops every file it
+ * kept, and the copy is installed and launched until its `readyTarget`
+ * shows. Nothing is built.
+ */
+const freshInstall = Effect.fn('Sim.freshInstall')(function* (place: Place, seconds: number) {
+  const session = yield* readSession(place);
+  if (session.platform === 'web')
+    return yield* NotOnPlatform.make({ command: 'journeys', platform: 'web' });
+  const config = place.config;
+  const udid = yield* booted(config, session);
+  const installed = yield* containerOf(config, udid, 'app');
+  yield* admit(installed);
+  const made = yield* copyApp(config, installed, `${session.out}/fresh`);
+  yield* succeed('xcrun', ['simctl', 'uninstall', udid, config.bundleId], Duration.minutes(2));
+  yield* succeed('xcrun', ['simctl', 'install', udid, made.app], Duration.minutes(2));
+  yield* device(
+    config,
+    ['open', config.bundleId, '--platform', 'ios', '--udid', udid, '--relaunch'],
+    Duration.seconds(seconds),
+  );
+  yield* present(config, session, config.readyTarget, seconds);
+  return outcome('ios', { app: made.app }, { udid, expect: config.readyTarget });
+});
+
+/** A text as an SQL string literal. */
+const sqlText = (text: string) => `'${text.replaceAll("'", "''")}'`;
+
+/**
+ * Set keys in the app's stored settings (iOS): the app is terminated, then
+ * each key's value is written into its store (`App.store`) in one
+ * transaction. The app stays stopped; the next launch reads them.
+ */
+const setStore = Effect.fn('Sim.setStore')(function* (
+  place: Place,
+  values: ReadonlyArray<readonly [string, string]>,
+) {
+  const session = yield* readSession(place);
+  if (session.platform === 'web')
+    return yield* NotOnPlatform.make({ command: 'journeys', platform: 'web' });
+  const config = place.config;
+  const kept = Option.fromNullishOr(config.store);
+  if (Option.isNone(kept))
+    return yield* Unhealthy.make({
+      check: 'store',
+      reason: `${config.displayName} names no store of its settings`,
+    });
+  const store = kept.value;
+  const udid = yield* booted(config, session);
+  yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, config.bundleId], short));
+  const data = yield* containerOf(config, udid, 'data');
+  yield* admit(data);
+  const file = `${data}/${store.file}`;
+  const rows = values.map(
+    ([key, value]) =>
+      `INSERT OR REPLACE INTO ${store.table} (key, value) VALUES (${sqlText(key)}, ${sqlText(value)});`,
+  );
+  yield* succeed('sqlite3', [file, ['BEGIN;', ...rows, 'COMMIT;'].join(' ')], short);
+  return outcome('ios', { store: file }, { keys: values.map(([key]) => key).join(',') });
+});
+
 /** How many times, 500 ms apart, `clean` looks for the stopped server's port to come free. */
 const PORT_FREE_LOOKS = 10;
 
@@ -1650,6 +1719,8 @@ export interface DriveMembers {
   readonly pinch: Hosted<typeof pinch>;
   readonly hold: Hosted<typeof hold>;
   readonly relaunch: Hosted<typeof relaunch>;
+  readonly freshInstall: Hosted<typeof freshInstall>;
+  readonly setStore: Hosted<typeof setStore>;
   readonly clean: Hosted<typeof clean>;
 }
 
@@ -1708,6 +1779,8 @@ export const DriveLive = Layer.effect(
       pinch: driving(pinch),
       hold: driving(hold),
       relaunch: driving(relaunch),
+      freshInstall: driving(freshInstall),
+      setStore: hosted(setStore),
       clean: hosted(clean),
     });
   }),

@@ -43,6 +43,7 @@ import {
   panStart,
   runJourney,
 } from './journey.ts';
+import { runJourneyLists } from './journeys.ts';
 import type { Platform } from './result.ts';
 import { encodeFailure, Success } from './result.ts';
 
@@ -601,21 +602,49 @@ const simCommand = (place: Place) => {
         Flag.withDefault(false),
         Flag.withDescription('take no video of the journey (a quiet app never takes one)'),
       ),
+      noShots: Flag.Boolean('no-shots').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription('take no screenshot and no video: each step keeps its snapshot alone'),
+      ),
       state,
     },
     (flags) => {
       const here = at(flags.state);
+      const video = !flags.skipVideo && !flags.noShots && app.quiet !== true;
       return contain(here)(
         Effect.gen(function* () {
-          const { journey, session } = yield* refused('journey', loadJourney(here, flags.feature));
+          const { journey, session } = yield* refused(
+            'journey',
+            loadJourney(here, flags.feature, !flags.noShots),
+          );
           yield* admit(session.out);
-          return yield* runJourney(here, journey, session, !flags.skipVideo && app.quiet !== true);
+          return yield* runJourney(here, journey, session, video);
         }),
       );
     },
   ).pipe(
     Command.withDescription(
       "Run a feature's journey (iOS): one JSON line per step, receipts, stop at the first failure",
+    ),
+  );
+
+  const journeysCommand = Command.make(
+    'journeys',
+    {
+      file: Argument.String('file').pipe(
+        Argument.withDescription(
+          'the feature file (<name>.md) whose **Journeys in order:** lines run',
+        ),
+      ),
+      state,
+    },
+    (flags) => {
+      const here = at(flags.state);
+      return contain(here)(runJourneyLists(here, flags.file));
+    },
+  ).pipe(
+    Command.withDescription(
+      "Run a feature file's journey lists in their written order from their start (iOS), with no shot or video: one line per step, then each journey's result and the one before it",
     ),
   );
 
@@ -645,6 +674,7 @@ const simCommand = (place: Place) => {
       holdCommand,
       relaunchCommand,
       journeyCommand,
+      journeysCommand,
       downCommand,
       serveCommand,
     ]),

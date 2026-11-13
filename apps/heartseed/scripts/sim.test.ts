@@ -64,6 +64,8 @@ const standIn = (calls: Array<Call>): DriveMembers => {
     pinch: step('pinch'),
     hold: step('hold'),
     relaunch: step('relaunch'),
+    freshInstall: step('freshInstall'),
+    setStore: step('setStore'),
     clean: step('clean'),
   };
 };

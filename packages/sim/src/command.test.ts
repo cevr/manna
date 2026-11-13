@@ -85,6 +85,8 @@ const standIn = (
     pinch: step('pinch'),
     hold: step('hold'),
     relaunch: step('relaunch'),
+    freshInstall: step('freshInstall'),
+    setStore: step('setStore'),
     sees: (...args) => Effect.sync(() => void calls.push({ op: 'sees', args })),
   };
 };

@@ -1,0 +1,8 @@
+{
+  "feature": "alpha",
+  "platform": "ios",
+  "steps": [
+    { "name": "alpha-start", "action": "open", "link": "/", "expect": [{ "shows": "label=Home" }] },
+    { "name": "alpha-shot", "action": "tap", "target": "label=Settings", "receipt": "shot" }
+  ]
+}

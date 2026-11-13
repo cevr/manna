@@ -51,6 +51,8 @@ const booted = (app: App): DriveMembers => ({
   pinch: noStep,
   hold: noStep,
   relaunch: noStep,
+  freshInstall: noStep,
+  setStore: noStep,
   clean: noStep,
 });
 

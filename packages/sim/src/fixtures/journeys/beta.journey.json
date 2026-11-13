@@ -1,0 +1,14 @@
+{
+  "feature": "beta",
+  "platform": "ios",
+  "steps": [
+    { "name": "beta-start", "action": "open", "link": "/", "expect": [{ "shows": "label=Home" }] },
+    {
+      "name": "beta-card",
+      "action": "tap",
+      "target": "label=Start",
+      "expect": [{ "shows": "label=Practice anyway" }]
+    },
+    { "name": "beta-after", "action": "back" }
+  ]
+}

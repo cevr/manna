@@ -55,6 +55,27 @@ const Ios = Schema.Struct({
   logProcess: Text,
 });
 
+/** A relative path with no `..` segment: a file inside the app's data container. */
+const ContainerPath = Text.check(
+  Schema.makeFilter((path) => isInside(path) || `${path} is not a path inside the container`),
+);
+
+/**
+ * The app's stored settings, as One's key-value store keeps them on iOS: a
+ * SQLite file in the app's data container whose table holds `key` and
+ * `value`. `sim journeys` sets keys in it before a run that asks.
+ */
+const Store = Schema.Struct({
+  /** The SQLite file, relative to the app's data container: `Library/one-kv-hymnal.sqlite`. */
+  file: ContainerPath,
+  /** The table of `key` and `value` text. */
+  table: Schema.String.check(
+    Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/, {
+      message: 'a table name is a letter or _, then letters, digits or _',
+    }),
+  ),
+});
+
 export const App = Schema.Struct({
   /** How help names the app, as a noun phrase: `the hymnal`. */
   displayName: Text,
@@ -93,6 +114,8 @@ export const App = Schema.Struct({
   cleanPaths: Schema.Array(AppPath),
   /** Whether a journey keeps no picture of the screen: no video, and no step whose receipt is a shot. */
   quiet: Schema.optionalKey(Schema.Boolean),
+  /** Where the app keeps its settings on iOS, for a journey list that sets them; none for an app that gives none. */
+  store: Schema.optionalKey(Store),
 });
 export interface App extends Schema.Schema.Type<typeof App> {}
 

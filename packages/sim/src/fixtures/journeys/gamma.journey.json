@@ -1,0 +1,5 @@
+{
+  "feature": "gamma",
+  "platform": "ios",
+  "steps": [{ "name": "gamma-start", "action": "relaunch", "expect": [{ "shows": "label=Home" }] }]
+}

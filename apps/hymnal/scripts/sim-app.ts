@@ -2,7 +2,8 @@
  * The hymnal as `@manna/sim` drives it: the `verify-hymnal` simulator, the
  * `im.cvr.hymnal` bundle and its `hymnal://` links, ports 8270-8279, the
  * Hymns list as the sign it has drawn, iOS and the web, the native project
- * under `ios/`, and the build output `down --clean` deletes.
+ * under `ios/`, the build output `down --clean` deletes, and the settings
+ * One's key-value store keeps (`src/store.ts`), which `sim journeys` sets.
  */
 import { defineApp } from '@manna/sim/app';
 
@@ -25,4 +26,5 @@ export const app = defineApp({
   },
   openPrompt: 'label="Open in “Hymnal”?"',
   cleanPaths: ['ios/build', 'ios/Pods', 'dist'],
+  store: { file: 'Library/one-kv-hymnal.sqlite', table: 'one_kv' },
 });

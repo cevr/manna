@@ -186,8 +186,23 @@ export const openOnce = (
     );
   });
 
-/** A journey ready to run: its file decoded, for the booted iOS drive; a quiet app's refused if a step keeps a shot. */
-export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place, feature: string) {
+/** A step's receipt with its shot left out: `both` keeps the snapshot alone, `shot` nothing. */
+const withoutShot = (receipt: Step['receipt']): Step['receipt'] => {
+  if (receipt === 'both') return 'snapshot';
+  if (receipt === 'shot') return 'none';
+  return receipt;
+};
+
+/**
+ * A journey ready to run: its file decoded, for the booted iOS drive; a
+ * quiet app's refused if a step keeps a shot. With `shots` false every
+ * step's shot is left out first (`--no-shots`), so no step is refused.
+ */
+export const loadJourney = Effect.fn('Sim.loadJourney')(function* (
+  place: Place,
+  feature: string,
+  shots = true,
+) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const file = path.join(place.features, `${feature}.journey.json`);
@@ -197,7 +212,13 @@ export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place,
   const text = yield* fs
     .readFileString(file)
     .pipe(Effect.mapError((error) => BadJourney.make({ file, issue: error.message })));
-  const journey = yield* decodeJourney(file, text);
+  const written = yield* decodeJourney(file, text);
+  let journey = written;
+  if (!shots)
+    journey = {
+      ...written,
+      steps: written.steps.map((step) => ({ ...step, receipt: withoutShot(step.receipt) })),
+    };
   if (journey.feature !== feature) {
     return yield* BadJourney.make({
       file,
@@ -360,16 +381,38 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
     return { line, failure };
   });
 
+/** How a journey ended: the steps that ran, and the one that failed with its error. */
+export interface Played {
+  readonly ran: number;
+  readonly failed: Option.Option<{ readonly step: Step; readonly error: SimError }>;
+}
+
 /**
- * Run `journey` on the booted drive: a video from start to end (unless
- * `video` is false; it is stopped whatever happens), each step in order
- * until one fails, then the summary. A failed step fails the run with its
- * error. Each line goes to the console before it is appended to
- * `<out>/results.jsonl`, and a write to the output folder that fails prints
- * its own failure line and fails the run, so a refused results file is
- * still reported once.
+ * Run `journey` on the booted drive and fail with its failed step's error,
+ * as `playJourney` plays it.
  */
 export const runJourney = (place: Place, journey: Journey, session: Session, video: boolean) =>
+  Effect.flatMap(playJourney(place, journey, session, video), (played) =>
+    Option.match(played.failed, {
+      onNone: () => Effect.void,
+      onSome: ({ error }) => Effect.fail(error),
+    }),
+  );
+
+/**
+ * Play `journey` on the booted drive: a video from start to end (unless
+ * `video` is false; it is stopped whatever happens), each step in order
+ * until one fails, then the summary; how it ended. Each line goes to the
+ * console before it is appended to `<out>/results.jsonl`, and a write to
+ * the output folder that fails prints its own failure line and fails the
+ * play, so a refused results file is still reported once.
+ */
+export const playJourney = (
+  place: Place,
+  journey: Journey,
+  session: Session,
+  video: boolean,
+): Effect.Effect<Played, SimError, Drive | FileSystem.FileSystem | Path.Path> =>
   hostFailed(
     Effect.gen(function* () {
       const d = yield* Drive;
@@ -404,10 +447,7 @@ export const runJourney = (place: Place, journey: Journey, session: Session, vid
             return { ran: index + 1, failed: Option.some({ step, error: failure.value }) };
           }
         }
-        return {
-          ran: journey.steps.length,
-          failed: Option.none<{ readonly step: Step; readonly error: SimError }>(),
-        };
+        return { ran: journey.steps.length, failed: Option.none() } satisfies Played;
       });
       const start = d.record(place, 'start', Option.some(journey.feature)).pipe(
         hostFailed,
@@ -439,6 +479,6 @@ export const runJourney = (place: Place, journey: Journey, session: Session, vid
           ms: (yield* Clock.currentTimeMillis) - started,
         }),
       );
-      if (Option.isSome(ran.failed)) return yield* ran.failed.value.error;
+      return ran satisfies Played;
     }),
   );

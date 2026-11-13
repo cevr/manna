@@ -81,6 +81,8 @@ const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>
     pinch: step('pinch'),
     hold: step('hold'),
     relaunch: step('relaunch'),
+    freshInstall: step('freshInstall'),
+    setStore: step('setStore'),
     sees: (_place, target, seconds) =>
       Effect.suspend(() => {
         calls.push({ op: 'sees', args: [target, seconds] });
