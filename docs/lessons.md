@@ -5740,3 +5740,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `manna/seed-from-clock` passed `Number(process.env['X_SEED']) || Date.now()`, `env ? Number(env) : Date.now()`, the same `||` inside `random(…)`, and `parseInt(env ?? '', 10) || Math.random() * 1e6`.
 - **Cause:** The rule read a seed's name only in a bare env read or a call's bare name arguments, and took a fallback only from the right of `??`/`||`, never a branch of `?:`; its tests named two shapes, not the forms a test writes.
 - **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
+
+### heartseed-journey-leaves-home-scrolled
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "the new `*-line` steps leave home at its foot, and the next journey in the written order starts there"
+- **Source:** hymnapp/hsaddlist/round-1-findings.md B2
+- **Wrong:** `handbook-limit` and `passage-limit` ended with a scroll down to the limit line at home's foot, so `handbook-remove` and `passage-keep`, whose `open` keeps the running app's offset, did not find the furrows they wait for.
+- **Cause:** Moving `Add a list` to the field's foot added scrolls down to it, and nothing held a journey to scroll home back up before it ends; the rules looked at each journey alone, never at the state it hands on.
+- **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `each rule names its mutant of the first journey`; code: `apps/heartseed/scripts/journeys.test.ts` `every shipped journey holds R1-R4 and is run by its feature file, whose cites name its steps`
