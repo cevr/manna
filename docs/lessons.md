@@ -5750,3 +5750,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `handbook-limit` and `passage-limit` ended with a scroll down to the limit line at home's foot, so `handbook-remove` and `passage-keep`, whose `open` keeps the running app's offset, did not find the furrows they wait for.
 - **Cause:** Moving `Add a list` to the field's foot added scrolls down to it, and nothing held a journey to scroll home back up before it ends; the rules looked at each journey alone, never at the state it hands on.
 - **Guard:** code: `apps/heartseed/scripts/journeys.test.ts` `each rule names its mutant of the first journey`; code: `apps/heartseed/scripts/journeys.test.ts` `every shipped journey holds R1-R4 and is run by its feature file, whose cites name its steps`
+
+### heartseed-move-back-beside-a-pending-recital
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "no test holds `Move back a stage` hidden while a recital waits for `Next`, the state this unit adds."
+- **Source:** hymnapp/hscancel/round-2-findings.md M1
+- **Wrong:** With `!each.recital && !each.done` removed from Today's `MoveBack` filter, Move back showed over a finished recital whose recall `Next` had yet to write, and every heartseed task stayed green.
+- **Cause:** Move back's tests never started a recital, and the root's frame rule said nothing of Move back, so the merge of hsstepback and hscancel left their meeting unchecked.
+- **Guard:** code: `apps/heartseed/src/test/root-rule.ts` `Move back beside`; code: `apps/heartseed/src/garden/back-today.test.tsx` `hides Move back a stage while a recital waits for Next, and offers it again on the unchanged stage after Your field`

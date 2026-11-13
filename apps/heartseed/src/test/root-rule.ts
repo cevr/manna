@@ -564,6 +564,22 @@ const lineFaults = (host: Element) => {
   return out;
 };
 
+/** Move back a stage's own controls and its ask, by name and test id. */
+const BACK_NAMES = new Set(['Move back a stage', 'Move back']);
+
+/** What Move back a stage shows wrong: its control or its ask beside a recital under way, held or done (`Listening`, `Next` or the `Grade` group), where a step back could land under a recall `Next` has yet to write. */
+const backStageFaults = (host: Element, controls: readonly Element[]) => {
+  const back =
+    controls.some((node) => BACK_NAMES.has(nameOf(node))) ||
+    host.querySelector('[data-testid="back-ask"]') !== null;
+  if (!back) return [];
+  const recital: string[] = controls
+    .map(nameOf)
+    .filter((name) => name === 'Listening' || name === 'Next');
+  if (host.querySelector('[role="radiogroup"][aria-label="Grade"]') !== null) recital.push('Grade');
+  return recital.map((name) => `Move back beside ${name}`);
+};
+
 /**
  * The root's frame rule (hshomeroot), for every rig that mounts the root:
  * what one frame shows wrong, `garden` being whether the launch's garden
@@ -595,7 +611,10 @@ const lineFaults = (host: Element) => {
  * `Settings`, `Your field`, `Plant` (or starting `Plant `, the Add a list
  * sheet's offers), `Voice`, `Add a list`, `Any passage` or `Remove` (or
  * starting `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
- * node, each the fault `<name> in reach while listening`. The end of a run
+ * node, each the fault `<name> in reach while listening`. `Move back a
+ * stage`, the ask's `Move back` and the ask never show beside `Listening`,
+ * `Next` or the `Grade` group, a recital under way, held or done
+ * (`backStageFaults`: `Move back beside <name>`). The end of a run
  * (`endFaults`) holds no control but `Your field` (`the control <name> on
  * The field is tended`), exactly one `tended` and one `grew` line (`<n>
  * tended nodes …`, `<n> grew lines …`), a line `Nothing grew this time.` or
@@ -647,6 +666,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   out.push(...introRuleFaults(on, host, controls));
   out.push(...licenceFaults(on, host, controls));
   out.push(...choicesFaults(on, host, controls));
+  out.push(...backStageFaults(host, controls));
   out.push(...reach);
   return out;
 };
