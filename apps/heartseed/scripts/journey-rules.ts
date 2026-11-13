@@ -20,6 +20,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import {
   type Fills,
+  fillsTemplate,
   isSpelled,
   type Journey,
   loadJourneys,
@@ -291,17 +292,17 @@ export const REFERENCE_HOLES: ReadonlyArray<ReferenceHole> = [
   { file: 'src/list/screen.tsx', parts: ['Remove ', ''], fills: [['reference', 'list']] },
 ];
 
-/** Whether `value` fills `parts`, the n-th hole with a piece that `fills[n]` takes. */
+/** Whether `value` fills `parts`, the n-th hole with a piece that `fills[n]` takes; the last hole as `fillsTemplate` fills one. */
 const fillsEach = (
   value: string,
   parts: ReadonlyArray<string>,
   fills: ReadonlyArray<(piece: string) => boolean>,
 ): boolean => {
+  const [fill = () => false, ...after] = fills;
+  if (after.length === 0) return fillsTemplate(value, parts, fill);
   const [head = '', ...rest] = parts;
-  const [fill, ...after] = fills;
   if (!value.startsWith(head)) return false;
   const tail = value.slice(head.length);
-  if (rest.length === 0 || fill === undefined) return rest.length === 0 && tail === '';
   for (let end = 1; end <= tail.length; end++)
     if (fill(tail.slice(0, end)) && fillsEach(tail.slice(end), rest, after)) return true;
   return false;
