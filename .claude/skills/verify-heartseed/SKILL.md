@@ -253,7 +253,8 @@ is what a live drive follows: a journey that leaves app state behind (a
 recital's held result, a planted verse, an open visit) is followed only by
 journeys that start from it. A journey that must leave the app clean for
 the next ends with the step that does so (`sayit-lines` ends with
-`Next`).
+`Next`; a journey that scrolled home to its foot ends with a scroll up to
+`label=Your field`).
 
 A journey's `open` relaunches the app only when its first `shows` is
 missing (its retry); a step that must start a launch (a new plan, a
@@ -267,7 +268,10 @@ fold is read in a raw snapshot taken by hand between two journeys
 `apps/heartseed/scripts/journeys.test.ts` holds every journey to the rules
 of `apps/heartseed/scripts/journey-rules.ts` (a first-minute heading only
 after the welcome is left, no node hidden from VoiceOver, an open that
-shows first, every selector one the app can draw), and every feature file
+shows first, every selector one the app can draw, and a journey that
+scrolls home to its foot, `id=add-list` or `id=limit`, scrolling back up
+to `label=Your field` before it ends, since the next journey's `open`
+keeps the running app's offset), and every feature file
 not yet moved to journeys to its `LEGACY` entry. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh

@@ -415,7 +415,9 @@ On a fresh install of its own, from `first.md`'s `sim journey first` to
 `sim journey home-add` → `"ok":true`:
 
 0. `home-add-foot` (hsaddlist, owner q97): `home-add/home-add-foot`, after
-   the scroll down to `id=add-list` → the furrows' last plants, the text
+   the scroll down to `Settings` (on the first-run field `Add a list` is
+   already on the first screen and `Settings` under the fold) → the
+   furrows' last plants, the text
    `Mark 4:28`, then the button `Add a list`, then the row `Settings`, in
    that order: `Add a list` sits under the legend, just above `Settings`,
    on the first run's field (the own furrow and `Protection & Fear`, no
