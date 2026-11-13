@@ -6,9 +6,9 @@
  * walk's oracle on the screen its model names after every command and to
  * the screens', the root's and home A's rules on every frame. Its floors,
  * from the counts the device reaches: gold dots and planted plants without
- * one, `Start`, a plant's tap on a plan item and over a result held, a
- * landed add, returns to the foreground on home over an
- * open visit and over a result held, the morning's and afternoon's
+ * one, `Start`, a plant's tap on a plan item, a landed add, returns to the
+ * foreground on home over an open visit,
+ * the morning's and afternoon's
  * greetings, and a relaunch that lands on home.
  */
 
@@ -21,7 +21,6 @@ const FLOORS = [
   'home:no-dot',
   'home:begin',
   'start:plan',
-  'start:over-held',
   'greeting:morning',
   'greeting:afternoon',
   'root:begin',
@@ -31,7 +30,6 @@ const FLOORS = [
   'home:add',
   'home:wake',
   'wake:over-visit',
-  'wake:over-held',
 ];
 
 describe('home A, walked (g)', () => {

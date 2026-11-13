@@ -14,6 +14,7 @@ import {
   gardenView,
   greetingNow,
   holdReading,
+  leave,
   letGo,
   listenTo,
   next,
@@ -49,6 +50,7 @@ import {
   type Plant,
   type ReadGarden,
   type Stage,
+  withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
 import { furrowsOf, readyOf } from '../src/home';
@@ -57,7 +59,7 @@ import { PlantImage } from '../src/home/plant';
 import { startOf } from '../src/home/start';
 import { todayOf } from '../src/home/today';
 import type { StartKind } from '../src/field/card';
-import type { VisitVerse } from '../src/session/service';
+import type { SessionView, VisitVerse } from '../src/session/service';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { AddSheet } from '../src/shelves/sheet';
@@ -223,6 +225,26 @@ const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly gro
 const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
   Option.filter(garden, (view): view is ReadGarden => view._tag === 'Read');
 
+/** The garden Today draws: the read one with the recall pending for the held item laid over it (`withRecall`), so a finished recital reads kept until its `Next` keeps it or a leave lets it go. */
+const pendingIn = (
+  garden: Option.Option<ReadGarden>,
+  session: Option.Option<SessionView>,
+  sayIt: Option.Option<SayItView>,
+): Option.Option<ReadGarden> =>
+  Option.map(garden, (read) =>
+    Option.match(
+      Option.filter(
+        Option.flatMap(sayIt, (view) => Option.fromNullishOr(view.pending)),
+        (pending) =>
+          Option.exists(
+            Option.flatMap(session, (view) => view.held),
+            (held) => held.reference === pending.reference,
+          ),
+      ),
+      { onNone: () => read, onSome: (pending) => withRecall(read, pending) },
+    ),
+  );
+
 /** The plant of `reference` in the garden read, none before its first recital. */
 const plantIn = (garden: ReadGarden, reference: string) =>
   Option.fromNullishOr(garden.plants.get(reference));
@@ -376,8 +398,11 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * new piece while the voice is on and reads nothing, and the action button.
  * Its first show with the garden read makes the launch's plan, unless home
  * made it first; a later show finds it made. The run shows one item at a time:
- * Say it holds it, and once its recall is kept (never at a recital's end
- * alone) the button reads Next, which lets it go. With every item of a run
+ * Say it holds it, and once its recital finished with a recall (never at a
+ * recital's end alone) the button reads Next. That recall waits: Today
+ * draws it laid over the garden (`pendingIn`), and only `Next` keeps it
+ * and lets the item go; `Your field` lets both go, so leaving records
+ * nothing and the verse stays as it was. With every item of a run
  * that is not empty done and none held (`tendedOf`), the heading reads
  * `The field is tended` and the scroll holds the end's drawing alone
  * (`Tended`): what grew, with the header's way to the field the only
@@ -396,11 +421,13 @@ function Today({ onField }: { readonly onField: () => void }) {
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
-  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const read = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const session = AsyncResult.value(useAtomValue(sessionView));
+  const garden = pendingIn(read, session, sayIt);
   const screen = screenOf(sayIt);
   const onPress = useAtomSet(press);
   const onNext = useAtomSet(next);
+  const onLeave = useAtomSet(leave);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
   const onListen = useAtomSet(listenTo);
@@ -412,7 +439,7 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onSeek = useAtomSet(seekTo);
   const onLetGo = useAtomSet(letGo);
   const hold: Hold = { held, onHeld: setHeld, onHold, onSeek, onLetGo };
-  useSessionBegunWhenShown(Option.isSome(garden));
+  useSessionBegunWhenShown(Option.isSome(read));
   const showing = showingOf(Option.map(session, (view) => shownOf(view, garden)));
   const recital = Option.exists(showing, (each) => each.recital);
   const shownSayIt = Option.filter(sayIt, () => recital);
@@ -435,7 +462,14 @@ function Today({ onField }: { readonly onField: () => void }) {
           </Text>
           {!screen.listening && (
             <View style={styles.ways}>
-              {Option.isSome(garden) && <FieldControl onPress={onField} />}
+              {Option.isSome(garden) && (
+                <FieldControl
+                  onPress={() => {
+                    onLeave();
+                    onField();
+                  }}
+                />
+              )}
             </View>
           )}
         </View>
@@ -760,8 +794,9 @@ const screenAt = (shown: Opening): Screen => {
  * the forced Today among them, ends the tour.
  * Which one shows is the launch's state, never stored and with no route of
  * its own, so every launch opens as above. Whenever Say it listens the
- * screen is Today. The root holds Say it's view, so Today comes back as it
- * was, and a recital that starts in the same turn as the tap on
+ * screen is Today. `Your field` lets a recital waiting for `Next` go
+ * unrecorded (`leave`), so Today comes back offering `Say it` on that
+ * verse; a recital that starts in the same turn as the tap on
  * `Your field` keeps Today on screen.
  */
 export default function Root() {

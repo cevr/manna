@@ -8,4 +8,4 @@
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('listen', 46, 2, ['wake:at:end', 'wake:end-to-item', 'end:one']);
+wakeCase('listen', 54, 2, ['wake:at:end', 'wake:end-to-item', 'end:one']);

@@ -12,14 +12,13 @@
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('returns', 1, 1, [
+wakeCase('returns', 2402, 1, [
   'wake:at:review',
   'wake:at:next',
   'wake:at:unheard',
   'wake:made:differs',
   'wake:drops-hold',
   'wake:field',
-  'wake:field:differs',
   'wake:minutes:2',
   'wake:minutes:20',
   'wake:minutes:differs',

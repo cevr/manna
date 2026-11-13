@@ -16,7 +16,8 @@
  * `ZONES`, play up to five rounds: Say it on the item the model shows, its
  * recital listening or finishing; a Minutes making with the model's plan
  * made at that instant and the hold kept (`madeModel(…, true)`); the
- * recital ended heard, unheard, refused or cancelled; then `Next`. Each
+ * recital ended heard, unheard, refused or cancelled, nothing written yet;
+ * then `Next`, which writes a heard one's recall (`nextItem`). Each
  * ending at each moment, the held item placed first by the new plan with no
  * hold (`kept`) or not (`moved`), is a cell. After every step the session's
  * plan equals `planModel` at the last making, its hold the model's, and
@@ -28,7 +29,7 @@ import { describe, expect, it } from 'bun:test';
 import { Context, Effect, Exit, Layer, Logger, MutableRef, Option, Scope } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
-import { appLayer, pressToday } from '../app';
+import { appLayer, nextItem, pressToday } from '../app';
 import { Dictation, DictationSource, type DictationEvent } from '../dictation';
 import { CHAIN } from '../dictation/attempt';
 import { recite } from '../dictation/script';
@@ -441,9 +442,9 @@ class Walk {
     return false;
   }
 
-  /** `Next`, the model's hold dropped, and a minute on. */
+  /** `Next` as Today's button runs it (`nextItem`: the pending recall kept, then the hold dropped), the model's hold dropped, and a minute on. */
   async moveOn() {
-    await this.run(this.session.next);
+    await this.run(nextItem);
     this.model = nextModel(this.model);
     await this.check('Next');
     this.device.time.now += MINUTE;
@@ -464,12 +465,14 @@ class Walk {
     const startedAt = this.device.time.now;
     if (!(await this.say(piece))) return false;
     await this.press(piece);
+    if (!(await until(() => this.status() === 'idle')))
+      this.fail(`${piece.reference}: the recital never ended`);
+    await this.check(`a plain recital of ${piece.reference}`);
+    await this.moveOn();
     if (
       !(await until(() => this.device.disk.has(keyOf({ reference: piece.reference, startedAt }))))
     )
-      this.fail(`${piece.reference}: no recall kept`);
-    await this.check(`a plain recital of ${piece.reference}`);
-    await this.moveOn();
+      this.fail(`${piece.reference}: no recall kept at Next`);
     this.bump('plain');
     return true;
   }
@@ -521,7 +524,7 @@ class Walk {
     return placed;
   }
 
-  /** The recital's end of the kind drawn, then the recall kept exactly when heard. */
+  /** The recital's end of the kind drawn, its recall still unwritten until `Next`. */
   async end(piece: TextPiece, { how, at }: Aim, startedAt: number) {
     if (how === 'cancelled') await this.run(this.dictation.cancel);
     else if (at === 'listening') await this.press(piece);
@@ -529,6 +532,13 @@ class Walk {
     this.device.ending.pending = null;
     if (!(await until(() => this.status() === 'idle')))
       this.fail(`${how}: the recital never ended`);
+    await until(() => false, 5);
+    if (this.device.disk.has(keyOf({ reference: piece.reference, startedAt })))
+      this.fail(`${how}: recall written before Next`);
+  }
+
+  /** After `Next`, the recall kept exactly when heard (a refused one's write fails). */
+  async kept(piece: TextPiece, how: How, startedAt: number) {
     const key = keyOf({ reference: piece.reference, startedAt });
     if (how === 'heard') await until(() => this.device.disk.has(key));
     else await until(() => false, 5);
@@ -560,6 +570,7 @@ class Walk {
     this.bump(`cell:${aim.at}:${aim.how}:${placed}`);
     await this.check(`${aim.how} ended`);
     await this.moveOn();
+    await this.kept(piece, aim.how, startedAt);
     return true;
   }
 

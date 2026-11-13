@@ -9,7 +9,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('run', 36, 1, [
+walkCase('run', 58, 1, [
   'pieces:no-passage-first',
   'kept:cue:full',
   'kept:cue:initials',
@@ -21,5 +21,5 @@ walkCase('run', 36, 1, [
   'home:begin',
   'end:one',
   'end:many',
-  'field:held:next:more',
+  'field:held:next:again',
 ]);

@@ -1093,13 +1093,18 @@ export interface Model {
   held: boolean;
   /** The recital last pressed was said under a cue: on a read Today, the full text before the passage is planted and first letters at a seed. */
   cued: boolean;
+  /** A read Today's finished recital whose recall waits for `Next`, by how the store takes that write then; Today draws it as kept meanwhile, and a making or a leave lets it go unwritten. */
+  pending: Write | null;
 }
 
-/** Today's run in a read launch (`plan` made): the passage shown under Say it until a kept recall, then under Next, and the done state once it is neither held nor planned and not done. */
+/** The passage's recalls as Today counts them: the disk's, and the one pending for `Next`. */
+const countedOf = (m: Model) => m.passage + (m.pending === null ? 0 : 1);
+
+/** Today's run in a read launch (`plan` made): the passage shown under Say it until a recall kept or pending for Next, then under Next, and the done state once it is neither held nor planned and not done. */
 const runOf = (m: Model): 'say' | 'next' | 'done' => {
   const plan = m.plan;
   if (plan === null) return 'say';
-  const done = m.passage > plan.recalls;
+  const done = countedOf(m) > plan.recalls;
   if (!m.held && (!plan.passage || done)) return 'done';
   return done ? 'next' : 'say';
 };
@@ -1315,6 +1320,7 @@ export const session = (count: (key: string) => void) => {
     plan: null,
     held: false,
     cued: false,
+    pending: null,
   };
   /** Whether the last settle showed the end of a run, so the frames of the command after it may still show its heading. */
   const settled = { end: false };
@@ -1330,13 +1336,14 @@ export const session = (count: (key: string) => void) => {
     return m.recalls > 0 ? 'home' : 'welcome';
   };
 
-  /** A making of Today's plan: one with no recital under way lets the held passage go, its recital's result with it. */
+  /** A making of Today's plan: one with no recital under way lets the held passage go, its recital's result and pending recall with it. */
   const make = () => {
     if (m.said !== 'open') {
       m.held = false;
       m.said = 'none';
       m.refused = false;
       m.shown = null;
+      m.pending = null;
     }
     const items = planOver(m.disk, now());
     m.plan = {
@@ -1480,6 +1487,14 @@ export const session = (count: (key: string) => void) => {
       m.said = 'none';
       m.refused = false;
       go(before, 'alone');
+      return UNWRITTEN;
+    }
+    if (before === 'today') {
+      m.pending = mode;
+      m.said = 'heard';
+      m.refused = false;
+      count('pending:today');
+      go(before, before);
       return UNWRITTEN;
     }
     const lands = write(mode);
@@ -1710,9 +1725,10 @@ export const session = (count: (key: string) => void) => {
         [],
       ]);
     if (m.screen !== 'today' || runOf(m) === 'done') return;
-    const want = ['Stage: not planted', 'Stage: seed'][m.passage] ?? 'Stage: planted';
+    const counted = countedOf(m);
+    const want = ['Stage: not planted', 'Stage: seed'][counted] ?? 'Stage: planted';
     const planted = stage !== null && (STAGES.includes(stage) || stage === 'Stage: seed');
-    const got = m.passage >= 2 && planted ? 'Stage: planted' : stage;
+    const got = counted >= 2 && planted ? 'Stage: planted' : stage;
     expect(got, `${here}: Today's stage`).toBe(want);
     if (!m.grew) expect(growth, `${here}: no growth line`).toBe(false);
   };
@@ -1747,6 +1763,7 @@ export const session = (count: (key: string) => void) => {
       plan: null,
       held: false,
       cued: false,
+      pending: null,
     } satisfies Partial<Model>);
     at.allowed = { headings: new Set(), pending: true };
     at.rig = await mount(at.allowed, kind.voices, count, time, gardenOf(kind));
@@ -1872,7 +1889,8 @@ export const session = (count: (key: string) => void) => {
       m.shown.record.peeked += 1;
       m.shown.misses -= 1;
       count(`peek:${before}:${m.shown.keep ? 'kept' : 'unkept'}`);
-      if (m.shown.keep) {
+      if (m.pending !== null) arm(mode);
+      else if (m.shown.keep) {
         const lands = write(mode);
         outcome = { lands, keeps: true };
         if (before === 'alone' && lands) {
@@ -1930,7 +1948,8 @@ export const session = (count: (key: string) => void) => {
     let outcome = UNWRITTEN;
     if (shown !== null && shown.keep && shown.record.grade !== to) {
       shown.record.grade = to;
-      outcome = { lands: write(mode), keeps: true };
+      if (m.pending === null) outcome = { lands: write(mode), keeps: true };
+      else arm(mode);
       count(`grade:${m.screen}`);
     } else arm(mode);
     await r.click(names[to]);
@@ -2028,16 +2047,21 @@ export const session = (count: (key: string) => void) => {
     await act(async () => labels.forEach((label, index) => r.press(nodes[index], label)));
   };
 
-  /** A press of Next: on Today it lets the held passage go with its result; in hear it stops a reading under way and goes on to letters. */
+  /** A press of Next: on Today it writes the pending recall as the store takes it then and lets the held passage go with its result; in hear it stops a reading under way and goes on to letters. */
   const next = async () => {
     const before = m.screen;
     if (before === 'today') {
+      const pending = m.pending;
+      const outcome = pending === null ? UNWRITTEN : { lands: write(pending), keeps: true };
+      m.pending = null;
       m.held = false;
       m.said = 'none';
       m.refused = false;
-      m.shown = null;
       go(before, before);
+      at.allowed.headings.add(END);
       await rig().click('Next');
+      await settleWrite(outcome);
+      m.shown = null;
       return;
     }
     if (m.reading) count('next:while-reading');
@@ -2656,7 +2680,7 @@ const renewal = ({ m, add, todayOn }: Offering, times = 1) => {
     add('renew', todayOn, () => ({ _tag: 'Renew' }), times);
 };
 
-/** Today's kept recall under Next: Next, a peek, a grade, a new plan at the passage's due, and a late event. */
+/** Today's recall pending under Next: Next (which writes it), a peek, a grade, a new plan at the passage's due (which lets it go), and a late event. */
 const offerNext = (offering: Offering) => {
   offering.add('next', offering.todayOn, () => ({ _tag: 'Next' }), 3);
   offerResult(offering);

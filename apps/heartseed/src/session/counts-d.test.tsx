@@ -10,7 +10,7 @@ import { describe } from 'bun:test';
 import { countsCase } from '../test/counts-walk';
 
 describe('Today’s counts line', () => {
-  countsCase(287, [2, 3], {
+  countsCase(90, [2, 3], {
     'history:evening': 2,
     'launch at morning -1': 1,
     'later:month': 1,

@@ -581,7 +581,7 @@ const inReach = () => {
   return names;
 };
 
-/** A recital held open, nothing that makes the plan in reach anywhere while it listens, then finished: its recall kept, the action reads `Next` (`Say it` in an unread garden, which runs no plan). */
+/** A recital held open, nothing that makes the plan in reach anywhere while it listens, then finished: the action reads `Next` over its recall pending (`Say it` in an unread garden, which runs no plan and keeps it at once), and half the time (by the walk's aside draw) `Next` keeps it there, Today then held to the run's model (`endCheck`). */
 const sayCommand = async (run: Run, at: string) => {
   const { app, device, m } = run;
   await renewCommand(run, at);
@@ -599,6 +599,11 @@ const sayCommand = async (run: Run, at: string) => {
     shown: true,
   });
   cover('recital');
+  if (then === 'Next' && walk.aside() < 0.8) {
+    await app.tap('Next');
+    await endCheck(run, `${at} Next`);
+    cover('recital kept');
+  }
 };
 
 /** The field and back to Today by `Start`, offered only in a read garden, while Today shows an action; in the done state home shows no `Start` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */

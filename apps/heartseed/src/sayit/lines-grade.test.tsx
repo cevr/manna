@@ -61,7 +61,7 @@ const wordFault = (node: Element | null, shown: ReturnType<typeof wordOf>, index
 };
 
 describe('grading under the lines', () => {
-  it('draws each mark, the summary, the suggestion and the kept recall as Say it’s view gives them, word number by word number, with the verse lined', async () => {
+  it('draws each mark, the summary, the suggestion and the recall pending as Say it’s view gives them, word number by word number, with the verse lined', async () => {
     expect(linesOf(passage.text).length).toBe(5);
     const want = JSON.stringify(hintsOf(passage.text));
     for (let seed = 1; seed <= 3; seed += 1) {
@@ -91,7 +91,8 @@ describe('grading under the lines', () => {
         return fault === null ? [] : [fault];
       });
       const result = Option.getOrUndefined(screen.result);
-      const last = today.kept.at(-1);
+      expect(await today.until(() => (today.pending()[0]?.peeked ?? 0) > 0)).toBe(true);
+      const last = today.pending().at(-1);
       expect({
         seed,
         faults,

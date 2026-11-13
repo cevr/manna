@@ -245,7 +245,7 @@ export const mount = async (
     [...host.querySelectorAll('[role="button"]')].find(
       (node) => node.getAttribute('aria-label') === name,
     );
-  /** Says the passage to its summary, its recall kept: the action reads `Next` (`then`; `Say it` in an unread garden, which runs no plan). */
+  /** Says the passage to its summary, its recall pending for `Next` (kept at once in an unread garden): the action reads `Next` (`then`; `Say it` in an unread garden, which runs no plan). */
   const say = async (then: 'Next' | 'Say it' = 'Next') => {
     const summary = one('[data-testid="summary"]');
     await click(sayIt());
@@ -305,6 +305,11 @@ export const mount = async (
     ).toBe(true);
     planned.recalls = passageRecalls().length;
   };
+  /** `Next`, which keeps the recall pending, then the end of the run it gives (`ended`). */
+  const next = async () => {
+    await click(button('Next'));
+    await ended();
+  };
   const leave = async () => {
     watch.disconnect();
     rootRule.stop();
@@ -336,6 +341,7 @@ export const mount = async (
     plant,
     drawn,
     say,
+    next,
     renew,
     radio,
     frames,

@@ -23,10 +23,12 @@
  *   when the model shows a verse, a relaunch the next morning after 04:00,
  *   a minutes choice in the Settings sheet (`minutesTap`: the plan made at
  *   the radio's tap, then `Start` when the model shows a verse);
- * - on Today: `Say it`, then `Next` or (three in ten) the result left held;
- *   a minutes choice (on a read garden `Your field` to home, then the
+ * - on Today: `Say it`, then `Next` or (three in ten) the result left held,
+ *   its recall written only at `Next` (`pending` until then, counted as
+ *   kept); a minutes choice (on a read garden `Your field` to home, then the
  *   sheet as on home; on an unread one the check that Today offers no
- *   `Settings` and no `<n> min`); `Your field` (none on an unread garden);
+ *   `Settings` and no `<n> min`); `Your field` (none on an unread garden),
+ *   which lets the hold and its pending recall go unwritten (`leaveToday`);
  *   a relaunch. While a visit is open, half the commands are `Say it`.
  *
  * The oracle, apart from the app's code, on the screen the model names
@@ -271,7 +273,31 @@ export class Walk {
     return this.rig as RootLaunch;
   }
 
-  recallsNow = (reference: string) => plantsOf(this.device.disk).get(reference)?.length ?? 0;
+  /** The held verse whose finished recital's recall waits for `Next`; Today counts it as kept meanwhile, and a leave or a making lets it go unwritten. */
+  pending: string | null = null;
+
+  /** The recalls of `reference` on the disk alone. */
+  stored = (reference: string) => plantsOf(this.device.disk).get(reference)?.length ?? 0;
+
+  recallsNow = (reference: string) => this.stored(reference) + (this.pending === reference ? 1 : 0);
+
+  /** `Next` on Today: the pending recall written, then the hold let go. */
+  async tapNext() {
+    const rig = this.launched;
+    const pending = this.pending;
+    const want = pending === null ? 0 : this.stored(pending) + 1;
+    await rig.tap('Next');
+    if (pending !== null) await rig.until(() => this.stored(pending) >= want);
+    this.pending = null;
+    this.hold = null;
+  }
+
+  /** Today left by `Your field`: the hold and its pending recall let go, nothing written. */
+  leaveToday() {
+    if (this.pending !== null) this.bump('field:let-go');
+    this.hold = null;
+    this.pending = null;
+  }
 
   /** Whether this launch makes a plan: the garden and the passages read. */
   planned() {
@@ -287,6 +313,7 @@ export class Walk {
   make() {
     this.visit = [];
     this.hold = null;
+    this.pending = null;
     if (!this.planned()) {
       this.plan = [];
       return;
@@ -429,16 +456,13 @@ export class Walk {
     if (this.screen === 'home') this.atHome();
   }
 
-  /** `Start` on home: Today on the verse the model shows, the hold and the visit kept. */
+  /** `Start` on home: Today on the verse the model shows, the visit kept. */
   async begin(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('begin');
     if (!(await rig.tap('Start'))) return 'no Start';
     this.bump('root:begin');
     if (!this.planned()) this.bump('root:begin-unread-passages');
-    const shown = this.shown();
-    if (this.hold !== null && shown !== null && this.recallsNow(shown.reference) > shown.recalls)
-      this.bump('root:back-held');
     this.screen = 'today';
     await rig.until(() => rig.headings().includes('Today'));
     return null;
@@ -451,8 +475,7 @@ export class Walk {
     if (shown === null) return null;
     if (this.hold !== null && this.recallsNow(shown.reference) > shown.recalls) {
       this.trail.push('next');
-      await rig.tap('Next');
-      this.hold = null;
+      await this.tapNext();
       return null;
     }
     this.trail.push(`say:${shown.reference}`);
@@ -470,8 +493,9 @@ export class Walk {
     }
     this.hold = shown;
     await rig.until(() => rig.has('Next'));
-    if (this.recallsNow(shown.reference) !== before + 1)
-      return { said: shown.reference, before, after: this.recallsNow(shown.reference) };
+    if (this.stored(shown.reference) !== before)
+      return { said: shown.reference, before, written: this.stored(shown.reference) };
+    this.pending = shown.reference;
     this.bump('today:said');
     if (visiting) this.bump('visit:said');
     if (FEAR?.promises.some((range) => promiseVerses(range).includes(shown.reference))) {
@@ -486,8 +510,7 @@ export class Walk {
       return null;
     }
     this.trail.push('next');
-    await rig.tap('Next');
-    this.hold = null;
+    await this.tapNext();
     const after = this.shown();
     if (visiting && after !== null && this.fromVisit(after)) this.bump('visit:next-verse');
     return null;
@@ -543,11 +566,12 @@ export class Walk {
     return this.offersBegin() ? this.begin() : null;
   }
 
-  /** Today's `Your field`: home, its rows titled as the model gives them, the visit and the hold kept for `Start`. */
+  /** Today's `Your field`: home, its rows titled as the model gives them, the visit kept for `Start`, the hold and its pending recall let go (`leaveToday`). */
   async field(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('field');
     if (!(await rig.tap('Your field'))) return 'no Your field';
+    this.leaveToday();
     this.screen = 'home';
     await rig.until(() => rig.headings().includes('Your field'));
     const want = fieldPassagesModel(OWN_ROW, this.held, TAUGHT_IDS).map((row) => row.title);

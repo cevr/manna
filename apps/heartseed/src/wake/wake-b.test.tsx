@@ -9,7 +9,7 @@
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('returns', 31676, 1, [
+wakeCase('returns', 12189, 1, [
   'wake:at:review',
   'wake:at:next',
   'wake:at:refused',

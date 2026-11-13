@@ -592,6 +592,15 @@ export const mount = async (
   const passageText = () => passageTextIn(host);
   /** Say it's view as Today last read it, none before one. */
   const sayIt = () => MutableRef.get(latest);
+  /** The recall Say it's view holds pending for `Next`, as a list of none or one. */
+  const pending = () =>
+    Option.match(
+      Option.flatMap(MutableRef.get(latest), (view) => Option.fromNullishOr(view.pending)),
+      { onNone: (): Recall[] => [], onSome: (recall) => [recall] },
+    );
+  /** A tap on Today's `Next`. */
+  const next = () =>
+    click(all('[role="button"]').find((node) => node.getAttribute('aria-label') === 'Next'));
   /** How many runs of three of the verse's words, as written, show in any text or label outside the word nodes and the whole-text node. */
   const runsElsewhere = () => {
     const inVerse = (node: Node) =>
@@ -627,6 +636,8 @@ export const mount = async (
     show,
     passageText,
     sayIt,
+    pending,
+    next,
     verseShown,
     faint,
     one,
@@ -676,6 +687,10 @@ export const saysUnderCue = async (disk: Disk, cue: 'full' | 'initials') => {
     true,
     0,
   ]);
+  expect(today.kept).toEqual([]);
+  expect(today.pending().map((recall) => [recall.grade, recall.missed])).toEqual([[2, 0]]);
+  await today.next();
+  expect(await today.until(() => today.kept.length === 1)).toBe(true);
   expect(today.kept.map((recall) => [recall.grade, recall.missed])).toEqual([[2, 0]]);
   await today.leave();
 };

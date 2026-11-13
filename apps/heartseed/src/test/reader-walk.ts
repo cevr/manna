@@ -264,7 +264,10 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   let addedOnPlantedDay = false;
 
   const pieces = () => piecesRule(CORPUS, [PASSAGE], held, (text) => sourceWords(text).length);
-  const recallsNow = (reference: string) => plantsIn(device.disk).get(reference)?.length ?? 0;
+  /** The reference whose recall a recital left pending until its `Next` keeps it, none else; Today counts it as kept meanwhile. */
+  let pending: string | null = null;
+  const recallsNow = (reference: string) =>
+    (plantsIn(device.disk).get(reference)?.length ?? 0) + (pending === reference ? 1 : 0);
   const planOf = () =>
     planModel({
       plants: plantsIn(device.disk),
@@ -490,16 +493,19 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     time.now += 30_000;
     MutableRef.set(at.hearing, { kind: 'heard', text: piece.text, skip: [] });
     run = startedModel(run, recallsNow);
-    recalls.add(keyOf({ reference: piece.reference, startedAt: time.now }));
+    const key = keyOf({ reference: piece.reference, startedAt: time.now });
     await tap('Say it');
     if (!(await at.until(() => at.has('Listening'))))
       faults.push(`${shown.reference} never listened`);
     await tap('Listening');
     await at.until(() => !at.has('Listening'));
+    pending = piece.reference;
     reached.add('today:said');
     if (shown.fresh) reached.add('today:said-new');
     await settle(`said ${shown.reference}`);
     await tap('Next');
+    pending = null;
+    recalls.add(key);
     run = nextModel(run);
     await settle('Next');
   };
