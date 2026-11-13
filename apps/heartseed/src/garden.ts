@@ -327,13 +327,13 @@ export class Garden extends Context.Service<
 /** A step back's answer: `Moved` once its record is written and the view shows the verse a stage lower, else `Failed` (the write failed, the garden is unread, or the verse is no plant standing at the stage asked from, past a seed). */
 export type BackAnswer = 'Moved' | 'Failed';
 
-/** A step back asked for: the verse, and the stage the reader saw it at when asking. */
+/** A step back asked for: the verse, and the stage the reader saw it at when asking. Each ask is its own object, made when the ask opens, and the garden settles it once. */
 export interface BackAsk {
   readonly reference: string;
   readonly from: Stage;
 }
 
-/** Moving a verse back a stage: `back(ask)` keeps a step back of the verse at the clock's instant, after every keep handed to the garden before it, only while the verse still stands at `ask.from`, so an ask answered twice moves it once. */
+/** Moving a verse back a stage: `back(ask)` keeps a step back of the verse at the clock's instant, after every keep handed to the garden before it, only while the verse still stands at `ask.from`. An ask is settled once: a later `back` of the same ask object writes nothing and gives the first answer, so one ask moves the verse at most one stage and every answer to it says what was kept. */
 export class Backs extends Context.Service<
   Backs,
   { readonly back: (ask: BackAsk) => Effect.Effect<BackAnswer> }
@@ -658,6 +658,17 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
         return 'Moved' as const;
       });
 
+      const settled = new WeakMap<BackAsk, BackAnswer>();
+
+      /** `back(ask)` the first time `ask` comes, its answer kept; each later time, that answer and no write. */
+      const settleOnce = Effect.fn('Garden.settleOnce')(function* (ask: BackAsk) {
+        const first = Option.fromNullishOr(settled.get(ask));
+        if (Option.isSome(first)) return first.value;
+        const answer = yield* back(ask);
+        settled.set(ask, answer);
+        return answer;
+      });
+
       const view = Effect.sync(() => MutableRef.get(held));
 
       return Context.make(
@@ -672,7 +683,10 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
           Recalls,
           Recalls.of({ keep: (recall) => Semaphore.withPermits(lock, 1)(keep(recall)) }),
         ),
-        Context.add(Backs, Backs.of({ back: (ask) => Semaphore.withPermits(lock, 1)(back(ask)) })),
+        Context.add(
+          Backs,
+          Backs.of({ back: (ask) => Semaphore.withPermits(lock, 1)(settleOnce(ask)) }),
+        ),
       );
     }),
   );

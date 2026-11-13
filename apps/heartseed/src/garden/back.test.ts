@@ -340,7 +340,7 @@ describe('a step back over the device', () => {
     expect([unread, backKeys()]).toEqual([['Failed', 'unread'], []]);
   });
 
-  it('moves one ask answered twice once: the second finds the verse a stage lower and writes nothing', async () => {
+  it('settles one ask once: answered twice it moves the verse once and gives the same answer twice', async () => {
     const ear = grownTo('ear');
     device.launch(ear.disk);
     const seen = await quietly(
@@ -354,6 +354,25 @@ describe('a step back over the device', () => {
         return [...answers, stageIn(yield* garden.view)];
       }),
     );
-    expect([seen, backKeys().length]).toEqual([['Moved', 'Failed', 'blade'], 1]);
+    expect([seen, backKeys().length]).toEqual([['Moved', 'Moved', 'blade'], 1]);
+  });
+
+  it('settles one ask whose first save fails as Failed: a second answer writes nothing, and a new ask then moves the verse', async () => {
+    const ear = grownTo('ear');
+    device.launch(ear.disk);
+    const seen = await quietly(
+      ear.after,
+      Effect.gen(function* () {
+        const { garden, backs } = yield* launch;
+        const ask = { reference: REFERENCE, from: 'ear' } as const;
+        device.fail('set', 1);
+        const first = yield* backs.back(ask);
+        const again = yield* backs.back(ask);
+        const kept = [first, again, stageIn(yield* garden.view), backKeys().length];
+        const fresh = yield* backs.back({ reference: REFERENCE, from: 'ear' });
+        return [...kept, fresh, stageIn(yield* garden.view), backKeys().length];
+      }),
+    );
+    expect(seen).toEqual(['Failed', 'Failed', 'ear', 0, 'Moved', 'blade', 1]);
   });
 });

@@ -44,12 +44,16 @@ import { END, rootFaults } from './root-rule';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
-/** The device's disk, which outlives every launch, whether every listing fails (an unread garden), and how many of its next writes fail (none when absent). */
+/** The device's disk, which outlives every launch, whether every listing fails (an unread garden), how many of its next writes fail (none when absent), and how many of its next writes take `SLOW` first (none when absent). */
 export interface RootDevice {
   readonly disk: Map<string, string>;
   unread: boolean;
   refuse?: number;
+  slow?: number;
 }
+
+/** How long a slow write takes before it lands or fails. */
+const SLOW = '20 millis';
 
 const failure = (method: string, key: string) =>
   new KeyValueStore.KeyValueStoreError({ message: `test: ${method}`, method, key });
@@ -61,10 +65,14 @@ const storeOf = (device: RootDevice) =>
       get: (key) => Effect.sync(() => device.disk.get(key)),
       set: (key, value) =>
         Effect.suspend(() => {
-          if ((device.refuse ?? 0) === 0)
-            return Effect.sync(() => void device.disk.set(key, value));
-          device.refuse = (device.refuse ?? 0) - 1;
-          return Effect.fail(failure('set', key));
+          const slow = (device.slow ?? 0) > 0;
+          if (slow) device.slow = (device.slow ?? 0) - 1;
+          const refused = (device.refuse ?? 0) > 0;
+          if (refused) device.refuse = (device.refuse ?? 0) - 1;
+          const write = refused
+            ? Effect.fail(failure('set', key))
+            : Effect.sync(() => void device.disk.set(key, value));
+          return slow ? Effect.delay(write, SLOW) : write;
         }),
       remove: (key) => Effect.fail(failure('remove', key)),
       clear: Effect.fail(failure('clear', '')),
