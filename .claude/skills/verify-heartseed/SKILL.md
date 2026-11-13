@@ -226,7 +226,8 @@ for what an expect cannot say. The journeys:
   `home-dot`, `home-relaunch`, `home-motion`, `home-settings`, `home-renew`,
   `home-end` and `home-add`, run by `home.md`.
 - [features/list.journey.json](features/list.journey.json), `list-practice` and `list-remove`, run by
-  `list.md`; [features/about.journey.json](features/about.journey.json), run by `about.md`;
+  `list.md`; [features/back.journey.json](features/back.journey.json), run by `back.md`;
+  [features/about.journey.json](features/about.journey.json), run by `about.md`;
   [features/appearance.journey.json](features/appearance.journey.json), `appearance-dark`,
   `appearance-choice` and `appearance-kept`, run by `appearance.md`.
 - [features/session.journey.json](features/session.journey.json) and `session-choose`,
@@ -407,6 +408,10 @@ not yet moved to journeys to its `LEGACY` entry. The features:
   row's tap and `Practice this list` starting Today, the way back, and a
   held list's `Remove` with its ask, `Keep` and the landed remove. Run
   it from `first.md`'s `first-home`.
+- [features/back.md](features/back.md): Move back a stage on Today
+  opened on a verse by a tap: no control on a seed, the ask and `Keep`, a
+  blade moved back to a seed on Today and home. Run it from home with the
+  passage a seed (`first.md`'s `first-home`).
 - [features/doctor.md](features/doctor.md): `sim doctor` against an
   installed build older than the served JavaScript: the row
   `doctor-native-stale` (a native contract changed in the working tree,

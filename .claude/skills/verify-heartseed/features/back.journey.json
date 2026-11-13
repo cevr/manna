@@ -1,0 +1,120 @@
+{
+  "feature": "back",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "back-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "none"
+    },
+    {
+      "name": "back-seed",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Say it" },
+        { "hides": "label=Move back a stage" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "back-listening",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "back-grown",
+      "action": "tap",
+      "target": "label=36 of 37 words",
+      "timeout": 30,
+      "expect": [
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Next" },
+        { "hides": "label=Move back a stage" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "back-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "shows": "label=Your field" }, { "hides": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "back-field",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, blade" }],
+      "receipt": "none"
+    },
+    {
+      "name": "back-blade",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, blade",
+      "expect": [
+        { "shows": "id=session" },
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Move back a stage" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "back-ask",
+      "action": "tap",
+      "target": "label=Move back a stage",
+      "expect": [
+        { "shows": "id=back-ask" },
+        { "shows": "label=Move back" },
+        { "shows": "label=Keep" },
+        { "hides": "label=Move back a stage" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "back-keep",
+      "action": "tap",
+      "target": "label=Keep",
+      "expect": [
+        { "shows": "label=Move back a stage" },
+        { "shows": "label=Stage: blade" },
+        { "hides": "id=back-ask" }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "back-ask-again",
+      "action": "tap",
+      "target": "label=Move back a stage",
+      "expect": [{ "shows": "id=back-ask" }],
+      "receipt": "none"
+    },
+    {
+      "name": "back-moved",
+      "action": "tap",
+      "target": "label=Move back",
+      "expect": [
+        { "shows": "label=Stage: seed" },
+        { "shows": "id=moved" },
+        { "hides": "label=Move back a stage" },
+        { "hides": "id=back-ask" },
+        { "shows": "label=Say it" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "back-home-seed",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

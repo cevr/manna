@@ -327,6 +327,7 @@ describe('verify-heartseed journeys', () => {
         ]).toEqual([
           'about',
           'appearance',
+          'back',
           'dictation',
           'doctor',
           'field',
