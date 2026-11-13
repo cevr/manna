@@ -5746,7 +5746,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/seedfix/round-1-findings.md M1
 - **Wrong:** `manna/seed-from-clock` passed `Number(process.env['X_SEED']) || Date.now()`, `env ? Number(env) : Date.now()`, the same `||` inside `random(…)`, and `parseInt(env ?? '', 10) || Math.random() * 1e6`.
 - **Cause:** The rule read a seed's name only in a bare env read or a call's bare name arguments, and took a fallback only from the right of `??`/`||`, never a branch of `?:`; its tests named two shapes, not the forms a test writes.
-- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
+- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random fallback of a seed read by name is reported under any holder, and the same line with a constant or a variable not a seed is not`; code: `packages/scripts/lint/seed-from-clock.test.ts` `each of vb-42's probes is reported as the contract says`
 
 ### heartseed-journey-leaves-home-scrolled
 
@@ -5766,7 +5766,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/seedfix/round-2-findings.md M1; hymnapp/seedfix/round-2-findings.md M2
 - **Wrong:** With a constant seed, `seed > 0 && performance.now() < 5_000`, `console.log(seed, Date.now())`, a `?:` on `seed > 0` with a timing branch and a property body that times itself were each reported as a seed from the clock; and a mutant that stopped reading a member's object left every test green while the rule missed `Number(process.env['X_SEED']?.trim()) || Date.now()`.
 - **Cause:** The rule took a read as a seed's when any enclosing node named a seed (a call's argument, a `&&`, any `?:`), not when the read's value made the seed's; and the property generated only bare variable reads, narrower than the forms the rule claims.
-- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random read beside a constant seed whose value it does not make is never reported: a timing, a log, a check, a label`; code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
+- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random read beside a seed, its value never the seed taken from the environment, is never reported: a key, a timing, a log, a check, a label`; code: `packages/scripts/lint/seed-from-clock.test.ts` `property: a clock or random fallback of a seed read by name is reported under any holder, and the same line with a constant or a variable not a seed is not`; code: `packages/scripts/lint/seed-from-clock.test.ts` `each of vb-44's probes is reported as the contract says`
 
 ### heartseed-move-back-beside-a-pending-recital
 
