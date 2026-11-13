@@ -25,6 +25,10 @@ export const a1 = Number(process.env['HYMNAL_PROBE_SEED']) || Date.now(); // RED
 export const a3 = process.env['X_SEED'] ? Number(process.env['X_SEED']) : Date.now(); // RED manna/seed-from-clock
 export const a5 = random(Number(process.env['HYMNAL_PROBE_SEED']) || Date.now()); // RED manna/seed-from-clock
 export const a6 = parseInt(process.env['X_SEED'] ?? '', 10) || Math.floor(Math.random() * 1e6); // RED manna/seed-from-clock
+export const a7 = Number(process.env['X_SEED']?.trim()) || Date.now(); // RED manna/seed-from-clock
+export const d1 = seed > 0 && performance.now() < 5_000;
+export const d2 = seed > 0 ? `seed ${seed}` : `took ${performance.now()} ms`;
+console.log(seed, Date.now());
 export const port = Number(process.env['PORT']) || Date.now();
 export const plain = process.env['CI'] ? 1 : Math.random();
 

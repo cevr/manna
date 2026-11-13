@@ -63,8 +63,19 @@ const WRAPPERS: ReadonlyArray<(x: string) => string> = [
   (x) => `Math.trunc(${x})`,
 ];
 
-/** The ways a seed's variable is read. */
-const READS = ["process.env['X_SEED']", 'process.env.X_SEED', 'Bun.env.X_SEED'];
+/** The ways a seed's variable is named. */
+const VARIABLES = ["process.env['X_SEED']", 'process.env.X_SEED', 'Bun.env.X_SEED'];
+
+/** The ways its text is taken: as it is, through a method on an optional chain or past `!`, or in a template. */
+const TAKES: ReadonlyArray<(x: string) => string> = [
+  (x) => x,
+  (x) => `${x}?.trim()`,
+  (x) => `${x}!.trim()`,
+  (x) => `\`\${${x}}\``,
+];
+
+/** The ways a seed's variable is read: each variable, each way taken. */
+const READS = VARIABLES.flatMap((variable) => TAKES.map((take) => take(variable)));
 
 /** The ways a fallback is chosen when the variable is unset, given a wrapper. */
 const CHOICES: ReadonlyArray<
@@ -97,21 +108,47 @@ const HOLDERS: ReadonlyArray<(x: string) => string> = [
   (x) => `Math.floor(${x})`,
 ];
 
-/** Every fallback form: each wrapper, read, choice, source and holder together. */
+/**
+ * Every fallback form: each wrapper, read, choice and source together, the
+ * holders taken in turn, so each holder meets every wrapper, read, choice
+ * and source.
+ */
 const fallbacks = (): ReadonlyArray<Fallback> =>
   WRAPPERS.flatMap((wrap) =>
     READS.flatMap((read) =>
-      CHOICES.flatMap((choice) =>
-        SOURCES.flatMap((source) =>
-          HOLDERS.map((hold) => ({
-            read,
-            source,
-            make: (r: string, s: string) => hold(choice(wrap)(r, s)),
-          })),
-        ),
-      ),
+      CHOICES.flatMap((choice) => SOURCES.map((source) => ({ wrap, read, choice, source }))),
     ),
-  );
+  ).map(({ wrap, read, choice, source }, i) => ({
+    read,
+    source,
+    make: (r: string, s: string) =>
+      (HOLDERS[i % HOLDERS.length] ?? ((x: string) => x))(choice(wrap)(r, s)),
+  }));
+
+/** A constant seed as a test names it: a binding, or the variable read with a constant fallback. */
+const CONSTANT_SEEDS = ['seed', ...READS.map((read) => `Number(${read} ?? 20261112)`)];
+
+/** The ways a test reads the clock beside a seed, its value never the seed's: a timing, a log, a check, a label. */
+const BESIDES: ReadonlyArray<(seed: string, source: string) => string> = [
+  (seed, source) => `${seed} > 0 && ${source} < 5_000`,
+  (seed, source) => `${seed} && ${source}`,
+  (seed, source) => `String(${seed}).length > 0 && ${source} > 0`,
+  (seed, source) => `${seed} > 0 ? \`seed \${${seed}}\` : \`took \${${source}} ms\``,
+  (seed, source) => `${seed} ? log(${source}) : 0`,
+  (seed, source) => `check(${seed}, () => { const started = ${source}; return started; })`,
+  (seed, source) => `check(${seed}, () => ${source})`,
+  (seed, source) => `console.log(${seed}, ${source})`,
+  (seed, source) => `[${seed}, ${source}]`,
+  (seed, source) => `({ seed: ${seed}, at: ${source} })`,
+  (seed, source) => `\`seed \${${seed}} at \${${source}}\``,
+  (seed, source) => `${seed} + ${source} * 0`,
+];
+
+/** Every line that reads the clock beside a constant seed, each under a binding of its own. */
+const besides = (): ReadonlyArray<string> =>
+  CONSTANT_SEEDS.flatMap((seed) =>
+    BESIDES.flatMap((beside) => SOURCES.map((source) => beside(seed, source))),
+  ).map((expression, i) => `const v${i} = ${expression};`);
 
 const fixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -125,7 +162,7 @@ describe('manna/seed-from-clock', () => {
     Effect.gen(function* () {
       const { file, text } = yield* fixture;
       const marked = markedLines(text);
-      expect(marked.length).toBe(11);
+      expect(marked.length).toBe(12);
       expect(reportedLines(file, text)).toEqual(marked);
     }),
   );
@@ -145,7 +182,7 @@ describe('manna/seed-from-clock', () => {
         const reported = new Set(reportedLines('walk.ts', named));
         const missed = everyLine.filter((n) => !reported.has(n));
         expect({ cases: all.length, missed: missed.map((n) => named.split('\n')[n - 1]) }).toEqual({
-          cases: 1728,
+          cases: 2304,
           missed: [],
         });
         const constant = lines(
@@ -158,6 +195,19 @@ describe('manna/seed-from-clock', () => {
           (line) => line.read.replaceAll('X_SEED', 'X_PORT'),
         );
         expect(reportedLines('walk.ts', unnamed)).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'property: a clock or random read beside a constant seed whose value it does not make is never reported: a timing, a log, a check, a label',
+    () =>
+      Effect.sync(() => {
+        const lines = besides();
+        const reported = reportedLines('rows.test.ts', lines.join('\n'));
+        expect({
+          cases: lines.length,
+          reported: reported.map((n) => lines[n - 1]).slice(0, 5),
+        }).toEqual({ cases: 1248, reported: [] });
       }),
   );
 
