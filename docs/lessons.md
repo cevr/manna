@@ -5730,3 +5730,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The hymnal's rows and search properties, the browser list test and test:budget's generated cases took their seed from the clock or `Math.random()` when no variable named one, so a cached green said nothing about the seed that ran.
 - **Cause:** A seed from the clock was meant to explore a new sample each run, but turbo caches a test task on its inputs and its env, never on the clock, and no check refused such a seed.
 - **Guard:** lint:manna/seed-from-clock, proof `packages/scripts/lint/fixtures/seed-from-clock.ts` `RED manna/seed-from-clock`; code: `packages/scripts/lint/seed-from-clock.test.ts` `reports each seed its fixture marks RED, and nothing else`
+
+### seed-from-clock-missed-wrapped-fallbacks
+
+- **Date:** 2026-11-13
+- **Kind:** review
+- **Said:** "a clock read that stands in for a seed read by name is caught only when the `??`/`||`'s left side is the env read itself. A wrapped read or a conditional passes."
+- **Source:** hymnapp/seedfix/round-1-findings.md M1
+- **Wrong:** `manna/seed-from-clock` passed `Number(process.env['X_SEED']) || Date.now()`, `env ? Number(env) : Date.now()`, the same `||` inside `random(…)`, and `parseInt(env ?? '', 10) || Math.random() * 1e6`.
+- **Cause:** The rule read a seed's name only in a bare env read or a call's bare name arguments, and took a fallback only from the right of `??`/`||`, never a branch of `?:`; its tests named two shapes, not the forms a test writes.
+- **Guard:** code: `packages/scripts/lint/seed-from-clock.test.ts` `property: every clock or random fallback of a seed read by name is reported, however it is chosen and wrapped, and the same line with a constant or a name not a seed is not`
