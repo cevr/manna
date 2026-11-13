@@ -58,23 +58,61 @@ const namesAt = (node: ESTree.Node): ReadonlyArray<string> => {
   return [];
 };
 
-/** Whether an expression reads a seed by name: `process.env['HYMNAL_ROWS_SEED']`, `Config.Int('TEST_BUDGET_SEED')`. */
-const seedIn = (node: ESTree.Node): boolean => {
-  if (node.type === 'MemberExpression') return namesAt(node).some(saysSeed) || seedIn(node.object);
-  if (node.type === 'CallExpression') return namesAt(node).some(saysSeed);
-  if (node.type === 'TSNonNullExpression' || node.type === 'ParenthesizedExpression')
-    return seedIn(node.expression);
-  return false;
+/** The expressions an expression is made of, as far as a seed's name can hide in them. */
+const partsOf = (node: ESTree.Node): ReadonlyArray<ESTree.Node> => {
+  if (node.type === 'MemberExpression') return [node.object, node.property];
+  if (node.type === 'CallExpression' || node.type === 'NewExpression')
+    return [node.callee, ...node.arguments];
+  if (node.type === 'LogicalExpression' || node.type === 'BinaryExpression')
+    return [node.left, node.right];
+  if (node.type === 'ConditionalExpression') return [node.test, node.consequent, node.alternate];
+  if (node.type === 'TemplateLiteral') return node.expressions;
+  if (
+    node.type === 'UnaryExpression' ||
+    node.type === 'AwaitExpression' ||
+    node.type === 'SpreadElement'
+  )
+    return [node.argument];
+  if (
+    node.type === 'TSNonNullExpression' ||
+    node.type === 'TSAsExpression' ||
+    node.type === 'TSSatisfiesExpression' ||
+    node.type === 'ParenthesizedExpression' ||
+    node.type === 'ChainExpression'
+  )
+    return [node.expression];
+  return [];
 };
 
-/** Whether a read is a seed's: a name around it says seed, or it stands in for a seed read by name (`?? Date.now()`). */
+/**
+ * Whether an expression reads a seed by name anywhere in it:
+ * `Number(process.env['HYMNAL_ROWS_SEED'])`, `parseInt(Bun.env.X_SEED ?? '', 10)`,
+ * `Config.Int('TEST_BUDGET_SEED')`, a binding named `seed`.
+ */
+const seedIn = (node: ESTree.Node): boolean =>
+  (node.type === 'Identifier' && saysSeed(node.name)) ||
+  namesAt(node).some(saysSeed) ||
+  partsOf(node).some(seedIn);
+
+/**
+ * Whether `at` is the fallback of a choice made on a seed read by name: the
+ * right of `??` or `||` whose left reads one, or a branch of `?:` whose test
+ * or other branch reads one.
+ */
+const fallsBackFrom = (parent: ESTree.Node, at: ESTree.Node) => {
+  if (parent.type === 'LogicalExpression') return parent.right === at && seedIn(parent.left);
+  if (parent.type !== 'ConditionalExpression' || parent.test === at) return false;
+  return [parent.test, parent.consequent, parent.alternate]
+    .filter((part) => part !== at)
+    .some(seedIn);
+};
+
+/** Whether a read is a seed's: a name around it says seed, or it is the fallback of a seed read by name, however wrapped. */
 const isSeed = (read: ESTree.Node) => {
   let at: ESTree.Node = read;
   while (at.type !== 'Program') {
     const parent: ESTree.Node = at.parent;
-    if (namesAt(parent).some(saysSeed)) return true;
-    if (parent.type === 'LogicalExpression' && parent.right === at && seedIn(parent.left))
-      return true;
+    if (namesAt(parent).some(saysSeed) || fallsBackFrom(parent, at)) return true;
     at = parent;
   }
   return false;

@@ -21,6 +21,12 @@ export const budgetSeed = Effect.gen(function* () {
     onSome: (value) => Effect.succeed(value),
   });
 });
+export const a1 = Number(process.env['HYMNAL_PROBE_SEED']) || Date.now(); // RED manna/seed-from-clock
+export const a3 = process.env['X_SEED'] ? Number(process.env['X_SEED']) : Date.now(); // RED manna/seed-from-clock
+export const a5 = random(Number(process.env['HYMNAL_PROBE_SEED']) || Date.now()); // RED manna/seed-from-clock
+export const a6 = parseInt(process.env['X_SEED'] ?? '', 10) || Math.floor(Math.random() * 1e6); // RED manna/seed-from-clock
+export const port = Number(process.env['PORT']) || Date.now();
+export const plain = process.env['CI'] ? 1 : Math.random();
 
 export const constant = Number(process.env['HYMNAL_ROWS_SEED'] ?? 20261112);
 export const configured = Config.Int('TOPICS_SEED').pipe(Config.withDefault(20261020));
