@@ -205,6 +205,13 @@ drivers in the caller's environment, files it away, and reports
 identity by `Os.started` only: it fails `server-pid` on a legacy session,
 and on a session whose start time no longer reads back.
 
+**The doctor's driver.** `doctor` first runs the platform's driver
+(`agent-device` on iOS, `agent-browser` on the web) with `--version`. A
+driver this process's PATH does not hold fails it as `Unhealthy` at
+`driver`, naming the tool, before any other check; an nvm or bun global
+bin missing from an agent's PATH is the usual cause
+(`src/doctor.test.ts`).
+
 **The doctor's native sources** (`src/native-source.ts`). On iOS, once
 `server-log` holds, `doctor` reads the app's log since boot as records
 (`xcrun simctl spawn <udid> log show --style ndjson --last <since boot>s

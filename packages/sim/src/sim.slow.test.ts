@@ -301,7 +301,7 @@ describe('sim commands', () => {
         ok: false,
         error: { _tag: 'Unhealthy', check: 'server-pid' },
       });
-      expect(answers.runs.map((run) => run.line)).toEqual([START_READ]);
+      expect(answers.runs.map((run) => run.line)).toEqual(['agent-browser --version', START_READ]);
     }).pipe(Effect.provide(Host)),
   );
 

@@ -1586,9 +1586,14 @@ const descends = Effect.fn('Sim.descends')(function* (pid: number, ancestor: num
 /** Lines of the dev server's log that report a failed request or build. */
 const FAILURE = /\b(error|failed|5\d\d)\b/i;
 
+/** The driver every step on a platform runs through. */
+const DRIVER: Readonly<Record<Platform, string>> = { ios: 'agent-device', web: 'agent-browser' };
+
 /**
  * Read-only checks of the booted drive, in order; the first that fails is
- * the result (`Unhealthy` names it). The server's log is its output and its
+ * the result (`Unhealthy` names it). The platform's driver comes first
+ * (`driver`): a driver this process cannot find fails every step after an
+ * ok doctor otherwise. The server's log is its output and its
  * error output both (`server-log`): a page the server fails to render (an
  * SSR error) answers 200 with an error page and is written to its error
  * output alone. On iOS, once the server's log holds,
@@ -1601,6 +1606,16 @@ const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const session = yield* readSession(place);
   const sick = (check: string, reason: string) => Effect.fail(Unhealthy.make({ check, reason }));
+  const driver = DRIVER[session.platform];
+  const found = yield* attempt(driver, ['--version'], short).pipe(
+    Effect.as(true),
+    Effect.catchTag('ToolMissing', () => Effect.succeed(false)),
+  );
+  if (!found)
+    return yield* sick(
+      'driver',
+      `${driver} is not on this process's PATH, so no step can run; install it, or put the folder that holds it (an nvm or bun global bin) on PATH`,
+    );
   const owned = ownedBy(session);
   if (Option.isNone(owned))
     return yield* sick(
