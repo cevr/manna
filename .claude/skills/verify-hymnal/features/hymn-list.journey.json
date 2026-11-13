@@ -78,6 +78,8 @@
       "direction": "up",
       "expect": [
         { "shows": "role=other label=Sections" },
+        { "shows": "role=other label=Lists" },
+        { "shows": "role=other label=Topics" },
         { "hides": "label=Number, title or first line" }
       ]
     },
