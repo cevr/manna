@@ -9,6 +9,7 @@ declare const it: (title: string, body: () => unknown) => void;
 declare const options: { readonly seed?: number };
 declare const startTimes: Map<number, number>;
 declare const table: Record<number, number>;
+declare const seedTimings: Map<string, number>;
 
 export const seed = Number(process.env['HYMNAL_ROWS_SEED'] ?? Date.now() % 1_000_000); // RED manna/seed-from-clock
 export const draws = random(Number(process.env['ROWS_SEED'] ?? Date.now())); // RED manna/seed-from-clock
@@ -35,6 +36,15 @@ export let wheelSeed = 0;
 wheelSeed ||= Date.now(); // RED manna/seed-from-clock
 process.env['X_SEED'] = String(performance.now()); // RED manna/seed-from-clock
 export const pageSeed = ((g?: string) => (g ? Number(g) >>> 0 : Date.now()))(process.env['X_SEED']); // RED manna/seed-from-clock
+export const RNGSeed = Math.random(); // RED manna/seed-from-clock
+export const seed2 = Date.now(); // RED manna/seed-from-clock
+export const budget = Effect.gen(function* () {
+  return yield* Config.Int('TEST_BUDGET_SEED').pipe(Config.withDefault(Date.now())); // RED manna/seed-from-clock
+}).pipe(Effect.orDie);
+export const Heartseed = Date.now();
+export const t2 = seedTimings.get('a') ?? performance.now();
+export const t3 = seedTimings.get(String(seed)) ?? performance.now();
+export const timeout = Config.Int('X_TIMEOUT').pipe(Config.withDefault(Date.now()));
 export const d1 = seed > 0 && performance.now() < 5_000;
 export const d2 = seed > 0 ? `seed ${seed}` : `took ${performance.now()} ms`;
 console.log(seed, Date.now());

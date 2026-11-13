@@ -78,10 +78,18 @@ const dotted = (node: ESTree.Node): Option.Option<string> => {
   return Option.map(keyOf(node.property, node.computed), (member) => `${object}.${member}`);
 };
 
-/** Whether a name holds the word seed or seeds: `seed`, `WHEEL_SEED`, `motionSeed`, `seedRows`, never `heartseed` or `seeded`. */
+/**
+ * Whether a name holds the word seed or seeds, its words split at a case
+ * change, an acronym's end, a digit, any other character and the name's
+ * edges: `seed`, `WHEEL_SEED`, `motionSeed`, `RNGSeed`, `seed1`, `SEED2`,
+ * never `heartseed`, `Heartseed`, `seeded` or `seedless`.
+ */
 const saysSeed = (name: string) =>
   name
     .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([A-Za-z])(\d)/g, '$1 $2')
+    .replace(/(\d)([A-Za-z])/g, '$1 $2')
     .split(/[^A-Za-z\d]+/)
     .some((word) => /^seeds?$/i.test(word));
 
@@ -101,10 +109,11 @@ const wraps = (callee: ESTree.Node) =>
  * branch; a sign (`+`, `-`, `~`); either side of arithmetic; a template's
  * expression; a conversion's, a `Math.*`'s or an Effect constructor's
  * argument; a call's callee (`Date.now()`, `(() => S)()`); the object of a
- * member or method (`Date.now().toString()`, `process.hrtime()[1]`); and a
- * function's expression body or `return`. `&&`, a comparison, a `?:`'s
- * test, `!`, `typeof`, any other call's or `new`'s argument, an array, an
- * object and a statement are not.
+ * member or method (`Date.now().toString()`, `process.hrtime()[1]`); a
+ * function's expression body or `return`; and a config's default
+ * (`resultAbove`, `defaulted`). `&&`, a comparison, a `?:`'s test, `!`,
+ * `typeof`, any other call's or `new`'s argument, an array, an object and a
+ * statement are not.
  */
 const resultOf = (parent: ESTree.Node, child: ESTree.Node): boolean => {
   if (TRANSPARENT.has(parent.type)) return true;
@@ -143,21 +152,87 @@ const enclosingFunction = (node: ESTree.Node): Option.Option<ESTree.Node> => {
   return Option.none();
 };
 
-/** The node `at`'s value is a result of, if any: its parent in a result position, or, from a `return`, its function. */
+/** Whether a node is a `Config.withDefault(…)` call. */
+const isWithDefault = (node: ESTree.Node): node is ESTree.CallExpression =>
+  node.type === 'CallExpression' && Option.contains(dotted(node.callee), 'Config.withDefault');
+
+/** A call's `i`th argument. */
+const argumentAt = (call: ESTree.CallExpression, i: number): Option.Option<ESTree.Node> =>
+  Option.fromNullishOr(call.arguments[i]);
+
+/** Whether `at` is the default a `Config.withDefault` call gives: its second argument data-first (`Config.withDefault(C, S)`), else its only one. */
+const isDefaultOf = (call: ESTree.CallExpression, at: ESTree.Node) =>
+  Option.exists(argumentAt(call, Math.min(call.arguments.length - 1, 1)), (node) => node === at);
+
+/** Whether a callee is a `.pipe` method. */
+const pipeMethod = (callee: ESTree.Node): callee is ESTree.MemberExpression =>
+  callee.type === 'MemberExpression' &&
+  Option.contains(keyOf(callee.property, callee.computed), 'pipe');
+
+/**
+ * The config a `Config.withDefault` call defaults, and the value its
+ * default is a result of: `C` and the call itself in
+ * `Config.withDefault(C, S)`; `C` and the whole pipe in
+ * `C.pipe(…, Config.withDefault(S))` and `pipe(C, …, Config.withDefault(S))`.
+ */
+const defaulted = (
+  call: ESTree.CallExpression,
+): Option.Option<{ readonly config: ESTree.Node; readonly value: ESTree.Node }> => {
+  if (call.arguments.length >= 2)
+    return Option.map(argumentAt(call, 0), (config) => ({ config, value: call }));
+  const holder: ESTree.Node = call.parent;
+  if (holder.type !== 'CallExpression' || !holder.arguments.includes(call)) return Option.none();
+  const callee = holder.callee;
+  if (pipeMethod(callee)) return Option.some({ config: callee.object, value: holder });
+  if (!Option.contains(nameOf(callee), 'pipe')) return Option.none();
+  return argumentAt(holder, 0).pipe(
+    Option.filter((piped) => piped !== call),
+    Option.map((config) => ({ config, value: holder })),
+  );
+};
+
+/**
+ * Whether an expression is a config read of a seed: a `Config.*` call given
+ * a seed's name (`Config.Int('TEST_BUDGET_SEED')`), one made from such a
+ * config (`Config.option(…)`), or such a config piped (`C.pipe(Config.map(f))`).
+ */
+const seedConfig = (node: ESTree.Node): boolean => {
+  if (node.type !== 'CallExpression') return false;
+  const callee = node.callee;
+  if (Option.exists(dotted(callee), (name) => name.startsWith('Config.')))
+    return node.arguments.some(
+      (argument) =>
+        (argument.type === 'Literal' && Option.exists(nameOf(argument), saysSeed)) ||
+        seedConfig(argument),
+    );
+  if (pipeMethod(callee)) return seedConfig(callee.object);
+  return Option.contains(nameOf(callee), 'pipe') && Option.exists(argumentAt(node, 0), seedConfig);
+};
+
+/**
+ * The node `at`'s value is a result of, if any: its parent in a result
+ * position; from a `return`, its function; from a config's default, the
+ * defaulted config's value (`defaulted`).
+ */
 const resultAbove = (at: ESTree.Node): Option.Option<ESTree.Node> => {
   if (at.type === 'Program') return Option.none();
   const parent: ESTree.Node = at.parent;
   if (parent.type === 'ReturnStatement') return enclosingFunction(parent);
+  if (isWithDefault(parent) && isDefaultOf(parent, at))
+    return Option.map(defaulted(parent), ({ value }) => value);
   return Option.some(parent).pipe(Option.filter((p) => resultOf(p, at)));
 };
 
 /**
  * Whether an expression reads a seed by name: a name that says seed
- * (`seed`, `HYMNAL_PROBE_SEED`), a member under one (`process.env['X_SEED']`,
- * `Bun.env.X_SEED`, `options.seed`), or such a read taken through a
- * conversion, a method (`R?.trim()`), `!`, a type assertion, a sign or the
- * left of `??`/`||`. A seed used as a key or an argument (`table[seed]`,
- * `map.get(seed)`) is no read of it.
+ * (`seed`, `HYMNAL_PROBE_SEED`), a member whose own key says seed
+ * (`process.env['X_SEED']`, `Bun.env.X_SEED`, `options.seed`), or such a
+ * read taken through a conversion, a method called with no argument
+ * (`R?.trim()`, `R.valueOf()`), `!`, a type assertion, `await`, a sign or
+ * the left of `??`/`||`. A seed used as a key or an argument (`table[seed]`,
+ * `map.get(seed)`) is no read of it, nor is a member or a lookup of an
+ * object named for a seed (`seedTimings.get(k)`, `seeds.length`,
+ * `seedRows.at`), nor the left of `&&`.
  */
 const seedRead = (node: ESTree.Node): boolean => {
   switch (node.type) {
@@ -171,10 +246,14 @@ const seedRead = (node: ESTree.Node): boolean => {
     case 'ChainExpression':
       return seedRead(node.expression);
     case 'MemberExpression':
-      return named(node.property, node.computed) || seedRead(node.object);
+      return named(node.property, node.computed);
     case 'CallExpression':
       if (wraps(node.callee)) return node.arguments.some(seedRead);
-      return node.callee.type === 'MemberExpression' && seedRead(node.callee);
+      return (
+        node.callee.type === 'MemberExpression' &&
+        node.arguments.length === 0 &&
+        seedRead(node.callee.object)
+      );
     case 'AwaitExpression':
       return seedRead(node.argument);
     case 'LogicalExpression':
@@ -234,9 +313,16 @@ const heldAsSeed = (parent: ESTree.Node, at: ESTree.Node) => {
  * Whether `at` stands in for a seed read by name, whatever holds the whole:
  * the right of `??` or `||` whose left reads a seed
  * (`Number(process.env['X_SEED']) || S`), or a `?:`'s branch whose test asks
- * for a seed read and whose other branch is one (`R ? Number(R) : S`).
+ * for a seed read and whose other branch is one (`R ? Number(R) : S`), or
+ * the default given to a config read of a seed
+ * (`Config.Int('X_SEED').pipe(Config.withDefault(S))`).
  */
 const fallsBackFrom = (parent: ESTree.Node, at: ESTree.Node) => {
+  if (isWithDefault(parent))
+    return (
+      isDefaultOf(parent, at) &&
+      Option.exists(defaulted(parent), ({ config }) => seedConfig(config))
+    );
   if (parent.type === 'LogicalExpression')
     return parent.operator !== '&&' && parent.right === at && seedRead(parent.left);
   if (parent.type !== 'ConditionalExpression' || parent.test === at) return false;
@@ -253,12 +339,14 @@ const fallsBackFrom = (parent: ESTree.Node, at: ESTree.Node) => {
  *   `const seed = Math.floor(Math.random() * n)`, `function draw(seed =
  *   Date.now())`, `{ seed: performance.now() }`, `wheelSeed ||= Date.now()`;
  * - or it stands in for a seed read by name (`fallsBackFrom`):
- *   `Number(process.env['X_SEED']) || Date.now()`.
+ *   `Number(process.env['X_SEED']) || Date.now()`, or a seed config's
+ *   default, `Config.Int('X_SEED').pipe(Config.withDefault(Date.now()))`.
  * A clock read outside a result position (a comparison, `&&`, a `?:`'s
  * test, a timing or log call's argument, a property body's statements) is
- * no seed's, nor is one whose `??`/`||` left side only uses a seed as a key
- * or an argument (`map.get(seed) ?? performance.now()`), nor one held by a
- * name that does not say seed. A function declaration's name, a callback
+ * no seed's, nor is one whose `??`/`||` left side only uses a seed as a key,
+ * an argument or a receiver (`map.get(seed) ?? performance.now()`,
+ * `seedTimings.get(k) ?? performance.now()`), nor one held by a name that
+ * does not say seed. A function declaration's name, a callback
  * (`Array.from(…, () => Math.random())`), a helper (`?? now()`) and a
  * renamed binding (`{ X_SEED: raw }`) are not followed.
  */

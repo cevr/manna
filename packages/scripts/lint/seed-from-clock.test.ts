@@ -47,7 +47,9 @@ const reportedOf = (lines: ReadonlyArray<string>) =>
   new Set(reportedLines('rows.test.ts', lines.join('\n')).map((n) => lines[n - 1] ?? ''));
 
 /** The lines whose report is not what each expects: missed when it should be reported, extra when not. */
-const wrongOf = (cases: ReadonlyArray<{ readonly line: string; readonly reported: boolean }>) => {
+const wrongOf = <C extends { readonly line: string; readonly reported: boolean }>(
+  cases: ReadonlyArray<C>,
+) => {
   const reported = reportedOf(cases.map(({ line }) => line));
   return cases.filter(({ line, reported: expected }) => reported.has(line) !== expected);
 };
@@ -96,11 +98,51 @@ const BINDINGS: ReadonlyArray<(name: string, value: string) => string> = [
   (n, v) => `class Rig { static ${n} = ${v}; }`,
 ];
 
+/** A word with its first letter capital. */
+const capital = (word: string) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+
+/** A word with its first letter small. */
+const small = (word: string) => `${word.charAt(0).toLowerCase()}${word.slice(1)}`;
+
+/** The prefixes a name may carry: none, a lower word, or an acronym. */
+const PREFIXES = ['', 'rng', 'hymnal', 'RNG', 'PRNG'];
+
+/** The suffixes a name may carry: none, a word, a digit. */
+const SUFFIXES = ['', 'value', '2', '1'];
+
+/** The casings a test writes a name in, camel, Pascal, snake and screaming: `write(prefix, core, suffix)`; a digit joins with no separator in each. */
+const CASINGS: ReadonlyArray<(prefix: string, core: string, suffix: string) => string> = [
+  (p, c, s) => small([p.toLowerCase(), capital(c), capital(s)].join('')),
+  (p, c, s) => [capital(p), capital(c), capital(s)].join(''),
+  (p, c, s) =>
+    [p.toLowerCase(), c, s]
+      .filter((part) => part !== '')
+      .join('_')
+      .replace(/_(\d)$/, '$1'),
+  (p, c, s) =>
+    [p, c, s]
+      .filter((part) => part !== '')
+      .join('_')
+      .toUpperCase()
+      .replace(/_(\d)$/, '$1'),
+];
+
+/** Every name of each core: each prefix, suffix and casing (`seed`, `RNGSeed`, `seedValue`, `seed2`, `RNG_SEED`, `HYMNAL_SEEDS1`). */
+const namesOf = (cores: ReadonlyArray<string>) => [
+  ...new Set(
+    cores.flatMap((core) =>
+      PREFIXES.flatMap((prefix) =>
+        SUFFIXES.flatMap((suffix) => CASINGS.map((write) => write(prefix, core, suffix))),
+      ),
+    ),
+  ),
+];
+
 /** Names that say seed. */
-const SEED_NAMES = ['seed', 'seeds', 'SEED', 'wheelSeed', 'X_SEED', 'seedRows'];
+const SEED_NAMES = namesOf(['seed', 'seeds']);
 
 /** Names that do not: other words, and words that only hold the letters seed. */
-const OTHER_NAMES = ['start', 'heartseed', 'seeded', 'at', 'seedless', 'PORT'];
+const OTHER_NAMES = [...namesOf(['heartseed', 'seeded', 'seedless']), 'start', 'at', 'PORT'];
 
 /** The result positions: `wrap(s)` makes a value from `s`, so a clock there is the value's. */
 const RESULTS: ReadonlyArray<(s: string) => string> = [
@@ -142,6 +184,7 @@ const RESULTS: ReadonlyArray<(s: string) => string> = [
   (s) => `Effect.gen(function* () { return yield* ${s}; })`,
   (s) => `Effect.gen(function* () { return ${s}; }).pipe(Effect.orDie)`,
   (s) => `((g) => (g !== undefined ? Number(g) : ${s}))(given)`,
+  (s) => `Config.Int('PORT').pipe(Config.withDefault(${s}))`,
 ];
 
 /** The positions that are no result: the value is not made from `s`, so a clock there is no seed's. */
@@ -157,6 +200,7 @@ const NOT_RESULTS: ReadonlyArray<(s: string) => string> = [
   (s) => `({ at: ${s} })`,
   (s) => `new Rng(${s})`,
   (s) => `new Date(${s}).getTime()`,
+  (s) => `Config.withDefault(${s}, 20261112)`,
   (s) => `() => { use(${s}); return 1; }`,
   (s) => `typeof ${s}`,
   (s) => `!${s}`,
@@ -189,12 +233,13 @@ const VARIABLES = [
   'options.seed',
 ];
 
-/** The ways its text is taken: as it is, through a method on an optional chain or past `!`, or asserted. */
+/** The ways its text is taken: as it is, through a method on an optional chain or past `!`, asserted, or awaited. */
 const TAKES: ReadonlyArray<(x: string) => string> = [
   (x) => x,
   (x) => `${x}?.trim()`,
   (x) => `${x}!.trim()`,
   (x) => `(${x} as string)`,
+  (x) => `(await ${x})`,
 ];
 
 /** The ways a test turns a variable's text into a number. */
@@ -267,6 +312,58 @@ const BESIDES: ReadonlyArray<(source: string) => string> = [
   (s) => `Number(process.env['X_SEED'] ?? 20261112) + ${s} * 0`,
   (s) => `expect(${s} - 5).toBeLessThan(seed)`,
 ];
+
+/** The ways a test reads the clock beside an object named for a seed, never reading the seed: a lookup, an element's field, a member, a length. */
+const RECEIVERS: ReadonlyArray<(receiver: string, source: string) => string> = [
+  (r, s) => `${r}.get(k) ?? ${s}`,
+  (r, s) => `${r}.get(String(seed)) ?? ${s}`,
+  (r, s) => `(${r}.get('a') as number) || ${s}`,
+  (r, s) => `${r}[0]?.createdAt ?? ${s}`,
+  (r, s) => `${r}.at ?? ${s}`,
+  (r, s) => `${r}.length || ${s}`,
+  (r, s) => `${r}.at(-1) ?? ${s}`,
+  (r, s) => `${r}.size + ${s}`,
+];
+
+/** Every receiver form beside every object named for a seed, the source taken in turn, each under a binding not a seed's. */
+const received = () =>
+  SEED_NAMES.flatMap((name) => RECEIVERS.map((receive) => ({ name, receive }))).map(
+    ({ name, receive }, i) => `const at = ${receive(name, nth(SOURCES, i))};`,
+  );
+
+/** The kinds of config a seed may be read with. */
+const CONFIG_KINDS = ['Int', 'Number', 'Integer', 'String'];
+
+/** The ways a config is given a default: piped, piped after a map, data-first, through `pipe`, after an option. */
+const CONFIG_DEFAULTS: ReadonlyArray<(config: string, source: string) => string> = [
+  (c, s) => `${c}.pipe(Config.withDefault(${s}))`,
+  (c, s) => `${c}.pipe(Config.map((x) => x), Config.withDefault(${s}))`,
+  (c, s) => `Config.withDefault(${c}, ${s})`,
+  (c, s) => `Config.withDefault(${c}.pipe(Config.map((x) => x)), ${s})`,
+  (c, s) => `pipe(${c}, Config.withDefault(${s}))`,
+  (c, s) => `Config.option(${c}).pipe(Config.withDefault(${s}))`,
+];
+
+/** What holds a config, under no seed's name: a binding, an Effect that yields it, a call. */
+const CONFIG_HOLDERS: ReadonlyArray<(x: string) => string> = [
+  (x) => `const at = ${x};`,
+  (x) => `const g = Effect.gen(function* () { return yield* ${x}; });`,
+  (x) =>
+    `const g = Effect.gen(function* () { const n = yield* ${x}; return random(n); }).pipe(Effect.orDie);`,
+  (x) => `use(${x});`,
+];
+
+/** Config names that say seed, and names that do not. */
+const CONFIG_SEEDS = ['X_SEED', 'TEST_BUDGET_SEED', 'TOPICS_SEED', 'RNGSeed', 'SEED2'];
+const CONFIG_OTHERS = ['X_PORT', 'HEARTSEED_PATH', 'SEEDED', 'seedless', 'PORT'];
+
+/** Every config kind, default form and holder together, with the name, the source and its result position taken in turn. */
+const configured = (names: ReadonlyArray<string>) =>
+  CONFIG_KINDS.flatMap((kind) =>
+    CONFIG_DEFAULTS.flatMap((give) => CONFIG_HOLDERS.map((hold) => ({ kind, give, hold }))),
+  ).map(({ kind, give, hold }, i) =>
+    hold(give(`Config.${kind}('${nth(names, i)}')`, `(${nth(RESULTS, i * 3)(nth(SOURCES, i))})`)),
+  );
 
 /** A probe a verifier planted: its name, its line, and whether a seed there is the clock's under the rule's contract. */
 interface Probe {
@@ -624,6 +721,162 @@ const VB46: ReadonlyArray<Probe> = [
   },
 ];
 
+/** A vb-48 probe reported: its line in the verifier's file, and the line. */
+const reportedProbe = (name: string, line: string): Probe => ({ name, line, reported: true });
+
+/** A vb-48 probe never reported. */
+const quietProbe = (name: string, line: string): Probe => ({ name, line, reported: false });
+
+/** The vb-48 probes: seed names beside an acronym or digit (M1), members of seed-named objects (M2), config defaults (M3), and the verifier's other lines. */
+const VB48: ReadonlyArray<Probe> = [
+  reportedProbe('names1 RNGSeed', 'export const RNGSeed = Date.now();'),
+  reportedProbe('names2 PRNGSeed', 'export const PRNGSeed = Math.random();'),
+  reportedProbe('names3 seed1', 'export const seed1 = Date.now();'),
+  reportedProbe('names4 SEED2', 'export const SEED2 = Date.now();'),
+  reportedProbe('names5 a key seed2', 'export const run = { seed2: Date.now() };'),
+  reportedProbe('names6 seed_2', 'export const seed_2 = Date.now();'),
+  reportedProbe('names7 rngSeed', 'export const rngSeed = Date.now();'),
+  reportedProbe('names8 RNG_SEED', 'export const RNG_SEED = Date.now();'),
+  reportedProbe('pos38 seed2', 'export const seed2 = Date.now();'),
+  reportedProbe('pos39 HYMNALSeed', 'export const HYMNALSeed = Date.now();'),
+  reportedProbe('a seedValue', 'export const seedValue = performance.now();'),
+  quietProbe('Heartseed is no seed', 'export const Heartseed = Date.now();'),
+  quietProbe('HEARTSEED_AT is no seed', 'export const HEARTSEED_AT = Date.now();'),
+  quietProbe(
+    'neg6 a lookup on seedTimings',
+    "export const t6 = seedTimings.get('a') ?? performance.now();",
+  ),
+  quietProbe(
+    'neg7 an element of seedUsers',
+    'export const createdAt7 = seedUsers[0]?.createdAt ?? Date.now();',
+  ),
+  quietProbe('neg8 a member of seedRows', 'export const at8 = seedRows.at ?? Date.now();'),
+  quietProbe('neg9 the length of seeds', 'export const n9 = seeds.length || Date.now();'),
+  quietProbe('neg10 a comparison', 'export const ok10 = seed === Date.now();'),
+  quietProbe('neg11 a comparison', 'export const old11 = seed < Date.now();'),
+  quietProbe('neg12 &&', 'export const x12 = seed && Date.now();'),
+  quietProbe('neg13 heartseedAt', 'export const heartseedAt13 = Date.now();'),
+  quietProbe('neg14 seeded', 'export const seeded14 = Date.now();'),
+  quietProbe('neg15 seedless', 'export const seedless15 = Math.random();'),
+  quietProbe(
+    'neg16 an option beside seed',
+    'fc.assert(prop, { seed, interruptAfterTimeLimit: Date.now() });',
+  ),
+  quietProbe('neg17 a label', 'export const label17 = `seed ${seed} at ${Date.now()}`;'),
+  quietProbe(
+    "neg18 decide.md's example with a seed-named map",
+    'export const t18 = seedTimings.get(String(seed)) ?? performance.now();',
+  ),
+  quietProbe('neg19 a check', 'export const c19 = check(seed, () => Date.now());'),
+  quietProbe('neg20 a new Date of a sum', 'export const d20 = new Date(Date.now() + seed);'),
+  quietProbe(
+    'neg21 an asserted lookup',
+    "export const t21 = (seedTimings.get('a') as number) || Date.now();",
+  ),
+  quietProbe('neg22 a size plus a clock', 'export const sum22 = seedTimings.size + Date.now();'),
+  reportedProbe(
+    'pos2 an assignment in an IIFE',
+    'export const p2 = (() => { let seed: number; seed = Math.random(); return seed; })();',
+  ),
+  reportedProbe('pos3 an array default', 'export const [seed_3 = Date.now()] = [] as number[];'),
+  reportedProbe(
+    'pos4 a parameter destructuring default',
+    'export function f4({ seed = Date.now() } = {} as { seed?: number }) { return seed; }',
+  ),
+  reportedProbe('pos5 a class field', 'export class A5 { seed = Date.now(); }'),
+  reportedProbe('pos6 a static field', 'export class A6 { static seed = Math.random(); }'),
+  reportedProbe('pos7 a string key', "export const o7 = { 'seed': Date.now() };"),
+  reportedProbe('pos8 a computed string key', "export const o8 = { ['seed']: Date.now() };"),
+  reportedProbe('pos9 ?? left', 'export const seed_9 = Date.now() ?? 1;'),
+  reportedProbe('pos10 a ?: branch', 'export const seed_10 = Math.random() > 2 ? Date.now() : 1;'),
+  reportedProbe('pos11 a minus', 'export const seed_11 = -Date.now();'),
+  reportedProbe('pos12 >>>', 'export const seed_12 = Date.now() >>> 0;'),
+  reportedProbe('pos13 a template in Number', 'export const seed_13 = Number(`${Date.now()}`);'),
+  reportedProbe('pos14 Math.floor', 'export const seed_14 = Math.floor(performance.now());'),
+  reportedProbe('pos15 hrtime()[0]', 'export const seed_15 = process.hrtime()[0];'),
+  reportedProbe('pos16 hrtime.bigint()', 'export const seed_16 = process.hrtime.bigint();'),
+  reportedProbe('pos17 new Date().valueOf()', 'export const seed_17 = new Date().valueOf();'),
+  reportedProbe('pos18 satisfies', 'export const seed_18 = Date.now() satisfies number;'),
+  reportedProbe("pos19 Date['now']()", "export const seed_19 = Date['now']();"),
+  reportedProbe('pos20 % 2 ** 32', 'export const seed_20 = new Date().getTime() % 2 ** 32;'),
+  reportedProbe(
+    'pos21 parseFloat(String())',
+    'export const seed_21 = parseFloat(String(Math.random()));',
+  ),
+  reportedProbe('pos22 a typed binding', 'export const seed_22: number = Date.now();'),
+  reportedProbe('pos23 a default export key', 'export default { seed: Date.now() };'),
+  reportedProbe(
+    'pos24 SEED24 with a fallback',
+    'export const SEED24 = Number(process.env.SEED) || Math.floor(Math.random() * 1e9);',
+  ),
+  reportedProbe(
+    'pos25 .valueOf() on a fallback',
+    'export const seed_25 = Number(process.env.X_SEED ?? Date.now()).valueOf();',
+  ),
+  reportedProbe('pos26 | 0', 'export const seed_26 = Math.random() * 1e9 | 0;'),
+  reportedProbe(
+    'pos27 this.seed =',
+    'export class A27 { seed = 0; reset() { this.seed = Date.now(); } }',
+  ),
+  reportedProbe('pos28 an Effect clock', 'export const seed_28 = Clock.currentTimeMillis;'),
+  reportedProbe(
+    'pos29 yield* Clock',
+    'export const g29 = Effect.gen(function* () { const seed = yield* Clock.currentTimeMillis; return seed; });',
+  ),
+  reportedProbe('pos30 toString(36)', 'export const seed_30 = Date.now().toString(36);'),
+  reportedProbe(
+    'pos31 slice of String',
+    'export const seed_31 = Number(String(Date.now()).slice(-6));',
+  ),
+  reportedProbe(
+    'pos32 env SEED fallback',
+    "export const x32 = Number(process.env.SEED ?? '') || performance.now();",
+  ),
+  reportedProbe('pos33 var', 'export var seed_33 = Date.now();'),
+  reportedProbe(
+    'pos34 a seed key beside seeds',
+    'export const run34 = { seeds: [1], seed: Math.trunc(Math.abs(Date.now())) };',
+  ),
+  quietProbe(
+    "pos35 Promise.resolve's argument",
+    'export const seed_35 = await Promise.resolve(Date.now());',
+  ),
+  reportedProbe(
+    'pos36 a seed config default',
+    "export const g36 = Effect.gen(function* () { const seed = yield* Config.Int('X_SEED').pipe(Config.withDefault(Date.now())); return seed; });",
+  ),
+  quietProbe(
+    "pos37 Option.getOrElse's callback",
+    'export const seed_37 = Option.getOrElse(Option.none<number>(), () => Date.now());',
+  ),
+  quietProbe(
+    "pos40 Config.orElse's callback",
+    "export const g40 = Effect.gen(function* () { const seed = yield* Config.Int('X_SEED').pipe(Config.orElse(() => Config.succeed(Date.now()))); return seed; });",
+  ),
+  quietProbe('pos41 globalThis.Date.now', 'export const seed_41 = globalThis.Date.now();'),
+  quietProbe("pos42 new Date's argument", 'export const seed_42 = new Date(Date.now()).getTime();'),
+  reportedProbe(
+    'revert test-budget',
+    "const seed = Effect.gen(function* () { return yield* Config.Int('TEST_BUDGET_SEED').pipe(Config.withDefault(Date.now())); }).pipe(Effect.orDie);",
+  ),
+  reportedProbe(
+    'revert topics',
+    "it.effect('t', () => Effect.gen(function* () { const seed = yield* Config.Int('TOPICS_SEED').pipe(Config.withDefault(Date.now())); return seed; }));",
+  ),
+  reportedProbe(
+    'a seed config default under a neutral name',
+    "const budget = Config.Int('TEST_BUDGET_SEED').pipe(Config.withDefault(Date.now()));",
+  ),
+  quietProbe(
+    "a clock in a seed config's map",
+    "const budget = Config.Int('X_SEED').pipe(Config.map((x) => x + Date.now()));",
+  ),
+  quietProbe(
+    "a clock default of a config not a seed's",
+    "const timeout = Config.Int('X_TIMEOUT').pipe(Config.withDefault(Date.now()));",
+  ),
+];
+
 const fixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -636,7 +889,7 @@ describe('manna/seed-from-clock', () => {
     Effect.gen(function* () {
       const { file, text } = yield* fixture;
       const marked = markedLines(text);
-      expect(marked.length).toBe(18);
+      expect(marked.length).toBe(21);
       expect(reportedLines(file, text)).toEqual(marked);
     }),
   );
@@ -650,7 +903,53 @@ describe('manna/seed-from-clock', () => {
         expect({
           cases: lines.length,
           missed: lines.filter((line) => !reported.has(line)).slice(0, 5),
-        }).toEqual({ cases: 608, missed: [] });
+        }).toEqual({ cases: 624, missed: [] });
+      }),
+  );
+
+  it.effect(
+    'property: every name holding the word seed or seeds, in any casing and beside any prefix or suffix, names a seed binding, and the same affixes on heartseed, seeded or seedless do not',
+    () =>
+      Effect.sync(() => {
+        const lines = (names: ReadonlyArray<string>) =>
+          names.map((name, i) => nth(BINDINGS, i)(name, nth(SOURCES, i)));
+        const seeds = lines(SEED_NAMES);
+        const reported = reportedOf(seeds);
+        const others = lines(OTHER_NAMES);
+        expect({
+          cases: [seeds.length, others.length],
+          missed: seeds.filter((line) => !reported.has(line)).slice(0, 5),
+          reported: [...reportedOf(others)].slice(0, 5),
+        }).toEqual({ cases: [SEED_NAMES.length, OTHER_NAMES.length], missed: [], reported: [] });
+        expect(SEED_NAMES).toEqual(
+          expect.arrayContaining([
+            'RNGSeed',
+            'PRNGSeed',
+            'seed1',
+            'SEED2',
+            'seedValue',
+            'RNG_SEED',
+            'hymnal_seeds',
+          ]),
+        );
+        expect(OTHER_NAMES).toEqual(
+          expect.arrayContaining(['Heartseed', 'HEARTSEED2', 'rngSeeded']),
+        );
+      }),
+  );
+
+  it.effect(
+    "property: a clock or random default given to a seed's config is reported however the default is given and held, and the same default of a config not a seed's is not",
+    () =>
+      Effect.sync(() => {
+        const seeds = configured(CONFIG_SEEDS);
+        const reported = reportedOf(seeds);
+        const others = configured(CONFIG_OTHERS);
+        expect({
+          cases: [seeds.length, others.length],
+          missed: seeds.filter((line) => !reported.has(line)).slice(0, 5),
+          reported: [...reportedOf(others)].slice(0, 5),
+        }).toEqual({ cases: [96, 96], missed: [], reported: [] });
       }),
   );
 
@@ -663,7 +962,7 @@ describe('manna/seed-from-clock', () => {
         expect({
           cases: [unnamed.length, placed.length],
           reported: [...reportedOf([...unnamed, ...placed])].slice(0, 5),
-        }).toEqual({ cases: [608, 304], reported: [] });
+        }).toEqual({ cases: [624, 320], reported: [] });
       }),
   );
 
@@ -679,7 +978,7 @@ describe('manna/seed-from-clock', () => {
         expect({
           cases: named.length,
           missed: named.filter((line) => !reported.has(line)).slice(0, 5),
-        }).toEqual({ cases: 960, missed: [] });
+        }).toEqual({ cases: 1200, missed: [] });
         const constant = fallbacks(
           (variable) => variable,
           () => '20261112',
@@ -688,21 +987,25 @@ describe('manna/seed-from-clock', () => {
           (variable) => variable.replace('SEED', 'PORT').replace('seed', 'port'),
           (i) => nth(SOURCES, i),
         );
-        expect([...reportedOf([...constant, ...unnamed])].slice(0, 5)).toEqual([]);
+        const anded = VARIABLES.flatMap((variable) => TAKES.map((take) => take(variable))).map(
+          (read, i) => `const at = (${read} && ok) || ${nth(SOURCES, i)};`,
+        );
+        expect([...reportedOf([...constant, ...unnamed, ...anded])].slice(0, 5)).toEqual([]);
       }),
   );
 
   it.effect(
-    'property: a clock or random read beside a seed, its value never the seed taken from the environment, is never reported: a key, a timing, a log, a check, a label',
+    'property: a clock or random read beside a seed, its value never the seed taken from the environment, is never reported: a key, a timing, a log, a check, a label, a lookup on an object named for a seed',
     () =>
       Effect.sync(() => {
         const lines = BESIDES.flatMap((beside) =>
           SOURCES.map((source) => `const at = ${beside(source)};`),
         );
-        expect({ cases: lines.length, reported: [...reportedOf(lines)].slice(0, 5) }).toEqual({
-          cases: 220,
-          reported: [],
-        });
+        const receivers = received();
+        expect({
+          cases: [lines.length, receivers.length],
+          reported: [...reportedOf([...lines, ...receivers])].slice(0, 5),
+        }).toEqual({ cases: [220, SEED_NAMES.length * RECEIVERS.length], reported: [] });
       }),
   );
 
@@ -716,6 +1019,10 @@ describe('manna/seed-from-clock', () => {
 
   it.effect("each of vb-46's probes is reported as the contract says", () =>
     Effect.sync(() => expect(wrongOf(VB46)).toEqual([])),
+  );
+
+  it.effect("each of vb-48's probes is reported as the contract says", () =>
+    Effect.sync(() => expect(wrongOf(VB48).map(({ name }) => name)).toEqual([])),
   );
 
   it.effect(
