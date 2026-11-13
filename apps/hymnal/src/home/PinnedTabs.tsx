@@ -10,6 +10,13 @@
  * Its slide runs on the UI thread from the list's offset; React hears only
  * when the row turns, to let touches and VoiceOver reach it exactly while it
  * is shown. With Reduce Motion on, it appears and leaves by a fade alone.
+ *
+ * The row's own scroll view never moves: the layer slides and clips, the
+ * scroll view stands still at the list's top inside it, and the tabs slide
+ * within the scroll view (`steadyAt`). A scroll view that slid with the
+ * layer would rest, hidden, in the status bar's band, where iOS 26 draws a
+ * scroll view's top edge effect, a blur and fade; a slide by transform runs
+ * no layout, so it would come to rest still blurred.
  */
 
 import { type ReactNode, useState } from 'react';
@@ -97,13 +104,29 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
   return { state, progress, cover, rest, height, reduced, jump, touch, scroll };
 }
 
-/** The pinned layer (`shown-tabs`): `children` is the tab row, drawn as the list's own. */
+/**
+ * Where each part of the pinned layer stands below the list's top, in
+ * points, as the layer covers `cover` of its `height`: the layer slides
+ * (`layer`), the scroll view inside it holds still at the top (`layer +
+ * steady`, always 0), and the tabs slide with the layer (`layer + steady +
+ * tabs`).
+ */
+const steadyAt = (cover: number, height: number) => {
+  'worklet';
+  const layer = cover - height;
+  return { layer, steady: -layer, tabs: layer };
+};
+
+/**
+ * The pinned layer (`shown-tabs`): `children` draws the tab row, as the
+ * list's own, with `slide` on its tabs inside its still scroll view.
+ */
 export function PinnedTabs({
   reveal,
   children,
 }: {
   readonly reveal: TabReveal;
-  readonly children: ReactNode;
+  readonly children: (slide: TabSlide) => ReactNode;
 }) {
   const [shown, setShown] = useState(false);
   useAnimatedReaction(
@@ -113,24 +136,40 @@ export function PinnedTabs({
     },
   );
   const place = useAnimatedStyle(() => {
-    const at = { translateY: reveal.cover.value - reveal.height };
+    const at = { translateY: steadyAt(reveal.cover.value, reveal.height).layer };
     if (reveal.reduced) return { opacity: reveal.progress.value, transform: [at] };
     return { opacity: 1, transform: [at] };
   });
+  const steady = useAnimatedStyle(() => ({
+    transform: [{ translateY: steadyAt(reveal.cover.value, reveal.height).steady }],
+  }));
+  const slide = useAnimatedStyle(() => ({
+    transform: [{ translateY: steadyAt(reveal.cover.value, reveal.height).tabs }],
+  }));
   return (
     <Animated.View
       testID="shown-tabs"
       {...(!shown && outOfReach)}
       style={[styles.pinned, { height: reveal.height }, place]}
     >
-      {children}
+      <Animated.View style={[{ height: reveal.height }, steady]}>{children(slide)}</Animated.View>
     </Animated.View>
   );
 }
+
+/** The tabs' slide inside the pinned row's still scroll view. */
+export type TabSlide = ReturnType<typeof useAnimatedStyle>;
 
 /** Untouchable and unseen by assistive technology, as the hidden row is. */
 const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
 
 const styles = StyleSheet.create({
-  pinned: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: color.ground },
+  pinned: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    backgroundColor: color.ground,
+  },
 });

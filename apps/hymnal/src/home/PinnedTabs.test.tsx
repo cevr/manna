@@ -4,6 +4,9 @@
  * the list's offset alone: over generated scroll paths, from the list's top
  * to deep in it with turns at random, the pinned row is in reach exactly
  * while `revealAt` says shown, and the layer holds the tab row and no field.
+ * In every frame of a slide, read as each element's own slide adds up, the
+ * row's scroll view stands at the list's top, never in the status bar's band
+ * above it, and only its tabs slide.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -12,6 +15,8 @@ import { Option } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { makeMutable, type SharedValue } from 'react-native-reanimated';
+
+import { holdAnimations, landAnimations, stepAnimations } from '~/test/reanimated';
 
 import { PinnedTabs, type TabReveal, useTabReveal } from './PinnedTabs';
 import { hidden, type Reveal, revealAt, travel } from './reveal';
@@ -64,7 +69,7 @@ function Pinned({
   onReveal(reveal);
   return (
     <PinnedTabs reveal={reveal}>
-      <TabRow names={names} selected="Sections" onSelect={onSelect} />
+      {(slide) => <TabRow names={names} selected="Sections" onSelect={onSelect} slide={slide} />}
     </PinnedTabs>
   );
 }
@@ -72,6 +77,17 @@ function Pinned({
 /** True when `element` or a layer holding it is hidden from assistive technology. */
 const unreached = (element: Element) =>
   Option.isSome(Option.fromNullishOr(element.closest('[aria-hidden="true"]')));
+
+/** `element` and the elements holding it, up to `top` and short of it. */
+const chainOf = (element: Element, top: Element): ReadonlyArray<Element> =>
+  Option.match(
+    Option.filter(Option.fromNullishOr(element.parentElement), (up) => up !== top),
+    { onNone: () => [element], onSome: (up) => [element, ...chainOf(up, top)] },
+  );
+
+/** How far an element's own style slides it down, in points. */
+const slideOf = (element: Element) =>
+  Number(/translateY\((-?[\d.]+)px\)/.exec(element.getAttribute('style') || '')?.[1] || 0);
 
 const mount = (onSelect: (name: TabName) => void = () => {}) => {
   const host = document.createElement('div');
@@ -107,11 +123,41 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
   /** The reader's drag on the list begins. */
   const touch = () => act(() => reveals.forEach((reveal) => reveal.touch()));
   const cover = () => reveals.map((reveal) => reveal.cover.value);
+  /** How far the layer's first `selector` stands below the list's top: the slides from it up to the layer. */
+  const standing = (selector: string) =>
+    inLayer(selector)
+      .slice(0, 1)
+      .map((found) => chainOf(found, host).reduce((at, node) => at + slideOf(node), 0));
+  /** Each frame of the slides now under way, until they land: where the row's scroll view and its tabs stand. */
+  const slideFrames = () => {
+    const out: Array<{
+      readonly view: ReadonlyArray<number>;
+      readonly tabs: ReadonlyArray<number>;
+    }> = [];
+    const running = { now: true };
+    for (let frame = 0; running.now && frame < 120; frame += 1) {
+      act(() => void (running.now = stepAnimations()));
+      out.push({ view: standing('[role="tablist"]'), tabs: standing('[role="tab"]') });
+    }
+    return out;
+  };
   const close = () => {
     act(() => root.unmount());
     host.remove();
   };
-  return { layer, inLayer, scrollTo, through, inReach, tap, touch, cover, close };
+  return {
+    layer,
+    inLayer,
+    scrollTo,
+    through,
+    inReach,
+    tap,
+    touch,
+    cover,
+    standing,
+    slideFrames,
+    close,
+  };
 };
 
 /** Offsets from `from` to `to` in steps of `step` points, as a drag's frames report them. */
@@ -190,6 +236,38 @@ describe('the tab row pinned over the home list', () => {
       pinned.close();
     }
     expect(misses).toEqual([]);
+  });
+
+  it('rests crisp after a scroll-up: its scroll view never leaves the list top, so iOS draws no edge blur on it', () => {
+    const pinned = mount();
+    const atOpening = pinned.standing('[role="tablist"]');
+    pinned.scrollTo(3000);
+    holdAnimations();
+    pinned.scrollTo(3000 - travel);
+    const slideIn = pinned.slideFrames();
+    const atRest = {
+      view: pinned.standing('[role="tablist"]'),
+      tabs: pinned.standing('[role="tab"]'),
+    };
+    pinned.scrollTo(3000 + travel);
+    const slideOut = pinned.slideFrames();
+    pinned.scrollTo(3000);
+    const again = pinned.slideFrames();
+    act(() => landAnimations());
+    pinned.close();
+    const views = [atOpening, ...[...slideIn, ...slideOut, ...again].map((frame) => frame.view)];
+    const between = slideIn.filter((frame) =>
+      frame.tabs.some((at) => at > -height && at < 0),
+    ).length;
+    expect({
+      above: views.map((at) => at.join()).filter((at) => at !== '0'),
+      atRest,
+      slid: between > 3,
+    }).toEqual({
+      above: [],
+      atRest: { view: [0], tabs: [0] },
+      slid: true,
+    });
   });
 
   it('holds the tab row and no field', () => {

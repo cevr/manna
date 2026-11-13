@@ -4,14 +4,17 @@
  * `selected` fill under the ink.
  * A tap on another tab chooses it with a `tab` cue, a haptic alone; a tap on
  * the tab in use does nothing. A row too wide for the screen at a large text
- * size scrolls sideways.
+ * size scrolls sideways. The pinned copy slides its tabs inside the row's
+ * still scroll view (`slide`, `PinnedTabs`).
  */
 
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { useCue } from '~/feel/cue';
 import { color, useAccent, useSelected } from '~/color';
 
+import type { TabSlide } from './PinnedTabs';
 import type { TabName } from './tabs';
 
 /** A tab's line of text, the space above and below it, and the space around the row. */
@@ -27,10 +30,13 @@ export function TabRow({
   names,
   selected,
   onSelect,
+  slide,
 }: {
   readonly names: ReadonlyArray<TabName>;
   readonly selected: TabName;
   readonly onSelect: (name: TabName) => void;
+  /** The tabs' slide inside the scroll view, the pinned copy's alone. */
+  readonly slide?: TabSlide;
 }) {
   const cue = useCue();
   const accent = useAccent();
@@ -41,42 +47,39 @@ export function TabRow({
     onSelect(name);
   };
   return (
-    <ScrollView
-      horizontal
-      role="tablist"
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-    >
-      {names.map((name) => {
-        const chosen = name === selected;
-        return (
-          <Pressable
-            key={name}
-            role="tab"
-            aria-selected={chosen}
-            aria-label={name}
-            onPress={() => choose(name)}
-            style={({ pressed }) => [
-              styles.tab,
-              chosen && { backgroundColor: selectedFill },
-              pressed && !chosen && styles.pressed,
-            ]}
-          >
-            <Text
-              style={[styles.name, { color: accent }, chosen && styles.chosenName]}
-              numberOfLines={1}
+    <ScrollView horizontal role="tablist" showsHorizontalScrollIndicator={false}>
+      <Animated.View style={[styles.row, slide]}>
+        {names.map((name) => {
+          const chosen = name === selected;
+          return (
+            <Pressable
+              key={name}
+              role="tab"
+              aria-selected={chosen}
+              aria-label={name}
+              onPress={() => choose(name)}
+              style={({ pressed }) => [
+                styles.tab,
+                chosen && { backgroundColor: selectedFill },
+                pressed && !chosen && styles.pressed,
+              ]}
             >
-              {name}
-            </Text>
-          </Pressable>
-        );
-      })}
+              <Text
+                style={[styles.name, { color: accent }, chosen && styles.chosenName]}
+                numberOfLines={1}
+              >
+                {name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </Animated.View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 8, paddingHorizontal: 16, paddingVertical: rowMargin },
+  row: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: rowMargin },
   tab: { paddingHorizontal: 12, paddingVertical: tabPadding, borderRadius: 16 },
   pressed: { opacity: 0.6 },
   name: { fontSize: 15, lineHeight: tabLine, fontWeight: '600' },

@@ -54,7 +54,7 @@ import { AllAtOnce } from './AllAtOnce';
 import { hymnHref, hymnOf } from './Browse';
 import { showTiles, type Stood, Tiles, tiles } from './finding';
 import { Gear } from './Gear';
-import { PinnedTabs, type TabReveal, useTabReveal } from './PinnedTabs';
+import { PinnedTabs, type TabReveal, type TabSlide, useTabReveal } from './PinnedTabs';
 import { usePinch } from './pinch';
 import { TabRow, tabRowHeight } from './TabRow';
 import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
@@ -186,7 +186,14 @@ function TabList({
     setChosen(name);
   };
   const choose = (name: TabName) => show(name, openingOffset(kept.current, name, scroll.value));
-  const tabRow = <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />;
+  const tabRowOf = (slide?: TabSlide) => (
+    <TabRow
+      names={tabs.map((t) => t.name)}
+      selected={tab.name}
+      onSelect={choose}
+      {...(slide && { slide })}
+    />
+  );
   const head = title + tabRowHeight(fontScale);
   const setTopic = useAtomSet(openAtTopic);
   useAtomSubscribe(
@@ -229,7 +236,7 @@ function TabList({
     node: (
       <View style={{ height: head }}>
         <View style={{ height: title }} />
-        {tabRow}
+        {tabRowOf()}
       </View>
     ),
     height: head,
@@ -260,7 +267,7 @@ function TabList({
             {...(tab.name === 'Sections' && { byTopic: true, shelves })}
             {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
           />
-          <PinnedTabs reveal={reveal}>{tabRow}</PinnedTabs>
+          <PinnedTabs reveal={reveal}>{tabRowOf}</PinnedTabs>
           {children}
         </View>
       </GestureDetector>
