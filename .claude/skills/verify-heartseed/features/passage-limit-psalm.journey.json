@@ -18,6 +18,14 @@
       "receipt": "none"
     },
     {
+      "name": "passage-limit-psalm-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
       "name": "passage-limit-sheet",
       "action": "tap",
       "target": "id=add-list",

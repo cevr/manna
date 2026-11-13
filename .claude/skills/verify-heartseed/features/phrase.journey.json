@@ -7,7 +7,15 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "phrase-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
       "receipt": "none"
     },
     {

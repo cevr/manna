@@ -7,7 +7,15 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
       "receipt": "none"
     },
     {
@@ -52,12 +60,26 @@
       "target": "label=Plant Smyrna",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=Open Smyrna" },
-        { "shows": "id=add-list" },
         { "hides": "label=Any passage" },
         { "hides": "label=Remove" }
       ],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-plant-row",
+      "action": "scroll",
+      "target": "label=Open Smyrna",
+      "direction": "up",
+      "expect": [{ "shows": "label=Open Smyrna" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-plant-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
     }
   ]
 }

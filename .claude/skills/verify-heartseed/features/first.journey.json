@@ -113,13 +113,24 @@
       "name": "first-tips",
       "action": "tap",
       "target": "label=Continue",
-      "expect": [
-        { "shows": "id=tip-1" },
-        { "shows": "id=tip-2" },
-        { "shows": "id=tip-3" },
-        { "shows": "label=Got it" }
-      ],
+      "expect": [{ "shows": "id=tip-1" }, { "shows": "id=tip-2" }, { "shows": "label=Got it" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "first-tips-foot",
+      "action": "scroll",
+      "target": "id=tip-3",
+      "direction": "down",
+      "expect": [{ "shows": "id=tip-3" }, { "shows": "id=add-list" }, { "shows": "label=Got it" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "first-tips-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     },
     {
       "name": "first-home",

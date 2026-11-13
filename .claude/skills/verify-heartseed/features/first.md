@@ -36,8 +36,10 @@ Then it is one promise in three phases, then the seed:
 4. `Planted`, once the garden's read holds that recall: `Stage: seed`, the
    still hand-drawn seed at 112 × 112 pt in its 120 pt place, and
    `Continue`, which opens home (the field) in the
-   done state with three tips (`id=tip-1` under the card, `id=tip-2` under
-   `Lists`, `id=tip-3` under the first furrow) and `Got it`, which ends
+   done state with three tips, numbered as they read down the page
+   (`id=tip-1` under the card, `id=tip-2` under the first furrow,
+   `id=tip-3` under `Add a list` at the Lists section's foot, just above
+   `Settings`) and `Got it`, which ends
    them. A relaunch shows none.
 
 Until the read completes the launch shows only the reference: no heading,
@@ -94,7 +96,8 @@ word 11 and the seed is graded Hard.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
 - `first-tips`: `Continue` opens home with `id=tip-1`, `id=tip-2` and
-  `id=tip-3`, each once, and `Got it`; after `Got it`, `id=today-card`
+  (scrolled to, beside `Add a list` at the field's foot) `id=tip-3`, each
+  once, and `Got it`; after `Got it`, `id=today-card`
   with `Practice anyway` and none of the four; after a relaunch, none
   again.
 - `first-still` (**phone only**, the owner's hand): with Reduce Motion on
@@ -202,8 +205,12 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 6. `first/first-planted`: `Planted` and one `Stage: seed` (its node and
    the text node under it that repeats it); the log holds no `[growth]
    play` line.
-7. `first/first-tips`: the journey's `shows` hold `id=tip-1`, `id=tip-2`
-   and `id=tip-3`; the receipt holds one `Got it`.
+7. `first/first-tips`: the journey's `shows` hold `id=tip-1` and
+   `id=tip-2`; the receipt holds one `Got it`. `first/first-tips-foot`,
+   after the scroll down to `id=tip-3` → the text `Mark 4:28`, then the
+   button `Add a list`, then tip 3's words `Add a psalm, a passage or a
+   set of promises when you want more.`, then `Settings`, and `Got it`
+   still.
    `first/first-home`: no `Got it`; on the Today card
    `All tended for today`, `Nothing is due right now.` and `Practice
    anyway`, no `Start` and no `About`; no heading `Today`, no button

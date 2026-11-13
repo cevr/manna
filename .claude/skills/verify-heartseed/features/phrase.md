@@ -80,7 +80,8 @@ recognizer's).
 
 1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
    microphone, and the first minute to `first-home`.
-2. `phrase-day-one`: `sim journey phrase` → `"ok":true`: `Add a list`,
+2. `phrase-day-one`: `sim journey phrase` → `"ok":true`: a scroll to
+   `Add a list` at the field's foot, `Add a list`,
    `Any passage`, `John`, `John 3`, a scroll to `John 3:16` (it waits for
    the verse to show), `John 3:16`, `Plant`.
    `phrase/phrase-day-one-field` → the row titles `Isaiah 41:10`,

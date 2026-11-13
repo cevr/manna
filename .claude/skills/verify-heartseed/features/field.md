@@ -20,9 +20,10 @@ on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, never an old piece, so
-Again takes a verse out). After them the label `Lists` with `Add a list`
-(`id=add-list`; it opens the Add a list sheet over home, `home.md`) or
-the limit line, then one furrow per row, each with its icon, title and
+Again takes a verse out). After them the label `Lists`, then one furrow
+per row (with the legend under them, then `Add a list`, `id=add-list`,
+which opens the Add a list sheet over home, `home.md`, or the limit line,
+just above `Settings`), each with its icon, title and
 caption (`<n> verse(s) · <r> ready today`, else `<n> verse(s) · <p>
 planted`, else `<n> verse(s) to learn`): the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader

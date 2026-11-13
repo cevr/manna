@@ -7,8 +7,16 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "expect": [{ "shows": "id=today-card" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-one-plant-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
     },
     {
       "name": "handbook-one-plant-sheet",
@@ -37,7 +45,15 @@
       "action": "tap",
       "target": "label=Plant Promises of God",
       "timeout": 60,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Promises of God" }],
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-one-plant-row",
+      "action": "scroll",
+      "target": "label=Open Promises of God",
+      "direction": "up",
+      "expect": [{ "shows": "label=Open Promises of God" }],
       "receipt": "snapshot"
     }
   ]

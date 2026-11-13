@@ -110,6 +110,14 @@
       "receipt": "snapshot"
     },
     {
+      "name": "home-add-places-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
       "name": "home-add-places",
       "action": "tap",
       "target": "id=add-list",

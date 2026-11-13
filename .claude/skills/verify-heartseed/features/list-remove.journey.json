@@ -46,12 +46,16 @@
       "name": "list-remove",
       "action": "tap",
       "target": "label=Remove",
-      "expect": [
-        { "shows": "id=today-card" },
-        { "shows": "id=add-list" },
-        { "hides": "label=Open John 15:1-5" }
-      ],
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Open John 15:1-5" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "list-remove-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
     }
   ]
 }

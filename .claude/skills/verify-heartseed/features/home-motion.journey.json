@@ -14,7 +14,7 @@
       "action": "relaunch",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "id=add-list" },
+        { "shows": "label=Open Isaiah 41:10" },
         { "shows": "label=Isaiah 41:10, seed, ready today" }
       ],
       "receipt": "snapshot"

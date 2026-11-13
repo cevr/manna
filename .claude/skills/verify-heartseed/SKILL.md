@@ -175,11 +175,11 @@ field, which is home, every launch's screen after the first minute: in
 its fixed top the Today card (`id=today-card`, its lines `id=today-headline`
 and `id=today-parts`, as Today's counts line is `id=session`) with one
 button, `Start` or `Practice anyway`;
-in its scroll view `Add a list`
-(`id=add-list`), in a furrow `Open <title>` (its title, opening the
+in its scroll view, in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
-today` when ready; one tap opens Today on that verse, whole), and at its end the rows `Settings` and `How Heartseed
-works` (scroll to them first: `sim scroll "label=Settings" down`; the
+today` when ready; one tap opens Today on that verse, whole), under the
+furrows and the legend `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
+works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=Settings" down`; the
 second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`),

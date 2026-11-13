@@ -110,8 +110,8 @@ snapshot (`first.md`, Driving it).
    `Remove John 15:1-5? Its plants stay in your field.`, the buttons
    `Remove` and `Keep`. The journey's `Keep` brings `Remove John 15:1-5`
    back with no `id=ask`; then `Remove John 15:1-5` and `Remove`:
-   `list-remove/list-remove` → home: no `Open John 15:1-5`,
-   `id=add-list` present.
+   `list-remove/list-remove` → home: no `Open John 15:1-5`; the
+   journey's `list-remove-foot` finds `id=add-list` at the field's foot.
 9. `sim doctor` (record `head` and `timingsHold`) and `sim down`; delete
    the `snapshots` folder.
 

@@ -16,14 +16,16 @@ due right now.`, and one full-width button: `Start`, which opens Today as
 the run stands, else `Practice anyway` on the weakest planted verse, else
 none); in the scroll view
 the heading `Your field`, the days sown and the harvest, the label
-`Lists` with `Add a list` (`id=add-list`) or the limit line, one furrow
-per row (its icon, its title as the button `Open <title>`, which opens
+`Lists`, one furrow per row (its icon, its title as the button `Open <title>`, which opens
 the list's own page, `list.md`, a caption `<n> verse(s) · <r> ready
 today`, else `<n> verse(s) · <p> planted`, else `<n> verse(s) to
 learn`, and its plants as buttons named
 `<reference>, <stage>`, then `, ready today` with a gold dot when a plan
-item not done is on the verse, no number under any), the legend, then the
-rows `Settings` and `How Heartseed works`. A tap on a plant goes straight
+item not done is on the verse, no number under any), the legend, then at
+the Lists section's foot `Add a list` (`id=add-list`) or the limit line,
+first run included (owner, q97: "At the very bottom of Lists, under the
+stage line, just above Settings."), then the rows `Settings` and `How
+Heartseed works`. A tap on a plant goes straight
 into Today on its verse, whole (a review of a planted verse, or a verse
 not planted learned fresh), with no card between (owner, 2026-11-12);
 Today's `Your field` comes back. The `Settings` row opens the Settings
@@ -69,9 +71,10 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   furrows, the own verse a seed, 14 plants not planted). It shows the
   plan on the device's runtime, not the drawings moving.
 - `home-motion-reach`: at once after a relaunch, while the drawings still
-  enter, home holds every control: `Practice anyway`, `Add a list`,
-  `Settings`, `How Heartseed works`, the own plant's button and the 14
-  not planted, and a tap on the own plant opens Today on it.
+  enter, home holds every control: `Practice anyway`, `Open Isaiah 41:10`,
+  the own plant's button and the 14 not planted, and a tap on the own
+  plant opens Today on it (`Add a list`, `Settings` and `How Heartseed
+  works` lie past the fold, at the field's foot).
 - `home-how`: at `first-home`, `How Heartseed works` shows the heading
   `Heartseed`, `Plant a verse. Say it from memory. Watch it grow.`,
   `Begin` and `Skip`, no `Your first verse` and no `Isaiah 41:10`;
@@ -98,8 +101,9 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   `id=add-row` or `id=counts`.
 - `home-start-run`: the card's `Start` opens Today (`id=session`) on
   `Isaiah 41:10` with `Say it`.
-- `home-lists`: scrolled through, home holds the text `Lists`, one
-  `id=add-list`, the captions `1 verse · 1 planted` and `14 verses to
+- `home-lists`: scrolled through, home holds the text `Lists` above the
+  first furrow, one `id=add-list` under the legend's `Mark 4:28` and just
+  above `Settings` (owner, q97), the captions `1 verse · 1 planted` and `14 verses to
   learn`, the buttons `Open Isaiah 41:10` and `Open Protection & Fear`,
   15 plant buttons, 0 buttons named `Remove` or starting `Remove `, and
   no text that is only a number.
@@ -122,8 +126,9 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   Today holds no `When I need…`.
 - `home-begin`: with the started visit open the Today card offers
   `Start`, which opens Today on it.
-- `home-add-places`: `Add a list` (`id=add-list`) opens the Add a list
-  sheet, whose `Done` leads back to home.
+- `home-add-places`: `Add a list` (`id=add-list`), at the foot of the
+  Lists section under `Mark 4:28` and just above `Settings`, opens the Add
+  a list sheet, whose `Done` leads back to home.
 - `home-add`: the sheet lists the 17 shelves in order, then the 25
   Handbook shelves (`handbook.md`); `Proverbs` lists
   its five picks, `Proverbs 18:10` (taught in `Protection & Fear`) as
@@ -254,8 +259,9 @@ puts `Start` on the Today card), with the same variables:
    `Isaiah 41:10, seed`; no heading `Today`, no button `Today`, no
    `Say it`, no label starting `Stage:`.
 3. `home-field/home-lists`, after the scroll to `How Heartseed works` →
-   the text `Lists` and one button `Add a list`; the button
-   `Open Isaiah 41:10` and the caption `1 verse · 1 planted`; a button
+   one button `Add a list` after the text `Mark 4:28` and before the row
+   `Settings` (the text `Lists` above the first furrow in a raw
+   snapshot); the button `Open Isaiah 41:10` and the caption `1 verse · 1 planted`; a button
    `Isaiah 41:10, seed`; the button `Open Protection & Fear`, the caption
    `14 verses to learn` and 14 buttons ending `, not planted` (15 plant
    buttons in all; a raw snapshot holds those above the fold); 0 buttons
@@ -281,8 +287,9 @@ puts `Start` on the Today card), with the same variables:
    `home-field/home-learn-grade` → the summary `<k> of 19 words`;
    `home-field/home-learn` → the button `Psalms 91:1, seed` and the
    caption `14 verses · 1 planted`.
-8. `home-add-places`: the journey's last steps open `Add a list` (its
-   `Any passage` and `Done`) and close it with `Done`, on home again.
+8. `home-add-places`: the journey's last steps scroll to `Add a list` at
+   the field's foot, open it (its `Any passage` and `Done`) and close it
+   with `Done`, on home again.
 9. `home-dot` and `home-today`, only when `PLANTED` was 0400-1759 local
    (an evening planting is due the next morning; otherwise record
    `All tended for today` and skip, as `run.md` step 3 does): wait until 7
@@ -307,7 +314,7 @@ puts `Start` on the Today card), with the same variables:
 11. `home-motion-reach` (a keep-guard): `sim journey home-motion` →
     `"ok":true`: a relaunch, then at once a tap on the own plant.
     `home-motion/home-motion-reach` → the heading `Your field`, the Today
-    card's button (`Start` or `Practice anyway`), `Add a list`, the own
+    card's button (`Start` or `Practice anyway`), `Open Isaiah 41:10`, the own
     plant's button `Isaiah 41:10, seed, ready today` (step 9 ran) and the
     buttons ending `, not planted`. `home-motion/home-motion-reach-today`
     → the heading `Today` and the reference `Isaiah 41:10`. Record the
@@ -406,6 +413,13 @@ On a fresh install of its own, from `first.md`'s `sim journey first` to
 `Protection & Fear` on home), with the same variables,
 `sim journey home-add` → `"ok":true`:
 
+0. `home-add-foot` (hsaddlist, owner q97): `home-add/home-add-foot`, after
+   the scroll down to `id=add-list` → the furrows' last plants, the text
+   `Mark 4:28`, then the button `Add a list`, then the row `Settings`, in
+   that order: `Add a list` sits under the legend, just above `Settings`,
+   on the first run's field (the own furrow and `Protection & Fear`, no
+   list held). Red on `67358563f`: `Add a list` comes before the first
+   furrow's `Open Isaiah 41:10`, under `Lists`.
 1. `home-add`: `home-add/home-add-sheet` → the heading `Add a list` and a
    button `Done`; the buttons `Any passage`, `Psalms`, `Proverbs`,
    `The Gospel of John`, `Forgiveness`, `Peace in Anxiety`, `Strength`,
@@ -422,12 +436,13 @@ On a fresh install of its own, from `first.md`'s `sim journey first` to
    `Plant Proverbs 16:3` and `Plant Proverbs 22:6`; the text
    `In your field` and no `Plant Proverbs 18:10` (it is in
    `Protection & Fear`, taught on the device).
-3. `home-add/home-add-planted`, after `Psalms` and `Plant Psalms 46:1-3`
-   → the heading `Your field` and no heading `Add a list`; the furrow
-   titles in order `Isaiah 41:10`, `Psalms 46:1-3`, `Protection & Fear`;
-   the caption `3 verses to learn`, and the buttons
-   `Psalms 46:1, not planted`, `Psalms 46:2, not planted` and
-   `Psalms 46:3, not planted`; the button `Add a list` still.
+3. `home-add/home-add-planted`, after `Psalms`, `Plant Psalms 46:1-3` and
+   the scroll up to the heading → the heading `Your field` and no heading
+   `Add a list`; the furrow titles in order `Isaiah 41:10`,
+   `Psalms 46:1-3`, `Protection & Fear`; the caption `3 verses to learn`,
+   and the buttons `Psalms 46:1, not planted`, `Psalms 46:2, not planted`
+   and `Psalms 46:3, not planted`. The journey's `home-add-again-foot`
+   finds the button `Add a list` still, at the foot.
 4. `home-add-any`: `home-add/home-add-any` → the heading `Add a passage`
    and a button `Add verses` showing `‹ Add verses`, with no button
    `Your field`. The journey's `Add verses` brings back `Add a list`
@@ -471,9 +486,12 @@ Report only the lines named above and the reference; delete the
   image reloads, so a count short of 24 that never moves is a PNG One's
   asset registry did not serve; an `icons failed …` line names it. A dev
   bundle that fails to load at all (before hsdevbundle) shows neither.
-- Home's add is `Add a list` (`id=add-list`), in the scroll view under
-  `Lists`; the `Settings` and `How Heartseed works` rows lie at the
-  scroll view's end, so scroll before a tap. On the chooser's
+- Home's add is `Add a list` (`id=add-list`), in the scroll view at the
+  Lists section's foot, under `Mark 4:28` and just above the `Settings`
+  and `How Heartseed works` rows at the scroll view's end, so scroll
+  before a tap (a journey's `scroll` step to `id=add-list`, down). The Add a list sheet
+  keeps home's scroll place under it, so after a plant from the sheet a
+  journey scrolls up to the new furrow. On the chooser's
   `Add a passage`, `label=Add verses` is its one back, to the sheet.
 - An offer's title is text, as a furrow's title on home under the modal
   is: target an offer by its button `Plant <reference>`.

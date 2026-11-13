@@ -9,11 +9,18 @@
       "relaunch": false,
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "id=add-list" },
         { "shows": "label=Open Isaiah 41:10" },
         { "hides": "label=Remove Isaiah 41:10" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "passage-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
     },
     {
       "name": "passage-sheet",

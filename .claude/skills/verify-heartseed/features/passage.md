@@ -7,9 +7,10 @@ Handbook lists together, a passage of up to 20 verses, from the whole KJV
 in the bundle.
 
 - **The field's lists** sit in the field's scroll view under the label
-  `Lists`: `Add a list` (`id=add-list`) while fewer than 3 passages and
-  Handbook lists are held together (`handbook.md`), else the line
-  "3 passages or lists, the most for now. Remove one to add another."
+  `Lists`; at their foot, under the legend's `Mark 4:28` and just above
+  `Settings` (owner, q97), `Add a list` (`id=add-list`) while fewer than 3
+  passages and Handbook lists are held together (`handbook.md`), else the
+  line "3 passages or lists, the most for now. Remove one to add another."
   (testID `limit`). `Add a list` opens the Add a list sheet over home
   (`home.md`), whose `Any passage` opens the chooser. With the reader's passages unread
   it offers neither, and no list's page offers `Remove`.
@@ -56,8 +57,9 @@ in the bundle.
 
 ## Sub-features
 
-- `passage-bar`: on the field, `Lists` and one `Add a list` sit in the
-  scroll view, and no `When I need…` and no `Add verses` anywhere.
+- `passage-bar`: on the field, `Lists` and, at the field's foot, one
+  `Add a list` sit in the scroll view, and no `When I need…` and no
+  `Add verses` anywhere.
 - `passage-books`: `Add a list`, then the sheet's `Any passage`,
   shows the heading `Add a passage`, `‹ Add verses`, `Old Testament`,
   `New Testament` and the books.
@@ -105,7 +107,8 @@ in the bundle.
 
 ## How to get to it (user POV)
 
-- On home (the field), tap `Add a list`, then `Any passage`: a book, a chapter,
+- On home (the field), scroll to its foot and tap `Add a list`, then
+  `Any passage`: a book, a chapter,
   the first verse and the last, then `Plant`.
 - On the field, a passage row's `Open <reference>`, then on its page
   `Remove <reference>` (shown `Remove this list`), then `Remove` or `Keep`
@@ -132,10 +135,11 @@ Driving it) taken where a journey leaves the screen.
 1. `first.md`'s `sim journey first`: boot, uninstall, install, revoke the
    microphone, and the first minute to `first-home`.
 2. `passage-bar`: `sim journey passage` → `"ok":true` (steps 2-4).
-   `passage/passage-bar` → the text `Lists`, one button `Add a list`
-   (`id=add-list`), no `When I need…` and no `Add verses`, the heading
-   `Your field`, the row `Isaiah 41:10` (the button `Open Isaiah 41:10`)
-   and no `Remove`, no button `Today`.
+   `passage/passage-bar` → the text `Lists`, no `When I need…` and no
+   `Add verses`, the heading `Your field`, the row `Isaiah 41:10` (the
+   button `Open Isaiah 41:10`) and no `Remove`, no button `Today`; the
+   journey's `passage-foot` scrolls to the one `Add a list`
+   (`id=add-list`) at the field's foot.
 3. `passage-books`: `passage/passage-books`, after `Add a list` and
    `Any passage` → the heading `Add a passage`, the button `Add verses`
    showing `‹ Add verses`, no button `Your field`, the texts
@@ -160,7 +164,8 @@ Driving it) taken where a journey leaves the screen.
    `Plant`. `passage-plant/passage-plant` → the heading `Your field`; the
    buttons `Open Isaiah 41:10` then `Open John 15:1-5`; five buttons
    `John 15:<n>, not planted` (n 1-5); no button named `Remove` or
-   starting `Remove `; one `Add a list`.
+   starting `Remove ` (`Add a list` lies at the field's foot, in a raw
+   snapshot).
 7. (Step 6 is `passage-plant`.)
 8. `passage-limit`: two more passages. `sim journey passage-limit-psalm`
    → `"ok":true`: `Psalms` → `Psalms 23` → `Psalms 23:1`, a pan up from
@@ -170,15 +175,17 @@ Driving it) taken where a journey leaves the screen.
    `Romans 8` → a scroll to `Romans 8:28` → `Romans 8:28`, `Plant`.
    `passage-limit/passage-limit` → the buttons `Open John 15:1-5`,
    `Open Psalms 23:1-6` and `Open Romans 8:28`, no `Remove`, no
-   `Add a list`, and the limit line's text.
+   `Add a list`; the journey's `passage-limit-line` scrolls to the limit
+   line's text at the field's foot, with no `Add a list` there either.
 9. `passage-keep`: `sim journey passage-keep` → `"ok":true`.
    `passage-keep/passage-ask` → `id=ask` with the ask's text, `Remove`,
    `Keep`; the journey's `Keep` brings `Remove Psalms 23:1-6` back with no
    `id=ask`; `passage-keep/passage-keep`, after `Your field` → as step 8.
 10. `passage-remove`: `sim journey passage-remove` → `"ok":true`.
     `passage-remove/passage-remove` → home: no `Open Romans 8:28`, the
-    buttons `Open John 15:1-5` and `Open Psalms 23:1-6`, no `Remove`, one
-    `Add a list`.
+    buttons `Open John 15:1-5` and `Open Psalms 23:1-6`, no `Remove`; the
+    journey's `passage-remove-foot` finds one `Add a list` at the foot and
+    no limit line.
 11. `passage-day-one`: `passage-remove/passage-day-one` → the Today
     card's parts line holds no `1 new`. When the card offers `Start` (the
     promise's review due), the tap on it and Today's lack of `Listen` are
@@ -224,7 +231,8 @@ snapshots.
 - The simulator's clock cannot be set: the second day is `passage-new`,
   after the next 04:00 local, and every zone and day after it are the
   tests' (`src/chooser/reader-*.test.tsx`).
-- Home's one add is `Add a list` (`id=add-list`), in the scroll view;
+- Home's one add is `Add a list` (`id=add-list`), at the foot of the
+  scroll view's lists, so a journey scrolls to it before its tap;
   on the chooser, `label=Add verses` is its back to the sheet.
 - A refused write, unread passages, a double tap in one turn and a remove
   under way are the tests' alone (`passage-fail`, `passage-unread`,

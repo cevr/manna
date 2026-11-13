@@ -42,6 +42,14 @@
         { "hides": "id=add-list" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "passage-keep-line",
+      "action": "scroll",
+      "target": "id=limit",
+      "direction": "down",
+      "expect": [{ "shows": "id=limit" }, { "hides": "id=add-list" }],
+      "receipt": "none"
     }
   ]
 }

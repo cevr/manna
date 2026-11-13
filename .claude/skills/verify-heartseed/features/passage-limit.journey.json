@@ -18,6 +18,14 @@
       "receipt": "none"
     },
     {
+      "name": "passage-limit-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
       "name": "passage-limit-sheet-again",
       "action": "tap",
       "target": "id=add-list",
@@ -105,6 +113,14 @@
         }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "passage-limit-line",
+      "action": "scroll",
+      "target": "id=limit",
+      "direction": "down",
+      "expect": [{ "shows": "id=limit" }, { "hides": "id=add-list" }],
+      "receipt": "none"
     }
   ]
 }

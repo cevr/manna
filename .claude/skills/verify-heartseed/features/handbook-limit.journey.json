@@ -7,7 +7,15 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "id=add-list" }],
+      "expect": [{ "shows": "id=today-card" }],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-limit-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
       "receipt": "none"
     },
     {
@@ -30,10 +38,25 @@
       "target": "label=Plant Psalms 46:1-3",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=Open Psalms 46:1-3" },
-        { "hides": "id=add-list" },
+        { "hides": "label=Any passage" },
         { "hides": "label=Remove" }
       ],
+      "receipt": "none"
+    },
+    {
+      "name": "handbook-limit-row",
+      "action": "scroll",
+      "target": "label=Open Psalms 46:1-3",
+      "direction": "up",
+      "expect": [{ "shows": "label=Open Psalms 46:1-3" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-limit-line",
+      "action": "scroll",
+      "target": "id=limit",
+      "direction": "down",
+      "expect": [{ "shows": "id=limit" }, { "hides": "id=add-list" }],
       "receipt": "snapshot"
     }
   ]

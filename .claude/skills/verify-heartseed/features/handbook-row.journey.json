@@ -16,6 +16,14 @@
       "receipt": "snapshot"
     },
     {
+      "name": "handbook-row-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
+    },
+    {
       "name": "handbook-row-sheet",
       "action": "tap",
       "target": "id=add-list",

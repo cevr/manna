@@ -11,13 +11,12 @@
       "receipt": "none"
     },
     {
-      "name": "home-add-top",
-      "action": "gesture",
-      "from": "label=Open Isaiah 41:10",
-      "dx": 0,
-      "dy": 500,
-      "expect": [{ "shows": "id=add-list" }],
-      "receipt": "none"
+      "name": "home-add-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }, { "shows": "label=Settings" }],
+      "receipt": "snapshot"
     },
     {
       "name": "home-add-sheet",
@@ -52,16 +51,30 @@
       "receipt": "none"
     },
     {
-      "name": "home-add-planted",
+      "name": "home-add-plant",
       "action": "tap",
       "target": "label=Plant Psalms 46:1-3",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Any passage" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-add-planted",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
       "expect": [
-        { "shows": "id=today-card" },
         { "shows": "label=Psalms 46:1, not planted" },
-        { "shows": "label=Psalms 46:3, not planted" },
-        { "hides": "label=Any passage" }
+        { "shows": "label=Psalms 46:3, not planted" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "home-add-again-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }],
+      "receipt": "none"
     },
     {
       "name": "home-add-again",

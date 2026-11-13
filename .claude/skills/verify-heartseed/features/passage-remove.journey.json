@@ -30,12 +30,19 @@
       "target": "label=Remove",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "id=add-list" },
         { "shows": "label=Open John 15:1-5" },
         { "shows": "label=Open Psalms 23:1-6" },
         { "hides": "label=Open Romans 8:28" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "passage-remove-foot",
+      "action": "scroll",
+      "target": "id=add-list",
+      "direction": "down",
+      "expect": [{ "shows": "id=add-list" }, { "hides": "id=limit" }],
+      "receipt": "none"
     },
     {
       "name": "passage-day-one",

@@ -61,7 +61,8 @@ corpus gives) and `missing <n>`. A release build renders nothing on it.
 
 ## How to get to it (user POV)
 
-- Home → `Add a list` → scroll the sheet past `Rest` → a Handbook shelf
+- Home → scroll to `Add a list` at the field's foot → `Add a list` →
+  scroll the sheet past `Rest` → a Handbook shelf
   (`Seven Churches`, `Prophecy`, …) → `Plant <title>`.
 - Home → a list's `Open <title>` → `Remove <title>` → `Remove` or `Keep`.
 
@@ -103,12 +104,13 @@ journey leaves the screen.
    button `Plant <title>` for each. `handbook/handbook-prophecy`, after
    `Prophecy` → the text `Second Chapter of Daniel` once, no
    `Second Chapter of Daniel (2)`, and no `Plant Ephesus`.
-3. `handbook-plant`: `handbook/handbook-plant`, after `Seven Churches` and
-   `Plant Smyrna` → the heading `Your field`, no heading `Add a list`;
-   the furrow title buttons in order `Open Isaiah 41:10`, `Open Smyrna`,
-   `Open Protection & Fear`; the caption `4 verses to learn`; the buttons
-   `Revelation 2:8, not planted` to `Revelation 2:11, not planted`; no
-   `Remove`; `id=add-list` still.
+3. `handbook-plant`: `handbook/handbook-plant-row`, after `Seven
+   Churches`, `Plant Smyrna` and the scroll up to `Open Smyrna` → the
+   heading `Your field`, no heading `Add a list`; the furrow title buttons
+   in order `Open Isaiah 41:10`, `Open Smyrna`, `Open Protection & Fear`;
+   the caption `4 verses to learn`; the buttons `Revelation 2:8, not
+   planted` to `Revelation 2:11, not planted`; no `Remove`. The journey's
+   `handbook-plant-foot` finds `id=add-list` still, at the foot.
 4. `handbook-row`: `sim journey handbook-row` → `"ok":true`.
    `handbook-row/handbook-row`, after a relaunch → the `Smyrna` furrow in
    the same place. `handbook-row/handbook-row-offer`, the sheet's
@@ -118,28 +120,33 @@ journey leaves the screen.
    (`Isaiah 41:10, <stage>`) from `handbook-one-plant/handbook-one-plant-home`.
    `sim journey handbook-one-plant` → `"ok":true`.
    `handbook-one-plant/handbook-one-plant-offer` → `87 verses`,
-   `Plant Promises of God`. `handbook-one-plant/handbook-one-plant`, after
-   the tap → home with the furrow `Promises of God` after `Smyrna`, its
+   `Plant Promises of God`. `handbook-one-plant/handbook-one-plant-row`,
+   after the tap and the scroll up to `Open Promises of God` → home with the furrow `Promises of God` after `Smyrna`, its
    caption `87 verses · 1 planted` (or `87 verses · 1 ready today` while
    the own verse is due), the own plant's button name unchanged in every
    furrow that shows the verse, no `Isaiah 41:10, not planted`. Record the
    tap step's `ms` (its line in `$EVIDENCE/results.jsonl`), and whether
    home still scrolls and answers a tap on a plant (the next journeys).
 6. `handbook-limit`: `sim journey handbook-limit` → `"ok":true`: the
-   sheet, `Psalms`, `Plant Psalms 46:1-3`. `handbook-limit/handbook-limit`
-   → home: the furrows `Isaiah 41:10`, `Psalms 46:1-3`, `Smyrna`,
-   `Promises of God`, `Protection & Fear`; the text `3 passages or lists,
-   the most for now. Remove one to add another.`; no `id=add-list`, no
-   `id=add-row` (gone from the sources: read it as absent in the receipt);
-   no button named `Remove` or starting `Remove `.
+   sheet, `Psalms`, `Plant Psalms 46:1-3`.
+   `handbook-limit/handbook-limit-row`, after the scroll up to
+   `Open Psalms 46:1-3` → home: the furrows `Isaiah 41:10`,
+   `Psalms 46:1-3`, `Smyrna`, `Promises of God`, `Protection & Fear`; no
+   button named `Remove` or starting `Remove `.
+   `handbook-limit/handbook-limit-line`, after the scroll down to
+   `id=limit` → the text `3 passages or lists, the most for now. Remove
+   one to add another.` under `Mark 4:28` and above `Settings`; no
+   `id=add-list`, no `id=add-row` (gone from the sources: read it as
+   absent in the receipt).
 7. `handbook-remove`: `sim journey handbook-remove` → `"ok":true`.
    `handbook-remove/handbook-remove-ask` → `id=ask`
    `Remove Promises of God? Its plants stay in your field.`, `Remove` and
    `Keep`. The journey's `Keep` brings `Remove Promises of God` back with
    no `id=ask`; again, then `Remove`: `handbook-remove/handbook-remove` →
-   home: no `Open Promises of God`, `Add a list` back, no limit line, the
-   own plant's button name unchanged. After a relaunch,
-   `handbook-remove/handbook-remove-relaunch` → the same.
+   home: no `Open Promises of God`, the own plant's button name
+   unchanged; the journey's `handbook-remove-foot` finds `Add a list` back
+   at the foot. After a relaunch,
+   `handbook-remove/handbook-remove-relaunch` and its foot → the same.
 8. `handbook-probe`: `sim journey handbook-probe` → `"ok":true`.
    `handbook-probe/handbook-probe` → the text nodes `sections 25`,
    `lists 130`, `ranges 2528`, `verses 3542`, `resolved 3542` and
