@@ -50,6 +50,14 @@
       "direction": "down",
       "expect": [{ "shows": "id=limit" }, { "hides": "id=add-list" }],
       "receipt": "none"
+    },
+    {
+      "name": "passage-keep-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

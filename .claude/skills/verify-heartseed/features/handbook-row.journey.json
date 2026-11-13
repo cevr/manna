@@ -55,6 +55,14 @@
       "target": "label=Done",
       "expect": [{ "shows": "id=today-card" }, { "hides": "label=Any passage" }],
       "receipt": "none"
+    },
+    {
+      "name": "handbook-row-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

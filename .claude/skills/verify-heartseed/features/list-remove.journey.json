@@ -56,6 +56,14 @@
       "direction": "down",
       "expect": [{ "shows": "id=add-list" }],
       "receipt": "none"
+    },
+    {
+      "name": "list-remove-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }
