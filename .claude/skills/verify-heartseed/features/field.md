@@ -70,7 +70,8 @@ every launch opens on the pending frame, then the first minute or home
   second wait, `run.md`'s `run-second`, runs): Again takes the passage back
   to a seed and never removes a day sown.
 - `field-relaunch`: a relaunch opens home, and its first frame claims no
-  count; the field then shows as before.
+  count (that frame: tests only, `src/home/root.test.tsx`); the field then
+  shows as before.
 - `field-record`: every recall record the app wrote holds an integer
   `offset`, the host's offset in minutes east of UTC.
 
@@ -126,10 +127,11 @@ line or a node below the fold is read there or in a raw snapshot
    the same days sown as step 5; its last step taps `Start` (the result
    held, with `Next`). Otherwise the tests own it.
 8. `field-relaunch`: `sim journey field-relaunch` → `"ok":true`.
-   `field-relaunch/field-relaunch-launch`, the receipt taken as soon as the
-   pending frame shows `Isaiah 41:10` → no `Your field` heading, no label
-   ending `sown` or `full corn` (a receipt that already holds home is no
-   proof either way: record it and run the journey again);
+   `field-relaunch/field-relaunch-launch`, the receipt taken once
+   `Isaiah 41:10` shows, holds home already (`Your field` and the counts):
+   the pending frame passes before a snapshot lands (5 of 5 relaunches at
+   load about 5), so the first frame's claim is the tests'
+   (`src/home/root.test.tsx`, pending frames, then home);
    `field-relaunch/field-relaunch` → the heading `Your field`, no heading
    `Today`, and the same plants and days as step 7 (step 5 when step 7
    did not run).
