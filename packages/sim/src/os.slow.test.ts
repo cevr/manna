@@ -13,7 +13,18 @@
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option, Path, Schema } from 'effect';
+import {
+  Clock,
+  Console,
+  Duration,
+  Effect,
+  Exit,
+  Fiber,
+  FileSystem,
+  Option,
+  Path,
+  Schema,
+} from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { type Identity, Os, stop } from './os.ts';
@@ -148,6 +159,9 @@ const runs = (mark: string) =>
   Effect.map(attempt('ps', ['-A', '-o', 'command='], Duration.seconds(30)), (done) =>
     done.output.split('\n').some((line) => line.includes(mark)),
   );
+
+/** The longest an interruption of a spawn may wait for it: far under the start's own 30 s limit, so a spawn that holds the interruption off fails here. */
+const INTERRUPT_HELD = Duration.seconds(5);
 
 /** How long `until` waits between two looks. */
 const LOOK = Duration.millis(50);
@@ -321,13 +335,21 @@ describe('the live Os', () => {
         const fs = yield* FileSystem.FileSystem;
         const mark = yield* marked;
         const stub = yield* stubPs(
-          'while [ ! -e "$(dirname "$0")/go" ]; do /bin/sleep 0.02; done\nexec /bin/ps "$@"',
+          'd=$(dirname "$0")\nwhile [ -d "$d" ] && [ ! -e "$d/go" ]; do /bin/sleep 0.02; done\nexec /bin/ps "$@"',
         );
         const spawning = yield* Effect.forkChild(
           os.spawn(['/bin/sleep', mark], { cwd: stub.dir, env: { PATH: stub.path } }),
         );
         yield* until(mark, true, 10).pipe(through(into));
-        yield* Fiber.interrupt(spawning);
+        yield* Fiber.interrupt(spawning).pipe(
+          Effect.timeoutOrElse({
+            duration: INTERRUPT_HELD,
+            orElse: () => Effect.fail('the spawn held off its interruption inside the read'),
+          }),
+        );
+        yield* Fiber.await(spawning).pipe(
+          Effect.filterOrFail(Exit.hasInterrupts, (exit) => `the spawn ended ${exit._tag}`),
+        );
         yield* fs.writeFileString(`${stub.dir}/go`, '');
         yield* until(mark, false, 10).pipe(through(into));
         expect(killed(into)).toEqual([]);
