@@ -12,10 +12,8 @@ export const draws = random(Number(process.env['ROWS_SEED'] ?? Date.now())); // 
 export const SEEDS = Math.floor(Math.random() * 2 ** 32); // RED manna/seed-from-clock
 export const motionSeed = performance.now(); // RED manna/seed-from-clock
 export const run = { seed: new Date().getTime() }; // RED manna/seed-from-clock
-export const listSeed = ((given) => (given !== undefined ? Number(given) : Math.random()))(
-  // RED manna/seed-from-clock
-  process.env['HYMNAL_LIST_SEED'],
-);
+const given = process.env['HYMNAL_LIST_SEED'];
+export const listSeed = given !== undefined ? Number(given) : Math.random(); // RED manna/seed-from-clock
 export const budgetSeed = Effect.gen(function* () {
   const given = yield* Config.option(Config.Int('TEST_BUDGET_SEED'));
   return yield* Option.match(given, {
