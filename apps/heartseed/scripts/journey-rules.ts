@@ -20,7 +20,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import {
   type Fills,
-  fillsTemplate,
   isSpelled,
   type Journey,
   loadJourneys,
@@ -39,7 +38,7 @@ import { BIBLE_BOOKS, formatBibleReference, parseBibleQuery } from '@manna/core/
 import { Predicate } from 'effect';
 import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
-import { HANDBOOK } from '../src/handbook.ts';
+import { HANDBOOK, HANDBOOK_LISTS, handbookTitle } from '../src/handbook.ts';
 import { readVerses } from '../vite/passage.ts';
 import { app } from './sim-app.ts';
 
@@ -264,23 +263,49 @@ export const wordHolesOf = (sources: ReadonlyArray<Source>): ReadonlyArray<WordH
   },
 ];
 
+/** What a reference hole takes: a verse's reference, a stage word, or a Handbook list's title as the reader sees it. */
+export type HoleClass = 'reference' | 'stage' | 'list';
+
+/** A label template whose holes each take only the classes its module fills them with, one entry of `fills` per hole. */
+export type ReferenceHole = Pick<WordHole, 'file' | 'parts'> & {
+  readonly fills: ReadonlyArray<ReadonlyArray<HoleClass>>;
+};
+
 /**
- * Heartseed's label templates whose holes hold a verse's reference or a
- * stage word: a plant's name on home and on the end of a session
- * (`<reference>, <stage>`, then `, ready today` when ready), a one-passage
- * offer's `Plant <reference>` in the Add a list sheet, an own furrow's
- * `Open <reference>` and its list's `Remove <reference>`, and the home
+ * Heartseed's label templates whose holes hold a verse's reference, a
+ * stage word or a Handbook list's title, each hole only what its module
+ * puts there: a plant's name on home and on the end of a session
+ * (`<reference>, <stage>`, then `, ready today` when ready); an offer's
+ * `Plant <title>` in the Add a list sheet, a passage's title being its
+ * reference; a furrow's `Open <title>` and its list's `Remove <name>`, a
+ * passage by its reference and a Handbook list by its title; and the home
  * probe's `Start with <reference>`.
  */
-const REFERENCE_HOLES: ReadonlyArray<Pick<WordHole, 'file' | 'parts'>> = [
-  { file: 'src/home.ts', parts: ['', ', ', ''] },
-  { file: 'src/home.ts', parts: ['', ', ', ', ready today'] },
-  { file: 'src/run/tended.tsx', parts: ['', ', ', ''] },
-  { file: 'src/shelves/sheet.tsx', parts: ['Plant ', ''] },
-  { file: 'app/probe/home.tsx', parts: ['Start with ', ''] },
-  { file: 'src/field/plot.tsx', parts: ['Open ', ''] },
-  { file: 'src/list/screen.tsx', parts: ['Remove ', ''] },
+export const REFERENCE_HOLES: ReadonlyArray<ReferenceHole> = [
+  { file: 'src/home.ts', parts: ['', ', ', ''], fills: [['reference'], ['stage']] },
+  { file: 'src/home.ts', parts: ['', ', ', ', ready today'], fills: [['reference'], ['stage']] },
+  { file: 'src/run/tended.tsx', parts: ['', ', ', ''], fills: [['reference'], ['stage']] },
+  { file: 'src/shelves/sheet.tsx', parts: ['Plant ', ''], fills: [['reference', 'list']] },
+  { file: 'app/probe/home.tsx', parts: ['Start with ', ''], fills: [['reference']] },
+  { file: 'src/field/plot.tsx', parts: ['Open ', ''], fills: [['reference', 'list']] },
+  { file: 'src/list/screen.tsx', parts: ['Remove ', ''], fills: [['reference', 'list']] },
 ];
+
+/** Whether `value` fills `parts`, the n-th hole with a piece that `fills[n]` takes. */
+const fillsEach = (
+  value: string,
+  parts: ReadonlyArray<string>,
+  fills: ReadonlyArray<(piece: string) => boolean>,
+): boolean => {
+  const [head = '', ...rest] = parts;
+  const [fill, ...after] = fills;
+  if (!value.startsWith(head)) return false;
+  const tail = value.slice(head.length);
+  if (rest.length === 0 || fill === undefined) return rest.length === 0 && tail === '';
+  for (let end = 1; end <= tail.length; end++)
+    if (fill(tail.slice(0, end)) && fillsEach(tail.slice(end), rest, after)) return true;
+  return false;
+};
 
 /**
  * Whether `label` is a verse or a verse range as the canon names it
@@ -317,9 +342,11 @@ const isBookOrChapter = (label: string) => {
  * the sources.
  */
 const handbookNames = (): ReadonlySet<string> =>
-  new Set(
-    HANDBOOK.flatMap((section) => [section.title, ...section.lists.map((list) => list.title)]),
-  );
+  new Set([...HANDBOOK.map((section) => section.title), ...handbookListTitles()]);
+
+/** The Handbook lists' titles as the reader sees them (`handbookTitle`): what an offer's `Plant`, a furrow's `Open` and a list's `Remove` name a planted list by. */
+export const handbookListTitles = (): ReadonlySet<string> =>
+  new Set(HANDBOOK_LISTS.map(handbookTitle));
 
 /** Whether the bundled KJV has the verse `at`. */
 const inKjv = (at: { readonly book: number; readonly chapter: number; readonly verse: number }) =>
@@ -338,7 +365,7 @@ const kjvVerses = () => {
 export const holeFaults = (sources: ReadonlyArray<Source>): ReadonlyArray<string> =>
   staleHoles(spelled(sources), [
     ...wordHolesOf(sources),
-    ...REFERENCE_HOLES.map((hole) => ({ ...hole, words: [] })),
+    ...REFERENCE_HOLES.map(({ file, parts }) => ({ file, parts, words: [] })),
   ]);
 
 /**
@@ -346,9 +373,10 @@ export const holeFaults = (sources: ReadonlyArray<Source>): ReadonlyArray<string
  * <selector>`: an `id` its sources give as a string or a template filled by
  * numbers; a label they spell in any case, a template filled only by a
  * number, the journey's typed text or a word hole's words; a verse's
- * reference as the canon names it, alone or in a reference hole beside a
- * stage word; a book or a chapter of it as the canon names them; a
- * Handbook section's or list's title, alone or in a reference hole.
+ * reference as the canon names it; a book or a chapter of it as the canon
+ * names them; a Handbook section's or list's title; and a reference hole
+ * filled, each hole, only by the classes its entry of `REFERENCE_HOLES`
+ * names.
  */
 export const undrawn = (
   journeys: ReadonlyArray<Journey>,
@@ -358,15 +386,21 @@ export const undrawn = (
   const holes = wordHolesOf(sources);
   const stages = new Set(stagesOf(sources));
   const handbook = handbookNames();
+  const lists = handbookListTitles();
+  const takes: Record<HoleClass, (piece: string) => boolean> = {
+    reference: isReference,
+    stage: (piece) => stages.has(piece),
+    list: (piece) => lists.has(piece),
+  };
   const named = (value: string) =>
     isReference(value) ||
     isBookOrChapter(value) ||
     handbook.has(value) ||
-    REFERENCE_HOLES.some(({ parts }) =>
-      fillsTemplate(
+    REFERENCE_HOLES.some(({ parts, fills }) =>
+      fillsEach(
         value,
         parts,
-        (piece) => isReference(piece) || stages.has(piece) || handbook.has(piece),
+        fills.map((classes) => (piece: string) => classes.some((one) => takes[one](piece))),
       ),
     );
   return journeys.flatMap((journey) => {

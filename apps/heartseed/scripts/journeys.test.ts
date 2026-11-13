@@ -28,6 +28,8 @@ import {
   LEGACY,
   ownerFaults,
   proseDrives,
+  REFERENCE_HOLES,
+  handbookListTitles,
   shippedJourneys,
   sourcesOfApp,
   startFaults,
@@ -35,6 +37,7 @@ import {
   wordHolesOf,
 } from './journey-rules.ts';
 import { formatBibleReference, Reference } from '@manna/core/bible';
+import { HANDBOOK } from '../src/handbook.ts';
 import { readVerses } from '../vite/passage.ts';
 import { app } from './sim-app.ts';
 
@@ -543,6 +546,15 @@ describe('verify-heartseed journeys', () => {
           { label: 'Start with Isaiah 41:99', drawn: false },
           { label: 'scheme dark', drawn: true },
           { label: 'scheme dusk', drawn: false },
+          { label: 'Plant seed', drawn: false },
+          { label: 'Plant blade', drawn: false },
+          { label: 'Open ear', drawn: false },
+          { label: 'Remove seed', drawn: false },
+          { label: 'Start with seed', drawn: false },
+          { label: 'Start with Seven Churches', drawn: false },
+          { label: 'Isaiah 41:10, Seven Churches', drawn: false },
+          { label: 'Seven Churches, seed', drawn: false },
+          { label: 'Isaiah 41:10, seed', drawn: true },
         ];
         const journey = yield* loaded(
           [
@@ -558,6 +570,103 @@ describe('verify-heartseed journeys', () => {
         );
         expect(undrawn([journey], sources)).toEqual(
           all.filter(({ drawn }) => !drawn).map(({ label }) => `gen/gen-open label=${label}`),
+        );
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'R4 takes in each hole only the classes its module fills it with, over every hole × every word class',
+    () =>
+      Effect.gen(function* () {
+        const words = wordHolesOf(sources);
+        const stageHole = words.find(({ parts }) => parts[0] === 'Stage: ');
+        const lists = handbookListTitles();
+        const collections = new Set(words.flatMap((hole) => hole.words));
+        const verses = readVerses().filter((_, at) => at % 4111 === 17);
+        const samples = {
+          reference: [
+            ...verses.map((row) =>
+              formatBibleReference(Reference.verse(row.book, row.chapter, row.verse)),
+            ),
+            'John 15:1-5',
+          ],
+          stage: [...(stageHole?.words ?? [])],
+          list: [...lists]
+            .filter((title) => !/\d:\d/u.test(title) && !collections.has(title))
+            .filter((_, at) => at % 29 === 3),
+          section: HANDBOOK.map((section) => section.title).filter((title) => !lists.has(title)),
+          book: ['Genesis', 'Jude 1'],
+          typed: ['zz typed words'],
+        } as const satisfies Record<string, ReadonlyArray<string>>;
+        const KINDS = ['reference', 'stage', 'list', 'section', 'book', 'typed'] as const;
+        type Kind = (typeof KINDS)[number] | 'own';
+        expect(verses.length).toBeGreaterThan(5);
+        expect(samples.stage.length).toBeGreaterThan(2);
+        expect(samples.list.length).toBeGreaterThan(2);
+        expect(samples.section.length).toBeGreaterThan(0);
+        const takers = [
+          ...REFERENCE_HOLES.map(({ parts, fills }) => ({
+            parts,
+            takes: fills.map(
+              (classes) => (kind: Kind, _piece: string) => classes.some((one) => one === kind),
+            ),
+          })),
+          ...words.map(({ parts, words: own }) => ({
+            parts,
+            takes: [(_kind: Kind, piece: string) => own.includes(piece)],
+          })),
+        ];
+        const templates = new Map(takers.map(({ parts }) => [parts.join('\u0000'), parts]));
+        const classed = KINDS.flatMap((kind) =>
+          samples[kind].map((piece) => [kind, piece] as const),
+        );
+        const pool: ReadonlyArray<readonly [Kind, string]> = [
+          ...classed,
+          ...words
+            .flatMap((hole) => hole.words.map((piece) => ['own', piece] as const))
+            .filter(([, piece]) => !classed.some(([, one]) => one === piece)),
+        ];
+        const cases = [...templates.values()].flatMap((parts) => {
+          const fillings = parts
+            .slice(1)
+            .reduce<ReadonlyArray<ReadonlyArray<readonly [Kind, string]>>>(
+              (prefixes, _, hole) =>
+                prefixes.flatMap((prefix) =>
+                  pool
+                    .filter((__, at) => parts.length === 2 || at % (5 + 2 * hole) === hole)
+                    .map((one) => [...prefix, one]),
+                ),
+              [[]],
+            );
+          return fillings.map((filling) => {
+            const label = parts.reduce(
+              (text, part, at) => `${text}${part}${filling[at]?.[1] ?? ''}`,
+              '',
+            );
+            const drawn = takers.some(
+              (taker) =>
+                taker.parts.join('\u0000') === parts.join('\u0000') &&
+                filling.every(([kind, piece], at) => taker.takes[at]?.(kind, piece) === true),
+            );
+            return { label, drawn };
+          });
+        });
+        expect(cases.filter(({ drawn }) => !drawn).length).toBeGreaterThan(100);
+        expect(cases.filter(({ drawn }) => drawn).length).toBeGreaterThan(30);
+        const journey = yield* loaded(
+          [
+            {
+              name: 'gen-open',
+              action: 'open',
+              link: '/',
+              receipt: 'none',
+              expect: cases.map(({ label }) => ({ shows: `label=${label}` })),
+            },
+          ],
+          'gen',
+        );
+        expect(undrawn([journey], sources)).toEqual(
+          cases.filter(({ drawn }) => !drawn).map(({ label }) => `gen/gen-open label=${label}`),
         );
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
