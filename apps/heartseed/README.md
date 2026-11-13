@@ -431,9 +431,12 @@ verse past a seed shows `Move back a stage` in the footer, outside the
 scroll view; a seed shows none, as no stage lies below it, and the plan's
 own items (Today by `Start`) show none. Its tap asks in place, `Move
 <reference> back to <stage>? It comes due again soon.`, with `Move back`
-and `Keep`. `Move back` runs in a transition (both answers disabled
-until it lands) and asks the garden to move the verse from the stage the
-ask saw, so an ask answered twice moves it once. It keeps one record,
+and `Keep`. `Move back` runs in a transition (both answers and the
+control disabled until it lands) and hands the garden the ask itself,
+which the garden settles once: however often it is pressed and whatever
+its first save does, one ask moves the verse at most one stage and every
+answer to it is the same, and an answer lands even after `Keep`, so the
+line or alert always says what was saved. It keeps one record,
 `heartseed/back/<reference>/<at>`
 (`{ reference, at }`), that folds in among the verse's recalls at its
 instant: full corn to an ear, an ear to a blade, a blade to a seed, and
@@ -2245,13 +2248,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     time, each one record, due within ten minutes, read back at a
     relaunch; a seed, a verse not planted, a stage the verse no longer
     stands at, a failed write and an unread garden answer `Failed` and
-    write nothing; one ask answered twice moves the verse once).
+    write nothing; one ask answered twice moves the verse once and gives
+    one answer, a first save refused included).
   - `test:back-today`: `src/garden/back-today.test.tsx`, Move back a stage
     through the root rig: a tapped ear's control outside the scroll view,
     the ask and `Keep`, `Move back` to a blade on Today and home, a
     relaunch to a seed with no control, a refused write's alert, none on
-    the plan's own item, and two taps of `Move back` in one turn moving it
-    once with no alert.
+    the plan's own item, two taps of `Move back` in one turn moving it
+    once with no alert, and a generated run of asks (`Move back` once or
+    twice, then `Keep`, or `Keep`; first saves kept, refused or slow),
+    each moving the verse at most one stage, its line or alert and the
+    stage line matching the disk.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
