@@ -43,6 +43,10 @@ one tap on its plant (`home.md`).
 
 ## Driving it
 
+`sim journeys <file>.md` plays the lists below one after another, each in one app session from its start, with no screenshot and no video, and names each journey that fails with its first failed step and the journey before it (`SKILL.md`, Drive). The by-hand steps between them (a raw snapshot, a read of the log) are not part of it.
+
+**Journeys in order:** from a fresh install: `first`, `promise`.
+
 `RUN=hspromise-l1` (or the run's own name), `EVIDENCE=$PWD/tmp/verify/$RUN`,
 a free `PORT` of 8280-8289, `sim` = `bun run --cwd apps/heartseed sim`, and
 `START` the drive's start time, local and UTC. Nothing native changes for

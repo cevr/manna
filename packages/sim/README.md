@@ -36,11 +36,49 @@ verify-heartseed skill drives through them.
 | `src/drive.ts`                   | The `Drive` service and `DriveLive`, every step reading the place's app |
 | `src/host.ts`                    | The contained host every step and command reaches files and tools by    |
 | `src/journey.ts`                 | `sim journey`: a feature's journey file, run step by step               |
+| `src/journeys.ts`                | `sim journeys`: a feature file's journey lists, played in written order |
 | `src/check.ts`                   | `@manna/sim/check`: journey files loaded and read as data, for tests    |
 | `src/screen.ts`                  | The iOS screen as numbers: `sim read`'s readout, the view a scroll pans |
 | `src/errors.ts`, `src/result.ts` | The tagged errors and the JSON results                                  |
 | `src/tools.ts`                   | Running a tool to its end, and the readiness wait                       |
 | `src/index.ts`                   | `launch`: an app's script in one call                                   |
+
+## Journeys in order
+
+A journey that passes alone can leave the app where the next one in its
+feature file does not expect it. `sim journeys <file>.md` plays a feature
+file's journeys in the order it gives. Each list is one line of the file:
+
+```
+**Journeys in order:** from a fresh install: `first`, `home-field`, `7 min`, `home-dot`.
+**Journeys in order:** from a relaunch, the store set to `chords=false`, `home.tab="Sections"`: `about`, `browse`.
+```
+
+Each list runs in one app session, in written order, from its start:
+
+- `from a fresh install` copies the installed build into
+  `<out>/fresh`, uninstalls the app (which drops every file it kept),
+  installs the copy and waits for the `readyTarget`. Nothing is built.
+- `from a relaunch` terminates and launches the app.
+- `the store set to` first writes each `key=value` (the value as the store
+  keeps it, JSON text for One's store) into the app's stored settings with
+  the app stopped. The settings are the SQLite table the app's `store`
+  names in its data container (`App.store`; the hymnal's is One's
+  `one_kv` in `Library/one-kv-hymnal.sqlite`). A list that sets a store
+  for an app with none is refused before any step.
+- A `<n> min` item waits that long.
+
+Every journey is played whether the one before it passed or not. No step
+takes a screenshot (`both` keeps the snapshot alone, `shot` nothing), and
+no video is taken. Each step's line and each journey's summary go to
+`<out>/results.jsonl` as `sim journey` writes them. The last line,
+`"command":"journeys"`, lists every journey in the order it ran: its list's
+line, `ok`, its steps, its first failed step (`failedStep`, `failedName`,
+`error`), and `after`, the journey before it or the list's start. A
+failure exits non-zero with the first failed journey's error. A file with
+no list, or a line the grammar does not read, is refused (`BadJourney`,
+naming the line). `sim journey --no-shots` drops the shots and the video of
+one journey the same way.
 
 ## The contained host
 

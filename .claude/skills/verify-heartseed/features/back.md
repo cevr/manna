@@ -45,6 +45,10 @@ Garden).
 
 ## Driving it
 
+`sim journeys <file>.md` plays the lists below one after another, each in one app session from its start, with no screenshot and no video, and names each journey that fails with its first failed step and the journey before it (`SKILL.md`, Drive). The by-hand steps between them (a raw snapshot, a read of the log) are not part of it.
+
+**Journeys in order:** from a fresh install: `first`, `back`.
+
 Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 `sim` = `bun run --cwd apps/heartseed sim`. Nothing native changes: the
 installed Debug build serves, the JavaScript from the dev server. Report

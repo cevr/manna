@@ -60,6 +60,20 @@ receipts and what stays by hand. The rest have none:
 - web-client, corpus-db and indexes: no journey: a browser, the CLI and
   SQLite, not the iOS app.
 
+`sim journeys README.md` plays them one after another on one install, in
+the order of the two lists below, with no screenshot and no video, and
+names each journey that fails with its first failed step and the journey
+before it (`packages/sim/README.md`, Journeys in order). Each list starts
+from a relaunch with the stored choices a journey assumes written first:
+chords off, the tab `Sections` and `Sounds and haptics` on, which `feel`
+and `settings` turn off and back on. The journeys that press Play run in a
+list of their own with `Sounds and haptics` off and `Sound` on, which each
+of them turns off before its Play.
+
+**Journeys in order:** from a relaunch, the store set to `chords=false`, `home.tab="Sections"`, `feel=true`: `about`, `browse`, `chords-and-capo`, `feel`, `hymn-list`, `hymn-reader`, `search`, `settings`.
+
+**Journeys in order:** from a relaunch, the store set to `chords=false`, `home.tab="Sections"`, `feel=false`, `sound=true`: `follow`, `player`.
+
 ## Entry contract
 
 Each feature file has an H1, one paragraph of user-visible behavior, then

@@ -196,6 +196,15 @@ development probe (`sim open probe/home --expect "label=Home probe"`,
 --expect "label=Light probe"`, `apps/heartseed/app/probe/light.tsx`)
 `Listen`, `Back 3` and `Forward 3`.
 
+`sim journeys <file>.md` plays a feature file's journeys in the order its
+`**Journeys in order:**` lines give, each line in one app session from its
+start (`from a fresh install`: the installed build installed again after an
+uninstall, with no build), waiting a `<n> min` item's minutes, with no
+screenshot and no video. Its last line names each journey's first failed
+step and the journey before it (`packages/sim/README.md`, Journeys in
+order). Run it once over a feature file whose journeys a change touches: a
+journey that passes alone can fail after the one before it.
+
 A feature's taps run as journeys: `sim journey <feature>` runs
 `features/<feature>.journey.json`, its steps in order, each with the
 `shows` and `hides` it expects and a snapshot receipt or none, and prints a

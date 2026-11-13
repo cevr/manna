@@ -103,6 +103,10 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 
 ## Driving it
 
+`sim journeys <file>.md` plays the lists below one after another, each in one app session from its start, with no screenshot and no video, and names each journey that fails with its first failed step and the journey before it (`SKILL.md`, Drive). The by-hand steps between them (a raw snapshot, a read of the log) are not part of it.
+
+**Journeys in order:** from a fresh install: `first`, `session`, `session-choose`, `session-restore`, `session-welcome`, `session-field`.
+
 Nothing native changes. Use an incremental `sim install` of the head under
 `lockf -k /tmp/manna-ios-build.lock`, with the bars of `SKILL.md`, Launch.
 Or use `--app` with a build of `d19c8ed2e` or later: the JavaScript comes

@@ -71,6 +71,10 @@ passage's due: every row below starts from `run.md`'s `run-due`, at
 
 ## Driving it
 
+`sim journeys <file>.md` plays the lists below one after another, each in one app session from its start, with no screenshot and no video, and names each journey that fails with its first failed step and the journey before it (`SKILL.md`, Drive). The by-hand steps between them (a raw snapshot, a read of the log) are not part of it.
+
+**Journeys in order:** from a fresh install: `first`, `7 min`, `run`, `run-recite`, `run-next`, `grow-restart`, `15 min`, `run-second`, `grow-again`.
+
 The growth sound's module (`apps/heartseed/native/growth`) must be in the
 installed build (`SKILL.md`, Launch; `first.md` says which build serves).
 The garden must start empty: uninstall the app by its udid before the

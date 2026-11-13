@@ -110,7 +110,11 @@ The feature files write `bun run --cwd apps/hymnal sim` as `sim`. Run a feature 
 `video/<feature>.mp4` (none with `--skip-video`), and runs each step: its action, its expects, then its
 receipts (`$EVIDENCE/snapshots/` and `$EVIDENCE/shots/`, named `<feature>-<nn>-<step>`). It prints one JSON line per step and a
 summary, appends every line to `$EVIDENCE/results.jsonl`, and stops at the first failed step, which the
-summary names in `failedStep` and `failedName`. The journeys:
+summary names in `failedStep` and `failedName`. `--no-shots` keeps each step's snapshot alone and takes
+no video, for a drive under a no-screenshot rule. `sim journeys README.md` plays every journey in the
+order of `features/README.md`'s `**Journeys in order:**` lines, with chords off and the tab `Sections`
+written to the stored settings first, with no screenshot and no video, and names each failed journey's
+first failed step and the journey before it (`packages/sim/README.md`, Journeys in order). The journeys:
 
 - [features/about.journey.json](features/about.journey.json), [features/browse.journey.json](features/browse.journey.json), [features/chords-and-capo.journey.json](features/chords-and-capo.journey.json),
   [features/feel.journey.json](features/feel.journey.json), [features/follow.journey.json](features/follow.journey.json), [features/hymn-list.journey.json](features/hymn-list.journey.json),
