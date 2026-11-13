@@ -132,6 +132,12 @@ const LEDGER = 'docs/lessons.md';
  * merges with no conflict, where two entries appended to one file conflict.
  */
 const ENTRIES = 'docs/lessons';
+/**
+ * How many entries `docs/lessons.md` holds, frozen: a new entry appended to
+ * it is refused, so the way that conflicts fails at its commit whatever a
+ * doc still says.
+ */
+const LEDGER_ENTRIES = 570;
 
 /** `problem`, unless `holds`. */
 const unless = (holds: boolean, problem: string): ReadonlyArray<string> =>
@@ -253,14 +259,21 @@ interface Page {
 
 /**
  * The ledger's files at `root`: `docs/lessons.md`, then each file of
- * `docs/lessons/` by name, each read for the entries its `### <id>` lines
- * head; with no folder, the ledger is its one file.
+ * `docs/lessons/` by name, a dotfile aside (a `.DS_Store` the OS writes,
+ * which git ignores), each read for the entries its `### <id>` lines head;
+ * with no folder, the ledger is its one file.
  */
 const pagesAt = Effect.fn('lessons.pagesAt')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const names = yield* Effect.orElseSucceed(fs.readDirectory(path.join(root, ENTRIES)), () => []);
-  const files = [LEDGER, ...names.toSorted().map((name) => `${ENTRIES}/${name}`)];
+  const files = [
+    LEDGER,
+    ...names
+      .filter((name) => !name.startsWith('.'))
+      .toSorted()
+      .map((name) => `${ENTRIES}/${name}`),
+  ];
   return yield* Effect.forEach(files, (file) =>
     Effect.map(fs.readFileString(path.join(root, file)), (text): Page => ({
       file,
@@ -271,11 +284,16 @@ const pagesAt = Effect.fn('lessons.pagesAt')(function* (root: string) {
 });
 
 /**
- * What is wrong with a file of `docs/lessons/`: a name not `<id>.md`, or not
- * one entry headed `### <id>` on its first line, its id its name.
+ * What is wrong with a file of the ledger: `docs/lessons.md` past its frozen
+ * count, or a file of `docs/lessons/` named other than `<id>.md` or holding
+ * other than one entry headed `### <id>` on its first line.
  */
 const pageProblems = (page: Page): ReadonlyArray<string> => {
-  if (page.file === LEDGER) return [];
+  if (page.file === LEDGER)
+    return unless(
+      page.entries.length <= LEDGER_ENTRIES,
+      `${LEDGER}: holds ${page.entries.length} entries, past its frozen ${LEDGER_ENTRIES}; a new entry goes in a file of its own, ${ENTRIES}/<id>.md`,
+    );
   const id = /^docs\/lessons\/(.+)\.md$/.exec(page.file)?.[1] ?? '';
   return unless(
     id !== '' && page.entries.length === 1 && page.text.startsWith(`### ${id}\n`),

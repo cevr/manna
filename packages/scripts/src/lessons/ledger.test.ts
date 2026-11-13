@@ -530,6 +530,34 @@ describe("the ledger's entries kept one to a file under docs/lessons/", () => {
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
+  it.effect('reads past a dotfile the OS leaves in docs/lessons/, as a .DS_Store', () =>
+    Effect.gen(function* () {
+      const root = yield* repoWith(PREAMBLE, {
+        'docs/lessons/.DS_Store': '\u0000\u0000\u0000\u0001Bud1',
+        'docs/lessons/held.md': entry('held', 'code: `src/thing.ts` `held`'),
+      });
+      expect(yield* ledgerProblems(root)).toEqual({ entries: 2, problems: [] });
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'refuses a 571st entry appended to docs/lessons.md, frozen at its 570, and holds the 570',
+    () =>
+      Effect.gen(function* () {
+        const ledger = (count: number) =>
+          `# Lessons\n\n${Array.from({ length: count }, (_, at) => entry(`old-${at}`, 'none: a reason')).join('\n')}`;
+        const problemsAt = (count: number) =>
+          Effect.map(
+            Effect.flatMap(repoWith(ledger(count)), ledgerProblems),
+            (found) => found.problems,
+          );
+        expect(yield* problemsAt(570)).toEqual([]);
+        expect(yield* problemsAt(571)).toEqual([
+          'docs/lessons.md: holds 571 entries, past its frozen 570; a new entry goes in a file of its own, docs/lessons/<id>.md',
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
   it.effect("routes a review's finding to the entry its own file keeps", () =>
     Effect.gen(function* () {
       const path = yield* Path.Path;
