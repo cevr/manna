@@ -14,7 +14,11 @@
       "name": "field-grow",
       "action": "tap",
       "target": "label=Your field",
-      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, blade" }],
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Isaiah 41:10, seed, ready today" },
+        { "hides": "label=Isaiah 41:10, blade" }
+      ],
       "receipt": "snapshot"
     },
     {
@@ -23,10 +27,11 @@
       "target": "label=Start",
       "expect": [
         { "shows": "id=session" },
-        { "shows": "label=Next" },
-        { "shows": "label=Stage: blade" }
+        { "shows": "label=Say it" },
+        { "shows": "label=Stage: seed" },
+        { "hides": "label=Next" }
       ],
-      "receipt": "none"
+      "receipt": "snapshot"
     }
   ]
 }

@@ -35,7 +35,31 @@
       "name": "run-held-field",
       "action": "tap",
       "target": "label=Start",
-      "expect": [{ "shows": "label=Next" }, { "hides": "label=Say it" }],
+      "expect": [
+        { "shows": "label=Say it" },
+        { "shows": "label=Stage: seed" },
+        { "hides": "label=Next" },
+        { "hides": "label=Good" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "run-next-say",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "run-next-recite",
+      "action": "tap",
+      "target": "label=36 of 37 words",
+      "timeout": 30,
+      "expect": [
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Next" },
+        { "hides": "label=Say it" },
+        { "hides": "label=Listening" }
+      ],
       "receipt": "snapshot"
     },
     {

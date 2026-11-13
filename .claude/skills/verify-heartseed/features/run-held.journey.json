@@ -43,8 +43,8 @@
       "target": "label=Done",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=All tended for today" },
-        { "hides": "label=Start" }
+        { "shows": "label=Start" },
+        { "hides": "label=All tended for today" }
       ],
       "receipt": "snapshot"
     }

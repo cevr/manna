@@ -7,7 +7,8 @@ the app `active` again after it was in the `background` (the home screen,
 another app, the app switcher, a lock). A return makes the plan again at
 that instant, so a reader who left the app open overnight finds this
 morning's verses, not yesterday's plan. It also lets go of the verse
-whose result shows: the run starts again at the new plan's first item.
+whose result shows, before its `Next`, with its recall unrecorded: the run
+starts again at the new plan's first item.
 Home reads its greeting again at a return (`home.md`). Nothing else
 changes at a return:
 
@@ -70,10 +71,12 @@ proves nothing.
   `Isaiah 41:10`, 37 `word-<i>` nodes in first letters, and `Say it`. Red
   on a base before hswake: home shows the done state until a
   `Minutes` tap or a relaunch.
-- `wake-result`: after `run.md`'s `run-held-field` (the result, the grades
-  and `Next` showing), **away** and back → the done state: `Nothing to tend
-  now`, no `Grade` group, no summary, no `Next`, no `Say it`, with the same
-  pid. Red on base: base keeps the result and `Next`.
+- `wake-result`: after `run.md`'s `run-recite` (the result, the grades
+  and `Next` showing), **away** and back → the recital let go and nothing
+  recorded: Today on `Isaiah 41:10` at `Stage: seed` with `Say it`, no
+  `Grade` group, no summary, no `Next`, no `Nothing to tend now`, with the
+  same pid. Red on base: base had kept the recall at the recital's end, so
+  the return showed the done state.
 - `wake-listen` (live in `passage.md`'s `passage-new`): `Listen` before `Say it` in
   the footer on a new verse while `Voice` is not `Off`; the voice reads that
   verse; no `Listen` while it reads, on a review, at `Next`, in the done
@@ -86,8 +89,9 @@ proves nothing.
 - Go through the first minute and tap `Continue`. Leave the app (the home
   screen) and come back once the verse is due: home offers `Start` for
   it, with no other tap.
-- Say it, then leave the app while the result shows, and come back: Today
-  shows the session's next verse, or nothing to tend.
+- Say it, then leave the app while the result shows, before `Next`, and
+  come back: nothing was recorded, and Today offers `Say it` on the plan's
+  first verse not done, the one just said among them.
 
 ## Driving it
 
@@ -127,15 +131,12 @@ it).
    `Start` → Today, plus a raw snapshot for `run.md`'s `run-due` rects.
    When `PLANTED` was in the evening, record `All tended for today` and
    stop here: only tests reach the rest.
-4. `run.md`'s `run-recite` (`run-listening`, `run-recite`), then
-   `field.md`'s `sim journey field-grow` (its last step is
-   `run-held-field`: `Your field`, then `Start`, the held result with
-   `Next`).
+4. `run.md`'s `run-recite` (`run-listening`, `run-recite`): the result,
+   the grades and `Next`.
 5. `wake-result`: **away** (from Today), then `sim journey wake-result` →
-   `"ok":true`. `wake-result/wake-result` → the done state. This takes
-   the place of `run.md`'s `run-next` in this drive: its end state is the
-   done state `run-next` shows, and `run-next` stays owned by
-   `apps/heartseed/src/run/*.test.tsx`.
+   `"ok":true`. `wake-result/wake-result` → the row's nodes: the recital
+   let go, `Say it` on the verse at its seed. `run.md`'s `run-next` stays
+   owned by `apps/heartseed/src/run/*.test.tsx` in this drive.
 6. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
 
 Report only counts, booleans, rect numbers, the pids' equality, the labels

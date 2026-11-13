@@ -116,8 +116,8 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-learn`: one tap on `Psalms 91:1, not planted` opens Today on
   `Psalms 91:1` (no card, no `Learn` button between) with `Listen`
   offered; after `Say it` the summary reads `<k> of 19 words`; after a
-  grade, `Your field` shows the button `Psalms 91:1, seed` and the
-  caption `14 verses · 1 planted`.
+  grade and `Next`, `Your field` shows the button `Psalms 91:1, seed` and
+  the caption `14 verses · 1 planted`.
 - `home-start`: one tap on `Isaiah 41:10, seed` opens Today on that
   verse; home holds no `id=chosen` and no button starting `Practice ` or
   `Learn ` but `Practice anyway`.
@@ -284,7 +284,8 @@ puts `Start` on the Today card), with the same variables:
 7. `home-learn`: `home-field/home-learn-today` → `Psalms 91:1` and a
    button `Listen`; then `Say it` (on the simulator, the replay of
    `run.md`'s recital) and `Good` once the grades show:
-   `home-field/home-learn-grade` → the summary `<k> of 19 words`;
+   `home-field/home-learn-grade` → the summary `<k> of 19 words`; then
+   `Next`, which keeps the recall, and `Your field`;
    `home-field/home-learn` → the button `Psalms 91:1, seed` and the
    caption `14 verses · 1 planted`.
 8. `home-add-places`: the journey's last steps scroll to `Add a list` at

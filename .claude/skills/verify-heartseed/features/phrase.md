@@ -12,8 +12,8 @@ stored stay stored as they were (`apps/heartseed/README.md`, Old pieces).
   whole: `Psalms 91:1` (19 words) is Fear's first new piece.
 - **Today on a long verse**: the reference is the verse's own, its words
   whole under the cue, `Listen` on a new verse (reading all its words),
-  and `Say it`, whose summary counts all its words. The recall is kept
-  under the verse's reference.
+  and `Say it`, whose summary counts all its words. `Next` keeps the
+  recall under the verse's reference.
 - **Old pieces**: never offered, reviewed or shown. A verse whose only
   plants are old pieces is `<verse>, not planted` on the field (bare soil)
   and a verse to learn, under the full text with `Listen`; its old pieces'
@@ -45,8 +45,8 @@ stored stay stored as they were (`apps/heartseed/README.md`, Old pieces).
   home holds `Psalms 91:1, not planted` and the caption `14 verses to
   learn`, days sown as before the switch; one tap on that plant opens
   Today on `id=reference` `Psalms 91:1` with `Listen`; after `Say it` the
-  summary reads `<k> of 19 words`; after a grade and `Your field`,
-  `Psalms 91:1, seed` and `14 verses · 1 planted`.
+  summary reads `<k> of 19 words`; after a grade, `Next` and
+  `Your field`, `Psalms 91:1, seed` and `14 verses · 1 planted`.
 - `whole-left` (tests only: old pieces never planned, their verse
   `not planted` until said whole, every stored record kept, days sown
   never falling, a piece planted today spending the day's new piece):
@@ -145,7 +145,7 @@ head's.
    `Psalms 91:1, not planted` → `id=reference` `Psalms 91:1` and
    `Listen`. The journey's `Say it` (the recital as `run.md`'s) and
    `Good`: `phrase-migrate/whole-migrate-grade` → the summary
-   `<k> of 19 words`; then `Your field` and a scroll to
+   `<k> of 19 words`; then `Next`, `Your field` and a scroll to
    `Psalms 91:1, seed`: `phrase-migrate/whole-migrate-after` →
    `Psalms 91:1, seed` and `14 verses · 1 planted`. Then `sim doctor` and
    `sim down`.

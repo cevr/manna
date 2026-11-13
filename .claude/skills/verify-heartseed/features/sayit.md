@@ -11,13 +11,18 @@ word shows only a mark, `Missed word <n>`, that a tap reveals (a peek).
 When the recital ends, Today shows `<lit> of <total> words` (and
 `, <n> peeked` once a word was peeked), `Suggested: <grade>`, and the four
 grades `Again`, `Hard`, `Good` and `Easy` as a radio group with the
-suggestion checked; the reader can change it. Each change of a finished
-recital's recall is kept in the garden, and Today's stage line under the
-verse follows it (`grow.md`). A recital that could not be heard shows one
+suggestion checked; the reader can change it. On Today the finished
+recital's recall waits for `Next`, each grade or peek changing it, and
+Today's stage line under the verse follows it (`grow.md`); `Next` keeps
+it in the garden, and leaving before `Next` records nothing (`run.md`).
+In the first minute and on an unread garden, which have no run, the
+recall is kept at the recital's end and at each change. A recital that
+could not be heard shows one
 alert and the verse as its cue, with no grade. Say it reads no word aloud. The
 first minute's letters and alone phases press the same Say it (`first.md`);
-the rows here are Today's. Once the recall is kept, the button reads
-`Next` and the result and the grades stay until it is tapped (`run.md`).
+the rows here are Today's. Once the recital finishes with a recall, the
+button reads `Next` and the result and the grades stay until it is
+tapped (`run.md`).
 
 In a development build on the simulator Say it hears the dictation
 module's replay of a scripted recital (the probe's plan: the passage less
