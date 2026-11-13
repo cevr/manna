@@ -93,6 +93,8 @@ every launch opens on the pending frame, then the first minute or home
 
 **Journeys in order:** from a fresh install: `first`, `field`, `7 min`, `run`, `run-recite`, `field-grow`, `run-recite`, `run-next`, `field-relaunch`.
 
+Not in a list: `field-again` (step 7) runs only when `run.md`'s `run-second` runs, and inside it, before its `Next`; a list plays whole journeys one after another, so it cannot hold a journey inside another.
+
 `RUN=hsfield-l9` (or the run's own name), `EVIDENCE=$PWD/tmp/verify/$RUN`, a
 free `PORT` of 8280-8289, `sim` = `bun run --cwd apps/heartseed sim`, and
 `START` the drive's start time, local and UTC. Nothing native changes for the

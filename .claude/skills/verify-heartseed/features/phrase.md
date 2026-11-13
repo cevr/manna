@@ -66,6 +66,8 @@ stored stay stored as they were (`apps/heartseed/README.md`, Old pieces).
 
 **Journeys in order:** from a fresh install: `first`, `phrase`.
 
+Not in a list: `phrase-new`, `phrase-today`, `phrase-listen` and `phrase-said` run in the second session, after the next 04:00 local (step 4), and `phrase-listen`'s reading is read by two raw snapshots taken by hand while it reads; `phrase-migrate` runs on an install main's build left (The migration). A list cannot hold a day's wait, a step by hand inside a reading, or another build.
+
 `RUN=hspiece-l1` (or the run's own name), `EVIDENCE=$PWD/tmp/verify/$RUN`,
 a free `PORT` of 8280-8289, `sim` = `bun run --cwd apps/heartseed sim`, and
 `START` the drive's start time, local and UTC. Nothing native changes for

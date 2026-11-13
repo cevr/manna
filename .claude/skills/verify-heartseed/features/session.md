@@ -107,6 +107,8 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 
 **Journeys in order:** from a fresh install: `first`, `session`, `session-choose`, `session-restore`, `session-welcome`, `session-field`.
 
+Not in a list: `session-voice-kept` and `session-done` run in the voice drive (`voice-cycle`), between `natural-voice` taps, on a container an older commit's JavaScript (the worktree `B`) wrote first, each followed by a raw snapshot and a store copy taken by hand. A list cannot hold another checkout's server or a step by hand between journeys.
+
 Nothing native changes. Use an incremental `sim install` of the head under
 `lockf -k /tmp/manna-ios-build.lock`, with the bars of `SKILL.md`, Launch.
 Or use `--app` with a build of `d19c8ed2e` or later: the JavaScript comes
