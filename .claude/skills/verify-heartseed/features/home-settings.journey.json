@@ -146,6 +146,14 @@
       "target": "label=Your field",
       "expect": [{ "shows": "id=today-card" }, { "hides": "label=5 min" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-up",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

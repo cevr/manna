@@ -47,6 +47,14 @@
         { "hides": "label=All tended for today" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "run-held-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

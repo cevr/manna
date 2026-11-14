@@ -6,8 +6,9 @@
  * after the welcome is left (R1), names no node hidden from VoiceOver (R2),
  * starts with an open that shows (R3), names only what the app's sources
  * can draw (R4), and is run by its feature file, whose cites name its steps
- * (R6); and the feature files drive in prose only where `LEGACY` says (R5).
- * R1, R2 and R5 are held to plain models over generated journeys and texts,
+ * (R6), and ends with home at its top after a scroll to its foot (R7); and
+ * the feature files drive in prose only where `LEGACY` says (R5).
+ * R1, R2, R5 and R7 are held to plain models over generated journeys and texts,
  * and each rule names a mutant of the `first` journey.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -314,6 +315,114 @@ const genProse = (next: Next) => {
   return { text: lines.join('\n'), drives };
 };
 
+/** Every node of home's foot, under its lists (`src/field/screen.tsx`): the legend and its caption, `Add a list` and its tip, the limit line, the end rows. */
+const FOOT_TARGETS = [
+  'id=legend',
+  'id=add-list',
+  'id=tip-3',
+  'id=limit',
+  'id=end-row',
+  'label=Mark 4:28',
+  'label=Add a list',
+  'label=Settings',
+  'label=How Heartseed works',
+];
+
+/** What a scroll reaches that is not home's foot nor its top: a furrow's row, the sheets' rows, the chooser's books. */
+const ELSEWHERE = [
+  'label=Open Promises of God',
+  'label=Promises of God',
+  'label=About',
+  'label=Voice',
+  'label=John',
+  'screen',
+];
+
+/** Whether `selector` names what `target` names, as `sim` reads both: an id exactly, a label folded. */
+const spells = (selector: string, target: string) =>
+  toJson(modelParse(selector)) === toJson(modelParse(target));
+
+/** `target` spelled any way `sim` reads it: quoted or not, a label in any case or bare, a role before either. */
+const spelling = (next: Next, target: string) => {
+  const { id, label } = modelParse(target);
+  const value = id || target.slice('label='.length);
+  let body = pick(next, [`id=${id}`, `id="${id}"`]);
+  if (id === '') {
+    const cased = pick(next, [value, value.toLowerCase(), value.toUpperCase()]);
+    body = pick(next, [`label=${cased}`, `label="${cased}"`, cased]);
+  }
+  if (label === 'your field' || next(4) !== 0) return body;
+  return `role=button ${body}`;
+};
+
+/**
+ * R7's model: the last step that scrolls to a node of home's foot, unless
+ * a later scroll to `Your field` or a `relaunch` brings home back to its top.
+ */
+const modelFoot = (steps: ReadonlyArray<Raw>): Option.Option<string> => {
+  let foot = Option.none<string>();
+  for (const step of steps) {
+    if (step.action === 'relaunch') foot = Option.none();
+    if (step.action !== 'scroll') continue;
+    const target = step.target ?? '';
+    if (FOOT_TARGETS.some((one) => spells(target, one))) foot = Option.some(step.name);
+    if (modelParse(target).label === 'your field') foot = Option.none();
+  }
+  return foot;
+};
+
+/**
+ * Journeys from home: a scroll to any foot target in any spelling, then
+ * what a journey does there (open a sheet at the foot, scroll inside it,
+ * tap, go back, open again without a relaunch), with now and then a scroll
+ * up to `Your field` or a `relaunch`; each with the step R7's model names.
+ */
+const footJourneys = (seed: number, count: number) => {
+  const next = rng(seed);
+  const made = (at: number): Raw => {
+    const name = `s${at}`;
+    const kind = next(10);
+    const direction = pick(next, ['down', 'up']);
+    if (kind < 3)
+      return {
+        name,
+        action: 'scroll',
+        target: spelling(next, pick(next, FOOT_TARGETS)),
+        direction,
+      };
+    if (kind === 3) return { name, action: 'scroll', target: pick(next, ELSEWHERE), direction };
+    if (kind === 4)
+      return {
+        name,
+        action: 'scroll',
+        target: spelling(next, 'label=Your field'),
+        direction: 'up',
+      };
+    if (kind === 5) return { name, action: 'relaunch' };
+    if (kind === 6) return { name, action: 'open', link: '/', relaunch: pick(next, [false, true]) };
+    if (kind === 7) return { name, action: 'back' };
+    return {
+      name,
+      action: 'tap',
+      target: pick(next, ['label=Settings', 'id=add-list', 'label=Done', 'label=About']),
+    };
+  };
+  return Array.from({ length: count }, () => {
+    const steps: ReadonlyArray<Raw> = [
+      {
+        name: 'home',
+        action: 'open',
+        link: '/',
+        relaunch: false,
+        expect: [{ shows: 'id=today-card' }],
+        receipt: 'none',
+      },
+      ...Array.from({ length: 1 + next(7) }, (_, at): Raw => ({ ...made(at), receipt: 'none' })),
+    ];
+    return { steps, foot: modelFoot(steps) };
+  });
+};
+
 const hidden = hiddenOfApp();
 const sources = sourcesOfApp();
 
@@ -386,6 +495,31 @@ describe('verify-heartseed journeys', () => {
       const shares = [share(modelFirstRun), share((raw) => modelHidden(raw, HIDDEN))];
       expect(shares.map((one) => one > 0.15 && one < 0.85)).toEqual([true, true]);
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'R7 names the last foot scroll that no scroll up to Your field or relaunch follows, over generated journeys reaching every foot target',
+    () =>
+      Effect.gen(function* () {
+        const raws = footJourneys(20261114, 120);
+        const journeys = yield* loadedAll(raws.map(({ steps }) => steps));
+        const disagree = raws.flatMap(({ steps, foot }, at) => {
+          const got = stepsOf(footFaults(journeys[at] as Journey));
+          const want = Option.toArray(foot);
+          if (toJson(got) === toJson(want)) return [];
+          return [`${toJson(steps)} got ${toJson(got)} want ${toJson(want)}`];
+        });
+        expect(disagree.slice(0, 2)).toEqual([]);
+        const tripped = raws.filter(({ foot }) => Option.isSome(foot));
+        const reached = new Set(
+          tripped.map(({ steps, foot }) => {
+            const step = steps.find((one) => one.name === Option.getOrElse(foot, () => ''));
+            return FOOT_TARGETS.find((target) => spells(step?.target ?? '', target)) ?? '';
+          }),
+        );
+        expect([...reached].sort()).toEqual([...FOOT_TARGETS].sort());
+        expect(tripped.length / raws.length > 0.3 && tripped.length / raws.length < 0.8).toBe(true);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect(
@@ -728,6 +862,27 @@ describe('verify-heartseed journeys', () => {
       expect(footFaults(footed)).toEqual(['first/first-foot leaves home at its foot']);
       const limited = yield* mutant((all) => [...all, scrolling('first-line', 'id=limit', 'down')]);
       expect(footFaults(limited)).toEqual(['first/first-line leaves home at its foot']);
+      const sheeted = yield* mutant((all) => [
+        ...all,
+        scrolling('first-settings', 'label=Settings', 'down'),
+        { name: 'first-sheet', action: 'tap', target: 'label=Settings', receipt: 'none' },
+        scrolling('first-about', 'label=About', 'down'),
+      ]);
+      expect(footFaults(sheeted)).toEqual(['first/first-settings leaves home at its foot']);
+      const shipped = (feature: string) =>
+        journeys.find((journey) => journey.feature === feature)?.steps ?? [];
+      const unscrolled = yield* loaded(
+        shipped('session-restore').filter((step) => step.name !== 'session-restore-top'),
+        'session-restore',
+      );
+      expect(footFaults(unscrolled)).toEqual([
+        'session-restore/session-restore-sheet leaves home at its foot',
+      ]);
+      const closed = yield* loaded(
+        [...shipped('natural-sheet'), scrolling('natural-sheet-top', 'label=Your field', 'up')],
+        'natural-sheet',
+      );
+      expect(footFaults(closed)).toEqual(["natural-sheet hands on no sheet over home's foot"]);
       const topped = yield* mutant((all) => [
         ...all,
         scrolling('first-foot', 'id=add-list', 'down'),

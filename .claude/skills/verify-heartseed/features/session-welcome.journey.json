@@ -37,6 +37,14 @@
       "target": "label=Skip",
       "expect": [{ "shows": "id=today-card" }, { "hides": "label=Begin" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "session-welcome-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

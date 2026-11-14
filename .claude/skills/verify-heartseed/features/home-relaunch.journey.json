@@ -112,6 +112,14 @@
       "target": "label=Your field",
       "expect": [{ "shows": "id=today-card" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "home-tips-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

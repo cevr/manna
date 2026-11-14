@@ -42,6 +42,14 @@
       "receipt": "snapshot"
     },
     {
+      "name": "home-renew-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
       "name": "home-renew",
       "action": "tap",
       "target": "label=Start",

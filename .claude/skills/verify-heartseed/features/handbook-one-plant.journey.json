@@ -55,6 +55,14 @@
       "direction": "up",
       "expect": [{ "shows": "label=Open Promises of God" }],
       "receipt": "snapshot"
+    },
+    {
+      "name": "handbook-one-plant-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }
