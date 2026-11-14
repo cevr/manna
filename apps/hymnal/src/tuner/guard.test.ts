@@ -136,7 +136,7 @@ describe('the ear’s audio session', () => {
 });
 
 describe('the Swift module’s declaration', () => {
-  it('is the one One’s native source writes for Listen.swift', () => {
+  it('is byte for byte what One’s typegen writes for Listen.swift, so the dev server’s boot leaves it unchanged', () => {
     const fromApp = createRequire(join(app, 'package.json'));
     const fromOne = createRequire(fromApp.resolve('one/package.json'));
     const { nativeSourceContract } = fromOne('vxrn/native-source-contract') as {
@@ -145,10 +145,7 @@ describe('the Swift module’s declaration', () => {
         source: string,
       ) => { readonly declaration: string };
     };
-    const unformatted = (text: string) => text.replaceAll(/;$/gm, '');
     const written = readFileSync(join(app, 'native', 'tuner', 'Listen.d.swift.ts'), 'utf8');
-    expect(unformatted(written)).toContain(
-      unformatted(nativeSourceContract(swiftFile, swift).declaration),
-    );
+    expect(written).toBe(nativeSourceContract(swiftFile, swift).declaration);
   });
 });
