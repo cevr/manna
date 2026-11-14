@@ -51,6 +51,14 @@
       "receipt": "none"
     },
     {
+      "name": "session-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
       "name": "session-first",
       "action": "tap",
       "target": "label=Isaiah 41:10, seed",

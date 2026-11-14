@@ -21,6 +21,14 @@
         { "hides": "label=5 min" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "wake-sheet-stays-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

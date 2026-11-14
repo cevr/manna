@@ -126,6 +126,14 @@
         }
       ],
       "receipt": "none"
+    },
+    {
+      "name": "passage-limit-psalm-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

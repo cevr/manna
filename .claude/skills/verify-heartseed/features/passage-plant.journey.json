@@ -68,6 +68,14 @@
         { "hides": "label=Remove John 15:1-5" }
       ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "passage-plant-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
     }
   ]
 }

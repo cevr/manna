@@ -42,6 +42,14 @@
       "receipt": "none"
     },
     {
+      "name": "appearance-choice-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
       "name": "appearance-chosen",
       "action": "open",
       "link": "probe/theme",

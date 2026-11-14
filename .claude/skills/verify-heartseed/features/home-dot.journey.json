@@ -43,6 +43,14 @@
       "receipt": "snapshot"
     },
     {
+      "name": "home-dot-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
       "name": "home-start-run",
       "action": "tap",
       "target": "label=Start",

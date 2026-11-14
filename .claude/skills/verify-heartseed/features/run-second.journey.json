@@ -44,6 +44,14 @@
       "receipt": "none"
     },
     {
+      "name": "run-second-top",
+      "action": "scroll",
+      "target": "label=Your field",
+      "direction": "up",
+      "expect": [{ "shows": "label=Your field" }],
+      "receipt": "none"
+    },
+    {
       "name": "run-second-due",
       "action": "tap",
       "target": "label=Start",

@@ -14,8 +14,8 @@
  *   holds, and the files still allowed to hold them;
  * - R6 `ownerFaults` and `citeFaults`: each journey is run by its feature
  *   file, and each cite of a step names one that ships;
- * - R7 `footFaults`: a journey that scrolls home to its foot scrolls it back
- *   up before it ends.
+ * - R7 `footFaults`: a journey that scrolls home to its foot (any node under
+ *   its lists) scrolls it back up before it ends.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -206,20 +206,82 @@ export const startFaults = (journey: Journey): ReadonlyArray<string> => {
   return [`${journey.feature}/${first.name} is no open that shows where the journey starts`];
 };
 
-/** The targets at home's foot, under its lists: `Add a list` and the limit line. */
-const FOOT = new Set(['id=add-list', 'id=limit']);
+/**
+ * Home's foot, under its lists (`src/field/screen.tsx`), by test id: the
+ * legend, `Add a list` and its tip, the limit line, and the end rows.
+ */
+const FOOT_IDS = new Set(['legend', 'add-list', 'tip-3', 'limit', 'end-row']);
+
+/** Home's foot by label, folded: the legend's caption, `Add a list`, and the end rows `Settings` and `How Heartseed works`. */
+const FOOT_LABELS = new Set(['mark 4:28', 'add a list', 'settings', 'how heartseed works']);
+
+/** Whether `selector` names a node of home's foot, in any spelling `sim` reads. */
+const atFoot = (selector: string) => {
+  const { by, value } = parseSelector(selector);
+  if (by === 'id') return FOOT_IDS.has(value);
+  return FOOT_LABELS.has(value.toLowerCase());
+};
 
 /**
- * R7. A journey whose last scroll goes to home's foot (`id=add-list` or
- * `id=limit`): it leaves home scrolled down, and the next journey in its
- * feature file's order, whose `open` keeps the running app's offset, starts
- * past the furrows it waits for. Such a journey ends with a scroll up to
- * `label=Your field`.
+ * The journeys that start inside a sheet or screen a journey before them
+ * opened over home scrolled to its foot (their first step an `open` that
+ * keeps the running app), so home sits at its foot under them.
+ */
+const CONTINUES: ReadonlySet<string> = new Set([
+  'natural-voice',
+  'natural-try',
+  'session-voice-kept',
+  'session-restore',
+  'session-done',
+  'wake-sheet-stays',
+  'passage-clip',
+  'passage-plant',
+]);
+
+/**
+ * The journeys that end inside a sheet or screen over home's foot on
+ * purpose, each with why: the journey after them in their feature file
+ * starts inside it (`CONTINUES`).
+ */
+const HANDS_ON: ReadonlyMap<string, string> = new Map([
+  [
+    'natural-sheet',
+    'natural.md snapshots the open Settings sheet; natural-voice and natural-try act in it',
+  ],
+  ['natural-voice', 'natural.md and session.md snapshot the sheet after each Voice tap'],
+  ['natural-try', 'natural.md snapshots the sheet after Try again'],
+  ['session-choose', 'session-restore restores the choices in the sheet it leaves open'],
+  ['session-voice-kept', 'natural-voice turns the Voice back in the sheet it leaves open'],
+  ['wake', 'wake-sheet-stays proves the sheet stays open across the wake'],
+  ['passage', 'passage-clip goes on choosing in the chooser it leaves open'],
+  ['passage-clip', 'passage-plant plants from the chooser it leaves open'],
+]);
+
+/**
+ * R7. A journey that ends with home at its foot: after a scroll to any
+ * target of `FOOT_IDS` or `FOOT_LABELS` (or from its start, for a journey
+ * of `CONTINUES`), no scroll up to `label=Your field` and no `relaunch`.
+ * It leaves home scrolled down, and the next journey in its feature file's
+ * order, whose `open` keeps the running app's offset, starts past the
+ * furrows it waits for. A scroll to anything else (a sheet's row, a furrow)
+ * leaves home where the foot scroll put it. The fault names the last foot
+ * scroll, or the first step of a journey of `CONTINUES`; a journey of
+ * `HANDS_ON` ends at the foot on purpose, and is a fault when it does not.
  */
 export const footFaults = (journey: Journey): ReadonlyArray<string> => {
-  const last = journey.steps.findLast((step) => step.action === 'scroll');
-  if (last === undefined || last.action !== 'scroll' || !FOOT.has(last.target)) return [];
-  return [`${journey.feature}/${last.name} leaves home at its foot`];
+  let foot: Step | undefined;
+  if (CONTINUES.has(journey.feature)) foot = journey.steps[0];
+  for (const step of journey.steps) {
+    if (step.action === 'relaunch') foot = undefined;
+    if (step.action !== 'scroll') continue;
+    if (atFoot(step.target)) foot = step;
+    if (labelOf(step.target) === 'your field') foot = undefined;
+  }
+  const handsOn = HANDS_ON.has(journey.feature);
+  if (foot === undefined && handsOn)
+    return [`${journey.feature} hands on no sheet over home's foot`];
+  if (foot === undefined || handsOn) return [];
+  return [`${journey.feature}/${foot.name} leaves home at its foot`];
 };
 
 /**

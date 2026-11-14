@@ -262,8 +262,11 @@ is what a live drive follows: a journey that leaves app state behind (a
 recital's held result, a planted verse, an open visit) is followed only by
 journeys that start from it. A journey that must leave the app clean for
 the next ends with the step that does so (`sayit-lines` ends with
-`Next`; a journey that scrolled home to its foot ends with a scroll up to
-`label=Your field`).
+`Next`; a journey that scrolled home to its foot, to anything under its
+lists, `Settings` too, ends with a scroll up to `label=Your field`, after
+any sheet it opened there is closed). A journey that hands a sheet or the
+chooser opened over home's foot to the next one, and the next one that
+starts inside it, are named in the rules' `HANDS_ON` and `CONTINUES`.
 
 A journey's `open` relaunches the app only when its first `shows` is
 missing (its retry); a step that must start a launch (a new plan, a
@@ -278,9 +281,11 @@ fold is read in a raw snapshot taken by hand between two journeys
 of `apps/heartseed/scripts/journey-rules.ts` (a first-minute heading only
 after the welcome is left, no node hidden from VoiceOver, an open that
 shows first, every selector one the app can draw, and a journey that
-scrolls home to its foot, `id=add-list` or `id=limit`, scrolling back up
-to `label=Your field` before it ends, since the next journey's `open`
-keeps the running app's offset), and every feature file
+scrolls home to its foot, any node under its lists (the legend, `Add a
+list` and its tip, the limit line, `Settings`, `How Heartseed works`),
+scrolling back up to `label=Your field` or relaunching before it ends,
+even after a sheet it opened there, since the next journey's `open` keeps
+the running app's offset), and every feature file
 not yet moved to journeys to its `LEGACY` entry. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
