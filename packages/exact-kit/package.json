@@ -1,0 +1,22 @@
+{
+  "name": "@manna/exact-kit",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./run": "./src/run.ts",
+    "./data-host": "./src/data-host.ts",
+    "./no-copy": "./src/no-copy.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test ./src"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "effect-bun-test": "catalog:"
+  }
+}

@@ -126,6 +126,12 @@
         "vite": "8.3.6",
       },
     },
+    "apps/heartseed-exact": {
+      "name": "@manna/heartseed-exact",
+      "dependencies": {
+        "@manna/exact-kit": "workspace:*",
+      },
+    },
     "apps/hymnal": {
       "name": "@manna/hymnal-app",
       "version": "0.1.0",
@@ -163,6 +169,12 @@
         "rolldown": "1.2.13",
         "sharp": "0.35.5",
         "vite": "8.3.6",
+      },
+    },
+    "apps/hymnal-exact": {
+      "name": "@manna/hymnal-exact",
+      "dependencies": {
+        "@manna/exact-kit": "workspace:*",
       },
     },
     "apps/screening": {
@@ -236,6 +248,16 @@
       "devDependencies": {
         "@effect/vitest": "catalog:",
         "vitest": "^5.1.0",
+      },
+    },
+    "packages/exact-kit": {
+      "name": "@manna/exact-kit",
+      "dependencies": {
+        "@effect/platform-bun": "catalog:",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "effect-bun-test": "catalog:",
       },
     },
     "packages/film": {
@@ -767,15 +789,21 @@
 
     "@manna/egw-search": ["@manna/egw-search@workspace:apps/egw-search"],
 
+    "@manna/exact-kit": ["@manna/exact-kit@workspace:packages/exact-kit"],
+
     "@manna/film": ["@manna/film@workspace:packages/film"],
 
     "@manna/firsttheblade": ["@manna/firsttheblade@workspace:apps/firsttheblade"],
 
     "@manna/heartseed": ["@manna/heartseed@workspace:apps/heartseed"],
 
+    "@manna/heartseed-exact": ["@manna/heartseed-exact@workspace:apps/heartseed-exact"],
+
     "@manna/hymnal": ["@manna/hymnal@workspace:packages/hymnal"],
 
     "@manna/hymnal-app": ["@manna/hymnal-app@workspace:apps/hymnal"],
+
+    "@manna/hymnal-exact": ["@manna/hymnal-exact@workspace:apps/hymnal-exact"],
 
     "@manna/screening": ["@manna/screening@workspace:apps/screening"],
 
