@@ -127,14 +127,26 @@ const CASINGS: ReadonlyArray<(prefix: string, core: string, suffix: string) => s
       .replace(/_(\d)$/, '$1'),
 ];
 
-/** Every name of each core: each prefix, suffix and casing (`seed`, `RNGSeed`, `seedValue`, `seed2`, `RNG_SEED`, `HYMNAL_SEEDS1`). */
+/** The prefixes that end in a digit, which alone bounds the word after them when a name is written in one case with no separator. */
+const DIGIT_PREFIXES = ['RNG2', 'v2'];
+
+/** The suffixes a name in one case with no separator may carry: none, or a digit. */
+const DIGIT_SUFFIXES = ['', '2'];
+
+/** Every name of each core: each prefix, suffix and casing, and each digit prefix joined in one case with no separator (`seed`, `RNGSeed`, `seedValue`, `seed2`, `RNG_SEED`, `HYMNAL_SEEDS1`, `RNG2SEED`, `v2seed`). */
 const namesOf = (cores: ReadonlyArray<string>) => [
   ...new Set(
-    cores.flatMap((core) =>
-      PREFIXES.flatMap((prefix) =>
+    cores.flatMap((core) => [
+      ...PREFIXES.flatMap((prefix) =>
         SUFFIXES.flatMap((suffix) => CASINGS.map((write) => write(prefix, core, suffix))),
       ),
-    ),
+      ...DIGIT_PREFIXES.flatMap((prefix) =>
+        DIGIT_SUFFIXES.flatMap((suffix) => {
+          const name = `${prefix}${core}${suffix}`;
+          return [name.toUpperCase(), name.toLowerCase()];
+        }),
+      ),
+    ]),
   ),
 ];
 
@@ -334,9 +346,10 @@ const received = () =>
 /** The kinds of config a seed may be read with. */
 const CONFIG_KINDS = ['Int', 'Number', 'Integer', 'String'];
 
-/** The ways a config is given a default: piped, piped after a map, data-first, through `pipe`, after an option. */
+/** The ways a config is given a default: piped, piped after a map, data-first, through `pipe`, after an option, made by `pipe` then piped. */
 const CONFIG_DEFAULTS: ReadonlyArray<(config: string, source: string) => string> = [
   (c, s) => `${c}.pipe(Config.withDefault(${s}))`,
+  (c, s) => `pipe(${c}, Config.map((x) => x)).pipe(Config.withDefault(${s}))`,
   (c, s) => `${c}.pipe(Config.map((x) => x), Config.withDefault(${s}))`,
   (c, s) => `Config.withDefault(${c}, ${s})`,
   (c, s) => `Config.withDefault(${c}.pipe(Config.map((x) => x)), ${s})`,
@@ -930,10 +943,12 @@ describe('manna/seed-from-clock', () => {
             'seedValue',
             'RNG_SEED',
             'hymnal_seeds',
+            'RNG2SEED',
+            'v2seed',
           ]),
         );
         expect(OTHER_NAMES).toEqual(
-          expect.arrayContaining(['Heartseed', 'HEARTSEED2', 'rngSeeded']),
+          expect.arrayContaining(['Heartseed', 'HEARTSEED2', 'rngSeeded', 'RNG2SEEDED']),
         );
       }),
   );
@@ -949,7 +964,7 @@ describe('manna/seed-from-clock', () => {
           cases: [seeds.length, others.length],
           missed: seeds.filter((line) => !reported.has(line)).slice(0, 5),
           reported: [...reportedOf(others)].slice(0, 5),
-        }).toEqual({ cases: [96, 96], missed: [], reported: [] });
+        }).toEqual({ cases: [112, 112], missed: [], reported: [] });
       }),
   );
 
