@@ -2,7 +2,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Match, Option } from 'effect';
 import { gapsOf, splitReported } from './gaps.ts';
 import { aliasesFor, isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
-import { preloadModules, preloadsOf } from './preload.ts';
+import { preloadModules } from './preload.ts';
 import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
 
@@ -427,7 +427,7 @@ describe('env-pass', () => {
             'test:slow:one': 'bun -r=src/boot.ts test ./src/x.slow.test.ts',
             'test:e2e': 'bun run-suite.ts --preload ./src/suite.ts e2e',
           },
-          bunfig: '[test]\npreload = "./src/env.ts"\n',
+          bunfig: 'preload = ["./src/all.ts"]\n[test]\npreload = "./src/env.ts"\n',
           wrappers: ['run-suite.ts'],
           runs: new Map([
             ['test', ['test']],
@@ -435,16 +435,11 @@ describe('env-pass', () => {
             ['test:e2e', ['test:e2e']],
           ]),
         };
-        expect(
-          ['test', 'test:slow', 'test:e2e'].map((task) => preloadsOf(workspace, task)),
-        ).toEqual([
-          ['./src/env.ts', './src/test/setup.ts'],
-          ['src/boot.ts', './src/env.ts'],
-          ['./src/env.ts', './src/suite.ts'],
-        ]);
         const resolve = resolverOf({
           files: new Set([
             'a/src/x.test.ts',
+            'a/src/not.ts',
+            'a/src/all.ts',
             'a/src/test/setup.ts',
             'a/src/test/clock.ts',
             'a/src/boot.ts',
@@ -457,6 +452,7 @@ describe('env-pass', () => {
         });
         const { modules, unresolved } = preloadModules([workspace], resolve);
         expect(Object.fromEntries(modules)).toEqual({
+          'a/src/all.ts': { dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
           'a/src/env.ts': { dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
           'a/src/test/setup.ts': { dir: 'a', tasks: ['test'] },
           'a/src/boot.ts': { dir: 'a', tasks: ['test:slow'] },

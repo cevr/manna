@@ -94,14 +94,14 @@ const scriptPreloads = (
 };
 
 /** The modules a task preloads, as written: those of each package script that runs inside it. */
-export const preloadsOf = (workspace: Workspace, task: string): ReadonlyArray<string> => [
+const preloadsOf = (workspace: Workspace, task: string): ReadonlyArray<string> => [
   ...new Set(
     (workspace.runs.get(task) ?? []).flatMap((name) => scriptPreloads(workspace, name, new Set())),
   ),
 ];
 
 /** A preload module of the repo: its workspace's folder and the tasks that preload it. */
-export interface PreloadModule {
+interface PreloadModule {
   readonly dir: string;
   readonly tasks: ReadonlyArray<string>;
 }
