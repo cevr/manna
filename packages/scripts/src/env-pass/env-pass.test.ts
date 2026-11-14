@@ -2,6 +2,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Match, Option } from 'effect';
 import { gapsOf, splitReported } from './gaps.ts';
 import { aliasesFor, isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
+import { preloadModules, preloadsOf } from './preload.ts';
 import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
 
@@ -351,6 +352,158 @@ describe('env-pass', () => {
             file: 'h/src/r.test.tsx',
             name: 'RIG_SEED',
             by: 'h/src/test/rig.ts',
+          },
+        ]);
+      }),
+  );
+
+  it.effect(
+    "takes the paths of the tsconfig a tsconfig extends, from that one's folder, transitively, until one sets its own",
+    () =>
+      Effect.sync(() => {
+        const aliases = aliasesFor(
+          new Map<string, Tsconfig>([
+            [
+              'config/tsconfig.base.json',
+              {
+                compilerOptions: {
+                  baseUrl: '..',
+                  paths: { '#shared/*': ['packages/shared/src/*'] },
+                },
+              },
+            ],
+            ['tsconfig.json', { extends: './config/tsconfig.base.json' }],
+            ['packages/a/tsconfig.json', { extends: '../../tsconfig.json' }],
+            [
+              'apps/h/tsconfig.json',
+              {
+                extends: '../../tsconfig.json',
+                compilerOptions: { paths: { '~/*': ['./src/*'] } },
+              },
+            ],
+            ['apps/loop/tsconfig.json', { extends: './tsconfig.json' }],
+          ]),
+        );
+        expect(Option.getOrUndefined(aliases('packages/a/src/x.ts'))).toEqual({
+          base: '',
+          paths: { '#shared/*': ['packages/shared/src/*'] },
+        });
+        expect(Option.getOrUndefined(aliases('apps/h/src/x.ts'))).toEqual({
+          base: 'apps/h',
+          paths: { '~/*': ['./src/*'] },
+        });
+        expect(Option.isNone(aliases('apps/loop/src/x.ts'))).toBe(true);
+        const resolve = resolverOf({
+          files: new Set(['packages/shared/src/util.ts', 'apps/h/src/util.ts']),
+          packages: [],
+          aliasesFor: aliases,
+          installed: () => false,
+          builtins: new Set(),
+        });
+        expect(
+          [
+            ['packages/a/src/x.ts', '#shared/util'],
+            ['apps/h/src/x.ts', '#shared/util'],
+            ['apps/h/src/x.ts', '~/util'],
+          ].map(([from = '', specifier = '']) =>
+            Match.value(resolve(from, specifier)).pipe(
+              Match.tag('Module', ({ file }) => file),
+              Match.orElse(({ _tag }) => _tag),
+            ),
+          ),
+        ).toEqual(['packages/shared/src/util.ts', 'Unresolved', 'apps/h/src/util.ts']);
+      }),
+  );
+
+  it.effect(
+    'a module a task preloads is an entry of that task: a variable it reads that turbo does not pass is a gap',
+    () =>
+      Effect.sync(() => {
+        const workspace = {
+          dir: 'a',
+          scripts: {
+            test: "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/x.test.ts",
+            'test:slow': 'bun run test:slow:one && bun ./tool.ts --preload ./src/not.ts',
+            'test:slow:one': 'bun -r=src/boot.ts test ./src/x.slow.test.ts',
+            'test:e2e': 'bun run-suite.ts --preload ./src/suite.ts e2e',
+          },
+          bunfig: '[test]\npreload = "./src/env.ts"\n',
+          wrappers: ['run-suite.ts'],
+          runs: new Map([
+            ['test', ['test']],
+            ['test:slow', ['test:slow']],
+            ['test:e2e', ['test:e2e']],
+          ]),
+        };
+        expect(
+          ['test', 'test:slow', 'test:e2e'].map((task) => preloadsOf(workspace, task)),
+        ).toEqual([
+          ['./src/env.ts', './src/test/setup.ts'],
+          ['src/boot.ts', './src/env.ts'],
+          ['./src/env.ts', './src/suite.ts'],
+        ]);
+        const resolve = resolverOf({
+          files: new Set([
+            'a/src/x.test.ts',
+            'a/src/test/setup.ts',
+            'a/src/test/clock.ts',
+            'a/src/boot.ts',
+            'a/src/env.ts',
+          ]),
+          packages: [],
+          aliasesFor: () => Option.none(),
+          installed: () => false,
+          builtins: new Set(),
+        });
+        const { modules, unresolved } = preloadModules([workspace], resolve);
+        expect(Object.fromEntries(modules)).toEqual({
+          'a/src/env.ts': { dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
+          'a/src/test/setup.ts': { dir: 'a', tasks: ['test'] },
+          'a/src/boot.ts': { dir: 'a', tasks: ['test:slow'] },
+        });
+        expect(unresolved).toEqual([{ dir: 'a', task: 'test:e2e', specifier: './src/suite.ts' }]);
+        const graph = new Map([
+          ['a/src/x.test.ts', { reads: [], deps: [], entry: false }],
+          ['a/src/test/setup.ts', { reads: [], deps: ['a/src/test/clock.ts'], entry: false }],
+          ['a/src/test/clock.ts', { reads: ['CLOCK_ZONE'], deps: [], entry: false }],
+          ['a/src/boot.ts', { reads: ['BOOT_SEED'], deps: [], entry: false }],
+          ['a/src/env.ts', { reads: ['ENV_SEED'], deps: [], entry: false }],
+        ]);
+        const ofTests = (file: string) => file.endsWith('.test.ts') || isTestSupport(file);
+        expect(productOf(graph, ofTests).has('a/src/boot.ts')).toBe(true);
+        const product = productOf(graph, (file) => ofTests(file) || modules.has(file));
+        expect(
+          gapsOf(
+            { tasks: { test: { env: ['ENV_SEED'] }, 'test:slow': { env: ['ENV_SEED'] } } },
+            new Map(),
+            [...modules].map(([file, { dir, tasks }]) => ({
+              file,
+              dir,
+              tasks,
+              reads: readsThrough(file, graph, product),
+            })),
+          ),
+        ).toEqual([
+          {
+            dir: 'a',
+            task: 'test:e2e',
+            file: 'a/src/env.ts',
+            name: 'ENV_SEED',
+            by: 'a/src/env.ts',
+          },
+          {
+            dir: 'a',
+            task: 'test',
+            file: 'a/src/test/setup.ts',
+            name: 'CLOCK_ZONE',
+            by: 'a/src/test/clock.ts',
+          },
+          {
+            dir: 'a',
+            task: 'test:slow',
+            file: 'a/src/boot.ts',
+            name: 'BOOT_SEED',
+            by: 'a/src/boot.ts',
           },
         ]);
       }),

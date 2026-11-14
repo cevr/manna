@@ -18,6 +18,7 @@ import {
   readsThrough,
   resolverOf,
 } from './env-pass/graph.ts';
+import { preloadModules } from './env-pass/preload.ts';
 import { envReads, importsOf, parsedImports } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
 import { reachesIn, repoTests } from './test-budget/reach.ts';
@@ -224,7 +225,11 @@ Effect.gen(function* () {
       { concurrency: 16 },
     ),
   );
-  const product = productOf(graph, (file) => texts.has(file) || isTestSupport(file));
+  const preloads = preloadModules(workspaces, resolve);
+  const product = productOf(
+    graph,
+    (file) => texts.has(file) || isTestSupport(file) || preloads.modules.has(file),
+  );
   const reading = repo.tests
     .map((test) => ({ ...test, reads: readsThrough(test.file, graph, product) }))
     .filter(({ reads }) => reads.size > 0);
@@ -251,7 +256,18 @@ Effect.gen(function* () {
       },
     ),
   );
-  const { open, reported, stale } = splitReported(gapsOf(rootTurbo, turbos, reached), REPORTED);
+  const preloading = [...preloads.modules]
+    .map(([file, { dir, tasks }]) => ({
+      file,
+      dir,
+      tasks,
+      reads: readsThrough(file, graph, product),
+    }))
+    .filter(({ reads }) => reads.size > 0);
+  const { open, reported, stale } = splitReported(
+    gapsOf(rootTurbo, turbos, [...reached, ...preloading]),
+    REPORTED,
+  );
   const said = (gap: Gap) => {
     const through = [gap.by].filter((by) => by !== gap.file).map((by) => ` through ${by}`);
     return `${gap.dir}#${gap.task}: ${gap.file} reads ${gap.name}${through.join('')}`;
@@ -284,7 +300,9 @@ Effect.gen(function* () {
     { discard: true },
   );
   const testSide = new Set(
-    repo.tests.flatMap(({ file }) => loadedBy(file, graph)).filter((file) => !product.has(file)),
+    [...repo.tests.map(({ file }) => file), ...preloads.modules.keys()]
+      .flatMap((file) => loadedBy(file, graph))
+      .filter((file) => !product.has(file)),
   );
   const unresolved = (yield* Effect.forEach(
     [...new Set(scanned.map(([file]) => file))].filter((file) => testSide.has(file)),
@@ -302,11 +320,20 @@ Effect.gen(function* () {
       ),
     { discard: true },
   );
+  yield* Effect.forEach(
+    preloads.unresolved,
+    ({ dir, task, specifier }) =>
+      Console.log(
+        `env-pass unresolved: ${dir}#${task} preloads '${specifier}', which names no module of the repo and no installed package, so the check cannot see what it reads`,
+      ),
+    { discard: true },
+  );
+  const missed = unresolved.length + preloads.unresolved.length;
   const ended = yield* Clock.currentTimeMillis;
   yield* Console.log(
-    `env-pass: ${reached.length} test file(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${unresolved.length} unresolved, ${ended - started} ms`,
+    `env-pass: ${reached.length} test file(s) and ${preloading.length} preload(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${missed} unresolved, ${ended - started} ms`,
   );
   yield* Effect.sync(() => {
-    process.exitCode = Math.min(open.length + stale.length + unresolved.length, 1);
+    process.exitCode = Math.min(open.length + stale.length + missed, 1);
   });
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer), BunRuntime.runMain);

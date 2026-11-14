@@ -125,7 +125,7 @@ export const aliasesFor =
   };
 
 /** What an import names: a module of the repo, something else that is there (a builtin, an installed package, a data file), or nothing. */
-type Resolved =
+export type Resolved =
   | { readonly _tag: 'Module'; readonly file: string }
   | { readonly _tag: 'Other' }
   | { readonly _tag: 'Unresolved' };
