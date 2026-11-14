@@ -1,0 +1,13 @@
+{
+  "name": "@manna/hymnal-exact",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "exact": "bun exact.mjs",
+    "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test ./src"
+  },
+  "dependencies": {
+    "@manna/exact-kit": "workspace:*"
+  }
+}

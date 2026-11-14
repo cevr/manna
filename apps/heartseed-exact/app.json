@@ -1,0 +1,24 @@
+{
+  "name": "Heartseed",
+  "short_name": "Heartseed",
+  "id": "app.heartseed.exact",
+  "start_url": "/",
+  "display": "standalone",
+  "app": {
+    "id": "app.heartseed.exact",
+    "name": "Heartseed"
+  },
+  "host": {
+    "web": {},
+    "ios": {
+      "minimumOS": "17.0",
+      "deviceFamily": ["iphone", "ipad"]
+    }
+  },
+  "deploy": {
+    "store": {
+      "web": "0",
+      "ios": "0"
+    }
+  }
+}

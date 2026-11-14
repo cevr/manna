@@ -1,0 +1,24 @@
+{
+  "name": "Hymnal",
+  "short_name": "Hymnal",
+  "id": "im.cvr.hymnal.exact",
+  "start_url": "/",
+  "display": "standalone",
+  "app": {
+    "id": "im.cvr.hymnal.exact",
+    "name": "Hymnal"
+  },
+  "host": {
+    "web": {},
+    "ios": {
+      "minimumOS": "17.0",
+      "deviceFamily": ["iphone", "ipad"]
+    }
+  },
+  "deploy": {
+    "store": {
+      "web": "0",
+      "ios": "0"
+    }
+  }
+}
