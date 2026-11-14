@@ -51,7 +51,8 @@ const standIn = (calls: Array<Call>): DriveMembers => {
     tap: step('tap'),
     fill: step('fill'),
     back: step('back'),
-    scroll: step('scroll'),
+    scroll: (...args) =>
+      Effect.map(step('scroll')(...args), (done) => ({ ...done, motion: Option.none() })),
     shot: step('shot'),
     snapshot: step('snapshot'),
     read: step('read'),

@@ -50,7 +50,8 @@ import {
   areaFor,
   type Ask,
   hides,
-  moved,
+  Motion,
+  motionOf,
   nodesOf,
   type Pan as ScreenPan,
   panFor,
@@ -93,6 +94,11 @@ export interface Outcome {
 
 /** What a step saw, in short. */
 type Detail = Record<string, string | number | boolean>;
+
+/** What a scroll reports: a step's outcome, and what its pans did to the scroll view (`Motion`), none where no pan of the drive's was judged. */
+interface Scrolled extends Outcome {
+  readonly motion: Option.Option<Motion>;
+}
 
 const outcome = (platform: Platform, paths: Record<string, string>, detail: Detail): Outcome => ({
   platform,
@@ -961,7 +967,8 @@ const panText = (pan: ScreenPan) => `${pan.x},${pan.y} by ${pan.dx},${pan.dy}`;
  * One pan of `area` in `direction`, inside the part of it on screen
  * (`panFor`), then the screen's nodes once the content has come to rest
  * (two looks in a row with it in one place, `settled`, so the next tap lands
- * on still content); it fails `ScrollStuck` when the content stayed where it
+ * on still content), and what the pan did to the view's content
+ * (`motionOf`); it fails `ScrollStuck` when the content stayed where it
  * was while the view still hid more of it that way.
  */
 const panArea = Effect.fn('Sim.panArea')(function* (
@@ -986,10 +993,35 @@ const panArea = Effect.fn('Sim.panArea')(function* (
     after = next;
     if (still) break;
   }
-  const went = moved(area, after, direction);
-  if (!went && hides(area, direction))
+  const motion = motionOf(area, after, direction);
+  if (Motion.$is('Unmoved')(motion) && hides(area, direction))
     return yield* ScrollStuck.make({ target: text, direction, pan: panText(pan) });
-  return { after, went, pan };
+  return { after, motion, pan };
+});
+
+/** What a scroll on iOS saw: what its pans did to the view (none when agent-device scrolled), and its detail. */
+interface Seen {
+  readonly motion: Option.Option<Motion>;
+  readonly detail: Detail;
+}
+
+/** A motion as `detail.motion` prints it. */
+const motionText = Motion.$match({
+  Moved: () => 'moved',
+  Unmoved: () => 'unmoved',
+  Gone: () => 'gone',
+});
+
+/** Which of a scroll's pans names its motion: a lost view over any move, a move over none. */
+const WEIGHT: Record<Motion['_tag'], number> = { Unmoved: 0, Moved: 1, Gone: 2 };
+
+/** A scroll agent-device made itself: no pan of the drive's, so nothing judged. */
+const UNJUDGED: Seen = { motion: Option.none(), detail: {} };
+
+/** What pans that did `motion` saw, with `detail` beside its printed name. */
+const seenAs = (motion: Motion, detail: Detail): Seen => ({
+  motion: Option.some(motion),
+  detail: { ...detail, motion: motionText(motion) },
 });
 
 /**
@@ -1005,16 +1037,19 @@ const scrollScreenIos = Effect.fn('Sim.scrollScreenIos')(function* (
   const area = areaFor(yield* nodesNow(app, udid), direction);
   if (Option.isNone(area)) {
     yield* inApp(app, udid, ['scroll', direction, '--settle']);
-    return Option.none<Detail>();
+    return UNJUDGED;
   }
-  const { went, pan } = yield* panArea(app, udid, area.value, direction, 'screen');
-  return Option.some<Detail>({ moved: went, pan: panText(pan) });
+  const { motion, pan } = yield* panArea(app, udid, area.value, direction, 'screen');
+  return seenAs(motion, { pan: panText(pan) });
 });
 
 /**
  * Scroll on iOS until the target shows (`shows`): a pan at a time, each
  * checked to move the content, at most `MAX_PASSES`. With no scroll view on
- * screen that scrolls that way, agent-device's own `scroll --until`.
+ * screen that scrolls that way, agent-device's own `scroll --until`. Its
+ * motion is `Gone` when any pan lost its view (the next pan takes the view
+ * then in front), else `Moved` after a pan, else `Unmoved`; a target that
+ * never shows after a lost view fails naming the pan that lost it.
  */
 const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
   app: App,
@@ -1024,22 +1059,35 @@ const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
   direction: Direction,
 ) {
   const target = parseTarget(text);
+  let lost = Option.none<string>();
+  let motion: Motion = Motion.Unmoved();
   const missing = (driver: string) =>
-    TargetMissing.make({ target: text, platform: session.platform, driver });
+    TargetMissing.make({
+      target: text,
+      platform: session.platform,
+      driver: Option.match(lost, {
+        onNone: () => driver,
+        onSome: (pan) => `${driver}; the pan from ${pan} lost its scroll view (a sheet closed?)`,
+      }),
+    });
   let nodes = yield* nodesNow(app, udid);
   for (let passes = 0; passes <= MAX_PASSES; passes += 1) {
-    if (shows(nodes, target)) return Option.some<Detail>({ passes });
+    if (shows(nodes, target)) return seenAs(motion, { passes });
     const area = areaFor(nodes, direction);
     if (Option.isNone(area) && passes === 0) {
       yield* inApp(app, udid, ['scroll', direction, '--until', iosSelector(target)]).pipe(
         Effect.catchTag('ToolFailed', missingFrom(session, text)),
       );
-      return Option.none<Detail>();
+      return UNJUDGED;
     }
     if (Option.isNone(area)) return yield* missing(`no scroll view scrolls ${direction} now`);
     if (!hides(area.value, direction))
       return yield* missing(`the scroll view's content ends after ${passes} pans ${direction}`);
-    nodes = (yield* panArea(app, udid, area.value, direction, text)).after;
+    const panned = yield* panArea(app, udid, area.value, direction, text);
+    nodes = panned.after;
+    if (WEIGHT[panned.motion._tag] > WEIGHT[motion._tag]) motion = panned.motion;
+    if (Motion.$is('Gone')(panned.motion))
+      lost = Option.orElse(lost, () => Option.some(panText(panned.pan)));
   }
   return yield* missing(`not shown after ${MAX_PASSES} pans ${direction}`);
 });
@@ -1047,8 +1095,12 @@ const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
 /**
  * Scroll the screen one step in `direction` (target `screen`), or until the
  * target shows: on iOS by pans inside the scroll view, each checked to move
- * its content (`detail.moved`; `ScrollStuck` when one moved nothing while the
- * view hid more), on the web by scrolling it into view.
+ * its content (`ScrollStuck` when one moved nothing while the view hid
+ * more), on the web by scrolling it into view. Its `motion` says what the
+ * pans did to the view (`Motion`; `detail.motion` prints it): `Gone` when the
+ * view they panned no longer shows, so a caller that needs the view to stay
+ * (a sheet) can tell; none where no pan of the drive's was judged (the web,
+ * agent-device's own scroll).
  */
 const scroll = Effect.fn('Sim.scroll')(function* (
   place: Place,
@@ -1058,7 +1110,7 @@ const scroll = Effect.fn('Sim.scroll')(function* (
 ) {
   const app = place.config;
   const session = yield* readSession(place);
-  let seen = Option.none<Detail>();
+  let seen = UNJUDGED;
   if (session.platform === 'ios') {
     const udid = yield* booted(app, session);
     if (text === 'screen') seen = yield* scrollScreenIos(app, udid, direction);
@@ -1081,11 +1133,10 @@ const scroll = Effect.fn('Sim.scroll')(function* (
     yield* present(app, session, text, seconds);
     yield* browser(app, ['scrollintoview', webSelector(parseTarget(text))]);
   }
-  return outcome(
-    session.platform,
-    {},
-    { target: text, direction, ...Option.getOrElse(seen, () => ({})) },
-  );
+  return {
+    ...outcome(session.platform, {}, { target: text, direction, ...seen.detail }),
+    motion: seen.motion,
+  } satisfies Scrolled;
 });
 
 const shot = Effect.fn('Sim.shot')(function* (place: Place, name: Option.Option<string>) {

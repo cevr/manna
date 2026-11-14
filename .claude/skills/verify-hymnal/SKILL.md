@@ -152,8 +152,10 @@ The recipe beside each says what to read in its receipts and which steps stay by
   never from a fixed header or footer around it, waits for the pan's fling to bring the content to rest
   (so the next tap lands on still content), and checks that same view's content moved (a hymn
   page's pager shares the page's frame and is never taken for it):
-  `detail.moved` (false at the content's end), or `ScrollStuck` when a pan moved nothing while the view
-  hides more. A target scroll pans until the target's centre is on screen, inside each scroll view that holds it (a row past a sheet's top edge is clipped, not shown), and hittable
+  `detail.motion` is `moved`, `unmoved` (at the content's end) or `gone` (no scroll view of that frame
+  shows any more: a sheet the pan closed), or `ScrollStuck` when a pan moved nothing while the view
+  hides more. In a journey, a scroll whose view is gone fails a `shows` expect that then does not show
+  as `ScrollGone`, naming the lost view, not as a missing target. A target scroll pans until the target's centre is on screen, inside each scroll view that holds it (a row past a sheet's top edge is clipped, not shown), and hittable
   (`detail.passes`), else `TargetMissing`.
 - `sim read [name] [--id <testID>]… [--label <name>]…` (iOS) reads the screen as numbers, never words:
   for each asked testID (a trailing `*` reads every id it begins) and name, its nodes' frames, states
@@ -306,7 +308,9 @@ and exits 1 (`journey` prints one line per step, then its summary). The
 tags: `WarmCheckout`, `NoSession`, `SimulatorDown`, `ReadinessTimedOut`,
 `TargetMissing` (with what the driver said), `TargetShown` (a `hides`
 expect still showed), `ScrollStuck` (a scroll's pan moved nothing while
-its view hides more), `BadJourney` (a journey file that does not decode),
+its view hides more), `ScrollGone` (a journey's scroll lost the view it
+panned, a sheet the pan closed, and a `shows` expect then did not show),
+`BadJourney` (a journey file that does not decode),
 `ToolMissing`, `ToolFailed`, `NotOnPlatform`, `HostFailed`, `Escaped` (the
 contained host refused a path that leads out of its roots), `Unhealthy`,
 `BootRefused` (`boot` started nothing: the state holds a live, legacy or
