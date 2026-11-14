@@ -13,6 +13,8 @@ manna/
 │   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@manna/firsttheblade; Alchemy → Cloudflare)
 │   ├── heartseed/      # Heartseed: Scripture memory on One (React 19.3, React Native 0.88) for iOS first (@manna/heartseed)
 │   ├── hymnal/         # The hymnal app: One 2.15 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
+│   ├── heartseed-exact/ # Heartseed ported to Exact (Contract view, TypeScript data), beside apps/heartseed until it replaces it (@manna/heartseed-exact; docs/exact.md)
+│   ├── hymnal-exact/   # The hymnal ported to Exact, iOS and the web first (@manna/hymnal-exact; docs/exact.md)
 │   └── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
 ├── packages/
 │   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
@@ -23,6 +25,7 @@ manna/
 │   ├── url-state/      # Typed URL state: Effect Schema codecs, a Location service, an atom binding (@manna/url-state)
 │   ├── ui/             # Base UI's unstyled parts ported to Solid 2 (@manna/ui; browser tests via its test:browser)
 │   ├── sim/            # The simulator driver an app's `sim` script runs, the app given as data (@manna/sim; the hymnal's is apps/hymnal/scripts/sim-app.ts)
+│   ├── exact-kit/      # The `bun run exact` wrapper for the Exact ports, the data-host test helper, the copy guard (@manna/exact-kit; docs/exact.md)
 │   └── scripts/        # Corpus compilers and repo tooling (@manna/scripts)
 ```
 
