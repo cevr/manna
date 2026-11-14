@@ -20,11 +20,13 @@ import {
   BadJourney,
   hostError,
   NotOnPlatform,
+  ScrollGone,
   SimError,
   type TargetMissing,
   TargetShown,
 } from './errors.ts';
 import { encodeFailure, type Session } from './result.ts';
+import { Motion } from './screen.ts';
 
 /** How long a pan takes, in milliseconds, when no `ms` is given. */
 export const PAN_MS = 900;
@@ -248,12 +250,21 @@ const showsOf = (expect: Expectation): Option.Option<string> => {
 };
 
 /**
+ * What a step's action did: the index of the expect it checked itself, if
+ * any, and, for a scroll, what its pans did to the scroll view.
+ */
+interface Acted {
+  readonly checked: Option.Option<number>;
+  readonly motion: Option.Option<Motion>;
+}
+
+/**
  * Run a step's action; the index of the expect the action checked itself, if
  * any: an open waits for its first `shows`, wherever it sits among the expects.
  */
 const act = (d: DriveMembers, place: Place, step: Step) => {
   const seconds = step.timeout ?? STEP_SECONDS;
-  const none = Option.none<number>();
+  const none: Acted = { checked: Option.none(), motion: Option.none() };
   switch (step.action) {
     case 'open': {
       const at = step.expect.findIndex((expect) => 'shows' in expect);
@@ -264,7 +275,7 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
         shows,
         step.timeout ?? OPEN_SECONDS,
         step.relaunch ?? true,
-      ).pipe(Effect.as(Option.map(shows, () => at)));
+      ).pipe(Effect.as({ ...none, checked: Option.map(shows, () => at) }));
     }
     case 'tap':
       return Effect.as(d.tap(place, step.target, seconds), none);
@@ -273,7 +284,10 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
     case 'back':
       return Effect.as(d.back(place), none);
     case 'scroll':
-      return Effect.as(d.scroll(place, step.target, step.direction, seconds), none);
+      return Effect.map(d.scroll(place, step.target, step.direction, seconds), (done): Acted => ({
+        ...none,
+        motion: done.motion,
+      }));
     case 'gesture': {
       const from = Option.getOrElse(panStart(step.from), () => step.from);
       return Effect.as(
@@ -302,6 +316,42 @@ const meet = (d: DriveMembers, place: Place, expect: Expectation, seconds: numbe
     Effect.andThen(Effect.fail(TargetShown.make({ target: expect.hides }))),
     Effect.catchTag('TargetMissing', () => Effect.void),
   );
+};
+
+/**
+ * Check one expect of `step` after its action: a scroll whose pans lost the
+ * view they panned (`Gone`, a sheet the pan closed) fails a `shows` that does
+ * not show as `ScrollGone`, naming the lost view, not as a missing target.
+ */
+const meetAfter = (
+  d: DriveMembers,
+  place: Place,
+  step: Step,
+  acted: Acted,
+  expect: Expectation,
+) => {
+  const seconds = step.timeout ?? STEP_SECONDS;
+  if (step.action !== 'scroll' || !('shows' in expect)) return meet(d, place, expect, seconds);
+  const lost = (missing: TargetMissing) =>
+    Motion.$match({
+      Moved: () => Effect.fail(missing),
+      Unmoved: () => Effect.fail(missing),
+      Gone: () =>
+        Effect.fail(
+          ScrollGone.make({
+            target: step.target,
+            direction: step.direction,
+            expected: expect.shows,
+          }),
+        ),
+    });
+  return d
+    .sees(place, expect.shows, seconds)
+    .pipe(
+      Effect.catchTag('TargetMissing', (missing) =>
+        Option.match(acted.motion, { onNone: () => Effect.fail(missing), onSome: lost(missing) }),
+      ),
+    );
 };
 
 /** Take a step's receipts, named `<feature>-<nn>-<step>`: the files they wrote. */
@@ -352,10 +402,10 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
     const done = yield* Effect.result(
       hostFailed(
         Effect.gen(function* () {
-          const checked = yield* act(d, place, step);
+          const acted = yield* act(d, place, step);
           for (const [index, expect] of step.expect.entries()) {
-            if (Option.contains(checked, index)) continue;
-            yield* meet(d, place, expect, step.timeout ?? STEP_SECONDS);
+            if (Option.contains(acted.checked, index)) continue;
+            yield* meetAfter(d, place, step, acted, expect);
           }
         }),
       ),

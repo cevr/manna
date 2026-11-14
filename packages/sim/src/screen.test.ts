@@ -17,7 +17,7 @@ import {
   type Area,
   areaFor,
   hides,
-  moved,
+  motionOf,
   type Node,
   nodesOf,
   panFor,
@@ -95,13 +95,27 @@ describe('the screen a scroll pans', () => {
       }),
   );
 
-  it.effect('the content moved when the same view shows it elsewhere, or the view is gone', () =>
-    Effect.sync(() => {
-      const before = area(chooser(0), 'down');
-      expect(moved(before, chooser(0), 'down')).toBe(false);
-      expect(moved(before, chooser(317), 'down')).toBe(true);
-      expect(moved(before, pager, 'down')).toBe(true);
-    }),
+  it.effect(
+    'the content moved when the same view shows it elsewhere, is unmoved in place, and is gone with the view',
+    () =>
+      Effect.sync(() => {
+        const before = area(chooser(0), 'down');
+        expect(motionOf(before, chooser(0), 'down')._tag).toBe('Unmoved');
+        expect(motionOf(before, chooser(317), 'down')._tag).toBe('Moved');
+        expect(motionOf(before, pager, 'down')._tag).toBe('Gone');
+      }),
+  );
+
+  it.effect(
+    'a sheet the pan closed is gone, never moved, though the page it covered still shows',
+    () =>
+      Effect.sync(() => {
+        const sheet = area(hymnPage(116, Option.some(495)), 'down');
+        expect(motionOf(sheet, hymnPage(116), 'down')._tag).toBe('Gone');
+        expect(motionOf(sheet, hymnPage(-506), 'down')._tag).toBe('Gone');
+        expect(settled(sheet, hymnPage(116, Option.some(200)), hymnPage(116), 'down')).toBe(false);
+        expect(settled(sheet, hymnPage(116), hymnPage(116), 'down')).toBe(true);
+      }),
   );
 
   it.effect('more is hidden below until the content ends, and above once it scrolled', () =>
@@ -199,8 +213,8 @@ describe('the scroll view on the hymnal’s screens', () => {
       Effect.sync(() => {
         const page = area(hymnPage(116), 'down');
         expect(page.frame).toEqual(PAGE);
-        expect(moved(page, hymnPage(116), 'down')).toBe(false);
-        expect(moved(page, hymnPage(-506), 'down')).toBe(true);
+        expect(motionOf(page, hymnPage(116), 'down')._tag).toBe('Unmoved');
+        expect(motionOf(page, hymnPage(-506), 'down')._tag).toBe('Moved');
       }),
   );
 
@@ -225,8 +239,8 @@ describe('the scroll view on the hymnal’s screens', () => {
           expect(y).toBeGreaterThan(SHEET.y);
           expect(y).toBeLessThan(SHEET.y + SHEET.height);
         }
-        expect(moved(sheet, hymnPage(-506, Option.some(495)), 'down')).toBe(false);
-        expect(moved(sheet, hymnPage(116, Option.some(200)), 'down')).toBe(true);
+        expect(motionOf(sheet, hymnPage(-506, Option.some(495)), 'down')._tag).toBe('Unmoved');
+        expect(motionOf(sheet, hymnPage(116, Option.some(200)), 'down')._tag).toBe('Moved');
       }),
   );
 
@@ -238,7 +252,9 @@ describe('the scroll view on the hymnal’s screens', () => {
         const sheet = area(covered, 'down');
         expect(sheet.frame).toEqual(SHEET);
         expect(hides(sheet, 'down')).toBe(false);
-        expect(moved(sheet, hymnPage(-506, Option.some(495), SHEET.height), 'down')).toBe(false);
+        expect(motionOf(sheet, hymnPage(-506, Option.some(495), SHEET.height), 'down')._tag).toBe(
+          'Unmoved',
+        );
         expect(area(hymnPage(116), 'down').frame).toEqual(PAGE);
       }),
   );
@@ -286,9 +302,11 @@ describe('the scroll view on the hymnal’s screens', () => {
               index: 1 + level * 2,
               depth: level,
             };
-            expect(moved(view, before, 'down')).toBe(false);
-            expect(moved(view, screen(0, offset), 'down')).toBe(false);
-            expect(moved(view, after, 'down')).toBe(level === shifted);
+            expect(motionOf(view, before, 'down')._tag).toBe('Unmoved');
+            expect(motionOf(view, screen(0, offset), 'down')._tag).toBe('Unmoved');
+            const went = motionOf(view, after, 'down')._tag;
+            expect(went === 'Moved').toBe(level === shifted);
+            expect(went).not.toBe('Gone');
           }
         }
       }),

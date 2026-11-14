@@ -2,9 +2,9 @@
  * The screen as agent-device's raw snapshot (`snapshot --json --raw`) gives
  * it on iOS, read as numbers and the caller's own names, never as an app's
  * words: the readout `sim read` prints, and the scroll view a `sim scroll`
- * pans inside, with whether its content moved.
+ * pans inside, with what a pan did to its content: moved, unmoved or gone.
  */
-import { Effect, Option, Schema } from 'effect';
+import { Data, Effect, Option, Schema } from 'effect';
 
 const Rect = Schema.Struct({
   x: Schema.Finite,
@@ -325,18 +325,30 @@ const sameIn = (area: Area, nodes: ReadonlyArray<Node>) =>
   );
 
 /**
- * Whether the content of `area` moved between its snapshot and `after`: the
- * same scroll view (its frame and its depth among scroll views, the nearest
- * in tree order when more than one match) shows its content elsewhere along
- * the axis of `direction`, or no longer shows (the screen changed). A pager
- * sharing its page's frame is never taken for the page.
+ * What a pan did to a scroll view: its content `Moved` along the pan's axis,
+ * stayed `Unmoved`, or the view is `Gone`: no scroll view of its frame and
+ * depth shows any more (a sheet the pan closed, or one that changed its
+ * frame), so nothing says where its content lies.
  */
-export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Direction) =>
+export type Motion = Data.TaggedEnum<{ Moved: {}; Unmoved: {}; Gone: {} }>;
+export const Motion = Data.taggedEnum<Motion>();
+
+/**
+ * What became of the content of `area` between its snapshot and `after`
+ * (`Motion`): the same scroll view (its frame and its depth among scroll
+ * views, the nearest in tree order when more than one match) shows its
+ * content elsewhere along the axis of `direction` or in the same place, or
+ * no longer shows. A pager sharing its page's frame is never taken for the
+ * page.
+ */
+export const motionOf = (area: Area, after: ReadonlyArray<Node>, direction: Direction): Motion =>
   Option.match(sameIn(area, after), {
-    onNone: () => true,
+    onNone: () => Motion.Gone(),
     onSome: (now) => {
-      if (VERTICAL.has(direction)) return Math.abs(now.content.y - area.content.y) >= 1;
-      return Math.abs(now.content.x - area.content.x) >= 1;
+      let shift = Math.abs(now.content.x - area.content.x);
+      if (VERTICAL.has(direction)) shift = Math.abs(now.content.y - area.content.y);
+      if (shift >= 1) return Motion.Moved();
+      return Motion.Unmoved();
     },
   });
 
@@ -345,7 +357,8 @@ export const moved = (area: Area, after: ReadonlyArray<Node>, direction: Directi
  * taken after a pan, `earlier` and `later`: the same view's content lies at
  * the same place in both, or the view no longer shows in `earlier`. A pan's
  * fling carries the content on for a second or two after the finger lifts,
- * and a tap on content still moving only stops it.
+ * and a tap on content still moving only stops it; a view gone by `later`
+ * is not yet at rest, so the next look finds it gone in `earlier`.
  */
 export const settled = (
   area: Area,
@@ -355,7 +368,7 @@ export const settled = (
 ) =>
   Option.match(sameIn(area, earlier), {
     onNone: () => true,
-    onSome: (then) => !moved(then, later, direction),
+    onSome: (then) => Motion.$is('Unmoved')(motionOf(then, later, direction)),
   });
 
 /**

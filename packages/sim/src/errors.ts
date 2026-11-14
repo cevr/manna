@@ -58,6 +58,21 @@ export class ScrollStuck extends Schema.TaggedError<ScrollStuck>()('ScrollStuck'
   }
 }
 
+/**
+ * A journey's scroll lost the scroll view it panned (a sheet the pan
+ * closed), and a target the step expects then did not show.
+ */
+export class ScrollGone extends Schema.TaggedError<ScrollGone>()('ScrollGone', {
+  target: Schema.String,
+  direction: Schema.String,
+  /** The target the step expected to show after the scroll. */
+  expected: Schema.String,
+}) {
+  override get message() {
+    return `scroll ${this.direction} (${this.target}) lost the scroll view it panned (a sheet closed?), and ${this.expected} does not show`;
+  }
+}
+
 /** A tool the command runs is not installed. */
 export class ToolMissing extends Schema.TaggedError<ToolMissing>()('ToolMissing', {
   tool: Schema.String,
@@ -212,6 +227,7 @@ export const SimError = Schema.Union([
   ReadinessTimedOut,
   TargetMissing,
   ScrollStuck,
+  ScrollGone,
   ToolMissing,
   ToolFailed,
   NotOnPlatform,

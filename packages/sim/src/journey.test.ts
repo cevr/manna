@@ -12,6 +12,7 @@ import type { App } from './app.ts';
 import { runSim } from './command.ts';
 import { Drive, type DriveMembers, type Outcome, type Place } from './drive.ts';
 import { TargetMissing } from './errors.ts';
+import { Motion } from './screen.ts';
 import { decodeJourneyLine } from './fixtures/lines.ts';
 import { probeApp } from './fixtures/probe.ts';
 
@@ -24,9 +25,15 @@ const done: Outcome = { platform: 'ios', paths: {}, detail: {} };
 
 /**
  * A booted iOS drive whose session writes to `out`. `missing` names the
- * targets that never show; every other step succeeds.
+ * targets that never show; every other step succeeds, a scroll answering
+ * `motion`.
  */
-const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>): DriveMembers => {
+const standIn = (
+  calls: Array<Call>,
+  out: string,
+  missing: ReadonlyArray<string>,
+  motion: Option.Option<Motion>,
+): DriveMembers => {
   const step =
     (op: string) =>
     (...args: ReadonlyArray<unknown>) =>
@@ -68,7 +75,7 @@ const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>
     tap: step('tap'),
     fill: step('fill'),
     back: step('back'),
-    scroll: step('scroll'),
+    scroll: (...args) => Effect.map(step('scroll')(...args), (done) => ({ ...done, motion })),
     shot: receipt('shot', 'png'),
     snapshot: receipt('snapshot', 'txt'),
     read: step('read'),
@@ -115,6 +122,7 @@ const runJourney = (
   args: ReadonlyArray<string>,
   missing: ReadonlyArray<string>,
   config: App = probeApp,
+  motion: Option.Option<Motion> = Option.none(),
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -144,7 +152,7 @@ const runJourney = (
     const exit = yield* Effect.exit(
       runSim(place, args).pipe(
         Effect.provideService(Console.Console, console),
-        Effect.provideService(Drive, standIn(calls, out, missing)),
+        Effect.provideService(Drive, standIn(calls, out, missing, motion)),
       ),
     );
     const results = path.join(out, 'results.jsonl');
@@ -390,6 +398,67 @@ describe('sim journey', () => {
       });
       expect(run.lines[4]).toMatchObject({ failedStep: 4, failedName: 'panel-gone' });
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped(
+    'a scroll that lost its sheet fails a shows expect as ScrollGone; a moved one as TargetMissing; a hides still passes',
+    () =>
+      Effect.gen(function* () {
+        const scrolling = {
+          ...journey,
+          steps: [
+            {
+              name: 'sheet-down',
+              action: 'scroll',
+              target: 'screen',
+              direction: 'down',
+              expect: [{ hides: 'label=Settings' }, { shows: 'label=Sounds and haptics' }],
+              receipt: 'none',
+            },
+          ],
+        };
+        const args = ['journey', 'chords', '--skip-video'];
+        const missing = ['label=Settings', 'label=Sounds and haptics'];
+        const outcomes = [
+          [Option.some(Motion.Gone()), 'ScrollGone'],
+          [Option.some(Motion.Moved()), 'TargetMissing'],
+          [Option.some(Motion.Unmoved()), 'TargetMissing'],
+          [Option.none(), 'TargetMissing'],
+        ] as const;
+        for (const [motion, tag] of outcomes) {
+          const run = yield* runJourney(toJson(scrolling), args, missing, probeApp, motion);
+          expect(Exit.isFailure(run.exit)).toBe(true);
+          expect(ops(run.calls)).toEqual(['scroll', 'sees', 'sees']);
+          expect(run.lines[0]).toMatchObject({
+            ok: false,
+            name: 'sheet-down',
+            error: { _tag: tag },
+          });
+        }
+        const gone = yield* runJourney(
+          toJson(scrolling),
+          args,
+          missing,
+          probeApp,
+          Option.some(Motion.Gone()),
+        );
+        expect(gone.lines[0]).toMatchObject({
+          error: {
+            target: 'screen',
+            direction: 'down',
+            expected: 'label=Sounds and haptics',
+          },
+          message: expect.stringContaining('lost the scroll view'),
+        });
+        const stays = yield* runJourney(
+          toJson(scrolling),
+          args,
+          ['label=Settings'],
+          probeApp,
+          Option.some(Motion.Gone()),
+        );
+        expect(Exit.isSuccess(stays.exit)).toBe(true);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.scoped(

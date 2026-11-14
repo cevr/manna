@@ -572,7 +572,12 @@ describe('sim commands', () => {
         expect(Exit.isSuccess(exit)).toBe(true);
         expect(printed[0]).toMatchObject({
           ok: true,
-          detail: { target: 'screen', direction: 'down', moved: true, pan: '201,598 by 0,-317' },
+          detail: {
+            target: 'screen',
+            direction: 'down',
+            motion: 'moved',
+            pan: '201,598 by 0,-317',
+          },
         });
         expect(driven(answers)).toEqual([
           'agent-device snapshot --json --raw',
@@ -629,7 +634,7 @@ describe('sim commands', () => {
           Option.some('ios'),
         );
         expect(Exit.isSuccess(again.exit)).toBe(true);
-        expect(again.printed[0]).toMatchObject({ ok: true, detail: { moved: false } });
+        expect(again.printed[0]).toMatchObject({ ok: true, detail: { motion: 'unmoved' } });
       }).pipe(Effect.provide(Host)),
   );
 
@@ -646,8 +651,15 @@ describe('sim commands', () => {
         expect(Exit.isSuccess(screen.exit)).toBe(true);
         expect(screen.printed[0]).toMatchObject({
           ok: true,
-          detail: { moved: false, pan: '201,792 by 0,-223' },
+          detail: { motion: 'unmoved', pan: '201,792 by 0,-223' },
         });
+        const closed = yield* sim(
+          ['scroll', 'screen', 'down'],
+          screensIn([fits, hymnPage(116), hymnPage(116)]),
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(closed.exit)).toBe(true);
+        expect(closed.printed[0]).toMatchObject({ ok: true, detail: { motion: 'gone' } });
         const target = yield* sim(
           ['scroll', 'label=Nowhere', 'down'],
           screensIn([fits]),
