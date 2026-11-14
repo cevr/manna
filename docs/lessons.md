@@ -28,10 +28,10 @@ test or a check ("we dont need to encode these rules in codes or tests or
 lints, just for the skill guidance is enough"). Their guards here are visual
 and process checks, and skill lines.
 
-**After any owner revise, add his entry here, and its guard, before
-redrawing** (`.claude/skills/film/SKILL.md`, "The lessons ledger"). A
-review states each finding as `### F<n> <severity>: <what>` with a `Guard
-class:` line (lint, judged, skill, code or none) and a `Cheapest guard:`
+**After any owner revise, add his entry in a file of its own,
+`docs/lessons/<id>.md`, and its guard, before redrawing**
+(`.claude/skills/film/SKILL.md`, "The lessons ledger"). A review states
+each finding as `### F<n> <severity>: <what>` with a `Guard class:` line (lint, judged, skill, code or none) and a `Cheapest guard:`
 line. A finding given a guard gets an entry, its Source citing the finding
 as `<unit>/<review file> F<n>`, or by the id a review in another form
 gives it (`M1`, `m3`, `o2`). The review file's name holds `findings`,

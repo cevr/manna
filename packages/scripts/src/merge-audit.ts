@@ -120,7 +120,7 @@ class Unrouted extends Schema.TaggedError<Unrouted>()('Unrouted', {
   problems: Schema.Finite,
 }) {
   override get message() {
-    return `merge-audit review: ${this.problems} problem(s); route each finding to an entry of docs/lessons.md, its Source citing <unit>/<file> F<n>`;
+    return `merge-audit review: ${this.problems} problem(s); route each finding to an entry in a file of its own, docs/lessons/<id>.md, its Source citing <unit>/<file> F<n>`;
   }
   override readonly [Runtime.errorReported] = false;
 }
