@@ -5,7 +5,8 @@
 // branch of the stack's view (README, "Where a feature's files go"). The
 // Settings sheet's routes (`settings…`) are drawn by their own loop: a
 // sheet is a route of its own, not the shared column, and the screen under
-// it stays drawn (`settingsUnderId`).
+// it stays drawn (`settingsUnderId`). Home stays drawn under every pushed
+// route, so the gear is drawn in that one entry alone: a driver finds one.
 use Today, TodayView from "./features/today.contract"
 use SettingsSheet, SettingsView from "./features/settings.contract"
 use AboutPage, LicencesPage from "./features/about.contract"
@@ -40,8 +41,9 @@ component HeartseedExact
         column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name}`
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
-            button press=settingsOpen aria-label="Settings" testId="gear"
-              image "symbol:settings"
+            if e.id == settingsUnderId
+              button press=settingsOpen aria-label="Settings" testId="gear"
+                image "symbol:settings"
           if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == settingsUnderId
             Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt)
           if e.name == "home"
