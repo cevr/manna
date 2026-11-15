@@ -1,0 +1,79 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "Today shows the passage"
+  expect text "reference" == "Isaiah 41:10"
+  expect text "passage" == "Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness."
+  expect text "word-0" == "Fear "
+  expect text "word-36" == "righteousness."
+  expect enabled "hear"
+  expect enabled "say"
+  expect tree missing "last"
+  expect tree missing "result"
+  expect tree missing "refused"
+
+test "Hear it lights every word, then rests"
+  tap "hear"
+  clock +1000
+  expect state today.lit >= 1
+  expect state today.lit <= 37
+  expect tree has "stop"
+  expect tree missing "hear"
+  clock +1000
+  expect state today.lit >= 3
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 6
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 9
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 12
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 15
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 18
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 20
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 23
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 26
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 29
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 32
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit >= 35
+  expect state today.lit <= 37
+  clock +1000
+  expect state today.lit == 37
+  expect state today.words.36.lit == true
+  clock +4000
+  clock settle
+  expect state today.phase == "resting"
+  expect state today.lit == 37
+  expect enabled "hear"
+  expect enabled "say"
+  tap "hear"
+  clock +3000
+  expect state today.phase == "reading"
+  expect state today.lit >= 1
+  expect state today.lit <= 36
+  tap "stop"
+  clock settle
+  expect state today.phase == "resting"
+  expect tree missing "stop"
+  expect enabled "hear"
+  expect enabled "say"
+  expect no failures

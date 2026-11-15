@@ -130,6 +130,7 @@
       "name": "@manna/heartseed-exact",
       "dependencies": {
         "@manna/exact-kit": "workspace:*",
+        "@manna/heartseed": "workspace:*",
       },
     },
     "apps/hymnal": {
