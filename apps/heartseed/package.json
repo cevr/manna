@@ -56,8 +56,13 @@
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
     },
+    "./kjv": {
+      "types": "./exact/kjv.d.ts",
+      "default": "./src/kjv.ts"
+    },
     "./passage": "./vite/passage.ts",
     "./licence": "./vite/licence.ts",
+    "./vite/kjv": "./vite/kjv.ts",
     "./kjv-hearings.json": "./data/kjv-hearings.json"
   },
   "scripts": {

@@ -24,6 +24,7 @@ component HeartseedExact
   members "./features/settings.contract"
   members "./features/about.contract"
   members "./features/garden.contract"
+  members "./features/text.contract"
   action follow(url: string)
     nav = go(nav, url)
   view
