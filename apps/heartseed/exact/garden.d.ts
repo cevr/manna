@@ -2,6 +2,7 @@ import type { Array as Arr, Context, Effect, Layer, Option, Stream } from 'effec
 import type { KeyValueStore } from 'effect/persistence/KeyValueStore';
 
 import type { Card } from './fsrs.d.ts';
+import type { Cue } from './matcher.d.ts';
 import type { Grade, Help, Recall, Recalls } from './sayit.d.ts';
 
 /** A plant's four stages, seed first (Mark 4:28). */
@@ -50,6 +51,9 @@ export declare const backOf: (stage: Stage) => Option.Option<Stage>;
 
 /** The best grade a try after Show all may take on a verse at `stage`. */
 export declare const shownAllCap: (stage: Stage) => Grade;
+
+/** The cue the verse of `reference` is said under next: its plant's stage's, else the full text. */
+export declare const cueIn: (garden: ReadGarden, reference: string) => Cue;
 
 /** `view` with Show all's step back of `help` laid over it. */
 export declare const withHelp: (view: ReadGarden, help: Help) => ReadGarden;

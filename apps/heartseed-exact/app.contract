@@ -16,6 +16,8 @@ routes nav
     settings "/settings"
       settingsAbout "/settings/about"
         settingsLicences "/settings/about/licences"
+  today "/today"
+  start "/start/:slug"
   cued "/cue/:cue"
   verses "/verses"
 
@@ -35,8 +37,8 @@ component HeartseedExact
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
             button press=settingsOpen aria-label="Settings" testId="gear"
               image "symbol:settings"
-          if (e.name == "home" or e.name == "cued") and e.id == settingsUnderId
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt)
+          if (e.name == "home" or e.name == "today" or e.name == "start" or e.name == "cued") and e.id == settingsUnderId
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt)
           if e.name == "home"
             link href=path("verses") testId="open-verses" padding="0 16px" min-height="44px" display="flex" align-items="center" flex-shrink=0
               text "Your verses"

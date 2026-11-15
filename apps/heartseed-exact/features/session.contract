@@ -1,0 +1,75 @@
+// The daily session around Today's recital: the counts line, the end of a
+// run with what grew and the way back home, and Today with nothing planted.
+// What it draws is `todayOpen`'s and the other Today sources' `session`
+// (src/today/sources.ts): the current Heartseed's `countsOf`, `shownOf`
+// and `tendedOf` over the launch's own `Session`. `wire` is the session's
+// view as home reads it (README, "The session").
+
+// An item of the plan, a visit or the hold.
+shape SessionItem
+  reference: string
+  fresh: bool
+  recalls: number
+  seconds: number
+
+// The session's view on the wire: the minutes, the plan once made, the
+// item held and the visit.
+shape SessionWire
+  minutes: number
+  planned: bool
+  items: SessionItem[]
+  held: option<SessionItem>
+  visit: SessionItem[]
+
+// A verse that grew in the run, its nodes named by its slug.
+shape SessionGrown
+  reference: string
+  slug: string
+  stage: string
+
+// What Today shows of the session: where it is drawn (`run`, `cued` or
+// `away`), whether the garden is read and a plan made, nothing planted,
+// the counts line, the item shown, the end and what grew, and how many
+// recalls Next has recorded in this launch.
+shape SessionShown
+  mode: string
+  read: bool
+  planned: bool
+  nothing: bool
+  counts: string
+  item: bool
+  fresh: bool
+  done: bool
+  held: bool
+  ended: bool
+  recorded: number
+  grown: SessionGrown[]
+  wire: SessionWire
+
+component SessionCounts
+  props
+    session: SessionShown
+  view
+    if session.mode == "run" and session.counts != "" and not session.ended and not session.nothing
+      text session.counts color="-exact-secondary-label" testId="counts"
+
+component SessionEnd
+  props
+    session: SessionShown
+    home: action
+  view
+    column gap=12 testId="run-end"
+      text "The field is tended" role="heading" aria-level=2
+      for g in session.grown key=g.slug
+        text `${g.reference}, ${g.stage}` testId=`grown-${g.slug}`
+      button press=home buttonStyle="filled" testId="to-home"
+        text "Back to your field"
+
+component SessionNothing
+  props
+    add: action
+  view
+    column gap=12
+      text "Nothing is planted yet." testId="nothing"
+      button press=add buttonStyle="filled" testId="today-add"
+        text "Add verses"

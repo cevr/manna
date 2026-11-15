@@ -26,6 +26,7 @@ import {
   type Help,
   type Recall,
 } from '@manna/heartseed/sayit';
+import { PEEK_SHOWN_MS } from '@manna/heartseed/sayit/letters';
 import { Match, Option } from 'effect';
 
 export type { Cue } from '@manna/heartseed/matcher';
@@ -46,8 +47,8 @@ export interface TodayResult {
 
 export type Phase = 'resting' | 'reading' | 'listening' | 'graded';
 
-/** How long a word peeked at rest shows, in milliseconds: the current Heartseed's `PEEK_SHOWN_MS` (`apps/heartseed/src/sayit/draw.tsx`). */
-export const TODAY_PEEK_MS = 1500;
+/** How long a word peeked at rest shows, in milliseconds: the current Heartseed's own `PEEK_SHOWN_MS`. */
+export const TODAY_PEEK_MS = PEEK_SHOWN_MS;
 
 /** The best grade a try after Show all may take when the caller names none: Hard, a peek's cap. */
 export const SHOWN_ALL_CAP: Grade = PEEK_CAP;

@@ -11,6 +11,7 @@
 import { matcherView } from '@manna/heartseed/matcher';
 import type { Mark } from '@manna/heartseed/matcher';
 import { cappedBy, GRADE_NAMES, GRADES } from '@manna/heartseed/sayit';
+import { lettersOf } from '@manna/heartseed/sayit/letters';
 import { Option } from 'effect';
 
 import {
@@ -106,13 +107,8 @@ export interface TodayView {
 // oxlint-disable-next-line effect/noNullish -- Exact's option is null on the wire.
 const ABSENT: null = Option.getOrNull(Option.none());
 
-const LETTER = /[\p{L}\p{N}]/u;
-
-/** A word drawn in first letters: its first letter or number as written, as the current Heartseed's `Initial` shows it. */
-export const initialOf = (word: string): string => {
-  const at = Math.max(0, word.search(LETTER));
-  return word.slice(at, at + 1);
-};
+/** A word drawn in first letters: its first letter or number as written, the current Heartseed's own rule (`lettersOf`). */
+export const initialOf = (word: string): string => lettersOf(word).cue;
 
 /** The longest slot, in rules: a long word's slot fits a phone's line at the largest text size. */
 const SLOT_MOST = 8;

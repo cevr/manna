@@ -5,12 +5,17 @@
   "scripts": {
     "exact": "bun tools/prepare.ts && manna-exact",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test --preload ./tools/setup.ts --path-ignore-patterns=src/garden/history-a.test.ts --path-ignore-patterns=src/garden/history-b.test.ts --path-ignore-patterns=src/garden/history-c.test.ts --path-ignore-patterns=src/garden/bytes.test.ts --path-ignore-patterns=src/text/text.test.ts --path-ignore-patterns=src/text/contract.test.ts --path-ignore-patterns=src/text/no-copy.test.ts ./src",
+    "test": "bun test --preload ./tools/setup.ts --path-ignore-patterns=src/app.test.ts --path-ignore-patterns=src/garden/history-a.test.ts --path-ignore-patterns=src/garden/history-b.test.ts --path-ignore-patterns=src/garden/history-c.test.ts --path-ignore-patterns=src/garden/bytes.test.ts --path-ignore-patterns=src/session/history-a.test.ts --path-ignore-patterns=src/session/history-b.test.ts --path-ignore-patterns=src/session/history-c.test.ts --path-ignore-patterns=src/session/overlap.test.ts --path-ignore-patterns=src/session/contract.test.ts --path-ignore-patterns=src/text/text.test.ts --path-ignore-patterns=src/text/contract.test.ts --path-ignore-patterns=src/text/no-copy.test.ts ./src",
+    "test:app": "bun test --preload ./tools/setup.ts ./src/app.test.ts",
     "test:text": "bun test --preload ./tools/setup.ts ./src/text",
     "test:garden-bytes": "bun test --preload ./tools/setup.ts ./src/garden/bytes.test.ts",
     "test:garden-a": "bun test --preload ./tools/setup.ts ./src/garden/history-a.test.ts",
     "test:garden-b": "bun test --preload ./tools/setup.ts ./src/garden/history-b.test.ts",
-    "test:garden-c": "bun test --preload ./tools/setup.ts ./src/garden/history-c.test.ts"
+    "test:garden-c": "bun test --preload ./tools/setup.ts ./src/garden/history-c.test.ts",
+    "test:session-a": "bun test --preload ./tools/setup.ts ./src/session/history-a.test.ts",
+    "test:session-b": "bun test --preload ./tools/setup.ts ./src/session/history-b.test.ts",
+    "test:session-c": "bun test --preload ./tools/setup.ts ./src/session/history-c.test.ts",
+    "test:session-calls": "bun test --preload ./tools/setup.ts ./src/session/overlap.test.ts ./src/session/contract.test.ts"
   },
   "dependencies": {
     "@manna/exact-kit": "workspace:*",

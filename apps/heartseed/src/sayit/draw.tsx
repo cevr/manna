@@ -24,6 +24,7 @@ import Animated, {
 
 import { themed, useThemed } from '../look';
 import type { Cue, Mark } from '../matcher';
+import { lettersOf, PEEK_SHOWN_MS } from './letters';
 import { wordOf, type Ink, type ShownWord } from './screen';
 
 /** A word lights with a short fade; under Reduce Motion it shows at once. */
@@ -83,14 +84,6 @@ export function Word({
   }
 }
 
-const LETTER = /[\p{L}\p{N}]/u;
-
-/** The first letter or number of `word` as written, and the parts before and after it. */
-const lettersOf = (word: string) => {
-  const at = Math.max(0, word.search(LETTER));
-  return { before: word.slice(0, at), cue: word.slice(at, at + 1), after: word.slice(at + 1) };
-};
-
 /** A word in letters before it is said: its first letter or number as written, in the cue's ink (AA on the ground), the rest laid out unseen, and only the letter named to the screen reader. */
 export function Initial({ index, word }: { readonly index: number; readonly word: string }) {
   const look = useLook();
@@ -111,9 +104,6 @@ export function Initial({ index, word }: { readonly index: number; readonly word
     </Text>
   );
 }
-
-/** How long a word peeked at rest shows, in milliseconds. */
-export const PEEK_SHOWN_MS = 1500;
 
 /** What a word to peek at tells the screen reader it does. */
 const PEEK_HINT = 'Shows the word for a moment. This try then counts as Hard at best.';

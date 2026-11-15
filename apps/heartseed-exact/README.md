@@ -9,32 +9,55 @@ bun run exact test web       # the contract tests in headless Chrome
 bun run exact test ios       # the same on verify-heartseed-exact
 bun run exact verify         # tests, checks, a relaunch: done when clean
 bun run exact verify ios
-bun tools/drive-say.ts web   # Say it, the kept recall and a refusal, driven through the agent (also: ios)
+bun tools/drive-say.ts web   # Say it on /cue/<cue>: a try, its help and a refusal, driven through the agent (also: ios)
+bun tools/drive-session.ts web  # the daily session: Next into the garden, a try left, a run to its end, Minutes (also: ios)
 bun tools/drive-look.ts web  # the brand in light and dark, the sheet's choices checked and kept (also: ios)
 bun tools/drive-garden.ts web   # the garden: a recall's day, peek, Show all, a relaunch, twenty singles (also: ios)
-bun run test                 # the Bun tests the gate runs (no Exact needed), with test:garden-a, -b, -c, -bytes and test:text
+bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:garden-a, -b, -c, -bytes, test:session-a, -b, -c, -calls and test:text
 ```
 
-`bun run exact` first runs `tools/prepare.ts`: it links Exact's standard modules (`@exact/speech-synthesis`, `@exact/speech-recognition`, `@exact/media-capture`) into `node_modules` from the clone, so no machine path is committed, and writes Today's passage (`tools/passage.ts`), About's licences (`tools/licences.ts`) and the KJV (`tools/kjv.ts`).
+`bun run exact` first runs `tools/prepare.ts`: it links Exact's standard modules (`@exact/speech-synthesis`, `@exact/speech-recognition`, `@exact/media-capture`) into `node_modules` from the clone, so no machine path is committed, and writes About's licences (`tools/licences.ts`) and the KJV (`tools/kjv.ts`).
 
 ## Today
 
-The one screen so far: Isaiah 41:10 under a cue, **Hear it** (the system voice reads it, each word lit as the voice reaches it), **Say it** (the recognizer listens on the device, hinted with the verse's words, and Heartseed's matcher marks each word), **Done** (the marks, the matcher's suggestion and the four grades), then **Next** (the try kept as the last one across launches) or **Say it again** (the try let go, its help kept).
+The daily session, one verse at a time (`/today`, and home): the counts, then the item the session shows under its cue, **Hear it** (the system voice reads it, each word lit as the voice reaches it), **Say it** (the recognizer listens on the device, hinted with the verse's words, and Heartseed's matcher marks each word), **Done** (the marks, the matcher's suggestion and the four grades), then **Next** (the try recorded in the garden, and the next item shown) or **Say it again** (the try let go, its help kept). At the end of the run, what grew and the way back home; with nothing planted, the way to add.
 
-- The cue is the route's: `/cue/none`, `/cue/initials` or `/cue/full`; any other route is `none`. Under no cue a word is a slot of rules, under first letters its first letter or number as written, under the full text the word.
-- At rest a word the cue hides is a button: a tap shows it for `TODAY_PEEK_MS` (1.5 s; the contract's `after(1500, …)` is held to it by `src/today/peek.test.ts`) and caps the try at Hard. **Show all** shows every word, caps the try at Hard and moves the verse back a stage. Grades above the cap are disabled, and the help line says the cost. The cap is the current Heartseed's `cappedBy`.
-- Nothing is kept before Next: a peek, a Show all or a graded try left unsaid is gone at the next launch.
+- The cue at rest is the current Heartseed's for the verse's stage (`cueIn`), and Show all's cap its `shownAllCap`. `/cue/none`, `/cue/initials` and `/cue/full` show Isaiah 41:10 under that cue, read from the shipped KJV, for the recital's own tests: Next there keeps the try in the launch alone. Under no cue a word is a slot of rules, under first letters its first letter or number as written (the current app's `lettersOf`, `@manna/heartseed/sayit/letters`), under the full text the word.
+- At rest a word the cue hides is a button: a tap shows it for `TODAY_PEEK_MS` (the current app's `PEEK_SHOWN_MS`; the contract's `after(1500, …)` is held to it by `src/today/peek.test.ts`) and caps the try at Hard. **Show all** shows every word, caps the try and moves the verse back a stage at Next. Grades above the cap are disabled, and the help line says the cost. The cap is the current Heartseed's `cappedBy`.
+- Nothing is recorded before Next: a peek, a Show all or a graded try left unsaid is gone when Today is left or the app closed.
+- **Hear it** shows on a new piece at rest with the Voice on (the current app's Listen); Voice Off hides it and refuses `todayHear`. Her and Him read with the system voice the current app's `bestVoice` picks among `speechSynthesisVoices()` (`src/today/reader.ts`, `todayReaderOf`).
 
 - Every rule is `step(state, input)` in `src/today/step.ts`, and the screen is `view(state)` in `src/today/view.ts`. `src/today/sources.ts` holds the state for one launch and answers one data source per input; `features/today.contract` only makes the calls (`speak`, `startSpeechRecognition`, …), forwards each native change as an input naming its utterance or recognition, and draws the view. An input for any other id changes nothing.
 - The matcher is the current Heartseed's, imported as `@manna/heartseed/matcher`, whose types are `apps/heartseed/exact/matcher.d.ts`: Exact's type check stages a package's declarations, never its source, and this file imports nothing, so it never reaches `effect`.
-- The passage is the current Heartseed's own derivation (`@manna/heartseed/passage`, from `@manna/core`'s KJV), written by `tools/passage.ts` to `src/passage/today.ts`, ignored and declared by the tracked `src/passage/today.d.ts`: no verse text is committed but the KJV.
-- The last recall is kept in `app:/data/today.json`, a stand-in until the garden comes.
+
+## The session
+
+The current Heartseed's own `Session` (`@manna/heartseed/session/service`: `planOf`, the hold, the visit, `startOf`), built once per launch of the data module (`src/session/live.ts`), so its plan lives the launch as in the app and is never derived afresh. What it stands on is reshaped: its `Garden` and `Passages` are the garden file's last read (`readGarden`, which writes nothing), taken at each call; its `Dictation` is Today's recital (listening or not); its store holds the Minutes Settings chose; its clock is the call's. Each command runs through the runner on the call's time and seed, and Today's calls run one at a time.
+
+- A task keyed on the route, its verse, Minutes and Voice sends `todayOpen(route, slug, cue, minutes, voice, now, seed)`: on `/today`, home and `/start/<slug>` the plan is made when first shown with the garden read (`begin`); a Minutes change makes it again (`choose`, keeping an item under recital); `/start/<slug>` (`<slug>` the verse's, as `John-3-16`) starts that verse ahead of the plan once per arrival (`start`); leaving for any screen but the Settings sheet lets the item go (`next`), unless a recital is under way. A plant or a remove that lands makes the plan again (`remake`): `app.ts` takes the garden's `gardenPlant` and `gardenRemove` through Today's.
+- Say it holds the item shown (`hold`); Next hands the try and its help to the garden's own `gardenRecall`, then lets the item go (`next`), and a task refreshes `garden`.
+- No own pieces and no taught collections: the plan is over the verses planted alone.
+
+`today.session` is what Today shows of it, and `today.session.wire` the session's view on the wire, for home:
+
+| Field                           | What                                                                                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `mode`                          | `run` (Today, home, a visit), `cued` (`/cue/<cue>`) or `away`                                                    |
+| `read`, `planned`               | The garden read; a plan made in this launch                                                                      |
+| `nothing`                       | The garden read, nothing planted and nothing shown                                                               |
+| `counts`                        | The current app's `countsOf` (`2 to tend · 1 new · about 3 min`); empty before a plan                            |
+| `item`, `fresh`, `done`, `held` | An item shown (`shownOf`), a new piece, done in the garden, held by Say it                                       |
+| `ended`, `grown`                | The run's end (`tendedOf`) and what grew (`reference`, `slug`, `stage`)                                          |
+| `recorded`                      | The recalls Next recorded in this launch                                                                         |
+| `wire`                          | `minutes`, `planned`, `items`, `held` (option) and `visit`, each item `reference`, `fresh`, `recalls`, `seconds` |
+
+The session's tests: `src/session/history-{a,b,c}.test.ts` run 300 generated histories on the port and on the current app's services side by side (`src/test/session-history.ts`, `session-model.ts`), over nine zones; `overlap.test.ts` walks every order of two calls' storage answers; `contract.test.ts` holds `session.test.contract`'s literals to the current app's answers.
 
 ## Settings, the look and About
 
 The gear in the header (`gear`) opens the Settings sheet (`features/settings.contract`), a modal route of its own (`/settings`), closed by Done (`settings-done`) or the platform's Back: **A day's tending** (the radio group Minutes: 2, 5, 10, 20), **Reads new verses aloud** (Voice: Off, Her, Him), **Appearance** (System, Light, Dark), then **About**.
 
-- Each choice is a root `state … persist` holding its text as tapped (`settingsMinutesKept`, `settingsVoiceKept`, `settingsAppearanceKept`, empty until chosen). `src/settings/choices.ts` reads it by the current Heartseed's rule (the text when it is exactly a choice, else 5 minutes, Her and System; `appearanceOf` itself) and offers the current app's lists in their order (`MINUTES`, `CHOICES`, `APPEARANCES`), through the one source `settingsOf`. The session reads `settingsMinutes` and `settingsVoice`; nothing acts on them yet.
+- Each choice is a root `state … persist` holding its text as tapped (`settingsMinutesKept`, `settingsVoiceKept`, `settingsAppearanceKept`, empty until chosen). `src/settings/choices.ts` reads it by the current Heartseed's rule (the text when it is exactly a choice, else 5 minutes, Her and System; `appearanceOf` itself) and offers the current app's lists in their order (`MINUTES`, `CHOICES`, `APPEARANCES`), through the one source `settingsOf`. The session reads `settingsMinutes` and `settingsVoice` (`The session`, above).
 - The appearance is the app's scheme: a task keyed on the read appearance calls `setScheme` with it, at a tap and at each launch, on both hosts.
 - The look is `app.forma`: every role of the current palette (`@manna/heartseed/theme`) as `hs.<role>` in light and dark, the platform's text roles and grounds drawn in them, the rounded face as `family.hs`. Screens name tokens and roles, never a colour; `src/look/brand.test.ts` holds the file to the palette, every text to AA on its grounds, and the Contract files to no colour literal.
 - About (`features/about.contract`, `/settings/about`) is pushed inside the sheet: what Heartseed is, the KJV's note, and `Licences` (`/settings/about/licences`), the licences' texts `tools/licences.ts` writes from the current app's own `readLicence()` to `src/about/licences.ts` (ignored, declared by `licences.d.ts`).
@@ -85,11 +108,11 @@ Both read the current Heartseed's `versesOf` (`@manna/heartseed/kjv`, declared b
 | `src/<name>/**`            | A feature's logic: pure TypeScript, imported by `app.ts`, tested in Bun                                 |
 | `<name>.test.contract`     | A feature's contract tests, beside `app.contract`: `exact test` and `verify` read only those            |
 | `app.test.contract`        | The app's own test: its name heads the first screen                                                     |
-| `tools/`                   | Host scripts: `prepare.ts`, `passage.ts`, and drives a `.test.contract` cannot hold                     |
+| `tools/`                   | Host scripts: `prepare.ts`, and drives a `.test.contract` cannot hold                                   |
 | `strings/en.json`          | The purpose strings of the app's grants                                                                 |
 | `app.forma`                | The brand: the current palette's roles as tokens, the platform's roles drawn in them, the rounded face  |
 | `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`             |
 
 A feature's names start with its own (`today…`), since its members share the root's one namespace. Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports runs it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would, as `src/app.test.ts` does.
 
-`app.contract.d.ts` (the types `app.ts` imports), `src/passage/today.ts`, `src/about/licences.ts`, `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone: a test reaches `answer` through `src/test/app.js`, whose types are `app.d.ts` beside it, so a fresh checkout type-checks with no generated file. `src/passage/today.d.ts` and `src/about/licences.d.ts` name their writers (`@writer`), which the gate's env-pass requires before it counts the declaration for the absent module.
+`app.contract.d.ts` (the types `app.ts` imports), `src/about/licences.ts`, `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone: a test reaches `answer` through `src/test/app.js`, whose types are `app.d.ts` beside it, so a fresh checkout type-checks with no generated file. `src/about/licences.d.ts` names its writer (`@writer`), which the gate's env-pass requires before it counts the declaration for the absent module.
