@@ -212,8 +212,9 @@ export const scrolled = (node: Element) => scrollerOf(node) !== null;
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
-/** Whether a control in Today's scroll view is the one kind allowed there: a missed word's mark, to peek at. */
-const recitals = (node: Element) => node.closest('[data-testid^="word-"]') !== null;
+/** Whether a control in Today's scroll view is the one kind allowed there: a word to peek at, a missed word's mark or one at rest. */
+const recitals = (node: Element) =>
+  node.closest('[data-testid^="word-"],[data-testid^="peek-"]') !== null;
 
 /** What a node labelled `Voice` says of itself: its value, and anything that breaks the pill's form (another role, a checked or pressed state, a text other than `Voice: <value>`). */
 const voiceOf = (node: Element) => {

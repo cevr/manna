@@ -9,7 +9,8 @@
  */
 
 import { Option } from 'effect';
-import { useEffect } from 'react';
+import { constVoid } from 'effect/Function';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -84,13 +85,16 @@ export function Word({
 
 const LETTER = /[\p{L}\p{N}]/u;
 
+/** The first letter or number of `word` as written, and the parts before and after it. */
+const lettersOf = (word: string) => {
+  const at = Math.max(0, word.search(LETTER));
+  return { before: word.slice(0, at), cue: word.slice(at, at + 1), after: word.slice(at + 1) };
+};
+
 /** A word in letters before it is said: its first letter or number as written, in the cue's ink (AA on the ground), the rest laid out unseen, and only the letter named to the screen reader. */
 export function Initial({ index, word }: { readonly index: number; readonly word: string }) {
   const look = useLook();
-  const at = Math.max(0, word.search(LETTER));
-  const cue = word.slice(at, at + 1);
-  const before = word.slice(0, at);
-  const after = word.slice(at + 1);
+  const { before, cue, after } = lettersOf(word);
   return (
     <Text testID={`word-${index}`} aria-label={cue} style={look.word}>
       {before !== '' && (
@@ -108,24 +112,120 @@ export function Initial({ index, word }: { readonly index: number; readonly word
   );
 }
 
+/** How long a word peeked at rest shows, in milliseconds. */
+export const PEEK_SHOWN_MS = 1500;
+
+/** What a word to peek at tells the screen reader it does. */
+const PEEK_HINT = 'Shows the word for a moment. This try then counts as Hard at best.';
+
+/** A word to peek at's name: the word while shown, else its letter under first letters and `Word <n>` under no cue. */
+const peekName = (word: string, index: number, cue: 'initials' | 'none', shown: boolean) => {
+  if (shown) return word;
+  if (cue === 'initials') return lettersOf(word).cue;
+  return `Word ${index + 1}`;
+};
+
+/**
+ * A word not yet said on Today at rest, held in a button to peek at it
+ * (`peek-<i>`): the word drawn as before inside it (its letters under first
+ * letters, its empty slot under no cue), the button named by its letter or
+ * `Word <n>`. A tap tells `onReveal` (the try's grade is capped) and shows
+ * the word whole in the peeked ink for `PEEK_SHOWN_MS`, the button then
+ * named by the word (so the screen reader reads it; Today announces nothing
+ * aloud), then as before.
+ */
+function Peek({
+  index,
+  word,
+  cue,
+  onReveal,
+}: {
+  readonly index: number;
+  readonly word: string;
+  readonly cue: 'initials' | 'none';
+  readonly onReveal: (index: number) => void;
+}) {
+  const look = useLook();
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!shown) return;
+    // oxlint-disable-next-line effect/noGlobals -- a React effect's own timer: the peeked word hides after its moment, and the timer is cleared when the word leaves.
+    const hide = setTimeout(() => setShown(false), PEEK_SHOWN_MS);
+    return () => clearTimeout(hide);
+  }, [shown]);
+  return (
+    <Pressable
+      testID={`peek-${index}`}
+      role="button"
+      aria-label={peekName(word, index, cue, shown)}
+      accessibilityHint={PEEK_HINT}
+      hitSlop={4}
+      onPress={() => {
+        onReveal(index);
+        setShown(true);
+      }}
+      style={({ pressed }) => pressed && look.pressed}
+    >
+      {shown && <PeekedWord index={index} word={word} cue={cue} />}
+      {!shown && cue === 'initials' && <Initial index={index} word={word} />}
+      {!shown && cue === 'none' && <Word shown={wordOf(pendingAt(index), word)} onPeek={NO_PEEK} />}
+    </Pressable>
+  );
+}
+
+/** A mark's peek a word to peek at never takes: its slot is no mark. */
+const NO_PEEK = constVoid;
+
+/** A word peeked at rest, whole in the peeked ink, in its slot under no cue so nothing moves. */
+function PeekedWord({
+  index,
+  word,
+  cue,
+}: {
+  readonly index: number;
+  readonly word: string;
+  readonly cue: 'initials' | 'none';
+}) {
+  const look = useLook();
+  if (cue === 'initials')
+    return (
+      <Text testID={`word-${index}`} style={[look.word, look.peeked]}>
+        {word}
+      </Text>
+    );
+  return (
+    <View style={look.slot}>
+      <Text testID={`word-${index}`} style={[look.word, look.unsaid, look.peeked]}>
+        {word}
+      </Text>
+    </View>
+  );
+}
+
 /**
  * A word Today has not yet heard, as the cue its recital is said under
  * shows it: whole in the cue's ink under the full text, in letters in the
  * same ink under first letters (`Initial`), and under no cue an empty slot
- * hidden from the screen reader, as `wordOf` shows a pending word.
+ * hidden from the screen reader, as `wordOf` shows a pending word. Given
+ * `onReveal` (Today at rest, before a try), a word in letters or a slot is
+ * a button to peek at it (`Peek`).
  */
 export function Unsaid({
   index,
   word,
   cue,
   onPeek,
+  onReveal = Option.none(),
 }: {
   readonly index: number;
   readonly word: string;
   readonly cue: Cue;
   readonly onPeek: (index: number) => void;
+  readonly onReveal?: Option.Option<(index: number) => void>;
 }) {
   const look = useLook();
+  if (Option.isSome(onReveal) && cue !== 'full')
+    return <Peek index={index} word={word} cue={cue} onReveal={onReveal.value} />;
   switch (cue) {
     case 'full':
       return (

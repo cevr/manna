@@ -64,7 +64,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { NEW_CARD, review, type Card } from './fsrs';
 import type { Cue } from './matcher';
-import { Recalls, type Recall } from './sayit';
+import { Recalls, type Grade, type Help, type Recall } from './sayit';
 
 export const STAGES = ['seed', 'blade', 'ear', 'full corn'] as const;
 
@@ -143,6 +143,22 @@ const nextStage = (before: Option.Option<Stage>, recall: Recall, stability: numb
 /** The stage a step back moves a verse at `stage` to, one below it: none for a seed, which has no stage below. */
 export const backOf = (stage: Stage): Option.Option<Stage> =>
   Option.fromUndefinedOr(STAGES[STAGES.indexOf(stage) - 1]);
+
+/**
+ * The best grade a try after `Show all` may take on a verse at `stage`:
+ * Again where the verse is a seed or its step back lands on one (only Again
+ * leaves a seed a seed), else Hard. With the step back before it and every
+ * word counted peeked, the try leaves the verse on the stage below, as the
+ * stage rule reads a helped recall (an ear's lands on a blade and stays).
+ */
+export const shownAllCap = (stage: Stage): Grade =>
+  Option.match(backOf(stage), {
+    onNone: (): Grade => 1,
+    onSome: (landing): Grade => {
+      if (landing === 'seed') return 1;
+      return 2;
+    },
+  });
 
 /** What a plant's history has folded to so far: its card, and its stage (none before its first recall). */
 interface Folded {
@@ -327,10 +343,11 @@ export class Garden extends Context.Service<
 /** A step back's answer: `Moved` once its record is written and the view shows the verse a stage lower, else `Failed` (the write failed, the garden is unread, or the verse is no plant standing at the stage asked from, past a seed). */
 export type BackAnswer = 'Moved' | 'Failed';
 
-/** A step back asked for: the verse, and the stage the reader saw it at when asking. Each ask is its own object, made when the ask opens, and the garden settles it once. */
+/** A step back asked for: the verse, the stage the reader saw it at when asking, and the instant it is kept at (`Show all`'s, taken before the try it precedes; the clock's at the write when absent). Each ask is its own object, made when the ask opens, and the garden settles it once. */
 export interface BackAsk {
   readonly reference: string;
   readonly from: Stage;
+  readonly at?: number;
 }
 
 /** Moving a verse back a stage: `back(ask)` keeps a step back of the verse at the clock's instant, after every keep handed to the garden before it, only while the verse still stands at `ask.from`. An ask is settled once: a later `back` of the same ask object writes nothing and gives the first answer, so one ask moves the verse at most one stage and every answer to it says what was kept. */
@@ -408,6 +425,13 @@ const withBack = (view: ReadGarden, back: Back): ReadGarden =>
       plants.set(back.reference, plantOf(plant.recalls, [...plant.backs, back.at]));
       return { _tag: 'Read', plants };
     },
+  });
+
+/** The view with the step back `help`'s `Show all` asks for laid over it, at its instant; unchanged before a `Show all`, and for a seed or a verse not planted, which no step back moves. */
+export const withHelp = (view: ReadGarden, help: Help): ReadGarden =>
+  Option.match(Option.fromNullishOr(help.shownAt), {
+    onNone: () => view,
+    onSome: (at) => withBack(view, { reference: help.reference, at }),
   });
 
 /** The recall kept for a recital, none when its plant holds none. */
@@ -627,7 +651,7 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
        * unread garden, a verse not planted, a seed and a verse no longer at
        * `from` write nothing. Each is `Failed`.
        */
-      const back = Effect.fn('Garden.back')(function* ({ reference, from }: BackAsk) {
+      const back = Effect.fn('Garden.back')(function* ({ reference, from, at }: BackAsk) {
         const before = MutableRef.get(held);
         if (
           before._tag === 'Unread' ||
@@ -639,7 +663,11 @@ export const layer: Layer.Layer<Grounds, never, KeyValueStore.KeyValueStore | Ch
           yield* Effect.logWarning('garden.back.refused').pipe(Effect.annotateLogs({ reference }));
           return 'Failed' as const;
         }
-        const step: Back = { reference, at: yield* Clock.currentTimeMillis };
+        const clock = yield* Clock.currentTimeMillis;
+        const step: Back = {
+          reference,
+          at: Option.getOrElse(Option.fromUndefinedOr(at), () => clock),
+        };
         const written = yield* Schema.encodeEffect(BackRecord)(step).pipe(
           Effect.flatMap((text) => store.set(backKey(step), text)),
           Effect.as(true),

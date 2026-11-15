@@ -2192,7 +2192,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     ending at the current view).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` but its cue tests and Today's (the source Say it
-    hears, and its guards).
+    hears, its guards, and `src/sayit/help.test.ts`: a peek and `Show all`
+    before a try over the app's layer, the try's cap, the step back kept
+    at `Next` before the try, and a leave writing nothing).
   - `test:sayit-today`: `src/sayit/today.test.tsx`, Today's Say it in
     happy-dom through `src/test/today-rig.tsx`.
   - `test:cue`: `src/sayit/cue.test.tsx`, and `test:cue-say`:
@@ -2260,7 +2262,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     generated run of asks (`Move back` once or twice, then `Keep`, or
     `Keep`; first saves kept, refused or slow), each moving the verse at
     most one stage, its line or alert and the stage line matching the
-    disk.
+    disk; and `src/garden/peek-today.test.tsx`, a word peeked and `Show
+    all` on a tapped ear through the root rig, the grades above Hard
+    disabled, the step back and the try written only at `Next`, and a leave
+    writing nothing.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
