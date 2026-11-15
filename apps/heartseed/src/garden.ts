@@ -132,11 +132,20 @@ export const cueAt = (stage: Stage): Cue => {
   return 'none';
 };
 
-/** The stage after one more recall, given the stage before it (none for the first) and the card's stability after it. */
-const nextStage = (before: Option.Option<Stage>, recall: Recall, stability: number): Stage => {
+/** Whether `recall` was said with every word shown, as `Show all` counts it. */
+const shownWhole = (recall: Recall) => recall.words > 0 && recall.peeked >= recall.words;
+
+/**
+ * The stage after one more recall, given what was folded before it (no
+ * stage for the first) and the card's stability after it. A recall said
+ * whole right after a step back (`Show all`'s try) keeps the stage the step
+ * back landed on, so `Show all` costs one stage in all.
+ */
+const nextStage = (before: Folded, recall: Recall, stability: number): Stage => {
   if (stability >= FULL_CORN_DAYS) return 'full corn';
-  if (Option.isNone(before) || recall.grade === 1) return 'seed';
-  if (recall.peeked > 0 || cueAt(before.value) !== 'none') return 'blade';
+  if (Option.isNone(before.stage) || recall.grade === 1) return 'seed';
+  if (before.backed && shownWhole(recall)) return before.stage.value;
+  if (recall.peeked > 0 || cueAt(before.stage.value) !== 'none') return 'blade';
   return 'ear';
 };
 
@@ -148,8 +157,8 @@ export const backOf = (stage: Stage): Option.Option<Stage> =>
  * The best grade a try after `Show all` may take on a verse at `stage`:
  * Again where the verse is a seed or its step back lands on one (only Again
  * leaves a seed a seed), else Hard. With the step back before it and every
- * word counted peeked, the try leaves the verse on the stage below, as the
- * stage rule reads a helped recall (an ear's lands on a blade and stays).
+ * word counted peeked, the try keeps the verse on the stage the step back
+ * landed on (`nextStage`): one stage below where it stood, full corn an ear.
  */
 export const shownAllCap = (stage: Stage): Grade =>
   Option.match(backOf(stage), {
@@ -160,10 +169,11 @@ export const shownAllCap = (stage: Stage): Grade =>
     },
   });
 
-/** What a plant's history has folded to so far: its card, and its stage (none before its first recall). */
+/** What a plant's history has folded to so far: its card, its stage (none before its first recall), and whether its last entry was a step back that moved it. */
 interface Folded {
   readonly card: Card;
   readonly stage: Option.Option<Stage>;
+  readonly backed: boolean;
 }
 
 /** One entry of a plant's history: a recall, or a step back at its time. */
@@ -190,11 +200,19 @@ const byTime = Order.combine(
 const foldEntry = (now: Folded, entry: Entry): Folded => {
   if (entry._tag === 'Recall') {
     const card = review(now.card, entry.recall.grade, entry.recall.startedAt);
-    return { card, stage: Option.some(nextStage(now.stage, entry.recall, card.stability)) };
+    return {
+      card,
+      stage: Option.some(nextStage(now, entry.recall, card.stability)),
+      backed: false,
+    };
   }
   return Option.match(Option.flatMap(now.stage, backOf), {
     onNone: () => now,
-    onSome: (stage) => ({ card: review(now.card, 1, entry.at), stage: Option.some(stage) }),
+    onSome: (stage) => ({
+      card: review(now.card, 1, entry.at),
+      stage: Option.some(stage),
+      backed: true,
+    }),
   });
 };
 
@@ -208,7 +226,7 @@ const entriesOf = (recalls: readonly Recall[], backs: readonly number[]) =>
     byTime,
   );
 
-const UNFOLDED: Folded = { card: NEW_CARD, stage: Option.none() };
+const UNFOLDED: Folded = { card: NEW_CARD, stage: Option.none(), backed: false };
 
 /** The fold of recalls and steps back, in time order, from a new card with no stage. */
 const foldOf = (recalls: readonly Recall[], backs: readonly number[]): Folded =>
@@ -240,7 +258,8 @@ export const plantOf = (
  * first recall or one graded Again; else a blade when the recall was helped,
  * by a peek or by the cue the stage before it gave (first letters at a
  * seed); else an ear (recalled with nothing, a miss with no peek included).
- * A recall's help is derived from the entries before it, never stored. A
+ * A recall said with every word peeked right after a step back (the try
+ * after `Show all`) keeps the stage the step back landed on. A recall's help is derived from the entries before it, never stored. A
  * step back between them moves the stage one down (`foldEntry`). A last
  * step that is a recall reads the plant's own card.
  */
@@ -251,7 +270,7 @@ export const stageOf = (plant: Plant): Stage => {
     onNone: () => before.stage,
     onSome: (entry) => {
       if (entry._tag === 'Back') return foldEntry(before, entry).stage;
-      return Option.some(nextStage(before.stage, entry.recall, plant.card.stability));
+      return Option.some(nextStage(before, entry.recall, plant.card.stability));
     },
   });
   return Option.getOrElse(last, (): Stage => 'seed');

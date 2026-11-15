@@ -2,9 +2,8 @@
 
 A reader who has forgotten a word of a verse can peek at it before saying
 it, and one who has forgotten the verse can show it all, each at a cost
-(owner, scrawl 1794699589304 #4; q104's working answer: a peek counts the
-try as Hard at best, Show all moves the verse back a stage as Move back
-does). Both live on Today at rest on a run's planted item: no recital
+(owner, scrawl 1794699589304 #4; q104: a peek counts the try as Hard at
+best, and Show all sends the verse back a stage, one stage in all). Both live on Today at rest on a run's planted item: no recital
 under way, held or done (`apps/heartseed/app/index.tsx`, `Peek` in
 `apps/heartseed/src/sayit/draw.tsx`, `reveal`/`showAll` and `Help` in
 `apps/heartseed/src/sayit.ts`, `showAllToday` and `nextItem` in
@@ -24,8 +23,9 @@ under way, held or done (`apps/heartseed/app/index.tsx`, `Peek` in
   the words to peek at and `Move back a stage` go. The try can be no
   better than the stage rule lets the verse stay there: Again from a blade
   and at a seed, Hard from an ear or full corn. Every word counts peeked,
-  so full corn, stepped back to an ear, reads a blade after its try (the
-  stage rule's for a helped recall).
+  and a try said whole right after its step back keeps the stage the step
+  back landed on, so Show all costs one stage in all : full
+  corn ends an ear, an ear a blade, a blade a seed, and a seed stays one.
 - **Only Next records** (hscancel's rule): `Next` keeps Show all's step
   back, Move back's own record `heartseed/back/<reference>/<at>` at the
   instant of the tap, before the try, then the try's recall.

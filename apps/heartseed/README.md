@@ -522,8 +522,11 @@ the end keep their own drawings and motion.
   seed at the first recall or one graded Again; else a blade when the
   recall was helped, by a peek or by the cue the stage before it gives
   (first letters at a seed); else an ear (recalled with nothing, a miss
-  with no peek included). The help is derived from the recalls, never
-  stored, so a history said with nothing at a seed reads as a blade.
+  with no peek included). A recall with every word peeked right after a
+  step back (the try after `Show all`) keeps the stage the step back
+  landed on, so `Show all` costs one stage in all. The help is derived
+  from the recalls, never stored, so a history said with nothing at a
+  seed reads as a blade.
   `growthOf(plant, startedAt)` is the recital's growth: the stage over the
   recalls before it and over those up to it, some only when there were
   recalls before and the stage rose.
