@@ -69,7 +69,9 @@ labels, counts and booleans only, never a verse's words.
    (`peek/peek-seed`: `Show all` and `id=peek-0`), says it to a blade,
    takes `Next` and `Your field`, taps `Isaiah 41:10, blade`
    (`peek/peek-blade`: `Show all`, `Move back a stage`, `Word 1`), peeks
-   at word 1 (`peek/peek-word`: `Word 1` named by its word), shows all
+   at word 1 (`peek/peek-word`: the tap lands, `Word 2` and `Show all`
+   still show; the word named for 1.5 s is shorter than a `hides`
+   check's 2 s, so the journey cannot see it), shows all
    (`peek/peek-all`: `Stage: seed`, `id=passage`, no `Show all`, no `Move
    back a stage`), says it and taps `Again`, the grade the cap leaves it
    (`peek/peek-capped`: `Stage: seed`, `Next`; its snapshot reads the
@@ -81,7 +83,8 @@ labels, counts and booleans only, never a verse's words.
 
 ## What the simulator cannot show
 
-The tests own each: the word hiding again after its moment, the cap on a
+The tests own each: the button named by the peeked word and the word hiding
+again after its moment (1.5 s, inside a `hides` check's 2 s), the cap on a
 grade tapped above it, the step back's instant before the try, an ear
 moved to a blade, and a leave writing nothing. VoiceOver reading a peeked
 word, and how the buttons feel under a finger, are the owner's Release
