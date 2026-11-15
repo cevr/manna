@@ -146,11 +146,19 @@ interface Repo {
   readonly builtins: ReadonlySet<string>;
 }
 
-/** What a path from the root names: a module (by bun's suffixes), another file of the repo, or nothing. */
+/**
+ * Whether a declaration of the repo (`today.d.ts` for `./today` or
+ * `./today.js`) stands for a module a tool writes before it is read and the
+ * repo ignores, as TypeScript resolves it when the module is not there.
+ */
+const declared = (files: ReadonlySet<string>, path: string) =>
+  files.has(`${path.replace(/\.[cm]?jsx?$/, '')}.d.ts`);
+
+/** What a path from the root names: a module (by bun's suffixes), another file of the repo or a written module its declaration stands for, or nothing. */
 const atPath = (files: ReadonlySet<string>, path: string): Resolved =>
   Option.match(fileAt(files, path), {
     onSome: (file): Resolved => ({ _tag: 'Module', file }),
-    onNone: () => [OTHER].find(() => files.has(path)) ?? UNRESOLVED,
+    onNone: () => [OTHER].find(() => files.has(path) || declared(files, path)) ?? UNRESOLVED,
   });
 
 /** What the first of `paths` that names something names, from `base`; nothing when none does. */

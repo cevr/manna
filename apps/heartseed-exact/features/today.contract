@@ -1,0 +1,160 @@
+// Today: one passage, heard with each word lit as the voice reaches it,
+// said while the matcher marks each word, and its last recall kept.
+// Every rule is `step` in src/today/step.ts, answered by the data sources
+// in src/today/sources.ts; this file holds the root's Today members (the
+// voice, the microphone, the recognizer and the calls) and the screen that
+// draws the view. The recognizer listens on the microphone's track, since
+// Apple's implementation at the pin traps on `microphone=true`.
+use speak, cancelSpeech, speechSynthesisState, speechUtterance, SpeechUtteranceInfo, SpeechSynthesisState, SpeechUtterance from "@exact/speech-synthesis"
+use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-capture"
+use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, SpeechRecognitionInfo, SpeechRecognitionState, SpeechRecognitionPhrase from "@exact/speech-recognition"
+
+shape Recall
+  right: number
+  total: number
+
+shape TodayWord
+  index: number
+  text: string
+  lit: bool
+  mark: string
+
+shape TodayView
+  reference: string
+  passage: string
+  phrases: SpeechRecognitionPhrase[]
+  phase: string
+  words: TodayWord[]
+  lit: number
+  canHear: bool
+  canSay: bool
+  canStop: bool
+  canFinish: bool
+  result: option<Recall>
+  last: option<Recall>
+  refused: bool
+
+fn recallText(r: Recall): string = `${r.right} of ${r.total} words`
+
+fn wordColor(w: TodayWord, phase: string): string = w.mark == "miss" ? "-exact-system-red" : (w.mark == "matched" or w.mark == "tentative" or w.lit or phase == "resting" or phase == "graded") ? "-exact-label" : "-exact-tertiary-label"
+
+members HeartseedExact
+  state todayUtterance = ""
+  state todayRecognition = ""
+  state todayTrack = ""
+  resource todayBooted = todayBoot() as shape TodayView else empty()
+  resource todayVoiceState = speechSynthesisState(interval=50) when todayUtterance != "" as shape SpeechSynthesisState else empty()
+  resource todaySpoken = speechUtterance(utterance=todayUtterance, interval=50) when todayUtterance != "" as shape SpeechUtterance else empty()
+  resource todayHeardState = speechRecognitionState(recognition=todayRecognition, interval=50) when todayRecognition != "" as shape SpeechRecognitionState else empty()
+  mutation todayStepped as shape TodayView queue
+  mutation todaySpeaking as shape SpeechUtteranceInfo then todayBegun
+  mutation todayOpened as shape MediaStream then todayOpenedIt
+  mutation todayListening as shape SpeechRecognitionInfo then todayStarted
+  mutation todayReleased as shape MediaStreamTrack
+  mutation todayHushed as shape SpeechSynthesisState
+  mutation todayClosed as shape SpeechRecognitionInfo
+  derive today = match todayStepped { case some(v) => v, case none => todayBooted }
+  derive todayFinals = todayHeardState.results.map(r => r.alternatives.slice(0, 1).map(a => a.transcript).join("")).join(" ")
+  derive todayInterim = match todayHeardState.interim { case some(i) => i.alternatives.slice(0, 1).map(a => a.transcript).join(""), case none => "" }
+
+  action todayHearIt
+    send todaySpeaking = speak(text=today.passage, lang="en-US")
+  derive todaySpeakingId = match todaySpeaking { case some(u) => u.id, case none => "" }
+  derive todayVoiceId = match todayVoiceState.utterance { case some(u) => u, case none => "" }
+  action todayBegun
+    if todaySpeakingId != ""
+      todayUtterance = todaySpeakingId
+      send todayStepped = todayHear(todaySpeakingId)
+  task todayFollow when todayUtterance != "" key=`${todayVoiceId}:${todayVoiceState.charIndex}:${todayVoiceState.charLength}`
+    change(todayMoved)
+  action todayMoved
+    if todayVoiceId != ""
+      send todayStepped = todayVoice(todayVoiceId, todayVoiceState.charIndex, todayVoiceState.charLength)
+  task todayEnd when todayUtterance != "" key=`${todaySpoken.id}:${todaySpoken.state}`
+    change(todayEnded)
+  action todayEnded
+    if todaySpoken.state == "ended"
+      send todayStepped = todayVoiceEnded(todaySpoken.id, match todaySpoken.outcome { case some(o) => o, case none => "error" })
+  action todayStopIt
+    send todayHushed = cancelSpeech()
+    send todayStepped = todayStop()
+
+  action todaySayIt
+    send todayOpened = getUserMedia(audio=true)
+  derive todayOpenedTrack = match todayOpened { case some(s) => (match s.tracks.at(0) { case some(t) => t.id, case none => "" }), case none => "" }
+  action todayOpenedIt
+    if todayOpenedTrack != ""
+      todayTrack = todayOpenedTrack
+      send todayListening = startSpeechRecognition(track=todayOpenedTrack, lang="en-US", continuous=true, interimResults=true, processLocally=true, phrases=today.phrases)
+  task todayMicRefused when failed(todayOpened) key=failed(todayOpened)
+    change(todayRefusedIt)
+  derive todayListeningId = match todayListening { case some(r) => r.id, case none => "" }
+  derive todayListenFailed = match todayListening { case some(r) => (match r.error { case some(e) => true, case none => false }), case none => false }
+  action todayStarted
+    if todayListenFailed
+      send todayReleased = stopTrack(track=todayTrack)
+      todayTrack = ""
+      send todayStepped = todayDenied()
+    else if todayListeningId != ""
+      todayRecognition = todayListeningId
+      send todayStepped = todaySay(todayListeningId)
+  task todayRefused when failed(todayListening) key=failed(todayListening)
+    change(todayRefusedIt)
+  action todayRefusedIt
+    if todayTrack != ""
+      send todayReleased = stopTrack(track=todayTrack)
+    todayTrack = ""
+    send todayStepped = todayDenied()
+  task todayHearFinal when todayRecognition != "" key=`${todayHeardState.id}|${todayFinals}`
+    change(todayHeardFinal)
+  action todayHeardFinal
+    send todayStepped = todayHeard(todayHeardState.id, todayFinals, true)
+  task todayHearInterim when todayRecognition != "" key=`${todayHeardState.id}|${todayInterim}`
+    change(todayHeardInterim)
+  action todayHeardInterim
+    send todayStepped = todayHeard(todayHeardState.id, todayInterim, false)
+  action todayFinishIt
+    send todayClosed = stopSpeechRecognition(recognition=todayRecognition)
+    send todayReleased = stopTrack(track=todayTrack)
+    todayTrack = ""
+    send todayStepped = todayFinish()
+
+component Today
+  props
+    today: TodayView
+    hear: action
+    stop: action
+    say: action
+    finish: action
+  view
+    scroll id="content" navigationScroll="content" flex=1 min-height=0
+      column gap=20 padding=20 max-width="40rem"
+        text today.reference role="heading" aria-level=2 testId="reference"
+        text testId="passage" font="-exact-title3" line-height=1.5 overflow-wrap="anywhere"
+          for w in today.words key=w.index
+            text (w.index + 1 < today.words.length ? `${w.text} ` : w.text) color=wordColor(w, today.phase) testId=`word-${w.index}`
+        row gap=12 flex-wrap="wrap"
+          if today.canStop
+            button press=stop buttonStyle="bordered" testId="stop"
+              text "Stop"
+          else
+            button press=hear disabled=(not today.canHear) buttonStyle="bordered" testId="hear"
+              text "Hear it"
+          if today.canFinish
+            button press=finish buttonStyle="filled" testId="finish"
+              text "Done"
+          else
+            button press=say disabled=(not today.canSay) buttonStyle="filled" testId="say"
+              text "Say it"
+        if today.refused
+          text "Heartseed can't hear you. Allow the microphone and speech recognition in Settings to say it." color="-exact-secondary-label" testId="refused"
+        match today.result
+          case some(r)
+            text recallText(r) font="-exact-headline" testId="result"
+          case none
+            column
+        match today.last
+          case some(r)
+            text `Last time: ${recallText(r)}` color="-exact-secondary-label" testId="last"
+          case none
+            column
