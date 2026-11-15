@@ -38,6 +38,7 @@ import {
   undrawn,
   wordHolesOf,
 } from './journey-rules.ts';
+import { footOf } from './foot.ts';
 import { formatBibleReference, Reference } from '@manna/core/bible';
 import { HANDBOOK } from '../src/handbook.ts';
 import { readVerses } from '../vite/passage.ts';
@@ -315,19 +316,6 @@ const genProse = (next: Next) => {
   return { text: lines.join('\n'), drives };
 };
 
-/** Every node of home's foot, under its lists (`src/field/screen.tsx`): the legend and its caption, `Add a list` and its tip, the limit line, the end rows. */
-const FOOT_TARGETS = [
-  'id=legend',
-  'id=add-list',
-  'id=tip-3',
-  'id=limit',
-  'id=end-row',
-  'label=Mark 4:28',
-  'label=Add a list',
-  'label=Settings',
-  'label=How Heartseed works',
-];
-
 /** What a scroll reaches that is not home's foot nor its top: a furrow's row, the sheets' rows, the chooser's books. */
 const ELSEWHERE = [
   'label=Open Promises of God',
@@ -426,6 +414,41 @@ const footJourneys = (seed: number, count: number) => {
 const hidden = hiddenOfApp();
 const sources = sourcesOfApp();
 
+/** Home's foot as the screen's sources draw it (`footOf`). */
+const FOOT = footOf(sources);
+
+/** Every node of home's foot as a selector: each id, each label. */
+const FOOT_TARGETS = [
+  ...[...FOOT.ids].map((id) => `id=${id}`),
+  ...[...FOOT.labels].map((label) => `label=${label}`),
+];
+
+/** The limit line's words, as `src/chooser.ts` spells them (the module reads the bundled KJV, so it is read, not imported). */
+const LIMIT_LINE =
+  /export const LIMIT_LINE = '([^']+)';/u.exec(
+    sources.find(([path]) => path === 'src/chooser.ts')?.[1] ?? '',
+  )?.[1] ?? 'no limit line';
+
+/** Nodes the screen draws under its lists today, named here apart from the sources: the foot must hold each. */
+const FOOT_KNOWN = [
+  'id=add-list',
+  'id=tip-3',
+  'id=limit',
+  'id=end-row',
+  'label=Add a list',
+  `label=${LIMIT_LINE.toLowerCase()}`,
+  'label=settings',
+  'label=how heartseed works',
+];
+
+/** `sources` with `src/field/screen.tsx`'s `anchor` followed by `added`. */
+const screenWith = (anchor: string, added: string) =>
+  sources.map(([path, text]): readonly [string, string] => {
+    if (path !== 'src/field/screen.tsx') return [path, text];
+    expect(text).toContain(anchor);
+    return [path, text.replace(anchor, `${anchor}\n${added}`)];
+  });
+
 describe('verify-heartseed journeys', () => {
   it.effect(
     'every shipped journey holds R1-R4 and is run by its feature file, whose cites name its steps',
@@ -463,7 +486,7 @@ describe('verify-heartseed journeys', () => {
             ...firstRunFaults(journey),
             ...hiddenFaults(journey, hidden),
             ...startFaults(journey),
-            ...footFaults(journey),
+            ...footFaults(journey, FOOT),
           ]),
         ).toEqual([]);
         expect(undrawn(journeys, sources)).toEqual([]);
@@ -504,22 +527,92 @@ describe('verify-heartseed journeys', () => {
         const raws = footJourneys(20261114, 120);
         const journeys = yield* loadedAll(raws.map(({ steps }) => steps));
         const disagree = raws.flatMap(({ steps, foot }, at) => {
-          const got = stepsOf(footFaults(journeys[at] as Journey));
+          const got = stepsOf(footFaults(journeys[at] as Journey, FOOT));
           const want = Option.toArray(foot);
           if (toJson(got) === toJson(want)) return [];
           return [`${toJson(steps)} got ${toJson(got)} want ${toJson(want)}`];
         });
         expect(disagree.slice(0, 2)).toEqual([]);
         const tripped = raws.filter(({ foot }) => Option.isSome(foot));
-        const reached = new Set(
-          tripped.map(({ steps, foot }) => {
-            const step = steps.find((one) => one.name === Option.getOrElse(foot, () => ''));
-            return FOOT_TARGETS.find((target) => spells(step?.target ?? '', target)) ?? '';
-          }),
-        );
-        expect([...reached].sort()).toEqual([...FOOT_TARGETS].sort());
         expect(tripped.length / raws.length > 0.3 && tripped.length / raws.length < 0.8).toBe(true);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'R7 trips a journey that ends on a scroll to each node the screen draws under its lists, in each spelling, inside a sheet after it too, and none scrolled back up',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          FOOT_KNOWN.filter((known) => !FOOT_TARGETS.some((one) => spells(one, known))),
+        ).toEqual([]);
+        const next = rng(20261115);
+        const home: Raw = {
+          name: 'home',
+          action: 'open',
+          link: '/',
+          relaunch: false,
+          expect: [{ shows: 'id=today-card' }],
+          receipt: 'none',
+        };
+        const scroll = (name: string, target: string, direction = 'down'): Raw => ({
+          name,
+          action: 'scroll',
+          target,
+          direction,
+          receipt: 'none',
+        });
+        const cases = FOOT_TARGETS.flatMap((target) =>
+          [0, 2].map((count) => {
+            const spelled = spelling(next, target);
+            const foot = scroll('foot', spelled);
+            const tail: ReadonlyArray<Raw> = [
+              { name: 'sheet', action: 'tap', target: 'label=Settings', receipt: 'none' },
+              scroll('inside', 'label=About'),
+            ].slice(0, count);
+            return [
+              { target: spelled, steps: [home, foot, ...tail], want: ['foot'] },
+              {
+                target: spelled,
+                steps: [home, foot, ...tail, scroll('top', 'label=Your field', 'up')],
+                want: [],
+              },
+            ];
+          }),
+        ).flat();
+        const journeys = yield* loadedAll(cases.map(({ steps }) => steps));
+        expect(
+          cases.flatMap(({ target, want }, at) => {
+            const got = stepsOf(footFaults(journeys[at] as Journey, FOOT));
+            if (toJson(got) === toJson(want)) return [];
+            return [`${target}: got ${toJson(got)} want ${toJson(want)}`];
+          }),
+        ).toEqual([]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'the foot is what the screen draws after its furrows: a node added there is in it, one added above them is not',
+    () =>
+      Effect.sync(() => {
+        const below = footOf(
+          screenWith(
+            '<EndRow label="How Heartseed works" onPress={onHow} />',
+            '<EndRow label="Help" onPress={onHow} />',
+          ),
+        );
+        expect([below.labels.has('help'), FOOT.labels.has('help')]).toEqual([true, false]);
+        const above = footOf(
+          screenWith(
+            '<Text style={styles.label}>Lists</Text>',
+            '<Text testID="above">Above the lists</Text>',
+          ),
+        );
+        expect([above.ids.has('above'), above.labels.has('above the lists')]).toEqual([
+          false,
+          false,
+        ]);
+        expect(above.ids).toEqual(FOOT.ids);
+      }),
   );
 
   it.effect(
@@ -859,36 +952,38 @@ describe('verify-heartseed journeys', () => {
         scrolling('first-foot', 'id=add-list', 'down'),
         { name: 'first-sheet', action: 'tap', target: 'id=add-list', receipt: 'none' },
       ]);
-      expect(footFaults(footed)).toEqual(['first/first-foot leaves home at its foot']);
+      expect(footFaults(footed, FOOT)).toEqual(['first/first-foot leaves home at its foot']);
       const limited = yield* mutant((all) => [...all, scrolling('first-line', 'id=limit', 'down')]);
-      expect(footFaults(limited)).toEqual(['first/first-line leaves home at its foot']);
+      expect(footFaults(limited, FOOT)).toEqual(['first/first-line leaves home at its foot']);
       const sheeted = yield* mutant((all) => [
         ...all,
         scrolling('first-settings', 'label=Settings', 'down'),
         { name: 'first-sheet', action: 'tap', target: 'label=Settings', receipt: 'none' },
         scrolling('first-about', 'label=About', 'down'),
       ]);
-      expect(footFaults(sheeted)).toEqual(['first/first-settings leaves home at its foot']);
+      expect(footFaults(sheeted, FOOT)).toEqual(['first/first-settings leaves home at its foot']);
       const shipped = (feature: string) =>
         journeys.find((journey) => journey.feature === feature)?.steps ?? [];
       const unscrolled = yield* loaded(
         shipped('session-restore').filter((step) => step.name !== 'session-restore-top'),
         'session-restore',
       );
-      expect(footFaults(unscrolled)).toEqual([
+      expect(footFaults(unscrolled, FOOT)).toEqual([
         'session-restore/session-restore-sheet leaves home at its foot',
       ]);
       const closed = yield* loaded(
         [...shipped('natural-sheet'), scrolling('natural-sheet-top', 'label=Your field', 'up')],
         'natural-sheet',
       );
-      expect(footFaults(closed)).toEqual(["natural-sheet hands on no sheet over home's foot"]);
+      expect(footFaults(closed, FOOT)).toEqual([
+        "natural-sheet hands on no sheet over home's foot",
+      ]);
       const topped = yield* mutant((all) => [
         ...all,
         scrolling('first-foot', 'id=add-list', 'down'),
         scrolling('first-top', 'label=Your field', 'up'),
       ]);
-      expect(footFaults(topped)).toEqual([]);
+      expect(footFaults(topped, FOOT)).toEqual([]);
       const last = steps.length - 1;
       const renamed = yield* mutant(adding(last, { shows: 'id=today-kard' }));
       expect(undrawn([renamed], sources)).toEqual(['first/first-home id=today-kard']);

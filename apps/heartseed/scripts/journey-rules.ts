@@ -43,6 +43,7 @@ import { parseSync, Visitor, type JSXAttribute, type Node } from 'oxc-parser';
 
 import { HANDBOOK, HANDBOOK_LISTS, handbookTitle } from '../src/handbook.ts';
 import { readVerses } from '../vite/passage.ts';
+import { type Foot } from './foot.ts';
 import { app } from './sim-app.ts';
 
 const APP = join(import.meta.dir, '..');
@@ -206,20 +207,11 @@ export const startFaults = (journey: Journey): ReadonlyArray<string> => {
   return [`${journey.feature}/${first.name} is no open that shows where the journey starts`];
 };
 
-/**
- * Home's foot, under its lists (`src/field/screen.tsx`), by test id: the
- * legend, `Add a list` and its tip, the limit line, and the end rows.
- */
-const FOOT_IDS = new Set(['legend', 'add-list', 'tip-3', 'limit', 'end-row']);
-
-/** Home's foot by label, folded: the legend's caption, `Add a list`, and the end rows `Settings` and `How Heartseed works`. */
-const FOOT_LABELS = new Set(['mark 4:28', 'add a list', 'settings', 'how heartseed works']);
-
-/** Whether `selector` names a node of home's foot, in any spelling `sim` reads. */
-const atFoot = (selector: string) => {
+/** Whether `selector` names a node of home's foot `foot`, in any spelling `sim` reads. */
+const atFoot = (foot: Foot, selector: string) => {
   const { by, value } = parseSelector(selector);
-  if (by === 'id') return FOOT_IDS.has(value);
-  return FOOT_LABELS.has(value.toLowerCase());
+  if (by === 'id') return foot.ids.has(value);
+  return foot.labels.has(value.toLowerCase());
 };
 
 /**
@@ -259,8 +251,8 @@ const HANDS_ON: ReadonlyMap<string, string> = new Map([
 
 /**
  * R7. A journey that ends with home at its foot: after a scroll to any
- * target of `FOOT_IDS` or `FOOT_LABELS` (or from its start, for a journey
- * of `CONTINUES`), no scroll up to `label=Your field` and no `relaunch`.
+ * node of `home`, home's foot as `footOf` reads it from the screen's
+ * sources (or from its start, for a journey of `CONTINUES`), no scroll up to `label=Your field` and no `relaunch`.
  * It leaves home scrolled down, and the next journey in its feature file's
  * order, whose `open` keeps the running app's offset, starts past the
  * furrows it waits for. A scroll to anything else (a sheet's row, a furrow)
@@ -268,13 +260,13 @@ const HANDS_ON: ReadonlyMap<string, string> = new Map([
  * scroll, or the first step of a journey of `CONTINUES`; a journey of
  * `HANDS_ON` ends at the foot on purpose, and is a fault when it does not.
  */
-export const footFaults = (journey: Journey): ReadonlyArray<string> => {
+export const footFaults = (journey: Journey, home: Foot): ReadonlyArray<string> => {
   let foot: Step | undefined;
   if (CONTINUES.has(journey.feature)) foot = journey.steps[0];
   for (const step of journey.steps) {
     if (step.action === 'relaunch') foot = undefined;
     if (step.action !== 'scroll') continue;
-    if (atFoot(step.target)) foot = step;
+    if (atFoot(home, step.target)) foot = step;
     if (labelOf(step.target) === 'your field') foot = undefined;
   }
   const handsOn = HANDS_ON.has(journey.feature);
