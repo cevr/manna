@@ -268,13 +268,12 @@ export const homeRuleFaults = (on: string, host: Element, controls: readonly Ele
 };
 
 /** The Lists section's parts by test id, as the field draws them down the page. */
-const LISTS_PARTS = ['row', 'legend', 'add-list', 'limit', 'end-row'];
+const LISTS_PARTS = ['row', 'add-list', 'limit', 'end-row'];
 
 /**
  * hsaddlist's place of the Lists section's foot (owner, q97): `Add a list`
- * or the limit line under every furrow's row and the legend and above the
- * end rows (`<id> above a row`, `<id> above the legend`, `<id> under an end
- * row`), in document order.
+ * or the limit line under every furrow's row and above the end rows (`<id>
+ * above a row`, `<id> under an end row`), in document order.
  */
 const footFaults = (host: Element) => {
   const order = [
@@ -285,7 +284,6 @@ const footFaults = (host: Element) => {
     if (id !== 'add-list' && id !== 'limit') continue;
     const after = order.slice(at + 1);
     if (after.includes('row')) out.push(`${id} above a row`);
-    if (after.includes('legend')) out.push(`${id} above the legend`);
     if (order.slice(0, at).includes('end-row')) out.push(`${id} under an end row`);
   }
   return out;

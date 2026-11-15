@@ -38,19 +38,6 @@ export const contrastModel = (node: Element) => {
   return (Math.max(ink, fill) + 0.05) / (Math.min(ink, fill) + 0.05);
 };
 
-const iconOf = (image: Element | null | undefined) => {
-  const found = /\/assets\/home\/([a-z]+)-(light|dark)\.png$/u.exec(
-    image?.getAttribute('src') ?? '',
-  );
-  if (found === null) return '<no home icon>';
-  return found[2] === systemScheme() ? (found[1] ?? '') : `<${found[1]} of the ${found[2]} set>`;
-};
-const oneIcon = (node: Element) => {
-  const images = node.querySelectorAll('img');
-  const image = images[0];
-  if (images.length !== 1 || image === undefined) return `<${images.length} images>`;
-  return hidden(image) ? iconOf(image) : '<an exposed icon>';
-};
 const counted = (host: Element, id: string) => {
   const nodes = host.querySelectorAll(`[data-testid="${id}"]`);
   const node = nodes[0];
@@ -59,14 +46,20 @@ const counted = (host: Element, id: string) => {
   return seen(node) && exposed ? text(node) : `<${id} not seen as exposed>`;
 };
 const drawingOf = (plant: Element) => {
+  const sown = plant.querySelectorAll('[data-testid="plant-sown"]');
   const soils = plant.querySelectorAll('[data-testid="plant-soil"]');
-  const images = plant.querySelectorAll('img');
-  const soil = soils[0];
-  if (soils.length === 0) return oneIcon(plant);
-  if (soils.length !== 1 || soil === undefined || images.length > 0)
-    return '<not one hidden drawing>';
-  const filled = getComputedStyle(soil).backgroundColor === computed(theme[systemScheme()].soil);
-  return hidden(soil) && filled ? 'soil' : '<soil not hidden and filled soil>';
+  if (sown.length + soils.length !== 1 || plant.querySelectorAll('img').length > 0)
+    return '<not one hidden dash>';
+  const dash = sown[0] ?? soils[0];
+  if (dash === undefined) return '<not one hidden dash>';
+  const fill = getComputedStyle(dash).backgroundColor;
+  if (sown.length === 1)
+    return hidden(dash) && fill === computed(theme[systemScheme()].ink)
+      ? 'sown'
+      : '<sown not hidden and filled ink>';
+  return hidden(dash) && fill === computed(theme[systemScheme()].soil)
+    ? 'soil'
+    : '<soil not hidden and filled soil>';
 };
 const plantRead = (plant: Element) => {
   const label = plant.getAttribute('aria-label') ?? '<no name>';
@@ -93,23 +86,18 @@ export const fieldReadModel = (host: Element) => {
   const rows = [...host.querySelectorAll('[data-testid="row"]')].map((row) => {
     const titles = row.querySelectorAll('[data-testid="row-title"]');
     const title = titles[0];
-    const icons = row.querySelectorAll('[data-testid="furrow-icon"]');
-    const icon = icons[0];
     return {
       title:
         titles.length === 1 && title !== undefined && seen(title) && !hidden(title)
           ? text(title)
           : '<title not one seen and exposed>',
-      icon: icons.length === 1 && icon !== undefined ? oneIcon(icon) : `<${icons.length} icons>`,
+      images: row.querySelectorAll('img').length,
       plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map(plantRead),
     };
   });
   const strays = [...host.querySelectorAll('*')].filter(
     (node) =>
-      (node.children.length === 0 &&
-        /\d/.test(text(node)) &&
-        text(node) !== 'Mark 4:28' &&
-        node.closest(ALLOWED) === null) ||
+      (node.children.length === 0 && /\d/.test(text(node)) && node.closest(ALLOWED) === null) ||
       ((node.tagName === 'IMG' || node.getAttribute('role') === 'img') &&
         node.closest('[data-testid="field-plant"]') === null &&
         !hidden(node)),
