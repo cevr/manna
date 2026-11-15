@@ -20,7 +20,24 @@
       "types": "./exact/day.d.ts",
       "default": "./src/day.ts"
     },
+    "./theme": {
+      "types": "./exact/theme.d.ts",
+      "default": "./src/theme.ts"
+    },
+    "./appearance": {
+      "types": "./exact/appearance.d.ts",
+      "default": "./src/appearance.ts"
+    },
+    "./session": {
+      "types": "./exact/session.d.ts",
+      "default": "./src/session.ts"
+    },
+    "./voice/reading": {
+      "types": "./exact/reading.d.ts",
+      "default": "./src/voice/reading.ts"
+    },
     "./passage": "./vite/passage.ts",
+    "./licence": "./vite/licence.ts",
     "./kjv-hearings.json": "./data/kjv-hearings.json"
   },
   "scripts": {
