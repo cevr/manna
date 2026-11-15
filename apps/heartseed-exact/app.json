@@ -3,6 +3,7 @@
   "short_name": "Heartseed",
   "id": "app.heartseed.exact",
   "start_url": "/",
+  "env": [{ "name": "HEARTSEED_GARDEN_DRIVE", "launch": true }],
   "display": "standalone",
   "app": {
     "id": "app.heartseed.exact",

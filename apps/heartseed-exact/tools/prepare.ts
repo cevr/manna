@@ -7,13 +7,14 @@
  * in the Exact clone, not on npm, so each is linked into this app's
  * `node_modules` from the clone `EXACT` names (or the default), and no
  * machine path is committed. Then Today's passage is written
- * (`tools/passage.ts`).
+ * (`tools/passage.ts`), and the chapters the garden reads (`tools/chapters.ts`).
  */
 
 import { existsSync, lstatSync, mkdirSync, readlinkSync, symlinkSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { writeChapters } from './chapters';
 import { writePassage } from './passage';
 
 /** Exact's standard modules the app's Contract uses. */
@@ -42,3 +43,4 @@ if (problems.length > 0) {
 }
 
 writePassage();
+writeChapters();

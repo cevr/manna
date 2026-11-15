@@ -1,0 +1,180 @@
+// Your verses: what is planted, each verse's stage and the day it is due.
+// Every rule is the current Heartseed's, run per call by the data sources in
+// src/garden/sources.ts over the garden kept in app:/data/heartseed.json;
+// this file holds the root's garden members (the time, the read, the
+// changes) and the plain screen that draws the read. Every source takes the
+// call's time, zone and seed as its last three arguments.
+// A driver's launch (HEARTSEED_GARDEN_DRIVE set, app.json's `env`) adds
+// a test control under each verse; a plain launch has none.
+
+shape GardenTime
+  epochAtZero: number
+  utcOffset: number
+  seed: number
+
+shape GardenVerse
+  reference: string
+  slug: string
+  planted: bool
+  stage: string
+  recalls: number
+  due: number
+  dueNow: bool
+  dueIn: number
+
+shape GardenList
+  id: string
+  slug: string
+  title: string
+  verses: GardenVerse[]
+
+shape GardenShown
+  read: bool
+  lists: GardenList[]
+  singles: GardenVerse[]
+  listsFull: bool
+  singlesFull: bool
+  limitLine: string
+
+shape GardenChange
+  answer: string
+  line: string
+
+shape GardenVerseChange
+  answer: string
+  verse: GardenVerse
+
+shape GardenDriven
+  on: bool
+
+// A recital's recall as `gardenRecall` takes it: SayIt's recall of the verse.
+shape GardenRecallIn
+  startedAt: number
+  offset: number
+  grade: number
+  suggested: number
+  words: number
+  missed: number
+  peeked: number
+  extra: number
+
+// The help taken before the try, as SayIt holds it: the words peeked at, the
+// instant of Show all, and the best grade the help leaves.
+shape GardenHelpIn
+  peeked: number[]
+  shownAt: option<number>
+  cap: number
+
+fn gardenDueText(v: GardenVerse): string = v.dueNow ? "Due now" : (v.dueIn <= 0 ? "Due later today" : (v.dueIn == 1 ? "Due tomorrow" : `Due in ${v.dueIn} days`))
+
+fn gardenGood(at: number, offset: number): GardenRecallIn = GardenRecallIn(startedAt=at, offset=offset, grade=3, suggested=3, words=10, missed=0, peeked=0, extra=0)
+
+members HeartseedExact
+  resource gardenTime = exactTime() as shape GardenTime
+  state gardenClock = 0
+  task gardenTicker mount
+    every(60000, gardenTicked)
+  action gardenTicked
+    gardenClock = performanceNow()
+  derive gardenAt = gardenTime.epochAtZero + gardenClock
+  resource garden = gardenRead(gardenTime.utcOffset) with gardenAt, gardenTime.seed as shape GardenShown else empty()
+  resource gardenDriven = gardenDrive() as shape GardenDriven
+  mutation gardenPlanted as shape GardenChange queue refreshes garden
+  mutation gardenRemoved as shape GardenChange queue refreshes garden
+  mutation gardenRecalled as shape GardenVerseChange queue refreshes garden
+  mutation gardenMoved as shape GardenVerseChange queue refreshes garden
+  derive gardenLine = match gardenPlanted { case some(c) => c.line, case none => "" }
+  derive gardenAnswer = match gardenPlanted { case some(c) => c.answer, case none => "" }
+
+  action gardenPlantRange(book: number, chapter: number, first: number, last: number)
+    gardenClock = performanceNow()
+    send gardenPlanted = gardenPlant(book, chapter, first, last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action gardenRemoveIt(id: string)
+    gardenClock = performanceNow()
+    send gardenRemoved = gardenRemove(id, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action gardenRecallGood(reference: string)
+    gardenClock = performanceNow()
+    send gardenRecalled = gardenRecall(reference, gardenGood(gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset), GardenHelpIn(peeked=[], shownAt=none, cap=4), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action gardenRecallPeeked(reference: string)
+    gardenClock = performanceNow()
+    send gardenRecalled = gardenRecall(reference, gardenGood(gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset), GardenHelpIn(peeked=[0], shownAt=none, cap=2), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action gardenRecallShown(reference: string)
+    gardenClock = performanceNow()
+    send gardenRecalled = gardenRecall(reference, gardenGood(gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset), GardenHelpIn(peeked=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], shownAt=some(gardenTime.epochAtZero + performanceNow() - 1000), cap=2), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action gardenMoveBack(reference: string)
+    gardenClock = performanceNow()
+    send gardenMoved = gardenBack(reference, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+
+component GardenRow
+  props
+    verse: GardenVerse
+    driven: bool
+    good: action
+    peeked: action
+    shown: action
+    back: action
+  view
+    column gap=4 testId=`plant-${verse.slug}`
+      text verse.reference font="-exact-headline"
+      row gap=12
+        text verse.stage color="-exact-secondary-label" testId=`stage-${verse.slug}`
+        text gardenDueText(verse) color="-exact-secondary-label" testId=`due-${verse.slug}`
+      if driven
+        row gap=8 flex-wrap="wrap"
+          button press=good(verse.reference) buttonStyle="bordered" testId=`good-${verse.slug}`
+            text "Good"
+          button press=peeked(verse.reference) buttonStyle="bordered" testId=`peeked-${verse.slug}`
+            text "Good after a peek"
+          button press=shown(verse.reference) buttonStyle="bordered" testId=`shown-${verse.slug}`
+            text "Good after Show all"
+          button press=back(verse.reference) buttonStyle="bordered" testId=`back-${verse.slug}`
+            text "Move back"
+
+component YourVerses
+  props
+    garden: GardenShown
+    line: string
+    answer: string
+    driven: bool
+    plant: action
+    remove: action
+    good: action
+    peeked: action
+    shown: action
+    back: action
+  view
+    scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0
+      column gap=20 padding=20 max-width="40rem" testId="verses"
+        text "Your verses" role="heading" aria-level=2
+        if garden.read and garden.lists.length == 0 and garden.singles.length == 0
+          text "Nothing planted yet. Plant a passage of three verses or more, or a single verse." color="-exact-secondary-label" testId="empty"
+        row gap=12 flex-wrap="wrap"
+          button press=plant(43, 3, 16, 18) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
+            text "Plant John 3:16-18"
+          button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) buttonStyle="bordered" testId="plant-one"
+            text "Plant a verse of Psalm 119"
+          button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
+            text "Plant Psalm 23:1-2"
+        if garden.limitLine != ""
+          text garden.limitLine color="-exact-secondary-label" testId="full"
+        else if answer == "Short"
+          text line color="-exact-secondary-label" testId="short"
+        else if line != ""
+          text line color="-exact-secondary-label" testId="line"
+        for l in garden.lists key=l.id
+          column gap=12 testId=`list-${l.slug}`
+            row gap=12 align-items="center"
+              text l.title role="heading" aria-level=3 flex=1
+              button press=remove(l.id) buttonStyle="bordered" testId=`remove-${l.slug}`
+                text "Remove"
+            for v in l.verses key=v.slug
+              GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
+        if garden.singles.length > 0
+          column gap=12 testId="singles"
+            text "Single verses" role="heading" aria-level=3
+            for v in garden.singles key=v.slug
+              row gap=12 align-items="center" testId=`single-${v.slug}`
+                column flex=1
+                  GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
+                button press=remove(`single:${v.reference}`) buttonStyle="bordered" testId=`remove-single-${v.slug}`
+                  text "Remove"
