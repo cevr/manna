@@ -8,6 +8,30 @@
       "types": "./exact/matcher.d.ts",
       "default": "./src/matcher.ts"
     },
+    "./garden": {
+      "types": "./exact/garden.d.ts",
+      "default": "./src/garden.ts"
+    },
+    "./sayit": {
+      "types": "./exact/sayit.d.ts",
+      "default": "./src/sayit.ts"
+    },
+    "./passages": {
+      "types": "./exact/passages.d.ts",
+      "default": "./src/passages.ts"
+    },
+    "./lists": {
+      "types": "./exact/lists.d.ts",
+      "default": "./src/lists.ts"
+    },
+    "./fsrs": {
+      "types": "./exact/fsrs.d.ts",
+      "default": "./src/fsrs.ts"
+    },
+    "./day": {
+      "types": "./exact/day.d.ts",
+      "default": "./src/day.ts"
+    },
     "./passage": "./vite/passage.ts",
     "./kjv-hearings.json": "./data/kjv-hearings.json"
   },
