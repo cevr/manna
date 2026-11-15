@@ -9,7 +9,9 @@
  * WCAG AA on what lies behind it (`Remove this list` in `miss` on the
  * ground among them). The device holds the promise, the Fear collection
  * taught, a held passage part grown, a held Handbook list with a verse
- * planted, and a loose verse. Each page reads, written out: its heading,
+ * planted, and a loose verse. The promise and the loose verse are single
+ * verses (hsminlist), with no `Open` and no page of their own; each list's
+ * page reads, written out: its heading,
  * its caption, `Practice this list` and its line (or neither), each row's
  * reference and stage words in the list's order, each row a button named
  * as home's plant only where a tap starts its verse, and `Remove <name>`
@@ -65,13 +67,16 @@ const launch = () => {
   ]);
 };
 
-/** Opens each furrow `titles` names in turn, reads its page, and goes back home. */
+/** Opens each furrow `titles` names in turn, reads its page, and goes back home; `opens` is every `Open …` home offers. */
 const pagesOf = async (scheme: Scheme, reads: number, titles: readonly string[]) => {
   setSystem(scheme);
   launch();
   const rig = await mountBar(reads, reads > 0, null, { now: START }, TAUGHT);
   const pages: Record<string, ReturnType<typeof pageOf>> = {};
   expect(await rig.until(() => rig.control(`Open ${titles[0]}`) !== undefined)).toBe(true);
+  const opens = [...rig.host.querySelectorAll('[role="button"]')]
+    .map(labelOf)
+    .filter((label) => label.startsWith('Open '));
   for (const title of titles) {
     expect(await rig.tap(`Open ${title}`)).toBe(true);
     expect(await rig.until(() => by(rig.host, 'list-screen').length === 1)).toBe(true);
@@ -82,10 +87,10 @@ const pagesOf = async (scheme: Scheme, reads: number, titles: readonly string[])
   const faults = rig.faults.splice(0);
   await rig.leave();
   setSystem('light');
-  return { pages, faults };
+  return { pages, opens, faults };
 };
 
-const TITLES = [passage.reference, 'Psalms 46:1-3', 'Protection & Fear', 'Smyrna', 'Genesis 1:1'];
+const TITLES = ['Psalms 46:1-3', 'Smyrna', 'Protection & Fear'];
 
 /** Fear's fourteen verses in the collection's order, none planted, each a button that learns it. */
 const FEAR = [
@@ -105,15 +110,6 @@ const FEAR = [
   'Isaiah 41:13',
 ].map((verse) => `${verse} · Not planted yet → ${verse}, not planted`);
 
-const PROMISE_PAGE = {
-  heading: [passage.reference],
-  caption: ['1 verse · 1 planted'],
-  practice: 1,
-  line: ['1 ready today · about 1 min'],
-  rows: [`${passage.reference} · A seed · ready today → ${passage.reference}, seed, ready today`],
-  remove: [],
-};
-
 const FEAR_PAGE = {
   heading: ['Protection & Fear'],
   caption: ['14 verses · none planted yet'],
@@ -125,10 +121,10 @@ const FEAR_PAGE = {
 
 describe.each(['light', 'dark'] as const)('a list’s own page in %s', (scheme) => {
   it('shows each list’s heading, caption, practice, rows and remove as written', async () => {
-    const { pages, faults } = await pagesOf(scheme, 0, TITLES);
+    const { pages, opens, faults } = await pagesOf(scheme, 0, TITLES);
     expect(faults).toEqual([]);
+    expect(opens).toEqual(TITLES.map((title) => `Open ${title}`));
     expect(pages).toEqual({
-      [passage.reference]: PROMISE_PAGE,
       'Psalms 46:1-3': {
         heading: ['Psalms 46:1-3'],
         caption: ['3 verses · 1 planted'],
@@ -155,43 +151,22 @@ describe.each(['light', 'dark'] as const)('a list’s own page in %s', (scheme) 
         ],
         remove: ['Remove Smyrna'],
       },
-      'Genesis 1:1': {
-        heading: ['Genesis 1:1'],
-        caption: ['1 verse · 1 planted'],
-        practice: 1,
-        line: ['Starts with Genesis 1:1, nothing is due'],
-        rows: ['Genesis 1:1 · A seed → Genesis 1:1, seed'],
-        remove: [],
-      },
     });
   });
 });
 
-/** A page with no plan: its heading, caption and rows as text alone, nothing to tap but the way back. */
-const still = (reference: string) => ({
-  heading: [reference],
-  caption: ['1 verse · 1 planted'],
-  practice: 0,
-  line: [],
-  rows: [`${reference} · A seed`],
-  remove: [],
-});
-
 describe('a list’s own page over unread passages', () => {
   it('offers no remove, and with no plan no Practice this list and no row button', async () => {
-    const titles = [passage.reference, 'Protection & Fear', 'Psalms 46:1', 'Revelation 2:10'];
-    const { pages, faults } = await pagesOf('light', 3, titles);
+    const { pages, opens, faults } = await pagesOf('light', 3, ['Protection & Fear']);
     expect(faults).toEqual([]);
+    expect(opens).toEqual(['Open Protection & Fear']);
     expect(pages).toEqual({
-      [passage.reference]: still(passage.reference),
       'Protection & Fear': {
         ...FEAR_PAGE,
         practice: 0,
         line: [],
         rows: FEAR.map((row) => row.slice(0, row.indexOf(' → '))),
       },
-      'Psalms 46:1': still('Psalms 46:1'),
-      'Revelation 2:10': still('Revelation 2:10'),
     });
   });
 });

@@ -48,17 +48,16 @@ import { clockOf, START, toDue, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
 import { computed, KEPT_LOOKS, lookFaults, systemScheme } from './look';
-import { fieldRule, heldOn, type ModelPlantStage } from './field-model';
+import { heldOn, homeFieldRule, type ModelPassage, type ModelPlantStage } from './field-model';
 import { captionModel } from './home-model';
 import { keyOf, PREFIX } from './garden-model';
 import { motionFaults } from './motion-rule';
 import { device } from './one';
+import { KEY, spanRef, verseRef, type Span } from './passages-model';
 import { cardLine, END, endShown, rootFaults } from './root-rule';
 import { grewLine, tendedModel } from './run-model';
 import { renewBySettings } from './settings-rig';
 import type { fieldReader as createFieldReader } from './seen';
-
-const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
 /** The ends of a run each `renew` met over every mount of the test file's process, by how many verses grew: `end:none`, `end:one` or `end:many`. */
 export const ENDS = new Map<string, number>();
@@ -236,10 +235,14 @@ export const readField = (host: Element) => {
     .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
     .filter((node) => contrastOf(node, styleOf) < AA)
     .map((node) => node.closest('[data-testid]')?.getAttribute('data-testid') ?? 'text');
+  const singles = [
+    ...host.querySelectorAll('[data-testid="singles"] [data-testid="field-plant"]'),
+  ].map((plant) => plantRead(plant, seen));
   return {
     sown: counted(host, 'sown', seen),
     harvest: counted(host, 'harvest', seen),
     rows,
+    singles,
     strays,
     faint: [...new Set(faint)],
   };
@@ -265,9 +268,31 @@ export const readoutsOf = (host: Element) => {
   };
 };
 
-/** The field frame the rule gives over the disk as it stands. */
+/** The lists of more than one verse the disk's passages key holds as stored, in order; none when it holds no array of ranges. */
+const storedLists = (): ModelPassage[] => {
+  const stored = device.disk.get(KEY);
+  if (stored === undefined || stored === null) return [];
+  let spans: unknown;
+  // oxlint-disable-next-line effect/noTryCatch -- a stored text the app reads as garbled is no lists, as the app reads it.
+  try {
+    spans = JSON.parse(stored);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(spans)) return [];
+  return spans
+    .filter((span: Span) => span.last > span.first)
+    .map((span: Span) => ({
+      title: spanRef(span),
+      verses: Array.from({ length: span.last - span.first + 1 }, (_, at) =>
+        verseRef(span.book, span.chapter, span.first + at),
+      ),
+    }));
+};
+
+/** The field frame the rule gives over the disk as it stands: its recalls, the lists its passages key holds and the promise a single verse. */
 export const wantField = () => {
-  const field = fieldRule(heldOn(device.disk), PASSAGES);
+  const field = homeFieldRule(heldOn(device.disk), storedLists(), [passage.reference]);
   return {
     sown: field.sown === 1 ? '1 day sown' : `${field.sown} days sown`,
     harvest: field.harvest === 1 ? '1 verse at full corn' : `${field.harvest} verses at full corn`,
@@ -279,6 +304,11 @@ export const wantField = () => {
         drawn: DRAWN[plant.stage],
         shown: '',
       })),
+    })),
+    singles: field.singles.map((plant) => ({
+      label: `${plant.reference}, ${plant.stage}`,
+      drawn: DRAWN[plant.stage],
+      shown: plant.reference.replace(/\s+/g, ' ').trim(),
     })),
     strays: 0,
     faint: [],
@@ -316,6 +346,7 @@ const END_ROWS = new Set(['Settings', 'How Heartseed works']);
 /** Whether a reader may have to scroll to `node`: a plant, a furrow's `Open …`, `Add a list` and the end rows. */
 const listed = (node: Element) =>
   idOf(node) === 'field-plant' ||
+  (node.closest('[data-testid="singles"]') !== null && /^Remove( |$)|^Keep$/u.test(nameOf(node))) ||
   idOf(node) === 'add-list' ||
   END_ROWS.has(nameOf(node)) ||
   (nameOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null);

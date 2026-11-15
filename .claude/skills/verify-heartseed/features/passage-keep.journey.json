@@ -38,7 +38,7 @@
       "expect": [
         { "shows": "id=today-card" },
         { "shows": "label=Open Psalms 23:1-6" },
-        { "shows": "label=Open Romans 8:28" },
+        { "shows": "label=Open Romans 8:28-30" },
         { "hides": "id=add-list" }
       ],
       "receipt": "snapshot"

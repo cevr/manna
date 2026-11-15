@@ -21,7 +21,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('adds a new passage last from 0, 1 and 2 held, then shows the limit line', async () => {
-  const { faults, reached } = await walkBars([110, 316], 5, 'bar');
+  const { faults, reached } = await walkBars([2, 69, 184], 5, 'bar');
   expect(faults).toEqual([]);
   const floors = [
     'stored:no key',

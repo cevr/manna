@@ -50,7 +50,7 @@ import {
   storedText,
   versesIn,
 } from '../test/passages-model';
-import { choosableOf, CORPUS } from '../test/passages-rig';
+import { CORPUS, storableOf } from '../test/passages-rig';
 import {
   oldPiecesRule,
   phraseOfRule,
@@ -301,7 +301,7 @@ const diskOf = (next: () => number, now: number, zone: string, tally: Map<string
   }
   const stored: Span[] = [];
   for (let n = below(next, 3); n > 0; n--)
-    stored.push(below(next, 2) === 0 ? pickOf(next, [...OVER]) : choosableOf(next, stored)[1]);
+    stored.push(below(next, 2) === 0 ? pickOf(next, [...OVER]) : storableOf(next, stored));
   disk.set(KEY, storedText(stored));
   if (below(next, 2) === 0 && readyBegun(next, disk, stored, now, zone))
     tally.set('gen:begun ready', (tally.get('gen:begun ready') ?? 0) + 1);
@@ -745,7 +745,7 @@ class Walk {
   async change(kind: 'add' | 'remove') {
     const spans = this.passages.tag === 'Read' ? this.passages.passages : [];
     const added =
-      below(this.next, 2) === 0 ? pickOf(this.next, [...OVER]) : choosableOf(this.next, spans)[1];
+      below(this.next, 2) === 0 ? pickOf(this.next, [...OVER]) : storableOf(this.next, spans);
     const span = kind === 'add' ? added : spans[below(this.next, Math.max(1, spans.length))];
     if (span === undefined) return false;
     const want =

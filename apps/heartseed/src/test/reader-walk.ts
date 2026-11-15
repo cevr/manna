@@ -37,7 +37,8 @@
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
  * the books or the chapters and in again, 1-4 verse taps by pattern, then
  * leaving (from the books, the back `Add verses` to the sheet, then its
- * `Done`) or `Plant` (refused or twice in one turn), retried after a refusal
+ * `Done`; always under 3 verses chosen, where the footer offers no
+ * `Plant`, hsminlist) or `Plant` (refused or twice in one turn), retried after a refusal
  * in half.
  *
  * After every command the settled screen is the model's, the sheet open
@@ -684,7 +685,6 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   };
   const tallyPlanted = (span: Span) => {
     const size = span.last - span.first + 1;
-    if (size === 1) reached.add('planted:one-verse');
     if (size === 20) reached.add('planted:twenty');
     if (span.first === 1 && span.last === countIn(span.book, span.chapter))
       reached.add('planted:whole-chapter');
@@ -759,7 +759,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     }
     await tapVerses(count);
     const chosen = choosing.chosen;
-    if (chosen === undefined || below(next, 6) === 0) {
+    if (chosen !== undefined && chosen.last - chosen.first < 2) reached.add('choose:short');
+    if (chosen === undefined || chosen.last - chosen.first < 2 || below(next, 6) === 0) {
       reached.add('choose:left');
       while (screen === 'chooser') await backOnce('leaving');
       return;

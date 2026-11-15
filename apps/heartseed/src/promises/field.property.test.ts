@@ -84,7 +84,7 @@ const caseOf = (next: () => number) => {
   const passages = passagesOf(next);
   const removed = below(next, 4) === 0 ? pickOf(next, OVER) : undefined;
   let held: Held = { tag: 'Read', passages };
-  let view: PassagesView = { _tag: 'Read', passages, lists: [] };
+  let view: PassagesView = { _tag: 'Read', passages, lists: [], singles: [] };
   if (below(next, 8) === 0) {
     held = { tag: 'Unread' };
     view = { _tag: 'Unread' };
@@ -105,7 +105,7 @@ const caseOf = (next: () => number) => {
 };
 
 describe('the field with collections taught', () => {
-  it('shows the app’s row, the passages held, then each taught collection’s verses as one row with no range, every other plant after, as the rule makes it', () => {
+  it('shows the passages held (the app’s one-verse row a single verse), then each taught collection’s verses as one row with no range, every other plant after, as the rule makes it', () => {
     const next = random(44_1);
     const tally = new Map<string, number>();
     const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
@@ -157,12 +157,17 @@ describe('the field with collections taught', () => {
   it('give the Fear row its 14 verses in order, Psalms 91:1-2 once each, and Psalms 91:1 in both rows over Psalms 91:1-16', () => {
     const shown = fieldPassagesOf(
       OWN,
-      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 16 }], lists: [] },
+      {
+        _tag: 'Read',
+        passages: [{ book: 19, chapter: 91, first: 1, last: 16 }],
+        lists: [],
+        singles: [],
+      },
       collectionsOf(TAUGHT),
     );
     const fear = shown.at(-1);
     expect([shown.length, fear?.title, fear?.verses.length, fear?.range]).toEqual([
-      3,
+      2,
       'Protection & Fear',
       14,
       undefined,
@@ -171,6 +176,6 @@ describe('the field with collections taught', () => {
     const field = fieldOf(gardenOf([recallOf('Psalms 91:1', Date.UTC(2026, 0, 2), 3, 0)]), shown);
     expect(
       field.rows.map((row) => row.plants.filter((p) => p.reference === 'Psalms 91:1').length),
-    ).toEqual([0, 1, 1]);
+    ).toEqual([1, 1]);
   });
 });

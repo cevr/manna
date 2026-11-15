@@ -17,8 +17,11 @@
  * taps `Done`, presses Escape, or taps `Any passage`; with it closed, the
  * stand-in's `Add verses` opens it again. After every command the sheet is
  * the model's, the stand-in's counts are the model's, the stored passages
- * are the start's until an add lands and the model's list after, no other
- * key is written, and every frame kept the sheet's rule.
+ * are the start's (a one-verse range moved to the single verses at the
+ * read, hsminlist `migrateRule`) until an add lands and the model's list
+ * after, the stored single verses are what the read moved until a pick of
+ * fewer than 3 verses joins them and the model's after, no other key is
+ * written, and every frame kept the sheet's rule.
  */
 
 import passage from 'virtual:heartseed-passage';
@@ -29,7 +32,17 @@ import { recallOf } from './field-model';
 import { below, DAY, random } from './garden-model';
 import { BASE_SHELVES, shelvesModel, type ModelList } from './home-model';
 import { device } from './one';
-import { KEY, readRule, storedText, verseRef, type Held, type Span } from './passages-model';
+import {
+  KEY,
+  migrateRule,
+  readRule,
+  SINGLES,
+  spanRef,
+  storedText,
+  verseRef,
+  type Held,
+  type Span,
+} from './passages-model';
 import { chapterOf, CORPUS, countIn, GARBLED } from './passages-rig';
 import { mountShelves } from './shelves-rig';
 import { any, done, opened, plant, sheetWant, tapShelf, type SheetModel } from './shelves-model';
@@ -121,15 +134,17 @@ export const walkShelf = async (seed: number, steps: number) => {
   const next = random(mixed(seed));
   const { kind, raw, loose } = launchDevice(next);
   const start = new Map(device.disk);
-  let model: SheetModel = opened(readRule(CORPUS, raw, 0));
-  let written = false;
+  const read = migrateRule(readRule(CORPUS, raw, 0));
+  let model: SheetModel = opened(read.held);
+  let written = read.moved > 0;
+  let joined = read.moved > 0;
   const reached = new Map<string, number>([[`stored:${kind}`, 1]]);
   const reach = (name: string) => reached.set(name, (reached.get(name) ?? 0) + 1);
   const faults: string[] = [];
   const log: string[] = [];
-  /** The field's rows as the model holds them: the own row, each held range, and the loose verse. */
+  /** The field's rows as the model holds them: each held range, the single verses (the own verse, each held), and the loose verse. */
   const rowsOf = (held: Held): (readonly string[])[] => [
-    [passage.reference],
+    [passage.reference, ...(held.tag === 'Read' ? (held.singles ?? []) : []).map(spanRef)],
     ...(held.tag === 'Read' ? held.passages.map(versesOf) : []),
     ...(loose === undefined ? [] : [loose.verses]),
   ];
@@ -151,8 +166,15 @@ export const walkShelf = async (seed: number, steps: number) => {
     const expected = written && model.held.tag === 'Read' ? storedText(model.held.passages) : raw;
     if (stored !== expected)
       faults.push(`${step}: the stored passages ${stored} where the model has ${expected}`);
+    const singles =
+      joined && model.held.tag === 'Read' ? storedText(model.held.singles ?? []) : undefined;
+    if (device.disk.get(SINGLES) !== singles)
+      faults.push(
+        `${step}: the stored single verses ${device.disk.get(SINGLES)} where the model has ${singles}`,
+      );
     for (const [key, value] of device.disk)
-      if (key !== KEY && start.get(key) !== value) faults.push(`${step}: the key ${key} written`);
+      if (key !== KEY && key !== SINGLES && start.get(key) !== value)
+        faults.push(`${step}: the key ${key} written`);
     faults.push(...rig.faults.splice(0).map((fault) => `${step}: ${fault}`));
   };
   /** Each shelf opened tallied: unread, and each offer in the field by a held range or by the loose verse alone. */
@@ -160,7 +182,7 @@ export const walkShelf = async (seed: number, steps: number) => {
     const shelf = LISTED.find((each) => each.title === model.shelf);
     if (shelf === undefined) return;
     if (model.held.tag === 'Unread') return reach('unread');
-    const held = model.held.passages.flatMap(versesOf);
+    const held = [...model.held.passages, ...(model.held.singles ?? [])].flatMap(versesOf);
     for (const list of shelf.lists) {
       if (list.verses.every((verse) => held.includes(verse))) reach('offer:in-field:held');
       else if (list.verses.every((verse) => verse === loose?.verses[0]))
@@ -211,9 +233,9 @@ export const walkShelf = async (seed: number, steps: number) => {
     } else if (how === 'then-Done') await rig.tapBoth(label, 'Done');
     else await rig.tap(label, how === 'twice');
   };
-  /** A landed add tallied: from how many held, of a pick or a promise, by two taps, after a retry. */
+  /** A landed add tallied: a list's from how many held, or a join to the single verses, of a pick or a promise, by two taps, after a retry. */
   const tallyAdded = (list: ModelList, how: How, from: number, retry: boolean) => {
-    reach(`plant:Added:from-${from}`);
+    reach(list.verses.length < 3 ? 'plant:Added:joined' : `plant:Added:from-${from}`);
     reach(`plant:Added:${PICKS.includes(list) ? 'pick' : 'promise'}`);
     if (how === 'twice') reach('plant:twice');
     if (retry) reach('retry landed');
@@ -229,8 +251,9 @@ export const walkShelf = async (seed: number, steps: number) => {
     model = answer.model;
     reach(`plant:${answer.outcome}`);
     if (how === 'then-Done') reach('plant:then-Done');
+    if (answer.outcome === 'Added' && list.verses.length < 3) joined = true;
+    if (answer.outcome === 'Added' && list.verses.length >= 3) written = true;
     if (answer.outcome === 'Added') {
-      written = true;
       tallyAdded(list, how, from, retry);
     }
     await settle(`${label} ${how} ${answer.outcome}`);

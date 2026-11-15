@@ -33,7 +33,7 @@ import { themed, useThemed } from '../look';
 import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
-import { CAP, MOST, type ChooserSeen } from './choose-model';
+import { CAP, MOST, SHORT, type ChooserSeen } from './choose-model';
 import { clockOf, START, type Time } from './clock';
 import { deadline } from './elapsed';
 import { AA, contrastOf } from './contrast';
@@ -115,19 +115,20 @@ export const readChooser = (host: Element): ChooserSeen | 'closed' => {
             reference: one('chosen-reference'),
             count: one('chosen-count'),
             cap: leaves.some((node) => text(node) === CAP),
+            short: one('short') === SHORT,
             plant: controls.filter((node) => labelOf(node) === 'Plant').length === 1,
           },
     line: lines.length === 0 ? undefined : lines.join(' | '),
   };
 };
 
-/** `Plant` only over a shown reference of 1-20 verses: the fault `host` shows now of that rule, if any. */
+/** `Plant` only over a shown reference of 3-20 verses (hsminlist): the fault `host` shows now of that rule, if any. */
 export const plantFaults = (host: Element): string[] => {
   const plant = [...host.querySelectorAll(CONTROL)].find((node) => labelOf(node) === 'Plant');
   if (plant === undefined) return [];
   const reference = text(host.querySelector('[data-testid="chosen-reference"]'));
   const n = Number.parseInt(text(host.querySelector('[data-testid="chosen-count"]')), 10);
-  if (reference === '' || !(n >= 1 && n <= MOST)) return [`Plant over ${reference} of ${n}`];
+  if (reference === '' || !(n >= 3 && n <= MOST)) return [`Plant over ${reference} of ${n}`];
   return [];
 };
 

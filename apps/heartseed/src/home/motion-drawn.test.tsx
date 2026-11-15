@@ -47,8 +47,8 @@ const fieldAt = (next: () => number, turn: number): readonly Furrow[] => {
     });
     return {
       id: `furrow-${row}`,
-      source: { _tag: 'Loose' },
-      kind: 'other',
+      source: { _tag: 'Own' },
+      kind: 'own',
       title: `Furrow ${row}`,
       icon: pickOf(next, HOME_ICONS),
       caption: captionOf(plants),

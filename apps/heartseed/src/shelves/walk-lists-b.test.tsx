@@ -20,7 +20,7 @@ import { walkListShelves } from '../test/lists-walk';
 import { missed } from '../test/shelves-walk';
 
 it('offers each Handbook list by the lists and passages held, the limit counting both, and nothing while the lists are unread', async () => {
-  const { faults, reached } = await walkListShelves([1, 4, 13, 15], 8);
+  const { faults, reached } = await walkListShelves([1, 4, 23, 15], 8);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [

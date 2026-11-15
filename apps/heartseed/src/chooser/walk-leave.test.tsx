@@ -17,7 +17,7 @@ import { expect, it } from 'bun:test';
 import { walkChoosers } from '../test/chooser-walk';
 
 it('leaves one step at a time, keeps nothing on the way out, and opens again at the books', async () => {
-  const { faults, reached } = await walkChoosers([38, 2], 3);
+  const { faults, reached } = await walkChoosers([0, 1, 66], 3);
   expect(faults).toEqual([]);
   const floors = [
     'taps:one',

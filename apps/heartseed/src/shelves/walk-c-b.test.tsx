@@ -18,7 +18,7 @@ import { expect, it } from 'bun:test';
 import { missed, walkShelves } from '../test/shelves-walk';
 
 it('shows the shelves and each offer as the model does over passages held, to the limit', async () => {
-  const { faults, reached } = await walkShelves([19, 20], 14);
+  const { faults, reached } = await walkShelves([0, 41], 14);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [

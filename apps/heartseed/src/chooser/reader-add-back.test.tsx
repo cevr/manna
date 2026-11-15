@@ -21,7 +21,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('clips a range tapped backward and restarts one, through the field and the chooser', async () => {
-  const { faults, reached } = await walkReaders([38], 16, 'change');
+  const { faults, reached } = await walkReaders([1, 38], 16, 'change');
   expect(faults).toEqual([]);
   const floors = [
     'add:Added',
@@ -32,7 +32,7 @@ it('clips a range tapped backward and restarts one, through the field and the ch
     'back:chapters',
     'choose:left',
     'chapter:176',
-    'planted:one-verse',
+    'choose:short',
     'planted:twenty',
     'planted:whole-chapter',
     'today:said-new',

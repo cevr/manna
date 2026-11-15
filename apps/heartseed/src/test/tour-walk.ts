@@ -10,7 +10,8 @@
  * only where its screen shows it: `How Heartseed works`, the Settings
  * sheet's `Show the welcome again`, `Begin`, `Skip`, `See your field`,
  * `Got it`, the card's button to Today and `Your field` back, `Open
- * <title>` and back, the Settings sheet opened and closed, the Add a list
+ * <title>` and back (where home shows a list; the planted device holds
+ * Psalms 23:1-3, and the fresh one's verse is a single verse with no page), the Settings sheet opened and closed, the Add a list
  * sheet opened and closed, a plant tapped (which opens Today on its verse), and a relaunch. After every
  * step the screen and whether the tips show equal the model's; across
  * each replay the field as read and the whole disk are as they were
@@ -25,6 +26,7 @@ import { mountBar, readBar } from './bar-rig';
 import { recallOf } from './field-model';
 import { record } from './field-rig';
 import { device } from './one';
+import { KEY, storedText } from './passages-model';
 import { closeSettings, modalOf, openSettings, tapInSheet } from './settings-rig';
 import { activateSheet } from './shelves-rig';
 import { tourStep, type Tour, type TourTap } from '../first/tour';
@@ -86,6 +88,7 @@ const PLANTED = () =>
   device.launch([
     record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)),
     record(recallOf(passage.reference, Date.UTC(2026, 9, 2), 3, 0)),
+    [KEY, storedText([{ book: 19, chapter: 23, first: 1, last: 3 }])],
   ]);
 
 /** The first minute from a fresh install to Planted's `Continue`: Skip, Next and two recitals. The bar's rules (Today's controls fixed) are not the first minute's, whose frames `src/test/first-rig.tsx` holds, so the walk keeps the faults from `Continue` on. */
@@ -187,15 +190,16 @@ const primaryOf = (rig: Bar) =>
     .map((node) => node.getAttribute('aria-label') ?? '')
     .find((name) => name === 'Start' || name === 'Practice anyway') ?? 'Start';
 
-/** The first `Open <title>` on home. */
+/** The first `Open <title>` on home, if it shows one. */
 const openOf = (rig: Bar) =>
   [...rig.host.querySelectorAll('[role="button"]')]
     .map((node) => node.getAttribute('aria-label') ?? '')
-    .find((name) => name.startsWith('Open ')) ?? 'Open';
+    .find((name) => name.startsWith('Open '));
 
-/** On home: `How Heartseed works`, `Got it`, Today, a list, either sheet, a plant, or a relaunch. */
+/** On home: `How Heartseed works`, `Got it`, Today, a list where one shows, either sheet, a plant, or a relaunch. */
 const onHome = async (walk: Walk, roll: number) => {
   const { rig } = walk;
+  const open = openOf(rig);
   if (roll < 0.22) {
     startReplay(walk);
     await rig.tap('How Heartseed works');
@@ -208,7 +212,8 @@ const onHome = async (walk: Walk, roll: number) => {
     return check(walk, 'Got it');
   }
   if (roll < 0.44) return leaveHome(walk, 'today', 'to Today', () => rig.tap(primaryOf(rig)));
-  if (roll < 0.54) return leaveHome(walk, 'list', 'Open a list', () => rig.tap(openOf(rig)));
+  if (roll < 0.54 && open !== undefined)
+    return leaveHome(walk, 'list', 'Open a list', () => rig.tap(open));
   if (roll < 0.66) {
     await openSettings(rig);
     walk.where = 'settings';

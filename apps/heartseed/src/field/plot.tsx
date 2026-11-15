@@ -102,12 +102,14 @@ export function Control({
   );
 }
 
-/** One plant: a button over its dot and its dash, each hidden inside it, with no text; filled `hearing` while pressed. */
+/** One plant: a button over its dot and its dash, each hidden inside it, with no text; filled `hearing` while pressed, disabled while `held`. */
 function Plot({
   plant,
+  held,
   onPlant,
 }: {
   readonly plant: FurrowPlant;
+  readonly held: boolean;
   readonly onPlant: (reference: string) => void;
 }) {
   const styles = useThemed(sheets);
@@ -117,6 +119,7 @@ function Plot({
       testID="field-plant"
       role="button"
       aria-label={plant.label}
+      disabled={held}
       onPress={() => onPlant(plant.reference)}
       style={({ pressed }) => [styles.plot, pressed && styles.pressed]}
     >
@@ -142,17 +145,18 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
         Option.some<Removal>({ _tag: 'Passage', name: passageReference(range), range }),
       Collection: () => Option.none<Removal>(),
       Handbook: ({ id }) => Option.some<Removal>({ _tag: 'Handbook', name: furrow.title, id }),
-      Loose: () => Option.none<Removal>(),
     }),
   );
 
-/** One furrow: its head (its title and caption as one button, `Open <title>`, with a chevron, which opens its list view, filled `hearing` while pressed), its plants, and its soil line. */
+/** One furrow: its head (its title and caption as one button, `Open <title>`, with a chevron, which opens its list view, filled `hearing` while pressed), its plants, and its soil line; its buttons disabled while `held`. */
 function FurrowRow({
   furrow,
+  held,
   onPlant,
   onOpen,
 }: {
   readonly furrow: Furrow;
+  readonly held: boolean;
   readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
 }) {
@@ -162,6 +166,7 @@ function FurrowRow({
       <Pressable
         role="button"
         aria-label={`Open ${furrow.title}`}
+        disabled={held}
         onPress={() => onOpen(furrow.id)}
         style={({ pressed }) => [styles.open, pressed && styles.pressed]}
       >
@@ -179,7 +184,7 @@ function FurrowRow({
       </Pressable>
       <View style={styles.plots}>
         {furrow.plants.map((plant, index) => (
-          <Plot key={index} plant={plant} onPlant={onPlant} />
+          <Plot key={index} plant={plant} held={held} onPlant={onPlant} />
         ))}
       </View>
       <View aria-hidden style={styles.soil} />
@@ -187,21 +192,23 @@ function FurrowRow({
   );
 }
 
-/** The field's rows, in order; `underFirst` sits directly under the first row. */
+/** The field's rows, in order; `underFirst` sits directly under the first row; every button is disabled while `held` (a single verse's remove pending). */
 export function Furrows({
   furrows,
+  held = false,
   onPlant,
   onOpen,
   underFirst,
 }: {
   readonly furrows: readonly Furrow[];
+  readonly held?: boolean;
   readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
   readonly underFirst?: ReactNode;
 }) {
   return furrows.map((furrow, index) => (
     <Fragment key={index}>
-      <FurrowRow furrow={furrow} onPlant={onPlant} onOpen={onOpen} />
+      <FurrowRow furrow={furrow} held={held} onPlant={onPlant} onOpen={onOpen} />
       {index === 0 && underFirst}
     </Fragment>
   ));

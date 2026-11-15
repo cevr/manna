@@ -5,7 +5,8 @@
  * every test id and label the scroll view draws after its last furrow, in
  * every home state over each prop the screen draws by (one to four furrows,
  * the tips shown or not, the passages read under the limit, with a list,
- * at the limit or unread, a field sown or not, the card's `Start` or none).
+ * at the limit or unread, a field sown or not, the card's `Start` or none,
+ * and no single verse, two or the most, 20).
  * Each state's foot lies within the foot written out by hand
  * (`HOME_FOOT`) and together they draw all of it; a screen with no furrow
  * gives no foot, as home always draws its own list (`app/index.tsx`'s
@@ -25,7 +26,7 @@ import { Button, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { footFaults, journeyOfText, shippedJourneys } from '../../scripts/journey-rules';
 import { type Foot, HOME_FOOT } from '../../scripts/foot';
-import type { Furrow } from '../home';
+import type { Furrow, SinglePlant } from '../home';
 import type { PassagesView } from '../passages';
 import { footOfHost } from '../test/foot';
 import { Furrows } from './plot';
@@ -80,33 +81,81 @@ const furrowsOf = (n: number): readonly Furrow[] =>
   }));
 
 const range = (chapter: number) => ({ book: 19, chapter, first: 1, last: 2 });
-const UNDER: PassagesView = { _tag: 'Read', passages: [range(1)], lists: [] };
-const LISTED: PassagesView = { _tag: 'Read', passages: [range(1)], lists: ['a-list'] };
-const FULL: PassagesView = { _tag: 'Read', passages: [range(1), range(2)], lists: ['a-list'] };
+const UNDER: PassagesView = { _tag: 'Read', passages: [range(1)], lists: [], singles: [] };
+const LISTED: PassagesView = {
+  _tag: 'Read',
+  passages: [range(1)],
+  lists: ['a-list'],
+  singles: [],
+};
+const FULL: PassagesView = {
+  _tag: 'Read',
+  passages: [range(1), range(2)],
+  lists: ['a-list'],
+  singles: [],
+};
+
+/** The single verses home may draw under the lists (hsminlist): none, the own verse beside one planted alone, or 20, the most. */
+const SINGLES: ReadonlyArray<readonly SinglePlant[]> = [
+  [],
+  [
+    {
+      reference: 'Isaiah 41:10',
+      stage: 'seed',
+      ready: true,
+      label: 'Isaiah 41:10, seed, ready today',
+      removal: Option.none(),
+    },
+    {
+      reference: 'Proverbs 4:23',
+      stage: 'blade',
+      ready: false,
+      label: 'Proverbs 4:23, blade',
+      removal: Option.some({ book: 20, chapter: 4, first: 23, last: 23 }),
+    },
+  ],
+  Array.from({ length: 20 }, (_, at) => ({
+    reference: `Psalms 119:${at + 1}`,
+    stage: 'not planted' as const,
+    ready: false,
+    label: `Psalms 119:${at + 1}, not planted`,
+    removal: Option.none(),
+  })),
+];
 const UNREAD: PassagesView = { _tag: 'Unread' };
 
-/** One state of home: how many furrows, whether the tips show, the passages, the days sown, and whether the card offers `Start`. */
+/** One state of home: how many furrows, the single verses, whether the tips show, the passages, the days sown, and whether the card offers `Start`. */
 interface HomeState {
   readonly furrows: number;
+  readonly singles: readonly SinglePlant[];
   readonly tips: boolean;
   readonly passages: PassagesView;
   readonly sown: number;
   readonly start: boolean;
 }
 
-/** Every home state over the props the screen draws by, each value of each crossed with every other. */
-const STATES: ReadonlyArray<HomeState> = [0, 1, 2, 3, 4].flatMap((furrows) =>
-  [true, false].flatMap((tips) =>
-    [UNDER, LISTED, FULL, UNREAD].flatMap((passages) =>
-      [0, 4].flatMap((sown) =>
-        [true, false].map((start) => ({ furrows, tips, passages, sown, start })),
+/** Every home state over the props the screen draws by, each value of each crossed with every other with no single verse; then each furrow count with each run of single verses (which draw apart from the card, the days sown and Start), the tips shown or not, under the limit or at it. */
+const STATES: ReadonlyArray<HomeState> = [
+  ...[0, 1, 2, 3, 4].flatMap((furrows) =>
+    [true, false].flatMap((tips) =>
+      [UNDER, LISTED, FULL, UNREAD].flatMap((passages) =>
+        [0, 4].flatMap((sown) =>
+          [true, false].map((start) => ({ furrows, singles: [], tips, passages, sown, start })),
+        ),
       ),
     ),
   ),
-);
+  ...[0, 1, 2, 3, 4].flatMap((furrows) =>
+    SINGLES.slice(1).flatMap((singles) =>
+      [true, false].flatMap((tips) =>
+        [UNDER, FULL].map((passages) => ({ furrows, singles, tips, passages, sown: 4, start: true })),
+      ),
+    ),
+  ),
+];
 
 const nameOf = (state: HomeState) =>
-  `${state.furrows} furrows, tips ${state.tips}, ${state.passages._tag === 'Read' ? `${state.passages.passages.length + state.passages.lists.length} held` : 'unread'}, sown ${state.sown}, start ${state.start}`;
+  `${state.furrows} furrows, ${state.singles.length} single verses, tips ${state.tips}, ${state.passages._tag === 'Read' ? `${state.passages.passages.length + state.passages.lists.length} held` : 'unread'}, sown ${state.sown}, start ${state.start}`;
 
 /** What `node` draws, mounted in the document: its foot, or none. */
 const drawn = async (node: ReactNode) => {
@@ -127,6 +176,8 @@ const screen = (state: HomeState) => (
   <FieldScreen
     field={{ rows: [], sown: state.sown, harvest: Math.min(state.sown, 1) }}
     furrows={furrowsOf(state.furrows)}
+    singles={state.singles}
+    onUproot={async () => 'Removed'}
     passages={state.passages}
     greeting={{ words: 'Good morning', icon: 'sun' }}
     card={{
@@ -287,7 +338,7 @@ const spellings = (foot: Foot) => [
 describe('home’s foot as the field screen draws it', () => {
   it('is every id and label drawn after the furrows, in each home state within the foot written out by hand, and all of it over every state; none with no furrow', async () => {
     const states = await statesDrawn;
-    expect(states.length).toBe(160);
+    expect(states.length).toBe(200);
     expect(
       states.flatMap(({ state, foot }) => {
         if (state.furrows === 0) return Option.isNone(foot) ? [] : [`${nameOf(state)}: a foot`];

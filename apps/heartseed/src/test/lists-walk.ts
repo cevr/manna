@@ -26,7 +26,9 @@
  * is written or removed (no recall), and every frame kept the root's rule
  * and the bar's.
  *
- * A sheet device holds the promise planted or not, 0-3 stored picks, the
+ * A sheet device holds the promise planted or not, 0-3 stored picks of 3
+ * verses or more (a pick of fewer joins the single verses, whose key is
+ * then the model's, hsminlist), the
  * lists' key absent, `[]`, 1 or 3 small lists (now and then with an unknown
  * id or an id twice) or garbled, and now and then a recall on one verse of
  * a small list. With the sheet open, each command opens, switches or closes
@@ -73,7 +75,15 @@ import {
 import { BASE_SHELVES, shelvesModel, type ModelList } from './home-model';
 import { device } from './one';
 import { mountBar } from './bar-rig';
-import { KEY, spanRef, storedText, verseRef, type Held, type Span } from './passages-model';
+import {
+  KEY,
+  SINGLES,
+  spanRef,
+  storedText,
+  verseRef,
+  type Held,
+  type Span,
+} from './passages-model';
 import { CORPUS } from './passages-rig';
 import { activateSheet, mountShelves, settleSheet, tapSheet } from './shelves-rig';
 import {
@@ -132,7 +142,8 @@ const deviceOf = (next: () => number) => {
     recalls.push(recallOf(list.verses[at] as string, now - 2 * DAY, 3, 0));
     if (below(next, 3) === 0 && passages.length < 2) {
       const [book, chapter, verse] = list.places[at] as readonly [number, number, number];
-      passages.push({ book, chapter, first: verse, last: verse });
+      const first = Math.max(1, verse - 2);
+      passages.push({ book, chapter, first, last: first + 2 });
     }
   }
   return {
@@ -270,8 +281,8 @@ export const walkListBar = async (seed: number, steps: number) => {
       wroteL = true;
       bar = QUIET;
       if (limited && count() < 3) reached.add('limit lifted by an uproot');
-      if (loose.some((verse) => homeNow().rows.some((row) => row.title === verse)))
-        reached.add('uproot:a loose row returns');
+      if (loose.some((verse) => homeNow().singles.some((plant) => plant.startsWith(`${verse}, `))))
+        reached.add('uproot:a verse turns single');
     } else bar = { open: bar.open, ask: undefined, alert: notRemoved(title) };
     await settle(`remove ${title}${twice ? ' twice' : ''}${refused ? ', refused' : ''}`);
     device.fail('set', 0);
@@ -319,8 +330,8 @@ export const walkListBar = async (seed: number, steps: number) => {
   /** `Add verses`, the shelf of a small list home does not show whole, and its `Plant`; a relaunch when none may be planted. */
   const plantThrough = async () => {
     const shown = new Set(
-      homeNow().rows.flatMap((row) =>
-        row.plants.map((plant) => plant.slice(0, plant.indexOf(', '))),
+      [...homeNow().rows.flatMap((row) => row.plants), ...homeNow().singles].map((plant) =>
+        plant.slice(0, plant.indexOf(', ')),
       ),
     );
     const choices = SMALL_LISTS.filter(
@@ -370,8 +381,8 @@ const shelfLists = (title: string): readonly ModelList[] => {
 /** The picks a sheet device may hold. */
 const DEVICE_PICKS: readonly Span[] = [
   { book: 19, chapter: 1, first: 1, last: 3 },
-  { book: 20, chapter: 15, first: 1, last: 1 },
-  { book: 43, chapter: 14, first: 27, last: 27 },
+  { book: 19, chapter: 46, first: 1, last: 3 },
+  { book: 19, chapter: 91, first: 1, last: 4 },
 ];
 
 /** The verses of `span`, by reference. */
@@ -434,6 +445,7 @@ export const walkListShelf = async (seed: number, steps: number) => {
   let model: SheetModel = opened(heldOf(lists));
   let wroteP = false;
   let wroteL = false;
+  let wroteS = false;
   const reached = new Map<string, number>([[`lists:${drawn.kind}`, 1]]);
   const reach = (name: string) => reached.set(name, (reached.get(name) ?? 0) + 1);
   const faults: string[] = [];
@@ -442,14 +454,16 @@ export const walkListShelf = async (seed: number, steps: number) => {
   const held = () => heldLists(stored());
   const passages = () => (model.held.tag === 'Read' ? model.held.passages : []);
   const count = () => passages().length + held().length;
-  /** The field's rows as the model holds them: the own row, each held range, each held list, and the loose verse. */
+  const singles = () => (model.held.tag === 'Read' ? (model.held.singles ?? []) : []);
+  /** The field's rows as the model holds them: each held range, each held list, the single verses (the own verse, each joined), and the loose verse. */
   const rows = (): (readonly string[])[] => {
-    const out: (readonly string[])[] = [[PROMISE]];
+    const out: (readonly string[])[] = [];
     if (model.held.tag === 'Read') {
       for (const span of model.held.passages) out.push(spanVerses(span));
       for (const id of held())
         out.push(HANDBOOK_ORDER.find((list) => list.id === id)?.verses ?? []);
     }
+    out.push([PROMISE, ...singles().map(spanRef)]);
     if (drawn.loose !== undefined) out.push([drawn.loose]);
     return out;
   };
@@ -477,8 +491,13 @@ export const walkListShelf = async (seed: number, steps: number) => {
       faults.push(
         `${step}: the stored passages ${device.disk.get(KEY)} where the model has ${wantP}`,
       );
+    const wantS = wroteS ? storedText(singles()) : undefined;
+    if (device.disk.get(SINGLES) !== wantS)
+      faults.push(
+        `${step}: the stored single verses ${device.disk.get(SINGLES)} where the model has ${wantS}`,
+      );
     for (const [key, value] of device.disk)
-      if (key !== KEY && key !== LISTS && start.get(key) !== value)
+      if (key !== KEY && key !== LISTS && key !== SINGLES && start.get(key) !== value)
         faults.push(`${step}: the key ${key} written`);
     faults.push(...rig.faults.splice(0).map((fault) => `${step}: ${fault}`));
   };
@@ -549,6 +568,37 @@ export const walkListShelf = async (seed: number, steps: number) => {
     if (how === 'twice') reach('plant:list:twice');
     if (retry) reach('retry landed');
   };
+  /** Plants Handbook `list` in the model and the stored ids, tallying what it reached; answers its outcome. */
+  const plantHandbook = (
+    list: ModelList,
+    refused: boolean,
+    how: How,
+    from: number,
+    retry: boolean,
+  ): string => {
+    const answer = plantList(model, list.id, list.title, refused);
+    model = answer.model;
+    reach(`plant:list:${answer.outcome}`);
+    if (answer.outcome === 'Added' && lists.tag === 'Read') {
+      lists = { ...lists, stored: [...lists.stored, list.id] };
+      wroteL = true;
+      tallyListAdded(how, from, retry);
+    }
+    return answer.outcome;
+  };
+  /** Plants pick `list` in the model, a list of 3 or more verses or single verses under 3, tallying what it reached; answers its outcome. */
+  const plantPick = (list: ModelList, refused: boolean): string => {
+    const answer = plant(CORPUS, model, list.range ?? DEVICE_PICKS[0]!, refused);
+    model = answer.model;
+    const short = list.verses.length < 3;
+    reach(`plant:${short ? 'singles' : 'pick'}:${answer.outcome}`);
+    if (answer.outcome === 'Added' && short) wroteS = true;
+    else if (answer.outcome === 'Added') {
+      wroteP = true;
+      if (held().length > 0) reach('plant:pick:Added:with a list');
+    }
+    return answer.outcome;
+  };
   const tapPlant = async (list: ModelList, retry: boolean): Promise<void> => {
     const label = `Plant ${list.title}`;
     const refused = below(next, 4) === 0;
@@ -556,27 +606,10 @@ export const walkListShelf = async (seed: number, steps: number) => {
     const from = count();
     device.fail('set', refused ? 1 : 0);
     await press(label, how);
-    let outcome: string;
-    if (list.source.tag === 'Handbook') {
-      const answer = plantList(model, list.id, list.title, refused);
-      model = answer.model;
-      outcome = answer.outcome;
-      reach(`plant:list:${outcome}`);
-      if (outcome === 'Added' && lists.tag === 'Read') {
-        lists = { ...lists, stored: [...lists.stored, list.id] };
-        wroteL = true;
-        tallyListAdded(how, from, retry);
-      }
-    } else {
-      const answer = plant(CORPUS, model, list.range ?? DEVICE_PICKS[0]!, refused);
-      model = answer.model;
-      outcome = answer.outcome;
-      reach(`plant:pick:${outcome}`);
-      if (outcome === 'Added') {
-        wroteP = true;
-        if (held().length > 0) reach('plant:pick:Added:with a list');
-      }
-    }
+    const outcome =
+      list.source.tag === 'Handbook'
+        ? plantHandbook(list, refused, how, from, retry)
+        : plantPick(list, refused);
     await settle(`${label} ${how} ${outcome}`);
     device.fail('set', 0);
     if (outcome !== 'Failed' || faults.length > 0) return;

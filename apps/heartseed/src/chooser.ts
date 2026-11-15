@@ -12,10 +12,16 @@
 
 import { Option } from 'effect';
 
-import { MOST_VERSES } from './passages';
+import { LEAST_VERSES, MOST_SINGLES, MOST_VERSES } from './passages';
 
 /** The line the field's bar and the chooser's footer show once 3 or more passages and lists are held together. */
 export const LIMIT_LINE = '3 passages or lists, the most for now. Remove one to add another.';
+
+/** The line the Add a list sheet shows once the single verses are at their own limit. */
+export const SINGLES_LIMIT_LINE = `${MOST_SINGLES} single verses, the most for now. Remove one to add another.`;
+
+/** The line the chooser's footer shows while fewer than 3 verses are chosen, in place of `Plant`. */
+export const SHORT_LINE = `A list holds at least ${LEAST_VERSES} verses.`;
 
 /** The verses chosen in one chapter, first to last. */
 export interface Verses {

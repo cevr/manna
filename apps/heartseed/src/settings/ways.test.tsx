@@ -128,7 +128,7 @@ describe('Settings, its ways', () => {
         .filter((label) => label.startsWith('Open ')),
     }).toEqual({
       modal: null,
-      opens: [`Open ${passage.reference}`, 'Open Psalms 23:1-2', 'Open Made 1:1'],
+      opens: ['Open Psalms 23:1-2'],
     });
     await openSettings(rig);
     expect({

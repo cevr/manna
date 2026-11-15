@@ -8,7 +8,7 @@
  * `Remove` asks, `Keep` keeps it, the ask's `Remove` takes the list away
  * once (twice in one turn makes one remove and no alert), a refused write
  * leaves the alert, an id stored twice goes whole, the plants stay (a verse
- * only the list named is a row of its own again), one verse shows one
+ * only the list named is a single verse again, hsminlist), one verse shows one
  * stage in two furrows, the limit line counts the lists held, an uproot
  * lifts it, and a relaunch shows the stored lists again.
  *
@@ -31,7 +31,7 @@ it('removes a planted list once its write lands, after one ask, keeping its plan
     ['uproot:Keep', 1],
     ['uproot:twice', 1],
     ['uproot:an id stored twice, both gone', 1],
-    ['uproot:a loose row returns', 1],
+    ['uproot:a verse turns single', 1],
     ['limit:with a list held', 2],
     ['limit lifted by an uproot', 1],
     ['relaunch', 1],

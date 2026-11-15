@@ -19,7 +19,7 @@ import { expect, it } from 'bun:test';
 import { walkChoosers } from '../test/chooser-walk';
 
 it('shows each step, the range and the footer as the rule does, and adds nothing it cannot', async () => {
-  const { faults, reached } = await walkChoosers([1, 3, 16], 3);
+  const { faults, reached } = await walkChoosers([0, 1, 16], 3);
   expect(faults).toEqual([]);
   const floors = [
     'taps:forward',

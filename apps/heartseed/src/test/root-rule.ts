@@ -253,7 +253,8 @@ export const homeRuleFaults = (on: string, host: Element, controls: readonly Ele
     if ([plant, ...plant.querySelectorAll('*')].some((node) => /^\d+$/u.test(text(node))))
       out.push(`a number in ${nameOf(plant)}`);
   for (const node of controls)
-    if (/^Remove( |$)/u.test(nameOf(node))) out.push(`${nameOf(node)} on home`);
+    if (/^Remove( |$)/u.test(nameOf(node)) && node.closest('[data-testid="singles"]') === null)
+      out.push(`${nameOf(node)} on home`);
   const rows = [...host.querySelectorAll('[data-testid="row"]')];
   for (const row of rows) {
     const title = text(row.querySelector('[data-testid="row-title"]'));

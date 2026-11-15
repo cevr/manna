@@ -5,9 +5,10 @@
  * the session does not teach, then each section of Haskell's Bible Handbook.
  * Every pick and every promise is a `Passage` list, held as canon numbers,
  * and every Handbook list a `Handbook` list read from its data, so no source
- * here names a verse (`src/today.test.tsx`). Planting a passage is
- * `addPassage`, and a Handbook list `addList`; `offerStateOf` says what a
- * shelf's row offers before that.
+ * here names a verse (`src/today.test.tsx`). Planting a passage of 3 or
+ * more verses is `addPassage`, one of fewer `joinSingles` (each of its
+ * verses a single verse), and a Handbook list `addList`; `offerStateOf`
+ * says what a shelf's row offers before that.
  */
 
 import { Option } from 'effect';
@@ -16,7 +17,15 @@ import type { Field } from './field';
 import { HANDBOOK, HANDBOOK_SOURCE } from './handbook';
 import type { HomeIcon } from './home';
 import { passageList, plantedListOf, type List } from './lists';
-import { heldCount, MOST_PASSAGES, type PassagesView, type Range } from './passages';
+import {
+  heldCount,
+  isShort,
+  MOST_PASSAGES,
+  MOST_SINGLES,
+  passageReference,
+  type PassagesView,
+  type Range,
+} from './passages';
 import { COLLECTIONS, TAUGHT } from './promises';
 
 /** Where a shelf's lists come from: the chooser over the whole Bible, or lists of its own. */
@@ -138,7 +147,18 @@ const HANDBOOK_SHELVES: readonly Shelf[] = HANDBOOK.map((section) => ({
 /** Every shelf of Add verses: the 17 above, then each section of the Handbook. */
 export const SHELVES: readonly Shelf[] = [...BASE_SHELVES, ...HANDBOOK_SHELVES];
 
-/** What a shelf's row offers for `list`: nothing while the passages are unread, `in field` when the field already shows each of its verses, `full` at the most passages and lists held together, else `plant`. */
+/** Whether `list` plants as single verses: a passage of fewer than 3 verses, which a list may not be. */
+export const plantsSingly = (list: List): boolean =>
+  list.source._tag === 'Passage' && isShort(list.source.range);
+
+/** Whether joining `list`'s verses would take the single verses held past their limit. */
+const singlesFull = (list: List, passages: PassagesView & { readonly _tag: 'Read' }) => {
+  const held = new Set(passages.singles.map((range) => passageReference(range)));
+  const more = list.verses.filter((verse) => !held.has(verse)).length;
+  return held.size + more > MOST_SINGLES;
+};
+
+/** What a shelf's row offers for `list`: nothing while the passages are unread, `in field` when the field already shows each of its verses, `full` at the limit its planting meets (the single verses' own for a pick of fewer than 3 verses, `plantsSingly`, else the most passages and lists held together), else `plant`. */
 export const offerStateOf = (
   list: List,
   passages: PassagesView,
@@ -147,6 +167,10 @@ export const offerStateOf = (
   if (passages._tag === 'Unread') return 'unread';
   const shown = new Set(field.rows.flatMap((row) => row.plants.map((plant) => plant.reference)));
   if (list.verses.every((verse) => shown.has(verse))) return 'in field';
+  if (plantsSingly(list)) {
+    if (singlesFull(list, passages)) return 'full';
+    return 'plant';
+  }
   if (heldCount(passages) >= MOST_PASSAGES) return 'full';
   return 'plant';
 };

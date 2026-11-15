@@ -16,7 +16,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('reads every passage held as its own row, past the caps and with equal passages', async () => {
-  const { faults, reached } = await walkBars([42, 139, 159], 5, 'bar');
+  const { faults, reached } = await walkBars([0, 29, 33], 5, 'bar');
   expect(faults).toEqual([]);
   const floors = [
     'reads:1',

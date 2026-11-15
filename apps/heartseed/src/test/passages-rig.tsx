@@ -97,6 +97,14 @@ export const choosableOf = (
   ];
 };
 
+/** A range a passage holds in this build, from `next`: a choosable one (`choosableOf`) of at least 3 verses, the fewest a list holds (hsminlist). Stored passages of fewer are an earlier build's, which `src/passages/service.test.ts` and `src/passages/migrate.test.ts` hold. */
+export const storableOf = (next: () => number, held: ReadonlyArray<Span>): Span => {
+  for (;;) {
+    const [, span] = choosableOf(next, held);
+    if (span.last - span.first >= 2) return span;
+  }
+};
+
 /** A range of `kind`, which a reader may not add, from `next`. */
 export const unchoosableOf = (next: () => number, kind: (typeof INVALID)[number]): Span => {
   const { book, chapter, count } = chapterOf(next);
@@ -115,10 +123,11 @@ export const unchoosableOf = (next: () => number, kind: (typeof INVALID)[number]
   return { book, chapter, first: 0, last: Math.min(count, 2) };
 };
 
-/** A device's stored value and its name, from `next`: no key, `[]`, one of `GARBLED` (by `seed`), or one to five choosable ranges, with a range of Psalms 119 past 20 verses in a third, and the first repeated in half. */
+/** A device's stored value and its name, from `next`: no key, `[]`, one of `GARBLED` (by `seed`), or one to five ranges drawn by `drawn` (by default a range a passage holds in this build, `storableOf`; an earlier build's devices draw any choosable one, one verse among them), with a range of Psalms 119 past 20 verses in a third, and the first repeated in half. */
 export const storedOf = (
   next: () => number,
   seed: number,
+  drawn: (next: () => number, held: ReadonlyArray<Span>) => Span = storableOf,
 ): readonly [string, string | undefined] => {
   const roll = below(next, 20);
   if (roll < 3) return ['no key', undefined];
@@ -128,7 +137,7 @@ export const storedOf = (
     return [`garbled: ${name}`, text];
   }
   const list: Span[] = [];
-  for (let n = 1 + below(next, 5); n > 0; n--) list.push(choosableOf(next, list)[1]);
+  for (let n = 1 + below(next, 5); n > 0; n--) list.push(drawn(next, list));
   if (below(next, 3) === 0)
     list.push({ book: 19, chapter: 119, first: 1, last: 21 + below(next, 156) });
   if (below(next, 2) === 0 && list[0] !== undefined)

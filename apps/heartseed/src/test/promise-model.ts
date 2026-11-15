@@ -201,13 +201,13 @@ export const startModel = <I extends ModelStartItem>(
   return { from: 'learn', item: { reference: verse, fresh: true, recalls: 0 } };
 };
 
-/** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */
+/** F1: the lists the field shows over the app's `own` rows (each of more than one verse: one of one verse is a single verse, hsminlist), the passages `held` and the collections `taught`. */
 export const fieldPassagesModel = (
   own: readonly ModelPassage[],
   held: Held,
   taught: readonly string[],
 ): ModelPassage[] => {
-  const out: ModelPassage[] = [...own];
+  const out: ModelPassage[] = own.filter((row) => row.verses.length > 1);
   if (held.tag === 'Read')
     for (const span of held.passages) {
       const verses: string[] = [];

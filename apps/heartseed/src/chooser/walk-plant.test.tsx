@@ -19,7 +19,7 @@ import { expect, it } from 'bun:test';
 import { walkChoosers } from '../test/chooser-walk';
 
 it('plants a range once its write lands, and keeps it with the alert when the write is refused', async () => {
-  const { faults, reached } = await walkChoosers([13, 36, 9], 3);
+  const { faults, reached } = await walkChoosers([0, 36, 124], 3);
   expect(faults).toEqual([]);
   const floors = [
     'added:from-0',

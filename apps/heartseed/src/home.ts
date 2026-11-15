@@ -13,10 +13,10 @@
 import { Array as Arr, Match, Option } from 'effect';
 
 import { offsetAt } from './day';
-import { fieldOf, type PlantStage } from './field';
+import { fieldOf, type FieldPassage, type FieldPlant, type PlantStage } from './field';
 import type { ReadGarden } from './garden';
-import { looseList, type List, type ListSource } from './lists';
-import type { Range } from './passages';
+import type { List, ListSource } from './lists';
+import { SINGLES_TITLE, verseReference, type Range } from './passages';
 import { phraseOf } from './phrase';
 import { isDone, type Plan } from './session';
 
@@ -38,8 +38,8 @@ export const HOME_ICONS = [
 
 export type HomeIcon = (typeof HOME_ICONS)[number];
 
-/** What a furrow's list is to the reader: the app's own, a passage or Handbook list held, a collection taught, or a verse no list names. */
-export type FurrowKind = 'own' | 'held' | 'taught' | 'other';
+/** What a furrow's list is to the reader: the app's own, a passage or Handbook list held, or a collection taught. */
+export type FurrowKind = 'own' | 'held' | 'taught';
 
 /** The kind of a list from its source. */
 export const kindOf: (source: ListSource) => FurrowKind = Match.type<ListSource>().pipe(
@@ -48,7 +48,6 @@ export const kindOf: (source: ListSource) => FurrowKind = Match.type<ListSource>
     Passage: (): FurrowKind => 'held',
     Collection: (): FurrowKind => 'taught',
     Handbook: (): FurrowKind => 'held',
-    Loose: (): FurrowKind => 'other',
   }),
 );
 
@@ -63,14 +62,13 @@ const bookIcon = (book: number): HomeIcon => {
   return 'scroll';
 };
 
-/** The icon of a list from its source: a bow for the app's own row and a collection, a passage's by its book, and a scroll for a Handbook list and a verse no list names. */
+/** The icon of a list from its source: a bow for the app's own row and a collection, a passage's by its book, and a scroll for a Handbook list. */
 export const iconOf: (source: ListSource) => HomeIcon = Match.type<ListSource>().pipe(
   Match.tagsExhaustive({
     Own: (): HomeIcon => 'bow',
     Passage: ({ range }): HomeIcon => bookIcon(range.book),
     Collection: (): HomeIcon => 'bow',
     Handbook: (): HomeIcon => 'scroll',
-    Loose: (): HomeIcon => 'scroll',
   }),
 );
 
@@ -123,28 +121,36 @@ const labelOf = (reference: string, stage: PlantStage, ready: boolean) => {
   return `${reference}, ${stage}`;
 };
 
+/** A field plant as home draws it, ready when its verse is in `ready`. */
+const furrowPlantOf = (plant: FieldPlant, ready: ReadonlySet<string>): FurrowPlant => {
+  const isReady = ready.has(plant.reference);
+  return {
+    reference: plant.reference,
+    stage: plant.stage,
+    ready: isReady,
+    label: labelOf(plant.reference, plant.stage, isReady),
+  };
+};
+
+/** The passages the field shows: the lists, then the single verses `singles` as one passage after them, so the field's other rows hold only verses neither names. */
+export const fieldPassagesWith = (
+  lists: readonly List[],
+  singles: readonly string[],
+): readonly FieldPassage[] => [...lists, { title: SINGLES_TITLE, verses: singles }];
+
 /**
- * The furrows of `garden` over `lists`: one per row of `fieldOf(garden,
- * lists)`, in row order. The first rows are the lists'; each later row is
- * a verse no list names, as a `Loose` list. A plant is ready when its verse
- * is in `ready`.
+ * The furrows of `garden` over `lists`: one per list, in order, each its
+ * row of `fieldOf(garden, lists)`. A plant is ready when its verse is in
+ * `ready`. A verse no list names is no furrow: it is a single verse
+ * (`singlesOf`).
  */
 export const furrowsOf = (
   garden: ReadGarden,
   lists: readonly List[],
   ready: ReadonlySet<string>,
 ): readonly Furrow[] =>
-  fieldOf(garden, lists).rows.map((row, index) => {
-    const list = Option.getOrElse(Arr.get(lists, index), () => looseList(row.title));
-    const plants = row.plants.map((plant): FurrowPlant => {
-      const isReady = ready.has(plant.reference);
-      return {
-        reference: plant.reference,
-        stage: plant.stage,
-        ready: isReady,
-        label: labelOf(plant.reference, plant.stage, isReady),
-      };
-    });
+  Arr.zipWith(lists, fieldOf(garden, lists).rows, (list, row): Furrow => {
+    const plants = row.plants.map((plant) => furrowPlantOf(plant, ready));
     return {
       id: list.id,
       title: list.title,
@@ -156,6 +162,38 @@ export const furrowsOf = (
       plants,
     };
   });
+
+/** A single verse as home draws it: its plant, and the one-verse range a `Remove` takes out when the reader planted it alone, none for the app's own verse and a verse that is single only as no list names it. */
+export interface SinglePlant extends FurrowPlant {
+  readonly removal: Option.Option<Range>;
+}
+
+/**
+ * The single verses home shows apart from the lists (owner, 2026-11-14: "a
+ * different type that shows itself differently"): each of `singles` in
+ * order, then every other verse the garden holds that no list names, in
+ * the order first sown (the field's other rows, `fieldOf`). Each verse of
+ * `held`, the single verses the reader planted, carries its range to
+ * remove. A plant is ready when its verse is in `ready`.
+ */
+export const singlesOf = (
+  garden: ReadGarden,
+  lists: readonly List[],
+  singles: readonly string[],
+  held: readonly Range[],
+  ready: ReadonlySet<string>,
+): readonly SinglePlant[] => {
+  const removable = new Map(
+    held.map((range) => [verseReference(range.book, range.chapter, range.first), range] as const),
+  );
+  return fieldOf(garden, fieldPassagesWith(lists, singles))
+    .rows.slice(lists.length)
+    .flatMap((row) => row.plants)
+    .map((plant) => ({
+      ...furrowPlantOf(plant, ready),
+      removal: Option.fromUndefinedOr(removable.get(plant.reference)),
+    }));
+};
 
 /** The verse a plant's reference belongs to: an earlier build's piece's verse (`src/phrase.ts`), else the reference itself. */
 export const verseOf = (reference: string) =>

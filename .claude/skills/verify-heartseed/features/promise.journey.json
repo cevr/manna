@@ -9,7 +9,7 @@
       "relaunch": false,
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=Open Isaiah 41:10" },
+        { "shows": "id=singles" },
         { "shows": "label=Open Protection & Fear" }
       ],
       "receipt": "snapshot"

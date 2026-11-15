@@ -90,6 +90,29 @@
       "expect": [
         {
           "shows": "label=1 verse"
+        },
+        {
+          "shows": "id=short"
+        },
+        {
+          "hides": "label=Plant"
+        }
+      ],
+      "receipt": "none"
+    },
+    {
+      "name": "passage-limit-range",
+      "action": "tap",
+      "target": "label=Romans 8:30",
+      "expect": [
+        {
+          "shows": "label=Romans 8:28-30"
+        },
+        {
+          "shows": "label=3 verses"
+        },
+        {
+          "shows": "label=Plant"
         }
       ],
       "receipt": "none"
@@ -103,7 +126,7 @@
           "shows": "id=today-card"
         },
         {
-          "shows": "label=Open Romans 8:28"
+          "shows": "label=Open Romans 8:28-30"
         },
         {
           "shows": "label=Open Psalms 23:1-6"

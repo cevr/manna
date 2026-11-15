@@ -4,7 +4,9 @@ Each furrow on home opens its own page (`apps/heartseed/src/list/screen.tsx`,
 the rules `apps/heartseed/src/list.ts`; `apps/heartseed/README.md`,
 Lists): a tap of its title, the button `Open <title>`, shows the page in
 place in the root route (no route, no link, no tab, never stored). Home
-holds no `Remove`: a held passage's or Handbook list's remove lives here.
+holds no list's `Remove`: a held passage's or Handbook list's remove lives
+here. A single verse (home's `Single verses`, `home.md`) is no list and
+has no page: its tap starts it on Today.
 
 - **Fixed above the scroll view** (`id=list-screen` on the page): the
   button `Your field` (shown `‹ Your field`), back to home; the list's
@@ -34,17 +36,19 @@ holds no `Remove`: a held passage's or Handbook list's remove lives here.
 
 ## Sub-features
 
-- `home-lists` (`home.md`): home's buttons `Open Isaiah 41:10` and `Open
-  Protection & Fear`, and 0 buttons named `Remove` or starting `Remove `.
+- `home-lists` (`home.md`): home's button `Open Protection & Fear`, no
+  `Open Isaiah 41:10` (the promise is a single verse), and 0 buttons named
+  `Remove` or starting `Remove `.
 - `list-open`: `Open Protection & Fear` shows its page.
 - `list-back`: the page's `Your field` shows home.
-- `list-weakest`: before the seed is due, `Open Isaiah 41:10` offers
-  `Practice this list` on the planted verse.
+- `list-single`: the single verse `Isaiah 41:10, seed` opens Today on
+  it, with no page between.
 - `list-learn`: Fear's `Practice this list` opens Today on its first
   verse, whole (`Psalms 91:1`), its line `Starts with Psalms 91:1, new
   today`; Today's `Your field` leads home.
 - `list-verse`: a row's tap opens Today on that verse.
-- `list-practice`: with the seed due, the page's line counts it ready.
+- `list-practice`: with the seed due, the single verse reads `, ready
+  today` and its tap opens Today on it.
 - `list-remove`: a held passage's page asks, keeps, and removes.
 - `list-tests-only` (tests only): a refused remove and its alert, a
   second tap while a remove is pending, Say it starting while a page
@@ -87,10 +91,9 @@ snapshot (`first.md`, Driving it).
    list's order (`promise.md`); the button `Your field`; 0 buttons
    starting `Remove`. `list-back`: the journey's `Your field` waits for
    `id=today-card`.
-4. `list-weakest`: `list/list-weakest` → the caption
-   `1 verse · 1 planted`; the line `Starts with Isaiah 41:10, nothing is
-   due`; one row button `Isaiah 41:10, seed`. `list/list-weakest-today`,
-   after `Practice this list` → `id=session`, the reference
+4. `list-single`: the journey's first step holds home with
+   `id=singles` and no `Open Isaiah 41:10`; `list/list-single`, after the
+   single verse `Isaiah 41:10, seed` → `id=session`, the reference
    `Isaiah 41:10`, `Say it`; then `Your field`.
 5. `list-learn`: `list/list-learn-page` → the line
    `Starts with Psalms 91:1, new today`; `list/list-learn`, after
@@ -106,9 +109,8 @@ snapshot (`first.md`, Driving it).
    `sim journey list-practice` → `"ok":true`. Its first open waits for
    home and, on `home-dot`'s last screen (Today, after `Start`), opens the
    app again onto home (`detail.retried`).
-   `list-practice/list-practice-page` → the row
-   `Isaiah 41:10, seed, ready today`; the line `1 ready today · about 1
-   min`. `list-practice/list-practice` → `id=session` on `Isaiah 41:10`.
+   `list-practice/list-practice`, after the single verse
+   `Isaiah 41:10, seed, ready today` → `id=session` on `Isaiah 41:10`.
 8. `list-remove`: `passage.md`'s `passage-plant` first (John 15:1-5
    planted). `sim journey list-remove` → `"ok":true`: its first step
    holds home with `Open John 15:1-5` and no `Remove John 15:1-5`.

@@ -57,8 +57,11 @@ import {
   listsModel,
   placesOf,
   readyModel,
+  singlesModel,
+  singleVersesModel,
   weakestModel,
   type ModelFurrow,
+  type ModelSingle,
 } from './home-model';
 import { addRule, KEY, readRule, spanRef, verseRef, type Held, type Span } from './passages-model';
 import { CORPUS, countIn } from './passages-rig';
@@ -107,7 +110,7 @@ class HomeWalk extends Walk {
   /** What the walk counts at each arrival on home: the dots, the card's action, and the greeting. */
   override atHome() {
     super.atHome();
-    const plants = this.furrows().flatMap((furrow) => furrow.plants);
+    const plants = this.plants();
     if (plants.some((plant) => plant.ready)) this.bump('home:dot');
     if (plants.some((plant) => !plant.ready && plant.stage !== 'not planted'))
       this.bump('home:no-dot');
@@ -130,6 +133,24 @@ class HomeWalk extends Walk {
       lists,
       readyModel(this.planned() ? this.plan : undefined, records),
     );
+  }
+
+  /** The single verses home shows apart from the furrows (hsminlist), as `singlesModel` gives them. */
+  singles(): ModelSingle[] {
+    const records = this.records();
+    const held = this.held.tag === 'Read' ? (this.held.singles ?? []) : [];
+    return singlesModel(
+      records,
+      listsModel(OWN_ROW, this.held, TAUGHT_IDS),
+      singleVersesModel(OWN_ROW, this.held),
+      held,
+      readyModel(this.planned() ? this.plan : undefined, records),
+    );
+  }
+
+  /** Every plant home shows: each furrow's, then each single verse's. */
+  plants() {
+    return [...this.furrows().flatMap((furrow) => furrow.plants), ...this.singles()];
   }
 
   /** What a tap on `verse` starts, as `startModel` gives it. */
@@ -176,6 +197,7 @@ class HomeWalk extends Walk {
         caption: furrow.caption,
         plants: furrow.plants.map((plant) => plant.label),
       })),
+      singles: this.singles().map((plant) => plant.label),
       selected: [],
       card: this.todayCard(),
       greeting: greetingModel(Intl.DateTimeFormat().resolvedOptions().timeZone, this.time.now),
@@ -202,6 +224,7 @@ class HomeWalk extends Walk {
         caption: text(row.querySelector('[data-testid="caption"]')),
         plants: by(row, 'field-plant').map(nameOf),
       })),
+      singles: by(host, 'singles').flatMap((section) => by(section, 'field-plant').map(nameOf)),
       selected: selectedPlants(host),
       card: cardOf(host),
       greeting: `${text(greeting)} ${iconOf(greeting?.querySelector('img'))}`,
@@ -254,26 +277,24 @@ class HomeWalk extends Walk {
   }
 
   /** The class of `verse` on the field: its open plan item's kind, else how it lies. */
-  classOf(verse: string, furrows: readonly ModelFurrow[]) {
+  classOf(verse: string) {
     const open = this.plan.find(
       (item) => this.recallsNow(item.reference) <= item.recalls && item.reference === verse,
     );
     if (this.planned() && open !== undefined) return open.fresh ? 'new' : 'ready';
     if (this.plan.some((item) => item.reference === verse)) return 'done';
-    const loose = furrows.some(
-      (furrow) =>
-        furrow.source.tag === 'Loose' && furrow.plants.some((plant) => plant.reference === verse),
-    );
+    const loose =
+      this.singles().some((plant) => plant.reference === verse) &&
+      !singleVersesModel(OWN_ROW, this.held).includes(verse);
     if (loose) return 'loose';
     return this.recallsNow(verse) > 0 ? 'unplanned' : 'not-planted';
   }
 
   /** A tap on a plant of a class drawn from those the field holds. */
   async tapPlant(): Promise<unknown> {
-    const furrows = this.furrows();
     const classes = new Map<string, string[]>();
-    for (const plant of furrows.flatMap((furrow) => furrow.plants)) {
-      const kind = this.classOf(plant.reference, furrows);
+    for (const plant of this.plants()) {
+      const kind = this.classOf(plant.reference);
       const verses = classes.get(kind) ?? [];
       if (!verses.includes(plant.reference)) verses.push(plant.reference);
       classes.set(kind, verses);
@@ -288,9 +309,7 @@ class HomeWalk extends Walk {
 
   /** A tap on `verse`'s plant: what `startModel` starts on it, at once, Today shown; nothing at all when it starts nothing, home kept. */
   async tap(verse: string, kind: string): Promise<unknown> {
-    const plant = this.furrows()
-      .flatMap((furrow) => furrow.plants)
-      .find((each) => each.reference === verse);
+    const plant = this.plants().find((each) => each.reference === verse);
     if (plant === undefined) return `no plant ${verse}`;
     this.bump(`pick:${kind}`);
     const started = this.startOf(verse);
@@ -415,17 +434,17 @@ class HomeWalk extends Walk {
     if (this.hold !== null) this.bump(`${kind}:over-held`);
   }
 
-  /** The add `Add a list` would land now, drawn: a verse of a drawn chapter, as `addRule` answers it. */
+  /** The add `Add a list` would land now, drawn: three verses of a drawn chapter (a list holds at least 3, hsminlist), as `addRule` answers it. */
   addable() {
     const target = TARGETS[below(this.next, TARGETS.length)] ?? TARGETS[0];
-    const verse = 1 + below(this.next, countIn(target.book, target.chapter));
-    const span = { ...target, first: verse, last: verse };
+    const verse = 1 + below(this.next, countIn(target.book, target.chapter) - 2);
+    const span = { ...target, first: verse, last: verse + 2 };
     return { span, answer: addRule(CORPUS, this.held, span, false) };
   }
 
   /**
    * A landed add from home: `Add a list`, the sheet's `Any passage`, then
-   * the book, the chapter, the verse and `Plant`. The passages gain the
+   * the book, the chapter, the span's first and last verse and `Plant`. The passages gain the
    * span, and the plan is made again over them, the visit and the hold
    * dropped (no recital is under way).
    */
@@ -441,6 +460,7 @@ class HomeWalk extends Walk {
       name,
       `${name} ${span.chapter}`,
       verseRef(span.book, span.chapter, span.first),
+      verseRef(span.book, span.chapter, span.last),
       'Plant',
     ])
       if (!(await rig.until(() => rig.has(label))) || !(await rig.tap(label))) return `no ${label}`;

@@ -10,6 +10,9 @@
  *   ranges or unread, taught ids none, one, several or unknown, lists
  *   overlapping on a verse), derived in each zone of `test/zone.ts`,
  *   against `furrowsModel` over the phrase model's fold of the field;
+ * - `singleVersesOf` and `singlesOf` (hsminlist) over the same cases with
+ *   0 to 3 single verses held (repeats, the own verse, a verse of a held
+ *   passage), against `singleVersesModel` and `singlesModel`;
  * - `kindOf` and `iconOf` over the four sources and a passage of each of
  *   the 66 books;
  * - `readyOf` over plans `planModel` makes (whole verses, old pieces
@@ -41,10 +44,11 @@ import {
   kindOf,
   minuteOf,
   readyOf,
+  singlesOf,
   type Furrow,
 } from './home';
-import { listsOf, type ListSource } from './lists';
-import type { PassagesView } from './passages';
+import { listsOf, singleVersesOf, type ListSource } from './lists';
+import { singlesHeld, type PassagesView } from './passages';
 import { collectionsOf } from './promises/taught';
 import type { Recall } from './sayit';
 import type { Item } from './session';
@@ -62,11 +66,13 @@ import {
   plannedOf,
   readyModel,
   recordsOf,
+  singlesModel,
+  singleVersesModel,
   taughtOf,
   type ModelFurrow,
   type ModelSource,
 } from './test/home-model';
-import type { Held } from './test/passages-model';
+import type { Held, Span } from './test/passages-model';
 import { choosableOf } from './test/passages-rig';
 import { verseOfRule } from './test/phrase-model';
 import { HOUR, MINUTE } from './test/session-model';
@@ -127,16 +133,48 @@ const plainFurrow = (furrow: Furrow): ModelFurrow => ({
   })),
 });
 
-/** The own rows: the promise's, none, or the promise's and the first verse of Psalm 23. */
+/** The own rows: the promise's, none, the promise's and the first verse of Psalm 23, or the promise's and the first two verses of Psalm 23 as one row (a list of the app's own). */
 const ownOf = (next: () => number): readonly ModelPassage[] => {
   const roll = below(next, 6);
   if (roll === 0) return [];
   if (roll === 1) return [...OWN, { title: 'Psalms 23:1', verses: ['Psalms 23:1'] }];
+  if (roll <= 3)
+    return [...OWN, { title: 'Psalms 23:1-2', verses: ['Psalms 23:1', 'Psalms 23:2'] }];
   return OWN;
 };
 
+/** Held passages with 0 to 3 single verses beside them, some a verse of a held passage, one of the own verse, or a repeat. */
+const heldWithSinglesOf = (next: () => number): Held => {
+  const held = heldOf(next, (more, passages) => choosableOf(more, passages)[1]);
+  if (held.tag === 'Unread') return held;
+  const singles: Span[] = [];
+  for (let n = below(next, 4); n > 0; n--) {
+    const roll = below(next, 4);
+    const passage = held.passages[0];
+    if (roll === 0 && passage !== undefined) singles.push({ ...passage, last: passage.first });
+    else if (roll === 1) singles.push({ book: 23, chapter: 41, first: 10, last: 10 });
+    else if (roll === 2 && singles[0] !== undefined) singles.push({ ...singles[0] });
+    else {
+      const span = choosableOf(next, held.passages)[1];
+      singles.push({ ...span, last: span.first });
+    }
+  }
+  return { ...held, singles };
+};
+
+/** The single verses of `held` once each, as the service holds them. */
+const singlesOnce = (held: Held): Span[] => {
+  if (held.tag === 'Unread') return [];
+  const out: Span[] = [];
+  for (const span of held.singles ?? [])
+    if (!out.some((each) => JSON.stringify(each) === JSON.stringify(span))) out.push(span);
+  return out;
+};
+
 const viewOf = (held: Held): PassagesView =>
-  held.tag === 'Read' ? { _tag: 'Read', passages: held.passages, lists: [] } : { _tag: 'Unread' };
+  held.tag === 'Read'
+    ? { _tag: 'Read', passages: held.passages, lists: [], singles: singlesOnce(held) }
+    : { _tag: 'Unread' };
 
 /** The kinds a case's furrows reach, by the model. */
 const tallyFurrows = (want: readonly ModelFurrow[], records: readonly Recall[], tally: Tally) => {
@@ -162,7 +200,7 @@ describe('the furrows', () => {
     const wrong: string[] = [];
     for (let run = 0; run < 240 && wrong.length < 3; run++) {
       const own = ownOf(next);
-      const held = heldOf(next, (more, passages) => choosableOf(more, passages)[1]);
+      const held = heldWithSinglesOf(next);
       const [, taught] = taughtOf(next);
       const modelLists = listsModel(own, held, taught);
       const lists = listsOf(own, viewOf(held), collectionsOf(taught));
@@ -186,7 +224,6 @@ describe('the furrows', () => {
     for (const [kind, floor] of [
       ['a verse in two lists', 30],
       ['phrase plants', 30],
-      ['kind:other', 30],
       ['kind:own', 30],
       ['kind:held', 30],
       ['kind:taught', 30],
@@ -198,6 +235,50 @@ describe('the furrows', () => {
       ['ready', 30],
     ] as const)
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);
+  });
+
+  it('leave every single verse to home’s own section: the own verse, then each held alone, then each planted verse no list names, each removable exactly when held alone, as hsminlist makes them in every zone', () => {
+    const next = random(7_302);
+    const tally: Tally = new Map();
+    const wrong: string[] = [];
+    for (let run = 0; run < 160 && wrong.length < 3; run++) {
+      const own = ownOf(next);
+      const held = heldWithSinglesOf(next);
+      const [, taught] = taughtOf(next);
+      const modelLists = listsModel(own, held, taught);
+      const view = viewOf(held);
+      const lists = listsOf(own, view, collectionsOf(taught));
+      const singles = singleVersesOf(own, view);
+      const wantSingles = singleVersesModel(own, held);
+      const records = recordsOf(next, modelLists, OWN_VERSE).map((recall) => stamped(next, recall));
+      const ready = new Set(
+        [...wantSingles, ...records.map((r) => verseOfRule(r.reference))].filter(
+          () => below(next, 3) === 0,
+        ),
+      );
+      const zone = ZONES[run % ZONES.length] ?? 'UTC';
+      const got = inZone(zone, () =>
+        singlesOf(gardenOf(records), lists, singles, singlesHeld(view), ready),
+      ).map((plant) => ({
+        reference: plant.reference,
+        stage: plant.stage,
+        ready: plant.ready,
+        label: plant.label,
+        removal: Option.getOrUndefined(Option.map(plant.removal, (range) => ({ ...range }))),
+      }));
+      const want = singlesModel(records, modelLists, wantSingles, singlesOnce(held), ready);
+      if (JSON.stringify(singles) !== JSON.stringify(wantSingles))
+        wrong.push(`run ${run}: verses ${JSON.stringify(singles)}`);
+      if (JSON.stringify(got) !== JSON.stringify(want))
+        wrong.push(`run ${run} in ${zone}: ${JSON.stringify(got).slice(0, 300)}`);
+      if (want.some((each) => each.removal !== undefined)) bump(tally, 'removable');
+      if (want.some((each) => each.removal === undefined && !wantSingles.includes(each.reference)))
+        bump(tally, 'a verse no list names');
+      if (want.some((each) => each.reference === OWN_VERSE)) bump(tally, 'own verse');
+    }
+    expect(wrong).toEqual([]);
+    for (const kind of ['removable', 'a verse no list names', 'own verse'])
+      expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(20);
   });
 
   it('caption each furrow in words: ready today first, else planted, else to learn, one verse singular', () => {
@@ -223,11 +304,11 @@ describe('the furrows', () => {
     ]);
   });
 
-  it('take their kind and icon from the source: a bow for the own row and a collection, a harp for a psalm, a lamp for a proverb, a scroll for any other book and a loose verse', () => {
+  it('take their kind and icon from the source: a bow for the own row and a collection, a harp for a psalm, a lamp for a proverb, a scroll for any other book and a Handbook list', () => {
     const sources: ListSource[] = [
       { _tag: 'Own' },
       { _tag: 'Collection', id: 'protection' },
-      { _tag: 'Loose' },
+      { _tag: 'Handbook', id: 'bhb-1695' },
     ];
     for (let book = 1; book <= 66; book++)
       sources.push({ _tag: 'Passage', range: { book, chapter: 1, first: 1, last: 2 } });
@@ -240,7 +321,7 @@ describe('the furrows', () => {
     expect(got.slice(0, 3)).toEqual([
       ['own', 'bow'],
       ['taught', 'bow'],
-      ['other', 'scroll'],
+      ['held', 'scroll'],
     ]);
     expect([got[3 + 18], got[3 + 19], got[3 + 22]]).toEqual([
       ['held', 'harp'],

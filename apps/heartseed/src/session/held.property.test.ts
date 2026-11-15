@@ -46,7 +46,7 @@ import {
   type Span,
   storedText,
 } from '../test/passages-model';
-import { choosableOf, CORPUS } from '../test/passages-rig';
+import { choosableOf, CORPUS, storableOf } from '../test/passages-rig';
 import { oldPiecesRule, phraseOfRule, pieceRule, verseOfRule } from '../test/phrase-model';
 import { DAY, MINUTE, planModel } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
@@ -163,7 +163,7 @@ const versesOf = (span: Span) =>
 const diskOf = (next: () => number, now: number, zone: string) => {
   const disk = new Map<string, string>();
   const stored: Span[] = [];
-  for (let n = 1 + below(next, 3); n > 0; n--) stored.push(choosableOf(next, stored)[1]);
+  for (let n = 1 + below(next, 3); n > 0; n--) stored.push(storableOf(next, stored));
   if (below(next, 3) === 0)
     stored.push({ book: 23, chapter: 41, first: 8 + below(next, 3), last: 11 + below(next, 5) });
   if (below(next, 2) === 0 && stored[0] !== undefined)

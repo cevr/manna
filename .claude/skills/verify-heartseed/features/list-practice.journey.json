@@ -10,16 +10,9 @@
       "receipt": "none"
     },
     {
-      "name": "list-practice-page",
-      "action": "tap",
-      "target": "label=Open Isaiah 41:10",
-      "expect": [{ "shows": "label=Isaiah 41:10, seed, ready today" }, { "shows": "id=list-line" }],
-      "receipt": "snapshot"
-    },
-    {
       "name": "list-practice",
       "action": "tap",
-      "target": "label=Practice this list",
+      "target": "label=Isaiah 41:10, seed, ready today",
       "expect": [{ "shows": "id=session" }, { "shows": "label=Isaiah 41:10" }],
       "receipt": "snapshot"
     },

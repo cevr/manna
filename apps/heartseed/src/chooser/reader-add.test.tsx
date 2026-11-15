@@ -24,7 +24,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('adds the reader’s passages through the field, the sheet and the chooser, one change at a time', async () => {
-  const { faults, reached } = await walkReaders([23], 10, 'change');
+  const { faults, reached } = await walkReaders([31, 193], 10, 'change');
   expect(faults).toEqual([]);
   const floors = [
     'add:Added',
@@ -34,7 +34,7 @@ it('adds the reader’s passages through the field, the sheet and the chooser, o
     'back:books',
     'back:chapters',
     'choose:left',
-    'planted:one-verse',
+    'choose:short',
     'planted:whole-chapter',
     'home:launch-begin',
     'home:begin',

@@ -90,7 +90,9 @@ const caseOf = (next: () => number) => {
     if (row.length > 0) rows.push(row);
   }
   const held: Held = unread ? { tag: 'Unread' } : { tag: 'Read', passages, lists };
-  const view: PassagesView = unread ? { _tag: 'Unread' } : { _tag: 'Read', passages, lists };
+  const view: PassagesView = unread
+    ? { _tag: 'Unread' }
+    : { _tag: 'Read', passages, lists, singles: [] };
   return { title, held, view, rows, lists };
 };
 

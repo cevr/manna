@@ -10,8 +10,9 @@
  * chapter (Psalms 119 and 117, the promise's, one of exactly 20 verses, one of
  * 21, or any), backs out a step and in again now and then, taps verses by
  * pattern (one; forward or back up to 40 on; the one verse twice; a
- * restart; first to last; exactly 20), then leaves and opens again, or taps
- * `Plant`: its write landing or refused, two taps in one turn, or `Plant`
+ * restart; first to last; exactly 20), then leaves and opens again, or,
+ * under 3 verses chosen (no `Plant`, the footer's `SHORT` line instead,
+ * hsminlist), taps more verses or leaves, else taps `Plant`: its write landing or refused, two taps in one turn, or `Plant`
  * and a back in one turn; a plant that writes has its write held until the
  * screen shows it pending (`plantHeld`); after a refusal it retries, taps a
  * verse, or leaves. After every tap the screen is the rule's, the stored passages are
@@ -68,8 +69,8 @@ const storedOf = (next: () => number): readonly [string, string | undefined] => 
   const length = [0, 1, 2, 3][roll - 2] ?? 0;
   const list: Span[] = Array.from({ length }, () => {
     const { book, chapter } = TARGETS[below(next, TARGETS.length)] ?? TARGETS[0];
-    const first = 1 + below(next, countIn(book, chapter));
-    return { book, chapter, first, last: first };
+    const first = 1 + below(next, Math.max(1, countIn(book, chapter) - 2));
+    return { book, chapter, first, last: first + 2 };
   });
   return [`held ${length}`, storedText(list)];
 };
@@ -184,6 +185,16 @@ export const walkChooser = async (seed: number, steps: number) => {
   const plant = async (target: { book: number; chapter: number }) => {
     if (state?.chosen === undefined) return;
     const span: Span = { ...target, first: state.chosen.first, last: state.chosen.last };
+    if (span.last - span.first < 2) {
+      reached.add('short');
+      if (below(next, 2) === 0) {
+        reached.add('short: more verses');
+        await tapAll(target);
+        if (state?.chosen !== undefined && state.chosen.last - state.chosen.first >= 2)
+          return plant(target);
+      }
+      return leave();
+    }
     const refused = below(next, 4) === 0;
     const how = HOWS[below(next, 5)] ?? 'once';
     device.fail('set', refused ? 1 : 0);

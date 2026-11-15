@@ -10,8 +10,8 @@
  * either order, several without it, an unknown id before or after a known
  * one); the stored passages (none, or one to three ranges, each a pick
  * whole, a pick in part, Proverbs 18:10, a range of the protection
- * collection or a promise of a shelf; three failed reads of them, so
- * unread); the app's own verse planted or not, and one loose planted verse
+ * collection or a promise of a shelf, a range of one verse stored as a
+ * single verse, hsminlist; three failed reads of them, so unread); the app's own verse planted or not, and one loose planted verse
  * or none. The script opens the sheet by `Add a list`, taps up to four
  * shelves (most often `Proverbs`, a taught
  * collection's own shelf or `Strength`), plants once, opens the sheet again
@@ -20,11 +20,13 @@
  *
  * After every command the sheet equals `sheetWant` over rows of verse
  * membership (the app's own row, the held ranges and the taught collections
- * by `listsModel`, each planted verse); each offer shown reads
- * `In your field` exactly when home, under the sheet, draws a plant for
- * every verse of it; home's rows equal `fieldRule` over the disk and
- * `fieldPassagesModel`; the stored passages are the model's and no other key
- * changed; and every frame kept the rig's rules.
+ * by `listsModel`, the single verses, each planted verse); each offer
+ * shown reads `In your field` exactly when home, under the sheet, draws a
+ * plant for every verse of it; home's rows and single verses equal
+ * `homeFieldRule` over the disk and `fieldPassagesModel`; the stored
+ * passages and single verses are the model's (a pick of fewer than 3 verses
+ * joins the single verses) and no other key changed; and every frame kept
+ * the rig's rules.
  */
 
 import passage from 'virtual:heartseed-passage';
@@ -32,12 +34,21 @@ import passage from 'virtual:heartseed-passage';
 import { COLLECTIONS } from '../promises';
 import { mountBar, readBar } from './bar-rig';
 import { START } from './clock';
-import { fieldRule, heldOn, recallOf } from './field-model';
+import { heldOn, homeFieldRule, recallOf } from './field-model';
 import { record } from './field-rig';
 import { below, DAY, random } from './garden-model';
 import { BASE_SHELVES, listsModel, offerModel, shelvesModel, type ModelList } from './home-model';
 import { device } from './one';
-import { KEY, readRule, storedText, verseRef, type Held, type Span } from './passages-model';
+import {
+  KEY,
+  readRule,
+  SINGLES,
+  spanRef,
+  storedText,
+  verseRef,
+  type Held,
+  type Span,
+} from './passages-model';
 import { CORPUS } from './passages-rig';
 import { fieldPassagesModel } from './promise-model';
 import { activateSheet, readSheet, settleSheet, tapSheet } from './shelves-rig';
@@ -139,23 +150,55 @@ interface World {
   readonly reads: number;
   readonly kinds: readonly string[];
   readonly raw: string | undefined;
+  readonly singles: readonly Span[];
   readonly planted: readonly string[];
 }
 
-/** The stored passages of a world: no key, or one to three ranges, read whole or failing three reads. */
+/** The stored passages of a world: no key, or one to three ranges, read whole or failing three reads; a range of one verse is stored among the single verses (hsminlist), each once. */
 const storedOf = (next: () => number) => {
   const storedRoll = below(next, 8);
   const reads = storedRoll === 0 ? 3 : 0;
   const kinds: string[] = [];
-  if (storedRoll === 1) return { reads, kinds, raw: undefined };
+  const singles: Span[] = [];
+  if (storedRoll === 1) return { reads, kinds, raw: undefined, singles };
   const count = storedRoll === 7 ? 3 : 1 + below(next, 2);
   const spans: Span[] = [];
   for (let at = 0; at < count; at++) {
     const [kind, span] = rangeOf(next);
     kinds.push(kind);
-    spans.push(span);
+    if (span.first !== span.last) spans.push(span);
+    else if (!singles.some((each) => spanRef(each) === spanRef(span))) singles.push(span);
   }
-  return { reads, kinds, raw: storedText(spans) };
+  return { reads, kinds, raw: storedText(spans), singles };
+};
+
+/** The passages a world holds: the stored passages as read, with its single verses beside them. */
+const heldOf = (world: World): Held => {
+  const held = readRule(CORPUS, world.raw, world.reads);
+  return held.tag === 'Read' ? { ...held, singles: world.singles } : held;
+};
+
+/** The single verses' stored text a world starts with: none when it holds none. */
+const singlesText = (world: World) =>
+  world.singles.length === 0 ? undefined : storedText(world.singles);
+
+/** The verses of the single verses `held` holds, the app's own first. */
+const singleVerses = (held: Held) => [
+  ...new Set([
+    passage.reference,
+    ...(held.tag === 'Read' ? (held.singles ?? []) : []).map(spanRef),
+  ]),
+];
+
+/** `held` with each verse of `range` not single already joined to its single verses, as a pick of fewer than 3 verses plants. */
+const joinedOf = (held: Held, range: Span): Held => {
+  if (held.tag !== 'Read') return held;
+  const singles = [...(held.singles ?? [])];
+  for (let verse = range.first; verse <= range.last; verse++) {
+    const one = { ...range, first: verse, last: verse };
+    if (!singles.some((each) => spanRef(each) === spanRef(one))) singles.push(one);
+  }
+  return { ...held, singles };
 };
 
 /** The verses a world has planted: the app's own or another, and one loose verse or none. */
@@ -179,9 +222,10 @@ const worldOf = (next: () => number): World => {
 
 type Reach = (name: string) => void;
 
-/** The field's rows by verse membership: the app's own row, the passages `held`, the taught collections and each planted verse. */
+/** The field's rows by verse membership: the passages `held`, the taught collections, the single verses (the app's own and each held) and each planted verse. */
 const rowsOf = (world: World, held: Held): string[][] => [
   ...listsModel(OWN, held, world.taught).map((list) => [...list.verses]),
+  singleVerses(held),
   ...world.planted.map((verse) => [verse]),
 ];
 
@@ -189,7 +233,8 @@ const rowsOf = (world: World, held: Held): string[][] => [
 const without = (world: World, held: Held, verses: readonly string[], source: string) => {
   const rows: (readonly string[])[] = [];
   if (source !== 'own') rows.push([passage.reference]);
-  if (source !== 'held' && held.tag === 'Read') rows.push(held.passages.flatMap(versesOf));
+  if (source !== 'held' && held.tag === 'Read')
+    rows.push([...held.passages, ...(held.singles ?? [])].flatMap(versesOf));
   if (source !== 'taught') rows.push(taughtVerses(world.taught));
   if (source !== 'planted') rows.push(world.planted);
   return verses.every((verse) => rows.some((row) => row.includes(verse)));
@@ -198,7 +243,8 @@ const without = (world: World, held: Held, verses: readonly string[], source: st
 /** Whether `list` needs a taught collection after the first known one. */
 const needsLater = (world: World, held: Held, list: ModelList) => {
   const first: (readonly string[])[] = [[passage.reference], world.planted];
-  if (held.tag === 'Read') first.push(held.passages.flatMap(versesOf));
+  if (held.tag === 'Read')
+    first.push([...held.passages, ...(held.singles ?? [])].flatMap(versesOf));
   first.push(taughtVerses(world.taught.filter((id) => IDS.includes(id)).slice(0, 1)));
   return !list.verses.every((verse) => first.some((row) => row.includes(verse)));
 };
@@ -256,6 +302,8 @@ interface Step {
   readonly want: SheetSeen;
   /** The stored passages after the step, by the model. */
   readonly stored: string | undefined;
+  /** The stored single verses after the step, by the model. */
+  readonly singles: string | undefined;
 }
 
 /** The sheet's script over a world whose passages read with fewer than 3 held, into `steps`; answers how many `Add a list` home offers at its end. */
@@ -268,12 +316,17 @@ const sheetScript = (
 ) => {
   let model: SheetModel = opened(held0);
   let written = false;
+  let joined = false;
   const push = (name: string, act: Step['act']) =>
     steps.push({
       name,
       act,
       want: sheetWant(model, rowsOf(world, model.held)),
       stored: written && model.held.tag === 'Read' ? storedText(model.held.passages) : world.raw,
+      singles:
+        joined && model.held.tag === 'Read'
+          ? storedText(model.held.singles ?? [])
+          : singlesText(world),
     });
   const open = () => {
     const where = 'add-list';
@@ -307,9 +360,11 @@ const sheetScript = (
     if (planted1 || offers.length === 0 || below(next, 3) !== 0) continue;
     const list = pick(next, offers);
     planted1 = true;
-    written = true;
+    const short = list.verses.length < 3;
+    if (short) joined = true;
+    else written = true;
     model = plant(CORPUS, model, list.range!, false).model;
-    reach('plant:landed');
+    reach(short ? 'plant:joined' : 'plant:landed');
     push(`plant ${list.title}`, { kind: 'plant', title: list.title });
     if (model.held.tag === 'Read' && model.held.passages.length >= 3) {
       reach('plant:to-3:no-add');
@@ -330,7 +385,7 @@ const sheetScript = (
 const scriptOf = (seed: number) => {
   const next = random(mixed(seed));
   const world = worldOf(next);
-  const held = readRule(CORPUS, world.raw, world.reads);
+  const held = heldOf(world);
   const reached = new Map<string, number>();
   const reach = (name: string) => {
     reached.set(name, (reached.get(name) ?? 0) + 1);
@@ -356,6 +411,8 @@ export const walkRoot = async (seed: number) => {
     script.planted.map((verse) => record(recallOf(verse, START - DAY, 3, 0))),
   );
   if (script.raw !== undefined) disk.set(KEY, script.raw);
+  const singles = singlesText(script);
+  if (singles !== undefined) disk.set(SINGLES, singles);
   device.launch(disk);
   const start = new Map(device.disk);
   const rig = await mountBar(
@@ -369,18 +426,28 @@ export const walkRoot = async (seed: number) => {
     if (faults.length < 6) faults.push(`seed ${seed} ${text}`);
   };
   /** Home's rows as the field's model has them over the disk, the passages the model holds and the collections taught. */
-  const homeWant = (held: Held) =>
-    fieldRule(heldOn(device.disk), fieldPassagesModel(OWN, held, script.taught)).rows.map(
-      (row) => ({
+  const homeWant = (held: Held) => {
+    const field = homeFieldRule(
+      heldOn(device.disk),
+      fieldPassagesModel(OWN, held, script.taught),
+      singleVerses(held),
+    );
+    return {
+      rows: field.rows.map((row) => ({
         title: row.title,
         plants: row.plants.map((each) => `${each.reference}, ${each.stage}`),
-      }),
-    );
+      })),
+      singles: field.singles.map((each) => `${each.reference}, ${each.stage}`),
+    };
+  };
   const homeSeen = () => {
     const seen = readBar(rig.host);
     if (typeof seen === 'string') return seen;
     if ('list' in seen) return `the list ${seen.list}`;
-    return seen.rows.map((row) => ({ title: row.title, plants: row.plants }));
+    return {
+      rows: seen.rows.map((row) => ({ title: row.title, plants: row.plants })),
+      singles: seen.singles,
+    };
   };
   const home = async (step: string, held: Held) => {
     const want = JSON.stringify(homeWant(held));
@@ -431,8 +498,10 @@ export const walkRoot = async (seed: number) => {
     } else if (act.kind === 'plant') {
       if (!(await tapSheet(`Plant ${act.title}`))) fail(`${step.name}: no Plant ${act.title}`);
       const list = LISTED.flatMap((shelf) => shelf.lists).find((each) => each.title === act.title);
-      if (held.tag === 'Read' && list?.range !== undefined)
-        held = { tag: 'Read', passages: [...held.passages, list.range] };
+      if (held.tag === 'Read' && list?.range !== undefined && list.verses.length < 3)
+        held = joinedOf(held, list.range);
+      else if (held.tag === 'Read' && list?.range !== undefined)
+        held = { ...held, passages: [...held.passages, list.range] };
     } else if (!(await tapSheet('Done'))) fail(`${step.name}: no Done`);
   };
   /** Holds the screen after `step` to the models; answers whether the sheet came as the model has it. */
@@ -451,8 +520,13 @@ export const walkRoot = async (seed: number) => {
       fail(
         `${step.name}: the stored passages ${device.disk.get(KEY)} where the model has ${step.stored}`,
       );
+    if (device.disk.get(SINGLES) !== step.singles)
+      fail(
+        `${step.name}: the stored single verses ${device.disk.get(SINGLES)} where the model has ${step.singles}`,
+      );
     for (const [key, value] of device.disk)
-      if (key !== KEY && start.get(key) !== value) fail(`${step.name}: the key ${key} written`);
+      if (key !== KEY && key !== SINGLES && start.get(key) !== value)
+        fail(`${step.name}: the key ${key} written`);
     for (const fault of rig.faults.splice(0)) fail(`${step.name}: ${fault}`);
     return true;
   };

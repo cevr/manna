@@ -117,7 +117,7 @@ type Live = Awaited<ReturnType<typeof launch>>;
 const SPANS: readonly Span[] = [
   { book: 19, chapter: 46, first: 1, last: 3 },
   { book: 43, chapter: 15, first: 1, last: 3 },
-  { book: 20, chapter: 4, first: 23, last: 23 },
+  { book: 20, chapter: 4, first: 23, last: 25 },
   { book: 19, chapter: 23, first: 1, last: 6 },
   { book: 1, chapter: 1, first: 1, last: 20 },
 ];

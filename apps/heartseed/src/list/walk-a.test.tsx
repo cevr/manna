@@ -2,7 +2,7 @@
 
 /**
  * The lists' own pages walked through the root (`test/list-walk.tsx`), part
- * a: three generated readers (seeds 58, 23 and 57, ten commands each) open
+ * a: four generated readers (seeds 58, 23, 2 and 0, ten commands each) open
  * lists from home, go back, practise a list, tap its rows, start Say it
  * from a page, return to the foreground, and remove a held list or keep
  * it, each step against the walk's model and every frame against the
@@ -43,7 +43,7 @@ const FLOORS = [
 ];
 
 it('opens, practises, starts and removes lists as the model does', async () => {
-  const { faults, reached } = await walkLists([58, 23, 57], 10);
+  const { faults, reached } = await walkLists([58, 23, 2, 0], 10);
   expect(faults).toEqual([]);
   expect(FLOORS.filter((floor) => !reached.has(floor))).toEqual([]);
 });

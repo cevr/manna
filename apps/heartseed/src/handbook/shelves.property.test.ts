@@ -137,7 +137,9 @@ const caseOf = (next: () => number, target: string, verses: readonly string[]) =
   const [cover, extra] = own ? ['own row', []] : coverOf(next, verses);
   rows.push(...extra);
   const held: Held = unread ? { tag: 'Unread' } : { tag: 'Read', passages, lists };
-  const view: PassagesView = unread ? { _tag: 'Unread' } : { _tag: 'Read', passages, lists };
+  const view: PassagesView = unread
+    ? { _tag: 'Unread' }
+    : { _tag: 'Read', passages, lists, singles: [] };
   return { cover, held, view, rows, lists };
 };
 

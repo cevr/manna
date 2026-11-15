@@ -153,6 +153,15 @@ describe('the shelves', () => {
 
 const OWN_VERSE: Span = { book: 23, chapter: 41, first: 10, last: 10 };
 
+/** `count` single verses held, Genesis 1:1 on: a reader at or near the single verses' limit of 20. */
+const singlesOf = (count: number): Span[] =>
+  Array.from({ length: count }, (_, index) => ({
+    book: 1,
+    chapter: 1,
+    first: index + 1,
+    last: index + 1,
+  }));
+
 const PICKS: readonly Span[] = SHELVES.flatMap((shelf) =>
   listsOn(shelf).flatMap((list) => (list.range === undefined ? [] : [list.range])),
 );
@@ -222,10 +231,19 @@ const heldKinds = (held: Held, want: string): string[] => {
   if (held.tag === 'Unread') return [];
   const count = held.passages.length;
   const kinds = [`held:${count}`];
-  if (count === 3 && want !== 'in field') kinds.push('full at 3');
+  if (count === 3 && want === 'full') kinds.push('full at 3');
   if (count === 2 && want === 'plant') kinds.push('plant at 2');
   if (count >= 3 && want === 'in field') kinds.push('in field though full');
   return kinds;
+};
+
+/** The single-verse cases a draw reached: a pick under 3 verses refused at 20 single verses, or offered though the lists are full. */
+const singleKinds = (span: Span, held: Held, want: string): string[] => {
+  if (span.last - span.first >= 2) return [];
+  if (want === 'full') return ['singles full'];
+  if (want === 'plant' && held.tag === 'Read' && held.passages.length >= 3)
+    return ['a single though full'];
+  return [];
 };
 
 describe('what a shelf row offers', () => {
@@ -235,12 +253,16 @@ describe('what a shelf row offers', () => {
     const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
     const wrong: string[] = [];
     for (let run = 0; run < 1500 && wrong.length < 3; run++) {
-      const held: Held = heldModelOf(next, (more, kept) => choosableOf(more, kept)[1]);
+      const drawn: Held = heldModelOf(next, (more, kept) => choosableOf(more, kept)[1]);
+      const held: Held =
+        drawn.tag === 'Read' && below(next, 3) === 0
+          ? { ...drawn, singles: singlesOf(18 + below(next, 3)) }
+          : drawn;
       const [rangeKind, span] = rangeOf(next, held.tag === 'Read' ? held.passages : []);
       const [rowsKind, rows] = rowsOf(next, span);
       const view: PassagesView =
         held.tag === 'Read'
-          ? { _tag: 'Read', passages: held.passages, lists: [] }
+          ? { _tag: 'Read', passages: held.passages, lists: [], singles: held.singles ?? [] }
           : { _tag: 'Unread' };
       const got = offerStateOf(passageList('offer:', span), view, fieldOf(next, rows));
       const want = offerModel(versesOfSpan(span), held, rows);
@@ -249,6 +271,7 @@ describe('what a shelf row offers', () => {
       bump(rowsKind);
       bump(want);
       for (const kind of heldKinds(held, want)) bump(kind);
+      for (const kind of singleKinds(span, held, want)) bump(kind);
     }
     expect(wrong.slice(0, 3)).toEqual([]);
     for (const kind of [
@@ -269,6 +292,8 @@ describe('what a shelf row offers', () => {
       'full at 3',
       'plant at 2',
       'in field though full',
+      'singles full',
+      'a single though full',
     ])
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(20);
   });

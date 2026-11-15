@@ -5,11 +5,12 @@
  * screen rig (`src/test/field-rig.tsx`), which holds every frame to the
  * field's rules: any count of other verses past forty (no ceiling), each
  * any non-empty string (any code unit or code point, combining marks, every
- * space, colons; `test/field-model.ts`), canonically equivalent twins each
- * its own row, references spelled as the screens' own words (`Your field`,
- * `Today`, the counts, the stages) with spaces of any kind, in the order
- * first sown, at every stage, each label the exact reference and stage, no
- * plant showing a number (hsstart T3), one `Your field`
+ * space, colons; `test/field-model.ts`), each a single verse (hsminlist:
+ * no list names it), canonically equivalent twins each its own, references
+ * spelled as the screens' own words (`Your field`, `Today`, the counts,
+ * the stages) with spaces of any kind, in the order first sown, at every
+ * stage, each label the exact reference and stage, each single verse
+ * showing its reference and no other number, one `Your field`
  * heading and no `Today` heading in every field frame, and every readout at
  * AA contrast.
  */
@@ -43,7 +44,7 @@ const SPOKEN = [
 ] as const;
 
 describe('a large garden on the field', () => {
-  it('shows a generated garden of any count past forty other verses of any reference, canonical twins apart, references spelled as the screens’ own words, in the order first sown, at every stage, each label the exact reference and stage, no plant showing a number, one Your field heading and no Today heading, every readout at AA contrast', async () => {
+  it('shows a generated garden of any count past forty other verses of any reference, canonical twins apart, references spelled as the screens’ own words, in the order first sown, at every stage, each a single verse labelled with the exact reference and stage and showing its reference, one Your field heading and no Today heading, every readout at AA contrast', async () => {
     const next = random(112);
     const said = random(28);
     const start = Date.UTC(2026, 3, 1) / DAY;
@@ -67,7 +68,7 @@ describe('a large garden on the field', () => {
     const app = await mount(true);
     expect(await app.until(app.home)).toBe(true);
     const field = app.onHome();
-    const labelled = field.rows.flatMap((row) => row.plants.map((plant) => plant.label ?? ''));
+    const labelled = field.singles.map((plant) => plant.label ?? '');
     const stages = new Set(labelled.map((label) => label.replace(/^.*, /su, '')));
     const kinds = new Set(references.flatMap(referenceKinds));
     const count = (reference: string) =>
@@ -80,6 +81,7 @@ describe('a large garden on the field', () => {
     );
     expect({
       rows: field.rows.length,
+      singles: field.singles.length,
       stages: [...stages].toSorted(),
       field,
       headings: app.headings(),
@@ -94,7 +96,8 @@ describe('a large garden on the field', () => {
       spoken: SPOKEN.map(count),
       drawn: spoken.size >= 8,
     }).toEqual({
-      rows: references.length,
+      rows: 0,
+      singles: references.length,
       stages: ['blade', 'ear', 'full corn', 'seed'],
       field: wantField(),
       headings: ['Your field'],
@@ -109,10 +112,9 @@ describe('a large garden on the field', () => {
       spoken: SPOKEN.map(() => 1),
       drawn: true,
     });
-    expect(
-      field.rows.flatMap((row) => row.plants).find((plant) => plant.label?.startsWith('Other:'))
-        ?.shown,
-    ).toBe('');
+    expect(field.singles.find((plant) => plant.label?.startsWith('Other:'))?.shown).toBe(
+      references.find((reference) => reference.startsWith('Other:')),
+    );
     const lowest = Math.min(...Object.values(app.readouts()));
     expect([lowest >= 4.5, field.faint, app.faults]).toEqual([true, [], []]);
     expect(await app.leave()).toEqual([]);

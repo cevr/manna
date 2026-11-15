@@ -286,12 +286,14 @@ const HELD = [
 ] as const;
 
 describe('Practice this list over the field’s real lists', () => {
-  it('holds the spec’s claims on the own row, held passages and Protection & Fear', () => {
+  it('holds the spec’s claims on held passages and Protection & Fear, the own one-verse row no list (a single verse)', () => {
     const tally: Tally = new Map();
     const failures: string[] = [];
-    const fearVerses = fieldPassagesOf([], { _tag: 'Read', passages: [], lists: [] }, FEAR).flatMap(
-      (list) => list.verses,
-    );
+    const fearVerses = fieldPassagesOf(
+      [],
+      { _tag: 'Read', passages: [], lists: [], singles: [] },
+      FEAR,
+    ).flatMap((list) => list.verses);
     for (let seed = 1; seed <= 60 && failures.length === 0; seed++) {
       const next = random(seed * 104_729);
       const at = Date.UTC(2026, below(next, 12), 1 + below(next, 28), 12);
@@ -299,6 +301,7 @@ describe('Practice this list over the field’s real lists', () => {
         _tag: 'Read',
         passages: HELD.slice(0, below(next, 3)),
         lists: [],
+        singles: [],
       };
       const records: Recall[] = [];
       const share = pickOf(next, [0, 0.3, 0.7, 1] as const);
@@ -336,9 +339,10 @@ describe('Practice this list over the field’s real lists', () => {
       }
     }
     expect(failures.slice(0, 2)).toEqual([]);
-    const reached = ['Collection:Open', 'Collection:Learn', 'Passage:Open', 'Own:Open'].filter(
+    const reached = ['Collection:Open', 'Collection:Learn', 'Passage:Open'].filter(
       (kind) => (tally.get(kind) ?? 0) < 3,
     );
     expect(reached).toEqual([]);
+    expect([...tally.keys()].filter((kind) => kind.startsWith('Own:'))).toEqual([]);
   });
 });

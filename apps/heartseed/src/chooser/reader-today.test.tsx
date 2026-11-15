@@ -22,7 +22,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('shows Today the plan made at each change, over the passages chosen, morning after morning', async () => {
-  const { faults, reached } = await walkReaders([92], 12, 'today');
+  const { faults, reached } = await walkReaders([3, 22], 12, 'today');
   expect(faults).toEqual([]);
   const floors = [
     'today:said',

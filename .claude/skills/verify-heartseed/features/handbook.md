@@ -111,7 +111,8 @@ journey leaves the screen.
 3. `handbook-plant`: `handbook/handbook-plant-row`, after `Seven
    Churches`, `Plant Smyrna` and the scroll up to `Open Smyrna` → the
    heading `Your field`, no heading `Add a list`; the furrow title buttons
-   in order `Open Isaiah 41:10`, `Open Smyrna`, `Open Protection & Fear`;
+   in order `Open Smyrna`, `Open Protection & Fear` (the promise under
+   `Single verses`);
    the caption `4 verses to learn`; the buttons `Revelation 2:8, not
    planted` to `Revelation 2:11, not planted`; no `Remove`. The journey's
    `handbook-plant-foot` finds `id=add-list` still, at the foot.
@@ -134,7 +135,7 @@ journey leaves the screen.
 6. `handbook-limit`: `sim journey handbook-limit` → `"ok":true`: the
    sheet, `Psalms`, `Plant Psalms 46:1-3`.
    `handbook-limit/handbook-limit-row`, after the scroll up to
-   `Open Psalms 46:1-3` → home: the furrows `Isaiah 41:10`,
+   `Open Psalms 46:1-3` → home: the furrows
    `Psalms 46:1-3`, `Smyrna`, `Promises of God`, `Protection & Fear`; no
    button named `Remove` or starting `Remove `.
    `handbook-limit/handbook-limit-line`, after the scroll down to
