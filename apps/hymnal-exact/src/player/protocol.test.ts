@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, eslint/complexity -- Exact's app folder cannot import effect (docs/exact.md): a model checker, a breadth-first search of every interleaving that names each action plainly, reads its depth from the environment when asked, and returns a broken property with its trace. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, eslint/complexity -- Exact's app folder cannot import effect (docs/exact.md): a model checker, a breadth-first search of every interleaving that names each action plainly, tells states apart by their JSON, and returns a broken property with its trace. */
 
 /**
  * The protocol of `protocol.qnt`, checked exhaustively over `step` itself
@@ -26,7 +26,7 @@ import { describe, expect, it } from 'bun:test';
 import { TRACKS } from './fixtures.testing.ts';
 import { type Input, type State, deviceOf, initial, step } from './step.ts';
 
-const DEPTH = Number(process.env['PROTOCOL_DEPTH'] ?? 20);
+const DEPTH = 20;
 const INBOX = 4;
 
 /** An event the element raised, not yet stepped. */
@@ -212,9 +212,7 @@ const explore = (depth: number) => {
 describe('the protocol (protocol.qnt) holds in every interleaving', () => {
   it(`keeps its three properties in every state within ${DEPTH} actions`, () => {
     const { states, broken: found } = explore(DEPTH);
-    if (process.env['PROTOCOL_DEPTH'] !== undefined)
-      console.log(`[protocol] depth=${DEPTH} states=${states}`);
     expect(found).toBeUndefined();
-    expect(states).toBeGreaterThan(1000);
+    expect(states).toBeGreaterThan(10_000);
   });
 });
