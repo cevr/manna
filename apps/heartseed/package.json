@@ -32,6 +32,10 @@
       "types": "./exact/fsrs.d.ts",
       "default": "./src/fsrs.ts"
     },
+    "./matcher/words": {
+      "types": "./exact/words.d.ts",
+      "default": "./src/matcher/words.ts"
+    },
     "./day": {
       "types": "./exact/day.d.ts",
       "default": "./src/day.ts"

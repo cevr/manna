@@ -1,0 +1,134 @@
+// The player against the fixture recordings (tools/recordings.ts, digital
+// silence): run with HYMNAL_RECORDINGS=http://127.0.0.1:4797 (README, "The
+// player"). The first line of each test refuses any other origin, so no
+// test ever asks the bucket. A playing element runs on real time, so its
+// place is checked as a lower bound after `clock +N real`.
+
+test "Play starts the hymn and the bar shows it"
+  at "/hymns/1"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  expect tree missing "bar"
+  tap "play"
+  clock data
+  clock settle
+  expect text "bar-hymn" == "1 · Praise to the Lord"
+  clock until state player.phase == "playing" within 10000
+  clock +3500 real
+  clock data
+  expect state player.at >= 3
+  expect text "bar-toggle" == "Pause"
+  expect mediasession title == "Praise to the Lord"
+  expect mediasession has "pause"
+
+test "Pause holds the place; resume goes on."
+  at "/hymns/1"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  tap "bar-toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect text "bar-toggle" == "Play"
+  expect state player.at >= 1
+  expect state player.at <= 3
+  clock +1500 real
+  clock data
+  expect state player.phase == "paused"
+  expect state player.at <= 3
+  tap "bar-toggle"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect state player.at >= 2
+  expect text "bar-toggle" == "Pause"
+
+test "The bar follows across screens"
+  at "/hymns/1"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  back
+  clock settle
+  clock data
+  expect text "title" == "Hymns"
+  expect text "bar-hymn" == "1 · Praise to the Lord"
+  expect text "bar-toggle" == "Pause"
+  type "search" "3"
+  clock data
+  tap "hymn-3"
+  clock settle
+  clock data
+  expect text "bar-hymn" == "1 · Praise to the Lord"
+  expect text "bar-toggle" == "Pause"
+  expect tree has "bar-page-play"
+  tap "bar-page-play"
+  clock data
+  clock settle
+  expect state player.number == 3
+  expect tree missing "bar-page-play"
+
+test "The full player"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock data
+  expect state player.length >= 200
+  tap "bar-title"
+  clock data
+  clock settle
+  expect tree has "player"
+  expect text "total" == "4:00"
+  tap "stanza-2"
+  clock data
+  tap "stanza-4"
+  clock data
+  clock settle
+  expect state player.chips.1 .chosen == false
+  expect state player.chips.2 .chosen == true
+  expect text "total" == "2:16"
+  tap "player-title"
+  clock data
+  clock settle
+  expect tree missing "player"
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  expect text "bar-hymn" == "2 · All Creatures of Our God and King"
+
+test "The lock screen's pause pauses"
+  at "/hymns/1"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "audio" mediasession "pause"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect text "bar-said" == "Paused"
+  expect text "bar-toggle" == "Play"
+
+test "It ends"
+  at "/hymns/1"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock until state player.phase == "ended" within 15000
+  clock data
+  clock settle
+  expect text "bar-said" == "Played to the end"
+  expect text "bar-toggle" == "Play"
+  expect state player.at >= 5

@@ -18,7 +18,11 @@ bun run test                 # the Bun tests the gate runs (no Exact needed), wi
 
 ## Today
 
-The one screen so far: Isaiah 41:10, **Hear it** (the system voice reads it, each word lit as the voice reaches it), **Say it** (the recognizer listens on the device, hinted with the verse's words, and Heartseed's matcher marks each word), **Done** (the recall, right of total, kept as the last one across launches).
+The one screen so far: Isaiah 41:10 under a cue, **Hear it** (the system voice reads it, each word lit as the voice reaches it), **Say it** (the recognizer listens on the device, hinted with the verse's words, and Heartseed's matcher marks each word), **Done** (the marks, the matcher's suggestion and the four grades), then **Next** (the try kept as the last one across launches) or **Say it again** (the try let go, its help kept).
+
+- The cue is the route's: `/cue/none`, `/cue/initials` or `/cue/full`; any other route is `none`. Under no cue a word is a slot of rules, under first letters its first letter or number as written, under the full text the word.
+- At rest a word the cue hides is a button: a tap shows it for `TODAY_PEEK_MS` (1.5 s; the contract's `after(1500, …)` is held to it by `src/today/peek.test.ts`) and caps the try at Hard. **Show all** shows every word, caps the try at Hard and moves the verse back a stage. Grades above the cap are disabled, and the help line says the cost. The cap is the current Heartseed's `cappedBy`.
+- Nothing is kept before Next: a peek, a Show all or a graded try left unsaid is gone at the next launch.
 
 - Every rule is `step(state, input)` in `src/today/step.ts`, and the screen is `view(state)` in `src/today/view.ts`. `src/today/sources.ts` holds the state for one launch and answers one data source per input; `features/today.contract` only makes the calls (`speak`, `startSpeechRecognition`, …), forwards each native change as an input naming its utterance or recognition, and draws the view. An input for any other id changes nothing.
 - The matcher is the current Heartseed's, imported as `@manna/heartseed/matcher`, whose types are `apps/heartseed/exact/matcher.d.ts`: Exact's type check stages a package's declarations, never its source, and this file imports nothing, so it never reaches `effect`.

@@ -8,11 +8,39 @@
     "id": "im.cvr.hymnal.exact",
     "name": "Hymnal"
   },
+  "audio_session": "playback",
+  "env": ["HYMNAL_RECORDINGS"],
+  "commands": {
+    "server": ["bun", "tools/recordings.ts"]
+  },
+  "server": {
+    "database": false
+  },
+  "verify": {
+    "accept": [
+      {
+        "finding": "overlap",
+        "node": "bar-title",
+        "why": "The player's bar is docked over the stack's foot: a route must be a child of the navigation root, so the bar cannot take room of its own, and the list and the hymn page (other units' files) do not yet leave room under their last row while it shows (follow-up of ex-hy-player)."
+      },
+      {
+        "finding": "overlap",
+        "node": "bar-hymn",
+        "why": "As bar-title: the docked bar over the screens' last rows, until each screen leaves room under it."
+      },
+      {
+        "finding": "overlap",
+        "node": "bar-said",
+        "why": "As bar-title: the docked bar over the screens' last rows, until each screen leaves room under it."
+      }
+    ]
+  },
   "host": {
     "web": {},
     "ios": {
       "minimumOS": "17.0",
-      "deviceFamily": ["iphone", "ipad"]
+      "deviceFamily": ["iphone", "ipad"],
+      "backgroundModes": ["audio"]
     }
   },
   "deploy": {

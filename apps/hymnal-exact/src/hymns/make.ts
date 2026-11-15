@@ -15,6 +15,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { readIndexes } from '@manna/hymnal-app/vite/indexes';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
+import '../../tools/timing.ts'; // oxlint-disable-line import/no-unassigned-import -- the player's timing is written as this module is imported, before Exact bundles it.
+
 const files = [
   ['words.gen.json', JSON.stringify(readWords())],
   ['indexes.gen.json', JSON.stringify(readIndexes())],

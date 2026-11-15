@@ -1,13 +1,17 @@
 import type { Context, Effect, Option } from 'effect';
 
-import type { Grade } from './fsrs.d.ts';
+import type { MatcherView, SuggestedGrade } from './matcher.d.ts';
 
-export type { Grade };
+/** A grade of FSRS's four, 1 (Again) to 4 (Easy). */
+export type Grade = 1 | 2 | 3 | 4;
 
-/** The matcher's own grade for a recital: Again, Hard or Good. */
-export type SuggestedGrade = 1 | 2 | 3;
+/** Every grade, Again first. */
+export declare const GRADES: readonly Grade[];
 
-/** One recital as the garden keeps it; `offset` is absent only in a record from before offsets were kept. */
+/** What the reader is shown for each grade. */
+export declare const GRADE_NAMES: Readonly<Record<Grade, string>>;
+
+/** One finished try as the garden keeps it; `src/sayit.ts` says what each count holds. */
 export interface Recall {
   readonly reference: string;
   readonly startedAt: number;
@@ -20,11 +24,11 @@ export interface Recall {
   readonly extra: number;
 }
 
-/** The help taken before a try: words peeked at rest by index, when Show all showed the verse (null for never), and the best grade the try may take. */
+/** Help taken at rest on one verse before its try: the words peeked, when Show all showed it (null before), and the try's best grade. */
 export interface Help {
   readonly reference: string;
   readonly peeked: readonly number[];
-  // oxlint-disable-next-line effect/noNullish -- the current app's Help gives an absent Show all as null.
+  // oxlint-disable-next-line effect/noNullish -- the current Heartseed's help gives no Show all as null (`src/sayit.ts`).
   readonly shownAt: number | null;
   readonly cap: Grade;
 }
@@ -38,8 +42,21 @@ declare const RecallsTag: Context.ServiceClass<
 /** Where a recital's recall is handed: the garden's layer provides it. */
 export declare class Recalls extends RecallsTag {}
 
-/** The best grade after a peek at rest: Hard. */
+/** A peek's cap on its try. */
 export declare const PEEK_CAP: Grade;
 
-/** `grade` held to the help's cap. */
+/** A grade held to the help's cap; see `src/sayit.ts`. */
 export declare const cappedBy: (grade: Grade, help: Option.Option<Help>) => Grade;
+
+/** A finished try's recall from the matcher's view; see `src/sayit.ts`. */
+export declare const recallOf: (
+  reference: string,
+  startedAt: number,
+  offset: number,
+  grade: Grade,
+  suggested: SuggestedGrade,
+  view: MatcherView,
+) => Recall;
+
+/** How many words peeked at rest the try itself left unpeeked; see `src/sayit.ts`. */
+export declare const restPeeks: (help: Option.Option<Help>, matcher: MatcherView) => number;

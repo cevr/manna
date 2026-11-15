@@ -8,7 +8,8 @@ use YourVerses from "./features/garden.contract"
 
 routes nav
   home "/"
-    verses "/verses"
+  cued "/cue/:cue"
+  verses "/verses"
 
 component HeartseedExact
   members "./features/today.contract"
@@ -21,8 +22,8 @@ component HeartseedExact
         column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column"
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
-          if e.name == "home"
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt)
+          if (e.name == "home" or e.name == "cued") and e.id == top(nav).id
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt)
           if e.name == "home"
             link href=path("verses") testId="open-verses" padding="0 16px" min-height="44px" display="flex" align-items="center" flex-shrink=0
               text "Your verses"

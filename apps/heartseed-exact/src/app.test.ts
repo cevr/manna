@@ -23,6 +23,15 @@ const app = await import('./test/app.js');
 const SEQUENCES = 40;
 const CALLS = 30;
 
+/** Kept files: one result as Next writes it, one with help, and texts it never writes. */
+const KEPT = [
+  '{"reference":"Isaiah 41:10","recall":{"reference":"Isaiah 41:10","startedAt":1763000000000,"offset":-300,"grade":3,"suggested":3,"words":37,"missed":0,"peeked":0,"extra":0},"help":null}',
+  '{"reference":"Isaiah 41:10","recall":{"reference":"Isaiah 41:10","startedAt":1763000000000,"offset":-300,"grade":2,"suggested":2,"words":37,"missed":1,"peeked":1,"extra":0},"help":{"reference":"Isaiah 41:10","peeked":[4],"shownAt":null,"cap":2}}',
+  '{"right":3,"total":37}',
+  '{"reference":"Isaiah 41:10","recall":{"grade":9}}',
+  '',
+];
+
 /** A promise that never settles: what a stub's `then` hands back, since `settle` reads only its callbacks. */
 const pending: PromiseLike<never> = { then: () => pending };
 
@@ -59,7 +68,23 @@ const callOf = (
 ): readonly [string, readonly unknown[]] => {
   const id = random.pick(['', 'utterance-1', 'recognition-1', 'x']);
   const words = last?.words.length ?? 1;
-  switch (random.below(9)) {
+  const at = random.pick([1_763_000_000_000, 0, -1, Number.NaN]);
+  switch (random.below(17)) {
+    case 9:
+      return ['todayCue', [random.pick(['none', 'initials', 'full', 'x'])]];
+    case 10:
+      return ['todayPeek', [random.below(words + 2) - 1]];
+    case 11:
+      return ['todayPeekEnded', [random.below(words + 2) - 1]];
+    case 12:
+      return ['todayShowAll', [at]];
+    case 13:
+      return ['todayGrade', [random.below(6)]];
+    case 14:
+    case 15:
+      return ['todayNext', []];
+    case 16:
+      return ['todayAgain', []];
     case 0:
       return ['todayBoot', []];
     case 1:
@@ -71,7 +96,7 @@ const callOf = (
     case 4:
       return ['todayStop', []];
     case 5:
-      return ['todaySay', [id]];
+      return ['todaySay', [id, at]];
     case 6:
       return [
         'todayHeard',
@@ -91,7 +116,7 @@ it('answers every source inside the data host, for seeded call sequences', async
     if (random.chance(0.5))
       storage.files.set(
         RECALL_FILE,
-        Uint8Array.from('{"right":3,"total":37}', (c) => c.charCodeAt(0)).buffer,
+        Uint8Array.from(random.pick(KEPT), (c) => c.charCodeAt(0)).buffer,
       );
     let last: TodayView | undefined;
     for (let n = 0; n < CALLS; n++) {
