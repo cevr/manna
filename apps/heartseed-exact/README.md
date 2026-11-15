@@ -27,7 +27,7 @@ The one screen so far: Isaiah 41:10, **Hear it** (the system voice reads it, eac
 
 ## The garden and Your verses
 
-What is planted (lists of three verses or more, and single verses), each verse's plant, stage, FSRS schedule and history, kept across launches in `app:/data/heartseed.json`. **Your verses** (`/verses`, the link on Today's header) lists them, plants John 3:16-18, a verse of Psalm 119 or Psalm 23:1-2 (two verses: refused as a list), and removes a list or a single verse.
+What is planted (lists of three verses or more, and single verses), each verse's plant, stage, FSRS schedule and history, kept across launches in `app:/data/heartseed.json`. **Your verses** (`/verses`, the link on Today's header) lists them, plants three verses of John 3 (16-18, then the next three), a verse of Psalm 119 or Psalm 23:1-2 (two verses: refused as a list), and removes a list or a single verse.
 
 - The current Heartseed's own services do the work, imported (`@manna/heartseed/garden`, `passages`, `lists`, `sayit`, `day`, `fsrs`, `chooser`; their declarations are `apps/heartseed/exact/*.d.ts`, held to the sources by `apps/heartseed/scripts/exact-declared.test.ts`). Each source is one call through the runner (`src/garden/program.ts` → `runCall`): it builds `Garden`, `Passages` and the single verses over `@manna/exact-kit/storage`'s `KeyValueStore` on the file, makes its one change and answers what they hold after it. The stored keys and bytes are the current app's, so `ex-hs-import` copies keys.
 - Calls run one at a time (`src/garden/writes.ts`), reads too: each call builds its own store, so the current app's `Semaphore` orders nothing across calls. The protocol is `src/garden/writes.qnt`, walked whole in `writes.test.ts`.

@@ -150,8 +150,8 @@ component YourVerses
         if garden.read and garden.lists.length == 0 and garden.singles.length == 0
           text "Nothing planted yet. Plant a passage of three verses or more, or a single verse." color="-exact-secondary-label" testId="empty"
         row gap=12 flex-wrap="wrap"
-          button press=plant(43, 3, 16, 18) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
-            text "Plant John 3:16-18"
+          button press=plant(43, 3, 16 + 3 * garden.lists.length, 18 + 3 * garden.lists.length) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
+            text "Plant three verses of John 3"
           button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) buttonStyle="bordered" testId="plant-one"
             text "Plant a verse of Psalm 119"
           button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"

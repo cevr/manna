@@ -45,7 +45,11 @@ test "It survives a relaunch"
   clock data
   tap "plant-one"
   clock data
+  back
+  clock settle
   reload
+  clock data
+  tap "open-verses"
   clock data
   expect tree has "list-passage-0-43-3-16-18"
   expect tree has "single-Psalms-119-1"
