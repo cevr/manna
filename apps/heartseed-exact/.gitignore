@@ -8,3 +8,4 @@
 /.env.local
 /src/about/licences.ts
 /src/text/kjv.gen.json
+_apalache-out/

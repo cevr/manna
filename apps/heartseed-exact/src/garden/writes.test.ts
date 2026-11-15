@@ -7,11 +7,14 @@
  * shown, twice.
  *
  * The walker visits every interleaving of the protocol `writes.qnt` writes
- * (two calls, each a read of the file and one or two writes of it, a call
- * of two writes being a Show all's step back then its recall): with the
- * queue, every end state is one of the two serial orders' (no lost update)
- * and no read sees a file between one call's two writes (no half-seen
- * write); without it, some interleaving breaks each.
+ * (two calls, each a read of the file and one or two changes of it, a call
+ * of two being a Show all's step back then its recall, each write landing
+ * or failing): with the queue and a call's changes in one write, every end
+ * state is one of the two serial orders' with a failed call's changes left
+ * out (no lost update), and no read sees one of a call's changes without the
+ * other (no half-seen write); with a write a change, a failed second write
+ * leaves half a recall for the next call; without the queue, some
+ * interleaving breaks each.
  *
  * Then the port itself: generated pairs of garden changes over a generated
  * garden, started together, their storage answers let go in a generated
@@ -31,17 +34,31 @@ interface Call {
   readonly writes: 1 | 2;
 }
 
-/** Where a call stands: waiting its turn, read (with what it read), each write made, done. */
+/** Where a call stands: waiting its turn, read (with what it read), each write made, done; and the calls whose write failed. */
 interface Walk {
   readonly pc: readonly number[];
   readonly seen: readonly (readonly string[])[];
   readonly file: readonly string[];
   readonly owner: number;
   readonly halfSeen: boolean;
+  readonly failed: readonly number[];
 }
 
-/** Every end state of the two calls over all interleavings, and whether any read saw half a call's writes. */
-const walk = (calls: readonly Call[], queued: boolean) => {
+/** How the walk runs: with the queue or not, each call's changes in one write (`staged`) or one write each, and whether a write may fail. */
+interface Rules {
+  readonly queued: boolean;
+  readonly staged: boolean;
+  readonly failing: boolean;
+}
+
+/** Whether `file` holds a call's first change without its last. */
+const halfIn = (calls: readonly Call[], file: readonly string[]) =>
+  calls.some(
+    (call, index) => file.includes(`${index}.0`) && !file.includes(`${index}.${call.writes - 1}`),
+  );
+
+/** Every end state of the two calls over all interleavings, and whether any read or end saw half a call's changes. */
+const walk = (calls: readonly Call[], rules: Rules) => {
   const ends = new Set<string>();
   let halfSeen = false;
   const visit = (state: Walk) => {
@@ -49,14 +66,19 @@ const walk = (calls: readonly Call[], queued: boolean) => {
     const moves = calls.flatMap((call, index) => {
       const pc = state.pc[index] ?? 0;
       if (pc > call.writes) return [];
-      if (pc === 0 && queued && state.owner !== -1 && state.owner !== index) return [];
+      if (pc === 0 && rules.queued && state.owner !== -1 && state.owner !== index) return [];
       return [index];
     });
     if (moves.length === 0) {
-      ends.add(state.file.join(','));
+      if (halfIn(calls, state.file)) halfSeen = true;
+      ends.add(`${state.file.join(',')}|${[...state.failed].sort().join(',')}`);
       return;
     }
-    for (const index of moves) visit(step(calls, state, index));
+    for (const index of moves) {
+      visit(step(calls, rules, state, index, true));
+      if (rules.failing && (state.pc[index] ?? 0) > 0)
+        visit(step(calls, rules, state, index, false));
+    }
   };
   visit({
     pc: calls.map(() => 0),
@@ -64,51 +86,61 @@ const walk = (calls: readonly Call[], queued: boolean) => {
     file: [],
     owner: -1,
     halfSeen: false,
+    failed: [],
   });
   return { ends, halfSeen };
 };
 
-/** Call `index` takes its next step: its read, or a write of what it read with its own changes so far. */
-const step = (calls: readonly Call[], state: Walk, index: number): Walk => {
+/** Call `index` takes its next step: its read, or a write of what it read with its own changes so far, which lands or fails. */
+const step = (
+  calls: readonly Call[],
+  rules: Rules,
+  state: Walk,
+  index: number,
+  lands: boolean,
+): Walk => {
   const call = calls[index] ?? { writes: 1 };
   const pc = state.pc[index] ?? 0;
-  const pcs = state.pc.map((each, at) => (at === index ? each + 1 : each));
-  if (pc === 0) {
-    const midway = state.pc.some(
-      (each, at) => at !== index && each > 1 && each <= (calls[at]?.writes ?? 1),
-    );
+  if (pc === 0)
     return {
       ...state,
-      pc: pcs,
+      pc: state.pc.map((each, at) => (at === index ? 1 : each)),
       seen: state.seen.map((each, at) => (at === index ? state.file : each)),
       owner: index,
-      halfSeen: state.halfSeen || midway,
+      halfSeen: state.halfSeen || halfIn(calls, state.file),
     };
-  }
-  const own = Array.from({ length: pc }, (_, n) => `${index}.${n}`);
-  const done = pc === call.writes;
+  const last = rules.staged ? call.writes : pc;
+  const done = !lands || last === call.writes;
+  const own = Array.from({ length: last }, (_, n) => `${index}.${n}`);
   return {
     ...state,
-    pc: pcs,
-    file: [...(state.seen[index] ?? []), ...own],
+    pc: state.pc.map((each, at) => (at === index ? (done ? call.writes + 1 : last + 1) : each)),
+    file: lands ? [...(state.seen[index] ?? []), ...own] : state.file,
     owner: done ? -1 : state.owner,
+    failed: lands ? state.failed : [...state.failed, index],
   };
 };
 
-/** The two serial orders' end states. */
-const serialEnds = (calls: readonly Call[]) =>
-  new Set(
-    [
-      [0, 1],
-      [1, 0],
-    ].map((order) =>
-      order
-        .flatMap((index) =>
-          Array.from({ length: calls[index]?.writes ?? 1 }, (_, n) => `${index}.${n}`),
-        )
-        .join(','),
+/** The end states of the two serial orders, each call's changes all there or, for a failed write, none. */
+const serialEnds = (calls: readonly Call[], failing: boolean) => {
+  const outcomes = failing ? [[], [0], [1], [0, 1]] : [[]];
+  return new Set(
+    outcomes.flatMap((failed) =>
+      [
+        [0, 1],
+        [1, 0],
+      ].map(
+        (order) =>
+          `${order
+            .filter((index) => !failed.includes(index))
+            .flatMap((index) =>
+              Array.from({ length: calls[index]?.writes ?? 1 }, (_, n) => `${index}.${n}`),
+            )
+            .join(',')}|${failed.join(',')}`,
+      ),
     ),
   );
+};
 
 const LAYOUTS: readonly (readonly Call[])[] = [
   [{ writes: 1 }, { writes: 1 }],
@@ -118,22 +150,44 @@ const LAYOUTS: readonly (readonly Call[])[] = [
 ];
 
 describe('the protocol of writes.qnt, walked whole', () => {
-  it('with the queue: no lost update and no half-seen write, in every interleaving', () => {
+  it('with the queue and one write a call, a write that may fail: no lost update and no half-seen write, in every interleaving', () => {
+    for (const failing of [false, true]) {
+      for (const calls of LAYOUTS) {
+        const walked = walk(calls, { queued: true, staged: true, failing });
+        expect({ failing, calls, ends: [...walked.ends].sort() }).toEqual({
+          failing,
+          calls,
+          ends: [...serialEnds(calls, failing)].sort(),
+        });
+        expect({ calls, halfSeen: walked.halfSeen }).toEqual({ calls, halfSeen: false });
+      }
+    }
+  });
+
+  it('with the queue and a write a change, none failing: no lost update and no half-seen write', () => {
     for (const calls of LAYOUTS) {
-      const walked = walk(calls, true);
+      const walked = walk(calls, { queued: true, staged: false, failing: false });
       expect({ calls, ends: [...walked.ends].sort() }).toEqual({
         calls,
-        ends: [...serialEnds(calls)].sort(),
+        ends: [...serialEnds(calls, false)].sort(),
       });
       expect({ calls, halfSeen: walked.halfSeen }).toEqual({ calls, halfSeen: false });
     }
   });
 
-  it('without it: some interleaving loses an update, and some read sees half a write', () => {
-    const lost = LAYOUTS.some((calls) =>
-      [...walk(calls, false).ends].some((end) => !serialEnds(calls).has(end)),
+  it('a write a change, the second failing: the next call reads half a recall', () => {
+    const half = LAYOUTS.some(
+      (calls) => walk(calls, { queued: true, staged: false, failing: true }).halfSeen,
     );
-    const half = LAYOUTS.some((calls) => walk(calls, false).halfSeen);
+    expect(half).toBe(true);
+  });
+
+  it('without the queue: some interleaving loses an update, and some read sees half a write', () => {
+    const rules = { queued: false, staged: false, failing: false };
+    const lost = LAYOUTS.some((calls) =>
+      [...walk(calls, rules).ends].some((end) => !serialEnds(calls, false).has(end)),
+    );
+    const half = LAYOUTS.some((calls) => walk(calls, rules).halfSeen);
     expect({ lost, half }).toEqual({ lost: true, half: true });
   });
 });
