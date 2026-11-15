@@ -18,7 +18,10 @@ const rows = Object.entries(table);
 
 const asked = await drive.launch(store, [
   'clock data',
-  ...rows.flatMap(([key]) => [`tap ask-${key}`, 'clock settle']),
+  ...rows.flatMap(([key]) => [`tap ask-${key}`, 'clock data', 'clock settle']),
+  'clock +5000',
+  'clock data',
+  'clock settle',
   'state outcomes',
 ]);
 const outcomes = new Map(
