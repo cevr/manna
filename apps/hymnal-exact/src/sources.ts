@@ -12,10 +12,12 @@ import { hymnSources } from './hymn/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
 import { originOf, playerSources } from './player/sources.ts';
+import { settingsSources } from './settings/sources.ts';
 
 export const sourcesAt = (origin: string, timing: ReadonlyArray<readonly [number, string]>) => ({
   ...listSources(book),
   ...hymnSources(book),
   ...playerSources(book, timing, originOf(origin)),
   ...homeSources(book),
+  ...settingsSources(),
 });

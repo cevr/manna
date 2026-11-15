@@ -1,0 +1,39 @@
+// About, pushed in the Settings sheet: who made the sounds the recordings are
+// played on, as their licences ask (src/settings/about.ts, the current
+// hymnal's credits). A licence with an address opens it.
+
+shape AboutCredit
+  part: string
+  work: string
+  author: string
+  licence: string
+  url: string
+
+shape AboutPage
+  lead: string
+  credits: AboutCredit[]
+
+members HymnalExact
+  resource aboutShown = aboutCredits() as shape AboutPage
+
+component AboutScreen
+  props
+    entry: Entry
+    page: AboutPage
+  view
+    column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 testId="about"
+      header display="flex" align-items="center" padding="8px 16px"
+        text "About" role="heading" aria-level=2
+      list id="about-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        section
+          header
+            text "Recordings"
+          text page.lead testId="about-lead"
+          for c in page.credits key=c.part
+            column gap=2 align-items="flex-start" testId=`about-${c.part}`
+              text `${c.part}: ${c.work} by ${c.author}`
+              if c.url == ""
+                text c.licence color="-exact-secondary-label"
+              else
+                link href=c.url min-height=44 min-width=44 display="flex" align-items="center" testId=`about-licence-${c.part}`
+                  text c.licence

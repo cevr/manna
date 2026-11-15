@@ -60,4 +60,19 @@ bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recor
 bun tools/drive-player.ts ios
 ```
 
+## Settings and the colours
+
+The gear in the list's title row (`SettingsGear`, one call line in `features/list.contract`) opens Settings (`features/settings.contract`), a sheet over the book: Appearance (System, Light, Dark), then one row per feature that has a setting, then About (`features/about.contract`), pushed in the sheet. A feature adds its row as one call line in the sheet's rows section, where its comment says, its component and state in its own file.
+
+The appearance is Contract's `settingsLook persist`, read before the first frame: the root is drawn in `settingsScheme` from it, so a kept Dark never paints light first, and `setScheme` hands the platform the same choice for its own sheets and bars. Its rules (the choices, reading kept text, the scheme each shows) are `src/look/look.ts`, held to the current hymnal's `Appearance` and its web `applyAppearance` by `look.test.ts`.
+
+The colours are the brand, `app.tamber`: every role of the current hymnal's theme (`apps/hymnal/src/theme.ts`, Heartseed's palette), light and dark, under the role's own name, and the platform's roles the screens draw with (`-exact-background`, `-exact-label`, `-exact-secondary-label`, the tint, …) each set to one of them, so a screen that names no colour is drawn in the brand. A Contract file names a role, never a colour. The Bun tests hold the brand to the theme (`brand.test.ts`), every text to the current app's 4.5:1 on the ground it is drawn on (`contrast.test.ts`), and the Contract files to no colour literal (`literal.test.ts`). A test cannot read a painted colour, so the live colour checks are a drive:
+
+```sh
+bun run exact test web settings.test.contract
+bun run exact test ios settings.test.contract
+bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once and on the first frame after a relaunch, System following
+bun tools/drive-settings.ts ios
+```
+
 `app.contract.d.ts` (the types `app.ts` imports), `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.
