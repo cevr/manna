@@ -6,12 +6,13 @@
  * or the recognizer's `heard`. The same steps run here through the wrapper's
  * `agent`, on the host named (`bun tools/drive-say.ts web|ios`), against the
  * substitute `@exact/speech-recognition` ships for the agent, the cue named
- * by the route `/cue/<cue>`. One store is kept across launches: a clean
- * recital under no cue (suggested Good: the current matcher counts any cue
- * as help, so first letters suggest Hard at best) kept at Next and shown
- * after a relaunch (1), then under first letters a try with one peek
- * (2), one after Show all (3), a peek and a try left before Next that keeps
- * nothing (4); then a refusal in a store of its own (5). The transcript is
+ * by the route `/cue/<cue>`, which records nothing in the garden: Next there
+ * keeps the try in the launch alone. One store is kept across launches: a
+ * clean recital under no cue (suggested Good: the current matcher counts any
+ * cue as help, so first letters suggest Hard at best) shown as last at Next,
+ * and nothing after a relaunch (1), then under first letters a try with one
+ * peek (2), one after Show all (3), a peek and a try left before Next that
+ * keeps nothing (4); then a refusal in a store of its own (5). The transcript is
  * the shipped passage with `thee`, `thy` and `yea` written as a recognizer
  * hears them. Each check prints one PASS or FAIL line and its time; exits 1
  * on any failed check. With `SHOTS=<dir>`, each step's end screen is kept
@@ -20,7 +21,7 @@
 
 import { join } from 'node:path';
 
-import { writePassage } from './passage';
+import { readPassage } from '@manna/heartseed/passage';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
@@ -82,7 +83,7 @@ const check = (name: string, ok: boolean, got: unknown) => {
 };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-const passage = writePassage();
+const passage = readPassage();
 const spoken = spokenOf(passage.text);
 const store = `say-${host}-${Date.now().toString(36)}`;
 const shot = (name: string) => [
@@ -174,8 +175,8 @@ const relaunched = await run(
   ['clock data', 'clock settle', 'state today.last', 'state today.pending'],
 );
 check(
-  'B1 a relaunch shows it as last',
-  same(relaunched('state today.last'), kept1),
+  'B1 the recital route keeps nothing past its launch',
+  relaunched('state today.last') === null,
   relaunched('state today.last'),
 );
 check(
@@ -283,14 +284,14 @@ const back = await run(
   ['clock data', 'clock settle', 'state today.last', 'state today.help'],
 );
 check(
-  'B4 leaving before Next keeps nothing new',
-  same(back('state today.last'), kept3),
+  'B4 leaving before Next keeps nothing',
+  back('state today.last') === null,
   back('state today.last'),
 );
 check('B4 and lets the help go', back('state today.help') === null, back('state today.help'));
 
 const refused = await run(
-  ['--storage', `${store}-refused`, '--reset-storage'],
+  ['--storage', `${store}-refused`, '--reset-storage', '--url', '/cue/none'],
   [
     'prefer permission.microphone granted',
     'prefer permission.speech-recognition denied',

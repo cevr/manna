@@ -56,9 +56,13 @@ Tests and drives never ask the bucket. A development build takes a loopback fixt
 ```sh
 HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test web player.test.contract
 HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test ios player.test.contract
-bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recording, a kept stanza choice
+HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test web seek.test.contract
+HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test ios seek.test.contract
+bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recording, a kept stanza choice, a held drag, a skip, ten seeks, label contrast, the dock under Settings
 bun tools/drive-player.ts ios
 ```
+
+The seek: the full player's position bar (`position`, a range) sends one seek at its release; a step, a stanza's place (`stanza-place-<n>`) and the lock screen's seek and ±10 s skip send one each. Each seek has a serial; the element's `time` and `seeked` name the one they follow, so a late one moves nothing, and a sent place is held until it is reached or 2 s pass (`scrub-rules.ts`'s `settleFor`). A span the stanza choice leaves out is sought across: a frame task arms it on the runner's clock from the last tick (`due`), and the next tick corrects it. VoiceOver's swipe on the bar moves it 10 s (`adjust-step=10`, `NUDGE`), as an arrow key does on the web, while a drag keeps the range's default step; `adjust-step` is the Exact patch the pin carries (`docs/exact.md`, "The pin"), and `type "position" adjust up` in `seek.test.contract` performs one swipe. `protocol.test.ts` searches 10 actions deep in the gate; `PROTOCOL_DEPTH=18` searches deeper.
 
 ## The web
 

@@ -5,17 +5,23 @@
 // branch of the stack's view (README, "Where a feature's files go"). The
 // Settings sheet's routes (`settings…`) are drawn by their own loop: a
 // sheet is a route of its own, not the shared column, and the screen under
-// it stays drawn (`settingsUnderId`).
+// it stays drawn (`settingsUnderId`). Home stays drawn under every pushed
+// route, so the gear is drawn in that one entry alone: a driver finds one.
 use Today, TodayView from "./features/today.contract"
 use SettingsSheet, SettingsView from "./features/settings.contract"
 use AboutPage, LicencesPage from "./features/about.contract"
 use YourVerses from "./features/garden.contract"
+use Home from "./features/home.contract"
+use ListPage from "./features/list.contract"
 
 routes nav
   home "/"
+    list "/lists/:id"
     settings "/settings"
       settingsAbout "/settings/about"
         settingsLicences "/settings/about/licences"
+  today "/today"
+  start "/start/:slug"
   cued "/cue/:cue"
   verses "/verses"
 
@@ -25,6 +31,8 @@ component HeartseedExact
   members "./features/about.contract"
   members "./features/garden.contract"
   members "./features/text.contract"
+  members "./features/home.contract"
+  members "./features/list.contract"
   action follow(url: string)
     nav = go(nav, url)
   view
@@ -33,13 +41,15 @@ component HeartseedExact
         column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name}`
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
-            button press=settingsOpen aria-label="Settings" testId="gear"
-              image "symbol:settings"
-          if (e.name == "home" or e.name == "cued") and e.id == settingsUnderId
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt)
+            if e.id == settingsUnderId
+              button press=settingsOpen aria-label="Settings" testId="gear"
+                image "symbol:settings"
+          if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == settingsUnderId
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt)
           if e.name == "home"
-            link href=path("verses") testId="open-verses" padding="0 16px" min-height="44px" display="flex" align-items="center" flex-shrink=0
-              text "Your verses"
+            Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo)
+          if e.name == "list"
+            ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo)
           if e.name == "verses"
             YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack)
       for e in stack(nav).filter(x => x.name.startsWith("settings")) key=e.id

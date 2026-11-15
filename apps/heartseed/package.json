@@ -56,6 +56,46 @@
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
     },
+    "./voice": {
+      "types": "./exact/voice.d.ts",
+      "default": "./src/voice.ts"
+    },
+    "./session/service": {
+      "types": "./exact/session-service.d.ts",
+      "default": "./src/session/service.ts"
+    },
+    "./session/run": {
+      "types": "./exact/session-run.d.ts",
+      "default": "./src/session/run.ts"
+    },
+    "./home/grown": {
+      "types": "./exact/grown.d.ts",
+      "default": "./src/home/grown.ts"
+    },
+    "./home": {
+      "types": "./exact/home.d.ts",
+      "default": "./src/home.ts"
+    },
+    "./home/today": {
+      "types": "./exact/home-today.d.ts",
+      "default": "./src/home/today.ts"
+    },
+    "./home/start": {
+      "types": "./exact/home-start.d.ts",
+      "default": "./src/home/start.ts"
+    },
+    "./list": {
+      "types": "./exact/list.d.ts",
+      "default": "./src/list.ts"
+    },
+    "./dictation": {
+      "types": "./exact/dictation.d.ts",
+      "default": "./src/dictation.ts"
+    },
+    "./sayit/letters": {
+      "types": "./exact/letters.d.ts",
+      "default": "./src/sayit/letters.ts"
+    },
     "./kjv": {
       "types": "./exact/kjv.d.ts",
       "default": "./src/kjv.ts"

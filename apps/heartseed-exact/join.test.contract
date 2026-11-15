@@ -1,0 +1,93 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "Three verses planted and due: home's card offers Start"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  expect tree has "row-passage-0-43-3-16-18"
+  expect text "today-action" == "Start"
+  expect state homeShown.card.action == "start"
+  expect no failures
+
+test "Start opens Today on the plan's first item"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "today-action"
+  clock data
+  clock settle
+  expect state today.session.wire.planned == true
+  expect text "item-reference" == "John 3:16"
+  expect state today.session.wire.items.0.reference == "John 3:16"
+  expect no failures
+
+test "A tap on a plant opens Today on that verse"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "plant-John-3-18"
+  clock data
+  clock settle
+  expect text "item-reference" == "John 3:18"
+  expect no failures
+
+test "Back from Today returns home at the scroll it left"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "home-scroll" drag 0 -1500
+  clock settle
+  tap "plant-John-3-24"
+  clock data
+  clock settle
+  expect text "item-reference" == "John 3:24"
+  perf
+    back
+    clock data
+    clock settle
+  expect perf built "Home" == 0
+  expect perf built "HomePlantButton" == 0
+  expect tree has "plant-John-3-24"
+  expect no failures
+
+test "Add a list opens Your verses until Add verses lands, and what is planted there shows on home (J2 stand-in)"
+  clock data
+  tap "add-list"
+  clock data
+  expect tree has "verses"
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect tree has "row-passage-0-43-3-16-18"
+  expect text "single-Psalms-119-1" == "Psalms 119:1"
+  expect no failures

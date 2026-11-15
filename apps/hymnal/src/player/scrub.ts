@@ -17,9 +17,10 @@
  * rested (`useCommitAtRest`).
  */
 
-import { Data, Duration, Effect, Fiber, Option } from 'effect';
+import { Data, type Duration, Effect, Fiber, Option } from 'effect';
 import { useEffect, useRef, useState } from 'react';
 
+import { reached, sends, settleFor } from './scrub-rules';
 import { clock } from './time';
 
 export interface ScrubberProps {
@@ -67,15 +68,6 @@ export const useCommitAtRest = (scrub: ReturnType<typeof useScrub>, rest: Durati
       Effect.runFork(Fiber.interrupt(resting));
     };
   }, [scrub.dragging, scrub.value]);
-
-/** How long the bar holds a place it sent before it shows the player's again. */
-const settleFor = Duration.seconds(2);
-
-/** Whether the player at `at` has reached the place `sent`: within a second of it. */
-const reached = (at: number, sent: number) => Math.abs(at - sent) < 1;
-
-/** The second a place falls in: the bar moves a second a step. */
-const second = Math.floor;
 
 export const useScrub = (
   { at, length, onSeek }: ScrubberProps,
@@ -144,7 +136,7 @@ export const useScrub = (
     );
   /** A step sent at once; a drag under way goes on from it. */
   const step = (to: number) => {
-    if (second(to) === second(shown())) return;
+    if (!sends(shown(), to)) return;
     send(to);
     const was = now.current;
     if (Hand.$is('Moving')(was)) become(Hand.Moving({ by: was.by, from: to, to }));
@@ -155,7 +147,7 @@ export const useScrub = (
   const letGo = () => {
     const was = now.current;
     become(Hand.Free());
-    if (Hand.$is('Moving')(was) && second(was.to) !== second(was.from)) send(was.to);
+    if (Hand.$is('Moving')(was) && sends(was.from, was.to)) send(was.to);
   };
   return {
     value,
@@ -191,20 +183,3 @@ export const useScrub = (
     },
   };
 };
-
-/** The place under a touch `x` points along a bar `width` points wide, of a recording `max` seconds long. */
-export const placeAt = (x: number, width: number, max: number) =>
-  Option.match(
-    Option.liftPredicate(width, (measured) => measured > 0),
-    {
-      onNone: () => 0,
-      onSome: (measured) => Math.min(Math.max(x / measured, 0), 1) * max,
-    },
-  );
-
-/** How far a screen reader's swipe moves the bar, in seconds. */
-export const NUDGE = 10;
-
-/** The place a screen reader's swipe up (`1`) or down (`-1`) moves the bar to, within the recording. */
-export const nudged = (value: number, max: number, way: 1 | -1) =>
-  Math.min(Math.max(value + way * NUDGE, 0), max);

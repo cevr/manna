@@ -9,6 +9,7 @@
     "test:app": {
       "dependsOn": ["^transit"],
       "outputs": [],
+      "passThroughEnv": ["PROTOCOL_DEPTH"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",

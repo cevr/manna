@@ -1,0 +1,750 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: cevr <seeve.c@gmail.com>
+Date: Sun, 15 Nov 2026 14:47:00 -0500
+Subject: [PATCH] A range's adjust-step sets an accessibility adjust's move
+ apart from the drag's step
+
+A seek bar wants 10 s per VoiceOver swipe and a free drag. A range had one
+`step` for both: iOS's swipe moves by the written `step`, else a twentieth of
+the span, and the same `step` snaps every drag (RangeIOS.swift `adjustRange`,
+`RangeSpec.sanitize`).
+
+`adjust-step` on `input type="range"` is the swipe's move alone (schema prop
+`adjustStep`, 310; the schema's digest moves). A literal is a positive number;
+on any other tag it is refused (`lower-attr-tag`). iOS's accessibility
+increment and decrement move by it, clamped at the ends, and the drag still
+snaps to `step`. The web writes it as `data-exact-adjust-step`, and the input
+glue moves the focused range by it on an arrow key, the adjust a desktop
+screen reader sends, `input` then `change`. VoiceOver on iOS Safari adjusts
+through WebKit and sends no key, so it keeps WebKit's own move; macOS,
+Android and the painted hosts ignore the prop.
+
+A test performs one adjust with `type "<range>" adjust up|down` (the agent's
+`type <id> adjust up|down`): the arrow key on the web, the slider's
+`accessibilityIncrement`/`Decrement` on iOS; the other carriers refuse it.
+
+Tests: contract `adjust_step_is_a_ranges_positive_number`,
+`adjust_steps_parse_and_print`; RangeIOSTests' adjust-step swipe and agent
+adjust; host/web/tests/range-adjust.test.mjs (real arrow keys in Chromium);
+scripts/agent-input.test.mjs and agent-keys.test.mjs for the driver.
+---
+ contract/cli/src/tests_json.rs                |  8 ++++
+ contract/cli/tests/it/controls.rs             | 42 ++++++++++++++++
+ contract/cli/tests/it/tests_decl.rs           | 20 ++++++++
+ contract/cli/tests/it/vocab.rs                |  1 +
+ contract/lower/src/controls.rs                | 32 ++++++++++++-
+ contract/lower/src/native.rs                  |  3 +-
+ contract/lower/src/tags.rs                    |  1 +
+ contract/lower/src/vocab.rs                   |  1 +
+ contract/syntax/src/parser/steps.rs           | 11 +++++
+ contract/syntax/src/spans.rs                  |  3 +-
+ contract/syntax/src/test_steps.rs             | 10 ++++
+ docs/contract-for-agents.md                   |  2 +-
+ docs/contract-grammar.md                      |  3 +-
+ .../apple/Sources/ExactKit/ControlKinds.swift |  3 ++
+ .../apple/Sources/ExactKit/IOS/AgentIOS.swift |  7 +++
+ .../apple/Sources/ExactKit/IOS/RangeIOS.swift | 19 ++++++--
+ .../tests/ExactKitTests/RangeIOSTests.swift   | 31 ++++++++++++
+ host/web/input-glue.js                        | 21 +++++++-
+ host/web/src/element.rs                       |  2 +
+ host/web/tests/range-adjust.test.mjs          | 48 +++++++++++++++++++
+ kernel/src/wire/codec.rs                      |  2 +-
+ kernel/tables/schema.json                     |  6 +++
+ scripts/agent-input.mjs                       |  9 ++++
+ scripts/agent-input.test.mjs                  | 19 ++++++++
+ scripts/agent-ios.mjs                         |  1 +
+ scripts/agent-keys.mjs                        |  4 +-
+ scripts/agent-keys.test.mjs                   |  6 +++
+ scripts/agent-test.mjs                        |  3 +-
+ 28 files changed, 304 insertions(+), 14 deletions(-)
+ create mode 100644 host/web/tests/range-adjust.test.mjs
+
+diff --git a/contract/cli/src/tests_json.rs b/contract/cli/src/tests_json.rs
+index 3f426418..bcd6ff8b 100644
+--- a/contract/cli/src/tests_json.rs
++++ b/contract/cli/src/tests_json.rs
+@@ -296,6 +296,14 @@ fn step_json(step: &Step, s: &mut String) {
+             s.push_str(",\"text\":");
+             q(text, s);
+         }
++        Step::Adjust {
++            target, direction, ..
++        } => {
++            s.push_str("{\"op\":\"adjust\",\"target\":");
++            q(target, s);
++            s.push_str(",\"direction\":");
++            q(direction, s);
++        }
+         Step::Clock { arg, .. } => {
+             s.push_str("{\"op\":\"clock\",\"arg\":");
+             q(arg, s);
+diff --git a/contract/cli/tests/it/controls.rs b/contract/cli/tests/it/controls.rs
+index 6695c99b..73c0d319 100644
+--- a/contract/cli/tests/it/controls.rs
++++ b/contract/cli/tests/it/controls.rs
+@@ -630,6 +630,48 @@ fn a_number_fields_bounds_take_numbers_as_a_ranges_do() {
+     }
+ }
+ 
++/// `adjust-step` is a range's, a positive number, carried as HTML's text
++/// beside `step`; on any other tag, or zero, it is refused.
++#[test]
++fn adjust_step_is_a_ranges_positive_number() {
++    let r = boot(
++        r#"component App
++  state at = 40
++  state by = 5
++  view
++    column
++      input type="range" min=0 max=240 value=at adjust-step=10 testId="seek" aria-label="Seek"
++      input type="range" min=0 max=240 value=at adjust-step=by step="any" testId="bound" aria-label="Bound"
++"#,
++    );
++    let prop = |id: &str, p: PropId| {
++        r.kernel()
++            .node(view_of(&r, id))
++            .unwrap()
++            .props
++            .str(p)
++            .map(str::to_owned)
++    };
++    assert_eq!(prop("seek", PropId::AdjustStep).as_deref(), Some("10"));
++    assert_eq!(prop("seek", PropId::Step), None);
++    assert_eq!(prop("bound", PropId::AdjustStep).as_deref(), Some("5"));
++    for (view, id) in [
++        ("input type=\"checkbox\" adjust-step=10", "lower-attr-tag"),
++        ("input adjust-step=10", "lower-attr-tag"),
++        ("view adjust-step=10", "lower-attr-tag"),
++        ("input type=\"range\" adjust-step=0", "lower-attr-value"),
++        ("input type=\"range\" adjust-step=-10", "lower-attr-value"),
++        (
++            "input type=\"range\" adjust-step=\"ten\"",
++            "lower-attr-value",
++        ),
++    ] {
++        let src = format!("component App\n  view\n    {view}\n");
++        let e = contract::compile(&src).unwrap_err();
++        assert_eq!(e.id, id, "{view}: {e:?}");
++    }
++}
++
+ /// LLP 1116.010 D3: a negative literal is a number as a positive one is, in
+ /// a field's bounds (the decimal pad's ± key comes of a negative `min`) and in a
+ /// style (`margin-top=-8` is -8 px), and a text field's bounds take numbers.
+diff --git a/contract/cli/tests/it/tests_decl.rs b/contract/cli/tests/it/tests_decl.rs
+index 8ae0394b..d0b36ec9 100644
+--- a/contract/cli/tests/it/tests_decl.rs
++++ b/contract/cli/tests/it/tests_decl.rs
+@@ -578,6 +578,26 @@ fn clipboard_steps_parse_and_print() {
+     );
+ }
+ 
++/// One accessibility adjust of a range is a step, `up` or `down`.
++#[test]
++fn adjust_steps_parse_and_print() {
++    let tests =
++        contract::tests("test \"seek\"\n  type \"bar\" adjust up\n  type \"bar\" adjust down\n")
++            .unwrap();
++    let steps = &tests[0].steps;
++    assert!(
++        matches!(&steps[0], Step::Adjust { target, direction, .. } if target == "bar" && direction == "up")
++    );
++    assert!(matches!(&steps[1], Step::Adjust { direction, .. } if direction == "down"));
++    let json = contract::tests_json(&tests);
++    assert!(
++        json.contains("{\"op\":\"adjust\",\"target\":\"bar\",\"direction\":\"down\",\"line\":3}"),
++        "{json}"
++    );
++    let e = contract::tests("test \"seek\"\n  type \"bar\" adjust left\n").unwrap_err();
++    assert_eq!(e.id, "syntax-expected-step");
++}
++
+ #[test]
+ fn a_test_double_clicks_scrolls_a_list_appends_reloads_and_reads_a_field() {
+     // feed F8/F10, mail F19, kanban F25: the driver's `tap` forms, a list
+diff --git a/contract/cli/tests/it/vocab.rs b/contract/cli/tests/it/vocab.rs
+index 2937b3db..9684a5ad 100644
+--- a/contract/cli/tests/it/vocab.rs
++++ b/contract/cli/tests/it/vocab.rs
+@@ -461,6 +461,7 @@ fn contextual_attributes_are_refused_elsewhere() {
+         ("selectionchange", "view", "selectionchange=done"),
+         ("beforeinput", "view", "beforeinput=done"),
+         ("name", "view", "name=\"station\""),
++        ("adjust-step", "view", "adjust-step=10"),
+         ("markup", "view", "markup=\"markdown\""),
+         (
+             "metadata",
+diff --git a/contract/lower/src/controls.rs b/contract/lower/src/controls.rs
+index ad80f34b..91a03616 100644
+--- a/contract/lower/src/controls.rs
++++ b/contract/lower/src/controls.rs
+@@ -107,6 +107,7 @@ pub(crate) fn control(
+     native_button: bool,
+ ) -> Result<Option<&'static str>, LowerError> {
+     search_tab_words(tag, attrs)?;
++    adjust_step(tag, attrs)?;
+     if tag != "textarea" {
+         if let Some(a) = attrs.iter().find(|a| a.name == "rows") {
+             return err("lower-attr-tag", "HTML rows belongs to textarea", a.span);
+@@ -248,6 +249,33 @@ pub(crate) fn control(
+     Ok(control)
+ }
+ 
++/// `adjust-step` is a range's: how far one accessibility adjust moves it,
++/// a positive number when written as a literal.
++fn adjust_step(tag: &str, attrs: &[contract_syntax::Attr]) -> Result<(), LowerError> {
++    let Some(a) = attrs.iter().find(|a| a.name == "adjust-step") else {
++        return Ok(());
++    };
++    if contract_syntax::input_control(tag, attrs) != Some("range") {
++        return err(
++            "lower-attr-tag",
++            "`adjust-step` belongs to `input type=\"range\"`: how far one accessibility adjust moves it",
++            a.span,
++        );
++    }
++    let literal = match &a.value {
++        Expr::Str(s, _) => Some(s.trim().parse::<f64>().unwrap_or(f64::NAN)),
++        e => super::values::numeric_literal(e),
++    };
++    if literal.is_some_and(|n| !(n.is_finite() && n > 0.0)) {
++        return err(
++            "lower-attr-value",
++            "`adjust-step` is a positive number: `adjust-step=10`",
++            a.span,
++        );
++    }
++    Ok(())
++}
++
+ /// The sentence of `rules/DEFERRED.md` that bounds the picker (LLP 1069.002
+ /// D1), cited by each refusal.
+ pub const PICKER_ADMISSION: &str = "rules/DEFERRED.md admits an unrestricted file input (Charlie, 2026-10-11); `capture` stays refused and specific `accept` types are bounded to media or the app's `file_handlers`";
+@@ -381,7 +409,7 @@ pub(crate) fn tag(kind: &str, t: Tag) -> Tag {
+     }
+ }
+ 
+-/// A range's `value`, `min`, `max` and `step` as HTML's strings, and a text
++/// A range's `value`, `min`, `max`, `step` and `adjust-step` as HTML's strings, and a text
+ /// or number field's `min`, `max` and `step`: a number literal, `-40` as `40`,
+ /// is written as one, a bound number through `toString` (LLP
+ /// 1069.001 D4: the props are strings on the wire, typed per control); so
+@@ -399,7 +427,7 @@ pub(crate) fn range_attrs(
+     // negative or positive. Its `value` stays its text: the field edits text,
+     // and `1.` is on the way to `1.5`.
+     let names: &[&str] = match control {
+-        Some("range") => &["value", "min", "max", "step"],
++        Some("range") => &["value", "min", "max", "step", "adjust-step"],
+         None if tag == "input" => &["min", "max", "step"],
+         None if tag == "progress" => &["value", "max"],
+         _ => &[],
+diff --git a/contract/lower/src/native.rs b/contract/lower/src/native.rs
+index b500229a..86c9394a 100644
+--- a/contract/lower/src/native.rs
++++ b/contract/lower/src/native.rs
+@@ -180,7 +180,7 @@ const MODULE_EVENTS: [&str; 9] = [
+ /// The form-control props (LLP 1069.001, LLP 1069.002) a module's box has
+ /// no use for. `checked` is refused on every tag but `input` before this
+ /// runs (`controls::control`); it is listed so the set reads whole.
+-const CONTROL_PROPS: [&str; 20] = [
++const CONTROL_PROPS: [&str; 21] = [
+     "value",
+     "placeholder",
+     "autofocus",
+@@ -188,6 +188,7 @@ const CONTROL_PROPS: [&str; 20] = [
+     "min",
+     "max",
+     "step",
++    "adjust-step",
+     "accept",
+     "multiple",
+     "readonly",
+diff --git a/contract/lower/src/tags.rs b/contract/lower/src/tags.rs
+index 42e9f8b0..36a11dca 100644
+--- a/contract/lower/src/tags.rs
++++ b/contract/lower/src/tags.rs
+@@ -487,6 +487,7 @@ pub fn attr(name: &str) -> Option<AttrTarget> {
+         "min" => AttrTarget::Prop(p("min")),
+         "max" => AttrTarget::Prop(p("max")),
+         "step" => AttrTarget::Prop(p("step")),
++        "adjust-step" => AttrTarget::Prop(p("adjustStep")),
+         "rows" => AttrTarget::Prop(p("rows")),
+         "maxlength" => AttrTarget::Prop(p("maxlength")),
+         "cancel" => AttrTarget::Handler("cancel"),
+diff --git a/contract/lower/src/vocab.rs b/contract/lower/src/vocab.rs
+index c2058a68..6d29778e 100644
+--- a/contract/lower/src/vocab.rs
++++ b/contract/lower/src/vocab.rs
+@@ -149,6 +149,7 @@ pub const CONTEXTUAL: &[(&str, &str)] = &[
+     ),
+     ("beforeinput", "plain text `input` or `textarea`"),
+     ("name", "`input type=\"radio\"` or `iframe`"),
++    ("adjust-step", "`input type=\"range\"`"),
+     ("markup", "`text` or `textarea`"),
+     // @ref LLP 1098 D1, D2 — the media session's, `media::check_session`.
+     ("metadata", "`audio` or `video`"),
+diff --git a/contract/syntax/src/parser/steps.rs b/contract/syntax/src/parser/steps.rs
+index 8d3224d2..3e213f72 100644
+--- a/contract/syntax/src/parser/steps.rs
++++ b/contract/syntax/src/parser/steps.rs
+@@ -794,6 +794,17 @@ impl Parser {
+                     self.next();
+                     let text = if edit == "paste" { self.str_lit("the pasted text")? } else { String::new() };
+                     Step::Clipboard { target, edit: edit.into(), text, span }
++                } else if self.at_ident("adjust") {
++                    self.next();
++                    if !(self.at_ident("up") || self.at_ident("down")) {
++                        return self.err(
++                            "syntax-expected-step",
++                            "`adjust` takes `up` or `down`: one accessibility adjust of a range",
++                        );
++                    }
++                    let direction = if self.at_ident("up") { "up" } else { "down" }.to_string();
++                    self.next();
++                    Step::Adjust { target, direction, span }
+                 } else {
+                     let text = self.str_lit("the text")?;
+                     let append = self.at_ident("append");
+diff --git a/contract/syntax/src/spans.rs b/contract/syntax/src/spans.rs
+index 161172a2..4c8376ee 100644
+--- a/contract/syntax/src/spans.rs
++++ b/contract/syntax/src/spans.rs
+@@ -175,7 +175,7 @@ record_variants! {
+         Tap { target, form, modifiers, span }, Drag { target, dx, dy, to, from, mouse, into, press, over, hold, during, span },
+         Size { width, height, span }, At { location, span }, Epoch { value, span }, TimeZone { zone, span },
+         Locale { tag, span }, Prefer { name, value, span }, Seed { seed, span }, Fresh { seed, span }, BeforeData { span }, FailFetch { prefix, times, span }, PassFetch { prefix, span }, Request { method, path, body, persona, status, span }, Type { target, text, append, span }, Key { target, key, phase, duration, span },
+-        Pick { target, paths, span }, Authorize { cancel, span }, Clipboard { target, edit, text, span },
++        Pick { target, paths, span }, Authorize { cancel, span }, Clipboard { target, edit, text, span }, Adjust { target, direction, span },
+         Clock { arg, span }, Reload { span }, Close { span }, Back { span }, Resize { width, height, span }, Screenshot { path, span }, ExpectRefusal { target, span }, ExpectTree { target, present, span }, ExpectDisabled { target, disabled, span }, ExpectFocused { target, span },
+         ExpectText { target, value, span }, ExpectState { name, comparison, value, span },
+         ExpectSound { src, present, at, gain, ends, playback_rate, pan, by, span },
+@@ -319,6 +319,7 @@ impl Step {
+             | Step::Pick { span, .. }
+             | Step::Authorize { span, .. }
+             | Step::Clipboard { span, .. }
++            | Step::Adjust { span, .. }
+             | Step::Clock { span, .. }
+             | Step::Reload { span, .. }
+             | Step::Close { span }
+diff --git a/contract/syntax/src/test_steps.rs b/contract/syntax/src/test_steps.rs
+index fc34f6ee..8ec95a30 100644
+--- a/contract/syntax/src/test_steps.rs
++++ b/contract/syntax/src/test_steps.rs
+@@ -262,6 +262,16 @@ pub enum Step {
+         /// Where.
+         span: Span,
+     },
++    /// `type "testId" adjust up`, `… adjust down`: one accessibility adjust
++    /// of a range, as VoiceOver's swipe or a screen reader's arrow makes it.
++    Adjust {
++        /// The range, by `testId`.
++        target: String,
++        /// `up` or `down`.
++        direction: String,
++        /// Where.
++        span: Span,
++    },
+     /// `clock settle`, `clock data`, `clock held …`, `clock until state …`,
+     /// `clock +ms`, `clock +ms real`, `clock ms`.
+     Clock {
+diff --git a/docs/contract-for-agents.md b/docs/contract-for-agents.md
+index de8c9184..de40b701 100644
+--- a/docs/contract-for-agents.md
++++ b/docs/contract-for-agents.md
+@@ -2425,7 +2425,7 @@ lists any literal colour, font size or weight an app's `.contract` files still w
+ | `delete=remove(id)` on either list's row (`disabled` beside it: no delete) | the cell's swipe action Delete, which a full swipe performs (`contract vocab swipe`) |
+ | `input type="checkbox" switch` | `UISwitch`; in a grouped list's row, the row and its switch are one VoiceOver element, as a Settings row is, named by the row's `aria-label`, else the switch's, else the row's text |
+ | `input type="radio"` (the radios of one `name` are a group) | the SF Symbols circle, filled at its centre when checked, at body size; in a grouped list's row no circle but the row's checkmark, which a tap on the row moves (LLP 1115.000 D13.2) |
+-| `input type="range"` (as wide as what holds it; in a `row`, `flex=1 min-width=0` beside its label) | `UISlider` |
++| `input type="range"` (as wide as what holds it; in a `row`, `flex=1 min-width=0` beside its label) | `UISlider`; VoiceOver's swipe up or down moves it by `step`, or with none a twentieth of the span. `adjust-step=10` makes the swipe 10 and leaves the drag to `step` (a seek bar: 10 s a swipe, the drag free); on the web an arrow key moves it by `adjust-step`, as a desktop screen reader's adjust sends one. A test moves it as a swipe does with `type "seek" adjust up` |
+ | `input type="date"`, `"time"`, `"datetime-local"` | `UIDatePicker`; with an empty `value` its pill shows your `placeholder` (`placeholder="Add a date"`) or, with none, no words (LLP 1115.000 D13.1). Opening it accepts the current local date or time within `min`/`max`. On macOS, typing, an arrow or Return accepts the field's displayed value; focus alone leaves it empty. The web shows the browser's own empty field. Android shows Material's filled field, the value as the phone writes dates and `placeholder` its floating label, and Material 3's picker, in the control's `accent-color` where it has one (LLP 1115.001.000) |
+ | `select` of `option`s (no wider than what holds it, however long its options) | a pop-up button with its menu |
+ | `progress value=done max=goal` (a goal, an upload; as wide as what holds it) | `UIProgressView`, tinted by `accent-color` (LLP 1116 D8); never a drawn track and fill |
+diff --git a/docs/contract-grammar.md b/docs/contract-grammar.md
+index b37f193f..0afac789 100644
+--- a/docs/contract-grammar.md
++++ b/docs/contract-grammar.md
+@@ -788,7 +788,8 @@ step          = "tap" "midi" STRING ( HEX { HEX } | "clock" NUMBER NUMBER ) NL
+                   [ "during" { STRING } ] NL
+               | "type" STRING ( STRING [ "append" ]
+                   | "key" STRING [ "down" | "up" | "for" NUMBER ]
+-                  | "copy" | "cut" | "paste" STRING ) NL
++                  | "copy" | "cut" | "paste" STRING
++                  | "adjust" ( "up" | "down" ) ) NL     (* a range's accessibility adjust: web, iOS *)
+               | "pick" STRING ( STRING { STRING } | "cancel" ) NL
+               | "authorize" [ "cancel" ] NL           (* the held sign-in, against the app's server (oauth recipe) *)
+               | "clock" ( "settle" | "data" | "+" NUMBER [ "real" ] | NUMBER ) NL
+diff --git a/host/apple/Sources/ExactKit/ControlKinds.swift b/host/apple/Sources/ExactKit/ControlKinds.swift
+index 0318e2cc..5f56f6a7 100644
+--- a/host/apple/Sources/ExactKit/ControlKinds.swift
++++ b/host/apple/Sources/ExactKit/ControlKinds.swift
+@@ -31,12 +31,15 @@ enum ControlKinds {
+ struct RangeSpec {
+     var min = 0.0, max = 100.0
+     var step: Double? = 1
++    /// `adjust-step`: one accessibility adjust's move, when written and positive.
++    var adjustStep: Double?
+ 
+     init(_ props: [String: String]) {
+         let number = { (s: String?) in s.flatMap { Double($0.trimmingCharacters(in: .whitespaces)) }.flatMap { $0.isFinite ? $0 : nil } }
+         min = number(props["min"]) ?? 0
+         max = Swift.max(number(props["max"]) ?? 100, min)
+         step = props["step"]?.trimmingCharacters(in: .whitespaces).lowercased() == "any" ? nil : (number(props["step"]).flatMap { $0 > 0 ? $0 : nil } ?? 1)
++        adjustStep = number(props["adjustStep"]).flatMap { $0 > 0 ? $0 : nil }
+     }
+ 
+     func sanitize(_ value: Double) -> Double {
+diff --git a/host/apple/Sources/ExactKit/IOS/AgentIOS.swift b/host/apple/Sources/ExactKit/IOS/AgentIOS.swift
+index 1a136f8f..65a0e806 100644
+--- a/host/apple/Sources/ExactKit/IOS/AgentIOS.swift
++++ b/host/apple/Sources/ExactKit/IOS/AgentIOS.swift
+@@ -1017,6 +1017,13 @@ extension Agent {
+         // An inert view takes no input, as a person cannot reach it (HTML inert; a modal presentation's background)
+         guard !v.inert else { return ["error": "view \(v.id) is inert"] }
+         if let edit = req["clipboard"] as? String { return withAgentPasteboard(req) { clipboardType(v, edit, req["text"] as? String, board: $0) } }
++        if let way = req["adjust"] as? String {
++            #if os(iOS)
++            return presenter.controls.adjust(v, up: way == "up")
++            #else
++            return ["error": "unsupported: adjust moves an iOS range"]
++            #endif
++        }
+         if session.canvases.wantsInput(v.id) {
+             if let routed = canvasRouted(v, req) { return routed }
+             // The world hears the key a chord names, not the chord's string.
+diff --git a/host/apple/Sources/ExactKit/IOS/RangeIOS.swift b/host/apple/Sources/ExactKit/IOS/RangeIOS.swift
+index 163f854c..d1466820 100644
+--- a/host/apple/Sources/ExactKit/IOS/RangeIOS.swift
++++ b/host/apple/Sources/ExactKit/IOS/RangeIOS.swift
+@@ -71,14 +71,25 @@ extension ControlHost {
+         return ["typed": Int(node.id), "value": RangeSpec.format(slider.exact), "delivery": "host-activation", "native": "control"]
+     }
+ 
+-    /// VoiceOver's swipe up or down, as WebKit adjusts a range: a written
+-    /// `step` is one move; without one, or with `any`, a twentieth of the
+-    /// span, at least the default step.
++    /// The agent's `type <range> adjust up|down`: the slider's accessibility
++    /// increment or decrement, as VoiceOver's swipe performs it.
++    func adjust(_ node: NodeView, up: Bool) -> [String: Any] {
++        guard let slider = controls[node.id] as? RangeSlider else { return ["error": "view \(node.id) is not a range: adjust moves an `input type=\"range\"`"] }
++        guard slider.isEnabled, !node.inert else { return ["error": "control #\(node.id) is disabled or inert"] }
++        if up { slider.accessibilityIncrement() } else { slider.accessibilityDecrement() }
++        return ["typed": Int(node.id), "value": RangeSpec.format(slider.exact), "delivery": "host-activation", "native": "control"]
++    }
++
++    /// VoiceOver's swipe up or down. A written `adjust-step` is one move;
++    /// else, as WebKit adjusts a range, a written `step`; without one, or
++    /// with `any`, a twentieth of the span, at least the default step.
++    /// `adjust-step` leaves the drag to `step`.
+     private func adjustRange(_ slider: RangeSlider, by direction: Double) {
+         guard let node = presenter.views[UInt32(slider.tag)], slider.isEnabled, !node.inert else { return }
+         let range = RangeSpec(node.props), from = range.sanitize(slider.exact)
+         let authored = node.props["step"]?.isEmpty == false ? range.step : nil
+-        let to = range.sanitize(from + direction * (authored ?? Swift.max((range.max - range.min) / 20, range.step ?? 0)))
++        let move = range.adjustStep ?? authored ?? Swift.max((range.max - range.min) / 20, range.step ?? 0)
++        let to = range.sanitize(from + direction * move)
+         if to != from { commitRange(slider, node, to) }
+     }
+ 
+diff --git a/host/apple/tests/ExactKitTests/RangeIOSTests.swift b/host/apple/tests/ExactKitTests/RangeIOSTests.swift
+index e39704fc..d136ca26 100644
+--- a/host/apple/tests/ExactKitTests/RangeIOSTests.swift
++++ b/host/apple/tests/ExactKitTests/RangeIOSTests.swift
+@@ -124,6 +124,37 @@ final class RangeIOSTests: XCTestCase {
+         XCTAssertEqual(s.value, 0.55, accuracy: 1e-6, "a disabled range does not move")
+     }
+ 
++    /// `adjust-step` is a swipe's move, to the ends and no further, while
++    /// the drag keeps `step`'s: `any` glides.
++    func testVoiceOverMovesAnAdjustStepAndTheDragKeepsItsStep() throws {
++        let (p, s) = try slider(["min": "0", "max": "240", "step": "any", "adjustStep": "10", "value": "40"])
++        var sent: [String] = []
++        p.onControlValue = { _, value, input, change in sent.append("\(value) \(input) \(change)") }
++        s.accessibilityIncrement()
++        XCTAssertEqual(s.value, 50)
++        s.accessibilityDecrement(); s.accessibilityDecrement()
++        XCTAssertEqual(s.value, 30)
++        XCTAssertEqual(sent, ["50 true true", "40 true true", "30 true true"])
++        s.value = 43.75
++        p.controls.rangeMoved(s)
++        XCTAssertEqual(sent.last, "43.75 true false", "the drag glides")
++        p.apply(wireBatch([["op": "props", "id": 1, "set": ["value": "235"]]]))
++        s.accessibilityIncrement()
++        XCTAssertEqual(s.value, 240, "held at max")
++        p.apply(wireBatch([["op": "props", "id": 1, "set": ["value": "4"]]]))
++        s.accessibilityDecrement()
++        XCTAssertEqual(s.value, 0, "held at min")
++    }
++
++    /// The agent's `type <range> adjust up|down` is the swipe's own path.
++    func testTheAgentsAdjustIsTheAccessibilityIncrement() throws {
++        let (p, s) = try slider(["min": "0", "max": "100", "adjustStep": "10", "value": "40"])
++        let node = try XCTUnwrap(p.views[1])
++        XCTAssertEqual(p.controls.adjust(node, up: true)["value"] as? String, "50")
++        XCTAssertEqual(p.controls.adjust(node, up: false)["value"] as? String, "40")
++        XCTAssertEqual(s.value, 40)
++    }
++
+     /// A step finer than the thumb's `Float` still adds up, whether or not
+     /// the app writes the value back, and VoiceOver reads it.
+     func testVoiceOverAddsUpStepsFinerThanTheThumb() throws {
+diff --git a/host/web/input-glue.js b/host/web/input-glue.js
+index 8690fb00..e5f38487 100644
+--- a/host/web/input-glue.js
++++ b/host/web/input-glue.js
+@@ -66,6 +66,25 @@ function radioArrow(root, event) {
+   if (next !== el) { rove(all, next); next.focus(); next.click(); }
+   return true;
+ }
++/** An arrow on a range with `adjust-step` moves it by that much, as VoiceOver's swipe does on iOS: a desktop screen
++ * reader's adjust is the arrow key, and a browser's own arrow moves by `step`, which also snaps a drag. Right and Up
++ * raise it (Left in a right-to-left range), `input` then `change` as the browser's own key sends them; whether it was one. */
++function rangeArrow(root, event) {
++  const el = event.target;
++  if (!(el instanceof HTMLInputElement) || el.type !== "range" || !el.hasAttribute("data-exact-adjust-step") || !root.contains(el)) return false;
++  const rtl = getComputedStyle(el).direction === "rtl";
++  const way = { ArrowUp: 1, ArrowDown: -1, ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[event.key];
++  const by = Number(el.getAttribute("data-exact-adjust-step"));
++  if (!way || !(by > 0) || el.disabled) return false;
++  event.preventDefault();
++  const from = Number(el.value), min = Number(el.min || 0), max = Math.max(Number(el.max || 100), min);
++  el.value = String(Math.min(Math.max(from + way * by, min), max));
++  if (Number(el.value) !== from) {
++    el.dispatchEvent(new Event("input", { bubbles: true }));
++    el.dispatchEvent(new Event("change", { bubbles: true }));
++  }
++  return true;
++}
+ /** @ref LLP 1115.000 D4.5 — a `tablist`'s tabs and a `menu`'s items (a chooser's too, drawn as a menu) move by the
+  * arrow keys, as WAI-ARIA's patterns give the roles and a web developer expects of them: Left and Right along a tablist
+  * (Up and Down when it is vertical: its `aria-orientation`, or a root tab bar the shell draws as a sidebar), Up and Down
+@@ -236,7 +255,7 @@ export function createInputHandlers({ root, views, retiredViews, ready, inertAnc
+   document.addEventListener("keydown", (event) => {
+     const el = event.target;
+     if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.key === "Process" || event.metaKey || event.ctrlKey || event.altKey || !ready()) return;
+-    if (radioArrow(root, event) || roveArrow(root, event) || typeAhead(root, event) || event.repeat) return;
++    if (rangeArrow(root, event) || radioArrow(root, event) || roveArrow(root, event) || typeAhead(root, event) || event.repeat) return;
+     // @ref LLP 1115.000 D4.14 — Space holds a `<button>` down until its keyup,
+     // when the browser clicks it. Its press shows meanwhile, as under a pointer:
+     // the unsaid dim, a native button's highlight, a `-exact-press-scale`, a pressed paint.
+diff --git a/host/web/src/element.rs b/host/web/src/element.rs
+index 4e00ec3b..e0bf3de2 100644
+--- a/host/web/src/element.rs
++++ b/host/web/src/element.rs
+@@ -937,6 +937,8 @@ pub fn props_of(node: &NodeFacts<'_>) -> SortedMap<String, String> {
+             PropId::End => "data-time-end",
+             PropId::TextReservation => "data-time-reservation",
+             PropId::Step => "step",
++            // Read by events.js: an arrow key moves the range by it.
++            PropId::AdjustStep => "data-exact-adjust-step",
+             PropId::Inert => "inert",
+             PropId::Lang => "lang",
+             PropId::ImageSource => "src",
+diff --git a/host/web/tests/range-adjust.test.mjs b/host/web/tests/range-adjust.test.mjs
+new file mode 100644
+index 00000000..d9f0ceb2
+--- /dev/null
++++ b/host/web/tests/range-adjust.test.mjs
+@@ -0,0 +1,48 @@
++import { test, expect, beforeAll, afterAll } from 'bun:test';
++import { resolve } from 'node:path';
++import { readFileSync } from 'node:fs';
++import { suiteBrowser } from '../../../scripts/agent-launch.mjs';
++
++// `adjust-step` on a range (`data-exact-adjust-step`): an arrow key, the adjust a desktop screen reader sends, moves
++// it by that much and no further than its ends, `input` then `change`, where the browser's own arrow moves by `step`.
++// A range without it keeps the browser's arrow. Real key presses, through the input glue both web targets load.
++let server;
++beforeAll(() => {
++  server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
++    const path = new URL(request.url).pathname;
++    if (path === '/') return new Response(`<!doctype html><div id="root">
++      <input id="seek" type="range" min="0" max="240" value="40" data-exact-adjust-step="10" aria-label="Seek">
++      <input id="plain" type="range" min="0" max="240" value="40" aria-label="Plain">
++      <input id="off" type="range" min="0" max="240" value="40" data-exact-adjust-step="10" disabled aria-label="Off"></div>`, { headers: { 'Content-Type': 'text/html' } });
++    if (path === '/favicon.ico') return new Response(null, { status: 204 });
++    if (path.startsWith('/web/')) return new Response(readFileSync(resolve(import.meta.dir, '..', path.slice(5))), { headers: { 'Content-Type': 'text/javascript' } });
++    return new Response(null, { status: 404 });
++  } });
++});
++afterAll(() => server?.stop(true));
++
++test('chromium: an arrow moves a range by its adjust-step, to its ends', async () => {
++  const browser = await suiteBrowser('chromium');
++  try {
++    const page = await browser.newPage();
++    await page.goto(server.url.href);
++    await page.evaluate(async () => {
++      const { createInputHandlers } = await import('/web/input-glue.js'), root = document.getElementById('root');
++      createInputHandlers({ root, views: new Map(), retiredViews: new Set(), ready: () => true, inertAncestor: () => null, editMenu: () => false, dispatch() {} });
++      window.heard = [];
++      for (const el of root.querySelectorAll('input')) for (const kind of ['input', 'change']) el.addEventListener(kind, () => window.heard.push(`${el.id} ${kind} ${el.value}`));
++    });
++    const press = async (id, key) => { await page.focus(`#${id}`); await page.keyboard.press(key); return page.evaluate(() => window.heard.splice(0)); };
++    expect(await press('seek', 'ArrowUp')).toEqual(['seek input 50', 'seek change 50']);
++    expect(await press('seek', 'ArrowLeft')).toEqual(['seek input 40', 'seek change 40']);
++    expect(await press('seek', 'ArrowRight')).toEqual(['seek input 50', 'seek change 50']);
++    expect(await press('seek', 'ArrowDown')).toEqual(['seek input 40', 'seek change 40']);
++    await page.evaluate(() => { document.getElementById('seek').value = '235'; });
++    expect(await press('seek', 'ArrowUp')).toEqual(['seek input 240', 'seek change 240']);
++    expect(await press('seek', 'ArrowUp')).toEqual([]);
++    await page.evaluate(() => { document.getElementById('seek').value = '4'; });
++    expect(await press('seek', 'ArrowDown')).toEqual(['seek input 0', 'seek change 0']);
++    expect(await press('plain', 'ArrowUp')).toEqual(['plain input 41', 'plain change 41']);
++    expect(await page.evaluate(() => document.getElementById('off').value)).toBe('40');
++  } finally { await browser.close(); }
++}, 30000);
+diff --git a/kernel/src/wire/codec.rs b/kernel/src/wire/codec.rs
+index c2b981d3..ea968b0d 100644
+--- a/kernel/src/wire/codec.rs
++++ b/kernel/src/wire/codec.rs
+@@ -735,7 +735,7 @@ mod tests {
+         // schema. The literal makes an accidental removal of that coupling a
+         // test failure whenever the byte snapshot above is intentionally moved.
+         // Recomputed when the schema changes; the digest test prints the value.
+-        assert_eq!(SCHEMA_DIGEST, 0x8d6ff77343bf0d86);
++        assert_eq!(SCHEMA_DIGEST, 0x60a4b4ad731dcabd);
+     }
+ 
+     #[test]
+diff --git a/kernel/tables/schema.json b/kernel/tables/schema.json
+index 537ebad2..1a8a4c88 100644
+--- a/kernel/tables/schema.json
++++ b/kernel/tables/schema.json
+@@ -1464,6 +1464,12 @@
+       "kind": "str",
+       "_comment": "@ref LLP 1069.001 D1: HTML's `step` on `input type=range` (a number, or `any`)."
+     },
++    {
++      "id": 310,
++      "name": "adjustStep",
++      "kind": "str",
++      "_comment": "`adjust-step` on `input type=range`, a positive number: how far one accessibility adjust moves the value (VoiceOver's swipe up or down on iOS; an arrow key on the web, which a desktop screen reader's adjust sends), apart from `step`, which still snaps a drag. Unsaid, an adjust moves by `step`, or a twentieth of the span with none. ARIA has no step attribute, so it is Exact's own."
++    },
+     {
+       "id": 216,
+       "name": "glassGroup",
+diff --git a/scripts/agent-input.mjs b/scripts/agent-input.mjs
+index b0bee364..973e3d37 100644
+--- a/scripts/agent-input.mjs
++++ b/scripts/agent-input.mjs
+@@ -448,6 +448,15 @@ export function sessionInput(s, { carrier, host, timing, touch, app }) {
+       }
+       if (typeof text === 'string' && text.startsWith('share:')) return s.share(target, text);
+       const options = typeof text === 'object' && text !== null ? text : { text };
++      // `type <range> adjust up|down`: one accessibility adjust. The web's is the arrow key a desktop screen reader
++      // sends; the iOS host performs the slider's accessibility increment or decrement, as VoiceOver's swipe does.
++      if (options.adjust !== undefined) {
++        if (!['up', 'down'].includes(options.adjust))
++          throw new MalformedOperation(`type ${target} adjust: up or down, not ${JSON.stringify(options.adjust)}`);
++        if (host === 'web') return s.type(target, { key: options.adjust === 'up' ? 'ArrowUp' : 'ArrowDown' });
++        if (host !== 'ios' && host !== 'host-ios')
++          throw new Error(`type ${target} adjust: the ${host} carrier performs no accessibility adjust; web and ios do`);
++      }
+       // a pad button on a world canvas (LLP 1127.003 D3)
+       if (/^Gamepad/.test(options.key ?? '')) return padOp({ op: 'type', s, target, opts: options, host, timing });
+       keyArguments(options);
+diff --git a/scripts/agent-input.test.mjs b/scripts/agent-input.test.mjs
+index d5b49dc9..3c17e2d8 100644
+--- a/scripts/agent-input.test.mjs
++++ b/scripts/agent-input.test.mjs
+@@ -2,8 +2,27 @@
+ import { test } from 'bun:test';
+ import assert from 'node:assert/strict';
+ import { open } from './agent.mjs';
++import { sessionInput } from './agent-input.mjs';
++import { MalformedOperation } from './agent-keys.mjs';
+ import { launchFacts } from './agent-launch.mjs';
+ 
++test("a range's accessibility adjust is the web's arrow key and iOS's increment; other carriers refuse it", async () => {
++  const run = async (host, way = 'up') => {
++    const calls = [];
++    const carrier = { async input(id, kind, opts) { calls.push([id, kind, opts.key ?? opts.adjust]); return {}; }, async reveal() { return {}; } };
++    const s = { find: async () => ({ id: 4, depth: 1, props: { testId: 'seek' } }), landed: async r => r, op: async req => { calls.push(['op', req.op]); return {}; } };
++    Object.assign(s, sessionInput(s, { carrier, host, timing: 'agent' }));
++    return [await s.type('seek', { adjust: way }).catch(e => e), calls];
++  };
++  assert.deepEqual((await run('web'))[1], [[4, 'key', 'ArrowUp']]);
++  assert.deepEqual((await run('web', 'down'))[1], [[4, 'key', 'ArrowDown']]);
++  assert.deepEqual((await run('ios', 'down'))[1], [[4, 'type', 'down']]);
++  const [refused, none] = await run('android');
++  assert.equal(refused.message, 'type seek adjust: the android carrier performs no accessibility adjust; web and ios do');
++  assert.deepEqual(none, []);
++  assert.ok((await run('ios', 'left'))[0] instanceof MalformedOperation);
++});
++
+ test('a point on a viewless iOS node uses its layout and is revealed before input', async () => {
+   const calls = [], box = { x: 10, y: 1000, w: 44, h: 44 }, viewport = { w: 420, h: 900 };
+   let layoutOnly = true;
+diff --git a/scripts/agent-ios.mjs b/scripts/agent-ios.mjs
+index ea758ff3..082829c2 100644
+--- a/scripts/agent-ios.mjs
++++ b/scripts/agent-ios.mjs
+@@ -370,6 +370,7 @@ async function openIOSOwned({ a, bundle, id, dev, plan, size, extra, session, ho
+                               id,
+                               text: opts.text,
+                               ...(opts.clipboard ? { clipboard: opts.clipboard } : {}),
++                              ...(opts.adjust ? { adjust: opts.adjust } : {}),
+                               ...(opts.files ? { files: opts.files } : {}),
+                               ...(opts.image ? { image: opts.image } : {}),
+                               ...guest,
+diff --git a/scripts/agent-keys.mjs b/scripts/agent-keys.mjs
+index fffa4ca3..896999a1 100644
+--- a/scripts/agent-keys.mjs
++++ b/scripts/agent-keys.mjs
+@@ -586,7 +586,7 @@ export function typeCommand(line) {
+   // A world surface's message (LLP 1139.004 D1), what `post` is short for: the rest of the line.
+   const message = /^message\s+([\s\S]*\S[\s\S]*)$/.exec(rest);
+   if (message) return [target, { message: decodeTypeText(message[1]) }];
+-  if (head === 'key' || head === 'copy' || head === 'cut' || head === 'paste') return typeArguments([target, ...rest.trim().split(/\s+/)]);
++  if (head === 'key' || head === 'copy' || head === 'cut' || head === 'paste' || /^adjust\s+(up|down)\s*$/.test(rest)) return typeArguments([target, ...rest.trim().split(/\s+/)]);
+   return [target, decodeTypeText(rest)];
+ }
+ function decodeTypeText(text) {
+@@ -602,6 +602,8 @@ function decodeTypeText(text) {
+ export function typeArguments(args) {
+   // The clipboard's events at the target (spreadsheet F6): `copy`, `cut`, `paste <text…>`.
+   if (['copy', 'cut'].includes(args[1]) && args.length === 2) return [args[0], {clipboard:args[1]}];
++  // One accessibility adjust of a range: `adjust up`, `adjust down`.
++  if (args[1] === 'adjust' && args.length === 3 && ['up', 'down'].includes(args[2])) return [args[0], {adjust:args[2]}];
+   if (args[1] === 'paste' && args[2] === '--file') {
+     if (args.length < 4) throw new MalformedOperation('paste --file takes one or more paths');
+     return [args[0], {clipboard:'paste', text:'', files:args.slice(3).map((path) => resolve(path))}];
+diff --git a/scripts/agent-keys.test.mjs b/scripts/agent-keys.test.mjs
+index f259bd79..e3e2f120 100644
+--- a/scripts/agent-keys.test.mjs
++++ b/scripts/agent-keys.test.mjs
+@@ -85,6 +85,12 @@ test('tap validates both into alignments before looking up its target', async ()
+   }
+ });
+ 
++test('a range adjust is `adjust up` or `adjust down` on the command line', () => {
++  expect(typeCommand('type seek adjust up')).toEqual(['seek', { adjust: 'up' }]);
++  expect(typeArguments(['seek', 'adjust', 'down'])).toEqual(['seek', { adjust: 'down' }]);
++  expect(typeCommand('type note adjust the text')).toEqual(['note', 'adjust the text']);
++});
++
+ test('key phases and durations carry the malformed label; failed focus does not', async () => {
+   for (const key of [browserKey, nativeKey]) await expect(key({ id: 2, opts: { key: 'Enter', phase: 'banana' } })).rejects.toBeInstanceOf(MalformedOperation);
+   await expect(typeFor({ options: { key: 'Enter', for: -1 } })).rejects.toBeInstanceOf(MalformedOperation);
+diff --git a/scripts/agent-test.mjs b/scripts/agent-test.mjs
+index d460748d..34092788 100644
+--- a/scripts/agent-test.mjs
++++ b/scripts/agent-test.mjs
+@@ -880,7 +880,7 @@ export async function runTests({ host, browser, file, plan, app, size, env, webD
+       };
+       // Before an input while counted faults are outstanding: those that fired leave the check, so a press the app
+       // answers with `close()` cannot take an unfired one's evidence with it (LLP 1103 D3).
+-      const INPUTS = new Set(['tap', 'drag', 'type', 'key', 'pick', 'authorize', 'clipboard', 'resize', 'back']);
++      const INPUTS = new Set(['tap', 'drag', 'type', 'key', 'pick', 'authorize', 'clipboard', 'adjust', 'resize', 'back']);
+       const settleFired = async () => {
+         if (!armed.size) return;
+         const faults = (await s.state()).faults ?? [];
+@@ -969,6 +969,7 @@ export async function runTests({ host, browser, file, plan, app, size, env, webD
+             delivered(await s.type(`@${ticket}`, location)); input = st.line; break;
+           }
+           case 'clipboard': delivered(await s.type(st.target, { clipboard: st.edit, text: st.text })); input = st.line; break;
++          case 'adjust': delivered(await s.type(st.target, { adjust: st.direction })); input = st.line; break;
+           case 'clock': await s.clock(st.arg); input = null; loaded = true; if (/^\+?\d/.test(st.arg)) unpolled = null; break;
+           // The driver writes through the app's server as another person (LLP 1116.006 D8), not the app: nothing it
+           // shows changes until it reads again.

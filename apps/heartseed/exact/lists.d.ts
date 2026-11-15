@@ -42,6 +42,9 @@ export declare const placeOf: (reference: string) => Option.Option<Place>;
 /** Each verse of `range`, by reference. */
 export declare const versesIn: (range: Range) => readonly string[];
 
+/** The single verses home shows apart from the lists: the app's own rows of one verse, then the single verses held, each once. */
+export declare const singleVersesOf: (own: readonly Row[], view: PassagesView) => readonly string[];
+
 /** The lists a field holds over `view`, after the app's own rows and before the collections. */
 export declare const listsOf: (
   own: readonly Row[],

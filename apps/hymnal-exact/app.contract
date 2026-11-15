@@ -67,4 +67,4 @@ component HymnalExact
           NotFound(entry=e)
         if e.name == "chord"
           ChordsGripScreen(entry=e, page=chordsGripShown, ready=current(chordsGripShown), done=chordsGripClose)
-      PlayerDock(player=player, ask=playerAsk, heard=playerHeard, broke=playerFailed)
+      PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)

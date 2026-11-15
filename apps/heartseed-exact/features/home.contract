@@ -1,0 +1,177 @@
+// Home (`/`): the greeting by the reader's local hour, the Today card, a
+// row per list, the single verses under the lists, and Add a list at the
+// foot. What it draws is `homeRead`'s answer (src/home/sources.ts): the
+// current Heartseed's rules over the garden one call reads, the session's
+// view (`today.session.wire`) and the call's time. A row is its title
+// (which opens the list's page), its caption and its plants; a plant is a
+// button named by its reference and stage, drawn as the current home draws
+// it: a gold dot when the plan holds it open, over a dash in ink once sown
+// and in soil before. No icon beside a list's name, no stage glyph and no
+// legend (owner, hsrows). An ask is a state of its row (`homeAsking`, the
+// id its Yes removes; src/home/asks.ts), opened by Remove, closed by any
+// other tap.
+use GardenVerse, GardenShown from "./garden.contract"
+
+shape HomePlant
+  reference: string
+  slug: string
+  id: string
+  label: string
+  ready: bool
+  sown: bool
+
+shape HomeRow
+  id: string
+  slug: string
+  title: string
+  caption: string
+  plants: HomePlant[]
+
+shape HomeSingle
+  reference: string
+  slug: string
+  label: string
+  ready: bool
+  sown: bool
+  removeId: string
+  ask: string
+
+shape HomeCard
+  line: string
+  parts: string
+  action: string
+  label: string
+  slug: string
+
+shape HomeShown
+  read: bool
+  greeting: string
+  card: HomeCard
+  rows: HomeRow[]
+  singles: HomeSingle[]
+  singlesShown: bool
+  addsList: bool
+  limitLine: string
+
+// A verse as the mark of the garden home last read: a change to any asks
+// home again.
+fn homeVerseMark(v: GardenVerse): string = `${v.slug}.${v.recalls}.${v.stage}.${v.due}`
+
+fn homeMarkOf(g: GardenShown): string = `${g.read}|${g.lists.map(l => `${l.id}:${l.verses.map(v => homeVerseMark(v)).join(",")}`).join(";")}|${g.singles.map(v => homeVerseMark(v)).join(",")}`
+
+members HeartseedExact
+  state homeAsking = ""
+  resource homeShown = homeRead(gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape HomeShown else empty()
+  action homeBegin
+    homeAsking = ""
+    nav = push(nav, "/today")
+  action homeStart(slug: string)
+    homeAsking = ""
+    nav = push(nav, path("start", slug))
+  action homeOpen(slug: string)
+    homeAsking = ""
+    listAsking = ""
+    nav = push(nav, path("list", slug))
+  action homeAdd
+    homeAsking = ""
+    nav = push(nav, "/verses")
+  action homeAsk(key: string)
+    homeAsking = key
+  action homeYes
+    if homeAsking != ""
+      gardenRemoveIt(homeAsking)
+    homeAsking = ""
+  action homeNo
+    homeAsking = ""
+
+// A plant: one button over its drawing, named by its reference and stage.
+component HomePlantMark
+  props
+    ready: bool
+    sown: bool
+  view
+    if ready
+      column width=8 height=8 border-radius=4 background-color="hs.sun" aria-hidden=true
+    else
+      column width=8 height=8 aria-hidden=true
+    if sown
+      column width=24 height=3 margin="14px 0" border-radius=2 background-color="hs.ink" aria-hidden=true
+    else
+      column width=24 height=3 margin="14px 0" border-radius=2 background-color="hs.soil" aria-hidden=true
+
+component HomePlantButton
+  props
+    plant: HomePlant
+    start: action
+  view
+    column role="button" press=start(plant.slug) aria-label=plant.label width=48 min-height=44 align-items="center" gap=2 padding="4px 0" border-radius=12 testId=`plant-${plant.id}`
+      :active
+        background-color = "hs.hearing"
+      HomePlantMark(ready=plant.ready, sown=plant.sown)
+
+component Home
+  props
+    home: HomeShown
+    asking: string
+    begin: action
+    start: action
+    open: action
+    add: action
+    ask: action
+    yes: action
+    no: action
+  view
+    scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
+      column gap=20 padding=20 max-width="40rem" testId="home"
+        text home.greeting role="heading" aria-level=2 testId="greeting"
+        if home.read
+          column gap=8 padding=16 border-radius=16 background-color="hs.card" testId="today-card"
+            if home.card.line != ""
+              text home.card.line font="-exact-headline" testId="today-line"
+            if home.card.parts != ""
+              text home.card.parts color="-exact-secondary-label" testId="today-parts"
+            if home.card.action == "start"
+              button press=begin buttonStyle="filled" testId="today-action"
+                text home.card.label
+            else if home.card.action == "practice"
+              button press=start(home.card.slug) buttonStyle="filled" testId="today-action"
+                text home.card.label
+        for r in home.rows key=r.id
+          column gap=8 testId=`row-${r.slug}`
+            column role="button" press=open(r.slug) aria-label=`Open ${r.title}` min-height=44 justify-content="center" border-radius=12 testId=`row-title-${r.slug}`
+              :active
+                background-color = "hs.hearing"
+              text r.title font="-exact-headline"
+            text r.caption font="-exact-footnote" color="-exact-secondary-label" testId=`row-caption-${r.slug}`
+            row flex-wrap="wrap" gap=4
+              for p in r.plants key=p.id
+                HomePlantButton(plant=p, start=start)
+            column height=2 border-radius=1 background-color="hs.furrow" aria-hidden=true
+        if home.singlesShown
+          column gap=8 testId="singles"
+            text "Single verses" role="heading" aria-level=3
+            for s in home.singles key=s.slug
+              column gap=8
+                row gap=8 align-items="center" flex-wrap="wrap"
+                  row role="button" press=start(s.slug) aria-label=s.label flex-grow=1 flex-basis="12rem" min-height=44 align-items="center" gap=12 border-radius=12 testId=`single-button-${s.slug}`
+                    :active
+                      background-color = "hs.hearing"
+                    column width=48 align-items="center" gap=2 aria-hidden=true
+                      HomePlantMark(ready=s.ready, sown=s.sown)
+                    text s.reference flex=1 testId=`single-${s.slug}`
+                  if s.removeId != "" and asking != s.removeId
+                    button press=ask(s.removeId) aria-label=`Remove ${s.reference}` buttonStyle="bordered" testId=`single-remove-${s.slug}`
+                      text "Remove"
+                if s.removeId != "" and asking == s.removeId
+                  column gap=8 testId=`ask-${s.slug}`
+                    text s.ask color="-exact-secondary-label"
+                    row gap=8 flex-wrap="wrap"
+                      button press=yes buttonStyle="bordered" testId="ask-yes"
+                        text "Remove"
+                      button press=no buttonStyle="bordered" testId="ask-no"
+                        text "Keep"
+        if home.read and home.addsList
+          button press=add buttonStyle="bordered" testId="add-list"
+            text "Add a list"
+        if home.limitLine != ""
+          text home.limitLine color="-exact-secondary-label" testId="limit-line"

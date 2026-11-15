@@ -3,6 +3,8 @@ time-zone "America/New_York"
 seed 7
 
 test "Today shows the passage under no cue, every word a hidden slot"
+  at "/cue/none"
+  clock settle
   expect text "reference" == "Isaiah 41:10"
   expect state today.cue == "none"
   expect state today.words.length == 37
@@ -67,6 +69,8 @@ test "Show all shows every word, says the cost, and caps the try"
   expect no failures
 
 test "Hear it lights every word, then rests"
+  at "/cue/none"
+  clock settle
   tap "hear"
   clock +1000
   expect state today.lit >= 1

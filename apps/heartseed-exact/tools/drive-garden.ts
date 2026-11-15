@@ -91,7 +91,7 @@ interface Verse {
 
 const grown = [
   'clock data',
-  'tap open-verses',
+  'tap add-list',
   'clock data',
   'state gardenTime',
   'tap plant-three',
@@ -182,7 +182,7 @@ const kept = keptRead.lists.flatMap((list) =>
 );
 const relaunched = await drive(
   ['--storage', store, '--keep-storage'],
-  ['clock data', 'tap open-verses', 'clock data', 'state garden', shot('relaunched')],
+  ['clock data', 'tap add-list', 'clock data', 'state garden', shot('relaunched')],
 );
 const againRead: { lists: { verses: Verse[] }[] } = relaunched('state garden');
 const again = againRead.lists.flatMap((list) =>
@@ -198,7 +198,7 @@ const sown = await drive(
   ['--storage', `${store}-singles`, '--reset-storage'],
   [
     'clock data',
-    'tap open-verses',
+    'tap add-list',
     'clock data',
     ...Array.from({ length: 20 }, () => ['tap plant-one', 'clock data']).flat(),
     'state garden.singles',

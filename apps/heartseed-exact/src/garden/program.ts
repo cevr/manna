@@ -45,7 +45,7 @@ import {
   type Help,
   type Recall,
 } from '@manna/heartseed/sayit';
-import { Effect, Layer, Option } from 'effect';
+import { Effect, Layer, MutableRef, Option } from 'effect';
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { plantIn } from './view';
@@ -198,12 +198,37 @@ const shownCapOf = (help: HelpIn, stage: Option.Option<Stage>): Grade => {
 const gardenView = Effect.flatMap(Garden, (garden) => garden.view);
 
 /**
- * Keeps the recall of `reference`: with Show all taken on a planted verse,
- * its step back first, at its instant; then the recall, its grade held to
- * the help's cap, the cap itself no better than the help's peeks and Show
- * all allow.
+ * `storage` with its writes held back: every write of the call lands in
+ * memory, and `commit` writes the last of them to the file once, answering
+ * whether it landed (`true` when the call wrote nothing).
  */
-export const recallVerse = (
+const stagedOf = (storage: FileStorage) => {
+  const last = MutableRef.make(Option.none<{ path: string; data: Uint8Array }>());
+  const staged: FileStorage = {
+    fs: {
+      readFile: (path) => storage.fs.readFile(path),
+      atomicWriteFile: (path, data) => {
+        MutableRef.set(last, Option.some({ path, data }));
+        // oxlint-disable-next-line effect/noNewPromise -- a FileStorage write answers a promise, as Exact's does; this one has landed already.
+        return Promise.resolve();
+      },
+    },
+  };
+  const commit = Effect.suspend(() =>
+    Option.match(MutableRef.get(last), {
+      onNone: () => Effect.succeed(true),
+      onSome: ({ path, data }) =>
+        Effect.tryPromise(() => storage.fs.atomicWriteFile(path, data)).pipe(
+          Effect.as(true),
+          Effect.orElseSucceed(() => false),
+        ),
+    }),
+  );
+  return { storage: staged, commit };
+};
+
+/** The step back and the recall of `recallVerse`, each written to `storage` as the services write. */
+const keepRecall = (
   storage: FileStorage,
   reference: string,
   recall: RecallIn,
@@ -237,6 +262,28 @@ export const recallVerse = (
       return 'Failed' satisfies RecallAnswer;
     }),
   );
+
+/**
+ * Keeps the recall of `reference`: with Show all taken on a planted verse,
+ * its step back first, at its instant; then the recall, its grade held to
+ * the help's cap, the cap itself no better than the help's peeks and Show
+ * all allow. The step back and the recall reach the file in one write, so
+ * no later call reads one without the other; when that write fails the
+ * call answers `Failed` with the garden as the file holds it.
+ */
+export const recallVerse = (
+  storage: FileStorage,
+  reference: string,
+  recall: RecallIn,
+  help: Option.Option<HelpIn>,
+) =>
+  Effect.gen(function* () {
+    const staged = stagedOf(storage);
+    const kept = yield* keepRecall(staged.storage, reference, recall, help);
+    if (yield* staged.commit) return kept;
+    const failed: RecallAnswer = 'Failed';
+    return { answer: failed, held: yield* readGarden(storage) };
+  });
 
 /** Moves `reference` back a stage from the stage it stands at, at the call's instant. */
 export const moveBack = (storage: FileStorage, reference: string) =>

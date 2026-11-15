@@ -6,10 +6,9 @@
  * 4.5:1, the bar `apps/hymnal/src/theme.test.ts` holds each text role to.
  * Each colour a file names is resolved through the brand (a role it sets,
  * or a brand role by name); a colour the brand does not set fails here,
- * since its shade would be the platform's, not the hymnal's. The one
- * exception is the tint (`AccentColor`, and the label on a filled button,
- * `AccentColorText`), which the brand leaves the platform's on purpose:
- * those texts are counted apart, and the brand is held to leaving it.
+ * since its shade would be the platform's, not the hymnal's. The tint is
+ * the brand's too (`AccentColor` the accent, the label on a filled button
+ * `AccentColorText` the label on it), as in the current app.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -17,7 +16,6 @@ import { describe, expect, it } from 'bun:test';
 import { appFile, brandOf, contractFiles, drawnIn } from './design.testing.ts';
 
 const AA = 4.5;
-const TINT = ['AccentColor', 'AccentColorText'];
 
 const brand = brandOf(appFile('app.forma'));
 
@@ -43,22 +41,23 @@ const ratio = (one: string, other: string) => {
 };
 
 const drawn = contractFiles().flatMap((file) => drawnIn(file, appFile(file)));
-const tinted = drawn.filter((text) => TINT.includes(text.ink) || TINT.includes(text.ground));
-const branded = drawn.filter((text) => !tinted.includes(text));
 
 describe('every text keeps the current hymnal’s contrast on its ground', () => {
-  it('reads the Contract files’ texts, the tinted ones apart', () => {
-    expect(branded.length).toBeGreaterThan(15);
-    expect(tinted.some((text) => text.ground === 'AccentColor')).toBe(true);
+  it('reads the Contract files’ texts, the tinted ones among them', () => {
+    expect(drawn.length).toBeGreaterThan(15);
+    expect(drawn.some((text) => text.ink === 'AccentColor')).toBe(true);
   });
 
-  it('leaves the tint the platform’s', () => {
-    expect(TINT.filter((name) => brand.colours.has(name) || brand.names.has(name))).toEqual([]);
+  it('tints with the accent, its label the label on the accent', () => {
+    expect([brand.names.get('AccentColor'), brand.names.get('AccentColorText')]).toEqual([
+      'accent',
+      'onAccent',
+    ]);
   });
 
   for (const scheme of ['light', 'dark'] as const)
     it(`holds ${AA}:1 in ${scheme}`, () => {
-      for (const text of branded) {
+      for (const text of drawn) {
         const [ink, ground] = [roleOf(text.ink), roleOf(text.ground)];
         const [inkColour, groundColour] = [brand.colours.get(ink), brand.colours.get(ground)];
         const got =

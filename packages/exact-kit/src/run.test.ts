@@ -15,6 +15,7 @@ import * as Arbitrary from 'effect/Arbitrary';
 import { ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
+import { EXACT_BASE } from './pin.ts';
 import { runExact } from './run.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
@@ -68,7 +69,7 @@ const repoRoot = Effect.gen(function* () {
   return path.join(yield* path.fromFileUrl(new URL('.', import.meta.url)), '..', '..', '..');
 });
 
-/** The commits `docs/exact.md` names: the pin alone, the clone's HEAD every run here stands in with but the off-pin ones. */
+/** The commits `docs/exact.md` names, in order: the pin, the clone's HEAD every run here stands in with but the off-pin ones, then the base. */
 const docsPins = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -542,14 +543,14 @@ describe('the exact wrapper', () => {
       if (result._tag !== 'Failure') return;
       expect(result.failure.message).toContain(elsewhere);
       expect(result.failure.message).toContain(pin);
+      expect(result.failure.message).toContain('bun packages/exact-kit/src/patch.ts');
       expect(spawned.map((s) => s.command)).toEqual(['git']);
     }),
   );
 
   it.effect('refuses with how to clone when there is no clone', () =>
     Effect.gen(function* () {
-      const { pins, files } = yield* fixtures;
-      const [pin = ''] = pins;
+      const { files } = yield* fixtures;
       const { result, spawned } = yield* running(
         'hymnal-exact',
         ['web'],
@@ -560,7 +561,9 @@ describe('the exact wrapper', () => {
       expect(result._tag).toBe('Failure');
       if (result._tag !== 'Failure') return;
       expect(result.failure.message).toContain(`no Exact clone at ${PROBE}/none`);
-      expect(result.failure.message).toContain(`checkout --detach ${pin}`);
+      expect(result.failure.message).toContain(
+        `EXACT=${PROBE}/none bun packages/exact-kit/src/patch.ts`,
+      );
       expect(spawned.map((s) => s.command)).toEqual(['git']);
     }),
   );
@@ -709,10 +712,11 @@ describe('the exact wrapper', () => {
       }),
   );
 
-  it.effect('docs/exact.md names one commit, the pin the wrapper runs at', () =>
+  it.effect('docs/exact.md names the pin the wrapper runs at, then the base it is made from', () =>
     Effect.gen(function* () {
       const { pins, files } = yield* fixtures;
-      expect(pins.length).toBe(1);
+      expect(pins.length).toBe(2);
+      expect(pins[1]).toBe(EXACT_BASE);
       const { result } = yield* running(
         'heartseed-exact',
         ['web'],

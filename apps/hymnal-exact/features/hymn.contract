@@ -8,7 +8,7 @@
 // The header and the page each keep one child per line: other features add
 // one call line each (the star, Play).
 use EmptyState from "exact:content"
-use PlayerPagePlay from "./player.contract"
+use PlayerPagePlay, PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
 use ChordsKeys, ChordsLines, ChordsPage from "./chords.contract"
 
@@ -61,3 +61,4 @@ component HymnPage
                   column gap=4
                     text p.label font="-exact-headline" color="-exact-secondary-label"
                     text p.text white-space="pre-line" testId=p.key
+      PlayerBarRoom(id="bar-room-hymn")

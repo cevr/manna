@@ -1,0 +1,118 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "Nothing planted: Today says so and offers the way to add"
+  at "/today"
+  clock data
+  clock settle
+  expect text "nothing" == "Nothing is planted yet."
+  expect tree missing "counts"
+  expect tree missing "say"
+  expect tree missing "run-end"
+  tap "today-add"
+  clock data
+  expect tree has "verses"
+  back
+  clock data
+  clock settle
+  expect tree has "nothing"
+  expect no failures
+
+test "The plan's first item shows, new pieces first heard"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect text "item-reference" == "Psalms 119:1"
+  expect state today.words.length == 16
+  expect tree has "word-15"
+  expect state today.session.fresh == true
+  expect state today.session.wire.planned == true
+  expect state today.session.wire.items.0.reference == "Psalms 119:1"
+  expect enabled "hear"
+  expect enabled "say"
+  expect text "counts" == "1 new · about 1 min"
+  expect no failures
+
+test "Minutes shape the plan"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "gear"
+  clock settle
+  tap "minutes-2"
+  clock data
+  clock settle
+  expect state today.session.wire.minutes == 2
+  expect text "counts" == "1 new · about 1 min"
+  tap "minutes-20"
+  clock data
+  clock settle
+  expect state today.session.wire.minutes == 20
+  expect text "counts" == "1 new · about 1 min"
+  tap "settings-done"
+  clock settle
+  expect text "item-reference" == "Psalms 119:1"
+  expect no failures
+
+test "A visit shows the verse tapped"
+  at "/start/Psalms-119-1"
+  clock data
+  clock settle
+  expect text "item-reference" == "Psalms 119:1"
+  expect state today.session.wire.visit.0.reference == "Psalms 119:1"
+  expect state today.session.fresh == true
+  expect enabled "say"
+  expect enabled "hear"
+  expect no failures
+
+test "Voice Off hides Hear it"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect text "item-reference" == "Psalms 119:1"
+  expect enabled "hear"
+  tap "gear"
+  clock settle
+  tap "voice-off"
+  clock data
+  clock settle
+  tap "settings-done"
+  clock settle
+  expect tree missing "hear"
+  expect enabled "say"
+  expect state todayReader.on == false
+  expect no failures
+
+test "The cue follows the stage: a new verse is learned under the full text"
+  at "/start/Psalms-119-1"
+  clock data
+  clock settle
+  expect state today.cue == "full"
+  expect state today.words.0.peekable == false
+  expect no failures

@@ -4,7 +4,7 @@
  * The look's live checks (spec B2-B4), which a `.test.contract` cannot hold
  * at Exact's pin: an authored test reads no node's colour and no radio's
  * checked state. Through `@manna/exact-kit/drive` on the host named
- * (`bun tools/drive-look.ts web|ios`): Today drawn on the brand's ground in
+ * (`bun tools/drive-look.ts web|ios`): home drawn on the brand's ground in
  * its ink, in light and in dark; the sheet's choices read checked; Dark
  * dark at once under a light system, System following the system, Light
  * holding under a dark one; and after a relaunch on the kept storage, the
@@ -135,11 +135,11 @@ const CHOSEN = ['minutes-10', 'voice-him', 'appearance-dark'];
 const a = script('first');
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const todayLight = a.ground('ground-home');
-const inkLight = a.step('layout reference');
+const inkLight = a.step('layout greeting');
 a.shot('today-light');
 a.step('prefer prefers-color-scheme dark', 'clock settle');
 const todayDark = a.ground('ground-home');
-const inkDark = a.step('layout reference');
+const inkDark = a.step('layout greeting');
 a.shot('today-dark');
 a.step('prefer prefers-color-scheme light', 'clock settle', 'tap gear', 'clock settle');
 a.shot('sheet-light');
@@ -158,10 +158,10 @@ a.step('tap settings-done', 'clock settle');
 const darkClosed = a.ground('ground-home');
 const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
 
-groundIs('B4 Today is on the light ground under a light system', first, todayLight, 'light');
-inkIs("B4 Today's reference is the light ink", first[inkLight], 'light');
-groundIs('B4 Today is on the dark ground under a dark system', first, todayDark, 'dark');
-inkIs("B4 Today's reference is the dark ink", first[inkDark], 'dark');
+groundIs('B4 Home is on the light ground under a light system', first, todayLight, 'light');
+inkIs("B4 Home's greeting is the light ink", first[inkLight], 'light');
+groundIs('B4 Home is on the dark ground under a dark system', first, todayDark, 'dark');
+inkIs("B4 Home's greeting is the dark ink", first[inkDark], 'dark');
 groundIs('B3 Dark is dark at once under a light system', first, darkAtOnce, 'dark');
 drive.check(
   'B2 each choice reads checked',

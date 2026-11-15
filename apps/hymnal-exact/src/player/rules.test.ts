@@ -150,7 +150,7 @@ describe('the rules are the current app’s', async () => {
       const seconds = below(random, 100_000) / 100;
       let state = step(initial, { _tag: 'play', track }).state;
       state = step(state, { _tag: 'loaded', id: 1, duration: 2000 }).state;
-      state = step(state, { _tag: 'time', id: 1, seconds }).state;
+      state = step(state, { _tag: 'time', id: 1, serial: 0, seconds }).state;
       expect(viewOf(state, undefined, titleOf).elapsed).toBe(clock(seconds));
     }
   });
