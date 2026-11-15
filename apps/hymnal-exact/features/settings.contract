@@ -24,15 +24,20 @@ members HymnalExact
     settingsLook = look
   action settingsApply
     setScheme(settingsLook)
+  action settingsOpen
+    nav = push(nav, "/settings")
   action settingsClose
     nav = back(nav)
   task settingsKept when settingsLook != "" key=settingsLook
     change(settingsApply)
 
-// The gear: one call line in the list's title row.
+// The gear: one call line in the list's title row, a button of the iOS
+// navigation bar, opening Settings through the root's `settingsGear`.
 component SettingsGear
+  inject
+    settingsGear: action
   view
-    link href=path("settings") aria-label="Settings" testId="gear"
+    button press=settingsGear aria-label="Settings" testId="gear"
       image "symbol:settings"
 
 component SettingsSheet

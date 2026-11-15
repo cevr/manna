@@ -27,6 +27,7 @@ component HymnalExact
   provide
     playerShown = player
     playerPress = playerAsk
+    settingsGear = settingsOpen
   action follow(url: string)
     nav = go(nav, url)
   view

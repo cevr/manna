@@ -34,7 +34,7 @@ theme
   onGlassChosen = light-dark(#f1f0e6, #142420)
   -exact-background = ground
   -exact-grouped-background = ground
-  -exact-secondary-background = panel
+  -exact-secondary-background = bar
   -exact-secondary-grouped-background = panel
   -exact-label = ink
   -exact-secondary-label = muted
