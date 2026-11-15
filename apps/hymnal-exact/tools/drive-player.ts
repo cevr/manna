@@ -344,8 +344,9 @@ const contrast = (one: ReadonlyArray<number>, other: ReadonlyArray<number>) => {
 
 /**
  * The contrast of a button's label against its fill, from a screenshot: a
- * grid of pixels over the button's frame; the fill is the colour most of
- * them are, the label the one that stands furthest from it.
+ * grid of pixels over the button's frame gives the fill, the colour most of
+ * them are; a finer grid over its middle finds the label, the pixel that
+ * stands furthest from the fill.
  */
 const labelContrast = async (path: string, all: ReadonlyArray<Ax>, id: string) => {
   const screen = all[0]?.frame;
@@ -365,6 +366,14 @@ const labelContrast = async (path: string, all: ReadonlyArray<Ax>, id: string) =
   const fill = ([...counts].toSorted((a, b) => b[1] - a[1])[0]?.[0] ?? '0,0,0')
     .split(',')
     .map(Number);
+  for (let row = 0; row < 9; row++)
+    for (let column = 0; column < 13; column++)
+      pixels.push(
+        await pixelAt(path, {
+          x: (box.x + box.w * (0.3 + (0.4 * column) / 12)) / screen.w,
+          y: (box.y + box.h * (0.3 + (0.4 * row) / 8)) / screen.h,
+        }),
+      );
   return Math.max(...pixels.map((pixel) => contrast(pixel, fill)));
 };
 
@@ -380,6 +389,9 @@ const seekOps = [
   'clock data',
   'clock +3000 real',
   'clock data',
+  'clock settle',
+  'tree --ax',
+  `screenshot ${darkShot('dark-bar')}`,
   'tap bar-title',
   'clock data',
   'clock settle',
@@ -388,6 +400,10 @@ const seekOps = [
   'clock settle',
   'tree --ax',
   `screenshot ${darkShot('dark-player')}`,
+  'prefer prefers-color-scheme light',
+  'clock settle',
+  'tree --ax',
+  `screenshot ${darkShot('light-player')}`,
   'state player.seek',
   'tap position down',
   'tap move by 40 0',
@@ -471,8 +487,10 @@ check(
 console.log(`measure ${host} skip ${JSON.stringify(skipGap)}; seeks ${JSON.stringify(landings)}`);
 
 const pageAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax'));
-const playerAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 1));
-const settingsAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 2));
+const barAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 1));
+const playerAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 2));
+const lightAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 3));
+const settingsAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 4));
 const ratios = {
   play: await labelContrast(darkShot('dark-page'), pageAx, 'play'),
   toggle: await labelContrast(darkShot('dark-player'), playerAx, 'toggle'),
@@ -482,6 +500,21 @@ check(
   'in dark, Play, the toggle and a chosen chip read their label at 4.5:1 on their fill',
   Object.values(ratios).every((ratio) => ratio >= 4.5),
   ratios,
+);
+const tinted = {
+  darkBarToggle: await labelContrast(darkShot('dark-bar'), barAx, 'bar-toggle'),
+  darkChip: await labelContrast(darkShot('dark-player'), playerAx, 'stanza-2'),
+  darkPlace: await labelContrast(darkShot('dark-player'), playerAx, 'stanza-place-1'),
+  lightToggle: await labelContrast(darkShot('light-player'), lightAx, 'toggle'),
+  lightFilledChip: await labelContrast(darkShot('light-player'), lightAx, 'stanza-1'),
+  lightChip: await labelContrast(darkShot('light-player'), lightAx, 'stanza-2'),
+  lightPlace: await labelContrast(darkShot('light-player'), lightAx, 'stanza-place-1'),
+};
+console.log(`measure ${host} label contrast ${JSON.stringify({ ...ratios, ...tinted })}`);
+check(
+  'in light and dark, the tinted buttons (the bar’s toggle, a chip not chosen, a stanza’s place) read their label at 4.5:1',
+  Object.values(tinted).every((ratio) => ratio >= 4.5),
+  tinted,
 );
 check(
   'with Settings open, the dock is not in the accessibility tree',

@@ -2,8 +2,8 @@
 // Heartseed's palette), light and dark, each under the role's own name, and the
 // platform's roles the port's screens draw with, each set to one of them.
 // src/look/brand.test.ts holds every colour here to theme.ts. The tint
-// (AccentColor) is left the platform's: UIKit draws a prominent button's label
-// white, which the accent's pale dark side cannot carry (findings, the tint).
+// (AccentColor) is the accent, and a filled tint's label (AccentColorText) its
+// ink; the player's filled buttons draw in `button` and `onButton`.
 tamber hymnal
 
 theme
@@ -43,3 +43,5 @@ theme
   -exact-separator = line
   Canvas = ground
   CanvasText = ink
+  AccentColor = accent
+  AccentColorText = onAccent

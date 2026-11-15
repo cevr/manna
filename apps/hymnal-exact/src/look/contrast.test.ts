@@ -6,10 +6,10 @@
  * 4.5:1, the bar `apps/hymnal/src/theme.test.ts` holds each text role to.
  * Each colour a file names is resolved through the brand (a role it sets,
  * or a brand role by name); a colour the brand does not set fails here,
- * since its shade would be the platform's, not the hymnal's. The one
- * exception is the tint (`AccentColor`, and the label on a filled button,
- * `AccentColorText`), which the brand leaves the platform's on purpose:
- * those texts are counted apart, and the brand is held to leaving it.
+ * since its shade would be the platform's, not the hymnal's. The tint
+ * (`AccentColor`, a button's or a link's words, and `AccentColorText`, the
+ * label on a filled one) is the brand's accent and its ink, so the tinted
+ * texts are held to the bar with the rest.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -44,16 +44,16 @@ const ratio = (one: string, other: string) => {
 
 const drawn = contractFiles().flatMap((file) => drawnIn(file, appFile(file)));
 const tinted = drawn.filter((text) => TINT.includes(text.ink) || TINT.includes(text.ground));
-const branded = drawn.filter((text) => !tinted.includes(text));
+const branded = drawn;
 
 describe('every text keeps the current hymnal’s contrast on its ground', () => {
-  it('reads the Contract files’ texts, the tinted ones apart', () => {
+  it('reads the Contract files’ texts, the tinted ones among them', () => {
     expect(branded.length).toBeGreaterThan(15);
     expect(tinted.some((text) => text.ink === 'AccentColor')).toBe(true);
   });
 
-  it('leaves the tint the platform’s', () => {
-    expect(TINT.filter((name) => brand.colours.has(name) || brand.names.has(name))).toEqual([]);
+  it('sets the tint to the brand’s accent, and a filled tint’s label to its ink', () => {
+    expect(TINT.map((name) => brand.names.get(name))).toEqual(['accent', 'onAccent']);
   });
 
   for (const scheme of ['light', 'dark'] as const)

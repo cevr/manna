@@ -14,7 +14,7 @@
  *   (`targetsOf`, `targetAt`) and its first line's start on the cut's clock;
  * - the Contract file's settle and skip offsets are `settleFor` and `NUDGE`;
  * - the filled buttons name `button` and `onButton` and no colour literal,
- *   and the brand still sets no tint.
+ *   and the tint is the brand's accent (owner, 2026-11-15).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -221,7 +221,7 @@ describe('the player’s Contract file keeps the current app’s numbers and the
     expect(contract).toContain(`seekbackwardOffset=${NUDGE} seekforwardOffset=${NUDGE}`);
   });
 
-  it('fills its buttons with button and onButton, names no colour, and the brand sets no tint', () => {
+  it('fills its buttons with button and onButton, names no colour, and the tint is the brand’s accent', () => {
     const filled = /component PlayerFilled\n[\s\S]*?\n {4}button ([^\n]*)\n {6}text ([^\n]*)/u.exec(
       contract,
     );
@@ -233,10 +233,6 @@ describe('the player’s Contract file keeps the current app’s numbers and the
     expect(contract).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|light-dark\(/iu);
     const brand = brandOf(appFile('app.tamber'));
     expect(brand.colours.has('button') && brand.colours.has('onButton')).toBe(true);
-    expect(
-      ['AccentColor', 'AccentColorText', 'tint'].filter(
-        (name) => brand.colours.has(name) || brand.names.has(name),
-      ),
-    ).toEqual([]);
+    expect(brand.names.get('AccentColor')).toBe('accent');
   });
 });
