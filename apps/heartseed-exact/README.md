@@ -13,7 +13,7 @@ bun tools/drive-say.ts web   # Say it on /cue/<cue>: a try, its help and a refus
 bun tools/drive-session.ts web  # the daily session: Next into the garden, a try left, a run to its end, Minutes (also: ios)
 bun tools/drive-look.ts web  # the brand in light and dark, the sheet's choices checked and kept (also: ios)
 bun tools/drive-garden.ts web   # the garden: a recall's day, peek, Show all, a relaunch, twenty singles (also: ios)
-bun run test                 # the Bun tests the gate runs (no Exact needed), with test:garden-a, -b, -c, -bytes, test:session-a, -b, -c, -calls and test:text
+bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:garden-a, -b, -c, -bytes, test:session-a, -b, -c, -calls and test:text
 ```
 
 `bun run exact` first runs `tools/prepare.ts`: it links Exact's standard modules (`@exact/speech-synthesis`, `@exact/speech-recognition`, `@exact/media-capture`) into `node_modules` from the clone, so no machine path is committed, and writes About's licences (`tools/licences.ts`) and the KJV (`tools/kjv.ts`).
