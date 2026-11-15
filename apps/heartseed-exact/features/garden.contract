@@ -164,7 +164,7 @@ component YourVerses
           text line color="-exact-secondary-label" testId="line"
         for l in garden.lists key=l.id
           column gap=12 testId=`list-${l.slug}`
-            row gap=12 align-items="center"
+            row gap=12 align-items="center" flex-wrap="wrap"
               text l.title role="heading" aria-level=3 flex=1
               button press=remove(l.id) buttonStyle="bordered" testId=`remove-${l.slug}`
                 text "Remove"
@@ -174,8 +174,8 @@ component YourVerses
           column gap=12 testId="singles"
             text "Single verses" role="heading" aria-level=3
             for v in garden.singles key=v.slug
-              row gap=12 align-items="center" testId=`single-${v.slug}`
-                column flex=1
+              row gap=12 align-items="center" flex-wrap="wrap" testId=`single-${v.slug}`
+                column flex=1 flex-basis="12rem"
                   GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
                 button press=remove(`single:${v.reference}`) buttonStyle="bordered" testId=`remove-single-${v.slug}`
                   text "Remove"
