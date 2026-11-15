@@ -586,9 +586,11 @@ test('a malformed field mutation is read and its frame fault is retained', async
     expect(await app.until(app.home)).toBe(true);
     expect(app.faults).toEqual([]);
     const frames = app.frames.field;
-    const title = document.querySelector('[data-testid="row-title"]');
-    expect(title).not.toBeNull();
-    title?.remove();
+    const shown = document.querySelector(
+      '[data-testid="singles"] [data-testid="field-plant"]',
+    )?.lastElementChild;
+    expect(shown ?? null).not.toBeNull();
+    shown?.remove();
     expect(await app.until(() => app.frames.field > frames)).toBe(true);
     expect(
       app.faults.some((fault) => fault.startsWith('a field frame ')),

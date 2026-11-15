@@ -88,7 +88,7 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    derived data in the `build` folder of the app's `ios`), installs,
    launches, and waits for `label=Isaiah 41:10`, the reference the
    launch's pending frame, the first minute's welcome and phases, home
-   (its furrow's title) and Today all show
+   (its single verse's reference, `Single verses`) and Today all show
    (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
    ends `** BUILD SUCCEEDED **`, and `detail.buildMs` is the build's time.
    Cold, a build took 397 s on a loaded host; a later one is incremental.
@@ -178,7 +178,9 @@ button, `Start` or `Practice anyway`;
 in its scroll view, in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready; one tap opens Today on that verse, whole), under the
-furrows `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
+furrows `Single verses` (`id=singles`: each verse a button named as a
+plant is, showing its reference, and on a verse planted alone `Remove
+<reference>` with its ask's `Remove` and `Keep`), then `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
 works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=How Heartseed works" down` before a tap on `Settings`, which on the first-run field can sit at the fold's edge, where the driver's tap finds its texts beside the button; the
 second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a

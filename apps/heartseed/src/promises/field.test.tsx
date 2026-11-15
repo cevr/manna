@@ -4,10 +4,11 @@
  * The field's taught row as a reader meets it (F1, T3): the root route over
  * the app's own layer, its `promises` part `TAUGHT` or left out, over a
  * device holding the promise, a Fear verse said, a verse no row names and
- * Psalms 91:1-16 held. Taught, the field shows the promise's row, the held
- * passage, the `Protection & Fear` row of its 14 verses, then the other
- * plant, each plant's label as `fieldRule` over `fieldPassagesModel` gives
- * it, each row with its `Open <title>` and none a `Remove`; opened, only
+ * Psalms 91:1-16 held. Taught, the field shows the held passage and the
+ * `Protection & Fear` row of its 14 verses, then the single verses apart
+ * (the promise and the other plant, hsminlist), each plant's label as
+ * `homeFieldRule` over `fieldPassagesModel` gives it, each row with its
+ * `Open <title>` and none a `Remove`; opened, only
  * the held passage's own page offers `Remove` (hslist L3); left out, the
  * field shows no taught row.
  */
@@ -28,7 +29,7 @@ import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { clockOf, START } from '../test/clock';
-import { fieldRule, heldOn, recallOf } from '../test/field-model';
+import { heldOn, homeFieldRule, recallOf } from '../test/field-model';
 import { readField, record } from '../test/field-rig';
 import { DAY } from '../test/garden-model';
 import { deadline } from '../test/elapsed';
@@ -76,10 +77,12 @@ const fieldShown = async (promises: readonly string[] | undefined) => {
     return holds();
   };
   expect(await until(() => host.querySelector('[data-testid="row"]') !== null)).toBe(true);
-  const rows = readField(host).rows.map((row) => ({
+  const read = readField(host);
+  const rows = read.rows.map((row) => ({
     title: row.title,
     plants: row.plants.map((plant) => plant.label),
   }));
+  const singles = read.singles.map((plant) => plant.label);
   const home = labels().filter((label) => /^(Remove|Open) /u.test(label ?? ''));
   const removes: string[] = [];
   const opens = [...host.querySelectorAll('[role="button"]')].filter((node) =>
@@ -110,46 +113,49 @@ const fieldShown = async (promises: readonly string[] | undefined) => {
   }
   await act(async () => root.unmount());
   host.remove();
-  return { rows, home, removes };
+  return { rows, singles, home, removes };
 };
 
-/** The rows the rule gives over the disk, the collections `taught` taught. */
-const wantRows = (taught: readonly string[]) =>
-  fieldRule(
+/** The rows and the single verses the rule gives over the disk, the collections `taught` taught. */
+const wantField = (taught: readonly string[]) => {
+  const field = homeFieldRule(
     heldOn(device.disk),
     fieldPassagesModel(
       [{ title: passage.reference, verses: [passage.reference] }],
       { tag: 'Read', passages: [HELD] },
       taught,
     ),
-  ).rows.map((row) => ({
-    title: row.title,
-    plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
-  }));
+    [passage.reference],
+  );
+  return {
+    rows: field.rows.map((row) => ({
+      title: row.title,
+      plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
+    })),
+    singles: field.singles.map((plant) => `${plant.reference}, ${plant.stage}`),
+  };
+};
 
 describe('the field’s taught row', () => {
   it('shows Protection & Fear after the held passage with its 14 verses, only the held passage’s own page offering Remove, Psalms 91:4 in both rows; left out, no taught row', async () => {
     const taught = await fieldShown(TAUGHT);
-    expect(taught.rows).toEqual(wantRows(TAUGHT));
+    expect({ rows: taught.rows, singles: taught.singles }).toEqual(wantField(TAUGHT));
     expect(taught.rows.map((row) => [row.title, row.plants.length])).toEqual([
-      [passage.reference, 1],
       ['Psalms 91:1-16', 16],
       ['Protection & Fear', 14],
-      ['Genesis 1:1', 1],
     ]);
-    expect(taught.home).toEqual([
-      `Open ${passage.reference}`,
-      'Open Psalms 91:1-16',
-      'Open Protection & Fear',
-      'Open Genesis 1:1',
+    expect(taught.singles.map((label) => label.slice(0, label.indexOf(', ')))).toEqual([
+      passage.reference,
+      'Genesis 1:1',
     ]);
+    expect(taught.home).toEqual(['Open Psalms 91:1-16', 'Open Protection & Fear']);
     expect(taught.removes).toEqual(['Remove Psalms 91:1-16']);
 
     const left = await fieldShown(undefined);
-    expect(left.rows).toEqual(wantRows([]));
-    expect(left.rows.map((row) => row.title)).toEqual([
+    expect({ rows: left.rows, singles: left.singles }).toEqual(wantField([]));
+    expect(left.rows.map((row) => row.title)).toEqual(['Psalms 91:1-16']);
+    expect(left.singles.map((label) => label.slice(0, label.indexOf(', ')))).toEqual([
       passage.reference,
-      'Psalms 91:1-16',
       'Psalms 56:3',
       'Genesis 1:1',
     ]);

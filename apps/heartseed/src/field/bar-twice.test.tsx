@@ -19,7 +19,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('makes one change for two taps in one turn, and takes no other tap while it is pending', async () => {
-  const { faults, reached } = await walkBars([24, 20], 5, 'twice');
+  const { faults, reached } = await walkBars([0, 46], 5, 'twice');
   expect(faults).toEqual([]);
   const floors = [
     'remove:twice:Removed',

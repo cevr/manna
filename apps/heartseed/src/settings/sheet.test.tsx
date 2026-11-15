@@ -36,6 +36,7 @@ import { recallOf } from '../test/field-model';
 import { iconOf, record, scrolled } from '../test/field-rig';
 import { setSystem } from '../test/look';
 import { device } from '../test/one';
+import { KEY, storedText } from '../test/passages-model';
 import { choicesOf } from '../test/session-rig';
 import {
   closeSettings,
@@ -271,7 +272,10 @@ describe('Settings', () => {
 
   it('replays the welcome from its row, closing the sheet in the same tap, from home with and without the tips', async () => {
     setSystem('light');
-    device.launch([record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0))]);
+    device.launch([
+      record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)),
+      [KEY, storedText([{ book: 19, chapter: 23, first: 1, last: 3 }])],
+    ]);
     const start = new Map(device.disk);
     const rig = await mountBar(0, false);
     const heading = () => text(rig.host.querySelector('[role="heading"]'));

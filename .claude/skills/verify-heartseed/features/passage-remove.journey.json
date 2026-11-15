@@ -7,20 +7,20 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Romans 8:28" }],
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Open Romans 8:28-30" }],
       "receipt": "none"
     },
     {
       "name": "passage-remove-page",
       "action": "tap",
-      "target": "label=Open Romans 8:28",
-      "expect": [{ "shows": "label=Remove Romans 8:28" }],
+      "target": "label=Open Romans 8:28-30",
+      "expect": [{ "shows": "label=Remove Romans 8:28-30" }],
       "receipt": "none"
     },
     {
       "name": "passage-remove-ask",
       "action": "tap",
-      "target": "label=Remove Romans 8:28",
+      "target": "label=Remove Romans 8:28-30",
       "expect": [{ "shows": "id=ask" }],
       "receipt": "none"
     },
@@ -32,7 +32,7 @@
         { "shows": "id=today-card" },
         { "shows": "label=Open John 15:1-5" },
         { "shows": "label=Open Psalms 23:1-6" },
-        { "hides": "label=Open Romans 8:28" }
+        { "hides": "label=Open Romans 8:28-30" }
       ],
       "receipt": "snapshot"
     },

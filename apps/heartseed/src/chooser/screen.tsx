@@ -10,7 +10,9 @@
  * inside the range a tap builds (`tapVerse`). On the verses step a footer
  * fixed under the scroll view holds the range's reference and count, the
  * cap, `Plant` and the plant's alert, so however long the chapter they are
- * on screen without a scroll.
+ * on screen without a scroll. A list the reader makes holds at least 3
+ * verses: while 1 or 2 are chosen the footer says so (`SHORT_LINE`) in
+ * place of `Plant`.
  *
  * `Plant` adds the range (`plantPassage`): on `Added` the reader is back on
  * the field, where the new row is last among the passages; on `Full` the
@@ -29,9 +31,16 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
 import { plantPassage } from '../app';
-import { LIMIT_LINE, tapVerse, type Verses } from '../chooser';
+import { LIMIT_LINE, SHORT_LINE, tapVerse, type Verses } from '../chooser';
 import { versesOf } from '../kjv';
-import { MOST_VERSES, passageReference, verseReference, type Range } from '../passages';
+import {
+  isShort,
+  LEAST_VERSES,
+  MOST_VERSES,
+  passageReference,
+  verseReference,
+  type Range,
+} from '../passages';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 
@@ -363,7 +372,7 @@ export function ChooserScreen({
               </View>
             ),
           })}
-          <Text style={styles.cap}>{`Up to ${MOST_VERSES} verses`}</Text>
+          <Text style={styles.cap}>{`${LEAST_VERSES} to ${MOST_VERSES} verses`}</Text>
           {Option.match(state.line, {
             onNone: () => false,
             onSome: (line) => (
@@ -372,24 +381,35 @@ export function ChooserScreen({
               </Text>
             ),
           })}
-          {Option.match(range, {
+          {Option.match(Option.filter(range, isShort), {
             onNone: () => false,
-            onSome: (each) => (
-              <Pressable
-                role="button"
-                aria-label="Plant"
-                disabled={pending}
-                onPress={() => onPlant(each)}
-                style={({ pressed }) => [
-                  styles.plant,
-                  pressed && look.pressed,
-                  pending && look.disabled,
-                ]}
-              >
-                <Text style={styles.plantText}>Plant</Text>
-              </Pressable>
+            onSome: () => (
+              <Text testID="short" style={styles.line}>
+                {SHORT_LINE}
+              </Text>
             ),
           })}
+          {Option.match(
+            Option.filter(range, (each) => !isShort(each)),
+            {
+              onNone: () => false,
+              onSome: (each) => (
+                <Pressable
+                  role="button"
+                  aria-label="Plant"
+                  disabled={pending}
+                  onPress={() => onPlant(each)}
+                  style={({ pressed }) => [
+                    styles.plant,
+                    pressed && look.pressed,
+                    pending && look.disabled,
+                  ]}
+                >
+                  <Text style={styles.plantText}>Plant</Text>
+                </Pressable>
+              ),
+            },
+          )}
         </View>
       )}
     </View>

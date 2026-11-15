@@ -10,7 +10,11 @@
  *   the shelf still open and no `onAdded`.
  * - Pending blocks the close: while a held plant has not answered, every
  *   control is disabled and Escape calls no `onDone`; `Plant` then `Done`
- *   in one turn makes one add, and `onAdded` runs once.
+ *   in one turn makes one add, and `onAdded` runs once; the one-verse pick
+ *   joins the single verses (hsminlist) and stores no passage.
+ * - The single verses full: with 20 stored, the foot shows the single
+ *   verses' limit line, a one-verse pick offers no `Plant` while Psalms
+ *   46:1-3 still does, and nothing is written.
  * - No paid tier and no verse's words, on every shelf.
  */
 
@@ -21,9 +25,9 @@ import type { Field } from '../field';
 import { versesOf } from '../kjv';
 import { BASE_SHELVES, shelvesModel, type ModelList } from '../test/home-model';
 import { device } from '../test/one';
-import { KEY, storedText, type Span } from '../test/passages-model';
+import { KEY, SINGLES, storedText, type Span } from '../test/passages-model';
 import { mountShelves, readSheet } from '../test/shelves-rig';
-import { LIMIT_WORDS } from '../test/shelves-model';
+import { LIMIT_WORDS, SINGLES_LIMIT_WORDS } from '../test/shelves-model';
 
 const SHELVES = shelvesModel();
 const listsOf = (title: string): readonly ModelList[] => {
@@ -68,7 +72,7 @@ const onRig = async (disk: ReadonlyMap<string, string>, body: (rig: Rig) => Prom
 describe('the Add verses sheet', () => {
   const three: Span[] = [
     { book: 19, chapter: 1, first: 1, last: 3 },
-    { book: 20, chapter: 15, first: 1, last: 1 },
+    { book: 20, chapter: 15, first: 1, last: 3 },
     { book: 43, chapter: 1, first: 1, last: 5 },
   ];
 
@@ -77,7 +81,7 @@ describe('the Add verses sheet', () => {
       const rows = [[passage.reference]];
       await rig.show({
         field: fieldOf(rows),
-        passages: { _tag: 'Read', passages: three.slice(0, 2), lists: [] },
+        passages: { _tag: 'Read', passages: three.slice(0, 2), lists: [], singles: [] },
       });
       expect(await rig.tap('Psalms')).toBe(true);
       expect(await rig.tap('Plant Psalms 46:1-3')).toBe(true);
@@ -113,12 +117,45 @@ describe('the Add verses sheet', () => {
       expect(live).toEqual([]);
       expect(await rig.until(() => rig.counts.added === 1)).toBe(true);
       expect(rig.counts).toEqual({ done: 0, any: 0, added: 1 });
-      expect(device.disk.get(KEY)).toBe(
-        storedText([{ book: 20, chapter: 4, first: 23, last: 23 }]),
-      );
+      expect({ passages: device.disk.get(KEY), singles: device.disk.get(SINGLES) }).toEqual({
+        passages: undefined,
+        singles: storedText([{ book: 20, chapter: 4, first: 23, last: 23 }]),
+      });
       expect(readSheet()).toBe('closed');
       expect(rig.faults).toEqual([]);
     }));
+
+  it('shows the single verses’ limit line over 20 of them, a one-verse pick with no Plant while a list still has one, writing nothing', () => {
+    const twenty = storedText(
+      Array.from({ length: 20 }, (_, index) => ({
+        book: 19,
+        chapter: 119,
+        first: index + 1,
+        last: index + 1,
+      })),
+    );
+    return onRig(new Map([[SINGLES, twenty]]), async (rig) => {
+      const plants = () =>
+        [...(document.querySelector('[aria-modal]')?.querySelectorAll('[role="button"]') ?? [])]
+          .map((node) => node.getAttribute('aria-label') ?? '')
+          .filter((label) => label.startsWith('Plant '));
+      expect(await rig.tap('Proverbs')).toBe(true);
+      const proverbs = plants();
+      expect(await rig.tap('Psalms')).toBe(true);
+      const seen = readSheet();
+      expect({
+        line: seen === 'closed' ? 'closed' : seen.line,
+        proverb: proverbs.includes('Plant Proverbs 4:23'),
+        psalm: plants().includes('Plant Psalms 46:1-3'),
+      }).toEqual({ line: SINGLES_LIMIT_WORDS, proverb: false, psalm: true });
+      expect(rig.counts).toEqual({ done: 0, any: 0, added: 0 });
+      expect({ passages: device.disk.get(KEY), singles: device.disk.get(SINGLES) }).toEqual({
+        passages: undefined,
+        singles: twenty,
+      });
+      expect(rig.faults).toEqual([]);
+    });
+  });
 
   it('names no paid tier and shows no verse words on any shelf', () =>
     onRig(new Map(), async (rig) => {

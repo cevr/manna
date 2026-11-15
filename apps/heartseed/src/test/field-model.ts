@@ -111,6 +111,25 @@ export const sownDate = (recall: Pick<Recall, 'startedAt' | 'offset'>) =>
     ? utcDate(recall.startedAt)
     : utcDate(recall.startedAt + recall.offset * 60_000 - 4 * HOUR);
 
+/**
+ * Home's field over `records` (hsminlist): the rows of `lists` alone, then
+ * the single verses apart from them, each of `singles` in order and after
+ * them every verse planted that neither names, as `fieldRule` orders a row
+ * of them and its other rows.
+ */
+export const homeFieldRule = (
+  records: readonly Recall[],
+  lists: readonly ModelPassage[],
+  singles: readonly string[],
+) => {
+  const field = fieldRule(records, [...lists, { title: 'Single verses', verses: singles }]);
+  return {
+    ...field,
+    rows: field.rows.slice(0, lists.length),
+    singles: field.rows.slice(lists.length).flatMap((row) => row.plants),
+  };
+};
+
 /** The field the rule gives over `records` (one per recital) and the passages taught. */
 export const fieldRule = (
   records: readonly Recall[],

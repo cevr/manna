@@ -15,8 +15,10 @@
 import { offerModel, shelvesModel, type ModelShelf } from './home-model';
 import {
   addRule,
+  joinRule,
   spanRef,
   type AddOutcome,
+  type JoinOutcome,
   type Corpus,
   type Held,
   type Span,
@@ -25,10 +27,14 @@ import {
 /** The limit line, as the spec writes it. */
 export const LIMIT_WORDS = '3 passages or lists, the most for now. Remove one to add another.';
 
-/** The line after a plant's answer: none, the limit line after `Full`, or the alert naming the list. */
+/** The single verses' limit line, as hsminlist writes it. */
+export const SINGLES_LIMIT_WORDS = '20 single verses, the most for now. Remove one to add another.';
+
+/** The line after a plant's answer: none, the lists' or the single verses' limit line after `Full`, or the alert naming the list. */
 export type ModelLine =
   | { readonly tag: 'None' }
   | { readonly tag: 'Limit' }
+  | { readonly tag: 'SinglesLimit' }
   | { readonly tag: 'Alert'; readonly title: string };
 
 /** The sheet as the model holds it. */
@@ -98,11 +104,12 @@ export const any = (model: SheetModel): SheetModel => ({
 /** A plant's answer and the sheet after it. */
 export interface Planted {
   readonly model: SheetModel;
-  readonly outcome: AddOutcome;
+  readonly outcome: AddOutcome | JoinOutcome;
 }
 
 /** `Plant` of `span`, its write refused or not: `Added` closes the sheet over the new list; `Full` shows the limit line; any other answer the alert. */
 export const plant = (corpus: Corpus, model: SheetModel, span: Span, refused: boolean): Planted => {
+  if (span.last - span.first < 2) return join(corpus, model, span, refused);
   const { outcome, held } = addRule(corpus, model.held, span, refused);
   if (outcome === 'Added')
     return {
@@ -117,6 +124,25 @@ export const plant = (corpus: Corpus, model: SheetModel, span: Span, refused: bo
       },
     };
   if (outcome === 'Full') return { outcome, model: { ...model, line: { tag: 'Limit' } } };
+  return { outcome, model: { ...model, line: { tag: 'Alert', title: spanRef(span) } } };
+};
+
+/** hsminlist: `Plant` of a pick of fewer than 3 verses, its write refused or not: its verses join the single verses (`joinRule`); `Added` and `Held` close the sheet; `Full` shows the single verses' limit line; any other answer the alert. */
+const join = (corpus: Corpus, model: SheetModel, span: Span, refused: boolean): Planted => {
+  const { outcome, held } = joinRule(corpus, model.held, span, refused);
+  if (outcome === 'Added' || outcome === 'Held')
+    return {
+      outcome,
+      model: {
+        ...model,
+        held,
+        open: false,
+        shelf: null,
+        line: NONE,
+        counts: { ...model.counts, added: model.counts.added + 1 },
+      },
+    };
+  if (outcome === 'Full') return { outcome, model: { ...model, line: { tag: 'SinglesLimit' } } };
   return { outcome, model: { ...model, line: { tag: 'Alert', title: spanRef(span) } } };
 };
 
@@ -173,9 +199,13 @@ const offersOf = (model: SheetModel, rows: readonly (readonly string[])[]) => {
   });
 };
 
-/** The line the foot shows: the limit while 3 or more are held, else the line after the last answer. */
+/** The line the foot shows: the limit while 3 or more are held, else the single verses' while 20 are held, else the line after the last answer. */
 const lineOf = (model: SheetModel) => {
-  if (full(model.held) || model.line.tag === 'Limit') return LIMIT_WORDS;
+  if (full(model.held)) return LIMIT_WORDS;
+  if (model.held.tag === 'Read' && (model.held.singles ?? []).length >= 20)
+    return SINGLES_LIMIT_WORDS;
+  if (model.line.tag === 'Limit') return LIMIT_WORDS;
+  if (model.line.tag === 'SinglesLimit') return SINGLES_LIMIT_WORDS;
   if (model.line.tag === 'Alert') return `${model.line.title} was not planted. Try again.`;
   return '';
 };

@@ -71,8 +71,11 @@ export const fitsChapter = (chosen: Chosen | undefined, count: number): boolean 
 /** C3, C8, with hshandbook R14: the limit line, word for word. */
 export const LIMIT = '3 passages or lists, the most for now. Remove one to add another.';
 
-/** C7: the cap's text. */
-export const CAP = 'Up to 20 verses';
+/** C7, with hsminlist: the cap's text. */
+export const CAP = '3 to 20 verses';
+
+/** hsminlist: the footer's line while fewer than 3 verses are chosen, word for word. */
+export const SHORT = 'A list holds at least 3 verses.';
 
 /** C8: the plant's alert over `reference`. */
 export const notPlanted = (reference: string) => `${reference} was not planted. Try again.`;
@@ -117,13 +120,14 @@ export interface ChooserSeen {
         readonly reference: string | undefined;
         readonly count: string | undefined;
         readonly cap: boolean;
+        readonly short: boolean;
         readonly plant: boolean;
       }
     | undefined;
   readonly line: string | undefined;
 }
 
-/** C6-C8: the screen the model wants for `state`, over the model's corpus. */
+/** C6-C8, with hsminlist: the screen the model wants for `state`, over the model's corpus; under 3 verses chosen the footer shows `SHORT` in place of `Plant`. */
 export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
   const { step } = state;
   if (step.at === 'books') {
@@ -172,7 +176,8 @@ export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
       reference: span === undefined ? undefined : spanRef(span),
       count: span === undefined ? undefined : versesText(span.last - span.first + 1),
       cap: true,
-      plant: span !== undefined,
+      short: span !== undefined && span.last - span.first + 1 < 3,
+      plant: span !== undefined && span.last - span.first + 1 >= 3,
     },
     line: state.line,
   };
@@ -197,13 +202,14 @@ const askedName = (asked: Span | string) => (typeof asked === 'string' ? asked :
 /** The bar with no ask and no alert, as the field opens. */
 export const QUIET: Asking = { ask: undefined, alert: undefined };
 
-/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add a list` show and how many Today cards; the limit line, the ask and the alerts, `undefined` for none. */
+/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; the single verses' labels (readiness cut off, hsminlist); how many `Add a list` show and how many Today cards; the limit line, the ask and the alerts, `undefined` for none. */
 export interface FieldSeen {
   readonly rows: ReadonlyArray<{
     readonly title: string;
     readonly plants: ReadonlyArray<string>;
     readonly controls: ReadonlyArray<string>;
   }>;
+  readonly singles: ReadonlyArray<string>;
   readonly add: number;
   readonly card: number;
   readonly limit: string | undefined;
@@ -220,15 +226,15 @@ export interface ListSeen {
   readonly alert: string | undefined;
 }
 
-/** The place among the field's rows of held passage `at` (the promise's row first). */
-export const passageRow = (at: number) => 1 + at;
+/** The place among the field's rows of held passage `at`: the passages' rows come first (the promise is a single verse, hsminlist). */
+export const passageRow = (at: number) => at;
 
-/** The place among the field's rows of the held list `id`, after the promise's and every held passage's; `undefined` when the field shows no such list. */
+/** The place among the field's rows of the held list `id`, after every held passage's; `undefined` when the field shows no such list. */
 export const listRow = (held: Held, id: string) => {
   if (held.tag !== 'Read') return undefined;
   const known = (held.lists ?? []).filter((each) => HANDBOOK_MODEL.has(each));
   const at = known.indexOf(id);
-  return at < 0 ? undefined : 1 + held.passages.length + at;
+  return at < 0 ? undefined : held.passages.length + at;
 };
 
 /** hslist L5: the `Open <title>` that opens the field's row `row`, and its place among the rows of equal title (from 0), over the same records, promise and held as `fieldWant`. */
@@ -255,12 +261,13 @@ const versesOfSpan = (span: Span) =>
 /**
  * C3-C5, with hshandbook R7, R13 and R14: the field the model wants over
  * the garden's `records`, the promise's reference, the passages and lists
- * `held` and the bar. The rows are the promise's, then each held passage's
- * in the order chosen, then each held list's (`held.lists`: known ids,
- * once, in stored order; its title and its verses in Haskell's order, from
- * `handbook-model.ts`), then every other plant (hsfield's rule), each
- * phrase folded into its verse (H7); every row holds one control, `Open
- * <title>` (hslist L5), and none a `Remove`. With the passages read,
+ * `held` and the bar. The rows are each held passage's in the order
+ * chosen, then each held list's (`held.lists`: known ids, once, in stored
+ * order; its title and its verses in Haskell's order, from
+ * `handbook-model.ts`); every row holds one control, `Open <title>`
+ * (hslist L5), and none a `Remove`. Apart from them the single verses
+ * (hsminlist): the promise, each single verse held in order, then every
+ * other plant (hsfield's rule), each phrase folded into its verse (H7). With the passages read,
  * `Lists` offers `Add a list` under 3 passages and lists held together,
  * else the limit line; unread, it holds neither. Home holds no ask and no
  * alert; the Today card always shows (hsstart T3): with the passages read
@@ -281,7 +288,7 @@ export const fieldWant = (
   const { rows, count } = foldOf(records, promise, held);
   const opened = bar.open === undefined ? undefined : rows[bar.open];
   if (opened === undefined || bar.open === undefined) return homeWant(records, promise, held);
-  const ours = held.tag === 'Read' && bar.open >= 1 && bar.open <= count;
+  const ours = held.tag === 'Read' && bar.open < count;
   const asking = ours ? bar.ask : undefined;
   return {
     list: opened.title,
@@ -292,22 +299,26 @@ export const fieldWant = (
   };
 };
 
-/** The field's rows (`fieldFoldRule` over the promise, the held passages and the known held lists) and how many passages and lists are held. */
+/** The field's rows (`fieldFoldRule` over the held passages and the known held lists, then the single verses' row of the promise and each single verse held) and how many passages and lists are held; the single verses are the plants of every row after theirs. */
 const foldOf = (records: ReadonlyArray<Recall>, promise: string, held: Held) => {
   const passages = held.tag === 'Read' ? held.passages : [];
   const lists = (held.tag === 'Read' ? (held.lists ?? []) : []).flatMap((id) => {
     const list = HANDBOOK_MODEL.get(id);
     return list === undefined ? [] : [{ title: list.title, verses: [...list.verses] }];
   });
-  const rule = fieldFoldRule(
-    [...records],
-    [
-      { title: promise, verses: [promise] },
-      ...passages.map((span) => ({ title: spanRef(span), verses: versesOfSpan(span) })),
-      ...lists,
-    ],
-  );
-  return { rows: rule.rows, count: passages.length + lists.length };
+  const singles = [
+    ...new Set([promise, ...(held.tag === 'Read' ? (held.singles ?? []) : []).map(spanRef)]),
+  ];
+  const shown = [
+    ...passages.map((span) => ({ title: spanRef(span), verses: versesOfSpan(span) })),
+    ...lists,
+  ];
+  const rule = fieldFoldRule([...records], [...shown, { title: 'Single verses', verses: singles }]);
+  return {
+    rows: rule.rows.slice(0, shown.length),
+    singles: rule.rows.slice(shown.length).flatMap((row) => row.plants),
+    count: passages.length + lists.length,
+  };
 };
 
 /** Home as `fieldWant` holds it, with no list's own page shown. */
@@ -316,7 +327,7 @@ export const homeWant = (
   promise: string,
   held: Held,
 ): FieldSeen => {
-  const { rows, count } = foldOf(records, promise, held);
+  const { rows, singles, count } = foldOf(records, promise, held);
   const read = held.tag === 'Read';
   return {
     rows: rows.map((row) => ({
@@ -324,6 +335,7 @@ export const homeWant = (
       plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
       controls: [`Open ${row.title}`],
     })),
+    singles: singles.map((plant) => `${plant.reference}, ${plant.stage}`),
     add: read && count < 3 ? 1 : 0,
     card: 1,
     limit: read && count >= 3 ? LIMIT : undefined,

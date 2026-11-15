@@ -31,7 +31,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Effect, Exit, Scope } from 'effect';
 
-import type { AddAnswer, RemoveAnswer } from '../passages';
+import { SINGLES_KEY, type AddAnswer, type RemoveAnswer } from '../passages';
 import { below, random } from '../test/garden-model';
 import { device } from '../test/one';
 import {
@@ -39,6 +39,7 @@ import {
   CAP_PASSAGES,
   type Held,
   KEY,
+  migrateRule,
   readRule,
   removeRule,
   type Span,
@@ -70,15 +71,27 @@ const COMMANDS = [
 
 /** The log lines a launch may write: these names, with these annotations, or the store's own failure line. */
 const LOG =
-  /^passages\.(read\.retry|read\.failed|write\.failed) \{("(key|method|reason|passages)":("[\w/.]+"|\d+),?)+\}$|^store\.failed /u;
+  /^passages\.(read\.retry|read\.failed|write\.failed|migrated) \{("(key|method|reason|passages)":("[\w/.]+"|\d+),?)+\}$|^store\.failed /u;
 
 const json = <A>(value: A) => JSON.stringify(value);
 
-const viewText = (view: { readonly _tag: string; readonly passages?: ReadonlyArray<Span> }) =>
-  json(view._tag === 'Read' ? { tag: 'Read', passages: view.passages } : { tag: view._tag });
+const viewText = (view: {
+  readonly _tag: string;
+  readonly passages?: ReadonlyArray<Span>;
+  readonly singles?: ReadonlyArray<Span>;
+}) =>
+  json(
+    view._tag === 'Read'
+      ? { tag: 'Read', passages: view.passages, singles: view.singles }
+      : { tag: view._tag },
+  );
 
 const heldText = (held: Held) =>
-  json(held.tag === 'Read' ? { tag: 'Read', passages: held.passages } : held);
+  json(
+    held.tag === 'Read'
+      ? { tag: 'Read', passages: held.passages, singles: held.singles ?? [] }
+      : held,
+  );
 
 type Coverage = Map<string, number>;
 
@@ -99,9 +112,18 @@ class Walk {
     readonly coverage: Coverage,
     readonly failures: string[],
   ) {
-    this.held = readRule(CORPUS, raw, faults);
+    const upgraded = migrateRule(readRule(CORPUS, raw, faults));
+    this.held = upgraded.held;
+    this.moved = upgraded.moved;
+    if (upgraded.moved > 0) {
+      this.writes = 2;
+      this.written = true;
+    }
     this.steps = [`${faults} failed reads`];
   }
+
+  /** How many stored passages of one verse the launch moved into the single verses. */
+  moved: number;
 
   bump(key: string) {
     this.coverage.set(key, (this.coverage.get(key) ?? 0) + 1);
@@ -124,6 +146,10 @@ class Walk {
     const disk = device.disk.get(KEY) ?? undefined;
     const want = this.written ? storedText(this.passages()) : this.raw;
     if (disk !== want) this.fail(`${step}: stored ${disk}, model ${want}`);
+    const singles = device.disk.get(SINGLES_KEY) ?? undefined;
+    const wantSingles =
+      this.moved > 0 && this.held.tag === 'Read' ? storedText(this.held.singles ?? []) : undefined;
+    if (singles !== wantSingles) this.fail(`${step}: singles ${singles}, model ${wantSingles}`);
     if (device.calls.set !== this.writes)
       this.fail(`${step}: ${device.calls.set} writes, model ${this.writes}`);
   }
@@ -248,7 +274,7 @@ class Walk {
 /** Launches one generated device and plays its commands. */
 const walk = async (seed: number, coverage: Coverage, failures: string[]) => {
   const next = random(seed * 977);
-  const [named, raw] = storedOf(next, seed);
+  const [named, raw] = storedOf(next, seed, (more, held) => choosableOf(more, held)[1]);
   const faults = [0, 0, 0, 0, 1, 1, 2, 2, 3, 4][below(next, 10)] ?? 0;
   const byOpen = faults > 0 && faults < 4 && below(next, 3) === 0;
   device.launch(raw === undefined ? [] : [[KEY, raw]]);
@@ -265,6 +291,7 @@ const walk = async (seed: number, coverage: Coverage, failures: string[]) => {
     one.bump(faults >= 3 ? 'launch:unread:faults' : 'launch:unread:garbled');
   if (one.passages().some((span) => span.last - span.first >= 20))
     one.bump('stored:long, read whole');
+  if (one.moved > 0) one.bump('launch:migrated');
   await one.check('launch');
   const gets = device.calls.get;
   for (let n = 6 + below(next, 9); n > 0; n--) await one.command(n);
@@ -292,6 +319,8 @@ const FLOORS = {
   'add:Added': 100,
   'add:Full': 40,
   'add:Invalid': 40,
+  'add:Short': 20,
+  'launch:migrated': 20,
   'add:Unread': 20,
   'add:Failed': 15,
   'add from 0 held': 10,

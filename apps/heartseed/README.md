@@ -653,7 +653,8 @@ launch counts them.
   does; else no button. With no plan and no button the card
   is absent. In the scroll view: the heading `Your field`, the days sown
   and the harvest, the label `Lists`, one furrow per row (`furrowsOf`;
-  testID `row`), then at the Lists section's foot `Add a list` (testID
+  testID `row`), then the single verses (`Single verses`, below; held
+  with the furrows above home's foot, R7), then at the Lists section's foot `Add a list` (testID
   `add-list`, opening the Add a list sheet over home: Choosing a passage)
   or the limit line, in every state, first run included (owner, q97: "At
   the very bottom of Lists, under the stage line, just above Settings.",
@@ -808,7 +809,10 @@ and removes one.
 - **A passage** (`src/passages.ts`) is a `Range` `{ book, chapter, first,
   last }` of whole numbers in one chapter, `1 ≤ first ≤ last ≤` the
   chapter's verse count (`inChapter`). A reader may add one of at most 20
-  verses (`choosable`); a whole chapter of 20 verses or fewer counts. Its
+  verses (`choosable`); a whole chapter of 20 verses or fewer counts. A
+  list the reader makes holds at least 3 verses (`LEAST_VERSES`, owner
+  2026-11-14: "minimum three"): an add of fewer answers `Short`
+  (`isShort`). Its
   reference is the canon's: `John 15:1-5`, or its one verse's
   (`passageReference`, `verseReference`).
 - **The stored list** is the key `heartseed/passages`, a JSON array of
@@ -831,6 +835,24 @@ and removes one.
   once, in stored order; an unknown id (a later build's, or `bhb-1760`,
   merged into `bhb-1695`) is not shown or counted, and every write keeps it
   in the stored text, in place.
+- **The single verses** (hsminlist) are the key `heartseed/singles`
+  (`SINGLES_KEY`), a JSON array of one-verse ranges in the order planted,
+  read in the same start, each tried 3 times in all, a failed or garbled
+  read making the view `Unread` as the others do. They are no list: home
+  shows them apart under `Single verses` (`SINGLES_TITLE`), the app's own
+  verse first, each a compact button that starts its verse. A shelf's pick
+  of fewer than 3 verses joins each of its verses not single already
+  (`Passages.join(range)`: `Unread`, `Invalid`, `Held` when each is single
+  already, `Full` past `MOST_SINGLES` (20; the app's own verse not
+  counted), else `Added` once written, or `Failed`); a verse planted alone
+  leaves by `Passages.part(range)` (`Removed`, `Absent`, `Unread`,
+  `Failed`), its plant kept. They never count toward the 3 lists. **The
+  upgrade**: at the read, a stored passage of one verse moves into the
+  single verses (`migrated`, `src/passages.ts`), the single verses' key
+  written first and the passages' second, each move once, its recall and
+  stage untouched, logged as `passages.migrated` with the count; a write
+  that does not land keeps the stored text, and the next launch moves it
+  again. A stored passage of two verses stays a list, as stored.
 - **The limit is joint** (`heldCount(view)`): passages and lists held count
   together, and an add or a plant needs fewer than 3. The service, the
   sheet's offers and foot, and the field's `Lists` read that one function.
@@ -843,7 +865,7 @@ and removes one.
   written in place, or `Failed`. A plant or uproot writes the lists' key
   alone and touches no recall; an add or remove the passages' key alone.
 - **An add** answers, in this order: `Unread`, `Invalid` (not choosable),
-  `Full` (3 or more passages and lists held), else `Added` once the list with the range at
+  `Short` (fewer than 3 verses), `Full` (3 or more passages and lists held), else `Added` once the list with the range at
   its end is written, or `Failed` when the write is refused (the view
   stays). **A remove** takes out the first passage equal to the range in
   all four fields: `Unread`, `Absent`, else `Removed` once written, or
@@ -892,11 +914,16 @@ the field's scroll view, at the foot of the lists it changes.
   `Add a list` opens the Add a list sheet over home. With the passages
   unread it offers neither, and no list's page offers `Remove`: the app
   never writes over what it could not read.
-- **The rows** are the promise's, then each passage held, in the order
-  chosen, titled by its reference, then each list held, in the order
-  planted, titled by its title, then each taught collection's
-  (`Protection & Fear`), then every other plant as a passage of one verse,
-  an old piece's folded into its verse (Field, above). A held passage's page
+- **The rows** are each passage held, in the order chosen, titled by its
+  reference, then each list held, in the order planted, titled by its
+  title, then each taught collection's (`Protection & Fear`); the promise,
+  each single verse held and every other plant (an old piece's folded into
+  its verse, Field, above) sit apart under `Single verses`
+  (`src/field/singles.tsx`, testID `singles`), each drawn as a list's plant is (its dot and dash, no image), with no `Open`
+  and no page; a verse planted alone there carries `Remove` (named
+  `Remove <reference>`), whose inline ask `Remove <reference>? Its plant
+  stays in your field.` offers `Remove` and `Keep`, and whose refusal
+  leaves the alert `<reference> was not removed. Try again.`. A held passage's page
   holds `Remove <its reference>`, which finds its passage by the row's
   range, never by its place; a held list's page holds `Remove <its
   title>`, which finds its list by its id (`removalOf`,
@@ -921,7 +948,10 @@ the field's scroll view, at the foot of the lists it changes.
   `In your field` by `offerStateOf` over home's field, so a list whose
   every verse a furrow holds is never planted again. `Plant` acts by the
   list's source: a passage's runs `plantPassage(range)`, a Handbook
-  list's `plantList(id)`. On `Added` (or `Held`) home shows, the new row
+  list's `plantList(id)`, a pick of fewer than 3 verses `plantSingles(range)`
+  (its verses join the single verses; on `Full` the foot shows "20 single
+  verses, the most for now. Remove one to add another.", also shown while
+  20 are held, and such a pick offers no `Plant`). On `Added` (or `Held`) home shows, the new row
   last among the passages or the lists; on `Full` the foot shows the limit
   line (shown too while 3 or more are held), on any other answer
   "<title> was not planted. Try again." (`role="alert"`), the shelf
@@ -948,8 +978,9 @@ the field's scroll view, at the foot of the lists it changes.
   chosen. Every range it gives is choosable.
 - **The footer**, fixed under the verses, holds the range's reference
   (testID `chosen-reference`) and count (`chosen-count`: `1 verse`,
-  `<n> verses`), the cap `Up to 20 verses` always, `Plant` while a range is
-  chosen, and the plant's line. `Plant` runs `addPassage`
+  `<n> verses`), the cap `3 to 20 verses` always, `Plant` while a range of
+  3 or more is chosen (while one or two are, "A list holds at least 3
+  verses." in its place, testID `short`), and the plant's line. `Plant` runs `addPassage`
   (`plantPassage`): on `Added` the field shows with the new row last among
   the passages; on `Full` the footer shows the limit line, and on any other
   answer "<reference> was not planted. Try again." (`role="alert"`). The
@@ -2481,12 +2512,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     passage's due), each command's writes
     modelled apart from the app; each file's device reaches its own floors
     (relaunches, or Again).
-  - `test:field-bar`, `test:field-bar-lists`, `test:field-bar-adds`,
-    `test:field-bar-kinds` and `test:field-bar-held`:
-    `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
+  - `test:field-bar`, `test:field-bar-twice`, `test:field-bar-lists`,
+    `test:field-bar-adds`, `test:field-bar-adds-b`, `test:field-bar-kinds`,
+    `test:field-bar-held` and `test:field-bar-held-b`:
+    `src/field/bar-remove.test.tsx`, then `bar-twice.test.tsx`, then
     `bar-lists.test.tsx` (seeds 120 and 122), then `bar-adds.test.tsx`
-    (seeds 110 and 125), then `bar-kinds.test.tsx` (unread kinds), then
-    `bar-held.test.tsx` (read lists of 1, 2 and 4 held), generated readers
+    with `bar-adds-b.test.tsx` (lists made, held and added to), then
+    `bar-kinds.test.tsx` (unread kinds), then `bar-held.test.tsx` with
+    `bar-held-b.test.tsx` (read lists held), generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads,
     under the app's layer teaching the collections a test gives, none by
@@ -2886,12 +2919,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     passages and every other key against the models, and the stand-in's
     count of leaves by the first back (`onBack`) and by an add (`onAdded`)
     each against the walk's own; each file's floors met by its own devices.
-  - `test:reader-today`, `test:reader-unread`, `test:reader-add`,
-    `test:reader-add-b`, `test:reader-add-back` and `test:reader-remove`:
-    `src/chooser/reader-today.test.tsx`, `reader-unread.test.tsx`,
-    `reader-add.test.tsx` with `reader-add-b.test.tsx` (one device each,
-    which together meet the floors one device met before the sheet came),
-    `reader-add-back.test.tsx`, and
+  - `test:reader-today`, `test:reader-today-b`, `test:reader-unread`,
+    `test:reader-add`, `test:reader-add-b`, `test:reader-add-c`,
+    `test:reader-add-back`, `test:reader-add-back-b` and
+    `test:reader-remove`:
+    `src/chooser/reader-today.test.tsx` with `reader-today-b.test.tsx`,
+    `reader-unread.test.tsx`, `reader-add.test.tsx` with
+    `reader-add-b.test.tsx` and `reader-add-c.test.tsx` (one device each,
+    which together meet the floors), `reader-add-back.test.tsx` with
+    `reader-add-back-b.test.tsx`, and
     `reader-remove.test.tsx` with `reader-remove-b.test.tsx`, generated
     readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
@@ -3111,8 +3147,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Asia/Kolkata at a return across their own 12:00; and at home's next
     mount after a return while Today shows. The rig's foreground holds
     one queue, so a second subscription to `Foreground.states` fails it.
-  - `test:home-walk-a` to `test:home-walk-h`:
-    `src/home/walk-{a,b,c,d,e,f,g,h}.test.tsx`, home walked through the
+  - `test:home-walk-a` to `test:home-walk-j`:
+    `src/home/walk-{a,b,c,d,e,f,g,h,i,j}.test.tsx` (i holding the floors
+    c's device leaves, j those d's leaves), home walked through the
     root (`src/test/home-walk.ts`, a `root-walk` `Walk` over the root's
     screens: on home a tap on a plant of each class, straight into Today
     on its verse when `startModel` starts it (a review or a verse learned

@@ -40,7 +40,7 @@ import { heldOn, recallOf } from '../test/field-model';
 import { below, keyOf, pickOf, random } from '../test/garden-model';
 import { device } from '../test/one';
 import { verseRef, type Held, type ModelTextPiece, type Span } from '../test/passages-model';
-import { CORPUS, choosableOf } from '../test/passages-rig';
+import { CORPUS, storableOf } from '../test/passages-rig';
 import { oldPiecesRule, phraseOfRule } from '../test/phrase-model';
 import { piecesModel } from '../test/promise-model';
 import { DAY, estimate, HOUR, MINUTE, planModel } from '../test/session-model';
@@ -95,14 +95,14 @@ const heldOf = (next: () => number): Span[] => {
   const list: Span[] = [];
   for (let n = below(next, 4); n > 0; n--) {
     if (below(next, 2) === 0) list.push({ ...pickOf(next, OVER) });
-    else list.push(choosableOf(next, list)[1]);
+    else list.push(storableOf(next, list));
   }
   return list;
 };
 
 const viewOf = (held: Held): PassagesView => {
   if (held.tag === 'Unread') return { _tag: 'Unread' };
-  return { _tag: 'Read', passages: held.passages, lists: [] };
+  return { _tag: 'Read', passages: held.passages, lists: [], singles: [] };
 };
 
 /** Each verse of `span`, by reference. */
@@ -302,7 +302,7 @@ describe('the pieces with collections taught', () => {
   it('give each of Fear’s verses whole, long ones too, under its title, and a Fear verse inside a held passage under the passage’s reference', () => {
     const taught = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [], lists: [] },
+      { _tag: 'Read', passages: [], lists: [], singles: [] },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     expect(
@@ -333,7 +333,12 @@ describe('the pieces with collections taught', () => {
     );
     const held = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 4 }], lists: [] },
+      {
+        _tag: 'Read',
+        passages: [{ book: 19, chapter: 91, first: 1, last: 4 }],
+        lists: [],
+        singles: [],
+      },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     const first = held.find((piece) => piece.reference === 'Psalms 91:1');
@@ -343,7 +348,12 @@ describe('the pieces with collections taught', () => {
   it('give Psalms 91:1-16 its own group, then Fear’s other verses grouped by its title, Psalms 91:1 once', () => {
     const pieces = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 16 }], lists: [] },
+      {
+        _tag: 'Read',
+        passages: [{ book: 19, chapter: 91, first: 1, last: 16 }],
+        lists: [],
+        singles: [],
+      },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     const groups = new Map(pieces.map((piece) => [piece.reference, piece.group]));

@@ -21,7 +21,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('shows Today the plan over unread passages, through removes and mornings', async () => {
-  const { faults, reached } = await walkReaders([150], 12, 'today');
+  const { faults, reached } = await walkReaders([0, 140], 12, 'today');
   expect(faults).toEqual([]);
   const floors = [
     'today:review-passage-verse',

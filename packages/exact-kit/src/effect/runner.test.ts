@@ -145,6 +145,12 @@ const program = (steps: ReadonlyArray<Step>, outside: Outside = 'promise') =>
   });
 
 /**
+ * How long, on the live clock, `TestClock` waits for a fiber it woke to suspend before it moves on: past bun's
+ * timeout, so a host too loaded to run the fiber within TestClock's default second still gets TestClock's own result.
+ */
+const STALL_MS = 60_000;
+
+/**
  * The same program under Effect's `TestClock` at `start` and `Random.withSeed(seed)`, time moved on until it ends.
  * It begins woken from a sleep that ends at `start`: `TestClock.adjust` waits for a woken fiber, and every fiber it
  * forks or resumes, to suspend before it looks at the next sleep, but it waits only one turn for a fiber it did not
@@ -159,16 +165,15 @@ const underTestClock = (steps: ReadonlyArray<Step>, start: number, seed: number)
       );
       yield* TestClock.adjust(1_000_000);
       return yield* Fiber.join(fiber);
-    }).pipe(Effect.provide(TestClock.layer())),
+    }).pipe(Effect.provide(TestClock.layer({ warningDelay: STALL_MS }))),
   );
 
 /**
- * The property's runs, and the deadline each is given: its timeout grows with its runs and stays under bun's 5 s. A
- * run takes about 2 ms at load 6, so a run 40 times slower still passes.
+ * How much each property checks, fixed so its work is the same on every run at any load: the same generated cases
+ * from one seed, and a failure shrunk at most `MAX_SHRINKS` times, so it is reported rather than shrunk past the
+ * test's timeout. The cases from this seed kill every runner mutant the unit's mutant lists name.
  */
-const PROPERTY_TIMEOUT_MS = 4_800;
-const MS_PER_RUN = 80;
-const RUNS = PROPERTY_TIMEOUT_MS / MS_PER_RUN;
+const CHECK = { runs: 60, seed: 1, maxShrinks: 40 } as const;
 
 const Case = Arbitrary.all({
   steps: Arbitrary.array(Arbitrary.schema(Step), { maxLength: 8 }),
@@ -271,11 +276,27 @@ describe('the Exact runner', () => {
               );
               return sync && Bun.deepEquals(later, expected);
             }),
-          { runs: RUNS },
+          CHECK,
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
       }),
-    PROPERTY_TIMEOUT_MS,
+  );
+
+  it.effect('sleeps to one deadline wake in the order they began, now and later', () =>
+    Effect.promise(async () => {
+      const tie = Effect.all(
+        [
+          Effect.race(Effect.as(Effect.sleep(5), 'a'), Effect.as(Effect.sleep(5), 'b')),
+          Effect.race(Effect.as(Effect.sleep(9), 'c'), Effect.as(Effect.sleep(9), 'd')),
+        ],
+        { concurrency: 'unbounded' },
+      );
+      const call = { now: 0, seed: 0 };
+      expect(runCallSync(tie, call, { turn: withDataHost })).toEqual(['a', 'c']);
+      expect(
+        await runCall(tie, call, { turn: withDataHost, wait: () => Promise.resolve() }),
+      ).toEqual(['a', 'c']);
+    }),
   );
 
   it.effect(
@@ -374,7 +395,7 @@ describe('the Exact runner', () => {
               );
               return forward && onTime && noneAfterReload && noneAfterEnd;
             }),
-          { runs: 60 },
+          CHECK,
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
       }),

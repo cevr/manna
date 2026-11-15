@@ -35,7 +35,7 @@ import { readPassage } from '../../vite/passage';
 import { fieldOf } from '../field';
 import { plantOf, type Plant, type ReadGarden } from '../garden';
 import { furrowsOf, readyOf, type Furrow } from '../home';
-import { listsOf, plantedListOf, type List } from '../lists';
+import { listsOf, plantedListOf, singleVersesOf, type List } from '../lists';
 import { sourceWords } from '../matcher/words';
 import { collectionPieces, piecesOf, type PassagesView } from '../passages';
 import { COLLECTIONS } from '../promises';
@@ -133,7 +133,9 @@ const caseOf = (next: () => number, first: string) => {
   }
   const unread = below(next, 10) === 0;
   const held: Held = unread ? { tag: 'Unread' } : { tag: 'Read', passages, lists };
-  const view: PassagesView = unread ? { _tag: 'Unread' } : { _tag: 'Read', passages, lists };
+  const view: PassagesView = unread
+    ? { _tag: 'Unread' }
+    : { _tag: 'Read', passages, lists, singles: [] };
   const [, taught] = taughtOf(next);
   const own = below(next, 6) === 0 ? [] : [PROMISE];
   if (unread) kinds.push('unread');
@@ -219,9 +221,10 @@ describe('the field and the session over held lists', () => {
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);
   });
 
-  it('give the own alone, and no list, while the view is unread', () => {
+  it('give no list while the view is unread, the own verse a single verse', () => {
     const view: PassagesView = { _tag: 'Unread' };
-    expect(listsOf(OWN_ROW, view, []).map((list) => list.id)).toEqual([`own:${PROMISE.reference}`]);
+    expect(listsOf(OWN_ROW, view, []).map((list) => list.id)).toEqual([]);
+    expect(singleVersesOf(OWN_ROW, view)).toEqual([PROMISE.reference]);
     expect(piecesOf([PROMISE], view, [])).toEqual([PROMISE]);
   });
 });

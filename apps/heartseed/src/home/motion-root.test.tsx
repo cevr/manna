@@ -24,11 +24,12 @@ const END = 'The field is tended';
 const heldVerse = (verse: number) => `Psalms 119:${verse}`;
 const by = (top: Element, id: string) => [...top.querySelectorAll(`[data-testid="${id}"]`)];
 
-/** A full-corn own verse, two held seeds and eighteen bare places, read from the device's store. */
+/** A full-corn own verse (a single verse, hsminlist), two held seeds, a held full corn and seventeen bare places, read from the device's store. */
 const launchField = () => {
   const today = Math.floor(START / DAY);
   const disk = new Map<string, string | null>([
     ...historyOf(() => 0.1, passage.reference, today - 400).map(record),
+    ...historyOf(() => 0.1, heldVerse(5), today - 400).map(record),
     record(recallOf(heldVerse(2), START - DAY, 3, 0)),
     record(recallOf(heldVerse(20), START - DAY, 3, 0)),
   ]);
@@ -41,7 +42,7 @@ const home = async () => {
   const rig = await mountBar(0, false);
   expect(
     await rig.until(
-      () => by(rig.host, 'row').length === 2 && by(rig.host, 'today-card').length === 1,
+      () => by(rig.host, 'row').length === 1 && by(rig.host, 'today-card').length === 1,
     ),
   ).toBe(true);
   return rig;
@@ -79,6 +80,15 @@ const reachable = (node: Element) => {
   return true;
 };
 
+/** Each single verse's label and the images inside it: a single verse is drawn as a list's plant is, with no image (hsminlist). */
+const singles = (host: Element) =>
+  by(host, 'singles').flatMap((section) =>
+    by(section, 'field-plant').map((plant) => [
+      labelOf(plant).replace(/, ready today$/u, ''),
+      plant.querySelectorAll('img').length,
+    ]),
+  );
+
 const seen = (host: Element) =>
   by(host, 'row').map((row) => ({
     title: text(row.querySelector('[data-testid="row-title"]')),
@@ -87,21 +97,22 @@ const seen = (host: Element) =>
   }));
 
 describe('home motion through the root', () => {
-  it('M1 draws the furrows with no image and moves nothing on home, full corn included', () =>
+  it('M1 draws the furrows and the single verses with no image and moves nothing on home, full corn included', () =>
     under('no-preference', async () => {
       const rig = await home();
       await frame();
       expect(seen(rig.host)).toEqual([
-        { title: passage.reference, images: 0, plants: [`${passage.reference}, full corn`] },
         {
           title: 'Psalms 119:1-20',
           images: 0,
           plants: Array.from({ length: 20 }, (_, place) => {
             if (place === 1 || place === 19) return `${heldVerse(place + 1)}, seed`;
+            if (place === 4) return `${heldVerse(5)}, full corn`;
             return `${heldVerse(place + 1)}, not planted`;
           }),
         },
       ]);
+      expect(singles(rig.host)).toEqual([[`${passage.reference}, full corn`, 0]]);
       expect(moving(rig.host).map((node) => node.getAttribute('style'))).toEqual([]);
       expect(rig.faults).toEqual([]);
       await rig.leave();

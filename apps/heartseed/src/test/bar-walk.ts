@@ -20,7 +20,7 @@
  * `Add a list`, the
  * Add a list sheet over the field with every shelf closed, then
  * `Any passage`, then back to the sheet by `Add verses` and to the field by
- * `Done`, or a verse planted. Over unread passages, a round trip. A
+ * `Done`, or three verses planted (a list's fewest, hsminlist). Over unread passages, a round trip. A
  * round trip leaves by `How Heartseed works` (the welcome, left by its `Skip`) while an ask shows,
  * else by `Start` when home offers it, else by `Practice anyway`, Today then showing `Say it` or `Next`, and comes back by
  * `Your field`; over unread passages `Start` is owed, and one of the two
@@ -319,15 +319,18 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       await settle('back to the field');
       return;
     }
-    const target = TARGETS[below(next, TARGETS.length)] ?? TARGETS[0];
+    const targets = TARGETS.filter((each) => countIn(each.book, each.chapter) >= 3);
+    const target = targets[below(next, targets.length)] ?? TARGETS[0];
     const name = bookName(target.book);
     await rig.tap(name);
     await rig.tap(`${name} ${target.chapter}`);
-    const verse = 1 + below(next, countIn(target.book, target.chapter));
-    await rig.tap(verseRef(target.book, target.chapter, verse));
+    const verse = 1 + below(next, countIn(target.book, target.chapter) - 2);
+    const span = { ...target, first: verse, last: verse + 2 };
+    await rig.tap(verseRef(target.book, target.chapter, span.first));
+    await rig.tap(verseRef(target.book, target.chapter, span.last));
     const count = passages().length;
     await rig.tap('Plant');
-    const answer = addRule(CORPUS, held, { ...target, first: verse, last: verse }, false);
+    const answer = addRule(CORPUS, held, span, false);
     reached.add(`add:${answer.outcome}`);
     if (answer.outcome === 'Added') {
       reached.add(`add:from-${count}`);
@@ -336,7 +339,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       screen = 'field';
       if (passages().length >= 3) reached.add('limit:after an add');
     }
-    await settle(`plant ${spanRef({ ...target, first: verse, last: verse })}`);
+    await settle(`plant ${spanRef(span)}`);
   };
   await settle('launch');
   if (passages().length >= 3) reached.add('limit:at launch');

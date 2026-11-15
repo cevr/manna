@@ -12,8 +12,8 @@
  * page (its `Your field` fixed, its ask with `Remove` and `Keep` in the
  * scroll view among the list it changes), the Add a list sheet's `Done`, the
  * chooser's header (each step's back, the first `‹ Add verses` back to the
- * sheet) and footer (`Up to 20 verses` and `Plant` under Psalms 119's 176
- * verses), and About's `Your field`, reached by home's Settings row.
+ * sheet) and footer (`3 to 20 verses`, the short line while one verse is
+ * chosen, hsminlist, and `Plant` under Psalms 119's 176 verses), and About's `Your field`, reached by home's Settings row.
  *
  * It catches any of those controls, an alert or the limit line moved into a
  * scroll view, as hsfield's `‹ Today` at the foot of the field's scroll was,
@@ -81,7 +81,10 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   seen.push('Any passage');
   await step('Psalms', 'Psalms 119');
   await step('Psalms 119', 'Psalms 119:20');
-  await step('Psalms 119:1', 'Plant');
+  await step('Psalms 119:1', '');
+  const short = () => rig.host.querySelector('[data-testid="short"]');
+  expect(await rig.until(() => short() !== null)).toBe(true);
+  expect(scrolled(short() as Element)).toBe(false);
   await step('Psalms 119:20', 'Plant');
   await step('Chapters', 'Psalms 119');
   await step('Books', 'Psalms');

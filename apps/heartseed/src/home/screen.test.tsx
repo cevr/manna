@@ -52,8 +52,8 @@ const by = (host: Element, id: string) => [...host.querySelectorAll(`[data-testi
 const placed = (host: Element, id: string) =>
   by(host, id).map((node) => `${placeOf(node)}:${text(node)}`);
 
-/** The scroll view's parts whose order down the page the layout names: the rows, `Add a list`, the end rows. */
-const ORDER = ['row', 'add-list', 'end-row'];
+/** The scroll view's parts whose order down the page the layout names: the rows, the single verses, `Add a list`, the end rows. */
+const ORDER = ['row', 'singles', 'add-list', 'end-row'];
 
 /** The field as home lays it out: what the fixed top and the scroll view each hold, and the order of `ORDER`'s parts. */
 const layoutOf = (host: Element) => {
@@ -82,6 +82,14 @@ const layoutOf = (host: Element) => {
           .map(nameOf),
         plants: by(row, 'field-plant').map(nameOf),
         numbers: by(row, 'field-plant').filter((plant) => /\d/u.test(text(plant))).length,
+      })),
+      singles: by(host, 'singles').map((section) => ({
+        place: placeOf(section),
+        label: text(section.firstElementChild),
+        plants: by(section, 'field-plant').map(nameOf),
+        controls: [...section.querySelectorAll(CONTROLS)]
+          .filter((node) => node.getAttribute('data-testid') !== 'field-plant')
+          .map(nameOf),
       })),
       legend: by(host, 'legend').length,
       mark: [...host.querySelectorAll('*')].filter((node) => text(node) === 'Mark 4:28').length,
@@ -114,7 +122,7 @@ for (const scheme of SCHEMES)
       const rig = await mountBar(0, false, null, time);
       const host = rig.host;
       const sets = device.calls.set;
-      expect(await rig.until(() => by(host, 'row').length === 2)).toBe(true);
+      expect(await rig.until(() => by(host, 'row').length === 1)).toBe(true);
       expect(layoutOf(host)).toEqual({
         top: {
           greeting: ['top:Good afternoon'],
@@ -130,15 +138,6 @@ for (const scheme of SCHEMES)
             {
               place: 'scroll',
               images: 0,
-              title: 'Isaiah 41:10',
-              caption: '1 verse · 1 planted',
-              controls: ['Open Isaiah 41:10'],
-              plants: ['Isaiah 41:10, seed'],
-              numbers: 0,
-            },
-            {
-              place: 'scroll',
-              images: 0,
               title: 'Isaiah 41:10-12',
               caption: '3 verses · 2 planted',
               controls: ['Open Isaiah 41:10-12'],
@@ -146,10 +145,18 @@ for (const scheme of SCHEMES)
               numbers: 0,
             },
           ],
+          singles: [
+            {
+              place: 'scroll',
+              label: 'Single verses',
+              plants: ['Isaiah 41:10, seed'],
+              controls: [],
+            },
+          ],
           legend: 0,
           mark: 0,
           ends: ['Settings', 'How Heartseed works'],
-          order: ['row', 'row', 'add-list', 'end-row', 'end-row'],
+          order: ['row', 'singles', 'add-list', 'end-row', 'end-row'],
         },
       });
       expect(by(host, 'dot')).toEqual([]);
@@ -167,7 +174,7 @@ for (const scheme of SCHEMES)
         ].join('|');
       const home = async () => {
         await rig.tap('Your field');
-        expect(await rig.until(() => by(host, 'row').length === 2)).toBe(true);
+        expect(await rig.until(() => by(host, 'row').length === 1)).toBe(true);
         expect(selectedPlants(host)).toEqual([]);
       };
       await rig.tap('Isaiah 41:10, seed', 1);
@@ -196,7 +203,7 @@ for (const scheme of SCHEMES)
         ['heartseed/voice/enabled', 'false'],
       ]);
       const rig = await mountBar(3, true, null, { now: DAY + 15 * HOUR });
-      expect(await rig.until(() => by(rig.host, 'row').length > 0)).toBe(true);
+      expect(await rig.until(() => by(rig.host, 'singles').length > 0)).toBe(true);
       const names = [...rig.host.querySelectorAll(CONTROLS)].map(nameOf);
       expect({
         add: names.filter((name) => name === 'Add a list'),
@@ -205,8 +212,16 @@ for (const scheme of SCHEMES)
         rows: by(rig.host, 'row').map((row) =>
           text(row.querySelector('[data-testid="row-title"]')),
         ),
+        singles: by(rig.host, 'field-plant').map(nameOf),
         faults: rig.faults,
-      }).toEqual({ add: [], remove: [], limit: 0, rows: ['Isaiah 41:10'], faults: [] });
+      }).toEqual({
+        add: [],
+        remove: [],
+        limit: 0,
+        rows: [],
+        singles: ['Isaiah 41:10, seed'],
+        faults: [],
+      });
       await rig.leave();
     });
   });

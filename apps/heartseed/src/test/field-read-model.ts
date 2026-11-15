@@ -110,6 +110,9 @@ export const fieldReadModel = (host: Element) => {
     sown: counted(host, 'sown'),
     harvest: counted(host, 'harvest'),
     rows,
+    singles: [...host.querySelectorAll('[data-testid="singles"]')].flatMap((section) =>
+      [...section.querySelectorAll('[data-testid="field-plant"]')].map(plantRead),
+    ),
     strays,
     faint: [...new Set(faint)],
   };

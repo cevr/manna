@@ -14,6 +14,9 @@
  * It catches an add that lands anywhere but last, an add offered once 3
  * are held, an alert that outlives leaving, and any write but a landed
  * change.
+ *
+ * Its floors are those its own devices reach; `bar-adds-b.test.tsx`, its own part,
+ * holds the rest of the floors named here.
  */
 
 import { expect, it } from 'bun:test';
@@ -21,18 +24,15 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('adds a new passage last from 0, 1 and 2 held, then shows the limit line', async () => {
-  const { faults, reached } = await walkBars([110, 316], 5, 'bar');
+  const { faults, reached } = await walkBars([2, 69], 5, 'bar');
   expect(faults).toEqual([]);
   const floors = [
     'stored:no key',
-    'held:5',
     'add:from-0',
     'add:from-1',
     'add:from-2',
     'limit:after an add',
-    'alert:dropped by leaving',
     'other plant',
-    'round:by Start',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

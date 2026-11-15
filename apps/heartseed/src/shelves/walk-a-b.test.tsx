@@ -3,7 +3,8 @@
 /**
  * The Add verses sheet's `Plant` (hsshelves S3, B) on two more generated
  * readers through `test/shelves-walk.ts`, the other half of
- * `walk-a.test.tsx`'s devices: adds from 1 and 2 held, of a promise, `Plant`
+ * `walk-a.test.tsx`'s devices: adds from 1 and 2 held, of a promise, a pick
+ * of fewer than 3 verses joined to the single verses (hsminlist), `Plant`
  * twice in one turn that stores once, and `Plant` then `Done` in one turn.
  * Its devices alone must reach those cases, each as often as its floor.
  *
@@ -15,7 +16,7 @@ import { expect, it } from 'bun:test';
 import { missed, walkShelves } from '../test/shelves-walk';
 
 it('plants an offer once its write lands, once for two taps in one turn, and once for Plant then Done in one turn', async () => {
-  const { faults, reached } = await walkShelves([29, 31], 14);
+  const { faults, reached } = await walkShelves([0, 81], 14);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
@@ -24,6 +25,7 @@ it('plants an offer once its write lands, once for two taps in one turn, and onc
       ['plant:Added:promise', 1],
       ['plant:twice', 1],
       ['plant:then-Done', 1],
+      ['plant:Added:joined', 1],
     ]),
   ).toEqual([]);
 });

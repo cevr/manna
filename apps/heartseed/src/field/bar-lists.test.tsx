@@ -21,7 +21,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('offers an add under 3 passages held, and the limit line at 3 or more', async () => {
-  const { faults, reached } = await walkBars([109, 230], 5, 'bar');
+  const { faults, reached } = await walkBars([0, 9, 31], 5, 'bar');
   expect(faults).toEqual([]);
   const floors = [
     'reads:1',

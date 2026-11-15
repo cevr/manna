@@ -14,11 +14,12 @@ in the bundle.
   (testID `limit`). `Add a list` opens the Add a list sheet over home
   (`home.md`), whose `Any passage` opens the chooser. With the reader's passages unread
   it offers neither, and no list's page offers `Remove`.
-- **The rows**: the promise's (`Isaiah 41:10`), then each passage held in
-  the order chosen, titled by its reference (the button `Open
-  <reference>`), each verse a plant button
-  labelled `<verse reference>, <stage>`, then every other plant, one verse each, in
-  the order first sown; an old piece folds into its verse (`phrase.md`). Home
+- **The rows**: each passage held in the order chosen, titled by its
+  reference (the button `Open <reference>`), each verse a plant button
+  labelled `<verse reference>, <stage>`; the promise (`Isaiah 41:10`) and
+  every other plant sit apart under `Single verses` (`id=singles`,
+  `home.md`), one verse each, with no `Open`; an old piece folds into its
+  verse (`phrase.md`). Home
   holds no `Remove`: each passage's own page (`list.md`), and no other
   passage-like page, holds `Remove <its reference>` (shown `Remove this
   list`) at the list's end.
@@ -40,7 +41,9 @@ in the bundle.
   range of more than one verse starts again from that verse.
 - **The footer**, fixed under the verses: the range's reference (testID
   `chosen-reference`) and count (`chosen-count`, `1 verse` or
-  `<n> verses`), `Up to 20 verses`, `Plant`, and the plant's line. `Plant`
+  `<n> verses`), `3 to 20 verses`, `Plant` (in its place, while one or two
+  verses are chosen, the line "A list holds at least 3 verses.", testID
+  `short`), and the plant's line. `Plant`
   on `Added` shows the field with the new row last among the passages; on
   `Full` the limit line, on any other answer "<reference> was not planted.
   Try again.", the range kept.
@@ -64,7 +67,7 @@ in the bundle.
   shows the heading `Add a passage`, `‹ Add verses`, `Old Testament`,
   `New Testament` and the books.
 - `passage-range`: `John` → `John 15` → taps on 1 and 5 show
-  `John 15:1-5`, `5 verses`, `Up to 20 verses` and `Plant`, with `Plant`
+  `John 15:1-5`, `5 verses`, `3 to 20 verses` and `Plant`, with `Plant`
   above the home indicator.
 - `passage-clip`: `Psalms` → `Psalms 119` → taps on 1 and 30 show
   `Psalms 119:1-20` and `20 verses`.
@@ -140,8 +143,8 @@ Driving it) taken where a journey leaves the screen.
    microphone, and the first minute to `first-home`.
 2. `passage-bar`: `sim journey passage` → `"ok":true` (steps 2-4).
    `passage/passage-bar` → the text `Lists`, no `When I need…` and no
-   `Add verses`, the heading `Your field`, the row `Isaiah 41:10` (the
-   button `Open Isaiah 41:10`) and no `Remove`, no button `Today`; the
+   `Add verses`, the heading `Your field`, `id=singles` (the promise a
+   single verse, no `Open Isaiah 41:10`) and no `Remove`, no button `Today`; the
    journey's `passage-foot` scrolls to the one `Add a list`
    (`id=add-list`) at the field's foot.
 3. `passage-books`: `passage/passage-books`, after `Add a list` and
@@ -151,7 +154,7 @@ Driving it) taken where a journey leaves the screen.
    (in a raw snapshot) `Revelation`.
 4. `passage-range`: `passage/passage-range`, after `John`, `John 15`,
    `John 15:1` and `John 15:5` → the heading `John 15`, `John 15:1-5`,
-   `5 verses`, `Up to 20 verses`, a button `Plant`; a raw snapshot after
+   `5 verses`, `3 to 20 verses`, a button `Plant`; a raw snapshot after
    the journey → `Plant`'s rect inside the window and above the home
    indicator's area.
 5. `passage-clip`: `sim journey passage-clip` → `"ok":true`: `Chapters`,
@@ -166,7 +169,7 @@ Driving it) taken where a journey leaves the screen.
 6. Back to John 15:1-5 and `passage-plant`: `sim journey passage-plant` →
    `"ok":true`: `Chapters`, `Books`, step 4's taps from `John`, then
    `Plant`. `passage-plant/passage-plant` → the heading `Your field`; the
-   buttons `Open Isaiah 41:10` then `Open John 15:1-5`; five buttons
+   button `Open John 15:1-5` (no `Open Isaiah 41:10`); five buttons
    `John 15:<n>, not planted` (n 1-5); no button named `Remove` or
    starting `Remove ` (`Add a list` lies at the field's foot, in a raw
    snapshot).
@@ -176,17 +179,21 @@ Driving it) taken where a journey leaves the screen.
    `Psalms 23:4` until `Psalms 23:6` shows clear of the footer (a scroll
    to it can leave it under the footer, where a tap misses), `Psalms 23:6`,
    `Plant`. Then `sim journey passage-limit` → `"ok":true`: `Romans` →
-   `Romans 8` → a scroll to `Romans 8:28` → `Romans 8:28`, `Plant`.
-   `passage-limit/passage-limit` → the buttons `Open John 15:1-5`,
-   `Open Psalms 23:1-6` and `Open Romans 8:28`, no `Remove`, no
-   `Add a list`; the journey's `passage-limit-line` scrolls to the limit
-   line's text at the field's foot, with no `Add a list` there either.
+   `Romans 8` → a scroll to `Romans 8:28` → `Romans 8:28` (`1 verse`,
+   `id=short`, no `Plant`) → `Romans 8:30` (`Romans 8:28-30`, `3 verses`),
+   `Plant`.
+   `passage-limit/passage-limit` → the button `Open Romans 8:28-30`, no
+   `Remove`, no `Add a list` (home keeps the scroll it had, so the rows
+   above may sit over the fold); the journey's `passage-limit-line`
+   scrolls to the limit line's text at the field's foot, with no `Add a
+   list` there either, and its `passage-limit-top` back up to `Your
+   field` and `Open Psalms 23:1-6`.
 9. `passage-keep`: `sim journey passage-keep` → `"ok":true`.
    `passage-keep/passage-ask` → `id=ask` with the ask's text, `Remove`,
    `Keep`; the journey's `Keep` brings `Remove Psalms 23:1-6` back with no
    `id=ask`; `passage-keep/passage-keep`, after `Your field` → as step 8.
 10. `passage-remove`: `sim journey passage-remove` → `"ok":true`.
-    `passage-remove/passage-remove` → home: no `Open Romans 8:28`, the
+    `passage-remove/passage-remove` → home: no `Open Romans 8:28-30`, the
     buttons `Open John 15:1-5` and `Open Psalms 23:1-6`, no `Remove`; the
     journey's `passage-remove-foot` finds one `Add a list` at the foot and
     no limit line.
@@ -196,10 +203,12 @@ Driving it) taken where a journey leaves the screen.
     `run.md`'s `run` (`run/run-due`).
 12. `passage-relaunch`: `sim journey passage-relaunch` → `"ok":true`.
     `passage-relaunch/passage-relaunch` → the heading `Your field` and the
-    rows' buttons `Open Isaiah 41:10`, `Open John 15:1-5`,
-    `Open Psalms 23:1-6`, in that order.
+    rows' buttons `Open John 15:1-5`, `Open Psalms 23:1-6` and `Open
+    Protection & Fear`, in that order (`Single verses` sits under them,
+    below the fold).
 13. `passage-launch-time`: the same journey's three relaunches, each
-    waiting for `Isaiah 41:10`: record each step's `ms` (its line in
+    waiting for home's Today card (`id=today-card`; the promise is a
+    single verse now, under the lists and below the fold, hsminlist): record each step's `ms` (its line in
     `$EVIDENCE/results.jsonl`) with `sim doctor`'s `timingsHold`; then the
     same three on a worktree of `69d70a02d`, on its own port. Report the
     six numbers and the load.

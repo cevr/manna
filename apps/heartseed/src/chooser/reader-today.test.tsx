@@ -15,6 +15,9 @@
  * the plan over the reader's pieces, a new verse on a planted day, a field
  * or chooser control on Today or inside a scroll view, and any write but a
  * recall, the minutes after a tap, and the passages after a landed change.
+ *
+ * Its floors are those its own devices reach; `reader-today-b.test.tsx`, its own part,
+ * holds the rest of the floors named here.
  */
 
 import { expect, it } from 'bun:test';
@@ -22,21 +25,15 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('shows Today the plan made at each change, over the passages chosen, morning after morning', async () => {
-  const { faults, reached } = await walkReaders([92], 12, 'today');
+  const { faults, reached } = await walkReaders([3], 12, 'today');
   expect(faults).toEqual([]);
   const floors = [
     'today:said',
     'today:listen',
     'today:fresh-passage-verse',
     'today:fresh-long-verse',
-    'today:no-new-on-a-planted-day',
-    'day:new-after-a-planted-day',
     'day:next-morning',
     'day:after',
-    'made:minutes',
-    'made:add',
-    'gen:first-minute-day',
-    'planted:on-a-planted-day',
     'zone:Australia/Lord_Howe',
     'home:launch-begin',
     'home:begin',

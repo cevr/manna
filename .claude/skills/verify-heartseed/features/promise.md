@@ -71,7 +71,8 @@ its absence is a count of 0 read in each receipt.
    where step 2 left it, `How Heartseed works` in view (`home.md`'s
    `home-scroll-kept`), and `Remove` nowhere;
    `promise/promise-field-plant`, after the scroll up to `Psalms 91:1, not
-   planted` → the row title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14
+   planted` → the row title button `Open Protection & Fear` (no `Open
+   Isaiah 41:10`: the promise is a single verse, `id=singles`); 14
    buttons `<reference>, not planted` in that row (`Psalms 91:1` first,
    `Isaiah 41:13` last; count them, those below the fold in a raw
    snapshot, `first.md`, Driving it); `Remove` nowhere.

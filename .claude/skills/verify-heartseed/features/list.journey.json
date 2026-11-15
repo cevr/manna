@@ -7,7 +7,11 @@
       "action": "open",
       "link": "/",
       "relaunch": false,
-      "expect": [{ "shows": "id=today-card" }],
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "id=singles" },
+        { "hides": "label=Open Isaiah 41:10" }
+      ],
       "receipt": "none"
     },
     {
@@ -33,20 +37,9 @@
       "receipt": "none"
     },
     {
-      "name": "list-weakest",
+      "name": "list-single",
       "action": "tap",
-      "target": "label=Open Isaiah 41:10",
-      "expect": [
-        { "shows": "label=Isaiah 41:10, seed" },
-        { "shows": "label=Practice this list" },
-        { "shows": "id=list-line" }
-      ],
-      "receipt": "snapshot"
-    },
-    {
-      "name": "list-weakest-today",
-      "action": "tap",
-      "target": "label=Practice this list",
+      "target": "label=Isaiah 41:10, seed",
       "expect": [
         { "shows": "id=session" },
         { "shows": "label=Isaiah 41:10" },
@@ -55,7 +48,7 @@
       "receipt": "snapshot"
     },
     {
-      "name": "list-weakest-back",
+      "name": "list-single-back",
       "action": "tap",
       "target": "label=Your field",
       "expect": [{ "shows": "id=today-card" }],

@@ -188,6 +188,7 @@ describe('a verse’s lines', () => {
           { book: 43, chapter: 3, first: 14, last: 21 },
         ],
         lists: [],
+        singles: [],
       },
       collectionPieces(collectionsOf(TAUGHT)),
     );

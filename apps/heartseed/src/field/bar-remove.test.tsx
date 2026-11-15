@@ -20,7 +20,7 @@ import { expect, it } from 'bun:test';
 import { walkBars } from '../test/bar-walk';
 
 it('removes the passage a row names once its write lands, after one ask', async () => {
-  const { faults, reached } = await walkBars([21, 3], 5, 'remove');
+  const { faults, reached } = await walkBars([0, 1, 2], 5, 'remove');
   expect(faults).toEqual([]);
   const floors = [
     'remove:from-1',

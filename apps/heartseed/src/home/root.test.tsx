@@ -24,7 +24,7 @@ import { recallOf } from '../test/field-model';
 import { cardOf, mount, record, selectedPlants } from '../test/field-rig';
 import type { Time } from '../test/clock';
 import { device } from '../test/one';
-import { KEY } from '../test/passages-model';
+import { KEY, storedText } from '../test/passages-model';
 import { screensOf, watchedLaunch } from '../test/root-rule';
 import { openSettings, tapInSheet } from '../test/settings-rig';
 
@@ -168,7 +168,11 @@ describe('the root', () => {
 
   it('brings home back at its scroll offset from Today, a list’s page and About, and opens a relaunch at the top', async () => {
     const time = { now: DAY + 15 * HOUR };
-    device.launch([record(recallOf(passage.reference, time.now - 2 * MINUTE, 3, 0)), VOICE_OFF]);
+    device.launch([
+      record(recallOf(passage.reference, time.now - 2 * MINUTE, 3, 0)),
+      VOICE_OFF,
+      [KEY, storedText([{ book: 19, chapter: 23, first: 1, last: 3 }])],
+    ]);
     const first = await launch('read', undefined, time);
     expect(await first.app.until(first.home)).toBe(true);
     const offset = () => scrollOf(first.host)?.scrollTop ?? -1;
@@ -189,7 +193,7 @@ describe('the root', () => {
     };
     await away(() => first.app.tap(plant ?? '<no plant>'), first.today, 'Today');
     await away(
-      () => first.app.tap(`Open ${passage.reference}`),
+      () => first.app.tap('Open Psalms 23:1-3'),
       () => first.app.buttons().includes('Practice this list'),
       'list',
     );

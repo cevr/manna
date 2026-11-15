@@ -65,6 +65,7 @@ import {
   GARBLED,
   INVALID,
   unchoosableOf,
+  storableOf,
 } from '../test/passages-rig';
 import { DAY, HOUR, localDay, MINUTE, planModel } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
@@ -596,7 +597,7 @@ const diskOf = (
     disk.set(KEY, text);
     bump(`disk:garbled:${name}`);
   } else {
-    for (let n = below(next, 6); n > 0; n--) stored.push(choosableOf(next, stored)[1]);
+    for (let n = below(next, 6); n > 0; n--) stored.push(storableOf(next, stored));
     if (below(next, 4) === 0) {
       const first = 1 + below(next, 120);
       stored.push({ book: 19, chapter: 119, first, last: first + 20 + below(next, 36) });

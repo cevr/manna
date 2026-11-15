@@ -657,7 +657,7 @@ const steer = (walk: Walk): Command | undefined => {
   return toward[below(walk.next, toward.length)];
 };
 
-/** One device: its stored passage of 1-12 verses, every verse planted three days before its first launch, then `steps` generated commands. */
+/** One device: its stored passage of 3-12 verses (a list holds at least 3, hsminlist), every verse planted three days before its first launch, then `steps` generated commands. */
 const deviceRun = async (
   next: () => number,
   d: number,
@@ -665,7 +665,7 @@ const deviceRun = async (
   coverage: Map<string, number>,
 ) => {
   const start = STARTS[d % STARTS.length] ?? STARTS[0];
-  const n = 1 + below(next, 12);
+  const n = 3 + below(next, 10);
   const pieces = piecesOf(n);
   const recalls = pieces.map((piece) => recallOf(piece.reference, AT - 3 * DAY, 3, 0));
   const entries: (readonly [string, string])[] = [

@@ -378,6 +378,32 @@ export const removeList = (id: string) =>
     return answer;
   });
 
+/** A join of each verse of `range` to the single verses, answered as the passages answer it; once `Added`, a plan made in this launch is made again over the passages now. */
+export const joinSingles = (range: Range) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.join(range);
+    if (answer === 'Added') yield* session.remake;
+    return answer;
+  });
+
+/** A part of the single verse `range` from the single verses, answered as the passages answer it; once `Removed`, a plan made in this launch is made again without it, its plant kept. */
+export const partSingle = (range: Range) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.part(range);
+    if (answer === 'Removed') yield* session.remake;
+    return answer;
+  });
+
+/** The sheet's Plant on a pick of fewer than 3 verses: a join of its verses to the single verses (`joinSingles`). The sheet lets one run at a time, so each answer is its own tap's. */
+export const plantSingles = runtime.fn((range: Range) => joinSingles(range), { concurrent: true });
+
+/** Home's confirmed Remove of one single verse (`partSingle`). Home's single verses let one run at a time, so each answer is its own tap's. */
+export const uprootSingle = runtime.fn((range: Range) => partSingle(range), { concurrent: true });
+
 /** The sheet's Plant on a Handbook list: a plant of its id (`addList`), answered as the passages answer it. The sheet lets one run at a time, so each answer is its own tap's. */
 export const plantList = runtime.fn((id: string) => addList(id), { concurrent: true });
 

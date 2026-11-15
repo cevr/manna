@@ -18,7 +18,7 @@ import { walkRoot } from '../test/root-sheet-walk';
 import { missed } from '../test/shelves-walk';
 
 it('offers Proverbs 18:10 as in your field by the second of three taught collections', async () => {
-  const { faults, reached } = await walkRoot(834);
+  const { faults, reached } = await walkRoot(1223);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
@@ -36,7 +36,7 @@ it('offers Proverbs 18:10 as in your field by the second of three taught collect
 });
 
 it('offers by the held and planted verses alone when no collection is taught', async () => {
-  const { faults, reached } = await walkRoot(64);
+  const { faults, reached } = await walkRoot(5);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
@@ -51,13 +51,12 @@ it('offers by the held and planted verses alone when no collection is taught', a
 });
 
 it('offers no Add a list with three passages held', async () => {
-  const { faults, reached } = await walkRoot(59);
+  const { faults, reached } = await walkRoot(3037);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
       ['taught:without', 1],
       ['stored:promise', 1],
-      ['stored:proverb', 1],
       ['held-3:no-add', 1],
     ]),
   ).toEqual([]);

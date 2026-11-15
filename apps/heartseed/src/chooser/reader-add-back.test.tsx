@@ -14,6 +14,9 @@
  * the wrong end), a restart that keeps the old range, an add with no
  * making, Today's plan off the passages after an add, and a fixed control,
  * alert or limit line inside a scroll view in any frame.
+ *
+ * Its floors are those its own devices reach; `reader-add-back-b.test.tsx`, its own part,
+ * holds the rest of the floors named here.
  */
 
 import { expect, it } from 'bun:test';
@@ -25,14 +28,13 @@ it('clips a range tapped backward and restarts one, through the field and the ch
   expect(faults).toEqual([]);
   const floors = [
     'add:Added',
-    'clip:back',
     'tap:restart',
     'tap:toggle-off',
     'back:books',
     'back:chapters',
     'choose:left',
     'chapter:176',
-    'planted:one-verse',
+    'choose:short',
     'planted:twenty',
     'planted:whole-chapter',
     'today:said-new',

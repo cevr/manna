@@ -80,7 +80,7 @@ describe('the Add verses sheet’s Handbook shelves', () => {
       async (rig) => {
         await rig.show({
           field: fieldOf([[passage.reference]]),
-          passages: { _tag: 'Read', passages: PASSAGES, lists: [] },
+          passages: { _tag: 'Read', passages: PASSAGES, lists: [], singles: [] },
         });
         expect(await rig.tap('Seven Churches')).toBe(true);
         expect(await rig.tap(`Plant ${SMYRNA.title}`)).toBe(true);
@@ -101,7 +101,7 @@ describe('the Add verses sheet’s Handbook shelves', () => {
     onRig(new Map([[LISTS, JSON.stringify([SMYRNA.id])]]), async (rig) => {
       await rig.show({
         field: fieldOf([[passage.reference]]),
-        passages: { _tag: 'Read', passages: [], lists: [] },
+        passages: { _tag: 'Read', passages: [], lists: [], singles: [] },
       });
       expect(await rig.tap('Seven Churches')).toBe(true);
       expect(await rig.tap(`Plant ${SMYRNA.title}`)).toBe(true);

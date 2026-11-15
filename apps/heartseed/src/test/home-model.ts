@@ -91,8 +91,7 @@ export type ModelSource =
   | { readonly tag: 'Own' }
   | { readonly tag: 'Passage'; readonly span: Span }
   | { readonly tag: 'Collection'; readonly id: string }
-  | { readonly tag: 'Handbook'; readonly id: string }
-  | { readonly tag: 'Loose' };
+  | { readonly tag: 'Handbook'; readonly id: string };
 
 /** A list as the model holds it. */
 export interface ModelList {
@@ -103,21 +102,48 @@ export interface ModelList {
   readonly source: ModelSource;
 }
 
-/** L2-L3: the lists the field holds over the app's `own` rows, the passages `held` and the collections `taught`. */
-export const listsModel = (
-  own: readonly ModelPassage[],
-  held: Held,
-  taught: readonly string[],
-): ModelList[] => {
-  const out: ModelList[] = [];
-  for (const row of own)
-    out.push({
+/** The app's `own` rows as lists, each but a row of one verse (a single verse, no list: hsminlist). */
+const ownLists = (own: readonly ModelPassage[]): ModelList[] =>
+  own
+    .filter((row) => row.verses.length > 1)
+    .map((row): ModelList => ({
       id: `own:${row.title}`,
       title: row.title,
       verses: [...row.verses],
       range: undefined,
       source: { tag: 'Own' },
+    }));
+
+/** The collections `taught` as lists, each verse once, an id no collection has skipped. */
+const taughtLists = (taught: readonly string[]): ModelList[] => {
+  const out: ModelList[] = [];
+  for (const id of taught) {
+    const collection = COLLECTIONS.find((each) => each.id === id);
+    if (collection === undefined) continue;
+    const verses: string[] = [];
+    for (const range of collection.promises)
+      for (let verse = range.first; verse <= range.last; verse++) {
+        const reference = verseRef(range.book, range.chapter, verse);
+        if (!verses.includes(reference)) verses.push(reference);
+      }
+    out.push({
+      id: `collection:${id}`,
+      title: collection.title,
+      verses,
+      range: undefined,
+      source: { tag: 'Collection', id },
     });
+  }
+  return out;
+};
+
+/** L2-L3: the lists the field holds over the app's `own` rows (a row of one verse is a single verse, no list: hsminlist), the passages `held` and the collections `taught`. */
+export const listsModel = (
+  own: readonly ModelPassage[],
+  held: Held,
+  taught: readonly string[],
+): ModelList[] => {
+  const out: ModelList[] = ownLists(own);
   if (held.tag === 'Read')
     held.passages.forEach((span, index) => {
       const verses: string[] = [];
@@ -143,23 +169,7 @@ export const listsModel = (
         source: { tag: 'Handbook', id },
       });
     }
-  for (const id of taught) {
-    const collection = COLLECTIONS.find((each) => each.id === id);
-    if (collection === undefined) continue;
-    const verses: string[] = [];
-    for (const range of collection.promises)
-      for (let verse = range.first; verse <= range.last; verse++) {
-        const reference = verseRef(range.book, range.chapter, verse);
-        if (!verses.includes(reference)) verses.push(reference);
-      }
-    out.push({
-      id: `collection:${id}`,
-      title: collection.title,
-      verses,
-      range: undefined,
-      source: { tag: 'Collection', id },
-    });
-  }
+  out.push(...taughtLists(taught));
   return out;
 };
 
@@ -218,21 +228,20 @@ export const recordsOf = (
 };
 
 /** A furrow's kind as the model holds it. */
-export type ModelKind = 'own' | 'held' | 'taught' | 'other';
+export type ModelKind = 'own' | 'held' | 'taught';
 
 /** H1: the kind of a list by its source. */
 export const kindRule = (source: ModelSource): ModelKind => {
   if (source.tag === 'Own') return 'own';
-  if (source.tag === 'Passage' || source.tag === 'Handbook') return 'held';
   if (source.tag === 'Collection') return 'taught';
-  return 'other';
+  return 'held';
 };
 
 /** H1: the icon of a list by its kind, a held passage's by its book (19 the Psalms, 20 the Proverbs). */
 export const iconRule = (source: ModelSource): string => {
   const kind = kindRule(source);
   if (kind === 'own' || kind === 'taught') return 'bow';
-  if (kind === 'other' || source.tag !== 'Passage') return 'scroll';
+  if (source.tag !== 'Passage') return 'scroll';
   if (source.span.book === 19) return 'harp';
   if (source.span.book === 20) return 'lamp';
   return 'scroll';
@@ -269,29 +278,29 @@ export const captionModel = (plants: readonly { stage: string; ready: boolean }[
   return `${n} to learn`;
 };
 
-/** H1: the furrows over `records` (one per recital) and `lists`, a plant ready when its verse is in `ready`. */
+/** A plant of the field as home marks it: ready when its verse is in `ready`, labelled `<reference>, <stage>` then `, ready today`. */
+const markedModel = (
+  plant: { readonly reference: string; readonly stage: ModelPlantStage },
+  ready: ReadonlySet<string>,
+) => {
+  const marked = ready.has(plant.reference);
+  return {
+    reference: plant.reference,
+    stage: plant.stage,
+    ready: marked,
+    label: `${plant.reference}, ${plant.stage}${marked ? ', ready today' : ''}`,
+  };
+};
+
+/** H1: the furrows over `records` (one per recital) and `lists`, one per list (a verse no list names is a single verse, no furrow: hsminlist), a plant ready when its verse is in `ready`. */
 export const furrowsModel = (
   records: readonly Recall[],
   lists: readonly ModelList[],
   ready: ReadonlySet<string>,
-): ModelFurrow[] =>
-  fieldFoldRule(records, lists).rows.map((row, index) => {
-    const list: ModelList = lists[index] ?? {
-      id: `verse:${row.title}`,
-      title: row.title,
-      verses: [row.title],
-      range: undefined,
-      source: { tag: 'Loose' },
-    };
-    const plants = row.plants.map((plant) => {
-      const marked = ready.has(plant.reference);
-      return {
-        reference: plant.reference,
-        stage: plant.stage,
-        ready: marked,
-        label: `${plant.reference}, ${plant.stage}${marked ? ', ready today' : ''}`,
-      };
-    });
+): ModelFurrow[] => {
+  const rows = fieldFoldRule(records, lists).rows;
+  return lists.map((list, index) => {
+    const plants = (rows[index]?.plants ?? []).map((plant) => markedModel(plant, ready));
     return {
       id: list.id,
       title: list.title,
@@ -303,6 +312,50 @@ export const furrowsModel = (
       plants,
     };
   });
+};
+
+/** A single verse as the model holds it: its plant as home marks it, and the span a `Remove` takes out, none when the reader did not plant it alone. */
+export interface ModelSingle {
+  readonly reference: string;
+  readonly stage: ModelPlantStage;
+  readonly ready: boolean;
+  readonly label: string;
+  readonly removal: Span | undefined;
+}
+
+/** hsminlist: the verses `own` rows of one verse name, then the single verses `held` holds (each its one verse), each once, in order. */
+export const singleVersesModel = (own: readonly ModelPassage[], held: Held): string[] => {
+  const out: string[] = [];
+  const add = (verse: string) => {
+    if (!out.includes(verse)) out.push(verse);
+  };
+  for (const row of own) if (row.verses.length === 1) add(row.verses[0] ?? '');
+  if (held.tag === 'Read')
+    for (const span of held.singles ?? []) add(verseRef(span.book, span.chapter, span.first));
+  return out;
+};
+
+/** hsminlist: the single verses home shows over `records`: each of `singles` in order, then every other verse the garden holds that no list of `lists` names, in the field's order of its other rows; each verse of the spans in `held` removable by its span. */
+export const singlesModel = (
+  records: readonly Recall[],
+  lists: readonly ModelList[],
+  singles: readonly string[],
+  held: readonly Span[],
+  ready: ReadonlySet<string>,
+): ModelSingle[] => {
+  const rows = fieldFoldRule(records, [
+    ...lists,
+    { title: 'Single verses', verses: singles },
+  ]).rows.slice(lists.length);
+  return rows
+    .flatMap((row) => row.plants)
+    .map((plant) => ({
+      ...markedModel(plant, ready),
+      removal: held.find(
+        (span) => verseRef(span.book, span.chapter, span.first) === plant.reference,
+      ),
+    }));
+};
 
 /** An item of a plan as H2 reads it. */
 export interface ModelReadyItem {
@@ -665,6 +718,11 @@ export const offerModel = (
   let every = true;
   for (const reference of verses) if (!rows.some((row) => row.includes(reference))) every = false;
   if (every) return 'in field';
+  if (verses.length < 3) {
+    const singles = (held.singles ?? []).map(spanRef);
+    const more = verses.filter((reference) => !singles.includes(reference)).length;
+    return singles.length + more > 20 ? 'full' : 'plant';
+  }
   if (held.passages.length + (held.lists ?? []).length >= 3) return 'full';
   return 'plant';
 };

@@ -13,11 +13,14 @@ import {
   greetingAt,
   HOME_ICONS,
   readyOf,
+  singlesOf,
   type Furrow,
   type Greeting,
+  type SinglePlant,
 } from '../../src/home';
 import { ICON_IMAGES } from '../../src/home/icons';
 import { startOf } from '../../src/home/start';
+import { singleVersesOf } from '../../src/lists';
 import { fieldPassagesOf } from '../../src/promises/taught';
 import { countsOf } from '../../src/session';
 import { shownOf, type Shown } from '../../src/session/run';
@@ -90,11 +93,12 @@ const iconLinesOf = (loaded: ReadonlySet<string>, failed: ReadonlySet<string>) =
   }),
 ];
 
-/** The probe's lines after the icons, over the garden read, the session and the furrows. */
+/** The probe's lines after the icons, over the garden read, the session, the furrows and the single verses. */
 const linesOf = (
   session: SessionView,
   garden: ReadGarden,
   furrows: readonly Furrow[],
+  singles: readonly SinglePlant[],
   lists: number,
 ) => [
   `counts ${Option.match(session.plan, {
@@ -102,6 +106,7 @@ const linesOf = (
     onSome: (plan) => countsOf(plan, garden),
   })}`,
   ...furrows.flatMap(furrowLines),
+  ...singles.map((plant) => `single ${plant.label}`),
   `lists ${lists}`,
   `shelves ${SHELVES.length}`,
   ...SHELVES.map(shelfLine),
@@ -118,11 +123,11 @@ const linesOf = (
  * how many of the home's icons loaded (and which failed) above each icon
  * drawn in both schemes, then the plan's counts, each
  * furrow of the field with its kind, icon and caption and each of its
- * plants' labels, the lists the field holds, the shelves Add verses
+ * plants' labels, each single verse's label, the lists the field holds, the shelves Add verses
  * offers, the session's visit and what Today would show, one line each,
  * over the live garden, passages and session. It begins the session once
  * the garden is read, as Today does, and its one button starts the first
- * plant `startOf` offers (`startHere`). It writes nothing. A release build
+ * plant `startOf` offers (`startHere`), the single verses before the furrows'. It writes nothing. A release build
  * renders nothing.
  */
 export default function HomeProbe() {
@@ -140,11 +145,13 @@ export default function HomeProbe() {
   if (Option.isNone(known)) return;
   const { garden: read, session: view } = known.value;
   const lists = fieldPassagesOf(OWN, known.value.passages, known.value.taught);
-  const furrows = furrowsOf(read, lists, readyOf(view.plan, read));
+  const ready = readyOf(view.plan, read);
+  const furrows = furrowsOf(read, lists, ready);
+  const singles = singlesOf(read, lists, singleVersesOf(OWN, known.value.passages), [], ready);
   // oxlint-disable-next-line effect/noGlobals -- the probe is a host adapter: it reads the host's clock at each render, as the home's screen will.
   const greeting = greetingAt(Date.now());
   const start = Arr.findFirst(
-    furrows.flatMap((furrow) => furrow.plants),
+    [...singles, ...furrows.flatMap((furrow) => furrow.plants)],
     (plant) => Option.isSome(startOf(view, read, plant.reference)),
   );
   return (
@@ -167,7 +174,7 @@ export default function HomeProbe() {
           />
         ))}
       </View>
-      {linesOf(view, read, furrows, lists.length).map((line, index) => (
+      {linesOf(view, read, furrows, singles, lists.length).map((line, index) => (
         <Text key={index} style={styles.line}>
           {line}
         </Text>

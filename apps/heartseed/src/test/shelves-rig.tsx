@@ -7,7 +7,7 @@
  * `One.Database` (`one.tsx`), beside a stand-in of home. The stand-in
  * reads the garden, the passages and the collections taught, and hands the
  * sheet home's field (`fieldOf` over `fieldPassagesOf` of the app's own
- * row) and the passages, or the props a test gives in their place
+ * row with the single verses, `fieldPassagesWith`) and the passages, or the props a test gives in their place
  * (`show`). While the sheet is closed it shows a button `Add verses` that
  * opens it again, at any count held. It counts `Done`, `Any passage` and a
  * landed plant apart.
@@ -32,6 +32,8 @@ import { appLayer, gardenView, passagesView, runtime, taughtView } from '../app'
 import { recite, scriptedSource } from '../dictation/script';
 import { fieldOf, type Field } from '../field';
 import { Chime, type GardenView, type ReadGarden } from '../garden';
+import { fieldPassagesWith } from '../home';
+import { singleVersesOf } from '../lists';
 import { themed, useThemed } from '../look';
 import type { PassagesView } from '../passages';
 import { fieldPassagesOf } from '../promises/taught';
@@ -46,7 +48,7 @@ import { scrolled } from './field-rig';
 import { shelvesModel } from './home-model';
 import { LISTS } from './handbook-model';
 import { lookFaults, systemScheme } from './look';
-import { KEY } from './passages-model';
+import { KEY, SINGLES } from './passages-model';
 import type { SheetSeen } from './shelves-model';
 
 const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]';
@@ -319,7 +321,13 @@ function Stage({ given, counts }: { readonly given: SheetProps | null; readonly 
     onNone: () => false,
     onSome: (known) => {
       const own = {
-        field: fieldOf(known.garden, fieldPassagesOf(OWN, known.passages, known.taught)),
+        field: fieldOf(
+          known.garden,
+          fieldPassagesWith(
+            fieldPassagesOf(OWN, known.passages, known.taught),
+            singleVersesOf(OWN, known.passages),
+          ),
+        ),
         passages: known.passages,
       };
       const shown = given ?? own;
@@ -336,10 +344,10 @@ function Stage({ given, counts }: { readonly given: SheetProps | null; readonly 
   });
 }
 
-/** A plant's write held by the rig: while `armed`, a write of the passages' key or the lists' waits in `waiting` until the rig lets it go. */
+/** A plant's write held by the rig: while `armed`, a write of the passages' key, the lists' or the single verses' waits in `waiting` until the rig lets it go. */
 type Hold = { armed: boolean; planting: boolean; readonly waiting: Array<() => void> };
 
-/** The app's store, whose writes of the passages' key and the lists' wait while `hold` is armed; every other call is the store's own. */
+/** The app's store, whose writes of the passages' key, the lists' and the single verses' wait while `hold` is armed; every other call is the store's own. */
 const storeHeld = (hold: Hold) =>
   Layer.effect(
     KeyValueStore.KeyValueStore,
@@ -348,7 +356,8 @@ const storeHeld = (hold: Hold) =>
         ...real,
         set: (key, value) =>
           Effect.suspend(() => {
-            if ((key !== KEY && key !== LISTS) || !hold.armed) return real.set(key, value);
+            if ((key !== KEY && key !== LISTS && key !== SINGLES) || !hold.armed)
+              return real.set(key, value);
             return Effect.promise(
               () => new Promise<void>((resolve) => hold.waiting.push(resolve)),
             ).pipe(Effect.andThen(real.set(key, value)));

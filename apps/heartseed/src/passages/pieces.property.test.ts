@@ -88,7 +88,7 @@ const heldOf = (next: () => number): readonly [Set<string>, Span[]] => {
 
 const viewOf = (held: Held): PassagesView => {
   if (held.tag === 'Unread') return { _tag: 'Unread' };
-  return { _tag: 'Read', passages: held.passages, lists: [] };
+  return { _tag: 'Read', passages: held.passages, lists: [], singles: [] };
 };
 
 /** Tallies each passage verse as long (more than 12 words, which main kept in pieces) or short. */
@@ -165,7 +165,12 @@ describe('the pieces over the reader’s passages', () => {
   it('give John 15:1-5 after the promise, grouped as the passage, and share the promise’s plant inside Isaiah 41', () => {
     const john: Span = { book: 43, chapter: 15, first: 1, last: 5 };
     const isaiah: Span = { book: 23, chapter: 41, first: 9, last: 11 };
-    const pieces = piecesOf([PROMISE], { _tag: 'Read', passages: [john, isaiah], lists: [] });
+    const pieces = piecesOf([PROMISE], {
+      _tag: 'Read',
+      passages: [john, isaiah],
+      lists: [],
+      singles: [],
+    });
     expect(pieces.map((piece) => piece.reference)).toEqual([
       'Isaiah 41:10',
       'John 15:1',
@@ -195,7 +200,12 @@ describe('the pieces over the reader’s passages', () => {
     ).toBe(true);
     expect(piecesOf([PROMISE], { _tag: 'Unread' })).toEqual([PROMISE]);
     expect(
-      piecesOf([], { _tag: 'Read', passages: [{ ...john, first: 3, last: 3 }], lists: [] }),
+      piecesOf([], {
+        _tag: 'Read',
+        passages: [{ ...john, first: 3, last: 3 }],
+        lists: [],
+        singles: [],
+      }),
     ).toHaveLength(1);
     expect(countIn(43, 15)).toBe(27);
   });

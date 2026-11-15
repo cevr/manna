@@ -182,17 +182,18 @@ export const walkAddScreens = async (scheme: Scheme) => {
   }
   await step('Any passage', 'Add a passage', 'the books', () => tapSheet('Any passage'));
   await step('Psalms', 'Psalms', 'a book');
-  await step('Psalms 117', 'Psalms 117', 'a chapter');
-  for (const verse of [...rig.host.querySelectorAll('[data-testid="verse"]')].slice(0, 1)) {
+  await step('Psalms 23', 'Psalms 23', 'a chapter');
+  const verses = [...rig.host.querySelectorAll('[data-testid="verse"]')];
+  for (const verse of [verses[0], verses[2]]) {
     await act(async () => {
-      verse.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+      verse?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
-    const plant = [...rig.host.querySelectorAll('[role="button"]')].some(
-      (node) => node.getAttribute('aria-label') === 'Plant',
-    );
-    if (plant) reached.push('verses chosen');
     await held(rig, scheme, 'verses chosen', report, presses);
   }
+  const plant = [...rig.host.querySelectorAll('[role="button"]')].some(
+    (node) => node.getAttribute('aria-label') === 'Plant',
+  );
+  if (plant) reached.push('verses chosen');
   if (rig.faults.length > 0) report.push(`rig: ${rig.faults.join(' | ')}`);
   await rig.leave();
   setSystem('light');

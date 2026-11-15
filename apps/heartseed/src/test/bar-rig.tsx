@@ -17,7 +17,8 @@
  * list control (a book, a chapter, a verse, a plant, a furrow's `Open …`,
  * `Add a list`, the end rows `Settings` and `How Heartseed works`; on a
  * list's own page its rows, its `Remove …`, the ask's `Remove` and `Keep`)
- * and no alert inside a scroll view but a list page's;
+ * and no alert inside a scroll view but a list page's and home's single
+ * verses' (each in place beside the verse it names, hsminlist);
  * `Plant` only over a shown reference of 1-20 verses; never `Add a list`
  * beside the limit line, and at most one; over
  * unread passages, no add, remove, `Keep`, `Plant` or limit line; while
@@ -63,6 +64,8 @@ const listed = (node: Element) => {
   const id = idOf(node);
   if (['book', 'chapter', 'verse', 'field-plant', 'add-list'].includes(id)) return true;
   if (END_ROWS.includes(labelOf(node))) return true;
+  if (node.closest('[data-testid="singles"]') !== null)
+    return /^Remove( |$)|^Keep$/u.test(labelOf(node));
   if (node.closest('[data-testid="list-screen"]') !== null)
     return id === 'list-row' || /^Remove( |$)|^Keep$/u.test(labelOf(node));
   return labelOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null;
@@ -116,6 +119,9 @@ export const readBar = (host: Element): FieldSeen | ListSeen | string => {
         .filter((node) => idOf(node) !== 'field-plant')
         .map(labelOf),
     })),
+    singles: [...host.querySelectorAll('[data-testid="singles"] [data-testid="field-plant"]')].map(
+      (plant) => unready(plant.getAttribute('aria-label') ?? '<no label>'),
+    ),
     add: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === ADD).length,
     card: host.querySelectorAll('[data-testid="today-card"]').length,
     limit: one('limit'),
@@ -124,14 +130,18 @@ export const readBar = (host: Element): FieldSeen | ListSeen | string => {
   };
 };
 
-/** Off Today: every control but a list control, and every alert, outside the scroll views. */
+/** Off Today: every control but a list control, and every alert but a list page's and the single verses', outside the scroll views. */
 const scrollFaults = (host: Element, on: string, controls: readonly Element[]) => {
   if (on === 'Today' || on === '') return [];
   const out = controls
     .filter((node) => !listed(node) && scrolled(node))
     .map((node) => `the control ${labelOf(node)} inside a scroll view on ${on}`);
   for (const node of host.querySelectorAll('[role="alert"]'))
-    if (scrolled(node) && node.closest('[data-testid="list-screen"]') === null)
+    if (
+      scrolled(node) &&
+      node.closest('[data-testid="list-screen"]') === null &&
+      node.closest('[data-testid="singles"]') === null
+    )
       out.push(`the line ${text(node).slice(0, 30)} inside a scroll view`);
   return out;
 };

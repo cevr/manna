@@ -3,7 +3,7 @@
 /**
  * The Add verses sheet's `Plant` (hsshelves S3, B) on generated readers
  * through `test/shelves-walk.ts`, leaning toward the adds that land: from
- * 0, 1 and 2 held, of a pick and of a promise, `Plant` twice in one turn
+ * 0 and 1 held, of a pick and of a promise, `Plant` twice in one turn
  * that stores once, `Plant` then `Done` in one turn, and a write held while
  * every control shows disabled. Its devices alone must reach those cases,
  * each as often as its floor.
@@ -20,13 +20,12 @@ import { expect, it } from 'bun:test';
 import { missed, walkShelves } from '../test/shelves-walk';
 
 it('plants an offer once its write lands, once for two taps in one turn, and holds every control while it is pending', async () => {
-  const { faults, reached } = await walkShelves([30, 32], 14);
+  const { faults, reached } = await walkShelves([13, 72], 14);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [
       ['plant:Added:from-0', 1],
       ['plant:Added:from-1', 1],
-      ['plant:Added:from-2', 1],
       ['plant:Added:pick', 1],
       ['plant:Added:promise', 1],
       ['plant:twice', 1],

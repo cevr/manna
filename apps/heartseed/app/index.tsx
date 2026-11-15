@@ -29,6 +29,7 @@ import {
   sessionView,
   showAll,
   startHere,
+  uprootSingle,
   taughtView,
   voiceView,
 } from '../src/app';
@@ -56,7 +57,9 @@ import {
   withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
-import { furrowsOf, readyOf } from '../src/home';
+import { furrowsOf, fieldPassagesWith, readyOf, singlesOf } from '../src/home';
+import { singleVersesOf } from '../src/lists';
+import { singlesHeld } from '../src/passages';
 import { tendedOf } from '../src/home/grown';
 import { PlantImage } from '../src/home/plant';
 import { startOf } from '../src/home/start';
@@ -722,6 +725,7 @@ function FieldOf({
   const session = AsyncResult.value(useAtomValue(sessionView));
   const greeting = AsyncResult.value(useAtomValue(greetingNow));
   const start = useAtomSet(startHere, { mode: 'promise' });
+  const uproot = useAtomSet(uprootSingle, { mode: 'promise' });
   useSessionBegunWhenShown(Option.isSome(garden));
   const onStart = (verse: string) => {
     void start(verse).then(onToday, onToday);
@@ -734,12 +738,16 @@ function FieldOf({
     onNone: () => <Pending />,
     onSome: (known) => {
       const lists = fieldPassagesOf(PASSAGES, known.passages, known.taught);
-      const field = fieldOf(known.garden, lists);
+      const singles = singleVersesOf(PASSAGES, known.passages);
+      const field = fieldOf(known.garden, fieldPassagesWith(lists, singles));
+      const ready = readyOf(known.session.plan, known.garden);
       return (
         <>
           <FieldScreen
             field={field}
-            furrows={furrowsOf(known.garden, lists, readyOf(known.session.plan, known.garden))}
+            furrows={furrowsOf(known.garden, lists, ready)}
+            singles={singlesOf(known.garden, lists, singles, singlesHeld(known.passages), ready)}
+            onUproot={uproot}
             passages={known.passages}
             greeting={known.greeting}
             card={todayOf(known.session, known.garden, known.passages._tag === 'Unread')}

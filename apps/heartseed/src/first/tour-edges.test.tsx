@@ -39,7 +39,7 @@ const THREE: readonly (readonly [string, string])[] = [
     JSON.stringify([
       { book: 19, chapter: 23, first: 1, last: 3 },
       { book: 43, chapter: 15, first: 1, last: 5 },
-      { book: 45, chapter: 8, first: 28, last: 28 },
+      { book: 45, chapter: 8, first: 28, last: 30 },
     ]),
   ],
 ];

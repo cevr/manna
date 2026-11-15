@@ -8,7 +8,10 @@
  * In the scroll view: the heading `Your field` with the days sown and the
  * harvest; the label `Lists`; one furrow per row (`./plot`), whose title
  * (`Open <title>`) opens the list's own page, where a held list is
- * removed; at the Lists section's foot `Add a list` while fewer than 3
+ * removed; the single verses (`./singles`), each a compact row of its own
+ * that starts its verse, apart from the lists and held with them above
+ * home's foot; at the Lists section's foot
+ * `Add a list` while fewer than 3
  * passages and lists are held together, else the limit line, first run
  * included (owner, q97: "At the very bottom of Lists, under the stage
  * line, just above Settings."); then the rows `Settings`, which opens the Settings sheet
@@ -26,7 +29,8 @@
  * back, you can easily go back from that page"); a tap on a plant nothing
  * starts (before a plan) does nothing. Whether the sheet is open is the
  * screen's own state, dropped when the reader leaves. With the passages
- * unread it offers no add. Home holds no remove.
+ * unread it offers no add. Home removes no list; it removes a single verse
+ * the reader planted alone, from its row.
  */
 
 import { Option } from 'effect';
@@ -43,15 +47,16 @@ import { useSafeAreaInsets } from 'one';
 
 import { LIMIT_LINE } from '../chooser';
 import { harvestText, sownText, type Field } from '../field';
-import type { Furrow, Greeting } from '../home';
+import type { Furrow, Greeting, SinglePlant } from '../home';
 import type { TodayCard } from '../home/today';
 import { themed, useThemed } from '../look';
-import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
+import { heldCount, MOST_PASSAGES, type PassagesView, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
 import { Pill } from '../first/intro';
 import { SettingsSheet } from '../settings/sheet';
 import { TodayCardView, type StartKind } from './card';
 import { Control, Furrows, Icon } from './plot';
+import { Singles } from './singles';
 import { Tip } from './tips';
 
 /** What the Lists section offers at its foot with the passages read: `Add a list`, else the limit line at 3 held. Home draws it only over read passages. */
@@ -89,8 +94,16 @@ function AddList({
   );
 }
 
-/** A row at the field's end: a button the width of the field, named and showing `label`. */
-function EndRow({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
+/** A row at the field's end: a button the width of the field, named and showing `label`, disabled while `held`. */
+function EndRow({
+  label,
+  held,
+  onPress,
+}: {
+  readonly label: string;
+  readonly held: boolean;
+  readonly onPress: () => void;
+}) {
   const look = useLook();
   const styles = useThemed(sheets);
   return (
@@ -98,6 +111,7 @@ function EndRow({ label, onPress }: { readonly label: string; readonly onPress: 
       testID="end-row"
       role="button"
       aria-label={label}
+      disabled={held}
       onPress={onPress}
       style={({ pressed }) => [styles.endRow, pressed && look.pressed]}
     >
@@ -122,10 +136,15 @@ function EndRow({ label, onPress }: { readonly label: string; readonly onPress: 
  * and `Got it` (`onGotIt`) fixed under the scroll view. The scroll view
  * opens at the offset `scrolled` had at the mount (a later value never
  * moves it) and hands each offset it reaches to `onScrolled`.
+ * `onUproot` removes one of the `singles` a reader planted alone. While a
+ * single verse's remove is pending every other control is disabled and
+ * `Add a list` is not offered, as on a list's own page.
  */
 export function FieldScreen({
   field,
   furrows,
+  singles,
+  onUproot,
   passages,
   greeting,
   card,
@@ -143,6 +162,8 @@ export function FieldScreen({
 }: {
   readonly field: Field;
   readonly furrows: readonly Furrow[];
+  readonly singles: readonly SinglePlant[];
+  readonly onUproot: (range: Range) => Promise<string>;
   readonly passages: PassagesView;
   readonly greeting: Greeting;
   readonly card: TodayCard;
@@ -162,6 +183,7 @@ export function FieldScreen({
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [opening] = useState(scrolled);
   const restored = useRef(false);
   const onPlant = (reference: string) => {
@@ -180,7 +202,7 @@ export function FieldScreen({
           <Icon name={greeting.icon} size={28} />
           <Text style={styles.greetingText}>{greeting.words}</Text>
         </View>
-        <TodayCardView card={card} pending={false} onToday={onToday} onStart={onStart} />
+        <TodayCardView card={card} pending={removing} onToday={onToday} onStart={onStart} />
         {tips && <Tip n={1} />}
       </View>
       <ScrollView
@@ -208,16 +230,27 @@ export function FieldScreen({
           </Text>
         </View>
         <Text style={styles.label}>Lists</Text>
-        <Furrows
-          furrows={furrows}
-          onPlant={onPlant}
-          onOpen={onOpen}
-          underFirst={tips && <Tip n={2} />}
-        />
-        {passages._tag === 'Read' && <AddList passages={passages} tips={tips} onAdd={onAdd} />}
+        <View style={styles.rows}>
+          <Furrows
+            furrows={furrows}
+            held={removing}
+            onPlant={onPlant}
+            onOpen={onOpen}
+            underFirst={tips && <Tip n={2} />}
+          />
+          <Singles
+            singles={singles}
+            onPlant={onPlant}
+            onUproot={onUproot}
+            onPending={setRemoving}
+          />
+        </View>
+        {passages._tag === 'Read' && !removing && (
+          <AddList passages={passages} tips={tips} onAdd={onAdd} />
+        )}
         <View style={styles.ends}>
-          <EndRow label="Settings" onPress={() => setSettings(true)} />
-          <EndRow label="How Heartseed works" onPress={onHow} />
+          <EndRow label="Settings" held={removing} onPress={() => setSettings(true)} />
+          <EndRow label="How Heartseed works" held={removing} onPress={onHow} />
         </View>
       </ScrollView>
       {tips && (
@@ -248,6 +281,7 @@ const sheets = themed((color, face) =>
     greetingText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.sun },
     head: { gap: 6 },
     lists: { gap: 8 },
+    rows: { gap: 16 },
     label: { fontFamily: face, fontSize: 13, fontWeight: '600', color: color.ink },
     limit: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.ink },
     ends: { gap: 8, marginTop: 8 },

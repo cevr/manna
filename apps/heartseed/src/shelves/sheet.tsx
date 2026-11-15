@@ -10,10 +10,12 @@
  * shelf opens in place under its head, one at a time, and lists its offers:
  * each list's title and count, and what `offerStateOf` says of it over
  * home's field: `Plant <title>`, `In your field`, or nothing. A tap of
- * `Plant` acts by the list's source: a passage adds its range
- * (`plantPassage`), a Handbook list plants its id whole (`plantList`). On
- * `Added` (or `Held`) home shows (`onAdded`); on `Full` the limit line
- * shows, and on any other answer the alert says the list was not planted,
+ * `Plant` acts by the list's source: a passage of 3 or more verses adds its
+ * range (`plantPassage`), one of fewer puts its verses among the single
+ * verses (`plantSingles`), a Handbook list plants its id whole
+ * (`plantList`). On `Added` (or `Held`) home shows (`onAdded`); on `Full`
+ * the limit line its planting met shows (the lists' or the single verses'
+ * own), and on any other answer the alert says the list was not planted,
  * the same shelf open, so a retry is one tap. The next tap clears the line,
  * the limit line excepted while 3 or more passages and lists are held
  * together. From a tap of `Plant` until its answer, no
@@ -28,14 +30,15 @@ import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
-import { plantList, plantPassage } from '../app';
-import { LIMIT_LINE } from '../chooser';
+import { plantList, plantPassage, plantSingles } from '../app';
+import { LIMIT_LINE, SINGLES_LIMIT_LINE } from '../chooser';
 import type { Field } from '../field';
 import { Icon } from '../field/plot';
 import type { List } from '../lists';
 import {
   heldCount,
   MOST_PASSAGES,
+  MOST_SINGLES,
   type AddAnswer,
   type PassagesView,
   type PlantAnswer,
@@ -43,10 +46,13 @@ import {
 } from '../passages';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
-import { offerStateOf, SHELVES, type Shelf } from '../shelves';
+import { offerStateOf, plantsSingly, SHELVES, type Shelf } from '../shelves';
 
-/** The sheet's line after a plant's answer: the limit line on `Full`, else the alert naming the list. */
-type Line = { readonly _tag: 'Limit' } | { readonly _tag: 'Alert'; readonly title: string };
+/** The sheet's line after a plant's answer: the lists' limit line or the single verses' on `Full`, else the alert naming the list. */
+type Line =
+  | { readonly _tag: 'Limit' }
+  | { readonly _tag: 'SinglesLimit' }
+  | { readonly _tag: 'Alert'; readonly title: string };
 
 /** A list's count as an offer writes it, over its distinct verses. */
 const countText = (list: List) => {
@@ -54,20 +60,23 @@ const countText = (list: List) => {
   return `${list.verses.length} verses`;
 };
 
-/** What a shelf's list plants, by its source: its range on a `Passage` list, its id on a `Handbook` list, nothing on any other. */
+/** What a shelf's list plants, by its source: its range on a `Passage` list (its verses as single verses when it is short, `plantsSingly`), its id on a `Handbook` list, nothing on any other. */
 type Planting =
   | { readonly _tag: 'Passage'; readonly range: Range }
+  | { readonly _tag: 'Singles'; readonly range: Range }
   | { readonly _tag: 'Handbook'; readonly id: string };
 
 /** The planting a shelf's list offers, if any. */
 const plantingOf = (list: List): Option.Option<Planting> =>
   Match.value(list.source).pipe(
     Match.tagsExhaustive({
-      Passage: ({ range }) => Option.some<Planting>({ _tag: 'Passage', range }),
+      Passage: ({ range }) => {
+        if (plantsSingly(list)) return Option.some<Planting>({ _tag: 'Singles', range });
+        return Option.some<Planting>({ _tag: 'Passage', range });
+      },
       Handbook: ({ id }) => Option.some<Planting>({ _tag: 'Handbook', id }),
       Own: () => Option.none<Planting>(),
       Collection: () => Option.none<Planting>(),
-      Loose: () => Option.none<Planting>(),
     }),
   );
 
@@ -75,9 +84,14 @@ const plantingOf = (list: List): Option.Option<Planting> =>
 const atMost = (passages: PassagesView) =>
   passages._tag === 'Read' && heldCount(passages) >= MOST_PASSAGES;
 
-/** The one line the foot shows: the limit line while the most are held or after `Full`, else the alert. */
+/** Whether the passages are read and hold the most single verses a reader may hold. */
+const singlesAtMost = (passages: PassagesView) =>
+  passages._tag === 'Read' && passages.singles.length >= MOST_SINGLES;
+
+/** The one line the foot shows: the lists' limit line while the most are held, else the single verses' while they are at theirs, else the line after a plant's answer. */
 const footLine = (passages: PassagesView, line: Option.Option<Line>): Option.Option<Line> => {
   if (atMost(passages)) return Option.some({ _tag: 'Limit' });
+  if (singlesAtMost(passages)) return Option.some({ _tag: 'SinglesLimit' });
   return line;
 };
 
@@ -204,6 +218,7 @@ export function AddSheet({
   const busy = useRef(false);
   const plantRange = useAtomSet(plantPassage, { mode: 'promise' });
   const plantId = useAtomSet(plantList, { mode: 'promise' });
+  const plantVerses = useAtomSet(plantSingles, { mode: 'promise' });
   const tapped = (then: () => void) => () => {
     if (busy.current) return;
     setLine(Option.none());
@@ -214,6 +229,8 @@ export function AddSheet({
     busy.current = false;
     setPending(false);
     if (answer === 'Added' || answer === 'Held') return onAdded();
+    if (answer === 'Full' && plantsSingly(list))
+      return setLine(Option.some({ _tag: 'SinglesLimit' }));
     if (answer === 'Full') return setLine(Option.some({ _tag: 'Limit' }));
     setLine(Option.some({ _tag: 'Alert', title: list.title }));
   };
@@ -221,6 +238,7 @@ export function AddSheet({
     Match.value(planting).pipe(
       Match.tagsExhaustive({
         Passage: ({ range }) => plantRange(range),
+        Singles: ({ range }) => plantVerses(range),
         Handbook: ({ id }) => plantId(id),
       }),
     );
@@ -317,6 +335,11 @@ export function AddSheet({
                   Limit: () => (
                     <Text role="alert" testID="limit" style={styles.line}>
                       {LIMIT_LINE}
+                    </Text>
+                  ),
+                  SinglesLimit: () => (
+                    <Text role="alert" testID="singles-limit" style={styles.line}>
+                      {SINGLES_LIMIT_LINE}
                     </Text>
                   ),
                   Alert: ({ title }) => (

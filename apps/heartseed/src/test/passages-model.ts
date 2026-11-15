@@ -99,6 +99,9 @@ export const verseCountIn = (corpus: Corpus, book: number, chapter: number): num
 
 /** The store key of the passages (P3). */
 export const KEY = 'heartseed/passages';
+
+/** hsminlist: the single verses' key. */
+export const SINGLES = 'heartseed/singles';
 /** P4's caps: an add needs fewer than 3 held, and a range of at most 20 verses. */
 export const CAP_PASSAGES = 3;
 export const CAP_VERSES = 20;
@@ -113,12 +116,13 @@ export interface Span {
   readonly last: number;
 }
 
-/** The passages as the model holds them, with the lists held beside them (hshandbook R2; absent is none). */
+/** The passages as the model holds them, with the lists held beside them (hshandbook R2; absent is none) and the single verses, each a one-verse span (hsminlist; absent is none). */
 export type Held =
   | {
       readonly tag: 'Read';
       readonly passages: ReadonlyArray<Span>;
       readonly lists?: ReadonlyArray<string>;
+      readonly singles?: ReadonlyArray<Span>;
     }
   | { readonly tag: 'Unread' };
 
@@ -159,7 +163,7 @@ export const spanRef = (span: Span) => {
   return `${start}-${span.last}`;
 };
 
-/** P3: the view a launch reads from the stored text (`undefined` for no key) after `failedReads` failed `get`s. */
+/** P3: the passages a launch reads from the stored text (`undefined` for no key) after `failedReads` failed `get`s, before hsminlist's upgrade (`migrateRule`). */
 export const readRule = (corpus: Corpus, raw: string | undefined, failedReads: number): Held => {
   if (failedReads >= ATTEMPTS) return { tag: 'Unread' };
   if (raw === undefined) return { tag: 'Read', passages: [] };
@@ -181,6 +185,43 @@ export const readRule = (corpus: Corpus, raw: string | undefined, failedReads: n
   return { tag: 'Read', passages };
 };
 
+export type JoinOutcome = 'Added' | 'Held' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
+
+/** hsminlist: a join's answer and the view after it, `refused` when its write fails: each verse of `span` not single already goes after the single verses held; every one single already is `Held`, writing nothing; past 20 single verses is `Full`. */
+export const joinRule = (
+  corpus: Corpus,
+  held: Held,
+  span: Span,
+  refused: boolean,
+): { outcome: JoinOutcome; held: Held } => {
+  if (held.tag === 'Unread') return { outcome: 'Unread', held };
+  if (!addable(corpus, span)) return { outcome: 'Invalid', held };
+  const singles = [...(held.singles ?? [])];
+  const known = new Set(singles.map(spanRef));
+  for (let verse = span.first; verse <= span.last; verse++) {
+    const one = { book: span.book, chapter: span.chapter, first: verse, last: verse };
+    if (!known.has(spanRef(one))) singles.push(one);
+  }
+  if (singles.length === (held.singles ?? []).length) return { outcome: 'Held', held };
+  if (singles.length > 20) return { outcome: 'Full', held };
+  if (refused) return { outcome: 'Failed', held };
+  return { outcome: 'Added', held: { ...held, singles } };
+};
+
+/** hsminlist's upgrade at a launch: each stored passage of one verse moves, in stored order, after the single verses held, each verse once; `moved` is how many passages moved (none: nothing is written). */
+export const migrateRule = (held: Held): { held: Held; moved: number } => {
+  if (held.tag === 'Unread') return { held, moved: 0 };
+  const singles: Span[] = [];
+  const add = (span: Span) => {
+    if (!singles.some((each) => storedText([each]) === storedText([span]))) singles.push(span);
+  };
+  for (const span of held.singles ?? []) add(span);
+  const moved = held.passages.filter((span) => span.first === span.last);
+  for (const span of moved) add(span);
+  const passages = held.passages.filter((span) => span.first !== span.last);
+  return { held: { ...held, passages, singles }, moved: moved.length };
+};
+
 /** The stored text the model expects for `passages`: the four fields of each, in order. */
 export const storedText = (passages: ReadonlyArray<Span>) =>
   JSON.stringify(
@@ -192,10 +233,13 @@ export const storedText = (passages: ReadonlyArray<Span>) =>
     })),
   );
 
-export type AddOutcome = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
+export type AddOutcome = 'Added' | 'Full' | 'Invalid' | 'Short' | 'Unread' | 'Failed';
 export type RemoveOutcome = 'Removed' | 'Absent' | 'Unread' | 'Failed';
 
-/** P4, with hshandbook R3: an add's answer and the view after it, `refused` when its write fails; the cap counts the lists held too, and they stay as held. */
+/** hsminlist: a list the reader makes holds at least 3 verses. */
+export const LEAST_VERSES = 3;
+
+/** P4, with hshandbook R3 and hsminlist: an add's answer and the view after it, `refused` when its write fails; a span of fewer than 3 verses is `Short`; the cap counts the lists held too (never the single verses), and they stay as held. */
 export const addRule = (
   corpus: Corpus,
   held: Held,
@@ -204,6 +248,7 @@ export const addRule = (
 ): { outcome: AddOutcome; held: Held } => {
   if (held.tag === 'Unread') return { outcome: 'Unread', held };
   if (!addable(corpus, span)) return { outcome: 'Invalid', held };
+  if (span.last - span.first + 1 < LEAST_VERSES) return { outcome: 'Short', held };
   if (countHeld(held) >= CAP_PASSAGES) return { outcome: 'Full', held };
   if (refused) return { outcome: 'Failed', held };
   const copy = { book: span.book, chapter: span.chapter, first: span.first, last: span.last };

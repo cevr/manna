@@ -34,17 +34,16 @@ describe('the field from Today', () => {
 
     const first = await app.field();
     expect(first).toEqual(wantField());
-    expect([first.sown, first.harvest, first.rows.map((row) => row.title)]).toEqual([
+    expect([first.sown, first.harvest, first.rows, app.captions()]).toEqual([
       '2 days sown',
       '0 verses at full corn',
-      [passage.reference, 'Made 1:1', 'Made 1:1'],
+      [],
+      [],
     ]);
-    expect(first.rows[0]?.plants).toEqual([
-      { label: `${passage.reference}, not planted`, drawn: 'soil', shown: '' },
-    ]);
-    expect([first.rows.map((row) => row.images), app.captions()]).toEqual([
-      [0, 0, 0],
-      ['1 verse · 1 ready today', '1 verse · 1 planted', '1 verse · 1 planted'],
+    expect(first.singles).toEqual([
+      { label: `${passage.reference}, not planted`, drawn: 'soil', shown: passage.reference },
+      { label: 'Made 1:1, seed', drawn: 'sown', shown: 'Made 1:1' },
+      { label: 'Made 1:1 , seed', drawn: 'sown', shown: 'Made 1:1' },
     ]);
     await app.back();
     expect(app.stage()).toBe('Stage: not planted');
@@ -57,7 +56,7 @@ describe('the field from Today', () => {
     await app.say();
     expect(app.stage()).toBe('Stage: blade');
     const left = await app.field();
-    expect(left.rows[0]?.plants[0]?.label).toBe(`${passage.reference}, seed`);
+    expect(left.singles[0]?.label).toBe(`${passage.reference}, seed`);
     expect(left).toEqual(wantField());
     await app.back();
     expect(app.stage()).toBe('Stage: seed');
@@ -69,7 +68,7 @@ describe('the field from Today', () => {
     await app.tap('Next');
     expect(await app.until(() => app.frames.end > 0)).toBe(true);
     const again = await app.field();
-    expect(again.rows[0]?.plants[0]?.label).toBe(`${passage.reference}, seed`);
+    expect(again.singles[0]?.label).toBe(`${passage.reference}, seed`);
     expect(again).toEqual(wantField());
     expect([app.frames.listening > 0, app.frames.end > 0, app.faults]).toEqual([true, true, []]);
     expect(await app.leave()).toEqual([]);

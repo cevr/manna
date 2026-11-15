@@ -11,8 +11,9 @@
  *
  * The device holds the promise planted two days back, Psalms 46:1-3 held
  * with its first verse planted, the Handbook list Smyrna held with
- * Revelation 2:10 planted, the Fear collection taught, and Genesis 1:1
- * planted on its own. Its launch lands on home. Commands, by the screen the
+ * Revelation 2:10 planted at the launch (so nothing of it is due), the Fear collection taught, and Genesis 1:1
+ * planted on its own; the promise and Genesis 1:1 are single verses
+ * (hsminlist), with no page to open. Its launch lands on home. Commands, by the screen the
  * model holds: on home, a list's `Open <title>`, or a return to the
  * foreground; on a list's page, `Your field`, `Practice this list`, a row's
  * tap, a return to the foreground, Say it starting to listen (Today's press
@@ -85,7 +86,7 @@ const pendingOnPage = (host: Element): string[] => {
 };
 
 /** The furrows the device shows at launch, by title. */
-const TITLES = [passage.reference, 'Psalms 46:1-3', 'Protection & Fear', 'Smyrna', 'Genesis 1:1'];
+const TITLES = ['Psalms 46:1-3', 'Smyrna', 'Protection & Fear'];
 
 /** The lists the reader holds, by title. */
 const HELD = new Set(['Psalms 46:1-3', 'Smyrna']);
@@ -101,7 +102,7 @@ export const walkList = async (seed: number, steps: number) => {
   const device = rootDevice([
     recordOf(passage.reference, START - 2 * DAY),
     recordOf('Psalms 46:1', START - DAY),
-    recordOf('Revelation 2:10', START - DAY),
+    recordOf('Revelation 2:10', START),
     recordOf('Genesis 1:1', START - DAY),
     [KEY, storedText([{ book: 19, chapter: 46, first: 1, last: 3 }])],
     [LISTS, JSON.stringify(['bhb-1816'])],

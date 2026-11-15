@@ -9,7 +9,7 @@
       "relaunch": false,
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=Open Isaiah 41:10" },
+        { "shows": "id=singles" },
         { "hides": "label=Remove Isaiah 41:10" }
       ],
       "receipt": "snapshot"
