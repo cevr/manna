@@ -21,6 +21,8 @@ export type Place =
   | { readonly screen: 'list' }
   | { readonly screen: 'recent' }
   | { readonly screen: 'player' }
+  | { readonly screen: 'settings' }
+  | { readonly screen: 'about' }
   | { readonly screen: 'hymn'; readonly number: number }
   | { readonly screen: 'notfound' };
 
@@ -29,6 +31,8 @@ export const ROUTE_OF: Readonly<Record<Place['screen'], string>> = {
   list: 'list',
   recent: 'recent',
   player: 'player',
+  settings: 'settings',
+  about: 'about',
   hymn: 'hymn',
   notfound: 'notfound',
 };
@@ -73,6 +77,8 @@ export const placeOf = (book: Book, location: string): Place => {
   if (joined === '') return { screen: 'list' };
   if (joined === 'recent') return { screen: 'recent' };
   if (joined === 'player') return { screen: 'player' };
+  if (joined === 'settings') return { screen: 'settings' };
+  if (joined === 'settings/about') return { screen: 'about' };
   const [first, second, ...rest] = segments;
   if (first !== 'hymns' || second === undefined || second === '' || rest.length > 0)
     return { screen: 'notfound' };

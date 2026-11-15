@@ -30,9 +30,11 @@ describe("the site's pages", () => {
       .map((file) => placeOf(book, `/${file.replace(/(^|\/)index\.html$/u, '')}`).screen);
     expect(opened.filter((screen) => screen === 'notfound')).toEqual([]);
     expect(opened.filter((screen) => screen === 'hymn')).toHaveLength(book.hymns.length);
-    expect(['list', 'recent', 'player'].every((screen) => opened.includes(screen as 'list'))).toBe(
-      true,
-    );
+    expect(
+      ['list', 'recent', 'player', 'settings', 'about'].every((screen) =>
+        opened.includes(screen as 'list'),
+      ),
+    ).toBe(true);
     expect(pages.has('404.html')).toBe(true);
   });
 

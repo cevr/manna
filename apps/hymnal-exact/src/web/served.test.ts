@@ -31,7 +31,14 @@ const FILES = new Set([
   '.gen/csp.json',
 ]);
 
-const PAGES = ['/', '/recent', '/player', ...hymnPages(book).map((n) => `/hymns/${n}`)];
+const PAGES = [
+  '/',
+  '/recent',
+  '/player',
+  '/settings',
+  '/settings/about',
+  ...hymnPages(book).map((n) => `/hymns/${n}`),
+];
 const PIECES = [
   'hymns',
   '100',

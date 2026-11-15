@@ -35,7 +35,7 @@ const byNumber = (number: number): Place => (forms.has(String(number)) ? hymn(nu
 const escaped = (text: string) =>
   [...text].map((char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`).join('');
 
-const ARBITRARY = 'hymns/recentplayer0123456789%2e.?#/\\ -+aZ\t\n\u0000é';
+const ARBITRARY = 'hymns/recentplayersettingsabout0123456789%2e.?#/\\ -+aZ\t\n\u0000é';
 
 /** A generated address and the screen it must open. */
 const cases = (seed: number) => {
@@ -63,6 +63,13 @@ const cases = (seed: number) => {
     ['/recent', { screen: 'recent' }],
     ['/recent?x=1#y', { screen: 'recent' }],
     ['/player', { screen: 'player' }],
+    ['/settings', { screen: 'settings' }],
+    ['/settings/about', { screen: 'about' }],
+    ['/settings/about?x=1#y', { screen: 'about' }],
+    ['/settings/', NOT_FOUND],
+    ['/settings/about/', NOT_FOUND],
+    ['/about', NOT_FOUND],
+    ['/Settings', NOT_FOUND],
     ['/recent/', NOT_FOUND],
     ['/Recent', NOT_FOUND],
     ['/rec%65nt', NOT_FOUND],

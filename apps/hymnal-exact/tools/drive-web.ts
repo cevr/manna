@@ -260,6 +260,10 @@ const addresses = async (page: Page) => {
     '/Recent',
     '/hymns/+1',
     '/hymns/1.0',
+    '/settings',
+    '/settings/about?x=1',
+    '/settings/',
+    '/Settings/about',
   ];
   const disagree: Array<unknown> = [];
   for (const path of odd) {
@@ -273,7 +277,9 @@ const addresses = async (page: Page) => {
           ? `document.querySelector('[data-testid="notfound"]')`
           : place.screen === 'recent'
             ? `document.title === 'Recent'`
-            : `document.title === 'Hymns'`;
+            : place.screen === 'settings' || place.screen === 'about'
+              ? `document.querySelector('[data-testid="${place.screen}"]')`
+              : `document.title === 'Hymns'`;
     if (!(await waitFor(page, want, 5000)))
       disagree.push({ path, place, shown: await screenOf(page) });
   }
@@ -329,6 +335,16 @@ const noScript = async (page: Page) => {
     "with script off, /hymns/100's title and description name the hymn (its body is the empty shell)",
     hymn.title === titleOf(100) && hymn.description.startsWith('Hymn 100 of the hymnal'),
     { hymn, hymnText },
+  );
+  const sheets: Array<{ title: string; description: string }> = [];
+  for (const path of ['/settings', '/settings/about']) {
+    await open(page, path, false);
+    sheets.push(await page.evaluate<{ title: string; description: string }>(head));
+  }
+  check(
+    "with script off, /settings's and /settings/about's titles name their screens",
+    sheets[0]?.title === 'Settings' && sheets[1]?.title === 'About',
+    sheets,
   );
   await open(page, '/hymns/696', false);
   const missing = await page.evaluate<{ title: string; description: string }>(head);

@@ -50,6 +50,17 @@ export const headsOf = (book: Book): ReadonlyArray<readonly [string, Head]> => {
       'player/index.html',
       { title: 'Now Playing', description: 'The hymn playing, and its stanzas.' },
     ],
+    [
+      'settings/index.html',
+      { title: 'Settings', description: "The hymnal's appearance and settings." },
+    ],
+    [
+      'settings/about/index.html',
+      {
+        title: 'About',
+        description: 'Who made the sounds the recordings are played on, and their licences.',
+      },
+    ],
     ['404.html', { title: 'No Such Page', description: 'The hymnal has no page at this address.' }],
     ...hymnPages(book).map((n) => {
       const hymn = byNumber.get(n);
