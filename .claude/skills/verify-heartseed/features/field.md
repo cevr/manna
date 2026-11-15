@@ -21,9 +21,9 @@ stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, never an old piece, so
 Again takes a verse out). After them the label `Lists`, then one furrow
-per row (with the legend under them, then `Add a list`, `id=add-list`,
-which opens the Add a list sheet over home, `home.md`, or the limit line,
-just above `Settings`), each with its icon, title and
+per row (then `Add a list`, `id=add-list`, which opens the Add a list
+sheet over home, `home.md`, or the limit line, just above `Settings`),
+each with its title and no icon, and its
 caption (`<n> verse(s) · <r> ready today`, else `<n> verse(s) · <p>
 planted`, else `<n> verse(s) to learn`): the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
@@ -35,12 +35,13 @@ plants are old pieces shows `not planted`, and a removed passage's old
 pieces make one row for their verse (`phrase.md`). Each plant is one button, labelled
 `<reference>, <stage>` (`seed`, `blade`, `ear`, `full corn` or
 `not planted`), then `, ready today` when a plan item not done is on it,
-its gold dot and drawing hidden inside it, no number under it; a tap
+its gold dot and its dash (`ink` once planted, `soil` before; no stage
+image: its list's page and Today draw the stage) hidden inside it, no
+number under it; a tap
 chooses its verse (`home.md`). Each furrow's title is the button `Open
 <title>`, which opens the list's own page (`list.md`); home holds no
 `Remove`: a held passage's (`passage.md`) and a Handbook list's
-(`handbook.md`) lie on its page. A legend of the four stages and the caption `Mark 4:28`,
-then the rows `Settings` (`home.md`: the Settings sheet, with the
+(`handbook.md`) lie on its page. The rows `Settings` (`home.md`: the Settings sheet, with the
 `Minutes` radios, `Voice`, the appearance and `About`, which opens the
 About screen, `about.md`) and `How Heartseed works` (the welcome
 replayed, `home.md`'s `home-how`) close the

@@ -211,8 +211,8 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    play` line.
 7. `first/first-tips`: the journey's `shows` hold `id=tip-1` and
    `id=tip-2`; the receipt holds one `Got it`. `first/first-tips-foot`,
-   after the scroll down to `id=tip-3` → the text `Mark 4:28`, then the
-   button `Add a list`, then tip 3's words `Add a psalm, a passage or a
+   after the scroll down to `id=tip-3` → the last furrow's plants, then
+   the button `Add a list` (no text `Mark 4:28`), then tip 3's words `Add a psalm, a passage or a
    set of promises when you want more.`, then `Settings`, and `Got it`
    still.
    `first/first-home`: no `Got it`; on the Today card

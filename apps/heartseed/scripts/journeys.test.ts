@@ -860,6 +860,19 @@ describe('verify-heartseed journeys', () => {
         { name: 'first-sheet', action: 'tap', target: 'id=add-list', receipt: 'none' },
       ]);
       expect(footFaults(footed)).toEqual(['first/first-foot leaves home at its foot']);
+      const backed = yield* mutant((all) => [
+        ...all,
+        scrolling('first-foot', 'id=add-list', 'down'),
+        { name: 'first-list', action: 'tap', target: 'label=Open Isaiah 41:10', receipt: 'none' },
+        { name: 'first-back', action: 'tap', target: 'label=Your field', receipt: 'none' },
+      ]);
+      expect(footFaults(backed)).toEqual(['first/first-foot leaves home at its foot']);
+      const relaunched = yield* mutant((all) => [
+        ...all,
+        scrolling('first-foot', 'id=add-list', 'down'),
+        { name: 'first-again', action: 'relaunch', receipt: 'none' },
+      ]);
+      expect(footFaults(relaunched)).toEqual([]);
       const limited = yield* mutant((all) => [...all, scrolling('first-line', 'id=limit', 'down')]);
       expect(footFaults(limited)).toEqual(['first/first-line leaves home at its foot']);
       const sheeted = yield* mutant((all) => [

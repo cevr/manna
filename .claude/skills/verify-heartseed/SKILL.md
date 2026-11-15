@@ -178,7 +178,7 @@ button, `Start` or `Practice anyway`;
 in its scroll view, in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready; one tap opens Today on that verse, whole), under the
-furrows and the legend `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
+furrows `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
 works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=Settings" down`; the
 second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
@@ -409,8 +409,8 @@ not yet moved to journeys to its `LEGACY` entry. The features:
   lists, the shelves Add a list will offer, and a start at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
   over the live garden, the row `home-icons` (the home's 24 icon PNGs
-  loaded on the device), the row `home-probe-motion` (the motion plan
-  over the live furrows), and the field in its layout: the greeting and
+  loaded on the device), the field kept at its scroll offset on every way
+  back (`home-scroll-kept`), and the field in its layout: the greeting and
   the Today card with one `Start` or `Practice anyway` fixed on top,
   furrows of plant buttons with their captions and no numbers, a choice
   with `Practice` or `Learn`, `Add a list` under `Lists`, the gold dot on

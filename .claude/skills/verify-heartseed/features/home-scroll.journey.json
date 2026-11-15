@@ -1,0 +1,84 @@
+{
+  "feature": "home-scroll",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home-scroll-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-scroll-down",
+      "action": "scroll",
+      "target": "label=How Heartseed works",
+      "direction": "down",
+      "expect": [
+        { "shows": "label=How Heartseed works" },
+        { "shows": "label=Open Protection & Fear" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-scroll-list",
+      "action": "tap",
+      "target": "label=Open Protection & Fear",
+      "expect": [{ "shows": "label=Practice this list" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-scroll-list-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Open Protection & Fear" },
+        { "shows": "label=How Heartseed works" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-scroll-today",
+      "action": "tap",
+      "target": "label=Practice anyway",
+      "expect": [{ "shows": "id=session" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-scroll-today-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-scroll-sheet",
+      "action": "tap",
+      "target": "label=Settings",
+      "expect": [{ "shows": "label=About" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-scroll-about",
+      "action": "tap",
+      "target": "label=About",
+      "expect": [{ "shows": "label=Licences" }],
+      "receipt": "none"
+    },
+    {
+      "name": "home-scroll-about-back",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "home-scroll-relaunch",
+      "action": "relaunch",
+      "expect": [{ "shows": "id=today-card" }, { "hides": "label=How Heartseed works" }],
+      "receipt": "snapshot"
+    }
+  ]
+}
