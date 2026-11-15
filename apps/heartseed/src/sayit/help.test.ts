@@ -8,13 +8,15 @@
  * `Show all` moves the verse back a stage through Move back's own step back
  * (`Backs.back`), written at `Next` at the instant of the `Show all`, before
  * the try, and caps the try so the stage rule leaves the verse on the stage
- * below (Again from a blade and at a seed, Hard from an ear). Leaving before
+ * below (Again from a blade and at a seed, Hard from an ear and full corn):
+ * one stage in all from each stage, a seed staying a seed. Leaving before
  * `Next` (`leaveToday`) writes nothing and lets the help go.
  *
  * It catches a peek or a `Show all` that leaves the try's grade free, a
  * grade above the cap taken by a tap, a step back written before `Next`,
  * after the try (where it would fold after the recall), or not at all, a
- * cap that lets the try grow the verse straight back, and help that
+ * cap that lets the try grow the verse straight back, a try that moves it a
+ * second stage down (full corn to a blade), and help that
  * outlives a leave. It misses what Today draws, which
  * `src/garden/peek-today.test.tsx` owns.
  */
@@ -54,6 +56,7 @@ const HISTORIES = {
   seed: [good(START - 3 * DAY)],
   blade: [good(START - 3 * DAY), good(START - 2 * DAY)],
   ear: [good(START - 3 * DAY), good(START - 2 * DAY), good(START - 2 * DAY + 10 * MINUTE)],
+  'full corn': [0, 1, 3, 8, 20, 50, 120].map((day) => good(START - 200 * DAY + day * DAY)),
 } as const;
 
 /** The run's item of the passage, as Today holds it at a press. */
@@ -222,6 +225,25 @@ describe('help taken before a try', () => {
         ]).toEqual([0, 1, Option.some('seed')]);
       }),
     ));
+
+  for (const [from, to] of [
+    ['full corn', 'ear'],
+    ['ear', 'blade'],
+    ['blade', 'seed'],
+    ['seed', 'seed'],
+  ] as const) {
+    it(`costs ${from} one stage in all at Show all then Next: it ends ${to}, the try taken at its suggestion`, () =>
+      run(
+        Effect.gen(function* () {
+          const app = yield* launch(from);
+          expect(yield* app.stage).toEqual(Option.some(from));
+          yield* app.showAll;
+          yield* app.say;
+          yield* app.next;
+          expect(yield* app.stage).toEqual(Option.some(to));
+        }),
+      ));
+  }
 
   it('records nothing when Today is left after a peek and Show all, and lets the help go: the next try is free', () =>
     run(
