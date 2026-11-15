@@ -10,6 +10,7 @@
         "test:garden-c",
         "test:garden-bytes"
       ],
+      "env": ["HEARTSEED_GARDEN_DRIVE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
