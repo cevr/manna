@@ -27,6 +27,7 @@ import { join } from 'node:path';
 import { makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
+import { appFile, brandOf } from '../src/look/design.testing.ts';
 import { pixelAt } from './pixel.ts';
 
 const host = process.argv[2] ?? 'web';
@@ -87,15 +88,24 @@ const styleOf = (reply: unknown): Style =>
 /** The scheme a layout reply's node is drawn in. */
 const schemeOf = (reply: unknown) => styleOf(reply).color_scheme?.value ?? '';
 
+const brand = brandOf(appFile('app.tamber'));
+
+/** A role a native host names (`CanvasText`), as the brand sets it in `scheme`; the name itself where the brand does not. */
+const named = (name: string, scheme: string) => {
+  const pair = brand.colours.get(brand.names.get(name) ?? name);
+  if (!pair) return name;
+  return scheme === 'dark' ? pair.dark : pair.light;
+};
+
 /**
  * The colour a layout reply names for `property` (`text_color`): the web's
- * computed `rgb(…)`, or a native host's `light-dark(…)` read in the node's
- * scheme; "" where it names none.
+ * computed `rgb(…)`, or a native host's `light-dark(…)` or role read in the
+ * node's scheme; "" where it names none.
  */
 const colourOf = (reply: unknown, property: string): string => {
   const value = styleOf(reply)[property]?.value ?? '';
   const pair = /^light-dark\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$/u.exec(value);
-  if (!pair) return value;
+  if (!pair) return named(value, schemeOf(reply));
   return (schemeOf(reply) === 'dark' ? pair[2] : pair[1]) ?? '';
 };
 

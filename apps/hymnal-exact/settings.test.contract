@@ -30,10 +30,15 @@ test "Dark at once, and kept."
   expect state settingsLook == "dark"
   expect state settingsLooks.2 .chosen == true
   expect state settingsLooks.0 .chosen == false
+  tap "settings-done"
+  clock settle
   reload
   clock data
   clock settle
   expect state settingsLook == "dark"
+  tap "gear"
+  clock settle
+  clock data
   expect state settingsLooks.2 .chosen == true
   tap "appearance-system"
   clock settle

@@ -37,7 +37,7 @@ theme
   -exact-background = ground
   -exact-grouped-background = ground
   -exact-secondary-background = bar
-  -exact-secondary-grouped-background = panel
+  -exact-secondary-grouped-background = ground
   -exact-label = ink
   -exact-secondary-label = muted
   -exact-separator = line
