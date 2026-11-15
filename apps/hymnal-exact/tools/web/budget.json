@@ -1,15 +1,15 @@
 {
-  "measuredAtLoad": 4.8,
+  "measuredAtLoad": 4,
   "/ cold": {
-    "bytes": 369494,
-    "html": 12551,
-    "script": 356636,
+    "bytes": 385187,
+    "html": 13836,
+    "script": 371044,
     "css": 0,
     "data": 307,
     "wasm": 0,
-    "rowMs": 87,
-    "readyMs": 87,
-    "loadMs": 92
+    "rowMs": 109,
+    "readyMs": 109,
+    "loadMs": 121
   },
   "/ warm": {
     "bytes": 724,
@@ -18,20 +18,20 @@
     "css": 0,
     "data": 172,
     "wasm": 0,
-    "rowMs": 54,
-    "readyMs": 54,
-    "loadMs": 59
+    "rowMs": 79,
+    "readyMs": 79,
+    "loadMs": 90
   },
   "/hymns/100 cold": {
-    "bytes": 369506,
-    "html": 12563,
-    "script": 356636,
+    "bytes": 385162,
+    "html": 13811,
+    "script": 371044,
     "css": 0,
     "data": 307,
     "wasm": 0,
-    "wordsMs": 113,
-    "readyMs": 113,
-    "loadMs": 122
+    "wordsMs": 106,
+    "readyMs": 106,
+    "loadMs": 119
   },
   "/hymns/100 warm": {
     "bytes": 724,
@@ -40,8 +40,8 @@
     "css": 0,
     "data": 172,
     "wasm": 0,
-    "wordsMs": 75,
-    "readyMs": 75,
-    "loadMs": 83
+    "wordsMs": 94,
+    "readyMs": 94,
+    "loadMs": 104
   }
 }

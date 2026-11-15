@@ -20,7 +20,7 @@
  * - `measure`: the bytes and times of `/` and `/hymns/100`, cold (cache
  *   emptied) and warm, five each, medians against `tools/web/budget.json`
  *   (bytes always; times only at a load of 5 or less, each allowed a
- *   tenth or 30 ms over, whichever is more); `--write-budget`
+ *   tenth or 20 ms over, whichever is more); `--write-budget`
  *   writes it from this run, and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
  * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
@@ -59,8 +59,8 @@ const PORT = server === 'exact' ? 8778 : checkoutPort();
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
 const budgetFile = join(import.meta.dir, 'web/budget.json');
-/** A time's least allowance over its budget: a warm load's 50 to 90 ms moves by more than a tenth between runs on a loaded host. */
-const TIME_SLACK_MS = 30;
+/** A time's least allowance over its budget: the spread of a median of five at a load of 5 or less, 9 to 20 ms over four such runs. */
+const TIME_SLACK_MS = 20;
 const report: Record<string, unknown> = { server, origin };
 
 const hymns = readWords();
