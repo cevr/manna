@@ -42,8 +42,8 @@ describe('the field from Today', () => {
     expect(first.rows[0]?.plants).toEqual([
       { label: `${passage.reference}, not planted`, drawn: 'soil', shown: '' },
     ]);
-    expect([first.rows.map((row) => row.icon), app.captions()]).toEqual([
-      ['bow', 'scroll', 'scroll'],
+    expect([first.rows.map((row) => row.images), app.captions()]).toEqual([
+      [0, 0, 0],
       ['1 verse · 1 ready today', '1 verse · 1 planted', '1 verse · 1 planted'],
     ]);
     await app.back();

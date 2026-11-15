@@ -14,7 +14,7 @@ import { describe, expect, it } from 'bun:test';
 import { FIELD_PLACES, walkFieldScreens } from '../test/screens-walk';
 
 describe('every screen but Today and the first minute, in dark', () => {
-  it('holds the field (every stage, a remove asked and pending) and About to the oracle', async () => {
+  it('holds the field (sown and bare plants, a remove asked and pending) and About to the oracle', async () => {
     const { report, reached, pressed } = await walkFieldScreens('dark');
     expect({ report, reached, pressed: pressed > 10 }).toEqual({
       report: [],

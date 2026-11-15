@@ -2,7 +2,6 @@ import { Option } from 'effect';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import Animated, {
   Easing,
-  FadeInDown,
   Keyframe,
   ReduceMotion,
   useAnimatedStyle,
@@ -13,38 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { MOTION, type PlantMotion } from '../home/motion';
-
-/** One furrow icon enters without moving its title or controls; no wrapper is added at rest. */
-export function EnteringIcon({
-  delay,
-  children,
-}: {
-  readonly delay: Option.Option<number>;
-  readonly children: ReactNode;
-}) {
-  return Option.match(delay, {
-    onNone: () => children,
-    onSome: (ms) => <IconEntrance delay={ms}>{children}</IconEntrance>,
-  });
-}
-
-function IconEntrance({
-  delay,
-  children,
-}: {
-  readonly delay: number;
-  readonly children: ReactNode;
-}) {
-  const entering = useMemo(
-    () => FadeInDown.delay(delay).duration(MOTION.iconDuration).reduceMotion(ReduceMotion.System),
-    [delay],
-  );
-  return (
-    <Animated.View aria-hidden entering={entering}>
-      {children}
-    </Animated.View>
-  );
-}
 
 /** A spring builder belongs to its own delay: Keyframe.delay mutates its instance. */
 function Spring({ delay, children }: { readonly delay: number; readonly children: ReactNode }) {

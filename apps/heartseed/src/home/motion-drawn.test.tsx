@@ -1,7 +1,15 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, eslint/no-await-in-loop -- the drawing seam mounts generated fields through React's promise-based act in happy-dom, yields to Reanimated's animation frame, and reads DOM absence as null. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, effect/noTernary, eslint/no-await-in-loop -- the drawing seam mounts generated fields through React's promise-based act in happy-dom, yields to Reanimated's animation frame, presses through react-native-web's keyboard press, and reads DOM absence as null. */
+
+/**
+ * Home's furrows as drawn, over generated fields in light and dark, with
+ * Reduce Motion off and on: a row holds no image (no icon beside its
+ * title), each plant is one button named as its furrow names it, holding a
+ * gold dot exactly when ready over one dash, `ink` once planted and `soil`
+ * before, and no image or text; nothing moves; and each plant and each
+ * `Open <title>` shows the `hearing` fill while pressed and none after.
+ */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { View } from 'react-native';
@@ -11,56 +19,26 @@ import { Furrows } from '../field/plot';
 import { STAGES } from '../garden';
 import { captionOf, HOME_ICONS, type Furrow } from '../home';
 import { below, pickOf, random } from '../test/garden-model';
-import { setSystem } from '../test/look';
-import { entryOf, moving, swayOf, under } from '../test/motion';
-import { motionFaults } from '../test/motion-rule';
+import { computed, setSystem } from '../test/look';
+import { moving, under } from '../test/motion';
 import { theme, type Scheme } from '../theme';
-import { motionOf } from './motion';
 
-const CASES = 12;
+const CASES = 10;
 const STAGES_DRAWN = ['not planted', ...STAGES] as const;
 const by = (top: Element, id: string) => [...top.querySelectorAll(`[data-testid="${id}"]`)];
-const delayOf = (delay: Option.Option<number>) =>
-  Option.match(delay, { onNone: () => null, onSome: (ms) => ms });
 
-const stageAt = (next: () => number, turn: number, place: number): PlantStage => {
-  if (turn === 0) return 'full corn';
-  if (turn === 1) {
-    if (place < 28) return 'full corn';
-    return 'seed';
-  }
-  if (turn === 2) return 'not planted';
-  if (turn === 4) {
-    if (place >= 60) return 'full corn';
-    return 'seed';
-  }
-  return pickOf(next, STAGES_DRAWN);
-};
-
-/** Small generated fields, plus long, capped and bare fields whose drawings exercise each boundary. */
+/** Small generated fields, plus a long bare one and an empty one. */
 const fieldAt = (next: () => number, turn: number): readonly Furrow[] => {
   if (turn === 3) return [];
   let rows = 1 + below(next, 3);
-  let places = 1 + below(next, 4);
-  if (turn === 0) {
-    rows = 16;
-    places = 1;
-  }
-  if (turn === 1) {
-    rows = 3;
-    places = 24;
-  }
+  let places = 1 + below(next, 5);
   if (turn === 2) {
     rows = 2;
-    places = 3;
-  }
-  if (turn === 4) {
-    rows = 3;
-    places = 21;
+    places = 14;
   }
   return Array.from({ length: rows }, (_, row): Furrow => {
     const plants = Array.from({ length: places }, (_, place) => {
-      const stage = stageAt(next, turn, row * places + place);
+      const stage: PlantStage = turn === 2 ? 'not planted' : pickOf(next, STAGES_DRAWN);
       const reference = `Psalms ${row + 1}:${place + 1}`;
       const ready = below(next, 2) === 0;
       let label = `${reference}, ${stage}`;
@@ -79,119 +57,120 @@ const fieldAt = (next: () => number, turn: number): readonly Furrow[] => {
   });
 };
 
-/** The document's icon/plant motion and names, read below each row and plant button. */
-const seen = (host: Element) =>
+const nextFrame = () =>
+  act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+
+const hidden = (node: Element) => node.closest('[aria-hidden="true"]') !== null;
+const fill = (node: Element) => getComputedStyle(node).backgroundColor;
+
+/** Each row as drawn: its images, its title's button, and each plant's name, role, dot, dash and what else it holds. */
+const seen = (host: Element, scheme: Scheme) =>
   by(host, 'row').map((row) => ({
-    icon: entryOf(row.querySelector('[data-testid="furrow-icon"]'), row),
+    images: row.querySelectorAll('img').length,
+    open: [...row.querySelectorAll('[role="button"]')]
+      .filter((node) => node.getAttribute('data-testid') !== 'field-plant')
+      .map((node) => node.getAttribute('aria-label')),
     plants: by(row, 'field-plant').map((plant) => {
-      const drawing = plant.querySelector('[data-testid="plant-image"],[data-testid="plant-soil"]');
+      const dashes = [
+        ...plant.querySelectorAll('[data-testid="plant-sown"],[data-testid="plant-soil"]'),
+      ];
+      const dash = dashes[0];
+      let drawn = `<${dashes.length} dashes>`;
+      if (dashes.length === 1 && dash !== undefined && hidden(dash)) {
+        if (fill(dash) === computed(theme[scheme].ink)) drawn = 'ink';
+        if (fill(dash) === computed(theme[scheme].soil)) drawn = 'soil';
+        drawn = `${dash.getAttribute('data-testid')}:${drawn}`;
+      }
       return {
         name: plant.getAttribute('aria-label'),
         role: plant.getAttribute('role'),
-        spring: entryOf(drawing, plant),
-        sway: swayOf(drawing, plant),
+        exposed: !hidden(plant),
+        dots: by(plant, 'dot').filter(hidden).length,
+        drawn,
+        extra: plant.querySelectorAll('img').length + plant.textContent.trim().length,
       };
     }),
   }));
 
-const want = (furrows: readonly Furrow[]) => {
-  const motion = motionOf(furrows);
-  return furrows.map((furrow, row) => ({
-    icon: delayOf(motion[row]?.icon ?? Option.none()),
-    plants: furrow.plants.map((plant, place) => ({
+const want = (furrows: readonly Furrow[]) =>
+  furrows.map((furrow) => ({
+    images: 0,
+    open: [`Open ${furrow.title}`],
+    plants: furrow.plants.map((plant) => ({
       name: plant.label,
       role: 'button',
-      spring: delayOf(motion[row]?.plants[place]?.spring ?? Option.none()),
-      sway: motion[row]?.plants[place]?.sway ?? false,
+      exposed: true,
+      dots: plant.ready ? 1 : 0,
+      drawn: plant.stage === 'not planted' ? 'plant-soil:soil' : 'plant-sown:ink',
+      extra: 0,
     })),
   }));
-};
 
-const nextFrame = () =>
-  act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+const key = (node: Element, type: string, name: string) =>
+  node.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: name }));
 
-/** The caps as drawn, by their literal values: nothing moves past the 14th furrow, at most 60 springs and 12 sways. */
-const expectCaps = (host: Element, turn: number) => {
-  for (const [row, node] of by(host, 'row').entries())
-    if (row >= 14)
-      expect(
-        moving(node).map((each) => each.getAttribute('style')),
-        `field ${turn} row ${row}`,
-      ).toEqual([]);
-  const plants = seen(host).flatMap((row) => row.plants);
-  expect(plants.filter((plant) => plant.spring !== null).length).toBeLessThanOrEqual(60);
-  expect(plants.filter((plant) => plant.sway).length).toBeLessThanOrEqual(12);
-};
-
-/** At rest a plant image stays directly in its button, with no redundant animation box. */
-const expectRest = (host: Element, furrows: readonly Furrow[]) => {
-  const plans = motionOf(furrows);
-  for (const [row, node] of by(host, 'row').entries()) {
-    for (const [place, plant] of by(node, 'field-plant').entries()) {
-      const plan = plans[row]?.plants[place];
-      if (plan && Option.isNone(plan.spring) && !plan.sway) {
-        expect(moving(plant).map((each) => each.getAttribute('style'))).toEqual([]);
-        const image = plant.querySelector('[data-testid="plant-image"]');
-        if (image) expect(image.parentNode === plant, `field row ${row} place ${place}`).toBe(true);
-      }
-    }
+/** Each control's fill held pressed (a space down on it), then let go (an Enter up on the page, no tap), as `<name>: <pressed>/<after>`. */
+const presses = async (host: Element, scheme: Scheme) => {
+  const out: string[] = [];
+  const named = (paint: string) => (paint === computed(theme[scheme].hearing) ? 'hearing' : 'none');
+  for (const node of host.querySelectorAll('[role="button"]')) {
+    await act(async () => key(node, 'keydown', ' '));
+    const pressed = named(fill(node));
+    await act(async () => key(document.body, 'keyup', 'Enter'));
+    out.push(`${node.getAttribute('aria-label')}: ${pressed}/${named(fill(node))}`);
   }
+  return out;
 };
 
-const checkFields = async (prefers: 'reduce' | 'no-preference') => {
+const checkFields = async () => {
   const next = random(10_204);
-  const floors = { furrows: 0, springs: 0, sways: 0, soil: 0, independent: 0 };
+  const floors = { planted: 0, bare: 0, ready: 0, empty: 0 };
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
   for (let turn = 0; turn < CASES; turn++) {
-    let scheme: Scheme = 'light';
-    if (turn % 2 === 1) scheme = 'dark';
+    const scheme: Scheme = turn % 2 === 1 ? 'dark' : 'light';
     const furrows = fieldAt(next, turn);
+    const tapped: string[] = [];
     await act(async () => {
       setSystem(scheme);
       root.render(
         <View style={{ backgroundColor: theme[scheme].ground }}>
-          <Furrows key={turn} furrows={furrows} onPlant={() => {}} onOpen={() => {}} />
+          <Furrows
+            key={turn}
+            furrows={furrows}
+            onPlant={(reference) => tapped.push(reference)}
+            onOpen={(id) => tapped.push(id)}
+          />
         </View>,
       );
     });
     await nextFrame();
-    if (prefers === 'no-preference') {
-      expect(seen(host), `field ${turn}`).toEqual(want(furrows));
-      expectRest(host, furrows);
-      expectCaps(host, turn);
-    } else {
-      expect(moving(host).map((node) => node.getAttribute('style'))).toEqual(
-        motionOf(furrows).flatMap((row) =>
-          row.plants.filter((plant) => plant.sway).map(() => 'transform: rotate(0deg);'),
-        ),
-      );
-      expect(by(host, 'field-plant').map((plant) => plant.getAttribute('aria-label'))).toEqual(
-        furrows.flatMap((row) => row.plants.map((plant) => plant.label)),
-      );
-    }
-    expect(motionFaults(host)).toEqual([]);
-    const plants = furrows.slice(0, 14).flatMap((row) => row.plants);
-    if (furrows.length > 14) floors.furrows++;
-    if (plants.filter((plant) => plant.stage !== 'not planted').length > 60) floors.springs++;
-    if (plants.filter((plant) => plant.stage === 'full corn').length > 12) floors.sways++;
-    if (plants.length > 0 && plants.every((plant) => plant.stage === 'not planted')) floors.soil++;
-    if (
-      motionOf(furrows).some((row) =>
-        row.plants.some((plant) => Option.isNone(plant.spring) && plant.sway),
-      )
-    )
-      floors.independent++;
+    expect(seen(host, scheme), `field ${turn}`).toEqual(want(furrows));
+    expect(
+      moving(host).map((node) => node.getAttribute('style')),
+      `field ${turn}`,
+    ).toEqual([]);
+    expect(await presses(host, scheme), `field ${turn}`).toEqual(
+      furrows.flatMap((furrow) => [
+        `Open ${furrow.title}: hearing/none`,
+        ...furrow.plants.map((plant) => `${plant.label}: hearing/none`),
+      ]),
+    );
+    expect(tapped, `field ${turn}`).toEqual([]);
+    const plants = furrows.flatMap((row) => row.plants);
+    if (plants.some((plant) => plant.stage !== 'not planted')) floors.planted++;
+    if (plants.some((plant) => plant.stage === 'not planted')) floors.bare++;
+    if (plants.some((plant) => plant.ready)) floors.ready++;
+    if (furrows.length === 0) floors.empty++;
   }
   await act(async () => root.unmount());
   host.remove();
   for (const [kind, count] of Object.entries(floors)) expect(count, kind).toBeGreaterThanOrEqual(1);
 };
 
-describe('home drawings follow the plan', () => {
-  it('draws generated furrows with each icon and plant at its own delay and sway, and leaves every named button still', () =>
-    under('no-preference', () => checkFields('no-preference')));
-  it('enters and hides nothing under Reduce Motion, resting every full-corn sway upright', () =>
-    under('reduce', () => checkFields('reduce')));
+describe('home furrows as drawn', () => {
+  it('draws no icon, a dot and a dash per plant, moves nothing, and fills each plant and title hearing while pressed', () =>
+    under('no-preference', checkFields));
+  it('draws the same, still, under Reduce Motion', () => under('reduce', checkFields));
 });

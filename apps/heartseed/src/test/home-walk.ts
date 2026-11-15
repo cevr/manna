@@ -172,7 +172,7 @@ class HomeWalk extends Walk {
     return {
       rows: furrows.map((furrow) => ({
         title: furrow.title.replace(/\s+/g, ' ').trim(),
-        icon: furrow.icon,
+        images: 0,
         caption: furrow.caption,
         plants: furrow.plants.map((plant) => plant.label),
       })),
@@ -198,7 +198,7 @@ class HomeWalk extends Walk {
     return {
       rows: by(host, 'row').map((row) => ({
         title: text(row.querySelector('[data-testid="row-title"]')),
-        icon: iconOf(row.querySelector('[data-testid="furrow-icon"] img')),
+        images: row.querySelectorAll('img').length,
         caption: text(row.querySelector('[data-testid="caption"]')),
         plants: by(row, 'field-plant').map(nameOf),
       })),

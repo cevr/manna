@@ -1,7 +1,7 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Array as Arr, Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
@@ -686,11 +686,14 @@ const startKindOf = (visit: VisitVerse): StartKind => {
  * Today once it is made (or failed), so Today never shows the plan's item
  * first. While `adding`, the Add a list sheet shows over it on the same
  * field, in the same place in the tree, so home's own state stays while
- * the sheet opens and closes.
+ * the sheet opens and closes. Its scroll view opens at `scrolled` and hands
+ * each offset to `onScrolled`, so the root brings home back where it was.
  */
 function FieldOf({
   adding,
   tips,
+  scrolled,
+  onScrolled,
   onToday,
   onAdd,
   onAddDone,
@@ -702,6 +705,8 @@ function FieldOf({
 }: {
   readonly adding: boolean;
   readonly tips: boolean;
+  readonly scrolled: number;
+  readonly onScrolled: (offset: number) => void;
   readonly onToday: () => void;
   readonly onAdd: () => void;
   readonly onAddDone: () => void;
@@ -740,6 +745,8 @@ function FieldOf({
             card={todayOf(known.session, known.garden, known.passages._tag === 'Unread')}
             starts={(verse) => Option.map(startOf(known.session, known.garden, verse), startKindOf)}
             tips={tips}
+            scrolled={scrolled}
+            onScrolled={onScrolled}
             onToday={onToday}
             onStart={onStart}
             onAdd={onAdd}
@@ -871,7 +878,10 @@ const screenAt = (shown: Opening): Screen => {
  * grows in home's place; and every change of the screen away from home,
  * the forced Today among them, ends the tour.
  * Which one shows is the launch's state, never stored and with no route of
- * its own, so every launch opens as above. Whenever Say it listens the
+ * its own, so every launch opens as above. Beside it the root keeps home's
+ * last scroll offset, so every way back to home (from Today, a list's page,
+ * About, the welcome's replay) shows it where the reader left it; a launch
+ * opens it at the top. Whenever Say it listens the
  * screen is Today. `Your field` lets a recital waiting for `Next` go
  * unrecorded (`leave`), so Today comes back offering `Say it` on that
  * verse; a recital that starts in the same turn as the tap on
@@ -885,6 +895,7 @@ export default function Root() {
   const [decided, setDecided] = useState<Opening>('pending');
   const [screen, setScreen] = useState<Screen>('field');
   const [list, setList] = useState('');
+  const fieldAt = useRef(0);
   useAppearanceShown(Option.getOrElse(appearance, (): AppearanceChoice => 'system'));
   if (decided === 'pending' && read !== 'pending') {
     setDecided(read);
@@ -925,6 +936,10 @@ export default function Root() {
         <FieldOf
           adding={screen === 'add'}
           tips={tour === 'tips'}
+          scrolled={fieldAt.current}
+          onScrolled={(offset) => {
+            fieldAt.current = offset;
+          }}
           onToday={toToday}
           onAdd={() => show('add')}
           onAddDone={toField}

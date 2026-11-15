@@ -17,10 +17,10 @@
  * exactly one `Your field` heading and no `Today` or `The field is tended`
  * heading, whatever its references spell; every field frame holds home A's layout rules (`homeFaults`); and
  * every field frame shows the rule's field over the records the disk holds
- * (`field-model.ts`): the rows, each with its icon (its caption is held to
+ * (`field-model.ts`): the rows, each with no image (its caption is held to
  * its own plants' names every frame), each plant's label (readiness cut
- * off: the home walk holds it to the plan), its drawing (the home icon of
- * its stage in the scheme now, or bare soil) and no text, the days sown and the harvest as
+ * off: the home walk holds it to the plan), its drawing (an `ink` dash once
+ * planted, a `soil` dash before) and no text, the days sown and the harvest as
  * seen and as exposed, and no other number or exposed image. Opening the
  * field must write nothing. Each `Next` a `renew` takes ends the run, the
  * passage its one item: Today then shows the end exactly as `tendedModel`
@@ -66,13 +66,13 @@ export const ENDS = new Map<string, number>();
 /** The tally of an end over `n` grown verses. */
 const endTally = (n: number) => (n === 0 ? 'end:none' : n === 1 ? 'end:one' : 'end:many');
 
-/** Each stage as the field draws it: the home icon of its name (full corn as `corn`), or bare soil before planting. */
+/** Each stage as the field draws it: an `ink` dash once planted, whatever the stage, or a `soil` dash before. */
 const DRAWN: Readonly<Record<ModelPlantStage, string>> = {
   'not planted': 'soil',
-  seed: 'seed',
-  blade: 'blade',
-  ear: 'ear',
-  'full corn': 'corn',
+  seed: 'sown',
+  blade: 'sown',
+  ear: 'sown',
+  'full corn': 'sown',
 };
 
 /** The stages a plant's name may end in. */
@@ -161,16 +161,23 @@ const counted = (host: Element, id: string, seen: Seen) => {
   return seen(node) && exposed ? text(node) : `<${id} not seen as exposed>`;
 };
 
-/** A plant's drawing as the reader sees it: the one hidden home icon of its stage in the scheme now, or the one hidden bare soil filled `soil`, and nothing else. */
+/** The dashes a plant may hold, by testID, and the role each is filled with. */
+const DASHES = [
+  ['plant-sown', 'sown', 'ink'],
+  ['plant-soil', 'soil', 'soil'],
+] as const;
+
+/** A plant's drawing as the reader sees it: its one hidden dash, `sown` filled `ink` or `soil` filled `soil`, and no image. */
 const drawingOf = (plant: Element) => {
-  const soils = plant.querySelectorAll('[data-testid="plant-soil"]');
-  const images = plant.querySelectorAll('img');
-  const soil = soils[0];
-  if (soils.length === 0) return oneIcon(plant);
-  if (soils.length !== 1 || soil === undefined || images.length > 0)
-    return '<not one hidden drawing>';
-  const filled = getComputedStyle(soil).backgroundColor === computed(theme[systemScheme()].soil);
-  return hidden(soil) && filled ? 'soil' : '<soil not hidden and filled soil>';
+  const dashes = plant.querySelectorAll('[data-testid="plant-sown"],[data-testid="plant-soil"]');
+  const dash = dashes[0];
+  if (dashes.length !== 1 || dash === undefined || plant.querySelectorAll('img').length > 0)
+    return '<not one hidden dash>';
+  const kind = DASHES.find(([id]) => dash.getAttribute('data-testid') === id);
+  if (kind === undefined) return '<no dash>';
+  const filled =
+    getComputedStyle(dash).backgroundColor === computed(theme[systemScheme()][kind[2]]);
+  return hidden(dash) && filled ? kind[1] : `<${kind[1]} not hidden and filled ${kind[2]}>`;
 };
 
 /** A plant as the reader gets it: its name (readiness cut off) when it is one exposed button, its drawing, and the text it shows. */
@@ -201,20 +208,18 @@ const ALLOWED = [
   .map((id) => `[data-testid="${id}"]`)
   .join(',');
 
-/** A field frame as the reader gets it: the counts, each row's title, icon and plants, and the numbers and exposed images outside them. */
+/** A field frame as the reader gets it: the counts, each row's title, images and plants, and the numbers and exposed images outside them. */
 export const readField = (host: Element) => {
   const { seen, styleOf } = fieldReader(host);
   const rows = [...host.querySelectorAll('[data-testid="row"]')].map((row) => {
     const titles = row.querySelectorAll('[data-testid="row-title"]');
     const title = titles[0];
-    const icons = row.querySelectorAll('[data-testid="furrow-icon"]');
-    const icon = icons[0];
     return {
       title:
         titles.length === 1 && title !== undefined && seen(title) && !hidden(title)
           ? text(title)
           : '<title not one seen and exposed>',
-      icon: icons.length === 1 && icon !== undefined ? oneIcon(icon) : `<${icons.length} icons>`,
+      images: row.querySelectorAll('img').length,
       plants: [...row.querySelectorAll('[data-testid="field-plant"]')].map((plant) =>
         plantRead(plant, seen),
       ),
@@ -222,10 +227,7 @@ export const readField = (host: Element) => {
   });
   const strays = [...host.querySelectorAll('*')].filter(
     (node) =>
-      (node.children.length === 0 &&
-        /\d/.test(text(node)) &&
-        text(node) !== 'Mark 4:28' &&
-        node.closest(ALLOWED) === null) ||
+      (node.children.length === 0 && /\d/.test(text(node)) && node.closest(ALLOWED) === null) ||
       ((node.tagName === 'IMG' || node.getAttribute('role') === 'img') &&
         node.closest('[data-testid="field-plant"]') === null &&
         !hidden(node)),
@@ -269,9 +271,9 @@ export const wantField = () => {
   return {
     sown: field.sown === 1 ? '1 day sown' : `${field.sown} days sown`,
     harvest: field.harvest === 1 ? '1 verse at full corn' : `${field.harvest} verses at full corn`,
-    rows: field.rows.map((row, index) => ({
+    rows: field.rows.map((row) => ({
       title: row.title.replace(/\s+/g, ' ').trim(),
-      icon: index < PASSAGES.length ? 'bow' : 'scroll',
+      images: 0,
       plants: row.plants.map((plant) => ({
         label: `${plant.reference}, ${plant.stage}`,
         drawn: DRAWN[plant.stage],
@@ -318,7 +320,7 @@ const listed = (node: Element) =>
   END_ROWS.has(nameOf(node)) ||
   (nameOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null);
 
-/** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, more than one image or one of the other scheme. */
+/** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, or any image. */
 const plantFaults = (plant: Element) => {
   const name = nameOf(plant);
   const out: string[] = [];
@@ -331,10 +333,8 @@ const plantFaults = (plant: Element) => {
   const sun = computed(theme[systemScheme()].sun);
   if (dots.some((dot) => ownStyle(dot, 'backgroundColor') !== sun))
     out.push(`a dot not filled sun on ${name}`);
-  const images = plant.querySelectorAll('img');
-  if (images.length > 1) out.push(`${images.length} images in ${name}`);
-  if (images.length === 1 && iconOf(images[0]).startsWith('<'))
-    out.push(`a plant drawn ${iconOf(images[0])}: ${name}`);
+  const images = plant.querySelectorAll('img').length;
+  if (images > 0) out.push(`${images} images in ${name}`);
   return out;
 };
 

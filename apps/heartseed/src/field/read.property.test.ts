@@ -126,22 +126,14 @@ const plantOf = (node: ReturnType<typeof factory>, n: number, p: number) => {
   plant.attrs['aria-label'] = `Isaiah 41:${10 + p}, ${stage}, ready today`;
   if ((n + p) % 11 === 10) delete plant.attrs['aria-label'];
   const soil = stage === 'not planted';
-  const drawing = node(soil ? 'plant-soil' : '', '', soil ? 'div' : 'img');
-  drawing.attrs = soil
-    ? {
-        'data-testid': 'plant-soil',
-        'aria-hidden': 'true',
-        style: `background-color:${theme.light.soil}`,
-      }
-    : {
-        'aria-hidden': 'true',
-        src: `/assets/home/${stage === 'full corn' ? 'corn' : stage}-light.png`,
-      };
+  const drawing = node(soil ? 'plant-soil' : 'plant-sown');
+  drawing.attrs['aria-hidden'] = 'true';
+  drawing.attrs['style'] = `background-color:${soil ? theme.light.soil : theme.light.ink}`;
   const number = node('', String(10 + p), 'span');
   number.attrs['aria-hidden'] = 'true';
   plant.children.push(drawing, number);
   if ((n + p) % 9 === 6) drawing.attrs['aria-hidden'] = 'false';
-  if ((n + p) % 9 === 7) drawing.attrs['src'] = '/assets/home/ear-dark.png';
+  if ((n + p) % 9 === 7) drawing.attrs['style'] = `background-color:${theme.dark.soil}`;
   if ((n + p) % 9 === 8) plant.children.push(node('', '', 'img'));
   return plant;
 };
@@ -165,11 +157,6 @@ const make = (next: () => number, rows: number): Model => {
     );
     title.attrs['class'] = 'ink';
     row.children.push(title, node('caption', '1 verse · 1 planted', 'span'));
-    const icon = node('furrow-icon');
-    const image = node('', '', 'img');
-    image.attrs = { src: '/assets/home/bow-light.png', 'aria-hidden': 'true' };
-    icon.children.push(image);
-    row.children.push(icon);
     const plants = 1 + count(next);
     for (let p = 0; p < plants; p += 1) row.children.push(plantOf(node, n, p));
     let branch = row;
@@ -470,8 +457,7 @@ const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext)
     if (other) other.attrs['id'] = 'probe';
   },
   siblings: ({ model }) => {
-    model.css =
-      '[data-testid="furrow-icon"] + [data-testid="field-plant"] span { color:transparent }';
+    model.css = '[data-testid="caption"] + [data-testid="field-plant"] span { color:transparent }';
   },
   position: ({ model }) => {
     model.css = '[data-testid="row"]:nth-child(3) [data-testid="row-title"] { color:transparent }';
@@ -488,18 +474,18 @@ const distinctions: Record<(typeof witnesses)[number], (context: WitnessContext)
     if (row && title) row.children.push({ ...title, key: 9999, attrs: { ...title.attrs } });
     const sown = all.find((node) => node.attrs['data-testid'] === 'sown');
     if (sown) sown.attrs['aria-label'] = 'different';
-    for (const node of all) if (node.tag === 'img') node.attrs['aria-hidden'] = 'false';
+    for (const node of all)
+      if (['plant-sown', 'plant-soil'].includes(node.attrs['data-testid'] ?? ''))
+        node.attrs['aria-hidden'] = 'false';
   },
   soil: ({ all }) => {
     for (const node of all)
-      if (node.tag === 'img') {
-        node.tag = 'div';
+      if (node.attrs['data-testid'] === 'plant-sown')
         node.attrs = {
           'data-testid': 'plant-soil',
           'aria-hidden': 'true',
           style: `background-color:${theme.light.soil}`,
         };
-      }
   },
   strays: ({ hostModel }) => {
     hostModel.children.push({
@@ -555,7 +541,7 @@ const assertWitness = (witness: string, host: Element, old: ReturnType<typeof re
   if (witness === 'malformed') {
     expect(got.rows[0]?.title).toBe('<title not one seen and exposed>');
     expect(got.sown).toBe('<sown not seen as exposed>');
-    expect(got.rows[0]?.icon).toBe('<an exposed icon>');
+    expect(got.rows[0]?.plants[0]?.drawn).toMatch(/^<(sown|soil) not hidden/u);
   }
 };
 

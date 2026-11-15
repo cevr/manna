@@ -8,12 +8,13 @@
  * In the scroll view: the heading `Your field` with the days sown and the
  * harvest; the label `Lists`; one furrow per row (`./plot`), whose title
  * (`Open <title>`) opens the list's own page, where a held list is
- * removed; the legend under Mark 4:28; at the Lists section's foot `Add a
- * list` while fewer than 3 passages and lists are held together, else the
- * limit line, first run included (owner, q97: "At the very bottom of
- * Lists, under the stage line, just above Settings."); then the rows
- * `Settings`, which opens the Settings sheet (`../settings/sheet`) over
- * home, and `How Heartseed works`, which replays the welcome.
+ * removed; at the Lists section's foot `Add a list` while fewer than 3
+ * passages and lists are held together, else the limit line, first run
+ * included (owner, q97: "At the very bottom of Lists, under the stage
+ * line, just above Settings."); then the rows `Settings`, which opens the Settings sheet
+ * (`../settings/sheet`) over home, and `How Heartseed works`, which
+ * replays the welcome. The scroll view opens at `scrolled` and reports
+ * each offset it scrolls to, so home comes back where the reader left it.
  *
  * While the root's tour shows the tips (`./tips`), numbered as they read
  * down the page: `tip-1` fixed under the card, `tip-2` under the first
@@ -29,8 +30,15 @@
  */
 
 import { Option } from 'effect';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState, type RefCallback } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
 import { LIMIT_LINE } from '../chooser';
@@ -43,7 +51,7 @@ import { useLook } from '../sayit/draw';
 import { Pill } from '../first/intro';
 import { SettingsSheet } from '../settings/sheet';
 import { TodayCardView, type StartKind } from './card';
-import { Control, Furrows, Icon, Legend } from './plot';
+import { Control, Furrows, Icon } from './plot';
 import { Tip } from './tips';
 
 /** What the Lists section offers at its foot with the passages read: `Add a list`, else the limit line at 3 held. Home draws it only over read passages. */
@@ -111,7 +119,9 @@ function EndRow({ label, onPress }: { readonly label: string; readonly onPress: 
  * welcome (`How Heartseed works`, and the sheet's `Show the welcome
  * again`, which closes the sheet in the same turn) and `onOpen` the way to
  * a furrow's list view, by its id. While `tips`, home shows its three tips
- * and `Got it` (`onGotIt`) fixed under the scroll view.
+ * and `Got it` (`onGotIt`) fixed under the scroll view. The scroll view
+ * opens at the offset `scrolled` had at the mount (a later value never
+ * moves it) and hands each offset it reaches to `onScrolled`.
  */
 export function FieldScreen({
   field,
@@ -121,6 +131,8 @@ export function FieldScreen({
   card,
   starts,
   tips,
+  scrolled,
+  onScrolled,
   onToday,
   onStart,
   onAdd,
@@ -136,6 +148,8 @@ export function FieldScreen({
   readonly card: TodayCard;
   readonly starts: (verse: string) => Option.Option<StartKind>;
   readonly tips: boolean;
+  readonly scrolled: number;
+  readonly onScrolled: (offset: number) => void;
   readonly onToday: () => void;
   readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
@@ -148,8 +162,16 @@ export function FieldScreen({
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState(false);
+  const [opening] = useState(scrolled);
+  const restored = useRef(false);
   const onPlant = (reference: string) => {
     if (Option.isSome(starts(reference))) onStart(reference);
+  };
+  const restore: RefCallback<ScrollViewInstance> = (node) => {
+    const view = Option.fromNullishOr(node);
+    if (Option.isNone(view) || restored.current) return;
+    restored.current = true;
+    view.value.scrollTo({ y: opening, animated: false });
   };
   return (
     <View style={look.screen}>
@@ -162,6 +184,11 @@ export function FieldScreen({
         {tips && <Tip n={1} />}
       </View>
       <ScrollView
+        ref={restore}
+        testID="field-scroll"
+        contentOffset={{ x: 0, y: opening }}
+        scrollEventThrottle={16}
+        onScroll={(event) => onScrolled(event.nativeEvent.contentOffset.y)}
         style={styles.scroll}
         contentContainerStyle={[
           look.content,
@@ -187,7 +214,6 @@ export function FieldScreen({
           onOpen={onOpen}
           underFirst={tips && <Tip n={2} />}
         />
-        <Legend />
         {passages._tag === 'Read' && <AddList passages={passages} tips={tips} onAdd={onAdd} />}
         <View style={styles.ends}>
           <EndRow label="Settings" onPress={() => setSettings(true)} />
