@@ -179,7 +179,7 @@ in its scroll view, in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready; one tap opens Today on that verse, whole), under the
 furrows `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
-works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=Settings" down`; the
+works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=How Heartseed works" down` before a tap on `Settings`, which on the first-run field can sit at the fold's edge, where the driver's tap finds its texts beside the button; the
 second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`),

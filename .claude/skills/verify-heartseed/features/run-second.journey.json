@@ -19,7 +19,7 @@
     {
       "name": "run-second-settings",
       "action": "scroll",
-      "target": "label=Settings",
+      "target": "label=How Heartseed works",
       "direction": "down",
       "receipt": "none"
     },
