@@ -77,7 +77,6 @@ const decodeKept = (text: string): Option.Option<TodayResult> =>
 /** JSON text as ASCII bytes, each UTF-16 unit past ASCII escaped as JSON escapes it, and bytes back as text. */
 const bytesOf = (json: string) =>
   Uint8Array.from(
-    // oxlint-disable-next-line eslint/require-unicode-regexp -- each UTF-16 unit is escaped alone, a surrogate pair as two escapes, as JSON writes it.
     json.replace(
       /[^\x20-\x7e]/g,
       (unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`,

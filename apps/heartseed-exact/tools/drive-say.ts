@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noKnownValueWidening, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, node/no-process-env, max-lines -- a host script, its shots folder named by SHOTS, that drives the built app through `bun run exact agent`, one process group per drive, reads its JSON replies and prints what it found. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noKnownValueWidening, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, node/no-process-env -- a host script, its shots folder named by SHOTS, that drives the built app through `bun run exact agent`, one process group per drive, reads its JSON replies and prints what it found. */
 
 /**
  * Say it's live checks (spec B), which a `.test.contract` cannot hold at
