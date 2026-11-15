@@ -5,6 +5,7 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { KEYS, probe } from '../../lab/probe.ts';
 import table from '../../lab/probe-table.json';
+import { contractTest } from '../../lab/tools/contract.ts';
 import { withDataHost } from '../data-host/testing.ts';
 
 /** A call as Exact makes one: a time past 2026 and a seed. */
@@ -12,19 +13,6 @@ const CALL = { now: 1_800_000_000_123.5, seed: 7 };
 
 /** The runner's host in Bun: each step under `withDataHost`, each sleep over at once. */
 const HOST = { turn: withDataHost, wait: () => Effect.runPromise(Effect.void) };
-
-/** The lab's contract test, written from the table: a tap and an expectation per row. */
-const contractTest = (rows: Readonly<Record<string, string>>) =>
-  [
-    'test "each probe row shows what probe-table.json says"',
-    '  expect text "title" == "Exact Lab"',
-    ...Object.entries(rows).flatMap(([key, text]) => [
-      `  tap "ask-${key}"`,
-      '  clock settle',
-      `  expect text "out-${key}" == "${text}"`,
-    ]),
-    '',
-  ].join('\n');
 
 const here = (file: string) =>
   Effect.gen(function* () {

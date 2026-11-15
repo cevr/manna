@@ -525,6 +525,36 @@
       }
     },
     {
+      // The kit's host helpers for an Exact app's tools (docs/exact.md): `prepare`
+      // links Exact's modules and writes generated modules with node's
+      // synchronous file system before a build reads them, and `drive` runs
+      // `bun run exact agent` in a process group of its own, reads `ps` and
+      // the agent's JSON replies, and steps by `await` while a run goes. The
+      // tools that import them run under Bun beside Exact's app folder, where
+      // `effect` is kept out (docs/exact.md), so they are plain TypeScript;
+      // their tests drive them over a stand-in machine and scratch folders.
+      // The lab's own tools are their first users.
+      "files": [
+        "**/packages/exact-kit/src/prepare/*.ts",
+        "**/packages/exact-kit/src/drive/*.ts",
+        "**/packages/exact-kit/lab/tools/*.ts"
+      ],
+      "rules": {
+        "effect/noAs": "off",
+        "effect/noAsyncFunction": "off",
+        "effect/noGlobals": "off",
+        "effect/noNewPromise": "off",
+        "effect/noNodeBuiltinImport": "off",
+        "effect/noNullish": "off",
+        "effect/noTernary": "off",
+        "effect/noTryCatch": "off",
+        "effect/noUnknownParameters": "off",
+        "node/no-process-env": "off",
+        "no-await-in-loop": "off",
+        "no-unmodified-loop-condition": "off"
+      }
+    },
+    {
       "files": ["**/packages/cli/src/services/process.ts"],
       "rules": {
         "effect/noGlobals": "off"

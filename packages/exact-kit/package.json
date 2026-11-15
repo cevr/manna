@@ -8,6 +8,8 @@
   "sideEffects": false,
   "exports": {
     "./main": "./src/main.ts",
+    "./prepare": "./src/prepare/prepare.ts",
+    "./drive": "./src/drive/drive.ts",
     "./effect": {
       "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"
@@ -16,7 +18,8 @@
     "./no-copy/testing": "./src/no-copy/testing.ts"
   },
   "scripts": {
-    "exact": "cd lab && bun ../src/bin.ts",
+    "exact": "bun lab/tools/prepare.ts && cd lab && bun ../src/bin.ts",
+    "drive:lab": "bun lab/tools/drive.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test ./src"
   },
