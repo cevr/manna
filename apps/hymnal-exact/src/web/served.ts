@@ -34,7 +34,7 @@ const segmentOf = (raw: string): string | undefined => {
   } catch {
     return undefined;
   }
-  if (text === '' || text.startsWith('.') || /[/\\\0]/u.test(text)) return undefined;
+  if (text.startsWith('.') || /[/\\\0]/u.test(text)) return undefined;
   return text;
 };
 

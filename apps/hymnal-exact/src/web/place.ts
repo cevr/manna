@@ -71,7 +71,6 @@ export const placeOf = (book: Book, location: string): Place => {
   const segments = segmentsOf(path);
   const joined = segments.join('/');
   if (joined === '') return { screen: 'list' };
-  if (joined.endsWith('/')) return { screen: 'notfound' };
   if (joined === 'recent') return { screen: 'recent' };
   if (joined === 'player') return { screen: 'player' };
   const [first, second, ...rest] = segments;
