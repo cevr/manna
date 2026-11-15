@@ -436,7 +436,7 @@ On a fresh install of its own, from `first.md`'s `sim journey first` to
 
 0. `home-add-foot` (hsaddlist, owner q97): `home-add/home-add-foot`, after
    the scroll down to `Settings` (on the first-run field `Add a list` is
-   already on the first screen and `Settings` under the fold) → the
+   already on the first screen and `Settings` at or under the fold) → the
    furrows' last plants, then the button `Add a list`, then the row
    `Settings`, in that order, and no text `Mark 4:28`: `Add a list` sits
    under the last furrow, just above `Settings`,
@@ -540,6 +540,11 @@ Report only the lines named above and the reference; delete the
   About, a journey scrolls to the node it taps next; only a relaunch
   opens home at the top (R7, `apps/heartseed/scripts/journey-rules.ts`). On the chooser's
   `Add a passage`, `label=Add verses` is its one back, to the sheet.
+- A journey scrolls to `How Heartseed works`, the last row, before it
+  taps `Settings`: on the first-run field, with no legend, `Settings` can
+  be the last row in view at the fold's edge, so a scroll to it moves
+  nothing and the tap fails `AMBIGUOUS_MATCH` on the button and its two
+  texts (hsrows).
 - An offer's title is text, as a furrow's title on home under the modal
   is: target an offer by its button `Plant <reference>`.
 - What the simulator cannot show of the Add a list sheet, the tests own:

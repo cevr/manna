@@ -13,7 +13,7 @@
     {
       "name": "about-scroll",
       "action": "scroll",
-      "target": "label=Settings",
+      "target": "label=How Heartseed works",
       "direction": "down",
       "receipt": "none"
     },
@@ -55,7 +55,7 @@
     {
       "name": "about-relaunch-scroll",
       "action": "scroll",
-      "target": "label=Settings",
+      "target": "label=How Heartseed works",
       "direction": "down",
       "receipt": "none"
     },

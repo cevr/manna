@@ -20,7 +20,7 @@
     {
       "name": "run-held-scroll",
       "action": "scroll",
-      "target": "label=Settings",
+      "target": "label=How Heartseed works",
       "direction": "down",
       "receipt": "none"
     },
