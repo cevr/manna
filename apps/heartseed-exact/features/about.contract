@@ -47,4 +47,4 @@ component LicencesPage
           for l in licences key=l.index
             column gap=8
               text l.name font="-exact-headline" testId=`licence-name-${l.index}`
-              text l.text font="-exact-footnote" white-space="pre-wrap" testId=`licence-text-${l.index}`
+              text l.text font="-exact-footnote" white-space="pre-line" overflow-wrap="break-word" testId=`licence-text-${l.index}`
