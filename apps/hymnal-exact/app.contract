@@ -1,5 +1,5 @@
 // The hymnal: the view. app.ts answers what it asks for. The colours are the
-// brand's (app.tamber), which also sets the platform's own roles, so a screen
+// brand's (app.forma), which also sets the platform's own roles, so a screen
 // that names none is drawn in them; fonts, sizes and the safe area are left
 // unsaid, so each platform supplies its own: a screen's header is the
 // navigation bar, its heading the title.

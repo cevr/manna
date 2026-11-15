@@ -1,7 +1,7 @@
 /**
  * `src/theme.ts` as Exact's type check reads it (it stages a package's
  * declarations, never its source): the hymnal's colours, a hex value for
- * each named role in each scheme. The port's brand (`app.tamber`) is held
+ * each named role in each scheme. The port's brand (`app.forma`) is held
  * to it role for role. `test/exact-declarations.ts` holds it to the source.
  */
 export type Role =

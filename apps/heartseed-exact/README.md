@@ -36,7 +36,7 @@ The gear in the header (`gear`) opens the Settings sheet (`features/settings.con
 
 - Each choice is a root `state … persist` holding its text as tapped (`settingsMinutesKept`, `settingsVoiceKept`, `settingsAppearanceKept`, empty until chosen). `src/settings/choices.ts` reads it by the current Heartseed's rule (the text when it is exactly a choice, else 5 minutes, Her and System; `appearanceOf` itself) and offers the current app's lists in their order (`MINUTES`, `CHOICES`, `APPEARANCES`), through the one source `settingsOf`. The session reads `settingsMinutes` and `settingsVoice`; nothing acts on them yet.
 - The appearance is the app's scheme: a task keyed on the read appearance calls `setScheme` with it, at a tap and at each launch, on both hosts.
-- The look is `app.tamber`: every role of the current palette (`@manna/heartseed/theme`) as `hs.<role>` in light and dark, the platform's text roles and grounds drawn in them, the rounded face as `family.hs`. Screens name tokens and roles, never a colour; `src/look/brand.test.ts` holds the file to the palette, every text to AA on its grounds, and the Contract files to no colour literal.
+- The look is `app.forma`: every role of the current palette (`@manna/heartseed/theme`) as `hs.<role>` in light and dark, the platform's text roles and grounds drawn in them, the rounded face as `family.hs`. Screens name tokens and roles, never a colour; `src/look/brand.test.ts` holds the file to the palette, every text to AA on its grounds, and the Contract files to no colour literal.
 - About (`features/about.contract`, `/settings/about`) is pushed inside the sheet: what Heartseed is, the KJV's note, and `Licences` (`/settings/about/licences`), the licences' texts `tools/licences.ts` writes from the current app's own `readLicence()` to `src/about/licences.ts` (ignored, declared by `licences.d.ts`).
 - What a contract test cannot read (a node's computed colour, a radio's checked state, a native relaunch) is in `tools/drive-look.ts`.
 
@@ -87,7 +87,7 @@ Both read the current Heartseed's `versesOf` (`@manna/heartseed/kjv`, declared b
 | `app.test.contract`        | The app's own test: its name heads the first screen                                                     |
 | `tools/`                   | Host scripts: `prepare.ts`, `passage.ts`, and drives a `.test.contract` cannot hold                     |
 | `strings/en.json`          | The purpose strings of the app's grants                                                                 |
-| `app.tamber`               | The brand: the current palette's roles as tokens, the platform's roles drawn in them, the rounded face  |
+| `app.forma`                | The brand: the current palette's roles as tokens, the platform's roles drawn in them, the rounded face  |
 | `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`             |
 
 A feature's names start with its own (`today…`), since its members share the root's one namespace. Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports runs it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would, as `src/app.test.ts` does.

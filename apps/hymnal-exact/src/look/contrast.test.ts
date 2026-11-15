@@ -19,7 +19,7 @@ import { appFile, brandOf, contractFiles, drawnIn } from './design.testing.ts';
 const AA = 4.5;
 const TINT = ['AccentColor', 'AccentColorText'];
 
-const brand = brandOf(appFile('app.tamber'));
+const brand = brandOf(appFile('app.forma'));
 
 /** A name a file writes, as the brand role it is drawn in, or "" if the brand does not set it. */
 const roleOf = (name: string): string => {

@@ -2,7 +2,7 @@
 
 /**
  * What the brand and contrast tests read from the app's own files: the
- * brand's tokens (`app.tamber`'s `theme` block), and each text the
+ * brand's tokens (`app.forma`'s `theme` block), and each text the
  * Contract files draw with the colour it is drawn in and the ground under
  * it, by the names they write.
  */
@@ -35,7 +35,7 @@ export interface Brand {
   readonly others: ReadonlyArray<string>;
 }
 
-/** `app.tamber`'s `theme` block, read token by token. */
+/** `app.forma`'s `theme` block, read token by token. */
 export const brandOf = (text: string): Brand => {
   const colours = new Map<string, Pair>();
   const names = new Map<string, string>();

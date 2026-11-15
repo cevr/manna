@@ -6,7 +6,7 @@
 // ink by day and the soil by night: UIKit keeps a filled button's label
 // white, and the soil is the one dark role at 3:1 under white and on the
 // night ground both.
-tamber heartseed
+forma heartseed
 
 theme
   hs.ground = light-dark(#f1f0e6, #142420)

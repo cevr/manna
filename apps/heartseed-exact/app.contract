@@ -1,5 +1,5 @@
 // Heartseed: the view. app.ts answers what it asks for. The colours are the
-// brand's roles (app.tamber), the face is rounded, and the safe area is
+// brand's roles (app.forma), the face is rounded, and the safe area is
 // left unsaid: the header is the navigation bar, its heading the title.
 // A feature adds one `use` line, one `members` line, one route and one
 // branch of the stack's view (README, "Where a feature's files go"). The

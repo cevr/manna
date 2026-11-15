@@ -3,7 +3,7 @@
 /**
  * The brand is the current Heartseed's palette (spec A2-A4): every role of
  * `theme` (`@manna/heartseed/theme`), light and dark, is a token of
- * `app.tamber` as `hs.<role>` with the same colour, and the file names no
+ * `app.forma` as `hs.<role>` with the same colour, and the file names no
  * colour the palette lacks; every text the port's Contract files draw reads
  * on every ground they draw at WCAG AA, the current app's own bar, in both
  * schemes; and no Contract file names a colour of its own.

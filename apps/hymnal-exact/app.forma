@@ -4,7 +4,7 @@
 // src/look/brand.test.ts holds every colour here to theme.ts. The tint
 // (AccentColor) is left the platform's: UIKit draws a prominent button's label
 // white, which the accent's pale dark side cannot carry (findings, the tint).
-tamber hymnal
+forma hymnal
 
 theme
   ground = light-dark(#f1f0e6, #142420)
