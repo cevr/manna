@@ -2,10 +2,15 @@
 // each stanza under its number and the refrain written out each time it is
 // sung (app.ts `hymnPage`, src/hymn/page.ts). Off a hymn's route the page is
 // asked for "" and answers the empty page, so the words a popped hymn showed
-// are not kept, and a relaunch holds what a fresh launch does.
+// are not kept, and a relaunch holds what a fresh launch does. With chords
+// on (features/chords.contract), each sung line is drawn under its chords,
+// the keys over the words; a hymn with no chords says so over its words.
+// The header and the page each keep one child per line: other features add
+// one call line each (the star, Play).
 use EmptyState from "exact:content"
 use PlayerPagePlay from "./player.contract"
 use FavouriteStar from "./favourites.contract"
+use ChordsKeys, ChordsLines, ChordsPage from "./chords.contract"
 
 shape HymnPart
   key: string
@@ -27,6 +32,7 @@ component HymnPage
     entry: Entry
     page: HymnText
     ready: bool
+    chords: ChordsPage
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -41,7 +47,17 @@ component HymnPage
             column padding=16 gap=20
               text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"
               PlayerPagePlay(number=page.number)
-              for p in page.parts key=p.key
-                column gap=4
-                  text p.label font="-exact-headline" color="-exact-secondary-label"
-                  text p.text white-space="pre-line" testId=p.key
+              ChordsKeys(chords=chords, number=page.number)
+              if chords.kind == "chords" and chords.number == page.number
+                for p, k in chords.parts key=p.key
+                  column gap=4
+                    text p.label font="-exact-headline" color="-exact-secondary-label"
+                    if p.lines.length > 0
+                      ChordsLines(chords=chords, k=k + 1, part=p)
+                    else
+                      text p.text white-space="pre-line" testId=p.key
+              else
+                for p in page.parts key=p.key
+                  column gap=4
+                    text p.label font="-exact-headline" color="-exact-secondary-label"
+                    text p.text white-space="pre-line" testId=p.key

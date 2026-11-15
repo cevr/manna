@@ -4,7 +4,8 @@
       "virtual:hymnal": ["./src/hymns/words.gen.json"],
       "virtual:hymnal-indexes": ["./src/hymns/indexes.gen.json"],
       "@manna/hymnal-app/hymns/*": ["./src/hymns/decl/*"],
-      "@manna/hymnal/recordings": ["./src/settings/decl/recordings"]
+      "@manna/hymnal/recordings": ["./src/settings/decl/recordings"],
+      "@manna/hymnal/chord": ["./src/chords/decl/chord"]
     }
   }
 }
