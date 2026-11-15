@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noNewPromise, no-await-in-loop -- a test model: each step is awaited as Exact asks its sources one by one, and the oracle's store is read by `Effect.runPromise`. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noNewPromise, no-await-in-loop -- a test model: each step is awaited as Exact asks its sources one by one, and the oracle's store is read by `Effect.runPromise`. */
 
 /**
  * One generated history of planting through Add verses (spec A3), on the

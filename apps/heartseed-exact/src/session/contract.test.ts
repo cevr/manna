@@ -4,7 +4,7 @@
  * `session.test.contract` writes what Today shows as literals: the counts at
  * each Minutes, the first item, its words, and a new verse's cue. This test
  * holds each to the current Heartseed's own answer for the same garden and
- * instant (the A1 oracle: John 3:16-18 and Psalm 119:1 planted at the
+ * instant (the A1 oracle: John 3:16-18 and Proverbs 4:23 planted at the
  * contract's epoch in its zone), so the contract restates nothing the
  * current app does not give.
  */
@@ -32,7 +32,7 @@ it("the contract's counts, first item, words and cue are the current app's", asy
   setZone(zone);
   const oracle = await makeSessionOracle();
   await oracle.at(epoch, appPlant({ book: 43, chapter: 3, first: 16, last: 18 }));
-  await oracle.at(epoch, appPlant({ book: 19, chapter: 119, first: 1, last: 1 }));
+  await oracle.at(epoch, appPlant({ book: 20, chapter: 4, first: 23, last: 23 }));
   await oracle.session(epoch, (each) => each.begin);
   const first = await oracle.viewAt(epoch);
   const seen = seenOf(first.session, first.garden);
