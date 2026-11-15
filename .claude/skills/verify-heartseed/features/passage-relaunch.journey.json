@@ -14,28 +14,28 @@
       "action": "relaunch",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "id=singles" },
         { "shows": "label=Open John 15:1-5" },
-        { "shows": "label=Open Psalms 23:1-6" }
+        { "shows": "label=Open Psalms 23:1-6" },
+        { "shows": "label=Open Protection & Fear" }
       ],
       "receipt": "snapshot"
     },
     {
       "name": "passage-launch-time-1",
       "action": "relaunch",
-      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "expect": [{ "shows": "id=today-card" }],
       "receipt": "none"
     },
     {
       "name": "passage-launch-time-2",
       "action": "relaunch",
-      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "expect": [{ "shows": "id=today-card" }],
       "receipt": "none"
     },
     {
       "name": "passage-launch-time-3",
       "action": "relaunch",
-      "expect": [{ "shows": "label=Isaiah 41:10" }],
+      "expect": [{ "shows": "id=today-card" }],
       "receipt": "none"
     }
   ]

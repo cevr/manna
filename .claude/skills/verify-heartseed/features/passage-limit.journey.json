@@ -141,9 +141,6 @@
           "shows": "label=Open Romans 8:28-30"
         },
         {
-          "shows": "label=Open Psalms 23:1-6"
-        },
-        {
           "hides": "id=add-list"
         }
       ],
@@ -162,7 +159,7 @@
       "action": "scroll",
       "target": "label=Your field",
       "direction": "up",
-      "expect": [{ "shows": "label=Your field" }],
+      "expect": [{ "shows": "label=Your field" }, { "shows": "label=Open Psalms 23:1-6" }],
       "receipt": "none"
     }
   ]

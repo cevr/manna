@@ -182,10 +182,12 @@ Driving it) taken where a journey leaves the screen.
    `Romans 8` → a scroll to `Romans 8:28` → `Romans 8:28` (`1 verse`,
    `id=short`, no `Plant`) → `Romans 8:30` (`Romans 8:28-30`, `3 verses`),
    `Plant`.
-   `passage-limit/passage-limit` → the buttons `Open John 15:1-5`,
-   `Open Psalms 23:1-6` and `Open Romans 8:28-30`, no `Remove`, no
-   `Add a list`; the journey's `passage-limit-line` scrolls to the limit
-   line's text at the field's foot, with no `Add a list` there either.
+   `passage-limit/passage-limit` → the button `Open Romans 8:28-30`, no
+   `Remove`, no `Add a list` (home keeps the scroll it had, so the rows
+   above may sit over the fold); the journey's `passage-limit-line`
+   scrolls to the limit line's text at the field's foot, with no `Add a
+   list` there either, and its `passage-limit-top` back up to `Your
+   field` and `Open Psalms 23:1-6`.
 9. `passage-keep`: `sim journey passage-keep` → `"ok":true`.
    `passage-keep/passage-ask` → `id=ask` with the ask's text, `Remove`,
    `Keep`; the journey's `Keep` brings `Remove Psalms 23:1-6` back with no
@@ -201,10 +203,12 @@ Driving it) taken where a journey leaves the screen.
     `run.md`'s `run` (`run/run-due`).
 12. `passage-relaunch`: `sim journey passage-relaunch` → `"ok":true`.
     `passage-relaunch/passage-relaunch` → the heading `Your field` and the
-    rows' buttons `Open John 15:1-5`, `Open Psalms 23:1-6`, in that
-    order, and `id=singles`.
+    rows' buttons `Open John 15:1-5`, `Open Psalms 23:1-6` and `Open
+    Protection & Fear`, in that order (`Single verses` sits under them,
+    below the fold).
 13. `passage-launch-time`: the same journey's three relaunches, each
-    waiting for `Isaiah 41:10`: record each step's `ms` (its line in
+    waiting for home's Today card (`id=today-card`; the promise is a
+    single verse now, under the lists and below the fold, hsminlist): record each step's `ms` (its line in
     `$EVIDENCE/results.jsonl`) with `sim doctor`'s `timingsHold`; then the
     same three on a worktree of `69d70a02d`, on its own port. Report the
     six numbers and the load.
