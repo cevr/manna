@@ -1,8 +1,8 @@
 /**
  * `sim doctor` checks the platform's driver before anything else: with
  * `agent-device` not found on this process's PATH, it fails as `Unhealthy`
- * at `driver`, naming the tool, and runs nothing after it, where it once
- * answered ok and every step of the next journey failed `ToolMissing`.
+ * at `driver`, naming the tool, and runs nothing after it, so no journey
+ * starts on a drive whose every step would fail `ToolMissing`.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
