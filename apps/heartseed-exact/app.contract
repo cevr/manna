@@ -22,7 +22,7 @@ component HeartseedExact
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
           if e.name == "home"
-            link href=path("verses") testId="open-verses" padding="0 16px"
+            link href=path("verses") testId="open-verses" padding="0 16px" min-height="44px" display="flex" align-items="center" flex-shrink=0
               text "Your verses"
           if e.name == "home"
             Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt)
