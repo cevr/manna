@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, eslint/complexity -- Exact's data module imports no effect itself (docs/exact.md), so no open search is a plain `undefined` and each input branches plainly; the current app's rules it calls carry their own. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's data module imports no effect itself (docs/exact.md), so no open search is a plain `undefined` and each input branches plainly; the current app's rules it calls carry their own. */
 
 /**
  * Finding a hymn, as one pure step: `step(state, input)` answers the next

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so it branches plainly. */
+/* oxlint-disable effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so a header with no line above it is plain `undefined`. */
 
 /**
  * A list's section header is drawn in the muted role on every host, as
