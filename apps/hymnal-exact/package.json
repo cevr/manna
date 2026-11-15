@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "exact": "bun src/hymns/make.ts && manna-exact",
+    "build:web": "bun run exact web-build --out dist && bun tools/web/pages.ts dist",
+    "serve:web": "bun run exact serve dist",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test --preload ./src/test/setup.ts ./src"
   },
