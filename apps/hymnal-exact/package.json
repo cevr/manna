@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "exact": "bun exact.mjs",
+    "exact": "bun src/hymns/make.ts && bun exact.mjs",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test ./src"
+    "test": "bun test --preload ./src/test/setup.ts ./src"
   },
   "dependencies": {
-    "@manna/exact-kit": "workspace:*"
+    "@manna/exact-kit": "workspace:*",
+    "@manna/hymnal": "workspace:*",
+    "@manna/hymnal-app": "workspace:*"
   }
 }

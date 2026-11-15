@@ -1,2 +1,2 @@
-test "the app's name heads the first screen"
-  expect text "title" == "Hymnal"
+test "the book opens on its list, under its name"
+  expect text "title" == "Hymns"
