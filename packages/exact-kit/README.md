@@ -10,7 +10,7 @@ What the Exact ports (`apps/heartseed-exact`, `apps/hymnal-exact`) share. The in
 | `@manna/exact-kit/no-copy/testing`   | `noCopies(appDir, sources)` and `assertNoCopies(appDir, sourceDir)`: a port imports a current app's code, never copies it                                     |
 | `manna-exact` (bin)                  | `main` for the app in the current folder                                                                                                                      |
 
-`src/run.ts` holds the rules: the pin, the apps' simulators and ports, the build lock, and `runExact`, which refuses or runs one command. `src/exact-cli.ts` is the child it starts once a command passes: the pinned clone's own app CLI, as Exact's generated `exact.mjs` runs it.
+`src/run.ts` holds the rules: the pin, the apps' simulators and ports, the build lock, the launcher every app's `exact.mjs` must be, and `runExact`, which refuses or runs one command. Each app's `bun run exact` is `manna-exact` (`src/bin.ts`), so a rewritten `exact.mjs` is refused rather than run; `run.test.ts` holds each app's script to it. `src/exact-cli.ts` is the child it starts once a command passes: the pinned clone's own app CLI, as Exact's generated `exact.mjs` runs it.
 
 The two helpers are test seams (`testing.ts`): only tests import them.
 

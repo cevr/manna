@@ -24,7 +24,7 @@ bun test ./src               # the Bun tests the gate runs (no Exact needed)
 | `app.test.contract`        | The app's own test: its name heads the first screen                                            |
 | `src/sources.ts`           | The registry: every source the view asks for, one spread per feature                           |
 | `src/hymns/**`             | The data seam: the book, made at build, and the declarations Exact's type check reads          |
-| `exact.mjs`                | The launcher `bun run exact` runs: the wrapper in `@manna/exact-kit`                           |
+| `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`    |
 
 ## Adding a feature
 

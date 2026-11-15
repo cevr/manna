@@ -14,15 +14,15 @@ bun test ./src               # the Bun tests the gate runs (no Exact needed)
 
 ## Where a feature's files go
 
-| Path                         | What                                                                    |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| `app.contract`               | The root view: one `use` line and one route per feature                 |
-| `app.ts`                     | The data module: one registry entry per feature                         |
-| `features/<name>.contract`   | A feature's view                                                        |
-| `src/<name>/**`              | A feature's logic: pure TypeScript, imported by `app.ts`, tested in Bun |
-| `tests/<name>.test.contract` | A feature's contract tests                                              |
-| `app.test.contract`          | The app's own test: its name heads the first screen                     |
-| `exact.mjs`                  | The launcher `bun run exact` runs: the wrapper in `@manna/exact-kit`    |
+| Path                       | What                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `app.contract`             | The root view: one `use` line and one route per feature                                     |
+| `app.ts`                   | The data module: one registry entry per feature                                             |
+| `features/<name>.contract` | A feature's view                                                                            |
+| `src/<name>/**`            | A feature's logic: pure TypeScript, imported by `app.ts`, tested in Bun                     |
+| `<name>.test.contract`     | A feature's contract tests, beside `app.contract`: Exact reads only those                   |
+| `app.test.contract`        | The app's own test: its name heads the first screen                                         |
+| `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact` |
 
 Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports can run it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would.
 
