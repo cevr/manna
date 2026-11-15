@@ -45,11 +45,11 @@ A hymn's recording plays from the recordings' bucket (`https://hymns.cvr.im`, th
 
 `bun run exact` also runs `tools/timing.ts`, which writes `src/player/timing.gen.ts` (ignored): each hymn's line timing with its words left out, for the stanza choice's length.
 
-Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`), two recordings of digital silence and a 404 for hymn 13. Each checkout has its own port (`bun tools/recordings.ts --port`, in 4790–5789), so two checkouts' runs never share a fixture; the build's grant for 4797 moves to it:
+Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`), two recordings of digital silence and a 404 for hymn 13. The tests name port 4797, which Exact gives each run in turn; the drives start the fixture themselves, on their checkout's own port (`bun tools/recordings.ts --port`, in 4790–5789), so two checkouts' drives never share one, and the build's grant for 4797 moves to it:
 
 ```sh
-HYMNAL_RECORDINGS=http://127.0.0.1:$(bun tools/recordings.ts --port) bun run exact test web player.test.contract
-HYMNAL_RECORDINGS=http://127.0.0.1:$(bun tools/recordings.ts --port) bun run exact test ios player.test.contract
+HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test web player.test.contract
+HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test ios player.test.contract
 bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recording, a kept stanza choice
 bun tools/drive-player.ts ios
 ```
