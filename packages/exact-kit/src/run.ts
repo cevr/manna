@@ -81,11 +81,32 @@ const isNative = (args: ReadonlyArray<string>) => {
   return ['test', 'verify', 'agent'].includes(verb ?? '') && host === 'ios';
 };
 
-/** Why `args`, with the caller's `EXACT_PORT` if it set one, is refused before any process starts, if it is. */
+/**
+ * The variables the pinned Exact reads a listening port from: `EXACT_PORT` (`web`'s dev loop,
+ * `host/web/dev.mjs`, and the drives, `scripts/agent-launch.mjs`), `PORT` (`serve`,
+ * `host/web/serve.mjs`, and an app's fixture server, `js/bake/src/typescript.mjs`) and
+ * `EXACT_TOOL_PORT` (the design tool's, `scripts/app-cli.mjs`). `PORT_LO` and `PORT_HI` are always the
+ * wrapper's.
+ */
+const PORT_VARIABLES = ['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT'] as const;
+type PortVariable = (typeof PORT_VARIABLES)[number];
+
+/** The caller's value of each port variable, where it set one. */
+type CallerPorts = Readonly<Record<PortVariable, Option.Option<string>>>;
+
+/** The variable a verb given no `--port` listens by, which the wrapper sets to the app's own port: `web`'s `EXACT_PORT` and `serve`'s `PORT`. */
+const ownPortVariable = (args: ReadonlyArray<string>): Option.Option<PortVariable> => {
+  if (portsOf(args).length > 0) return Option.none();
+  if (args[0] === 'web') return Option.some('EXACT_PORT');
+  if (args[0] === 'serve') return Option.some('PORT');
+  return Option.none();
+};
+
+/** Why `args`, with the caller's port variables, is refused before any process starts, if it is. */
 const refusalOf = (
   args: ReadonlyArray<string>,
   app: ExactApp,
-  callerPort: Option.Option<string>,
+  callerPorts: CallerPorts,
 ): Option.Option<string> => {
   const [verb = '', ...rest] = args;
   if (REFUSED_VERBS.includes(verb))
@@ -111,9 +132,11 @@ const refusalOf = (
       Arr.findFirst(portsOf(args), notOwned),
       (given) => `--port ${given} is not this app's: ${range}`,
     ),
-    Option.map(
-      Option.filter(callerPort, notOwned),
-      (given) => `EXACT_PORT=${given} is not this app's: unset it, or ${range}`,
+    ...PORT_VARIABLES.map((name) =>
+      Option.map(
+        Option.filter(callerPorts[name], notOwned),
+        (given) => `${name}=${given} is not this app's: unset it, or ${range}`,
+      ),
     ),
   ]);
 };
@@ -130,24 +153,33 @@ const ownsPort = (app: ExactApp, port: number) =>
   port === app.port || (port >= app.spare[0] && port <= app.spare[1]);
 
 /**
- * The run of `args` for `app`, whose clone is at `clone`, with the caller's `EXACT_PORT` if it set one:
- * refused for a verb that publishes or rewrites the launcher, a feedback send, another device or
- * simulator, or a port not the app's; else the child's variables, set over whatever the caller's held:
- * the clone, feedback off, the app's simulator and ports. `EXACT_PORT` is the caller's when it is the
- * app's, else the app's own port for a bare `web`, else removed.
+ * The run of `args` for `app`, whose clone is at `clone`, with the caller's port variables: refused for
+ * a verb that publishes or rewrites the launcher, a feedback send, another device or simulator, or a
+ * port not the app's; else the child's variables, set over whatever the caller's held: the clone,
+ * feedback off, the app's simulator and spare range. Each port variable is the caller's when it is the
+ * app's, else the app's own port for the verb that listens by it bare (`web`, `serve`), else removed:
+ * no child listens outside the app's ports.
  */
 const plan = (
   args: ReadonlyArray<string>,
   app: ExactApp,
   clone: string,
-  callerPort: Option.Option<string>,
+  callerPorts: CallerPorts,
 ): Result.Result<Plan, ExactRefused> =>
-  Option.match(refusalOf(args, app, callerPort), {
+  Option.match(refusalOf(args, app, callerPorts), {
     onSome: (reason) => Result.fail(ExactRefused.make({ reason })),
     onNone: () => {
-      const web = args[0] === 'web' && portsOf(args).length === 0;
-      const port = Option.orElse(callerPort, () =>
-        Option.filter(Option.some(String(app.port)), () => web),
+      const own = ownPortVariable(args);
+      const ports = PORT_VARIABLES.map(
+        (name) =>
+          [
+            name,
+            Option.orElse(callerPorts[name], () =>
+              Option.filter(Option.some(String(app.port)), () =>
+                Option.exists(own, (variable) => variable === name),
+              ),
+            ),
+          ] as const,
       );
       return Result.succeed({
         args,
@@ -159,9 +191,11 @@ const plan = (
           EXACT_SIM: app.simulator,
           PORT_LO: String(app.spare[0]),
           PORT_HI: String(app.spare[1]),
-          ...Option.match(port, { onNone: () => ({}), onSome: (p) => ({ EXACT_PORT: p }) }),
+          ...Object.fromEntries(
+            ports.flatMap(([name, port]) => Option.toArray(Option.map(port, (p) => [name, p]))),
+          ),
         },
-        removed: Option.match(port, { onNone: () => ['EXACT_PORT'], onSome: () => [] }),
+        removed: ports.filter(([, port]) => Option.isNone(port)).map(([name]) => name),
       });
     },
   });
@@ -250,8 +284,12 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const clone = yield* Config.String('EXACT').pipe(
     Config.withDefault(path.join(home, DEFAULT_CLONE)),
   );
-  const callerPort = yield* Config.option(Config.String('EXACT_PORT'));
-  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPort));
+  const callerPorts: CallerPorts = {
+    EXACT_PORT: yield* Config.option(Config.String('EXACT_PORT')),
+    PORT: yield* Config.option(Config.String('PORT')),
+    EXACT_TOOL_PORT: yield* Config.option(Config.String('EXACT_TOOL_PORT')),
+  };
+  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts));
   yield* launcherHeld(appDir);
   const head = yield* headOf(clone);
   if (head !== EXACT_PIN)

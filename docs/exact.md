@@ -47,10 +47,10 @@ bun run exact verify ios
 
 `bun run exact` is the package's command `manna-exact` (`src/bin.ts`), which runs `@manna/exact-kit`'s wrapper (`main` in `src/main.ts`, over `runExact` in `src/run.ts`) for the app in the current folder. Each app's `exact.mjs` is the kit's launcher into the same wrapper, for Exact's own tools, which run `bun exact.mjs <verb>` inside a command. Never run Exact another way: not `bun <clone>/scripts/exact.mjs` on an app, not Exact's generated `exact.mjs`. The wrapper:
 
-- **Refuses before any process starts**: `share`, `deploy` and `release` (they publish: the owner's alone), `update` and `snapback` (they write Exact's own `exact.mjs` and `AGENTS.md` over the app's, which run Exact past the wrapper and tell agents to share and send feedback), `feedback` with anything but `never` (feedback goes to Expo), `--sim` and `--device` (another simulator, or the owner's iPhone), and a `--port`, or a caller's `EXACT_PORT`, not the app's.
+- **Refuses before any process starts**: `share`, `deploy` and `release` (they publish: the owner's alone), `update` and `snapback` (they write Exact's own `exact.mjs` and `AGENTS.md` over the app's, which run Exact past the wrapper and tell agents to share and send feedback), `feedback` with anything but `never` (feedback goes to Expo), `--sim` and `--device` (another simulator, or the owner's iPhone), and a `--port`, or a caller's port variable (`EXACT_PORT`, `PORT`, `EXACT_TOOL_PORT`), not the app's.
 - **Refuses a rewritten app**: an `exact.mjs` that is not the kit's launcher, or an `AGENTS.md` that holds Exact's generated block (`<!-- exact:begin`), with the `git checkout` that restores them. The `exact-kit` unit test holds each app's `bun run exact` to `manna-exact`, so a rewritten `exact.mjs` cannot take the wrapper out.
 - **Refuses a clone off the pin**, naming both commits, and a missing clone with how to clone it.
-- **Sets, over whatever the caller's environment holds**: `EXACT` (the clone), `EXACT_FEEDBACK=0`, `EXACT_SIM` (the app's simulator), `PORT_LO` and `PORT_HI` (the app's spare range), and `EXACT_PORT`: the caller's when it is the app's, else the app's own port for `web` with no `--port`, else removed from what the child inherits (Exact takes `EXACT_PORT` before `PORT_LO`/`PORT_HI`).
+- **Sets, over whatever the caller's environment holds**: `EXACT` (the clone), `EXACT_FEEDBACK=0`, `EXACT_SIM` (the app's simulator), `PORT_LO` and `PORT_HI` (the app's spare range), and each variable the pinned Exact reads a listening port from: `EXACT_PORT` (`web`'s dev loop and the drives, before `PORT_LO`/`PORT_HI`), `PORT` (`serve`, and an app's fixture server) and `EXACT_TOOL_PORT` (the design tool's). Each is the caller's when it is the app's, else the app's own port for the verb that listens by it given no `--port` (`web` by `EXACT_PORT`, `serve` by `PORT`), else removed from what the child inherits. So no child listens outside the app's ports, whatever the caller's environment holds.
 - **Takes the build lock** `/tmp/manna-exact-build.lock` (`lockf -k`) for `ios`, `mac`, `test ios`, `verify ios` and `agent ios`, so native builds on this Mac run one at a time.
 
 The clone is `~/Developer/vendor/exact`, under the home folder, unless `EXACT` names another; that is the one machine path the repo knows.
@@ -60,7 +60,7 @@ The clone is `~/Developer/vendor/exact`, under the home folder, unless `EXACT` n
 |                                                 | Heartseed                | The hymnal            |
 | ----------------------------------------------- | ------------------------ | --------------------- |
 | Simulator (iPhone 17, iOS 27.0)                 | `verify-heartseed-exact` | `verify-hymnal-exact` |
-| Web port (`bun run exact web`)                  | 8765                     | 8766                  |
+| Web port (`bun run exact web`, `serve`)         | 8765                     | 8766                  |
 | Spare ports (`test web`, `verify`, `agent web`) | 8770-8774                | 8775-8779             |
 
 The current apps' simulators (`verify-heartseed`, `verify-hymnal`) and their ports are never Exact's. Exact's own default, "a simulator that's already booted", is never used: the wrapper always names the app's.
