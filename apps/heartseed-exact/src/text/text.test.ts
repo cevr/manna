@@ -148,6 +148,16 @@ describe('textOf', () => {
     }
     expect([...kinds].toSorted()).toEqual(['malformed', 'one', 'past', 'range']);
   });
+
+  it('reads no verse for a range from verse 0, even one running to its chapter’s end', () => {
+    const count = COUNTS.get('43:3') ?? 0;
+    expect(count).toBeGreaterThan(1);
+    for (const last of [0, 1, count - 1, count, count + 1])
+      expect(textOf({ book: 43, chapter: 3, first: 0, last }), `0-${last}`).toEqual({
+        reference: '',
+        verses: [],
+      });
+  });
 });
 
 describe('the shipped corpus', () => {
