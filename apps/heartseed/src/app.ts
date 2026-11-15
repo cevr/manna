@@ -44,10 +44,14 @@ import { microphoneSource, replaySource } from './dictation/source';
 import { type Foreground, Returns, wakeLayer } from './foreground';
 import { foregroundSource } from './foreground/source';
 import {
+  backOf,
   Backs,
   cueIn,
   Garden,
   layer as gardenLayer,
+  shownAllCap,
+  stageOf,
+  withHelp,
   type BackAsk,
   type Chime,
   type GardenView,
@@ -56,7 +60,16 @@ import { liveChime } from './garden/chime';
 import { greetingAt } from './home';
 import type { Cue } from './matcher';
 import { sourceWords } from './matcher/words';
-import { Haptics, layer as sayItLayer, SayIt, TODAY, type Grade, type Recital } from './sayit';
+import {
+  Haptics,
+  helpFor,
+  layer as sayItLayer,
+  SayIt,
+  TODAY,
+  type Grade,
+  type Help,
+  type Recital,
+} from './sayit';
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
@@ -213,10 +226,13 @@ export const retryNatural = runtime.fn(() => Effect.flatMap(Natural, (natural) =
   concurrent: true,
 });
 
-/** The cue a piece of Today's is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
-const todayCue = (view: GardenView, reference: string): Cue => {
+/** The cue a piece of Today's is said under next: the ladder's in a read garden, with the step back a `Show all` taken on it laid over (`withHelp`), none in an unread one, which claims no stage. */
+const todayCue = (view: GardenView, reference: string, help: Option.Option<Help>): Cue => {
   if (view._tag === 'Unread') return TODAY.cue;
-  return cueIn(view, reference);
+  return cueIn(
+    Option.match(help, { onNone: () => view, onSome: (taken) => withHelp(view, taken) }),
+    reference,
+  );
 };
 
 /**
@@ -236,21 +252,74 @@ export const pressToday = (piece: Passage, item: Option.Option<Item> = Option.no
     const voice = yield* Voice;
     yield* voice.stop;
     const view = yield* garden.settled;
+    const help = helpFor(yield* sayIt.view, piece.reference);
     if (Option.isSome(item)) yield* session.hold(item.value);
     yield* sayIt.recite(
-      { cue: todayCue(view, piece.reference), keep: TODAY.keep, untilNext: Option.isSome(item) },
+      {
+        cue: todayCue(view, piece.reference, help),
+        keep: TODAY.keep,
+        untilNext: Option.isSome(item),
+      },
       piece,
     );
   });
 
-/** Today's `Next`: the held item's pending recall is kept (its write landed or failed), then the item is let go. */
+/** The step back a `Show all` on the verse of `reference` asks for, at its instant, from the stage the garden reads now; none without a `Show all` on it, and for a seed or a verse not planted. */
+const shownAllBack = (view: GardenView, help: Option.Option<Help>, reference: string) =>
+  Option.flatMap(help, (taken) =>
+    Option.flatMap(Option.fromNullishOr(taken.shownAt), (at) => {
+      if (view._tag === 'Unread') return Option.none<BackAsk>();
+      return Option.flatMap(Option.fromNullishOr(view.plants.get(reference)), (plant) => {
+        const from = stageOf(plant);
+        return Option.map(backOf(from), (): BackAsk => ({ reference, from, at }));
+      });
+    }),
+  );
+
+/** Today's `Next`: a `Show all` taken on the held item is kept first as Move back's step back (`Backs.back`, at its instant, before the try), then its pending recall (each write landed or failed), then the item is let go. */
 export const nextItem = Effect.gen(function* () {
   const sayIt = yield* SayIt;
   const session = yield* Session;
   const { held } = yield* session.view;
-  if (Option.isSome(held)) yield* sayIt.commit(held.value.reference);
+  if (Option.isSome(held)) {
+    const { reference } = held.value;
+    const view = yield* sayIt.view;
+    const pending = Option.filter(
+      Option.fromNullishOr(view.pending),
+      (recall) => recall.reference === reference,
+    );
+    const ask = shownAllBack(
+      yield* Effect.flatMap(Garden, (garden) => garden.settled),
+      helpFor(view, reference),
+      reference,
+    );
+    if (Option.isSome(pending) && Option.isSome(ask))
+      yield* Effect.flatMap(Backs, (backs) => backs.back(ask.value));
+    yield* sayIt.commit(reference);
+  }
   yield* session.next;
 });
+
+/** A peek at rest at the word `index` of the verse of `reference`: the word shows a moment on Today, and its try can be no better than Hard. */
+export const reveal = runtime.fn(
+  (at: { readonly reference: string; readonly index: number }) =>
+    Effect.flatMap(SayIt, (sayIt) => sayIt.reveal(at.reference, at.index)),
+  { concurrent: true },
+);
+
+/** `Show all` at rest on `piece`: the verse shows whole and reads a stage lower (`Next` keeps the step back), and its try can be no better than the garden allows after it (`shownAllCap`); a seed's, Again. */
+export const showAllToday = (piece: Passage) =>
+  Effect.gen(function* () {
+    const sayIt = yield* SayIt;
+    const view = yield* Effect.flatMap(Garden, (garden) => garden.settled);
+    if (view._tag === 'Unread') return;
+    const plant = Option.fromNullishOr(view.plants.get(piece.reference));
+    if (Option.isNone(plant)) return;
+    yield* sayIt.showAll(piece, shownAllCap(stageOf(plant.value)));
+  });
+
+/** Today's `Show all` (`showAllToday`). */
+export const showAll = runtime.fn(showAllToday, { concurrent: true });
 
 /** Today left by `Your field` before `Next`: the held item is let go and its pending recall with it, so nothing is recorded and the verse stays as it was; a recital under way (one started in the same turn as the tap) keeps both. */
 export const leaveToday = Effect.gen(function* () {

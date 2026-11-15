@@ -520,7 +520,7 @@ const WORD_RUN = /[\p{L}\p{N}]/u;
 /** How many words (whitespace runs holding a letter or number) `text` holds. */
 const wordCount = (text: string) => text.split(/\s+/u).filter((run) => WORD_RUN.test(run)).length;
 
-/** The verse view a break or line sits in, and its words: `passage` by its lines' text, `reading` or the cue's view by its `word-<i>` children; none for any other parent. */
+/** The verse view a break or line sits in, and its words: `passage` by its lines' text, `reading` or the cue's view by its `word-<i>` children (or `peek-<i>`, a word to peek at at rest); none for any other parent. */
 const verseViewOf = (node: Element): { readonly words: number } | null => {
   const parent = node.parentElement;
   if (parent === null) return null;
@@ -534,7 +534,7 @@ const verseViewOf = (node: Element): { readonly words: number } | null => {
       ),
     };
   const words = [...parent.children].filter((child) =>
-    (child.getAttribute('data-testid') ?? '').startsWith('word-'),
+    /^(word|peek)-/.test(child.getAttribute('data-testid') ?? ''),
   ).length;
   if (id === 'reading' || words > 0) return { words };
   return null;
