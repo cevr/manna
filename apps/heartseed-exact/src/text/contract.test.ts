@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noTernary, effect/noNodeBuiltinImport -- Exact's app folder cannot import effect (docs/exact.md): the test reads two Contract files as text, and picks a field's oracle by a plain branch. */
+/* oxlint-disable effect/noTernary, effect/noNodeBuiltinImport -- Exact's app folder cannot import effect (docs/exact.md): the test reads two Contract files as text, and picks a field's oracle by a plain branch. */
 
 /**
  * `text.test.contract` holds the words the built app reads to the current
