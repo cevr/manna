@@ -4,6 +4,7 @@
 // header opens this screen with all of them (`recentRows`).
 use HymnRow, ListBarRoom, RecentView from "./list.contract"
 use PlayerView from "./player.contract"
+use FindBar, FindView, findSearchingAt from "./find.contract"
 
 shape RecentList
   numbers: number[]
@@ -30,12 +31,15 @@ component RecentScreen
     favourites: number[]
   inject
     playerShown: PlayerView
+    findShown: FindView
   view
     column navigationKey=`${entry.id}` navigationScroll="recent-list" position="absolute" inset=0
       display="flex" flex-direction="column"
       header display="flex" align-items="center" padding="8px 16px"
         text "Recent" role="heading" aria-level=2 testId="recent-title"
-      list id="recent-list" appearance="auto" listStyle="plain" flex=1 min-height=0 testId="recent-list"
+      FindBar(entry=entry, results=true)
+      list id="recent-list" appearance="auto" listStyle="plain" flex=1 min-height=0
+        display=(findShown.results and findSearchingAt(findShown, entry.url) ? "none" : "flex") testId="recent-list"
         section
           for r in recent.all key=r.number
             HymnRow(number=r.number, title=r.title, id=`recent-${r.number}`, star=(favourites.includes(r.number) ? `recent-star-${r.number}` : ""))

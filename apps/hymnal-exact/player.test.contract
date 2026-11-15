@@ -62,6 +62,9 @@ test "The bar follows across screens"
   expect text "title" == "Hymns"
   expect text "bar-hymn" == "1 · Praise to the Lord"
   expect text "bar-toggle" == "Pause"
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "3"
   clock data
   tap "hymn-3"

@@ -16,6 +16,9 @@ test "The book opens on its list."
   expect text "hymn-695" == "695Praise God, From Whom All Blessings"
 
 test "Search by number, title and first line."
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "2"
   clock settle
   clock data

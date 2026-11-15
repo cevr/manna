@@ -7,8 +7,9 @@
     "build:web": "bun run exact web-build --out dist && bun tools/web/pages.ts dist",
     "serve:web": "bun run exact serve dist",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test:app": "bun test --preload ./src/test/setup.ts --path-ignore-patterns=src/web/place.test.ts --path-ignore-patterns=src/web/served.test.ts --path-ignore-patterns=src/web/pages.test.ts ./src",
-    "test:web": "bun test --preload ./src/test/setup.ts ./src/web"
+    "test:app": "bun test --preload ./src/test/setup.ts --path-ignore-patterns=src/web/place.test.ts --path-ignore-patterns=src/web/served.test.ts --path-ignore-patterns=src/web/pages.test.ts --path-ignore-patterns=src/find --path-ignore-patterns=src/list/headers.test.ts --path-ignore-patterns=src/no-bucket.test.ts ./src",
+    "test:web": "bun test --preload ./src/test/setup.ts ./src/web",
+    "test:find": "bun test --preload ./src/test/setup.ts ./src/find ./src/list/headers.test.ts ./src/no-bucket.test.ts"
   },
   "dependencies": {
     "@manna/exact-kit": "workspace:*",

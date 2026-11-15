@@ -94,6 +94,14 @@ describe('the data module runs where Exact runs it', () => {
         expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
+        expect(() =>
+          sources.findStep([
+            pick(random, ['screen', 'searchOn', 'drumsOpen', 'turn', 'open', 'tile', 'pinch', 'x']),
+            pick(random, ['/', `/ /hymns/${route(random)}`, 'tens']),
+            below(random, 700) - 2,
+            0,
+          ]),
+        ).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.listTabs().length).toBe(5);
@@ -102,6 +110,8 @@ describe('the data module runs where Exact runs it', () => {
     expect(Object.keys(sources).toSorted()).toEqual([
       'aboutCredits',
       'favouritesAfter',
+      'findStep',
+      'findTiles',
       'hymnPage',
       'hymnRows',
       'listOpening',

@@ -1,0 +1,238 @@
+// Finding a hymn: the find bar on every screen where the `#` stands (home,
+// Recent, a hymn's page), the drums that dial a hymn by its number, and the
+// home list's tiles, every hymn's number at once. Every rule is `step` in
+// src/find/step.ts, answered by `findStep` (src/find/sources.ts); this file
+// draws its view and turns presses into calls. A found hymn goes where the
+// step says (`go`, taken once by its serial); the drums are a dialog the
+// step's `drums` opens and closes, and a tap outside it closes them and
+// fires nothing else. The search box's text is `listQuery`, which the
+// home list's search reads (features/list.contract).
+use PlayerView from "./player.contract"
+
+shape ListRow
+  number: number
+  title: string
+
+shape RowSection
+  slug: string
+  name: string
+  rows: ListRow[]
+
+shape FindGo
+  serial: number
+  how: string
+  path: string
+
+shape FindView
+  serial: number
+  top: string
+  row: string
+  chosen: string
+  searchDrawn: bool
+  searchReach: bool
+  boxDrawn: bool
+  boxReach: bool
+  cancelDrawn: bool
+  cancelReach: bool
+  hashReach: bool
+  tilesControl: bool
+  searchAt: string
+  query: string
+  results: bool
+  drums: bool
+  number: number
+  hundreds: number
+  tens: number
+  ones: number
+  tiles: bool
+  homeTiles: bool
+  pinchable: bool
+  go: FindGo
+
+// Whether the search is on at the screen of `url`: the step names a screen
+// by its path, without the query or fragment a launch may add.
+fn findSearchingAt(v: FindView, url: string): bool = url == v.searchAt or url.startsWith(`${v.searchAt}?`) or url.startsWith(`${v.searchAt}#`)
+
+members HymnalExact
+  state findGone = 0
+  state findDrumsUp = false
+  state findTilesAsked = false
+  derive findPaths = stack(nav).map(e => e.url).join(" ")
+  derive findTopId = top(nav).id
+  resource findOnScreen = findStep("screen", findPaths, 0, 0) as shape FindView
+  mutation findStepped as shape FindView queue then findTook
+  derive find = match findStepped { case some(v) => (v.serial >= findOnScreen.serial ? v : findOnScreen), case none => findOnScreen }
+  resource findTileNumbers = findTiles() when findTilesAsked as shape number[] else empty()
+  action findAsk(kind: string, n: number)
+    send findStepped = findStep(kind, "", n, 0)
+  action findSearch
+    listQuery = ""
+    send findStepped = findStep("searchOn", "", 0, 0)
+  action findCancel
+    listQuery = ""
+    send findStepped = findStep("searchOff", "", 0, 0)
+  action findType(v: string)
+    listQuery = v
+    send findStepped = findStep("query", v, 0, 0)
+  action findTurn(drum: string, n: number)
+    send findStepped = findStep("turn", drum, n, 0)
+  action findWheeled(e: WheelEvent)
+    if e.ctrlKey
+      preventDefault()
+      send findStepped = findStep("wheel", "", e.deltaY, 0)
+  action findTook
+    if find.homeTiles
+      findTilesAsked = true
+    if find.drums and not findDrumsUp
+      findDrumsUp = true
+      showModal("find-drums")
+    else if findDrumsUp and not find.drums
+      findDrumsUp = false
+      close("find-drums")
+    if find.go.serial > findGone
+      findGone = find.go.serial
+      if find.go.how == "push"
+        nav = push(nav, find.go.path)
+      else if find.go.how == "replace"
+        nav = replace(nav, find.go.path)
+  action findDismissed
+    findDrumsUp = false
+    send findStepped = findStep("drumsClose", "", 0, 0)
+
+// The find bar of the screen `entry` draws, shown while that screen is on
+// top. Folded: Search and the `#` (and, on the home list, All at once);
+// searching here: the box, the `#` and Cancel; on the tiles: the `#`
+// alone. With `results`, a search's hymns show under it, taking the
+// screen's place.
+component FindBar
+  props
+    entry: Entry
+    results: bool
+  inject
+    findShown: FindView
+    findPress: action
+    findSearchOn: action
+    findSearchOff: action
+    findTyped: action
+    findText: string
+    findTop: number
+    findRows: RowSection[]
+    findOpen: action
+    favouriteNumbers: number[]
+    playerShown: PlayerView
+  view
+    if entry.id == findTop
+      column flex=(results and findShown.results ? "1000 1 0px" : "none") min-height=0 testId="find"
+        row gap=8 align-items="center" padding="4px 16px" testId="find-bar"
+          if findShown.searchDrawn
+            button press=findSearchOn disabled=(not findShown.searchReach) aria-pressed=(findShown.chosen == "search") flex=1 min-height=44 testId="find-search"
+              row gap=6 align-items="center"
+                image "symbol:search"
+                text "Search"
+          if findShown.boxDrawn
+            input type="search" value=findText input=findTyped placeholder="Number, title or first line"
+              aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) flex=1 min-width=0 testId="search"
+          button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) disabled=(not findShown.hashReach)
+            aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") min-width=44 min-height=44 testId="find-number"
+            text "#" font="-exact-title3"
+          if findShown.cancelDrawn
+            button press=findSearchOff disabled=(not findShown.cancelReach) min-height=44 testId="find-cancel"
+              text "Cancel"
+          if findShown.tilesControl
+            button press=findPress("tilesShow", 0) aria-label="All at once" min-width=44 min-height=44 testId="tiles-show"
+              image "symbol:layers"
+        if results and findShown.results
+          if findRows.length == 0
+            text `No hymn matches “${findText.trim()}”.` padding=16 color="-exact-secondary-label" testId="none-found"
+          else
+            list id=`find-list-${entry.id}` appearance="auto" listStyle="plain" flex=1 min-height=0 testId="find-list"
+              section
+                for s in findRows key=s.slug
+                  for r in s.rows key=r.number
+                    FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+
+// The drums: a hymn's number dialled on three, hundreds, tens and ones,
+// each the platform's adjustable control with its digit as its value. The
+// hundreds stop at 0 and 6; the tens and ones turn one past each end, which
+// the step wraps (`turn`), so an increment at 9 dials 0. Open goes to the
+// hymn; the `#` here, a tap outside, Escape or a swipe down close them.
+component FindDrums
+  inject
+    findShown: FindView
+    findPress: action
+    findDismiss: action
+  view
+    dialog id="find-drums" closedby="any" cancel=findDismiss aria-label="Find a hymn by number"
+      background-color="-exact-secondary-background" border-radius=16 padding=16 testId="drums"
+      column gap=12 min-width=280
+        row gap=12 align-items="center"
+          text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
+          button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
+            text "#" font="-exact-title3"
+        FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
+        FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
+        FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
+        button press=findPress("open", 0) buttonStyle="filled" min-height=44 testId="drums-open"
+          text `Open ${findShown.number}`
+
+component FindDrum
+  props
+    drum: string
+    label: string
+    digit: number
+    low: number
+    high: number
+  inject
+    findDial: action
+  view
+    row gap=12 align-items="center"
+      text label min-width="5.5rem"
+      text `${digit}` font-variant-numeric="tabular-nums" min-width="1.5rem" aria-hidden=true
+      input type="range" min=low max=high step=1 value=digit input=findDial(drum) aria-label=label
+        aria-valuetext=`${digit}` flex=1 min-width=0 testId=`drum-${drum}`
+
+// All at once: every hymn's number in one grid over the home list, which
+// stays where it stood beneath. A tile opens its hymn; Done returns to the
+// list.
+component FindTiles
+  inject
+    findPress: action
+    findTileList: number[]
+    findWheel: action
+  view
+    column flex=1 min-height=0 testId="tiles"
+      row align-items="center" padding="4px 16px"
+        text "All at once" flex=1 color="-exact-secondary-label"
+        button press=findPress("tilesDone", 0) min-height=44 testId="tiles-done"
+          text "Done"
+      scroll id="find-tiles" flex=1 min-height=0 wheel=findWheel
+        row flex-wrap="wrap" gap=6 padding=16
+          for n in findTileList key=n
+            button press=findPress("tile", n) aria-label=`Hymn ${n}` min-width=44 min-height=44 testId=`tile-${n}`
+              text `${n}` font-variant-numeric="tabular-nums"
+
+// A found hymn's row: a hymn's row whose press opens the hymn as a found
+// hymn opens (`listOpening`).
+component FoundRow
+  props
+    number: number
+    title: string
+    star: bool
+    open: action
+  view
+    button press=open(number) testId=`hymn-${number}`
+      HymnRowText(number=number, title=title, star=(star ? `star-${number}` : ""))
+
+// A hymn's row's words: its number, then its title, and a star when `star`
+// names one (its `testId`).
+component HymnRowText
+  props
+    number: number
+    title: string
+    star: string
+  view
+    row gap=12 flex=1 min-width=0 align-items="baseline"
+      text `${number}` font-variant-numeric="tabular-nums" min-width="2.5rem"
+      text title flex=1 min-width=0
+      if star != ""
+        image "symbol:star-fill" aria-label="Favourite" testId=star

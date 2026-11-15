@@ -1,0 +1,190 @@
+test "The bar folds and opens"
+  expect tree has "find-search"
+  expect tree has "find-number"
+  expect tree missing "find-cancel"
+  expect tree missing "search"
+  tap "find-search"
+  clock settle
+  clock data
+  expect tree has "search"
+  expect tree has "find-cancel"
+  expect tree has "find-number"
+  expect tree missing "find-search"
+  expect state find.row == "open"
+  type "search" "100"
+  clock settle
+  clock data
+  expect tree missing "section-adoration-and-praise"
+  tap "find-cancel"
+  clock settle
+  clock data
+  expect state find.row == "folded"
+  expect state listQuery == ""
+  expect tree has "find-search"
+  expect tree missing "find-cancel"
+  expect tree has "section-adoration-and-praise"
+
+test "A hymn by its number"
+  tap "find-number"
+  clock settle
+  clock data
+  expect tree has "drums"
+  expect state find.drums == true
+  type "drum-hundreds" "3"
+  clock data
+  type "drum-tens" "4"
+  clock data
+  type "drum-ones" "5"
+  clock data
+  expect text "drums-number" == "345"
+  tap "drums-open"
+  clock settle
+  clock data
+  expect state find.drums == false
+  expect text "hymn-title" == "Christ Is the World's True Light"
+  back
+  clock settle
+  expect text "title" == "Hymns"
+  expect tree missing "hymn-title"
+
+test "The drums hold to the book"
+  tap "find-number"
+  clock settle
+  clock data
+  type "drum-hundreds" "6"
+  clock data
+  type "drum-tens" "9"
+  clock data
+  type "drum-ones" "9"
+  clock data
+  expect text "drums-number" == "695"
+  type "drum-hundreds" "7"
+  clock data
+  expect state find.hundreds == 6
+  expect text "drums-number" == "695"
+  type "drum-ones" "10"
+  clock data
+  expect state find.ones == 0
+  expect text "drums-number" == "690"
+
+test "A tap outside closes the drums and opens nothing"
+  tap "find-number"
+  clock settle
+  clock data
+  expect state find.drums == true
+  tap "root" drag 0 0 from 20 860
+  clock settle
+  clock data
+  expect state find.drums == false
+  expect state findDrumsUp == false
+  expect text "title" == "Hymns"
+  expect tree missing "hymn-title"
+  expect state find.go.serial == 0
+
+test "All at once"
+  perf
+    tap "tab-topics"
+    clock settle
+    clock data
+  expect perf query findTileNumbers == 0
+  expect state findTilesAsked == false
+  expect state find.top == "/"
+  expect state find.tilesControl == true
+  tap "tiles-show"
+  clock settle
+  clock data
+  expect tree has "tiles"
+  expect tree has "tile-1"
+  expect tree has "tile-695"
+  expect state find.row == "tiles"
+  expect tree missing "find-search"
+  tap "tile-100"
+  clock settle
+  clock data
+  expect text "hymn-title" == "Great Is Thy Faithfulness"
+  back
+  clock settle
+  clock data
+  expect tree has "tiles"
+  expect tree has "tile-100"
+  perf
+    tap "tiles-done"
+    clock settle
+    clock data
+  expect perf built "HymnRow" == 0
+  expect tree missing "tiles"
+  expect state listTab == "Topics"
+  expect tree has "group-adoration-and-praise"
+
+test "On a hymn's page a found hymn takes its place"
+  at "/hymns/2"
+  clock data
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  tap "find-number"
+  clock settle
+  clock data
+  type "drum-hundreds" "1"
+  clock data
+  expect text "drums-number" == "100"
+  tap "drums-open"
+  clock settle
+  clock data
+  expect text "hymn-title" == "Great Is Thy Faithfulness"
+  back
+  clock settle
+  expect text "title" == "Hymns"
+  expect tree missing "hymn-title"
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "100"
+  clock settle
+  clock data
+  expect tree has "find-list"
+  tap "hymn-100"
+  clock settle
+  clock data
+  expect text "hymn-title" == "Great Is Thy Faithfulness"
+  expect tree missing "find-list"
+  back
+  clock settle
+  expect text "title" == "Hymns"
+  expect tree missing "hymn-title"
+
+test "On Recent the bar stands too"
+  tap "hymn-2"
+  clock settle
+  clock data
+  back
+  clock settle
+  tap "recent-all"
+  clock settle
+  clock data
+  expect text "recent-title" == "Recent"
+  expect tree has "find-search"
+  expect tree has "find-number"
+  expect tree missing "tiles-show"
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "100"
+  clock settle
+  clock data
+  expect tree has "find-list"
+  tap "hymn-100"
+  clock settle
+  clock data
+  expect text "hymn-title" == "Great Is Thy Faithfulness"
+  back
+  clock settle
+  clock data
+  expect text "recent-title" == "Recent"
+  expect tree has "find-list"
+  tap "find-cancel"
+  clock settle
+  clock data
+  expect tree missing "find-list"
+  expect tree has "recent-2"

@@ -6,6 +6,7 @@
 use EmptyState from "exact:content"
 use PlayerPagePlay, PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
+use FindBar from "./find.contract"
 
 shape HymnPart
   key: string
@@ -33,6 +34,7 @@ component HymnPage
       header display="flex" align-items="center" padding="8px 16px"
         text (not ready ? "" : page.number == 0 ? "No Such Hymn" : page.title) role="heading" aria-level=2 testId="hymn-title"
         FavouriteStar(number=(ready ? page.number : 0))
+      FindBar(entry=entry, results=true)
       if ready and page.number == 0
         EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
       else

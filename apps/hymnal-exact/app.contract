@@ -16,6 +16,7 @@ use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
 use RecentScreen from "./features/recent.contract"
 use NotFound from "./features/notfound.contract"
+use FindDrums from "./features/find.contract"
 
 routes nav
   list "/"
@@ -34,19 +35,33 @@ component HymnalExact
   members "./features/about.contract"
   members "./features/recent.contract"
   members "./features/favourites.contract"
+  members "./features/find.contract"
   provide
     playerShown = player
     playerPress = playerAsk
     settingsGear = settingsOpen
     favouriteNumbers = favouriteList
     favouritePress = favouriteToggle
+    findShown = find
+    findPress = findAsk
+    findSearchOn = findSearch
+    findSearchOff = findCancel
+    findTyped = findType
+    findText = listQuery
+    findTop = findTopId
+    findRows = listRows
+    findOpen = listOpen
+    findDial = findTurn
+    findDismiss = findDismissed
+    findTileList = findTileNumbers
+    findWheel = findWheeled
   action follow(url: string)
     nav = go(nav, url)
   view
     main testId="root" navigationKey=`${top(nav).id}` navigate=follow color-scheme=settingsScheme width="100%" height="100%"
       for e in stack(nav) key=e.id
         if e.name == "list"
-          HymnList(entry=e, query=listQuery, sections=listRows, search=listSearch, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
+          HymnList(entry=e, query=listQuery, sections=listRows, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
         if e.name == "hymn" and not (current(hymnShown) and hymnShown.number == 0)
           HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
         if e.name == "player"
@@ -60,3 +75,4 @@ component HymnalExact
         if e.name == "notfound" or (e.name == "hymn" and current(hymnShown) and hymnShown.number == 0)
           NotFound(entry=e)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)
+      FindDrums()

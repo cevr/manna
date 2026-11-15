@@ -7,6 +7,7 @@
  * the written `src/player/timing.gen.ts`).
  */
 
+import { findSources } from './find/sources.ts';
 import { homeSources } from './home/sources.ts';
 import { hymnSources } from './hymn/sources.ts';
 import { book } from './hymns/book.ts';
@@ -20,4 +21,5 @@ export const sourcesAt = (origin: string, timing: ReadonlyArray<readonly [number
   ...playerSources(book, timing, originOf(origin)),
   ...homeSources(book),
   ...settingsSources(),
+  ...findSources(book),
 });

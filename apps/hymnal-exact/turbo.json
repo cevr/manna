@@ -3,8 +3,13 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web"],
+      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web", "test:find"],
       "outputs": []
+    },
+    "test:find": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
     },
     "test:app": {
       "dependsOn": ["^transit"],
@@ -14,7 +19,10 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/apps/hymnal/src/**",
-        "!src/web/**/*.test.*"
+        "!src/web/**/*.test.*",
+        "!src/find/**/*.test.*",
+        "!src/list/headers.test.ts",
+        "!src/no-bucket.test.ts"
       ]
     },
     "test:web": {

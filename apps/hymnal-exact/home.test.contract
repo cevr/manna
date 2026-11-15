@@ -36,6 +36,9 @@ test "Recent fills as hymns are opened"
   clock data
   back
   clock settle
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "100"
   clock settle
   clock data
@@ -82,6 +85,9 @@ test "Recent fills as hymns are opened"
   expect tree has "shelf-2"
 
 test "A star marks a hymn everywhere"
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "100"
   clock settle
   clock data
@@ -131,6 +137,9 @@ test "A star marks a hymn everywhere"
   expect tree missing "star-100"
 
 test "A hymn found on the list is pushed over it"
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "100"
   clock settle
   clock data
