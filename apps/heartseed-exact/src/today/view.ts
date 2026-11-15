@@ -10,7 +10,7 @@ import type { Mark } from '@manna/heartseed/matcher';
 
 import { isIdle, type Maybe, type Phase, type Recall, type TodayState } from './step';
 
-export interface WordView {
+interface WordView {
   readonly index: number;
   readonly text: string;
   readonly lit: boolean;
@@ -18,7 +18,7 @@ export interface WordView {
 }
 
 /** A phrase the recognizer is told to expect, as `@exact/speech-recognition` takes it. */
-export interface Phrase {
+interface Phrase {
   readonly phrase: string;
   // oxlint-disable-next-line effect/noNullish -- Exact's option<number> is null on the wire.
   readonly boost: null;
@@ -50,7 +50,7 @@ const wire = (recall: Maybe<Recall>): Recall | null => {
 };
 
 /** The verse's distinct words, lowercase, letters and numbers alone, in first-seen order: the recognizer's hints. */
-export const phrasesOf = (words: readonly string[]): Phrase[] =>
+const phrasesOf = (words: readonly string[]): Phrase[] =>
   [...new Set(words.map((word) => word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')))]
     .filter((phrase) => phrase.length > 0)
     // oxlint-disable-next-line effect/noNullish -- Exact's option<number> is null on the wire.

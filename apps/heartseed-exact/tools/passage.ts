@@ -20,7 +20,7 @@ import type { Passage } from '../src/today/step';
 export const PASSAGE_FILE = join(import.meta.dir, '..', 'src', 'passage', 'today.json');
 
 /** The shipped file's text for `passage`: its reference and text alone, as JSON. */
-export const passageJson = (passage: Passage): string =>
+const passageJson = (passage: Passage): string =>
   `${JSON.stringify({ reference: passage.reference, text: passage.text }, undefined, 2)}\n`;
 
 /** Writes the shipped passage file from the KJV and answers its text. */
