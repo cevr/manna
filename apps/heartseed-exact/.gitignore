@@ -6,6 +6,5 @@
 /app.contract.d.ts
 /.exact/
 /.env.local
-/src/passage/today.ts
 /src/about/licences.ts
 /src/text/kjv.gen.json

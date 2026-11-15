@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md): a host script `bun run exact` runs before Exact; it links Exact's standard modules from the clone `EXACT` names and writes the passage, synchronously, before any build reads them. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md): a host script `bun run exact` runs before Exact; it links Exact's standard modules from the clone `EXACT` names and writes the licences and the KJV, synchronously, before any build reads them. */
 
 /**
  * Readies the app folder for an Exact command, every time `bun run exact`
@@ -6,10 +6,9 @@
  * `@exact/speech-recognition` and the `@exact/media-capture` it uses) live
  * in the Exact clone, not on npm, so each is linked into this app's
  * `node_modules` from the clone `EXACT` names (or the default), and no
- * machine path is committed. Then Today's passage is written
- * (`tools/passage.ts`), About's licences (`tools/licences.ts`), and the
- * whole KJV the current app's modules read (`tools/kjv.ts`), only when its
- * text changed.
+ * machine path is committed. Then About's licences are written
+ * (`tools/licences.ts`), and the whole KJV the current app's modules read
+ * (`tools/kjv.ts`), only when its text changed.
  */
 
 import { existsSync, lstatSync, mkdirSync, readlinkSync, symlinkSync, unlinkSync } from 'node:fs';
@@ -18,7 +17,6 @@ import { join } from 'node:path';
 
 import { writeKjv } from './kjv';
 import { writeLicences } from './licences';
-import { writePassage } from './passage';
 
 /** Exact's standard modules the app's Contract uses. */
 const MODULES = ['speech-synthesis', 'speech-recognition', 'media-capture'];
@@ -45,6 +43,5 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-writePassage();
 writeLicences();
 writeKjv();

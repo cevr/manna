@@ -89,7 +89,7 @@ export interface Now {
   readonly held: Held;
 }
 
-const rangeIn = (random: Random): Range => {
+export const rangeIn = (random: Random): Range => {
   const [book, chapter, verses] = random.pick(CHAPTERS);
   const length = random.pick([1, 1, 1, 2, 3, 3, 4, 5, 8]);
   const first = 1 + random.below(verses);
@@ -279,12 +279,15 @@ export const makePort = (stand: ReturnType<typeof storageOf> = storageOf()) => {
 const silentChime = Layer.succeed(Chime, Chime.of({ grow: () => Effect.void }));
 
 /** The current app's services over one store, as a launch builds them. */
-const appGrounds = Layer.mergeAll(gardenLayer.pipe(Layer.provide(silentChime)), passagesLayer);
+export const appGrounds = Layer.mergeAll(
+  gardenLayer.pipe(Layer.provide(silentChime)),
+  passagesLayer,
+);
 
-type AppServices = Garden | Recalls | Backs | Passages;
+export type AppServices = Garden | Recalls | Backs | Passages;
 
 /** A TestClock, and no logger. */
-const QUIET_TEST_CLOCK = Layer.mergeAll(TestClock.layer(), Logger.layer([]));
+export const QUIET_TEST_CLOCK = Layer.mergeAll(TestClock.layer(), Logger.layer([]));
 
 /** Runs `effect` on the oracle's services, its TestClock set to the instant `now`, its logs dropped. */
 const atTime = <A>(
@@ -313,7 +316,7 @@ const plantNow = (reference: string) =>
   );
 
 /** A plant on the current app's `Passages`, as its chooser plants: one verse joins the single verses, any other range is added as a list. */
-const appPlant = (range: Range) =>
+export const appPlant = (range: Range) =>
   Effect.flatMap(Passages, (passages) => {
     if (range.first === range.last)
       return Effect.map(passages.join(range), (joined): string => {
@@ -327,7 +330,7 @@ const appPlant = (range: Range) =>
   });
 
 /** A list's or a single verse's removal on the current app's `Passages`, by its id. */
-const appRemove = (id: string) =>
+export const appRemove = (id: string) =>
   Effect.gen(function* () {
     const passages = yield* Passages;
     const view = yield* passages.view;
@@ -350,7 +353,7 @@ const appRemove = (id: string) =>
  * none for a seed or a verse not planted), then the recall, its grade held
  * to the cap (`cappedBy`).
  */
-const appRecall = (step: Extract<Step, { readonly _tag: 'recall' }>) =>
+export const appRecall = (step: Extract<Step, { readonly _tag: 'recall' }>) =>
   Effect.gen(function* () {
     const { reference, help } = step;
     const stage = Option.map(yield* plantNow(reference), stageOf);

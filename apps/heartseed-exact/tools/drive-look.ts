@@ -135,11 +135,11 @@ const CHOSEN = ['minutes-10', 'voice-him', 'appearance-dark'];
 const a = script('first');
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const todayLight = a.ground('ground-home');
-const inkLight = a.step('layout reference');
+const inkLight = a.step('layout nothing');
 a.shot('today-light');
 a.step('prefer prefers-color-scheme dark', 'clock settle');
 const todayDark = a.ground('ground-home');
-const inkDark = a.step('layout reference');
+const inkDark = a.step('layout nothing');
 a.shot('today-dark');
 a.step('prefer prefers-color-scheme light', 'clock settle', 'tap gear', 'clock settle');
 a.shot('sheet-light');
@@ -159,9 +159,9 @@ const darkClosed = a.ground('ground-home');
 const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
 
 groundIs('B4 Today is on the light ground under a light system', first, todayLight, 'light');
-inkIs("B4 Today's reference is the light ink", first[inkLight], 'light');
+inkIs("B4 Today's text (nothing planted) is the light ink", first[inkLight], 'light');
 groundIs('B4 Today is on the dark ground under a dark system', first, todayDark, 'dark');
-inkIs("B4 Today's reference is the dark ink", first[inkDark], 'dark');
+inkIs("B4 Today's text (nothing planted) is the dark ink", first[inkDark], 'dark');
 groundIs('B3 Dark is dark at once under a light system', first, darkAtOnce, 'dark');
 drive.check(
   'B2 each choice reads checked',
