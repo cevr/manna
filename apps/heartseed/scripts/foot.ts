@@ -4,17 +4,20 @@
  * Home's foot as the screen draws it: every test id and every label of the
  * nodes `src/field/screen.tsx` puts in its scroll view after the furrows,
  * read from the sources through each component they render, so a node
- * added under the lists is in the foot with no list to keep.
+ * added under the lists is in the foot with no list to keep. What it
+ * cannot read there it names (`unread`), so a form it does not know fails
+ * loudly instead of leaving the foot short.
  */
 
 import { dirname, join } from 'node:path';
 import type { Source } from '@manna/sim/check';
 import { Predicate } from 'effect';
 import {
+  type ArrowFunctionExpression,
   type Expression,
   type Function as FunctionNode,
-  type ArrowFunctionExpression,
   type JSXElement,
+  type JSXFragment,
   type JSXOpeningElement,
   type Node,
   parseSync,
@@ -22,10 +25,11 @@ import {
   visitorKeys,
 } from 'oxc-parser';
 
-/** Home's foot: test ids as spelled, labels folded. */
+/** Home's foot: test ids as spelled, labels folded, and each piece under the lists it could not read, as `<file>: <source>`. */
 export interface Foot {
   readonly ids: ReadonlySet<string>;
   readonly labels: ReadonlySet<string>;
+  readonly unread: ReadonlyArray<string>;
 }
 
 /** The screen whose scroll view holds the foot, its function, and the element its foot follows. */
@@ -42,9 +46,10 @@ type Value = string | number | ReadonlyArray<Value> | ReadonlyMap<string, Value>
 
 type Component = FunctionNode | ArrowFunctionExpression;
 
-/** One module of the app: its constants, its functions, what it imports and what it passes on, by name. */
+/** One module of the app: its text, its constants, its functions, what it imports and what it passes on, by name. */
 interface Module {
   readonly path: string;
+  readonly text: string;
   readonly consts: Map<string, Expression>;
   readonly functions: Map<string, Component>;
   readonly imports: Map<string, { readonly from: string; readonly name: string }>;
@@ -70,16 +75,20 @@ const exportName = (node: Node): string => {
   return '';
 };
 
-const readDeclaration = (module: Module, node: Node | null) => {
-  if (node?.type === 'FunctionDeclaration' && node.id !== null)
-    module.functions.set(node.id.name, node);
+/** Each `const <name> = <init>` of `node`, a function by its name in `functions`, any other in `consts`. */
+const readDeclaration = (
+  consts: Map<string, Expression>,
+  functions: Map<string, Component>,
+  node: Node | null,
+) => {
+  if (node?.type === 'FunctionDeclaration' && node.id !== null) functions.set(node.id.name, node);
   if (node?.type !== 'VariableDeclaration') return;
   for (const each of node.declarations) {
     if (each.id.type !== 'Identifier' || each.init === null) continue;
     const init = each.init;
     if (init.type === 'ArrowFunctionExpression' || init.type === 'FunctionExpression')
-      module.functions.set(each.id.name, init);
-    else module.consts.set(each.id.name, init);
+      functions.set(each.id.name, init);
+    else consts.set(each.id.name, init);
   }
 };
 
@@ -98,13 +107,15 @@ const readStatement = (module: Module, top: Program['body'][number]) => {
       from: top.source.value,
       names: new Set(top.specifiers.map((each) => exportName(each.exported))),
     });
-  if (top.type === 'ExportNamedDeclaration') readDeclaration(module, top.declaration);
-  else if (isNode(top)) readDeclaration(module, top);
+  if (top.type === 'ExportNamedDeclaration')
+    readDeclaration(module.consts, module.functions, top.declaration);
+  else if (isNode(top)) readDeclaration(module.consts, module.functions, top);
 };
 
 const readModule = (path: string, text: string): Module => {
   const module: Module = {
     path,
+    text,
     consts: new Map(),
     functions: new Map(),
     imports: new Map(),
@@ -178,11 +189,31 @@ const bindingOf = (
   return bindingOf(modules, target, imported.name, next);
 };
 
-/** Where a walk stands: its module, and the values its names hold (a component's props, a map's item). */
+/** What a prop renders when its component draws it: the caller's expression (or children), drawn in the caller's scope. */
+type Deferred = (into: Gathered) => void;
+
+/**
+ * Where a walk stands: its module, the values its names hold (a
+ * component's props, a map's item), the props it can only draw
+ * (`deferred`: a node passed in, its children), the consts of the
+ * function body it is in, and the props its component takes that this
+ * call does not pass (`absent`).
+ */
 interface Scope {
   readonly modules: Modules;
   readonly module: Module;
   readonly env: ReadonlyMap<string, Value>;
+  readonly deferred: ReadonlyMap<string, Deferred>;
+  readonly locals: ReadonlyMap<string, Expression>;
+  readonly absent: ReadonlySet<string>;
+}
+
+/** The foot gathered so far, what could not be read, and the component calls already walked. */
+interface Gathered {
+  readonly ids: Set<string>;
+  readonly labels: Set<string>;
+  readonly unread: Array<string>;
+  readonly walked: Set<string>;
 }
 
 const isScalar = (value: Value | undefined): value is string | number =>
@@ -196,9 +227,21 @@ const templateOf = (scope: Scope, node: Extract<Expression, { type: 'TemplateLit
 
 const namedOf = (scope: Scope, name: string): Value | undefined => {
   if (scope.env.has(name)) return scope.env.get(name);
+  const local = scope.locals.get(name);
+  if (local !== undefined) return valueOf({ ...scope, locals: new Map() }, local);
   const binding = bindingOf(scope.modules, scope.module, name);
   if (binding?.kind !== 'const') return undefined;
-  return valueOf({ ...scope, module: binding.module, env: new Map() }, binding.node);
+  return valueOf(
+    {
+      ...scope,
+      module: binding.module,
+      env: new Map(),
+      deferred: new Map(),
+      locals: new Map(),
+      absent: new Set(),
+    },
+    binding.node,
+  );
 };
 
 const arrayOf = (scope: Scope, node: Extract<Expression, { type: 'ArrayExpression' }>) => {
@@ -261,46 +304,16 @@ const valueOf = (scope: Scope, node: Node): Value | undefined => {
   }
 };
 
-/** The props an element passes: each attribute's value where the sources spell it. */
-const propsOf = (scope: Scope, opening: JSXOpeningElement) => {
-  const props = new Map<string, Value>();
-  for (const attribute of opening.attributes) {
-    if (attribute.type !== 'JSXAttribute' || attribute.value === null) continue;
-    let value: Node = attribute.value;
-    if (value.type === 'JSXExpressionContainer') value = value.expression;
-    const got = valueOf(scope, value);
-    if (got !== undefined && attribute.name.type === 'JSXIdentifier')
-      props.set(attribute.name.name, got);
-  }
-  return props;
-};
-
-/** A component's props as its first parameter destructures them, by local name. */
-const paramsOf = (fn: Component, props: ReadonlyMap<string, Value>) => {
-  const env = new Map<string, Value>();
-  const [first] = fn.params;
-  if (first?.type !== 'ObjectPattern') return env;
-  for (const property of first.properties) {
-    if (property.type !== 'Property' || property.key.type !== 'Identifier') continue;
-    let local = property.key.name;
-    if (property.value.type === 'Identifier') local = property.value.name;
-    const value = props.get(property.key.name);
-    if (value !== undefined) env.set(local, value);
-  }
-  return env;
-};
-
-/** The foot gathered so far, and the component calls already walked. */
-interface Gathered {
-  readonly ids: Set<string>;
-  readonly labels: Set<string>;
-  readonly walked: Set<string>;
-}
-
 const addLabel = (into: Gathered, value: Value | undefined) => {
   if (!Predicate.isString(value)) return;
   const label = value.trim();
   if (label !== '') into.labels.add(label.toLowerCase());
+};
+
+/** `node` as its source spells it, on one line, after its file. */
+const unreadAt = (scope: Scope, node: Node, into: Gathered) => {
+  const text = scope.module.text.slice(node.start, node.end).replace(/\s+/gu, ' ');
+  into.unread.push(`${scope.module.path}: ${text}`);
 };
 
 const nameOfElement = (opening: JSXOpeningElement) => {
@@ -308,55 +321,238 @@ const nameOfElement = (opening: JSXOpeningElement) => {
   return '';
 };
 
-/** An element: a component the sources declare is walked with the props it passes, once per props; any other names what its attributes say. */
-const element = (scope: Scope, node: JSXElement, into: Gathered) => {
-  const name = nameOfElement(node.openingElement);
-  const props = propsOf(scope, node.openingElement);
-  const binding = /^[A-Z]/u.test(name) && bindingOf(scope.modules, scope.module, name);
-  if (binding && binding.kind === 'function') {
-    const env = paramsOf(binding.node, props);
-    const key = `${binding.module.path}#${name}#${[...env].map(([k, v]) => `${k}=${String(v)}`).join('&')}`;
-    if (into.walked.has(key) || binding.node.body === null) return;
-    into.walked.add(key);
-    gather({ ...scope, module: binding.module, env }, binding.node.body, into);
-    return;
+/** The props an element passes: each attribute's value where the sources spell it, else what it would draw. */
+const propsOf = (scope: Scope, node: JSXElement) => {
+  const values = new Map<string, Value>();
+  const deferred = new Map<string, Deferred>();
+  for (const attribute of node.openingElement.attributes) {
+    if (attribute.type !== 'JSXAttribute' || attribute.name.type !== 'JSXIdentifier') continue;
+    const name = attribute.name.name;
+    let value: Node | null = attribute.value;
+    if (value?.type === 'JSXExpressionContainer') value = value.expression;
+    if (value === null) continue;
+    const got = valueOf(scope, value);
+    const drawn = value;
+    if (got !== undefined) values.set(name, got);
+    else deferred.set(name, (into) => rendered(scope, drawn, into));
   }
-  for (const [prop, value] of props) {
+  if (node.children.length > 0)
+    deferred.set('children', (into) => {
+      for (const child of node.children) child_(scope, child, into);
+    });
+  return { values, deferred };
+};
+
+/** The consts a function body declares at its top, by name. */
+const localsOf = (fn: Component) => {
+  const consts = new Map<string, Expression>();
+  if (fn.body?.type !== 'BlockStatement') return consts;
+  for (const statement of fn.body.body) readDeclaration(consts, new Map(), statement);
+  return consts;
+};
+
+/** What a component's body hands back: each `return`'s argument, outside the functions it declares; an arrow's own expression. */
+const returnsOf = (fn: Component): ReadonlyArray<Node> => {
+  if (fn.body === null) return [];
+  if (fn.body.type !== 'BlockStatement') return [fn.body];
+  const out: Array<Node> = [];
+  const visit = (node: Node) => {
+    if (node.type === 'ReturnStatement' && node.argument !== null) out.push(node.argument);
+    if (
+      node.type === 'ArrowFunctionExpression' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'FunctionDeclaration'
+    )
+      return;
+    for (const child of childrenOf(node)) visit(child);
+  };
+  for (const statement of fn.body.body) visit(statement);
+  return out;
+};
+
+/** A component's props as its first parameter takes them: destructured by local name, or whole under its name. */
+const paramsOf = (fn: Component, values: ReadonlyMap<string, Value>) => {
+  const env = new Map<string, Value>();
+  const names = new Map<string, string>();
+  const [first] = fn.params;
+  if (first?.type === 'Identifier') env.set(first.name, values);
+  if (first?.type !== 'ObjectPattern') return { env, names };
+  for (const property of first.properties) {
+    if (property.type !== 'Property' || property.key.type !== 'Identifier') continue;
+    let local = property.key.name;
+    if (property.value.type === 'Identifier') local = property.value.name;
+    names.set(property.key.name, local);
+    const value = values.get(property.key.name);
+    if (value !== undefined) env.set(local, value);
+  }
+  return { env, names };
+};
+
+/** A component the sources declare, drawn with the props this call passes, once per props. */
+const component = (
+  scope: Scope,
+  node: JSXElement,
+  binding: { readonly module: Module; readonly node: Component },
+  into: Gathered,
+) => {
+  const name = nameOfElement(node.openingElement);
+  const props = propsOf(scope, node);
+  const { env, names } = paramsOf(binding.node, props.values);
+  const deferred = new Map<string, Deferred>();
+  for (const [prop, draw] of props.deferred) deferred.set(names.get(prop) ?? prop, draw);
+  const absent = new Set(
+    [...names].flatMap(([prop, local]) => {
+      if (props.values.has(prop) || props.deferred.has(prop)) return [];
+      return [local];
+    }),
+  );
+  const key = `${binding.module.path}#${name}#${node.start}#${[...env].map(([k, v]) => `${k}=${String(v)}`).join('&')}`;
+  if (into.walked.has(key)) return;
+  into.walked.add(key);
+  const inner: Scope = {
+    modules: scope.modules,
+    module: binding.module,
+    env,
+    deferred,
+    locals: localsOf(binding.node),
+    absent,
+  };
+  for (const each of returnsOf(binding.node)) rendered(inner, each, into);
+};
+
+/** A host element (a lower-case name, or one a package exports): what its attributes name. */
+const host = (scope: Scope, node: JSXElement, into: Gathered) => {
+  for (const attribute of node.openingElement.attributes) {
+    if (attribute.type !== 'JSXAttribute' || attribute.name.type !== 'JSXIdentifier') continue;
+    const prop = attribute.name.name;
+    const names = ID_ATTRIBUTES.has(prop) || LABEL_ATTRIBUTES.has(prop);
+    let expression: Node | null = attribute.value;
+    if (expression?.type === 'JSXExpressionContainer') expression = expression.expression;
+    if (!names || expression === null) continue;
+    const value = valueOf(scope, expression);
+    const absent = expression.type === 'Identifier' && scope.absent.has(expression.name);
+    if (!Predicate.isString(value) && !absent) unreadAt(scope, attribute, into);
     if (ID_ATTRIBUTES.has(prop) && Predicate.isString(value)) into.ids.add(value);
     if (LABEL_ATTRIBUTES.has(prop)) addLabel(into, value);
   }
 };
 
-/** A `.map` over a constant array: its callback's body walked once per item, the item bound to its parameter. */
+/** An element: a component the sources declare is drawn through its body, a host names its attributes and draws its children; any other is unread. */
+const element = (scope: Scope, node: JSXElement, into: Gathered) => {
+  const name = nameOfElement(node.openingElement);
+  const binding = bindingOf(scope.modules, scope.module, name);
+  if (binding?.kind === 'function') return component(scope, node, binding, into);
+  const from = scope.module.imports.get(name)?.from ?? '';
+  const isHost = /^[a-z]/u.test(name) || (from !== '' && !from.startsWith('.'));
+  if (!isHost) return unreadAt(scope, node.openingElement, into);
+  host(scope, node, into);
+  for (const child of node.children) child_(scope, child, into);
+};
+
+/** A child of an element: its text, an element or fragment, or what its expression draws. */
+const child_ = (scope: Scope, node: Node, into: Gathered): void => {
+  if (node.type === 'JSXText') return addLabel(into, node.value);
+  if (node.type === 'JSXExpressionContainer') {
+    if (node.expression.type === 'JSXEmptyExpression') return;
+    return rendered(scope, node.expression, into);
+  }
+  if (node.type === 'JSXElement') return element(scope, node, into);
+  if (node.type === 'JSXFragment') return fragment(scope, node, into);
+  unreadAt(scope, node, into);
+};
+
+const fragment = (scope: Scope, node: JSXFragment, into: Gathered) => {
+  for (const child of node.children) child_(scope, child, into);
+};
+
+/** A `.map` over a constant array: its callback drawn once per item, the item bound to its parameter; false when it is no such call. */
 const mapped = (scope: Scope, node: Extract<Node, { type: 'CallExpression' }>, into: Gathered) => {
   const [fn] = node.arguments;
-  if (node.callee.type !== 'MemberExpression' || fn?.type !== 'ArrowFunctionExpression') return;
-  if (node.callee.computed || node.callee.property.name !== 'map') return;
+  if (node.callee.type !== 'MemberExpression' || fn?.type !== 'ArrowFunctionExpression')
+    return false;
+  if (node.callee.computed || node.callee.property.name !== 'map') return false;
   const items = valueOf(scope, node.callee.object);
   const [param] = fn.params;
-  if (!Array.isArray(items) || param?.type !== 'Identifier') return;
-  for (const item of items)
-    gather({ ...scope, env: new Map([...scope.env, [param.name, item]]) }, fn.body, into);
+  if (!Array.isArray(items) || param?.type !== 'Identifier') return false;
+  for (const item of items) {
+    const inner: Scope = {
+      ...scope,
+      env: new Map([...scope.env, [param.name, item]]),
+      locals: new Map([...scope.locals, ...localsOf(fn)]),
+    };
+    for (const each of returnsOf(fn)) rendered(inner, each, into);
+  }
+  return true;
+};
+
+/** An `Option.match(value, { onNone, onSome })`: each case's callback drawn, its parameter unknown; false when it is no such call. */
+const matched = (scope: Scope, node: Extract<Node, { type: 'CallExpression' }>, into: Gathered) => {
+  const { callee } = node;
+  const [, cases] = node.arguments;
+  if (callee.type !== 'MemberExpression' || callee.computed || cases?.type !== 'ObjectExpression')
+    return false;
+  if (callee.object.type !== 'Identifier' || callee.object.name !== 'Option') return false;
+  if (callee.property.name !== 'match') return false;
+  for (const each of cases.properties) {
+    if (each.type !== 'Property') continue;
+    const fn = each.value;
+    if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression')
+      unreadAt(scope, fn, into);
+    else for (const drawn of returnsOf(fn)) rendered(scope, drawn, into);
+  }
+  return true;
+};
+
+/** A name drawn: a prop passed as a node, a const of the body, else a value the sources spell; unread when none. */
+const drawnName = (scope: Scope, node: Extract<Node, { type: 'Identifier' }>, into: Gathered) => {
+  const draw = scope.deferred.get(node.name);
+  if (draw !== undefined) return draw(into);
+  const local = scope.locals.get(node.name);
+  if (local !== undefined && valueOf(scope, local) === undefined)
+    return rendered(
+      { ...scope, locals: new Map([...scope.locals].filter(([name]) => name !== node.name)) },
+      local,
+      into,
+    );
+  const value = valueOf(scope, node);
+  if (value === undefined) return unreadAt(scope, node, into);
+  addLabel(into, value);
 };
 
 /**
- * Gathers every id and label `node` draws in `scope`: a host element's
- * `testID` and label, a text child, a child the sources spell as a string,
- * each component the sources declare through its own body, and a `.map`
- * over a constant array once per item.
+ * What an expression draws: an element or fragment, either side a
+ * condition may draw, a `.map` over a constant array, a name, or a value
+ * the sources spell (a string is a label; a number, a boolean or null
+ * draws no node). Anything else is unread.
  */
-const gather = (scope: Scope, node: Node, into: Gathered): void => {
-  if (node.type === 'JSXAttribute') {
-    const value = node.value;
-    if (value?.type === 'JSXExpressionContainer') gather(scope, value.expression, into);
-    else if (value !== null && value.type !== 'Literal') gather(scope, value, into);
-    return;
+const rendered = (scope: Scope, node: Node, into: Gathered): void => {
+  switch (node.type) {
+    case 'JSXElement':
+      return element(scope, node, into);
+    case 'JSXFragment':
+      return fragment(scope, node, into);
+    case 'LogicalExpression':
+      if (node.operator !== '&&') rendered(scope, node.left, into);
+      return rendered(scope, node.right, into);
+    case 'ConditionalExpression':
+      rendered(scope, node.consequent, into);
+      return rendered(scope, node.alternate, into);
+    case 'ParenthesizedExpression':
+      return rendered(scope, node.expression, into);
+    case 'Identifier':
+      return drawnName(scope, node, into);
+    case 'CallExpression':
+      if (!mapped(scope, node, into) && !matched(scope, node, into)) unreadAt(scope, node, into);
+      return;
+    case 'Literal':
+      if (!Predicate.isString(node.value)) return;
+      return addLabel(into, node.value);
+    default: {
+      const value = valueOf(scope, node);
+      if (value === undefined) return unreadAt(scope, node, into);
+      addLabel(into, value);
+    }
   }
-  if (node.type === 'JSXText') addLabel(into, node.value);
-  if (node.type === 'JSXExpressionContainer') addLabel(into, valueOf(scope, node.expression));
-  if (node.type === 'JSXElement') element(scope, node, into);
-  if (node.type === 'CallExpression') mapped(scope, node, into);
-  for (const child of childrenOf(node)) gather(scope, child, into);
 };
 
 /** The first element named `name` in `node`, depth first. */
@@ -371,19 +567,29 @@ const elementIn = (node: Node, name: string): JSXElement | undefined => {
 
 /**
  * Home's foot over `sources`: every id and label of what `FieldScreen`
- * draws in its `ScrollView` after the child that holds `<Furrows>`; none
- * when the screen, its scroll view or its furrows are gone.
+ * draws in its `ScrollView` after the child that holds `<Furrows>`, and
+ * each piece there it cannot read; one unread entry naming what is gone
+ * when the screen, its scroll view or its furrows are.
  */
 export const footOf = (sources: ReadonlyArray<Source>): Foot => {
   const modules = modulesOf(sources);
-  const into: Gathered = { ids: new Set(), labels: new Set(), walked: new Set() };
+  const into: Gathered = { ids: new Set(), labels: new Set(), unread: [], walked: new Set() };
   const screen = modules.at(SCREEN);
   const fn = screen?.functions.get(SCREEN_FUNCTION);
   const scroll = fn && elementIn(fn, 'ScrollView');
-  if (screen === undefined || scroll === undefined) return into;
-  const after = scroll.children.findIndex((child) => elementIn(child, AFTER) !== undefined);
-  if (after < 0) return into;
-  for (const child of scroll.children.slice(after + 1))
-    gather({ modules, module: screen, env: new Map() }, child, into);
-  return { ids: into.ids, labels: into.labels };
+  const after = (scroll?.children ?? []).findIndex(
+    (child) => elementIn(child, AFTER) !== undefined,
+  );
+  if (screen === undefined || fn === undefined || scroll === undefined || after < 0)
+    return { ...into, unread: [`${SCREEN}: no ${SCREEN_FUNCTION} ScrollView holding <${AFTER}>`] };
+  const scope: Scope = {
+    modules,
+    module: screen,
+    env: new Map(),
+    deferred: new Map(),
+    locals: localsOf(fn),
+    absent: new Set(),
+  };
+  for (const child of scroll.children.slice(after + 1)) child_(scope, child, into);
+  return { ids: into.ids, labels: into.labels, unread: into.unread };
 };
