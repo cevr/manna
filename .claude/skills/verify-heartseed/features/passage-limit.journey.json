@@ -101,6 +101,18 @@
       "receipt": "none"
     },
     {
+      "name": "passage-limit-range-scroll",
+      "action": "scroll",
+      "receipt": "none",
+      "target": "label=Romans 8:30",
+      "direction": "down",
+      "expect": [
+        {
+          "shows": "label=Romans 8:30"
+        }
+      ]
+    },
+    {
       "name": "passage-limit-range",
       "action": "tap",
       "target": "label=Romans 8:30",

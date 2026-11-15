@@ -193,7 +193,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 
 **Journeys in order:** from a fresh install: `first`, `home-add`.
 
-**Journeys in order:** from a fresh install: `first`, `home-scroll`.
+**Journeys in order:** from a fresh install: `first`, `home-add`, `home-scroll`.
 
 Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 `sim` = `bun run --cwd apps/heartseed sim`. Nothing native changes for the
@@ -488,8 +488,10 @@ sheet opened from `id=add-verses`, its heading `Add verses`).
 ### The scroll kept
 
 On a fresh install of its own, from `first.md`'s `sim journey first` to
-`first-home`, with the same variables, `sim journey home-scroll` →
-`"ok":true`:
+`first-home`, with the same variables, then `sim journey home-add` (its
+`Psalms 46:1-3` makes the field taller than the screen: the first run's
+field alone, its own verse a single verse, hsminlist, fits with `How
+Heartseed works` in view), `sim journey home-scroll` → `"ok":true`:
 
 1. `home-scroll/home-scroll-home` → the Today card, and `How Heartseed
    works` under the fold (hidden); `home-scroll/home-scroll-down`, after

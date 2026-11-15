@@ -351,13 +351,19 @@ const listed = (node: Element) =>
   END_ROWS.has(nameOf(node)) ||
   (nameOf(node).startsWith('Open ') && node.closest('[data-testid="row"]') !== null);
 
-/** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden, under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, or any image. */
+/** Whether `part` of the plant named `name` may be exposed: a single verse's reference, reading the plant's reference. */
+const shownPart = (part: Element, name: string) =>
+  idOf(part) === 'single-reference' &&
+  text(part) === (nameParts(name)?.reference ?? '').replace(/\s+/g, ' ').trim();
+
+/** What one plant shows wrong: not one exposed button of a plant's name whose children are all hidden (a single verse's reference aside), under 44 wide, a dot not exactly on a plant ready today or not filled `sun`, or any image. */
 const plantFaults = (plant: Element) => {
   const name = nameOf(plant);
   const out: string[] = [];
   if (plant.getAttribute('role') !== 'button' || hidden(plant) || nameParts(name) === null)
     out.push(`a plant not one exposed button of a plant's name: ${name}`);
-  if (![...plant.children].every(hidden)) out.push(`a plant's part exposed: ${name}`);
+  if (![...plant.children].every((part) => hidden(part) || shownPart(part, name)))
+    out.push(`a plant's part exposed: ${name}`);
   if (parseFloat(ownStyle(plant, 'width')) < 44) out.push(`a plant under 44 wide: ${name}`);
   const dots = [...plant.querySelectorAll('[data-testid="dot"]')];
   if (dots.length !== (name.endsWith(READY) ? 1 : 0)) out.push(`${dots.length} dots on ${name}`);

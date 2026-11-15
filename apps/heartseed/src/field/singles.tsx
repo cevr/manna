@@ -6,8 +6,10 @@
  * own. A row is one button, a plant of the field (`field-plant`), named as
  * a plant is (`<reference>, <stage>`, then `, ready today`), whose tap
  * starts its verse as a plant's tap does; inside it, hidden (the name says
- * them), the gold dot when ready, its dash (ink once sown, soil before) and
- * its reference. A verse the reader planted alone carries
+ * them), the gold dot when ready and its dash (ink once sown, soil
+ * before); then its reference (`single-reference`), the one part left
+ * exposed, so a simulator drive finds the verse by its reference on home
+ * as it did by a list's title (verify-heartseed's ready target). A verse the reader planted alone carries
  * a `Remove` beside its row, named `Remove <reference>`: its tap puts the
  * ask under the row, `Remove <reference>? Its plant stays in your field.`
  * with `Remove` and `Keep`. From a tap of the ask's `Remove` until its
@@ -82,7 +84,7 @@ function Single({
           style={({ pressed }) => [styles.verse, pressed && styles.pressed]}
         >
           <Drawing plant={plant} />
-          <Text aria-hidden style={styles.reference}>
+          <Text testID="single-reference" style={styles.reference}>
             {plant.reference}
           </Text>
         </Pressable>
