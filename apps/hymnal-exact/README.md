@@ -41,15 +41,15 @@ Logic of the current hymnal and `@manna/hymnal` is imported through package expo
 
 ## The player
 
-A hymn's recording plays from the recordings' bucket (`https://hymns.cvr.im`, the current app's `audioUrl`), through one `audio` element per load and the system's Now Playing (`features/player.contract`). Every rule is one pure `step(state, input)` in `src/player/step.ts`, over the current app's own `bar`, `stanzas`, `title`, `time` and `follow/timeline` (imported through `@manna/hymnal-app`'s exports, whose declarations are `apps/hymnal/exact/**`); `src/player/sources.ts` answers `playerStep`, which the view calls for each tap and each of the element's events, each event naming its load. `src/player/protocol.qnt` is the protocol of taps, events and the platform's play and pause; `protocol.test.ts` checks it over `step` by a search of every interleaving.
+A hymn's recording plays from the recordings' bucket (`https://hymns.cvr.im`, the current app's `audioUrl`), through one `audio` element per load and the system's Now Playing (`features/player.contract`). Every rule is one pure `step(state, input)` in `src/player/step.ts`, over the current app's own `bar`, `stanzas`, `title`, `time` and `follow/timeline` (imported through `@manna/hymnal-app`'s exports, whose declarations are `apps/hymnal/exact/**`); `src/player/sources.ts` answers `playerStep`, which the view calls for each tap and each of the element's events, each event naming its load. `src/player/protocol.qnt` is the protocol of taps, events and the platform's play and pause; `protocol.test.ts` checks it over `step` by a search of every interleaving. Quint's simulator runs the model itself: `bunx @informalsystems/quint run --invariant=safe --max-steps=20 src/player/protocol.qnt`.
 
 `bun run exact` also runs `tools/timing.ts`, which writes `src/player/timing.gen.ts` (ignored): each hymn's line timing with its words left out, for the stanza choice's length.
 
-Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`, port 4797), two recordings of digital silence and a 404 for hymn 13:
+Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`), two recordings of digital silence and a 404 for hymn 13. Each checkout has its own port (`bun tools/recordings.ts --port`, in 4790–5789), so two checkouts' runs never share a fixture; the build's grant for 4797 moves to it:
 
 ```sh
-HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test web player.test.contract
-HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test ios player.test.contract
+HYMNAL_RECORDINGS=http://127.0.0.1:$(bun tools/recordings.ts --port) bun run exact test web player.test.contract
+HYMNAL_RECORDINGS=http://127.0.0.1:$(bun tools/recordings.ts --port) bun run exact test ios player.test.contract
 bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recording, a kept stanza choice
 bun tools/drive-player.ts ios
 ```
