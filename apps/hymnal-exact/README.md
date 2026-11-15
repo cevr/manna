@@ -74,7 +74,7 @@ bun tools/drive-web.ts             # every hymn's address, not-found, script off
 bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json from five loads of each
 ```
 
-The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' (`src/chords/*.test.ts`) the part `test:chords`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs all three.
+The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' page, declarations and data-host tests the part `test:chords`, their moves, line rule and shapes the part `test:moves`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs all four.
 
 The drive starts the server and Chrome (no Exact driver), each in a process group of its own, and fails on any request that leaves the local server, but the recordings' bucket after a press of Play, which it answers itself with silence. Its budget checks bytes always and times only at a load of 5 or less.
 
@@ -99,7 +99,7 @@ Chords are off at first; Settings' `Chords` row (`ChordsRow`, one call line in t
 
 `bun run exact` writes `src/chords/chords.gen.ts` (ignored; `chords.gen.d.ts` declares it) from the current app's `vite/chords` maker, one string per hymn, which `app.ts` hands the sources; a hymn's string is decoded only when its page is asked for with chords on. The rules are the current app's, imported (`hymns/chords`, `hymns/simple`, `hymns/shapes`, `@manna/hymnal/chord`), with declarations for Exact's type check under `src/hymns/decl/` and `src/chords/decl/`, held to their sources by `src/chords/held.test.ts`. What the port adds is `src/chords/`: the page's answer (`page.ts`), the kept moves (`move.ts`), the shape's drawing (`shape.ts`) and the line rule (`rows.ts`). A chord stands over its syllable because the two are one box, a column of the chord over the syllable, inside a wrapping row of the word's pairs inside a wrapping row of the line's words: a line breaks between words, a word only where it is wider than the page, and never inside a pair. `rows.ts` is that rule as a pure function the tests and the drive hold the hosts to.
 
-The Bun tests hold every hymn's answer to the current app's `sectionsOf` (`page.test.ts`), every move's names and keys to its `transposed`, `capoed`, `playedKey` and `soundingKey` (`move.test.ts`), the line rule (`rows.test.ts`) and every chord's shape under every transpose to its `fingeringOf` (`shape.test.ts`). They run as their own task, `test:chords`. A test cannot read where a node is drawn, so the placement checks are a drive, which reads the chords from the sources and so needs the test setup's modules:
+The Bun tests hold every hymn's answer to the current app's `sectionsOf` (`page.test.ts`), every move's names and keys to its `transposed`, `capoed`, `playedKey` and `soundingKey` (`move.test.ts`), the line rule (`rows.test.ts`) and every chord's shape under every transpose to its `fingeringOf` (`shape.test.ts`). They run as their own tasks, `test:chords` and `test:moves`. A test cannot read where a node is drawn, so the placement checks are a drive, which reads the chords from the sources and so needs the test setup's modules:
 
 ```sh
 bun run exact test web chords.test.contract

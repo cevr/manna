@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web", "test:chords"],
+      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web", "test:chords", "test:moves"],
       "outputs": []
     },
     "test:app": {
@@ -40,7 +40,27 @@
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
         "$TURBO_ROOT$/packages/hymnal/data/playback/**",
         "!src/**/*.test.*",
-        "src/chords/**/*.test.*"
+        "src/chords/page.test.ts",
+        "src/chords/held.test.ts",
+        "src/chords/host.test.ts"
+      ]
+    },
+    "test:moves": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "!src/**/*.test.*",
+        "src/chords/move.test.ts",
+        "src/chords/rows.test.ts",
+        "src/chords/shape.test.ts"
       ]
     }
   }
