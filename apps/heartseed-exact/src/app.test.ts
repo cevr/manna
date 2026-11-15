@@ -18,7 +18,7 @@ import { RECALL_FILE } from './today/sources';
 import type { TodayView } from './today/view';
 
 writePassage();
-const app = await import('../app');
+const app = await import('./test/app.js');
 
 const SEQUENCES = 40;
 const CALLS = 30;

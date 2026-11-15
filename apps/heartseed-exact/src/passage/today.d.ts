@@ -3,6 +3,8 @@
  * KJV before every `bun run exact` and every test that imports `app.ts`. The
  * module is ignored, so no verse text is committed; this declaration is what
  * a fresh checkout's type check and the gate's import graph read in its place.
+ *
+ * @writer ../../tools/passage.ts
  */
 declare const passage: { readonly reference: string; readonly text: string };
 
