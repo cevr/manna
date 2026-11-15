@@ -255,9 +255,9 @@
     "apps/*/app/routes.d.ts",
     "apps/*-exact/app.contract.d.ts",
     "apps/*-exact/.exact/**",
-    "packages/exact-kit/lab/*/app.contract.d.ts",
-    "packages/exact-kit/lab/*/.exact/**",
-    "packages/exact-kit/lab/*/target/**"
+    "packages/exact-kit/lab/app.contract.d.ts",
+    "packages/exact-kit/lab/.exact/**",
+    "packages/exact-kit/lab/target/**"
   ],
   "overrides": [
     {
@@ -504,7 +504,7 @@
         "**/packages/exact-kit/src/effect/import-probe.ts",
         "**/packages/exact-kit/src/exact-cli.ts",
         "**/packages/exact-kit/src/bin.ts",
-        "**/packages/exact-kit/lab/heartseed-exact/exact.mjs",
+        "**/packages/exact-kit/lab/exact.mjs",
         "**/apps/heartseed-exact/exact.mjs",
         "**/apps/hymnal-exact/exact.mjs"
       ],

@@ -4,7 +4,7 @@ Both ports keep their logic in Effect 4.1.2: services, layers, streams, schedule
 
 ## The evidence
 
-The lab app `packages/exact-kit/lab/heartseed-exact` (bundle id `app.manna.exactlab`, on `verify-heartseed-exact`) has a button per probe row. Each runs one program in one mode and shows what happened. The expected outcomes are one file, `packages/exact-kit/lab/heartseed-exact/probe-table.json`. Bun asserts it (`packages/exact-kit/src/effect/probe.test.ts`, every row under `withDataHost`), and the lab's contract test, written from the same file, asserts it on the web (`bun run exact test web --port 8774`) and on iOS (`bun run exact test ios`): green on both at the pin `0fa708e34ef4`.
+The lab app `packages/exact-kit/lab` (bundle id `app.manna.exactlab`, on `verify-heartseed-exact`) has a button per probe row. Each runs one program in one mode and shows what happened. The expected outcomes are one file, `packages/exact-kit/lab/probe-table.json`. Bun asserts it (`packages/exact-kit/src/effect/probe.test.ts`, every row under `withDataHost`), and the lab's contract test, written from the same file, asserts it on the web (`bun run exact test web --port 8774`) and on iOS (`bun run exact test ios`): green on both at the pin `0fa708e34ef4`.
 
 | Row                                               | Effect's defaults | Through the runner |
 | ------------------------------------------------- | ----------------- | ------------------ |

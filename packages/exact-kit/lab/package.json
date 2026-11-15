@@ -1,0 +1,8 @@
+{
+  "name": "exact-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "exact": "manna-exact"
+  }
+}

@@ -21,18 +21,46 @@ const DEFAULT_CLONE = 'Developer/vendor/exact';
 /** The lock every native build and drive waits on, one at a time on this Mac. */
 const BUILD_LOCK = '/tmp/manna-exact-build.lock';
 
-/** An app this wrapper runs: its simulator, its web port and its spare ports. */
+/**
+ * An app this wrapper runs: its simulator, its web port and its spare ports, and whether it is quiet: a quiet
+ * app's plain launch would speak through the simulator, so it is looked at under the agent alone.
+ */
 interface ExactApp {
   readonly simulator: string;
   readonly port: number;
   readonly spare: readonly [number, number];
+  readonly quiet: boolean;
 }
 
-/** The ported apps, by folder. Each drives its own simulator and serves on its own ports. */
-const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact', ExactApp>> = {
-  'heartseed-exact': { simulator: 'verify-heartseed-exact', port: 8765, spare: [8770, 8774] },
-  'hymnal-exact': { simulator: 'verify-hymnal-exact', port: 8766, spare: [8775, 8779] },
+/**
+ * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
+ * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
+ */
+const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
+  'heartseed-exact': {
+    simulator: 'verify-heartseed-exact',
+    port: 8765,
+    spare: [8770, 8774],
+    quiet: true,
+  },
+  'hymnal-exact': {
+    simulator: 'verify-hymnal-exact',
+    port: 8766,
+    spare: [8775, 8779],
+    quiet: false,
+  },
+  lab: { simulator: 'verify-heartseed-exact', port: 8774, spare: [8774, 8774], quiet: true },
 };
+
+/** The hosts a drive runs natively on this Mac: the simulator and the Mac itself. */
+const NATIVE_HOSTS: ReadonlyArray<string> = ['ios', 'macos', 'mac'];
+
+/** The verbs that build and install a native app, and launch it with `--run`, each with the host its agent looks on. */
+const LAUNCHING = { ios: 'ios', mac: 'macos' } as const;
+
+/** Whether `verb` is one of `LAUNCHING`'s. */
+const isLaunching = (verb: string): verb is keyof typeof LAUNCHING =>
+  Object.hasOwn(LAUNCHING, verb);
 
 /** Verbs that publish or upload: never through this wrapper. */
 const REFUSED_VERBS: ReadonlyArray<string> = ['share', 'deploy', 'release'];
@@ -74,11 +102,19 @@ interface Plan {
   readonly locked: boolean;
 }
 
-/** Whether `args` is a native build or drive: `ios`, `mac`, or `test`, `verify` or `agent` on `ios`. */
+/** Whether `args` is a native build or drive: `ios`, `mac`, or `test`, `verify` or `agent` on `ios`, `macos` or `mac`. */
 const isNative = (args: ReadonlyArray<string>) => {
-  const [verb, host] = args;
-  if (verb === 'ios' || verb === 'mac') return true;
-  return ['test', 'verify', 'agent'].includes(verb ?? '') && host === 'ios';
+  const [verb = '', host = ''] = args;
+  if (isLaunching(verb)) return true;
+  return ['test', 'verify', 'agent'].includes(verb) && NATIVE_HOSTS.includes(host);
+};
+
+/** The host whose agent shows what `args` would launch outside it, `ios` or `mac` with `--run`, if it would. */
+const plainLaunch = (args: ReadonlyArray<string>): Option.Option<string> => {
+  const [verb = ''] = args;
+  if (!isLaunching(verb) || !args.some((arg) => arg === '--run' || arg.startsWith('--run=')))
+    return Option.none();
+  return Option.some(LAUNCHING[verb]);
 };
 
 /**
@@ -117,6 +153,11 @@ const refusalOf = (
     );
   if (verb === 'feedback' && !(rest.length === 1 && rest[0] === 'never'))
     return Option.some('feedback goes to Expo; only `feedback never` runs here');
+  const launch = Option.filter(plainLaunch(args), () => app.quiet);
+  if (Option.isSome(launch))
+    return Option.some(
+      `${verb} --run launches the app outside the agent, where it speaks through the simulator; build with \`${verb}\` alone and look with \`agent ${launch.value}\``,
+    );
   const flag = Arr.findFirst(args, (arg) =>
     REFUSED_FLAGS.some((f) => arg === f || arg.startsWith(`${f}=`)),
   );
@@ -154,8 +195,8 @@ const ownsPort = (app: ExactApp, port: number) =>
 
 /**
  * The run of `args` for `app`, whose clone is at `clone`, with the caller's port variables: refused for
- * a verb that publishes or rewrites the launcher, a feedback send, another device or simulator, or a
- * port not the app's; else the child's variables, set over whatever the caller's held: the clone,
+ * a verb that publishes or rewrites the launcher, a feedback send, a quiet app's launch outside the agent,
+ * another device or simulator, or a port not the app's; else the child's variables, set over whatever the caller's held: the clone,
  * feedback off, the app's simulator and spare range. Each port variable is the caller's when it is the
  * app's, else the app's own port for the verb that listens by it bare (`web`, `serve`), else removed:
  * no child listens outside the app's ports.

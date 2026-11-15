@@ -20,12 +20,35 @@ import { runExact } from './run.ts';
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;
 
-/** The apps, their simulators and ports, and the lock, as the spec names them: written out apart from the wrapper. */
+/**
+ * The apps, their folders, simulators and ports, whether each is quiet, and the lock, as the spec names them:
+ * written out apart from the wrapper.
+ */
 const APPS = {
-  'heartseed-exact': { simulator: 'verify-heartseed-exact', port: 8765, spare: [8770, 8774] },
-  'hymnal-exact': { simulator: 'verify-hymnal-exact', port: 8766, spare: [8775, 8779] },
+  'heartseed-exact': {
+    folder: 'apps/heartseed-exact',
+    simulator: 'verify-heartseed-exact',
+    port: 8765,
+    spare: [8770, 8774],
+    quiet: true,
+  },
+  'hymnal-exact': {
+    folder: 'apps/hymnal-exact',
+    simulator: 'verify-hymnal-exact',
+    port: 8766,
+    spare: [8775, 8779],
+    quiet: false,
+  },
+  lab: {
+    folder: 'packages/exact-kit/lab',
+    simulator: 'verify-heartseed-exact',
+    port: 8774,
+    spare: [8774, 8774],
+    quiet: true,
+  },
 } as const;
 type App = keyof typeof APPS;
+const APP_NAMES = Object.keys(APPS) as ReadonlyArray<App>;
 const BUILD_LOCK = '/tmp/manna-exact-build.lock';
 const DEFAULT_CLONE = 'Developer/vendor/exact';
 
@@ -59,10 +82,10 @@ const appFiles = Effect.gen(function* () {
   const path = yield* Path.Path;
   const root = yield* repoRoot;
   const entries = yield* Effect.forEach(
-    Object.keys(APPS).flatMap((app) => ['exact.mjs', 'AGENTS.md'].map((file) => [app, file])),
-    ([app = '', file = '']) =>
+    APP_NAMES.flatMap((app) => ['exact.mjs', 'AGENTS.md'].map((file) => [app, file] as const)),
+    ([app, file]) =>
       Effect.map(
-        fs.readFileString(path.join(root, 'apps', app, file)),
+        fs.readFileString(path.join(root, APPS[app].folder, file)),
         (text) => [`${PROBE}/apps/${app}/${file}`, text] as const,
       ),
   );
@@ -188,6 +211,8 @@ const WORDS = [
   'always',
   '--json',
   '--run',
+  '--run=1',
+  'mac',
   '--prebuild',
   '--help',
   '--sim',
@@ -206,22 +231,62 @@ const WORDS = [
   'clock data',
 ] as const;
 
-/** A port a caller may leave in a port variable: none, each app's own and spare, the current hymnal's, and not a number. */
-const CALLER_PORTS = ['', '', '', '8765', '8766', '8771', '8776', '8281', '87a', '8765.0'] as const;
+/**
+ * A port a caller may leave in a port variable: none (drawn most, so a fifth of the draws leave all three unset and
+ * reach the run), each app's own and spare, the lab's, the current hymnal's, and not a number.
+ */
+const CALLER_PORTS = [
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '8765',
+  '8766',
+  '8771',
+  '8774',
+  '8776',
+  '8281',
+  '87a',
+  '8765.0',
+] as const;
 
 /** The variables the pinned Exact reads a listening port from (its clone's `EXACT_PORT`, `PORT` and `EXACT_TOOL_PORT` reads), written out apart from the wrapper. */
 const PORT_VARIABLES = ['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT'] as const;
 type PortVariable = (typeof PORT_VARIABLES)[number];
 type CallerPorts = Readonly<Record<PortVariable, string>>;
 
-/** The verbs that listen, drawn more often: each must keep to the app's ports. */
-const LISTENING = [['web'], ['serve'], ['test', 'web'], ['verify'], ['agent', 'web']] as const;
+/**
+ * Starts drawn more often: the verbs that listen, each of which must keep to the app's ports, the native drives
+ * on the Mac, and the launches a quiet app refuses.
+ */
+const STARTS = [
+  ['web'],
+  ['serve'],
+  ['test', 'web'],
+  ['verify'],
+  ['agent', 'web'],
+  ['test', 'macos'],
+  ['agent', 'macos'],
+  ['verify', 'macos'],
+  ['ios', '--run'],
+  ['mac', '--run'],
+  ['ios', '--run=1'],
+  ['test', 'mac'],
+] as const;
 
 /** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
 const REWRITES = ['none', 'none', 'none', 'launcher', 'notes', 'no launcher'] as const;
 
 const Case = Arbitrary.all({
-  app: Arbitrary.schema(Schema.Literals(['heartseed-exact', 'hymnal-exact'])),
+  app: Arbitrary.schema(Schema.Literals(APP_NAMES)),
   verb: Arbitrary.schema(
     Schema.Union([Schema.Literals(VERBS), Schema.Literals(VERBS), Schema.String]),
   ),
@@ -237,13 +302,15 @@ const Case = Arbitrary.all({
     PORT: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
     EXACT_TOOL_PORT: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
   }),
-  listening: Arbitrary.schema(Schema.Literals([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])),
+  start: Arbitrary.schema(
+    Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: STARTS.length * 2 - 1 })),
+  ),
   rewrite: Arbitrary.schema(Schema.Literals(REWRITES)),
 });
 
-/** The case's arguments: a listening verb for half the draws, else the drawn verb, then the drawn words. */
-const argsOf = (verb: string, rest: ReadonlyArray<string>, listening: number) => [
-  ...Option.getOrElse(Option.fromUndefinedOr(LISTENING[listening]), () => [verb]),
+/** The case's arguments: one of `STARTS` for half the draws, else the drawn verb, then the drawn words. */
+const argsOf = (verb: string, rest: ReadonlyArray<string>, start: number) => [
+  ...Option.getOrElse(Option.fromUndefinedOr(STARTS[start]), () => [verb]),
   ...rest,
 ];
 
@@ -266,6 +333,8 @@ const mustRefuse = (
   if (['share', 'deploy', 'release', 'update', 'snapback'].includes(verb)) return true;
   if (verb === 'feedback' && rest.join(' ') !== 'never') return true;
   if (args.some((a) => /^--(?:sim|device)(?:=|$)/.test(a))) return true;
+  if (APPS[app].quiet && ['ios', 'mac'].includes(verb) && rest.some((a) => /^--run(?:=|$)/.test(a)))
+    return true;
   const allowed = owned(app);
   if (PORT_VARIABLES.some((name) => callerPorts[name] !== '' && !allowed.has(callerPorts[name])))
     return true;
@@ -281,7 +350,8 @@ const mustRefuse = (
 const mustLock = (args: ReadonlyArray<string>) =>
   args[0] === 'ios' ||
   args[0] === 'mac' ||
-  (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
+  (['test', 'verify', 'agent'].includes(args[0] ?? '') &&
+    ['ios', 'macos', 'mac'].includes(args[1] ?? ''));
 
 /**
  * The rule, written out: the child's `name`, the caller's when set, else the app's own port for the
@@ -332,9 +402,37 @@ const rewritten = (
   return files;
 };
 
+/**
+ * Whether `child` is `args` run as the rule says: the clone, feedback off, the app's simulator and spare range, its
+ * ports, the build lock for the native verbs alone, and the launcher with the app's folder, name and arguments.
+ */
+const ranAsPlanned = (
+  child: Spawned,
+  app: App,
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+  clone: string,
+) => {
+  const locked =
+    child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  return (
+    child.extendEnv &&
+    child.env['EXACT'] === clone &&
+    child.env['EXACT_FEEDBACK'] === '0' &&
+    child.env['EXACT_SIM'] === APPS[app].simulator &&
+    child.env['PORT_LO'] === String(APPS[app].spare[0]) &&
+    child.env['PORT_HI'] === String(APPS[app].spare[1]) &&
+    portsHeld(child, app, args, callerPorts) &&
+    locked === mustLock(args) &&
+    (locked || child.command === 'bun') &&
+    child.args.slice(-args.length - 3).join('\u0000') ===
+      [LAUNCHER, `${PROBE}/apps/${app}`, app, ...args].join('\u0000')
+  );
+};
+
 describe('the exact wrapper', () => {
   it.effect(
-    'refuses publishing, rewriting the launcher, feedback, other devices and ports, and a rewritten launcher, before any process; runs the rest on the app own simulator, clone, port and lock',
+    "refuses publishing, rewriting the launcher, feedback, a quiet app's launch outside the agent, other devices and ports, and a rewritten launcher, before any process; runs the rest on the app own simulator, clone, ports and lock",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -349,11 +447,11 @@ describe('the exact wrapper', () => {
             callerFeedback,
             callerExact,
             callerPorts,
-            listening,
+            start,
             rewrite,
           }) =>
             Effect.gen(function* () {
-              const args = argsOf(verb, rest, listening);
+              const args = argsOf(verb, rest, start);
               const caller = Rec.filter(
                 {
                   HOME: `${PROBE}/home`,
@@ -383,20 +481,10 @@ describe('the exact wrapper', () => {
                 );
               const [git, child, ...more] = spawned;
               if (ran._tag !== 'Success' || !git || !child || more.length > 0) return false;
-              const locked =
-                child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
               return (
                 git.command === 'git' &&
                 git.args.join(' ') === `-C ${clone} rev-parse HEAD` &&
-                child.extendEnv &&
-                child.env['EXACT'] === clone &&
-                child.env['EXACT_FEEDBACK'] === '0' &&
-                child.env['EXACT_SIM'] === APPS[app].simulator &&
-                portsHeld(child, app, args, callerPorts) &&
-                locked === mustLock(args) &&
-                (locked || child.command === 'bun') &&
-                child.args.slice(-args.length - 3).join('\u0000') ===
-                  [LAUNCHER, `${PROBE}/apps/${app}`, app, ...args].join('\u0000')
+                ranAsPlanned(child, app, args, callerPorts, clone)
               );
             }),
           { runs: 500 },
@@ -515,6 +603,62 @@ describe('the exact wrapper', () => {
       }),
   );
 
+  it.effect(
+    "refuses a quiet app's `ios --run` and `mac --run`, naming the agent, and starts nothing; the hymnal's runs under the lock",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        for (const app of ['heartseed-exact', 'lab'] as const) {
+          const ios = yield* running(app, ['ios', '--run'], { HOME: PROBE }, head, files);
+          expect(ios.spawned).toEqual([]);
+          expect(ios.result._tag).toBe('Failure');
+          if (ios.result._tag === 'Failure')
+            expect(ios.result.failure.message).toContain('agent ios');
+          const mac = yield* running(app, ['mac', '--run'], { HOME: PROBE }, head, files);
+          expect(mac.spawned).toEqual([]);
+          if (mac.result._tag === 'Failure')
+            expect(mac.result.failure.message).toContain('agent macos');
+          const built = yield* running(app, ['ios'], { HOME: PROBE }, head, files);
+          expect(built.result._tag).toBe('Success');
+        }
+        const hymnal = yield* running(
+          'hymnal-exact',
+          ['ios', '--run'],
+          { HOME: PROBE },
+          head,
+          files,
+        );
+        expect(hymnal.result._tag).toBe('Success');
+        expect(hymnal.spawned[1]?.command).toBe('lockf');
+      }),
+  );
+
+  it.effect('the lab serves on 8774 alone, on Heartseed simulator', () =>
+    Effect.gen(function* () {
+      const { pins, files } = yield* fixtures;
+      const head = Option.fromNullishOr(pins[0]);
+      const tested = yield* running('lab', ['test', 'web'], { HOME: PROBE }, head, files);
+      expect(tested.spawned[1]?.env).toMatchObject({
+        EXACT_SIM: 'verify-heartseed-exact',
+        PORT_LO: '8774',
+        PORT_HI: '8774',
+      });
+      const web = yield* running('lab', ['web'], { HOME: PROBE }, head, files);
+      expect(web.spawned[1]?.env['EXACT_PORT']).toBe('8774');
+      const other = yield* running(
+        'lab',
+        ['test', 'web', '--port', '8773'],
+        { HOME: PROBE },
+        head,
+        files,
+      );
+      expect(other.spawned).toEqual([]);
+      const macos = yield* running('lab', ['test', 'macos'], { HOME: PROBE }, head, files);
+      expect(macos.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
+    }),
+  );
+
   it.effect('refuses an app it does not know', () =>
     Effect.gen(function* () {
       const { pins, files } = yield* fixtures;
@@ -586,9 +730,9 @@ describe('the exact wrapper', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = yield* repoRoot;
-        const scripts = yield* Effect.forEach(Object.keys(APPS), (app) =>
+        const scripts = yield* Effect.forEach(APP_NAMES, (app) =>
           Effect.map(
-            fs.readFileString(path.join(root, 'apps', app, 'package.json')),
+            fs.readFileString(path.join(root, APPS[app].folder, 'package.json')),
             (text) => /"exact":\s*"([^"]*)"/.exec(text)?.[1] ?? '',
           ),
         );

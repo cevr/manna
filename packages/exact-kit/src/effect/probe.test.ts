@@ -3,8 +3,8 @@ import { Duration, Effect, FileSystem, Path, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { KEYS, probe } from '../../lab/heartseed-exact/probe.ts';
-import table from '../../lab/heartseed-exact/probe-table.json';
+import { KEYS, probe } from '../../lab/probe.ts';
+import table from '../../lab/probe-table.json';
 import { withDataHost } from '../data-host/testing.ts';
 
 /** A call as Exact makes one: a time past 2026 and a seed. */
@@ -72,9 +72,7 @@ describe('the Effect probe', () => {
   it.effect("the lab's contract test asks every row and expects the table's text", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      const committed = yield* fs.readFileString(
-        yield* here('../../lab/heartseed-exact/app.test.contract'),
-      );
+      const committed = yield* fs.readFileString(yield* here('../../lab/app.test.contract'));
       expect(committed).toBe(contractTest(table));
     }).pipe(Effect.provide(BunServices.layer)),
   );
