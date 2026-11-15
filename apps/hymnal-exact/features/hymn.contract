@@ -30,15 +30,14 @@ component HymnPage
       display="flex" flex-direction="column"
       header display="flex" align-items="center" padding="8px 16px"
         text (not ready ? "" : page.number == 0 ? "No Such Hymn" : page.title) role="heading" aria-level=2 testId="hymn-title"
-        if ready and page.number != 0
-          text `${page.number} · ${page.topic}`
       if ready and page.number == 0
         EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
       else
         scroll id="hymn-words" flex=1 min-height=0
           if ready
             column padding=16 gap=20
+              text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"
               for p in page.parts key=p.key
                 column gap=4
                   text p.label font="-exact-headline" color="-exact-secondary-label"
-                  text p.text testId=p.key
+                  text p.text white-space="pre-line" testId=p.key

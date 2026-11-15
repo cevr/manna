@@ -54,5 +54,6 @@ component HymnRow
     row: ListRow
   view
     link href=path("hymn", `${row.number}`) testId=`hymn-${row.number}`
-      text `${row.number}` font-variant-numeric="tabular-nums" min-width="2.5rem"
-      text row.title flex=1 min-width=0
+      row gap=12 flex=1 min-width=0 align-items="baseline"
+        text `${row.number}` font-variant-numeric="tabular-nums" min-width="2.5rem"
+        text row.title flex=1 min-width=0
