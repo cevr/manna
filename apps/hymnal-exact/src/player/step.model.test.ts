@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, eslint/max-lines, effect/noAsyncFunction -- the current app's modules are awaited once; the reference model is one plain switch over every input, as a reader checks it against the spec, and a broken rule throws naming its seed and history as JSON. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, effect/noAsyncFunction -- the current app's modules are awaited once; the reference model is one plain switch over every input, as a reader checks it against the spec, and a broken rule throws naming its seed and history as JSON. */
 
 /**
  * `step` against a reference model of the player written here: its states

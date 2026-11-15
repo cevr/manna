@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): the generators branch plainly, and a held hymn is undefined when none is held, as `step`'s state has it. */
+/* oxlint-disable effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): a held hymn is undefined when none is held, as `step`'s state has it. */
 
 /**
  * What the player's tests step: three hymns, one of them with no

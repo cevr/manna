@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, eslint/complexity, effect/maxCognitiveComplexity, eslint/max-lines -- Exact's app folder cannot import effect (docs/exact.md): a model checker, a breadth-first search of every interleaving that names each action plainly, tells states apart by their JSON, and returns a broken property with its trace. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals, eslint/complexity, effect/maxCognitiveComplexity -- Exact's app folder cannot import effect (docs/exact.md): a model checker, a breadth-first search of every interleaving that names each action plainly, tells states apart by their JSON, and returns a broken property with its trace. */
 
 /**
  * The protocol of `protocol.qnt`, checked exhaustively over `step` itself
