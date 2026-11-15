@@ -203,10 +203,10 @@ component ChordsGripScreen
                   for y, fi in b.fretsY key=fi
                     line x1=b.left y1=y x2=b.right y2=y stroke="currentColor" stroke-width=(fi == 0 and b.nut ? 4 : 1)
                 for m, mi in b.marks key=mi
-                  text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font-size=13 testId=`shape-${bi}-mark-${mi}`
+                  text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font-size="min(-exact-footnote, 13px)" testId=`shape-${bi}-mark-${mi}`
                 for d, di in b.dots key=di
-                  text `${d.finger}` position="absolute" left=(d.x - page.dot / 2) top=(d.y - page.dot / 2) width=page.dot height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size=11 font-weight=700 color="-exact-background" testId=`shape-${bi}-dot-${di}`
+                  text `${d.finger}` position="absolute" left=(d.x - page.dot / 2) top=(d.y - page.dot / 2) width=page.dot height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size="min(-exact-caption2, 11px)" font-weight=700 color="-exact-background" testId=`shape-${bi}-dot-${di}`
                 for r, ri in b.barres key=ri
-                  text `${r.finger}` position="absolute" left=r.x top=r.y width=r.width height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size=11 font-weight=700 color="-exact-background" testId=`shape-${bi}-barre-${ri}`
+                  text `${r.finger}` position="absolute" left=r.x top=r.y width=r.width height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size="min(-exact-caption2, 11px)" font-weight=700 color="-exact-background" testId=`shape-${bi}-barre-${ri}`
                 if b.firstLabel != ""
-                  text b.firstLabel position="absolute" left=0 top=b.top width=(b.left - 8) text-align="right" font-size=12 color="-exact-secondary-label" testId=(bi == 0 ? "shape-first" : `shape-first-${bi}`)
+                  text b.firstLabel position="absolute" left=0 top=b.top width=(b.left - 8) text-align="right" font-size="min(-exact-caption1, 12px)" color="-exact-secondary-label" testId=(bi == 0 ? "shape-first" : `shape-first-${bi}`)
