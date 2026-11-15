@@ -8,13 +8,33 @@
       "types": "./exact/matcher.d.ts",
       "default": "./src/matcher.ts"
     },
-    "./matcher/words": {
-      "types": "./exact/words.d.ts",
-      "default": "./src/matcher/words.ts"
+    "./garden": {
+      "types": "./exact/garden.d.ts",
+      "default": "./src/garden.ts"
     },
     "./sayit": {
       "types": "./exact/sayit.d.ts",
       "default": "./src/sayit.ts"
+    },
+    "./passages": {
+      "types": "./exact/passages.d.ts",
+      "default": "./src/passages.ts"
+    },
+    "./lists": {
+      "types": "./exact/lists.d.ts",
+      "default": "./src/lists.ts"
+    },
+    "./chooser": {
+      "types": "./exact/chooser.d.ts",
+      "default": "./src/chooser.ts"
+    },
+    "./fsrs": {
+      "types": "./exact/fsrs.d.ts",
+      "default": "./src/fsrs.ts"
+    },
+    "./matcher/words": {
+      "types": "./exact/words.d.ts",
+      "default": "./src/matcher/words.ts"
     },
     "./day": {
       "types": "./exact/day.d.ts",

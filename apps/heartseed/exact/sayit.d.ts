@@ -1,4 +1,4 @@
-import type { Option } from 'effect';
+import type { Context, Effect, Option } from 'effect';
 
 import type { MatcherView, SuggestedGrade } from './matcher.d.ts';
 
@@ -32,6 +32,15 @@ export interface Help {
   readonly shownAt: number | null;
   readonly cap: Grade;
 }
+
+declare const RecallsTag: Context.ServiceClass<
+  Recalls,
+  'heartseed/sayit/Recalls',
+  { readonly keep: (recall: Recall) => Effect.Effect<void> }
+>;
+
+/** Where a recital's recall is handed: the garden's layer provides it. */
+export declare class Recalls extends RecallsTag {}
 
 /** A peek's cap on its try. */
 export declare const PEEK_CAP: Grade;

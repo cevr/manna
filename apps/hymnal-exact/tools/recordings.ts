@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noRuntimeTypeof, node/no-process-env -- a host script that reads its port from `PORT`, as Exact starts an app's server: Bun's own server, the stand-in for the recordings' bucket that `test`, `verify` and the drives start (app.json's `commands.server`, `tools/drive-player.ts`); it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noRuntimeTypeof, node/no-process-env -- a host script that reads its port from `PORT`, as Exact starts an app's server, and names its checkout's own port from its real directory: Bun's own server, the stand-in for the recordings' bucket that `test`, `verify` and the drives start (app.json's `commands.server`, `tools/drive-player.ts`); it never runs in the data module. */
 
 /**
  * The recordings' bucket, as a test meets it: `GET` and `HEAD` of
@@ -9,8 +9,12 @@
  * (`LONG_SECONDS`), so a stanza choice has lines to cut. Both are digital
  * silence (every sample at rest), so nothing a test plays can sound. Hymn
  * `MISSING_HYMN` has no recording: 404, as the bucket answers a key it
- * does not hold.
+ * does not hold. `bun tools/recordings.ts --port` prints this checkout's
+ * own port (`checkoutPort`), the one its drives use.
  */
+
+import { realpathSync } from 'node:fs';
+import { join } from 'node:path';
 
 export const SHORT_SECONDS = 6;
 export const LONG_HYMN = 2;
@@ -102,7 +106,25 @@ export const answer = (request: Request): Response => {
   return served(request, hymn === LONG_HYMN ? long : short);
 };
 
-if (import.meta.main) {
+/**
+ * This checkout's own fixture port, in 4790–5789 as Exact gives a declared
+ * fixture's (one per real app directory), so the drives of two checkouts
+ * never meet on one port; the build's keyed grant for 4797 moves to it, as
+ * a development build moves a loopback grant.
+ */
+export const checkoutPort = (): number =>
+  4790 +
+  (Number.parseInt(
+    new Bun.CryptoHasher('sha256')
+      .update(realpathSync(join(import.meta.dir, '..')))
+      .digest('hex')
+      .slice(0, 8),
+    16,
+  ) %
+    1000);
+
+if (import.meta.main && process.argv.includes('--port')) console.log(checkoutPort());
+else if (import.meta.main) {
   const port = Number(process.env.PORT ?? FIXTURE_PORT);
   Bun.serve({ hostname: '127.0.0.1', port, fetch: answer });
   console.log(`[recordings] listening port=${port}`);

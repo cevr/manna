@@ -127,7 +127,8 @@ const modelStep = (m: Model, input: Input): Model => {
       return after.echo ? after.m : pausedBy(after.m, false);
     }
     case 'ended':
-      return mine ? { ...m, phase: 'ended', wants: 'pause', owed: [] } : m;
+      if (!mine || m.owed.includes('played')) return m;
+      return { ...m, phase: 'ended', wants: 'pause', owed: [] };
     case 'failed':
       return mine ? { ...m, phase: 'failed', why: input.why } : m;
     default:

@@ -59,6 +59,10 @@ const playerCall = (random: () => number): readonly [string, number, number, str
   pick(random, ['', '/', '/ /hymns/1', '/ /hymns/2 /player', '1:1.3,2:2', 'x', '/ /hymns/0']),
 ];
 
+/** A reader's kept list: hymn numbers, now and then one no hymn has. */
+const numbers = (random: () => number): Array<number> =>
+  Array.from({ length: below(random, 60) }, () => Number(route(random)));
+
 describe('the data module runs where Exact runs it', () => {
   test('inside the data host, every source answers generated arguments without throwing', () => {
     const random = seeded(41);
@@ -69,14 +73,32 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
         expect(() => sources.settingsLooks([route(random)])).not.toThrow();
+        const list = numbers(random);
+        const tab = pick(random, ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture', '', 'x']);
+        expect(() => sources.listTabRows([tab, list, numbers(random)])).not.toThrow();
+        expect(() => sources.recentAfter([list, route(random)])).not.toThrow();
+        expect(() => sources.favouritesAfter([list, Number(route(random))])).not.toThrow();
+        expect(() => sources.recentRows([list])).not.toThrow();
+        expect(() =>
+          sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
+        ).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
+      expect(sources.listTabs().length).toBe(5);
+      expect(sources.listTitles().length).toBe(695);
     });
     expect(Object.keys(sources).toSorted()).toEqual([
       'aboutCredits',
+      'favouritesAfter',
       'hymnPage',
       'hymnRows',
+      'listOpening',
+      'listTabRows',
+      'listTabs',
+      'listTitles',
       'playerStep',
+      'recentAfter',
+      'recentRows',
       'settingsLooks',
     ]);
   });
