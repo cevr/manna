@@ -4,10 +4,39 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./follow/timeline": {
+      "types": "./exact/follow/timeline.d.ts",
+      "default": "./src/follow/timeline.ts"
+    },
+    "./player/bar": {
+      "types": "./exact/player/bar.d.ts",
+      "default": "./src/player/bar.ts"
+    },
+    "./player/player": {
+      "types": "./exact/player/player.d.ts",
+      "default": "./src/player/player.ts"
+    },
+    "./player/stanzas": {
+      "types": "./exact/player/stanzas.d.ts",
+      "default": "./src/player/stanzas.ts"
+    },
+    "./player/time": {
+      "types": "./exact/player/time.d.ts",
+      "default": "./src/player/time.ts"
+    },
+    "./player/title": {
+      "types": "./exact/player/title.d.ts",
+      "default": "./src/player/title.ts"
+    },
+    "./remote": {
+      "types": "./exact/remote.d.ts",
+      "default": "./src/remote.ts"
+    },
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/search": "./src/hymns/search.ts",
     "./hymns/text": "./src/hymns/text.ts",
     "./vite/indexes": "./vite/indexes.ts",
+    "./vite/timing": "./vite/timing.ts",
     "./vite/words": "./vite/words.ts"
   },
   "scripts": {
