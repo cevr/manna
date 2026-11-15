@@ -193,6 +193,28 @@ describe('the workspace the dead-export check reads', () => {
   );
 
   it.effect(
+    'an `exports` entry given as conditions resolves to the file its `default` names, and the declaration its `types` names is not checked',
+    () =>
+      Effect.gen(function* () {
+        const workspace = yield* workspaceOf({
+          'package.json': packageJson({ scripts: { gate: 'bun packages/q/src/entry.ts' } }),
+          'packages/p/package.json':
+            '{"name":"@t/p","exports":{"./plain":"./src/plain.ts","./run":{"types":"./src/run.d.ts","default":"./src/run.ts"}}}',
+          'packages/p/src/plain.ts': 'export const a = 1;\nexport const d = 2;\n',
+          'packages/p/src/run.ts': 'export const b = 1;\nexport const e = 2;\n',
+          'packages/p/src/run.d.ts': 'export declare const b: number;\n',
+          'packages/q/package.json': packageJson({ name: '@t/q' }),
+          'packages/q/src/entry.ts':
+            "import { a } from '@t/p/plain';\nimport { b } from '@t/p/run';\nconsole.log(a, b);\n",
+        });
+        expect(deadExports(workspace)).toEqual([
+          'packages/p/src/plain.ts d',
+          'packages/p/src/run.ts e',
+        ]);
+      }),
+  );
+
+  it.effect(
     "a lint plugin's import keeps an export alive, and the import of a lint rule's test does not",
     () =>
       Effect.gen(function* () {

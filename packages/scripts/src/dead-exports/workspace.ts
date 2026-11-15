@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { type ModuleRecord, type Resolve, type Workspace, recordOf } from './graph.js';
+import { Exports } from '../package-exports.js';
 import { RUNS_SHELL, shellRuns } from './shell.js';
 
 /** A package's name and the files its `exports`, `main` and `bin` name. */
@@ -8,7 +9,7 @@ const PackageJson = Schema.fromJsonString(
     name: Schema.optionalKey(Schema.String),
     main: Schema.optionalKey(Schema.String),
     bin: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
-    exports: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    exports: Schema.optionalKey(Exports),
     scripts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   }),
 );
@@ -29,6 +30,9 @@ interface Package {
 
 /** A type-level check (`x.types.ts`): it uses the types it pins, and its own names are read by the compiler. */
 const isTypeCheck = (file: string) => file.endsWith('.types.ts');
+
+/** A declaration file (`x.d.ts`): it says what another module exports, for a type check alone, so that module's exports are the ones checked. */
+const isDeclaration = (file: string) => file.endsWith('.d.ts');
 
 /**
  * A test, a fixture or its support: code that runs to prove, not to ship. A
@@ -245,7 +249,10 @@ export const readWorkspace = (root: string) =>
       resolve: resolver(path, records, packages, byDir),
       consumes: (file) => !isTestCode(file) && !isTypeCheck(file),
       checked: (file) =>
-        /^packages\/[^/]+\/src\//.test(file) && !isTestCode(file) && !isTypeCheck(file),
+        /^packages\/[^/]+\/src\//.test(file) &&
+        !isTestCode(file) &&
+        !isTypeCheck(file) &&
+        !isDeclaration(file),
       roots,
     };
     return workspace;

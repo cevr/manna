@@ -23,6 +23,7 @@ import { envReads, importsOf, parsedImports } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
 import { reachesIn, repoTests } from './test-budget/reach.ts';
 import { gateFiles } from './guard/files.ts';
+import { Exports } from './package-exports.ts';
 import { commandsOf } from './test-budget/shell.ts';
 
 const RootManifest = Schema.fromJsonString(
@@ -46,7 +47,7 @@ const TEST_TASKS = ['test', 'test:slow', 'test:perf'];
 const Manifest = Schema.fromJsonString(
   Schema.Struct({
     name: Schema.optionalKey(Schema.String),
-    exports: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    exports: Schema.optionalKey(Exports),
   }),
 );
 
