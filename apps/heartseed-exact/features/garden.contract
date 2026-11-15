@@ -18,6 +18,7 @@ shape GardenVerse
   planted: bool
   stage: string
   recalls: number
+  lastGrade: number
   due: number
   dueNow: bool
   dueIn: number

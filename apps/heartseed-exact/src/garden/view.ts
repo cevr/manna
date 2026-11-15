@@ -13,7 +13,7 @@ import { dayOf } from '@manna/heartseed/day';
 import { stageOf, type GardenView, type Plant } from '@manna/heartseed/garden';
 import { listsOf } from '@manna/heartseed/lists';
 import { MOST_PASSAGES, verseReference } from '@manna/heartseed/passages';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 
 import type { Held } from './program';
 
@@ -25,13 +25,14 @@ export interface At {
   readonly offset: number;
 }
 
-/** One verse as Your verses shows it; `slug` names its nodes. */
+/** One verse as Your verses shows it: `slug` names its nodes, `lastGrade` is its last recall's grade (0 before any). */
 export interface GardenVerse {
   reference: string;
   slug: string;
   planted: boolean;
   stage: string;
   recalls: number;
+  lastGrade: number;
   due: number;
   dueNow: boolean;
   dueIn: number;
@@ -75,6 +76,7 @@ export const verseIn = (garden: GardenView, reference: string, at: At): GardenVe
       planted: false,
       stage: 'seed',
       recalls: 0,
+      lastGrade: 0,
       due: at.now,
       dueNow: true,
       dueIn: 0,
@@ -85,6 +87,7 @@ export const verseIn = (garden: GardenView, reference: string, at: At): GardenVe
       planted: true,
       stage: stageOf(each),
       recalls: each.recalls.length,
+      lastGrade: Arr.lastNonEmpty(each.recalls).grade,
       due: each.card.due,
       dueNow: each.card.due <= at.now,
       dueIn: dayOf({ startedAt: each.card.due, offset: at.offset }) - today,

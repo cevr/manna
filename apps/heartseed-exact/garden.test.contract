@@ -1,0 +1,53 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "Nothing planted yet"
+  tap "open-verses"
+  clock data
+  expect tree has "verses"
+  expect text "empty" == "Nothing planted yet. Plant a passage of three verses or more, or a single verse."
+  expect enabled "plant-three"
+  expect enabled "plant-one"
+  expect tree missing "singles"
+  expect tree missing "good-John-3-16"
+
+test "Three verses make a list"
+  tap "open-verses"
+  clock data
+  tap "plant-three"
+  clock data
+  expect tree has "list-passage-0-43-3-16-18"
+  expect text "stage-John-3-16" == "seed"
+  expect text "stage-John-3-17" == "seed"
+  expect text "stage-John-3-18" == "seed"
+  expect text "due-John-3-16" == "Due now"
+  expect tree missing "empty"
+  expect tree missing "singles"
+
+test "Fewer than three is a single verse"
+  tap "open-verses"
+  clock data
+  tap "plant-one"
+  clock data
+  expect tree has "single-Psalms-119-1"
+  expect text "stage-Psalms-119-1" == "seed"
+  expect tree missing "list-passage-0-19-119-1-1"
+  tap "plant-two"
+  clock data
+  expect text "short" == "A list holds at least 3 verses."
+  expect tree missing "list-passage-0-19-23-1-2"
+
+test "It survives a relaunch"
+  tap "open-verses"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  reload
+  clock data
+  expect tree has "list-passage-0-43-3-16-18"
+  expect tree has "single-Psalms-119-1"
+  expect text "stage-John-3-17" == "seed"
+  expect text "due-Psalms-119-1" == "Due now"
