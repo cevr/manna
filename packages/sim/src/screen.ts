@@ -360,7 +360,7 @@ const WEIGHT: Record<Motion['_tag'], number> = { Unmoved: 0, Moved: 1, Gone: 2 }
  * `Moved` once any pan moved, else `Unmoved`; and the first pan that lost
  * its view (as `<x>,<y> by <dx>,<dy>`), if any.
  */
-export interface Panned {
+interface Panned {
   readonly motion: Motion;
   readonly lost: Option.Option<string>;
 }
