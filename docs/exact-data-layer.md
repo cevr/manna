@@ -94,6 +94,8 @@ A current service is a long-lived object: a layer built once at start, fibers fo
 
 Cost for wave 2, against the plan's 40-60 hours (Heartseed) and 20-30 (the hymnal) had the runtime not run: a `KeyValueStore` layer over Exact's `storage`, once, in `@manna/exact-kit` (3-5 hours); each Heartseed service reshaped from a lifetime to per-call programs, its `changes` stream to refreshed resources (about 2-3 hours a service, 15-20 in all); the player's listeners to Contract tasks (6-10). About 25-35 hours over the port, most of it inside units already planned (`ex-hs-garden`, `ex-hs-session`, `ex-hy-player`), where way 2 would have added 60-90.
 
+The owner added Heartseed behavior while the port was planned, and the port's slices carry it: hsrows (no list icons, press feedback, the scroll kept on Back, plant glyphs), hsminlist (a list holds three verses or more; fewer go under 'Single verses', a section of its own) and hspeek (peek at a word, or Show all, at a cost). Each is view and garden rule work inside the units above. A list's minimum and the peek's cost are per-call programs over the garden, and the rest is Contract. None of it changes the way chosen.
+
 ## Limits
 
 - Bun's `withDataHost` follows Effect's defaults only through the synchronous start of a call: Effect's own scheduler runs later steps outside it. It cannot see the `.then` refusal of rule 6 either. The lab on the web and iOS is the check for both.
