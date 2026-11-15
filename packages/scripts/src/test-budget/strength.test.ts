@@ -4,7 +4,6 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { bunTests } from './shell.ts';
 import { weakeningFlags } from './strength.ts';
-import { testDryRun, unitTests } from './units.ts';
 
 const Root = Schema.fromJsonString(Schema.Struct({ workspaces: Schema.Array(Schema.String) }));
 
@@ -24,6 +23,25 @@ const Bunfig = Schema.Struct({
     Schema.Struct({ preload: Schema.optionalKey(Schema.Array(Schema.String)) }),
   ),
 });
+/** A manifest's scripts. */
+const TestManifest = Schema.fromJsonString(
+  Schema.Struct({ scripts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)) }),
+);
+
+/** A `turbo.json`'s `test` task, as far as the tasks it depends on. */
+const TurboTest = Schema.Struct({
+  tasks: Schema.optionalKey(
+    Schema.Struct({
+      test: Schema.optionalKey(
+        Schema.Struct({ dependsOn: Schema.optionalKey(Schema.Array(Schema.String)) }),
+      ),
+    }),
+  ),
+});
+
+/** A part's task name, in the workspace's own turbo.json: `test:<part>`. */
+const PART = /^test:[^:#^$]+$/u;
+
 const SlowManifest = Schema.fromJsonString(
   Schema.Struct({
     scripts: Schema.optionalKey(Schema.Struct({ 'test:slow': Schema.optionalKey(Schema.String) })),
@@ -76,18 +94,46 @@ describe("a workspace's test script", () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    'every workspace of the repo runs its tests at full strength',
+    "every workspace of the repo runs its tests at full strength, by its manifest: its test script and each test:<part> its turbo.json's test depends on",
     () =>
       Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
-        const units = unitTests(
-          yield* testDryRun(root, path.join(root, 'node_modules', '.bin', 'turbo')),
+        const { workspaces } = yield* Schema.decodeEffect(Root)(
+          yield* fs.readFileString(path.join(root, 'package.json')),
         );
-        expect(new Set(units.map((unit) => unit.workspace)).size).toBeGreaterThan(5);
-        const weak = units.flatMap((unit) =>
-          weakeningFlags(unit.command).map((why) => `${unit.taskId}: ${why}`),
+        const dirs = workspaces.flatMap((pattern) =>
+          [...new Glob(`${pattern}/package.json`).scanSync({ cwd: root })].map(path.dirname),
         );
+        const units = yield* Effect.forEach(dirs, (dir) =>
+          Effect.gen(function* () {
+            const { scripts = {} } = yield* Schema.decodeEffect(TestManifest)(
+              yield* fs.readFileString(path.join(root, dir, 'package.json')),
+            );
+            const turbo = yield* Effect.option(
+              fs.readFileString(path.join(root, dir, 'turbo.json')),
+            );
+            const parts = yield* Option.match(turbo, {
+              onNone: () => Effect.succeed([]),
+              onSome: (text) =>
+                Effect.map(Schema.decodeUnknownEffect(TurboTest)(JSONC.parse(text)), (read) =>
+                  (read.tasks?.test?.dependsOn ?? []).filter((task) => PART.test(task)),
+                ),
+            });
+            return ['test', ...parts].flatMap((task) =>
+              Option.toArray(Option.fromUndefinedOr(scripts[task])).map((command) => ({
+                taskId: `${dir}#${task}`,
+                command,
+              })),
+            );
+          }),
+        );
+        expect(units.filter((unit) => unit.length > 0).length).toBeGreaterThan(5);
+        expect(units.flat().some((unit) => unit.taskId.endsWith('#test:engine'))).toBe(true);
+        const weak = units
+          .flat()
+          .flatMap((unit) => weakeningFlags(unit.command).map((why) => `${unit.taskId}: ${why}`));
         expect(weak).toEqual([]);
       }),
   );
