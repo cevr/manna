@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "exact": "bun src/hymns/make.ts && bun exact.mjs",
+    "exact": "bun src/hymns/make.ts && manna-exact",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test --preload ./src/test/setup.ts ./src"
   },

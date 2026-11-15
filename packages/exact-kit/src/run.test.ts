@@ -25,23 +25,68 @@ const APPS = {
   'heartseed-exact': { simulator: 'verify-heartseed-exact', port: 8765, spare: [8770, 8774] },
   'hymnal-exact': { simulator: 'verify-hymnal-exact', port: 8766, spare: [8775, 8779] },
 } as const;
+type App = keyof typeof APPS;
 const BUILD_LOCK = '/tmp/manna-exact-build.lock';
 const DEFAULT_CLONE = 'Developer/vendor/exact';
+
+/** What Exact's `update` writes: its own launcher, which runs its CLI directly, and its notes' opening line. */
+const EXACT_LAUNCHER = `#!/usr/bin/env bun
+import {run} from "../../../vendor/exact/scripts/app-cli.mjs";
+process.exit(await run({ name: "manna-heartseed-exact", exact2: EXACT, args: process.argv.slice(2) }));
+`;
+const EXACT_NOTES = `<!-- exact:begin (exact new writes this block; bun exact.mjs update rewrites it) -->
+When an iPhone app is ready to try, run \`bun exact.mjs share\` and send its link.
+<!-- exact:end -->
+`;
+
+/** The repo's root, from this file. */
+const repoRoot = Effect.gen(function* () {
+  const path = yield* Path.Path;
+  return path.join(yield* path.fromFileUrl(new URL('.', import.meta.url)), '..', '..', '..');
+});
 
 /** The commits `docs/exact.md` names: the pin alone, the clone's HEAD every run here stands in with but the off-pin ones. */
 const docsPins = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const here = yield* path.fromFileUrl(new URL('.', import.meta.url));
-  const doc = yield* fs.readFileString(path.join(here, '..', '..', '..', 'docs', 'exact.md'));
+  const doc = yield* fs.readFileString(path.join(yield* repoRoot, 'docs', 'exact.md'));
   return [...new Set([...doc.matchAll(/\b[0-9a-f]{40}\b/g)].map((m) => m[0]))];
 }).pipe(Effect.provide(BunServices.layer));
 
-/** A process the stand-in was asked to start: its command, arguments and options. */
+/** Each app's committed `exact.mjs` and `AGENTS.md`, keyed by where the runs here put the app: `PROBE/apps/<app>/<file>`. */
+const appFiles = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const root = yield* repoRoot;
+  const entries = yield* Effect.forEach(
+    Object.keys(APPS).flatMap((app) => ['exact.mjs', 'AGENTS.md'].map((file) => [app, file])),
+    ([app = '', file = '']) =>
+      Effect.map(
+        fs.readFileString(path.join(root, 'apps', app, file)),
+        (text) => [`${PROBE}/apps/${app}/${file}`, text] as const,
+      ),
+  );
+  return Object.fromEntries(entries);
+}).pipe(Effect.provide(BunServices.layer));
+
+/** A file system over `files` (absolute path → text) that only reads, touching no disk. */
+const memoryFs = (files: Readonly<Record<string, string>>) => {
+  const missing = FileSystem.makeNoop({});
+  return FileSystem.layerNoop({
+    readFileString: (file) =>
+      Option.match(Rec.get(files, file), {
+        onNone: () => missing.readFileString(file),
+        onSome: Effect.succeed,
+      }),
+  });
+};
+
+/** A process the stand-in was asked to start: its command, arguments and options; `removed`, the inherited variables it is started without. */
 interface Spawned {
   readonly command: string;
   readonly args: ReadonlyArray<string>;
   readonly env: Readonly<Record<string, string>>;
+  readonly removed: ReadonlyArray<string>;
   readonly extendEnv: boolean;
 }
 
@@ -64,10 +109,16 @@ const handleOf = (stdout: string, exitCode: number) =>
 const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf('', 0));
+    const env = Object.entries(
+      Option.getOrElse(Option.fromUndefinedOr(command.options.env), () => ({})),
+    ).map(([name, value]) => [name, Option.map(Option.fromUndefinedOr(value), String)] as const);
     spawned.push({
       command: command.command,
       args: command.args.map(String),
-      env: Rec.map(command.options.env ?? {}, String),
+      env: Object.fromEntries(
+        env.flatMap(([name, value]) => Option.toArray(Option.map(value, (v) => [name, v]))),
+      ),
+      removed: env.filter(([, value]) => Option.isNone(value)).map(([name]) => name),
       extendEnv: command.options.extendEnv === true,
     });
     if (command.command === 'git' && Option.isNone(head)) return Effect.succeed(handleOf('', 128));
@@ -76,14 +127,16 @@ const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
     return Effect.succeed(handleOf('', 0));
   });
 
-/** The caller's environment: what the wrapper may read (`HOME`, `EXACT`) and what it must override. */
+/** The caller's environment: what the wrapper may read (`HOME`, `EXACT`, `EXACT_PORT`) and what it must override. */
 type Caller = Readonly<Record<string, string>>;
 
+/** `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`, and the caller's `caller`. */
 const running = (
-  app: keyof typeof APPS,
+  app: App | 'heartseed',
   args: ReadonlyArray<string>,
   caller: Caller,
   head: Option.Option<string>,
+  files: Readonly<Record<string, string>>,
 ) => {
   const spawned: Array<Spawned> = [];
   return runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
@@ -91,6 +144,7 @@ const running = (
     Effect.provide(
       Layer.mergeAll(
         BunServices.layer,
+        memoryFs(files),
         Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
@@ -98,6 +152,9 @@ const running = (
     Effect.map((result) => ({ result, spawned })),
   );
 };
+
+/** The pin and the apps' committed files, which every run but a refused one needs. */
+const fixtures = Effect.all({ pins: docsPins, files: appFiles });
 
 const VERBS = [
   'web',
@@ -113,6 +170,8 @@ const VERBS = [
   'contract',
   'pattern',
   'update',
+  'snapback',
+  'add',
   'help',
   'web-build',
   'serve',
@@ -147,6 +206,12 @@ const WORDS = [
   'clock data',
 ] as const;
 
+/** A port a caller may leave in `EXACT_PORT`: none, each app's own and spare, the current hymnal's, and not a number. */
+const CALLER_PORTS = ['', '', '8765', '8766', '8771', '8776', '8281', '87a', '8765.0'] as const;
+
+/** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
+const REWRITES = ['none', 'none', 'none', 'launcher', 'notes', 'no launcher'] as const;
+
 const Case = Arbitrary.all({
   app: Arbitrary.schema(Schema.Literals(['heartseed-exact', 'hymnal-exact'])),
   verb: Arbitrary.schema(
@@ -159,18 +224,32 @@ const Case = Arbitrary.all({
   callerSim: Arbitrary.schema(Schema.Literals(['booted', 'verify-heartseed', 'verify-hymnal', ''])),
   callerFeedback: Arbitrary.schema(Schema.Literals(['1', 'always', ''])),
   callerExact: Arbitrary.schema(Schema.Literals([`${PROBE}/elsewhere`, ''])),
+  callerPort: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
+  rewrite: Arbitrary.schema(Schema.Literals(REWRITES)),
 });
 
-/** The rule, written out apart from the wrapper: what it must refuse. */
-const mustRefuse = (app: keyof typeof APPS, args: ReadonlyArray<string>) => {
-  const [verb = '', ...rest] = args;
-  if (['share', 'deploy', 'release'].includes(verb)) return true;
-  if (verb === 'feedback' && rest.join(' ') !== 'never') return true;
-  if (args.some((a) => /^--(?:sim|device)(?:=|$)/.test(a))) return true;
+/** The ports `app` owns, as text: its own and its spare range. */
+const owned = (app: App) => {
   const { port: own, spare } = APPS[app];
-  const allowed = new Set(
+  return new Set(
     [own, ...Array.from({ length: spare[1] - spare[0] + 1 }, (_, i) => spare[0] + i)].map(String),
   );
+};
+
+/** The rule, written out apart from the wrapper: what it must refuse. */
+const mustRefuse = (
+  app: App,
+  args: ReadonlyArray<string>,
+  callerPort: string,
+  rewrite: (typeof REWRITES)[number],
+) => {
+  const [verb = '', ...rest] = args;
+  if (['share', 'deploy', 'release', 'update', 'snapback'].includes(verb)) return true;
+  if (verb === 'feedback' && rest.join(' ') !== 'never') return true;
+  if (args.some((a) => /^--(?:sim|device)(?:=|$)/.test(a))) return true;
+  const allowed = owned(app);
+  if (callerPort !== '' && !allowed.has(callerPort)) return true;
+  if (rewrite !== 'none') return true;
   return args.some(
     (a, i) =>
       (a === '--port' && !allowed.has(args[i + 1] ?? '')) ||
@@ -184,15 +263,45 @@ const mustLock = (args: ReadonlyArray<string>) =>
   args[0] === 'mac' ||
   (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
 
+/** The rule, written out: the child's `EXACT_PORT`, the caller's when set, else the app's own for a bare `web`, else none. */
+const portFor = (app: App, args: ReadonlyArray<string>, callerPort: string) => {
+  if (callerPort !== '') return Option.some(callerPort);
+  const bareWeb = args[0] === 'web' && !args.some((a) => a === '--port' || a.startsWith('--port='));
+  if (bareWeb) return Option.some(String(APPS[app].port));
+  return Option.none();
+};
+
+/** Whether `child` gets the `EXACT_PORT` `port` names: set to it, or removed from what it inherits. */
+const portHeld = (child: Spawned, port: Option.Option<string>) =>
+  Option.match(port, {
+    onSome: (p) => child.env['EXACT_PORT'] === p && !child.removed.includes('EXACT_PORT'),
+    onNone: () => !('EXACT_PORT' in child.env) && child.removed.includes('EXACT_PORT'),
+  });
+
+/** `files` with `app`'s folder rewritten as `rewrite` says. */
+const rewritten = (
+  files: Readonly<Record<string, string>>,
+  app: App,
+  rewrite: (typeof REWRITES)[number],
+) => {
+  const at = `${PROBE}/apps/${app}`;
+  if (rewrite === 'launcher') return { ...files, [`${at}/exact.mjs`]: EXACT_LAUNCHER };
+  if (rewrite === 'notes')
+    return { ...files, [`${at}/AGENTS.md`]: `${files[`${at}/AGENTS.md`] ?? ''}\n${EXACT_NOTES}` };
+  if (rewrite === 'no launcher') return Rec.remove(files, `${at}/exact.mjs`);
+  return files;
+};
+
 describe('the exact wrapper', () => {
   it.effect(
-    'refuses publishing, feedback, other devices and ports before any process; runs the rest on the app own simulator, clone and lock',
+    'refuses publishing, rewriting the launcher, feedback, other devices and ports, and a rewritten launcher, before any process; runs the rest on the app own simulator, clone, port and lock',
     () =>
       Effect.gen(function* () {
-        const [pin = ''] = yield* docsPins;
+        const { pins, files } = yield* fixtures;
+        const [pin = ''] = pins;
         const result = yield* Arbitrary.checkEffect(
           Case,
-          ({ app, verb, rest, callerSim, callerFeedback, callerExact }) =>
+          ({ app, verb, rest, callerSim, callerFeedback, callerExact, callerPort, rewrite }) =>
             Effect.gen(function* () {
               const args = [verb, ...rest];
               const caller = Rec.filter(
@@ -201,6 +310,7 @@ describe('the exact wrapper', () => {
                   EXACT_SIM: callerSim,
                   EXACT_FEEDBACK: callerFeedback,
                   EXACT: callerExact,
+                  EXACT_PORT: callerPort,
                 },
                 (value) => value !== '',
               );
@@ -208,8 +318,14 @@ describe('the exact wrapper', () => {
                 Rec.get(caller, 'EXACT'),
                 () => `${PROBE}/home/${DEFAULT_CLONE}`,
               );
-              const { result: ran, spawned } = yield* running(app, args, caller, Option.some(pin));
-              if (mustRefuse(app, args))
+              const { result: ran, spawned } = yield* running(
+                app,
+                args,
+                caller,
+                Option.some(pin),
+                rewritten(files, app, rewrite),
+              );
+              if (mustRefuse(app, args, callerPort, rewrite))
                 return (
                   ran._tag === 'Failure' &&
                   ran.failure._tag === 'ExactRefused' &&
@@ -226,27 +342,62 @@ describe('the exact wrapper', () => {
                 child.env['EXACT'] === clone &&
                 child.env['EXACT_FEEDBACK'] === '0' &&
                 child.env['EXACT_SIM'] === APPS[app].simulator &&
+                portHeld(child, portFor(app, args, callerPort)) &&
                 locked === mustLock(args) &&
                 (locked || child.command === 'bun') &&
                 child.args.slice(-args.length - 3).join('\u0000') ===
                   [LAUNCHER, `${PROBE}/apps/${app}`, app, ...args].join('\u0000')
               );
             }),
-          { runs: 400 },
+          { runs: 500 },
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
       }),
   );
 
+  it.effect(
+    'refuses update, and a launcher update rewrote, naming how to restore it; starts nothing',
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const update = yield* running('heartseed-exact', ['update'], { HOME: PROBE }, head, files);
+        expect(update.result._tag).toBe('Failure');
+        expect(update.spawned).toEqual([]);
+        const after = yield* running(
+          'heartseed-exact',
+          ['share'],
+          { HOME: PROBE },
+          head,
+          rewritten(files, 'heartseed-exact', 'launcher'),
+        );
+        expect(after.result._tag).toBe('Failure');
+        const web = yield* running(
+          'hymnal-exact',
+          ['test', 'web'],
+          { HOME: PROBE },
+          head,
+          rewritten(files, 'hymnal-exact', 'notes'),
+        );
+        expect(web.spawned).toEqual([]);
+        if (web.result._tag !== 'Failure') return;
+        expect(web.result.failure.message).toContain(
+          `git checkout -- ${PROBE}/apps/hymnal-exact/exact.mjs`,
+        );
+      }),
+  );
+
   it.effect('refuses a clone off the pin, naming both commits, and starts nothing after git', () =>
     Effect.gen(function* () {
-      const [pin = ''] = yield* docsPins;
+      const { pins, files } = yield* fixtures;
+      const [pin = ''] = pins;
       const elsewhere = 'f'.repeat(40);
       const { result, spawned } = yield* running(
         'heartseed-exact',
         ['test', 'web'],
         { HOME: PROBE },
         Option.some(elsewhere),
+        files,
       );
       expect(result._tag).toBe('Failure');
       if (result._tag !== 'Failure') return;
@@ -258,12 +409,14 @@ describe('the exact wrapper', () => {
 
   it.effect('refuses with how to clone when there is no clone', () =>
     Effect.gen(function* () {
-      const [pin = ''] = yield* docsPins;
+      const { pins, files } = yield* fixtures;
+      const [pin = ''] = pins;
       const { result, spawned } = yield* running(
         'hymnal-exact',
         ['web'],
         { EXACT: `${PROBE}/none` },
         Option.none(),
+        files,
       );
       expect(result._tag).toBe('Failure');
       if (result._tag !== 'Failure') return;
@@ -275,21 +428,13 @@ describe('the exact wrapper', () => {
 
   it.effect('refuses an app it does not know', () =>
     Effect.gen(function* () {
-      const [pin = ''] = yield* docsPins;
-      const spawned: Array<Spawned> = [];
-      const result = yield* runExact(`${PROBE}/apps/heartseed`, ['web'], LAUNCHER).pipe(
-        Effect.result,
-        // oxlint-disable-next-line effect/noInlineProvide -- this case's own stand-in spawner
-        Effect.provide(
-          Layer.mergeAll(
-            BunServices.layer,
-            Layer.succeed(
-              ChildProcessSpawner.ChildProcessSpawner,
-              standIn(Option.some(pin), spawned),
-            ),
-            ConfigProvider.layer(ConfigProvider.fromUnknown({ HOME: PROBE })),
-          ),
-        ),
+      const { pins, files } = yield* fixtures;
+      const { result, spawned } = yield* running(
+        'heartseed',
+        ['web'],
+        { HOME: PROBE },
+        Option.fromNullishOr(pins[0]),
+        files,
       );
       expect(result._tag).toBe('Failure');
       expect(spawned).toEqual([]);
@@ -297,16 +442,12 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    'serves the web loop on the app own port, and every other web host in its spare range',
+    "serves the web loop on the app own port, every other web host in its spare range without the caller's EXACT_PORT, and refuses a caller's EXACT_PORT not the app's",
     () =>
       Effect.gen(function* () {
-        const [pin = ''] = yield* docsPins;
-        const { spawned } = yield* running(
-          'hymnal-exact',
-          ['web'],
-          { HOME: PROBE },
-          Option.some(pin),
-        );
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const { spawned } = yield* running('hymnal-exact', ['web'], { HOME: PROBE }, head, files);
         expect(spawned[1]?.env).toMatchObject({
           EXACT_PORT: '8766',
           PORT_LO: '8775',
@@ -316,24 +457,53 @@ describe('the exact wrapper', () => {
           'heartseed-exact',
           ['test', 'web'],
           { HOME: PROBE },
-          Option.some(pin),
+          head,
+          files,
         );
         expect(tested.spawned[1]?.env).toMatchObject({ PORT_LO: '8770', PORT_HI: '8774' });
-        expect(tested.spawned[1]?.env['EXACT_PORT']).toBeUndefined();
+        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT']);
+        const hymnals = yield* running(
+          'hymnal-exact',
+          ['test', 'web'],
+          { HOME: PROBE, EXACT_PORT: '8281' },
+          head,
+          files,
+        );
+        expect(hymnals.spawned).toEqual([]);
+        if (hymnals.result._tag !== 'Failure') return;
+        expect(hymnals.result.failure.message).toContain('EXACT_PORT=8281');
       }),
   );
 
   it.effect('docs/exact.md names one commit, the pin the wrapper runs at', () =>
     Effect.gen(function* () {
-      const pins = yield* docsPins;
+      const { pins, files } = yield* fixtures;
       expect(pins.length).toBe(1);
       const { result } = yield* running(
         'heartseed-exact',
         ['web'],
         { HOME: PROBE },
         Option.fromNullishOr(pins[0]),
+        files,
       );
       expect(result._tag).toBe('Success');
     }),
+  );
+
+  it.effect(
+    "each app's `bun run exact` is the kit's command, so a rewritten exact.mjs cannot take the wrapper out",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* repoRoot;
+        const scripts = yield* Effect.forEach(Object.keys(APPS), (app) =>
+          Effect.map(
+            fs.readFileString(path.join(root, 'apps', app, 'package.json')),
+            (text) => /"exact":\s*"([^"]*)"/.exec(text)?.[1] ?? '',
+          ),
+        );
+        for (const script of scripts) expect(script).toMatch(/(?:^|&& )manna-exact$/);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 });

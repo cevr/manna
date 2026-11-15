@@ -3,6 +3,7 @@ import {
   Config,
   Duration,
   Effect,
+  FileSystem,
   Option,
   Path,
   Result,
@@ -36,6 +37,23 @@ const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact', ExactApp>> = {
 /** Verbs that publish or upload: never through this wrapper. */
 const REFUSED_VERBS: ReadonlyArray<string> = ['share', 'deploy', 'release'];
 
+/**
+ * Verbs that rewrite the app's `exact.mjs` or its `AGENTS.md` with Exact's own: `update` writes Exact's
+ * launcher, which runs its CLI past this wrapper, and both write Exact's notes, which tell agents to share
+ * and send feedback.
+ */
+const REWRITING_VERBS: ReadonlyArray<string> = ['update', 'snapback'];
+
+/** Each app's `exact.mjs`, byte for byte: the launcher into this wrapper. */
+const KIT_LAUNCHER = `#!/usr/bin/env bun
+import { main } from '@manna/exact-kit/main';
+
+main(import.meta.dir, process.argv.slice(2));
+`;
+
+/** The line that opens Exact's generated block in an `AGENTS.md`. */
+const EXACT_NOTES = '<!-- exact:begin';
+
 /** Flags that would leave the app's simulator for another device, or name another simulator. */
 const REFUSED_FLAGS: ReadonlyArray<string> = ['--sim', '--device'];
 
@@ -48,10 +66,11 @@ class ExactRefused extends Schema.TaggedError<ExactRefused>()('ExactRefused', {
   }
 }
 
-/** What runs: the child's arguments after Bun and the launcher, the variables set over the caller's, and whether it takes the build lock. */
+/** What runs: the child's arguments after Bun and the launcher, the variables set over the caller's, the caller's it removes, and whether it takes the build lock. */
 interface Plan {
   readonly args: ReadonlyArray<string>;
   readonly env: Readonly<Record<string, string>>;
+  readonly removed: ReadonlyArray<string>;
   readonly locked: boolean;
 }
 
@@ -62,32 +81,41 @@ const isNative = (args: ReadonlyArray<string>) => {
   return ['test', 'verify', 'agent'].includes(verb ?? '') && host === 'ios';
 };
 
-/** Why `args` is refused before any process starts, if it is. */
-const refusalOf = (args: ReadonlyArray<string>, app: ExactApp): Option.Option<string> => {
+/** Why `args`, with the caller's `EXACT_PORT` if it set one, is refused before any process starts, if it is. */
+const refusalOf = (
+  args: ReadonlyArray<string>,
+  app: ExactApp,
+  callerPort: Option.Option<string>,
+): Option.Option<string> => {
   const [verb = '', ...rest] = args;
   if (REFUSED_VERBS.includes(verb))
     return Option.some(`${verb} publishes the app; it is the owner's to run, never an agent's`);
+  if (REWRITING_VERBS.includes(verb))
+    return Option.some(
+      `${verb} writes Exact's own exact.mjs and AGENTS.md over this app's, which run Exact past this wrapper; it is the ex-pin unit's, by hand (docs/exact.md)`,
+    );
   if (verb === 'feedback' && !(rest.length === 1 && rest[0] === 'never'))
     return Option.some('feedback goes to Expo; only `feedback never` runs here');
   const flag = Arr.findFirst(args, (arg) =>
     REFUSED_FLAGS.some((f) => arg === f || arg.startsWith(`${f}=`)),
   );
-  const other = Arr.findFirst(
-    portsOf(args),
-    (given) => String(Number(given)) !== given || !ownsPort(app, Number(given)),
-  );
-  return Option.orElse(
+  const notOwned = (given: string) =>
+    String(Number(given)) !== given || !ownsPort(app, Number(given));
+  const range = `use ${app.port} or ${app.spare[0]}-${app.spare[1]}`;
+  return Option.firstSomeOf([
     Option.map(
       flag,
       (given) => `${given} is refused: every drive uses ${app.simulator}, the app's own simulator`,
     ),
-    () =>
-      Option.map(
-        other,
-        (given) =>
-          `--port ${given} is not this app's: use ${app.port} or ${app.spare[0]}-${app.spare[1]}`,
-      ),
-  );
+    Option.map(
+      Arr.findFirst(portsOf(args), notOwned),
+      (given) => `--port ${given} is not this app's: ${range}`,
+    ),
+    Option.map(
+      Option.filter(callerPort, notOwned),
+      (given) => `EXACT_PORT=${given} is not this app's: unset it, or ${range}`,
+    ),
+  ]);
 };
 
 /** Every port `args` names, as `--port <n>` or `--port=<n>`; a `--port` with nothing after names "". */
@@ -102,19 +130,25 @@ const ownsPort = (app: ExactApp, port: number) =>
   port === app.port || (port >= app.spare[0] && port <= app.spare[1]);
 
 /**
- * The run of `args` for `app`, whose clone is at `clone`: refused for a verb that publishes, a feedback
- * send, another device or simulator, or a port not the app's; else the child's variables, set over
- * whatever the caller's held: the clone, feedback off, the app's simulator and ports.
+ * The run of `args` for `app`, whose clone is at `clone`, with the caller's `EXACT_PORT` if it set one:
+ * refused for a verb that publishes or rewrites the launcher, a feedback send, another device or
+ * simulator, or a port not the app's; else the child's variables, set over whatever the caller's held:
+ * the clone, feedback off, the app's simulator and ports. `EXACT_PORT` is the caller's when it is the
+ * app's, else the app's own port for a bare `web`, else removed.
  */
 const plan = (
   args: ReadonlyArray<string>,
   app: ExactApp,
   clone: string,
+  callerPort: Option.Option<string>,
 ): Result.Result<Plan, ExactRefused> =>
-  Option.match(refusalOf(args, app), {
+  Option.match(refusalOf(args, app, callerPort), {
     onSome: (reason) => Result.fail(ExactRefused.make({ reason })),
     onNone: () => {
       const web = args[0] === 'web' && portsOf(args).length === 0;
+      const port = Option.orElse(callerPort, () =>
+        Option.filter(Option.some(String(app.port)), () => web),
+      );
       return Result.succeed({
         args,
         locked: isNative(args),
@@ -125,10 +159,39 @@ const plan = (
           EXACT_SIM: app.simulator,
           PORT_LO: String(app.spare[0]),
           PORT_HI: String(app.spare[1]),
-          ...(web && { EXACT_PORT: String(app.port) }),
+          ...Option.match(port, { onNone: () => ({}), onSome: (p) => ({ EXACT_PORT: p }) }),
         },
+        removed: Option.match(port, { onNone: () => ['EXACT_PORT'], onSome: () => [] }),
       });
     },
+  });
+
+/**
+ * Refused unless `appDir`'s `exact.mjs` is the kit's launcher and its `AGENTS.md` holds no block of
+ * Exact's: a rewrite by `update` or by hand would run Exact past this wrapper, and its notes tell agents
+ * to share and send feedback.
+ */
+const launcherHeld = (appDir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const restore = `git checkout -- ${appDir}/exact.mjs ${appDir}/AGENTS.md`;
+    const launcher = yield* Effect.orElseSucceed(
+      fs.readFileString(path.join(appDir, 'exact.mjs')),
+      () => '',
+    );
+    if (launcher !== KIT_LAUNCHER)
+      return yield* ExactRefused.make({
+        reason: `${appDir}/exact.mjs is not @manna/exact-kit's launcher, so Exact would run past this wrapper: ${restore}`,
+      });
+    const notes = yield* Effect.orElseSucceed(
+      fs.readFileString(path.join(appDir, 'AGENTS.md')),
+      () => '',
+    );
+    if (notes.includes(EXACT_NOTES))
+      return yield* ExactRefused.make({
+        reason: `${appDir}/AGENTS.md holds Exact's generated notes, which tell agents to share and send feedback: ${restore}`,
+      });
   });
 
 /** A byte stream as text. */
@@ -165,7 +228,8 @@ const appNamed = (name: string) =>
 
 /**
  * Runs Exact's `args` for the app in `appDir` through `launcher` (exact-cli.ts): refused before any
- * process when the command is, then refused unless the clone is at the pin, then run with the plan's
+ * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
+ * clone is at the pin, then run with the plan's
  * variables over the caller's, a native build or drive under the build lock. The child's exit code.
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
@@ -186,7 +250,9 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const clone = yield* Config.String('EXACT').pipe(
     Config.withDefault(path.join(home, DEFAULT_CLONE)),
   );
-  const planned = yield* Effect.fromResult(plan(args, app, clone));
+  const callerPort = yield* Config.option(Config.String('EXACT_PORT'));
+  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPort));
+  yield* launcherHeld(appDir);
   const head = yield* headOf(clone);
   if (head !== EXACT_PIN)
     return yield* ExactRefused.make({
@@ -200,7 +266,13 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
       spawner.spawn(
         ChildProcess.make(command, rest, {
           cwd: appDir,
-          env: planned.env,
+          env: {
+            ...planned.env,
+            ...Object.fromEntries(
+              // oxlint-disable-next-line effect/noNullish -- the spawner removes a variable set to undefined from the inherited environment
+              planned.removed.map((name) => [name, undefined]),
+            ),
+          },
           extendEnv: true,
           stdin: 'inherit',
           stdout: 'inherit',

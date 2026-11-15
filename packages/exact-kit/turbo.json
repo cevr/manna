@@ -5,7 +5,17 @@
     "test": {
       "dependsOn": ["^transit"],
       "outputs": [],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/docs/exact.md"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/docs/exact.md",
+        "$TURBO_ROOT$/apps/heartseed-exact/exact.mjs",
+        "$TURBO_ROOT$/apps/heartseed-exact/AGENTS.md",
+        "$TURBO_ROOT$/apps/heartseed-exact/package.json",
+        "$TURBO_ROOT$/apps/hymnal-exact/exact.mjs",
+        "$TURBO_ROOT$/apps/hymnal-exact/AGENTS.md",
+        "$TURBO_ROOT$/apps/hymnal-exact/package.json"
+      ]
     }
   }
 }
