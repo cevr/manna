@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, effect/noAs, effect/noTryCatch, effect/noUnsafeDictionaryType, effect/noKnownValueWidening, effect/maxCognitiveComplexity, eslint/no-await-in-loop, eslint/complexity, node/no-process-env -- a host script that serves the built site and drives headless Chrome over the DevTools protocol, each in a process group of its own, awaits each page in turn, reads each method's JSON as it comes, and prints what it found in a report of named sections; it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, effect/noAs, effect/noTryCatch, effect/noUnsafeDictionaryType, effect/noKnownValueWidening, effect/maxCognitiveComplexity, eslint/no-await-in-loop, eslint/complexity -- a host script that serves the built site and drives headless Chrome over the DevTools protocol, each in a process group of its own, awaits each page in turn, reads each method's JSON as it comes, and prints what it found in a report of named sections; it never runs in the data module. */
 
 /**
  * The production web build as a visitor meets it (spec B), with no Exact
@@ -330,8 +330,10 @@ const noScript = async (page: Page) => {
   await open(page, '/hymns/696', false);
   const missing = await page.evaluate<{ title: string; description: string }>(head);
   check(
-    'with script off, an unknown hymn is the not-found page',
-    missing.title === 'No Such Page',
+    server === 'exact'
+      ? "with script off, an unknown hymn is Exact's serve's shell (it answers a route's pattern with shell.html)"
+      : 'with script off, an unknown hymn is the not-found page',
+    missing.title === (server === 'exact' ? 'Hymnal' : 'No Such Page'),
     missing,
   );
   report.noscript = { list, listText, hymn, hymnText };
