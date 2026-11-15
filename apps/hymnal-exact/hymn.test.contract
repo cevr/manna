@@ -27,3 +27,11 @@ test "A hymn's address opens it."
   clock settle
   expect tree missing "hymn-title"
   expect text "title" == "Hymns"
+
+test "An address that names no hymn says so."
+  at "/hymns/999"
+  clock data
+  expect text "hymn-title" == "No Such Hymn"
+  back
+  clock settle
+  expect text "title" == "Hymns"
