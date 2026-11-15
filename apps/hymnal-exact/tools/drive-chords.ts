@@ -24,6 +24,7 @@
  * Screens at the largest size are kept in SHOTS. Exits 1 on any failed check.
  */
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
@@ -137,10 +138,39 @@ const largeOps = [
 ];
 const keepOps = ['tap capo-up', 'clock data', 'clock settle', 'state chordsMoves'];
 
-const first = await drive.run(
-  ['--backend', backend, '--storage', store, '--reset-storage'],
-  [...chordsOn, ...defaultOps, ...largeOps, ...keepOps],
-);
+/**
+ * Whether the web store named holds `text` on disk. A browser Exact ends at
+ * its deadline before it writes its store loses what the run kept
+ * (`exact/scripts/agent-web.mjs` `close`), which this tells apart from the
+ * app not keeping it, as the player's drive does. True on iOS, whose store
+ * is the simulator's.
+ */
+const onDisk = async (name: string, text: string) => {
+  if (host !== 'web') return true;
+  const cache =
+    process.platform === 'darwin'
+      ? join(homedir(), 'Library/Caches')
+      : (process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'));
+  const needle = Buffer.from(text);
+  const glob = new Bun.Glob(`*/agent-web-*/${name}/Default/Local Storage/leveldb/*`);
+  for await (const path of glob.scan({ cwd: join(cache, 'exact'), absolute: true }))
+    if (Buffer.from(await Bun.file(path).arrayBuffer()).includes(needle)) return true;
+  return false;
+};
+
+const firstOps = [...chordsOn, ...defaultOps, ...largeOps, ...keepOps];
+const firstRun = () =>
+  drive.run(['--backend', backend, '--storage', store, '--reset-storage'], firstOps);
+let first = await firstRun();
+if (
+  JSON.stringify(first.at(-1)) === JSON.stringify([`${HYMN}:0:1`]) &&
+  !(await onDisk(store, `${HYMN}:0:1`))
+) {
+  console.log(
+    `again ${host}: the browser quit before it wrote its store (Exact ended it at its deadline); the first run once more`,
+  );
+  first = await firstRun();
+}
 const frame = (id: string, ops: ReadonlyArray<string>, offset: number) =>
   frameOf(first[offset + ops.indexOf(`layout ${id}`)]);
 
