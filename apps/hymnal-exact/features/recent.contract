@@ -1,7 +1,9 @@
 // Recent: the hymns last opened, newest first, kept across launches. A hymn
 // page shown on top of the stack is a visit (`recentAfter`, the current
 // app's `visited`); the home list's shelf shows the latest five, and its
-// header opens this screen with all of them (`recentRows`).
+// header opens this screen with all of them (`recentRows`). The find bar
+// stands under its header, and its results take the list's place while
+// its search is open here (features/find.contract).
 use HymnRow, ListBarRoom, RecentView from "./list.contract"
 use PlayerView from "./player.contract"
 use FindBar, FindView, findSearchingAt from "./find.contract"
