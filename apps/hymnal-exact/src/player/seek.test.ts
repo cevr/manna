@@ -231,7 +231,7 @@ describe('the player’s Contract file keeps the current app’s numbers and the
     expect(contract).not.toContain('bordered-prominent');
     expect(contract.match(/PlayerFilled\(/gu)?.length).toBe(3);
     expect(contract).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|light-dark\(/iu);
-    const brand = brandOf(appFile('app.tamber'));
+    const brand = brandOf(appFile('app.forma'));
     expect(brand.colours.has('button') && brand.colours.has('onButton')).toBe(true);
     expect(brand.names.get('AccentColor')).toBe('accent');
   });

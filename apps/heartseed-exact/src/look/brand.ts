@@ -1,7 +1,7 @@
 /* oxlint-disable effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): a regex group, a map entry and a list's first item are absent as undefined. */
 
 /**
- * A token's colour in each scheme, as the brand file (`app.tamber`) is read
+ * A token's colour in each scheme, as the brand file (`app.forma`) is read
  * as data: each token of its `theme` block with its light and dark colour (a
  * token that names another token or role takes that one's), and the colour
  * literals any text holds. The look's tests read the brand through these,

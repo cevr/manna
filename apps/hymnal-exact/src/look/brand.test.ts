@@ -1,6 +1,6 @@
 /**
  * The brand is the current hymnal's palette (A2): every role of
- * `apps/hymnal/src/theme.ts` is a token of `app.tamber`, under its own
+ * `apps/hymnal/src/theme.ts` is a token of `app.forma`, under its own
  * name, with the same colour light and dark, and the brand has no other
  * colour: each of its other tokens sets one of the platform's roles to one
  * of those roles. Generated over the current theme's role names, so a role
@@ -13,7 +13,7 @@ import { theme } from '@manna/hymnal-app/theme';
 
 import { appFile, brandOf } from './design.testing.ts';
 
-const brand = brandOf(appFile('app.tamber'));
+const brand = brandOf(appFile('app.forma'));
 const roles = Object.keys(theme.light);
 
 describe('the brand is the current hymnal’s palette', () => {

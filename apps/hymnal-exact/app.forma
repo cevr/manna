@@ -3,7 +3,7 @@
 // platform's roles the port's screens draw with, each set to one of them.
 // src/look/brand.test.ts holds every colour here to theme.ts. The tint
 // (AccentColor) is the accent, as in the current app (the owner's choice).
-tamber hymnal
+forma hymnal
 
 theme
   ground = light-dark(#f1f0e6, #142420)

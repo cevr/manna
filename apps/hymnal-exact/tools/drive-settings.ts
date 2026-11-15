@@ -17,7 +17,7 @@
  *
  * A section's header is the platform's: the label on the web, the
  * secondary label on iOS (UIKit's grouped header), each the brand's. The
- * brand's colours are the current hymnal's theme (`app.tamber` is held to
+ * brand's colours are the current hymnal's theme (`app.forma` is held to
  * it by `src/look/brand.test.ts`). The list, a hymn and the sheet are kept
  * in SHOTS, light and dark. Exits 1 on any failed check.
  */
@@ -88,7 +88,7 @@ const styleOf = (reply: unknown): Style =>
 /** The scheme a layout reply's node is drawn in. */
 const schemeOf = (reply: unknown) => styleOf(reply).color_scheme?.value ?? '';
 
-const brand = brandOf(appFile('app.tamber'));
+const brand = brandOf(appFile('app.forma'));
 
 /** A role a native host names (`CanvasText`), as the brand sets it in `scheme`; the name itself where the brand does not. */
 const named = (name: string, scheme: string) => {

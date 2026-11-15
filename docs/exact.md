@@ -17,10 +17,10 @@ Exact is not a package: an app runs it from a clone, by path. Nothing of Exact i
 
    ```sh
    git clone https://github.com/expo/exact.git ~/Developer/vendor/exact
-   git -C ~/Developer/vendor/exact checkout --detach 0fa708e34ef4d2e49af98b25edc76bedc46ae7fa
+   git -C ~/Developer/vendor/exact checkout --detach d1a71d7cb6bb4477f452f9c7351c49bc9b88adb3
    ```
 
-3. `bun scripts/exact.mjs setup` in the clone: it installs Exact's Rust toolchains (1.97.0 and a nightly, without changing `rustup default`), wasm-bindgen, Binaryen (`~/.cache/exact/binaryen`), Exact's own `node_modules`, Playwright's headless Chromium, and the Hermes bundles (`~/.cargo/hermes-lean-sys/`). `bun scripts/exact.mjs setup --check --platform ios` names what is still missing and changes nothing.
+3. `bun scripts/exact.mjs setup` in the clone: it installs Exact's Rust toolchains (1.99.1 and a nightly, without changing `rustup default`), wasm-bindgen, Binaryen (`~/.cache/exact/binaryen`), Exact's own `node_modules`, Playwright's headless Chromium, and the Hermes bundles (`~/.cargo/hermes-lean-sys/`). `bun scripts/exact.mjs setup --check --platform ios` names what is still missing and changes nothing.
 
 Exact needs the real `HOME`: rustup, Cargo and the Hermes bundles are found through it.
 
@@ -28,7 +28,7 @@ Exact needs the real `HOME`: rustup, Cargo and the Hermes bundles are found thro
 
 Exact is pre-1.0 and lands about a hundred commits a day with no stability promise, so every app runs one commit:
 
-**`0fa708e34ef4d2e49af98b25edc76bedc46ae7fa`** (2026-11-14).
+**`d1a71d7cb6bb4477f452f9c7351c49bc9b88adb3`** (2026-11-15).
 
 The pin is `EXACT_PIN` in `packages/exact-kit/src/run.ts`; its test holds this file to it. Only the `ex-pin` unit moves it: it moves the constant and this file together, runs every contract test of both apps on the web and iOS, and records what it cost.
 
