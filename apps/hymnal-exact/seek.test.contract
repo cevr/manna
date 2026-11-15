@@ -1,0 +1,167 @@
+// The player's seek against the fixture recordings (tools/recordings.ts,
+// digital silence): run with HYMNAL_RECORDINGS=http://127.0.0.1:4797
+// (README, "The player"). The first line of each test refuses any other
+// origin, so no test ever asks the bucket. Hymn 2's recording is 240 s;
+// its timing sings stanza 1 from 22.3 s to 73.4 s and stanza 3 from
+// 124.6 s to 175.7 s. A playing element runs on real time, so a place is
+// checked as a lower bound after `clock +N real`. A drag held between two
+// moves is the drive's (tools/drive-player.ts): a test's read cannot assert
+// while a finger is down; here `type` moves the bar as a release does.
+
+test "A drag moves the place once, at release"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  expect tree has "position"
+  expect state player.seek == 0
+  type "position" "120"
+  clock data
+  expect state player.seek == 1
+  expect state player.seekTo == 120
+  expect text "elapsed" == "2:00"
+  clock +1500 real
+  clock data
+  expect state player.seek == 1
+  expect state player.at >= 120
+  expect state player.at <= 124
+  expect state player.phase == "playing"
+
+test "Paused stays paused through a seek"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  type "position" "60"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect text "elapsed" == "1:00"
+  clock +1500 real
+  clock data
+  expect state player.phase == "paused"
+  expect state player.at >= 60
+  expect state player.at <= 61
+
+test "Playing goes on through a seek"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  type "position" "100"
+  clock data
+  clock +2500 real
+  clock data
+  expect state player.phase == "playing"
+  expect state player.at >= 101
+  expect text "toggle" == "Pause"
+
+test "The lock screen's position moves it"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "audio" mediasession "seekto" 150
+  clock data
+  clock +1500 real
+  clock data
+  expect state player.at >= 150
+  expect state player.at <= 154
+  expect state player.phase == "playing"
+  tap "audio" mediasession "seekforward"
+  clock data
+  expect state player.at >= 160
+  expect state player.at <= 165
+  tap "audio" mediasession "seekbackward"
+  clock data
+  expect state player.at >= 150
+  expect state player.at <= 155
+
+test "Only the chosen stanzas sound"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "stanza-2"
+  clock data
+  tap "stanza-4"
+  clock data
+  clock settle
+  expect text "total" == "2:16"
+  type "position" "71"
+  clock data
+  clock +5000 real
+  clock data
+  expect state player.place >= 124.5
+  expect state player.place <= 128
+  expect state player.at >= 73
+  expect state player.at <= 77
+  expect state player.phase == "playing"
+  expect text "total" == "2:16"
+
+test "A stanza's place"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "stanza-2"
+  clock data
+  tap "stanza-4"
+  clock data
+  clock settle
+  expect tree has "stanza-place-1"
+  expect tree has "stanza-place-3"
+  expect tree missing "stanza-place-2"
+  tap "stanza-place-3"
+  clock data
+  expect text "elapsed" == "1:13"
+  expect state player.place >= 124.5
+  expect state player.place <= 124.7
+
+test "Nothing sits under the bar"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  expect tree missing "bar-room-hymn"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock settle
+  expect tree has "bar"
+  expect tree has "bar-room-hymn"
+  tap "bar-title"
+  clock data
+  clock settle
+  expect tree has "player"
+  expect tree missing "bar"

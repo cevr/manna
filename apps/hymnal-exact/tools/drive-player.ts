@@ -16,7 +16,14 @@
  * - a hymn with no recording (the fixture's 404) says so and offers no Play;
  * - a stanza choice is kept as it is made, and survives a relaunch with
  *   kept storage. On the web, a first run whose browser was killed before
- *   it wrote its store (`onDisk`) is run once more, and says so.
+ *   it wrote its store (`onDisk`) is run once more, and says so;
+ * - a drag held in two moves shows the drag and sends no seek until it is
+ *   let go; a place played across a span the stanza choice leaves out lands
+ *   in the next stanza sung; ten seeks land where they were sent (their
+ *   delay to the first tick, and the skip's, printed as `measure`);
+ * - in dark, the page's Play, the player's toggle and a chosen chip read
+ *   their label at 4.5:1 on their fill, from a screenshot's pixels;
+ * - with Settings open, the dock is not in the accessibility tree.
  *
  * The fixture listens on this checkout's own port (`checkoutPort`), so
  * drives in two checkouts never share one. The build reads the fixture's
@@ -27,6 +34,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { pixelAt } from './pixel.ts';
 import { LONG_HYMN, MISSING_HYMN, checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
@@ -305,6 +313,181 @@ check(
     JSON.stringify((chips as ReadonlyArray<{ chosen: boolean }>).map((chip) => chip.chosen)) ===
       JSON.stringify([true, false, true, false]),
   { keptChoice, chips, total },
+);
+
+/** An element of a `tree --ax` reply: its test id and its frame in points. */
+interface Ax {
+  readonly testId?: string;
+  readonly value?: string;
+  readonly frame: {
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+  };
+}
+const axOf = (reply: unknown): ReadonlyArray<Ax> =>
+  ((reply as { ax?: { elements?: ReadonlyArray<Ax> } }).ax?.elements ?? []) as ReadonlyArray<Ax>;
+
+/** A colour's relative luminance (WCAG 2), its channels 0 to 255. */
+const luminance = (rgb: ReadonlyArray<number>) => {
+  const [r, g, b] = rgb.map((channel) => {
+    const share = channel / 255;
+    return share <= 0.03928 ? share / 12.92 : ((share + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+};
+const contrast = (one: ReadonlyArray<number>, other: ReadonlyArray<number>) => {
+  const [high, low] = [luminance(one), luminance(other)].toSorted((a, b) => b - a);
+  return ((high ?? 0) + 0.05) / ((low ?? 0) + 0.05);
+};
+
+/**
+ * The contrast of a button's label against its fill, from a screenshot: a
+ * grid of pixels over the button's frame; the fill is the colour most of
+ * them are, the label the one that stands furthest from it.
+ */
+const labelContrast = async (path: string, all: ReadonlyArray<Ax>, id: string) => {
+  const screen = all[0]?.frame;
+  const box = all.find((each) => each.testId === id)?.frame;
+  if (screen === undefined || box === undefined) return -1;
+  const pixels: Array<ReadonlyArray<number>> = [];
+  for (let row = 1; row < 8; row++)
+    for (let column = 1; column < 16; column++)
+      pixels.push(
+        await pixelAt(path, {
+          x: (box.x + (box.w * column) / 16) / screen.w,
+          y: (box.y + (box.h * row) / 8) / screen.h,
+        }),
+      );
+  const counts = new Map<string, number>();
+  for (const pixel of pixels) counts.set(pixel.join(), (counts.get(pixel.join()) ?? 0) + 1);
+  const fill = ([...counts].toSorted((a, b) => b[1] - a[1])[0]?.[0] ?? '0,0,0')
+    .split(',')
+    .map(Number);
+  return Math.max(...pixels.map((pixel) => contrast(pixel, fill)));
+};
+
+const darkShot = (name: string) => `.exact/shots/player-${host}-${name}.png`;
+const POSITIONS = [10, 30, 50, 60, 90, 100, 110, 120, 130, 140];
+const seekOps = [
+  'prefer prefers-color-scheme dark',
+  'clock data',
+  'clock settle',
+  'tree --ax',
+  `screenshot ${darkShot('dark-page')}`,
+  'tap play',
+  'clock data',
+  'clock +3000 real',
+  'clock data',
+  'tap bar-title',
+  'clock data',
+  'clock settle',
+  'tap stanza-2',
+  'clock data',
+  'clock settle',
+  'tree --ax',
+  `screenshot ${darkShot('dark-player')}`,
+  'state player.seek',
+  'tap position down',
+  'tap move by 40 0',
+  'tap hold 50',
+  'state player',
+  'tap move by 40 0',
+  'tap hold 50',
+  'state player',
+  'tap up',
+  'clock data',
+  'state player.seek',
+  'type position 71',
+  'clock data',
+  'clock +5000 real',
+  'clock data',
+  'state player.place',
+  'state player.at',
+  'state playerSkipGap',
+  'state playerSkipFrom',
+  'state playerSkipLanded',
+  ...POSITIONS.flatMap((to) => [
+    `type position ${to}`,
+    'clock data',
+    'clock +1500 real',
+    'clock data',
+    'state player.at',
+    'state playerGap',
+  ]),
+  'tap player-close',
+  'clock data',
+  'clock settle',
+  'back',
+  'clock settle',
+  'tap gear',
+  'clock data',
+  'clock settle',
+  'tree --ax',
+  shot('settings-open'),
+];
+const seekReplies = await run(
+  ['--storage', `${store}-seek`, '--reset-storage'],
+  `/hymns/${LONG_HYMN}`,
+  seekOps,
+);
+
+type Viewed = { readonly seek: number; readonly at: number; readonly dragging: boolean };
+const during = [0, 1].map(
+  (nth) => replyTo(seekOps, seekReplies, 'state player', nth) as Viewed | undefined,
+);
+const before = replyTo(seekOps, seekReplies, 'state player.seek');
+const after = replyTo(seekOps, seekReplies, 'state player.seek', 1);
+check(
+  'a drag held in two moves shows the drag and sends nothing until it is let go, then one seek',
+  during.every((view) => view?.dragging === true && view.seek === before) &&
+    (during[1]?.at ?? 0) > (during[0]?.at ?? 0) &&
+    after === (before as number) + 1,
+  { before, after, during },
+);
+const place = replyTo(seekOps, seekReplies, 'state player.place') as number;
+const sung = replyTo(seekOps, seekReplies, 'state player.at') as number;
+const skipGap = {
+  ms: replyTo(seekOps, seekReplies, 'state playerSkipGap'),
+  from: replyTo(seekOps, seekReplies, 'state playerSkipFrom'),
+  landed: replyTo(seekOps, seekReplies, 'state playerSkipLanded'),
+};
+check(
+  'chosen 1, 3 and 4, a place played across stanza 2’s span lands in stanza 3, elapsed going on',
+  place >= 124.5 && place <= 130 && sung >= 73 && sung <= 79,
+  { place, sung, skipGap },
+);
+const landings = POSITIONS.map((to, index) => ({
+  to,
+  at: replyTo(seekOps, seekReplies, 'state player.at', index + 1),
+  gap: replyTo(seekOps, seekReplies, 'state playerGap', index),
+}));
+check(
+  'ten seeks each land where they were sent and play on',
+  landings.every(({ to, at }) => typeof at === 'number' && at >= to && at <= to + 3),
+  landings,
+);
+console.log(`measure ${host} skip ${JSON.stringify(skipGap)}; seeks ${JSON.stringify(landings)}`);
+
+const pageAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax'));
+const playerAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 1));
+const settingsAx = axOf(replyTo(seekOps, seekReplies, 'tree --ax', 2));
+const ratios = {
+  play: await labelContrast(darkShot('dark-page'), pageAx, 'play'),
+  toggle: await labelContrast(darkShot('dark-player'), playerAx, 'toggle'),
+  chip: await labelContrast(darkShot('dark-player'), playerAx, 'stanza-1'),
+};
+check(
+  'in dark, Play, the toggle and a chosen chip read their label at 4.5:1 on their fill',
+  Object.values(ratios).every((ratio) => ratio >= 4.5),
+  ratios,
+);
+check(
+  'with Settings open, the dock is not in the accessibility tree',
+  settingsAx.some((each) => each.testId === 'settings') &&
+    !settingsAx.some((each) => each.testId?.startsWith('bar') === true),
+  settingsAx.map((each) => each.testId).filter(Boolean),
 );
 
 console.log(`${failed === 0 ? 'ok' : 'FAILED'}: drive-player ${host}, ${failed} failed`);

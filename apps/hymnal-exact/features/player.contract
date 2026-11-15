@@ -72,8 +72,13 @@ members HymnalExact
   state playerSought = 0
   state playerTickAt = 0
   state playerDueAt = -1
-  state playerSkipSentAt = 0
+  state playerSeekSentAt = 0
+  state playerSeekSkips = false
   state playerGap = -1
+  state playerSkipGap = -1
+  state playerLastTick = 0
+  state playerSkipFrom = -1
+  state playerSkipLanded = -1
   derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" ? "/settings" : "/"))).join(" ")
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
   resource playerOnScreen = playerStep("screen", 0, 0, 0, playerPaths) as shape PlayerView
@@ -85,8 +90,10 @@ members HymnalExact
     if player.seek > playerSought
       playerSought = player.seek
       fastSeek("audio", player.seekTo)
+      playerSeekSentAt = performanceNow()
+      playerSeekSkips = player.command == "skip"
       if player.command == "skip"
-        playerSkipSentAt = performanceNow()
+        playerSkipFrom = playerLastTick
     if player.go.serial > playerGone
       playerGone = player.go.serial
       if player.go.kind == "back"
@@ -102,10 +109,16 @@ members HymnalExact
   action playerHeard(kind: string, id: number, value: number)
     send playerStepped = playerStep(kind, id, player.seek, value, "")
   action playerTicked(id: number, value: number)
-    playerTickAt = performanceNow()
-    if playerSkipSentAt > 0
-      playerGap = playerTickAt - playerSkipSentAt
-      playerSkipSentAt = 0
+    let now = performanceNow()
+    playerTickAt = now
+    playerLastTick = value
+    if playerSeekSentAt > 0
+      let gap = now - playerSeekSentAt
+      playerGap = gap
+      playerSeekSentAt = 0
+      if playerSeekSkips
+        playerSkipGap = gap
+        playerSkipLanded = value
     send playerStepped = playerStep("time", id, player.seek, value, "")
   action playerFailed(id: number, code: string)
     send playerStepped = playerStep("failed", id, 0, 0, code)
@@ -141,7 +154,7 @@ component PlayerDock
     broke: action
     remote: action
   view
-    column position="absolute" left=0 right=0 bottom=0
+    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not player.dock)
       for l in (player.src == "" ? [] : [player.load]) key=l
         audio player.src id="audio" paused=player.paused currentTime=player.from testId="audio"
           metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")

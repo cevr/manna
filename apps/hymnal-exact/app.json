@@ -16,25 +16,6 @@
   "server": {
     "database": false
   },
-  "verify": {
-    "accept": [
-      {
-        "finding": "overlap",
-        "node": "bar-title",
-        "why": "The player's bar is docked over the stack's foot: a route must be a child of the navigation root, so the bar cannot take room of its own. The home list and Recent leave room under their last row while it shows; the full player's sheet and the hymn page (other units' files) do not yet (follow-up of ex-hy-player)."
-      },
-      {
-        "finding": "overlap",
-        "node": "bar-hymn",
-        "why": "As bar-title: the docked bar over the full player's and the hymn page's last rows, until each leaves room under it."
-      },
-      {
-        "finding": "overlap",
-        "node": "bar-said",
-        "why": "As bar-title: the docked bar over the full player's and the hymn page's last rows, until each leaves room under it."
-      }
-    ]
-  },
   "host": {
     "web": {},
     "ios": {
