@@ -111,7 +111,7 @@ component Today
     scroll id="content" navigationScroll="content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem"
         text today.reference role="heading" aria-level=2 testId="reference"
-        text testId="passage" font="-exact-title3" line-height=1.5
+        text testId="passage" font="-exact-title3" line-height=1.5 overflow-wrap="anywhere"
           for w in today.words key=w.index
             text (w.index + 1 < today.words.length ? `${w.text} ` : w.text) color=wordColor(w, today.phase) testId=`word-${w.index}`
         row gap=12 flex-wrap="wrap"
