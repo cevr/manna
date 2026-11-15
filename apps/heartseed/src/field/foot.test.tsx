@@ -148,7 +148,14 @@ const STATES: ReadonlyArray<HomeState> = [
   ...[0, 1, 2, 3, 4].flatMap((furrows) =>
     SINGLES.slice(1).flatMap((singles) =>
       [true, false].flatMap((tips) =>
-        [UNDER, FULL].map((passages) => ({ furrows, singles, tips, passages, sown: 4, start: true })),
+        [UNDER, FULL].map((passages) => ({
+          furrows,
+          singles,
+          tips,
+          passages,
+          sown: 4,
+          start: true,
+        })),
       ),
     ),
   ),

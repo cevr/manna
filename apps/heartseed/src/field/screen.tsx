@@ -238,7 +238,12 @@ export function FieldScreen({
             onOpen={onOpen}
             underFirst={tips && <Tip n={2} />}
           />
-          <Singles singles={singles} onPlant={onPlant} onUproot={onUproot} onPending={setRemoving} />
+          <Singles
+            singles={singles}
+            onPlant={onPlant}
+            onUproot={onUproot}
+            onPending={setRemoving}
+          />
         </View>
         {passages._tag === 'Read' && !removing && (
           <AddList passages={passages} tips={tips} onAdd={onAdd} />
