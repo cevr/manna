@@ -671,6 +671,50 @@ describe('sim commands', () => {
   );
 
   it.scopedLive(
+    'a scroll to a target whose first pan closes the sheet answers gone though the page then moves, and one that never shows names the pan that lost the sheet, never ScrollStuck',
+    () =>
+      Effect.gen(function* () {
+        const sheet = hymnPage(116, Option.some(495));
+        const row: Node = {
+          index: 1123,
+          parentIndex: 1122,
+          type: 'StaticText',
+          label: 'Under the sheet',
+          rect: { x: 24, y: 400, width: 300, height: 40 },
+          hittable: true,
+        };
+        const moved = [...hymnPage(-506), row];
+        const answers = screensIn([sheet, hymnPage(116), hymnPage(116), moved, moved]);
+        const found = yield* sim(
+          ['scroll', 'label=Under the sheet', 'down'],
+          answers,
+          Option.some('ios'),
+        );
+        expect(Exit.isSuccess(found.exit)).toBe(true);
+        expect(found.printed[0]).toMatchObject({ ok: true, detail: { passes: 2, motion: 'gone' } });
+        expect(driven(answers).filter((line) => line.includes('gesture pan'))).toEqual([
+          'agent-device gesture pan 201 792 0 -223 600',
+          'agent-device gesture pan 201 650 0 -401 600',
+        ]);
+        const end = hymnPage(116 + 668 - 2491);
+        const lost = yield* sim(
+          ['scroll', 'label=Nowhere', 'down'],
+          screensIn([sheet, hymnPage(116), hymnPage(116), end, end]),
+          Option.some('ios'),
+        );
+        expect(Exit.isFailure(lost.exit)).toBe(true);
+        expect(lost.printed[0]).toMatchObject({
+          ok: false,
+          error: {
+            _tag: 'TargetMissing',
+            driver:
+              "the scroll view's content ends after 2 pans down; the pan from 201,792 by 0,-223 lost its scroll view (a sheet closed?)",
+          },
+        });
+      }).pipe(Effect.provide(Host)),
+  );
+
+  it.scopedLive(
     'a scroll to a target pans until its row shows, then stops; one past the content fails TargetMissing',
     () =>
       Effect.gen(function* () {
