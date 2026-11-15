@@ -13,18 +13,21 @@ import { dirname, join } from 'node:path';
 import { writeGenerated } from '@manna/exact-kit/prepare';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
+import type { Book } from '../../src/hymns/book.ts';
 import { pagesOf } from '../../src/web/pages.ts';
 
-/** Writes every page into `dir`; how many it wrote and how many it left as they were. */
-export const writePages = (dir: string) => {
+/** The book the pages are named from: the hymns' words, with no search. */
+const wordsBook = (): Book => ({
+  hymns: readWords(),
+  index: () => {
+    throw new Error('pages ask no search');
+  },
+});
+
+/** Writes every page of `book` (the hymnal's own by default) into `dir`; how many it wrote and how many it left as they were. */
+export const writePages = (dir: string, book: Book = wordsBook()) => {
   const shell = join(dir, 'shell.html');
   if (!existsSync(shell)) throw new Error(`pages: no ${shell}: run the web build first`);
-  const book = {
-    hymns: readWords(),
-    index: () => {
-      throw new Error('pages ask no search');
-    },
-  };
   let wrote = 0;
   let kept = 0;
   for (const [file, html] of pagesOf(book, readFileSync(shell, 'utf8'))) {

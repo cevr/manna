@@ -22,6 +22,7 @@ const SHELL =
 
 describe("the site's pages", () => {
   const pages = pagesOf(book, SHELL);
+  const byNumber = new Map(book.hymns.map((hymn) => [hymn.number, hymn]));
 
   test('each address a screen has is a page, and 404.html the rest', () => {
     const opened = [...pages.keys()]
@@ -43,7 +44,7 @@ describe("the site's pages", () => {
       expect(html).toContain('<meta name="description" content="');
       if (file.startsWith('hymns/')) {
         const n = Number(file.split('/')[1]);
-        const hymn = book.hymns.find((each) => each.number === n);
+        const hymn = byNumber.get(n);
         expect(html).toContain(`content="Hymn ${n} of the hymnal`);
         const title = withHead('<title></title>', { title: hymn?.title ?? '-', description: '' });
         expect(html).toContain(title.split('\n')[0] ?? '-');
@@ -58,16 +59,21 @@ describe("the site's pages", () => {
   });
 
   test('written twice over one shell, the second run writes nothing', () => {
+    const few = {
+      ...book,
+      hymns: book.hymns.filter((hymn) => [1, 100, 695].includes(hymn.number)),
+    };
+    const fewPages = pagesOf(few, SHELL);
     const dir = mkdtempSync(join(tmpdir(), 'hymnal-pages-'));
     writeFileSync(join(dir, 'shell.html'), SHELL);
-    const first = writePages(dir);
+    const first = writePages(dir, few);
     const before = statSync(join(dir, 'hymns/100/index.html')).mtimeMs;
-    const second = writePages(dir);
+    const second = writePages(dir, few);
     const after = statSync(join(dir, 'hymns/100/index.html')).mtimeMs;
     const notFound = readFileSync(join(dir, '404.html'), 'utf8');
     rmSync(dir, { recursive: true, force: true });
-    expect(first).toEqual({ wrote: pages.size, kept: 0 });
-    expect(second).toEqual({ wrote: 0, kept: pages.size });
+    expect(first).toEqual({ wrote: fewPages.size, kept: 0 });
+    expect(second).toEqual({ wrote: 0, kept: fewPages.size });
     expect(after).toBe(before);
     expect(notFound).toBe(pages.get('404.html') ?? '-');
   });

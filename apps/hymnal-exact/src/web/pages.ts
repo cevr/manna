@@ -35,31 +35,34 @@ export const withHead = (shell: string, head: Head): string => {
 };
 
 /** Each page's file, relative to the build's folder, and its head. */
-export const headsOf = (book: Book): ReadonlyArray<readonly [string, Head]> => [
-  [
-    'index.html',
-    {
-      title: 'Hymns',
-      description: `The hymnal's ${book.hymns.length} hymns: their words, and each one's recording.`,
-    },
-  ],
-  ['recent/index.html', { title: 'Recent', description: 'The hymns you opened last.' }],
-  [
-    'player/index.html',
-    { title: 'Now Playing', description: 'The hymn playing, and its stanzas.' },
-  ],
-  ['404.html', { title: 'No Such Page', description: 'The hymnal has no page at this address.' }],
-  ...hymnPages(book).map((n) => {
-    const hymn = book.hymns.find((each) => `${each.number}` === n);
-    return [
-      `hymns/${n}/index.html`,
+export const headsOf = (book: Book): ReadonlyArray<readonly [string, Head]> => {
+  const byNumber = new Map(book.hymns.map((hymn) => [`${hymn.number}`, hymn]));
+  return [
+    [
+      'index.html',
       {
-        title: hymn?.title ?? n,
-        description: `Hymn ${n} of the hymnal, under ${hymn?.topic ?? ''}.`,
+        title: 'Hymns',
+        description: `The hymnal's ${book.hymns.length} hymns: their words, and each one's recording.`,
       },
-    ] as const;
-  }),
-];
+    ],
+    ['recent/index.html', { title: 'Recent', description: 'The hymns you opened last.' }],
+    [
+      'player/index.html',
+      { title: 'Now Playing', description: 'The hymn playing, and its stanzas.' },
+    ],
+    ['404.html', { title: 'No Such Page', description: 'The hymnal has no page at this address.' }],
+    ...hymnPages(book).map((n) => {
+      const hymn = byNumber.get(n);
+      return [
+        `hymns/${n}/index.html`,
+        {
+          title: hymn?.title ?? n,
+          description: `Hymn ${n} of the hymnal, under ${hymn?.topic ?? ''}.`,
+        },
+      ] as const;
+    }),
+  ];
+};
 
 /** Every page of the site, by its file, made from `shell`. */
 export const pagesOf = (book: Book, shell: string): ReadonlyMap<string, string> =>
