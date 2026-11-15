@@ -76,7 +76,7 @@ component Reader
 
 The resource reads the clock 50 ms after the launch's time: `at` is `time.epochAtZero + 50`, on every host and under the driver alike. A mutation sent from an action passes `time.epochAtZero + performanceNow()` instead, as the lab's `probe` does.
 
-A package `app.ts` imports through its `exports` needs declarations for Exact's type check (`exact:docs/contract-for-agents.md`, "A TypeScript package for the data module"): `@manna/exact-kit/effect` points `types` at `src/effect/exact.d.ts`.
+A package `app.ts` imports through its `exports` needs declarations for Exact's type check (`exact:docs/contract-for-agents.md`, "A TypeScript package for the data module"): `@manna/exact-kit/effect` points `types` at `src/effect/runner.d.ts`.
 
 ## What each current service becomes
 

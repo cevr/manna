@@ -15,7 +15,7 @@ import * as Arbitrary from 'effect/Arbitrary';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
 
-import type * as Declared from '@manna/exact-kit/effect';
+import type * as Declared from './runner.d.ts';
 
 import { withDataHost } from '../data-host/testing.ts';
 import { runCall, runCallSync, type Call, type Host } from './runner.ts';
@@ -185,7 +185,7 @@ interface Seen {
 }
 
 describe('the Exact runner', () => {
-  it.effect('its declarations for Exact (exact.d.ts) say what runner.ts does', () =>
+  it.effect('its declarations for Exact (runner.d.ts) say what runner.ts does', () =>
     Effect.sync(() => expect(DECLARED).toEqual([true, true, true, true])),
   );
 

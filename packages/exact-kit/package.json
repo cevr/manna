@@ -9,7 +9,7 @@
   "exports": {
     "./main": "./src/main.ts",
     "./effect": {
-      "types": "./src/effect/exact.d.ts",
+      "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"
     },
     "./data-host/testing": "./src/data-host/testing.ts",
