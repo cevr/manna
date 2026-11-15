@@ -2,23 +2,45 @@ epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
-test "Nothing planted yet"
+test "Nothing planted yet, and no test control in a plain launch"
+  at "/verses"
   clock data
-  tap "add-list"
-  clock data
+  clock settle
   expect tree has "verses"
   expect text "empty" == "Nothing planted yet. Plant a passage of three verses or more, or a single verse."
-  expect enabled "plant-three"
-  expect enabled "plant-one"
+  expect enabled "verses-add"
+  expect tree missing "plant-three"
+  expect tree missing "plant-one"
+  expect tree missing "plant-two"
   expect tree missing "singles"
   expect tree missing "good-John-3-16"
+  expect no failures
 
 test "Three verses make a list"
+  at "/verses"
   clock data
-  tap "add-list"
+  clock settle
+  tap "verses-add"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  back
+  clock data
+  clock settle
   expect tree has "list-passage-0-43-3-16-18"
   expect text "stage-John-3-16" == "seed"
   expect text "stage-John-3-17" == "seed"
@@ -26,37 +48,86 @@ test "Three verses make a list"
   expect text "due-John-3-16" == "Due now"
   expect tree missing "empty"
   expect tree missing "singles"
+  expect tree missing "good-John-3-16"
+  expect no failures
 
-test "Fewer than three is a single verse"
+test "A short pick is a single verse; fewer than three in the chooser is no list"
+  at "/verses"
   clock data
-  tap "add-list"
+  clock settle
+  tap "verses-add"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
   clock data
-  expect tree has "single-Psalms-119-1"
-  expect text "stage-Psalms-119-1" == "seed"
-  expect tree missing "list-passage-0-19-119-1-1"
-  tap "plant-two"
+  clock settle
+  tap "shelf-plant"
   clock data
-  expect text "short" == "A list holds at least 3 verses."
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-19"
+  clock data
+  clock settle
+  tap "chapter-23"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  tap "verse-2"
+  clock data
+  expect text "short-line" == "A list holds at least 3 verses."
+  expect tree missing "plant-list"
+  back
+  clock settle
+  back
+  clock settle
+  back
+  clock data
+  clock settle
+  expect tree has "single-Proverbs-4-23"
+  expect text "stage-Proverbs-4-23" == "seed"
+  expect tree missing "list-passage-0-20-4-23-23"
   expect tree missing "list-passage-0-19-23-1-2"
+  expect no failures
 
 test "It survives a relaunch"
+  at "/verses"
   clock data
-  tap "add-list"
+  clock settle
+  tap "verses-add"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
-  back
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
   clock settle
   reload
   clock data
   clock data
-  tap "add-list"
+  clock settle
+  back
   clock data
+  clock settle
   expect tree has "list-passage-0-43-3-16-18"
-  expect tree has "single-Psalms-119-1"
+  expect tree has "single-Proverbs-4-23"
   expect text "stage-John-3-17" == "seed"
-  expect text "due-Psalms-119-1" == "Due now"
+  expect text "due-Proverbs-4-23" == "Due now"
+  expect no failures

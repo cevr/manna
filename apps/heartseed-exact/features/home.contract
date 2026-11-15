@@ -74,7 +74,7 @@ members HeartseedExact
     nav = push(nav, path("list", slug))
   action homeAdd
     homeAsking = ""
-    nav = push(nav, "/verses")
+    nav = push(nav, "/add")
   action homeAsk(key: string)
     homeAsking = key
   action homeYes

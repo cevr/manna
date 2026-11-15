@@ -5,7 +5,8 @@
 // changes) and the plain screen that draws the read. Every source takes the
 // call's time, zone and seed as its last three arguments.
 // A driver's launch (HEARTSEED_GARDEN_DRIVE set, app.json's `env`) adds
-// a test control under each verse; a plain launch has none.
+// the plant buttons and a test control under each verse; a plain launch
+// has none, and plants only through Add verses (features/add.contract).
 
 shape GardenTime
   epochAtZero: number
@@ -143,19 +144,23 @@ component YourVerses
     peeked: action
     shown: action
     back: action
+    add: action
   view
     scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem" testId="verses"
         text "Your verses" role="heading" aria-level=2
         if garden.read and garden.lists.length == 0 and garden.singles.length == 0
           text "Nothing planted yet. Plant a passage of three verses or more, or a single verse." color="-exact-secondary-label" testId="empty"
-        row gap=12 flex-wrap="wrap"
-          button press=plant(43, 3, 16 + 3 * garden.lists.length, 18 + 3 * garden.lists.length) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
-            text "Plant three verses of John 3"
-          button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) buttonStyle="bordered" testId="plant-one"
-            text "Plant a verse of Psalm 119"
-          button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
-            text "Plant Psalm 23:1-2"
+        button press=add buttonStyle="bordered" testId="verses-add"
+          text "Add verses"
+        if driven
+          row gap=12 flex-wrap="wrap"
+            button press=plant(43, 3, 16 + 3 * garden.lists.length, 18 + 3 * garden.lists.length) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
+              text "Plant three verses of John 3"
+            button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) buttonStyle="bordered" testId="plant-one"
+              text "Plant a verse of Psalm 119"
+            button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
+              text "Plant Psalm 23:1-2"
         if garden.limitLine != ""
           text garden.limitLine color="-exact-secondary-label" testId="full"
         else if answer == "Short"

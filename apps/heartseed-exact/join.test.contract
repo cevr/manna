@@ -6,8 +6,22 @@ test "Three verses planted and due: home's card offers Start"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -20,8 +34,22 @@ test "Start opens Today on the plan's first item"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -37,8 +65,22 @@ test "A tap on a plant opens Today on that verse"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -52,12 +94,52 @@ test "Back from Today returns home at the scroll it left"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "verse-16"
   clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-19"
+  clock data
+  tap "verse-21"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-22"
+  clock data
+  tap "verse-24"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -76,18 +158,57 @@ test "Back from Today returns home at the scroll it left"
   expect tree has "plant-John-3-24"
   expect no failures
 
-test "Add a list opens Your verses until Add verses lands, and what is planted there shows on home (J2 stand-in)"
+test "Add a list opens Add verses (J2)"
   clock data
+  clock settle
   tap "add-list"
   clock data
-  expect tree has "verses"
-  tap "plant-three"
-  clock data
-  tap "plant-one"
-  clock data
+  clock settle
+  expect tree has "add-verses"
+  expect tree missing "verses"
+  expect tree has "shelf-any"
   back
   clock data
   clock settle
-  expect tree has "row-passage-0-43-3-16-18"
-  expect text "single-Psalms-119-1" == "Psalms 119:1"
+  expect tree missing "add-verses"
+  expect tree has "add-list"
+  expect no failures
+
+test "A list planted in Add verses shows as a row on home after Back (J2)"
+  clock data
+  tap "add-list"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-1-1-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect tree has "add-verses"
+  back
+  clock data
+  clock settle
+  expect text "row-title-passage-0-19-1-1-3" == "Psalms 1:1-3"
+  expect state homeShown.rows.length == 1
+  expect tree missing "singles"
+  expect no failures
+
+test "A single verse planted in Add verses shows under Single verses (J2)"
+  clock data
+  tap "add-list"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  back
+  clock data
+  clock settle
+  expect tree has "singles"
+  expect text "single-Proverbs-4-23" == "Proverbs 4:23"
+  expect state homeShown.rows.length == 0
   expect no failures
