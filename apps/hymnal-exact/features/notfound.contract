@@ -16,5 +16,5 @@ component NotFound
         text "No Such Page" role="heading" aria-level=2 testId="notfound-title"
       column flex=1 min-height=0
         EmptyState(symbol="symbol:alert", title="No Such Page", message="The hymnal has 695 hymns.")
-          link href="/" testId="notfound-home"
+          link href="/" min-width=44 min-height=44 padding="0 12px" display="flex" align-items="center" justify-content="center" testId="notfound-home"
             text "All Hymns"
