@@ -13,6 +13,8 @@ use AboutPage, LicencesPage from "./features/about.contract"
 use YourVerses from "./features/garden.contract"
 use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
+use AddVersesPage, AddSectionPage, AddListPage from "./features/add.contract"
+use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
 
 routes nav
   home "/"
@@ -24,6 +26,12 @@ routes nav
   start "/start/:slug"
   cued "/cue/:cue"
   verses "/verses"
+  add "/add"
+    addBible "/add/bible"
+      addBook "/add/bible/:book"
+        addChapter "/add/bible/:book/:chapter"
+    addSection "/add/handbook/:section"
+    addList "/add/lists/:list"
 
 component HeartseedExact
   members "./features/today.contract"
@@ -33,6 +41,8 @@ component HeartseedExact
   members "./features/text.contract"
   members "./features/home.contract"
   members "./features/list.contract"
+  members "./features/add.contract"
+  members "./features/chooser.contract"
   action follow(url: string)
     nav = go(nav, url)
   view
@@ -51,7 +61,19 @@ component HeartseedExact
           if e.name == "list"
             ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo)
           if e.name == "verses"
-            YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack)
+            YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
+          if e.name == "add"
+            AddVersesPage(add=addShown, bible=addOpenBible)
+          if e.name == "addSection"
+            AddSectionPage(section=addSectionShown)
+          if e.name == "addList"
+            AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
+          if e.name == "addBible"
+            ChooserBooksPage(books=chooserBooksShown, open=chooserOpenBook)
+          if e.name == "addBook"
+            ChooserChaptersPage(book=chooserChaptersShown, open=chooserOpenChapter)
+          if e.name == "addChapter"
+            ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=chooserTapIt, plant=chooserPlantIt)
       for e in stack(nav).filter(x => x.name.startsWith("settings")) key=e.id
         if e.name == "settings"
           SettingsSheet(route=e.id, settings=settings, minutes=settingsChooseMinutes, voice=settingsChooseVoice, appearance=settingsChooseAppearance, about=aboutOpen, done=settingsDone)

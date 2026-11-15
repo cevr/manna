@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "paths": {
-      "virtual:heartseed-kjv": ["./src/text/kjv.gen.json"]
+      "virtual:heartseed-kjv": ["./src/text/kjv.gen.json"],
+      "@manna/core/bible": ["./src/chooser/decl/bible"]
     }
   }
 }

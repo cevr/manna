@@ -320,3 +320,70 @@ it('answers every text source inside the data host, for seeded calls', async () 
     }
   }
 });
+
+/** One Add verses or chooser call, or a garden call between them: rows, sections and routes named well, badly or not at all. */
+const addCallOf = (random: Random, now: number): readonly [string, readonly unknown[]] => {
+  const key = random.pick(['', 'x']);
+  const seed = random.below(2 ** 32);
+  const offset = random.pick([-300, 0, 330]);
+  const slug = random.pick([
+    'pick-psalms-19-1-1-3',
+    'pick-proverbs-20-4-23-23',
+    'pick-john-43-3-16-17',
+    'bhb-30',
+    'x',
+    '',
+  ]);
+  const book = random.pick(['43', '19', '0', '67', 'x', '', '1.5']);
+  const chapter = random.pick(['3', '119', '0', '151', '', 'x']);
+  const first = random.below(40) - 2;
+  const last = first + random.below(25) - 2;
+  const answer = random.pick(['', 'Planted', 'Full', 'Failed', 'Short']);
+  switch (random.below(9)) {
+    case 0:
+      return ['addRead', [key, now, seed]];
+    case 1:
+      return ['addSection', [random.pick(['handbook-bhb-27', 'psalms', 'x']), key, now, seed]];
+    case 2:
+      return ['addList', [slug, answer, key, now, seed]];
+    case 3:
+      return ['addPlant', [slug, now, offset, seed]];
+    case 4:
+      return ['chooserBooks', []];
+    case 5:
+      return ['chooserChapters', [book]];
+    case 6:
+      return [
+        'chooserTap',
+        [book, chapter, first, last, random.pick([1, 16, 0, 200, 2.5, Number.NaN])],
+      ];
+    case 7:
+      return ['chooserRead', [book, chapter, first, last, answer]];
+    default:
+      return gardenCallOf(random, now);
+  }
+};
+
+it('answers every Add verses and chooser source inside the data host, between garden calls over a failing storage', async () => {
+  for (let seed = 1; seed <= SEQUENCES / 4; seed++) {
+    const random = seeded(seed);
+    const storage = gardenStorageOf(random);
+    let now = START;
+    for (let n = 0; n < CALLS; n++) {
+      const [source, args] = addCallOf(random, now);
+      const answered: Record<string, unknown> = await withDataHost(() =>
+        Reflect.apply(app.answer, undefined, [source, args, {}, storage, {}]),
+      );
+      if (source === 'addRead') expect(Array.isArray(answered['shelves'])).toBe(true);
+      else if (source === 'addSection') expect(Array.isArray(answered['rows'])).toBe(true);
+      else if (source === 'addList') expect(Array.isArray(answered['verses'])).toBe(true);
+      else if (source === 'addPlant') expect(typeof answered['answer']).toBe('string');
+      else if (source === 'chooserBooks') expect(Array.isArray(answered['testaments'])).toBe(true);
+      else if (source === 'chooserChapters') expect(Array.isArray(answered['chapters'])).toBe(true);
+      else if (source === 'chooserTap') expect(typeof answered['first']).toBe('number');
+      else if (source === 'chooserRead') expect(typeof answered['plant']).toBe('boolean');
+      expect([...storage.files.keys()].every((path) => path === GARDEN_FILE)).toBe(true);
+      now += random.below(86_400_000);
+    }
+  }
+});

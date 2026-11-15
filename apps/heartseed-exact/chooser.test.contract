@@ -1,0 +1,158 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A book, a chapter, its verses"
+  clock data
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  expect text "book-43" == "John"
+  tap "book-43"
+  clock data
+  clock settle
+  expect text "chapter-3" == "3"
+  tap "chapter-3"
+  clock data
+  clock settle
+  expect state chooserShown.heading == "John 3"
+  expect state chooserShown.count == 36
+  expect state chooserWords.reference == "John 3:1-36"
+  expect state chooserWords.verses.15.verse == 16
+  expect tree has "verse-16"
+  expect tree has "verse-36"
+  expect tree missing "verse-37"
+  expect tree missing "range-line"
+  expect tree missing "plant-list"
+  expect no failures
+
+test "Fewer than three is not a list"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  expect text "range-line" == "John 3:16"
+  expect text "range-count" == "1 verse"
+  expect text "short-line" == "A list holds at least 3 verses."
+  expect tree missing "plant-list"
+  expect tree missing "plant-singles"
+  tap "verse-17"
+  clock data
+  expect text "range-line" == "John 3:16-17"
+  expect text "short-line" == "A list holds at least 3 verses."
+  expect tree missing "plant-list"
+  expect no failures
+
+test "Three make a list"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  expect text "range-line" == "John 3:16-18"
+  expect text "range-count" == "3 verses"
+  expect tree missing "short-line"
+  expect enabled "plant-list"
+  tap "plant-list"
+  clock data
+  clock settle
+  expect state garden.lists.length == 1
+  expect state garden.lists.0.verses.length == 3
+  expect state garden.singles.length == 0
+  expect tree missing "chooser-verses"
+  expect tree has "add-verses"
+  expect no failures
+
+test "A range clips at twenty"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  tap "verse-36"
+  clock data
+  expect text "range-line" == "John 3:1-20"
+  expect text "range-count" == "20 verses"
+  expect state chooserFirst == 1
+  expect state chooserLast == 20
+  expect no failures
+
+test "A tap on the one verse chosen clears it"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  expect text "range-line" == "John 3:16"
+  tap "verse-16"
+  clock data
+  expect tree missing "range-line"
+  expect tree missing "short-line"
+  expect state chooserFirst == 0
+  expect no failures
+
+test "At three lists the chooser's Plant says the limit"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  tap "verse-3"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-4"
+  clock data
+  tap "verse-6"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-7"
+  clock data
+  tap "verse-9"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  expect state garden.lists.length == 3
+  expect text "add-limit" == "3 passages or lists, the most for now. Remove one to add another."
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-10"
+  clock data
+  tap "verse-12"
+  clock data
+  tap "plant-list"
+  clock data
+  expect text "chooser-limit" == "3 passages or lists, the most for now. Remove one to add another."
+  expect state garden.lists.length == 3
+  expect no failures

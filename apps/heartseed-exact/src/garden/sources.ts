@@ -14,7 +14,8 @@ import { runCall, type Host } from '@manna/exact-kit/effect';
 import type { FileStorage } from '@manna/exact-kit/storage';
 import { Effect, Logger, Option, Schema } from 'effect';
 
-import { moveBack, plantRange, readGarden, recallVerse, removeById } from './program';
+import { rowNamed } from '../add/shelves';
+import { moveBack, plantList, plantRange, readGarden, recallVerse, removeById } from './program';
 import { SHORT_LINE } from '@manna/heartseed/chooser';
 import { shownOf, verseIn, type At, type GardenShown, type GardenVerse } from './view';
 import { makeQueue, oneAtATime } from './writes';
@@ -174,7 +175,23 @@ export const gardenSources = (options: GardenOptions = {}) => {
 
   const gardenDrive = () => Promise.resolve<GardenDriven>({ on: options.driven === true });
 
+  const addPlant: Source<readonly [string, number, number, number], GardenChange> = (
+    [slug, now, _offset, seed],
+    _store,
+    storage,
+  ) =>
+    Option.match(rowNamed(slug), {
+      onNone: () => run(Effect.succeed({ answer: 'Invalid', line: '' }), now, seed),
+      onSome: ({ list }) =>
+        run(
+          Effect.map(plantList(storage, list), ({ answer }) => ({ answer, line: '' })),
+          now,
+          seed,
+        ),
+    });
+
   return {
+    addPlant,
     gardenRead,
     gardenPlant,
     gardenRemove,

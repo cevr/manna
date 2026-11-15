@@ -1,0 +1,150 @@
+// The chooser: Add verses' Any passage. Three pushed routes: the books
+// under their testaments (`/add/bible`), a book's chapters
+// (`/add/bible/:book`), and a chapter's verses with their words
+// (`/add/bible/:book/:chapter`). Every rule is src/chooser/chooser.ts's,
+// over the current Heartseed's `tapVerse`: a tap asks `chooserTap` for the
+// range after it, and `chooserRead` says what the footer offers (the
+// range, the cap, Plant at 3 verses or more, the short line under 3, and
+// a plant's line). Plant goes through the garden's `gardenPlant`; once it
+// lands the reader is back at Add verses. The words are `textOf`'s.
+use GardenChange from "./garden.contract"
+use TextPassage from "./text.contract"
+
+shape ChooserBook
+  number: number
+  name: string
+  chapters: number
+
+shape ChooserTestament
+  label: string
+  books: ChooserBook[]
+
+shape ChooserBooks
+  heading: string
+  testaments: ChooserTestament[]
+
+shape ChooserChapters
+  found: bool
+  number: number
+  name: string
+  chapters: number[]
+
+shape ChooserRange
+  first: number
+  last: number
+
+shape ChooserShown
+  found: bool
+  book: number
+  chapter: number
+  heading: string
+  count: number
+  chosen: bool
+  first: number
+  last: number
+  reference: string
+  countText: string
+  cap: string
+  short: string
+  plant: bool
+  line: string
+  lineId: string
+
+members HeartseedExact
+  state chooserFirst = 0
+  state chooserLast = 0
+  state chooserAnswer = ""
+  derive chooserBookArg = match stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").at(-1) { case some(t) => t.params.book, case none => "" }
+  derive chooserChapterArg = match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" }
+  resource chooserBooksShown = chooserBooks() as shape ChooserBooks else empty()
+  resource chooserChaptersShown = chooserChapters(chooserBookArg) as shape ChooserChapters else empty()
+  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer) as shape ChooserShown else empty()
+  resource chooserWords = textOf(chooserShown.book, chooserShown.chapter, 1, chooserShown.count) as shape TextPassage else empty()
+  mutation chooserTapped as shape ChooserRange queue then chooserTook
+  mutation chooserPlanted as shape GardenChange queue refreshes garden then chooserLanded
+
+  action chooserOpenBook(book: number)
+    nav = push(nav, path("addBook", `${book}`))
+  action chooserOpenChapter(chapter: number)
+    chooserFirst = 0
+    chooserLast = 0
+    chooserAnswer = ""
+    nav = push(nav, path("addChapter", chooserBookArg, `${chapter}`))
+  action chooserTapIt(verse: number)
+    if not pending(chooserPlanted)
+      chooserAnswer = ""
+      send chooserTapped = chooserTap(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, verse)
+  derive chooserTappedRange = match chooserTapped { case some(r) => r, case none => ChooserRange(first=chooserFirst, last=chooserLast) }
+  action chooserTook
+    chooserFirst = chooserTappedRange.first
+    chooserLast = chooserTappedRange.last
+  action chooserPlantIt
+    if chooserShown.plant and not pending(chooserPlanted)
+      gardenClock = performanceNow()
+      send chooserPlanted = gardenPlant(chooserShown.book, chooserShown.chapter, chooserShown.first, chooserShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  derive chooserLandedAnswer = match chooserPlanted { case some(c) => c.answer, case none => "" }
+  action chooserLanded
+    chooserAnswer = chooserLandedAnswer
+    if chooserLandedAnswer == "Planted" or chooserLandedAnswer == "Already"
+      chooserFirst = 0
+      chooserLast = 0
+      chooserAnswer = ""
+      nav = go(nav, "/add")
+
+component ChooserBooksPage
+  props
+    books: ChooserBooks
+    open: action
+  view
+    scroll id="chooser-books" navigationScroll="chooser-books" flex=1 min-height=0
+      column gap=16 padding=20 max-width="40rem" testId="chooser-books"
+        text books.heading role="heading" aria-level=2
+        for t in books.testaments key=t.label
+          column gap=8
+            text t.label font="-exact-headline"
+            row gap=8 flex-wrap="wrap"
+              for b in t.books key=b.number
+                button press=open(b.number) buttonStyle="bordered" min-height="44px" aria-label=b.name testId=`book-${b.number}`
+                  text b.name
+
+component ChooserChaptersPage
+  props
+    book: ChooserChapters
+    open: action
+  view
+    scroll id="chooser-chapters" navigationScroll="chooser-chapters" flex=1 min-height=0
+      column gap=16 padding=20 max-width="40rem" testId="chooser-chapters"
+        text book.name role="heading" aria-level=2
+        row gap=8 flex-wrap="wrap"
+          for c in book.chapters key=c
+            button press=open(c) buttonStyle="bordered" min-width="44px" min-height="44px" aria-label=`${book.name} ${c}` testId=`chapter-${c}`
+              text `${c}`
+
+component ChooserVersesPage
+  props
+    shown: ChooserShown
+    words: TextPassage
+    pending: bool
+    tap: action
+    plant: action
+  view
+    column flex=1 min-height=0 display="flex" flex-direction="column"
+      scroll id="chooser-verses" navigationScroll="chooser-verses" flex=1 min-height=0
+        column gap=4 padding=20 max-width="40rem" testId="chooser-verses"
+          text shown.heading role="heading" aria-level=2
+          for v in words.verses key=v.verse
+            button role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` disabled=pending press=tap(v.verse) min-height="44px" text-align="start" testId=`verse-${v.verse}`
+              text `${v.verse} ${v.text}` overflow-wrap="break-word" hyphens="auto"
+      column gap=6 padding="12px 20px" flex-shrink=0 testId="chooser-footer"
+        if shown.chosen
+          row gap=12 justify-content="space-between"
+            text shown.reference font="-exact-headline" testId="range-line"
+            text shown.countText testId="range-count"
+        text shown.cap color="-exact-secondary-label"
+        if shown.line != ""
+          text shown.line role="alert" testId=shown.lineId
+        if shown.short != ""
+          text shown.short testId="short-line"
+        if shown.plant
+          button press=plant buttonStyle="filled" disabled=pending testId="plant-list"
+            text "Plant"

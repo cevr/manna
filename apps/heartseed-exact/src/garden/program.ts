@@ -29,7 +29,8 @@ import {
   type GardenView,
   type Stage,
 } from '@manna/heartseed/garden';
-import { listsOf, placeOf } from '@manna/heartseed/lists';
+import { listsOf, placeOf, type List } from '@manna/heartseed/lists';
+import { plantsSingly } from '@manna/heartseed/shelves';
 import {
   layer as passagesLayer,
   Passages,
@@ -126,6 +127,35 @@ export const plantRange = (storage: FileStorage, range: Range) =>
       const added = yield* passages.add(range);
       if (added === 'Added') return 'Planted' satisfies PlantAnswer;
       return added;
+    }),
+  );
+
+/** A join or a plant's answer in a plant's words: `Added` is `Planted`, `Held` is `Already`. */
+const plantedOf = (answer: PlantAnswer | 'Added' | 'Held'): PlantAnswer => {
+  if (answer === 'Added') return 'Planted';
+  if (answer === 'Held') return 'Already';
+  return answer;
+};
+
+/**
+ * Plants a shelf's list by its source, as the current Add verses sheet
+ * does: a passage of fewer verses than a list holds (`plantsSingly`)
+ * joins each of its verses to the single verses (`Passages.join`), any
+ * other passage is a list (`Passages.add`), and a Handbook list is planted
+ * whole by its id (`Passages.plant`). A list of no other source plants
+ * nothing and answers `Invalid`.
+ */
+export const plantList = (storage: FileStorage, list: List) =>
+  withGrounds(
+    storage,
+    Effect.gen(function* () {
+      const passages = yield* Passages;
+      const source = list.source;
+      if (source._tag === 'Passage' && plantsSingly(list))
+        return plantedOf(yield* passages.join(source.range));
+      if (source._tag === 'Passage') return plantedOf(yield* passages.add(source.range));
+      if (source._tag === 'Handbook') return plantedOf(yield* passages.plant(source.id));
+      return 'Invalid' satisfies PlantAnswer;
     }),
   );
 

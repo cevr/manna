@@ -436,7 +436,9 @@ export const makeOracle = async () => {
     }
     return atTime(context, now, appStep(step));
   };
-  return { store, held, run };
+  const exec = <A>(effect: Effect.Effect<A, never, AppServices>, now: number): Promise<A> =>
+    atTime(context, now, effect);
+  return { store, held, run, exec };
 };
 
 /** A garden's plants as plain data, by reference in order, so two views compare plant for plant: recalls, steps back, card and stage. */

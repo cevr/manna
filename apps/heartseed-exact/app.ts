@@ -1,6 +1,8 @@
 import type { Answer, Sources } from './app.contract.d.ts';
 import licences from './src/about/licences';
 import { aboutSources } from './src/about/sources';
+import { addSources } from './src/add/sources';
+import { chooserSources } from './src/chooser/sources';
 import { gardenSources } from './src/garden/sources';
 import { homeSources } from './src/home/sources';
 import { settingsSources } from './src/settings/choices';
@@ -22,6 +24,8 @@ const sources: Sources = {
   ...aboutSources(licences),
   ...garden,
   ...homeSources(),
+  ...addSources(),
+  ...chooserSources,
   ...todaySources(garden),
   ...readerSources,
   ...textSources,
