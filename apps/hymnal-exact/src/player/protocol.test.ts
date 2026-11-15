@@ -17,6 +17,14 @@
  * - a pause is never undone by a late device event: after the reader's
  *   pause, with no play, resume, retry or remote play since, once every
  *   event is stepped the player is paused and the element silent;
+ * - settled, the element does what the reader last asked: after a reader's
+ *   ask that turned the player to play, with no pause, stop or platform
+ *   act since, once every event is stepped the player wants to hear and the
+ *   element sounds (a failed load aside);
+ * - a resume is never undone by a late echo: in that same span, no event
+ *   the element raised doing what the player told it (its echo, known here
+ *   by where it was raised, not by `step`'s `owed`) turns the player to
+ *   pause, at any moment, settled or not;
  * - a stale event is inert: an event of any load but the held one changes
  *   nothing.
  */
@@ -33,6 +41,8 @@ const INBOX = 4;
 interface Event {
   readonly _tag: 'loaded' | 'played' | 'playing' | 'paused' | 'waiting' | 'ended' | 'failed';
   readonly id: number;
+  /** The element raised it doing what the player told it, not on the platform's act. */
+  readonly echo?: true;
 }
 
 interface Element {
@@ -48,6 +58,13 @@ interface World {
   readonly inbox: ReadonlyArray<Event>;
   /** The reader paused, and nothing since asked to hear. */
   readonly held: boolean;
+  /**
+   * The reader's ask turned the player to play (a resume, or a new load),
+   * and since then neither the reader nor the platform stopped it (no pause
+   * or stop, no element paused, ended or failed). An ask the player already
+   * held changes nothing, so it sets nothing here.
+   */
+  readonly hearing: boolean;
 }
 
 const asInput = (event: Event): Input => {
@@ -61,8 +78,8 @@ const raise = (world: World, element: Element | undefined, events: ReadonlyArray
     ? undefined
     : { ...world, element, inbox: [...world.inbox, ...events] };
 
-const starts = (id: number): ReadonlyArray<Event> => [
-  { _tag: 'played', id },
+const starts = (id: number, echo: boolean): ReadonlyArray<Event> => [
+  echo ? { _tag: 'played', id, echo } : { _tag: 'played', id },
   { _tag: 'playing', id },
 ];
 
@@ -85,13 +102,15 @@ const stepped = (world: World, input: Input): World | undefined => {
     return raise(
       told,
       { id, sounding: !wanted.paused, broken: false },
-      wanted.paused ? [loaded] : [loaded, ...starts(id)],
+      wanted.paused ? [loaded] : [loaded, ...starts(id, true)],
     );
   }
   if (element.broken || element.sounding !== wanted.paused) return told;
   if (wanted.paused)
-    return raise(told, { ...element, sounding: false }, [{ _tag: 'paused', id: element.id }]);
-  return raise(told, { ...element, sounding: true }, starts(element.id));
+    return raise(told, { ...element, sounding: false }, [
+      { _tag: 'paused', id: element.id, echo: true },
+    ]);
+  return raise(told, { ...element, sounding: true }, starts(element.id, true));
 };
 
 const READER: ReadonlyArray<Input> = [
@@ -106,6 +125,24 @@ const READER: ReadonlyArray<Input> = [
 const nameOf = (input: Input) =>
   input._tag === 'play' ? `reader play ${input.track.number}` : `reader ${input._tag}`;
 
+/** `world` after the reader's `input`, its `held` and `hearing` kept, if the inbox has room. */
+const byReader = (world: World, input: Input): World | undefined => {
+  const after = stepped(world, input);
+  if (after === undefined) return undefined;
+  const asks = input._tag === 'play' || input._tag === 'resume' || input._tag === 'retry';
+  const held =
+    after.player.held !== undefined &&
+    (input._tag === 'pause'
+      ? (world.player.held?.wants === 'play' && after.player.held.wants === 'pause') || world.held
+      : !asks && world.held);
+  const asked =
+    asks &&
+    after.player.held?.wants === 'play' &&
+    (world.player.held?.wants !== 'play' || after.player.held.load !== world.player.held.load);
+  const hearing = asked || (input._tag !== 'pause' && input._tag !== 'stop' && world.hearing);
+  return { ...after, held: input._tag === 'stop' ? false : held, hearing };
+};
+
 /** Every action enabled in `world`, named, with the world after it. */
 const actions = (world: World): ReadonlyArray<readonly [string, World]> => {
   const out: Array<readonly [string, World]> = [];
@@ -113,29 +150,23 @@ const actions = (world: World): ReadonlyArray<readonly [string, World]> => {
     if (after !== undefined) out.push([name, after]);
   };
 
-  for (const input of READER) {
-    const after = stepped(world, input);
-    if (after === undefined) continue;
-    const asks = input._tag === 'play' || input._tag === 'resume' || input._tag === 'retry';
-    const held =
-      after.player.held !== undefined &&
-      (input._tag === 'pause'
-        ? (world.player.held?.wants === 'play' && after.player.held.wants === 'pause') || world.held
-        : !asks && world.held);
-    add(nameOf(input), { ...after, held: input._tag === 'stop' ? false : held });
-  }
+  for (const input of READER) add(nameOf(input), byReader(world, input));
 
   const { element } = world;
+  const stopped = (after: World | undefined) => after && { ...after, hearing: false };
   if (element?.sounding === true) {
     const { id } = element;
     add('element waits', raise(world, element, [{ _tag: 'waiting', id }]));
     const silent = { id, sounding: false, broken: false };
-    add('element ends', raise(world, silent, [{ _tag: 'ended', id }]));
-    add('element fails', raise(world, { ...silent, broken: true }, [{ _tag: 'failed', id }]));
-    add('platform pauses', raise(world, silent, [{ _tag: 'paused', id }]));
+    add('element ends', stopped(raise(world, silent, [{ _tag: 'ended', id }])));
+    add(
+      'element fails',
+      stopped(raise(world, { ...silent, broken: true }, [{ _tag: 'failed', id }])),
+    );
+    add('platform pauses', stopped(raise(world, silent, [{ _tag: 'paused', id }])));
   }
   if (element?.sounding === false && !element.broken) {
-    const after = raise(world, { ...element, sounding: true }, starts(element.id));
+    const after = raise(world, { ...element, sounding: true }, starts(element.id, false));
     add('platform plays', after && { ...after, held: false });
   }
 
@@ -143,7 +174,7 @@ const actions = (world: World): ReadonlyArray<readonly [string, World]> => {
     const at = world.inbox.findIndex((event) => event.id === id);
     const event = world.inbox[at]!;
     const rest = { ...world, inbox: world.inbox.filter((_, index) => index !== at) };
-    add(`deliver ${event._tag} ${id}`, stepped(rest, asInput(event)));
+    add(`deliver ${event.echo ? 'echo ' : ''}${event._tag} ${id}`, stepped(rest, asInput(event)));
   }
   return out;
 };
@@ -158,6 +189,7 @@ const keyOf = (world: World) =>
     world.element,
     world.inbox,
     world.held,
+    world.hearing,
   ]);
 
 const without = (state: State) =>
@@ -177,7 +209,17 @@ const broken = (before: World, name: string, world: World): string | undefined =
     (!silent || (held?.phase === 'paused' && held.wants !== 'pause') || sounds)
   )
     return 'a pause is never undone by a late device event';
-  const delivered = /^deliver \w+ (\d+)$/u.exec(name);
+  if (settled && world.hearing && held?.phase !== 'failed' && (held?.wants !== 'play' || !sounds))
+    return 'settled, the element does what the reader last asked';
+  const echo = /^deliver echo \w+ (\d+)$/u.exec(name);
+  if (
+    echo !== null &&
+    before.hearing &&
+    Number(echo[1]) === before.player.held?.load &&
+    world.player.held?.wants !== 'play'
+  )
+    return 'a resume is never undone by a late echo';
+  const delivered = /^deliver (?:echo )?\w+ (\d+)$/u.exec(name);
   if (
     delivered !== null &&
     Number(delivered[1]) !== before.player.held?.load &&
@@ -189,7 +231,13 @@ const broken = (before: World, name: string, world: World): string | undefined =
 
 /** Every reachable world within `depth`, or the first trace that breaks a property. */
 const explore = (depth: number) => {
-  const start: World = { player: initial, element: undefined, inbox: [], held: false };
+  const start: World = {
+    player: initial,
+    element: undefined,
+    inbox: [],
+    held: false,
+    hearing: false,
+  };
   const seen = new Set<string>([keyOf(start)]);
   let frontier: ReadonlyArray<readonly [World, ReadonlyArray<string>]> = [[start, []]];
   for (let level = 0; level < depth; level++) {
@@ -210,7 +258,7 @@ const explore = (depth: number) => {
 };
 
 describe('the protocol (protocol.qnt) holds in every interleaving', () => {
-  it(`keeps its three properties in every state within ${DEPTH} actions`, () => {
+  it(`keeps its five properties in every state within ${DEPTH} actions`, () => {
     const { states, broken: found } = explore(DEPTH);
     expect(found).toBeUndefined();
     expect(states).toBeGreaterThan(10_000);
