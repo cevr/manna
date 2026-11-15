@@ -425,22 +425,16 @@ const FOOT_TARGETS = [
 
 /**
  * Home's foot as today's `src/field/screen.tsx` draws it under the lists,
- * written out by hand from the screen, apart from `footOf`: the legend
- * (its stage names, hidden from VoiceOver, and its caption), `Add a list`
+ * written out by hand from the screen, apart from `footOf`: `Add a list`
  * and tip 3, the limit line, and the end rows with their hidden `›`.
  */
 const FOOT_TODAY = {
-  ids: ['add-list', 'end-row', 'legend', 'limit', 'tip-3'],
+  ids: ['add-list', 'end-row', 'limit', 'tip-3'],
   labels: [
     '3 passages or lists, the most for now. remove one to add another.',
     'add a list',
     'add a psalm, a passage or a set of promises when you want more.',
-    'blade',
-    'ear',
-    'full corn',
     'how heartseed works',
-    'mark 4:28',
-    'seed',
     'settings',
     '›',
   ],
