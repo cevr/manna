@@ -4,6 +4,7 @@
  * the current app's `timelineOf` decodes, each line's words left out. The
  * module is ignored; this declaration is what a fresh checkout's type check
  * and the gate's import graph read in its place.
+ * @writer ../../tools/timing.ts
  */
 declare const timing: ReadonlyArray<readonly [number, string]>;
 
