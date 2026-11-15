@@ -2,7 +2,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Match, Option } from 'effect';
 import { gapsOf, splitReported } from './gaps.ts';
 import { aliasesFor, isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
-import { preloadModules } from './preload.ts';
+import { failed, passCheck } from './check.ts';
 import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
 
@@ -450,14 +450,13 @@ describe('env-pass', () => {
           installed: () => false,
           builtins: new Set(),
         });
-        const { modules, unresolved } = preloadModules([workspace], resolve);
-        expect(Object.fromEntries(modules)).toEqual({
-          'a/src/all.ts': { dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
-          'a/src/env.ts': { dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
-          'a/src/test/setup.ts': { dir: 'a', tasks: ['test'] },
-          'a/src/boot.ts': { dir: 'a', tasks: ['test:slow'] },
-        });
-        expect(unresolved).toEqual([{ dir: 'a', task: 'test:e2e', specifier: './src/suite.ts' }]);
+        const shared = {
+          dir: 'b',
+          scripts: { test: 'bun test ./src' },
+          bunfig: '[test]\npreload = ["../a/src/env.ts"]\n',
+          wrappers: [],
+          runs: new Map([['test', ['test']]]),
+        };
         const graph = new Map([
           ['a/src/x.test.ts', { reads: [], deps: [], entry: false }],
           ['a/src/test/setup.ts', { reads: [], deps: ['a/src/test/clock.ts'], entry: false }],
@@ -467,19 +466,41 @@ describe('env-pass', () => {
         ]);
         const ofTests = (file: string) => file.endsWith('.test.ts') || isTestSupport(file);
         expect(productOf(graph, ofTests).has('a/src/boot.ts')).toBe(true);
-        const product = productOf(graph, (file) => ofTests(file) || modules.has(file));
-        expect(
-          gapsOf(
-            { tasks: { test: { env: ['ENV_SEED'] }, 'test:slow': { env: ['ENV_SEED'] } } },
-            new Map(),
-            [...modules].map(([file, { dir, tasks }]) => ({
-              file,
-              dir,
-              tasks,
-              reads: readsThrough(file, graph, product),
-            })),
-          ),
-        ).toEqual([
+        const check = passCheck({
+          graph,
+          tests: [{ file: 'a/src/x.test.ts' }],
+          ofTests,
+          workspaces: [workspace, shared],
+          resolve,
+          reach: (reading) =>
+            reading.map(({ file, reads }) => ({ file, dir: 'a', tasks: ['test'], reads })),
+          root: { tasks: { test: { env: ['ENV_SEED'] }, 'test:slow': { env: ['ENV_SEED'] } } },
+          turbos: new Map([['b', { tasks: { test: { env: ['OTHER'] } } }]]),
+          reported: [],
+        });
+        expect(check.preloading.map(({ file, dir, tasks }) => ({ file, dir, tasks }))).toEqual([
+          { file: 'a/src/env.ts', dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
+          { file: 'a/src/test/setup.ts', dir: 'a', tasks: ['test'] },
+          { file: 'a/src/boot.ts', dir: 'a', tasks: ['test:slow'] },
+          { file: 'a/src/env.ts', dir: 'b', tasks: ['test'] },
+        ]);
+        expect(check.unresolvedPreloads).toEqual([
+          { dir: 'a', task: 'test:e2e', specifier: './src/suite.ts' },
+        ]);
+        expect([...check.testSide].toSorted()).toEqual([
+          'a/src/all.ts',
+          'a/src/boot.ts',
+          'a/src/env.ts',
+          'a/src/test/clock.ts',
+          'a/src/test/setup.ts',
+          'a/src/x.test.ts',
+        ]);
+        const passing = { open: [], stale: [], unresolvedPreloads: [] };
+        expect(failed(passing, 0)).toBe(false);
+        expect(failed({ ...passing, unresolvedPreloads: check.unresolvedPreloads }, 0)).toBe(true);
+        expect(failed(passing, 1)).toBe(true);
+        expect(failed(check, 0)).toBe(true);
+        expect(check.open).toEqual([
           {
             dir: 'a',
             task: 'test:e2e',
@@ -500,6 +521,13 @@ describe('env-pass', () => {
             file: 'a/src/boot.ts',
             name: 'BOOT_SEED',
             by: 'a/src/boot.ts',
+          },
+          {
+            dir: 'b',
+            task: 'test',
+            file: 'a/src/env.ts',
+            name: 'ENV_SEED',
+            by: 'a/src/env.ts',
           },
         ]);
       }),

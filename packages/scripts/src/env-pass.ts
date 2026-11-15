@@ -6,19 +6,16 @@ import { Glob, JSONC } from 'bun';
 import { builtinModules } from 'node:module';
 import { Clock, Console, Effect, FileSystem, Option, Path, Schema, Stdio } from 'effect';
 
-import { type Gap, type Reported, gapsOf, splitReported } from './env-pass/gaps.ts';
+import { failed, passCheck } from './env-pass/check.ts';
+import type { Gap, Reported } from './env-pass/gaps.ts';
 import {
   type Module,
   type Package,
   aliasesFor,
   isModule,
-  loadedBy,
   isTestSupport,
-  productOf,
-  readsThrough,
   resolverOf,
 } from './env-pass/graph.ts';
-import { preloadModules } from './env-pass/preload.ts';
 import { envReads, importsOf, parsedImports } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
 import { reachesIn, repoTests } from './test-budget/reach.ts';
@@ -225,49 +222,42 @@ Effect.gen(function* () {
       { concurrency: 16 },
     ),
   );
-  const preloads = preloadModules(workspaces, resolve);
-  const product = productOf(
+  const check = passCheck({
     graph,
-    (file) => texts.has(file) || isTestSupport(file) || preloads.modules.has(file),
-  );
-  const reading = repo.tests
-    .map((test) => ({ ...test, reads: readsThrough(test.file, graph, product) }))
-    .filter(({ reads }) => reads.size > 0);
-  const readsOf = new Map(reading.map(({ file, reads }) => [file, reads]));
-  const reached = reachesIn(workspaces, reading).flatMap(({ file, units: scripts }) =>
-    Option.match(
-      Option.fromUndefinedOr(
-        workspaces
-          .filter(({ dir }) => file.startsWith(`${dir}/`))
-          .toSorted((a, b) => b.dir.length - a.dir.length)[0],
-      ),
-      {
-        onNone: () => [],
-        onSome: ({ dir, runs }) => [
+    tests: repo.tests,
+    ofTests: (file) => texts.has(file) || isTestSupport(file),
+    workspaces,
+    resolve,
+    reach: (reading) => {
+      const readsOf = new Map(reading.map(({ file, reads }) => [file, reads]));
+      return reachesIn(workspaces, reading).flatMap(({ file, units: scripts }) =>
+        Option.match(
+          Option.fromUndefinedOr(
+            workspaces
+              .filter(({ dir }) => file.startsWith(`${dir}/`))
+              .toSorted((a, b) => b.dir.length - a.dir.length)[0],
+          ),
           {
-            file,
-            dir,
-            tasks: [...runs]
-              .filter(([, held]) => held.some((script) => scripts.includes(script)))
-              .map(([task]) => task),
-            reads: readsOf.get(file) ?? new Map<string, string>(),
+            onNone: () => [],
+            onSome: ({ dir, runs }) => [
+              {
+                file,
+                dir,
+                tasks: [...runs]
+                  .filter(([, held]) => held.some((script) => scripts.includes(script)))
+                  .map(([task]) => task),
+                reads: readsOf.get(file) ?? new Map<string, string>(),
+              },
+            ],
           },
-        ],
-      },
-    ),
-  );
-  const preloading = [...preloads.modules]
-    .map(([file, { dir, tasks }]) => ({
-      file,
-      dir,
-      tasks,
-      reads: readsThrough(file, graph, product),
-    }))
-    .filter(({ reads }) => reads.size > 0);
-  const { open, reported, stale } = splitReported(
-    gapsOf(rootTurbo, turbos, [...reached, ...preloading]),
-    REPORTED,
-  );
+        ),
+      );
+    },
+    root: rootTurbo,
+    turbos,
+    reported: REPORTED,
+  });
+  const { open, reported, stale, reached, preloading, testSide } = check;
   const said = (gap: Gap) => {
     const through = [gap.by].filter((by) => by !== gap.file).map((by) => ` through ${by}`);
     return `${gap.dir}#${gap.task}: ${gap.file} reads ${gap.name}${through.join('')}`;
@@ -299,11 +289,6 @@ Effect.gen(function* () {
       Console.log(`env-pass stale: REPORTED names ${dir}#${task} ${name}, which is no gap now`),
     { discard: true },
   );
-  const testSide = new Set(
-    [...repo.tests.map(({ file }) => file), ...preloads.modules.keys()]
-      .flatMap((file) => loadedBy(file, graph))
-      .filter((file) => !product.has(file)),
-  );
   const unresolved = (yield* Effect.forEach(
     [...new Set(scanned.map(([file]) => file))].filter((file) => testSide.has(file)),
     (file) =>
@@ -321,19 +306,19 @@ Effect.gen(function* () {
     { discard: true },
   );
   yield* Effect.forEach(
-    preloads.unresolved,
+    check.unresolvedPreloads,
     ({ dir, task, specifier }) =>
       Console.log(
         `env-pass unresolved: ${dir}#${task} preloads '${specifier}', which names no module of the repo and no installed package, so the check cannot see what it reads`,
       ),
     { discard: true },
   );
-  const missed = unresolved.length + preloads.unresolved.length;
+  const missed = unresolved.length + check.unresolvedPreloads.length;
   const ended = yield* Clock.currentTimeMillis;
   yield* Console.log(
     `env-pass: ${reached.length} test file(s) and ${preloading.length} preload(s) read variables, ${open.length} gap(s), ${reported.length} reported, ${stale.length} stale, ${missed} unresolved, ${ended - started} ms`,
   );
   yield* Effect.sync(() => {
-    process.exitCode = Math.min(open.length + stale.length + missed, 1);
+    process.exitCode = Number(failed(check, unresolved.length));
   });
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer), BunRuntime.runMain);
