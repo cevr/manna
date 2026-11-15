@@ -230,7 +230,7 @@ component PlayerSheet
         text "Now Playing" role="heading" aria-level=2
       scroll id="player-sheet" flex=1 min-height=0
         column padding=20 gap=16
-          button press=ask("title", 0) testId="player-title" aria-label=`Open hymn ${player.number}`
+          button press=ask("title", 0) min-height=44 testId="player-title" aria-label=`Open hymn ${player.number}`
             text `${player.number} · ${player.title}` font="-exact-title2"
           input type="range" id="position" min=0 max=player.length value=player.at disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
           row gap=8 align-items="baseline"
