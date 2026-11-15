@@ -458,7 +458,11 @@ describe('env-pass', () => {
           runs: new Map([['test', ['test']]]),
         };
         const graph = new Map([
-          ['a/src/x.test.ts', { reads: [], deps: [], entry: false }],
+          ['a/src/x.test.ts', { reads: [], deps: ['a/src/rig.ts', 'a/src/app.ts'], entry: false }],
+          ['a/src/quiet.test.ts', { reads: [], deps: [], entry: false }],
+          ['a/src/rig.ts', { reads: ['RIG_SEED'], deps: [], entry: false }],
+          ['a/src/main.ts', { reads: [], deps: ['a/src/app.ts'], entry: false }],
+          ['a/src/app.ts', { reads: ['APP_KEY'], deps: [], entry: false }],
           ['a/src/test/setup.ts', { reads: [], deps: ['a/src/test/clock.ts'], entry: false }],
           ['a/src/test/clock.ts', { reads: ['CLOCK_ZONE'], deps: [], entry: false }],
           ['a/src/boot.ts', { reads: ['BOOT_SEED'], deps: [], entry: false }],
@@ -468,7 +472,7 @@ describe('env-pass', () => {
         expect(productOf(graph, ofTests).has('a/src/boot.ts')).toBe(true);
         const check = passCheck({
           graph,
-          tests: [{ file: 'a/src/x.test.ts' }],
+          tests: [{ file: 'a/src/x.test.ts' }, { file: 'a/src/quiet.test.ts' }],
           ofTests,
           workspaces: [workspace, shared],
           resolve,
@@ -476,8 +480,19 @@ describe('env-pass', () => {
             reading.map(({ file, reads }) => ({ file, dir: 'a', tasks: ['test'], reads })),
           root: { tasks: { test: { env: ['ENV_SEED'] }, 'test:slow': { env: ['ENV_SEED'] } } },
           turbos: new Map([['b', { tasks: { test: { env: ['OTHER'] } } }]]),
-          reported: [],
+          reported: [
+            { dir: 'a', task: 'test:slow', name: 'BOOT_SEED' },
+            { dir: 'a', task: 'test', name: 'GONE' },
+          ],
         });
+        expect(check.reached).toEqual([
+          {
+            file: 'a/src/x.test.ts',
+            dir: 'a',
+            tasks: ['test'],
+            reads: new Map([['RIG_SEED', 'a/src/rig.ts']]),
+          },
+        ]);
         expect(check.preloading.map(({ file, dir, tasks }) => ({ file, dir, tasks }))).toEqual([
           { file: 'a/src/env.ts', dir: 'a', tasks: ['test', 'test:slow', 'test:e2e'] },
           { file: 'a/src/test/setup.ts', dir: 'a', tasks: ['test'] },
@@ -491,16 +506,33 @@ describe('env-pass', () => {
           'a/src/all.ts',
           'a/src/boot.ts',
           'a/src/env.ts',
+          'a/src/quiet.test.ts',
+          'a/src/rig.ts',
           'a/src/test/clock.ts',
           'a/src/test/setup.ts',
           'a/src/x.test.ts',
         ]);
-        const passing = { open: [], stale: [], unresolvedPreloads: [] };
-        expect(failed(passing, 0)).toBe(false);
-        expect(failed({ ...passing, unresolvedPreloads: check.unresolvedPreloads }, 0)).toBe(true);
-        expect(failed(passing, 1)).toBe(true);
-        expect(failed(check, 0)).toBe(true);
+        expect(check.reported.map(({ dir, task, name }) => `${dir}#${task} ${name}`)).toEqual([
+          'a#test:slow BOOT_SEED',
+        ]);
+        expect(check.stale).toEqual([{ dir: 'a', task: 'test', name: 'GONE' }]);
+        const none = { open: [], stale: [], unresolvedPreloads: [] };
+        expect([
+          failed(none, 0),
+          failed({ ...none, open: check.open }, 0),
+          failed({ ...none, stale: check.stale }, 0),
+          failed({ ...none, unresolvedPreloads: check.unresolvedPreloads }, 0),
+          failed(none, 1),
+          failed(check, 0),
+        ]).toEqual([false, true, true, true, true, true]);
         expect(check.open).toEqual([
+          {
+            dir: 'a',
+            task: 'test',
+            file: 'a/src/x.test.ts',
+            name: 'RIG_SEED',
+            by: 'a/src/rig.ts',
+          },
           {
             dir: 'a',
             task: 'test:e2e',
@@ -516,13 +548,6 @@ describe('env-pass', () => {
             by: 'a/src/test/clock.ts',
           },
           {
-            dir: 'a',
-            task: 'test:slow',
-            file: 'a/src/boot.ts',
-            name: 'BOOT_SEED',
-            by: 'a/src/boot.ts',
-          },
-          {
             dir: 'b',
             task: 'test',
             file: 'a/src/env.ts',
@@ -530,6 +555,63 @@ describe('env-pass', () => {
             by: 'a/src/env.ts',
           },
         ]);
+      }),
+  );
+
+  it.effect(
+    'fails on each cause alone and on any together, and passes on none: an open gap, a stale entry, an unresolved preload, an unresolved import',
+    () =>
+      Effect.sync(() => {
+        const gap = { dir: 'a', task: 'test', file: 'a/x.test.ts', name: 'X', by: 'a/x.test.ts' };
+        const entry = { dir: 'a', task: 'test', name: 'GONE' };
+        const preload = { dir: 'a', task: 'test', specifier: './missing.ts' };
+        const table: ReadonlyArray<readonly [string, number, number, number, number, boolean]> = [
+          ['none', 0, 0, 0, 0, false],
+          ['an open gap alone', 1, 0, 0, 0, true],
+          ['a stale entry alone', 0, 1, 0, 0, true],
+          ['an unresolved preload alone', 0, 0, 1, 0, true],
+          ['an unresolved import alone', 0, 0, 0, 1, true],
+          ['two open gaps alone', 2, 0, 0, 0, true],
+          ['all four', 1, 1, 1, 1, true],
+        ];
+        const counts = [0, 1, 2];
+        const every = counts.flatMap((open) =>
+          counts.flatMap((stale) =>
+            counts.flatMap((preloads) =>
+              counts.map(
+                (imports) =>
+                  [
+                    `${open}/${stale}/${preloads}/${imports}`,
+                    open,
+                    stale,
+                    preloads,
+                    imports,
+                    open + stale + preloads + imports > 0,
+                  ] as const,
+              ),
+            ),
+          ),
+        );
+        const judged = [...table, ...every].map(
+          ([name, open, stale, preloads, imports, expected]) => [
+            name,
+            failed(
+              {
+                open: Array.from({ length: open }, () => gap),
+                stale: Array.from({ length: stale }, () => entry),
+                unresolvedPreloads: Array.from({ length: preloads }, () => preload),
+              },
+              imports,
+            ) === expected,
+          ],
+        );
+        expect(judged.filter(([, held]) => !held)).toEqual([]);
+        expect(
+          every.filter(
+            ([, open, stale, preloads, imports]) =>
+              [open, stale, preloads, imports].filter((n) => n > 0).length === 1,
+          ),
+        ).toHaveLength(8);
       }),
   );
 
