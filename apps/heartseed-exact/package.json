@@ -3,11 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "exact": "bun exact.mjs",
+    "exact": "bun tools/prepare.ts && bun exact.mjs",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test ./src"
   },
   "dependencies": {
-    "@manna/exact-kit": "workspace:*"
+    "@manna/exact-kit": "workspace:*",
+    "@manna/heartseed": "workspace:*"
   }
 }
