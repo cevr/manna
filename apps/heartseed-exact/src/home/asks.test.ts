@@ -16,7 +16,6 @@ import { placeOf } from '@manna/heartseed/lists';
 
 import { GARDEN_FILE } from '../garden/program';
 import { gardenSources } from '../garden/sources';
-import { makeQueue } from '../garden/writes';
 import { storageOf } from '../test/garden-model';
 import { homeCaseOf } from '../test/home-model';
 import { seeded, type Random } from '../test/random';
@@ -30,9 +29,8 @@ const NOW = Date.UTC(2026, 10, 15, 13, 0, 0);
 
 /** The port's garden and home sources over one storage, as one launch holds them. */
 const launch = (stand: ReturnType<typeof storageOf>) => {
-  const queue = makeQueue();
-  const garden = gardenSources({ host: HOST, quiet: true, queue });
-  const home = homeSources({ host: HOST, quiet: true, queue });
+  const garden = gardenSources({ host: HOST, quiet: true });
+  const home = homeSources({ host: HOST, quiet: true });
   const call = <A>(run: (storage: typeof stand.storage) => Promise<A>) =>
     withDataHost(() => run(stand.storage));
   return {

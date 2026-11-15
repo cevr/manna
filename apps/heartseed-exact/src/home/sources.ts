@@ -2,9 +2,12 @@
  * Home's data sources, as `app.ts` registers them: `homeRead` answers home
  * and `listRead` a list's page. Each is one call through the runner on the
  * call's clock and seed: it reads the garden (`readGarden`, which writes
- * nothing) in the garden's own queue, so no read lands between another
- * call's writes, takes the session's view as the Contract hands it, and
- * answers the screen. A view that does not decode is no plan made. The key
+ * nothing) outside the garden's queue, takes the session's view as the
+ * Contract hands it, and answers the screen. A read waits on no other call:
+ * Exact's iOS bake refuses a resource whose answer waits on a promise no
+ * storage step settles. Each write of the file is atomic (a recall's two
+ * changes are one, `stagedOf`), and a change's `refreshes` of `garden`
+ * changes the mark, so home asks again once the change has ended. A view that does not decode is no plan made. The key
  * argument is the Contract's mark of the garden it last read, so a change
  * asks again; the source reads the file, never the key.
  */
@@ -14,7 +17,6 @@ import type { FileStorage } from '@manna/exact-kit/storage';
 import { Effect, Logger, Option, Schema } from 'effect';
 
 import { readGarden } from '../garden/program';
-import { oneAtATime, type makeQueue } from '../garden/writes';
 import { listPageOf, type ListShown } from '../list/page';
 import type { SessionWire } from '../today/sources';
 import { homeOf, type HomeShown } from './home';
@@ -56,15 +58,14 @@ interface ExactStore {
   readonly forget: (name: string) => void;
 }
 
-/** How the sources run: the garden's queue (one per launch, shared with the garden's sources), the runner's host, and whether logs are dropped. */
+/** How the sources run: the runner's host, and whether logs are dropped. */
 export interface HomeOptions {
-  readonly queue: ReturnType<typeof makeQueue>;
   readonly host?: Host;
   readonly quiet?: boolean;
 }
 
-/** Home's sources over the garden's queue. */
-export const homeSources = (options: HomeOptions) => {
+/** Home's sources. */
+export const homeSources = (options: HomeOptions = {}) => {
   const logged = <A>(program: Effect.Effect<A>) => {
     if (options.quiet === true) return Effect.provide(program, Logger.layer([]));
     return program;
@@ -74,10 +75,7 @@ export const homeSources = (options: HomeOptions) => {
     now: number,
     seed: number,
     answer: (held: Effect.Success<ReturnType<typeof readGarden>>) => A,
-  ) =>
-    oneAtATime(options.queue, () =>
-      runCall(logged(Effect.map(readGarden(storage), answer)), { now, seed }, options.host),
-    );
+  ) => runCall(logged(Effect.map(readGarden(storage), answer)), { now, seed }, options.host);
 
   const homeRead = (
     [offset, wire, _key, now, seed]: readonly [number, SessionWire, string, number, number],

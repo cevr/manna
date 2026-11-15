@@ -2,7 +2,6 @@ import type { Answer, Sources } from './app.contract.d.ts';
 import licences from './src/about/licences';
 import { aboutSources } from './src/about/sources';
 import { gardenSources } from './src/garden/sources';
-import { makeQueue } from './src/garden/writes';
 import { homeSources } from './src/home/sources';
 import { settingsSources } from './src/settings/choices';
 import { textSources } from './src/text/sources';
@@ -16,15 +15,13 @@ export const grants =
 /** A driver's launch (`tools/drive-garden.ts`) sets this, and Your verses shows its test controls; a plain launch has none. */
 const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
 
-const gardenQueue = makeQueue();
-
-const garden = gardenSources({ driven: GARDEN_DRIVE !== '', queue: gardenQueue });
+const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
 
 const sources: Sources = {
   ...settingsSources,
   ...aboutSources(licences),
   ...garden,
-  ...homeSources({ queue: gardenQueue }),
+  ...homeSources(),
   ...todaySources(garden),
   ...readerSources,
   ...textSources,

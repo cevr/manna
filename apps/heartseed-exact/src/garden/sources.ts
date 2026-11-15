@@ -19,12 +19,11 @@ import { SHORT_LINE } from '@manna/heartseed/chooser';
 import { shownOf, verseIn, type At, type GardenShown, type GardenVerse } from './view';
 import { makeQueue, oneAtATime } from './writes';
 
-/** How the sources run their calls: the runner's host (Exact's own by default), whether the services' logs are dropped, and the launch's queue, which home's reads share (a fresh one by default). */
+/** How the sources run their calls: the runner's host (Exact's own by default), and whether the services' logs are dropped. */
 export interface GardenOptions {
   readonly host?: Host;
   readonly quiet?: boolean;
   readonly driven?: boolean;
-  readonly queue?: ReturnType<typeof makeQueue>;
 }
 
 /** A change's answer, and the line it shows: a list too short, none for the rest (a limit has its own line on the read). */
@@ -83,7 +82,7 @@ type Source<A, B> = (args: A, store: ExactStore, storage: FileStorage) => Promis
 
 /** The garden's sources, with the queue of one launch of the data module. */
 export const gardenSources = (options: GardenOptions = {}) => {
-  const queue = options.queue ?? makeQueue();
+  const queue = makeQueue();
   const logged = <A>(program: Effect.Effect<A>) => {
     if (options.quiet === true) return Effect.provide(program, Logger.layer([]));
     return program;
