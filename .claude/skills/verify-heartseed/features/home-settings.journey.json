@@ -124,8 +124,20 @@
       "name": "home-settings-back",
       "action": "tap",
       "target": "label=Your field",
-      "expect": [{ "shows": "id=today-card" }, { "hides": "label=Licences" }],
+      "expect": [
+        { "shows": "id=today-card" },
+        { "shows": "label=Settings" },
+        { "hides": "label=Licences" }
+      ],
       "receipt": "snapshot"
+    },
+    {
+      "name": "home-settings-plant",
+      "action": "scroll",
+      "target": "label=Isaiah 41:10, seed",
+      "direction": "up",
+      "expect": [{ "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "none"
     },
     {
       "name": "home-settings-today",

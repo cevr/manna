@@ -67,8 +67,11 @@ its absence is a count of 0 read in each receipt.
    `promise/need-gone-home`, `promise/need-gone-home-end` (after the
    scroll to `How Heartseed works`) and `promise/need-gone-today` (after
    `Practice anyway`) → `When I need…` count 0 in each.
-3. `promise-field`: `promise/promise-field`, after `Your field` → the row
-   title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14
+3. `promise-field`: `promise/promise-field`, after `Your field` → home
+   where step 2 left it, `How Heartseed works` in view (`home.md`'s
+   `home-scroll-kept`), and `Remove` nowhere;
+   `promise/promise-field-plant`, after the scroll up to `Psalms 91:1, not
+   planted` → the row title buttons `Open Isaiah 41:10` then `Open Protection & Fear`; 14
    buttons `<reference>, not planted` in that row (`Psalms 91:1` first,
    `Isaiah 41:13` last; count them, those below the fold in a raw
    snapshot, `first.md`, Driving it); `Remove` nowhere.

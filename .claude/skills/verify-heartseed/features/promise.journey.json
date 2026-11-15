@@ -35,9 +35,17 @@
       "target": "label=Your field",
       "expect": [
         { "shows": "id=today-card" },
-        { "shows": "label=Psalms 91:1, not planted" },
+        { "shows": "label=How Heartseed works" },
         { "hides": "label=Remove" }
       ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "promise-field-plant",
+      "action": "scroll",
+      "target": "label=Psalms 91:1, not planted",
+      "direction": "up",
+      "expect": [{ "shows": "label=Psalms 91:1, not planted" }],
       "receipt": "snapshot"
     },
     {

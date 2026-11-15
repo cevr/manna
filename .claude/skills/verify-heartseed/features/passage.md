@@ -7,7 +7,7 @@ Handbook lists together, a passage of up to 20 verses, from the whole KJV
 in the bundle.
 
 - **The field's lists** sit in the field's scroll view under the label
-  `Lists`; at their foot, under the legend's `Mark 4:28` and just above
+  `Lists`; at their foot, under the last furrow and just above
   `Settings` (owner, q97), `Add a list` (`id=add-list`) while fewer than 3
   passages and Handbook lists are held together (`handbook.md`), else the
   line "3 passages or lists, the most for now. Remove one to add another."
