@@ -42,7 +42,7 @@ component HymnPage
       if ready and page.number == 0
         EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
       else
-        scroll id="hymn-words" flex=1 min-height=0
+        scroll id="hymn-words" flex=1 min-height=0 testId="hymn-words"
           if ready
             column padding=16 gap=20
               text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"

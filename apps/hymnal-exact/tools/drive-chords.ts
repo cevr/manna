@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md): a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads the frames its layout replies name and prints what it found; its shots folder is named by SHOTS. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noNewPromise, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md): a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads the frames its layout replies name and prints what it found; its shots folder is named by SHOTS. */
 
 /**
  * The chords' live checks a `.test.contract` cannot hold (spec B2, B5 and
@@ -28,12 +28,47 @@ import { readChords } from '@manna/hymnal-app/vite/chords';
 
 import { breaksOf, type Place } from '../src/chords/rows.ts';
 import { sourcesAt } from '../src/sources.ts';
+import { checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const shots = process.env.SHOTS ?? join(app, '.exact/shots/chords');
 const shot = (name: string) => `screenshot ${join(shots, `${name}-${host}.png`)}`;
-const drive = makeDrive({ name: 'drive-chords', host, appDir: app });
+/**
+ * The agent's server is the recordings' fixture on this checkout's own
+ * port (`--backend`, and the build's recordings origin with it), as the
+ * player's drive has it, so another checkout's tests on 4797 never refuse
+ * a run.
+ */
+const backend = `http://127.0.0.1:${checkoutPort()}`;
+const env = { ...process.env, HYMNAL_RECORDINGS: backend };
+const processes = {
+  spawn: (argv: ReadonlyArray<string>, cwd: string) => {
+    const child = Bun.spawn([...argv], {
+      cwd,
+      env,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+    });
+    return {
+      pid: child.pid,
+      ended: Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]).then(([stdout, stderr, code]) => ({ code, stdout, stderr })),
+    };
+  },
+  signal: (pid: number, signal: 'SIGTERM') => {
+    if (pid < -1) process.kill(pid, signal);
+  },
+  sleep: (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms).unref();
+    }),
+};
+const drive = makeDrive({ name: 'drive-chords', host, appDir: app, processes });
 const store = `chords-${host}-${Date.now().toString(36)}`;
 
 const LARGEST = 53;
@@ -99,7 +134,10 @@ const largeOps = [
 ];
 const keepOps = ['tap capo-up', 'clock data', 'clock settle', 'state chordsMoves'];
 
-const first = await drive.launch(store, [...chordsOn, ...defaultOps, ...largeOps, ...keepOps]);
+const first = await drive.run(
+  ['--backend', backend, '--storage', store, '--reset-storage'],
+  [...chordsOn, ...defaultOps, ...largeOps, ...keepOps],
+);
 const frame = (id: string, ops: ReadonlyArray<string>, offset: number) =>
   frameOf(first[offset + ops.indexOf(`layout ${id}`)]);
 
@@ -182,19 +220,22 @@ stanza.forEach((line, i) => {
 const kept = first.at(-1);
 drive.check('a capo set is kept', JSON.stringify(kept) === JSON.stringify([`${HYMN}:0:1`]), kept);
 
-const again = await drive.relaunch(store, [
-  'clock data',
-  'state chordsOn',
-  'state chordsMoves',
-  'tap hymn-list drag 0 -600',
-  'clock settle',
-  `tap hymn-${HYMN}`,
-  'clock settle',
-  'clock data',
-  'state chordsShown.capo',
-  'layout chord-1-1-1',
-  shot('relaunched'),
-]);
+const again = await drive.run(
+  ['--backend', backend, '--storage', store, '--keep-storage'],
+  [
+    'clock data',
+    'state chordsOn',
+    'state chordsMoves',
+    'tap hymn-list drag 0 -600',
+    'clock settle',
+    `tap hymn-${HYMN}`,
+    'clock settle',
+    'clock data',
+    'state chordsShown.capo',
+    'layout chord-1-1-1',
+    shot('relaunched'),
+  ],
+);
 drive.check('relaunch: chords still on', again[1] === true, again[1]);
 drive.check(
   'relaunch: the capo kept, the hymn drawn under its chords',
