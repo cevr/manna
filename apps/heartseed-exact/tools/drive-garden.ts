@@ -23,18 +23,24 @@ const app = join(import.meta.dir, '..');
 const DRIVE_MS = 20 * 60 * 1000;
 const DAY = 86_400_000;
 
+/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
+const port = host === 'web' ? ['--port', '8774'] : [];
+
 const run = async (flags: readonly string[], ops: readonly string[]) => {
-  const child = Bun.spawn(['bun', 'run', 'exact', 'agent', host, '--json', ...flags, ...ops], {
-    cwd: app,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    detached: true,
-    env: {
-      ...process.env,
-      HEARTSEED_GARDEN_DRIVE: '1',
-      SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE: '1',
+  const child = Bun.spawn(
+    ['bun', 'run', 'exact', 'agent', host, '--json', ...port, ...flags, ...ops],
+    {
+      cwd: app,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+      env: {
+        ...process.env,
+        HEARTSEED_GARDEN_DRIVE: '1',
+        SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE: '1',
+      },
     },
-  });
+  );
   const timer = setTimeout(() => process.kill(-child.pid, 'SIGTERM'), DRIVE_MS);
   const [out, err, code] = await Promise.all([
     new Response(child.stdout).text(),
@@ -91,8 +97,7 @@ interface Verse {
 
 const grown = [
   'clock data',
-  'tap add-list',
-  'clock data',
+  'clock settle',
   'state gardenTime',
   'tap plant-three',
   'clock data',
@@ -120,7 +125,7 @@ const grown = [
   shot('shown'),
   'state garden',
 ];
-const first = await drive(['--storage', store, '--reset-storage'], grown);
+const first = await drive(['--storage', store, '--reset-storage', '--url', '/verses'], grown);
 
 const time: { epochAtZero: number; utcOffset: number } = first('state gardenTime');
 const good: { answer: string; verse: Verse } = first('state gardenRecalled', 0);
@@ -181,8 +186,8 @@ const kept = keptRead.lists.flatMap((list) =>
   list.verses.map(({ reference, stage, recalls, due }) => ({ reference, stage, recalls, due })),
 );
 const relaunched = await drive(
-  ['--storage', store, '--keep-storage'],
-  ['clock data', 'tap add-list', 'clock data', 'state garden', shot('relaunched')],
+  ['--storage', store, '--keep-storage', '--url', '/verses'],
+  ['clock data', 'clock settle', 'state garden', shot('relaunched')],
 );
 const againRead: { lists: { verses: Verse[] }[] } = relaunched('state garden');
 const again = againRead.lists.flatMap((list) =>
@@ -195,11 +200,10 @@ check(
 );
 
 const sown = await drive(
-  ['--storage', `${store}-singles`, '--reset-storage'],
+  ['--storage', `${store}-singles`, '--reset-storage', '--url', '/verses'],
   [
     'clock data',
-    'tap add-list',
-    'clock data',
+    'clock settle',
     ...Array.from({ length: 20 }, () => ['tap plant-one', 'clock data']).flat(),
     'state garden.singles',
     'tap plant-one',
