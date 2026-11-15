@@ -423,31 +423,84 @@ const FOOT_TARGETS = [
   ...[...FOOT.labels].map((label) => `label=${label}`),
 ];
 
-/** The limit line's words, as `src/chooser.ts` spells them (the module reads the bundled KJV, so it is read, not imported). */
-const LIMIT_LINE =
-  /export const LIMIT_LINE = '([^']+)';/u.exec(
-    sources.find(([path]) => path === 'src/chooser.ts')?.[1] ?? '',
-  )?.[1] ?? 'no limit line';
+/**
+ * Home's foot as today's `src/field/screen.tsx` draws it under the lists,
+ * written out by hand from the screen, apart from `footOf`: `Add a list`
+ * and tip 3, the limit line, and the end rows with their hidden `›`.
+ */
+const FOOT_TODAY = {
+  ids: ['add-list', 'end-row', 'limit', 'tip-3'],
+  labels: [
+    '3 passages or lists, the most for now. remove one to add another.',
+    'add a list',
+    'add a psalm, a passage or a set of promises when you want more.',
+    'how heartseed works',
+    'settings',
+    '›',
+  ],
+};
 
-/** Nodes the screen draws under its lists today, named here apart from the sources: the foot must hold each. */
-const FOOT_KNOWN = [
-  'id=add-list',
-  'id=tip-3',
-  'id=limit',
-  'id=end-row',
-  'label=Add a list',
-  `label=${LIMIT_LINE.toLowerCase()}`,
-  'label=settings',
-  'label=how heartseed works',
+/** A foot as sorted ids, sorted labels and what it could not read. */
+const sortedFoot = (foot: ReturnType<typeof footOf>) => ({
+  ids: [...foot.ids].sort(),
+  labels: [...foot.labels].sort(),
+  unread: foot.unread,
+});
+
+/** `sources` with each `[anchor, added]` put after its anchor in `src/field/screen.tsx`, and `more` files beside them. */
+const screenWith = (
+  edits: ReadonlyArray<readonly [string, string]>,
+  more: ReadonlyArray<readonly [string, string]> = [],
+) => [
+  ...sources.map(([path, text]): readonly [string, string] => {
+    if (path !== 'src/field/screen.tsx') return [path, text];
+    let out = text;
+    for (const [anchor, added] of edits) {
+      expect(out).toContain(anchor);
+      out = out.replace(anchor, `${anchor}\n${added}`);
+    }
+    return [path, out];
+  }),
+  ...more,
 ];
 
-/** `sources` with `src/field/screen.tsx`'s `anchor` followed by `added`. */
-const screenWith = (anchor: string, added: string) =>
-  sources.map(([path, text]): readonly [string, string] => {
-    if (path !== 'src/field/screen.tsx') return [path, text];
-    expect(text).toContain(anchor);
-    return [path, text.replace(anchor, `${anchor}\n${added}`)];
-  });
+/** The anchors in today's screen: the last end row, the body's first const, the last import. */
+const LAST_ROW = '<EndRow label="How Heartseed works" onPress={onHow} />';
+const FIRST_CONST = 'const [settings, setSettings] = useState(false);';
+const LAST_IMPORT = "import { Tip } from './tips';";
+
+/** A screen of its own, apart from the app's: each form a foot node takes, after its furrows. */
+const FIXTURE_SCREEN = [
+  "import { Pressable, ScrollView, Text, View } from 'react-native';",
+  "import { Row, WORDS } from './parts';",
+  "const KINDS = ['one', 'two'] as const;",
+  'export function FieldScreen() {',
+  '  const held = <Text testID="held">Held in a const</Text>;',
+  '  return (',
+  '    <ScrollView>',
+  '      <Text testID="above">Above</Text>',
+  '      <View><Furrows /></View>',
+  '      <View testID="caption"><Text>A caption</Text></View>',
+  '      {KINDS.map((kind) => <Text key={kind}>{kind}</Text>)}',
+  '      {held}',
+  '      <Row n={3} label="From a file" />',
+  '      <Pressable aria-label={`Tap ${WORDS[3]}`} />',
+  '    </ScrollView>',
+  '  );',
+  '}',
+].join('\n');
+
+const FIXTURE_ROW = [
+  "import { Text, View } from 'react-native';",
+  'export function Row({ n, label, testID }: { readonly n: number; readonly label: string; readonly testID?: string }) {',
+  '  return (',
+  '    <View testID={`row-${n}`}>',
+  '      <Text testID={testID}>{label}</Text>',
+  '      {n > 2 && <Text>Big</Text>}',
+  '    </View>',
+  '  );',
+  '}',
+].join('\n');
 
 describe('verify-heartseed journeys', () => {
   it.effect(
@@ -543,9 +596,6 @@ describe('verify-heartseed journeys', () => {
     'R7 trips a journey that ends on a scroll to each node the screen draws under its lists, in each spelling, inside a sheet after it too, and none scrolled back up',
     () =>
       Effect.gen(function* () {
-        expect(
-          FOOT_KNOWN.filter((known) => !FOOT_TARGETS.some((one) => spells(one, known))),
-        ).toEqual([]);
         const next = rng(20261115);
         const home: Raw = {
           name: 'home',
@@ -595,24 +645,119 @@ describe('verify-heartseed journeys', () => {
     'the foot is what the screen draws after its furrows: a node added there is in it, one added above them is not',
     () =>
       Effect.sync(() => {
-        const below = footOf(
-          screenWith(
-            '<EndRow label="How Heartseed works" onPress={onHow} />',
-            '<EndRow label="Help" onPress={onHow} />',
+        const added = sortedFoot(
+          footOf(
+            screenWith(
+              [
+                [LAST_IMPORT, "import { AddedRow } from './added-row';"],
+                [FIRST_CONST, 'const held = <Text testID="added-local">Added local</Text>;'],
+                [
+                  LAST_ROW,
+                  [
+                    '<EndRow label="Help" onPress={onHow} />',
+                    '<Text testID="added-host">Added inline</Text>',
+                    '<View><Text>Added words</Text></View>',
+                    '{held}',
+                    '<AddedRow label="Added row" />',
+                  ].join('\n'),
+                ],
+              ],
+              [
+                [
+                  'src/field/added-row.tsx',
+                  'import { Text } from \'react-native\';\nexport function AddedRow({ label }: { readonly label: string }) {\n  return <Text testID="added-row">{label}</Text>;\n}\n',
+                ],
+              ],
+            ),
           ),
         );
-        expect([below.labels.has('help'), FOOT.labels.has('help')]).toEqual([true, false]);
-        const above = footOf(
-          screenWith(
-            '<Text style={styles.label}>Lists</Text>',
-            '<Text testID="above">Above the lists</Text>',
+        expect(added).toEqual({
+          ids: [...FOOT_TODAY.ids, 'added-host', 'added-local', 'added-row'].sort(),
+          labels: [
+            ...FOOT_TODAY.labels,
+            'help',
+            'added inline',
+            'added words',
+            'added local',
+            'added row',
+          ].sort(),
+          unread: [],
+        });
+        const above = sortedFoot(
+          footOf(
+            screenWith([
+              [
+                '<Text style={styles.label}>Lists</Text>',
+                '<Text testID="above">Above the lists</Text>',
+              ],
+            ]),
           ),
         );
-        expect([above.ids.has('above'), above.labels.has('above the lists')]).toEqual([
-          false,
-          false,
+        expect(above).toEqual({ ...FOOT_TODAY, unread: [] });
+      }),
+  );
+
+  it.effect("footOf reads today's foot as it is written out by hand, with nothing unread", () =>
+    Effect.sync(() => {
+      expect(sortedFoot(FOOT)).toEqual({ ...FOOT_TODAY, unread: [] });
+    }),
+  );
+
+  it.effect(
+    'footOf reads a screen of its own: a text child, a .map over a constant, a node held in a const, a component from another file through re-exports with its props, a template label, a condition',
+    () =>
+      Effect.sync(() => {
+        const fixture = sortedFoot(
+          footOf([
+            ['src/field/screen.tsx', FIXTURE_SCREEN],
+            ['src/field/row.tsx', FIXTURE_ROW],
+            ['src/field/parts.ts', "export * from './row';\nexport { WORDS } from './words';\n"],
+            ['src/field/words.ts', "export const WORDS = { 3: 'Third words' } as const;\n"],
+          ]),
+        );
+        expect(fixture).toEqual({
+          ids: ['caption', 'held', 'row-3'],
+          labels: [
+            'a caption',
+            'big',
+            'from a file',
+            'held in a const',
+            'one',
+            'tap third words',
+            'two',
+          ],
+          unread: [],
+        });
+      }),
+  );
+
+  it.effect(
+    'footOf names what it cannot read under the lists: a call, an unknown component, a name it cannot spell, an id it cannot evaluate; and a screen with no furrows',
+    () =>
+      Effect.sync(() => {
+        const unknown = footOf(
+          screenWith([
+            [
+              LAST_ROW,
+              [
+                '{wordsOf(field)}',
+                '<Mystery />',
+                '<Text>{field.sown}</Text>',
+                '<View testID={idOf(field)} />',
+              ].join('\n'),
+            ],
+          ]),
+        );
+        expect(unknown.unread).toEqual([
+          'src/field/screen.tsx: wordsOf(field)',
+          'src/field/screen.tsx: <Mystery />',
+          'src/field/screen.tsx: field.sown',
+          'src/field/screen.tsx: testID={idOf(field)}',
         ]);
-        expect(above.ids).toEqual(FOOT.ids);
+        const gone = footOf([['src/field/screen.tsx', FIXTURE_SCREEN.replace('<Furrows />', '')]]);
+        expect(gone.unread).toEqual([
+          'src/field/screen.tsx: no FieldScreen ScrollView holding <Furrows>',
+        ]);
       }),
   );
 

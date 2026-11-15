@@ -284,8 +284,10 @@ after the welcome is left, no node hidden from VoiceOver, an open that
 shows first, every selector one the app can draw, and a journey that
 scrolls home to its foot, any id or label `src/field/screen.tsx` draws
 after its furrows (`scripts/foot.ts` reads them from the sources: `Add a
-list` and its tip, the limit line, `Settings`, `How Heartseed works`),
-scrolling back up to `label=Your field` or relaunching before it ends,
+list` and its tip, the limit line, `Settings`, `How Heartseed works`, and
+names any form there it cannot read, which fails the test; the test holds
+today's foot to a list written out by hand, so a node added under the lists
+changes that list in the same commit), scrolling back up to `label=Your field` or relaunching before it ends,
 even after a sheet it opened there, since the next journey's `open` keeps
 the running app's offset), and every feature file
 not yet moved to journeys to its `LEGACY` entry. The features:
