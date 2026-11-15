@@ -19,7 +19,8 @@
  *   (`src/web/pages.ts`), and an unknown hymn is the not-found page;
  * - `measure`: the bytes and times of `/` and `/hymns/100`, cold (cache
  *   emptied) and warm, five each, medians against `tools/web/budget.json`
- *   (bytes always; times only at a load of 5 or less); `--write-budget`
+ *   (bytes always; times only at a load of 5 or less, each allowed a
+ *   tenth or 30 ms over, whichever is more); `--write-budget`
  *   writes it from this run, and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
  * - `return`: a hymn visited, a favourite, a stanza choice; Chrome closed
@@ -57,6 +58,8 @@ const PORT = server === 'exact' ? 8778 : checkoutPort();
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
 const budgetFile = join(import.meta.dir, 'web/budget.json');
+/** A time's least allowance over its budget: a warm load's 50 to 90 ms moves by more than a tenth between runs on a loaded host. */
+const TIME_SLACK_MS = 30;
 const report: Record<string, unknown> = { server, origin };
 
 const hymns = readWords();
@@ -452,10 +455,13 @@ const measure = async (page: Page) => {
     for (const [name, value] of Object.entries(values)) {
       const limit = budget[key]?.[name];
       if (limit === undefined || (name.endsWith('Ms') && !timesChecked)) continue;
-      if (value > limit * 1.1) over.push(`${key} ${name} ${value} > ${limit} + 10%`);
+      const allowed = name.endsWith('Ms')
+        ? Math.max(limit * 1.1, limit + TIME_SLACK_MS)
+        : limit * 1.1;
+      if (value > allowed) over.push(`${key} ${name} ${value} > ${Math.floor(allowed)}`);
     }
   check(
-    `bytes and times within tools/web/budget.json + 10% (times ${timesChecked ? 'checked' : `not checked: load ${load.toFixed(1)}`})`,
+    `bytes and times within tools/web/budget.json + 10% (a time + ${TIME_SLACK_MS} ms at least) (times ${timesChecked ? 'checked' : `not checked: load ${load.toFixed(1)}`})`,
     budget['/ cold'] !== undefined && over.length === 0,
     over,
   );
