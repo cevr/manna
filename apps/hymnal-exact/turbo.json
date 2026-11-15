@@ -3,7 +3,11 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "dependsOn": ["$TURBO_EXTENDS$", "test:web"],
+      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web"],
+      "outputs": []
+    },
+    "test:app": {
+      "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
