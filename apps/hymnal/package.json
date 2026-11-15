@@ -56,6 +56,8 @@
       "types": "./exact/reader/lists.d.ts",
       "default": "./src/reader/lists.ts"
     },
+    "./follow/seek-targets": "./src/follow/seek-targets.ts",
+    "./player/scrub-rules": "./src/player/scrub-rules.ts",
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/search": "./src/hymns/search.ts",
     "./hymns/text": "./src/hymns/text.ts",

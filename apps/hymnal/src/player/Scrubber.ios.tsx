@@ -34,7 +34,8 @@ import {
 
 import { color, useAccent } from '~/color';
 
-import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
+import { type ScrubberProps, useScrub } from './scrub';
+import { nudged, placeAt } from './scrub-rules';
 
 /** The one touch a bar on iOS follows: its pan holds one at a time. */
 const TOUCH = 1;

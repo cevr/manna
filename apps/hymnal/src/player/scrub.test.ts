@@ -5,7 +5,8 @@ import { Option } from 'effect';
 import { act, createElement, Fragment } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { nudged, placeAt, useScrub } from './scrub';
+import { useScrub } from './scrub';
+import { nudged, placeAt } from './scrub-rules';
 
 describe('placeAt', () => {
   it('maps a touch along the bar to its place in the recording, held inside the bar', () => {

@@ -31,7 +31,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 
-import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
+import { type ScrubberProps, useScrub } from './scrub';
+import { nudged, placeAt } from './scrub-rules';
 import { clock } from './time';
 
 /** The one touch the seeker follows. */
