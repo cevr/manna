@@ -67,6 +67,9 @@ const granted = [
   'prefer permission.speech-recognition granted',
   'clock data',
   'clock settle',
+  'type root /today',
+  'clock data',
+  'clock settle',
 ];
 
 /** A recital of `text` said through, then Done. */
@@ -127,7 +130,7 @@ const later = async (ops: readonly string[]) => {
 
 /** The ops of a launch that also reads Today and the garden at its end, and the indexes of both reads. */
 const reading = (ops: readonly string[]) => {
-  const all = [...ops, 'state today', 'tap open-verses', 'clock data', 'state garden'];
+  const all = [...ops, 'state today', 'type root /verses', 'clock data', 'state garden'];
   return { ops: all, today: all.length - 4, garden: all.length - 1 };
 };
 
@@ -143,7 +146,7 @@ await drive.run(
   ],
   [
     ...granted,
-    'tap open-verses',
+    'type root /verses',
     'clock data',
     'tap plant-three',
     'clock data',
@@ -214,7 +217,7 @@ drive.check(
 await later([
   ...granted,
   ...recite((leaving[before.today] as Today | undefined)?.passage ?? ''),
-  'tap open-verses',
+  'type root /verses',
   'clock data',
 ]);
 const back = reading(granted);
