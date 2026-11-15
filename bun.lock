@@ -176,6 +176,8 @@
       "name": "@manna/hymnal-exact",
       "dependencies": {
         "@manna/exact-kit": "workspace:*",
+        "@manna/hymnal": "workspace:*",
+        "@manna/hymnal-app": "workspace:*",
       },
     },
     "apps/screening": {

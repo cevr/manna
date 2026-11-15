@@ -178,8 +178,8 @@ button, `Start` or `Practice anyway`;
 in its scroll view, in a furrow `Open <title>` (its title, opening the
 list's own page) and its plants (`<reference>, <stage>`, then `, ready
 today` when ready; one tap opens Today on that verse, whole), under the
-furrows and the legend `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
-works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=Settings" down`; the
+furrows `Add a list` (`id=add-list`), and at its end the rows `Settings` and `How Heartseed
+works` (scroll to them first: `sim scroll "id=add-list" down`, `sim scroll "label=How Heartseed works" down` before a tap on `Settings`, which on the first-run field can sit at the fold's edge, where the driver's tap finds its texts beside the button; the
 second replays the welcome, `Begin`, `Skip` and `See your field`); in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`),
@@ -236,6 +236,7 @@ for what an expect cannot say. The journeys:
   `home-end` and `home-add`, run by `home.md`.
 - [features/list.journey.json](features/list.journey.json), `list-practice` and `list-remove`, run by
   `list.md`; [features/back.journey.json](features/back.journey.json), run by `back.md`;
+  [features/peek.journey.json](features/peek.journey.json), run by `peek.md`;
   [features/about.journey.json](features/about.journey.json), run by `about.md`;
   [features/appearance.journey.json](features/appearance.journey.json), `appearance-dark`,
   `appearance-choice` and `appearance-kept`, run by `appearance.md`.
@@ -281,7 +282,8 @@ fold is read in a raw snapshot taken by hand between two journeys
 of `apps/heartseed/scripts/journey-rules.ts` (a first-minute heading only
 after the welcome is left, no node hidden from VoiceOver, an open that
 shows first, every selector one the app can draw, and a journey that
-scrolls home to its foot, any node under its lists (the legend, `Add a
+scrolls home to its foot, any id or label `src/field/screen.tsx` draws
+after its furrows (`scripts/foot.ts` reads them from the sources: `Add a
 list` and its tip, the limit line, `Settings`, `How Heartseed works`),
 scrolling back up to `label=Your field` or relaunching before it ends,
 even after a sheet it opened there, since the next journey's `open` keeps
@@ -409,8 +411,8 @@ not yet moved to journeys to its `LEGACY` entry. The features:
   lists, the shelves Add a list will offer, and a start at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
   over the live garden, the row `home-icons` (the home's 24 icon PNGs
-  loaded on the device), the row `home-probe-motion` (the motion plan
-  over the live furrows), and the field in its layout: the greeting and
+  loaded on the device), the field kept at its scroll offset on every way
+  back (`home-scroll-kept`), and the field in its layout: the greeting and
   the Today card with one `Start` or `Practice anyway` fixed on top,
   furrows of plant buttons with their captions and no numbers, a choice
   with `Practice` or `Learn`, `Add a list` under `Lists`, the gold dot on

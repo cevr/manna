@@ -5,8 +5,9 @@
  * the bar rig (`src/test/bar-rig.tsx`), which holds every frame to home's
  * rules (`homeFaults`) beside its own, over a reader who holds a passage.
  * Each case names its expected values written out: what the fixed top and
- * the scroll view each hold (down it the rows, the legend, `Add a list` and
- * the end rows: hsaddlist), the Today card with `Practice anyway` when
+ * the scroll view each hold (down it the rows, each with no icon, `Add a
+ * list` and the end rows: hsaddlist; no legend and no Mark 4:28: hsrows),
+ * the Today card with `Practice anyway` when
  * nothing is due; a tap on a plant opening Today on its verse at once (a
  * seed in its second furrow, a verse not planted, another seed), with no
  * plant left selected back on home; `Start` then leading to Today as the
@@ -51,14 +52,13 @@ const by = (host: Element, id: string) => [...host.querySelectorAll(`[data-testi
 const placed = (host: Element, id: string) =>
   by(host, id).map((node) => `${placeOf(node)}:${text(node)}`);
 
-/** The scroll view's parts whose order down the page the layout names: the rows, the legend, `Add a list`, the end rows. */
-const ORDER = ['row', 'legend', 'add-list', 'end-row'];
+/** The scroll view's parts whose order down the page the layout names: the rows, `Add a list`, the end rows. */
+const ORDER = ['row', 'add-list', 'end-row'];
 
 /** The field as home lays it out: what the fixed top and the scroll view each hold, and the order of `ORDER`'s parts. */
 const layoutOf = (host: Element) => {
   const controls = [...host.querySelectorAll(CONTROLS)];
   const greeting = by(host, 'greeting')[0];
-  const legend = by(host, 'legend')[0];
   return {
     top: {
       greeting: placed(host, 'greeting'),
@@ -74,7 +74,7 @@ const layoutOf = (host: Element) => {
       add: by(host, 'add-list').map((node) => `${placeOf(node)}:${nameOf(node)}`),
       rows: by(host, 'row').map((row) => ({
         place: placeOf(row),
-        icon: iconOf(row.querySelector('[data-testid="furrow-icon"] img')),
+        images: row.querySelectorAll('img').length,
         title: text(row.querySelector('[data-testid="row-title"]')),
         caption: text(row.querySelector('[data-testid="caption"]')),
         controls: [...row.querySelectorAll(CONTROLS)]
@@ -83,9 +83,8 @@ const layoutOf = (host: Element) => {
         plants: by(row, 'field-plant').map(nameOf),
         numbers: by(row, 'field-plant').filter((plant) => /\d/u.test(text(plant))).length,
       })),
-      legend: [...(legend?.querySelectorAll('img') ?? [])].map(iconOf),
-      legendPlace: legend === undefined ? '<none>' : placeOf(legend),
-      caption: text(legend?.lastElementChild),
+      legend: by(host, 'legend').length,
+      mark: [...host.querySelectorAll('*')].filter((node) => text(node) === 'Mark 4:28').length,
       ends: controls
         .filter((node) => placeOf(node) === 'scroll')
         .map(nameOf)
@@ -130,7 +129,7 @@ for (const scheme of SCHEMES)
           rows: [
             {
               place: 'scroll',
-              icon: 'bow',
+              images: 0,
               title: 'Isaiah 41:10',
               caption: '1 verse · 1 planted',
               controls: ['Open Isaiah 41:10'],
@@ -139,7 +138,7 @@ for (const scheme of SCHEMES)
             },
             {
               place: 'scroll',
-              icon: 'scroll',
+              images: 0,
               title: 'Isaiah 41:10-12',
               caption: '3 verses · 2 planted',
               controls: ['Open Isaiah 41:10-12'],
@@ -147,11 +146,10 @@ for (const scheme of SCHEMES)
               numbers: 0,
             },
           ],
-          legend: ['seed', 'blade', 'ear', 'corn'],
-          legendPlace: 'scroll',
-          caption: 'Mark 4:28',
+          legend: 0,
+          mark: 0,
           ends: ['Settings', 'How Heartseed works'],
-          order: ['row', 'row', 'legend', 'add-list', 'end-row', 'end-row'],
+          order: ['row', 'row', 'add-list', 'end-row', 'end-row'],
         },
       });
       expect(by(host, 'dot')).toEqual([]);

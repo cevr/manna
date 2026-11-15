@@ -1,0 +1,49 @@
+test "A hymn opens and reads in sung order."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  expect state hymnShown.parts.0 .key == "stanza-1"
+  expect state hymnShown.parts.1 .key == "refrain-1"
+  expect state hymnShown.parts.2 .key == "stanza-2"
+  expect state hymnShown.parts.3 .key == "refrain-2"
+  expect text "stanza-1" == "All creatures of our God and King,\nLift up your voice with us and sing:\nAlleluia! Alleluia!\nO burning sun with golden beam\nAnd silver moon with softer gleam:"
+  expect text "refrain-1" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
+  expect text "stanza-2" == "O rushing wind and breezes soft,\nO clouds that ride the winds aloft:\nOh, praise Him! Alleluia!\nO rising morn, in praise rejoice,\nO lights of evening, find a voice."
+  expect text "refrain-2" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
+  perf
+    back
+    clock settle
+  expect perf built "HymnRow" == 0
+  expect perf query listRows == 0
+  expect tree missing "hymn-title"
+  expect tree has "hymn-2"
+
+test "A hymn's address opens it."
+  at "/hymns/2"
+  clock data
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  back
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
+test "A hymn's address stays on it through a reload." on web
+  at "/hymns/2"
+  clock data
+  reload
+  clock data
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  back
+  clock settle
+  expect text "title" == "Hymns"
+
+test "An address that names no hymn says so."
+  at "/hymns/999"
+  clock data
+  expect text "hymn-title" == "No Such Hymn"
+  back
+  clock settle
+  expect text "title" == "Hymns"

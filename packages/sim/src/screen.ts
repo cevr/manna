@@ -352,6 +352,31 @@ export const motionOf = (area: Area, after: ReadonlyArray<Node>, direction: Dire
     },
   });
 
+/** Which pan names a run of pans' motion: a lost view over any move, a move over none. */
+const WEIGHT: Record<Motion['_tag'], number> = { Unmoved: 0, Moved: 1, Gone: 2 };
+
+/**
+ * What a run of pans did, so far: `Gone` once any pan lost its view, else
+ * `Moved` once any pan moved, else `Unmoved`; and the first pan that lost
+ * its view (as `<x>,<y> by <dx>,<dy>`), if any.
+ */
+interface Panned {
+  readonly motion: Motion;
+  readonly lost: Option.Option<string>;
+}
+
+/** A run of no pans: nothing moved, no view lost. */
+export const NO_PANS: Panned = { motion: Motion.Unmoved(), lost: Option.none() };
+
+/** The run `seen` after one more pan, `pan`, that did `motion`. */
+export const afterPan = (seen: Panned, motion: Motion, pan: string): Panned => {
+  let lost = seen.lost;
+  if (Motion.$is('Gone')(motion)) lost = Option.orElse(seen.lost, () => Option.some(pan));
+  let most = seen.motion;
+  if (WEIGHT[motion._tag] > WEIGHT[seen.motion._tag]) most = motion;
+  return { motion: most, lost };
+};
+
 /**
  * Whether the content of `area` has come to rest between two snapshots
  * taken after a pan, `earlier` and `later`: the same view's content lies at

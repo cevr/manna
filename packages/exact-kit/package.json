@@ -16,7 +16,7 @@
     "./no-copy/testing": "./src/no-copy/testing.ts"
   },
   "scripts": {
-    "exact": "bun lab/heartseed-exact/exact.mjs",
+    "exact": "cd lab/heartseed-exact && bun ../../src/bin.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test ./src"
   },

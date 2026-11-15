@@ -36,7 +36,7 @@ The one screen so far: Isaiah 41:10, **Hear it** (the system voice reads it, eac
 | `app.test.contract`        | The app's own test: its name heads the first screen                                                     |
 | `tools/`                   | Host scripts: `prepare.ts`, `passage.ts`, and drives a `.test.contract` cannot hold                     |
 | `strings/en.json`          | The purpose strings of the app's grants                                                                 |
-| `exact.mjs`                | The launcher `bun run exact` runs: the wrapper in `@manna/exact-kit`                                    |
+| `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`             |
 
 A feature's names start with its own (`today…`), since its members share the root's one namespace. Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports runs it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would, as `src/app.test.ts` does.
 

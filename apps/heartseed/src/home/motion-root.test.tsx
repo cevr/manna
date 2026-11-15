@@ -11,7 +11,7 @@ import { START } from '../test/clock';
 import { historyOf, recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
 import { DAY } from '../test/garden-model';
-import { entryOf, moving, swayOf, under } from '../test/motion';
+import { entryOf, moving, under } from '../test/motion';
 import { motionFaults } from '../test/motion-rule';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
@@ -82,48 +82,27 @@ const reachable = (node: Element) => {
 const seen = (host: Element) =>
   by(host, 'row').map((row) => ({
     title: text(row.querySelector('[data-testid="row-title"]')),
-    icon: entryOf(row.querySelector('[data-testid="furrow-icon"]'), row),
-    plants: by(row, 'field-plant').map((plant) => {
-      const drawing = plant.querySelector('[data-testid="plant-image"],[data-testid="plant-soil"]');
-      return [
-        labelOf(plant).replace(/, ready today$/u, ''),
-        entryOf(drawing, plant),
-        swayOf(drawing, plant),
-      ];
-    }),
+    images: row.querySelectorAll('img').length,
+    plants: by(row, 'field-plant').map((plant) => labelOf(plant).replace(/, ready today$/u, '')),
   }));
 
 describe('home motion through the root', () => {
-  it('M1 staggers furrow icons and planted plants, holds long delays, sways full corn and leaves soil still', () =>
+  it('M1 draws the furrows with no image and moves nothing on home, full corn included', () =>
     under('no-preference', async () => {
       const rig = await home();
       await frame();
       expect(seen(rig.host)).toEqual([
-        {
-          title: passage.reference,
-          icon: 0,
-          plants: [[`${passage.reference}, full corn`, 70, true]],
-        },
+        { title: passage.reference, images: 0, plants: [`${passage.reference}, full corn`] },
         {
           title: 'Psalms 119:1-20',
-          icon: 90,
+          images: 0,
           plants: Array.from({ length: 20 }, (_, place) => {
-            if (place === 1) return [`${heldVerse(2)}, seed`, 230, false];
-            if (place === 19) return [`${heldVerse(20)}, seed`, 1200, false];
-            return [`${heldVerse(place + 1)}, not planted`, null, false];
+            if (place === 1 || place === 19) return `${heldVerse(place + 1)}, seed`;
+            return `${heldVerse(place + 1)}, not planted`;
           }),
         },
       ]);
-      expect(rig.faults).toEqual([]);
-      await rig.leave();
-    }));
-
-  it('M2 moves only hidden drawings holding one image, never text or controls', () =>
-    under('no-preference', async () => {
-      const rig = await home();
-      await frame();
-      expect(moving(rig.host).length).toBeGreaterThanOrEqual(5);
-      expect(motionFaults(rig.host)).toEqual([]);
+      expect(moving(rig.host).map((node) => node.getAttribute('style'))).toEqual([]);
       expect(rig.faults).toEqual([]);
       await rig.leave();
     }));
@@ -153,14 +132,12 @@ describe('home motion through the root', () => {
       await rig.leave();
     }));
 
-  it('M4 enters nothing under Reduce Motion, holds nothing unseen and rests full corn upright', () =>
+  it('M4 moves nothing on home under Reduce Motion', () =>
     under('reduce', async () => {
       const rig = await home();
       await frame();
       await frame();
-      expect(moving(rig.host).map((node) => node.getAttribute('style'))).toEqual([
-        'transform: rotate(0deg);',
-      ]);
+      expect(moving(rig.host).map((node) => node.getAttribute('style'))).toEqual([]);
       expect(rig.faults).toEqual([]);
       await rig.leave();
     }));

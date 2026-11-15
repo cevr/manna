@@ -64,6 +64,9 @@ export const ACTIONS = ['Say it', 'Listening', 'Next'] as const;
 /** A missed word's mark, the one control allowed inside Today's scroll view. */
 const PEEK_MARK = /^Missed word \d+$/;
 
+/** A word to peek at at rest, by its test id: like a missed word's mark, a control of the verse's own. */
+const PEEK_AT_REST = /^peek-\d+$/;
+
 const CONTROLS =
   '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],[role="radiogroup"],input,a[href]';
 
@@ -251,6 +254,11 @@ export const footerFaults = (host: Element): string[] => {
   for (const node of host.querySelectorAll(CONTROLS)) {
     if (!scrolled(node)) continue;
     if (node.getAttribute('role') === 'button' && PEEK_MARK.test(nameOf(node))) continue;
+    if (
+      node.getAttribute('role') === 'button' &&
+      PEEK_AT_REST.test(node.getAttribute('data-testid') ?? '')
+    )
+      continue;
     out.push(
       `a control in the scroll view: ${node.getAttribute('role') ?? node.tagName}:${(ACTIONS as readonly string[]).includes(nameOf(node)) || nameOf(node) === 'Grade' ? nameOf(node) : 'other'}`,
     );

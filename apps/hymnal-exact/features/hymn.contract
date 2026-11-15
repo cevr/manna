@@ -1,0 +1,43 @@
+// A hymn's page, pushed over the list: its words in the order they are sung,
+// each stanza under its number and the refrain written out each time it is
+// sung (app.ts `hymnPage`, src/hymn/page.ts). Off a hymn's route the page is
+// asked for "" and answers the empty page, so the words a popped hymn showed
+// are not kept, and a relaunch holds what a fresh launch does.
+use EmptyState from "exact:content"
+
+shape HymnPart
+  key: string
+  label: string
+  text: string
+
+shape HymnText
+  number: number
+  title: string
+  topic: string
+  parts: HymnPart[]
+
+members HymnalExact
+  derive hymnOpen = match stack(nav).filter(e => e.name == "hymn").at(-1) { case some(e) => e.params.n, case none => "" }
+  resource hymnShown = hymnPage(hymnOpen) as shape HymnText
+
+component HymnPage
+  props
+    entry: Entry
+    page: HymnText
+    ready: bool
+  view
+    column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" align-items="center" padding="8px 16px"
+        text (not ready ? "" : page.number == 0 ? "No Such Hymn" : page.title) role="heading" aria-level=2 testId="hymn-title"
+      if ready and page.number == 0
+        EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
+      else
+        scroll id="hymn-words" flex=1 min-height=0
+          if ready
+            column padding=16 gap=20
+              text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"
+              for p in page.parts key=p.key
+                column gap=4
+                  text p.label font="-exact-headline" color="-exact-secondary-label"
+                  text p.text white-space="pre-line" testId=p.key

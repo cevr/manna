@@ -13,7 +13,7 @@ const Bunfig = Schema.Struct({
 });
 
 /** A workspace as the preload reader reads it. */
-interface Workspace {
+export interface Workspace {
   /** Its folder from the repo's root. */
   readonly dir: string;
   readonly scripts: Readonly<Record<string, string>>;
@@ -100,15 +100,17 @@ const preloadsOf = (workspace: Workspace, task: string): ReadonlyArray<string> =
   ),
 ];
 
-/** A preload module of the repo: its workspace's folder and the tasks that preload it. */
+/** A module of the repo a workspace preloads: its path from the root, the workspace's folder and the tasks there that preload it. */
 interface PreloadModule {
+  readonly file: string;
   readonly dir: string;
   readonly tasks: ReadonlyArray<string>;
 }
 
 /**
- * Each module of the repo a workspace's task preloads (`preloadsOf`), by its
- * path from the root, with the tasks that preload it: bun loads it before
+ * Each module of the repo a workspace's task preloads (`preloadsOf`), once
+ * for each workspace that preloads it, with the tasks there that preload it
+ * (a module two workspaces preload is held to each one's turbo config): bun loads it before
  * the task's tests, so what it reads the tests run with. A preload resolves
  * from the workspace's folder, as an import there does, a bare path
  * (`src/setup.ts`) as a relative one when it names no package; `unresolved`
@@ -119,6 +121,7 @@ export const preloadModules = (
   resolve: (from: string, specifier: string) => Resolved,
 ) => {
   const modules = new Map<string, PreloadModule>();
+  const keyOf = (dir: string, file: string) => `${dir}\n${file}`;
   const unresolved: Array<{
     readonly dir: string;
     readonly task: string;
@@ -134,11 +137,13 @@ export const preloadModules = (
         if (resolved._tag === 'Unresolved')
           unresolved.push({ dir: workspace.dir, task, specifier });
         if (resolved._tag !== 'Module') continue;
-        const held = modules.get(resolved.file);
-        modules.set(resolved.file, {
+        const key = keyOf(workspace.dir, resolved.file);
+        const held = modules.get(key);
+        modules.set(key, {
+          file: resolved.file,
           dir: workspace.dir,
           tasks: [...new Set([...(held?.tasks ?? []), task])],
         });
       }
-  return { modules, unresolved };
+  return { modules: [...modules.values()], unresolved };
 };

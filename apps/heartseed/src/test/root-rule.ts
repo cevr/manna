@@ -268,13 +268,12 @@ export const homeRuleFaults = (on: string, host: Element, controls: readonly Ele
 };
 
 /** The Lists section's parts by test id, as the field draws them down the page. */
-const LISTS_PARTS = ['row', 'legend', 'add-list', 'limit', 'end-row'];
+const LISTS_PARTS = ['row', 'add-list', 'limit', 'end-row'];
 
 /**
  * hsaddlist's place of the Lists section's foot (owner, q97): `Add a list`
- * or the limit line under every furrow's row and the legend and above the
- * end rows (`<id> above a row`, `<id> above the legend`, `<id> under an end
- * row`), in document order.
+ * or the limit line under every furrow's row and above the end rows (`<id>
+ * above a row`, `<id> under an end row`), in document order.
  */
 const footFaults = (host: Element) => {
   const order = [
@@ -285,7 +284,6 @@ const footFaults = (host: Element) => {
     if (id !== 'add-list' && id !== 'limit') continue;
     const after = order.slice(at + 1);
     if (after.includes('row')) out.push(`${id} above a row`);
-    if (after.includes('legend')) out.push(`${id} above the legend`);
     if (order.slice(0, at).includes('end-row')) out.push(`${id} under an end row`);
   }
   return out;
@@ -520,7 +518,7 @@ const WORD_RUN = /[\p{L}\p{N}]/u;
 /** How many words (whitespace runs holding a letter or number) `text` holds. */
 const wordCount = (text: string) => text.split(/\s+/u).filter((run) => WORD_RUN.test(run)).length;
 
-/** The verse view a break or line sits in, and its words: `passage` by its lines' text, `reading` or the cue's view by its `word-<i>` children; none for any other parent. */
+/** The verse view a break or line sits in, and its words: `passage` by its lines' text, `reading` or the cue's view by its `word-<i>` children (or `peek-<i>`, a word to peek at at rest); none for any other parent. */
 const verseViewOf = (node: Element): { readonly words: number } | null => {
   const parent = node.parentElement;
   if (parent === null) return null;
@@ -534,7 +532,7 @@ const verseViewOf = (node: Element): { readonly words: number } | null => {
       ),
     };
   const words = [...parent.children].filter((child) =>
-    (child.getAttribute('data-testid') ?? '').startsWith('word-'),
+    /^(word|peek)-/.test(child.getAttribute('data-testid') ?? ''),
   ).length;
   if (id === 'reading' || words > 0) return { words };
   return null;

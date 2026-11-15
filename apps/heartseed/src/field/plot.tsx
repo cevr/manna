@@ -1,36 +1,31 @@
 /**
- * The field's furrows as home A draws them. A furrow's head holds its icon,
- * then its title (never a heading: a reference may spell `Your field` or
- * `Today`, and the field holds one heading, its own) and its caption
- * (`captionOf`) inside one button, `Open <title>`, at least 44 pt tall,
- * with a chevron hidden from the screen reader: its tap opens the list's
- * own page, where a held passage or Handbook list is removed. Under
- * it, its plants, then a soil line. Each plant is one button named
- * `<reference>, <stage>` (then `, ready today`), whose tap starts its verse
- * (`./screen`); inside it, hidden from the screen reader, the gold dot of
- * a plant ready today, its stage drawn with the home's icons of the scheme
- * now (bare soil before planting), and no text. The legend draws
- * the four stages the same way, over Mark 4:28. Every text is a text role
- * of the scheme, and every fill a role.
+ * The field's furrows as home draws them. A furrow's head holds its title
+ * (never a heading: a reference may spell `Your field` or `Today`, and the
+ * field holds one heading, its own) and its caption (`captionOf`) inside
+ * one button, `Open <title>`, at least 44 pt tall, with a chevron hidden
+ * from the screen reader, and no icon: its tap opens the list's own page,
+ * where a held passage or Handbook list is removed and each verse's stage
+ * is drawn. Under it, its plants, then a soil line. Each plant is one
+ * button named `<reference>, <stage>` (then `, ready today`), whose tap
+ * starts its verse (`./screen`); inside it, hidden from the screen reader,
+ * the gold dot of a plant ready today over a dash, `ink` once planted and
+ * `soil` before, and no text or image. A pressed plant or title is filled
+ * `hearing`. Nothing moves. Every text is a text role of the scheme, and
+ * every fill a role.
  */
 
 import { Match, Option } from 'effect';
-import { Fragment, useMemo, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { PlantStage } from '../field';
-import { STAGES, type Stage } from '../garden';
+import type { Stage } from '../garden';
 import type { Furrow, FurrowPlant, HomeIcon } from '../home';
 import { ICON_IMAGES } from '../home/icons';
-import { motionOf, type FurrowMotion, type PlantMotion } from '../home/motion';
 import { themed, useScheme, useThemed } from '../look';
 import { passageReference, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
-import { EnteringIcon, Moves } from './moves';
 
-const STILL_PLANT: PlantMotion = { spring: Option.none(), sway: false };
-
-/** The icon each stage is drawn with, on the field and at the end of a run: full corn as `corn`. */
+/** The icon each stage is drawn with, on a list's page and at the end of a run: full corn as `corn`. */
 export const DRAWN: Readonly<Record<Stage, HomeIcon>> = {
   seed: 'seed',
   blade: 'blade',
@@ -107,40 +102,28 @@ export function Control({
   );
 }
 
-/** A plant's stage drawn: its icon, or bare soil before planting. */
-function Drawing({ stage, motion }: { readonly stage: PlantStage; readonly motion: PlantMotion }) {
-  const styles = useThemed(sheets);
-  if (stage === 'not planted') return <View aria-hidden testID="plant-soil" style={styles.bare} />;
-  return (
-    <Moves motion={motion}>
-      <Icon testID="plant-image" name={DRAWN[stage]} size={32} />
-    </Moves>
-  );
-}
-
-/** One plant: a button over its dot and its drawing, each hidden inside it, with no text. */
+/** One plant: a button over its dot and its dash, each hidden inside it, with no text; filled `hearing` while pressed. */
 function Plot({
   plant,
-  motion,
   onPlant,
 }: {
   readonly plant: FurrowPlant;
-  readonly motion: PlantMotion;
   readonly onPlant: (reference: string) => void;
 }) {
-  const look = useLook();
   const styles = useThemed(sheets);
+  const planted = plant.stage !== 'not planted';
   return (
     <Pressable
       testID="field-plant"
       role="button"
       aria-label={plant.label}
       onPress={() => onPlant(plant.reference)}
-      style={({ pressed }) => [styles.plot, pressed && look.pressed]}
+      style={({ pressed }) => [styles.plot, pressed && styles.pressed]}
     >
       {plant.ready && <View aria-hidden testID="dot" style={[styles.dot, styles.ready]} />}
       {!plant.ready && <View aria-hidden style={styles.dot} />}
-      <Drawing stage={plant.stage} motion={motion} />
+      {planted && <View aria-hidden testID="plant-sown" style={[styles.dash, styles.sown]} />}
+      {!planted && <View aria-hidden testID="plant-soil" style={[styles.dash, styles.bare]} />}
     </Pressable>
   );
 }
@@ -163,52 +146,40 @@ export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
     }),
   );
 
-/** One furrow: its head (icon, then its title and caption as one button, `Open <title>`, with a chevron, which opens its list view), its plants, and its soil line. */
-export function FurrowRow({
+/** One furrow: its head (its title and caption as one button, `Open <title>`, with a chevron, which opens its list view, filled `hearing` while pressed), its plants, and its soil line. */
+function FurrowRow({
   furrow,
-  motion,
   onPlant,
   onOpen,
 }: {
   readonly furrow: Furrow;
-  readonly motion: FurrowMotion;
   readonly onPlant: (reference: string) => void;
   readonly onOpen: (id: string) => void;
 }) {
   const styles = useThemed(sheets);
   return (
     <View testID="row" style={styles.furrow}>
-      <View style={styles.head}>
-        <EnteringIcon delay={motion.icon}>
-          <Icon testID="furrow-icon" name={furrow.icon} size={28} />
-        </EnteringIcon>
-        <Pressable
-          role="button"
-          aria-label={`Open ${furrow.title}`}
-          onPress={() => onOpen(furrow.id)}
-          style={({ pressed }) => [styles.open, pressed && styles.openPressed]}
-        >
-          <View style={styles.names}>
-            <Text testID="row-title" style={styles.title}>
-              {furrow.title}
-            </Text>
-            <Text testID="caption" style={styles.furrowCaption}>
-              {furrow.caption}
-            </Text>
-          </View>
-          <Text aria-hidden style={styles.chevron}>
-            ›
+      <Pressable
+        role="button"
+        aria-label={`Open ${furrow.title}`}
+        onPress={() => onOpen(furrow.id)}
+        style={({ pressed }) => [styles.open, pressed && styles.pressed]}
+      >
+        <View style={styles.names}>
+          <Text testID="row-title" style={styles.title}>
+            {furrow.title}
           </Text>
-        </Pressable>
-      </View>
+          <Text testID="caption" style={styles.furrowCaption}>
+            {furrow.caption}
+          </Text>
+        </View>
+        <Text aria-hidden style={styles.chevron}>
+          ›
+        </Text>
+      </Pressable>
       <View style={styles.plots}>
         {furrow.plants.map((plant, index) => (
-          <Plot
-            key={index}
-            plant={plant}
-            motion={motion.plants[index] ?? STILL_PLANT}
-            onPlant={onPlant}
-          />
+          <Plot key={index} plant={plant} onPlant={onPlant} />
         ))}
       </View>
       <View aria-hidden style={styles.soil} />
@@ -216,7 +187,7 @@ export function FurrowRow({
   );
 }
 
-/** The field's rows share one motion plan per furrows value; only their icon and plant images move. `underFirst` sits directly under the first row. */
+/** The field's rows, in order; `underFirst` sits directly under the first row. */
 export function Furrows({
   furrows,
   onPlant,
@@ -228,36 +199,12 @@ export function Furrows({
   readonly onOpen: (id: string) => void;
   readonly underFirst?: ReactNode;
 }) {
-  const motion = useMemo(() => motionOf(furrows), [furrows]);
   return furrows.map((furrow, index) => (
     <Fragment key={index}>
-      <FurrowRow
-        furrow={furrow}
-        motion={motion[index] ?? { icon: Option.none(), plants: [] }}
-        onPlant={onPlant}
-        onOpen={onOpen}
-      />
+      <FurrowRow furrow={furrow} onPlant={onPlant} onOpen={onOpen} />
       {index === 0 && underFirst}
     </Fragment>
   ));
-}
-
-/** The four stages as the plants draw them, named, hidden from the screen reader, over Mark 4:28. */
-export function Legend() {
-  const styles = useThemed(sheets);
-  return (
-    <View testID="legend" style={styles.legendPlace}>
-      <View aria-hidden style={styles.legend}>
-        {STAGES.map((stage) => (
-          <View key={stage} style={styles.key}>
-            <Icon name={DRAWN[stage]} size={24} />
-            <Text style={styles.keyName}>{stage}</Text>
-          </View>
-        ))}
-      </View>
-      <Text style={styles.caption}>Mark 4:28</Text>
-    </View>
-  );
 }
 
 const sheets = themed((color, face) =>
@@ -279,16 +226,14 @@ const sheets = themed((color, face) =>
     pillText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     strongText: { color: color.onInk },
     furrow: { gap: 8 },
-    head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     open: {
-      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       minHeight: 44,
       borderRadius: 12,
     },
-    openPressed: { backgroundColor: color.card },
+    pressed: { backgroundColor: color.hearing },
     names: { flex: 1, gap: 2 },
     chevron: { fontFamily: face, fontSize: 22, fontWeight: '600', color: color.quiet },
     title: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
@@ -304,24 +249,9 @@ const sheets = themed((color, face) =>
     },
     dot: { width: 8, height: 8, borderRadius: 4 },
     ready: { backgroundColor: color.sun },
-    bare: {
-      width: 24,
-      height: 3,
-      marginVertical: 14,
-      borderRadius: 1.5,
-      backgroundColor: color.soil,
-    },
+    dash: { width: 24, height: 3, marginVertical: 14, borderRadius: 1.5 },
+    sown: { backgroundColor: color.ink },
+    bare: { backgroundColor: color.soil },
     soil: { height: 2, borderRadius: 1, backgroundColor: color.furrow },
-    legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
-    legend: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      columnGap: 12,
-      rowGap: 4,
-    },
-    key: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    keyName: { fontFamily: face, fontSize: 12, color: color.ink },
-    caption: { fontFamily: face, fontStyle: 'italic', fontSize: 13, color: color.ink },
   }),
 );

@@ -68,7 +68,7 @@ export const FIELD_PLACES = [
   'home from Today',
   'Today by a plant',
   'home from its Today',
-  'every stage',
+  'sown and bare plants',
   'the list page',
   'the ask',
   'a remove refused',
@@ -108,7 +108,7 @@ const launchScreens = async (scheme: Scheme, report: string[], reached: string[]
   return { rig, presses, step };
 };
 
-/** The field (every stage, a remove asked and pending) and About in `scheme`: the faults found, the places reached and how many controls were seen pressed. */
+/** The field (sown and bare plants, a remove asked and pending) and About in `scheme`: the faults found, the places reached and how many controls were seen pressed. */
 export const walkFieldScreens = async (scheme: Scheme) => {
   const report: string[] = [];
   const reached: string[] = [];
@@ -123,14 +123,10 @@ export const walkFieldScreens = async (scheme: Scheme) => {
     await step(bare, 'Today', 'Today by a plant');
     await step('Your field', 'Your field', 'home from its Today');
   }
-  const drawn = new Set(
-    [...rig.host.querySelectorAll('img')].flatMap(
-      (node) =>
-        /\/assets\/home\/(seed|blade|ear|corn)-/u.exec(String(node.getAttribute('src')))?.[1] ?? [],
-    ),
+  const dashes = ['plant-sown', 'plant-soil'].filter(
+    (id) => rig.host.querySelector(`[data-testid="${id}"]`) !== null,
   );
-  if (rig.host.querySelectorAll('[data-testid="plant-soil"]').length > 0) drawn.add('soil');
-  if (drawn.size >= 5) reached.push('every stage');
+  if (dashes.length === 2) reached.push('sown and bare plants');
   await step('Open Psalms 117:1-2', 'Psalms 117:1-2', 'the list page');
   await step('Remove Psalms 117:1-2', 'Psalms 117:1-2', 'the ask');
   const pending = { frames: 0 };

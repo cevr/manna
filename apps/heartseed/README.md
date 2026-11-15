@@ -522,8 +522,11 @@ the end keep their own drawings and motion.
   seed at the first recall or one graded Again; else a blade when the
   recall was helped, by a peek or by the cue the stage before it gives
   (first letters at a seed); else an ear (recalled with nothing, a miss
-  with no peek included). The help is derived from the recalls, never
-  stored, so a history said with nothing at a seed reads as a blade.
+  with no peek included). A recall with every word peeked right after a
+  step back (the try after `Show all`) keeps the stage the step back
+  landed on, so `Show all` costs one stage in all. The help is derived
+  from the recalls, never stored, so a history said with nothing at a
+  seed reads as a blade.
   `growthOf(plant, startedAt)` is the recital's growth: the stage over the
   recalls before it and over those up to it, some only when there were
   recalls before and the stage rose.
@@ -630,7 +633,7 @@ launch counts them.
   through a landed remove (Choosing a passage, below). Every number
   derives from the garden's view each time the field shows.
 - `src/field/screen.tsx` draws a `Field` in home's layout (Home,
-  below), its furrows and legend in `src/field/plot.tsx` and its cards in
+  below), its furrows in `src/field/plot.tsx` and its cards in
   `src/field/card.tsx`. Fixed above the scroll view: the greeting (testID
   `greeting`, the sun or the moon, then its words in `sun`, plain text),
   then one card: the Today card, or a remove's ask (Choosing a passage, below), and under it a remove's
@@ -650,15 +653,15 @@ launch counts them.
   does; else no button. With no plan and no button the card
   is absent. In the scroll view: the heading `Your field`, the days sown
   and the harvest, the label `Lists`, one furrow per row (`furrowsOf`;
-  testID `row`), a legend of the four stages (testID `legend`), hidden
-  from the screen reader, over the caption `Mark 4:28`, then at the Lists
-  section's foot `Add a list` (testID `add-list`, opening the Add a list
-  sheet over home: Choosing a passage) or the limit line, in every state,
-  first run included (owner, q97: "At the very bottom of Lists, under the
-  stage line, just above Settings."), then two rows the width of the
-  field (testID `end-row`): `Settings` (Settings, below) and `How
-  Heartseed works`, which replays the welcome (Home, below: the tour). A
-  furrow's head holds its icon (`furrow-icon`), its title as one button
+  testID `row`), then at the Lists section's foot `Add a list` (testID
+  `add-list`, opening the Add a list sheet over home: Choosing a passage)
+  or the limit line, in every state, first run included (owner, q97: "At
+  the very bottom of Lists, under the stage line, just above Settings.",
+  the stage line being the furrows' last; home holds no legend of the
+  stages and no `Mark 4:28`: owner scrawl, hsrows), then two rows the
+  width of the field (testID `end-row`): `Settings` (Settings, below) and `How Heartseed works`,
+  which replays the welcome (Home, below: the tour). A furrow's head
+  holds no icon (owner scrawl, hsrows), only its title as one button
   named `Open <title>`, at least 44 pt tall, showing the title and a `›`
   hidden from the screen reader (never a heading, so a reference spelled
   `Your field` or `Today` adds none), which opens the list's own page
@@ -671,10 +674,22 @@ launch counts them.
   `<reference>, <stage>`, then `, ready today` for a verse of the plan's
   open items, never shown selected; inside it,
   hidden, the gold dot (testID `dot`, filled `sun`, at least 3:1 on the
-  ground) when ready, the stage's image
-  (`seed`, `blade`, `ear` or `corn` from `ICON_IMAGES`, of the scheme
-  now) or bare soil (`plant-soil`) for a verse not planted, and no number.
-  Every icon is hidden from the screen reader; nothing moves.
+  ground) when ready, over one dash: `plant-sown`, filled `ink`, for a
+  planted verse at any stage, or `plant-soil`, filled `soil`, for a verse
+  not planted; no image, no number. A verse's stage is drawn on its
+  list's page (Lists, below) and on Today, and VoiceOver reads it in the
+  plant's name. While pressed, a plant and a furrow's `Open <title>` are
+  filled `hearing` (a role every text role reads at AA on), and nothing
+  else on home changes. Every icon is hidden from the screen reader;
+  nothing moves.
+- **The scroll offset.** Home's scroll view comes back where the reader
+  left it: the root keeps its last offset (`onScroll`, every 16 ms) for
+  the launch, never stored, and each mount of home opens there
+  (`contentOffset` for the first native frame, and a `scrollTo` from the
+  scroll view's ref on the web), so a way back from Today, a list's page,
+  About or the welcome's replay shows the same furrows; the Settings and
+  Add a list sheets lie over home and never unmount it. A launch opens at
+  the top.
   Every text is in a text role at WCAG AA on what lies behind it. At most
   one filled button shows on home.
 - **A tap on a plant** goes straight into Today on its verse, whole, with
@@ -868,7 +883,7 @@ and its footer are fixed outside the scroll views; `Add a list` lies in
 the field's scroll view, at the foot of the lists it changes.
 
 - **The field's lists**: under the heading's days sown and harvest, the
-  label `Lists`, the rows and the legend, then, with the passages read,
+  label `Lists`, the rows, then, with the passages read,
   just above `Settings`, `Add a list` (testID `add-list`) while fewer than 3
   passages and lists are held together, else the limit line "3 passages or
   lists, the most for now. Remove one to add another." (testID `limit`),
@@ -1433,9 +1448,9 @@ session (verify-heartseed, `features/home.md`).
   typed `number` by the `.d.png.ts` beside it; a name added without its
   two PNGs fails the typecheck. They are 144 px, so a screen draws them at
   48 pt or less, except Planted's 112 pt seed. The probe shows all 24 and how many loaded
-  (`home-icons`); the field draws the furrows', the plants', the legend's,
-  the greeting's and `Add a list`'s icons; the gear is drawn only by the
-  probe. Today's stage line
+  (`home-icons`); the field draws the greeting's and `Add a list`'s icons,
+  and a list's page its furrow's icon and its plants' stages; the gear is
+  drawn only by the probe. Today's stage line
   and the first minute's Planted use `PlantImage` (`src/home/plant.tsx`)
   from the same set (Garden, above).
 - **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses of the
@@ -1477,27 +1492,18 @@ session (verify-heartseed, `features/home.md`).
   each once, in plan order. `tendedOf` gives the same over a finished run
   (the visit's items, then the plan's) and is none while anything is
   left, held or unread; Today's end draws it (Session, above).
-- **Motion** (`motionOf`, `endMotionOf`, `src/home/motion.ts`; drawn by
-  `src/field/moves.tsx`). Only drawings move: on home each furrow's icon
-  enters in turn (furrow `i` at `90·i` ms, over 300 ms), each planted
-  plant springs up after the one before it (place `j` of furrow `i` at
-  `90·i + 70·(j + 1)` ms, held at 1,200, over 420 ms), and a plant at full
-  corn sways ±3°, 1.8 s from side to side, starting and resting upright;
-  soil never moves. At the end of a run the grown plants spring one after
-  another (verse `k` at `300 + 160·k` ms, held at 1,200) and full corn
-  among them sways. The caps bound the work on any field: the first 14
-  furrows, the first 60 planted plants and the first 12 at full corn on
-  home, counted in reading order (spring and sway apart), and the first
-  12 grown at the end; the rest are drawn at rest, so every entrance has
-  ended by 1,620 ms. A moving node is an `aria-hidden` wrapper holding one
-  image and no text or control, so titles, counts, plant
-  buttons, the Today card, the end rows and the end's line and `Your field` stand
-  still and answer a tap from home's first frame. The entrance plays at
-  each mount of home (a sheet's close does not replay it). Every
-  animation passes Reanimated's `ReduceMotion.System`: with the system's
-  Reduce Motion on, nothing enters, nothing is held unseen and full corn
-  stands upright. The probe's `motion` line gives the plan over the live
-  furrows.
+- **Motion** (`endMotionOf`, `src/home/motion.ts`; drawn by
+  `src/field/moves.tsx`). Nothing moves on home: it draws no image to
+  move. At the end of a run the grown plants spring one after another
+  (verse `k` at `300 + 160·k` ms, held at 1,200, over 420 ms), and full
+  corn among them sways ±3°, 1.8 s from side to side, starting and
+  resting upright. Only the first 12 grown move; the rest are drawn at
+  rest, so every entrance has ended by 1,620 ms. A moving node is an
+  `aria-hidden` wrapper holding one image and no text or control, so the
+  end's line and `Your field` stand still and answer a tap from the first
+  frame. Every animation passes Reanimated's `ReduceMotion.System`: with
+  the system's Reduce Motion on, nothing enters, nothing is held unseen
+  and full corn stands upright.
 
 ## Lists
 
@@ -2080,7 +2086,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   disabled control (`look.disabled`, 0.6: the big button while it cannot
   be pressed, a pill or `Plant` while a remove or a plant is pending) is
   left out of AA, as WCAG leaves it. The big button's press scales it
-  (`look.pressedButton`) and changes no colour. `src/test/look.ts`'s
+  (`look.pressedButton`) and changes no colour. Home's plants and its
+  furrows' `Open <title>` are filled `hearing` while pressed instead,
+  so a press on a small dash shows. `src/test/look.ts`'s
   `seenContrast` composes these opacities and `pressedFaults` holds each
   control pressed in turn (`test:dark-screens`, `test:dark-screens-b`,
   `test:dark-screens-dark`, `test:dark-screens-dark-b`).
@@ -2192,7 +2200,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     ending at the current view).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` but its cue tests and Today's (the source Say it
-    hears, and its guards).
+    hears, its guards, and `src/sayit/help.test.ts`: a peek and `Show all`
+    before a try over the app's layer, the try's cap, the step back kept
+    at `Next` before the try, and a leave writing nothing).
   - `test:sayit-today`: `src/sayit/today.test.tsx`, Today's Say it in
     happy-dom through `src/test/today-rig.tsx`.
   - `test:cue`: `src/sayit/cue.test.tsx`, and `test:cue-say`:
@@ -2260,7 +2270,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     generated run of asks (`Move back` once or twice, then `Keep`, or
     `Keep`; first saves kept, refused or slow), each moving the verse at
     most one stage, its line or alert and the stage line matching the
-    disk.
+    disk; and `src/garden/peek-today.test.tsx`, a word peeked and `Show
+    all` on a tapped ear through the root rig, the grades above Hard
+    disabled, the step back and the try written only at `Next`, and a leave
+    writing nothing.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
@@ -2398,8 +2411,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `id=counts`, `add-verses` or `add-row`, at most one `Add a list`, at most
     one of `Start`, `Practice anyway`, `Practice <reference>` and
     `Learn <reference>`, outside the scroll view, no number in a
-    plant, and `Add a list` or the limit line under every row and the
-    legend and above the end rows), no text and no accessible name with a word range
+    plant, and `Add a list` or the limit line under every row and above
+    the end rows), no text and no accessible name with a word range
     (`[<n>-<n>]`), and no `Minutes` group, `<n> min` or `Voice` on any
     screen, and home's and Today's nodes only under their headings; and
     while the host shows `Listening`, nothing that makes the plan in reach
@@ -2409,8 +2422,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `[aria-modal]` node, each `<name> in reach while listening`;
     and to the field's rules: the way back taken only after a read
     completed, and each field frame the
-    rule's rows with their icons and captions, plants as buttons with
-    their drawings (each image's source of the scheme now), days sown and
+    rule's rows with no image and their captions, plants as buttons with
+    their dashes (`ink` once planted, `soil` before, no image), days sown and
     harvest as seen and exposed, every text at AA contrast, and home's
     frame rules, `homeFaults`, among them `Add a list` drawn with its
     `add` icon of the scheme now, the Today card (`cardFaults`) fixed above
@@ -2938,7 +2951,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/home/rule.test.ts`: home's rule (`homeRuleFaults`, the guard of
     `docs/lessons.md`'s `heartseed-home-one-start`) fed one offending frame
     per clause, each fault named (`Add a list` or the limit line above a
-    row or the legend or under an end row among them), a clean home and
+    row or under an end row among them), a clean home and
     other screens none;
     and the root rule's word-range clause (the guard of `docs/lessons.md`'s
     `heartseed-verses-whole`): a frame with a word range in a text and in an
@@ -3035,9 +3048,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     layout through `src/test/bar-rig.tsx` (launched on home, every frame
     also held to `homeFaults`), in light and in dark, its expected values written out:
     the fixed top and the scroll view and what each holds (down it the
-    rows, the legend, `Add a list` and the end rows), the Today card
-    and the end rows at AA, the
-    furrows' icons of the scheme, one tap on a plant opening Today on its
+    rows, `Add a list` and the end rows; no legend, no `Mark 4:28`), the
+    Today card and the end rows at AA, no image in a furrow, one tap on a plant opening Today on its
     verse (a seed in its second furrow, a verse not planted, another seed),
     no plant left selected back on home, `Start` then on to Today, nothing
     written; and no add, remove or limit line over unread passages.
@@ -3061,7 +3073,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Start` alone and no card lines, `Start` opening Today
     on the app's passage; a held read on pending frames, then home; a
     relaunch after a plant's tap and `Your field`, on home with no plant
-    selected and `Start` as the fresh plan gives it; and `Practice anyway` on
+    selected and `Start` as the fresh plan gives it; home scrolled to
+    137 pt, back at 137 from Today, a list's page and About (through the
+    Settings sheet), and at 0 after a relaunch; and `Practice anyway` on
     home with nothing due, opening Today on the passage, then home again as
     it was. `src/home/root-say.test.tsx`, a fresh install's
     first minute through `Continue` to home in the done state (no `Start`,
@@ -3133,13 +3147,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     they cannot prove sharpness, transparent edges, physical fit, colours,
     large-text layout, pronunciation or motion feel. An owner Release
     look from main, if requested, judges pixels.
-  - `test:home-motion`: home's motion without a mount.
-    `src/home/motion.property.test.ts`, `motionOf` and `endMotionOf`
-    against a loop with two counters written in the test, over generated
-    fields of 0-20 furrows of 0-200 plants, fields of 0-120 one-plant
-    furrows and grown lists of 0-30 verses (the shape, each delay by its
-    formula and under 1,200, the caps of 14 furrows, 60 springs and 12
-    sways, soil still, purity), each floor met at least 10 times;
+  - `test:home-motion`: the end's motion without a mount.
+    `src/home/motion.property.test.ts`, `endMotionOf` against a loop
+    written in the test, over grown lists of 0-30 verses (each delay by its
+    formula and under 1,200, the cap of 12, purity), each floor met at
+    least 10 times;
     `src/home/motion-rule.test.ts`, the frame rule `motionFaults`
     (`src/test/motion-rule.ts`, run by `homeFaults` on every home frame
     and by the root rule on every end frame: a node with an inline
@@ -3162,19 +3174,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     through the root with motion on (`under` of `src/test/motion.ts`, which
     sets happy-dom's preference and mounts a `ReducedMotionConfig` of
     `ReduceMotion.System` before the app, and puts both back in a
-    `finally`): the icons and plants at their delays and the hold, only
-    hidden drawings moving, every control seen and enabled in the first
-    frame with a plant's tap choosing it, nothing entering under Reduce
-    Motion with full corn upright, and the end's grown plant at 300 ms
-    with `Your field` in reach; every frame held to the rig's faults.
+    `finally`): no image in a furrow and nothing moving on home, full
+    corn included, with motion on and under Reduce Motion, every control
+    seen and enabled in the first frame with a plant's tap opening Today,
+    and the end's grown plant at 300 ms with `Your field` in reach; every
+    frame held to the rig's faults.
   - `test:home-motion-drawn`: `src/home/motion-drawn.test.tsx`, `Furrows`
-    mounted alone over generated fields (past 14 furrows, past 60 planted,
-    past 12 at full corn, soil alone): with motion on each icon's and
-    plant's entry and sway read from the document equal `motionOf`, the
-    caps held by their literal values (nothing moving past the 14th
-    furrow, at most 60 springs and 12 sways), no motion fault and every
-    plant button named; under Reduce Motion
-    nothing enters or is unseen and every sway rests at `rotate(0deg)`.
+    mounted alone over generated fields in light and dark, with motion on
+    and under Reduce Motion: no image in a row, each plant one exposed
+    button of its name holding a hidden dot exactly when ready over one
+    hidden dash (`plant-sown` filled `ink`, `plant-soil` filled `soil`) and
+    nothing else, nothing moving, and each plant and `Open <title>` filled
+    `hearing` while pressed (react-native-web's keyboard press) and not
+    after, with no tap.
   - `test:phrase`: the old pieces' reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `phraseReference` with `phraseOf`
     against `src/test/phrase-model.ts`'s reader over round trips, near

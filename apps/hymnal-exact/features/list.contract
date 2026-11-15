@@ -1,0 +1,59 @@
+// The home list: every hymn under the hymnal's topical sections, and the bar's
+// search over them (app.ts `hymnRows`, src/list/rows.ts).
+use EmptyState from "exact:content"
+
+shape ListRow
+  number: number
+  title: string
+
+shape RowSection
+  slug: string
+  name: string
+  rows: ListRow[]
+
+members HymnalExact
+  state listQuery = ""
+  resource listRows = hymnRows(listQuery) as shape RowSection[] else empty()
+  action listSearch(v: string)
+    listQuery = v
+
+component HymnList
+  props
+    entry: Entry
+    query: string
+    sections: RowSection[]
+    search: action
+  view
+    column navigationKey=`${entry.id}` navigationScroll="hymn-list" position="absolute" inset=0
+      display="flex" flex-direction="column"
+      header display="flex" flex-wrap="wrap" align-items="center" gap=8 padding="8px 16px"
+        text "Hymns" role="heading" aria-level=1 flex=1 testId="title"
+        input type="search" value=query input=search placeholder="Number, title or first line"
+          aria-label="Search hymns" testId="search" width="100%"
+      if sections.length == 0 and query.trim() != ""
+        column flex=1 min-height=0 testId="none-found"
+          EmptyState(symbol="symbol:search", title=`No hymn matches “${query.trim()}”.`, message="Try its number, or a line you remember.")
+      else if query.trim() == ""
+        list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 testId="hymn-list"
+          for s in sections key=s.slug
+            section
+              header
+                text s.name testId=`section-${s.slug}`
+              for r in s.rows key=r.number
+                HymnRow(row=r)
+      else
+        list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 testId="hymn-list"
+          section
+            for s in sections key=s.slug
+              for r in s.rows key=r.number
+                HymnRow(row=r)
+
+// A hymn's row: its number, then its title; a press opens the hymn.
+component HymnRow
+  props
+    row: ListRow
+  view
+    link href=path("hymn", `${row.number}`) testId=`hymn-${row.number}`
+      row gap=12 flex=1 min-width=0 align-items="baseline"
+        text `${row.number}` font-variant-numeric="tabular-nums" min-width="2.5rem"
+        text row.title flex=1 min-width=0

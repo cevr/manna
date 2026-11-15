@@ -8,13 +8,16 @@
  * names its expected screens and values: a read launch with the passage due, pending then home with its plan's counts in every
  * home frame; an unread garden on Today with no field; garbled passages,
  * home with `Start` alone; a held read, pending until its release; a
- * relaunch after a visit a plant's tap opened, which keeps none; and home with
+ * relaunch after a visit a plant's tap opened, which keeps none; home
+ * scrolled down, back at that offset from Today, a list's page and About,
+ * and at the top after a relaunch; and home with
  * nothing due, whose `Practice anyway` opens Today on the passage and comes
  * back with the card as it was. The launches that hold a recital are
  * `root-say.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
+import { act } from 'react';
 import passage from 'virtual:heartseed-passage';
 
 import { recallOf } from '../test/field-model';
@@ -23,6 +26,7 @@ import type { Time } from '../test/clock';
 import { device } from '../test/one';
 import { KEY } from '../test/passages-model';
 import { screensOf, watchedLaunch } from '../test/root-rule';
+import { openSettings, tapInSheet } from '../test/settings-rig';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -32,6 +36,9 @@ const GARBLED = 'not a list of passages';
 
 /** The passage recalled long ago, so it is due at any launch now. */
 const due = () => record(recallOf(passage.reference, Date.UTC(2020, 0, 1, 12), 3, 0));
+
+/** Home's scroll view, none off home. */
+const scrollOf = (host: Element) => host.querySelector<HTMLElement>('[data-testid="field-scroll"]');
 
 /** A launch through the field rig, every frame held to the root's rule. */
 const launch = (garden: 'read' | 'unread', held?: Promise<void>, time?: Time) =>
@@ -156,6 +163,53 @@ describe('the root', () => {
       screens: ['pending', 'Your field'],
       faults: [],
     });
+    expect(await again.end()).toEqual([]);
+  });
+
+  it('brings home back at its scroll offset from Today, a list’s page and About, and opens a relaunch at the top', async () => {
+    const time = { now: DAY + 15 * HOUR };
+    device.launch([record(recallOf(passage.reference, time.now - 2 * MINUTE, 3, 0)), VOICE_OFF]);
+    const first = await launch('read', undefined, time);
+    expect(await first.app.until(first.home)).toBe(true);
+    const offset = () => scrollOf(first.host)?.scrollTop ?? -1;
+    await act(async () => {
+      const view = scrollOf(first.host);
+      if (view === null) return;
+      view.scrollTop = 137;
+      view.dispatchEvent(new Event('scroll'));
+    });
+    const plant = first.app.buttons().find((label) => label?.startsWith(`${passage.reference}, `));
+    const trips: Record<string, number> = {};
+    const away = async (go: () => Promise<unknown>, shown: () => boolean, name: string) => {
+      await go();
+      expect([name, await first.app.until(shown)]).toEqual([name, true]);
+      await first.app.tap('Your field');
+      expect(await first.app.until(first.home)).toBe(true);
+      trips[name] = offset();
+    };
+    await away(() => first.app.tap(plant ?? '<no plant>'), first.today, 'Today');
+    await away(
+      () => first.app.tap(`Open ${passage.reference}`),
+      () => first.app.buttons().includes('Practice this list'),
+      'list',
+    );
+    await away(
+      async () => {
+        await openSettings({ host: first.host, until: first.app.until });
+        await tapInSheet('About');
+      },
+      () => first.app.buttons().includes('Licences'),
+      'About',
+    );
+    expect({ trips, faults: [...first.watch.faults, ...first.app.faults] }).toEqual({
+      trips: { Today: 137, list: 137, About: 137 },
+      faults: [],
+    });
+    expect(await first.end()).toEqual([]);
+
+    const again = await launch('read', undefined, time);
+    expect(await again.app.until(again.home)).toBe(true);
+    expect(scrollOf(again.host)?.scrollTop).toBe(0);
     expect(await again.end()).toEqual([]);
   });
 

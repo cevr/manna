@@ -139,7 +139,7 @@ journey leaves the screen.
    button named `Remove` or starting `Remove `.
    `handbook-limit/handbook-limit-line`, after the scroll down to
    `id=limit` → the text `3 passages or lists, the most for now. Remove
-   one to add another.` under `Mark 4:28` and above `Settings`; no
+   one to add another.` under the last furrow and above `Settings`; no
    `id=add-list`, no `id=add-row` (gone from the sources: read it as
    absent in the receipt).
 7. `handbook-remove`: `sim journey handbook-remove` → `"ok":true`.

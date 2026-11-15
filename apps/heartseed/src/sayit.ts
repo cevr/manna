@@ -20,13 +20,30 @@
  * (and every change after it) or `drop` lets it go, so a reader who leaves
  * before `Next` records nothing.
  *
+ * Help taken on Today at rest, before a verse's try (`reveal`, a peek at a
+ * word; `showAll`, the verse whole), is kept in the view (`help`) for that
+ * verse alone: it caps the try's grade (the suggestion taken and every
+ * grade chosen) and counts its words among the recall's peeks. A recital
+ * of another verse, `commit` and `drop` let it go, so help taken and left
+ * before `Next` records nothing.
+ *
  * Each of `Dictation.changes` has the screen show Dictation's view as it is
  * then, and tick for the words it lights since the recital's own last view
  * shown; the endings come from `Dictation.endings`, which loses none, and
  * the n-th ending is the n-th recital's, since no recital is ever replaced.
  */
 
-import { Clock, Context, Effect, Layer, MutableRef, Option, PubSub, Stream } from 'effect';
+import {
+  Array as Arr,
+  Clock,
+  Context,
+  Effect,
+  Layer,
+  MutableRef,
+  Option,
+  PubSub,
+  Stream,
+} from 'effect';
 
 import { offsetAt } from './day';
 import { Dictation, type DictationView } from './dictation';
@@ -78,14 +95,43 @@ export class Haptics extends Context.Service<Haptics, { readonly tick: Effect.Ef
   'heartseed/sayit/Haptics',
 ) {}
 
-/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, the grade chosen for it, the cue it is said under (`none` before the first recital), and the recall a recital kept at `Next` waits to hand over (none once handed over or let go). */
+/** The help a reader took on Today before saying a verse: the words peeked at rest (`peeked`, by index), the instant `Show all` showed it whole (none before), and the best grade its try may take (`cap`). */
+export interface Help {
+  readonly reference: string;
+  readonly peeked: readonly number[];
+  readonly shownAt: OrNull<number>;
+  readonly cap: Grade;
+}
+
+/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, the grade chosen for it, the cue it is said under (`none` before the first recital), the recall a recital kept at `Next` waits to hand over (none once handed over or let go), and the help taken on the verse shown, absent when none was. */
 export interface SayItView {
   readonly dictation: DictationView;
   readonly startedAt: OrNull<number>;
   readonly choice: OrNull<Grade>;
   readonly cue: Cue;
   readonly pending: OrNull<Recall>;
+  readonly help?: Help;
 }
+
+/** The best grade a peek at rest leaves the try: Hard. */
+export const PEEK_CAP: Grade = 2;
+
+/** `grade`, no better than the help's cap; `grade` itself with no help. */
+export const cappedBy = (grade: Grade, help: Option.Option<Help>): Grade =>
+  Option.match(help, {
+    onNone: () => grade,
+    onSome: (taken): Grade => {
+      if (grade <= taken.cap) return grade;
+      return taken.cap;
+    },
+  });
+
+/** The help `view` holds, none when it holds none. */
+export const helpOf = (view: SayItView): Option.Option<Help> => Option.fromUndefinedOr(view.help);
+
+/** The help `view` holds for the verse of `reference`; none when it holds none, or another verse's. */
+export const helpFor = (view: SayItView, reference: string): Option.Option<Help> =>
+  Option.filter(helpOf(view), (taken) => taken.reference === reference);
 
 /** How a recital is said: the cue the matcher grades it under, whether its recall is handed to `Recalls`, and whether that waits for `commit` (Today's `Next`) instead of its end. */
 export interface Recital {
@@ -105,6 +151,11 @@ export class SayIt extends Context.Service<
     /** `recite(TODAY)` of the layer's passage. */
     readonly press: Effect.Effect<void>;
     readonly peek: (index: number) => Effect.Effect<void>;
+    /** A peek at rest at the word `index` of the verse of `reference`, before its try: the try's grade can be no better than Hard (`PEEK_CAP`); nothing while a recital is under way. */
+    readonly reveal: (reference: string, index: number) => Effect.Effect<void>;
+    /** `Show all` at rest on `piece`, before its try: every word counts peeked, the instant is kept for the step back `Next` writes, and the try's grade can be no better than `cap`; nothing while a recital is under way. */
+    readonly showAll: (piece: Passage, cap: Grade) => Effect.Effect<void>;
+    /** A grade for the finished recital: refused when the help taken caps the try below it. */
     readonly choose: (grade: Grade) => Effect.Effect<void>;
     /** Today's `Next` on the verse of `reference`: the recall pending for it is handed to `Recalls`, and every change after it too; nothing when none is pending for it. */
     readonly commit: (reference: string) => Effect.Effect<void>;
@@ -188,20 +239,67 @@ type Progress =
       readonly kept: Option.Option<Recall>;
     };
 
+/** The words `help` peeked at rest that the recital did not peek again: each counts once among the recall's peeks. */
+export const restPeeks = (help: Option.Option<Help>, matcher: MatcherView) =>
+  Option.match(help, {
+    onNone: () => 0,
+    onSome: (taken) =>
+      taken.peeked.filter((index) => matcher.marks[index]?.status !== 'peek').length,
+  });
+
+/** The recall of `recital` finished under `view`'s choice and `matcher`: the grade no better than the help's cap, and the words peeked at rest counted among its peeks. */
+const recallIn = (
+  recital: Extract<Progress, { _tag: 'Finished' }>,
+  view: SayItView,
+  choice: Grade,
+  matcher: MatcherView,
+): Recall => {
+  const recall = recallOf(
+    recital.reference,
+    recital.startedAt,
+    recital.offset,
+    cappedBy(choice, helpOf(view)),
+    recital.suggested,
+    matcher,
+  );
+  return { ...recall, peeked: recall.peeked + restPeeks(helpOf(view), matcher) };
+};
+
 /** The recall a finished recital that waits for `commit` would hand over now, under `view`'s choice and matcher; none for any other recital. */
 const pendingOf = (recital: Progress, view: SayItView): OrNull<Recall> => {
   const { matcher } = view.dictation;
   if (recital._tag !== 'Finished' || !recital.keep || !recital.waits) return ABSENT;
   if (view.choice === ABSENT || matcher === ABSENT) return ABSENT;
-  return recallOf(
-    recital.reference,
-    recital.startedAt,
-    recital.offset,
-    view.choice,
-    recital.suggested,
-    matcher,
-  );
+  return recallIn(recital, view, view.choice, matcher);
 };
+
+/** `view` with `help`, or with no help field at all for none; `view` itself when that is the help it holds. */
+const helped = (view: SayItView, help: Option.Option<Help>): SayItView => {
+  const { help: was, ...rest } = view;
+  return Option.match(help, {
+    onNone: () => {
+      if (Option.isNone(Option.fromUndefinedOr(was))) return view;
+      return rest;
+    },
+    onSome: (taken) => {
+      if (was === taken) return view;
+      return { ...rest, help: taken };
+    },
+  });
+};
+
+/** `help` with its `Show all` at least a millisecond before a try started at `startedAt`, so its step back folds before the try's recall even on a clock that has not moved. */
+const before = (help: Help, startedAt: number): Help =>
+  Option.match(Option.fromNullishOr(help.shownAt), {
+    onNone: () => help,
+    onSome: (at) => {
+      if (at < startedAt) return help;
+      return { ...help, shownAt: startedAt - 1 };
+    },
+  });
+
+/** No help. */
+const NO_HELP = Option.none<Help>();
 
 /** The state with its view's `pending` read again, the view kept as it was when that recall is unchanged. */
 const withPending = (state: Held): Held => {
@@ -263,14 +361,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         const { matcher } = yield* dictation.view;
         if (recital._tag !== 'Finished' || !recital.keep || recital.waits) return;
         if (view.choice === ABSENT || matcher === ABSENT) return;
-        const recall = recallOf(
-          recital.reference,
-          recital.startedAt,
-          recital.offset,
-          view.choice,
-          recital.suggested,
-          matcher,
-        );
+        const recall = recallIn(recital, view, view.choice, matcher);
         if (Option.exists(recital.kept, (kept) => sameRecall(kept, recall))) return;
         MutableRef.update(held, (now) => ({
           ...now,
@@ -301,7 +392,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
               suggested,
               kept: Option.none(),
             },
-            view: { ...now.view, choice: suggested },
+            view: { ...now.view, choice: cappedBy(suggested, helpOf(now.view)) },
           }));
           yield* keep;
         });
@@ -370,16 +461,50 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
               waits: how.untilNext === true,
             },
             shown: ABSENT,
-            view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue, pending: ABSENT },
+            view: helped(
+              { dictation: current, startedAt, choice: ABSENT, cue: how.cue, pending: ABSENT },
+              Option.map(helpFor(now.view, reference), (taken) => before(taken, startedAt)),
+            ),
           }));
           yield* dictation.start(piece.text, how.cue);
         });
+
+      /** A help taken at rest on the verse of `reference`, no recital under way: `change` applied to the help kept for it (a new one, capped at Easy, when the help kept is another verse's or none). */
+      const help = (reference: string, change: (was: Help) => Help) =>
+        update((now) => {
+          if (now.recital._tag === 'Open') return now;
+          const was = Option.getOrElse(helpFor(now.view, reference), (): Help => ({
+            reference,
+            peeked: [],
+            shownAt: ABSENT,
+            cap: 4,
+          }));
+          return { ...now, view: helped(now.view, Option.some(change(was))) };
+        });
+
+      const reveal = (reference: string, index: number) =>
+        help(reference, (was) => ({
+          ...was,
+          peeked: Arr.dedupe([...was.peeked, index]),
+          cap: cappedBy(PEEK_CAP, Option.some(was)),
+        }));
+
+      const showAll = (piece: Passage, cap: Grade) =>
+        Effect.flatMap(now, (at) =>
+          help(piece.reference, (was) => ({
+            ...was,
+            peeked: sourceWords(piece.text).map((_, index) => index),
+            shownAt: Option.getOrElse(Option.fromNullishOr(was.shownAt), () => at),
+            cap: cappedBy(cap, Option.some(was)),
+          })),
+        );
 
       const choose = (grade: Grade) =>
         Effect.suspend(() => {
           const { recital, view } = MutableRef.get(held);
           if (recital._tag !== 'Finished' || !isGrade(grade) || view.choice === grade)
             return Effect.void;
+          if (cappedBy(grade, helpOf(view)) !== grade) return Effect.void;
           return Effect.andThen(
             update((now) => ({ ...now, view: { ...now.view, choice: grade } })),
             keep,
@@ -393,19 +518,25 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
             return Effect.void;
           return Effect.andThen(
             update((now) => ({ ...now, recital: { ...recital, waits: false } })),
-            keep,
+            Effect.andThen(
+              keep,
+              update((now) => ({ ...now, view: helped(now.view, NO_HELP) })),
+            ),
           );
         });
 
       const drop = update((now) => {
-        if (now.recital._tag !== 'Finished' || !now.recital.waits) return now;
-        return { ...now, recital: { _tag: 'Unheard' } };
+        const rested = { ...now, view: helped(now.view, NO_HELP) };
+        if (now.recital._tag !== 'Finished' || !now.recital.waits) return rested;
+        return { ...rested, recital: { _tag: 'Unheard' } };
       });
 
       return SayIt.of({
         recite,
         press: recite(TODAY, passage),
         peek: (index) => Effect.andThen(dictation.peek(index), keep),
+        reveal,
+        showAll,
         choose,
         commit,
         drop,

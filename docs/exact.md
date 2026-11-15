@@ -45,11 +45,12 @@ bun run exact verify
 bun run exact verify ios
 ```
 
-`bun run exact` is the app's `exact.mjs`, which runs `@manna/exact-kit`'s wrapper (`main` in `src/main.ts`, over `runExact` in `src/run.ts`; `manna-exact <verb>`, the package's command, runs it for the app in the current folder). Never run Exact another way: not `bun <clone>/scripts/exact.mjs` on an app, not Exact's generated `exact.mjs` (the apps hold ours in its place). The wrapper:
+`bun run exact` is the package's command `manna-exact` (`src/bin.ts`), which runs `@manna/exact-kit`'s wrapper (`main` in `src/main.ts`, over `runExact` in `src/run.ts`) for the app in the current folder. Each app's `exact.mjs` is the kit's launcher into the same wrapper, for Exact's own tools, which run `bun exact.mjs <verb>` inside a command. Never run Exact another way: not `bun <clone>/scripts/exact.mjs` on an app, not Exact's generated `exact.mjs`. The wrapper:
 
-- **Refuses before any process starts**: `share`, `deploy` and `release` (they publish: the owner's alone), `feedback` with anything but `never` (feedback goes to Expo), `--sim` and `--device` (another simulator, or the owner's iPhone), and a `--port` not the app's.
+- **Refuses before any process starts**: `share`, `deploy` and `release` (they publish: the owner's alone), `update` and `snapback` (they write Exact's own `exact.mjs` and `AGENTS.md` over the app's, which run Exact past the wrapper and tell agents to share and send feedback), `feedback` with anything but `never` (feedback goes to Expo), `--sim` and `--device` (another simulator, or the owner's iPhone), and a `--port`, or a caller's `EXACT_PORT`, not the app's.
+- **Refuses a rewritten app**: an `exact.mjs` that is not the kit's launcher, or an `AGENTS.md` that holds Exact's generated block (`<!-- exact:begin`), with the `git checkout` that restores them. The `exact-kit` unit test holds each app's `bun run exact` to `manna-exact`, so a rewritten `exact.mjs` cannot take the wrapper out.
 - **Refuses a clone off the pin**, naming both commits, and a missing clone with how to clone it.
-- **Sets, over whatever the caller's environment holds**: `EXACT` (the clone), `EXACT_FEEDBACK=0`, `EXACT_SIM` (the app's simulator), `PORT_LO` and `PORT_HI` (the app's spare range), and for `web` with no `--port`, `EXACT_PORT` (the app's port).
+- **Sets, over whatever the caller's environment holds**: `EXACT` (the clone), `EXACT_FEEDBACK=0`, `EXACT_SIM` (the app's simulator), `PORT_LO` and `PORT_HI` (the app's spare range), and `EXACT_PORT`: the caller's when it is the app's, else the app's own port for `web` with no `--port`, else removed from what the child inherits (Exact takes `EXACT_PORT` before `PORT_LO`/`PORT_HI`).
 - **Takes the build lock** `/tmp/manna-exact-build.lock` (`lockf -k`) for `ios`, `mac`, `test ios`, `verify ios` and `agent ios`, so native builds on this Mac run one at a time.
 
 The clone is `~/Developer/vendor/exact`, under the home folder, unless `EXACT` names another; that is the one machine path the repo knows.
@@ -71,7 +72,7 @@ Create a missing simulator with `xcrun simctl create verify-heartseed-exact com.
 - Screenshots of the Exact simulators are allowed and stay under each app's `.exact/` (ignored). No sound, no recording, no microphone.
 - A native build needs 12 GB free disk; it waits on the build lock itself.
 - Never `share`, `deploy`, `release` or send feedback; the wrapper refuses them, and no other way is taken round it.
-- `bun exact.mjs update` rewrites the app's `exact.mjs` and `AGENTS.md`: put ours back from git after it.
+- `verify ios` can leave Exact's touch runner (`xcodebuild test-without-building … exact-touches-<udid>`) running after it exits, at the pin. After a live iOS leg, `ps` for `exact-touches-<the app's simulator udid>` and stop the one your run started.
 - Exact's type check (`contract build`, every build) stages the declarations of every package any `.ts` or `.js` file in the app's folder imports, and follows the import lines inside their doc comments, and refuses two copies of one package (`package declarations: two copies of …`). `effect`'s doc comments reach `rolldown`, so the root `package.json` overrides it to one version. A package imported by `app.ts` must ship declarations (`types` before `default` in its `exports`).
 - The data layer is Effect through `@manna/exact-kit/effect`'s runner: `docs/exact-data-layer.md` (the rule, the evidence, a worked example).
 - Each app's `tsconfig.src.json` (extending the root's) is the typecheck's; the app has no `tsconfig.json`, since Exact's type check reads that file and refuses a config that extends one outside the app.
@@ -79,7 +80,7 @@ Create a missing simulator with `xcrun simctl create verify-heartseed-exact com.
 
 ## Where a feature's files go
 
-Each app keeps one feature in `features/<name>.contract` (its view), `src/<name>/**` (its logic, pure TypeScript with Bun tests), and `tests/<name>.test.contract` (its contract tests). The root `app.contract` and `app.ts` take one line per feature. Logic of a current app is imported through its package's exports, never copied: each app's `src/no-copy.test.ts` fails on a file that shares more than a few lines with a current app's source (`noCopies` in `@manna/exact-kit/no-copy/testing`).
+Each app keeps one feature in `features/<name>.contract` (its view), `src/<name>/**` (its logic, pure TypeScript with Bun tests), and `<name>.test.contract` beside `app.contract` (its contract tests: Exact's `test` and `verify` read only `*.test.contract` there). The root `app.contract` and `app.ts` take one line per feature. Logic of a current app is imported through its package's exports, never copied: each app's `src/no-copy.test.ts` fails on a file that shares more than a few lines with a current app's source (`noCopies` in `@manna/exact-kit/no-copy/testing`).
 
 ## Testing a data module's logic in Bun
 

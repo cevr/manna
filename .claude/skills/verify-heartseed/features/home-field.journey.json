@@ -70,6 +70,14 @@
       "receipt": "none"
     },
     {
+      "name": "home-learn-plant",
+      "action": "scroll",
+      "target": "label=Psalms 91:1, not planted",
+      "direction": "down",
+      "expect": [{ "shows": "label=Psalms 91:1, not planted" }],
+      "receipt": "none"
+    },
+    {
       "name": "home-learn-today",
       "action": "tap",
       "target": "label=Psalms 91:1, not planted",

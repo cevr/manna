@@ -1,0 +1,118 @@
+{
+  "feature": "peek",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "peek-home",
+      "action": "open",
+      "link": "/",
+      "relaunch": false,
+      "expect": [{ "shows": "id=today-card" }, { "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-seed",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, seed",
+      "expect": [
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Say it" },
+        { "shows": "label=Show all" },
+        { "shows": "id=peek-0" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "peek-listening",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "peek-grown",
+      "action": "tap",
+      "target": "label=36 of 37 words",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Stage: blade" }, { "shows": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-next",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "shows": "label=Your field" }, { "hides": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-field",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "label=Isaiah 41:10, blade" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-blade",
+      "action": "tap",
+      "target": "label=Isaiah 41:10, blade",
+      "expect": [
+        { "shows": "label=Stage: blade" },
+        { "shows": "label=Show all" },
+        { "shows": "label=Move back a stage" },
+        { "shows": "label=Word 1" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "peek-word",
+      "action": "tap",
+      "target": "label=Word 1",
+      "expect": [{ "shows": "label=Word 2" }, { "shows": "label=Show all" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-all",
+      "action": "tap",
+      "target": "label=Show all",
+      "expect": [
+        { "shows": "label=Stage: seed" },
+        { "shows": "id=passage" },
+        { "hides": "label=Show all" },
+        { "hides": "label=Move back a stage" },
+        { "hides": "id=peek-0" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "peek-say",
+      "action": "tap",
+      "target": "label=Say it",
+      "receipt": "none"
+    },
+    {
+      "name": "peek-capped",
+      "action": "tap",
+      "target": "label=Again",
+      "timeout": 30,
+      "expect": [
+        { "shows": "label=Stage: seed" },
+        { "shows": "label=Hard" },
+        { "shows": "label=Next" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "peek-kept",
+      "action": "tap",
+      "target": "label=Next",
+      "expect": [{ "shows": "label=Your field" }, { "hides": "label=Next" }],
+      "receipt": "none"
+    },
+    {
+      "name": "peek-home-seed",
+      "action": "tap",
+      "target": "label=Your field",
+      "expect": [{ "shows": "label=Isaiah 41:10, seed" }],
+      "receipt": "snapshot"
+    }
+  ]
+}

@@ -66,7 +66,7 @@ booleans only.
 
 1. `first.md`'s `sim journey first`, to `first-home`.
 2. `sim journey about` → `"ok":true`.
-3. `about-page`: `about/about`, after the scroll to `Settings`, the sheet
+3. `about-page`: `about/about`, after the scroll to `How Heartseed works`, the sheet
    and `About` → as the row says. A raw snapshot here (a second run of the
    journey up to this step, or by hand after step 6 below) gives three
    booleans: a label `Heartseed`, a label starting `Version `, no label
@@ -93,7 +93,7 @@ folder and the raw snapshots.
 ## Gotchas
 
 - Home's `Settings` and `How Heartseed works` rows lie at the field's end:
-  the journey scrolls to `Settings` first. `About` in the sheet is
+  the journey scrolls to `How Heartseed works` first (`home.md`, Gotchas). `About` in the sheet is
   outside its scroll view; `Your field` sits in About's bar and `About` in
   the licences' bar. The licence is long; reading it from the raw
   snapshot needs no scroll, since the node holds the whole text.
