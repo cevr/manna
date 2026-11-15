@@ -1,21 +1,40 @@
-// Heartseed: the view. app.ts answers what it asks for. Colours, fonts,
-// sizes and the safe area are left unsaid, so each platform supplies its own:
-// the header is the navigation bar, its heading the title.
+// Heartseed: the view. app.ts answers what it asks for. The colours are the
+// brand's roles (app.tamber), the face is rounded, and the safe area is
+// left unsaid: the header is the navigation bar, its heading the title.
 // A feature adds one `use` line, one `members` line, one route and one
-// branch of the stack's view (README, "Where a feature's files go").
+// branch of the stack's view (README, "Where a feature's files go"). The
+// Settings sheet's routes (`settings…`) are drawn by their own loop: a
+// sheet is a route of its own, not the shared column, and the screen under
+// it stays drawn (`settingsUnderId`).
 use Today, TodayView from "./features/today.contract"
+use SettingsSheet, SettingsView from "./features/settings.contract"
+use AboutPage, LicencesPage from "./features/about.contract"
 
 routes nav
   home "/"
+    settings "/settings"
+      settingsAbout "/settings/about"
+        settingsLicences "/settings/about/licences"
   cued "/cue/:cue"
 
 component HeartseedExact
   members "./features/today.contract"
+  members "./features/settings.contract"
+  members "./features/about.contract"
   view
     main testId="root" navigationKey=`${top(nav).id}` width="100%" height="100%"
-      for e in stack(nav) key=e.id
-        column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column"
+      for e in stack(nav).filter(x => not x.name.startsWith("settings")) key=e.id
+        column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name}`
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
-          if (e.name == "home" or e.name == "cued") and e.id == top(nav).id
+            button press=settingsOpen aria-label="Settings" testId="gear"
+              image "symbol:settings"
+          if (e.name == "home" or e.name == "cued") and e.id == settingsUnderId
             Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt)
+      for e in stack(nav).filter(x => x.name.startsWith("settings")) key=e.id
+        if e.name == "settings"
+          SettingsSheet(route=e.id, settings=settings, minutes=settingsChooseMinutes, voice=settingsChooseVoice, appearance=settingsChooseAppearance, about=aboutOpen, done=settingsDone)
+        if e.name == "settingsAbout"
+          AboutPage(route=e.id, licences=aboutOpenLicences)
+        if e.name == "settingsLicences"
+          LicencesPage(route=e.id, licences=aboutLicences.licences)

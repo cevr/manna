@@ -1,0 +1,50 @@
+// About, pushed inside the Settings sheet: what Heartseed is, the KJV's
+// note, and the one row to the licences, whose text tools/licences.ts
+// writes at build from the current Heartseed's own derivation
+// (src/about/licences.ts, answered by `aboutLicences`).
+
+shape AboutLicence
+  index: number
+  name: string
+  text: string
+
+shape AboutLicences
+  licences: AboutLicence[]
+
+members HeartseedExact
+  resource aboutLicences = aboutLicencesOf() when top(nav).name == "settingsLicences" as shape AboutLicences else empty()
+  action aboutOpen
+    nav = push(nav, "/settings/about")
+  action aboutOpenLicences
+    nav = push(nav, "/settings/about/licences")
+
+component AboutPage
+  props
+    route: number
+    licences: action
+  view
+    column navigationKey=`${route}` navigationScroll="about-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="about"
+      header display="flex" align-items="center"
+        text "About" role="heading" aria-level=2 flex=1
+      scroll id="about-scroll" flex=1 min-height=0
+        column gap=16 padding=20
+          text "Heartseed" font="-exact-title2" testId="about-name"
+          text "Heartseed helps you learn verses of Scripture by heart: hear a verse, say it back, and come back to it as it grows." testId="about-line"
+          text "Scripture is from the King James Version, which is in the public domain." color="-exact-secondary-label" testId="about-kjv"
+          button press=licences buttonStyle="bordered" testId="licences-row"
+            text "Licences"
+
+component LicencesPage
+  props
+    route: number
+    licences: AboutLicence[]
+  view
+    column navigationKey=`${route}` navigationScroll="licences-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="licences"
+      header display="flex" align-items="center"
+        text "Licences" role="heading" aria-level=2 flex=1
+      scroll id="licences-scroll" flex=1 min-height=0
+        column gap=16 padding=20
+          for l in licences key=l.index
+            column gap=8
+              text l.name font="-exact-headline" testId=`licence-name-${l.index}`
+              text l.text font="-exact-footnote" white-space="pre-wrap" testId=`licence-text-${l.index}`
