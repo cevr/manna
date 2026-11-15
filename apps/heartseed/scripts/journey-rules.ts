@@ -251,8 +251,9 @@ const HANDS_ON: ReadonlyMap<string, string> = new Map([
 
 /**
  * R7. A journey that ends with home at its foot: after a scroll to any
- * node of `home`, home's foot as `footOf` reads it from the screen's
- * sources (or from its start, for a journey of `CONTINUES`), no scroll up to `label=Your field` and no `relaunch`.
+ * node of `home`, home's foot as the field screen renders it
+ * (`src/field/foot.test.tsx`), or from its start, for a journey of
+ * `CONTINUES`, no scroll up to `label=Your field` and no `relaunch`.
  * It leaves home scrolled down, and the next journey in its feature file's
  * order, whose `open` keeps the running app's offset, starts past the
  * furrows it waits for. A scroll to anything else (a sheet's row, a furrow)

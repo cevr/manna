@@ -65,6 +65,7 @@
     "test:field-unread": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/unread.test.tsx",
     "test:field-unread-keep": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/unread-keep.test.tsx",
     "test:field-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/screen.test.tsx ./src/field/tips.test.tsx",
+    "test:field-foot": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/foot.test.tsx",
     "test:field-garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/garden.test.tsx",
     "test:field-read": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/read.property.test.ts",
     "test:field-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk.test.tsx",

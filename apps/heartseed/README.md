@@ -2433,6 +2433,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     whole disk and taking no write, remove or clear; `Start` back only when
     Today showed `Say it` or `Next`, which it shows again): the way there
     and back through recitals, Again and a relaunch.
+  - `test:field-foot`: `src/field/foot.test.tsx`, home's foot read from the
+    field screen as it renders (`src/test/foot.ts`: every test id, label
+    and text the scroll view draws after its last furrow row) under the
+    limit with the tips, at the limit and unread, equal to the foot
+    written out by hand (`HOME_FOOT` in `scripts/foot.ts`); a screen of
+    its own reading each JSX form a node under the furrows takes; and R7
+    (`footFaults`) over every shipped journey against the rendered foot,
+    tripping a journey that ends on a scroll to any node of it. Its
+    inputs take `.claude/skills/verify-heartseed`.
   - `test:field-garden`: `src/field/garden.test.tsx`, a generated garden past 140 other verses
     of any reference, canonical twins each its own plant, each label the
     exact reference, and no number in any plant.
