@@ -128,7 +128,7 @@ const largeOps = [
   ...measure(pairs.map((pair) => `pair-${pair.id}`)),
   ...measure(chorded.flatMap((id) => [`chord-${id}`, `syllable-${id}`])),
   shot('largest'),
-  'tap line-1-3 drag 0 -400',
+  'tap hymn-words drag 0 -400',
   'clock settle',
   shot('largest-scrolled'),
 ];
