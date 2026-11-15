@@ -14,8 +14,7 @@ export type ListSource =
   | { readonly _tag: 'Own' }
   | { readonly _tag: 'Passage'; readonly range: Range }
   | { readonly _tag: 'Collection'; readonly id: string }
-  | { readonly _tag: 'Handbook'; readonly id: string }
-  | { readonly _tag: 'Loose' };
+  | { readonly _tag: 'Handbook'; readonly id: string };
 
 /** A row of the app's own: a title and its verses, with a range when it is one. */
 export interface Row {

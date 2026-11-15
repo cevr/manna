@@ -28,6 +28,11 @@ type Mutual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
 const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Chooser.LIMIT_LINE, typeof DeclaredChooser.LIMIT_LINE>,
+  true satisfies Mutual<
+    typeof Chooser.SINGLES_LIMIT_LINE,
+    typeof DeclaredChooser.SINGLES_LIMIT_LINE
+  >,
+  true satisfies Mutual<typeof Chooser.SHORT_LINE, typeof DeclaredChooser.SHORT_LINE>,
   true satisfies Mutual<typeof Day.dayOf, typeof DeclaredDay.dayOf>,
   true satisfies Mutual<Fsrs.Card, DeclaredFsrs.Card>,
   true satisfies Mutual<Fsrs.Grade, DeclaredFsrs.Grade>,
@@ -54,6 +59,11 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Passages.LISTS_KEY, typeof DeclaredPassages.LISTS_KEY>,
   true satisfies Mutual<typeof Passages.MOST_PASSAGES, typeof DeclaredPassages.MOST_PASSAGES>,
   true satisfies Mutual<typeof Passages.MOST_VERSES, typeof DeclaredPassages.MOST_VERSES>,
+  true satisfies Mutual<typeof Passages.SINGLES_KEY, typeof DeclaredPassages.SINGLES_KEY>,
+  true satisfies Mutual<typeof Passages.MOST_SINGLES, typeof DeclaredPassages.MOST_SINGLES>,
+  true satisfies Mutual<typeof Passages.LEAST_VERSES, typeof DeclaredPassages.LEAST_VERSES>,
+  true satisfies Mutual<typeof Passages.verseCount, typeof DeclaredPassages.verseCount>,
+  true satisfies Mutual<Passages.JoinAnswer, DeclaredPassages.JoinAnswer>,
   true satisfies Mutual<Passages.Range, DeclaredPassages.Range>,
   true satisfies Mutual<Passages.PassagesView, DeclaredPassages.PassagesView>,
   true satisfies Mutual<Passages.AddAnswer, DeclaredPassages.AddAnswer>,

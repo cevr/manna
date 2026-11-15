@@ -7,11 +7,20 @@ export declare const PASSAGES_KEY: 'heartseed/passages';
 /** The key the Handbook lists planted are kept under. */
 export declare const LISTS_KEY: 'heartseed/lists';
 
-/** How many ranges and lists a reader may hold. */
+/** The key the single verses are kept under. */
+export declare const SINGLES_KEY: 'heartseed/singles';
+
+/** How many ranges and lists a reader may hold, single verses not counted. */
 export declare const MOST_PASSAGES: 3;
+
+/** How many single verses a reader may hold. */
+export declare const MOST_SINGLES: 20;
 
 /** The longest range a reader may add, in verses. */
 export declare const MOST_VERSES: 20;
+
+/** The fewest verses a list may hold. */
+export declare const LEAST_VERSES: 3;
 
 /** Verses `first` to `last` of one chapter, by canon numbers. */
 export interface Range {
@@ -24,6 +33,9 @@ export interface Range {
 /** Whether `range` lies in one chapter of the canon. */
 export declare const inChapter: (range: Range) => boolean;
 
+/** How many verses `range` spans. */
+export declare const verseCount: (range: Range) => number;
+
 /** Whether a reader may add `range`: in one chapter and short enough. */
 export declare const choosable: (range: Range) => boolean;
 
@@ -33,23 +45,27 @@ export declare const verseReference: (book: number, chapter: number, verse: numb
 /** A range's reference as the canon writes it. */
 export declare const passageReference: (range: Range) => string;
 
-/** The ranges and lists held, or `Unread`. */
+/** The ranges, lists and single verses held, or `Unread`. */
 export type PassagesView =
   | {
       readonly _tag: 'Read';
       readonly passages: ReadonlyArray<Range>;
       readonly lists: ReadonlyArray<string>;
+      readonly singles: ReadonlyArray<Range>;
     }
   | { readonly _tag: 'Unread' };
 
-/** What an add answers. */
-export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
+/** What an add answers; `Short` for a range under the fewest a list holds. */
+export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Short' | 'Unread' | 'Failed';
 
-/** What a remove or an uproot answers. */
+/** What a remove, a part or an uproot answers. */
 export type RemoveAnswer = 'Removed' | 'Absent' | 'Unread' | 'Failed';
 
 /** What a plant of a Handbook list answers. */
 export type PlantAnswer = 'Added' | 'Held' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
+
+/** What a join of single verses answers. */
+export type JoinAnswer = PlantAnswer;
 
 declare const PassagesTag: Context.ServiceClass<
   Passages,
@@ -58,14 +74,16 @@ declare const PassagesTag: Context.ServiceClass<
     readonly view: Effect.Effect<PassagesView>;
     readonly changes: Stream.Stream<PassagesView>;
     readonly add: (range: Range) => Effect.Effect<AddAnswer>;
+    readonly join: (range: Range) => Effect.Effect<JoinAnswer>;
+    readonly part: (range: Range) => Effect.Effect<RemoveAnswer>;
     readonly remove: (range: Range) => Effect.Effect<RemoveAnswer>;
     readonly plant: (id: string) => Effect.Effect<PlantAnswer>;
     readonly uproot: (id: string) => Effect.Effect<RemoveAnswer>;
   }
 >;
 
-/** The reader's ranges and lists over a store. */
+/** The reader's ranges, lists and single verses over a store. */
 export declare class Passages extends PassagesTag {}
 
-/** The passages over a store, read at its build. */
+/** The passages over a store, read (and one-verse passages moved to the single verses) at its build. */
 export declare const layer: Layer.Layer<Passages, never, KeyValueStore>;
