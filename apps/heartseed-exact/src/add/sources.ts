@@ -1,6 +1,6 @@
 /**
- * Add verses' reads, as `app.ts` registers them: `addRead` the shelves,
- * `addSection` a Handbook section's lists, `addList` one list's page. Each
+ * Add verses' reads, as `app.ts` registers them: `addRead` the shelves
+ * with the open one's lists, `addList` one list's page. Each
  * is one call through the runner that reads the garden (`readGarden`,
  * which writes nothing) outside the garden's queue, as home's reads do:
  * Exact's iOS bake refuses a resource whose answer waits on a promise no
@@ -15,14 +15,7 @@ import type { FileStorage } from '@manna/exact-kit/storage';
 import { Effect, Logger } from 'effect';
 
 import { readGarden, type Held } from '../garden/program';
-import {
-  addListOf,
-  addSectionOf,
-  addShownOf,
-  type AddList,
-  type AddSection,
-  type AddShown,
-} from './shelves';
+import { addListOf, addShownOf, type AddList, type AddShown } from './shelves';
 
 /** Exact's `Store` argument, as much of it as names it: Add verses keeps nothing there. */
 interface ExactStore {
@@ -45,16 +38,10 @@ export const addSources = (options: AddOptions = {}) => {
     runCall(logged(Effect.map(readGarden(storage), answer)), { now, seed }, options.host);
 
   const addRead = (
-    [_key, now, seed]: readonly [string, number, number],
+    [open, _key, now, seed]: readonly [string, string, number, number],
     _store: ExactStore,
     storage: FileStorage,
-  ): Promise<AddShown> => read(storage, now, seed, addShownOf);
-
-  const addSection = (
-    [slug, _key, now, seed]: readonly [string, string, number, number],
-    _store: ExactStore,
-    storage: FileStorage,
-  ): Promise<AddSection> => read(storage, now, seed, (held) => addSectionOf(slug, held));
+  ): Promise<AddShown> => read(storage, now, seed, (held) => addShownOf(held, open));
 
   const addList = (
     [slug, answer, _key, now, seed]: readonly [string, string, string, number, number],
@@ -62,5 +49,5 @@ export const addSources = (options: AddOptions = {}) => {
     storage: FileStorage,
   ): Promise<AddList> => read(storage, now, seed, (held) => addListOf(slug, held, answer));
 
-  return { addRead, addSection, addList };
+  return { addRead, addList };
 };

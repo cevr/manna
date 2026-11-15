@@ -90,6 +90,9 @@ test "Remove this list asks, then returns home without the row"
   tap "plant-list"
   clock data
   clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
   tap "offer-pick-proverbs-20-4-23-23"
   clock data
   clock settle

@@ -4,7 +4,7 @@
  * Add verses' and the chooser's words (spec A4). Every shelf row's page
  * shows each verse's words as `versesOf` gives them; the Add verses answer
  * names lists by title and reference alone, holds no verse's words and is
- * under 60 KB, as is each Handbook section's; and the words the port
+ * under 60 KB with any one shelf open; and the words the port
  * writes that the current Heartseed keeps in its React files (the sheet's
  * `Plant`, `In your field`, its counts and alert; the chooser's heading,
  * testaments, cap and alert) are held to those files' own text.
@@ -14,6 +14,7 @@ import { runCall } from '@manna/exact-kit/effect';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { versesOf } from '@manna/heartseed/kjv';
 import { placeOf } from '@manna/heartseed/lists';
+import { SHELVES } from '@manna/heartseed/shelves';
 import { expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { join } from 'node:path';
@@ -23,14 +24,7 @@ import { readGarden, type Held } from '../garden/program';
 import { slugOf } from '../garden/view';
 import { ROWS } from '../test/add-history';
 import { makePort } from '../test/garden-model';
-import {
-  addListOf,
-  addSectionOf,
-  addShownOf,
-  plantLineOf,
-  type AddSection,
-  type AddShown,
-} from './shelves';
+import { addListOf, addShownOf, plantLineOf, type AddShown } from './shelves';
 
 const CURRENT = join(import.meta.dir, '../../../heartseed/src');
 
@@ -41,8 +35,7 @@ const EMPTY: Held = await runCall(
   { turn: withDataHost, wait: () => Promise.resolve() },
 );
 
-const bytesOf = (value: AddShown | AddSection) =>
-  new TextEncoder().encode(JSON.stringify(value)).length;
+const bytesOf = (value: AddShown) => new TextEncoder().encode(JSON.stringify(value)).length;
 
 /** The words of a canon reference, read apart from the port. */
 const wordsAt = (reference: string) =>
@@ -66,14 +59,10 @@ it("shows every shelf row's verses with versesOf's words", () => {
   }
 });
 
-it('answers Add verses and each Handbook section by titles and references, no words, under 60 KB', () => {
-  const shown = addShownOf(EMPTY);
-  const answers = [
-    shown,
-    ...shown.shelves
-      .filter((shelf) => shelf.kind === 'handbook')
-      .map((shelf) => addSectionOf(shelf.slug, EMPTY)),
-  ];
+it('answers Add verses, with any one shelf open, by titles and references, no words, under 60 KB', () => {
+  const answers = ['', ...SHELVES.map((shelf) => slugOf(shelf.id))].map((open) =>
+    addShownOf(EMPTY, open),
+  );
   const words = ROWS.flatMap((list) => list.verses.map(wordsAt)).filter((text) => text.length > 24);
   expect(words.length).toBeGreaterThan(500);
   for (const answer of answers) {

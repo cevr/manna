@@ -43,6 +43,9 @@ test "The plan's first item shows, new pieces first heard"
   tap "plant-list"
   clock data
   clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
   tap "offer-pick-proverbs-20-4-23-23"
   clock data
   clock settle
@@ -88,6 +91,9 @@ test "Minutes shape the plan"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
   clock data
   clock settle
   tap "offer-pick-proverbs-20-4-23-23"
@@ -136,6 +142,9 @@ test "Voice Off hides Hear it"
   tap "today-add"
   clock data
   tap "verses-add"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
   clock data
   clock settle
   tap "offer-pick-proverbs-20-4-23-23"

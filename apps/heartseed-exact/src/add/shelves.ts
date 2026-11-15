@@ -4,12 +4,13 @@
  * (`offerStateOf` over the reader's passages and the field the garden
  * read makes), and the one line the current sheet's foot shows: the lists'
  * limit line while the most are held, else the single verses' while they
- * are at theirs. Any passage opens the chooser; a shelf of picks or
- * promises lists its rows in place; each section of the Handbook is one
- * row that opens its lists, so the Add verses answer stays small. A row
- * opens its list, which shows its verses with their words before it is
- * planted. Every answer names lists by their titles and references alone;
- * only a list's own page carries words.
+ * are at theirs. Any passage opens the chooser; every other shelf (the
+ * picks, the promises, each section of the Handbook) is a head that opens
+ * in place, one at a time, as the current sheet's shelves do, so only the
+ * open shelf's rows are answered and drawn. A row opens its list, which
+ * shows its verses with their words before it is planted. Every answer
+ * names lists by their titles and references alone; only a list's own
+ * page carries words.
  */
 
 import { LIMIT_LINE, SINGLES_LIMIT_LINE } from '@manna/heartseed/chooser';
@@ -43,13 +44,14 @@ export interface AddRow {
   singly: boolean;
 }
 
-/** One shelf: `kind` is `bible` (the chooser), `lists` (its rows in place) or `handbook` (a row that opens its section). */
+/** One shelf: `kind` is `bible` (the chooser), `lists` (the picks and the promises) or `handbook` (a section of the Handbook); `open` while its rows show, which they hold only then. */
 export interface AddShelf {
   id: string;
   slug: string;
   title: string;
   note: string;
   kind: string;
+  open: boolean;
   rows: AddRow[];
 }
 
@@ -59,17 +61,6 @@ export interface AddShown {
   line: string;
   lineId: string;
   shelves: AddShelf[];
-}
-
-/** A Handbook section's page: its rows, and the same foot line. */
-export interface AddSection {
-  found: boolean;
-  slug: string;
-  title: string;
-  note: string;
-  line: string;
-  lineId: string;
-  rows: AddRow[];
 }
 
 /** One verse of a list's page and its words. */
@@ -178,44 +169,29 @@ export const footOf = (passages: PassagesView) => {
 /** Whether `held` is read whole. */
 const readOf = (held: Held) => held.garden._tag === 'Read' && held.passages._tag === 'Read';
 
-/** Add verses over a read: a Handbook section holds no rows here. */
-export const addShownOf = (held: Held): AddShown => {
+/** Add verses over a read, the shelf whose slug is `open` open (none for any other text). */
+export const addShownOf = (held: Held, open: string): AddShown => {
   const seen = seenOf(held);
   return {
     read: readOf(held),
     ...footOf(held.passages),
     shelves: SHELVES.map((shelf) => {
-      const kind = kindOf(shelf);
+      const slug = slugOf(shelf.id);
+      const opened = slug === open && shelf.source._tag === 'Lists';
       return {
         id: shelf.id,
-        slug: slugOf(shelf.id),
+        slug,
         title: shelf.title,
         note: shelf.note,
-        kind,
-        rows: listsIn(shelf)
-          .filter(() => kind === 'lists')
-          .map((list) => rowOf(list, seen)),
+        kind: kindOf(shelf),
+        open: opened,
+        rows: rowsOf(
+          listsIn(shelf).filter(() => opened),
+          seen,
+        ),
       };
     }),
   };
-};
-
-/** The Handbook section named `slug` over a read. */
-export const addSectionOf = (slug: string, held: Held): AddSection => {
-  const shelf = Option.fromUndefinedOr(
-    SHELVES.find((each) => kindOf(each) === 'handbook' && slugOf(each.id) === slug),
-  );
-  return Option.match(shelf, {
-    onNone: () => ({ found: false, slug, title: '', note: '', line: '', lineId: '', rows: [] }),
-    onSome: (each) => ({
-      found: true,
-      slug,
-      title: each.title,
-      note: each.note,
-      ...footOf(held.passages),
-      rows: rowsOf(listsIn(each), seenOf(held)),
-    }),
-  });
 };
 
 /** The words of `reference`, a canon verse, from the corpus. */

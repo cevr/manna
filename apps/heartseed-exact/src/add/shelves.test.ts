@@ -25,7 +25,7 @@ import { slugOf } from '../garden/view';
 import { ROWS } from '../test/add-history';
 import { makePort } from '../test/garden-model';
 import { seeded } from '../test/random';
-import { addSectionOf, addShownOf } from './shelves';
+import { addShownOf } from './shelves';
 
 const START = Date.UTC(2026, 10, 15, 13, 0, 0);
 const HOST = { turn: withDataHost, wait: () => Promise.resolve() };
@@ -46,17 +46,21 @@ const appSheet = (held: Held) => {
   return { offers: ROWS.map((list) => offerStateOf(list, passages, field)), line };
 };
 
-/** Every row the port shows for `held`, in shelf order, Handbook sections opened. */
+/** Every row the port shows for `held`, in shelf order, each shelf opened in turn. */
 const portRows = (held: Held) =>
-  addShownOf(held).shelves.flatMap((shelf) => {
-    if (shelf.kind === 'handbook') return addSectionOf(shelf.slug, held).rows;
-    return shelf.rows;
-  });
+  SHELVES.flatMap((shelf) =>
+    addShownOf(held, slugOf(shelf.id)).shelves.flatMap((each) => each.rows),
+  );
 
 it('lists the shelves in the order, titles and notes of SHELVES, every row in place', async () => {
   const port = makePort();
   const held = await runCall(readGarden(port.storage), { now: START, seed: 1 }, HOST);
-  const shown = addShownOf(held);
+  const shown = addShownOf(held, '');
+  expect(shown.shelves.every((each) => !each.open && each.rows.length === 0)).toBe(true);
+  for (const shelf of SHELVES) {
+    const opened = addShownOf(held, slugOf(shelf.id)).shelves.filter((each) => each.open);
+    expect(opened.map((each) => each.id)).toEqual(shelf.source._tag === 'Lists' ? [shelf.id] : []);
+  }
   expect(shown.shelves.map((each) => [each.id, each.title, each.note])).toEqual(
     SHELVES.map((each) => [each.id, each.title, each.note]),
   );
@@ -72,7 +76,7 @@ it('lists the shelves in the order, titles and notes of SHELVES, every row in pl
     ROWS.map((list) => [list.id, list.title, slugOf(list.id), plantsSingly(list)]),
   );
   expect(new Set(rows.map((row) => row.slug)).size).toBe(rows.length);
-  expect(addSectionOf('nowhere', held)).toMatchObject({ found: false, rows: [] });
+  expect(addShownOf(held, 'nowhere').shelves.some((each) => each.open)).toBe(false);
 });
 
 it("offers every row as offerStateOf over the current home's field, in generated gardens", async () => {
@@ -90,7 +94,7 @@ it("offers every row as offerStateOf over the current home's field, in generated
       const held = await runCall(readGarden(port.storage), { now, seed }, HOST);
       const app = appSheet(held);
       lines.add(app.line);
-      const shown = addShownOf(held);
+      const shown = addShownOf(held, '');
       expect({ seed, n, line: shown.line }).toEqual({ seed, n, line: app.line });
       expect({ seed, n, offers: portRows(held).map((row) => row.offer) }).toEqual({
         seed,

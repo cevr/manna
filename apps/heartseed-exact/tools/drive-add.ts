@@ -56,6 +56,15 @@ const PICKS = [
 ];
 const TWENTY_FIRST = 'pick-peace-19-4-8-8';
 
+/** A pick's shelf: `pick-<shelf>-…`. */
+const shelfOf = (slug: string) => slug.split('-')[1] ?? '';
+
+/** The tap that opens `slug`'s shelf, unless the pick before it left that shelf open. */
+const opening = (slug: string, before: string) =>
+  shelfOf(slug) === shelfOf(before)
+    ? []
+    : [`tap shelf-${shelfOf(slug)}`, 'clock data', 'clock settle'];
+
 interface GardenVerse {
   readonly reference: string;
 }
@@ -157,7 +166,8 @@ const sown = [
   'tap add-list',
   'clock data',
   'clock settle',
-  ...PICKS.flatMap((slug) => [
+  ...PICKS.flatMap((slug, index) => [
+    ...opening(slug, PICKS[index - 1] ?? ''),
     `tap offer-${slug}`,
     'clock data',
     'clock settle',

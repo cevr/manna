@@ -179,6 +179,9 @@ test "A list planted in Add verses shows as a row on home after Back (J2)"
   tap "add-list"
   clock data
   clock settle
+  tap "shelf-psalms"
+  clock data
+  clock settle
   tap "offer-pick-psalms-19-1-1-3"
   clock data
   clock settle
@@ -197,6 +200,9 @@ test "A list planted in Add verses shows as a row on home after Back (J2)"
 test "A single verse planted in Add verses shows under Single verses (J2)"
   clock data
   tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
   clock data
   clock settle
   tap "offer-pick-proverbs-20-4-23-23"

@@ -13,7 +13,7 @@ use AboutPage, LicencesPage from "./features/about.contract"
 use YourVerses from "./features/garden.contract"
 use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
-use AddVersesPage, AddSectionPage, AddListPage from "./features/add.contract"
+use AddVersesPage, AddListPage from "./features/add.contract"
 use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
 
 routes nav
@@ -30,7 +30,6 @@ routes nav
     addBible "/add/bible"
       addBook "/add/bible/:book"
         addChapter "/add/bible/:book/:chapter"
-    addSection "/add/handbook/:section"
     addList "/add/lists/:list"
 
 component HeartseedExact
@@ -63,9 +62,7 @@ component HeartseedExact
           if e.name == "verses"
             YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
           if e.name == "add"
-            AddVersesPage(add=addShown, bible=addOpenBible)
-          if e.name == "addSection"
-            AddSectionPage(section=addSectionShown)
+            AddVersesPage(add=addShown, bible=addOpenBible, toggle=addToggle, open=addOpenList)
           if e.name == "addList"
             AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
           if e.name == "addBible"

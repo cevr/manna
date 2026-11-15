@@ -341,9 +341,11 @@ const addCallOf = (random: Random, now: number): readonly [string, readonly unkn
   const answer = random.pick(['', 'Planted', 'Full', 'Failed', 'Short']);
   switch (random.below(9)) {
     case 0:
-      return ['addRead', [key, now, seed]];
     case 1:
-      return ['addSection', [random.pick(['handbook-bhb-27', 'psalms', 'x']), key, now, seed]];
+      return [
+        'addRead',
+        [random.pick(['', 'handbook-bhb-27', 'psalms', 'any', 'x']), key, now, seed],
+      ];
     case 2:
       return ['addList', [slug, answer, key, now, seed]];
     case 3:
@@ -375,7 +377,6 @@ it('answers every Add verses and chooser source inside the data host, between ga
         Reflect.apply(app.answer, undefined, [source, args, {}, storage, {}]),
       );
       if (source === 'addRead') expect(Array.isArray(answered['shelves'])).toBe(true);
-      else if (source === 'addSection') expect(Array.isArray(answered['rows'])).toBe(true);
       else if (source === 'addList') expect(Array.isArray(answered['verses'])).toBe(true);
       else if (source === 'addPlant') expect(typeof answered['answer']).toBe('string');
       else if (source === 'chooserBooks') expect(Array.isArray(answered['testaments'])).toBe(true);
