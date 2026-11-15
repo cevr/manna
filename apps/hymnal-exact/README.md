@@ -62,7 +62,7 @@ bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recor
 bun tools/drive-player.ts ios
 ```
 
-The seek: the full player's position bar (`position`, a range) sends one seek at its release; a step, a stanza's place (`stanza-place-<n>`) and the lock screen's seek and ±10 s skip send one each. Each seek has a serial; the element's `time` and `seeked` name the one they follow, so a late one moves nothing, and a sent place is held until it is reached or 2 s pass (`scrub-rules.ts`'s `settleFor`). A span the stanza choice leaves out is sought across: a frame task arms it on the runner's clock from the last tick (`due`), and the next tick corrects it. `protocol.test.ts` searches 10 actions deep in the gate; `PROTOCOL_DEPTH=18` searches deeper.
+The seek: the full player's position bar (`position`, a range) sends one seek at its release; a step, a stanza's place (`stanza-place-<n>`) and the lock screen's seek and ±10 s skip send one each. Each seek has a serial; the element's `time` and `seeked` name the one they follow, so a late one moves nothing, and a sent place is held until it is reached or 2 s pass (`scrub-rules.ts`'s `settleFor`). A span the stanza choice leaves out is sought across: a frame task arms it on the runner's clock from the last tick (`due`), and the next tick corrects it. VoiceOver's swipe on the bar moves Exact's default for a range with no `step`, a twentieth of the hymn, not the owner's 10 s: Exact has no adjust step apart from the drag's yet (`step=10` would snap drags). `protocol.test.ts` searches 10 actions deep in the gate; `PROTOCOL_DEPTH=18` searches deeper.
 
 ## The web
 

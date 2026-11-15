@@ -6,8 +6,9 @@
  *
  * - a drag sends one seek at its release, and none when it ends on the
  *   second the bar showed at its start (`sends`); the thumb stands where
- *   `placeAt` puts it; a screen reader's step and the lock screen's skip
- *   move by `nudged`;
+ *   `placeAt` puts it; the step's `nudge` and the lock screen's skip move
+ *   by `nudged` (VoiceOver's swipe on the bar is Exact's span/20 until
+ *   Exact can set an adjust step apart from the drag's);
  * - for 50 hymns of the book under generated choices, and every choice of
  *   5, the cut's clock, every span the player skips and where it lands are
  *   `cutOf`'s over `keptOf`; a stanza's place is its first line's target
@@ -169,7 +170,7 @@ describe('the seek’s rules are the current app’s', () => {
     expect(sent).toBeGreaterThan(50);
   });
 
-  it('a screen reader’s step and the lock screen’s skip move by nudged', () => {
+  it('a nudge (which no Contract event sends yet) and the lock screen’s skip move by nudged', () => {
     const random = seeded(19);
     for (let run = 0; run < 150; run++) {
       const length = 1 + below(random, 60_000) / 100;
