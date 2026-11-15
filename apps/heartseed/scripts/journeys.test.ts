@@ -449,6 +449,7 @@ describe('verify-heartseed journeys', () => {
           'list',
           'natural',
           'passage',
+          'peek',
           'phrase',
           'promise',
           'run',

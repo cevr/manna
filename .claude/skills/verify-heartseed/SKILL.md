@@ -236,6 +236,7 @@ for what an expect cannot say. The journeys:
   `home-end` and `home-add`, run by `home.md`.
 - [features/list.journey.json](features/list.journey.json), `list-practice` and `list-remove`, run by
   `list.md`; [features/back.journey.json](features/back.journey.json), run by `back.md`;
+  [features/peek.journey.json](features/peek.journey.json), run by `peek.md`;
   [features/about.journey.json](features/about.journey.json), run by `about.md`;
   [features/appearance.journey.json](features/appearance.journey.json), `appearance-dark`,
   `appearance-choice` and `appearance-kept`, run by `appearance.md`.
