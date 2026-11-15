@@ -213,7 +213,7 @@ component Today
         row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
           for w in today.words key=w.index
             if w.peekable
-              button press=peek(w.index) aria-label=w.label min-width=28 min-height=36 testId=`word-${w.index}`
+              button press=peek(w.index) aria-label=w.label min-width=44 min-height=44 testId=`word-${w.index}`
                 text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase)
             else
               text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
