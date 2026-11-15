@@ -1,0 +1,45 @@
+// The hymnal's brand: the current hymnal's colour roles (apps/hymnal/src/theme.ts,
+// Heartseed's palette), light and dark, each under the role's own name, and the
+// platform's roles the port's screens draw with, each set to one of them.
+// src/look/brand.test.ts holds every colour here to theme.ts.
+tamber hymnal
+
+theme
+  ground = light-dark(#f1f0e6, #142420)
+  ink = light-dark(#2c4542, #e6eedb)
+  muted = light-dark(#5a6761, #a0b4a7)
+  line = light-dark(#cfdcc4, #2d463c)
+  accent = light-dark(#2c4542, #e6eedb)
+  button = light-dark(#2c4542, #e6eedb)
+  onButton = light-dark(#f1f0e6, #142420)
+  selected = light-dark(#dde4d2, #3d5c4f)
+  chord = light-dark(#80641f, #d4a640)
+  soft = light-dark(#dde4d2, #263d35)
+  onAccent = light-dark(#f1f0e6, #142420)
+  pressed = light-dark(#536763, #bcc6b6)
+  onPressed = light-dark(#f1f0e6, #142420)
+  panel = light-dark(#f9f8f1, #1d322c)
+  edge = light-dark(#6d8474, #627c6e)
+  bar = light-dark(#f1f0e6, #142420)
+  pill = light-dark(#b9cfae, #e6eedb)
+  onPill = light-dark(#2c4542, #142420)
+  chosen = light-dark(#2c4542, #142420)
+  onChosen = light-dark(#f1f0e6, #e6eedb)
+  alert = light-dark(#a04a34, #f09982)
+  shadow = light-dark(#2c4542, #000000)
+  glass = light-dark(#dde4d2d9, #263d35d9)
+  onGlass = light-dark(#2c4542, #e6eedb)
+  onGlassMuted = light-dark(#415853, #bec9b8)
+  glassChosen = light-dark(#2c4542, #e6eedb)
+  onGlassChosen = light-dark(#f1f0e6, #142420)
+  -exact-background = ground
+  -exact-grouped-background = ground
+  -exact-secondary-background = panel
+  -exact-secondary-grouped-background = panel
+  -exact-label = ink
+  -exact-secondary-label = muted
+  -exact-separator = line
+  AccentColor = accent
+  AccentColorText = onAccent
+  Canvas = ground
+  CanvasText = ink

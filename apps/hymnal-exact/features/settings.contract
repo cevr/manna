@@ -1,0 +1,66 @@
+// Settings: the gear in the list's title row opens it as a sheet over the
+// book. Appearance first (System, Light, Dark), then one row per feature that
+// has a setting, then About, pushed in the sheet. The choice is kept across
+// launches and applied to the whole app at once through the host's scheme
+// (src/look/look.ts holds its rules to the current hymnal's).
+
+shape SettingsLook
+  value: string
+  label: string
+  chosen: bool
+
+shape SettingsMedia
+  prefersColorScheme: string
+
+// `settingsScheme` is the scheme the root is drawn in from the first frame,
+// as `shownOf` says: the kept choice is read before it, so a kept Dark never
+// paints light first; `setScheme` takes the platform's own (sheets, bars).
+members HymnalExact
+  state settingsLook = "system" persist
+  resource settingsLooks = settingsLooks(settingsLook) as shape SettingsLook[] else empty()
+  resource settingsMedia = exactViewport() as shape SettingsMedia
+  derive settingsScheme = settingsLook == "dark" or settingsLook == "light" ? settingsLook : (settingsMedia.prefersColorScheme == "dark" ? "dark" : "light")
+  action settingsChoose(look: string)
+    settingsLook = look
+  action settingsApply
+    setScheme(settingsLook)
+  action settingsClose
+    nav = back(nav)
+  task settingsKept when settingsLook != "" key=settingsLook
+    change(settingsApply)
+
+// The gear: one call line in the list's title row.
+component SettingsGear
+  view
+    link href=path("settings") aria-label="Settings" testId="gear"
+      image "symbol:settings"
+
+component SettingsSheet
+  props
+    entry: Entry
+    looks: SettingsLook[]
+    choose: action
+    done: action
+  view
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="settings-list" position="absolute" inset=0 testId="settings"
+      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
+        text "Settings" role="heading" aria-level=2
+        button press=done testId="settings-done"
+          text "Done"
+      list id="settings-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
+        section
+          header
+            text "Appearance"
+          for l in looks key=l.value
+            button role="radio" aria-checked=l.chosen press=choose(l.value) testId=`appearance-${l.value}`
+              row flex=1 min-width=0 align-items="center"
+                text l.label flex=1 min-width=0
+                if l.chosen
+                  image "symbol:checkmark" aria-hidden=true
+        // Each feature with a setting adds its row here, one call line
+        // (README.md, "Settings").
+        section
+          link href=path("about") testId="about-row"
+            row flex=1 min-width=0 align-items="center"
+              text "About" flex=1 min-width=0
+              image "symbol:forward-chevron" aria-hidden=true

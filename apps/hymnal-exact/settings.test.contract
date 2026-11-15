@@ -1,0 +1,57 @@
+test "The gear opens Settings; Done and Back close it."
+  tap "gear"
+  clock settle
+  clock data
+  expect tree has "settings"
+  expect text "appearance-system" == "System"
+  expect text "appearance-light" == "Light"
+  expect text "appearance-dark" == "Dark"
+  tap "settings-done"
+  clock settle
+  expect tree missing "settings"
+  expect text "title" == "Hymns"
+  tap "gear"
+  clock settle
+  expect tree has "settings"
+  back
+  clock settle
+  expect tree missing "settings"
+  expect text "title" == "Hymns"
+
+test "Dark at once, and kept."
+  prefer prefers-color-scheme light
+  tap "gear"
+  clock settle
+  clock data
+  expect state settingsLooks.0 .chosen == true
+  tap "appearance-dark"
+  clock settle
+  clock data
+  expect state settingsLook == "dark"
+  expect state settingsLooks.2 .chosen == true
+  expect state settingsLooks.0 .chosen == false
+  reload
+  clock data
+  clock settle
+  expect state settingsLook == "dark"
+  expect state settingsLooks.2 .chosen == true
+  tap "appearance-system"
+  clock settle
+  clock data
+  expect state settingsLook == "system"
+  expect state settingsLooks.0 .chosen == true
+
+test "About opens from the sheet and Back returns to it."
+  tap "gear"
+  clock settle
+  clock data
+  tap "about-row"
+  clock settle
+  clock data
+  expect tree has "about"
+  expect text "about-lead" == "The recordings are played from the hymnal's own scores."
+  back
+  clock settle
+  expect tree missing "about"
+  expect tree has "settings"
+  expect text "appearance-dark" == "Dark"

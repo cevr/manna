@@ -1,6 +1,7 @@
 // The home list: every hymn under the hymnal's topical sections, and the bar's
 // search over them (app.ts `hymnRows`, src/list/rows.ts).
 use EmptyState from "exact:content"
+use SettingsGear from "./settings.contract"
 
 shape ListRow
   number: number
@@ -28,6 +29,7 @@ component HymnList
       display="flex" flex-direction="column"
       header display="flex" flex-wrap="wrap" align-items="center" gap=8 padding="8px 16px"
         text "Hymns" role="heading" aria-level=1 flex=1 testId="title"
+        SettingsGear()
         input type="search" value=query input=search placeholder="Number, title or first line"
           aria-label="Search hymns" testId="search" width="100%"
       if sections.length == 0 and query.trim() != ""
