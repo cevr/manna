@@ -74,7 +74,7 @@ bun tools/drive-web.ts             # every hymn's address, not-found, script off
 bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json from five loads of each
 ```
 
-The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs both.
+The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' (`src/chords/*.test.ts`) the part `test:chords`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs all three.
 
 The drive starts the server and Chrome (no Exact driver), each in a process group of its own, and fails on any request that leaves the local server, but the recordings' bucket after a press of Play, which it answers itself with silence. Its budget checks bytes always and times only at a load of 5 or less.
 
