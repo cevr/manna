@@ -240,6 +240,60 @@ it('answers every garden source inside the data host, for seeded call sequences 
   }
 });
 
+/** One home call, a list page's, or a garden call between them: the session's wire whole, empty or garbled, as the Contract may send it. */
+const homeCallOf = (random: Random, now: number): readonly [string, readonly unknown[]] => {
+  const offset = random.pick([-300, 0, 330]);
+  const wire = random.pick([
+    { minutes: 5, planned: false, items: [], held: null, visit: [] },
+    {
+      minutes: 10,
+      planned: true,
+      items: [{ reference: 'John 3:16', fresh: false, recalls: 1, seconds: 20 }],
+      held: null,
+      visit: [],
+    },
+    { minutes: 5, planned: true, items: [{ reference: 'x' }], held: 3, visit: 'x' },
+    {},
+    'x',
+    null,
+  ]);
+  const key = random.pick(['', 'x', '1|a']);
+  const seed = random.below(2 ** 32);
+  if (random.chance(0.4)) return gardenCallOf(random, now);
+  if (random.chance(0.5)) return ['homeRead', [offset, wire, key, now, seed]];
+  return [
+    'listRead',
+    [
+      random.pick(['passage-0-43-3-16-18', 'passage-1-43-3-16-18', 'x', '']),
+      offset,
+      wire,
+      key,
+      now,
+      seed,
+    ],
+  ];
+};
+
+it('answers every home and list source inside the data host, between garden calls over a failing storage', async () => {
+  for (let seed = 1; seed <= SEQUENCES / 2; seed++) {
+    const random = seeded(seed);
+    const storage = gardenStorageOf(random);
+    let now = START;
+    for (let n = 0; n < CALLS; n++) {
+      const [source, args] = homeCallOf(random, now);
+      const answered: Record<string, unknown> = await withDataHost(() =>
+        Reflect.apply(app.answer, undefined, [source, args, {}, storage, {}]),
+      );
+      if (source === 'homeRead') {
+        expect(typeof answered['greeting']).toBe('string');
+        expect(Array.isArray(answered['rows'])).toBe(true);
+      } else if (source === 'listRead') expect(Array.isArray(answered['verses'])).toBe(true);
+      expect([...storage.files.keys()].every((path) => path === GARDEN_FILE)).toBe(true);
+      now += random.below(86_400_000);
+    }
+  }
+});
+
 /** One text call: a chapter's verses, or a range's words or their sums, over places in the canon and outside it. */
 const textCallOf = (random: Random): readonly [string, readonly unknown[]] => {
   const book = random.pick([43, 19, 66, 1, 0, 67, Number.NaN]);
