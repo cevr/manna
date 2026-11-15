@@ -6,8 +6,10 @@
  * or the recognizer's `heard`. The same steps run here through the wrapper's
  * `agent`, on the host named (`bun tools/drive-say.ts web|ios`), against the
  * substitute `@exact/speech-recognition` ships for the agent, the cue named
- * by the route `/cue/initials`. One store is kept across launches: a clean
- * recital kept at Next and shown after a relaunch (1), a try with one peek
+ * by the route `/cue/<cue>`. One store is kept across launches: a clean
+ * recital under no cue (suggested Good: the current matcher counts any cue
+ * as help, so first letters suggest Hard at best) kept at Next and shown
+ * after a relaunch (1), then under first letters a try with one peek
  * (2), one after Show all (3), a peek and a try left before Next that keeps
  * nothing (4); then a refusal in a store of its own (5). The transcript is
  * the shipped passage with `thee`, `thy` and `yea` written as a recognizer
@@ -110,7 +112,7 @@ const enabledOf = (grades: readonly { grade: number; enabled: boolean }[] | unde
 const cued = ['--url', '/cue/initials'];
 
 const clean = await run(
-  ['--storage', store, '--reset-storage', ...cued],
+  ['--storage', store, '--reset-storage', '--url', '/cue/none'],
   [
     ...granted,
     'clock data',
@@ -121,6 +123,9 @@ const clean = await run(
     'state today.grades',
     'state today.pending',
     'state todayListening',
+    'tap grade-4',
+    'clock settle',
+    'state today.grades.3.chosen',
     'tap grade-3',
     'clock settle',
     'state today.grades.2.chosen',
@@ -130,14 +135,10 @@ const clean = await run(
     ...shot('clean'),
   ],
 );
+check('B1 the cue is none', clean('state today.cue') === 'none', clean('state today.cue'));
 check(
-  'B1 the cue is first letters',
-  clean('state today.cue') === 'initials',
-  clean('state today.cue'),
-);
-check(
-  "B1 a clean recital under first letters: the matcher's suggestion (Hard, a cue's help)",
-  clean('state today.suggested') === 'Suggested: Hard',
+  'B1 a clean recital under no cue: suggested Good',
+  clean('state today.suggested') === 'Suggested: Good',
   clean('state today.suggested'),
 );
 check(
@@ -156,7 +157,12 @@ check(
   clean('state todayListening'),
 );
 check(
-  'B1 Good chosen',
+  'B1 Easy can be chosen',
+  clean('state today.grades.3.chosen') === true,
+  clean('state today.grades.3.chosen'),
+);
+check(
+  'B1 then Good chosen',
   clean('state today.grades.2.chosen') === true,
   clean('state today.grades.2.chosen'),
 );
