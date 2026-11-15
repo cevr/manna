@@ -56,6 +56,30 @@
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
     },
+    "./voice": {
+      "types": "./exact/voice.d.ts",
+      "default": "./src/voice.ts"
+    },
+    "./session/service": {
+      "types": "./exact/session-service.d.ts",
+      "default": "./src/session/service.ts"
+    },
+    "./session/run": {
+      "types": "./exact/session-run.d.ts",
+      "default": "./src/session/run.ts"
+    },
+    "./home/grown": {
+      "types": "./exact/grown.d.ts",
+      "default": "./src/home/grown.ts"
+    },
+    "./dictation": {
+      "types": "./exact/dictation.d.ts",
+      "default": "./src/dictation.ts"
+    },
+    "./sayit/letters": {
+      "types": "./exact/letters.d.ts",
+      "default": "./src/sayit/letters.ts"
+    },
     "./kjv": {
       "types": "./exact/kjv.d.ts",
       "default": "./src/kjv.ts"

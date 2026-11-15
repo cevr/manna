@@ -16,6 +16,21 @@ import type * as DeclaredKjv from '../exact/kjv.d.ts';
 import type * as DeclaredLists from '../exact/lists.d.ts';
 import type * as DeclaredPassages from '../exact/passages.d.ts';
 import type * as DeclaredSayIt from '../exact/sayit.d.ts';
+import type * as DeclaredDictation from '../exact/dictation.d.ts';
+import type * as DeclaredGrown from '../exact/grown.d.ts';
+import type * as DeclaredLetters from '../exact/letters.d.ts';
+import type * as DeclaredRun from '../exact/session-run.d.ts';
+import type * as DeclaredService from '../exact/session-service.d.ts';
+import type * as DeclaredSession from '../exact/session.d.ts';
+import type * as DeclaredVoice from '../exact/voice.d.ts';
+import type * as Dictation from '../src/dictation';
+import type * as Grown from '../src/home/grown';
+import type * as Promises from '../src/promises';
+import type * as Letters from '../src/sayit/letters';
+import type * as Session from '../src/session';
+import type * as Run from '../src/session/run';
+import type * as Service from '../src/session/service';
+import type * as Voice from '../src/voice';
 import type * as Chooser from '../src/chooser';
 import type * as Day from '../src/day';
 import type * as Fsrs from '../src/fsrs';
@@ -82,6 +97,34 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Lists.versesIn, typeof DeclaredLists.versesIn>,
   true satisfies Mutual<typeof Lists.listsOf, typeof DeclaredLists.listsOf>,
   true satisfies Mutual<typeof Kjv.versesOf, typeof DeclaredKjv.versesOf>,
+  true satisfies Mutual<typeof Garden.cueIn, typeof DeclaredGarden.cueIn>,
+  true satisfies Mutual<Session.Piece, DeclaredSession.Piece>,
+  true satisfies Mutual<Session.TextPiece, DeclaredSession.TextPiece>,
+  true satisfies Mutual<Session.Item, DeclaredSession.Item>,
+  true satisfies Mutual<Session.Plan, DeclaredSession.Plan>,
+  true satisfies Mutual<typeof Session.isDone, typeof DeclaredSession.isDone>,
+  true satisfies Mutual<typeof Session.countsOf, typeof DeclaredSession.countsOf>,
+  true satisfies Mutual<typeof Service.MINUTES_KEY, typeof DeclaredService.MINUTES_KEY>,
+  true satisfies Mutual<Service.SessionView, DeclaredService.SessionView>,
+  true satisfies Mutual<Service.VisitVerse, DeclaredService.VisitVerse>,
+  true satisfies Mutual<Promises.Collection, DeclaredService.Collection>,
+  true satisfies Mutual<typeof Service.Session, typeof DeclaredService.Session>,
+  true satisfies Mutual<typeof Service.layer, typeof DeclaredService.layer>,
+  true satisfies Mutual<Run.Shown, DeclaredRun.Shown>,
+  true satisfies Mutual<typeof Run.shownOf, typeof DeclaredRun.shownOf>,
+  true satisfies Mutual<Grown.Grown, DeclaredGrown.Grown>,
+  true satisfies Mutual<typeof Grown.grownOf, typeof DeclaredGrown.grownOf>,
+  true satisfies Mutual<typeof Grown.tendedOf, typeof DeclaredGrown.tendedOf>,
+  true satisfies Mutual<Dictation.DictationView, DeclaredDictation.DictationView>,
+  true satisfies Mutual<Dictation.EngineReport, DeclaredDictation.EngineReport>,
+  true satisfies Mutual<Dictation.Status, DeclaredDictation.Status>,
+  true satisfies Mutual<Dictation.Engine, DeclaredDictation.Engine>,
+  true satisfies Mutual<Dictation.Ending, DeclaredDictation.Ending>,
+  true satisfies Mutual<typeof Dictation.Dictation, typeof DeclaredDictation.Dictation>,
+  true satisfies Mutual<Voice.VoiceInfo, DeclaredVoice.VoiceInfo>,
+  true satisfies Mutual<typeof Voice.bestVoice, typeof DeclaredVoice.bestVoice>,
+  true satisfies Mutual<typeof Letters.lettersOf, typeof DeclaredLetters.lettersOf>,
+  true satisfies Mutual<typeof Letters.PEEK_SHOWN_MS, typeof DeclaredLetters.PEEK_SHOWN_MS>,
 ];
 
 it('declares for Exact what each module the port imports exports', () => {
