@@ -28,6 +28,14 @@
       "types": "./exact/chooser.d.ts",
       "default": "./src/chooser.ts"
     },
+    "./shelves": {
+      "types": "./exact/shelves.d.ts",
+      "default": "./src/shelves.ts"
+    },
+    "./field": {
+      "types": "./exact/field.d.ts",
+      "default": "./src/field.ts"
+    },
     "./fsrs": {
       "types": "./exact/fsrs.d.ts",
       "default": "./src/fsrs.ts"

@@ -23,7 +23,9 @@ import type * as DeclaredHome from '../exact/home.d.ts';
 import type * as DeclaredHomeToday from '../exact/home-today.d.ts';
 import type * as DeclaredHomeStart from '../exact/home-start.d.ts';
 import type * as DeclaredList from '../exact/list.d.ts';
+import type * as DeclaredShelves from '../exact/shelves.d.ts';
 import type * as Field from '../src/field';
+import type * as Shelves from '../src/shelves';
 import type * as Home from '../src/home';
 import type * as HomeToday from '../src/home/today';
 import type * as HomeStart from '../src/home/start';
@@ -137,6 +139,19 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Letters.PEEK_SHOWN_MS, typeof DeclaredLetters.PEEK_SHOWN_MS>,
   true satisfies Mutual<typeof Lists.singleVersesOf, typeof DeclaredLists.singleVersesOf>,
   true satisfies Mutual<Field.PlantStage, DeclaredField.PlantStage>,
+  true satisfies Mutual<Field.FieldPassage, DeclaredField.FieldPassage>,
+  true satisfies Mutual<Field.Field, DeclaredField.Field>,
+  true satisfies Mutual<typeof Field.fieldOf, typeof DeclaredField.fieldOf>,
+  true satisfies Mutual<typeof Home.fieldPassagesWith, typeof DeclaredHome.fieldPassagesWith>,
+  true satisfies Mutual<Shelves.Shelf, DeclaredShelves.Shelf>,
+  true satisfies Mutual<typeof Shelves.SHELVES, typeof DeclaredShelves.SHELVES>,
+  true satisfies Mutual<typeof Shelves.plantsSingly, typeof DeclaredShelves.plantsSingly>,
+  true satisfies Mutual<typeof Shelves.offerStateOf, typeof DeclaredShelves.offerStateOf>,
+  true satisfies Mutual<Chooser.Verses, DeclaredChooser.Verses>,
+  true satisfies Mutual<typeof Chooser.tapVerse, typeof DeclaredChooser.tapVerse>,
+  true satisfies Mutual<typeof Passages.isShort, typeof DeclaredPassages.isShort>,
+  true satisfies Mutual<typeof Passages.heldCount, typeof DeclaredPassages.heldCount>,
+  true satisfies Mutual<typeof Passages.SINGLES_TITLE, typeof DeclaredPassages.SINGLES_TITLE>,
   true satisfies Mutual<Home.HomeIcon, DeclaredHome.HomeIcon>,
   true satisfies Mutual<Home.FurrowKind, DeclaredHome.FurrowKind>,
   true satisfies Mutual<Home.FurrowPlant, DeclaredHome.FurrowPlant>,

@@ -1,6 +1,6 @@
 import type { Option } from 'effect';
 
-import type { PlantStage } from './field.d.ts';
+import type { FieldPassage, PlantStage } from './field.d.ts';
 import type { ReadGarden } from './garden.d.ts';
 import type { List, ListSource } from './lists.d.ts';
 import type { Range } from './passages.d.ts';
@@ -73,6 +73,12 @@ export declare const singlesOf: (
   held: readonly Range[],
   ready: ReadonlySet<string>,
 ) => readonly SinglePlant[];
+
+/** The rows the field shows: the lists, then the single verses as one row. */
+export declare const fieldPassagesWith: (
+  lists: readonly List[],
+  singles: readonly string[],
+) => readonly FieldPassage[];
 
 /** The verse a plant's reference belongs to. */
 export declare const verseOf: (reference: string) => string;
