@@ -26,7 +26,7 @@ import { view, type TodayView } from './view';
 export const RECALL_FILE = 'app:/data/today.json';
 
 /** The part of Exact's `Storage` Today uses. */
-export interface TodayStorage {
+interface TodayStorage {
   readonly fs: {
     readonly readFile: (path: string) => PromiseLike<ArrayBuffer>;
     readonly atomicWriteFile: (path: string, bytes: Uint8Array) => PromiseLike<unknown>;
@@ -36,11 +36,11 @@ export interface TodayStorage {
 const RECALL = /^\{"right":(\d{1,6}),"total":(\d{1,6})\}$/u;
 
 /** A recall as the text kept, plain JSON. */
-export const encodeRecall = (recall: Recall): string =>
+const encodeRecall = (recall: Recall): string =>
   `{"right":${recall.right},"total":${recall.total}}`;
 
 /** A kept recall's text as a recall: none for any text `encodeRecall` did not write. */
-export const decodeRecall = (text: string): Maybe<Recall> => {
+const decodeRecall = (text: string): Maybe<Recall> => {
   const [right, total] = text
     .replace(/[^\d,]/gu, '')
     .split(',')

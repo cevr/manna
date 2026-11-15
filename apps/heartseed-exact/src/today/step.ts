@@ -32,7 +32,7 @@ export const some = <A>(value: A): Maybe<A> => ({ _tag: 'Some', value });
 export type Phase = 'resting' | 'reading' | 'listening' | 'graded';
 
 /** A word's UTF-16 span `[start, end)` in the passage's text. */
-export interface WordSpan {
+interface WordSpan {
   readonly from: number;
   readonly to: number;
 }
@@ -79,7 +79,7 @@ export type TodayInput =
 const LETTER = /[\p{L}\p{N}]/u;
 
 /** The passage's words as the matcher counts them (whitespace runs holding a letter or number), each as its span. */
-export const spansOf = (text: string): readonly WordSpan[] =>
+const spansOf = (text: string): readonly WordSpan[] =>
   [...text.matchAll(/\S+/gu)]
     .filter((run) => LETTER.test(run[0]))
     .map((run): WordSpan => ({ from: run.index, to: run.index + run[0].length }));
