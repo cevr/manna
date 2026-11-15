@@ -33,6 +33,7 @@ export const HOME_FOOT: Foot = {
     'singles',
     'single',
     'field-plant',
+    'single-reference',
     'dot',
     'plant-sown',
     'plant-soil',
