@@ -227,3 +227,30 @@ it('answers every garden source inside the data host, for seeded call sequences 
     }
   }
 });
+
+/** One text call: a chapter's verses, or a range's words or their sums, over places in the canon and outside it. */
+const textCallOf = (random: Random): readonly [string, readonly unknown[]] => {
+  const book = random.pick([43, 19, 66, 1, 0, 67, Number.NaN]);
+  const chapter = random.pick([3, 119, 22, 1, 0, 151, 1.5]);
+  const first = random.below(180) - 2;
+  const range = [book, chapter, first, first + random.below(8) - 2];
+  return random.pick([
+    ['textVerses', [book, chapter]],
+    ['textOf', range],
+    ['textSum', range],
+  ]);
+};
+
+it('answers every text source inside the data host, for seeded calls', async () => {
+  for (let seed = 1; seed <= 10; seed++) {
+    const random = seeded(seed);
+    for (let n = 0; n < CALLS; n++) {
+      const [source, args] = textCallOf(random);
+      const answered: unknown = await withDataHost(() =>
+        Reflect.apply(app.answer, undefined, [source, args, {}, storageOf(random), {}]),
+      );
+      if (source === 'textVerses') expect(Array.isArray(answered)).toBe(true);
+      else expect(Array.isArray(Reflect.get(Object(answered), 'verses'))).toBe(true);
+    }
+  }
+});

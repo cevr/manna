@@ -1,0 +1,27 @@
+test "An address no screen has shows not-found, and its link goes home."
+  at "/nothing"
+  clock data
+  expect text "notfound-title" == "No Such Page"
+  tap "notfound-home"
+  clock settle
+  clock data
+  expect tree missing "notfound"
+  expect text "title" == "Hymns"
+
+test "A hymn's address for a number the hymnal has not shows not-found."
+  at "/hymns/696"
+  clock data
+  expect text "notfound-title" == "No Such Page"
+  expect tree missing "hymn-title"
+
+test "A hymn's number written another way is not found."
+  at "/hymns/007"
+  clock data
+  expect text "notfound-title" == "No Such Page"
+  expect tree missing "hymn-title"
+
+test "A hymn's address the hymnal has opens the hymn, not the not-found screen."
+  at "/hymns/7"
+  clock data
+  expect tree has "hymn-title"
+  expect tree missing "notfound"

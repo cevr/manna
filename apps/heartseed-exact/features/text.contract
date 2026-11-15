@@ -1,0 +1,31 @@
+// The text: any verse's words, read in src/text/ from the whole KJV the data
+// module imports (the current Heartseed's own corpus). The screens that need
+// words call `textVerses(book, chapter)` and `textOf(book, chapter, first,
+// last)`. This file draws nothing: its resources are the probe
+// text.test.contract reads, three verses and two chapters, held to the
+// current app's words by their fingerprints (`textSum`).
+
+shape TextVerse
+  verse: number
+  text: string
+
+shape TextPassage
+  reference: string
+  verses: TextVerse[]
+
+shape TextVerseSum
+  verse: number
+  length: number
+  sum: number
+
+shape TextSums
+  reference: string
+  verses: TextVerseSum[]
+
+members HeartseedExact
+  resource textJohn = textOf(43, 3, 16, 16) as shape TextPassage else empty()
+  resource textJohnSum = textSum(43, 3, 16, 16) as shape TextSums else empty()
+  resource textPsalmSum = textSum(19, 119, 176, 180) as shape TextSums else empty()
+  resource textEndSum = textSum(66, 22, 21, 21) as shape TextSums else empty()
+  resource textPsalm = textVerses(19, 119) as shape string[] else empty()
+  resource textMissing = textVerses(43, 22) as shape string[] else empty()

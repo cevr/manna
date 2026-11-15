@@ -60,6 +60,24 @@ bun tools/drive-player.ts web    # the fixture down and up, a hymn with no recor
 bun tools/drive-player.ts ios
 ```
 
+## The web
+
+`bun run build:web` makes the site a host serves as plain files: Exact's release build (`web-build --out dist`, after the book's makers) and then `tools/web/pages.ts`, which writes a page per address a screen has from the build's `shell.html` (`src/web/pages.ts`): `index.html`, `recent/`, `player/`, `settings/`, `settings/about/`, `hymns/<n>/` for each hymn and `404.html`, each the same shell with its screen's own `<title>` and description, so a shared link previews as its hymn. Every route renders in the browser (`render=client`). The pin can render a route at build (`render=build`, with `pages=` for a hymn's), but its pages keep the answers they were built with: on such a site a returning reader's Recent shelf stayed empty, a stanza choice was written back to none and the first press of Play did nothing (`bun tools/drive-web.ts return` over such a build).
+
+A host needs one rule, `servedFor` in `src/web/served.ts`: a file at the path, else that folder's `index.html`, with 200; anything else `404.html` with 404, whose script draws the not-found screen (`features/notfound.contract`). Which screen an address opens is `placeOf` (`src/web/place.ts`): a hymn's address only as the current app writes its number (`/hymns/7`, never `/hymns/007`), and a path with a trailing `/` is not found.
+
+```sh
+bun run build:web                  # dist/, about 5 s
+bun run serve:web                  # Exact's serve of dist/ on http://127.0.0.1:8766/
+bun tools/web/serve.ts dist        # the same by the one rule alone, as a static host serves it
+bun tools/drive-web.ts             # every hymn's address, not-found, script off, bytes and times, a returning reader
+bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json from five loads of each
+```
+
+The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs both.
+
+The drive starts the server and Chrome (no Exact driver), each in a process group of its own, and fails on any request that leaves the local server, but the recordings' bucket after a press of Play, which it answers itself with silence. Its budget checks bytes always and times only at a load of 5 or less.
+
 ## Settings and the colours
 
 The gear in the list's title row (`SettingsGear`, one call line in `features/list.contract`) opens Settings (`features/settings.contract`), a sheet over the book: Appearance (System, Light, Dark), then one row per feature that has a setting, then About (`features/about.contract`), pushed in the sheet. A feature adds its row as one call line in the sheet's rows section, where its comment says, its component and state in its own file.

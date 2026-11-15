@@ -1,0 +1,47 @@
+{
+  "measuredAtLoad": 4.8,
+  "/ cold": {
+    "bytes": 369494,
+    "html": 12551,
+    "script": 356636,
+    "css": 0,
+    "data": 307,
+    "wasm": 0,
+    "rowMs": 87,
+    "readyMs": 87,
+    "loadMs": 92
+  },
+  "/ warm": {
+    "bytes": 724,
+    "html": 180,
+    "script": 372,
+    "css": 0,
+    "data": 172,
+    "wasm": 0,
+    "rowMs": 54,
+    "readyMs": 54,
+    "loadMs": 59
+  },
+  "/hymns/100 cold": {
+    "bytes": 369506,
+    "html": 12563,
+    "script": 356636,
+    "css": 0,
+    "data": 307,
+    "wasm": 0,
+    "wordsMs": 113,
+    "readyMs": 113,
+    "loadMs": 122
+  },
+  "/hymns/100 warm": {
+    "bytes": 724,
+    "html": 180,
+    "script": 372,
+    "css": 0,
+    "data": 172,
+    "wasm": 0,
+    "wordsMs": 75,
+    "readyMs": 75,
+    "loadMs": 83
+  }
+}

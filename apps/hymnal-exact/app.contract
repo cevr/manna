@@ -5,12 +5,17 @@
 // navigation bar, its heading the title.
 // A feature adds one `use` line, one `members` line, its route, and its screen
 // under the stack below (README.md, "Adding a feature").
+// Each route renders in the browser (`render=client`, the default): a page
+// rendered at build keeps its answers when the reader's kept lists differ
+// (README.md, "The web"). A path no route matches, and a hymn's address for a
+// number the hymnal has not, draws the not-found screen.
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
 use PlayerDock, PlayerSheet from "./features/player.contract"
 use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
 use RecentScreen from "./features/recent.contract"
+use NotFound from "./features/notfound.contract"
 
 routes nav
   list "/"
@@ -19,6 +24,7 @@ routes nav
     settings "/settings"
       about "/settings/about"
     recent "/recent"
+  notfound
 
 component HymnalExact
   members "./features/list.contract"
@@ -41,7 +47,7 @@ component HymnalExact
       for e in stack(nav) key=e.id
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, search=listSearch, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
-        if e.name == "hymn"
+        if e.name == "hymn" and not (current(hymnShown) and hymnShown.number == 0)
           HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
@@ -51,4 +57,6 @@ component HymnalExact
           AboutScreen(entry=e, page=aboutShown)
         if e.name == "recent"
           RecentScreen(entry=e, recent=recentShown, favourites=favouriteList)
+        if e.name == "notfound" or (e.name == "hymn" and current(hymnShown) and hymnShown.number == 0)
+          NotFound(entry=e)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, broke=playerFailed)

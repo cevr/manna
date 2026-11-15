@@ -12,6 +12,7 @@ import type * as DeclaredChooser from '../exact/chooser.d.ts';
 import type * as DeclaredDay from '../exact/day.d.ts';
 import type * as DeclaredFsrs from '../exact/fsrs.d.ts';
 import type * as DeclaredGarden from '../exact/garden.d.ts';
+import type * as DeclaredKjv from '../exact/kjv.d.ts';
 import type * as DeclaredLists from '../exact/lists.d.ts';
 import type * as DeclaredPassages from '../exact/passages.d.ts';
 import type * as DeclaredSayIt from '../exact/sayit.d.ts';
@@ -19,6 +20,7 @@ import type * as Chooser from '../src/chooser';
 import type * as Day from '../src/day';
 import type * as Fsrs from '../src/fsrs';
 import type * as Garden from '../src/garden';
+import type * as Kjv from '../src/kjv';
 import type * as Lists from '../src/lists';
 import type * as Passages from '../src/passages';
 import type * as SayIt from '../src/sayit';
@@ -79,6 +81,7 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Lists.placeOf, typeof DeclaredLists.placeOf>,
   true satisfies Mutual<typeof Lists.versesIn, typeof DeclaredLists.versesIn>,
   true satisfies Mutual<typeof Lists.listsOf, typeof DeclaredLists.listsOf>,
+  true satisfies Mutual<typeof Kjv.versesOf, typeof DeclaredKjv.versesOf>,
 ];
 
 it('declares for Exact what each module the port imports exports', () => {

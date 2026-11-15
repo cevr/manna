@@ -3,6 +3,20 @@
   "extends": ["//"],
   "tasks": {
     "test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:web"],
+      "outputs": []
+    },
+    "test:app": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "!src/web/**/*.test.*"
+      ]
+    },
+    "test:web": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]

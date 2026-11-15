@@ -4,6 +4,7 @@ import { aboutSources } from './src/about/sources';
 import { gardenSources } from './src/garden/sources';
 import passage from './src/passage/today';
 import { settingsSources } from './src/settings/choices';
+import { textSources } from './src/text/sources';
 import { todaySources } from './src/today/sources';
 
 /** Today listens on the device and keeps its last recall in one file of the app's data; the garden keeps its keys in another. */
@@ -18,6 +19,7 @@ const sources: Sources = {
   ...settingsSources,
   ...aboutSources(licences),
   ...gardenSources({ driven: GARDEN_DRIVE !== '' }),
+  ...textSources,
 };
 
 export const answer: Answer = (source, args, store, storage, native) =>

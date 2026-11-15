@@ -43,7 +43,7 @@ test "A hymn's address stays on it through a reload." on web
 test "An address that names no hymn says so."
   at "/hymns/999"
   clock data
-  expect text "hymn-title" == "No Such Hymn"
+  expect text "notfound-title" == "No Such Page"
   back
   clock settle
   expect text "title" == "Hymns"
