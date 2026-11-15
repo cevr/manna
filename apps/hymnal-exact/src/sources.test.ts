@@ -6,16 +6,12 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { indexOf } from '@manna/hymnal-app/hymns/search';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
-import { bundled } from './chords/shipped.testing.ts';
 import { book } from './hymns/book.ts';
 import { BUCKET } from './player/sources.ts';
 import { sourcesAt } from './sources.ts';
 import { below, pick, query, seeded } from './test/random.ts';
 
-const sources = sourcesAt(BUCKET, [], bundled);
-
-const CHORD_STEPS = ['up', 'down', 'capo-up', 'capo-down', 'reset', '', 'sideways'] as const;
-const GRIP_TOKENS = ['Db_0', 'Fs_5m7-b', 'Bbm_0_7', '', 'C', 'Es_0', 'C_zz', 'G_0-1-2'] as const;
+const sources = sourcesAt(BUCKET, []);
 
 /** A route's hymn number as a reader or a stale link writes it. */
 const route = (random: () => number): string =>
@@ -86,19 +82,6 @@ describe('the data module runs where Exact runs it', () => {
         expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
-        const moves = pick(random, [
-          [],
-          ['100:2:1'],
-          ['x', '5:9:0', '100:-5:11'],
-          [`${below(random, 700)}:1:1`],
-        ]);
-        expect(() =>
-          sources.chordsPage([route(random), below(random, 4) > 0, moves]),
-        ).not.toThrow();
-        expect(() =>
-          sources.chordsMove([moves, below(random, 700), pick(random, CHORD_STEPS)]),
-        ).not.toThrow();
-        expect(() => sources.chordsGrip([pick(random, GRIP_TOKENS)])).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.listTabs().length).toBe(5);
