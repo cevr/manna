@@ -333,13 +333,17 @@ const device = (state: State, input: Input): State => {
         return held.wants === 'play' && sounding(held) ? paused(held) : held;
       });
     case 'ended':
-      return onLoad(state, input.id, (held) => ({
-        ...held,
-        owed: [],
-        phase: 'ended',
-        wants: 'pause',
-        at: held.length > 0 ? held.length : held.at,
-      }));
+      return onLoad(state, input.id, (held) =>
+        held.owed.includes('played')
+          ? held
+          : {
+              ...held,
+              owed: [],
+              phase: 'ended',
+              wants: 'pause',
+              at: held.length > 0 ? held.length : held.at,
+            },
+      );
     case 'failed':
       return onLoad(state, input.id, (held) => ({ ...held, phase: 'failed', why: input.why }));
     case 'interrupted':

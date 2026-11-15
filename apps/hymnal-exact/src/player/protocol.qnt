@@ -15,7 +15,9 @@
 module protocol {
   type Phase = str // "none" | "loading" | "playing" | "paused" | "ended" | "failed"
   type Echo = str // "played" | "paused"
-  type Event = { tag: str, id: int }
+  // `echo`: the element raised it doing what the player told it, not on
+  // the platform's act; the player cannot see this, the properties can.
+  type Event = { tag: str, id: int, echo: bool }
 
   // The player's state: what `step` keeps of it.
   var phase: Phase
@@ -35,11 +37,20 @@ module protocol {
   // The reader paused, and nothing since asked to hear.
   var held: bool
 
+  // The reader's ask turned the player to play, and nothing since (the
+  // reader's pause or stop, the platform's pause, the element's end or
+  // failure) stopped it.
+  var hearing: bool
+
+  // An echo, stepped while `hearing`, turned the player to pause.
+  var undone: bool
+
   pure val INBOX = 4
 
   action init = all {
     phase' = "none", load' = 0, loads' = 0, wants' = "pause", owed' = List(),
     element' = 0, sounds' = false, broken' = false, inbox' = List(), held' = false,
+    hearing' = false, undone' = false,
   }
 
   // The view draws the element as the player asks: a new load is a new
@@ -48,21 +59,29 @@ module protocol {
     phase' = "loading", wants' = "play", load' = loads + 1, loads' = loads + 1,
     owed' = List("played"),
     element' = loads + 1, sounds' = true, broken' = false,
-    inbox' = inbox.concat(List({ tag: "loaded", id: loads + 1 }, { tag: "played", id: loads + 1 },
-      { tag: "playing", id: loads + 1 })),
+    inbox' = inbox.concat(List(
+      { tag: "loaded", id: loads + 1, echo: false },
+      { tag: "played", id: loads + 1, echo: true },
+      { tag: "playing", id: loads + 1, echo: false })),
   }
 
+  // The reader's play of a paused hymn: it plays on.
+  action readerResume = all {
+    inbox.length() + 2 <= INBOX, phase == "paused",
+    phase' = "loading", wants' = "play", owed' = owed.append("played"),
+    load' = load, loads' = loads, element' = element, broken' = broken,
+    sounds' = if (broken or sounds) sounds else true,
+    inbox' = if (broken or sounds) inbox
+      else inbox.concat(List({ tag: "played", id: load, echo: true },
+        { tag: "playing", id: load, echo: false })),
+    held' = false, hearing' = true, undone' = undone,
+  }
+
+  // The reader's play with nothing paused: a new load.
   action readerPlay = all {
-    inbox.length() + 3 <= INBOX,
-    or {
-      all { phase == "paused", phase' = "loading", wants' = "play", owed' = owed.append("played"),
-        load' = load, loads' = loads, element' = element, broken' = broken,
-        sounds' = if (broken or sounds) sounds else true,
-        inbox' = if (broken or sounds) inbox
-          else inbox.concat(List({ tag: "played", id: load }, { tag: "playing", id: load })) },
-      all { phase.in(Set("none", "ended", "failed")), fresh },
-    },
-    held' = false,
+    inbox.length() + 3 <= INBOX, phase.in(Set("none", "ended", "failed")),
+    fresh,
+    held' = false, hearing' = true, undone' = undone,
   }
 
   action readerPause = all {
@@ -70,47 +89,51 @@ module protocol {
     phase' = "paused", wants' = "pause", owed' = owed.append("paused"),
     load' = load, loads' = loads, element' = element, broken' = broken,
     sounds' = false,
-    inbox' = if (sounds and not(broken)) inbox.append({ tag: "paused", id: load }) else inbox,
-    held' = true,
+    inbox' = if (sounds and not(broken)) inbox.append({ tag: "paused", id: load, echo: true }) else inbox,
+    held' = true, hearing' = false, undone' = undone,
   }
 
   action readerStop = all {
     phase' = "none", wants' = "pause", owed' = List(), load' = 0, loads' = loads,
     element' = 0, sounds' = false, broken' = false, inbox' = inbox, held' = false,
+    hearing' = false, undone' = undone,
   }
 
   // The element on its own, and the platform on it.
   action elementEnds = all {
     sounds, inbox.length() + 1 <= INBOX, sounds' = false,
-    inbox' = inbox.append({ tag: "ended", id: element }),
+    inbox' = inbox.append({ tag: "ended", id: element, echo: false }),
     phase' = phase, load' = load, loads' = loads, wants' = wants, owed' = owed,
-    element' = element, broken' = broken, held' = held,
+    element' = element, broken' = broken, held' = held, hearing' = false, undone' = undone,
   }
 
   action elementFails = all {
     sounds, inbox.length() + 1 <= INBOX, sounds' = false, broken' = true,
-    inbox' = inbox.append({ tag: "failed", id: element }),
+    inbox' = inbox.append({ tag: "failed", id: element, echo: false }),
     phase' = phase, load' = load, loads' = loads, wants' = wants, owed' = owed,
-    element' = element, held' = held,
+    element' = element, held' = held, hearing' = false, undone' = undone,
   }
 
   action platformPauses = all {
     sounds, inbox.length() + 1 <= INBOX, sounds' = false,
-    inbox' = inbox.append({ tag: "paused", id: element }),
+    inbox' = inbox.append({ tag: "paused", id: element, echo: false }),
     phase' = phase, load' = load, loads' = loads, wants' = wants, owed' = owed,
-    element' = element, broken' = broken, held' = held,
+    element' = element, broken' = broken, held' = held, hearing' = false, undone' = undone,
   }
 
   action platformPlays = all {
     element != 0, not(sounds), not(broken), inbox.length() + 2 <= INBOX, sounds' = true,
-    inbox' = inbox.concat(List({ tag: "played", id: element }, { tag: "playing", id: element })),
+    inbox' = inbox.concat(List({ tag: "played", id: element, echo: false },
+      { tag: "playing", id: element, echo: false })),
     phase' = phase, load' = load, loads' = loads, wants' = wants, owed' = owed,
-    element' = element, broken' = broken, held' = false,
+    element' = element, broken' = broken, held' = false, hearing' = hearing, undone' = undone,
   }
 
   // An element's first event not yet stepped, stepped: an event of another
-  // load changes nothing; the echo owed first is paid; any other `played`
-  // or `paused` lets every debt go and is the platform's.
+  // load changes nothing; the echo owed first is paid; an end while the
+  // element's `play` is still owed came before that play, and changes
+  // nothing; any other `played` or `paused` lets every debt go and is the
+  // platform's.
   action deliver = all {
     inbox.length() > 0,
     nondet i = inbox.indices().oneOf()
@@ -118,34 +141,38 @@ module protocol {
     val first = inbox.indices().forall(j => j >= i or inbox[j].id != e.id)
     val mine = e.id == load and phase != "failed" and phase != "none"
     val echo = owed.length() > 0 and owed.head() == e.tag
+    val stale = e.tag == "ended" and owed.select(x => x == "played").length() > 0
+    val inert = not(mine) or echo or stale
+    val nextWants =
+      if (inert) wants
+      else if (e.tag == "played" and phase.in(Set("paused", "ended"))) "play"
+      else if (e.tag.in(Set("paused", "ended"))) "pause"
+      else wants
     all {
       first,
       inbox' = inbox.slice(0, i).concat(inbox.slice(i + 1, inbox.length())),
       phase' =
-        if (not(mine) or echo) phase
+        if (inert) phase
         else if (e.tag == "playing" and wants == "play" and phase == "loading") "playing"
         else if (e.tag == "played" and phase.in(Set("paused", "ended"))) "loading"
         else if (e.tag == "paused" and wants == "play" and phase.in(Set("loading", "playing"))) "paused"
         else if (e.tag == "ended") "ended"
         else if (e.tag == "failed") "failed"
         else phase,
-      wants' =
-        if (not(mine) or echo) wants
-        else if (e.tag == "played" and phase.in(Set("paused", "ended"))) "play"
-        else if (e.tag.in(Set("paused", "ended"))) "pause"
-        else wants,
+      wants' = nextWants,
       owed' =
-        if (not(mine)) owed
+        if (not(mine) or stale) owed
         else if (echo) owed.tail()
         else if (e.tag.in(Set("played", "paused", "ended"))) List()
         else owed,
       load' = load, loads' = loads, element' = element, sounds' = sounds, broken' = broken,
-      held' = held,
+      held' = held, hearing' = hearing,
+      undone' = (undone or (e.echo and hearing and mine and nextWants == "pause")),
     },
   }
 
   action step = any {
-    readerPlay, readerPause, readerStop,
+    readerPlay, readerResume, readerPause, readerStop,
     elementEnds, elementFails, platformPauses, platformPlays,
     deliver,
   }
@@ -159,5 +186,15 @@ module protocol {
   val pauseNeverUndone = inbox.length() > 0 or not(held)
     or (phase.in(Set("paused", "ended", "failed")) and not(sounds))
 
-  val safe = neverTwoLoadsSounding and pauseNeverUndone
+  // After the reader's ask to hear, with nothing since that stopped it,
+  // once every event is stepped the player wants to hear and the element
+  // sounds, a failed load aside.
+  val settledAsAsked = inbox.length() > 0 or not(hearing) or phase == "failed"
+    or (wants == "play" and sounds)
+
+  // No echo of the player's own command undoes the reader's ask, settled
+  // or not.
+  val resumeNeverUndone = not(undone)
+
+  val safe = neverTwoLoadsSounding and pauseNeverUndone and settledAsAsked and resumeNeverUndone
 }

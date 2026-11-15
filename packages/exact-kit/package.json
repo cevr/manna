@@ -14,6 +14,10 @@
       "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"
     },
+    "./storage": {
+      "types": "./src/storage/store.d.ts",
+      "default": "./src/storage/store.ts"
+    },
     "./data-host/testing": "./src/data-host/testing.ts",
     "./no-copy/testing": "./src/no-copy/testing.ts"
   },

@@ -14,18 +14,24 @@
  * - the fixture down: Play fails, the bar says the recording needs a
  *   connection and offers Try again; the fixture up: Try again plays;
  * - a hymn with no recording (the fixture's 404) says so and offers no Play;
- * - a stanza choice survives a relaunch with kept storage.
+ * - a stanza choice is kept as it is made, and survives a relaunch with
+ *   kept storage. On the web, a first run whose browser was killed before
+ *   it wrote its store (`onDisk`) is run once more, and says so.
  *
- * The build reads the fixture's origin from `HYMNAL_RECORDINGS`, which this
- * sets; the recordings are digital silence. Exits 1 on any failed check.
+ * The fixture listens on this checkout's own port (`checkoutPort`), so
+ * drives in two checkouts never share one. The build reads the fixture's
+ * origin from `HYMNAL_RECORDINGS`, which this sets; the recordings are
+ * digital silence. Exits 1 on any failed check.
  */
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { FIXTURE_PORT, LONG_HYMN, MISSING_HYMN } from './recordings.ts';
+import { LONG_HYMN, MISSING_HYMN, checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
+const FIXTURE_PORT = checkoutPort();
 const origin = `http://127.0.0.1:${FIXTURE_PORT}`;
 const DRIVE_MS = 15 * 60 * 1000;
 const env = { ...process.env, HYMNAL_RECORDINGS: origin };
@@ -223,7 +229,8 @@ check(
   { missingPhase, missingSaid, missingToggle },
 );
 
-await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, [
+const CHOICE = `${LONG_HYMN}:1.3`;
+const chooseOps = [
   'clock data',
   'tap play',
   'clock data',
@@ -239,7 +246,41 @@ await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, [
   'clock settle',
   'state playerKept',
   shot('stanzas'),
-]);
+];
+
+/**
+ * Whether the web store's Chrome profile holds `text` on disk once its run
+ * has ended. Chrome writes a page's `localStorage` to its profile only as it
+ * quits; when it has not quit cleanly within Exact's deadline, Exact kills
+ * it and the write is lost (`exact/scripts/agent-web.mjs` `close`), which
+ * this tells apart from the app not keeping the choice. True on iOS, whose
+ * store is the simulator's.
+ */
+const onDisk = async (name: string, text: string) => {
+  if (host !== 'web') return true;
+  const cache =
+    process.platform === 'darwin'
+      ? join(homedir(), 'Library/Caches')
+      : (process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'));
+  const needle = Buffer.from(text);
+  const glob = new Bun.Glob(`*/agent-web-*/${name}/Default/Local Storage/leveldb/*`);
+  for await (const path of glob.scan({ cwd: join(cache, 'exact'), absolute: true }))
+    if (Buffer.from(await Bun.file(path).arrayBuffer()).includes(needle)) return true;
+  return false;
+};
+
+let chose = await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, chooseOps);
+if (
+  replyTo(chooseOps, chose, 'state playerKept') === CHOICE &&
+  !(await onDisk(store, JSON.stringify(CHOICE)))
+) {
+  console.log(
+    `again ${host}: the browser quit before it wrote its store (Exact killed it at its deadline); the choice once more`,
+  );
+  chose = await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, chooseOps);
+}
+const chosen = replyTo(chooseOps, chose, 'state playerKept');
+check('a stanza choice is kept as it is made', chosen === CHOICE, chosen);
 const keptOps = [
   'clock data',
   'state playerKept',
@@ -260,7 +301,7 @@ const chips = replyTo(keptOps, kept, 'state player.chips');
 const total = replyTo(keptOps, kept, 'state player.total');
 check(
   'a stanza choice survives a relaunch with kept storage',
-  keptChoice === `${LONG_HYMN}:1.3` &&
+  keptChoice === CHOICE &&
     JSON.stringify((chips as ReadonlyArray<{ chosen: boolean }>).map((chip) => chip.chosen)) ===
       JSON.stringify([true, false, true, false]),
   { keptChoice, chips, total },

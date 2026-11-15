@@ -33,6 +33,12 @@ bun test ./src               # the Bun tests the gate runs (no Exact needed)
 3. In `src/<name>/sources.ts`, export `<name>Sources(book)`, the sources its resources name; add one spread line to `src/sources.ts`. `app.ts` stays as it is.
 4. Put its rules in pure modules under `src/<name>/`, with Bun tests beside them, and its contract tests in `<name>.test.contract`.
 
+## The home
+
+`features/list.contract` draws the home list: a tab row (`tab-<name>`) over the list of the tab in use, `listTab`, kept across launches. Sections is the list of every hymn under its sections (`hymnRows`), under the Recent shelf; Lists, Topics, Metres and Scripture are the current app's `tabsOf` (`@manna/hymnal-app/home/tabs`), asked one tab at a time by `listTabRows` once the tab is chosen (`src/home/tabs.ts`). A tab's answer is its groups' names and hymn numbers; the titles come once from `listTitles`. A hymn found by the search opens as the current app's `openingAt` says (`listOpening`).
+
+`features/recent.contract` and `features/favourites.contract` keep the reader's two lists as `persist` states of hymn numbers, `recentList` and `favouriteList`. A hymn page coming to the top of the stack is a visit (`recentAfter`, the current app's `visited`); the star in a hymn page's header (`favourite`) adds or takes out its hymn (`favouritesAfter`, the current app's `toggleFavourite`). The shelf shows Recent's latest five (`shelf-<n>`), and its last row, `recent-all`, opens `/recent` with all of them (`recent-<n>`). A favourite's rows carry a star (`star-<n>`).
+
 ## The book
 
 `bun run exact` first runs `src/hymns/make.ts`, which writes `src/hymns/words.gen.json` and `indexes.gen.json` (ignored) by the current app's own derivations (`@manna/hymnal-app/vite/words`, `vite/indexes`). `tsconfig.json` maps the current app's `virtual:hymnal` and `virtual:hymnal-indexes` to those files, so Exact's bundler takes `apps/hymnal/src/hymns/search.ts` and `hymns.ts` unchanged, and maps `@manna/hymnal-app/hymns/*` to `src/hymns/decl/*.d.ts` for Exact's type check, which stages declarations and cannot stage `effect`'s. The Bun tests get the same modules through `src/test/setup.ts`. The list's answer holds numbers, titles and sections; a hymn's words are answered only for the hymn open.
@@ -41,11 +47,11 @@ Logic of the current hymnal and `@manna/hymnal` is imported through package expo
 
 ## The player
 
-A hymn's recording plays from the recordings' bucket (`https://hymns.cvr.im`, the current app's `audioUrl`), through one `audio` element per load and the system's Now Playing (`features/player.contract`). Every rule is one pure `step(state, input)` in `src/player/step.ts`, over the current app's own `bar`, `stanzas`, `title`, `time` and `follow/timeline` (imported through `@manna/hymnal-app`'s exports, whose declarations are `apps/hymnal/exact/**`); `src/player/sources.ts` answers `playerStep`, which the view calls for each tap and each of the element's events, each event naming its load. `src/player/protocol.qnt` is the protocol of taps, events and the platform's play and pause; `protocol.test.ts` checks it over `step` by a search of every interleaving.
+A hymn's recording plays from the recordings' bucket (`https://hymns.cvr.im`, the current app's `audioUrl`), through one `audio` element per load and the system's Now Playing (`features/player.contract`). Every rule is one pure `step(state, input)` in `src/player/step.ts`, over the current app's own `bar`, `stanzas`, `title`, `time` and `follow/timeline` (imported through `@manna/hymnal-app`'s exports, whose declarations are `apps/hymnal/exact/**`); `src/player/sources.ts` answers `playerStep`, which the view calls for each tap and each of the element's events, each event naming its load. `src/player/protocol.qnt` is the protocol of taps, events and the platform's play and pause; `protocol.test.ts` checks it over `step` by a search of every interleaving. Quint's simulator runs the model itself: `bunx @informalsystems/quint run --invariant=safe --max-steps=20 src/player/protocol.qnt`.
 
 `bun run exact` also runs `tools/timing.ts`, which writes `src/player/timing.gen.ts` (ignored): each hymn's line timing with its words left out, for the stanza choice's length.
 
-Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`, port 4797), two recordings of digital silence and a 404 for hymn 13:
+Tests and drives never ask the bucket. A development build takes a loopback fixture's origin from `HYMNAL_RECORDINGS`; the fixture is `tools/recordings.ts` (app.json's `commands.server`), two recordings of digital silence and a 404 for hymn 13. The tests name port 4797, which Exact gives each run in turn; the drives start the fixture themselves, on their checkout's own port (`bun tools/recordings.ts --port`, in 4790–5789), so two checkouts' drives never share one, and the build's grant for 4797 moves to it:
 
 ```sh
 HYMNAL_RECORDINGS=http://127.0.0.1:4797 bun run exact test web player.test.contract
