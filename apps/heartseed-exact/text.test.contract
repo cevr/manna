@@ -1,0 +1,42 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+// The built app reads the current Heartseed's words: each verse's length and
+// FNV-1a sum (src/text/sum.ts) are held to the current app's derivation by
+// src/text/contract.test.ts, so no verse's text is written here.
+
+test "John 3:16 reads the current app's words"
+  clock data
+  expect state textJohn.reference == "John 3:16"
+  expect state textJohn.verses.length == 1
+  expect state textJohn.verses.0.verse == 16
+  expect state textJohnSum.reference == "John 3:16"
+  expect state textJohnSum.verses.0.verse == 16
+  expect state textJohnSum.verses.0.length == 141
+  expect state textJohnSum.verses.0.sum == 2363466936
+  expect no failures
+
+test "Psalm 119:176, the chapter's last, ends a range read past it"
+  clock data
+  expect state textPsalm.length == 176
+  expect state textPsalmSum.reference == "Psalms 119:176"
+  expect state textPsalmSum.verses.length == 1
+  expect state textPsalmSum.verses.0.verse == 176
+  expect state textPsalmSum.verses.0.length == 93
+  expect state textPsalmSum.verses.0.sum == 2800134830
+  expect no failures
+
+test "Revelation 22:21, the canon's last verse"
+  clock data
+  expect state textEndSum.reference == "Revelation 22:21"
+  expect state textEndSum.verses.0.verse == 21
+  expect state textEndSum.verses.0.length == 57
+  expect state textEndSum.verses.0.sum == 865429241
+  expect no failures
+
+test "A chapter the canon lacks reads empty, and nothing is drawn"
+  clock data
+  expect state textMissing.length == 0
+  expect tree missing "text-probe"
+  expect no failures

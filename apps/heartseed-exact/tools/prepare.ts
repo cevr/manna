@@ -7,14 +7,16 @@
  * in the Exact clone, not on npm, so each is linked into this app's
  * `node_modules` from the clone `EXACT` names (or the default), and no
  * machine path is committed. Then Today's passage is written
- * (`tools/passage.ts`), About's licences (`tools/licences.ts`), and the chapters the garden reads (`tools/chapters.ts`).
+ * (`tools/passage.ts`), About's licences (`tools/licences.ts`), and the
+ * whole KJV the current app's modules read (`tools/kjv.ts`), only when its
+ * text changed.
  */
 
 import { existsSync, lstatSync, mkdirSync, readlinkSync, symlinkSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { writeChapters } from './chapters';
+import { writeKjv } from './kjv';
 import { writeLicences } from './licences';
 import { writePassage } from './passage';
 
@@ -45,4 +47,4 @@ if (problems.length > 0) {
 
 writePassage();
 writeLicences();
-writeChapters();
+writeKjv();

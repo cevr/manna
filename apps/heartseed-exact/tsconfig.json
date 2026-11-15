@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "paths": {
-      "virtual:heartseed-kjv": ["./src/garden/chapters.gen.json"]
+      "virtual:heartseed-kjv": ["./src/text/kjv.gen.json"]
     }
   }
 }

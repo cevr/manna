@@ -12,10 +12,10 @@ bun run exact verify ios
 bun tools/drive-say.ts web   # Say it, the kept recall and a refusal, driven through the agent (also: ios)
 bun tools/drive-look.ts web  # the brand in light and dark, the sheet's choices checked and kept (also: ios)
 bun tools/drive-garden.ts web   # the garden: a recall's day, peek, Show all, a relaunch, twenty singles (also: ios)
-bun run test                 # the Bun tests the gate runs (no Exact needed), with test:garden-a, -b, -c and -bytes
+bun run test                 # the Bun tests the gate runs (no Exact needed), with test:garden-a, -b, -c, -bytes and test:text
 ```
 
-`bun run exact` first runs `tools/prepare.ts`: it links Exact's standard modules (`@exact/speech-synthesis`, `@exact/speech-recognition`, `@exact/media-capture`) into `node_modules` from the clone, so no machine path is committed, and writes Today's passage (`tools/passage.ts`), About's licences (`tools/licences.ts`) and the garden's chapters (`tools/chapters.ts`).
+`bun run exact` first runs `tools/prepare.ts`: it links Exact's standard modules (`@exact/speech-synthesis`, `@exact/speech-recognition`, `@exact/media-capture`) into `node_modules` from the clone, so no machine path is committed, and writes Today's passage (`tools/passage.ts`), About's licences (`tools/licences.ts`) and the KJV (`tools/kjv.ts`).
 
 ## Today
 
@@ -47,7 +47,7 @@ What is planted (lists of three verses or more, and single verses), each verse's
 - The current Heartseed's own services do the work, imported (`@manna/heartseed/garden`, `passages`, `lists`, `sayit`, `day`, `fsrs`, `chooser`; their declarations are `apps/heartseed/exact/*.d.ts`, held to the sources by `apps/heartseed/scripts/exact-declared.test.ts`). Each source is one call through the runner (`src/garden/program.ts` → `runCall`): it builds `Garden`, `Passages` and the single verses over `@manna/exact-kit/storage`'s `KeyValueStore` on the file, makes its one change and answers what they hold after it. The stored keys and bytes are the current app's, so `ex-hs-import` copies keys.
 - Calls run one at a time (`src/garden/writes.ts`), reads too: each call builds its own store, so the current app's `Semaphore` orders nothing across calls. The protocol is `src/garden/writes.qnt`, walked whole in `writes.test.ts`.
 - Single verses are the current app's `Passages` too (`join` and `part`, `heartseed/singles`, at most `MOST_SINGLES`): one verse joins them, any other range is added as a list, and `add` answers `Short` under `LEAST_VERSES`, with the chooser's `SHORT_LINE` and `SINGLES_LIMIT_LINE` shown. A stored one-verse list moves to the single verses when `Passages` is read (its `migrated`).
-- `virtual:heartseed-kjv`, which the current app's lists read, is `src/garden/chapters.gen.json` (`tsconfig.json`'s `paths`): each chapter's verse count, no text, written by `tools/chapters.ts` from `tools/prepare.ts`; the Bun tests get the same through `tools/setup.ts`.
+- `virtual:heartseed-kjv`, which the current app's lists read, is the whole KJV (`The text`, below).
 - A driver's launch (`HEARTSEED_GARDEN_DRIVE` set, `app.json`'s `env`) adds test controls under each verse (Good, Good after a peek, Good after Show all, Move back); a plain launch has none. `tools/drive-garden.ts web|ios` drives them.
 
 The seam other units call, every source taking the call's time, zone and seed from `exactTime()` (`time.epochAtZero + performanceNow()`, `time.utcOffset`, `time.seed`):
@@ -61,6 +61,19 @@ The seam other units call, every source taking the call's time, zone and seed fr
 | `gardenBack`   | `reference`, `now`, `offset`, `seed`                                   | `GardenVerseChange`: `Moved`, `Failed` and the verse after it                                                                                                                |
 
 A `GardenVerse` is `reference`, `slug` (its nodes' names: `plant-`, `stage-`, `due-`, `single-<slug>`), `planted`, `stage`, `recalls`, `lastGrade`, `due`, `dueNow` and `dueIn` (reader's days from today, the day turning at 04:00 in the call's zone). `GardenRecallIn` is SayIt's recall (`startedAt`, `offset`, `grade`, `suggested`, `words`, `missed`, `peeked`, `extra`); `GardenHelpIn` is SayIt's help (`peeked` word indexes, `shownAt` (none for no Show all), `cap`). A recall's grade is held to the help's cap, the cap no better than Hard after a peek and than `shownAllCap` after Show all, whose step back is kept first, at its instant. Every change `refreshes` `garden`.
+
+## The text
+
+Any verse's words, for the screens that need words and nothing else (`src/text/`):
+
+| Source       | Arguments                          | Answers                                                                                                                                                                  |
+| ------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `textVerses` | `book`, `chapter`                  | The chapter's verses, each its shown text in order; none for a chapter the canon lacks                                                                                   |
+| `textOf`     | `book`, `chapter`, `first`, `last` | `TextPassage`: `reference` as the canon writes it, and `verses` (`verse`, `text`); a range past its chapter's end stops there, and a malformed one holds none under `''` |
+
+Both read the current Heartseed's `versesOf` (`@manna/heartseed/kjv`, declared by `apps/heartseed/exact/kjv.d.ts`) over the import it reads, `virtual:heartseed-kjv`, so every current-app module over it (`passages`, `lists`) runs unchanged here. That import is `src/text/kjv.gen.json` (`tsconfig.json`'s `paths`): the canon's 1,189 chapters, each one string of its verses, derived by the current app's own deriver (`@manna/heartseed/vite/kjv`) and written by `tools/kjv.ts` from `tools/prepare.ts` only when its text changes (ignored, never committed). It ships as a module the data module imports, and a read splits only the chapter it asks for; the Bun tests get the same corpus through `tools/setup.ts`, behind a counter of the chapters read.
+
+`features/text.contract` draws nothing: its resources are the probe `text.test.contract` reads, John 3:16, Psalm 119:176 and Revelation 22:21 by fingerprint (`textSum`: each verse's length and FNV-1a sum, `src/text/sum.ts`), held to the current app's words by `src/text/contract.test.ts`, so no verse's text is written in a test. `bun run test:text` runs the text's Bun tests.
 
 ## Where a feature's files go
 
