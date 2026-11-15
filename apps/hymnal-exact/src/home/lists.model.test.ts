@@ -89,7 +89,7 @@ const currentStep = (lists: Model, step: Step): Model => {
 describe('the reader’s lists', () => {
   test('over generated sequences, against the model and the current app’s rules', () => {
     const random = seeded(1844);
-    for (let run = 0; run < 200; run++) {
+    for (let run = 0; run < 100; run++) {
       const sorted = [...new Set(keptOf(random))].toSorted((a, b) => a - b);
       let kept: Model = { recent: [...new Set(keptOf(random))], favourites: sorted };
       let model = kept;

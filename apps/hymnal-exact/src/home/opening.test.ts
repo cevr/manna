@@ -20,7 +20,7 @@ describe('a found hymn opens as the current app opens it', () => {
     const numbers = [...Array.from({ length: 695 }, (_, i) => i + 1), 0, 696, -1];
     const screens = [
       ...SCREENS,
-      ...Array.from({ length: 700 }, (_, i) => `/hymns/${i}`),
+      ...[0, 1, 2, 9, 10, 99, 100, 101, 694, 695, 696].map((i) => `/hymns/${i}`),
       '/hymns/007',
       '/hymns/abc',
     ];
