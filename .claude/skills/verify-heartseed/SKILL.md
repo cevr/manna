@@ -282,7 +282,8 @@ fold is read in a raw snapshot taken by hand between two journeys
 of `apps/heartseed/scripts/journey-rules.ts` (a first-minute heading only
 after the welcome is left, no node hidden from VoiceOver, an open that
 shows first, every selector one the app can draw, and a journey that
-scrolls home to its foot, any node under its lists (the legend, `Add a
+scrolls home to its foot, any id or label `src/field/screen.tsx` draws
+after its furrows (`scripts/foot.ts` reads them from the sources: `Add a
 list` and its tip, the limit line, `Settings`, `How Heartseed works`),
 scrolling back up to `label=Your field` or relaunching before it ends,
 even after a sheet it opened there, since the next journey's `open` keeps
