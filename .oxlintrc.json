@@ -485,17 +485,19 @@
       }
     },
     {
-      // Exact's host seams (docs/exact.md). `data-host.ts` makes Bun refuse
+      // Exact's host seams (docs/exact.md). `data-host/testing.ts` makes Bun refuse
       // what Exact's data module refuses: it swaps the clock, timer, random
       // and Symbol globals in place and throws Exact's own error from them,
       // and its test calls each one and plants throws to prove the restore.
       // `exact-cli.ts` and each app's `exact.mjs` are the launchers Exact's
       // tools run by name: plain argv, env and a dynamic import of the
-      // pinned clone's CLI, as Exact's generated `exact.mjs` does.
+      // pinned clone's CLI, as Exact's generated `exact.mjs` does; `bin.ts`,
+      // the `manna-exact` command, reads the folder and argv it runs in.
       "files": [
-        "**/packages/exact-kit/src/data-host.ts",
-        "**/packages/exact-kit/src/data-host.test.ts",
+        "**/packages/exact-kit/src/data-host/testing.ts",
+        "**/packages/exact-kit/src/data-host/testing.test.ts",
         "**/packages/exact-kit/src/exact-cli.ts",
+        "**/packages/exact-kit/src/bin.ts",
         "**/apps/heartseed-exact/exact.mjs",
         "**/apps/hymnal-exact/exact.mjs"
       ],

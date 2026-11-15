@@ -1,9 +1,6 @@
-import * as BunRuntime from '@effect/platform-bun/BunRuntime';
-import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   Config,
-  Console,
   Duration,
   Effect,
   Option,
@@ -15,35 +12,35 @@ import {
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 /** The Exact commit every command runs at. Only the `ex-pin` unit moves it (docs/exact.md). */
-export const EXACT_PIN = '0fa708e34ef4d2e49af98b25edc76bedc46ae7fa';
+const EXACT_PIN = '0fa708e34ef4d2e49af98b25edc76bedc46ae7fa';
 
 /** Where the clone is when `EXACT` names none: under the home folder. */
-export const DEFAULT_CLONE = 'Developer/vendor/exact';
+const DEFAULT_CLONE = 'Developer/vendor/exact';
 
 /** The lock every native build and drive waits on, one at a time on this Mac. */
-export const BUILD_LOCK = '/tmp/manna-exact-build.lock';
+const BUILD_LOCK = '/tmp/manna-exact-build.lock';
 
 /** An app this wrapper runs: its simulator, its web port and its spare ports. */
-export interface ExactApp {
+interface ExactApp {
   readonly simulator: string;
   readonly port: number;
   readonly spare: readonly [number, number];
 }
 
 /** The ported apps, by folder. Each drives its own simulator and serves on its own ports. */
-export const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact', ExactApp>> = {
+const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact', ExactApp>> = {
   'heartseed-exact': { simulator: 'verify-heartseed-exact', port: 8765, spare: [8770, 8774] },
   'hymnal-exact': { simulator: 'verify-hymnal-exact', port: 8766, spare: [8775, 8779] },
 };
 
 /** Verbs that publish or upload: never through this wrapper. */
-export const REFUSED_VERBS: ReadonlyArray<string> = ['share', 'deploy', 'release'];
+const REFUSED_VERBS: ReadonlyArray<string> = ['share', 'deploy', 'release'];
 
 /** Flags that would leave the app's simulator for another device, or name another simulator. */
-export const REFUSED_FLAGS: ReadonlyArray<string> = ['--sim', '--device'];
+const REFUSED_FLAGS: ReadonlyArray<string> = ['--sim', '--device'];
 
 /** A command the wrapper will not run, and why. */
-export class ExactRefused extends Schema.TaggedError<ExactRefused>()('ExactRefused', {
+class ExactRefused extends Schema.TaggedError<ExactRefused>()('ExactRefused', {
   reason: Schema.String,
 }) {
   override get message() {
@@ -52,14 +49,14 @@ export class ExactRefused extends Schema.TaggedError<ExactRefused>()('ExactRefus
 }
 
 /** What runs: the child's arguments after Bun and the launcher, the variables set over the caller's, and whether it takes the build lock. */
-export interface Plan {
+interface Plan {
   readonly args: ReadonlyArray<string>;
   readonly env: Readonly<Record<string, string>>;
   readonly locked: boolean;
 }
 
 /** Whether `args` is a native build or drive: `ios`, `mac`, or `test`, `verify` or `agent` on `ios`. */
-export const isNative = (args: ReadonlyArray<string>) => {
+const isNative = (args: ReadonlyArray<string>) => {
   const [verb, host] = args;
   if (verb === 'ios' || verb === 'mac') return true;
   return ['test', 'verify', 'agent'].includes(verb ?? '') && host === 'ios';
@@ -109,7 +106,7 @@ const ownsPort = (app: ExactApp, port: number) =>
  * send, another device or simulator, or a port not the app's; else the child's variables, set over
  * whatever the caller's held: the clone, feedback off, the app's simulator and ports.
  */
-export const plan = (
+const plan = (
   args: ReadonlyArray<string>,
   app: ExactApp,
   clone: string,
@@ -215,17 +212,3 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
     ),
   );
 });
-
-/** `bun run exact <args>` in an app: the wrapper, its refusal printed, its exit code the child's. */
-export const main = (appDir: string, args: ReadonlyArray<string>) =>
-  Effect.gen(function* () {
-    const path = yield* Path.Path;
-    const launcher = yield* path.fromFileUrl(new URL('./exact-cli.ts', import.meta.url));
-    return yield* runExact(appDir, args, launcher);
-  }).pipe(
-    Effect.catchTag('ExactRefused', (refused) => Effect.as(Console.error(refused.message), 2)),
-    // oxlint-disable-next-line effect/noGlobals -- the wrapper exits with its child's code, as `bun exact.mjs` does
-    Effect.flatMap((code) => Effect.sync(() => process.exit(code))),
-    Effect.provide(BunServices.layer),
-    BunRuntime.runMain,
-  );

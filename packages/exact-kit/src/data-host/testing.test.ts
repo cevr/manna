@@ -3,7 +3,7 @@ import * as Arbitrary from 'effect/Arbitrary';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { refusal, withDataHost } from './data-host.ts';
+import { refusal, withDataHost } from './testing.ts';
 
 const before = {
   date: globalThis.Date,

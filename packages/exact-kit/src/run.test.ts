@@ -15,10 +15,27 @@ import * as Arbitrary from 'effect/Arbitrary';
 import { ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { APPS, BUILD_LOCK, DEFAULT_CLONE, EXACT_PIN, runExact } from './run.ts';
+import { runExact } from './run.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;
+
+/** The apps, their simulators and ports, and the lock, as the spec names them: written out apart from the wrapper. */
+const APPS = {
+  'heartseed-exact': { simulator: 'verify-heartseed-exact', port: 8765, spare: [8770, 8774] },
+  'hymnal-exact': { simulator: 'verify-hymnal-exact', port: 8766, spare: [8775, 8779] },
+} as const;
+const BUILD_LOCK = '/tmp/manna-exact-build.lock';
+const DEFAULT_CLONE = 'Developer/vendor/exact';
+
+/** The commits `docs/exact.md` names: the pin alone, the clone's HEAD every run here stands in with but the off-pin ones. */
+const docsPins = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const here = yield* path.fromFileUrl(new URL('.', import.meta.url));
+  const doc = yield* fs.readFileString(path.join(here, '..', '..', '..', 'docs', 'exact.md'));
+  return [...new Set([...doc.matchAll(/\b[0-9a-f]{40}\b/g)].map((m) => m[0]))];
+}).pipe(Effect.provide(BunServices.layer));
 
 /** A process the stand-in was asked to start: its command, arguments and options. */
 interface Spawned {
@@ -66,12 +83,11 @@ const running = (
   app: keyof typeof APPS,
   args: ReadonlyArray<string>,
   caller: Caller,
-  head: Option.Option<string> = Option.some(EXACT_PIN),
+  head: Option.Option<string>,
 ) => {
   const spawned: Array<Spawned> = [];
   return runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
     Effect.result,
-    // oxlint-disable-next-line effect/noInlineProvide -- each case runs over its own stand-in spawner and caller environment
     Effect.provide(
       Layer.mergeAll(
         BunServices.layer,
@@ -173,6 +189,7 @@ describe('the exact wrapper', () => {
     'refuses publishing, feedback, other devices and ports before any process; runs the rest on the app own simulator, clone and lock',
     () =>
       Effect.gen(function* () {
+        const [pin = ''] = yield* docsPins;
         const result = yield* Arbitrary.checkEffect(
           Case,
           ({ app, verb, rest, callerSim, callerFeedback, callerExact }) =>
@@ -191,7 +208,7 @@ describe('the exact wrapper', () => {
                 Rec.get(caller, 'EXACT'),
                 () => `${PROBE}/home/${DEFAULT_CLONE}`,
               );
-              const { result: ran, spawned } = yield* running(app, args, caller);
+              const { result: ran, spawned } = yield* running(app, args, caller, Option.some(pin));
               if (mustRefuse(app, args))
                 return (
                   ran._tag === 'Failure' &&
@@ -223,6 +240,7 @@ describe('the exact wrapper', () => {
 
   it.effect('refuses a clone off the pin, naming both commits, and starts nothing after git', () =>
     Effect.gen(function* () {
+      const [pin = ''] = yield* docsPins;
       const elsewhere = 'f'.repeat(40);
       const { result, spawned } = yield* running(
         'heartseed-exact',
@@ -233,13 +251,14 @@ describe('the exact wrapper', () => {
       expect(result._tag).toBe('Failure');
       if (result._tag !== 'Failure') return;
       expect(result.failure.message).toContain(elsewhere);
-      expect(result.failure.message).toContain(EXACT_PIN);
+      expect(result.failure.message).toContain(pin);
       expect(spawned.map((s) => s.command)).toEqual(['git']);
     }),
   );
 
   it.effect('refuses with how to clone when there is no clone', () =>
     Effect.gen(function* () {
+      const [pin = ''] = yield* docsPins;
       const { result, spawned } = yield* running(
         'hymnal-exact',
         ['web'],
@@ -249,13 +268,14 @@ describe('the exact wrapper', () => {
       expect(result._tag).toBe('Failure');
       if (result._tag !== 'Failure') return;
       expect(result.failure.message).toContain(`no Exact clone at ${PROBE}/none`);
-      expect(result.failure.message).toContain(`checkout --detach ${EXACT_PIN}`);
+      expect(result.failure.message).toContain(`checkout --detach ${pin}`);
       expect(spawned.map((s) => s.command)).toEqual(['git']);
     }),
   );
 
   it.effect('refuses an app it does not know', () =>
     Effect.gen(function* () {
+      const [pin = ''] = yield* docsPins;
       const spawned: Array<Spawned> = [];
       const result = yield* runExact(`${PROBE}/apps/heartseed`, ['web'], LAUNCHER).pipe(
         Effect.result,
@@ -265,7 +285,7 @@ describe('the exact wrapper', () => {
             BunServices.layer,
             Layer.succeed(
               ChildProcessSpawner.ChildProcessSpawner,
-              standIn(Option.some(EXACT_PIN), spawned),
+              standIn(Option.some(pin), spawned),
             ),
             ConfigProvider.layer(ConfigProvider.fromUnknown({ HOME: PROBE })),
           ),
@@ -280,27 +300,40 @@ describe('the exact wrapper', () => {
     'serves the web loop on the app own port, and every other web host in its spare range',
     () =>
       Effect.gen(function* () {
-        const { spawned } = yield* running('hymnal-exact', ['web'], { HOME: PROBE });
+        const [pin = ''] = yield* docsPins;
+        const { spawned } = yield* running(
+          'hymnal-exact',
+          ['web'],
+          { HOME: PROBE },
+          Option.some(pin),
+        );
         expect(spawned[1]?.env).toMatchObject({
           EXACT_PORT: '8766',
           PORT_LO: '8775',
           PORT_HI: '8779',
         });
-        const tested = yield* running('heartseed-exact', ['test', 'web'], { HOME: PROBE });
+        const tested = yield* running(
+          'heartseed-exact',
+          ['test', 'web'],
+          { HOME: PROBE },
+          Option.some(pin),
+        );
         expect(tested.spawned[1]?.env).toMatchObject({ PORT_LO: '8770', PORT_HI: '8774' });
         expect(tested.spawned[1]?.env['EXACT_PORT']).toBeUndefined();
       }),
   );
 
-  it.effect('names the pin in docs/exact.md, and no other commit as the pin', () =>
+  it.effect('docs/exact.md names one commit, the pin the wrapper runs at', () =>
     Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const here = yield* path.fromFileUrl(new URL('.', import.meta.url));
-      const doc = yield* fs.readFileString(path.join(here, '..', '..', '..', 'docs', 'exact.md'));
-      const pins = [...doc.matchAll(/\b[0-9a-f]{40}\b/g)].map((m) => m[0]);
-      expect(pins.length).toBeGreaterThan(0);
-      expect(new Set(pins)).toEqual(new Set([EXACT_PIN]));
-    }).pipe(Effect.provide(BunServices.layer)),
+      const pins = yield* docsPins;
+      expect(pins.length).toBe(1);
+      const { result } = yield* running(
+        'heartseed-exact',
+        ['web'],
+        { HOME: PROBE },
+        Option.fromNullishOr(pins[0]),
+      );
+      expect(result._tag).toBe('Success');
+    }),
   );
 });

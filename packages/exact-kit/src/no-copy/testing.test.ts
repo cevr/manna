@@ -2,7 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Path } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { SHARED_LINE_LIMIT, noCopies } from './no-copy.ts';
+import { SHARED_LINE_LIMIT, noCopies } from './testing.ts';
 
 /** A source file of a current app, ten meaningful lines long. */
 const SOURCE = Array.from(
