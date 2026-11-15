@@ -17,25 +17,32 @@ test "The book opens on its list."
 
 test "Search by number, title and first line."
   type "search" "2"
+  clock settle
   clock data
   expect state listRows.0 .rows.0 .number == 2
   expect tree missing "section-adoration-and-praise"
   type "search" ""
+  clock settle
   clock data
   type "search" "creatures of our god"
+  clock settle
   clock data
   expect state listRows.0 .rows.0 .number == 2
   type "search" ""
+  clock settle
   clock data
   type "search" "the almighty, the king of creation"
+  clock settle
   clock data
   expect tree has "hymn-1"
   type "search" "zzqx qqzx"
+  clock settle
   clock data
   expect tree has "none-found"
   expect tree missing "hymn-1"
   expect state listRows == []
   type "search" ""
+  clock settle
   clock data
   expect tree has "section-adoration-and-praise"
   expect tree missing "none-found"

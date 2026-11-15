@@ -1,4 +1,6 @@
 test "A hymn opens and reads in sung order."
+  tap "hymn-list" drag 0 -600
+  clock settle
   tap "hymn-2"
   clock settle
   clock data
@@ -11,8 +13,11 @@ test "A hymn opens and reads in sung order."
   expect text "refrain-1" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
   expect text "stanza-2" == "O rushing wind and breezes soft,\nO clouds that ride the winds aloft:\nOh, praise Him! Alleluia!\nO rising morn, in praise rejoice,\nO lights of evening, find a voice."
   expect text "refrain-2" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
-  back
-  clock settle
+  perf
+    back
+    clock settle
+  expect perf built "HymnRow" == 0
+  expect perf query listRows == 0
   expect tree missing "hymn-title"
   expect tree has "hymn-2"
 
@@ -20,12 +25,19 @@ test "A hymn's address opens it."
   at "/hymns/2"
   clock data
   expect text "hymn-title" == "All Creatures of Our God and King"
+  back
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
+test "A hymn's address stays on it through a reload." on web
+  at "/hymns/2"
+  clock data
   reload
   clock data
   expect text "hymn-title" == "All Creatures of Our God and King"
   back
   clock settle
-  expect tree missing "hymn-title"
   expect text "title" == "Hymns"
 
 test "An address that names no hymn says so."
