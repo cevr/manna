@@ -22,9 +22,9 @@ component HeartseedExact
           header display="flex" align-items="center"
             text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
           if e.name == "home"
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt)
+          if e.name == "home"
             link href=path("verses") testId="open-verses" padding="0 16px" min-height="44px" display="flex" align-items="center" flex-shrink=0
               text "Your verses"
-          if e.name == "home"
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt)
           if e.name == "verses"
             YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack)
