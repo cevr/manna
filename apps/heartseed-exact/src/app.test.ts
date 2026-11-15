@@ -12,12 +12,14 @@
 import { expect, it } from 'bun:test';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
+import { writeLicences } from '../tools/licences';
 import { writePassage } from '../tools/passage';
 import { seeded, type Random } from './test/random';
 import { RECALL_FILE } from './today/sources';
 import type { TodayView } from './today/view';
 
 writePassage();
+writeLicences();
 const app = await import('./test/app.js');
 
 const SEQUENCES = 40;

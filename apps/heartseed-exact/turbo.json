@@ -18,6 +18,8 @@
         "$TURBO_ROOT$/apps/heartseed/package.json",
         "$TURBO_ROOT$/apps/heartseed/src/**",
         "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/licence.ts",
+        "$TURBO_ROOT$/apps/heartseed/native/natural/kokoro/LICENSE",
         "$TURBO_ROOT$/apps/heartseed/data/kjv-hearings.json",
         "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json"

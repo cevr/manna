@@ -1,0 +1,46 @@
+test "the sheet opens and closes"
+  tap "gear"
+  clock settle
+  expect tree has "settings"
+  expect text "settings-done" == "Done"
+  expect tree has "reference"
+  tap "settings-done"
+  clock settle
+  expect tree missing "settings"
+  tap "gear"
+  clock settle
+  expect tree has "settings"
+  back
+  clock settle
+  expect tree missing "settings"
+  expect text "title" == "Heartseed"
+
+test "a fresh install reads the defaults"
+  tap "gear"
+  clock settle
+  expect state settingsMinutes == 5
+  expect state settingsVoice == "her"
+  expect state settingsAppearance == "system"
+  expect state settings.minutesOptions.0.value == "2"
+  expect state settings.voiceOptions.0.value == "off"
+  expect state settings.appearanceOptions.0.value == "system"
+
+test "a choice shows and is kept"
+  tap "gear"
+  clock settle
+  tap "minutes-10"
+  tap "voice-him"
+  tap "appearance-dark"
+  clock data
+  expect state settingsMinutes == 10
+  expect state settingsVoice == "him"
+  expect state settingsAppearance == "dark"
+  tap "settings-done"
+  clock settle
+  reload
+  clock data
+  tap "gear"
+  clock settle
+  expect state settingsMinutes == 10
+  expect state settingsVoice == "him"
+  expect state settingsAppearance == "dark"

@@ -7,4 +7,5 @@
 /.exact/
 /.env.local
 /src/passage/today.ts
+/src/about/licences.ts
 /src/garden/chapters.gen.json

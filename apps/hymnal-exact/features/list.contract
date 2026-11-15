@@ -5,6 +5,7 @@
 // chosen. A found hymn opens as the current app opens one (`listOpening`).
 use EmptyState from "exact:content"
 use PlayerView from "./player.contract"
+use SettingsGear from "./settings.contract"
 
 shape ListRow
   number: number
@@ -81,6 +82,7 @@ component HymnList
       display="flex" flex-direction="column"
       header display="flex" flex-wrap="wrap" align-items="center" gap=8 padding="8px 16px"
         text "Hymns" role="heading" aria-level=1 flex=1 testId="title"
+        SettingsGear()
         input type="search" value=query input=search placeholder="Number, title or first line"
           aria-label="Search hymns" testId="search" width="100%"
       row role="tablist" aria-label="Show hymns by" flex-wrap="wrap" testId="tabs"

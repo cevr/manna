@@ -1,6 +1,9 @@
 import type { Answer, Sources } from './app.contract.d.ts';
+import licences from './src/about/licences';
+import { aboutSources } from './src/about/sources';
 import { gardenSources } from './src/garden/sources';
 import passage from './src/passage/today';
+import { settingsSources } from './src/settings/choices';
 import { todaySources } from './src/today/sources';
 
 /** Today listens on the device and keeps its last recall in one file of the app's data; the garden keeps its keys in another. */
@@ -12,6 +15,8 @@ const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
 
 const sources: Sources = {
   ...todaySources(passage),
+  ...settingsSources,
+  ...aboutSources(licences),
   ...gardenSources({ driven: GARDEN_DRIVE !== '' }),
 };
 

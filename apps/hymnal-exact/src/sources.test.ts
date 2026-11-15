@@ -72,6 +72,7 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.hymnRows([query(random, book.hymns)])).not.toThrow();
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
+        expect(() => sources.settingsLooks([route(random)])).not.toThrow();
         const list = numbers(random);
         const tab = pick(random, ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture', '', 'x']);
         expect(() => sources.listTabRows([tab, list, numbers(random)])).not.toThrow();
@@ -82,10 +83,12 @@ describe('the data module runs where Exact runs it', () => {
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
       }
+      expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.listTabs().length).toBe(5);
       expect(sources.listTitles().length).toBe(695);
     });
     expect(Object.keys(sources).toSorted()).toEqual([
+      'aboutCredits',
       'favouritesAfter',
       'hymnPage',
       'hymnRows',
@@ -96,6 +99,7 @@ describe('the data module runs where Exact runs it', () => {
       'playerStep',
       'recentAfter',
       'recentRows',
+      'settingsLooks',
     ]);
   });
 

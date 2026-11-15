@@ -62,7 +62,7 @@ bun tools/drive-player.ts ios
 
 ## The web
 
-`bun run build:web` makes the site a host serves as plain files: Exact's release build (`web-build --out dist`, after the book's makers) and then `tools/web/pages.ts`, which writes a page per address a screen has from the build's `shell.html` (`src/web/pages.ts`): `index.html`, `recent/`, `player/`, `hymns/<n>/` for each hymn and `404.html`, each the same shell with its screen's own `<title>` and description, so a shared link previews as its hymn. Every route renders in the browser (`render=client`). The pin can render a route at build (`render=build`, with `pages=` for a hymn's), but its pages keep the answers they were built with: on such a site a returning reader's Recent shelf stayed empty, a stanza choice was written back to none and the first press of Play did nothing (`bun tools/drive-web.ts return` over such a build).
+`bun run build:web` makes the site a host serves as plain files: Exact's release build (`web-build --out dist`, after the book's makers) and then `tools/web/pages.ts`, which writes a page per address a screen has from the build's `shell.html` (`src/web/pages.ts`): `index.html`, `recent/`, `player/`, `settings/`, `settings/about/`, `hymns/<n>/` for each hymn and `404.html`, each the same shell with its screen's own `<title>` and description, so a shared link previews as its hymn. Every route renders in the browser (`render=client`). The pin can render a route at build (`render=build`, with `pages=` for a hymn's), but its pages keep the answers they were built with: on such a site a returning reader's Recent shelf stayed empty, a stanza choice was written back to none and the first press of Play did nothing (`bun tools/drive-web.ts return` over such a build).
 
 A host needs one rule, `servedFor` in `src/web/served.ts`: a file at the path, else that folder's `index.html`, with 200; anything else `404.html` with 404, whose script draws the not-found screen (`features/notfound.contract`). Which screen an address opens is `placeOf` (`src/web/place.ts`): a hymn's address only as the current app writes its number (`/hymns/7`, never `/hymns/007`), and a path with a trailing `/` is not found.
 
@@ -77,5 +77,20 @@ bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json f
 The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs both.
 
 The drive starts the server and Chrome (no Exact driver), each in a process group of its own, and fails on any request that leaves the local server, but the recordings' bucket after a press of Play, which it answers itself with silence. Its budget checks bytes always and times only at a load of 5 or less.
+
+## Settings and the colours
+
+The gear in the list's title row (`SettingsGear`, one call line in `features/list.contract`) opens Settings (`features/settings.contract`), a sheet over the book: Appearance (System, Light, Dark), then one row per feature that has a setting, then About (`features/about.contract`), pushed in the sheet. A feature adds its row as one call line in the sheet's rows section, where its comment says, its component and state in its own file.
+
+The appearance is Contract's `settingsLook persist`, read before the first frame: the root is drawn in `settingsScheme` from it, so a kept Dark never paints light first, and `setScheme` hands the platform the same choice for its own sheets and bars. Its rules (the choices, reading kept text, the scheme each shows) are `src/look/look.ts`, held to the current hymnal's `Appearance` and its web `applyAppearance` by `look.test.ts`.
+
+The colours are the brand, `app.tamber`: every role of the current hymnal's theme (`apps/hymnal/src/theme.ts`, Heartseed's palette), light and dark, under the role's own name, and the platform's roles the screens draw with (`-exact-background`, `-exact-label`, `-exact-secondary-label`, the tint, …) each set to one of them, so a screen that names no colour is drawn in the brand. A Contract file names a role, never a colour. The Bun tests hold the brand to the theme (`brand.test.ts`), every text to the current app's 4.5:1 on the ground it is drawn on (`contrast.test.ts`), and the Contract files to no colour literal (`literal.test.ts`). A test cannot read a painted colour, so the live colour checks are a drive:
+
+```sh
+bun run exact test web settings.test.contract
+bun run exact test ios settings.test.contract
+bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once and on the first frame after a relaunch, System following
+bun tools/drive-settings.ts ios
+```
 
 `app.contract.d.ts` (the types `app.ts` imports), `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.

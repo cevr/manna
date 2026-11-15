@@ -1,0 +1,39 @@
+// Heartseed's brand: brand C, "Two leaves", every role of the current app's
+// palette (apps/heartseed/src/theme.ts) in light and dark, as `hs.<role>`.
+// src/look/brand.test.ts holds this file to that palette, so a role added
+// there fails until it is carried here. The platform's roles a screen names
+// (`-exact-label` and the rest) are drawn in the brand's. The tint is the
+// ink by day and the soil by night: UIKit keeps a filled button's label
+// white, and the soil is the one dark role at 3:1 under white and on the
+// night ground both.
+tamber heartseed
+
+theme
+  hs.ground = light-dark(#f1f0e6, #142420)
+  hs.card = light-dark(#f9f8f1, #1d322c)
+  hs.ink = light-dark(#2c4542, #e6eedb)  pair=hs.ground
+  hs.quiet = light-dark(#5a6761, #a0b4a7)  pair=hs.ground
+  hs.soft = light-dark(#b9cfae, #3d5c4f)
+  hs.miss = light-dark(#a04a34, #f09982)  pair=hs.ground
+  hs.hearing = light-dark(#ebe0c1, #444528)
+  hs.glow = light-dark(#d4a640, #d4a640)
+  hs.pulse = light-dark(rgba(212, 166, 64, 0.45), rgba(212, 166, 64, 0.45))
+  hs.on-ink = light-dark(#f1f0e6, #142420)  pair=hs.ink
+  hs.shadow = light-dark(#2c4542, #000000)
+  hs.gold = light-dark(#d4a640, #d4a640)
+  hs.leaf = light-dark(#6f9a4a, #86b862)
+  hs.green-ear = light-dark(#9cbf6a, #a9cd78)
+  hs.soil = light-dark(#8a6e4b, #a88a62)
+  hs.furrow = light-dark(#c3b6a0, #57523e)
+  hs.sun = light-dark(#80641f, #d4a640)  pair=hs.ground
+  family.hs = ui-rounded, system-ui
+  AccentColor = light-dark(#2c4542, #a88a62)
+  Canvas = hs.ground
+  CanvasText = hs.ink
+  -exact-background = hs.ground
+  -exact-secondary-background = hs.card
+  -exact-label = hs.ink
+  -exact-secondary-label = hs.quiet
+  -exact-tertiary-label = hs.quiet
+  -exact-system-red = hs.miss
+  -exact-system-orange = hs.miss

@@ -1,0 +1,27 @@
+test "About opens from the sheet, Licences from About, and Back returns to the sheet as it was"
+  tap "gear"
+  clock settle
+  tap "minutes-20"
+  tap "voice-off"
+  tap "appearance-light"
+  clock data
+  tap "about-row"
+  clock settle
+  expect text "about-name" == "Heartseed"
+  expect tree has "about-line"
+  expect text "about-kjv" == "Scripture is from the King James Version, which is in the public domain."
+  tap "licences-row"
+  clock data
+  clock settle
+  expect text "licence-name-0" == "Apache License, Version 2.0"
+  expect tree has "licence-text-0"
+  back
+  clock settle
+  expect tree has "about-name"
+  back
+  clock settle
+  expect tree has "settings"
+  expect tree missing "about"
+  expect state settingsMinutes == 20
+  expect state settingsVoice == "off"
+  expect state settingsAppearance == "light"

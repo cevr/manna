@@ -1,6 +1,8 @@
-// The hymnal: the view. app.ts answers what it asks for. Colours, fonts, sizes
-// and the safe area are left unsaid, so each platform supplies its own: a
-// screen's header is the navigation bar, its heading the title.
+// The hymnal: the view. app.ts answers what it asks for. The colours are the
+// brand's (app.tamber), which also sets the platform's own roles, so a screen
+// that names none is drawn in them; fonts, sizes and the safe area are left
+// unsaid, so each platform supplies its own: a screen's header is the
+// navigation bar, its heading the title.
 // A feature adds one `use` line, one `members` line, its route, and its screen
 // under the stack below (README.md, "Adding a feature").
 // Each route renders in the browser (`render=client`, the default): a page
@@ -10,6 +12,8 @@
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
 use PlayerDock, PlayerSheet from "./features/player.contract"
+use SettingsSheet from "./features/settings.contract"
+use AboutScreen from "./features/about.contract"
 use RecentScreen from "./features/recent.contract"
 use NotFound from "./features/notfound.contract"
 
@@ -17,6 +21,8 @@ routes nav
   list "/"
     hymn "/hymns/:n"
     player "/player"
+    settings "/settings"
+      about "/settings/about"
     recent "/recent"
   notfound
 
@@ -24,17 +30,20 @@ component HymnalExact
   members "./features/list.contract"
   members "./features/hymn.contract"
   members "./features/player.contract"
+  members "./features/settings.contract"
+  members "./features/about.contract"
   members "./features/recent.contract"
   members "./features/favourites.contract"
   provide
     playerShown = player
     playerPress = playerAsk
+    settingsGear = settingsOpen
     favouriteNumbers = favouriteList
     favouritePress = favouriteToggle
   action follow(url: string)
     nav = go(nav, url)
   view
-    main testId="root" navigationKey=`${top(nav).id}` navigate=follow width="100%" height="100%"
+    main testId="root" navigationKey=`${top(nav).id}` navigate=follow color-scheme=settingsScheme width="100%" height="100%"
       for e in stack(nav) key=e.id
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, search=listSearch, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
@@ -42,6 +51,10 @@ component HymnalExact
           HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
+        if e.name == "settings"
+          SettingsSheet(entry=e, looks=settingsLooks, choose=settingsChoose, done=settingsClose)
+        if e.name == "about"
+          AboutScreen(entry=e, page=aboutShown)
         if e.name == "recent"
           RecentScreen(entry=e, recent=recentShown, favourites=favouriteList)
         if e.name == "notfound" or (e.name == "hymn" and current(hymnShown) and hymnShown.number == 0)

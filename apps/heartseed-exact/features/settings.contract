@@ -1,0 +1,82 @@
+// Settings: the sheet the header's gear opens, with the session's minutes,
+// the voice and the appearance, then About. Each choice is kept as plain
+// text by `persist` and read by src/settings/choices.ts (`settingsOf`), the
+// current Heartseed's rule: a kept text names its choice exactly, or the
+// default stands. The session reads `settingsMinutes` and `settingsVoice`;
+// the appearance is the app's scheme, set at once and again at each launch.
+
+shape SettingsOption
+  value: string
+  label: string
+
+shape SettingsView
+  minutes: number
+  voice: string
+  appearance: string
+  minutesOptions: SettingsOption[]
+  voiceOptions: SettingsOption[]
+  appearanceOptions: SettingsOption[]
+
+members HeartseedExact
+  state settingsMinutesKept = "" persist
+  state settingsVoiceKept = "" persist
+  state settingsAppearanceKept = "" persist
+  resource settings = settingsOf(settingsMinutesKept, settingsVoiceKept, settingsAppearanceKept) as shape SettingsView else settingsOf("", "", "")
+  derive settingsMinutes = settings.minutes
+  derive settingsVoice = settings.voice
+  derive settingsAppearance = settings.appearance
+  derive settingsUnderId = match stack(nav).filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.id, case none => top(nav).id }
+
+  action settingsOpen
+    nav = push(nav, "/settings")
+  action settingsDone
+    nav = back(nav)
+  action settingsChooseMinutes(value: string)
+    settingsMinutesKept = value
+  action settingsChooseVoice(value: string)
+    settingsVoiceKept = value
+  action settingsChooseAppearance(value: string)
+    settingsAppearanceKept = value
+  task settingsScheme key=settingsAppearance
+    change(settingsShowScheme)
+  action settingsShowScheme
+    setScheme(settingsAppearance)
+
+component SettingsChoice
+  props
+    line: string
+    group: string
+    name: string
+    chosen: string
+    options: SettingsOption[]
+    choose: action
+  view
+    column gap=8
+      text line font="-exact-headline"
+      row role="radiogroup" aria-label=group gap=8 flex-wrap="wrap"
+        for o in options key=o.value
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) testId=`${name}-${o.value}`
+            text o.label
+
+component SettingsSheet
+  props
+    route: number
+    settings: SettingsView
+    minutes: action
+    voice: action
+    appearance: action
+    about: action
+    done: action
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationScroll="settings-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="settings"
+      header display="flex" align-items="center"
+        text "Settings" role="heading" aria-level=1 flex=1
+        button press=done testId="settings-done"
+          text "Done"
+      scroll id="settings-scroll" flex=1 min-height=0
+        column gap=24 padding=20
+          SettingsChoice(line="A day's tending", group="Minutes", name="minutes", chosen=`${settings.minutes}`, options=settings.minutesOptions, choose=minutes)
+          SettingsChoice(line="Reads new verses aloud", group="Voice", name="voice", chosen=settings.voice, options=settings.voiceOptions, choose=voice)
+          SettingsChoice(line="Appearance", group="Appearance", name="appearance", chosen=settings.appearance, options=settings.appearanceOptions, choose=appearance)
+          button press=about buttonStyle="bordered" testId="about-row"
+            text "About"
