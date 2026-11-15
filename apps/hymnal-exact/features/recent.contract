@@ -41,7 +41,7 @@ component RecentScreen
         text "Recent" role="heading" aria-level=2 testId="recent-title"
       FindBar(entry=entry, results=true)
       list id="recent-list" appearance="auto" listStyle="plain" flex=1 min-height=0
-        display=(findShown.results and findSearchingAt(findShown, entry.url) ? "none" : "flex") testId="recent-list"
+        display=(findShown.results and findSearchingAt(findShown, entry.url) ? "none" : "flex") flex-direction="column" testId="recent-list"
         section
           for r in recent.all key=r.number
             HymnRow(number=r.number, title=r.title, id=`recent-${r.number}`, star=(favourites.includes(r.number) ? `recent-star-${r.number}` : ""))

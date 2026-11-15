@@ -123,23 +123,23 @@ component FindBar
   view
     if entry.id == findTop
       column flex=(results and findShown.results ? "1000 1 0px" : "none") min-height=0 testId="find"
-        row gap=8 align-items="center" padding="4px 16px" testId="find-bar"
+        row gap=8 align-items="center" flex-wrap="wrap" padding="4px 16px" testId="find-bar"
           if findShown.searchDrawn
-            button press=findSearchOn disabled=(not findShown.searchReach) aria-pressed=(findShown.chosen == "search") flex=1 min-height=44 testId="find-search"
+            button press=findSearchOn disabled=(not findShown.searchReach) aria-pressed=(findShown.chosen == "search") flex="1 1 8rem" min-height=44 testId="find-search"
               row gap=6 align-items="center"
                 image "symbol:search"
                 text "Search"
           if findShown.boxDrawn
             input type="search" value=findText input=findTyped placeholder="Number, title or first line"
-              aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) flex=1 min-width=0 testId="search"
+              aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) flex="1 1 10rem" min-width=0 testId="search"
           button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) disabled=(not findShown.hashReach)
-            aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") min-width=44 min-height=44 testId="find-number"
+            aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") min-width=44 min-height=44 flex-shrink=0 testId="find-number"
             text "#" font="-exact-title3"
           if findShown.cancelDrawn
-            button press=findSearchOff disabled=(not findShown.cancelReach) min-height=44 testId="find-cancel"
+            button press=findSearchOff disabled=(not findShown.cancelReach) min-height=44 flex-shrink=0 testId="find-cancel"
               text "Cancel"
           if findShown.tilesControl
-            button press=findPress("tilesShow", 0) aria-label="All at once" min-width=44 min-height=44 testId="tiles-show"
+            button press=findPress("tilesShow", 0) aria-label="All at once" min-width=44 min-height=44 flex-shrink=0 testId="tiles-show"
               image "symbol:layers"
         if results and findShown.results
           if findRows.length == 0
@@ -208,7 +208,7 @@ component FindTiles
       scroll id="find-tiles" flex=1 min-height=0 wheel=findWheel
         row flex-wrap="wrap" gap=6 padding=16
           for n in findTileList key=n
-            button press=findPress("tile", n) aria-label=`Hymn ${n}` min-width=44 min-height=44 testId=`tile-${n}`
+            button press=findPress("tile", n) aria-label=`Hymn ${n}` min-width="2.75rem" min-height=44 testId=`tile-${n}`
               text `${n}` font-variant-numeric="tabular-nums"
 
 // A found hymn's row: a hymn's row whose press opens the hymn as a found
