@@ -8,6 +8,18 @@
       "types": "./exact/matcher.d.ts",
       "default": "./src/matcher.ts"
     },
+    "./matcher/words": {
+      "types": "./exact/words.d.ts",
+      "default": "./src/matcher/words.ts"
+    },
+    "./sayit": {
+      "types": "./exact/sayit.d.ts",
+      "default": "./src/sayit.ts"
+    },
+    "./day": {
+      "types": "./exact/day.d.ts",
+      "default": "./src/day.ts"
+    },
     "./passage": "./vite/passage.ts",
     "./kjv-hearings.json": "./data/kjv-hearings.json"
   },
