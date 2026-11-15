@@ -15,6 +15,9 @@
  * with no making, Today's plan off the passages after an add, a sheet left
  * open or never shown, and a fixed control, alert or limit line inside a
  * scroll view in any frame.
+ *
+ * Its floors are those its own devices reach; `reader-add-c.test.tsx`, its own part,
+ * holds the rest of the floors named here.
  */
 
 import { expect, it } from 'bun:test';
@@ -22,7 +25,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('adds the reader’s passages through the sheet and the chooser: clipped, twice in one turn, twenty verses and over the promise', async () => {
-  const { faults, reached } = await walkReaders([50, 170], 10, 'change');
+  const { faults, reached } = await walkReaders([50], 10, 'change');
   expect(faults).toEqual([]);
   const floors = [
     'add:Added',
@@ -31,10 +34,8 @@ it('adds the reader’s passages through the sheet and the chooser: clipped, twi
     'tap:toggle-off',
     'back:chapters',
     'choose:left',
-    'chapter:176',
     'choose:short',
     'planted:twenty',
-    'planted:over-promise',
     'home:launch-begin',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);

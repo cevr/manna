@@ -2512,12 +2512,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     passage's due), each command's writes
     modelled apart from the app; each file's device reaches its own floors
     (relaunches, or Again).
-  - `test:field-bar`, `test:field-bar-lists`, `test:field-bar-adds`,
-    `test:field-bar-kinds` and `test:field-bar-held`:
-    `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
+  - `test:field-bar`, `test:field-bar-twice`, `test:field-bar-lists`,
+    `test:field-bar-adds`, `test:field-bar-adds-b`, `test:field-bar-kinds`,
+    `test:field-bar-held` and `test:field-bar-held-b`:
+    `src/field/bar-remove.test.tsx`, then `bar-twice.test.tsx`, then
     `bar-lists.test.tsx` (seeds 120 and 122), then `bar-adds.test.tsx`
-    (seeds 110 and 125), then `bar-kinds.test.tsx` (unread kinds), then
-    `bar-held.test.tsx` (read lists of 1, 2 and 4 held), generated readers
+    with `bar-adds-b.test.tsx` (lists made, held and added to), then
+    `bar-kinds.test.tsx` (unread kinds), then `bar-held.test.tsx` with
+    `bar-held-b.test.tsx` (read lists held), generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads,
     under the app's layer teaching the collections a test gives, none by
@@ -2917,12 +2919,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     passages and every other key against the models, and the stand-in's
     count of leaves by the first back (`onBack`) and by an add (`onAdded`)
     each against the walk's own; each file's floors met by its own devices.
-  - `test:reader-today`, `test:reader-unread`, `test:reader-add`,
-    `test:reader-add-b`, `test:reader-add-back` and `test:reader-remove`:
-    `src/chooser/reader-today.test.tsx`, `reader-unread.test.tsx`,
-    `reader-add.test.tsx` with `reader-add-b.test.tsx` (one device each,
-    which together meet the floors one device met before the sheet came),
-    `reader-add-back.test.tsx`, and
+  - `test:reader-today`, `test:reader-today-b`, `test:reader-unread`,
+    `test:reader-add`, `test:reader-add-b`, `test:reader-add-c`,
+    `test:reader-add-back`, `test:reader-add-back-b` and
+    `test:reader-remove`:
+    `src/chooser/reader-today.test.tsx` with `reader-today-b.test.tsx`,
+    `reader-unread.test.tsx`, `reader-add.test.tsx` with
+    `reader-add-b.test.tsx` and `reader-add-c.test.tsx` (one device each,
+    which together meet the floors), `reader-add-back.test.tsx` with
+    `reader-add-back-b.test.tsx`, and
     `reader-remove.test.tsx` with `reader-remove-b.test.tsx`, generated
     readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
@@ -3142,8 +3147,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Asia/Kolkata at a return across their own 12:00; and at home's next
     mount after a return while Today shows. The rig's foreground holds
     one queue, so a second subscription to `Foreground.states` fails it.
-  - `test:home-walk-a` to `test:home-walk-h`:
-    `src/home/walk-{a,b,c,d,e,f,g,h}.test.tsx`, home walked through the
+  - `test:home-walk-a` to `test:home-walk-j`:
+    `src/home/walk-{a,b,c,d,e,f,g,h,i,j}.test.tsx` (i holding the floors
+    c's device leaves, j those d's leaves), home walked through the
     root (`src/test/home-walk.ts`, a `root-walk` `Walk` over the root's
     screens: on home a tap on a plant of each class, straight into Today
     on its verse when `startModel` starts it (a review or a verse learned
