@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./appearance": {
+      "types": "./exact/appearance.d.ts",
+      "default": "./src/appearance.ts"
+    },
     "./follow/timeline": {
       "types": "./exact/follow/timeline.d.ts",
       "default": "./src/follow/timeline.ts"
@@ -31,6 +35,14 @@
     "./remote": {
       "types": "./exact/remote.d.ts",
       "default": "./src/remote.ts"
+    },
+    "./settings": {
+      "types": "./exact/settings.d.ts",
+      "default": "./src/settings.ts"
+    },
+    "./theme": {
+      "types": "./exact/theme.d.ts",
+      "default": "./src/theme.ts"
     },
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/search": "./src/hymns/search.ts",
