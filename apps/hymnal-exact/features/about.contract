@@ -35,5 +35,5 @@ component AboutScreen
               if c.url == ""
                 text c.licence color="-exact-secondary-label"
               else
-                link href=c.url testId=`about-licence-${c.part}`
+                link href=c.url min-height=44 min-width=44 display="flex" align-items="center" testId=`about-licence-${c.part}`
                   text c.licence
