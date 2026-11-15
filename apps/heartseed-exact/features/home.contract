@@ -152,8 +152,8 @@ component Home
             text "Single verses" role="heading" aria-level=3
             for s in home.singles key=s.slug
               column gap=8
-                row gap=8 align-items="center"
-                  row role="button" press=start(s.slug) aria-label=s.label flex=1 min-height=44 align-items="center" gap=12 border-radius=12 testId=`single-button-${s.slug}`
+                row gap=8 align-items="center" flex-wrap="wrap"
+                  row role="button" press=start(s.slug) aria-label=s.label flex-grow=1 flex-basis="12rem" min-height=44 align-items="center" gap=12 border-radius=12 testId=`single-button-${s.slug}`
                     :active
                       background-color = "hs.hearing"
                     column width=48 align-items="center" gap=2 aria-hidden=true
