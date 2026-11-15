@@ -23,8 +23,9 @@
  *   tenth or 30 ms over, whichever is more); `--write-budget`
  *   writes it from this run, and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
- * - `return`: a hymn visited, a favourite, a stanza choice; Chrome closed
- *   as a person closes it and opened again on its profile: all three kept.
+ * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
+ *   stanza choice; Chrome closed as a person closes it and opened again on
+ *   its profile: all four kept.
  *
  * Every request is recorded by origin: one not the local server's fails,
  * but for the recordings' bucket after a press of Play, which the drive
@@ -483,10 +484,17 @@ const measure = async (page: Page) => {
   );
 };
 
+/** The app's root is drawn in the dark scheme (`color-scheme=settingsScheme` in `app.contract`). */
+const isDark = `getComputedStyle(document.querySelector('[data-testid="root"]') ?? document.documentElement).colorScheme === 'dark'`;
+
+/** A light system on both launches, so a dark root after the reopen is the kept choice, not the system's. */
+const LIGHT_SYSTEM = [{ name: 'prefers-color-scheme', value: 'light' }];
+
 const returning = async () => {
   const profile = join(app, '.exact/web-return-profile');
   const first = await launchChrome(profile, true);
   await watch(first.page);
+  await first.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
   const page = first.page;
   const trace: Array<unknown> = [];
   let firstPlayLost = 0;
@@ -508,6 +516,12 @@ const returning = async () => {
     await step('tap bar', tap(on, '[data-testid="bar-title"]'));
     await step('chips', waitFor(on, `${chips}.length > 1`, 8000));
   };
+  await step('settings', open(page, '/settings'));
+  await step('appearance shown', waitFor(page, has('appearance-dark'), 5000));
+  const lightFirst = !(await page.evaluate<boolean>(isDark));
+  await step('tap dark', tap(page, '[data-testid="appearance-dark"]'));
+  const darkSet = await waitFor(page, isDark, 3000);
+  await step('dark', darkSet);
   await step('open', open(page, '/hymns/2'));
   await step(
     'title',
@@ -537,7 +551,9 @@ const returning = async () => {
   );
   const second = await launchChrome(profile, false);
   await watch(second.page);
+  await second.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
   await step('reopen', open(second.page, '/'));
+  const darkKept = await waitFor(second.page, isDark, 5000);
   const shelf = await waitFor(second.page, has('shelf-2'), 5000);
   await step(
     'shelf',
@@ -550,7 +566,7 @@ const returning = async () => {
   await playerOf(second.page);
   const kept = await second.page.evaluate<Array<string | null>>(chips);
   await second.close();
-  report.returning = { shelf, star, chosen, kept, firstPlayLost, trace };
+  report.returning = { darkSet, darkKept, shelf, star, chosen, kept, firstPlayLost, trace };
   check('the first press of Play plays (both launches)', firstPlayLost === 0, { firstPlayLost });
   if (!shelf || !star || JSON.stringify(chosen) !== JSON.stringify(kept) || chosen.length === 0)
     console.log(`trace ${JSON.stringify(trace)}`);
@@ -563,8 +579,10 @@ const returning = async () => {
       chosen.includes('true'),
     { chosen, kept },
   );
-  console.log(
-    'GAP Appearance (Dark): the port has no Appearance setting on main yet; nothing to keep',
+  check(
+    'after a close and a reopen: Dark, chosen in Settings over a light first launch, is as left',
+    lightFirst && darkSet && darkKept,
+    { lightFirst, darkSet, darkKept },
   );
 };
 
