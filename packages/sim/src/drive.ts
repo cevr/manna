@@ -49,9 +49,11 @@ import {
   type Area,
   areaFor,
   type Ask,
+  afterPan,
   hides,
   Motion,
   motionOf,
+  NO_PANS,
   nodesOf,
   type Pan as ScreenPan,
   panFor,
@@ -1012,9 +1014,6 @@ const motionText = Motion.$match({
   Gone: () => 'gone',
 });
 
-/** Which of a scroll's pans names its motion: a lost view over any move, a move over none. */
-const WEIGHT: Record<Motion['_tag'], number> = { Unmoved: 0, Moved: 1, Gone: 2 };
-
 /** A scroll agent-device made itself: no pan of the drive's, so nothing judged. */
 const UNJUDGED: Seen = { motion: Option.none(), detail: {} };
 
@@ -1059,20 +1058,19 @@ const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
   direction: Direction,
 ) {
   const target = parseTarget(text);
-  let lost = Option.none<string>();
-  let motion: Motion = Motion.Unmoved();
+  let seen = NO_PANS;
   const missing = (driver: string) =>
     TargetMissing.make({
       target: text,
       platform: session.platform,
-      driver: Option.match(lost, {
+      driver: Option.match(seen.lost, {
         onNone: () => driver,
         onSome: (pan) => `${driver}; the pan from ${pan} lost its scroll view (a sheet closed?)`,
       }),
     });
   let nodes = yield* nodesNow(app, udid);
   for (let passes = 0; passes <= MAX_PASSES; passes += 1) {
-    if (shows(nodes, target)) return seenAs(motion, { passes });
+    if (shows(nodes, target)) return seenAs(seen.motion, { passes });
     const area = areaFor(nodes, direction);
     if (Option.isNone(area) && passes === 0) {
       yield* inApp(app, udid, ['scroll', direction, '--until', iosSelector(target)]).pipe(
@@ -1085,9 +1083,7 @@ const scrollToIos = Effect.fn('Sim.scrollToIos')(function* (
       return yield* missing(`the scroll view's content ends after ${passes} pans ${direction}`);
     const panned = yield* panArea(app, udid, area.value, direction, text);
     nodes = panned.after;
-    if (WEIGHT[panned.motion._tag] > WEIGHT[motion._tag]) motion = panned.motion;
-    if (Motion.$is('Gone')(panned.motion))
-      lost = Option.orElse(lost, () => Option.some(panText(panned.pan)));
+    seen = afterPan(seen, panned.motion, panText(panned.pan));
   }
   return yield* missing(`not shown after ${MAX_PASSES} pans ${direction}`);
 });

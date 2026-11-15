@@ -14,10 +14,13 @@ import { Effect, Option, Schema } from 'effect';
 
 import { chooser, hymnPage, PAGE, SHEET, snapshotOf, VERSES } from './fixtures/screens.ts';
 import {
+  afterPan,
   type Area,
   areaFor,
   hides,
+  Motion,
   motionOf,
+  NO_PANS,
   type Node,
   nodesOf,
   panFor,
@@ -396,6 +399,46 @@ describe('the scroll view on the hymnal’s screens', () => {
         }
         expect(fitting).toBeGreaterThan(20);
         expect(covered).toBeGreaterThan(20);
+      }),
+  );
+});
+
+describe('a run of pans', () => {
+  it.effect('a sheet one pan closed stays gone though later pans move the page under it', () =>
+    Effect.sync(() => {
+      const run = [Motion.Moved(), Motion.Gone(), Motion.Moved(), Motion.Unmoved(), Motion.Gone()];
+      const seen = run.reduce((so, motion, at) => afterPan(so, motion, `pan-${at}`), NO_PANS);
+      expect(seen.motion._tag).toBe('Gone');
+      expect(seen.lost).toEqual(Option.some('pan-1'));
+      expect(afterPan(NO_PANS, Motion.Unmoved(), 'pan-0')).toEqual(NO_PANS);
+      expect(afterPan(NO_PANS, Motion.Moved(), 'pan-0').motion._tag).toBe('Moved');
+    }),
+  );
+
+  it.effect(
+    'property: a run is gone iff some pan lost its view, else moved iff some pan moved, and names the first lost pan',
+    () =>
+      Effect.sync(() => {
+        const next = seeded(13);
+        const kinds = [Motion.Moved(), Motion.Unmoved(), Motion.Gone()] as const;
+        const tags = { gone: 0, moved: 0, unmoved: 0 };
+        for (let run = 0; run < CASES; run += 1) {
+          const motions = Array.from({ length: next(7) }, () => kinds[next(3)] ?? Motion.Unmoved());
+          const seen = motions.reduce(
+            (so, motion, at) => afterPan(so, motion, `pan-${at}`),
+            NO_PANS,
+          );
+          const first = motions.findIndex((motion) => motion._tag === 'Gone');
+          let want: Motion['_tag'] = 'Unmoved';
+          if (motions.some((motion) => motion._tag === 'Moved')) want = 'Moved';
+          if (first >= 0) want = 'Gone';
+          expect(seen.motion._tag).toBe(want);
+          let lost = Option.none<string>();
+          if (first >= 0) lost = Option.some(`pan-${first}`);
+          expect(seen.lost).toEqual(lost);
+          tags[({ Gone: 'gone', Moved: 'moved', Unmoved: 'unmoved' } as const)[want]] += 1;
+        }
+        expect(Math.min(tags.gone, tags.moved, tags.unmoved)).toBeGreaterThan(10);
       }),
   );
 });
