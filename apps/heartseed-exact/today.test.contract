@@ -2,16 +2,69 @@ epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
-test "Today shows the passage"
+test "Today shows the passage under no cue, every word a hidden slot"
   expect text "reference" == "Isaiah 41:10"
-  expect text "passage" == "Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness."
-  expect text "word-0" == "Fear "
-  expect text "word-36" == "righteousness."
+  expect state today.cue == "none"
+  expect state today.words.length == 37
+  expect text "word-0" == "____"
+  expect state today.words.0.label == "Word 1"
+  expect state today.words.0.peekable == true
+  expect state today.cap == 4
   expect enabled "hear"
   expect enabled "say"
+  expect enabled "show-all"
   expect tree missing "last"
   expect tree missing "result"
   expect tree missing "refused"
+  expect tree missing "help-line"
+  expect no failures
+
+test "Under the full text every word reads whole, with nothing to peek at"
+  at "/cue/full"
+  clock settle
+  expect state today.cue == "full"
+  expect text "word-0" == "Fear"
+  expect state today.words.0.peekable == false
+  expect tree missing "show-all"
+  expect no failures
+
+test "First letters: a tap on a word shows it a moment, and the try counts as Hard at best"
+  at "/cue/initials"
+  clock settle
+  expect state today.cue == "initials"
+  expect text "word-0" == "F"
+  expect text "word-3" == "f"
+  expect state today.words.3.label == "f"
+  tap "word-3"
+  clock settle
+  expect text "word-3" == "for"
+  expect state today.words.3.label == "for"
+  expect state today.peeking == 3
+  expect state today.cap == 2
+  expect text "help-line" == "1 word peeked: this try counts as Hard at best."
+  clock +1400
+  expect text "word-3" == "for"
+  clock +100
+  clock settle
+  expect text "word-3" == "f"
+  expect state today.peeking == -1
+  expect state today.cap == 2
+  expect no failures
+
+test "Show all shows every word, says the cost, and caps the try"
+  at "/cue/initials"
+  clock settle
+  tap "show-all"
+  clock settle
+  expect text "word-0" == "Fear"
+  expect text "word-3" == "for"
+  expect state today.shownAll == true
+  expect state today.moveBack == true
+  expect state today.cap == 2
+  expect text "help-line" == "Shown whole: this try counts as Hard at best, and the verse moves back a stage."
+  expect tree missing "show-all"
+  expect state today.words.3.peekable == false
+  expect no failures
 
 test "Hear it lights every word, then rests"
   tap "hear"

@@ -101,12 +101,16 @@ const reference = (verse: string, heard: readonly { transcript: string; final: b
 
 const slice = (verse: string, heard: readonly { transcript: string; final: boolean }[]) => {
   const inputs: TodayInput[] = [
-    { _tag: 'say', recognition: 'r' },
+    { _tag: 'say', recognition: 'r', at: 0, offset: 0 },
     ...heard.map((report): TodayInput => ({ _tag: 'heard', recognition: 'r', ...report })),
     { _tag: 'finish' },
   ];
   const shown = view(inputs.reduce(step, initial({ reference: '', text: verse })));
-  return { marks: shown.words.map((word) => word.mark), result: shown.result };
+  const recall = shown.pending?.recall;
+  return {
+    marks: shown.words.map((word) => word.mark),
+    result: { right: (recall?.words ?? 0) - (recall?.missed ?? 0), total: recall?.words },
+  };
 };
 
 describe("Today's marks", () => {

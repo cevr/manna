@@ -15,15 +15,6 @@
       "deviceFamily": ["iphone", "ipad"]
     }
   },
-  "verify": {
-    "accept": [
-      {
-        "finding": "broken-words",
-        "node": "passage",
-        "why": "A verse's longest word (righteousness.) is wider than a phone at the largest text size; breaking it there is better than its end running off the screen, which wrapping between words alone leaves (verify's clipped and overflow on word-36)."
-      }
-    ]
-  },
   "deploy": {
     "store": {
       "web": "0",
