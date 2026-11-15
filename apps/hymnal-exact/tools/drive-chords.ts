@@ -14,7 +14,10 @@
  *   body), every chord of the first stanza stands over its own syllable in
  *   the same way, and each line breaks where the line rule says
  *   (`breaksOf` over the pairs' measured widths, the line's width and the
- *   measured gap between words): no pair split, no chord on the wrong row;
+ *   measured gap between words), at the line's width give or take half a
+ *   point, since a host rounds each frame to its pixel grid and a row that
+ *   fills the line to within that may break either way: no pair split, no
+ *   chord on the wrong row;
  * - a capo set, a relaunch on the kept store shows chords still on and the
  *   capo kept.
  *
@@ -209,11 +212,14 @@ stanza.forEach((line, i) => {
   const widths = line.map((word) =>
     word.map((pair) => frame(`pair-${pair.id}`, largeOps, largeAt)?.w ?? 0),
   );
-  const ruled = box === undefined ? undefined : breaksOf(widths, box.w + 0.5, gapOf(line));
+  const gap = gapOf(line);
+  const ruledAt = (slack: number) =>
+    box === undefined ? undefined : JSON.stringify(breaksOf(widths, box.w + slack, gap));
+  const ruled = [ruledAt(-0.5), ruledAt(0.5)];
   drive.check(
-    `largest size: line 1-${i + 1} breaks where the line rule says (${drawn?.length ?? 0} rows)`,
-    drawn !== undefined && JSON.stringify(drawn) === JSON.stringify(ruled),
-    { drawn, ruled, width: box?.w, widths },
+    `largest size: line 1-${i + 1} breaks where the line rule says, within half a point of its width (${drawn?.length ?? 0} rows)`,
+    drawn !== undefined && ruled.includes(JSON.stringify(drawn)),
+    { drawn, ruled, width: box?.w, gap, widths },
   );
 });
 
