@@ -1,0 +1,151 @@
+test "Off by default, the words as before."
+  at "/hymns/2"
+  clock data
+  expect state chordsOn == false
+  expect state chordsShown.kind == "off"
+  expect tree has "stanza-1"
+  expect tree has "refrain-1"
+  expect tree missing "chord-1-1-1"
+  expect tree missing "line-1-1"
+  expect tree missing "key-played"
+
+test "On, each chord sits over its syllable."
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock settle
+  clock data
+  expect state chordsOn == true
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect tree has "line-1-1"
+  expect tree has "line-2-1"
+  expect tree has "line-4-1"
+  expect text "chord-1-1-1" == "D"
+  expect text "chord-1-1-6" == "Bm"
+  expect text "chord-1-1-7" == "Em"
+  expect text "chord-1-1-8" == "D"
+  expect tree missing "chord-1-1-2"
+  expect text "key-sounding" == "D"
+  expect text "key-played" == "D"
+
+test "Transpose and capo rename every chord and both keys."
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "transpose-up"
+  clock data
+  tap "transpose-up"
+  clock data
+  tap "capo-up"
+  clock data
+  clock settle
+  expect state chordsMoves.0 == "2:2:1"
+  expect state chordsShown.transpose == 2
+  expect state chordsShown.capo == 1
+  expect text "key-sounding" == "E"
+  expect text "key-played" == "Eb"
+  expect text "capo" == "Capo 1, played in"
+  expect text "chord-1-1-1" == "Eb"
+  expect text "chord-1-1-6" == "Cm"
+  expect text "chord-1-1-7" == "Fm"
+  expect text "chord-1-1-8" == "Eb"
+  tap "transpose-down"
+  clock data
+  tap "transpose-down"
+  clock data
+  tap "capo-down"
+  clock data
+  clock settle
+  expect state chordsShown.transpose == 0
+  expect state chordsShown.capo == 0
+  expect text "key-sounding" == "D"
+  expect text "key-played" == "D"
+  expect text "chord-1-1-1" == "D"
+  expect text "chord-1-1-6" == "Bm"
+  expect state chordsShown.capoDown == false
+
+test "A chord opens its shape, and Back returns with chords on."
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "chord-1-1-6"
+  clock settle
+  clock data
+  expect text "shape-name" == "Bm"
+  expect tree has "shape"
+  expect tree has "shape-0-barre-0"
+  back
+  clock settle
+  clock data
+  expect tree missing "shape-name"
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  expect text "chord-1-1-6" == "Bm"
+  expect state chordsOn == true
+
+test "Kept through a reload." on web
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "capo-up"
+  clock data
+  reload
+  clock data
+  clock settle
+  expect state chordsOn == true
+  expect state chordsMoves.0 == "2:0:1"
+  expect text "key-played" == "Db"
+  expect text "chord-1-1-1" == "Db"
+
+test "A hymn without chords says so, its words as before."
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  type "search" "181"
+  clock settle
+  clock data
+  tap "hymn-181"
+  clock settle
+  clock data
+  expect state chordsShown.kind == "none"
+  expect text "no-chords" == "No chords for this hymn yet."
+  expect tree has "stanza-1"
+  expect tree missing "chord-1-1-1"
+  expect tree missing "key-played"

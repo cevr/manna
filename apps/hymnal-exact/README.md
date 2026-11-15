@@ -93,4 +93,19 @@ bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once a
 bun tools/drive-settings.ts ios
 ```
 
+## Chords
+
+Chords are off at first; Settings' `Chords` row (`ChordsRow`, one call line in the sheet) turns them on for every hymn, kept across launches (`chordsOn persist`). On, a hymn's page names the key sounding and the key played, with the transpose (`-` and `+`, wrapping through the twelve) and the capo (stopping at 0 and 11), and draws each sung line as its words, each word as its syllables, and over each syllable the chord that changes there, in the current app's default Simple style, spelled in the key played. A refrain carries its chords each time it is sung; a part the chords do not cover shows its words; a hymn with no chords says so over its words. Each hymn keeps its own move (`chordsMoves persist`, `"<hymn>:<transpose>:<capo>"`). A tap on a chord opens its shape over the page (`/hymns/<n>/chord/<grip>`): a chord box per chord, its strings and frets an SVG, the marks over the nut, each finger a dot with its number, a barre one bar.
+
+`bun run exact` writes `src/chords/chords.gen.ts` (ignored; `chords.gen.d.ts` declares it) from the current app's `vite/chords` maker, one string per hymn, which `app.ts` hands the sources; a hymn's string is decoded only when its page is asked for with chords on. The rules are the current app's, imported (`hymns/chords`, `hymns/simple`, `hymns/shapes`, `@manna/hymnal/chord`), with declarations for Exact's type check under `src/hymns/decl/` and `src/chords/decl/`, held to their sources by `src/chords/held.test.ts`. What the port adds is `src/chords/`: the page's answer (`page.ts`), the kept moves (`move.ts`), the shape's drawing (`shape.ts`) and the line rule (`rows.ts`). A chord stands over its syllable because the two are one box, a column of the chord over the syllable, inside a wrapping row of the word's pairs inside a wrapping row of the line's words: a line breaks between words, a word only where it is wider than the page, and never inside a pair. `rows.ts` is that rule as a pure function the tests and the drive hold the hosts to.
+
+The Bun tests hold every hymn's answer to the current app's `sectionsOf` (`page.test.ts`), every move's names and keys to its `transposed`, `capoed`, `playedKey` and `soundingKey` (`move.test.ts`), the line rule (`rows.test.ts`) and every chord's shape under every transpose to its `fingeringOf` (`shape.test.ts`). They run as their own task, `test:chords`. A test cannot read where a node is drawn, so the placement checks are a drive, which reads the chords from the sources and so needs the test setup's modules:
+
+```sh
+bun run exact test web chords.test.contract
+bun run exact test ios chords.test.contract
+bun --preload ./src/test/setup.ts tools/drive-chords.ts web    # chords over their syllables, the largest text's lines broken by the line rule, kept after a relaunch
+bun --preload ./src/test/setup.ts tools/drive-chords.ts ios
+```
+
 `app.contract.d.ts` (the types `app.ts` imports), `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.
