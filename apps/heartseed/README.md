@@ -2435,9 +2435,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and back through recitals, Again and a relaunch.
   - `test:field-foot`: `src/field/foot.test.tsx`, home's foot read from the
     field screen as it renders (`src/test/foot.ts`: every test id, label
-    and text the scroll view draws after its last furrow row) under the
-    limit with the tips, at the limit and unread, equal to the foot
-    written out by hand (`HOME_FOOT` in `scripts/foot.ts`); a screen of
+    and text the scroll view draws after its last furrow row) in every
+    home state over the props the screen draws by (none to four furrows,
+    the tips, the passages under the limit, with a list, at the limit or
+    unread, sown or not, the card's `Start` or none), each within the foot
+    written out by hand (`HOME_FOOT` in `scripts/foot.ts`) and all of
+    them together equal to it, none with no furrow; a screen of
     its own reading each JSX form a node under the furrows takes; and R7
     (`footFaults`) over every shipped journey against the rendered foot,
     tripping a journey that ends on a scroll to any node of it. Its

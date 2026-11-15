@@ -11,17 +11,22 @@ export interface Foot {
 }
 
 /**
- * Home's foot as `src/field/screen.tsx` draws it under the lists, written
- * out by hand from the screen: `Add a list` and tip 3 (its words and its
- * badge's `3`), the limit line, and the end rows with their hidden `›`.
- * `src/field/foot.test.tsx` holds it equal to the foot the screen renders;
- * the rule's own models in `journeys.test.ts` draw their targets from it.
+ * Home's foot as `src/field/screen.tsx` draws it under the lists over
+ * every state, written out by hand from the screen: `Add a list` and tip 3
+ * (its words and its badge's `3`), tip 2 (its words and its badge's `2`,
+ * under the first furrow, so below the lists when home holds one, as after
+ * the first minute), the limit line, and the end rows with their hidden
+ * `›`. `src/field/foot.test.tsx` holds every home state's rendered foot
+ * within it and all of them together equal to it; the rule's own models
+ * in `journeys.test.ts` draw their targets from it.
  */
 export const HOME_FOOT: Foot = {
-  ids: new Set(['add-list', 'end-row', 'limit', 'tip-3']),
+  ids: new Set(['add-list', 'end-row', 'limit', 'tip-2', 'tip-3']),
   labels: new Set([
+    '2',
     '3',
     '3 passages or lists, the most for now. remove one to add another.',
+    'a list is a set of verses. tap its name to open it.',
     'add a list',
     'add a psalm, a passage or a set of promises when you want more.',
     'how heartseed works',

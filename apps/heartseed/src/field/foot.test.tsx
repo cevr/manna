@@ -1,11 +1,15 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noNullish, effect/noNodeBuiltinImport -- a drawing test: it mounts the field screen through React's promise-based act in happy-dom, its screen of its own spells each JSX form a node under the lists takes, a ternary and a nullish fallback among them, and it loads the journey files through a file system that reads the disk synchronously, since Bun's asynchronous reads refuse happy-dom's AbortSignal. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noNullish, effect/noNodeBuiltinImport, eslint/no-await-in-loop -- a drawing test: it mounts the field screen through React's promise-based act in happy-dom, one home state after another since act scopes do not overlap, its screen of its own spells each JSX form a node under the lists takes, a ternary and a nullish fallback among them, and it loads the journey files through a file system that reads the disk synchronously, since Bun's asynchronous reads refuse happy-dom's AbortSignal. */
 
 /**
  * Home's foot, read from the field screen as it renders (`../test/foot`):
  * every test id and label the scroll view draws after its last furrow, in
- * each state the foot changes with (the passages read under the limit with
- * the tips, read at the limit, unread). It equals the foot written out by
- * hand (`HOME_FOOT`); a screen of its own puts each JSX form a node there
+ * every home state over each prop the screen draws by (one to four furrows,
+ * the tips shown or not, the passages read under the limit, with a list,
+ * at the limit or unread, a field sown or not, the card's `Start` or none).
+ * Each state's foot lies within the foot written out by hand
+ * (`HOME_FOOT`) and together they draw all of it; a screen with no furrow
+ * gives no foot, as home always draws its own list (`app/index.tsx`'s
+ * `PASSAGES`). A screen of its own puts each JSX form a node there
  * can take under its furrows, and each is read; and R7 (`footFaults`) holds
  * every shipped journey to the rendered foot, and trips a journey that
  * ends on a scroll to any node of it, in each spelling, after a sheet too.
@@ -58,13 +62,51 @@ const furrow = (id: string): Furrow => ({
   plants: [],
 });
 
-/** Two furrows, so what sits under the first row (tip 2) sits above the last. */
+/** Two furrows, for the screen of its own: what sits under the first row sits above the last. */
 const FURROWS = [furrow('a'), furrow('b')];
+
+/** `n` furrows, each holding a plant at a stage of its own, the first ready. */
+const furrowsOf = (n: number): readonly Furrow[] =>
+  Array.from({ length: n }, (_, at) => ({
+    ...furrow(String(at)),
+    plants: [
+      {
+        reference: `Ref ${at}`,
+        stage: at % 2 === 0 ? 'not planted' : 'blade',
+        ready: at === 0,
+        label: `Ref ${at}`,
+      },
+    ],
+  }));
 
 const range = (chapter: number) => ({ book: 19, chapter, first: 1, last: 2 });
 const UNDER: PassagesView = { _tag: 'Read', passages: [range(1)], lists: [] };
-const FULL: PassagesView = { _tag: 'Read', passages: [range(1), range(2), range(3)], lists: [] };
+const LISTED: PassagesView = { _tag: 'Read', passages: [range(1)], lists: ['a-list'] };
+const FULL: PassagesView = { _tag: 'Read', passages: [range(1), range(2)], lists: ['a-list'] };
 const UNREAD: PassagesView = { _tag: 'Unread' };
+
+/** One state of home: how many furrows, whether the tips show, the passages, the days sown, and whether the card offers `Start`. */
+interface HomeState {
+  readonly furrows: number;
+  readonly tips: boolean;
+  readonly passages: PassagesView;
+  readonly sown: number;
+  readonly start: boolean;
+}
+
+/** Every home state over the props the screen draws by, each value of each crossed with every other. */
+const STATES: ReadonlyArray<HomeState> = [0, 1, 2, 3, 4].flatMap((furrows) =>
+  [true, false].flatMap((tips) =>
+    [UNDER, LISTED, FULL, UNREAD].flatMap((passages) =>
+      [0, 4].flatMap((sown) =>
+        [true, false].map((start) => ({ furrows, tips, passages, sown, start })),
+      ),
+    ),
+  ),
+);
+
+const nameOf = (state: HomeState) =>
+  `${state.furrows} furrows, tips ${state.tips}, ${state.passages._tag === 'Read' ? `${state.passages.passages.length + state.passages.lists.length} held` : 'unread'}, sown ${state.sown}, start ${state.start}`;
 
 /** What `node` draws, mounted in the document: its foot, or none. */
 const drawn = async (node: ReactNode) => {
@@ -80,16 +122,20 @@ const drawn = async (node: ReactNode) => {
 
 const noop = () => {};
 
-/** Home's field screen over `passages`, the tour's tips shown or not. */
-const screen = (passages: PassagesView, tips: boolean) => (
+/** Home's field screen in `state`. */
+const screen = (state: HomeState) => (
   <FieldScreen
-    field={{ rows: [], sown: 0, harvest: 0 }}
-    furrows={FURROWS}
-    passages={passages}
+    field={{ rows: [], sown: state.sown, harvest: Math.min(state.sown, 1) }}
+    furrows={furrowsOf(state.furrows)}
+    passages={state.passages}
     greeting={{ words: 'Good morning', icon: 'sun' }}
-    card={{ headline: Option.none(), parts: Option.none(), action: { _tag: 'None' } }}
+    card={{
+      headline: Option.none(),
+      parts: Option.none(),
+      action: state.start ? { _tag: 'Start' } : { _tag: 'None' },
+    }}
     starts={() => Option.none()}
-    tips={tips}
+    tips={state.tips}
     scrolled={0}
     onScrolled={noop}
     onToday={noop}
@@ -111,17 +157,16 @@ const union = (feet: ReadonlyArray<Foot>): Foot => ({
 const sorted = (foot: Option.Option<Foot>) =>
   Option.map(foot, (some) => ({ ids: [...some.ids].sort(), labels: [...some.labels].sort() }));
 
-/** Home's foot over every state it changes with: under the limit with the tips, at the limit, unread. */
-const renderedFoot = async () => {
-  const feet = [
-    await drawn(screen(UNDER, true)),
-    await drawn(screen(UNDER, false)),
-    await drawn(screen(FULL, true)),
-    await drawn(screen(UNREAD, false)),
-  ];
-  expect(feet.map(Option.isSome)).toEqual([true, true, true, true]);
-  return union(feet.flatMap(Option.toArray));
-};
+/** Each home state with the foot it draws, rendered once for the file. */
+const statesDrawn = (async () => {
+  const out: Array<{ readonly state: HomeState; readonly foot: Option.Option<Foot> }> = [];
+  for (const state of STATES) out.push({ state, foot: await drawn(screen(state)) });
+  return out;
+})();
+
+/** Home's foot: every state's foot together. */
+const renderedFoot = async () =>
+  union((await statesDrawn).flatMap(({ foot }) => Option.toArray(foot)));
 
 /** A component that passes every prop it takes to its view. */
 function Mark(props: { readonly testID: string }) {
@@ -240,7 +285,19 @@ const spellings = (foot: Foot) => [
 ];
 
 describe('home’s foot as the field screen draws it', () => {
-  it('is every id and label drawn after the furrows, in each state, as written out by hand', async () => {
+  it('is every id and label drawn after the furrows, in each home state within the foot written out by hand, and all of it over every state; none with no furrow', async () => {
+    const states = await statesDrawn;
+    expect(states.length).toBe(160);
+    expect(
+      states.flatMap(({ state, foot }) => {
+        if (state.furrows === 0) return Option.isNone(foot) ? [] : [`${nameOf(state)}: a foot`];
+        if (Option.isNone(foot)) return [`${nameOf(state)}: no foot`];
+        return [
+          ...[...foot.value.ids].filter((id) => !HOME_FOOT.ids.has(id)),
+          ...[...foot.value.labels].filter((label) => !HOME_FOOT.labels.has(label)),
+        ].map((target) => `${nameOf(state)}: ${target}`);
+      }),
+    ).toEqual([]);
     expect(sorted(Option.some(await renderedFoot()))).toEqual(sorted(Option.some(HOME_FOOT)));
   });
 
