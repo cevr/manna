@@ -8,10 +8,10 @@
  * 1. John 3:16-18 planted through the chooser lands as a list; relaunched
  *    on the kept storage, the garden reads it;
  * 2. Psalm 119's 176 verses are drawn and its last is chosen;
- * 3. twenty single verses planted through the shelves' short picks are
- *    held, and a twenty-first pick offers no Plant and says the single
- *    verses' limit (the chooser offers no single verse: the current app's
- *    chooser plants only a list of 3 or more);
+ * 3. the chooser offers one verse to the single verses, not as a list;
+ *    twenty single verses planted through nineteen short picks and the
+ *    chooser are held, a twenty-first pick offers no Plant and says the
+ *    single verses' limit, and so does the chooser for one more verse;
  * 4. a plain launch's Your verses has no test control in its tree.
  *
  * Screenshots go to `.exact/shots/add-<host>-*`. Exits 1 on any failed
@@ -31,7 +31,19 @@ const port = host === 'web' ? ['--port', '8774'] : [];
 const shot = (name: string) => `screenshot .exact/shots/add-${host}-${name}.png`;
 const SINGLES_LIMIT = '20 single verses, the most for now. Remove one to add another.';
 
-/** The twenty distinct verses of the first short picks, in Add verses' order, and a twenty-first. */
+/** From Add verses, the chooser at John 3. */
+const toChapter43 = () => [
+  'tap shelf-any',
+  'clock settle',
+  'tap book-43',
+  'clock data',
+  'clock settle',
+  'tap chapter-3',
+  'clock data',
+  'clock settle',
+];
+
+/** Nineteen distinct verses of the first short picks, in Add verses' order (John 3:16 through the chooser makes twenty), and a twenty-first. */
 const PICKS = [
   'pick-proverbs-20-4-23-23',
   'pick-proverbs-20-15-1-1',
@@ -52,7 +64,6 @@ const PICKS = [
   'pick-peace-23-26-3-3',
   'pick-peace-60-5-7-7',
   'pick-peace-19-55-22-22',
-  'pick-peace-43-16-33-33',
 ];
 const TWENTY_FIRST = 'pick-peace-19-4-8-8';
 
@@ -175,6 +186,14 @@ const sown = [
     'clock data',
     'clock settle',
   ]),
+  ...toChapter43(),
+  'tap verse-16',
+  'clock data',
+  'state chooserShown',
+  shot('single-offered'),
+  'tap plant-singles',
+  'clock data',
+  'clock settle',
   'state garden.singles.length',
   'state addShown.line',
   `tap offer-${TWENTY_FIRST}`,
@@ -182,13 +201,28 @@ const sown = [
   'clock settle',
   'state addListShown',
   shot('singles-full'),
+  'back',
+  'clock settle',
+  ...toChapter43(),
+  'tap verse-17',
+  'clock data',
+  'state chooserShown',
+  shot('chooser-singles-full'),
 ];
 const full = replyOf(
   sown,
   await drive.run([...port, '--storage', `${store}-singles`, '--reset-storage'], sown),
 );
+const single = full('state chooserShown', 0) as
+  | { reference?: string; singles?: boolean; plant?: boolean }
+  | undefined;
 drive.check(
-  'twenty single verses planted through the picks are held',
+  'the chooser offers John 3:16 alone to the single verses, not as a list',
+  single?.reference === 'John 3:16' && single.singles === true && single.plant === false,
+  single,
+);
+drive.check(
+  'twenty single verses planted through nineteen picks and the chooser are held',
   full('state garden.singles.length') === 20,
   full('state garden.singles.length'),
 );
@@ -204,6 +238,14 @@ drive.check(
   'a twenty-first pick offers no Plant and says the limit',
   refused?.row?.offer === 'full' && refused.line === SINGLES_LIMIT,
   refused,
+);
+const shut = full('state chooserShown', 1) as
+  | { reference?: string; singles?: boolean; line?: string }
+  | undefined;
+drive.check(
+  'at twenty, the chooser offers John 3:17 nothing and says the limit',
+  shut?.reference === 'John 3:17' && shut.singles === false && shut.line === SINGLES_LIMIT,
+  shut,
 );
 
 const plain = ['clock data', 'clock settle', 'state gardenDriven', 'tree', shot('plain-verses')];

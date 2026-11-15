@@ -7,8 +7,10 @@
  * chapter) step the range as `tapVerse` does, and after each tap and for
  * every plant answer the footer offers what the current chooser does:
  * `Plant` exactly at 3 verses or more, `SHORT_LINE` and no `Plant` under
- * 3 (no single-verse offer), the limit line on `Full`, the alert on any
- * other refusal, nothing once the plant landed. Every range it holds is
+ * 3, there the offer to join the single verses while they have room (the
+ * owner's rule) and their limit line while they have none, the limit line
+ * of what was planted on `Full`, the alert on any other refusal, nothing
+ * once the plant landed. Every range it holds is
  * choosable, and `textOf` gives each verse of the chapter as `versesOf`.
  */
 
@@ -16,9 +18,9 @@ import { BIBLE_BOOKS } from '@manna/core/bible';
 import { expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { LIMIT_LINE, SHORT_LINE, tapVerse } from '@manna/heartseed/chooser';
+import { LIMIT_LINE, SHORT_LINE, SINGLES_LIMIT_LINE, tapVerse } from '@manna/heartseed/chooser';
 import { versesOf } from '@manna/heartseed/kjv';
-import { choosable, isShort, passageReference } from '@manna/heartseed/passages';
+import { choosable, isShort, MOST_SINGLES, passageReference } from '@manna/heartseed/passages';
 import { textOf } from '../text/text';
 import { seeded } from '../test/random';
 import { chooserShown, chooserStep, chooserTap, type ChooserRange } from './chooser';
@@ -47,16 +49,30 @@ const appStep = (range: ChooserRange, verse: number, count: number): ChooserRang
     { onNone: () => ({ first: 0, last: 0 }), onSome: (each) => ({ ...each }) },
   );
 
-/** The current chooser's footer for a range and the last answer. */
-const appFooter = (book: number, chapter: number, range: ChooserRange, answer: string) => {
+/** The current chooser's footer for a range and the last answer, with the owner's single-verse offer: one or two verses join the single verses while `held` leaves room for them. */
+const appFooter = (
+  book: number,
+  chapter: number,
+  range: ChooserRange,
+  answer: string,
+  held: number,
+) => {
   const passage = { book, chapter, ...range };
   const short = isShort(passage);
+  const room = held + range.last - range.first + 1 <= MOST_SINGLES;
   const reference = passageReference(passage);
   let line = '';
-  if (answer === 'Full') line = LIMIT_LINE;
+  if (answer === '' && short && !room) line = SINGLES_LIMIT_LINE;
+  else if (answer === 'Full') line = short ? SINGLES_LIMIT_LINE : LIMIT_LINE;
   else if (!['', 'Planted', 'Already'].includes(answer))
     line = `${reference} was not planted. Try again.`;
-  return { plant: !short, short: short ? SHORT_LINE : '', reference, line };
+  return {
+    plant: !short,
+    singles: short && room,
+    short: short ? SHORT_LINE : '',
+    reference,
+    line,
+  };
 };
 
 it('steps and offers as the current chooser, for every chapter length', () => {
@@ -88,18 +104,26 @@ it('steps and offers as the current chooser, for every chapter length', () => {
       expect(chooserTap(`${book}`, `${chapter}`, range, verse)).toEqual(next);
       range = next;
       const answer = random.pick(ANSWERS);
-      const shown = chooserShown(`${book}`, `${chapter}`, range, answer);
+      const held = random.pick([0, 5, 18, 19, 20]);
+      const shown = chooserShown(`${book}`, `${chapter}`, range, answer, held);
       if (range.first === 0) {
-        expect(shown).toMatchObject({ chosen: false, plant: false, short: '', line: '' });
+        expect(shown).toMatchObject({
+          chosen: false,
+          plant: false,
+          singles: false,
+          short: '',
+          line: '',
+        });
         continue;
       }
       expect(choosable({ book, chapter, ...range })).toBe(true);
-      const app = appFooter(book, chapter, range, answer);
-      expect({ book, chapter, range, answer, shown }).toMatchObject({
+      const app = appFooter(book, chapter, range, answer, held);
+      expect({ book, chapter, range, answer, held, shown }).toMatchObject({
         book,
         chapter,
         range,
         answer,
+        held,
         shown: { chosen: true, ...app },
       });
     }
@@ -115,7 +139,7 @@ it("refuses a route outside the canon, and reads each chapter's verses as verses
     ['43', '1.5'],
     ['', ''],
   ])
-    expect(chooserShown(book, chapter, { first: 1, last: 3 }, '')).toMatchObject({
+    expect(chooserShown(book, chapter, { first: 1, last: 3 }, '', 0)).toMatchObject({
       found: false,
       plant: false,
     });

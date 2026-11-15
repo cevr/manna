@@ -38,12 +38,47 @@ test "Fewer than three is not a list"
   expect text "range-count" == "1 verse"
   expect text "short-line" == "A list holds at least 3 verses."
   expect tree missing "plant-list"
-  expect tree missing "plant-singles"
+  expect enabled "plant-singles"
+  expect text "plant-singles" == "Add to single verses"
   tap "verse-17"
   clock data
   expect text "range-line" == "John 3:16-17"
   expect text "short-line" == "A list holds at least 3 verses."
   expect tree missing "plant-list"
+  expect enabled "plant-singles"
+  expect no failures
+
+test "One or two join the single verses"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  expect state garden.singles.length == 1
+  expect state garden.singles.0.reference == "John 3:16"
+  expect state garden.lists.length == 0
+  expect tree missing "chooser-verses"
+  expect tree has "add-verses"
+  tap "shelf-any"
+  clock settle
+  tap "book-19"
+  clock data
+  clock settle
+  tap "chapter-23"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  tap "verse-2"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  expect state garden.singles.length == 3
+  expect state garden.lists.length == 0
   expect no failures
 
 test "Three make a list"

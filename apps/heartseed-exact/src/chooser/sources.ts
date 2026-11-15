@@ -3,7 +3,7 @@
  * once from the canon and the corpus the data module imports, and touches
  * no storage: `chooserBooks` the books step, `chooserChapters` a book's
  * chapters, `chooserTap` the range after a tap, and `chooserRead` the
- * verses step's footer. A route's book and chapter arrive as its text.
+ * verses step's footer, given the count of single verses held. A route's book and chapter arrive as its text.
  */
 
 import {
@@ -28,11 +28,12 @@ export const chooserSources = {
     number,
     number,
   ]): ChooserRange => chooserTap(book, chapter, { first, last }, verse),
-  chooserRead: ([book, chapter, first, last, answer]: readonly [
+  chooserRead: ([book, chapter, first, last, answer, singles]: readonly [
     string,
     string,
     number,
     number,
     string,
-  ]): ChooserShown => chooserShown(book, chapter, { first, last }, answer),
+    number,
+  ]): ChooserShown => chooserShown(book, chapter, { first, last }, answer, singles),
 };

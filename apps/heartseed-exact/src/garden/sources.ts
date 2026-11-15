@@ -15,7 +15,15 @@ import type { FileStorage } from '@manna/exact-kit/storage';
 import { Effect, Logger, Option, Schema } from 'effect';
 
 import { rowNamed } from '../add/shelves';
-import { moveBack, plantList, plantRange, readGarden, recallVerse, removeById } from './program';
+import {
+  joinRange,
+  moveBack,
+  plantList,
+  plantRange,
+  readGarden,
+  recallVerse,
+  removeById,
+} from './program';
 import { SHORT_LINE } from '@manna/heartseed/chooser';
 import { shownOf, verseIn, type At, type GardenShown, type GardenVerse } from './view';
 import { makeQueue, oneAtATime } from './writes';
@@ -125,6 +133,19 @@ export const gardenSources = (options: GardenOptions = {}) => {
       seed,
     );
 
+  const gardenJoin: Source<
+    readonly [number, number, number, number, number, number, number],
+    GardenChange
+  > = ([book, chapter, first, last, now, _offset, seed], _store, storage) =>
+    run(
+      Effect.map(joinRange(storage, { book, chapter, first, last }), ({ answer }) => ({
+        answer,
+        line: '',
+      })),
+      now,
+      seed,
+    );
+
   const gardenRemove: Source<readonly [string, number, number, number], GardenChange> = (
     [id, now, _offset, seed],
     _store,
@@ -194,6 +215,7 @@ export const gardenSources = (options: GardenOptions = {}) => {
     addPlant,
     gardenRead,
     gardenPlant,
+    gardenJoin,
     gardenRemove,
     gardenRecall,
     gardenBack,

@@ -101,7 +101,7 @@ it("writes the current sheet's and chooser's words", async () => {
   expect([countText(1), countText(3)]).toEqual(['1 verse', '3 verses']);
   expect(screen).toContain('{`${LEAST_VERSES} to ${MOST_VERSES} verses`}');
   expect(screen).toContain('`${passageReference(each)} was not planted. Try again.`');
-  expect(chooserShown('43', '3', { first: 16, last: 18 }, 'Failed')).toMatchObject({
+  expect(chooserShown('43', '3', { first: 16, last: 18 }, 'Failed', 0)).toMatchObject({
     cap: '3 to 20 verses',
     line: 'John 3:16-18 was not planted. Try again.',
   });

@@ -232,6 +232,11 @@ export interface GardenCalls {
     store: ExactStore,
     storage: FileStorage,
   ) => Promise<{ answer: string; line: string }>;
+  readonly gardenJoin: (
+    args: readonly [number, number, number, number, number, number, number],
+    store: ExactStore,
+    storage: FileStorage,
+  ) => Promise<{ answer: string; line: string }>;
   readonly gardenRemove: (
     args: readonly [string, number, number, number],
     store: ExactStore,
@@ -476,10 +481,17 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       return screen();
     });
 
-  /** The garden's plant (a range, or a shelf's list by `addPlant`) and remove, and the session's plan made again after one that landed. */
+  /** The garden's plant (a range, a range's verses joined by `gardenJoin`, or a shelf's list by `addPlant`) and remove, and the session's plan made again after one that landed. */
   const gardenPlant: GardenCalls['gardenPlant'] = (args, store, storage) =>
     queued(async () => {
       const changed = await garden.gardenPlant(args, store, storage);
+      if (changed.answer === 'Planted')
+        await onSession(storage, { now: args[4], seed: args[6] }, (each) => each.remake);
+      return changed;
+    });
+  const gardenJoin: GardenCalls['gardenJoin'] = (args, store, storage) =>
+    queued(async () => {
+      const changed = await garden.gardenJoin(args, store, storage);
       if (changed.answer === 'Planted')
         await onSession(storage, { now: args[4], seed: args[6] }, (each) => each.remake);
       return changed;
@@ -533,6 +545,7 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
     todayNext,
     todayAgain: (() => apply({ _tag: 'again' })) satisfies Source<readonly []>,
     gardenPlant,
+    gardenJoin,
     addPlant,
     gardenRemove,
   };

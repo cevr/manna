@@ -6,7 +6,8 @@
  * `Garden` over `KeyValueStore.layerMemory` (`garden-model.ts`), side by
  * side. A step plants a chooser range as the chooser offers it (`Plant`
  * at 3 verses or more: `gardenPlant` on the port, `Passages.add` on the
- * current app; under 3 nothing is sent), plants any shelf row (a pick, a
+ * current app; one or two verses, while the single verses have room:
+ * `gardenJoin` on the port, `Passages.join` on the current app), plants any shelf row (a pick, a
  * promise, a Handbook list: `addPlant` on the port, and on the current app
  * what its sheet runs for the row: `join` for a pick under 3 verses, else
  * `add`, or `plant` for a Handbook list), removes a list or a single
@@ -125,6 +126,39 @@ const dumpOf = (store: KeyValueStore.KeyValueStore) =>
 
 const LANDED = new Set(['Planted', 'Removed']);
 
+/** A chooser step: what the chooser offers for its range, sent to the port and run on the current app; the port's answer and the app's, both empty when nothing is offered. */
+const chosen = async (
+  port: ReturnType<typeof makePort>,
+  oracle: Awaited<ReturnType<typeof makeOracle>>,
+  step: Extract<Step, { _tag: 'choose' }>,
+  held: number,
+  now: number,
+  seed: number,
+): Promise<readonly [string, string]> => {
+  const shown = chooserShown(`${step.book}`, `${step.chapter}`, step.range, '', held);
+  const range = { book: step.book, chapter: step.chapter, first: shown.first, last: shown.last };
+  if (!shown.singles && !shown.plant) return ['', ''];
+  const source = shown.singles ? 'gardenJoin' : 'gardenPlant';
+  const answer = (
+    await port.call<{ answer: string }>(source, [
+      range.book,
+      range.chapter,
+      range.first,
+      range.last,
+      now,
+      0,
+      seed,
+    ])
+  ).answer;
+  const own = await oracle.exec(
+    Effect.flatMap(Passages, (passages) =>
+      shown.singles ? passages.join(range) : passages.add(range),
+    ),
+    now,
+  );
+  return [answer, planted(own)];
+};
+
 /** Runs the history of `seed`; a broken step fails with its seed and step. */
 export const runAddHistory = async (seed: number, steps: number) => {
   const random = seeded(seed);
@@ -147,33 +181,8 @@ export const runAddHistory = async (seed: number, steps: number) => {
     let answer = '';
     let expected = '';
     if (step._tag === 'choose') {
-      const shown = chooserShown(`${step.book}`, `${step.chapter}`, step.range, '');
-      if (shown.plant) {
-        answer = (
-          await port.call<{ answer: string }>('gardenPlant', [
-            step.book,
-            step.chapter,
-            shown.first,
-            shown.last,
-            now,
-            0,
-            seed,
-          ])
-        ).answer;
-        expected = planted(
-          await oracle.exec(
-            Effect.flatMap(Passages, (passages) =>
-              passages.add({
-                book: step.book,
-                chapter: step.chapter,
-                first: shown.first,
-                last: shown.last,
-              }),
-            ),
-            now,
-          ),
-        );
-      }
+      const held = known.passages._tag === 'Read' ? known.passages.singles.length : 0;
+      [answer, expected] = await chosen(port, oracle, step, held, now, seed);
     } else if (step._tag === 'shelf') {
       answer = (
         await port.call<{ answer: string }>('addPlant', [slugOf(step.row.id), now, 0, seed])

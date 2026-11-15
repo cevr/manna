@@ -137,6 +137,16 @@ const plantedOf = (answer: PlantAnswer | 'Added' | 'Held'): PlantAnswer => {
   return answer;
 };
 
+/** Joins each verse of `range` to the single verses (`Passages.join`), as a shelf's short pick does: the chooser's offer for a range of one or two verses. */
+export const joinRange = (storage: FileStorage, range: Range) =>
+  withGrounds(
+    storage,
+    Effect.gen(function* () {
+      const passages = yield* Passages;
+      return plantedOf(yield* passages.join(range));
+    }),
+  );
+
 /**
  * Plants a shelf's list by its source, as the current Add verses sheet
  * does: a passage of fewer verses than a list holds (`plantsSingly`)

@@ -4,9 +4,11 @@
 // (`/add/bible/:book/:chapter`). Every rule is src/chooser/chooser.ts's,
 // over the current Heartseed's `tapVerse`: a tap asks `chooserTap` for the
 // range after it, and `chooserRead` says what the footer offers (the
-// range, the cap, Plant at 3 verses or more, the short line under 3, and
-// a plant's line). Plant goes through the garden's `gardenPlant`; once it
-// lands the reader is back at Add verses. The words are `textOf`'s.
+// range, the cap, Plant at 3 verses or more, the short line under 3 with
+// Add to single verses while they have room, and a plant's line). Plant
+// goes through the garden's `gardenPlant`, Add to single verses through
+// its `gardenJoin`; once either lands the reader is back at Add verses.
+// The words are `textOf`'s.
 use GardenChange from "./garden.contract"
 use TextPassage from "./text.contract"
 
@@ -47,6 +49,7 @@ shape ChooserShown
   cap: string
   short: string
   plant: bool
+  singles: bool
   line: string
   lineId: string
 
@@ -58,7 +61,7 @@ members HeartseedExact
   derive chooserChapterArg = match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" }
   resource chooserBooksShown = chooserBooks() as shape ChooserBooks else empty()
   resource chooserChaptersShown = chooserChapters(chooserBookArg) as shape ChooserChapters else empty()
-  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer) as shape ChooserShown else empty()
+  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer, garden.singles.length) as shape ChooserShown else empty()
   resource chooserWords = textOf(chooserShown.book, chooserShown.chapter, 1, chooserShown.count) as shape TextPassage else empty()
   mutation chooserTapped as shape ChooserRange queue then chooserTook
   mutation chooserPlanted as shape GardenChange queue refreshes garden then chooserLanded
@@ -82,6 +85,10 @@ members HeartseedExact
     if chooserShown.plant and not pending(chooserPlanted)
       gardenClock = performanceNow()
       send chooserPlanted = gardenPlant(chooserShown.book, chooserShown.chapter, chooserShown.first, chooserShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  action chooserJoinIt
+    if chooserShown.singles and not pending(chooserPlanted)
+      gardenClock = performanceNow()
+      send chooserPlanted = gardenJoin(chooserShown.book, chooserShown.chapter, chooserShown.first, chooserShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
   derive chooserLandedAnswer = match chooserPlanted { case some(c) => c.answer, case none => "" }
   action chooserLanded
     chooserAnswer = chooserLandedAnswer
@@ -127,6 +134,7 @@ component ChooserVersesPage
     pending: bool
     tap: action
     plant: action
+    join: action
   view
     column flex=1 min-height=0 display="flex" flex-direction="column"
       scroll id="chooser-verses" navigationScroll="chooser-verses" flex=1 min-height=0
@@ -148,3 +156,6 @@ component ChooserVersesPage
         if shown.plant
           button press=plant buttonStyle="filled" disabled=pending testId="plant-list"
             text "Plant"
+        if shown.singles
+          button press=join buttonStyle="filled" disabled=pending testId="plant-singles"
+            text "Add to single verses"

@@ -120,7 +120,8 @@ it('answers every Today source inside the data host, writing no file but the gar
       const answered: Record<string, unknown> = await withDataHost(() =>
         Reflect.apply(app.answer, undefined, [source, args, {}, storage, {}]),
       );
-      if (source === 'gardenPlant') expect(typeof answered['answer']).toBe('string');
+      if (source === 'gardenPlant' || source === 'gardenJoin')
+        expect(typeof answered['answer']).toBe('string');
       else {
         last = answered as unknown as TodayScreen;
         expect(Array.isArray(last.words)).toBe(true);
@@ -192,7 +193,7 @@ const gardenCallOf = (random: Random, now: number): readonly [string, readonly u
       return ['gardenRead', [offset, now, seed]];
     case 1:
       return [
-        'gardenPlant',
+        random.pick(['gardenPlant', 'gardenJoin']),
         [
           random.pick([43, 19, 0]),
           random.pick([3, 119]),
@@ -360,7 +361,7 @@ const addCallOf = (random: Random, now: number): readonly [string, readonly unkn
         [book, chapter, first, last, random.pick([1, 16, 0, 200, 2.5, Number.NaN])],
       ];
     case 7:
-      return ['chooserRead', [book, chapter, first, last, answer]];
+      return ['chooserRead', [book, chapter, first, last, answer, random.pick([0, 19, 20, -1])]];
     default:
       return gardenCallOf(random, now);
   }
