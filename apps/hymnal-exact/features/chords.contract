@@ -167,7 +167,7 @@ component ChordsLines
               for b, bi in w.boxes key=bi
                 column align-items="flex-start" testId=`pair-${k}-${l.at}-${w.at + bi}`
                   if b.chord == ""
-                    text "​" aria-hidden=true
+                    text " " aria-hidden=true
                   else
                     if b.grip == ""
                       text b.chord color="chord" padding-right="0.3em" testId=`chord-${k}-${l.at}-${w.at + bi}`
@@ -203,7 +203,7 @@ component ChordsGripScreen
                   for y, fi in b.fretsY key=fi
                     line x1=b.left y1=y x2=b.right y2=y stroke="currentColor" stroke-width=(fi == 0 and b.nut ? 4 : 1)
                 for m, mi in b.marks key=mi
-                  text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font-size=13
+                  text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font-size=13 testId=`shape-${bi}-mark-${mi}`
                 for d, di in b.dots key=di
                   text `${d.finger}` position="absolute" left=(d.x - page.dot / 2) top=(d.y - page.dot / 2) width=page.dot height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size=11 font-weight=700 color="-exact-background" testId=`shape-${bi}-dot-${di}`
                 for r, ri in b.barres key=ri
