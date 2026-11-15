@@ -9,8 +9,8 @@
  * through the runner inside the data host; and on the oracle, the current
  * Heartseed's own `Garden`, `Passages` and FSRS built once per launch, as
  * the current app builds them, over `KeyValueStore.layerMemory`, under a
- * `TestClock` set to the step's instant. The single verses, which the
- * current app on main does not hold yet, are a plain list in the oracle.
+ * `TestClock` set to the step's instant. The single verses are the current
+ * app's too: `Passages`'s `join` and `part`.
  */
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
@@ -29,7 +29,6 @@ import {
 } from '@manna/heartseed/garden';
 import { listsOf } from '@manna/heartseed/lists';
 import {
-  choosable,
   layer as passagesLayer,
   Passages,
   verseReference,
@@ -56,9 +55,6 @@ const CHAPTERS: ReadonlyArray<readonly [number, number, number]> = [
 
 /** Offsets a history's zone takes, minutes east of UTC: New York in winter and summer, UTC, Kolkata, Berlin, Tokyo, Hawaii, Chatham. */
 const OFFSETS = [-300, -240, 0, 330, 60, 540, -600, 765];
-
-/** The most single verses a reader holds (hsminlist), written here, not read from the port, so the oracle is no copy of it. */
-const MOST_SINGLES = 20;
 
 const MINUTE = 60_000;
 const DAY = 86_400_000;
@@ -306,16 +302,8 @@ const SINGLE_ID = 'single:';
 const singleId = (range: Range) =>
   `${SINGLE_ID}${verseReference(range.book, range.chapter, range.first)}`;
 
-/** A one-verse plant by hsminlist's rules, on the oracle's plain list: its answer and the list after. */
-const sownSingle = (singles: readonly Range[], range: Range): readonly [string, Range[]] => {
-  if (!choosable(range)) return ['Invalid', [...singles]];
-  if (singles.some((each) => singleId(each) === singleId(range))) return ['Already', [...singles]];
-  if (singles.length >= MOST_SINGLES) return ['Full', [...singles]];
-  return ['Planted', [...singles, { ...range }]];
-};
-
 /** The plant of `reference` in the current app's garden now. */
-const appPlant = (reference: string) =>
+const plantNow = (reference: string) =>
   Effect.map(
     Effect.flatMap(Garden, (garden) => garden.view),
     (view) => {
@@ -324,21 +312,31 @@ const appPlant = (reference: string) =>
     },
   );
 
-/** A list's plant on the current app's `Passages`: two verses make no list (hsminlist), else its own answer. */
-const appPlantList = (range: Range) => {
-  if (range.last - range.first + 1 === 2) return Effect.succeed('Short');
-  return Effect.map(
-    Effect.flatMap(Passages, (passages) => passages.add(range)),
-    (added): string => (added === 'Added' ? 'Planted' : added),
-  );
-};
+/** A plant on the current app's `Passages`, as its chooser plants: one verse joins the single verses, any other range is added as a list. */
+const appPlant = (range: Range) =>
+  Effect.flatMap(Passages, (passages) => {
+    if (range.first === range.last)
+      return Effect.map(passages.join(range), (joined): string => {
+        if (joined === 'Added') return 'Planted';
+        if (joined === 'Held') return 'Already';
+        return joined;
+      });
+    return Effect.map(passages.add(range), (added): string =>
+      added === 'Added' ? 'Planted' : added,
+    );
+  });
 
-/** A list's removal on the current app's `Passages`, by its id. */
+/** A list's or a single verse's removal on the current app's `Passages`, by its id. */
 const appRemove = (id: string) =>
   Effect.gen(function* () {
     const passages = yield* Passages;
     const view = yield* passages.view;
     if (view._tag === 'Unread') return 'Unread';
+    if (id.startsWith(SINGLE_ID)) {
+      const single = view.singles.find((range) => singleId(range) === id);
+      if (single === undefined) return 'Absent';
+      return yield* passages.part(single);
+    }
     const list = listsOf([], view, []).find((each) => each.id === id);
     if (list === undefined) return 'Absent';
     if (list.source._tag === 'Passage') return yield* passages.remove(list.source.range);
@@ -355,7 +353,7 @@ const appRemove = (id: string) =>
 const appRecall = (step: Extract<Step, { readonly _tag: 'recall' }>) =>
   Effect.gen(function* () {
     const { reference, help } = step;
-    const stage = Option.map(yield* appPlant(reference), stageOf);
+    const stage = Option.map(yield* plantNow(reference), stageOf);
     const taken = (cap: Grade) =>
       Option.some({ reference, peeked: help.peeked, shownAt: help.shownAt, cap });
     let cap = help.cap;
@@ -374,7 +372,7 @@ const appRecall = (step: Extract<Step, { readonly _tag: 'recall' }>) =>
 
 /** A move back as Your verses asks it: from the stage the verse stands at, none for a verse not planted. */
 const appBack = (reference: string) =>
-  Effect.flatMap(appPlant(reference), (plant) =>
+  Effect.flatMap(plantNow(reference), (plant) =>
     Option.match(plant, {
       onNone: () => Effect.succeed<string>('Failed'),
       onSome: (each) =>
@@ -384,21 +382,20 @@ const appBack = (reference: string) =>
 
 /** One step on the current app's services: its answer, none for a step that changes nothing there. */
 const appStep = (step: Step): Effect.Effect<unknown, never, AppServices> => {
-  if (step._tag === 'plant') return appPlantList(step.range);
+  if (step._tag === 'plant') return appPlant(step.range);
   if (step._tag === 'remove') return appRemove(step.id);
   if (step._tag === 'recall') return appRecall(step);
   if (step._tag === 'back') return appBack(step.reference);
   return Effect.void;
 };
 
-/** The oracle: the current app's services over `KeyValueStore.layerMemory`, built once per launch, and the single verses as a plain list. */
+/** The oracle: the current app's services over `KeyValueStore.layerMemory`, built once per launch. */
 export const makeOracle = async () => {
   const store = await Effect.runPromise(
     Effect.map(Layer.build(KeyValueStore.layerMemory).pipe(Effect.scoped), (ctx) =>
       Context.get(ctx, KeyValueStore.KeyValueStore),
     ),
   );
-  let singles: Range[] = [];
   let scope = await Effect.runPromise(Scope.make());
   const build = () =>
     Effect.runPromise(
@@ -415,11 +412,17 @@ export const makeOracle = async () => {
     atTime(
       context,
       now,
-      Effect.all({
-        garden: Effect.flatMap(Garden, (garden) => garden.view),
-        passages: Effect.flatMap(Passages, (passages) => passages.view),
-        singles: Effect.sync(() => Option.some<readonly Range[]>([...singles])),
-      }),
+      Effect.map(
+        Effect.all({
+          garden: Effect.flatMap(Garden, (garden) => garden.view),
+          passages: Effect.flatMap(Passages, (passages) => passages.view),
+        }),
+        ({ garden, passages }): Held => ({
+          garden,
+          passages,
+          singles: passages._tag === 'Read' ? Option.some(passages.singles) : Option.none(),
+        }),
+      ),
     );
   const run = async (step: Step, now: number): Promise<unknown> => {
     if (step._tag === 'relaunch') {
@@ -428,20 +431,9 @@ export const makeOracle = async () => {
       context = await build();
       return undefined;
     }
-    if (step._tag === 'plant' && step.range.first === step.range.last) {
-      const [answer, after] = sownSingle(singles, step.range);
-      singles = after;
-      return answer;
-    }
-    if (step._tag === 'remove' && step.id.startsWith(SINGLE_ID)) {
-      const after = singles.filter((range) => singleId(range) !== step.id);
-      const answer = after.length < singles.length ? 'Removed' : 'Absent';
-      singles = after;
-      return answer;
-    }
     return atTime(context, now, appStep(step));
   };
-  return { store, held, run, singles: () => singles };
+  return { store, held, run };
 };
 
 /** A garden's plants as plain data, by reference in order, so two views compare plant for plant: recalls, steps back, card and stage. */

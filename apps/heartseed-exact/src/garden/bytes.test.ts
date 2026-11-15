@@ -20,8 +20,7 @@ import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { runHistory } from '../test/garden-history';
 import { entriesIn, makePort, plainOf } from '../test/garden-model';
-import { GARDEN_FILE, readGarden } from './program';
-import { readSingles, SINGLES_KEY } from './singles';
+import { GARDEN_FILE, readGarden, type Held } from './program';
 
 const HOST = { turn: withDataHost, wait: () => Promise.resolve() };
 const silentChime = Layer.succeed(Chime, Chime.of({ grow: () => Effect.void }));
@@ -56,11 +55,17 @@ const readByApp = (entries: ReadonlyArray<readonly [string, string]>) => {
     passagesLayer,
     Logger.layer([collect]),
   ).pipe(Layer.provideMerge(filled), Layer.provideMerge(Logger.layer([collect])));
-  const program = Effect.all({
-    garden: Effect.flatMap(Garden, (each) => each.view),
-    passages: Effect.flatMap(Passages, (each) => each.view),
-    singles: readSingles,
-  });
+  const program = Effect.map(
+    Effect.all({
+      garden: Effect.flatMap(Garden, (each) => each.view),
+      passages: Effect.flatMap(Passages, (each) => each.view),
+    }),
+    ({ garden, passages }): Held => ({
+      garden,
+      passages,
+      singles: passages._tag === 'Read' ? Option.some(passages.singles) : Option.none(),
+    }),
+  );
   return Effect.runPromise(
     Effect.map(Effect.provide(program, grounds), (held) => ({ held, warnings })),
   );
@@ -70,17 +75,8 @@ it('writes the bytes the current app writes, and reads the stores it writes', as
   for (let seed = 1001; seed <= 1040; seed++) {
     const { port, oracle, now } = await runHistory(seed);
     const written = [...entriesIn(port.files)].sort(([a], [b]) => a.localeCompare(b));
-    const singles = oracle.singles();
     const ownWritten = await dumpOf(oracle.store);
-    const singlesWritten = written.filter(([key]) => key === SINGLES_KEY);
-    expect({ seed, entries: written.filter(([key]) => key !== SINGLES_KEY) }).toEqual({
-      seed,
-      entries: ownWritten,
-    });
-    expect({ seed, singles: singlesWritten.map(([, value]) => JSON.parse(value)) }).toEqual({
-      seed,
-      singles: singlesWritten.length === 0 ? [] : [singles],
-    });
+    expect({ seed, entries: written }).toEqual({ seed, entries: ownWritten });
 
     const portHeld = await runCall(readGarden(port.storage), { now, seed }, HOST);
     const read = await readByApp(written);
@@ -88,14 +84,9 @@ it('writes the bytes the current app writes, and reads the stores it writes', as
     expect({ seed, held: plainOf(read.held) }).toEqual({ seed, held: plainOf(portHeld) });
 
     const fresh = makePort();
-    const ownFile = [...ownWritten, ...singlesWritten];
-    fresh.files.set(GARDEN_FILE, new TextEncoder().encode(JSON.stringify(ownFile)).buffer);
+    fresh.files.set(GARDEN_FILE, new TextEncoder().encode(JSON.stringify(ownWritten)).buffer);
     const freshHeld = await runCall(readGarden(fresh.storage), { now, seed }, HOST);
     const known = await oracle.held(now);
     expect({ seed, held: plainOf(freshHeld) }).toEqual({ seed, held: plainOf(known) });
-    expect({ seed, singles: Option.getOrNull(freshHeld.singles) }).toEqual({
-      seed,
-      singles: singlesWritten.length === 0 ? [] : singles,
-    });
   }
 });

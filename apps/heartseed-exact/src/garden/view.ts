@@ -8,16 +8,14 @@
  * nothing: no list, no verse, no limit reached.
  */
 
-import { LIMIT_LINE } from '@manna/heartseed/chooser';
+import { LIMIT_LINE, SINGLES_LIMIT_LINE } from '@manna/heartseed/chooser';
 import { dayOf } from '@manna/heartseed/day';
 import { stageOf, type GardenView, type Plant } from '@manna/heartseed/garden';
 import { listsOf } from '@manna/heartseed/lists';
-import { MOST_PASSAGES, verseReference } from '@manna/heartseed/passages';
+import { MOST_PASSAGES, MOST_SINGLES, verseReference } from '@manna/heartseed/passages';
 import { Array as Arr, Option } from 'effect';
 
 import type { Held } from './program';
-
-import { MOST_SINGLES, SINGLES_LIMIT_LINE } from './singles';
 
 /** The instant a call reads the garden at, and the zone's offset then, in minutes east of UTC. */
 export interface At {

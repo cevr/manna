@@ -2,8 +2,7 @@
  * The garden's calls, each one program the runner runs for one Exact call.
  * The current Heartseed's own services do the work: its `Garden` (the
  * plants, their stages, FSRS and the steps back), its `Recalls` and `Backs`,
- * and its `Passages` (the lists), with the single verses beside them
- * (`singles.ts`). A call builds them over Effect's `KeyValueStore` on one
+ * and its `Passages` (the lists and the single verses). A call builds them over Effect's `KeyValueStore` on one
  * file of Exact's storage (`@manna/exact-kit/storage`), so their layers live
  * for that call alone: each reads the store as the current app does at
  * launch, the call makes its one change, and it answers what the services
@@ -34,6 +33,7 @@ import { listsOf, placeOf } from '@manna/heartseed/lists';
 import {
   layer as passagesLayer,
   Passages,
+  verseCount,
   type PassagesView,
   type Range,
 } from '@manna/heartseed/passages';
@@ -48,13 +48,12 @@ import {
 import { Effect, Layer, Option } from 'effect';
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
-import { joinSingles, LEAST_VERSES, partSingle, readSingles, verseCount } from './singles';
 import { plantIn } from './view';
 
 /** The file the garden's keys are kept in. */
 export const GARDEN_FILE = 'app:/data/heartseed.json';
 
-/** What a call holds once its services are read: the garden, the lists and the single verses. */
+/** What a call holds once its services are read: the garden, the lists, and the single verses (none while the lists are unread). */
 export interface Held {
   readonly garden: GardenView;
   readonly passages: PassagesView;
@@ -88,12 +87,17 @@ const groundsOf = (storage: FileStorage) =>
     Layer.provideMerge(layerFile(storage, GARDEN_FILE)),
   );
 
+/** The single verses `view` holds; none while it is unread. */
+const singlesOf = (view: PassagesView): Option.Option<readonly Range[]> => {
+  if (view._tag === 'Unread') return Option.none();
+  return Option.some(view.singles);
+};
+
 /** What the services hold now. */
 const held = Effect.gen(function* () {
   const garden = yield* Effect.flatMap(Garden, (each) => each.view);
   const passages = yield* Effect.flatMap(Passages, (each) => each.view);
-  const singles = yield* readSingles;
-  return { garden, passages, singles } satisfies Held;
+  return { garden, passages, singles: singlesOf(passages) } satisfies Held;
 });
 
 /** `program` over the services of one call, then what they hold after it. */
@@ -107,20 +111,19 @@ const withGrounds = <A>(storage: FileStorage, program: Effect.Effect<A, never, G
 export const readGarden = (storage: FileStorage) =>
   withGrounds(storage, Effect.void).pipe(Effect.map(({ held: now }) => now));
 
-/** Plants `range`: one verse joins the single verses, three or more make a list, two make neither (`Short`). */
+/** Plants `range`: one verse joins the single verses (`Passages.join`); any other range is a list (`Passages.add`, which answers `Short` under the fewest a list holds). */
 export const plantRange = (storage: FileStorage, range: Range) =>
   withGrounds(
     storage,
     Effect.gen(function* () {
-      const verses = verseCount(range);
-      if (verses === 1) {
-        const joined = yield* joinSingles(yield* readSingles, range);
+      const passages = yield* Passages;
+      if (verseCount(range) === 1) {
+        const joined = yield* passages.join(range);
         if (joined === 'Added') return 'Planted' satisfies PlantAnswer;
         if (joined === 'Held') return 'Already' satisfies PlantAnswer;
         return joined;
       }
-      if (verses > 1 && verses < LEAST_VERSES) return 'Short' satisfies PlantAnswer;
-      const added = yield* Effect.flatMap(Passages, (passages) => passages.add(range));
+      const added = yield* passages.add(range);
       if (added === 'Added') return 'Planted' satisfies PlantAnswer;
       return added;
     }),
@@ -146,9 +149,9 @@ export const removeById = (storage: FileStorage, id: string) =>
   withGrounds(
     storage,
     Effect.gen(function* () {
-      const single = singleOf(id);
-      if (Option.isSome(single)) return yield* partSingle(yield* readSingles, single.value);
       const passages = yield* Passages;
+      const single = singleOf(id);
+      if (Option.isSome(single)) return yield* passages.part(single.value);
       const view = yield* passages.view;
       if (view._tag === 'Unread') return 'Unread' satisfies RemoveAnswer;
       return yield* Option.match(

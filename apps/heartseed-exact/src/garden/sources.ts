@@ -15,7 +15,7 @@ import type { FileStorage } from '@manna/exact-kit/storage';
 import { Effect, Logger, Option, Schema } from 'effect';
 
 import { moveBack, plantRange, readGarden, recallVerse, removeById } from './program';
-import { SHORT_LINE } from './singles';
+import { SHORT_LINE } from '@manna/heartseed/chooser';
 import { shownOf, verseIn, type At, type GardenShown, type GardenVerse } from './view';
 import { makeQueue, oneAtATime } from './writes';
 
