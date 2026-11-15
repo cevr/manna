@@ -36,3 +36,4 @@ theme
   -exact-secondary-label = hs.quiet
   -exact-tertiary-label = hs.quiet
   -exact-system-red = hs.miss
+  -exact-system-orange = hs.miss

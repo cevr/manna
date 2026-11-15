@@ -3,6 +3,7 @@ test "the sheet opens and closes"
   clock settle
   expect tree has "settings"
   expect text "settings-done" == "Done"
+  expect tree has "reference"
   tap "settings-done"
   clock settle
   expect tree missing "settings"
