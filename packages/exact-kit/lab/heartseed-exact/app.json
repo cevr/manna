@@ -1,0 +1,24 @@
+{
+  "name": "Exact Lab",
+  "short_name": "Exact Lab",
+  "id": "app.manna.exactlab",
+  "start_url": "/",
+  "display": "standalone",
+  "app": {
+    "id": "app.manna.exactlab",
+    "name": "Exact Lab"
+  },
+  "host": {
+    "web": {},
+    "ios": {
+      "minimumOS": "17.0",
+      "deviceFamily": ["iphone", "ipad"]
+    }
+  },
+  "deploy": {
+    "store": {
+      "web": "0",
+      "ios": "0"
+    }
+  }
+}

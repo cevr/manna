@@ -1,0 +1,110 @@
+test "each probe row shows what probe-table.json says"
+  expect text "title" == "Exact Lab"
+  tap "ask-import-defaults"
+  clock settle
+  expect text "out-import-defaults" == "ran"
+  tap "ask-import-runner"
+  clock settle
+  expect text "out-import-runner" == "ran"
+  tap "ask-option-defaults"
+  clock settle
+  expect text "out-option-defaults" == "ran"
+  tap "ask-option-runner"
+  clock settle
+  expect text "out-option-runner" == "ran"
+  tap "ask-match-defaults"
+  clock settle
+  expect text "out-match-defaults" == "ran"
+  tap "ask-match-runner"
+  clock settle
+  expect text "out-match-runner" == "ran"
+  tap "ask-schema-defaults"
+  clock settle
+  expect text "out-schema-defaults" == "ran"
+  tap "ask-schema-runner"
+  clock settle
+  expect text "out-schema-runner" == "ran"
+  tap "ask-order-defaults"
+  clock settle
+  expect text "out-order-defaults" == "ran"
+  tap "ask-order-runner"
+  clock settle
+  expect text "out-order-runner" == "ran"
+  tap "ask-run-sync-defaults"
+  clock settle
+  expect text "out-run-sync-defaults" == "ran"
+  tap "ask-run-sync-runner"
+  clock settle
+  expect text "out-run-sync-runner" == "ran"
+  tap "ask-sleep-defaults"
+  clock settle
+  expect text "out-sleep-defaults" == "ran"
+  tap "ask-sleep-runner"
+  clock settle
+  expect text "out-sleep-runner" == "ran"
+  tap "ask-clock-defaults"
+  clock settle
+  expect text "out-clock-defaults" == "refused clock"
+  tap "ask-clock-runner"
+  clock settle
+  expect text "out-clock-runner" == "ran"
+  tap "ask-random-defaults"
+  clock settle
+  expect text "out-random-defaults" == "refused random"
+  tap "ask-random-runner"
+  clock settle
+  expect text "out-random-runner" == "ran"
+  tap "ask-fork-defaults"
+  clock settle
+  expect text "out-fork-defaults" == "ran"
+  tap "ask-fork-runner"
+  clock settle
+  expect text "out-fork-runner" == "ran"
+  tap "ask-layer-defaults"
+  clock settle
+  expect text "out-layer-defaults" == "ran"
+  tap "ask-layer-runner"
+  clock settle
+  expect text "out-layer-runner" == "ran"
+  tap "ask-stream-pubsub-defaults"
+  clock settle
+  expect text "out-stream-pubsub-defaults" == "ran"
+  tap "ask-stream-pubsub-runner"
+  clock settle
+  expect text "out-stream-pubsub-runner" == "ran"
+  tap "ask-semaphore-defaults"
+  clock settle
+  expect text "out-semaphore-defaults" == "ran"
+  tap "ask-semaphore-runner"
+  clock settle
+  expect text "out-semaphore-runner" == "ran"
+  tap "ask-key-value-store-defaults"
+  clock settle
+  expect text "out-key-value-store-defaults" == "ran"
+  tap "ask-key-value-store-runner"
+  clock settle
+  expect text "out-key-value-store-runner" == "ran"
+  tap "ask-scope-defaults"
+  clock settle
+  expect text "out-scope-defaults" == "ran"
+  tap "ask-scope-runner"
+  clock settle
+  expect text "out-scope-runner" == "ran"
+  tap "ask-log-defaults"
+  clock settle
+  expect text "out-log-defaults" == "refused clock"
+  tap "ask-log-runner"
+  clock settle
+  expect text "out-log-runner" == "ran"
+  tap "ask-span-defaults"
+  clock settle
+  expect text "out-span-defaults" == "refused clock"
+  tap "ask-span-runner"
+  clock settle
+  expect text "out-span-runner" == "ran"
+  tap "ask-retry-defaults"
+  clock settle
+  expect text "out-retry-defaults" == "refused clock"
+  tap "ask-retry-runner"
+  clock settle
+  expect text "out-retry-runner" == "ran"

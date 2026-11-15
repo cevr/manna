@@ -4,6 +4,7 @@ What the Exact ports (`apps/heartseed-exact`, `apps/hymnal-exact`) share. The in
 
 | Export                               | What                                                                                                                                                          |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@manna/exact-kit/effect`            | `runCall(effect, { now, seed })` and `runCallSync`: an effect run for one Exact call, on the call's clock, seed and scheduler (`docs/exact-data-layer.md`)    |
 | `@manna/exact-kit/main`              | `main(appDir, args)`: the wrapper every `bun run exact <verb>` goes through (each app's `exact.mjs` calls it), its refusal printed, its exit code the child's |
 | `@manna/exact-kit/data-host/testing` | `withDataHost(run)`: `run` with the clock, timers, random and `Symbol.dispose` refused as Exact's data module refuses them                                    |
 | `@manna/exact-kit/no-copy/testing`   | `noCopies(appDir, sources)` and `assertNoCopies(appDir, sourceDir)`: a port imports a current app's code, never copies it                                     |
@@ -14,5 +15,11 @@ What the Exact ports (`apps/heartseed-exact`, `apps/hymnal-exact`) share. The in
 The two helpers are test seams (`testing.ts`): only tests import them.
 
 `bun test ./src` runs the tests (the gate's `test` task). They need no Exact clone: the wrapper's tests run `runExact` over a stand-in spawner that starts nothing, against the apps, ports and lock written out as the spec names them and the pin `docs/exact.md` names.
+
+## Effect in the data module
+
+`src/effect/runner.ts` runs an effect for one call of Exact's data module: its `Clock` reads the call's time and moves only to each sleep's deadline, its `Random` is seeded with the call's seed, and its fibers run on a scheduler the runner drives, waiting out a sleep with the answer's own `setTimeout` (`runCall`) or at once (`runCallSync`). When the call's fiber ends, every fiber still asleep is interrupted. `src/effect/exact.d.ts` is the declaration Exact's type check reads in place of the source; `src/effect/runner.test.ts` holds the two together through the typecheck and holds the runner to `TestClock` and to its invariants across calls.
+
+The lab, `lab/heartseed-exact` (`app.manna.exactlab`, Heartseed's simulator and port 8774), shows each probe row's outcome on the device: `bun run exact test web --port 8774`, and `lockf -k /tmp/manna-ios-build.lock bun run exact test ios`, from this folder. `lab/heartseed-exact/probe-table.json` is the one table Bun (`src/effect/probe.test.ts`) and the lab's contract test both assert. The rule and the evidence: `docs/exact-data-layer.md`.
 
 An app's own Bun test imports only `bun:test` and this package's `no-copy/testing`: Exact's type check stages the declarations of every package a file in the app's folder imports, and `effect`'s name a second copy of rolldown in this repo (`docs/exact.md`).

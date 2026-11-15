@@ -254,7 +254,10 @@
     "apps/heartseed/react-native.config.cjs",
     "apps/*/app/routes.d.ts",
     "apps/*-exact/app.contract.d.ts",
-    "apps/*-exact/.exact/**"
+    "apps/*-exact/.exact/**",
+    "packages/exact-kit/lab/*/app.contract.d.ts",
+    "packages/exact-kit/lab/*/.exact/**",
+    "packages/exact-kit/lab/*/target/**"
   ],
   "overrides": [
     {
@@ -493,11 +496,15 @@
       // tools run by name: plain argv, env and a dynamic import of the
       // pinned clone's CLI, as Exact's generated `exact.mjs` does; `bin.ts`,
       // the `manna-exact` command, reads the folder and argv it runs in.
+      // `effect/import-probe.ts` loads `effect` for the first time under those
+      // refusals, in a process of its own, and prints what the load threw.
       "files": [
         "**/packages/exact-kit/src/data-host/testing.ts",
         "**/packages/exact-kit/src/data-host/testing.test.ts",
+        "**/packages/exact-kit/src/effect/import-probe.ts",
         "**/packages/exact-kit/src/exact-cli.ts",
         "**/packages/exact-kit/src/bin.ts",
+        "**/packages/exact-kit/lab/heartseed-exact/exact.mjs",
         "**/apps/heartseed-exact/exact.mjs",
         "**/apps/hymnal-exact/exact.mjs"
       ],

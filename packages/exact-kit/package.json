@@ -8,10 +8,15 @@
   "sideEffects": false,
   "exports": {
     "./main": "./src/main.ts",
+    "./effect": {
+      "types": "./src/effect/exact.d.ts",
+      "default": "./src/effect/runner.ts"
+    },
     "./data-host/testing": "./src/data-host/testing.ts",
     "./no-copy/testing": "./src/no-copy/testing.ts"
   },
   "scripts": {
+    "exact": "bun lab/heartseed-exact/exact.mjs",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test ./src"
   },
