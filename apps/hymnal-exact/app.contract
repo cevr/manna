@@ -21,4 +21,4 @@ component HymnalExact
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, search=listSearch)
         if e.name == "hymn"
-          HymnPage(entry=e, page=hymnShown)
+          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
