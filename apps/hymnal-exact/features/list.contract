@@ -4,6 +4,7 @@
 // sections, under the Recent shelf; another tab is asked for only once it is
 // chosen. A found hymn opens as the current app opens one (`listOpening`).
 use EmptyState from "exact:content"
+use PlayerView from "./player.contract"
 
 shape ListRow
   number: number
@@ -73,6 +74,8 @@ component HymnList
     recent: RecentView
     favourites: number[]
     open: action
+  inject
+    playerShown: PlayerView
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-list" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -117,6 +120,17 @@ component HymnList
                 text g.name testId=`group-${g.slug}`
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""))
+      ListBarRoom(shown=playerShown.bar.shown)
+
+// The room the player's docked bar takes under a screen's list while it
+// shows: the bar lies over the stack's foot (a route is a child of the
+// navigation root), so the screen leaves room for it under its last row.
+component ListBarRoom
+  props
+    shown: bool
+  view
+    if shown
+      column min-height="5rem" flex-shrink=0 testId="bar-room"
 
 // A hymn's row: its number, then its title, and a star when it is a
 // favourite; a press opens the hymn. `id` is the row's `testId` and `star`

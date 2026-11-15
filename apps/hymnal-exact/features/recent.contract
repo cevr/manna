@@ -2,7 +2,8 @@
 // page shown on top of the stack is a visit (`recentAfter`, the current
 // app's `visited`); the home list's shelf shows the latest five, and its
 // header opens this screen with all of them (`recentRows`).
-use HymnRow, RecentView from "./list.contract"
+use HymnRow, ListBarRoom, RecentView from "./list.contract"
+use PlayerView from "./player.contract"
 
 shape RecentList
   numbers: number[]
@@ -27,6 +28,8 @@ component RecentScreen
     entry: Entry
     recent: RecentView
     favourites: number[]
+  inject
+    playerShown: PlayerView
   view
     column navigationKey=`${entry.id}` navigationScroll="recent-list" position="absolute" inset=0
       display="flex" flex-direction="column"
@@ -36,3 +39,4 @@ component RecentScreen
         section
           for r in recent.all key=r.number
             HymnRow(number=r.number, title=r.title, id=`recent-${r.number}`, star=(favourites.includes(r.number) ? `recent-star-${r.number}` : ""))
+      ListBarRoom(shown=playerShown.bar.shown)
