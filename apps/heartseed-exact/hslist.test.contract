@@ -1,0 +1,73 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A list's page shows its verses with stage and due"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "row-title-passage-0-43-3-16-18"
+  clock data
+  clock settle
+  expect text "list-title" == "John 3:16-18"
+  expect text "list-caption" == "3 verses · none planted yet"
+  expect text "list-stage-John-3-16" == "Not planted yet"
+  expect text "list-due-John-3-16" == "Due now"
+  expect text "list-stage-John-3-18" == "Not planted yet"
+  expect tree missing "list-back-John-3-16"
+  expect no failures
+
+test "Practice this list reads its line and starts its verse"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "row-title-passage-0-43-3-16-18"
+  clock data
+  clock settle
+  expect state listShown.start == "open"
+  expect text "list-line" == "1 ready today · about 1 min"
+  tap "list-practice"
+  clock data
+  clock settle
+  expect text "item-reference" == "John 3:16"
+  expect no failures
+
+test "Remove this list asks, then returns home without the row"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "row-title-passage-0-43-3-16-18"
+  clock data
+  clock settle
+  tap "list-remove"
+  expect tree has "ask-list"
+  expect state listShown.removeAsk == "Remove John 3:16-18? Its plants stay in your field."
+  tap "ask-no"
+  expect tree missing "ask-list"
+  expect tree has "list-page"
+  tap "list-remove"
+  tap "ask-yes"
+  clock data
+  clock settle
+  expect tree missing "list-page"
+  expect tree missing "row-passage-0-43-3-16-18"
+  expect tree has "single-Psalms-119-1"
+  expect state homeShown.rows.length == 0
+  expect no failures

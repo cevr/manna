@@ -1,0 +1,259 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "An empty home greets and offers Add a list"
+  clock data
+  clock settle
+  expect text "greeting" == "Good morning"
+  expect tree has "today-card"
+  expect tree has "add-list"
+  expect tree missing "singles"
+  expect tree missing "limit-line"
+  expect tree missing "row-passage-0-43-3-16-18"
+  expect tree has "gear"
+  expect no failures
+
+test "A list is a row of plants, with no icon and no glyph"
+  clock data
+  tap "add-list"
+  clock data
+  perf
+    tap "plant-three"
+    clock data
+    clock settle
+  expect perf built "HomePlantButton" == 3
+  back
+  clock data
+  clock settle
+  expect text "row-title-passage-0-43-3-16-18" == "John 3:16-18"
+  expect text "row-caption-passage-0-43-3-16-18" == "3 verses · 1 ready today"
+  expect tree has "plant-John-3-16"
+  expect tree has "plant-John-3-17"
+  expect tree has "plant-John-3-18"
+  expect state homeShown.rows.0.plants.0.label == "John 3:16, not planted, ready today"
+  expect state homeShown.rows.0.plants.length == 3
+  expect tree missing "singles"
+  expect no failures
+
+test "Single verses sit under the lists"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect tree has "singles"
+  expect text "single-Psalms-119-1" == "Psalms 119:1"
+  expect text "single-Psalms-119-2" == "Psalms 119:2"
+  expect state homeShown.singles.0.reference == "Psalms 119:1"
+  expect state homeShown.singles.1.reference == "Psalms 119:2"
+  expect state homeShown.singlesShown == true
+  expect state homeShown.rows.length == 1
+  expect no failures
+
+test "The card offers the day's one action"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect text "today-line" == "1 verse · about 1 min"
+  expect text "today-parts" == "1 new"
+  expect text "today-action" == "Start"
+  tap "today-action"
+  clock data
+  clock settle
+  expect state today.session.wire.items.0.reference == "Psalms 119:1"
+  expect tree has "say"
+  expect no failures
+
+test "A plant starts its verse"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "plant-John-3-17"
+  clock data
+  clock settle
+  expect text "item-reference" == "John 3:17"
+  expect no failures
+
+test "Removing a single verse asks first"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  tap "single-remove-Psalms-119-1"
+  expect tree has "ask-Psalms-119-1"
+  expect tree missing "single-remove-Psalms-119-1"
+  expect state homeShown.singles.0.ask == "Remove Psalms 119:1? Its plant stays in your field."
+  tap "ask-no"
+  clock data
+  expect tree missing "ask-Psalms-119-1"
+  expect tree has "single-Psalms-119-1"
+  tap "single-remove-Psalms-119-1"
+  tap "ask-yes"
+  clock data
+  clock settle
+  expect tree missing "single-Psalms-119-1"
+  expect tree missing "singles"
+  expect no failures
+
+test "Back keeps the place"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect state homeShown.rows.length == 3
+  expect state homeShown.singles.length == 20
+  tap "home-scroll" drag 0 -1500
+  tap "home-scroll" drag 0 -1500
+  clock settle
+  tap "row-title-passage-2-43-3-22-24"
+  clock data
+  clock settle
+  expect text "list-title" == "John 3:22-24"
+  perf
+    back
+    clock data
+    clock settle
+  expect perf built "Home" == 0
+  expect perf built "HomePlantButton" == 0
+  expect tree has "limit-line"
+  expect no failures
+
+test "The limits speak"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  tap "plant-three"
+  clock data
+  back
+  clock data
+  clock settle
+  expect text "limit-line" == "3 passages or lists, the most for now. Remove one to add another."
+  expect tree missing "add-list"
+  expect no failures
+
+test "Twenty single verses speak their limit"
+  clock data
+  tap "add-list"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  tap "plant-one"
+  clock data
+  back
+  clock data
+  clock settle
+  expect text "limit-line" == "20 single verses, the most for now. Remove one to add another."
+  expect tree has "add-list"
+  expect no failures

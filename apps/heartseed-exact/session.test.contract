@@ -20,7 +20,10 @@ test "Nothing planted: Today says so and offers the way to add"
   expect no failures
 
 test "The plan's first item shows, new pieces first heard"
-  tap "open-verses"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
   clock data
   tap "plant-three"
   clock data
@@ -41,7 +44,10 @@ test "The plan's first item shows, new pieces first heard"
   expect no failures
 
 test "Minutes shape the plan"
-  tap "open-verses"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
   clock data
   tap "plant-three"
   clock data
@@ -79,7 +85,10 @@ test "A visit shows the verse tapped"
   expect no failures
 
 test "Voice Off hides Hear it"
-  tap "open-verses"
+  at "/today"
+  clock data
+  clock settle
+  tap "today-add"
   clock data
   tap "plant-one"
   clock data

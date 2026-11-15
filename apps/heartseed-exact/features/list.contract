@@ -1,0 +1,102 @@
+// A list's page (`/lists/:id`, `:id` the slug of the list's id), opened by
+// its row's title on home: its title and caption, Practice this list and
+// the line under it, each verse with its stage and when it is due, a Move
+// back on a plant past a seed, and Remove this list for a list the reader
+// holds. What it draws is `listRead`'s answer (src/list/page.ts), the
+// current Heartseed's rules over the garden one call reads. An ask is a
+// state of its row (`listAsking`: `remove` for the list, else the verse's
+// reference), opened by its button and closed by any other tap.
+use homeMarkOf from "./home.contract"
+
+shape ListVerse
+  reference: string
+  slug: string
+  label: string
+  ready: bool
+  sown: bool
+  stage: string
+  due: string
+  backTo: string
+  backAsk: string
+
+shape ListShown
+  read: bool
+  found: bool
+  id: string
+  slug: string
+  title: string
+  caption: string
+  verses: ListVerse[]
+  start: string
+  startLine: string
+  startSlug: string
+  removeId: string
+  removeName: string
+  removeAsk: string
+
+members HeartseedExact
+  state listAsking = ""
+  derive listSlug = match stack(nav).filter(x => x.name == "list").at(-1) { case some(t) => t.params.id, case none => "" }
+  resource listShown = listRead(listSlug, gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape ListShown else empty()
+  action listPractice(slug: string)
+    listAsking = ""
+    nav = push(nav, path("start", slug))
+  action listAsk(key: string)
+    listAsking = key
+  action listYes
+    if listAsking == "remove"
+      gardenRemoveIt(listShown.removeId)
+      nav = back(nav)
+    else if listAsking != ""
+      gardenMoveBack(listAsking)
+    listAsking = ""
+  action listNo
+    listAsking = ""
+
+component ListPage
+  props
+    list: ListShown
+    asking: string
+    practice: action
+    ask: action
+    yes: action
+    no: action
+  view
+    scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0
+      column gap=16 padding=20 max-width="40rem" testId="list-page"
+        text list.title role="heading" aria-level=2 testId="list-title"
+        text list.caption color="-exact-secondary-label" testId="list-caption"
+        if list.start != "none"
+          button press=practice(list.startSlug) buttonStyle="filled" testId="list-practice"
+            text "Practice this list"
+          text list.startLine color="-exact-secondary-label" testId="list-line"
+        for v in list.verses key=v.slug
+          column gap=4 testId=`list-verse-${v.slug}`
+            text v.reference font="-exact-headline"
+            row gap=12 flex-wrap="wrap"
+              text v.stage color="-exact-secondary-label" testId=`list-stage-${v.slug}`
+              text v.due color="-exact-secondary-label" testId=`list-due-${v.slug}`
+            if v.backTo != "" and asking != v.reference
+              button press=ask(v.reference) aria-label=`Move ${v.reference} back` buttonStyle="bordered" testId=`list-back-${v.slug}`
+                text "Move back"
+            if v.backTo != "" and asking == v.reference
+              column gap=8 testId=`ask-${v.slug}`
+                text v.backAsk color="-exact-secondary-label"
+                row gap=8 flex-wrap="wrap"
+                  button press=yes buttonStyle="bordered" testId="ask-yes"
+                    text "Move back"
+                  button press=no buttonStyle="bordered" testId="ask-no"
+                    text "Keep"
+        if list.removeId != "" and asking == "remove"
+          column gap=8 testId="ask-list"
+            text list.removeAsk color="-exact-secondary-label"
+            row gap=8 flex-wrap="wrap"
+              button press=yes buttonStyle="bordered" testId="ask-yes"
+                text "Remove"
+              button press=no buttonStyle="bordered" testId="ask-no"
+                text "Keep"
+        else if list.removeId != ""
+          column gap=4
+            button press=ask("remove") aria-label=`Remove ${list.removeName}` buttonStyle="bordered" testId="list-remove"
+              text "Remove this list"
+            text "Its plants stay in your field." color="-exact-secondary-label"
