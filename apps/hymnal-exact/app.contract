@@ -59,4 +59,4 @@ component HymnalExact
           RecentScreen(entry=e, recent=recentShown, favourites=favouriteList)
         if e.name == "notfound" or (e.name == "hymn" and current(hymnShown) and hymnShown.number == 0)
           NotFound(entry=e)
-      PlayerDock(player=player, ask=playerAsk, heard=playerHeard, broke=playerFailed)
+      PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)

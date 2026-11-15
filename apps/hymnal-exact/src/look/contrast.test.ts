@@ -49,7 +49,7 @@ const branded = drawn.filter((text) => !tinted.includes(text));
 describe('every text keeps the current hymnal’s contrast on its ground', () => {
   it('reads the Contract files’ texts, the tinted ones apart', () => {
     expect(branded.length).toBeGreaterThan(15);
-    expect(tinted.some((text) => text.ground === 'AccentColor')).toBe(true);
+    expect(tinted.some((text) => text.ink === 'AccentColor')).toBe(true);
   });
 
   it('leaves the tint the platform’s', () => {
