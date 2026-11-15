@@ -48,13 +48,25 @@ const KINDS = [
   'ended',
   'screen',
   'restore',
+  'dragStart',
+  'dragTo',
+  'dragEnd',
+  'nudge',
+  'seekTo',
+  'place',
+  'remoteSeek',
+  'remoteSkip',
+  'seeked',
+  'settle',
+  'due',
   'nonsense',
 ] as const;
 
 /** A call of the player's source as the view makes it, any argument of any kind. */
-const playerCall = (random: () => number): readonly [string, number, number, string] => [
+const playerCall = (random: () => number): readonly [string, number, number, number, string] => [
   pick(random, KINDS),
   below(random, 6),
+  below(random, 4),
   pick(random, [0, 1, 2, 3, 13, 695, 696, -1, 2.5, Number.NaN, Infinity, below(random, 400)]),
   pick(random, ['', '/', '/ /hymns/1', '/ /hymns/2 /player', '1:1.3,2:2', 'x', '/ /hymns/0']),
 ];
@@ -105,14 +117,28 @@ describe('the data module runs where Exact runs it', () => {
 
   test('inside the data host, a play and its device events step at once, with no clock read', async () => {
     const fresh = sourcesAt(BUCKET, []);
-    const answers: Array<Promise<{ readonly phase: string; readonly src: string }>> = [];
+    const answers: Array<
+      Promise<{
+        readonly phase: string;
+        readonly src: string;
+        readonly seek: number;
+        readonly seekTo: number;
+        readonly command: string;
+      }>
+    > = [];
     withDataHost(() => {
-      answers.push(fresh.playerStep(['play', 0, 1, '']));
-      answers.push(fresh.playerStep(['playing', 1, 0, '']));
+      answers.push(fresh.playerStep(['play', 0, 0, 1, '']));
+      answers.push(fresh.playerStep(['playing', 1, 0, 0, '']));
+      answers.push(fresh.playerStep(['loaded', 1, 0, 120, '']));
+      answers.push(fresh.playerStep(['seekTo', 0, 0, 60, '']));
     });
-    const [played, playing] = await Promise.all(answers);
+    const [played, playing, , sought] = await Promise.all(answers);
     expect(played?.src).toBe(`${BUCKET}/audio/warm-1/sdah/1.mp3`);
     expect(playing?.phase).toBe('playing');
+    expect(sought?.phase).toBe('playing');
+    expect(sought?.command).toBe('seek');
+    expect(sought?.seek).toBe(1);
+    expect(sought?.seekTo).toBe(60);
   });
 });
 

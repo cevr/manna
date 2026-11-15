@@ -2,11 +2,12 @@
 
 /**
  * The player's one data source, as `app.ts` registers it: `playerStep(kind,
- * id, value, text)` runs one input of `step` and answers the view. The state
- * lives here, one per launch of the data module; what outlives a launch is
- * the stanza choice, which the view hands back as text for a `persist`
- * state and a `restore` reads in again. Nothing reads the clock: every input
- * is the call's arguments, and a device event names its load.
+ * id, serial, value, text)` runs one input of `step` and answers the view.
+ * The state lives here, one per launch of the data module; what outlives a
+ * launch is the stanza choice, which the view hands back as text for a
+ * `persist` state and a `restore` reads in again. Nothing reads the clock:
+ * every input is the call's arguments, and a device event names its load
+ * and the seek it follows.
  *
  * A failed load is told why by asking the recording's address once: no
  * answer is no connection, a 404 or 403 no recording, anything else a
@@ -58,7 +59,10 @@ const whyOf = async (url: string): Promise<Why> => {
   }
 };
 
-const KINDS = new Set(['pause', 'resume', 'stop', 'retry']);
+const KINDS = new Set(['pause', 'resume', 'stop', 'retry', 'dragStart', 'dragEnd']);
+
+/** A way on the bar or the lock screen: back for a negative value, else on. */
+const wayOf = (value: number): 1 | -1 => (value < 0 ? -1 : 1);
 
 /** The player's sources over `book`, its hymns timed by `timing`, the recordings at `origin`. */
 export const playerSources = (
@@ -78,7 +82,7 @@ export const playerSources = (
       number,
       title: hymn.title,
       url: recordingAt(origin, number),
-      score: scoreOf(hymn.sections as ReadonlyArray<Section>, timeline),
+      score: scoreOf(hymn.sections as ReadonlyArray<Section>, timeline, hymn),
     };
   };
   let state: State = initial;
@@ -96,6 +100,10 @@ export const playerSources = (
     if (KINDS.has(kind)) return { _tag: kind } as Input;
     if (kind === 'play') return play(value);
     if (kind === 'stanza') return { _tag: 'chooseStanza', stanza: value };
+    if (kind === 'place') return { _tag: 'stanzaPlace', stanza: value };
+    if (kind === 'dragTo' || kind === 'seekTo' || kind === 'remoteSeek')
+      return { _tag: kind, seconds: value };
+    if (kind === 'nudge' || kind === 'remoteSkip') return { _tag: kind, way: wayOf(value) };
     if (kind === 'open') return { _tag: 'openSheet' };
     if (kind === 'close') return { _tag: 'closeSheet' };
     if (kind === 'title') return { _tag: 'titlePressed' };
@@ -114,16 +122,18 @@ export const playerSources = (
     if (toggle === 'play') return play(number);
     return undefined;
   };
-  const device = (kind: string, id: number, value: number): Input | undefined => {
+  const device = (kind: string, id: number, serial: number, value: number): Input | undefined => {
     if (kind === 'loaded') return { _tag: 'loaded', id, duration: value };
-    if (kind === 'time') return { _tag: 'time', id, seconds: value };
+    if (kind === 'time' || kind === 'due') return { _tag: kind, id, serial, seconds: value };
+    if (kind === 'seeked' || kind === 'settle') return { _tag: kind, id, serial };
     if (kind === 'waiting' || kind === 'played' || kind === 'playing' || kind === 'paused')
       return { _tag: kind, id };
     if (kind === 'ended') return { _tag: 'ended', id };
     return undefined;
   };
-  const playerStep = async ([kind, id, value, text]: readonly [
+  const playerStep = async ([kind, id, serial, value, text]: readonly [
     string,
+    number,
     number,
     number,
     string,
@@ -136,7 +146,7 @@ export const playerSources = (
       const why = await whyOf(url);
       return apply({ _tag: 'failed', id, why });
     }
-    return apply(reader(kind, value) ?? device(kind, id, value));
+    return apply(reader(kind, value) ?? device(kind, id, serial, value));
   };
   return { playerStep };
 };

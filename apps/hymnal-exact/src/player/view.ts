@@ -23,6 +23,8 @@ import {
   deviceOf,
   pageOf,
   sessionOf,
+  sheetUp,
+  skipAheadOf,
   sounding,
   timesOf,
 } from './step.ts';
@@ -61,15 +63,30 @@ export interface PlayerView {
   readonly phase: Phase;
   readonly said: string;
   readonly toggle: Toggle;
-  /** The place and the length in sung seconds, and as a clock reads them. */
+  /** The place the position bar shows (a drag while one is held) and the length, in sung seconds, and as a clock reads them. */
   readonly at: number;
   readonly length: number;
   readonly elapsed: string;
   readonly total: string;
+  /** The device's last seek: its serial (0 for none) and where it sent the device, in the recording's seconds. */
+  readonly seek: number;
+  readonly seekTo: number;
+  /** A sent place is held: the settle's timer runs. */
+  readonly holding: boolean;
+  /** The reader holds the position bar. */
+  readonly dragging: boolean;
+  /** The place in the recording's seconds, as the device last told it. */
+  readonly place: number;
+  /** The start of a span the choice leaves out within a tick or so of the place, in the recording's seconds; -1 for none. */
+  readonly skipAt: number;
+  /** The bar is docked: it shows, and no sheet is up over the stack. */
+  readonly dock: boolean;
   readonly bar: BarView;
   /** The hymn page shown's own button: Pause while its hymn sounds, else what the player offers it. */
   readonly pageToggle: Toggle;
   readonly chips: Array<Chip>;
+  /** The stanzas a press can seek to the start of: those the choice sings, with a timed place. */
+  readonly places: Array<number>;
   readonly session: {
     readonly title: string;
     readonly artist: string;
@@ -160,7 +177,28 @@ export const decodeChoices = (text: string): Readonly<Record<string, Choice>> =>
 const commandText = (command: Command | undefined): string => {
   if (command === undefined) return '';
   if (command._tag === 'load') return `load ${command.id}`;
+  if (command._tag === 'seek') return command.skip ? 'skip' : 'seek';
   return command._tag;
+};
+
+/** The seek's part of the view: the device's last seek, the hold, the drag, and the stanzas with a place. */
+const seekView = (state: State, chosen: ReadonlyArray<number>) => {
+  const { held } = state;
+  const device = deviceOf(state);
+  const score = held?.track.score;
+  const choice = held === undefined ? [] : choiceOf(state, held.track.number);
+  return {
+    seek: device?.seek ?? 0,
+    seekTo: device?.to ?? 0,
+    holding: held?.holding ?? false,
+    dragging: held?.drag !== undefined,
+    place: held?.at ?? 0,
+    skipAt: skipAheadOf(state) ?? -1,
+    places:
+      score === undefined || held === undefined || held.length <= 0
+        ? []
+        : chosen.filter((stanza) => score.stanzaAt(choice, stanza) !== undefined),
+  };
 };
 
 /** The view of `state`, after the step that gave `command`. */
@@ -195,6 +233,8 @@ export const viewOf = (
     length: total,
     elapsed: clock(elapsed),
     total: total > 0 ? clock(total) : '–:––',
+    ...seekView(state, chosen),
+    dock: bar.shown && !sheetUp(state),
     bar,
     pageToggle: pageHeld ? toggleOf(held.phase, held.why) : 'play',
     chips: Array.from({ length: score?.count ?? 0 }, (_, index) => ({
