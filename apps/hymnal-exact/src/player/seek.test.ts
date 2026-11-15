@@ -7,13 +7,14 @@
  * - a drag sends one seek at its release, and none when it ends on the
  *   second the bar showed at its start (`sends`); the thumb stands where
  *   `placeAt` puts it; the step's `nudge` and the lock screen's skip move
- *   by `nudged` (VoiceOver's swipe on the bar is Exact's span/20 until
- *   Exact can set an adjust step apart from the drag's);
+ *   by `nudged`, and the bar's VoiceOver swipe by `NUDGE` (`adjust-step`,
+ *   carried as an Exact patch), its drag left to the default step;
  * - for 50 hymns of the book under generated choices, and every choice of
  *   5, the cut's clock, every span the player skips and where it lands are
  *   `cutOf`'s over `keptOf`; a stanza's place is its first line's target
  *   (`targetsOf`, `targetAt`) and its first line's start on the cut's clock;
- * - the Contract file's settle and skip offsets are `settleFor` and `NUDGE`;
+ * - the Contract file's settle, skip offsets and the bar's adjust step are
+ *   `settleFor` and `NUDGE`;
  * - the filled buttons name `button` and `onButton` and no colour literal,
  *   and the tint is the brand's accent (owner, 2026-11-15).
  */
@@ -217,9 +218,12 @@ describe('the seek’s rules are the current app’s', () => {
 describe('the player’s Contract file keeps the current app’s numbers and the brand’s roles', () => {
   const contract = appFile('features/player.contract');
 
-  it('holds a sent place as long as settleFor, and the lock screen skips by NUDGE', () => {
+  it('holds a sent place as long as settleFor, and the lock screen and VoiceOver skip by NUDGE', () => {
     expect(contract).toContain(`after(${Duration.toMillis(settleFor)}, playerSettled)`);
     expect(contract).toContain(`seekbackwardOffset=${NUDGE} seekforwardOffset=${NUDGE}`);
+    const bar = /\n\s*input type="range" id="position" ([^\n]*)/u.exec(contract)?.[1] ?? '';
+    expect(bar).toContain(`adjust-step=${NUDGE} `);
+    expect(bar).not.toMatch(/(?:^|\s)step=/u);
   });
 
   it('fills its buttons with button and onButton, names no colour, and the tint is the brand’s accent', () => {

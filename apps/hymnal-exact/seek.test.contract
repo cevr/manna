@@ -165,3 +165,50 @@ test "Nothing sits under the bar"
   clock settle
   expect tree has "player"
   expect tree missing "bar"
+
+// One VoiceOver swipe on the bar (an arrow key on the web) moves the place
+// 10 s, held at the start; a drag still lands where it is let go.
+test "An adjust of the bar moves the place 10 s"
+  at "/hymns/2"
+  clock data
+  expect state player.origin == "http://127.0.0.1:4797"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  type "position" "40"
+  clock data
+  clock settle
+  expect state player.seekTo == 40
+  type "position" adjust up
+  clock data
+  clock settle
+  expect state player.seekTo == 50
+  expect text "elapsed" == "0:50"
+  type "position" adjust down
+  clock data
+  clock settle
+  type "position" adjust down
+  clock data
+  clock settle
+  expect state player.seekTo == 30
+  expect text "elapsed" == "0:30"
+  type "position" "4"
+  clock data
+  clock settle
+  type "position" adjust down
+  clock data
+  clock settle
+  expect state player.seekTo == 0
+  expect text "elapsed" == "0:00"
+  type "position" "123"
+  clock data
+  clock settle
+  expect state player.seekTo >= 122.9
+  expect state player.seekTo <= 123.1
