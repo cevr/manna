@@ -5,6 +5,7 @@
 // are not kept, and a relaunch holds what a fresh launch does.
 use EmptyState from "exact:content"
 use PlayerPagePlay from "./player.contract"
+use FavouriteStar from "./favourites.contract"
 
 shape HymnPart
   key: string
@@ -31,6 +32,7 @@ component HymnPage
       display="flex" flex-direction="column"
       header display="flex" align-items="center" padding="8px 16px"
         text (not ready ? "" : page.number == 0 ? "No Such Hymn" : page.title) role="heading" aria-level=2 testId="hymn-title"
+        FavouriteStar(number=(ready ? page.number : 0))
       if ready and page.number == 0
         EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
       else

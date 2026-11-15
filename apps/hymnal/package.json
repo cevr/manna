@@ -32,6 +32,18 @@
       "types": "./exact/remote.d.ts",
       "default": "./src/remote.ts"
     },
+    "./home/opening": {
+      "types": "./exact/home/opening.d.ts",
+      "default": "./src/home/opening.ts"
+    },
+    "./home/tabs": {
+      "types": "./exact/home/tabs.d.ts",
+      "default": "./src/home/tabs.ts"
+    },
+    "./reader/lists": {
+      "types": "./exact/reader/lists.d.ts",
+      "default": "./src/reader/lists.ts"
+    },
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/search": "./src/hymns/search.ts",
     "./hymns/text": "./src/hymns/text.ts",
