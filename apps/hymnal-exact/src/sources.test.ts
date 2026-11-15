@@ -68,9 +68,17 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.hymnRows([query(random, book.hymns)])).not.toThrow();
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
+        expect(() => sources.settingsLooks([route(random)])).not.toThrow();
       }
+      expect(() => sources.aboutCredits()).not.toThrow();
     });
-    expect(Object.keys(sources).toSorted()).toEqual(['hymnPage', 'hymnRows', 'playerStep']);
+    expect(Object.keys(sources).toSorted()).toEqual([
+      'aboutCredits',
+      'hymnPage',
+      'hymnRows',
+      'playerStep',
+      'settingsLooks',
+    ]);
   });
 
   test('inside the data host, a play and its device events step at once, with no clock read', async () => {

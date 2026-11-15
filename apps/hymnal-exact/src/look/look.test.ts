@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNodeBuiltinImport, effect/noAs, effect/noTryCatch, effect/noTernary -- a Bun test that runs the current hymnal's appearance rule on a stand-in page (the `document` it writes, put back after), reads the page's scheme as CSS does, reads its settings source's text for the default, and decodes with its Effect schema, typed in the port's declaration by its literals alone. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noTryCatch, effect/noTernary -- a Bun test that runs the current hymnal's appearance rule on a stand-in page (the `document` it writes, put back after), reads the page's scheme as CSS does, reads its settings source's text for the default, and decodes with its Effect schema, typed in the port's declaration by its literals alone. */
 
 /**
  * The appearance setting is the current hymnal's (A1): the choices, in

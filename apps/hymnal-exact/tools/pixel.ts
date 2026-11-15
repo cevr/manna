@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noTernary, effect/noNullish, effect/noAsyncFunction -- a host script's reader of the screenshots a drive takes: Bun's file and node's zlib, no package. */
+/* oxlint-disable effect/noGlobals, effect/noTernary, effect/noAsyncFunction -- a host script's reader of the screenshots a drive takes: Bun's file and node's zlib, no package. */
 
 /**
  * One pixel of a screenshot the agent wrote: a PNG of 8-bit RGB or RGBA,
