@@ -144,30 +144,59 @@ interface Repo {
   readonly installed: (from: string, name: string) => boolean;
   /** The runtime's own modules (`fs`, `path`), beside the `node:` and `bun:` ones. */
   readonly builtins: ReadonlySet<string>;
+  /** Each declaration that names the tool writing its module (`@writer <path>`), with that tool's path from the root (`writersOf`). */
+  readonly writers: ReadonlyMap<string, string>;
 }
+
+/**
+ * The tool each declaration names as its module's writer: a `@writer
+ * <path>` line, the path from the declaration's folder, read from the
+ * declarations' texts (path from the root → text).
+ */
+export const writersOf = (declarations: ReadonlyMap<string, string>): ReadonlyMap<string, string> =>
+  new Map(
+    [...declarations].flatMap(([file, text]) =>
+      Option.toArray(
+        Option.flatMap(Option.fromNullishOr(/@writer\s+(\S+)/.exec(text)?.[1]), (written) =>
+          Option.map(
+            normal(`${file.split('/').slice(0, -1).join('/')}/${written.replace(/`/g, '')}`),
+            (writer) => [file, writer] as const,
+          ),
+        ),
+      ),
+    ),
+  );
 
 /**
  * Whether a declaration of the repo (`today.d.ts` for `./today` or
  * `./today.js`) stands for a module a tool writes before it is read and the
- * repo ignores, as TypeScript resolves it when the module is not there.
+ * repo ignores, as TypeScript resolves it when the module is not there: the
+ * declaration names its writer, and the writer is a file of the repo. A lone
+ * declaration with no writer stands for nothing.
  */
-const declared = (files: ReadonlySet<string>, path: string) =>
-  files.has(`${path.replace(/\.[cm]?jsx?$/, '')}.d.ts`);
+const declared = (repo: Repo, path: string) =>
+  Option.match(
+    Option.fromUndefinedOr(repo.writers.get(`${path.replace(/\.[cm]?jsx?$/, '')}.d.ts`)),
+    {
+      onNone: () => false,
+      onSome: (writer) => repo.files.has(writer),
+    },
+  );
 
 /** What a path from the root names: a module (by bun's suffixes), another file of the repo or a written module its declaration stands for, or nothing. */
-const atPath = (files: ReadonlySet<string>, path: string): Resolved =>
-  Option.match(fileAt(files, path), {
+const atPath = (repo: Repo, path: string): Resolved =>
+  Option.match(fileAt(repo.files, path), {
     onSome: (file): Resolved => ({ _tag: 'Module', file }),
-    onNone: () => [OTHER].find(() => files.has(path) || declared(files, path)) ?? UNRESOLVED,
+    onNone: () => [OTHER].find(() => repo.files.has(path) || declared(repo, path)) ?? UNRESOLVED,
   });
 
 /** What the first of `paths` that names something names, from `base`; nothing when none does. */
-const firstAt = (files: ReadonlySet<string>, base: string, paths: ReadonlyArray<string>) =>
+const firstAt = (repo: Repo, base: string, paths: ReadonlyArray<string>) =>
   paths
     .map((target) =>
       Option.match(normal(`${base}/${target}`), {
         onNone: () => UNRESOLVED,
-        onSome: (path) => atPath(files, path),
+        onSome: (path) => atPath(repo, path),
       }),
     )
     .find((resolved) => resolved._tag !== 'Unresolved') ?? UNRESOLVED;
@@ -217,14 +246,14 @@ export const resolverOf =
     if (specifier.startsWith('./') || specifier.startsWith('../') || specifier === '.')
       return Option.match(normal(`${folder}/${specifier}`), {
         onNone: () => UNRESOLVED,
-        onSome: (path) => atPath(repo.files, path),
+        onSome: (path) => atPath(repo, path),
       });
     const alias = Option.flatMap(repo.aliasesFor(from), (aliases) =>
       Option.map(aliased(aliases, specifier), (targets) => ({ base: aliases.base, targets })),
     );
     const viaAlias = Option.match(alias, {
       onNone: () => UNRESOLVED,
-      onSome: ({ base, targets }) => firstAt(repo.files, base, targets),
+      onSome: ({ base, targets }) => firstAt(repo, base, targets),
     });
     if (viaAlias._tag !== 'Unresolved') return viaAlias;
     const workspace = repo.packages.find(
@@ -234,10 +263,10 @@ export const resolverOf =
       onSome: (workspace) => {
         const subpath = `.${specifier.slice(workspace.name.length)}`;
         if (Object.keys(workspace.exports).length === 0)
-          return firstAt(repo.files, workspace.dir, [subpath]);
+          return firstAt(repo, workspace.dir, [subpath]);
         return Option.match(exported(workspace.exports, subpath), {
           onNone: () => UNRESOLVED,
-          onSome: (target) => firstAt(repo.files, workspace.dir, [target]),
+          onSome: (target) => firstAt(repo, workspace.dir, [target]),
         });
       },
       onNone: () => [OTHER].find(() => repo.installed(from, packageName(specifier))) ?? UNRESOLVED,

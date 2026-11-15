@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Config, Effect, Match, Option } from 'effect';
 import { gapsOf, splitReported } from './gaps.ts';
-import { aliasesFor, isTestSupport, productOf, readsThrough, resolverOf } from './graph.ts';
+import {
+  aliasesFor,
+  isTestSupport,
+  productOf,
+  readsThrough,
+  resolverOf,
+  writersOf,
+} from './graph.ts';
 import { failed, passCheck } from './check.ts';
 import { envReads, importsOf } from './reads.ts';
 import { declaredFor, passes } from './turbo.ts';
@@ -206,6 +213,7 @@ describe('env-pass', () => {
           ),
           installed: (_from, name) => name === 'effect',
           builtins: new Set(['fs']),
+          writers: new Map(),
         });
         const from = 'packages/a/src/x.test.ts';
         const named = (at: string, specifier: string) =>
@@ -265,21 +273,46 @@ describe('env-pass', () => {
   );
 
   it.effect(
-    'a module a tool writes resolves by its declaration beside it, and is unresolved without one',
+    'a module a tool writes resolves by its declaration beside it when the declaration names a writer the repo holds; a lone declaration stands for nothing',
     () =>
       Effect.sync(() => {
+        const writers = writersOf(
+          new Map([
+            [
+              'apps/h/src/passage/today.d.ts',
+              '/** Written by its tool. @writer ../../tools/passage.ts */',
+            ],
+            ['apps/h/src/passage/gone.d.ts', '/** @writer `../../tools/gone.ts` */'],
+            ['apps/h/src/passage/lone.d.ts', '/** A hand-kept declaration, no writer. */'],
+          ]),
+        );
+        expect([...writers]).toEqual([
+          ['apps/h/src/passage/today.d.ts', 'apps/h/tools/passage.ts'],
+          ['apps/h/src/passage/gone.d.ts', 'apps/h/tools/gone.ts'],
+        ]);
         const resolve = resolverOf({
-          files: new Set(['apps/h/app.ts', 'apps/h/src/passage/today.d.ts']),
+          files: new Set([
+            'apps/h/app.ts',
+            'apps/h/tools/passage.ts',
+            'apps/h/src/passage/today.d.ts',
+            'apps/h/src/passage/gone.d.ts',
+            'apps/h/src/passage/lone.d.ts',
+          ]),
           packages: [],
           aliasesFor: aliasesFor(new Map()),
           installed: () => false,
           builtins: new Set(),
+          writers,
         });
         expect(
-          ['./src/passage/today', './src/passage/today.js', './src/passage/other'].map(
-            (specifier) => resolve('apps/h/app.ts', specifier)._tag,
-          ),
-        ).toEqual(['Other', 'Other', 'Unresolved']);
+          [
+            './src/passage/today',
+            './src/passage/today.js',
+            './src/passage/gone',
+            './src/passage/lone',
+            './src/passage/other',
+          ].map((specifier) => resolve('apps/h/app.ts', specifier)._tag),
+        ).toEqual(['Other', 'Other', 'Unresolved', 'Unresolved', 'Unresolved']);
       }),
   );
 
@@ -330,6 +363,7 @@ describe('env-pass', () => {
           ),
           installed: () => false,
           builtins: new Set(),
+          writers: new Map(),
         });
         const imports = new Map([
           ['h/src/r.test.tsx', ['~/test/rig']],
@@ -418,6 +452,7 @@ describe('env-pass', () => {
           aliasesFor: aliases,
           installed: () => false,
           builtins: new Set(),
+          writers: new Map(),
         });
         expect(
           [
@@ -468,6 +503,7 @@ describe('env-pass', () => {
           aliasesFor: () => Option.none(),
           installed: () => false,
           builtins: new Set(),
+          writers: new Map(),
         });
         const shared = {
           dir: 'b',

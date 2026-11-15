@@ -15,6 +15,7 @@ import {
   isModule,
   isTestSupport,
   resolverOf,
+  writersOf,
 } from './env-pass/graph.ts';
 import { envReads, importsOf, parsedImports } from './env-pass/reads.ts';
 import { TurboEnv } from './env-pass/turbo.ts';
@@ -185,8 +186,16 @@ Effect.gen(function* () {
       ),
     ),
   );
+  const declarations = new Map(
+    yield* Effect.forEach(
+      files.filter((file) => file.endsWith('.d.ts') && !file.split('/').includes('node_modules')),
+      (file) =>
+        Effect.map(fs.readFileString(path.join(root, file)), (text) => [file, text] as const),
+    ),
+  );
   const resolve = resolverOf({
     files: new Set(files),
+    writers: writersOf(declarations),
     packages: packages.flat(),
     aliasesFor: aliasesFor(tsconfigs),
     installed: (from, name) =>
