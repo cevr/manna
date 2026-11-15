@@ -206,8 +206,16 @@ const WORDS = [
   'clock data',
 ] as const;
 
-/** A port a caller may leave in `EXACT_PORT`: none, each app's own and spare, the current hymnal's, and not a number. */
-const CALLER_PORTS = ['', '', '8765', '8766', '8771', '8776', '8281', '87a', '8765.0'] as const;
+/** A port a caller may leave in a port variable: none, each app's own and spare, the current hymnal's, and not a number. */
+const CALLER_PORTS = ['', '', '', '8765', '8766', '8771', '8776', '8281', '87a', '8765.0'] as const;
+
+/** The variables the pinned Exact reads a listening port from (its clone's `EXACT_PORT`, `PORT` and `EXACT_TOOL_PORT` reads), written out apart from the wrapper. */
+const PORT_VARIABLES = ['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT'] as const;
+type PortVariable = (typeof PORT_VARIABLES)[number];
+type CallerPorts = Readonly<Record<PortVariable, string>>;
+
+/** The verbs that listen, drawn more often: each must keep to the app's ports. */
+const LISTENING = [['web'], ['serve'], ['test', 'web'], ['verify'], ['agent', 'web']] as const;
 
 /** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
 const REWRITES = ['none', 'none', 'none', 'launcher', 'notes', 'no launcher'] as const;
@@ -224,9 +232,20 @@ const Case = Arbitrary.all({
   callerSim: Arbitrary.schema(Schema.Literals(['booted', 'verify-heartseed', 'verify-hymnal', ''])),
   callerFeedback: Arbitrary.schema(Schema.Literals(['1', 'always', ''])),
   callerExact: Arbitrary.schema(Schema.Literals([`${PROBE}/elsewhere`, ''])),
-  callerPort: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
+  callerPorts: Arbitrary.all({
+    EXACT_PORT: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
+    PORT: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
+    EXACT_TOOL_PORT: Arbitrary.schema(Schema.Literals(CALLER_PORTS)),
+  }),
+  listening: Arbitrary.schema(Schema.Literals([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])),
   rewrite: Arbitrary.schema(Schema.Literals(REWRITES)),
 });
+
+/** The case's arguments: a listening verb for half the draws, else the drawn verb, then the drawn words. */
+const argsOf = (verb: string, rest: ReadonlyArray<string>, listening: number) => [
+  ...Option.getOrElse(Option.fromUndefinedOr(LISTENING[listening]), () => [verb]),
+  ...rest,
+];
 
 /** The ports `app` owns, as text: its own and its spare range. */
 const owned = (app: App) => {
@@ -240,7 +259,7 @@ const owned = (app: App) => {
 const mustRefuse = (
   app: App,
   args: ReadonlyArray<string>,
-  callerPort: string,
+  callerPorts: CallerPorts,
   rewrite: (typeof REWRITES)[number],
 ) => {
   const [verb = '', ...rest] = args;
@@ -248,7 +267,8 @@ const mustRefuse = (
   if (verb === 'feedback' && rest.join(' ') !== 'never') return true;
   if (args.some((a) => /^--(?:sim|device)(?:=|$)/.test(a))) return true;
   const allowed = owned(app);
-  if (callerPort !== '' && !allowed.has(callerPort)) return true;
+  if (PORT_VARIABLES.some((name) => callerPorts[name] !== '' && !allowed.has(callerPorts[name])))
+    return true;
   if (rewrite !== 'none') return true;
   return args.some(
     (a, i) =>
@@ -263,20 +283,40 @@ const mustLock = (args: ReadonlyArray<string>) =>
   args[0] === 'mac' ||
   (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
 
-/** The rule, written out: the child's `EXACT_PORT`, the caller's when set, else the app's own for a bare `web`, else none. */
-const portFor = (app: App, args: ReadonlyArray<string>, callerPort: string) => {
-  if (callerPort !== '') return Option.some(callerPort);
-  const bareWeb = args[0] === 'web' && !args.some((a) => a === '--port' || a.startsWith('--port='));
-  if (bareWeb) return Option.some(String(APPS[app].port));
+/**
+ * The rule, written out: the child's `name`, the caller's when set, else the app's own port for the
+ * verb that listens by it given no `--port` (`web` by `EXACT_PORT`, `serve` by `PORT`), else none.
+ */
+const portFor = (
+  app: App,
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+  name: PortVariable,
+) => {
+  if (callerPorts[name] !== '') return Option.some(callerPorts[name]);
+  const bare = !args.some((a) => a === '--port' || a.startsWith('--port='));
+  const listensBy =
+    (args[0] === 'web' && name === 'EXACT_PORT') || (args[0] === 'serve' && name === 'PORT');
+  if (bare && listensBy) return Option.some(String(APPS[app].port));
   return Option.none();
 };
 
-/** Whether `child` gets the `EXACT_PORT` `port` names: set to it, or removed from what it inherits. */
-const portHeld = (child: Spawned, port: Option.Option<string>) =>
-  Option.match(port, {
-    onSome: (p) => child.env['EXACT_PORT'] === p && !child.removed.includes('EXACT_PORT'),
-    onNone: () => !('EXACT_PORT' in child.env) && child.removed.includes('EXACT_PORT'),
-  });
+/**
+ * Whether `child` gets every port variable as `portFor` says (set to it, or removed from what it
+ * inherits), and so listens on none but `app`'s ports.
+ */
+const portsHeld = (
+  child: Spawned,
+  app: App,
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+) =>
+  PORT_VARIABLES.every((name) =>
+    Option.match(portFor(app, args, callerPorts, name), {
+      onSome: (p) => child.env[name] === p && owned(app).has(p) && !child.removed.includes(name),
+      onNone: () => !(name in child.env) && child.removed.includes(name),
+    }),
+  );
 
 /** `files` with `app`'s folder rewritten as `rewrite` says. */
 const rewritten = (
@@ -301,16 +341,26 @@ describe('the exact wrapper', () => {
         const [pin = ''] = pins;
         const result = yield* Arbitrary.checkEffect(
           Case,
-          ({ app, verb, rest, callerSim, callerFeedback, callerExact, callerPort, rewrite }) =>
+          ({
+            app,
+            verb,
+            rest,
+            callerSim,
+            callerFeedback,
+            callerExact,
+            callerPorts,
+            listening,
+            rewrite,
+          }) =>
             Effect.gen(function* () {
-              const args = [verb, ...rest];
+              const args = argsOf(verb, rest, listening);
               const caller = Rec.filter(
                 {
                   HOME: `${PROBE}/home`,
                   EXACT_SIM: callerSim,
                   EXACT_FEEDBACK: callerFeedback,
                   EXACT: callerExact,
-                  EXACT_PORT: callerPort,
+                  ...callerPorts,
                 },
                 (value) => value !== '',
               );
@@ -325,7 +375,7 @@ describe('the exact wrapper', () => {
                 Option.some(pin),
                 rewritten(files, app, rewrite),
               );
-              if (mustRefuse(app, args, callerPort, rewrite))
+              if (mustRefuse(app, args, callerPorts, rewrite))
                 return (
                   ran._tag === 'Failure' &&
                   ran.failure._tag === 'ExactRefused' &&
@@ -342,7 +392,7 @@ describe('the exact wrapper', () => {
                 child.env['EXACT'] === clone &&
                 child.env['EXACT_FEEDBACK'] === '0' &&
                 child.env['EXACT_SIM'] === APPS[app].simulator &&
-                portHeld(child, portFor(app, args, callerPort)) &&
+                portsHeld(child, app, args, callerPorts) &&
                 locked === mustLock(args) &&
                 (locked || child.command === 'bun') &&
                 child.args.slice(-args.length - 3).join('\u0000') ===
@@ -426,6 +476,45 @@ describe('the exact wrapper', () => {
     }),
   );
 
+  it.effect(
+    "serves on the app's own port by PORT, refuses a caller's PORT not the app's, and drops it from every other verb",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const hymnal = yield* running('hymnal-exact', ['serve'], { HOME: PROBE }, head, files);
+        expect(hymnal.spawned[1]?.env['PORT']).toBe('8766');
+        expect(hymnal.spawned[1]?.removed).toEqual(['EXACT_PORT', 'EXACT_TOOL_PORT']);
+        const heartseed = yield* running(
+          'heartseed-exact',
+          ['serve'],
+          { HOME: PROBE },
+          head,
+          files,
+        );
+        expect(heartseed.spawned[1]?.env['PORT']).toBe('8765');
+        const theirs = yield* running(
+          'heartseed-exact',
+          ['serve'],
+          { HOME: PROBE, PORT: '8281' },
+          head,
+          files,
+        );
+        expect(theirs.spawned).toEqual([]);
+        expect(theirs.result._tag).toBe('Failure');
+        if (theirs.result._tag === 'Failure')
+          expect(theirs.result.failure.message).toContain('PORT=8281');
+        const given = yield* running(
+          'hymnal-exact',
+          ['serve', '--port', '8777'],
+          { HOME: PROBE },
+          head,
+          files,
+        );
+        expect(given.spawned[1]?.removed).toContain('PORT');
+      }),
+  );
+
   it.effect('refuses an app it does not know', () =>
     Effect.gen(function* () {
       const { pins, files } = yield* fixtures;
@@ -461,7 +550,7 @@ describe('the exact wrapper', () => {
           files,
         );
         expect(tested.spawned[1]?.env).toMatchObject({ PORT_LO: '8770', PORT_HI: '8774' });
-        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT']);
+        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT']);
         const hymnals = yield* running(
           'hymnal-exact',
           ['test', 'web'],
