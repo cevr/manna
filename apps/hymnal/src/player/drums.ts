@@ -16,7 +16,7 @@
 
 import { Option } from 'effect';
 
-import { type Cue, type DialName, plain, type Tell } from '~/feel/cue';
+import { type Cue, type DialName, plain, type Tell } from '../feel/cues';
 
 import { type Detents, ownDetent } from './dial';
 

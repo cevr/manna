@@ -10,25 +10,12 @@
 import { Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 
+import type { Searching } from './search-mode';
+
+export { modeAt, searchAt, type SearchMode, type Searching } from './search-mode';
+
 /** The search field's text. */
 export const searchQuery = Atom.make('').pipe(Atom.keepAlive);
-
-/**
- * How a screen of the phone is in search mode, or `off` when it is not:
- * `field` after a press on its find bar's `Search` (`FindBar.tsx`), which
- * focuses the box so the keyboard rises for the reader's words, and `about`
- * after `About this hymn` opens it on the home list with a query (a topic or
- * a passage), which leaves the keyboard down over the results the reader
- * came for. Cancel turns it off. The web's home has no mode: its results
- * show while the query has text.
- */
-export type SearchMode = 'off' | 'field' | 'about';
-
-/** The one open search: the path of the screen it opened on, and how it opened. */
-export interface Searching {
-  readonly path: string;
-  readonly mode: Exclude<SearchMode, 'off'>;
-}
 
 /**
  * The open search, if one is open. It belongs to the screen it opened on
@@ -40,17 +27,6 @@ export interface Searching {
  * one search at a time: `Search` pressed on another screen moves it there.
  */
 export const searchOpen = Atom.make(Option.none<Searching>()).pipe(Atom.keepAlive);
-
-/** Search open on the screen at `path`, opened by `mode`. */
-export const searchAt = (path: string, mode: Searching['mode']): Option.Option<Searching> =>
-  Option.some({ path, mode });
-
-/** The search mode of the screen at `path`: the open search's mode on its own screen, else `off`. */
-export const modeAt = (open: Option.Option<Searching>, path: string): SearchMode =>
-  Option.match(
-    Option.filter(open, (searching) => searching.path === path),
-    { onNone: () => 'off', onSome: ({ mode }) => mode },
-  );
 
 /** The Hymns list's scroll offset, in points from its top. */
 export const hymnsOffset = Atom.make(0).pipe(Atom.keepAlive);
