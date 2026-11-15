@@ -21,7 +21,7 @@ The one screen so far: Isaiah 41:10, **Hear it** (the system voice reads it, eac
 
 - Every rule is `step(state, input)` in `src/today/step.ts`, and the screen is `view(state)` in `src/today/view.ts`. `src/today/sources.ts` holds the state for one launch and answers one data source per input; `features/today.contract` only makes the calls (`speak`, `startSpeechRecognition`, …), forwards each native change as an input naming its utterance or recognition, and draws the view. An input for any other id changes nothing.
 - The matcher is the current Heartseed's, imported as `@manna/heartseed/matcher`, whose types are `apps/heartseed/exact/matcher.d.ts`: Exact's type check stages a package's declarations, never its source, and this file imports nothing, so it never reaches `effect`.
-- The passage is the current Heartseed's own derivation (`@manna/heartseed/passage`, from `@manna/core`'s KJV), written by `tools/passage.ts` to `src/passage/today.json`, ignored: no verse text is committed but the KJV.
+- The passage is the current Heartseed's own derivation (`@manna/heartseed/passage`, from `@manna/core`'s KJV), written by `tools/passage.ts` to `src/passage/today.ts`, ignored and declared by the tracked `src/passage/today.d.ts`: no verse text is committed but the KJV.
 - The last recall is kept in `app:/data/today.json`, a stand-in until the garden comes.
 
 ## Where a feature's files go
@@ -40,4 +40,4 @@ The one screen so far: Isaiah 41:10, **Hear it** (the system voice reads it, eac
 
 A feature's names start with its own (`today…`), since its members share the root's one namespace. Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports runs it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would, as `src/app.test.ts` does.
 
-`app.contract.d.ts` (the types `app.ts` imports), `src/passage/today.json`, `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.
+`app.contract.d.ts` (the types `app.ts` imports), `src/passage/today.ts`, `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.

@@ -1,5 +1,5 @@
 import type { Answer, Sources } from './app.contract.d.ts';
-import passage from './src/passage/today.json';
+import passage from './src/passage/today';
 import { todaySources } from './src/today/sources';
 
 /** Today listens on the device and keeps its last recall in one file of the app's data. */

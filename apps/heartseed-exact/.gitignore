@@ -6,4 +6,4 @@
 /app.contract.d.ts
 /.exact/
 /.env.local
-/src/passage/today.json
+/src/passage/today.ts

@@ -11,8 +11,9 @@
  * them and `dismayed` left out. Exits 1 on any failed check.
  */
 
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { writePassage } from './passage';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
@@ -68,7 +69,7 @@ const check = (name: string, ok: boolean, got: unknown) => {
 };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-const passage = JSON.parse(readFileSync(join(app, 'src', 'passage', 'today.json'), 'utf8'));
+const passage = writePassage();
 const spoken = spokenOf(passage.text);
 const store = `say-${host}-${Date.now().toString(36)}`;
 const shot = (name: string) => `screenshot .exact/shots/${host}-${name}.png`;

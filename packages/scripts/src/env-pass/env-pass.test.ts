@@ -265,21 +265,21 @@ describe('env-pass', () => {
   );
 
   it.effect(
-    'a data file a tool writes resolves by its declaration beside it, and is unresolved without one',
+    'a module a tool writes resolves by its declaration beside it, and is unresolved without one',
     () =>
       Effect.sync(() => {
         const resolve = resolverOf({
-          files: new Set(['apps/h/app.ts', 'apps/h/src/passage/today.d.json.ts']),
+          files: new Set(['apps/h/app.ts', 'apps/h/src/passage/today.d.ts']),
           packages: [],
           aliasesFor: aliasesFor(new Map()),
           installed: () => false,
           builtins: new Set(),
         });
         expect(
-          ['./src/passage/today.json', './src/passage/other.json', './src/passage/today'].map(
+          ['./src/passage/today', './src/passage/today.js', './src/passage/other'].map(
             (specifier) => resolve('apps/h/app.ts', specifier)._tag,
           ),
-        ).toEqual(['Other', 'Unresolved', 'Unresolved']);
+        ).toEqual(['Other', 'Other', 'Unresolved']);
       }),
   );
 
