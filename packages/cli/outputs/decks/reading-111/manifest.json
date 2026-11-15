@@ -1,0 +1,255 @@
+{
+  "title": "Departing and Being with Christ",
+  "subtitle": "Bible Readings — Chapter 111",
+  "deckName": "Reading 111 - Departing and Being with Christ",
+  "titleConcept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, seen from a little distance standing at a high barred window of a Roman prison, chained, gazing out toward a dawn sky where the first golden light breaks through the clouds, the room in deep shadow",
+  "app": "Keynote Creator Studio",
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "layouts": {
+    "A_imageRight": {
+      "text": [
+        131,
+        408,
+        805,
+        264
+      ],
+      "image": [
+        1037,
+        75,
+        750,
+        903
+      ]
+    },
+    "B_imageLeft": {
+      "image": [
+        133,
+        75,
+        750,
+        903
+      ],
+      "text": [
+        984,
+        408,
+        805,
+        264
+      ]
+    }
+  },
+  "slides": [
+    {
+      "id": "s01-philippians-1-21",
+      "ref": "Philippians 1:21",
+      "section": "Paul's Earnest Dilemma",
+      "text": "For to me to live is Christ, and to die is gain.",
+      "sourceImage": "images/s01-philippians-1-21.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, chained by the wrist to a Roman soldier in a bare stone prison room, writing on a scroll by the light of a high barred window, his face calm and resolved",
+      "character": "paul",
+      "side": "right",
+      "note": "Written from prison. Christ magnified whether by life or by death (v. 20): the gain is for Christ's cause, not merely Paul's comfort."
+    },
+    {
+      "id": "s02-philippians-1-23",
+      "ref": "Philippians 1:23",
+      "section": "Paul's Earnest Dilemma",
+      "text": "For I am in a strait betwixt two, having a desire to depart, and to be with Christ; which is far better:",
+      "sourceImage": "images/s02-philippians-1-23.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, seated alone in a dim Roman prison cell, his chained hands resting on an unfinished scroll, his face lifted toward a shaft of light from a small high window, torn between longing and duty",
+      "side": "left",
+      "note": "\"Strait\" (synechomai): pressed from both sides. \"Depart\" (analyo): loosing a ship from its moorings, striking a tent to move on. The verse does not say when or how he would be with Christ."
+    },
+    {
+      "id": "s03-philippians-1-24",
+      "ref": "Philippians 1:24",
+      "section": "Paul's Earnest Dilemma",
+      "text": "Nevertheless to abide in the flesh is more needful for you.",
+      "sourceImage": "images/s03-philippians-1-24.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe in chains, dictating a letter to a young companion who writes on a scroll, a few believers from Philippi gathered close and listening with love and concern, warm lamplight in a plain stone room",
+      "character": "paul",
+      "side": "right",
+      "note": "Paul chose to remain: not because death would be bad for him, but because his ministry was more needful for the church."
+    },
+    {
+      "id": "s04-1-thessalonians-4-16-17",
+      "ref": "1 Thessalonians 4:16-17",
+      "section": "When Believers Meet Christ",
+      "text": "For the Lord himself shall descend from heaven with a shout, with the voice of the archangel, and with the trump of God: and the dead in Christ shall rise first: Then we which are alive and remain shall be caught up together with them in the clouds, to meet the Lord in the air: and so shall we ever be with the Lord.",
+      "sourceImage": "../reading-105/images/s34-1-thessalonians-4-16-17.png",
+      "side": "left",
+      "note": "Paul's own timeline: Christ descends, the dead in Christ rise first, the living are caught up together with them, and so (houtos, in this manner) shall we ever be with the Lord."
+    },
+    {
+      "id": "s05-john-14-3",
+      "ref": "John 14:3",
+      "section": "When Believers Meet Christ",
+      "text": "And if I go and prepare a place for you, I will come again, and receive you unto myself; that where I am, there ye may be also.",
+      "sourceImage": "../reading-110/images/s17-john-14-3.png",
+      "side": "right",
+      "note": "Christ names the moment: I will come again, and receive you unto myself."
+    },
+    {
+      "id": "s06-ecclesiastes-9-5",
+      "ref": "Ecclesiastes 9:5",
+      "section": "No Lapse of Time",
+      "text": "For the living know that they shall die: but the dead know not any thing, neither have they any more a reward; for the memory of them is forgotten.",
+      "sourceImage": "../reading-105/images/s06-ecclesiastes-9-5-6.png",
+      "side": "left",
+      "note": "The dead know not any thing. Whether eight hours or eight hundred years, the sleeper wakes as if it were a moment."
+    },
+    {
+      "id": "s07-psalm-146-4",
+      "ref": "Psalm 146:4",
+      "section": "No Lapse of Time",
+      "text": "His breath goeth forth, he returneth to his earth; in that very day his thoughts perish.",
+      "sourceImage": "../reading-105/images/s07-psalm-146-4.png",
+      "side": "right",
+      "note": "In that very day his thoughts perish. Paul's next conscious moment would be the presence of Christ at His coming."
+    },
+    {
+      "id": "s08-1-corinthians-15-52",
+      "ref": "1 Corinthians 15:52",
+      "section": "No Lapse of Time",
+      "text": "In a moment, in the twinkling of an eye, at the last trump: for the trumpet shall sound, and the dead shall be raised incorruptible, and we shall be changed.",
+      "sourceImage": "../reading-105/images/s36-1-corinthians-15-51-52.png",
+      "side": "left",
+      "note": "Two thousand years on earth; for the sleeping saint, the twinkling of an eye. This is why departing is \"far better.\""
+    },
+    {
+      "id": "s09-2-timothy-4-6-7",
+      "ref": "2 Timothy 4:6-7",
+      "section": "Paul's Final Testimony",
+      "text": "For I am now ready to be offered, and the time of my departure is at hand. I have fought a good fight, I have finished my course, I have kept the faith:",
+      "sourceImage": "images/s09-2-timothy-4-6-7.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, older now and in a cold dark Roman dungeon, a worn cloak about his shoulders, writing his last letter by a guttering oil lamp, his face peaceful and ready",
+      "character": "paul",
+      "side": "right",
+      "note": "Near the end of his life: the time of my departure is at hand."
+    },
+    {
+      "id": "s10-2-timothy-4-8",
+      "ref": "2 Timothy 4:8",
+      "section": "Paul's Final Testimony",
+      "text": "Henceforth there is laid up for me a crown of righteousness, which the Lord, the righteous judge, shall give me at that day: and not to me only, but unto all them also that love his appearing.",
+      "sourceImage": "images/s10-2-timothy-4-8.png",
+      "concept": "a radiant golden crown of righteousness resting on a white cloth upon a stone ledge in a shaft of heavenly light, a great multitude of the redeemed faintly glimpsed in glory beyond, warm golden light",
+      "side": "left",
+      "note": "The crown is given \"at that day,\" the day of His appearing, and to Paul together with all them that love His appearing, not before them."
+    },
+    {
+      "id": "s11-revelation-14-13",
+      "ref": "Revelation 14:13",
+      "section": "Paul's Final Testimony",
+      "text": "And I heard a voice from heaven saying unto me, Write, Blessed are the dead which die in the Lord from henceforth: Yea, saith the Spirit, that they may rest from their labours; and their works do follow them.",
+      "sourceImage": "images/s11-revelation-14-13.png",
+      "concept": "a quiet hillside burial garden at evening, an old labourer's tools laid down beside a simple sealed tomb, olive trees and long golden shadows, a feeling of deep rest and peace",
+      "side": "right",
+      "note": "Death for the believer is rest from labour, not an intermediate state of waiting or uncertainty."
+    },
+    {
+      "id": "s12-john-11-11",
+      "ref": "John 11:11",
+      "section": "Paul's Final Testimony",
+      "text": "These things said he: and after that he saith unto them, Our friend Lazarus sleepeth; but I go, that I may awake him out of sleep.",
+      "sourceImage": "../reading-105/images/s09-john-11-11.png",
+      "side": "left",
+      "note": "Christ's own word for death is sleep, and He goes to awake him."
+    },
+    {
+      "id": "s13-genesis-2-17",
+      "ref": "Genesis 2:17",
+      "section": "Satan's Ancient Lie",
+      "text": "But of the tree of the knowledge of good and evil, thou shalt not eat of it: for in the day that thou eatest thereof thou shalt surely die.",
+      "sourceImage": "images/s13-genesis-2-17.png",
+      "concept": "Adam and Eve standing modestly in the garden of Eden before the tree of the knowledge of good and evil, listening reverently as a radiant heavenly light falls on them from above, lush garden and soft morning light, the figures seen from a little distance",
+      "side": "right",
+      "note": "God said, Thou shalt surely die."
+    },
+    {
+      "id": "s14-genesis-3-4",
+      "ref": "Genesis 3:4",
+      "section": "Satan's Ancient Lie",
+      "text": "And the serpent said unto the woman, Ye shall not surely die:",
+      "sourceImage": "../reading-102/images/s14-gen-3-4-5.png",
+      "side": "left",
+      "note": "Satan contradicted: Ye shall not surely die. The lie of the soul's natural immortality opened the door to spiritualism, purgatory and prayers to the dead."
+    },
+    {
+      "id": "s15-hebrews-9-28",
+      "ref": "Hebrews 9:28",
+      "section": "The Sanctuary Connection",
+      "text": "So Christ was once offered to bear the sins of many; and unto them that look for him shall he appear the second time without sin unto salvation.",
+      "sourceImage": "images/s15-hebrews-9-28.png",
+      "concept": "Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash coming in great glory upon a bright cloud above the earth, surrounded by a host of shining angels, people on the hills below lifting their faces and hands to him in joy",
+      "character": "jesus",
+      "side": "right",
+      "note": "Christ ministers in the heavenly sanctuary to prepare a people to meet Him. The reward is given at His appearing, not at death (Rev 22:12; 2 Cor 5:10)."
+    },
+    {
+      "id": "s16-revelation-22-12",
+      "ref": "Revelation 22:12",
+      "section": "The Sanctuary Connection",
+      "text": "And, behold, I come quickly; and my reward is with me, to give every man according as his work shall be.",
+      "sourceImage": "../reading-110/images/s19-revelation-22-12.png",
+      "side": "left",
+      "note": "My reward is with me: no one receives his final destiny before the verdict is rendered."
+    },
+    {
+      "id": "s17-john-5-28-29",
+      "ref": "John 5:28-29",
+      "section": "Practical Application",
+      "text": "Marvel not at this: for the hour is coming, in the which all that are in the graves shall hear his voice, And shall come forth; they that have done good, unto the resurrection of life; and they that have done evil, unto the resurrection of damnation.",
+      "sourceImage": "../reading-105/images/s30-john-5-28-29.png",
+      "side": "right",
+      "note": "Our comfort is not that loved ones are looking down, but that they rest securely until Jesus calls them forth."
+    },
+    {
+      "id": "s18-1-john-4-1",
+      "ref": "1 John 4:1",
+      "section": "Practical Application",
+      "text": "Beloved, believe not every spirit, but try the spirits whether they are of God: because many false prophets are gone out into the world.",
+      "sourceImage": "images/s18-1-john-4-1.png",
+      "concept": "a dim candlelit room where a hooded medium leans over a table toward a pale glowing apparition, while in the foreground a grieving widow draws back clutching an open Bible to her breast, its pages catching a clean steady light",
+      "side": "left",
+      "note": "If the dead are unconscious, any spirit claiming to be a departed loved one is a demonic deception."
+    },
+    {
+      "id": "s19-1-thessalonians-4-13",
+      "ref": "1 Thessalonians 4:13",
+      "section": "Practical Application",
+      "text": "But I would not have you to be ignorant, brethren, concerning them which are asleep, that ye sorrow not, even as others which have no hope.",
+      "sourceImage": "../reading-105/images/s35-1-thessalonians-4-13-14.png",
+      "side": "right",
+      "note": "We sorrow, but not as others which have no hope. Our loved ones in Christ are safe in His keeping."
+    },
+    {
+      "id": "s20-revelation-1-18",
+      "ref": "Revelation 1:18",
+      "section": "Appeal",
+      "text": "I am he that liveth, and was dead; and, behold, I am alive for evermore, Amen; and have the keys of hell and of death.",
+      "sourceImage": "../reading-105/images/s57-revelation-1-18.png",
+      "side": "left",
+      "note": "He who conquered the grave holds the keys."
+    },
+    {
+      "id": "s21-john-11-25",
+      "ref": "John 11:25",
+      "section": "Appeal",
+      "text": "Jesus said unto her, I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live:",
+      "sourceImage": "../reading-105/images/s58-john-11-25-26.png",
+      "side": "right",
+      "note": "Whether we live until His coming or sleep in death, our next conscious moment of meeting Jesus comes at the same glorious instant."
+    },
+    {
+      "id": "s22-1-thessalonians-4-18",
+      "ref": "1 Thessalonians 4:18",
+      "section": "Appeal",
+      "text": "Wherefore comfort one another with these words.",
+      "sourceImage": "images/s22-1-thessalonians-4-18.png",
+      "concept": "a small group of mourners at an open garden tomb at dawn, an older believer with his arm about a weeping young widow, pointing her gaze to the first light of sunrise breaking over the eastern hills, their faces turning from grief to hope",
+      "side": "left",
+      "note": "Comfort one another with these words. Trust Him, live for Him, and look for that blessed hope."
+    }
+  ]
+}

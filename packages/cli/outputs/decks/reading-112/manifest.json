@@ -1,0 +1,241 @@
+{
+  "title": "Absent from the Body",
+  "subtitle": "Bible Readings — Chapter 112 — Understanding Paul's Hope",
+  "deckName": "Reading 112 - Absent from the Body",
+  "titleConcept": "a weathered pilgrim's tent standing alone on a high desert ridge at dawn, its flap open and empty, a long road leading from it toward the horizon where a great golden light breaks through the clouds, no figures",
+  "app": "Keynote Creator Studio",
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "layouts": {
+    "A_imageRight": {
+      "text": [
+        131,
+        408,
+        805,
+        264
+      ],
+      "image": [
+        1037,
+        75,
+        750,
+        903
+      ]
+    },
+    "B_imageLeft": {
+      "image": [
+        133,
+        75,
+        750,
+        903
+      ],
+      "text": [
+        984,
+        408,
+        805,
+        264
+      ]
+    }
+  },
+  "slides": [
+    {
+      "id": "s01-2-corinthians-5-1",
+      "ref": "2 Corinthians 5:1",
+      "section": "The Three States",
+      "text": "For we know that if our earthly house of this tabernacle were dissolved, we have a building of God, an house not made with hands, eternal in the heavens.",
+      "sourceImage": "images/s01-2-corinthians-5-1.png",
+      "concept": "a worn, patched goatskin tent pitched on a barren hillside at dusk, its ropes fraying and one pole leaning, while far above in the glowing clouds the faint shining outline of a great heavenly dwelling of light appears, not made with hands",
+      "side": "right",
+      "note": "First state: clothed with the earthly house. \"Tabernacle\" (skenos): a tent, a temporary dwelling, set against the permanent building of God."
+    },
+    {
+      "id": "s02-2-corinthians-5-3",
+      "ref": "2 Corinthians 5:3",
+      "section": "The Three States",
+      "text": "If so be that being clothed we shall not be found naked.",
+      "sourceImage": "images/s02-2-corinthians-5-3.png",
+      "concept": "an empty stone tomb in a quiet garden at night, its entrance sealed, a simple folded burial shroud lying on the ledge before it, cold moonlight and deep still shadow",
+      "side": "left",
+      "note": "Second state: unclothed, naked. Death: the body in the grave, the person without conscious existence."
+    },
+    {
+      "id": "s03-2-corinthians-5-4",
+      "ref": "2 Corinthians 5:4",
+      "section": "The Three States",
+      "text": "For we that are in this tabernacle do groan, being burdened: not for that we would be unclothed, but clothed upon, that mortality might be swallowed up of life.",
+      "sourceImage": "images/s03-2-corinthians-5-4.png",
+      "concept": "the redeemed rising from opened graves at dawn, clothed in shining white garments, their faces lifted upward in wonder and joy as golden light floods over the hillside cemetery, figures seen from a little distance",
+      "side": "right",
+      "note": "Third state: clothed upon. Not unclothed, but clothed upon, that mortality might be swallowed up of life: the resurrection body."
+    },
+    {
+      "id": "s04-2-corinthians-5-2",
+      "ref": "2 Corinthians 5:2",
+      "section": "What Paul Desired",
+      "text": "For in this we groan, earnestly desiring to be clothed upon with our house which is from heaven:",
+      "sourceImage": "images/s04-2-corinthians-5-2.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, kneeling in prayer on a rocky hillside at sunset beside a small tent, his hands raised and his face lifted with earnest longing toward a glowing sky",
+      "character": "paul",
+      "side": "left",
+      "note": "His earnest desire was to be clothed upon: not a naked, disembodied spirit, but the glorified resurrection body."
+    },
+    {
+      "id": "s05-2-corinthians-5-6",
+      "ref": "2 Corinthians 5:6",
+      "section": "What Paul Desired",
+      "text": "Therefore we are always confident, knowing that, whilst we are at home in the body, we are absent from the Lord:",
+      "sourceImage": "images/s05-2-corinthians-5-6.png",
+      "concept": "the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe, a travelling pilgrim with staff and cloak, walking a long dusty road through a dry land toward distant hills where a warm light breaks on the horizon",
+      "character": "paul",
+      "side": "right",
+      "note": "At home in the body, absent from the Lord: a pilgrim on the way, not yet at the destination."
+    },
+    {
+      "id": "s06-2-corinthians-5-8",
+      "ref": "2 Corinthians 5:8",
+      "section": "What Paul Desired",
+      "text": "We are confident, I say, and willing rather to be absent from the body, and to be present with the Lord.",
+      "sourceImage": "images/s06-2-corinthians-5-8.png",
+      "concept": "the redeemed caught up in white garments into the shining clouds to meet Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash, who comes in glory with outstretched arms, a host of angels around them, the earth far below",
+      "character": "jesus",
+      "side": "left",
+      "note": "Two states set side by side: this groaning mortal life and the glorified life with the Lord. The unclothed state between them Paul expressly does not desire; his hope leaps over death to the resurrection morning."
+    },
+    {
+      "id": "s07-romans-8-23",
+      "ref": "Romans 8:23",
+      "section": "The Parallel in Romans 8",
+      "text": "And not only they, but ourselves also, which have the firstfruits of the Spirit, even we ourselves groan within ourselves, waiting for the adoption, to wit, the redemption of our body.",
+      "sourceImage": "images/s07-romans-8-23.png",
+      "concept": "a small band of early believers gathered in prayer by lamplight in a humble house church at night, an old man and a weary mother among them, their faces turned upward with patient longing, a faint dawn glow at the window",
+      "side": "right",
+      "note": "Same longing, same event: we groan (2 Cor 5) / we groan within ourselves; clothed upon / the redemption of our body; mortality swallowed up of life / the adoption."
+    },
+    {
+      "id": "s08-1-thessalonians-4-16",
+      "ref": "1 Thessalonians 4:16",
+      "section": "When the Change Comes",
+      "text": "For the Lord himself shall descend from heaven with a shout, with the voice of the archangel, and with the trump of God: and the dead in Christ shall rise first:",
+      "sourceImage": "../reading-105/images/s34-1-thessalonians-4-16-17.png",
+      "side": "left",
+      "note": "Scripture is explicit about when: the Lord descends, and the dead in Christ rise."
+    },
+    {
+      "id": "s09-1-corinthians-15-51-52",
+      "ref": "1 Corinthians 15:51-52",
+      "section": "When the Change Comes",
+      "text": "Behold, I shew you a mystery; We shall not all sleep, but we shall all be changed, In a moment, in the twinkling of an eye, at the last trump: for the trumpet shall sound, and the dead shall be raised incorruptible, and we shall be changed.",
+      "sourceImage": "../reading-105/images/s36-1-corinthians-15-51-52.png",
+      "side": "right",
+      "note": "The house from heaven, the immortal body, is received at the last trump, not at death. A traveller in a worn tent longs not to be homeless, but to reach his father's house."
+    },
+    {
+      "id": "s10-1-john-5-11",
+      "ref": "1 John 5:11",
+      "section": "The Immortal Soul Problem",
+      "text": "And this is the record, that God hath given to us eternal life, and this life is in his Son.",
+      "sourceImage": "images/s10-1-john-5-11.png",
+      "concept": "an open Bible on a rough wooden table lit by a single candle, a beam of warm golden light falling on its pages from above, a humble room in shadow",
+      "side": "left",
+      "note": "Why call death naked, disclaim it, and groan for the body if the soul is already in glory? We \"have\" a building of God as we \"have\" eternal life: by faith now, in His Son, its fulness at the resurrection."
+    },
+    {
+      "id": "s11-job-18-14",
+      "ref": "Job 18:14",
+      "section": "God's Answer to Death",
+      "text": "His confidence shall be rooted out of his tabernacle, and it shall bring him to the king of terrors.",
+      "sourceImage": "images/s11-job-18-14.png",
+      "concept": "a lone desert tent torn from its stakes in a night storm, its frightened dweller driven out and led away into a gathering darkness toward a towering cloaked shadow whose face is unseen",
+      "side": "right",
+      "note": "Death, the king of terrors: the enemy's final weapon in the great controversy."
+    },
+    {
+      "id": "s12-1-corinthians-15-26",
+      "ref": "1 Corinthians 15:26",
+      "section": "God's Answer to Death",
+      "text": "The last enemy that shall be destroyed is death.",
+      "sourceImage": "../reading-105/images/s54-1-corinthians-15-26.png",
+      "side": "left",
+      "note": "God's answer is the resurrection. The grave is neither the end nor the entrance to glory, but a sleep from which Christ alone awakens."
+    },
+    {
+      "id": "s13-genesis-3-4",
+      "ref": "Genesis 3:4",
+      "section": "God's Answer to Death",
+      "text": "And the serpent said unto the woman, Ye shall not surely die:",
+      "sourceImage": "../reading-102/images/s14-gen-3-4-5.png",
+      "side": "right",
+      "note": "The resurrection morning defeats Satan's lie: ye shall not surely die."
+    },
+    {
+      "id": "s14-exodus-28-29",
+      "ref": "Exodus 28:29",
+      "section": "Sanctuary Connections",
+      "text": "And Aaron shall bear the names of the children of Israel in the breastplate of judgment upon his heart, when he goeth in unto the holy place, for a memorial before the LORD continually.",
+      "sourceImage": "images/s14-exodus-28-29.png",
+      "concept": "the high priest Aaron in his sacred robes with the jeweled breastplate of twelve stones upon his heart, standing in incense smoke before the veil of the Most Holy Place, a soft glory of light on his face, the camp of Israel waiting outside",
+      "side": "left",
+      "note": "On the Day of Atonement the high priest bore Israel's names on his heart into the Most Holy Place; the people waited outside, their fate bound up with his ministry."
+    },
+    {
+      "id": "s15-hebrews-9-28",
+      "ref": "Hebrews 9:28",
+      "section": "Sanctuary Connections",
+      "text": "So Christ was once offered to bear the sins of many; and unto them that look for him shall he appear the second time without sin unto salvation.",
+      "sourceImage": "../reading-111/images/s15-hebrews-9-28.png",
+      "side": "right",
+      "note": "When Christ comes out from the Most Holy Place He appears the second time, and then His waiting people are clothed upon with immortality."
+    },
+    {
+      "id": "s16-1-john-5-12",
+      "ref": "1 John 5:12",
+      "section": "Righteousness by Faith",
+      "text": "He that hath the Son hath life; and he that hath not the Son of God hath not life.",
+      "sourceImage": "images/s16-1-john-5-12.png",
+      "concept": "Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash gently lifting a kneeling, ragged penitent to his feet, a warm light surrounding them both in a quiet hillside place at morning",
+      "character": "jesus",
+      "side": "left",
+      "note": "Paul's confidence rested not on inherent immortality, but on union with Christ. This life is in Him, received by faith."
+    },
+    {
+      "id": "s17-ephesians-1-6",
+      "ref": "Ephesians 1:6",
+      "section": "Righteousness by Faith",
+      "text": "To the praise of the glory of his grace, wherein he hath made us accepted in the beloved.",
+      "sourceImage": "images/s17-ephesians-1-6.png",
+      "concept": "a returning prodigal in rags embraced and welcomed home by Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash at the open door of a house full of light, a white robe being brought to cover him",
+      "character": "jesus",
+      "side": "right",
+      "note": "Accepted in the beloved: our destiny secured by His merits, not our own. The resurrection body is the final gift of grace."
+    },
+    {
+      "id": "s18-1-thessalonians-4-13",
+      "ref": "1 Thessalonians 4:13",
+      "section": "Application",
+      "text": "But I would not have you to be ignorant, brethren, concerning them which are asleep, that ye sorrow not, even as others which have no hope.",
+      "sourceImage": "../reading-105/images/s35-1-thessalonians-4-13-14.png",
+      "side": "left",
+      "note": "Our loved ones who sleep in Jesus are not suffering, not in purgatory, not hovering as spirits. We shall see them again."
+    },
+    {
+      "id": "s19-titus-2-13",
+      "ref": "Titus 2:13",
+      "section": "Application",
+      "text": "Looking for that blessed hope, and the glorious appearing of the great God and our Saviour Jesus Christ;",
+      "sourceImage": "images/s19-titus-2-13.png",
+      "concept": "a family of believers standing together on a hilltop at daybreak, gazing toward the eastern sky where a small bright cloud glows with golden light, their faces full of hope",
+      "side": "right",
+      "note": "We need not fear death, we must not be deceived by spiritualism, we live by faith, and we long for His return."
+    },
+    {
+      "id": "s20-1-thessalonians-4-17-18",
+      "ref": "1 Thessalonians 4:17-18",
+      "section": "Appeal",
+      "text": "Then we which are alive and remain shall be caught up together with them in the clouds, to meet the Lord in the air: and so shall we ever be with the Lord. Wherefore comfort one another with these words.",
+      "sourceImage": "../what-is-truth/images/day3-v2/d3-g-first-resurrection.png",
+      "side": "left",
+      "note": "Is your hope anchored in Christ and His resurrection? Not a ghostly existence, but this mortal putting on immortality."
+    }
+  ]
+}
