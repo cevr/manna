@@ -18,6 +18,16 @@ import type * as DeclaredPassages from '../exact/passages.d.ts';
 import type * as DeclaredSayIt from '../exact/sayit.d.ts';
 import type * as DeclaredDictation from '../exact/dictation.d.ts';
 import type * as DeclaredGrown from '../exact/grown.d.ts';
+import type * as DeclaredField from '../exact/field.d.ts';
+import type * as DeclaredHome from '../exact/home.d.ts';
+import type * as DeclaredHomeToday from '../exact/home-today.d.ts';
+import type * as DeclaredHomeStart from '../exact/home-start.d.ts';
+import type * as DeclaredList from '../exact/list.d.ts';
+import type * as Field from '../src/field';
+import type * as Home from '../src/home';
+import type * as HomeToday from '../src/home/today';
+import type * as HomeStart from '../src/home/start';
+import type * as List from '../src/list';
 import type * as DeclaredLetters from '../exact/letters.d.ts';
 import type * as DeclaredRun from '../exact/session-run.d.ts';
 import type * as DeclaredService from '../exact/session-service.d.ts';
@@ -125,6 +135,29 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Voice.bestVoice, typeof DeclaredVoice.bestVoice>,
   true satisfies Mutual<typeof Letters.lettersOf, typeof DeclaredLetters.lettersOf>,
   true satisfies Mutual<typeof Letters.PEEK_SHOWN_MS, typeof DeclaredLetters.PEEK_SHOWN_MS>,
+  true satisfies Mutual<typeof Lists.singleVersesOf, typeof DeclaredLists.singleVersesOf>,
+  true satisfies Mutual<Field.PlantStage, DeclaredField.PlantStage>,
+  true satisfies Mutual<Home.HomeIcon, DeclaredHome.HomeIcon>,
+  true satisfies Mutual<Home.FurrowKind, DeclaredHome.FurrowKind>,
+  true satisfies Mutual<Home.FurrowPlant, DeclaredHome.FurrowPlant>,
+  true satisfies Mutual<Home.Furrow, DeclaredHome.Furrow>,
+  true satisfies Mutual<Home.SinglePlant, DeclaredHome.SinglePlant>,
+  true satisfies Mutual<Home.Greeting, DeclaredHome.Greeting>,
+  true satisfies Mutual<typeof Home.captionOf, typeof DeclaredHome.captionOf>,
+  true satisfies Mutual<typeof Home.furrowsOf, typeof DeclaredHome.furrowsOf>,
+  true satisfies Mutual<typeof Home.singlesOf, typeof DeclaredHome.singlesOf>,
+  true satisfies Mutual<typeof Home.verseOf, typeof DeclaredHome.verseOf>,
+  true satisfies Mutual<typeof Home.readyOf, typeof DeclaredHome.readyOf>,
+  true satisfies Mutual<typeof Home.minuteOf, typeof DeclaredHome.minuteOf>,
+  true satisfies Mutual<typeof Home.greetingOf, typeof DeclaredHome.greetingOf>,
+  true satisfies Mutual<HomeToday.TodayAction, DeclaredHomeToday.TodayAction>,
+  true satisfies Mutual<HomeToday.TodayCard, DeclaredHomeToday.TodayCard>,
+  true satisfies Mutual<typeof HomeToday.todayOf, typeof DeclaredHomeToday.todayOf>,
+  true satisfies Mutual<typeof HomeStart.startOf, typeof DeclaredHomeStart.startOf>,
+  true satisfies Mutual<List.ListStart, DeclaredList.ListStart>,
+  true satisfies Mutual<typeof List.listStartOf, typeof DeclaredList.listStartOf>,
+  true satisfies Mutual<typeof List.listLineOf, typeof DeclaredList.listLineOf>,
+  true satisfies Mutual<typeof List.listCaptionOf, typeof DeclaredList.listCaptionOf>,
 ];
 
 it('declares for Exact what each module the port imports exports', () => {
