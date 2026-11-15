@@ -1,47 +1,100 @@
-// Today: one passage, heard with each word lit as the voice reaches it,
-// said while the matcher marks each word, and its last recall kept.
+// Today: one passage, heard with each word lit as the voice reaches it, and
+// said under a cue (none, first letters or the full text) while the matcher
+// marks each word. At rest a word the cue hides is a button that shows it a
+// moment, and Show all shows the verse whole, each capping the try's grade.
+// Done shows the marks, the suggestion and the four grades; Next keeps the
+// try as the last one, and nothing is kept before it.
 // Every rule is `step` in src/today/step.ts, answered by the data sources
 // in src/today/sources.ts; this file holds the root's Today members (the
-// voice, the microphone, the recognizer and the calls) and the screen that
-// draws the view. The recognizer listens on the microphone's track, since
-// Apple's implementation at the pin traps on `microphone=true`.
+// voice, the microphone, the recognizer, the clock and the calls) and the
+// screen that draws the view. The recognizer listens on the microphone's
+// track, since Apple's implementation at the pin traps on `microphone=true`.
+// The cue is the screen's argument: the route `/cue/:cue` names it, `none`
+// on any other.
 use speak, cancelSpeech, speechSynthesisState, speechUtterance, SpeechUtteranceInfo, SpeechSynthesisState, SpeechUtterance from "@exact/speech-synthesis"
 use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-capture"
 use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, SpeechRecognitionInfo, SpeechRecognitionState, SpeechRecognitionPhrase from "@exact/speech-recognition"
 
-shape Recall
-  right: number
-  total: number
+shape TodayTime
+  epochAtZero: number
+  seed: number
+
+shape TodayRecall
+  reference: string
+  startedAt: number
+  offset: number
+  grade: number
+  suggested: number
+  words: number
+  missed: number
+  peeked: number
+  extra: number
+
+shape TodayHelp
+  reference: string
+  peeked: number[]
+  shownAt: option<number>
+  cap: number
+
+shape TodayResult
+  reference: string
+  recall: TodayRecall
+  help: option<TodayHelp>
+
+shape TodayGrade
+  grade: number
+  name: string
+  enabled: bool
+  chosen: bool
 
 shape TodayWord
   index: number
   text: string
+  shown: string
+  label: string
+  silent: bool
   lit: bool
   mark: string
+  peekable: bool
+  peeked: bool
 
 shape TodayView
   reference: string
   passage: string
   phrases: SpeechRecognitionPhrase[]
   phase: string
+  cue: string
   words: TodayWord[]
   lit: number
   canHear: bool
   canSay: bool
   canStop: bool
   canFinish: bool
-  result: option<Recall>
-  last: option<Recall>
+  canShowAll: bool
+  canNext: bool
+  shownAll: bool
+  peeking: number
+  peekKey: string
+  cap: number
+  help: option<TodayHelp>
+  helpLine: string
+  moveBack: bool
+  summary: string
+  suggested: string
+  grades: TodayGrade[]
+  pending: option<TodayResult>
+  last: option<TodayResult>
   refused: bool
 
-fn recallText(r: Recall): string = `${r.right} of ${r.total} words`
+fn todayLastText(r: TodayResult): string = `Last time: ${r.recall.words - r.recall.missed} of ${r.recall.words} words`
 
-fn wordColor(w: TodayWord, phase: string): string = w.mark == "miss" ? "-exact-system-red" : (w.mark == "matched" or w.mark == "tentative" or w.lit or phase == "resting" or phase == "graded") ? "-exact-label" : "-exact-tertiary-label"
+fn todayWordColor(w: TodayWord, phase: string): string = w.mark == "miss" ? "-exact-system-red" : w.peeked ? "-exact-system-orange" : (w.mark == "matched" or w.mark == "tentative" or w.lit or phase == "graded") ? "-exact-label" : "-exact-secondary-label"
 
 members HeartseedExact
   state todayUtterance = ""
   state todayRecognition = ""
   state todayTrack = ""
+  resource todayTime = exactTime() as shape TodayTime
   resource todayBooted = todayBoot() as shape TodayView else empty()
   resource todayVoiceState = speechSynthesisState(interval=50) when todayUtterance != "" as shape SpeechSynthesisState else empty()
   resource todaySpoken = speechUtterance(utterance=todayUtterance, interval=50) when todayUtterance != "" as shape SpeechUtterance else empty()
@@ -56,6 +109,12 @@ members HeartseedExact
   derive today = match todayStepped { case some(v) => v, case none => todayBooted }
   derive todayFinals = todayHeardState.results.map(r => r.alternatives.slice(0, 1).map(a => a.transcript).join("")).join(" ")
   derive todayInterim = match todayHeardState.interim { case some(i) => i.alternatives.slice(0, 1).map(a => a.transcript).join(""), case none => "" }
+  derive todayCueArg = top(nav).name == "cued" ? top(nav).params.cue : "none"
+
+  task todayCued when current(todayBooted) key=todayCueArg
+    change(todayCueIt)
+  action todayCueIt
+    send todayStepped = todayCue(todayCueArg)
 
   action todayHearIt
     send todaySpeaking = speak(text=today.passage, lang="en-US")
@@ -97,7 +156,7 @@ members HeartseedExact
       send todayStepped = todayDenied()
     else if todayListeningId != ""
       todayRecognition = todayListeningId
-      send todayStepped = todaySay(todayListeningId)
+      send todayStepped = todaySay(todayListeningId, todayTime.epochAtZero + performanceNow())
   task todayRefused when failed(todayListening) key=failed(todayListening)
     change(todayRefusedIt)
   action todayRefusedIt
@@ -119,6 +178,22 @@ members HeartseedExact
     todayTrack = ""
     send todayStepped = todayFinish()
 
+  action todayPeekIt(index: number)
+    send todayStepped = todayPeek(index)
+  task todayPeekShown when today.peeking >= 0 key=today.peekKey
+    after(1500, todayPeekOver)
+  action todayPeekOver
+    send todayStepped = todayPeekEnded(today.peeking)
+  action todayShowAllIt
+    send todayStepped = todayShowAll(todayTime.epochAtZero + performanceNow())
+  action todayGradeIt(grade: number)
+    send todayStepped = todayGrade(grade)
+  action todayNextIt
+    send todayStepped = todayNext()
+  action todayAgainIt
+    send todayStepped = todayAgain()
+    send todayOpened = getUserMedia(audio=true)
+
 component Today
   props
     today: TodayView
@@ -126,13 +201,32 @@ component Today
     stop: action
     say: action
     finish: action
+    peek: action
+    showAll: action
+    grade: action
+    next: action
+    again: action
   view
     scroll id="content" navigationScroll="content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem"
         text today.reference role="heading" aria-level=2 testId="reference"
-        text testId="passage" font="-exact-title3" line-height=1.5 overflow-wrap="anywhere"
+        row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
           for w in today.words key=w.index
-            text (w.index + 1 < today.words.length ? `${w.text} ` : w.text) color=wordColor(w, today.phase) testId=`word-${w.index}`
+            if w.peekable
+              button press=peek(w.index) aria-label=w.label min-width=28 min-height=36 testId=`word-${w.index}`
+                text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase)
+            else
+              text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
+        if today.helpLine != ""
+          text today.helpLine color="-exact-secondary-label" testId="help-line"
+        if today.canNext
+          column gap=12
+            text today.summary font="-exact-headline" testId="result"
+            text today.suggested color="-exact-secondary-label" testId="suggested"
+            row role="radiogroup" aria-label="Grade" gap=8 flex-wrap="wrap"
+              for g in today.grades key=g.grade
+                button role="radio" aria-checked=g.chosen disabled=(not g.enabled) press=grade(g.grade) buttonStyle=(g.chosen ? "filled" : "bordered") testId=`grade-${g.grade}`
+                  text g.name
         row gap=12 flex-wrap="wrap"
           if today.canStop
             button press=stop buttonStyle="bordered" testId="stop"
@@ -140,21 +234,24 @@ component Today
           else
             button press=hear disabled=(not today.canHear) buttonStyle="bordered" testId="hear"
               text "Hear it"
+          if today.canShowAll
+            button press=showAll buttonStyle="bordered" testId="show-all"
+              text "Show all"
           if today.canFinish
             button press=finish buttonStyle="filled" testId="finish"
               text "Done"
+          else if today.canNext
+            button press=again buttonStyle="bordered" testId="again"
+              text "Say it again"
+            button press=next buttonStyle="filled" testId="next"
+              text "Next"
           else
             button press=say disabled=(not today.canSay) buttonStyle="filled" testId="say"
               text "Say it"
         if today.refused
           text "Heartseed can't hear you. Allow the microphone and speech recognition in Settings to say it." color="-exact-secondary-label" testId="refused"
-        match today.result
-          case some(r)
-            text recallText(r) font="-exact-headline" testId="result"
-          case none
-            column
         match today.last
           case some(r)
-            text `Last time: ${recallText(r)}` color="-exact-secondary-label" testId="last"
+            text todayLastText(r) color="-exact-secondary-label" testId="last"
           case none
             column
