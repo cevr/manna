@@ -191,6 +191,7 @@ const VERBS = [
   'release',
   'feedback',
   'contract',
+  'forma',
   'pattern',
   'update',
   'snapback',

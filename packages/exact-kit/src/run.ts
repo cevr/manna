@@ -13,7 +13,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 /** The Exact commit every command runs at. Only the `ex-pin` unit moves it (docs/exact.md). */
-const EXACT_PIN = '0fa708e34ef4d2e49af98b25edc76bedc46ae7fa';
+const EXACT_PIN = 'd1a71d7cb6bb4477f452f9c7351c49bc9b88adb3';
 
 /** Where the clone is when `EXACT` names none: under the home folder. */
 const DEFAULT_CLONE = 'Developer/vendor/exact';
