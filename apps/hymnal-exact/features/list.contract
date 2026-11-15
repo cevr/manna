@@ -80,9 +80,9 @@ component HymnList
         text "Hymns" role="heading" aria-level=1 flex=1 testId="title"
         input type="search" value=query input=search placeholder="Number, title or first line"
           aria-label="Search hymns" testId="search" width="100%"
-      row role="tablist" aria-label="Show hymns by" testId="tabs"
+      row role="tablist" aria-label="Show hymns by" flex-wrap="wrap" testId="tabs"
         for t in tabs key=t
-          button role="tab" aria-selected=(tab == t) press=choose(t) testId=`tab-${t.toLowerCase()}`
+          button role="tab" aria-selected=(tab == t) press=choose(t) flex="1 1 6rem" testId=`tab-${t.toLowerCase()}`
             text t
       if sections.length == 0 and query.trim() != ""
         column flex=1 min-height=0 testId="none-found"
