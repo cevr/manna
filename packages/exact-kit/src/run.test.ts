@@ -15,7 +15,8 @@ import * as Arbitrary from 'effect/Arbitrary';
 import { ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { EXACT_BASE, runExact } from './run.ts';
+import { EXACT_BASE } from './pin.ts';
+import { runExact } from './run.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;

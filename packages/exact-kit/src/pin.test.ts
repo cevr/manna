@@ -3,8 +3,7 @@ import { Effect, FileSystem, Layer, Path, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { toPin } from './patch.ts';
-import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './run.ts';
+import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN, toPin } from './pin.ts';
 
 const CLONE = '/nonexistent/loop-probe-x/exact';
 const PATCHES = '/nonexistent/loop-probe-x/patches';
@@ -83,7 +82,7 @@ const AT_BASE: Clone = {
 };
 const AM = `am --quiet --no-gpg-sign --committer-date-is-author-date ${EXACT_PATCHES.map((p) => `${PATCHES}/${p}`).join(' ')}`;
 
-describe('patch.ts brings a clone to the pin', () => {
+describe('toPin brings a clone to the pin', () => {
   it.effect(
     'replays the patches on the base under the fixed committer, and is done at the pin',
     () =>

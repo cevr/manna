@@ -24,6 +24,7 @@
   "scripts": {
     "exact": "bun lab/tools/prepare.ts && cd lab && bun ../src/bin.ts",
     "drive:lab": "bun lab/tools/drive.ts",
+    "patch": "bun src/patch.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test ./src"
   },

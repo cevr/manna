@@ -12,17 +12,7 @@ import {
 } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-/**
- * The Exact commit every command runs at: `EXACT_BASE` with `EXACT_PATCHES` replayed on it by `patch.ts`, which makes
- * this same commit in any clone. Only the `ex-pin` unit moves it (docs/exact.md).
- */
-export const EXACT_PIN = '7b80cf82052646b292d77f61656f3afeb2fcbf8d';
-
-/** The upstream commit the pin is made from. */
-export const EXACT_BASE = 'd1a71d7cb6bb4477f452f9c7351c49bc9b88adb3';
-
-/** The patches the pin carries on `EXACT_BASE`, in order, under `packages/exact-kit/patches/`. */
-export const EXACT_PATCHES: ReadonlyArray<string> = ['adjust-step.patch'];
+import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
 
 /** How a clone comes to the pin. */
 const TO_PIN = 'bun packages/exact-kit/src/patch.ts';
