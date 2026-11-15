@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./hymns/hymns": "./src/hymns/hymns.ts",
+    "./hymns/search": "./src/hymns/search.ts",
+    "./hymns/text": "./src/hymns/text.ts",
+    "./vite/indexes": "./vite/indexes.ts",
+    "./vite/words": "./vite/words.ts"
+  },
   "scripts": {
     "postinstall": "one patch || true",
     "dev": "one dev",

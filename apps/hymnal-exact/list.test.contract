@@ -1,0 +1,41 @@
+test "The book opens on its list."
+  expect text "hymn-1" == "1Praise to the Lord"
+  expect tree has "section-adoration-and-praise"
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3600
+  clock settle
+  expect tree has "section-sentences-and-responses"
+  expect text "hymn-695" == "695Praise God, From Whom All Blessings"
+
+test "Search by number, title and first line."
+  type "search" "2"
+  clock data
+  expect state listRows.0 .rows.0 .number == 2
+  expect tree missing "section-adoration-and-praise"
+  type "search" ""
+  clock data
+  type "search" "creatures of our god"
+  clock data
+  expect state listRows.0 .rows.0 .number == 2
+  type "search" ""
+  clock data
+  type "search" "the almighty, the king of creation"
+  clock data
+  expect tree has "hymn-1"
+  type "search" "zzqx qqzx"
+  clock data
+  expect tree has "none-found"
+  expect tree missing "hymn-1"
+  expect state listRows == []
+  type "search" ""
+  clock data
+  expect tree has "section-adoration-and-praise"
+  expect tree missing "none-found"

@@ -1,0 +1,26 @@
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- a build-time host script, run before each Exact command (`bun run exact`): it writes the book the data module bundles as JSON text, as the current app's bundler plugin does (`vite/hymnal.ts`); it runs under Bun, never in the data module. */
+
+/**
+ * The book the data module ships, made from the compiled hymnal by the
+ * current app's own derivations: every hymn's words (`words.gen.json`, the
+ * current app's `virtual:hymnal`) and the back-matter indexes search reads
+ * (`indexes.gen.json`, its `virtual:hymnal-indexes`). The app's
+ * `tsconfig.json` maps the two virtual modules to these files, so Exact's
+ * bundler takes the current app's search and its hymns unchanged. A file is
+ * written only when its bytes change, so an unchanged book leaves the build
+ * fresh. Neither file is committed.
+ */
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+
+import { readIndexes } from '@manna/hymnal-app/vite/indexes';
+import { readWords } from '@manna/hymnal-app/vite/words';
+
+const files = [
+  ['words.gen.json', JSON.stringify(readWords())],
+  ['indexes.gen.json', JSON.stringify(readIndexes())],
+] as const;
+
+for (const [name, json] of files) {
+  const path = new URL(`./${name}`, import.meta.url).pathname;
+  if (!existsSync(path) || readFileSync(path, 'utf8') !== json) writeFileSync(path, json);
+}

@@ -6,3 +6,4 @@
 /app.contract.d.ts
 /.exact/
 /.env.local
+/src/hymns/*.gen.json
