@@ -15,8 +15,7 @@
  *   at once; a relaunch on the kept store paints its first frame dark and
  *   the sheet shows Dark chosen; System then follows the system.
  *
- * A section's header is the platform's: the label on the web, the
- * secondary label on iOS (UIKit's grouped header), each the brand's. The
+ * A section's header is the brand's muted role on both hosts. The
  * brand's colours are the current hymnal's theme (`app.forma` is held to
  * it by `src/look/brand.test.ts`). The list, a hymn and the sheet are kept
  * in SHOTS, light and dark. Exits 1 on any failed check.
@@ -67,8 +66,8 @@ const drive = makeDrive({ name: 'drive-settings', host, appDir: app, processes }
 type Scheme = 'light' | 'dark';
 type Role = keyof (typeof theme)['light'];
 
-/** The header's role on this host: the platform's grouped header on iOS, the page's text on the web. */
-const HEADER: Role = host === 'ios' ? 'muted' : 'ink';
+/** A section header's role on every host: the muted one, as UIKit's plain list draws it and the list names it (`src/list/headers.test.ts`). */
+const HEADER: Role = 'muted';
 
 /** A colour as its red, green and blue, 0 to 255, from `rgb(…)`, `rgba(…)` or `#rrggbb`; `[]` when it is none of them. */
 const channels = (colour: string): ReadonlyArray<number> => {
@@ -125,17 +124,29 @@ const expectDrawn = (name: string, reply: unknown, scheme: Scheme, role: Role) =
   );
 };
 
-/** A point at the screen's trailing edge, halfway down: inside every screen's padding, clear of its words and bars. */
-const EDGE = { x: 0.985, y: 0.55 };
+/**
+ * Two points at the screen's trailing edge, halfway down and a little
+ * lower: inside every screen's padding, clear of its words and bars. A
+ * list's row separator, one point high, can lie under one of them, never
+ * both.
+ */
+const EDGES = [
+  { x: 0.985, y: 0.55 },
+  { x: 0.985, y: 0.56 },
+];
 
-/** Checks the colour painted at `EDGE` in the shot `name` is the brand's `role`. */
+/** Checks the colour painted at one of `EDGES` in the shot `name` is the brand's `role`. */
 const expectPainted = async (check: string, name: string, scheme: Scheme, role: Role) => {
-  const painted = await pixelAt(shotFile(name), EDGE).catch(() => []);
-  const colour = painted.length === 3 ? `rgb(${painted.join(', ')})` : '';
+  const colours = await Promise.all(
+    EDGES.map(async (at) => {
+      const painted = await pixelAt(shotFile(name), at).catch(() => []);
+      return painted.length === 3 ? `rgb(${painted.join(', ')})` : '';
+    }),
+  );
   drive.check(
     `${check} is painted the brand's ${scheme} ${role}`,
-    isRole(colour, scheme, role),
-    colour,
+    colours.some((colour) => isRole(colour, scheme, role)),
+    colours,
   );
 };
 
