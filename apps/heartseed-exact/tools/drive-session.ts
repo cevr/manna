@@ -203,6 +203,14 @@ drive.check(
 const before = reading(granted);
 const leaving = await later(before.ops);
 const held = (leaving[before.today] as Today | undefined)?.reference ?? '';
+drive.check(
+  'B3 an item shows before the try',
+  (leaving[before.today] as Today | undefined)?.session.item === true,
+  {
+    session: (leaving[before.today] as Today | undefined)?.session,
+    garden: leaving[before.garden],
+  },
+);
 await later([
   ...granted,
   ...recite((leaving[before.today] as Today | undefined)?.passage ?? ''),
@@ -222,7 +230,7 @@ drive.check(
 );
 drive.check(
   'B3 the same item shows',
-  (returned[back.today] as Today | undefined)?.reference === held,
+  held !== '' && (returned[back.today] as Today | undefined)?.reference === held,
   (returned[back.today] as Today | undefined)?.reference,
 );
 
