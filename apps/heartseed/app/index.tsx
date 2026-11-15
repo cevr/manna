@@ -23,9 +23,11 @@ import {
   practiceList,
   press,
   readingAloud,
+  reveal,
   sayItView,
   seekTo,
   sessionView,
+  showAll,
   startHere,
   taughtView,
   voiceView,
@@ -33,7 +35,7 @@ import {
 import { AboutScreen, LicencesScreen } from '../src/about/screen';
 import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
-import { removalOf } from '../src/field/plot';
+import { Control, removalOf } from '../src/field/plot';
 import { FieldScreen } from '../src/field/screen';
 import { listStartOf } from '../src/list';
 import { ListScreen } from '../src/list/screen';
@@ -50,6 +52,7 @@ import {
   type Plant,
   type ReadGarden,
   type Stage,
+  withHelp,
   withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
@@ -63,7 +66,15 @@ import type { SessionView, VisitVerse } from '../src/session/service';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { AddSheet } from '../src/shelves/sheet';
-import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
+import {
+  cappedBy,
+  GRADE_NAMES,
+  GRADES,
+  helpFor,
+  helpOf,
+  type Grade,
+  type SayItView,
+} from '../src/sayit';
 import { BigButton, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 import { fieldPassagesOf } from '../src/promises/taught';
@@ -91,8 +102,10 @@ const PASSAGES: readonly FieldPassage[] = [
  * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
  * or an empty slot. All three draw the verse's lines (`linesOf`): a verse of
  * one line as one run, a longer one with a `break-<k>` row before each line
- * after the first, its plain text as one `line-<i>` text per line. Exported
- * for the test that holds the three drawings to one set of lines.
+ * after the first, its plain text as one `line-<i>` text per line. Given
+ * `onReveal` (at rest, before a try), each word in letters or slot is a
+ * button to peek at it. Exported for the test that holds the three
+ * drawings to one set of lines.
  */
 export function Verse({
   text,
@@ -101,6 +114,7 @@ export function Verse({
   voice,
   hold,
   onPeek,
+  onReveal = Option.none(),
 }: {
   readonly text: string;
   readonly marks: Option.Option<readonly Mark[]>;
@@ -108,6 +122,7 @@ export function Verse({
   readonly voice: Option.Option<VoiceView>;
   readonly hold: Hold;
   readonly onPeek: (index: number) => void;
+  readonly onReveal?: Option.Option<(index: number) => void>;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
@@ -140,7 +155,14 @@ export function Verse({
         if (Option.isNone(mark) || mark.value.status === 'pending')
           return [
             ...breakBefore(breaks, index),
-            <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />,
+            <Unsaid
+              key={index}
+              index={index}
+              word={word}
+              cue={cue}
+              onPeek={onPeek}
+              onReveal={Option.filter(onReveal, () => Option.isNone(marks))}
+            />,
           ];
         return [
           ...breakBefore(breaks, index),
@@ -155,27 +177,31 @@ export function Verse({
  * The cue Today shows the verse of `reference` under: a recital's own while
  * one is shown (its marks), else the one the garden's ladder gives it now,
  * and the full text in an unread garden, which shows the verse whole and
- * claims no stage.
+ * claims no stage; at rest after `Show all` on it, the full text.
  */
 const shownCue = (
   reference: string,
   garden: Option.Option<ReadGarden>,
   sayIt: Option.Option<SayItView>,
   marks: Option.Option<readonly Mark[]>,
+  shownAll: boolean,
 ): Cue => {
   if (Option.isSome(marks) && Option.isSome(sayIt)) return sayIt.value.cue;
+  if (shownAll) return 'full';
   return Option.match(garden, {
     onNone: (): Cue => 'full',
     onSome: (read) => cueIn(read, reference),
   });
 };
 
-/** The count, the suggestion and the four grades of a finished recital, the chosen one checked. */
+/** The count, the suggestion and the four grades of a finished recital, the chosen one checked, and every grade better than the help taken allows (`cap`) disabled. */
 function Grades({
   result,
+  cap,
   onChoose,
 }: {
   readonly result: Result;
+  readonly cap: Grade;
   readonly onChoose: (grade: Grade) => void;
 }) {
   const look = useLook();
@@ -189,17 +215,21 @@ function Grades({
       <View role="radiogroup" aria-label="Grade" style={styles.grades}>
         {GRADES.map((grade) => {
           const chosen = result.choice === grade;
+          const barred = grade > cap;
           return (
             <Pressable
               key={grade}
               role="radio"
               aria-label={GRADE_NAMES[grade]}
               aria-checked={chosen}
+              aria-disabled={barred}
+              disabled={barred}
               onPress={() => onChoose(grade)}
               style={({ pressed }) => [
                 styles.grade,
                 chosen && styles.chosen,
                 pressed && look.pressed,
+                barred && look.disabled,
               ]}
             >
               <Text style={[styles.gradeName, chosen && styles.chosenName]}>
@@ -225,14 +255,25 @@ const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly gro
 const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
   Option.filter(garden, (view): view is ReadGarden => view._tag === 'Read');
 
-/** The garden Today draws: the read one with the recall pending for the held item laid over it (`withRecall`), so a finished recital reads kept until its `Next` keeps it or a leave lets it go. */
+/** Whether `Show all` was taken on the verse of `reference`, its try not yet kept. */
+const shownAllOn = (sayIt: Option.Option<SayItView>, reference: string) =>
+  Option.exists(
+    Option.flatMap(sayIt, (view) => helpFor(view, reference)),
+    (help) => Option.isSome(Option.fromNullishOr(help.shownAt)),
+  );
+
+/** The garden Today draws: the read one with the step back a `Show all` asks for laid over it (`withHelp`), then the recall pending for the held item (`withRecall`), so a finished recital reads kept, and a verse shown whole a stage lower, until `Next` keeps them or a leave lets them go. */
 const pendingIn = (
   garden: Option.Option<ReadGarden>,
   session: Option.Option<SessionView>,
   sayIt: Option.Option<SayItView>,
 ): Option.Option<ReadGarden> =>
-  Option.map(garden, (read) =>
-    Option.match(
+  Option.map(garden, (unhelped) => {
+    const read = Option.match(Option.flatMap(sayIt, helpOf), {
+      onNone: () => unhelped,
+      onSome: (help) => withHelp(unhelped, help),
+    });
+    return Option.match(
       Option.filter(
         Option.flatMap(sayIt, (view) => Option.fromNullishOr(view.pending)),
         (pending) =>
@@ -242,8 +283,8 @@ const pendingIn = (
           ),
       ),
       { onNone: () => read, onSome: (pending) => withRecall(read, pending) },
-    ),
-  );
+    );
+  });
 
 /** The plant of `reference` in the garden read, none before its first recital. */
 const plantIn = (garden: ReadGarden, reference: string) =>
@@ -412,7 +453,11 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * Today keeps the reading view's hold: the word a finger holds while a
  * reading is under way, and while one is held the scroll view stands still
  * (`scrollEnabled` off), so a drag across the words seeks and never scrolls.
- * Every control but a missed word's mark sits outside the scroll view, so
+ * At rest on a run's planted item, each word under its cue is a button to
+ * peek at it (`reveal`), and `Show all` in the footer shows the verse whole
+ * a stage lower (`showAll`); either caps the try, and only `Next` records
+ * them (`nextItem`), so `Your field` lets them go.
+ * Every control but a word to peek at and a missed word's mark sits outside the scroll view, so
  * however long the verse or the result, they are on screen without a
  * scroll and clear of the home indicator.
  */
@@ -445,6 +490,14 @@ function Today({ onField }: { readonly onField: () => void }) {
   const shownSayIt = Option.filter(sayIt, () => recital);
   const marks = Option.filter(screen.marks, () => recital);
   const tended = Option.flatMap(session, (view) => tendedOf(view, garden));
+  const onReveal = useAtomSet(reveal);
+  const onShowAll = useAtomSet(showAll);
+  /** The planted verse of the run's item shown at rest (no recital under way, held or done), which may be peeked at or shown whole before its try. */
+  const resting = (each: Showing) =>
+    Option.filter(
+      Option.flatMap(garden, (shown) => plantIn(shown, each.piece.reference)),
+      () => !screen.listening && !each.recital && !each.done && Option.isSome(each.item),
+    );
   const onAction = (each: Showing) => {
     if (screen.listening) return onPress({ piece: each.piece, item: Option.none() });
     if (each.done) return onNext();
@@ -494,20 +547,30 @@ function Today({ onField }: { readonly onField: () => void }) {
         })}
         {Option.match(showing, {
           onNone: () => false,
-          onSome: ({ piece }) => (
+          onSome: (each) => (
             <View style={styles.passage}>
               <Text testID="reference" style={look.reference}>
-                {piece.reference}
+                {each.piece.reference}
               </Text>
               <Verse
-                text={piece.text}
+                text={each.piece.text}
                 marks={marks}
-                cue={shownCue(piece.reference, garden, shownSayIt, marks)}
+                cue={shownCue(
+                  each.piece.reference,
+                  garden,
+                  shownSayIt,
+                  marks,
+                  shownAllOn(sayIt, each.piece.reference),
+                )}
                 voice={voice}
                 hold={hold}
                 onPeek={onPeek}
+                onReveal={Option.map(
+                  resting(each),
+                  () => (index: number) => onReveal({ reference: each.piece.reference, index }),
+                )}
               />
-              <Growing reference={piece.reference} garden={garden} sayIt={shownSayIt} />
+              <Growing reference={each.piece.reference} garden={garden} sayIt={shownSayIt} />
             </View>
           ),
         })}
@@ -527,6 +590,14 @@ function Today({ onField }: { readonly onField: () => void }) {
         onNone: () => false,
         onSome: (each) => (
           <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+            {Option.isSome(resting(each)) && !shownAllOn(sayIt, each.piece.reference) && (
+              <Control
+                label="Show all"
+                shown="Show all"
+                pending={false}
+                onPress={() => onShowAll(each.piece)}
+              />
+            )}
             {Option.match(
               Option.filter(
                 Option.flatMap(garden, (read) => plantIn(read, each.piece.reference)),
@@ -534,6 +605,7 @@ function Today({ onField }: { readonly onField: () => void }) {
                   !screen.listening &&
                   !each.recital &&
                   !each.done &&
+                  !shownAllOn(sayIt, each.piece.reference) &&
                   Option.exists(session, (view) =>
                     view.visit.some((verse) => verse.piece.reference === each.piece.reference),
                   ),
@@ -553,7 +625,13 @@ function Today({ onField }: { readonly onField: () => void }) {
               Option.filter(screen.result, () => recital),
               {
                 onNone: () => false,
-                onSome: (result) => <Grades result={result} onChoose={onChoose} />,
+                onSome: (result) => (
+                  <Grades
+                    result={result}
+                    cap={cappedBy(4, Option.flatMap(sayIt, helpOf))}
+                    onChoose={onChoose}
+                  />
+                ),
               },
             )}
             {voiceFree && offersListen(screen.listening, each) && (

@@ -10,7 +10,16 @@
 import { Option } from 'effect';
 
 import type { Mark, MatcherView } from '../matcher';
-import { GRADE_NAMES, type DictationView, type Grade, type SayItView } from '../sayit';
+import {
+  cappedBy,
+  GRADE_NAMES,
+  helpOf,
+  restPeeks,
+  type DictationView,
+  type Grade,
+  type Help,
+  type SayItView,
+} from '../sayit';
 
 /** The count, the suggestion and the grade chosen, after a recital that finished. */
 export interface Result {
@@ -98,12 +107,13 @@ const marksOf = (view: DictationView): Option.Option<readonly Mark[]> => {
   return Option.map(Option.fromNullishOr(view.matcher), (matcher) => matcher.marks);
 };
 
-/** The words lit of the words, and the peeks once there is one. */
-const summaryOf = (heard: MatcherView) => {
+/** The words lit of the words, and the peeks once there is one, those taken at rest before the try (`help`) among them. */
+const summaryOf = (heard: MatcherView, help: Option.Option<Help>) => {
   const lit = heard.marks.filter((mark) => mark.status === 'matched').length;
   const words = `${lit} of ${heard.marks.length} words`;
-  if (heard.peekCount === 0) return words;
-  return `${words}, ${heard.peekCount} peeked`;
+  const peeked = heard.peekCount + restPeeks(help, heard);
+  if (peeked === 0) return words;
+  return `${words}, ${peeked} peeked`;
 };
 
 const buttonOf = (listening: boolean): Screen['button'] => {
@@ -117,8 +127,10 @@ const resultOf = (view: SayItView): Option.Option<Result> => {
   return Option.flatMap(Option.fromNullishOr(matcher), (heard) =>
     Option.flatMap(Option.fromNullishOr(view.choice), (choice) =>
       Option.map(Option.fromNullishOr(heard.suggestedGrade), (suggested) => {
-        const summary = summaryOf(heard);
-        return { summary, suggested: `Suggested: ${GRADE_NAMES[suggested]}`, choice };
+        const help = helpOf(view);
+        const summary = summaryOf(heard, help);
+        const named = GRADE_NAMES[cappedBy(suggested, help)];
+        return { summary, suggested: `Suggested: ${named}`, choice };
       }),
     ),
   );
