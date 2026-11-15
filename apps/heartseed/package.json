@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./matcher": {
+      "types": "./exact/matcher.d.ts",
+      "default": "./src/matcher.ts"
+    },
+    "./passage": "./vite/passage.ts",
+    "./kjv-hearings.json": "./data/kjv-hearings.json"
+  },
   "scripts": {
     "dev": "one dev",
     "prebuild:native": "one prebuild",
