@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals, effect/noNullish -- a Bun test reading tracked source files, as the gate's other source checks do. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals -- a Bun test reading tracked source files, as the gate's other source checks do. */
 
 /**
  * The words home and a list's page write that the current Heartseed keeps

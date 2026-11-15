@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its JSON replies as the shapes the app answers and its screenshots, and prints what it found. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noAs, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its JSON replies as the shapes the app answers and its screenshots, and prints what it found. */
 
 /**
  * Home's live checks a `.test.contract` cannot make (spec B, the drive), on

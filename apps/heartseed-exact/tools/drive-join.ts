@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noTernary, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the words it says, drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the words it says, drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * Home and the session joined (the joins file's J1 drive), on the host

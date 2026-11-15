@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noNewPromise, effect/noGlobals, no-await-in-loop -- a model test over the port's sources: each call is awaited in turn as Exact asks them, the storage stand-in answers with promises as Exact's does, the steps are plain data, and a stored garden and an answer's weight are their JSON bytes. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noNewPromise, effect/noGlobals, no-await-in-loop -- a model test over the port's sources: each call is awaited in turn as Exact asks them, the storage stand-in answers with promises as Exact's does, the steps are plain data, and a stored garden and an answer's weight are their JSON bytes. */
 
 /**
  * Home's asks, its weight, and its sources over a stored garden (spec A4,
