@@ -33,6 +33,12 @@ bun test ./src               # the Bun tests the gate runs (no Exact needed)
 3. In `src/<name>/sources.ts`, export `<name>Sources(book)`, the sources its resources name; add one spread line to `src/sources.ts`. `app.ts` stays as it is.
 4. Put its rules in pure modules under `src/<name>/`, with Bun tests beside them, and its contract tests in `<name>.test.contract`.
 
+## The home
+
+`features/list.contract` draws the home list: a tab row (`tab-<name>`) over the list of the tab in use, `listTab`, kept across launches. Sections is the list of every hymn under its sections (`hymnRows`), under the Recent shelf; Lists, Topics, Metres and Scripture are the current app's `tabsOf` (`@manna/hymnal-app/home/tabs`), asked one tab at a time by `listTabRows` once the tab is chosen (`src/home/tabs.ts`). A tab's answer is its groups' names and hymn numbers; the titles come once from `listTitles`. A hymn found by the search opens as the current app's `openingAt` says (`listOpening`).
+
+`features/recent.contract` and `features/favourites.contract` keep the reader's two lists as `persist` states of hymn numbers, `recentList` and `favouriteList`. A hymn page coming to the top of the stack is a visit (`recentAfter`, the current app's `visited`); the star in a hymn page's header (`favourite`) adds or takes out its hymn (`favouritesAfter`, the current app's `toggleFavourite`). The shelf shows Recent's latest five (`shelf-<n>`), and its last row, `recent-all`, opens `/recent` with all of them (`recent-<n>`). A favourite's rows carry a star (`star-<n>`).
+
 ## The book
 
 `bun run exact` first runs `src/hymns/make.ts`, which writes `src/hymns/words.gen.json` and `indexes.gen.json` (ignored) by the current app's own derivations (`@manna/hymnal-app/vite/words`, `vite/indexes`). `tsconfig.json` maps the current app's `virtual:hymnal` and `virtual:hymnal-indexes` to those files, so Exact's bundler takes `apps/hymnal/src/hymns/search.ts` and `hymns.ts` unchanged, and maps `@manna/hymnal-app/hymns/*` to `src/hymns/decl/*.d.ts` for Exact's type check, which stages declarations and cannot stage `effect`'s. The Bun tests get the same modules through `src/test/setup.ts`. The list's answer holds numbers, titles and sections; a hymn's words are answered only for the hymn open.

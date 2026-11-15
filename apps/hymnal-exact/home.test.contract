@@ -1,0 +1,162 @@
+test "The five tabs"
+  expect tree has "tab-sections"
+  expect tree has "tab-lists"
+  expect tree has "tab-topics"
+  expect tree has "tab-metres"
+  expect tree has "tab-scripture"
+  expect state listGroups == []
+  expect state listTitleOf == []
+  tap "tab-topics"
+  clock settle
+  clock data
+  expect state listTab == "Topics"
+  expect text "group-adoration-and-praise" == "ADORATION AND PRAISE"
+  expect text "hymn-2" == "2All Creatures of Our God and King"
+  tap "tab-metres"
+  clock settle
+  clock data
+  expect text "group-s-m" == "S. M."
+  expect text "hymn-15" == "15My Maker and My King"
+  tap "tab-scripture"
+  clock settle
+  clock data
+  expect text "group-genesis" == "Genesis"
+  expect text "hymn-17" == "17Lord of All Being, Throned Afar"
+  tap "tab-sections"
+  clock settle
+  clock data
+  expect tree has "section-adoration-and-praise"
+  expect text "hymn-1" == "1Praise to the Lord"
+  expect tree missing "group-genesis"
+
+test "Recent fills as hymns are opened"
+  expect tree missing "recent-shelf"
+  tap "hymn-2"
+  clock settle
+  clock data
+  back
+  clock settle
+  type "search" "100"
+  clock settle
+  clock data
+  tap "hymn-100"
+  clock settle
+  clock data
+  back
+  clock settle
+  type "search" "5"
+  clock settle
+  clock data
+  tap "hymn-5"
+  clock settle
+  clock data
+  back
+  clock settle
+  type "search" ""
+  clock settle
+  clock data
+  expect state recentList.0 == 5
+  expect state recentList.1 == 100
+  expect state recentList.2 == 2
+  expect state recentShown.shelf.0 .number == 5
+  expect state recentShown.shelf.1 .number == 100
+  expect state recentShown.shelf.2 .number == 2
+  expect tree has "recent-shelf"
+  expect text "shelf-5" == "5All My Hope On God Is Founded"
+  expect tree has "shelf-100"
+  expect tree has "shelf-2"
+  tap "recent-all"
+  clock settle
+  clock data
+  expect text "recent-title" == "Recent"
+  expect tree has "recent-5"
+  expect tree has "recent-100"
+  expect tree has "recent-2"
+  back
+  clock settle
+  reload
+  clock data
+  expect state recentList.0 == 5
+  expect state recentList.2 == 2
+  expect state recentShown.shelf.0 .number == 5
+  expect tree has "shelf-2"
+
+test "A star marks a hymn everywhere"
+  type "search" "100"
+  clock settle
+  clock data
+  tap "hymn-100"
+  clock settle
+  clock data
+  expect tree missing "star-100"
+  tap "favourite"
+  clock settle
+  clock data
+  expect state favouriteList.0 == 100
+  expect state favouriteList.length == 1
+  back
+  clock settle
+  type "search" ""
+  clock settle
+  clock data
+  expect tree has "star-100"
+  expect tree has "shelf-star-100"
+  reload
+  clock data
+  expect state favouriteList.0 == 100
+  expect tree has "star-100"
+  tap "tab-lists"
+  clock settle
+  clock data
+  expect text "group-favourites" == "Favourites"
+  expect tree has "hymn-100"
+  expect text "group-recent" == "Recent"
+  expect tree has "hymn-recent-100"
+  tap "hymn-100"
+  clock settle
+  clock data
+  tap "favourite"
+  clock settle
+  clock data
+  expect state favouriteList == []
+  back
+  clock settle
+  clock data
+  expect tree missing "group-favourites"
+  expect tree missing "star-100"
+  expect tree has "group-recent"
+  reload
+  clock data
+  expect state favouriteList == []
+  expect tree missing "star-100"
+
+test "A hymn found on the list is pushed over it"
+  type "search" "100"
+  clock settle
+  clock data
+  tap "hymn-100"
+  clock settle
+  clock data
+  expect text "hymn-title" == "Great Is Thy Faithfulness"
+  back
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
+test "Back keeps the tab and the place"
+  tap "tab-topics"
+  clock settle
+  clock data
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect text "hymn-title" == "All Creatures of Our God and King"
+  perf
+    back
+    clock settle
+  expect perf built "HymnRow" == 0
+  expect state listTab == "Topics"
+  expect tree has "group-adoration-and-praise"
+  expect tree missing "hymn-title"

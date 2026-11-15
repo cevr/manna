@@ -1,0 +1,32 @@
+// Favourites: the hymns the reader starred, in number order, kept across
+// launches. The star in a hymn page's header adds the hymn or takes it out
+// (`favouritesAfter`, the current app's `toggleFavourite`); each row that
+// shows a favourite carries a star, and the Lists tab's Favourites group
+// holds them.
+
+shape FavouriteList
+  numbers: number[]
+
+members HymnalExact
+  state favouriteList: number[] = [] persist
+  mutation favouriteToggled as shape FavouriteList queue then favouriteKeep
+  action favouriteToggle(n: number)
+    send favouriteToggled = favouritesAfter(favouriteList, n)
+  action favouriteKeep
+    match favouriteToggled
+      case some(f)
+        favouriteList = f.numbers
+      case none
+        favouriteList = favouriteList
+
+// The star in a hymn page's header: filled while the hymn is a favourite.
+component FavouriteStar
+  props
+    number: number
+  inject
+    favouriteNumbers: number[]
+    favouritePress: action
+  view
+    if number > 0
+      button press=favouritePress(number) aria-label="Favourite" aria-pressed=favouriteNumbers.includes(number) testId="favourite"
+        image (favouriteNumbers.includes(number) ? "symbol:star-fill" : "symbol:star")
