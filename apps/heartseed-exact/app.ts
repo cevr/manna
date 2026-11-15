@@ -8,7 +8,7 @@ export const grants =
   'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/today.json\nfs.write app:/data/today.json\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json';
 
 /** A driver's launch (`tools/drive-garden.ts`) sets this, and Your verses shows its test controls; a plain launch has none. */
-const GARDEN_DRIVE = import.meta.env['HEARTSEED_GARDEN_DRIVE'] ?? '';
+const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
 
 const sources: Sources = {
   ...todaySources(passage),
