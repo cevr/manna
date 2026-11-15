@@ -49,8 +49,32 @@ const Step = Schema.Union([
   Leaf,
   Schema.TaggedStruct('fork', { body: Schema.Array(Leaf).check(Schema.isMaxLength(4)) }),
   Schema.TaggedStruct('join', {}),
+  Schema.TaggedStruct('outside', {
+    after: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 3 })),
+  }),
 ]);
 type Step = typeof Step.Type;
+
+/**
+ * How a program meets an outside wait: on the runner it awaits a promise from outside the call (a fetch's stand-in)
+ * that settles after `after` turns of the host's event loop; in the reference under `TestClock` it awaits every child
+ * forked so far, which is what the runner promises while the call waits outside: its other fibers sleep on to their
+ * deadlines, the clock moving only to those, and then the call goes on.
+ */
+type Outside = 'promise' | 'children';
+
+/** A promise from outside the call: it settles after `after` turns of the event loop, which no step of the call drives. */
+const outsideAfter = (after: number) =>
+  new Promise<void>((resolve) => {
+    const tick = (left: number) => {
+      if (left === 0) resolve();
+      else setImmediate(() => tick(left - 1));
+    };
+    tick(after);
+  });
+
+/** The runner's own words when a call that waits outside it is run with `runCallSync`. */
+const SYNC_OUTSIDE = 'the call waits on something outside it; run it with runCall, not runCallSync';
 
 /** What a program saw, in its order: clock reads, draws, winners, timeouts, stream items, joined children's traces. */
 type Trace = Array<unknown>;
@@ -89,11 +113,15 @@ const leaf = (step: Leaf, trace: Trace): Effect.Effect<void> =>
       ),
   });
 
-/** The program `steps` make: each fork runs its body in a child fiber, each join takes the latest child not joined. */
-const program = (steps: ReadonlyArray<Step>) =>
+/**
+ * The program `steps` make: each fork runs its body in a child fiber, each join takes the latest child not joined,
+ * each outside wait is met as `outside` says and traced with the time the call goes on at.
+ */
+const program = (steps: ReadonlyArray<Step>, outside: Outside = 'promise') =>
   Effect.gen(function* () {
     const trace: Trace = [];
     const children: Array<Fiber.Fiber<Trace>> = [];
+    const forked: Array<Fiber.Fiber<Trace>> = [];
     for (const step of steps) {
       if (step._tag === 'fork') {
         const body = Effect.gen(function* () {
@@ -101,25 +129,46 @@ const program = (steps: ReadonlyArray<Step>) =>
           for (const inner of step.body) yield* leaf(inner, own);
           return own;
         });
-        children.push(yield* Effect.forkChild(body));
+        const child = yield* Effect.forkChild(body);
+        children.push(child);
+        forked.push(child);
       } else if (step._tag === 'join') {
         const child = children.pop();
         if (child) trace.push(['join', yield* Fiber.join(child)]);
+      } else if (step._tag === 'outside') {
+        if (outside === 'promise') yield* Effect.promise(() => outsideAfter(step.after));
+        else yield* Fiber.awaitAll(forked);
+        trace.push(['outside', step.after, yield* Clock.currentTimeMillis]);
       } else yield* leaf(step, trace);
     }
     return trace;
   });
 
-/** The same program under Effect's `TestClock` at `start` and `Random.withSeed(seed)`, time moved on until it ends. */
+/**
+ * The same program under Effect's `TestClock` at `start` and `Random.withSeed(seed)`, time moved on until it ends.
+ * It begins woken from a sleep that ends at `start`: `TestClock.adjust` waits for a woken fiber, and every fiber it
+ * forks or resumes, to suspend before it looks at the next sleep, but it waits only one turn for a fiber it did not
+ * wake, so a program that forks and joins before its first sleep would sleep past the adjustment and never wake.
+ */
 const underTestClock = (steps: ReadonlyArray<Step>, start: number, seed: number) =>
   Effect.runPromise(
     Effect.gen(function* () {
-      yield* TestClock.setTime(start);
-      const fiber = yield* Effect.forkChild(Random.withSeed(program(steps), seed));
+      yield* TestClock.setTime(start - 1);
+      const fiber = yield* Effect.forkChild(
+        Random.withSeed(Effect.andThen(Effect.sleep(1), program(steps, 'children')), seed),
+      );
       yield* TestClock.adjust(1_000_000);
       return yield* Fiber.join(fiber);
     }).pipe(Effect.provide(TestClock.layer())),
   );
+
+/**
+ * The property's runs, and the deadline each is given: its timeout grows with its runs and stays under bun's 5 s. A
+ * run takes about 2 ms at load 6, so a run 40 times slower still passes.
+ */
+const PROPERTY_TIMEOUT_MS = 4_800;
+const MS_PER_RUN = 80;
+const RUNS = PROPERTY_TIMEOUT_MS / MS_PER_RUN;
 
 const Case = Arbitrary.all({
   steps: Arbitrary.array(Arbitrary.schema(Step), { maxLength: 8 }),
@@ -190,7 +239,7 @@ describe('the Exact runner', () => {
   );
 
   it.effect(
-    "gives any program built from sleeps, clock reads, draws, forks, joins, races, timeouts and streams TestClock's result at the call's time and seed, calling no refused global",
+    "gives any program built from sleeps, clock reads, draws, forks, joins, races, timeouts, streams and waits on a promise from outside, alone or beside sleeping children, TestClock's result at the call's time and seed, calling no refused global; runCallSync refuses the outside wait",
     () =>
       Effect.gen(function* () {
         const result = yield* Arbitrary.checkEffect(
@@ -198,17 +247,67 @@ describe('the Exact runner', () => {
           ({ steps, start, seed }) =>
             Effect.promise(async () => {
               const expected = await underTestClock(steps, start, seed);
-              const now = runCallSync(program(steps), { now: start, seed }, { turn: withDataHost });
               const later = await runCall(
                 program(steps),
                 { now: start, seed },
                 { turn: withDataHost, wait: () => Promise.resolve() },
               );
-              return Bun.deepEquals(now, expected) && Bun.deepEquals(later, expected);
+              const waitsOutside = steps.some((step) => step._tag === 'outside');
+              const now = Effect.runSync(
+                Effect.result(
+                  Effect.try({
+                    try: () =>
+                      runCallSync(program(steps), { now: start, seed }, { turn: withDataHost }),
+                    catch: (error) => String(error),
+                  }),
+                ),
+              );
+              const sync = Match.value(now).pipe(
+                Match.tag(
+                  'Failure',
+                  ({ failure }) => waitsOutside && failure.includes(SYNC_OUTSIDE),
+                ),
+                Match.orElse(({ success }) => !waitsOutside && Bun.deepEquals(success, expected)),
+              );
+              return sync && Bun.deepEquals(later, expected);
             }),
-          { runs: 60 },
+          { runs: RUNS },
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
+      }),
+    PROPERTY_TIMEOUT_MS,
+  );
+
+  it.effect(
+    'a call waiting outside, alone and beside a sleeping child, goes on when the promise settles, on the host clock',
+    () =>
+      Effect.promise(async () => {
+        const host = makeHost();
+        const call = { now: 1000, seed: 3 };
+        const alone = runCall(
+          Effect.andThen(
+            Effect.promise(() => outsideAfter(2)),
+            Clock.currentTimeMillis,
+          ),
+          call,
+          { wait: host.wait, turn: withDataHost },
+        );
+        const beside = runCall(
+          Effect.gen(function* () {
+            const child = yield* Effect.forkChild(
+              Effect.andThen(Effect.sleep(40), Clock.currentTimeMillis),
+            );
+            yield* Effect.promise(() => outsideAfter(1));
+            yield* Effect.yieldNow;
+            const at = yield* Clock.currentTimeMillis;
+            return [at, yield* Fiber.join(child)];
+          }),
+          call,
+          { wait: host.wait, turn: withDataHost },
+        );
+        expect(await alone).toBe(1000);
+        await host.advance(40);
+        expect(await beside).toEqual([1000, 1040]);
       }),
   );
 
