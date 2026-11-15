@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals -- a Bun test in an Exact app's folder imports no effect (docs/exact.md: Exact's type check would stage its declarations, and so its Schema JSON codecs), and the sizes it holds are the JSON bytes the build ships. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNewPromise -- the player's source answers a Promise, awaited as the host awaits it; a Bun test in an Exact app's folder imports no effect (docs/exact.md: Exact's type check would stage its declarations, and so its Schema JSON codecs), and the sizes it holds are the JSON bytes the build ships. */
 
 import { describe, expect, test } from 'bun:test';
 
@@ -7,8 +7,11 @@ import { indexOf } from '@manna/hymnal-app/hymns/search';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { book } from './hymns/book.ts';
-import { sources } from './sources.ts';
+import { BUCKET } from './player/sources.ts';
+import { sourcesAt } from './sources.ts';
 import { below, pick, query, seeded } from './test/random.ts';
+
+const sources = sourcesAt(BUCKET, []);
 
 /** A route's hymn number as a reader or a stale link writes it. */
 const route = (random: () => number): string =>
@@ -24,6 +27,38 @@ const route = (random: () => number): string =>
     `${below(random, 100000)}`,
   ]);
 
+const KINDS = [
+  'play',
+  'pause',
+  'resume',
+  'stop',
+  'retry',
+  'stanza',
+  'open',
+  'close',
+  'title',
+  'bar',
+  'page',
+  'loaded',
+  'time',
+  'waiting',
+  'played',
+  'playing',
+  'paused',
+  'ended',
+  'screen',
+  'restore',
+  'nonsense',
+] as const;
+
+/** A call of the player's source as the view makes it, any argument of any kind. */
+const playerCall = (random: () => number): readonly [string, number, number, string] => [
+  pick(random, KINDS),
+  below(random, 6),
+  pick(random, [0, 1, 2, 3, 13, 695, 696, -1, 2.5, Number.NaN, Infinity, below(random, 400)]),
+  pick(random, ['', '/', '/ /hymns/1', '/ /hymns/2 /player', '1:1.3,2:2', 'x', '/ /hymns/0']),
+];
+
 describe('the data module runs where Exact runs it', () => {
   test('inside the data host, every source answers generated arguments without throwing', () => {
     const random = seeded(41);
@@ -32,9 +67,22 @@ describe('the data module runs where Exact runs it', () => {
       for (let run = 0; run < 200; run++) {
         expect(() => sources.hymnRows([query(random, book.hymns)])).not.toThrow();
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
+        expect(() => sources.playerStep(playerCall(random))).not.toThrow();
       }
     });
-    expect(Object.keys(sources).toSorted()).toEqual(['hymnPage', 'hymnRows']);
+    expect(Object.keys(sources).toSorted()).toEqual(['hymnPage', 'hymnRows', 'playerStep']);
+  });
+
+  test('inside the data host, a play and its device events step at once, with no clock read', async () => {
+    const fresh = sourcesAt(BUCKET, []);
+    const answers: Array<Promise<{ readonly phase: string; readonly src: string }>> = [];
+    withDataHost(() => {
+      answers.push(fresh.playerStep(['play', 0, 1, '']));
+      answers.push(fresh.playerStep(['playing', 1, 0, '']));
+    });
+    const [played, playing] = await Promise.all(answers);
+    expect(played?.src).toBe(`${BUCKET}/audio/warm-1/sdah/1.mp3`);
+    expect(playing?.phase).toBe('playing');
   });
 });
 

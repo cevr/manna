@@ -4,6 +4,7 @@
 // asked for "" and answers the empty page, so the words a popped hymn showed
 // are not kept, and a relaunch holds what a fresh launch does.
 use EmptyState from "exact:content"
+use PlayerPagePlay from "./player.contract"
 
 shape HymnPart
   key: string
@@ -37,6 +38,7 @@ component HymnPage
           if ready
             column padding=16 gap=20
               text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"
+              PlayerPagePlay(number=page.number)
               for p in page.parts key=p.key
                 column gap=4
                   text p.label font="-exact-headline" color="-exact-secondary-label"

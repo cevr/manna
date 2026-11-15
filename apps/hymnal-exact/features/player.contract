@@ -1,0 +1,168 @@
+// The player: a hymn's recording from the bucket, the bar docked under the
+// stack while the player holds a hymn, the full player as a sheet, and the
+// system's Now Playing. Every rule is `step` in src/player/step.ts, answered
+// by `playerStep` (src/player/sources.ts); this file draws its view and
+// turns the element's events into calls, each naming its load.
+
+shape PlayerBar
+  shown: bool
+  number: number
+  title: string
+  phase: string
+  said: string
+  toggle: string
+  page: number
+
+shape PlayerChip
+  stanza: number
+  chosen: bool
+
+shape PlayerSession
+  title: string
+  artist: string
+  duration: number
+  playing: bool
+
+shape PlayerGo
+  serial: number
+  kind: string
+  path: string
+  close: bool
+
+shape PlayerView
+  origin: string
+  serial: number
+  src: string
+  load: number
+  from: number
+  paused: bool
+  held: bool
+  number: number
+  title: string
+  phase: string
+  said: string
+  toggle: string
+  at: number
+  length: number
+  elapsed: string
+  total: string
+  bar: PlayerBar
+  pageToggle: string
+  chips: PlayerChip[]
+  session: PlayerSession
+  go: PlayerGo
+  kept: string
+  command: string
+
+fn playerLabel(toggle: string): string = toggle == "pause" ? "Pause" : (toggle == "retry" ? "Try again" : "Play")
+
+members HymnalExact
+  state playerKept = "" persist
+  state playerGone = 0
+  derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : "/")).join(" ")
+  resource playerBooted = playerStep("restore", 0, 0, playerKept) as shape PlayerView
+  resource playerOnScreen = playerStep("screen", 0, 0, playerPaths) as shape PlayerView
+  mutation playerStepped as shape PlayerView queue then playerTook
+  derive playerLatest = playerOnScreen.serial >= playerBooted.serial ? playerOnScreen : playerBooted
+  derive player = match playerStepped { case some(v) => (v.serial >= playerLatest.serial ? v : playerLatest), case none => playerLatest }
+  action playerTook
+    playerKept = player.kept
+    if player.go.serial > playerGone
+      playerGone = player.go.serial
+      if player.go.kind == "back"
+        nav = back(nav)
+      else if player.go.kind == "push" and player.go.close
+        nav = push(back(nav), player.go.path)
+      else if player.go.kind == "push"
+        nav = push(nav, player.go.path)
+      else if player.go.kind == "replace"
+        nav = go(nav, player.go.path)
+  action playerAsk(kind: string, value: number)
+    send playerStepped = playerStep(kind, 0, value, "")
+  action playerHeard(kind: string, id: number, value: number)
+    send playerStepped = playerStep(kind, id, value, "")
+  action playerFailed(id: number, code: string)
+    send playerStepped = playerStep("failed", id, 0, code)
+
+// The device and the bar, docked under the stack: the element is keyed by
+// its load, so a new load is a new element and an old one's events end
+// with it; the bar shows while the player holds a hymn.
+component PlayerDock
+  props
+    player: PlayerView
+    ask: action
+    heard: action
+    broke: action
+  view
+    column position="absolute" left=0 right=0 bottom=0
+      for l in (player.src == "" ? [] : [player.load]) key=l
+        audio player.src paused=player.paused currentTime=player.from testId="audio"
+          metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
+          durationchange=heard("loaded", l) timeupdate=heard("time", l)
+          waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
+          pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
+      if player.bar.shown
+        row testId="bar" align-items="center" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
+          button press=ask("open", 0) flex=1 min-width=0 testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
+            column gap=2 align-items="flex-start"
+              text `${player.bar.number} · ${player.bar.title}` testId="bar-hymn"
+              if player.bar.said != ""
+                text player.bar.said color="-exact-secondary-label" testId="bar-said"
+          if player.bar.page != 0
+            button press=ask("play", player.bar.page) buttonStyle="bordered" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
+              text "Play"
+          if player.bar.toggle != ""
+            button press=ask("bar", 0) buttonStyle="bordered" testId="bar-toggle"
+              text playerLabel(player.bar.toggle)
+
+// A hymn page's own Play: Pause while its hymn sounds, Try again after a
+// failure, nothing for a hymn with no recording.
+component PlayerPagePlay
+  props
+    number: number
+  inject
+    playerShown: PlayerView
+    playerPress: action
+  view
+    if not (playerShown.number == number and playerShown.toggle == "")
+      button press=playerPress("page", number) buttonStyle="bordered-prominent" testId="play"
+        text (playerShown.number == number ? playerLabel(playerShown.pageToggle) : "Play")
+
+// The full player, a sheet over the screen it opened from: the hymn's
+// title (a press goes to its page), its time, Play or Pause, and its stanzas.
+component PlayerSheet
+  props
+    entry: Entry
+    player: PlayerView
+    ask: action
+  view
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
+      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
+        button id="close" press=ask("close", 0) aria-label="Close" testId="player-close"
+          image "symbol:close"
+        text "Now Playing" role="heading" aria-level=2
+      scroll id="player-sheet" flex=1 min-height=0
+        column padding=20 gap=16
+          button press=ask("title", 0) testId="player-title" aria-label=`Open hymn ${player.number}`
+            text `${player.number} · ${player.title}` font="-exact-title2"
+          row gap=8 align-items="baseline"
+            text player.elapsed font-variant-numeric="tabular-nums" testId="elapsed"
+            text "of" color="-exact-secondary-label"
+            text player.total font-variant-numeric="tabular-nums" testId="total"
+          if player.said != ""
+            text player.said color="-exact-secondary-label" testId="player-said"
+          if player.phase == "failed"
+            column gap=8 testId="player-error"
+              if player.toggle == "retry"
+                button press=ask("retry", 0) buttonStyle="bordered" testId="retry"
+                  text "Try again"
+          else if player.toggle != ""
+            button press=ask("page", player.number) buttonStyle="bordered-prominent" testId="toggle"
+              text playerLabel(player.toggle)
+          if player.chips.length > 0
+            column gap=8
+              text "Stanzas" font="-exact-headline"
+              row gap=8 flex-wrap="wrap"
+                for c in player.chips key=c.stanza
+                  button press=ask("stanza", c.stanza) aria-pressed=c.chosen buttonStyle=(c.chosen ? "bordered-prominent" : "bordered") testId=`stanza-${c.stanza}`
+                    text `${c.stanza}`

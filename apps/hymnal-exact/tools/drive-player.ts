@@ -1,0 +1,270 @@
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, effect/noAs, effect/noRuntimeTypeof, effect/noTryCatch, eslint/no-await-in-loop, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md): a host script that starts the recordings' fixture and drives the built app through `bun run exact agent`, each in a process group of its own, waits on the fixture's first answer in turn, passes its environment to the agent with the fixture's origin, reads the agent's JSON replies and prints what it found; a group that has already ended cannot be signalled. */
+
+/**
+ * The player's live checks a `.test.contract` cannot hold (spec B): a
+ * test's server runs for the whole test, so none can take it away and give
+ * it back. Here the first run's fixture (`tools/recordings.ts`) is the
+ * drive's own, in a process group of its own, which the agent uses as a
+ * server it did not start; the drive stops it once the app is up and starts
+ * it again when the bar offers Try again. The later runs, each on a store
+ * that starts empty, have the agent start and stop the fixture itself, as
+ * app.json's `commands.server`. On the host named
+ * (`bun tools/drive-player.ts web|ios`):
+ *
+ * - the fixture down: Play fails, the bar says the recording needs a
+ *   connection and offers Try again; the fixture up: Try again plays;
+ * - a hymn with no recording (the fixture's 404) says so and offers no Play;
+ * - a stanza choice survives a relaunch with kept storage.
+ *
+ * The build reads the fixture's origin from `HYMNAL_RECORDINGS`, which this
+ * sets; the recordings are digital silence. Exits 1 on any failed check.
+ */
+
+import { join } from 'node:path';
+
+import { FIXTURE_PORT, LONG_HYMN, MISSING_HYMN } from './recordings.ts';
+
+const host = process.argv[2] ?? 'web';
+const app = join(import.meta.dir, '..');
+const origin = `http://127.0.0.1:${FIXTURE_PORT}`;
+const DRIVE_MS = 15 * 60 * 1000;
+const env = { ...process.env, HYMNAL_RECORDINGS: origin };
+
+type Child = ReturnType<typeof Bun.spawn>;
+const groups = new Set<Child>();
+const stop = (child: Child) => {
+  if (!groups.delete(child)) return;
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    groups.delete(child);
+  }
+};
+process.on('exit', () => {
+  for (const child of groups) stop(child);
+});
+
+/** The fixture, in a process group of its own, once it answers. */
+const fixture = async () => {
+  const child = Bun.spawn(['bun', join(import.meta.dir, 'recordings.ts')], {
+    cwd: app,
+    env: { ...process.env, PORT: `${FIXTURE_PORT}` },
+    stdout: 'ignore',
+    stderr: 'inherit',
+    detached: true,
+  });
+  groups.add(child);
+  for (let tries = 0; tries < 50; tries++) {
+    const up = await fetch(`${origin}/audio/warm-1/sdah/1.mp3`, { method: 'HEAD' })
+      .then((answer) => answer.ok)
+      .catch(() => false);
+    if (up) return child;
+    await Bun.sleep(100);
+  }
+  stop(child);
+  throw new Error(`the fixture did not answer at ${origin}`);
+};
+
+const isReply = (line: string) =>
+  line.startsWith('{') ||
+  line.startsWith('[') ||
+  line === 'null' ||
+  line.startsWith('"') ||
+  /^[-\d]|^true$|^false$/u.test(line);
+
+/**
+ * One agent run of `ops` at `path`; `onReply(index, reply)` hears each reply
+ * as it comes, so a drive can act between two of the run's steps.
+ */
+const run = async (
+  flags: ReadonlyArray<string>,
+  path: string,
+  ops: ReadonlyArray<string>,
+  onReply: (index: number, reply: unknown) => Promise<void> | void = () => undefined,
+) => {
+  const child = Bun.spawn(
+    ['bun', 'run', 'exact', 'agent', host, '--json', '--url', path, ...flags, ...ops],
+    { cwd: app, env, stdout: 'pipe', stderr: 'pipe', detached: true },
+  );
+  groups.add(child);
+  const timer = setTimeout(() => stop(child), DRIVE_MS);
+  const replies: Array<unknown> = [];
+  const decoder = new TextDecoder();
+  let rest = '';
+  const read = async () => {
+    for await (const chunk of child.stdout as ReadableStream<Uint8Array>) {
+      const lines = (rest + decoder.decode(chunk, { stream: true })).split('\n');
+      rest = lines.pop() ?? '';
+      for (const line of lines.filter(isReply)) {
+        replies.push(JSON.parse(line));
+        await onReply(replies.length - 1, replies.at(-1));
+      }
+    }
+    if (isReply(rest)) replies.push(JSON.parse(rest));
+  };
+  const [, err, code] = await Promise.all([
+    read(),
+    new Response(child.stderr as ReadableStream<Uint8Array>).text(),
+    child.exited,
+  ]);
+  clearTimeout(timer);
+  groups.delete(child);
+  if (code !== 0 || replies.length < ops.length)
+    throw new Error(
+      `agent ${host} exited ${code} with ${replies.length} of ${ops.length} replies\n${err.slice(-2000)}`,
+    );
+  return replies.slice(-ops.length);
+};
+
+let failed = 0;
+const check = (name: string, ok: boolean, got: unknown) => {
+  if (!ok) failed++;
+  console.log(`${ok ? 'PASS' : 'FAIL'} ${host} ${name}${ok ? '' : `: ${JSON.stringify(got)}`}`);
+};
+const store = `player-${host}-${Date.now().toString(36)}`;
+const shot = (name: string) => `screenshot .exact/shots/player-${host}-${name}.png`;
+
+const down = [
+  'clock data',
+  'state player.origin',
+  'tap play',
+  'clock data',
+  'clock +12000 real',
+  'clock data',
+  'clock settle',
+  'state player.phase',
+  'state player.bar.said',
+  'state player.bar.toggle',
+  shot('down'),
+  'clock +4000 real',
+  'tap bar-toggle',
+  'clock data',
+  'clock +4000 real',
+  'clock data',
+  'clock settle',
+  'state player.phase',
+  'state player.at',
+  'state player.bar.toggle',
+  shot('retried'),
+];
+/** The reply to the `nth` (from 0) `op` of `ops`. */
+const replyTo = (
+  ops: ReadonlyArray<string>,
+  replies: ReadonlyArray<unknown>,
+  op: string,
+  nth = 0,
+) => replies[ops.flatMap((each, index) => (each === op ? [index] : []))[nth] ?? -1];
+
+let server: Child | undefined = await fixture();
+const downReplies = await run(
+  ['--storage', `${store}-down`, '--keep-storage'],
+  '/hymns/1',
+  down,
+  async (_, reply) => {
+    if (reply === origin && server !== undefined) {
+      stop(server);
+      await server.exited;
+      server = undefined;
+    }
+    if (reply === 'retry' && server === undefined) server = await fixture();
+  },
+);
+if (server !== undefined) stop(server);
+const seen = replyTo(down, downReplies, 'state player.origin');
+const phase = replyTo(down, downReplies, 'state player.phase');
+const said = replyTo(down, downReplies, 'state player.bar.said');
+const toggle = replyTo(down, downReplies, 'state player.bar.toggle');
+const again = replyTo(down, downReplies, 'state player.phase', 1);
+const at = replyTo(down, downReplies, 'state player.at');
+const offered = replyTo(down, downReplies, 'state player.bar.toggle', 1);
+check('the build plays from the fixture', seen === origin, seen);
+check(
+  'the fixture down: the bar says the recording needs a connection, with Try again',
+  phase === 'failed' && said === 'The recording needs a connection.' && toggle === 'retry',
+  { phase, said, toggle },
+);
+check(
+  'the fixture up: Try again plays',
+  (again === 'playing' || again === 'loading') && typeof at === 'number' && offered === 'pause',
+  { again, at, offered },
+);
+
+const missingOps = [
+  'clock data',
+  'tap play',
+  'clock data',
+  'clock +4000 real',
+  'clock data',
+  'clock settle',
+  'state player.phase',
+  'state player.said',
+  'state player.toggle',
+  'tree',
+  shot('missing'),
+];
+const missing = await run(
+  ['--storage', `${store}-missing`, '--reset-storage'],
+  `/hymns/${MISSING_HYMN}`,
+  missingOps,
+);
+const missingPhase = replyTo(missingOps, missing, 'state player.phase');
+const missingSaid = replyTo(missingOps, missing, 'state player.said');
+const missingToggle = replyTo(missingOps, missing, 'state player.toggle');
+const tree = replyTo(missingOps, missing, 'tree');
+const text = JSON.stringify(tree);
+check(
+  'a hymn with no recording says so and offers no Play',
+  missingPhase === 'failed' &&
+    missingSaid === 'This hymn has no recording.' &&
+    missingToggle === '' &&
+    !text.includes('"play"') &&
+    !text.includes('"bar-toggle"') &&
+    !text.includes('"retry"'),
+  { missingPhase, missingSaid, missingToggle },
+);
+
+await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, [
+  'clock data',
+  'tap play',
+  'clock data',
+  'clock +3000 real',
+  'clock data',
+  'tap bar-title',
+  'clock data',
+  'clock settle',
+  'tap stanza-2',
+  'clock data',
+  'tap stanza-4',
+  'clock data',
+  'clock settle',
+  'state playerKept',
+  shot('stanzas'),
+]);
+const keptOps = [
+  'clock data',
+  'state playerKept',
+  'tap play',
+  'clock data',
+  'clock +3000 real',
+  'clock data',
+  'tap bar-title',
+  'clock data',
+  'clock settle',
+  'state player.chips',
+  'state player.total',
+  shot('relaunched'),
+];
+const kept = await run(['--storage', store, '--keep-storage'], `/hymns/${LONG_HYMN}`, keptOps);
+const keptChoice = replyTo(keptOps, kept, 'state playerKept');
+const chips = replyTo(keptOps, kept, 'state player.chips');
+const total = replyTo(keptOps, kept, 'state player.total');
+check(
+  'a stanza choice survives a relaunch with kept storage',
+  keptChoice === `${LONG_HYMN}:1.3` &&
+    JSON.stringify((chips as ReadonlyArray<{ chosen: boolean }>).map((chip) => chip.chosen)) ===
+      JSON.stringify([true, false, true, false]),
+  { keptChoice, chips, total },
+);
+
+console.log(`${failed === 0 ? 'ok' : 'FAILED'}: drive-player ${host}, ${failed} failed`);
+process.exit(failed === 0 ? 0 : 1);

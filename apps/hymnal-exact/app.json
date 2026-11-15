@@ -8,11 +8,20 @@
     "id": "im.cvr.hymnal.exact",
     "name": "Hymnal"
   },
+  "audio_session": "playback",
+  "env": ["HYMNAL_RECORDINGS"],
+  "commands": {
+    "server": ["bun", "tools/recordings.ts"]
+  },
+  "server": {
+    "database": false
+  },
   "host": {
     "web": {},
     "ios": {
       "minimumOS": "17.0",
-      "deviceFamily": ["iphone", "ipad"]
+      "deviceFamily": ["iphone", "ipad"],
+      "backgroundModes": ["audio"]
     }
   },
   "deploy": {

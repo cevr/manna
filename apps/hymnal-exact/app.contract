@@ -5,14 +5,20 @@
 // under the stack below (README.md, "Adding a feature").
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
+use PlayerDock, PlayerSheet from "./features/player.contract"
 
 routes nav
   list "/"
     hymn "/hymns/:n"
+    player "/player"
 
 component HymnalExact
   members "./features/list.contract"
   members "./features/hymn.contract"
+  members "./features/player.contract"
+  provide
+    playerShown = player
+    playerPress = playerAsk
   action follow(url: string)
     nav = go(nav, url)
   view
@@ -22,3 +28,6 @@ component HymnalExact
           HymnList(entry=e, query=listQuery, sections=listRows, search=listSearch)
         if e.name == "hymn"
           HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
+        if e.name == "player"
+          PlayerSheet(entry=e, player=player, ask=playerAsk)
+      PlayerDock(player=player, ask=playerAsk, heard=playerHeard, broke=playerFailed)
