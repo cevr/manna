@@ -24,6 +24,10 @@
       "types": "./exact/lists.d.ts",
       "default": "./src/lists.ts"
     },
+    "./chooser": {
+      "types": "./exact/chooser.d.ts",
+      "default": "./src/chooser.ts"
+    },
     "./fsrs": {
       "types": "./exact/fsrs.d.ts",
       "default": "./src/fsrs.ts"

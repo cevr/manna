@@ -8,12 +8,14 @@
 
 import { expect, it } from 'bun:test';
 
+import type * as DeclaredChooser from '../exact/chooser.d.ts';
 import type * as DeclaredDay from '../exact/day.d.ts';
 import type * as DeclaredFsrs from '../exact/fsrs.d.ts';
 import type * as DeclaredGarden from '../exact/garden.d.ts';
 import type * as DeclaredLists from '../exact/lists.d.ts';
 import type * as DeclaredPassages from '../exact/passages.d.ts';
 import type * as DeclaredSayIt from '../exact/sayit.d.ts';
+import type * as Chooser from '../src/chooser';
 import type * as Day from '../src/day';
 import type * as Fsrs from '../src/fsrs';
 import type * as Garden from '../src/garden';
@@ -25,6 +27,7 @@ import type * as SayIt from '../src/sayit';
 type Mutual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
 const DECLARED: readonly true[] = [
+  true satisfies Mutual<typeof Chooser.LIMIT_LINE, typeof DeclaredChooser.LIMIT_LINE>,
   true satisfies Mutual<typeof Day.dayOf, typeof DeclaredDay.dayOf>,
   true satisfies Mutual<Fsrs.Card, DeclaredFsrs.Card>,
   true satisfies Mutual<Fsrs.Grade, DeclaredFsrs.Grade>,
