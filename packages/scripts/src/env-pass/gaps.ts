@@ -2,7 +2,7 @@ import { Option } from 'effect';
 import { type TurboEnv, declaredFor, passes } from './turbo.ts';
 
 /** A test file of a workspace: the tasks turbo runs it in, and the variables it reads. */
-interface ReadingTest {
+export interface ReadingTest {
   /** Its path from the repo's root. */
   readonly file: string;
   /** Its workspace's folder from the root. */
