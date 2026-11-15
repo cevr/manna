@@ -265,6 +265,25 @@ describe('env-pass', () => {
   );
 
   it.effect(
+    'a data file a tool writes resolves by its declaration beside it, and is unresolved without one',
+    () =>
+      Effect.sync(() => {
+        const resolve = resolverOf({
+          files: new Set(['apps/h/app.ts', 'apps/h/src/passage/today.d.json.ts']),
+          packages: [],
+          aliasesFor: aliasesFor(new Map()),
+          installed: () => false,
+          builtins: new Set(),
+        });
+        expect(
+          ['./src/passage/today.json', './src/passage/other.json', './src/passage/today'].map(
+            (specifier) => resolve('apps/h/app.ts', specifier)._tag,
+          ),
+        ).toEqual(['Other', 'Unresolved', 'Unresolved']);
+      }),
+  );
+
+  it.effect(
     'a test that imports a helper reading a variable turbo does not pass is a gap; the product’s own settings are not',
     () =>
       Effect.sync(() => {
