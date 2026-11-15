@@ -12,8 +12,10 @@ import {
 } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-/** The Exact commit every command runs at. Only the `ex-pin` unit moves it (docs/exact.md). */
-const EXACT_PIN = 'd1a71d7cb6bb4477f452f9c7351c49bc9b88adb3';
+import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
+
+/** How a clone comes to the pin. */
+const TO_PIN = 'bun packages/exact-kit/src/patch.ts';
 
 /** Where the clone is when `EXACT` names none: under the home folder. */
 const DEFAULT_CLONE = 'Developer/vendor/exact';
@@ -292,7 +294,7 @@ const headOf = (clone: string) =>
   ).pipe(
     Effect.mapError((error) =>
       ExactRefused.make({
-        reason: `no Exact clone at ${clone} (${String(error)}): git clone https://github.com/expo/exact.git ${clone} && git -C ${clone} checkout --detach ${EXACT_PIN}, or set EXACT to the clone (docs/exact.md)`,
+        reason: `no Exact clone at ${clone} (${String(error)}): git clone https://github.com/expo/exact.git ${clone} && EXACT=${clone} ${TO_PIN}, or set EXACT to the clone (docs/exact.md)`,
       }),
     ),
   );
@@ -335,7 +337,7 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const head = yield* headOf(clone);
   if (head !== EXACT_PIN)
     return yield* ExactRefused.make({
-      reason: `the clone at ${clone} is at ${head}, not the pin ${EXACT_PIN}: git -C ${clone} checkout --detach ${EXACT_PIN}`,
+      reason: `the clone at ${clone} is at ${head}, not the pin ${EXACT_PIN} (${EXACT_BASE} with ${EXACT_PATCHES.join(', ')}): EXACT=${clone} ${TO_PIN}`,
     });
   const lock = Arr.filter(['lockf', '-k', BUILD_LOCK], () => planned.locked);
   const [command = 'bun', ...rest] = [...lock, 'bun', launcher, appDir, name, ...planned.args];

@@ -13,11 +13,11 @@ Heartseed and the hymnal are being ported to [Exact](https://github.com/expo/exa
 Exact is not a package: an app runs it from a clone, by path. Nothing of Exact is committed here.
 
 1. Rust through rustup, Bun, Xcode 27.1 or later.
-2. Clone and pin it:
+2. Clone it and bring it to the pin (below), from this repo's root:
 
    ```sh
    git clone https://github.com/expo/exact.git ~/Developer/vendor/exact
-   git -C ~/Developer/vendor/exact checkout --detach d1a71d7cb6bb4477f452f9c7351c49bc9b88adb3
+   EXACT=~/Developer/vendor/exact bun packages/exact-kit/src/patch.ts
    ```
 
 3. `bun scripts/exact.mjs setup` in the clone: it installs Exact's Rust toolchains (1.99.1 and a nightly, without changing `rustup default`), wasm-bindgen, Binaryen (`~/.cache/exact/binaryen`), Exact's own `node_modules`, Playwright's headless Chromium, and the Hermes bundles (`~/.cargo/hermes-lean-sys/`). `bun scripts/exact.mjs setup --check --platform ios` names what is still missing and changes nothing.
@@ -28,9 +28,11 @@ Exact needs the real `HOME`: rustup, Cargo and the Hermes bundles are found thro
 
 Exact is pre-1.0 and lands about a hundred commits a day with no stability promise, so every app runs one commit:
 
-**`d1a71d7cb6bb4477f452f9c7351c49bc9b88adb3`** (2026-11-15).
+**`7b80cf82052646b292d77f61656f3afeb2fcbf8d`** (2026-11-15): upstream's `d1a71d7cb6bb4477f452f9c7351c49bc9b88adb3` with the patches in `packages/exact-kit/patches/` on it.
 
-The pin is `EXACT_PIN` in `packages/exact-kit/src/run.ts`; its test holds this file to it. Only the `ex-pin` unit moves it: it moves the constant and this file together, runs every contract test of both apps on the web and iOS, and records what it cost.
+The pin is `EXACT_PIN` in `packages/exact-kit/src/pin.ts`, made from `EXACT_BASE` and `EXACT_PATCHES` beside it; its test holds this file to it. Only the `ex-pin` unit moves it: it moves the constants and this file together, runs every contract test of both apps on the web and iOS, and records what it cost.
+
+The patches are changes the ports need before Exact has them, each also proposed upstream: `adjust-step.patch` gives a range's VoiceOver swipe its own move (`adjust-step`) and tests a step for it (`type "<range>" adjust up`). `bun packages/exact-kit/src/patch.ts`, with `EXACT` naming the clone, checks out the base, replays the patches with `git am` under a fixed committer and the author's dates, and so makes the pin's own commit in any clone; it leaves a clone already at the pin alone. It fails, exiting 2, when the clone has uncommitted changes, when a patch no longer applies to the base (`git am` is aborted and the clone left at the base), or when the replay makes another commit than `EXACT_PIN`. So a pin move replays the patches on the new base, in a clone of its own: rebase each patch there, write it again with `git format-patch --zero-commit --no-signature`, run `src/patch.ts` on that clone, and write the commit it names into `EXACT_PIN` and this file. A patch upstream has taken is dropped from `EXACT_PATCHES` at the move.
 
 ## The wrapper: `bun run exact <verb>`
 
