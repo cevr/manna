@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- a Bun test drawing generated presses with the app's seeded generator (no effect's FastCheck: Exact's type check stages what an app file imports). */
+/* oxlint-disable effect/noTernary -- a Bun test drawing generated presses with the app's seeded generator (no effect's FastCheck: Exact's type check stages what an app file imports). */
 
 /**
  * Transpose and capo over the whole domain (A2): for generated hymns with

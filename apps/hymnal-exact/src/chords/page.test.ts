@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals -- a Bun test reading the current app's decoded chords as plain values; the sizes it holds are the JSON bytes Exact sends. */
+/* oxlint-disable effect/noTernary, effect/noGlobals -- a Bun test reading the current app's decoded chords as plain values; the sizes it holds are the JSON bytes Exact sends. */
 
 /**
  * The page's chords are the current app's (A1) and light (A4): for every
