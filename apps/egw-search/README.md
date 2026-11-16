@@ -8,7 +8,17 @@ bun run --cwd apps/egw-search start
 ```
 
 `build` is a Vite build into `dist/`; the server (`server/main.ts`) serves it
-beside `/api/search`, `/api/search/batch` and `/health`. For development,
+beside `/api/search`, `/api/search/batch`, `/api/commentary/pack` and `/health`.
+
+`/api/commentary/pack` is Ellen White's Bible Commentary as one JSON pack that
+Heartseed downloads and keeps: each paragraph of 1BC-7BC linked to a Bible
+verse, once, and each verse's notes (`server/commentary.ts` is the rule). It is
+built from the corpus the server holds, so it follows the weekly sync. Its
+`ETag` is its version, made of its note count and an FNV-1a sum of its notes, so
+an `If-None-Match` naming it answers `304`. The Bun server keeps the built pack
+in memory for an hour; the Worker keeps it in the edge cache for an hour, so D1
+is read for it at most once an hour per edge (on a `workers.dev` stage the
+Cache API keeps nothing, so every ask reads D1). For development,
 `bun run --cwd apps/egw-search dev` runs Vite on port 5273 with `/api`
 proxied to the server on port 3101.
 
