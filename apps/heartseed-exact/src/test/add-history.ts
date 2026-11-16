@@ -4,9 +4,12 @@
  * One generated history of planting through Add verses (spec A3), on the
  * port's sources and on the current Heartseed's own `Passages` and
  * `Garden` over `KeyValueStore.layerMemory` (`garden-model.ts`), side by
- * side. A step plants a chooser range as the chooser offers it (`Plant`
+ * side. The owner's rule is also stated here as a literal 3: the chooser
+ * offers a list exactly at 3 verses or more, and no list made is shorter.
+ * A step plants a chooser range as the chooser offers it (`Plant`
  * at 3 verses or more: `gardenPlant` on the port, `Passages.add` on the
- * current app; one or two verses, while the single verses have room:
+ * current app; one or two verses, while a verse of them is not single yet
+ * and the single verses have room for it:
  * `gardenJoin` on the port, `Passages.join` on the current app), plants any shelf row (a pick, a
  * promise, a Handbook list: `addPlant` on the port, and on the current app
  * what its sheet runs for the row: `join` for a pick under 3 verses, else
@@ -126,17 +129,27 @@ const dumpOf = (store: KeyValueStore.KeyValueStore) =>
 
 const LANDED = new Set(['Planted', 'Removed']);
 
+/** The owner's rule, stated here and not imported: a list holds at least three verses. */
+const OWNER_LEAST = 3;
+
 /** A chooser step: what the chooser offers for its range, sent to the port and run on the current app; the port's answer and the app's, both empty when nothing is offered. */
 const chosen = async (
   port: ReturnType<typeof makePort>,
   oracle: Awaited<ReturnType<typeof makeOracle>>,
   step: Extract<Step, { _tag: 'choose' }>,
-  held: number,
+  held: ReadonlyArray<string>,
   now: number,
   seed: number,
 ): Promise<readonly [string, string]> => {
   const shown = chooserShown(`${step.book}`, `${step.chapter}`, step.range, '', held);
   const range = { book: step.book, chapter: step.chapter, first: shown.first, last: shown.last };
+  const verses = shown.chosen ? shown.last - shown.first + 1 : 0;
+  expect({ step, verses, list: shown.plant, both: shown.plant && shown.singles }).toEqual({
+    step,
+    verses,
+    list: verses >= OWNER_LEAST,
+    both: false,
+  });
   if (!shown.singles && !shown.plant) return ['', ''];
   const source = shown.singles ? 'gardenJoin' : 'gardenPlant';
   const answer = (
@@ -181,7 +194,12 @@ export const runAddHistory = async (seed: number, steps: number) => {
     let answer = '';
     let expected = '';
     if (step._tag === 'choose') {
-      const held = known.passages._tag === 'Read' ? known.passages.singles.length : 0;
+      const held =
+        known.passages._tag === 'Read'
+          ? known.passages.singles.map((range) =>
+              verseReference(range.book, range.chapter, range.first),
+            )
+          : [];
       [answer, expected] = await chosen(port, oracle, step, held, now, seed);
     } else if (step._tag === 'shelf') {
       answer = (
@@ -212,12 +230,13 @@ export const runAddHistory = async (seed: number, steps: number) => {
       const lists = listsOf([], after.passages, []);
       expect({ ...where, most: lists.length <= MOST_PASSAGES }).toEqual({ ...where, most: true });
       const made = lists.filter((list) => list.source._tag === 'Passage');
-      expect({ ...where, least: made.every((list) => list.verses.length >= LEAST_VERSES) }).toEqual(
-        {
-          ...where,
-          least: true,
-        },
+      const least = made.every(
+        (list) => list.verses.length >= LEAST_VERSES && list.verses.length >= OWNER_LEAST,
       );
+      expect({ ...where, least }).toEqual({
+        ...where,
+        least: true,
+      });
       const singles = after.passages.singles.map((range) =>
         verseReference(range.book, range.chapter, range.first),
       );
