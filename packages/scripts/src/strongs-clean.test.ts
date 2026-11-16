@@ -224,9 +224,9 @@ describe('stage 2, from the source', () => {
     });
   });
 
-  test('never replaces a sound entry', () => {
+  test('never replaces a sound entry that has a lemma', () => {
     for (const [index, entry] of draw(5, (random) => ({
-      lemma: '',
+      lemma: word(random),
       xlit: word(random),
       def: definition(random),
     })).entries())
@@ -266,5 +266,28 @@ describe('stage 2, from the source', () => {
       kjvDef: 'text.',
     });
     expect(result).toMatchObject({ cleaned: ['H3'], refilled: ['H2'], defective: [] });
+  });
+
+  test('gives a sound entry with no lemma the source lemma, in place, every other field as stored', () => {
+    const stored = {
+      H4: { lemma: '', xlit: 'd', pron: 'dee', def: 'sound text — here.', kjvDef: 'here.' },
+      H5: { lemma: 'ה', xlit: 'e', def: 'sound text — there.' },
+      H6: { lemma: '', xlit: 'f', def: 'sound text — elsewhere.' },
+    };
+    const result = repair(
+      stored,
+      Option.some({ H4: { lemma: 'ד', strongs_def: 'other' }, H5: { lemma: 'ו' }, H6: {} }),
+    );
+    expect(Object.entries({ ...result.lexicon['H4'] })).toEqual([
+      ['lemma', 'ד'],
+      ['xlit', 'd'],
+      ['pron', 'dee'],
+      ['def', 'sound text — here.'],
+      ['kjvDef', 'here.'],
+    ]);
+    expect(result.lexicon['H5']).toBe(stored.H5);
+    expect(result.lexicon['H6']).toBe(stored.H6);
+    expect(result).toMatchObject({ lemmas: ['H4'], cleaned: [], refilled: [] });
+    expect(repair(stored, Option.none()).lexicon['H4']).toBe(stored.H4);
   });
 });

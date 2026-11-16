@@ -231,8 +231,10 @@ const same = (left: LexiconEntry, right: LexiconEntry) => bytesOf(left) === byte
 /**
  * Both stages over a whole lexicon as the file stores it: the repaired
  * lexicon (an entry neither stage changes is the stored one, its fields in
- * their order), the numbers stage 1 alone changed, those stage 2 refilled, and
- * those still defective. Without sources, stage 1 alone.
+ * their order; a sound one with no lemma takes the source's lemma in place,
+ * every other byte kept), the numbers stage 1 alone changed, those stage 2
+ * refilled, those given only a lemma, and those still defective. Without
+ * sources, stage 1 alone.
  */
 export const repair = (
   lexicon: Readonly<Record<string, Stored>>,
@@ -246,6 +248,15 @@ export const repair = (
   });
   const changed = rows.filter((row) => row.changed);
   const byRule = (row: (typeof rows)[number]) => same(row.repaired, clean(row.entry));
+  const lemmaOf = (row: (typeof rows)[number]) =>
+    Option.filter(
+      Option.flatMap(sources, (all) =>
+        Option.flatMap(Option.fromUndefinedOr(all[row.number]), (found) =>
+          Option.fromUndefinedOr(found.lemma),
+        ),
+      ),
+      (lemma) => !row.changed && row.entry.lemma.length === 0 && lemma.length > 0,
+    );
   const written: ReadonlyArray<readonly [string, Stored]> = rows.map((row) => [
     row.number,
     Option.getOrElse(
@@ -253,13 +264,18 @@ export const repair = (
         Option.liftPredicate(row, (kept) => kept.changed),
         (kept) => kept.repaired,
       ),
-      () => row.stored,
+      () =>
+        Option.match(lemmaOf(row), {
+          onNone: () => row.stored,
+          onSome: (lemma) => ({ ...row.stored, lemma }),
+        }),
     ),
   ]);
   return {
     lexicon: Object.fromEntries(written),
     cleaned: changed.filter(byRule).map((row) => row.number),
     refilled: changed.filter((row) => !byRule(row)).map((row) => row.number),
+    lemmas: rows.filter((row) => Option.isSome(lemmaOf(row))).map((row) => row.number),
     defective: rows.filter((row) => !isSound(row.repaired)).map((row) => row.number),
   };
 };

@@ -62,7 +62,7 @@ const summaryOf = (result: ReturnType<typeof repair>) => {
     onNone: () => '',
     onSome: () => ` (first: ${result.defective.slice(0, 5).join(' ')})`,
   });
-  return `${Object.keys(result.lexicon).length} entries; stage 1 cleaned ${result.cleaned.length}, stage 2 refilled ${result.refilled.length}, still defective ${result.defective.length}${sample}`;
+  return `${Object.keys(result.lexicon).length} entries; stage 1 cleaned ${result.cleaned.length}, stage 2 refilled ${result.refilled.length}, lemma filled ${result.lemmas.length}, still defective ${result.defective.length}${sample}`;
 };
 
 const command = Command.make(
