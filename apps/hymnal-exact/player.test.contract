@@ -88,6 +88,7 @@ test "The full player"
   clock until state player.phase == "playing" within 10000
   clock data
   expect state player.length >= 200
+  clock settle
   tap "bar-title"
   clock data
   clock settle

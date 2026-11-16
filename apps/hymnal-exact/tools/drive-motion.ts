@@ -368,6 +368,7 @@ if (host === 'ios') {
       'clock settle',
       'tap gear',
       film('sink'),
+      'clock settle',
       'tap settings-done',
       'prefer prefers-color-scheme dark',
       'clock settle',
