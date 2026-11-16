@@ -130,7 +130,8 @@ const inkIs = (name: string, reply: unknown, scheme: Scheme) => {
   drive.check(name, got === rgbOf(theme[scheme].ink) || got === 'hs.ink', got);
 };
 
-const CHOSEN = ['minutes-10', 'voice-him', 'appearance-dark'];
+/** The choices made, and Sounds and haptics' switch, on by default and kept on. */
+const CHOSEN = ['minutes-10', 'voice-him', 'appearance-dark', 'settings-feel'];
 
 const a = script('first');
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
