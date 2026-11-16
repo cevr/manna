@@ -97,7 +97,7 @@ interface Verse {
 
 const grown = [
   'clock data',
-  'clock settle',
+  'clock data',
   'state gardenTime',
   'tap plant-three',
   'clock data',
