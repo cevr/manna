@@ -15,3 +15,41 @@ repository at commit `f00ee65` on 2026-07-19.
 - Imported file SHA-256: `02230f547d8096e76bc844718d934a8e8b6f209e9d590581d1712e86062fe494`
 - Original CrossWire source and provenance are retained in the asset's `meta`
   envelope.
+
+## Strong's lexicon
+
+`strongs.json` is James Strong's Greek (1890) and Hebrew (1894) dictionaries,
+one entry per Strong's number (`G<n>`, `H<n>`): `lemma`, `xlit`, `def` (the
+definition, a dash, how the KJV renders the word), and `pron` (every Hebrew
+entry, and the Greek entries the repair gave one) and `kjvDef` (Hebrew).
+Strong's own text is in the public domain.
+
+The 4,710 entries that were defective (a definition that began with `null`
+and its pronunciation, written twice, with no letter, or with Greek or Hebrew
+words dropped) were refilled from Open Scriptures' JSON edition of the two
+dictionaries; every other entry is as it was, except that each Hebrew entry
+with no lemma took the source's lemma (3,557). That edition says in each
+file: "Copyright 2009 (Greek), 2010 (Hebrew), Open Scriptures. CC-BY-SA.
+Derived from XML" (the Greek XML by Ulrik Petersen, the Hebrew by David
+Instone-Brewer and David Troidl). Credit Open Scriptures wherever the lexicon
+is shown, and share an adapted lexicon under the same terms.
+
+- Source repository: <https://github.com/openscriptures/strongs>, commit
+  `0acd2f251c2d35ff8db2dece4e0593979d3ac223` (2021-07-15)
+- `greek/strongs-greek-dictionary.js` SHA-256:
+  `7624ee738ae47e80f1a352223e28a26d011c9cd4898822cee52f47a010c04efd`
+- `hebrew/strongs-hebrew-dictionary.js` SHA-256:
+  `5ce6aeed551c709f49bcfa341cadf2f34bc7599b85d9de9e6ac2ecbf60fc3739`
+- Repair: download both files into one directory outside the repository, then
+  `bun run --cwd packages/scripts strongs:clean --source <that directory>`.
+  The tool refuses a file whose SHA-256 differs, leaves every sound entry as
+  it is, and run again changes nothing. Without `--source` it applies the
+  rules alone (`packages/scripts/src/strongs-clean/rules.ts`).
+- Into the databases: `bible.db` is built from this file, every field
+  (`lemma`, `xlit`, `pron`, `def`, `kjvDef` into the `strongs` table), so a
+  rebuild carries every repair. The CLI reads `~/.bible/bible.db`; rebuild and
+  install a local copy with
+  `bun run --cwd packages/core sync:bible:force && cp packages/core/data/bible.db ~/.bible/bible.db`.
+  `manna init` on a new machine installs the pinned release
+  (`BIBLE_ARTIFACT_RELEASE` in `packages/core/src/corpus-supply/file-artifact.ts`),
+  which carries the repair only once a new release is published and pinned.

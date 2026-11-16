@@ -189,13 +189,16 @@ export class BibleCorpus extends Context.Service<BibleCorpus, BibleCorpusService
                   number, language, lemma, transliteration, pronunciation, definition, kjv_definition
                 ) VALUES (
                   ${number}, ${language.value}, ${entry.lemma}, ${Option.getOrNull(Option.fromNullishOr(entry.xlit))},
-                  NULL, ${entry.def}, NULL
+                  ${Option.getOrNull(Option.fromNullishOr(entry.pron))}, ${entry.def},
+                  ${Option.getOrNull(Option.fromNullishOr(entry.kjvDef))}
                 )
                 ON CONFLICT(number) DO UPDATE SET
                   language = excluded.language,
                   lemma = excluded.lemma,
                   transliteration = excluded.transliteration,
-                  definition = excluded.definition
+                  pronunciation = excluded.pronunciation,
+                  definition = excluded.definition,
+                  kjv_definition = excluded.kjv_definition
               `;
                 imported += 1;
               }
