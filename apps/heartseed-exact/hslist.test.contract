@@ -6,8 +6,22 @@ test "A list's page shows its verses with stage and due"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -26,8 +40,22 @@ test "Practice this list reads its line and starts its verse"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -46,10 +74,31 @@ test "Remove this list asks, then returns home without the row"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -68,6 +117,6 @@ test "Remove this list asks, then returns home without the row"
   clock settle
   expect tree missing "list-page"
   expect tree missing "row-passage-0-43-3-16-18"
-  expect tree has "single-Psalms-119-1"
+  expect tree has "single-Proverbs-4-23"
   expect state homeShown.rows.length == 0
   expect no failures

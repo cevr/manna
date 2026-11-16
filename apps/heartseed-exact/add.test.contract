@@ -1,0 +1,140 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "The shelves, in order"
+  at "/add"
+  clock data
+  clock settle
+  expect tree has "add-verses"
+  expect text "shelf-any" == "Any passageEvery book, chapter and verse"
+  expect state addShown.shelves.0.id == "any"
+  expect state addShown.shelves.1.id == "psalms"
+  expect state addShown.shelves.2.id == "proverbs"
+  expect state addShown.shelves.3.id == "john"
+  expect state addShown.shelves.4.id == "forgiveness"
+  expect state addShown.shelves.17.id == "handbook:bhb-27"
+  expect tree has "shelf-psalms"
+  expect tree has "shelf-handbook-bhb-27"
+  expect tree missing "offer-pick-psalms-19-1-1-3"
+  tap "shelf-psalms"
+  clock data
+  clock settle
+  expect state addShown.shelves.1.open == true
+  expect text "offer-state-pick-psalms-19-1-1-3" == "Plant"
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  expect state addShown.shelves.1.open == false
+  expect tree missing "offer-pick-psalms-19-1-1-3"
+  expect tree has "offer-pick-proverbs-20-4-23-23"
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  expect tree missing "offer-pick-proverbs-20-4-23-23"
+  expect tree missing "add-limit"
+  expect no failures
+
+test "A pick shows its verses before it is planted, then plants"
+  at "/add"
+  clock data
+  clock settle
+  tap "shelf-psalms"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-1-1-3"
+  clock data
+  clock settle
+  expect text "shelf-title" == "Psalms 1:1-3"
+  expect text "shelf-count" == "3 verses"
+  expect tree has "shelf-verse-Psalms-1-1"
+  expect tree has "shelf-verse-Psalms-1-3"
+  expect state addListShown.verses.2.reference == "Psalms 1:3"
+  expect enabled "shelf-plant"
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect tree missing "shelf-list"
+  expect tree has "add-verses"
+  expect state garden.lists.length == 1
+  expect text "offer-state-pick-psalms-19-1-1-3" == "In your field"
+  expect no failures
+
+test "A short pick joins the single verses"
+  at "/add"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  expect text "shelf-count" == "1 verse"
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect state garden.singles.length == 1
+  expect state garden.singles.0.reference == "Proverbs 4:23"
+  expect state garden.lists.length == 0
+  expect no failures
+
+test "A Handbook list plants as a list"
+  at "/add"
+  clock data
+  clock settle
+  tap "shelf-handbook-bhb-27"
+  clock data
+  clock settle
+  expect tree has "offer-bhb-30"
+  tap "offer-bhb-30"
+  clock data
+  clock settle
+  expect text "shelf-title" == "Magnifying the Word of God"
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect state garden.lists.length == 1
+  expect state garden.lists.0.title == "Magnifying the Word of God"
+  expect no failures
+
+test "At three lists the rows say the limit"
+  at "/add"
+  clock data
+  clock settle
+  tap "shelf-psalms"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-1-1-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-46-1-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-91-1-4"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect state garden.lists.length == 3
+  expect text "add-limit" == "3 passages or lists, the most for now. Remove one to add another."
+  expect tree missing "offer-state-pick-psalms-19-103-1-5"
+  tap "offer-pick-psalms-19-103-1-5"
+  clock data
+  clock settle
+  expect tree missing "shelf-plant"
+  expect text "shelf-limit" == "3 passages or lists, the most for now. Remove one to add another."
+  back
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  expect text "offer-state-pick-proverbs-20-15-1-1" == "Plant"
+  expect no failures

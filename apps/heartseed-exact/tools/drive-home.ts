@@ -82,7 +82,7 @@ interface ListVerse {
 
 const ops = [
   'clock data',
-  'tap add-list',
+  'type root /verses',
   'clock data',
   'tap plant-three',
   'clock data',

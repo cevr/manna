@@ -39,6 +39,12 @@ export declare const verseCount: (range: Range) => number;
 /** Whether a reader may add `range`: in one chapter and short enough. */
 export declare const choosable: (range: Range) => boolean;
 
+/** Whether `range` holds fewer verses than a list may. */
+export declare const isShort: (range: Range) => boolean;
+
+/** The title home gives the single verses. */
+export declare const SINGLES_TITLE: 'Single verses';
+
 /** One verse's reference as the canon writes it. */
 export declare const verseReference: (book: number, chapter: number, verse: number) => string;
 
@@ -54,6 +60,9 @@ export type PassagesView =
       readonly singles: ReadonlyArray<Range>;
     }
   | { readonly _tag: 'Unread' };
+
+/** How many passages and lists `view` holds together; none when unread. */
+export declare const heldCount: (view: PassagesView) => number;
 
 /** What an add answers; `Short` for a range under the fewest a list holds. */
 export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Short' | 'Unread' | 'Failed';

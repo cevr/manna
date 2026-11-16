@@ -18,8 +18,21 @@ test "A list is a row of plants, with no icon and no glyph"
   clock data
   tap "add-list"
   clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
   perf
-    tap "plant-three"
+    tap "plant-list"
     clock data
     clock settle
   expect perf built "HomePlantButton" == 3
@@ -40,20 +53,45 @@ test "Single verses sit under the lists"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "verse-16"
   clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-15-1-1"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
   back
   clock data
   clock settle
   expect tree has "singles"
-  expect text "single-Psalms-119-1" == "Psalms 119:1"
-  expect text "single-Psalms-119-2" == "Psalms 119:2"
-  expect state homeShown.singles.0.reference == "Psalms 119:1"
-  expect state homeShown.singles.1.reference == "Psalms 119:2"
+  expect text "single-Proverbs-4-23" == "Proverbs 4:23"
+  expect text "single-Proverbs-15-1" == "Proverbs 15:1"
+  expect state homeShown.singles.0.reference == "Proverbs 4:23"
+  expect state homeShown.singles.1.reference == "Proverbs 15:1"
   expect state homeShown.singlesShown == true
   expect state homeShown.rows.length == 1
   expect no failures
@@ -62,10 +100,31 @@ test "The card offers the day's one action"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -75,7 +134,7 @@ test "The card offers the day's one action"
   tap "today-action"
   clock data
   clock settle
-  expect state today.session.wire.items.0.reference == "Psalms 119:1"
+  expect state today.session.wire.items.0.reference == "Proverbs 4:23"
   expect tree has "say"
   expect no failures
 
@@ -83,8 +142,22 @@ test "A plant starts its verse"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -98,24 +171,32 @@ test "Removing a single verse asks first"
   clock data
   tap "add-list"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-proverbs"
   clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
   back
   clock data
   clock settle
-  tap "single-remove-Psalms-119-1"
-  expect tree has "ask-Psalms-119-1"
-  expect tree missing "single-remove-Psalms-119-1"
-  expect state homeShown.singles.0.ask == "Remove Psalms 119:1? Its plant stays in your field."
+  tap "single-remove-Proverbs-4-23"
+  expect tree has "ask-Proverbs-4-23"
+  expect tree missing "single-remove-Proverbs-4-23"
+  expect state homeShown.singles.0.ask == "Remove Proverbs 4:23? Its plant stays in your field."
   tap "ask-no"
   clock data
-  expect tree missing "ask-Psalms-119-1"
-  expect tree has "single-Psalms-119-1"
-  tap "single-remove-Psalms-119-1"
+  expect tree missing "ask-Proverbs-4-23"
+  expect tree has "single-Proverbs-4-23"
+  tap "single-remove-Proverbs-4-23"
   tap "ask-yes"
   clock data
   clock settle
-  expect tree missing "single-Psalms-119-1"
+  expect tree missing "single-Proverbs-4-23"
   expect tree missing "singles"
   expect no failures
 
@@ -123,52 +204,184 @@ test "Back keeps the place"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "verse-16"
   clock data
-  tap "plant-one"
+  tap "verse-18"
   clock data
-  tap "plant-one"
+  tap "plant-list"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "verse-19"
   clock data
-  tap "plant-one"
+  tap "verse-21"
   clock data
-  tap "plant-one"
+  tap "plant-list"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "verse-22"
   clock data
-  tap "plant-one"
+  tap "verse-24"
   clock data
-  tap "plant-one"
+  tap "plant-list"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-proverbs"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-15-1-1"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-16-3-3"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-18-10-10"
   clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-22-6-6"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "shelf-john"
+  clock data
+  clock settle
+  tap "offer-pick-john-43-14-27-27"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "shelf-forgiveness"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-62-1-9-9"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-1-18-18"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-19-103-12-12"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-43-25-25"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-44-22-22"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-49-1-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-44-3-19-19"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-19-86-5-5"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-55-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-58-8-12-12"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "shelf-peace"
+  clock data
+  clock settle
+  tap "offer-pick-peace-23-26-3-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-60-5-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-19-55-22-22"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-43-16-33-33"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -194,12 +407,52 @@ test "The limits speak"
   clock data
   tap "add-list"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "chapter-3"
   clock data
-  tap "plant-three"
+  clock settle
+  tap "verse-16"
   clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-19"
+  clock data
+  tap "verse-21"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-22"
+  clock data
+  tap "verse-24"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -211,46 +464,148 @@ test "Twenty single verses speak their limit"
   clock data
   tap "add-list"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-proverbs"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-15-1-1"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-16-3-3"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-18-10-10"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-proverbs-20-22-6-6"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-john"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-john-43-14-27-27"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-forgiveness"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-forgiveness-62-1-9-9"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-forgiveness-23-1-18-18"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-plant"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "offer-pick-forgiveness-19-103-12-12"
   clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-43-25-25"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-44-22-22"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-49-1-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-44-3-19-19"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-19-86-5-5"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-23-55-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-forgiveness-58-8-12-12"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "shelf-peace"
+  clock data
+  clock settle
+  tap "offer-pick-peace-23-26-3-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-60-5-7-7"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-19-55-22-22"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "offer-pick-peace-43-16-33-33"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  expect text "add-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  expect tree missing "offer-state-pick-peace-19-4-8-8"
+  tap "offer-pick-peace-19-4-8-8"
+  clock data
+  clock settle
+  expect tree missing "shelf-plant"
+  expect text "shelf-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  back
+  clock settle
   back
   clock data
   clock settle

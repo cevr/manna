@@ -18,6 +18,7 @@ import { runCall } from '@manna/exact-kit/effect';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { backOf, stageOf, type Stage } from '@manna/heartseed/garden';
 import { listsOf } from '@manna/heartseed/lists';
+import { LEAST_VERSES, MOST_PASSAGES, MOST_SINGLES } from '@manna/heartseed/passages';
 import { expect } from 'bun:test';
 import { Option } from 'effect';
 
@@ -48,12 +49,12 @@ const invariants = (step: Step, before: Held, after: Held, seed: number) => {
       where,
       lists: after.passages.passages.length + after.passages.lists.length,
     });
-    expect({ where, most: lists.length <= 3 }).toEqual({ where, most: true });
+    expect({ where, most: lists.length <= MOST_PASSAGES }).toEqual({ where, most: true });
     for (const list of lists)
-      expect({ where, least: list.verses.length >= 3 }).toEqual({ where, least: true });
+      expect({ where, least: list.verses.length >= LEAST_VERSES }).toEqual({ where, least: true });
   }
   Option.map(after.singles, (singles) =>
-    expect({ where, singles: singles.length <= 20 }).toEqual({ where, singles: true }),
+    expect({ where, singles: singles.length <= MOST_SINGLES }).toEqual({ where, singles: true }),
   );
   if (step._tag !== 'recall' || after.garden._tag === 'Unread') return;
   const plant = Option.fromUndefinedOr(after.garden.plants.get(step.reference));

@@ -25,19 +25,45 @@ test "The plan's first item shows, new pieces first heard"
   clock settle
   tap "today-add"
   clock data
-  tap "plant-three"
+  tap "verses-add"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  back
+  clock settle
   back
   clock data
   clock settle
-  expect text "item-reference" == "Psalms 119:1"
-  expect state today.words.length == 16
-  expect tree has "word-15"
+  expect text "item-reference" == "Proverbs 4:23"
+  expect state today.words.length == 15
+  expect tree has "word-14"
+  expect tree missing "word-15"
   expect state today.session.fresh == true
   expect state today.session.wire.planned == true
-  expect state today.session.wire.items.0.reference == "Psalms 119:1"
+  expect state today.session.wire.items.0.reference == "Proverbs 4:23"
   expect enabled "hear"
   expect enabled "say"
   expect text "counts" == "1 new · about 1 min"
@@ -49,10 +75,35 @@ test "Minutes shape the plan"
   clock settle
   tap "today-add"
   clock data
-  tap "plant-three"
+  tap "verses-add"
   clock data
-  tap "plant-one"
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
   clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  back
+  clock settle
   back
   clock data
   clock settle
@@ -70,7 +121,7 @@ test "Minutes shape the plan"
   expect text "counts" == "1 new · about 1 min"
   tap "settings-done"
   clock settle
-  expect text "item-reference" == "Psalms 119:1"
+  expect text "item-reference" == "Proverbs 4:23"
   expect no failures
 
 test "A visit shows the verse tapped"
@@ -90,12 +141,24 @@ test "Voice Off hides Hear it"
   clock settle
   tap "today-add"
   clock data
-  tap "plant-one"
+  tap "verses-add"
   clock data
+  clock settle
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  back
+  clock settle
   back
   clock data
   clock settle
-  expect text "item-reference" == "Psalms 119:1"
+  expect text "item-reference" == "Proverbs 4:23"
   expect enabled "hear"
   tap "gear"
   clock settle

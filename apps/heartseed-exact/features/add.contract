@@ -1,0 +1,139 @@
+// Add verses (`/add`): the current Heartseed's shelves in its order, as a
+// grouped list. Any passage opens the chooser (features/chooser.contract);
+// every other shelf (the picks, the promises, each section of Haskell's
+// Bible Handbook) is a head that opens in place, one at a time, as the
+// current sheet's shelves do, and lists its rows, one per list, each its
+// title, its count and what it offers now (`addShelf` names the open one).
+// A row opens its list (`/add/lists/:list`): its verses with their words
+// and Plant. What each screen draws is src/add/shelves.ts's answer, the
+// current app's rules (`SHELVES`, `offerStateOf`, `plantsSingly`) over the
+// garden one call reads; Plant is the garden's `addPlant`, through its
+// queue, and once it lands the reader is back at Add verses. Each screen's
+// node names start with its own, since the screens under it stay drawn.
+use GardenShown, GardenChange from "./garden.contract"
+use homeMarkOf from "./home.contract"
+
+shape AddRow
+  id: string
+  slug: string
+  title: string
+  count: string
+  offer: string
+  offerText: string
+  singly: bool
+
+shape AddShelf
+  id: string
+  slug: string
+  title: string
+  note: string
+  kind: string
+  open: bool
+  rows: AddRow[]
+
+shape AddShown
+  read: bool
+  line: string
+  lineId: string
+  shelves: AddShelf[]
+
+shape AddVerse
+  reference: string
+  slug: string
+  text: string
+
+shape AddList
+  found: bool
+  row: AddRow
+  shelf: string
+  line: string
+  lineId: string
+  verses: AddVerse[]
+
+members HeartseedExact
+  state addAnswer = ""
+  state addShelf = ""
+  derive addOpen = stack(nav).filter(x => x.name == "add").length > 0
+  derive addListArg = match stack(nav).filter(x => x.name == "addList").at(-1) { case some(t) => t.params.list, case none => "" }
+  resource addShown = addRead(addShelf, homeMarkOf(garden)) with gardenAt, gardenTime.seed when addOpen as shape AddShown else empty()
+  resource addListShown = addList(addListArg, addAnswer, homeMarkOf(garden)) with gardenAt, gardenTime.seed when addListArg != "" as shape AddList else empty()
+  mutation addPlanted as shape GardenChange queue refreshes garden then addLanded
+
+  action addOpenIt
+    nav = push(nav, "/add")
+  action addOpenBible
+    nav = push(nav, "/add/bible")
+  action addOpenList(slug: string)
+    addAnswer = ""
+    nav = push(nav, path("addList", slug))
+  action addToggle(slug: string)
+    if addShelf == slug
+      addShelf = ""
+    else
+      addShelf = slug
+  action addPlantIt
+    if addListShown.row.offer == "plant" and not pending(addPlanted)
+      gardenClock = performanceNow()
+      send addPlanted = addPlant(addListShown.row.slug, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  derive addLandedAnswer = match addPlanted { case some(c) => c.answer, case none => "" }
+  action addLanded
+    addAnswer = addLandedAnswer
+    if addLandedAnswer == "Planted" or addLandedAnswer == "Already"
+      addAnswer = ""
+      nav = go(nav, "/add")
+
+component AddVersesPage
+  props
+    add: AddShown
+    bible: action
+    toggle: action
+    open: action
+  view
+    column flex=1 min-height=0 display="flex" flex-direction="column"
+      list id="add-list" navigationScroll="add-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="add-verses"
+        for s in add.shelves key=s.id
+          section
+            if s.kind == "bible"
+              button press=bible aria-label=s.title testId=`shelf-${s.slug}`
+                column flex=1 min-width=0 gap=2
+                  text s.title overflow-wrap="break-word"
+                  text s.note color="-exact-secondary-label"
+            if s.kind != "bible"
+              button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open testId=`shelf-${s.slug}`
+                column flex=1 min-width=0 gap=2
+                  text s.title overflow-wrap="break-word"
+                  text s.note color="-exact-secondary-label"
+            for r in s.rows key=r.id
+              button press=open(r.slug) aria-label=r.title testId=`offer-${r.slug}`
+                row gap=12 flex=1 min-width=0 align-items="center"
+                  column flex=1 min-width=0 gap=2
+                    text r.title overflow-wrap="break-word"
+                    text r.count color="-exact-secondary-label"
+                  if r.offerText != ""
+                    text r.offerText color="-exact-secondary-label" testId=`offer-state-${r.slug}`
+      if add.line != ""
+        text add.line role="alert" padding="12px 20px" flex-shrink=0 testId=`add-${add.lineId}`
+
+component AddListPage
+  props
+    list: AddList
+    pending: bool
+    plant: action
+  view
+    column flex=1 min-height=0 display="flex" flex-direction="column"
+      scroll id="shelf-scroll" navigationScroll="shelf-scroll" flex=1 min-height=0
+        column gap=12 padding=20 max-width="40rem" testId="shelf-list"
+          text list.row.title role="heading" aria-level=2 overflow-wrap="break-word" testId="shelf-title"
+          text list.row.count color="-exact-secondary-label" testId="shelf-count"
+          for v in list.verses key=v.slug
+            column gap=2 testId=`shelf-verse-${v.slug}`
+              text v.reference font="-exact-headline"
+              text v.text overflow-wrap="break-word" hyphens="auto"
+      column gap=6 padding="12px 20px" flex-shrink=0
+        if list.row.offer == "in field"
+          text list.row.offerText testId="shelf-state"
+        if list.line != ""
+          text list.line role="alert" testId=`shelf-${list.lineId}`
+        if list.row.offer == "plant"
+          button press=plant buttonStyle="filled" disabled=pending testId="shelf-plant"
+            text "Plant"
