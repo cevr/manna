@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAs, effect/noUnsafeDictionaryType, effect/noTernary, effect/noNullish, effect/noKnownValueWidening -- a host script that writes `tools/web/budget.json` from drive-web's JSON reports, whose measures are open records of numbers by page and name, and the rule drive-web checks a measure by; it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAs, effect/noTernary, effect/noNullish, effect/noKnownValueWidening -- a host script that writes `tools/web/budget.json` from drive-web's JSON reports, whose measures are open records of numbers by page and name, and the rule drive-web checks a measure by; it never runs in the data module. */
 
 /**
  * The web build's budget (`tools/web/budget.json`): each byte count and
