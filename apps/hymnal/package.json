@@ -61,6 +61,7 @@
     "./follow/seek-targets": "./src/follow/seek-targets.ts",
     "./player/scrub-rules": "./src/player/scrub-rules.ts",
     "./home/find-rules": "./src/home/find-rules.ts",
+    "./home/tile-times": "./src/home/tile-times.ts",
     "./player/drums": "./src/player/drums.ts",
     "./reader/search-mode": "./src/reader/search-mode.ts",
     "./hymns/chords": "./src/hymns/chords.ts",

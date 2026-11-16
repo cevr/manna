@@ -36,6 +36,7 @@ import { ListEnd } from '~/reader/ListEnd';
 import { usePinch } from './pinch';
 import { playingNumber } from './playing';
 import { type Tab, type Tile, tilesOf } from './tabs';
+import { tileTimes } from './tile-times';
 
 /** Tiles in a row, and the space between and around them. */
 const columns = 2;
@@ -64,15 +65,18 @@ const zoomed = {
   entering: new Keyframe({
     0: { opacity: 0, transform: [{ scale: 1.06 }] },
     100: { opacity: 1, transform: [{ scale: 1 }] },
-  }).duration(180),
+  }).duration(tileTimes.in),
   exiting: new Keyframe({
     0: { opacity: 1, transform: [{ scale: 1 }] },
     100: { opacity: 0, transform: [{ scale: 1.06 }] },
-  }).duration(140),
+  }).duration(tileTimes.out),
 };
 
 /** With Reduce Motion on, the tiles come and go by a cross-fade in place of the zoom. */
-const faded = { entering: FadeIn.duration(150), exiting: FadeOut.duration(150) };
+const faded = {
+  entering: FadeIn.duration(tileTimes.fade),
+  exiting: FadeOut.duration(tileTimes.fade),
+};
 
 const idle = Atom.make<Player>(Player.Idle());
 
