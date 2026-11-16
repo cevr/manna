@@ -25,7 +25,7 @@ use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
 use AddVersesPage, AddListPage from "./features/add.contract"
 use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
-use readTopOf from "./features/read.contract"
+use readTopOf, ReadDriven from "./features/read.contract"
 
 routes nav
   tab garden "/"
@@ -73,7 +73,7 @@ component HeartseedExact
         for t in nav.tabs key=t.name
           column role="tabpanel" id=`panel-${t.name}` testId=`panel-${t.name}` position="absolute" inset=0
             for e in t.stack.filter(x => not x.name.startsWith("settings")) key=e.id
-              column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name}`
+              column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name == "garden" ? "home" : e.name}`
                 header display="flex" align-items="center"
                   if e.name == "read" or e.name == "readAt"
                     text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=1 flex=1 testId=`read-title-${e.name}`
@@ -98,6 +98,8 @@ component HeartseedExact
                   ChooserChaptersPage(book=chooserChaptersShown, open=chooserOpenChapter)
                 if e.name == "addChapter" or ((e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack))
                   ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=feelChooseVerse, plant=chooserPlantIt, join=chooserJoinIt)
+                if gardenDriven.on and (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
+                  ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
                   Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
             for e in t.stack.filter(x => x.name.startsWith("settings")) key=e.id
