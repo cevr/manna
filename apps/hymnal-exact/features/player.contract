@@ -162,7 +162,7 @@ component PlayerDock
   inject
     motionStill: bool
   view
-    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not player.dock)
+    column position="absolute" inset=0 justify-content="flex-end" pointer-events="none" aria-hidden=(not player.dock)
       for l in (player.src == "" ? [] : [player.load]) key=l
         audio player.src id="audio" paused=player.paused currentTime=player.from testId="audio"
           metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
@@ -172,7 +172,7 @@ component PlayerDock
           waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
           pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
       if player.dock
-        row testId="bar" animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both") align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
+        row testId="bar" pointer-events="auto" animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both") align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
           button press=ask("open", 0) flex="1 1 12rem" min-width=0 min-height=44 testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
             column gap=2 align-items="flex-start"
               text `${player.bar.number} · ${player.bar.title}` testId="bar-hymn"

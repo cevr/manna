@@ -46,6 +46,29 @@ test "Dark at once, and kept."
   expect state settingsLook == "system"
   expect state settingsLooks.0 .chosen == true
 
+// The relaunch with the store kept is tools/drive-motion.ts's.
+test "Sounds and haptics is on, and stays off once turned off"
+  tap "gear"
+  clock settle
+  clock data
+  expect tree has "settings-feel"
+  expect state settingsFeelKept == "on"
+  expect state settingsFeel == true
+  tap "settings-feel"
+  clock settle
+  clock data
+  expect state settingsFeelKept == "off"
+  expect state settingsFeel == false
+  tap "appearance-dark"
+  clock settle
+  clock data
+  expect state settingsFeel == false
+  tap "settings-feel"
+  clock settle
+  clock data
+  expect state settingsFeelKept == "on"
+  expect state settingsFeel == true
+
 test "About opens from the sheet and Back returns to it."
   tap "gear"
   clock settle
