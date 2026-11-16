@@ -84,13 +84,15 @@ bun tools/drive-web.ts             # every hymn's address, not-found, script off
 bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json from five loads of each
 ```
 
-The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' page, declarations and data-host tests the part `test:chords`, their moves, line rule and shapes the part `test:moves`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs all four.
+The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' page, declarations and data-host tests the part `test:chords`, their moves, line rule and shapes the part `test:moves`, the find bar's the part `test:find`, the motion and Sounds and haptics guards (`src/look/motion.test.ts`, `src/settings/feel.test.ts`) the part `test:motion`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs them all.
 
 The drive starts the server and Chrome (no Exact driver), each in a process group of its own, and fails on any request that leaves the local server, but the recordings' bucket after a press of Play, which it answers itself with silence. Its budget checks bytes always and times only at a load of 5 or less.
 
 ## Settings and the colours
 
 The gear in the list's title row (`SettingsGear`, one call line in `features/list.contract`) opens Settings (`features/settings.contract`), a sheet over the book: Appearance (System, Light, Dark), then one row per feature that has a setting, then About (`features/about.contract`), pushed in the sheet. A feature adds its row as one call line in the sheet's rows section, where its comment says, its component and state in its own file.
+
+Sounds and haptics (`settings-feel`, `SettingsFeelRow`) is the current hymnal's `feel`: on until the reader turns it off, kept as its word (`settingsFeelKept persist`, `on` or `off`) and read by `feelOf` (`src/settings/feel.ts`) into `settingsFeel`, which `feel.test.ts` holds to the current app's decoding and default. Every `haptic(…)` the app plays stands under `if settingsFeel` (see "Motion").
 
 The appearance is Contract's `settingsLook persist`, read before the first frame: the root is drawn in `settingsScheme` from it, so a kept Dark never paints light first, and `setScheme` hands the platform the same choice for its own sheets and bars. Its rules (the choices, reading kept text, the scheme each shows) are `src/look/look.ts`, held to the current hymnal's `Appearance` and its web `applyAppearance` by `look.test.ts`.
 
@@ -101,6 +103,21 @@ bun run exact test web settings.test.contract
 bun run exact test ios settings.test.contract
 bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once and on the first frame after a relaunch, System following
 bun tools/drive-settings.ts ios
+```
+
+## Motion
+
+Calm and quick, as the owner asked (150–250 ms, nothing that overshoots), and still under Reduce Motion. The times and curves are `app.forma`'s motion tokens (`duration.fade`, `duration.exit`, `duration.bar-in`, `duration.bar-out`, `easing.out`), named in each row and written in at build; the shared frames (`hy-rise`, `hy-sink`, `hy-fade-in`, `hy-fade-out`) and `motionStill`, the platform's Reduce Motion (`settingsMedia.prefersReducedMotion`), are `features/motion.contract`. Every motion row is a choice on `motionStill` whose still arm only fades or is `none`.
+
+- The filled buttons (`PlayerFilled`) take the brand's `pressed` fill under `onPressed` while held, and give to 0.97, on the host's press curve.
+- The docked bar rises from the screen's foot (`hy-rise`, 250 ms, `easing.out`) and sinks back (`hy-sink`, 150 ms, `ease-out`) when a sheet opens; still, it fades in and out over 150 ms. The room under a hymn's last row (`PlayerBarRoom`) slides with it. The dock spans the screen with `pointer-events="none"` (the bar's own `auto`), because an exiting node is drawn at its offset in its parent: a dock that shrank to nothing at the foot sank the bar below the screen. An exiting bar is out of the agent's tree at once (`tree lists live targets`), so no test waits on it.
+- Play, Pause and the sheet's toggle tick `impact-light`, a stanza and an appearance `selection`, as the current Feel seam's `bodyOf` gives their cues, each only under `if settingsFeel`.
+
+`src/look/motion.test.ts` holds it all from the files: each token's value, no duration over 250 ms and no spring under a damping ratio of 1, every motion row a choice on `motionStill` with a still arm that only fades, no time, curve or spring written in Contract, the press, and every `haptic(` under the setting with the kind its cue's body gives (a table there names each call's cue). The live checks are a drive (it reads the sources, so it takes the test setup's modules); on iOS a transform in flight reads at its end value, so iOS reads the ends and films the rise and sink:
+
+```sh
+bun --preload ./src/test/setup.ts tools/drive-motion.ts web   # the press light and dark, the rise at 100 ms, the exit and return, the room, Reduce Motion, the setting kept
+bun --preload ./src/test/setup.ts tools/drive-motion.ts ios
 ```
 
 ## Chords
