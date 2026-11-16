@@ -51,6 +51,7 @@ import {
 import { layerBunEmbedder } from '@manna/core/search/bun';
 
 import { SearchApi } from './api.js';
+import { CommentaryMemoryLive } from './commentary-api.js';
 import { SearchGroupLive } from './search-api.js';
 import { teardown } from './teardown.js';
 import { lateVectorIndex } from './vector-index.js';
@@ -162,6 +163,14 @@ const TunedSqlLive = Layer.effectDiscard(
   ),
 ).pipe(Layer.provideMerge(SqlLive));
 
+/** The paragraph database over the one tuned connection, shared by search
+ *  and the commentary pack. */
+const ParagraphsLive = EGWParagraphDatabase.layerCore.pipe(
+  Layer.provide(TunedSqlLive),
+  Layer.provide(BunServices.layer),
+  Layer.orDie,
+);
+
 const CorpusSources = Layer.effect(
   SearchCorpusSources,
   Effect.gen(function* () {
@@ -172,12 +181,7 @@ const CorpusSources = Layer.effect(
       },
     });
   }),
-).pipe(
-  Layer.provide(EGWParagraphDatabase.layerCore),
-  Layer.provide(TunedSqlLive),
-  Layer.provide(BunServices.layer),
-  Layer.orDie,
-);
+).pipe(Layer.provide(ParagraphsLive));
 
 /** Load the embedding model at boot instead of on a reader's first search.
  *
@@ -310,7 +314,10 @@ const searchLayer = Layer.mergeAll(
   WarmCorpusLive,
 ).pipe(Layer.provideMerge(EmbedderLive));
 
-const GroupLive = SearchGroupLive.pipe(Layer.provide(searchLayer), Layer.provide(TunedSqlLive));
+const GroupLive = Layer.mergeAll(
+  SearchGroupLive.pipe(Layer.provide(searchLayer), Layer.provide(TunedSqlLive)),
+  CommentaryMemoryLive.pipe(Layer.provide(ParagraphsLive)),
+);
 
 const ApiLive = HttpApiBuilder.layer(SearchApi).pipe(Layer.provide(GroupLive));
 

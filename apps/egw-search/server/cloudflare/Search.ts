@@ -11,6 +11,7 @@
  * | `vectors.bvi` scanned in memory | Vectorize (`./vectorize.ts`)            |
  * | ONNX EmbeddingGemma in process  | Workers AI (`./workers-ai.ts`)          |
  * | `HttpStaticServer` over `dist/` | the Worker's static assets              |
+ * | the commentary pack in memory   | the commentary pack in the edge cache   |
  *
  * Only `/api/*`, `/health` and the sync's reports under `/sync`
  * (`./sync-pages.ts`) reach the Worker; every other path is an asset,
@@ -41,6 +42,7 @@ import {
   VectorNeighbors,
 } from '@manna/core/search';
 
+import { CommentaryPacks, edgeStore } from '../commentary-api.js';
 import { VectorIndexLoad } from '../vector-index.js';
 import { D1Atomic } from './d1-atomic.ts';
 import { Corpus, SyncReports, Vectors } from './resources.ts';
@@ -93,16 +95,24 @@ const storedFile = (object: Cloudflare.R2.ObjectBody) =>
         ),
   });
 
+/** The edge cache the commentary pack is kept in, an hour at a time, so D1
+ *  is read for it at most once an hour per edge. */
+const COMMENTARY_CACHE = 'commentary';
+
 /** The search's services over the Worker's bindings. */
 const searchLayer = (bindings: Bindings) => {
   const sql = D1Client.layer({ db: bindings.corpus });
+  const paragraphsDb = EGWParagraphDatabase.layerExisting.pipe(Layer.provide(D1Atomic));
   const sources = Layer.effect(
     SearchCorpusSources,
     Effect.gen(function* () {
       const paragraphs = yield* EGWParagraphDatabase;
       return SearchCorpusSources.of({ _tag: 'wired', sources: { paragraphs } });
     }),
-  ).pipe(Layer.provide(EGWParagraphDatabase.layerExisting), Layer.provide(D1Atomic));
+  ).pipe(Layer.provide(paragraphsDb));
+  const commentary = CommentaryPacks.layerStore(
+    edgeStore(() => caches.open(COMMENTARY_CACHE)),
+  ).pipe(Layer.provide(paragraphsDb));
   const neighbors = Layer.succeed(
     VectorNeighbors,
     VectorNeighbors.of(vectorizeNeighbors(bindings.vectors, MODEL_FINGERPRINT)),
@@ -122,7 +132,7 @@ const searchLayer = (bindings: Bindings) => {
     VectorIndexLoad,
     VectorIndexLoad.of({ readiness: Effect.succeed('ready' as const) }),
   );
-  return Layer.mergeAll(search, ready).pipe(Layer.provideMerge(sql), Layer.orDie);
+  return Layer.mergeAll(search, ready, commentary).pipe(Layer.provideMerge(sql), Layer.orDie);
 };
 
 export default class Search extends Cloudflare.Worker<Search>()(

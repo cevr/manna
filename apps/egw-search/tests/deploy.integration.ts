@@ -24,7 +24,9 @@ import { Effect, Option, Schedule, Schema } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
 import Stack, { providers } from '../alchemy.run.ts';
+import { CommentaryPackSchema } from '../server/api.ts';
 import { CorpusSyncInput } from '../server/cloudflare/Sync.ts';
+import { notesSum, versionOf } from '../server/commentary.ts';
 
 const options = { providers, state: Cloudflare.state() };
 const { test, deploy, destroy } = Test.make(options);
@@ -115,6 +117,19 @@ test(
       Effect.flatMap(HttpClientResponse.schemaBodyJson(Searched)),
     );
     expect(exact.hits.length).toBeGreaterThan(0);
+
+    const packed = yield* get('/api/commentary/pack');
+    const etag = packed.headers['etag'] ?? '';
+    const pack = yield* HttpClientResponse.schemaBodyJson(CommentaryPackSchema)(packed);
+    expect(pack.format).toBe(1);
+    expect(pack.count).toBe(pack.notes.length);
+    expect(pack.sum).toBe(notesSum(pack.notes));
+    expect(pack.version).toBe(versionOf(pack.count, pack.sum));
+    expect(etag).toBe(`"${pack.version}"`);
+    const unchanged = yield* (yield* HttpClient.HttpClient)
+      .get(`${url}/api/commentary/pack`, { headers: { 'if-none-match': etag } })
+      .pipe(Effect.retry({ schedule: Schedule.exponential('1 second'), times: 8 }));
+    expect(unchanged.status).toBe(304);
 
     const reports = yield* get('/sync/').pipe(Effect.flatMap((response) => response.text));
     expect(reports).toContain('<h1>EGW sync reports</h1>');
