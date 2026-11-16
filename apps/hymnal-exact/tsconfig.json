@@ -9,7 +9,8 @@
       "@manna/hymnal-app/player/scrub-rules": ["./src/player/decl/scrub-rules"],
       "@manna/hymnal-app/home/find-rules": ["./src/find/decl/find-rules"],
       "@manna/hymnal-app/player/drums": ["./src/find/decl/drums"],
-      "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"]
+      "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"],
+      "@manna/hymnal/chord": ["./src/chords/decl/chord"]
     }
   }
 }

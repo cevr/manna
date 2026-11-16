@@ -109,6 +109,9 @@ describe('the data module runs where Exact runs it', () => {
     });
     expect(Object.keys(sources).toSorted()).toEqual([
       'aboutCredits',
+      'chordsGrip',
+      'chordsMove',
+      'chordsPage',
       'favouritesAfter',
       'findStep',
       'findTiles',

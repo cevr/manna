@@ -16,11 +16,13 @@ use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
 use RecentScreen from "./features/recent.contract"
 use NotFound from "./features/notfound.contract"
+use ChordsGripScreen from "./features/chords.contract"
 use FindDrums from "./features/find.contract"
 
 routes nav
   list "/"
     hymn "/hymns/:n"
+      chord "/hymns/:n/chord/:grip"
     player "/player"
     settings "/settings"
       about "/settings/about"
@@ -35,6 +37,7 @@ component HymnalExact
   members "./features/about.contract"
   members "./features/recent.contract"
   members "./features/favourites.contract"
+  members "./features/chords.contract"
   members "./features/find.contract"
   provide
     playerShown = player
@@ -42,6 +45,9 @@ component HymnalExact
     settingsGear = settingsOpen
     favouriteNumbers = favouriteList
     favouritePress = favouriteToggle
+    chordsSwitchOn = chordsOn
+    chordsSwitch = chordsSet
+    chordsPress = chordsStep
     findShown = find
     findPress = findAsk
     findSearchOn = findSearch
@@ -63,7 +69,7 @@ component HymnalExact
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
         if e.name == "hymn" and not (current(hymnShown) and hymnShown.number == 0)
-          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown))
+          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown), chords=chordsShown)
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
         if e.name == "settings"
@@ -74,5 +80,7 @@ component HymnalExact
           RecentScreen(entry=e, recent=recentShown, favourites=favouriteList)
         if e.name == "notfound" or (e.name == "hymn" and current(hymnShown) and hymnShown.number == 0)
           NotFound(entry=e)
+        if e.name == "chord"
+          ChordsGripScreen(entry=e, page=chordsGripShown, ready=current(chordsGripShown), done=chordsGripClose)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)
       FindDrums()
