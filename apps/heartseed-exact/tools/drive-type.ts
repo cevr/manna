@@ -6,9 +6,10 @@
  * drawn in `TypeColumn` under an Aa button (`bun tools/drive-type.ts
  * web|ios`; every launch sets `HEARTSEED_GARDEN_DRIVE`):
  *
- * - each font draws: the sample's first line ("Psalm 119", a line of its
- *   own) is laid out at eleven different widths under the eleven fonts, so
- *   no bundled family falls back to a system face;
+ * - each font draws: each sets its own family on the text, each draws the
+ *   sample (its first line's width, "Psalm 119" on a line of its own, or
+ *   the whole sample's height) other than the default, and each bundled
+ *   family as no other font does, so none falls back to a system face;
  * - the web's font files: what a default launch fetches (Exact's web host
  *   preloads every declared face, so this is a note, not a check);
  * - kept: a relaunch on the kept storage reads and draws the font, the size
@@ -16,8 +17,9 @@
  * - the worst case: Psalm 119 at 38 pt, Airy, Wider, Narrow, OpenDyslexic,
  *   then again at the largest system text size: all 176 verses built, none
  *   wider than its column, the last reached by scrolling in parts;
- * - the live preview: with the sheet at medium, a size step changes the
- *   text's size while the sheet stays up with its scroll kept; and the time
+ * - the live preview: with the sheet up (medium on the web; large on iOS,
+ *   which scrolls a medium sheet only by raising it), a size step changes
+ *   the text's size while the sheet stays up with its scroll kept; the time
  *   from a tap to settled, measured as the agent's replies arrive, under
  *   200 ms at the median;
  * - Reduce Motion: the sheet's own nodes carry no translate, scale or
@@ -173,15 +175,30 @@ const worstChecks = (name: string, replies: readonly unknown[], at: Record<strin
 const a = script();
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const probes: Record<string, number> = {};
+/** Each font's whole sample: iOS lays a line out in thirds of a point, so one short line can measure the same in two faces, and 176 verses wrapped in them cannot. */
+const columns: Record<string, number> = {};
 a.step('tap type-aa', 'clock data', 'clock settle');
 a.step(shot('sheet-light'));
 for (const font of [...FONTS.slice(1), FONTS[0] ?? 'newyork']) {
   a.step(`tap type-font-${font}`, 'clock data', 'clock settle');
   probes[font] = a.step('layout type-probe');
+  columns[font] = a.step('layout type-column');
 }
 a.step(shot('fonts-light'));
-/** The sheet scrolled to its top, then by a little, so the size buttons stay in view: the agent brings a tap's target into view first, which would scroll the sheet itself. */
-a.step('tap type-scroll drag 0 300', 'clock settle', 'tap type-scroll drag 0 -26', 'clock settle');
+/**
+ * The sheet scrolled by a little, so the size buttons stay in view (the agent brings a tap's target into view first, which would scroll the sheet itself).
+ * On the web the medium sheet scrolls its content: to its top, then down. On iOS a drag up on a medium sheet raises it to large before its content scrolls, so the scroll is kept at large there.
+ */
+a.step(
+  ...(web
+    ? ['tap type-scroll drag 0 300', 'clock settle', 'tap type-scroll drag 0 -26', 'clock settle']
+    : [
+        'tap type-scroll drag 0 -400',
+        'clock settle',
+        'tap type-scroll drag 0 -60',
+        'clock settle',
+      ]),
+);
 const scrollBefore = a.step('layout type-larger');
 const sizeBefore = a.step('layout type-probe');
 a.step('tap type-larger', 'clock data', 'clock settle');
@@ -241,31 +258,32 @@ drive.check(
   new Set(Object.values(families)).size === FONTS.length && Object.values(families).every(Boolean),
   families,
 );
+const heights = Object.fromEntries(
+  FONTS.map((font) => [font, frameOf(first, columns[font] ?? -1)?.h ?? Number.NaN]),
+);
+/** Whether two fonts draw the sample differently: its first line's width or the whole sample's height. */
+const differ = (one: string, other: string) =>
+  Math.abs((widths[one] ?? 0) - (widths[other] ?? 0)) > 0.1 ||
+  Math.abs((heights[one] ?? 0) - (heights[other] ?? 0)) > 0.5;
+const drawn = (font: string) => Number.isFinite(widths[font]) && Number.isFinite(heights[font]);
 drive.check(
-  'each of the ten other fonts draws the first line at a width other than the default’s',
-  FONTS.slice(1).every(
-    (font) =>
-      Number.isFinite(widths[font]) &&
-      Math.abs((widths[font] ?? 0) - (widths[FONTS[0] ?? ''] ?? 0)) > 0.1,
-  ),
-  widths,
+  'each of the ten other fonts draws the sample other than the default does (the first line’s width or the whole sample’s height)',
+  FONTS.slice(1).every((font) => drawn(font) && differ(font, FONTS[0] ?? '')),
+  { widths, heights },
 );
 const BUNDLED = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => font.key);
-const alone = (font: string) =>
-  Number.isFinite(widths[font]) &&
-  FONTS.every(
-    (other) => other === font || Math.abs((widths[other] ?? 0) - (widths[font] ?? 0)) > 0.1,
-  );
 drive.check(
-  'each of the seven bundled fonts draws the first line at a width no other font draws it at (its own file, not a fallback)',
-  BUNDLED.every(alone),
-  widths,
+  'each of the seven bundled fonts draws the sample as no other font does (its own file, not a fallback)',
+  BUNDLED.every(
+    (font) => drawn(font) && FONTS.every((other) => other === font || differ(font, other)),
+  ),
+  { widths, heights },
 );
 console.log(
-  `WIDTH ${host} "Psalm 119" at 18 pt: ${FONTS.map((font) => `${font} ${widths[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
+  `WIDTH ${host} at 18 pt, "Psalm 119" wide and the sample tall: ${FONTS.map((font) => `${font} ${widths[font]}/${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
 );
 drive.check(
-  'live preview: a size step changes the text’s size with the sheet at medium',
+  `live preview: a size step changes the text’s size with the sheet up (${web ? 'medium' : 'large, where iOS scrolls a sheet'})`,
   fontSizeOf(first, sizeAfter) > fontSizeOf(first, sizeBefore),
   [fontSizeOf(first, sizeBefore), fontSizeOf(first, sizeAfter)],
 );

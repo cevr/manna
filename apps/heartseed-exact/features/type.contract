@@ -153,21 +153,20 @@ component TypeSheet
           text "Done"
       scroll id="type-scroll" flex=1 min-height=0 testId="type-scroll"
         column gap=20 padding=20 padding-bottom=96
-          row gap=12 align-items="center"
-            button press=size(type.smaller) disabled=(not type.smallerEnabled) buttonStyle="bordered" aria-label="Smaller text" flex=1 min-height=44 testId="type-smaller"
+          row gap=12 align-items="center" flex-wrap="wrap"
+            button press=size(type.smaller) disabled=(not type.smallerEnabled) buttonStyle="bordered" aria-label="Smaller text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-smaller"
               text "A" font-size="0.9rem"
             text type.sizeLabel role="status" aria-label=type.sizeSpoken min-width="4.5rem" text-align="center" color="-exact-secondary-label" font-variant-numeric="tabular-nums" testId="type-size"
-            button press=size(type.larger) disabled=(not type.largerEnabled) buttonStyle="bordered" aria-label="Larger text" flex=1 min-height=44 testId="type-larger"
+            button press=size(type.larger) disabled=(not type.largerEnabled) buttonStyle="bordered" aria-label="Larger text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-larger"
               text "A" font-size="1.4rem"
           column gap=8
             text "Font" font="-exact-subheadline" color="-exact-secondary-label"
-            scroll id="type-fonts" overflow-x="auto" overflow-y="hidden" testId="type-fonts-scroll"
-              row role="radiogroup" aria-label="Font" gap=8 padding-bottom=4 testId="type-fonts"
-                for f in type.fonts key=f.value
-                  button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 min-width="6rem" min-height=84 padding=8 border-radius=14 border-width=2 border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 id=`type-font-${f.value}` testId=`type-font-${f.value}`
-                    text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font-size="1.6rem" line-height="normal"
-                    text f.label font="-exact-caption1" text-align="center"
-                    text f.kind font="-exact-caption2" color="-exact-secondary-label"
+            row role="radiogroup" aria-label="Font" id="type-fonts" overflow-x="auto" overflow-y="hidden" gap=8 padding-bottom=4 testId="type-fonts"
+              for f in type.fonts key=f.value
+                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 min-width="6rem" min-height=84 padding=8 border-radius=14 border-width=2 border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 id=`type-font-${f.value}` testId=`type-font-${f.value}`
+                  text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font-size="1.6rem" line-height="normal"
+                  text f.label font="-exact-caption1" text-align="center"
+                  text f.kind font="-exact-caption2" color="-exact-secondary-label"
           TypeSegments(line="Line spacing", group="Line spacing", name="type-line", chosen=type.line, options=type.lines, choose=line)
           TypeSegments(line="Letter spacing", group="Letter spacing", name="type-letter", chosen=type.letter, options=type.letters, choose=letter)
           TypeSegments(line="Line width", group="Line width", name="type-width", chosen=type.width, options=type.widths, choose=width)
