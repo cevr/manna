@@ -40,7 +40,7 @@ is shown, and share an adapted lexicon under the same terms.
 - `hebrew/strongs-hebrew-dictionary.js` SHA-256:
   `5ce6aeed551c709f49bcfa341cadf2f34bc7599b85d9de9e6ac2ecbf60fc3739`
 - Repair: download both files into one directory outside the repository, then
-  `bun packages/scripts/src/strongs-clean.ts --source <that directory>`. The
-  tool refuses a file whose SHA-256 differs, leaves every sound entry as it
-  is, and run again changes nothing. Without `--source` it applies the rules
-  alone (`packages/scripts/src/strongs-clean.ts`).
+  `bun run --cwd packages/scripts strongs:clean --source <that directory>`.
+  The tool refuses a file whose SHA-256 differs, leaves every sound entry as
+  it is, and run again changes nothing. Without `--source` it applies the
+  rules alone (`packages/scripts/src/strongs-clean/rules.ts`).

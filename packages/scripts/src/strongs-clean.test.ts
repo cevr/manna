@@ -1,14 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 
-import {
-  clean,
-  isSound,
-  refill,
-  repair,
-  type LexiconEntry,
-  type SourceEntry,
-} from './strongs-clean.ts';
+import { repair, type SourceEntry } from './strongs-clean/rules.ts';
+
+type Stored = Readonly<Record<string, string>>;
+type Source = typeof SourceEntry.Type;
 
 /** How many made-up entries each property draws. */
 const DRAWS = 300;
@@ -37,7 +33,7 @@ const word = (random: Random) =>
 const words = (random: Random, low: number, high: number) =>
   Array.from({ length: between(random, low, high) }, () => word(random)).join(' ');
 
-/** A made-up Strong's pronunciation as its syllables: the stress mark after one of them. */
+/** A made-up Strong's pronunciation as its syllables, the stress mark after one of them. */
 const syllables = (random: Random) => {
   const count = between(random, 1, 4);
   const stressed = between(random, 0, count - 1);
@@ -49,7 +45,7 @@ const syllables = (random: Random) => {
 /** A made-up definition as the sound entries write one: words, a dash, the KJV's renderings. */
 const definition = (random: Random) => `${words(random, 3, 12)} — ${words(random, 1, 4)}.`;
 
-/** A made-up entry with every defect a `null`-led one shows: `null`, a transliteration with letters dropped, a comma, the pronunciation split at a stressed syllable, two spaces, then the text written twice. */
+/** A made-up definition with every defect a `null`-led one shows: `null`, a transliteration with letters dropped, a comma, the pronunciation split after its stressed syllable, two spaces, then the text written twice. */
 const nullLed = (random: Random, said: ReadonlyArray<string>, body: string) => {
   const xlit = `${word(random)} ${word(random).slice(0, 2)}`;
   const written = said.join(' -').replace(/([^'])( -)/gu, '$1-');
@@ -62,16 +58,25 @@ const draw = <T>(seed: number, make: (random: Random) => T) => {
   return Array.from({ length: DRAWS }, () => make(random));
 };
 
-describe('clean', () => {
-  test('a sound entry comes back unchanged, though it holds the word null or a phrase twice', () => {
+/** One entry through the repair, as number `number`, with the source entry given or none. */
+const repaired = (number: string, entry: Stored, source: Option.Option<Source>) => {
+  const result = repair(
+    { [number]: entry },
+    Option.map(source, (found) => ({ [number]: found })),
+  );
+  return { entry: result.lexicon[number], ...result };
+};
+
+const stage1 = (entry: Stored) => repaired('G1', entry, Option.none()).entry;
+
+describe('stage 1, by rule', () => {
+  test('a sound entry comes back as stored, though it holds the word null or a phrase twice', () => {
     for (const [index, entry] of draw(1, (random) => {
       const phrase = words(random, 1, 2);
       const def = `${phrase} null ${words(random, 2, 6)}, ${phrase} — ${words(random, 1, 3)}.`;
       return { lemma: word(random), xlit: word(random), def };
-    }).entries()) {
-      expect(isSound(entry), `draw ${index}`).toBe(true);
-      expect(clean(entry), `draw ${index}`).toBe(entry);
-    }
+    }).entries())
+      expect(stage1(entry), `draw ${index}`).toBe(entry);
   });
 
   test('a null-led Greek entry written twice comes back as its one definition, its pronunciation in pron', () => {
@@ -84,11 +89,19 @@ describe('clean', () => {
         entry: { lemma: word(random), xlit: word(random), def: nullLed(random, said, body) },
       };
     }).entries()) {
-      const cleaned = clean(made.entry);
-      expect(cleaned.def, `draw ${index}`).toBe(made.body);
-      expect(cleaned.pron, `draw ${index}`).toBe(made.said.join('-'));
-      expect(Object.keys(cleaned), `draw ${index}`).toEqual(['lemma', 'xlit', 'def', 'pron']);
-      expect(isSound(cleaned), `draw ${index}`).toBe(true);
+      const result = repaired('G7', made.entry, Option.none());
+      expect(result.entry, `draw ${index}`).toEqual({
+        ...made.entry,
+        def: made.body,
+        pron: made.said.join('-'),
+      });
+      expect(Object.keys({ ...result.entry }), `draw ${index}`).toEqual([
+        'lemma',
+        'xlit',
+        'def',
+        'pron',
+      ]);
+      expect(result.defective, `draw ${index}`).toEqual([]);
     }
   });
 
@@ -96,7 +109,7 @@ describe('clean', () => {
     for (const [index, made] of draw(3, (random) => {
       const said = syllables(random);
       const body = definition(random);
-      const entry: LexiconEntry = {
+      const entry = {
         lemma: '',
         xlit: word(random),
         def: nullLed(random, said, body),
@@ -104,27 +117,29 @@ describe('clean', () => {
         kjvDef: `${words(random, 1, 3)}.`,
       };
       return { body, entry };
-    }).entries()) {
-      const cleaned = clean(made.entry);
-      expect(cleaned, `draw ${index}`).toEqual({ ...made.entry, def: made.body });
-    }
+    }).entries())
+      expect(repaired('H7', made.entry, Option.none()).entry, `draw ${index}`).toEqual({
+        ...made.entry,
+        def: made.body,
+      });
   });
 
   test('runs of spaces close and the ends are trimmed', () => {
-    expect(clean({ lemma: 'x', def: '  first   second    — third.' })).toEqual({
+    expect(stage1({ lemma: 'x', def: '  first   second    — third.' })).toEqual({
       lemma: 'x',
       def: 'first second — third.',
     });
   });
 
-  test('an entry with no letter is left for the source', () => {
+  test('an entry with no letter is left as it is, and still defective', () => {
     const entry = { lemma: 'x', xlit: 'y', def: '.' };
-    expect(clean(entry)).toBe(entry);
-    expect(isSound(entry)).toBe(false);
+    const result = repaired('G3', entry, Option.none());
+    expect(result.entry).toBe(entry);
+    expect(result.defective).toEqual(['G3']);
   });
 
   test('is idempotent over sound and defective entries alike', () => {
-    for (const [index, entry] of draw(4, (random): LexiconEntry => {
+    for (const [index, entry] of draw(4, (random) => {
       const said = syllables(random);
       const body = definition(random);
       const defs = [
@@ -136,13 +151,17 @@ describe('clean', () => {
       ];
       const pick = between(random, 0, defs.length - 1);
       return { lemma: word(random), def: defs.slice(pick, pick + 1).join('') };
-    }).entries())
-      expect(clean(clean(entry)), `draw ${index}`).toEqual(clean(entry));
+    }).entries()) {
+      const once = repair({ G1: entry }, Option.none());
+      const twice = repair(once.lexicon, Option.none());
+      expect(twice.lexicon, `draw ${index}`).toEqual(once.lexicon);
+      expect([...twice.cleaned, ...twice.refilled], `draw ${index}`).toEqual([]);
+    }
   });
 });
 
-describe('refill', () => {
-  const source: SourceEntry = {
+describe('stage 2, from the source', () => {
+  const greek: Source = {
     lemma: 'λέξις',
     translit: 'léxis',
     derivation: 'from G1 (α) and (to say;',
@@ -151,15 +170,32 @@ describe('refill', () => {
   };
 
   test('an entry with no letter takes the source definition in the sound style, its spilled derivation set aside', () => {
-    expect(refill('G9', { lemma: 'λέξις', xlit: 'lexis', def: '.' }, Option.some(source))).toEqual({
+    const result = repaired('G9', { lemma: 'λέξις', xlit: 'lexis', def: '.' }, Option.some(greek));
+    expect(result.entry).toEqual({
       lemma: 'λέξις',
       xlit: 'lexis',
       def: 'a word, i.e. a saying — word, saying.',
     });
+    expect(result).toMatchObject({ cleaned: [], refilled: ['G9'], defective: [] });
+  });
+
+  test('a null-led Greek entry keeps the pronunciation stage 1 found', () => {
+    expect(
+      repaired(
+        'G9',
+        { lemma: 'λέξις', xlit: 'lexis', def: "nulll xis,lex' -is  from        to speak" },
+        Option.some(greek),
+      ).entry,
+    ).toEqual({
+      lemma: 'λέξις',
+      xlit: 'lexis',
+      def: 'a word, i.e. a saying — word, saying.',
+      pron: "lex'-is",
+    });
   });
 
   test('a Hebrew entry takes the source lemma where it had none, and the source renderings', () => {
-    const hebrew: SourceEntry = {
+    const hebrew: Source = {
       lemma: 'דָּבָר',
       xlit: 'dâbâr',
       pron: "daw-baw'",
@@ -168,7 +204,7 @@ describe('refill', () => {
       kjv_def: 'act, advice, word.',
     };
     expect(
-      refill(
+      repaired(
         'H1697',
         {
           lemma: '',
@@ -178,7 +214,7 @@ describe('refill', () => {
           kjvDef: 'act',
         },
         Option.some(hebrew),
-      ),
+      ).entry,
     ).toEqual({
       lemma: 'דָּבָר',
       xlit: 'dāḇār',
@@ -188,46 +224,25 @@ describe('refill', () => {
     });
   });
 
-  test('a null-led Greek entry keeps the pronunciation stage 1 found', () => {
-    expect(
-      refill(
-        'G9',
-        { lemma: 'λέξις', xlit: 'lexis', def: "nulll xis,lex' -is  from        to speak" },
-        Option.some(source),
-      ),
-    ).toEqual({
-      lemma: 'λέξις',
-      xlit: 'lexis',
-      def: 'a word, i.e. a saying — word, saying.',
-      pron: "lex'-is",
-    });
-  });
-
-  test('never replaces a sound entry, and with no source leaves what stage 1 made', () => {
+  test('never replaces a sound entry', () => {
     for (const [index, entry] of draw(5, (random) => ({
       lemma: '',
       xlit: word(random),
       def: definition(random),
     })).entries())
-      expect(refill('H1', entry, Option.some(source)), `draw ${index}`).toBe(entry);
-    const spaced = { lemma: 'x', def: 'one   two — three.' };
-    expect(refill('G1', spaced, Option.none())).toEqual({ lemma: 'x', def: 'one two — three.' });
-    const blank = { lemma: 'x', def: '.' };
-    expect(refill('G1', blank, Option.none())).toBe(blank);
+      expect(repaired('H1', entry, Option.some(greek)).entry, `draw ${index}`).toBe(entry);
   });
-});
 
-describe('repair', () => {
-  test('keeps a sound entry as stored, field order and all, and refills only the defective', () => {
+  test('keeps sound entries as stored, field order and all, and refills only the defective', () => {
     const stored = {
       H1: { lemma: '', xlit: 'a', pron: 'aw', def: 'sound text — here.', kjvDef: 'here.' },
       H2: { lemma: '', xlit: 'b', def: '.', pron: 'bee', kjvDef: 'there.' },
       H3: { lemma: '', xlit: 'c', def: 'cut   off — text.', pron: 'see', kjvDef: 'text.' },
     };
-    const sources = {
-      H2: { lemma: 'ב', strongs_def: 'whole text', kjv_def: 'there.' },
-    };
-    const result = repair(stored, Option.some(sources));
+    const result = repair(
+      stored,
+      Option.some({ H2: { lemma: 'ב', strongs_def: 'whole text', kjv_def: 'there.' } }),
+    );
     expect(result.lexicon['H1']).toBe(stored.H1);
     expect(Object.keys({ ...result.lexicon['H1'] })).toEqual([
       'lemma',
