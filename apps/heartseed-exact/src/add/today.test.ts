@@ -39,3 +39,16 @@ it("plans a list planted from a shelf, and a short pick's verse, once each lands
     expect(itemsOf(await open())).toEqual([verse]);
   }
 });
+
+it("plans the chooser's one or two verses once they join the single verses", async () => {
+  const port = makeSessionPort();
+  const open = () => port.call<Screen>('todayOpen', ['home', '', '', '5', 'her', NOW, 7]);
+  expect(itemsOf(await open())).toEqual([]);
+  const joined = await port.call<{ answer: string }>('gardenJoin', [43, 3, 16, 17, NOW, 0, 7]);
+  expect(joined.answer).toBe('Planted');
+  const planned = itemsOf(await open());
+  expect(planned).toEqual(['John 3:16']);
+  const again = await port.call<{ answer: string }>('gardenJoin', [43, 3, 16, 17, NOW, 0, 7]);
+  expect(again.answer).toBe('Already');
+  expect(itemsOf(await open())).toEqual(planned);
+});
