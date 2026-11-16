@@ -43,6 +43,8 @@ export const StrongsLexiconAsset = Schema.Struct({
   lemma: Schema.String,
   xlit: Schema.optional(Schema.String),
   def: Schema.String,
+  pron: Schema.optional(Schema.String),
+  kjvDef: Schema.optional(Schema.String),
 });
 export type StrongsLexiconAsset = typeof StrongsLexiconAsset.Type;
 
