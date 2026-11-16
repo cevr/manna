@@ -108,11 +108,7 @@ interface Frame {
 interface Laid {
   readonly viewport?: { readonly w?: number };
   readonly node?: {
-    readonly space?: {
-      readonly viewport?: Frame;
-      readonly local?: { readonly w: number };
-      readonly capture?: { readonly scale?: number };
-    };
+    readonly space?: { readonly viewport?: Frame; readonly local?: { readonly w: number } };
     readonly style?: Record<
       string,
       { readonly computed?: string; readonly value?: string | number }
@@ -190,9 +186,7 @@ const wordInk = (layout: unknown, shot: string, scheme: Scheme) => {
   const frame = frameOf(layout);
   if (frame === undefined) return undefined;
   const image = readPng(join(app, shot));
-  const scale =
-    (layout as Laid).node?.space?.capture?.scale ??
-    image.width / ((layout as Laid).viewport?.w ?? image.width);
+  const scale = image.width / ((layout as Laid).viewport?.w ?? image.width);
   return inkIn(image, frame, scale, channelsOf(theme[scheme].ground));
 };
 
