@@ -241,6 +241,15 @@ drive.check(
   new Set(Object.values(families)).size === FONTS.length && Object.values(families).every(Boolean),
   families,
 );
+drive.check(
+  'each of the ten other fonts draws the first line at a width other than the default’s',
+  FONTS.slice(1).every(
+    (font) =>
+      Number.isFinite(widths[font]) &&
+      Math.abs((widths[font] ?? 0) - (widths[FONTS[0] ?? ''] ?? 0)) > 0.1,
+  ),
+  widths,
+);
 const BUNDLED = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => font.key);
 const alone = (font: string) =>
   Number.isFinite(widths[font]) &&
