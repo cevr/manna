@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAs, effect/noTernary, effect/noTryCatch, node/no-process-env -- Exact's app folder cannot import effect (docs/exact.md); a host script: it reads a copy of the repository's Bible database and writes the word index pack, which the app downloads and never bundles; the database's rows are typed as its schema has them, and the scratch copy is removed whatever happens. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAs, effect/noTernary, effect/noTryCatch -- Exact's app folder cannot import effect (docs/exact.md); a host script: it reads a copy of the repository's Bible database and writes the word index pack, which the app downloads and never bundles; the database's rows are typed as its schema has them, and the scratch copy is removed whatever happens. */
 
 /**
  * The word index find reads (`src/find/pack.ts` says what it holds), as a

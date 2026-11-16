@@ -32,7 +32,7 @@
         "test:find-f",
         "test:find-g"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -51,7 +51,7 @@
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
