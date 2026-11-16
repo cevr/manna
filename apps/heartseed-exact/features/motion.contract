@@ -7,6 +7,8 @@
 // opacity alone, `hs-leave` takes an ask out 4px up, `hs-fade-out` takes
 // it out by opacity alone under reduced motion, and `hs-pulse` is the
 // listening ring's loop, grown by the current app's 0.4 as it fades.
+// `motionSheetUp` holds the words' colour still while Settings is up, so a
+// scheme chosen there switches them at once instead of smearing them.
 
 keyframes hs-rise
   from opacity=0 translate="0px 8px"
@@ -30,3 +32,4 @@ shape MotionMedia
 members HeartseedExact
   resource motionMedia = exactViewport() as shape MotionMedia
   derive motionStill = motionMedia.prefersReducedMotion
+  derive motionSheetUp = stack(nav).filter(x => x.name.startsWith("settings")).length > 0

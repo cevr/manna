@@ -69,10 +69,10 @@ component SessionEnd
     still: bool
   view
     column gap=12 testId="run-end"
-      text "The field is tended" role="heading" aria-level=2 animation=(still ? "none" : "hs-rise duration.rise easing.out both") testId="run-end-heading"
+      text "The field is tended" role="heading" aria-level=2 opacity=1 animation=(still ? "none" : "hs-rise duration.rise easing.out both") testId="run-end-heading"
       for g, i in session.grown key=g.slug
-        text `${g.reference}, ${g.stage}` animation=((still or not sessionEndEnters(i)) ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(i)}ms both`) testId=`grown-${g.slug}`
-      column animation=(still ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(session.grown.length)}ms both`) testId="to-home-place"
+        text `${g.reference}, ${g.stage}` opacity=1 animation=((still or not sessionEndEnters(i)) ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(i)}ms both`) testId=`grown-${g.slug}`
+      column opacity=1 animation=(still ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(session.grown.length)}ms both`) testId="to-home-place"
         button press=home buttonStyle="filled" testId="to-home"
           text "Back to your field"
 

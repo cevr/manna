@@ -238,16 +238,17 @@ component TodayRecital
     next: action
     again: action
     still: bool
+    sheet: bool
   view
-    column gap=20 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
+    column gap=20 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
       text today.reference role="heading" aria-level=2 testId=(today.session.mode == "run" ? "item-reference" : "reference")
       row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
         for w in today.words key=w.index
           if w.peekable
             button press=peek(w.index) aria-label=w.label min-width=44 min-height=44 testId=`word-${w.index}`
-              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase) transition=(still ? "none" : "color duration.light ease")
+              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase) transition=((still or sheet) ? "none" : "color duration.light ease")
           else
-            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
+            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) transition=((still or sheet) ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
       if today.helpLine != ""
         text today.helpLine color="-exact-secondary-label" testId="help-line"
       if today.canNext
@@ -270,9 +271,10 @@ component TodayRecital
             text "Show all"
         if today.canFinish
           column position="relative"
-            column position="absolute" inset=0 border-radius=999 background-color="hs.pulse" aria-hidden=true animation=(still ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId="ring"
-            button press=finish buttonStyle="filled" testId="finish"
-              text "Done"
+            column position="absolute" inset=0 border-radius=999 background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId="ring"
+            column position="relative"
+              button press=finish buttonStyle="filled" testId="finish"
+                text "Done"
         else if today.canNext
           button press=again buttonStyle="bordered" testId="again"
             text "Say it again"
@@ -304,6 +306,7 @@ component Today
     add: action
     home: action
     still: bool
+    sheet: bool
   view
     scroll id="content" navigationScroll="content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem"
@@ -314,4 +317,4 @@ component Today
           SessionEnd(session=today.session, home=home, still=still)
         else if today.session.mode == "cued" or today.session.item
           for k in [today.reference] key=k
-            TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again, still=still)
+            TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again, still=still, sheet=sheet)

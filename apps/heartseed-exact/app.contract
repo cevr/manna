@@ -56,7 +56,7 @@ component HeartseedExact
               button press=settingsOpen aria-label="Settings" testId="gear"
                 image "symbol:settings"
           if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == settingsUnderId
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill)
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp)
           if e.name == "home"
             Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
           if e.name == "list"

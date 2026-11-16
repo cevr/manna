@@ -165,7 +165,7 @@ component Home
                     button press=ask(s.removeId) aria-label=`Remove ${s.reference}` buttonStyle="bordered" testId=`single-remove-${s.slug}`
                       text "Remove"
                 if s.removeId != "" and asking == s.removeId
-                  column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
+                  column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
                     text s.ask color="-exact-secondary-label"
                     row gap=8 flex-wrap="wrap"
                       button press=yes buttonStyle="bordered" testId="ask-yes"
@@ -173,7 +173,8 @@ component Home
                       button press=no buttonStyle="bordered" testId="ask-no"
                         text "Keep"
         if home.read and home.addsList
-          button press=add buttonStyle="bordered" testId="add-list"
-            text "Add a list"
+          column -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
+            button press=add buttonStyle="bordered" testId="add-list"
+              text "Add a list"
         if home.limitLine != ""
-          text home.limitLine color="-exact-secondary-label" testId="limit-line"
+          text home.limitLine color="-exact-secondary-label" -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId="limit-line"

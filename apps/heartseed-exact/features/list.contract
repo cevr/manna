@@ -82,7 +82,7 @@ component ListPage
               button press=ask(v.reference) aria-label=`Move ${v.reference} back` buttonStyle="bordered" testId=`list-back-${v.slug}`
                 text "Move back"
             if v.backTo != "" and asking == v.reference
-              column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${v.slug}`
+              column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${v.slug}`
                 text v.backAsk color="-exact-secondary-label"
                 row gap=8 flex-wrap="wrap"
                   button press=yes buttonStyle="bordered" testId="ask-yes"
@@ -90,7 +90,7 @@ component ListPage
                   button press=no buttonStyle="bordered" testId="ask-no"
                     text "Keep"
         if list.removeId != "" and asking == "remove"
-          column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="ask-list"
+          column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="ask-list"
             text list.removeAsk color="-exact-secondary-label"
             row gap=8 flex-wrap="wrap"
               button press=yes buttonStyle="bordered" testId="ask-yes"
