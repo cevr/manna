@@ -138,6 +138,9 @@ test "A hymn without chords says so, its words as before."
   clock data
   tap "settings-done"
   clock settle
+  tap "find-search"
+  clock settle
+  clock data
   type "search" "181"
   clock settle
   clock data
