@@ -42,6 +42,8 @@ component HeartseedExact
   members "./features/list.contract"
   members "./features/add.contract"
   members "./features/chooser.contract"
+  members "./features/motion.contract"
+  members "./features/feel.contract"
   action follow(url: string)
     nav = go(nav, url)
   view
@@ -54,11 +56,11 @@ component HeartseedExact
               button press=settingsOpen aria-label="Settings" testId="gear"
                 image "symbol:settings"
           if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == settingsUnderId
-            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt)
+            Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill)
           if e.name == "home"
-            Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo)
+            Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
           if e.name == "list"
-            ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo)
+            ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill)
           if e.name == "verses"
             YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
           if e.name == "add"
@@ -73,7 +75,7 @@ component HeartseedExact
             ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=chooserTapIt, plant=chooserPlantIt, join=chooserJoinIt)
       for e in stack(nav).filter(x => x.name.startsWith("settings")) key=e.id
         if e.name == "settings"
-          SettingsSheet(route=e.id, settings=settings, minutes=settingsChooseMinutes, voice=settingsChooseVoice, appearance=settingsChooseAppearance, about=aboutOpen, done=settingsDone)
+          SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, about=aboutOpen, done=settingsDone)
         if e.name == "settingsAbout"
           AboutPage(route=e.id, licences=aboutOpenLicences)
         if e.name == "settingsLicences"

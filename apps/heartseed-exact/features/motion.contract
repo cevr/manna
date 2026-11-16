@@ -1,0 +1,32 @@
+// How Heartseed moves: the shared keyframes and the one reduced-motion
+// read every motion row chooses on. A row is `(motionStill ? <reduced> :
+// <full>)`, its reduced arm an opacity fade at `duration.fade` or `none`;
+// its timings are the brand's motion tokens (app.forma), the current app's
+// own, and src/look/motion.test.ts holds the rule (README, "Motion").
+// `hs-rise` brings a column in from 8px below, `hs-fade` brings it in by
+// opacity alone, `hs-leave` takes an ask out 4px up, `hs-fade-out` takes
+// it out by opacity alone under reduced motion, and `hs-pulse` is the
+// listening ring's loop, grown by the current app's 0.4 as it fades.
+
+keyframes hs-rise
+  from opacity=0 translate="0px 8px"
+
+keyframes hs-fade
+  from opacity=0
+
+keyframes hs-leave
+  to opacity=0 translate="0px -4px"
+
+keyframes hs-fade-out
+  to opacity=0
+
+keyframes hs-pulse
+  from opacity=1 scale=1
+  to opacity=0 scale=1.4
+
+shape MotionMedia
+  prefersReducedMotion: bool
+
+members HeartseedExact
+  resource motionMedia = exactViewport() as shape MotionMedia
+  derive motionStill = motionMedia.prefersReducedMotion

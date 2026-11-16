@@ -11,6 +11,7 @@
 // id its Yes removes; src/home/asks.ts), opened by Remove, closed by any
 // other tap.
 use GardenVerse, GardenShown from "./garden.contract"
+use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
 shape HomePlant
   reference: string
@@ -104,7 +105,7 @@ component HomePlantButton
     plant: HomePlant
     start: action
   view
-    column role="button" press=start(plant.slug) aria-label=plant.label width=48 min-height=44 align-items="center" gap=2 padding="4px 0" border-radius=12 testId=`plant-${plant.id}`
+    column role="button" press=start(plant.slug) aria-label=plant.label width=48 min-height=44 align-items="center" gap=2 padding="4px 0" border-radius=12 -exact-press-scale=0.97 testId=`plant-${plant.id}`
       :active
         background-color = "hs.hearing"
       HomePlantMark(ready=plant.ready, sown=plant.sown)
@@ -120,6 +121,7 @@ component Home
     ask: action
     yes: action
     no: action
+    still: bool
   view
     scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
       column gap=20 padding=20 max-width="40rem" testId="home"
@@ -138,7 +140,7 @@ component Home
                 text home.card.label
         for r in home.rows key=r.id
           column gap=8 testId=`row-${r.slug}`
-            column role="button" press=open(r.slug) aria-label=`Open ${r.title}` min-height=44 justify-content="center" border-radius=12 testId=`row-title-${r.slug}`
+            column role="button" press=open(r.slug) aria-label=`Open ${r.title}` min-height=44 justify-content="center" border-radius=12 -exact-press-scale=0.97 testId=`row-title-${r.slug}`
               :active
                 background-color = "hs.hearing"
               text r.title font="-exact-headline"
@@ -151,7 +153,7 @@ component Home
           column gap=8 testId="singles"
             text "Single verses" role="heading" aria-level=3
             for s in home.singles key=s.slug
-              column gap=8
+              column gap=8 -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
                 row gap=8 align-items="center" flex-wrap="wrap"
                   row role="button" press=start(s.slug) aria-label=s.label flex-grow=1 flex-basis="12rem" min-height=44 align-items="center" gap=12 border-radius=12 testId=`single-button-${s.slug}`
                     :active
@@ -163,7 +165,7 @@ component Home
                     button press=ask(s.removeId) aria-label=`Remove ${s.reference}` buttonStyle="bordered" testId=`single-remove-${s.slug}`
                       text "Remove"
                 if s.removeId != "" and asking == s.removeId
-                  column gap=8 testId=`ask-${s.slug}`
+                  column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
                     text s.ask color="-exact-secondary-label"
                     row gap=8 flex-wrap="wrap"
                       button press=yes buttonStyle="bordered" testId="ask-yes"

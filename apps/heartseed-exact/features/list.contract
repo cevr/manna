@@ -7,6 +7,7 @@
 // state of its row (`listAsking`: `remove` for the list, else the verse's
 // reference), opened by its button and closed by any other tap.
 use homeMarkOf from "./home.contract"
+use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
 shape ListVerse
   reference: string
@@ -61,6 +62,7 @@ component ListPage
     ask: action
     yes: action
     no: action
+    still: bool
   view
     scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0
       column gap=16 padding=20 max-width="40rem" testId="list-page"
@@ -71,7 +73,7 @@ component ListPage
             text "Practice this list"
           text list.startLine color="-exact-secondary-label" testId="list-line"
         for v in list.verses key=v.slug
-          column gap=4 testId=`list-verse-${v.slug}`
+          column gap=4 -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
             text v.reference font="-exact-headline"
             row gap=12 flex-wrap="wrap"
               text v.stage color="-exact-secondary-label" testId=`list-stage-${v.slug}`
@@ -80,7 +82,7 @@ component ListPage
               button press=ask(v.reference) aria-label=`Move ${v.reference} back` buttonStyle="bordered" testId=`list-back-${v.slug}`
                 text "Move back"
             if v.backTo != "" and asking == v.reference
-              column gap=8 testId=`ask-${v.slug}`
+              column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${v.slug}`
                 text v.backAsk color="-exact-secondary-label"
                 row gap=8 flex-wrap="wrap"
                   button press=yes buttonStyle="bordered" testId="ask-yes"
@@ -88,7 +90,7 @@ component ListPage
                   button press=no buttonStyle="bordered" testId="ask-no"
                     text "Keep"
         if list.removeId != "" and asking == "remove"
-          column gap=8 testId="ask-list"
+          column gap=8 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="ask-list"
             text list.removeAsk color="-exact-secondary-label"
             row gap=8 flex-wrap="wrap"
               button press=yes buttonStyle="bordered" testId="ask-yes"

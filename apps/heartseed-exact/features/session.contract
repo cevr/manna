@@ -4,6 +4,7 @@
 // (src/today/sources.ts): the current Heartseed's `countsOf`, `shownOf`
 // and `tendedOf` over the launch's own `Session`. `wire` is the session's
 // view as home reads it (README, "The session").
+use hs-rise from "./motion.contract"
 
 // An item of the plan, a visit or the hold.
 shape SessionItem
@@ -53,17 +54,27 @@ component SessionCounts
     if session.mode == "run" and session.counts != "" and not session.ended and not session.nothing
       text session.counts color="-exact-secondary-label" testId="counts"
 
+// The run's end's entrances: the n-th grown row (and "Back to your field"
+// after the last) enters after `sessionEndDelay(n)` ms, the first
+// `sessionEndEnters` rows alone, as the current app's `endMotionOf` springs
+// its plants; src/look/motion.test.ts holds both to it.
+fn sessionEndDelay(i: number): number = min(300 + 160 * i, 1200)
+
+fn sessionEndEnters(i: number): bool = i < 12
+
 component SessionEnd
   props
     session: SessionShown
     home: action
+    still: bool
   view
     column gap=12 testId="run-end"
-      text "The field is tended" role="heading" aria-level=2
-      for g in session.grown key=g.slug
-        text `${g.reference}, ${g.stage}` testId=`grown-${g.slug}`
-      button press=home buttonStyle="filled" testId="to-home"
-        text "Back to your field"
+      text "The field is tended" role="heading" aria-level=2 animation=(still ? "none" : "hs-rise duration.rise easing.out both") testId="run-end-heading"
+      for g, i in session.grown key=g.slug
+        text `${g.reference}, ${g.stage}` animation=((still or not sessionEndEnters(i)) ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(i)}ms both`) testId=`grown-${g.slug}`
+      column animation=(still ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(session.grown.length)}ms both`) testId="to-home-place"
+        button press=home buttonStyle="filled" testId="to-home"
+          text "Back to your field"
 
 component SessionNothing
   props
