@@ -25,7 +25,7 @@
         "test:session-calls",
         "test:text"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_COMMENTARY_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -44,7 +44,7 @@
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_COMMENTARY_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",

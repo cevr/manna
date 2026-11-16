@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noAs, node/no-process-env -- a host script: Bun's own server standing in for egw.cvr.im's commentary pack, on this checkout's own port (read from `PORT`, as a drive starts it), steered by the drive's own JSON; it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, node/no-process-env -- a host script: Bun's own server standing in for egw.cvr.im's commentary pack, on this checkout's own port (read from `PORT`, as a drive starts it), steered by the drive's own JSON; it never runs in the data module. */
 
 /**
  * egw.cvr.im's `GET /api/commentary/pack` as a drive meets it, on

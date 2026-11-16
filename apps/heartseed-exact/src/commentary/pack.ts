@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noRuntimeTypeof, effect/noTryCatch, effect/noUnsafeDictionaryType, effect/noGlobals -- Exact's app folder cannot import effect (docs/exact.md), so no Schema codec: the pack arrives as text from a server, `JSON.parse` reads it, each field is checked by its runtime type, and a body that does not parse is an answer to name, not a defect. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noRuntimeTypeof, effect/noTryCatch, effect/noGlobals -- Exact's app folder cannot import effect (docs/exact.md), so no Schema codec: the pack arrives as text from a server, `JSON.parse` reads it, each field is checked by its runtime type, and a body that does not parse is an answer to name, not a defect. */
 
 /**
  * Ellen White's Bible Commentary as the phone keeps it: the pack egw.cvr.im
