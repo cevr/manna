@@ -31,6 +31,10 @@ import type * as HomeToday from '../src/home/today';
 import type * as HomeStart from '../src/home/start';
 import type * as List from '../src/list';
 import type * as DeclaredLetters from '../exact/letters.d.ts';
+import type * as DeclaredSayItMotion from '../exact/sayit-motion.d.ts';
+import type * as DeclaredHomeMotion from '../exact/home-motion.d.ts';
+import type * as SayItMotion from '../src/sayit/motion';
+import type * as HomeMotion from '../src/home/motion';
 import type * as DeclaredRun from '../exact/session-run.d.ts';
 import type * as DeclaredService from '../exact/session-service.d.ts';
 import type * as DeclaredSession from '../exact/session.d.ts';
@@ -138,6 +142,10 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Letters.lettersOf, typeof DeclaredLetters.lettersOf>,
   true satisfies Mutual<typeof Letters.PEEK_SHOWN_MS, typeof DeclaredLetters.PEEK_SHOWN_MS>,
   true satisfies Mutual<typeof Lists.singleVersesOf, typeof DeclaredLists.singleVersesOf>,
+  true satisfies Mutual<typeof SayItMotion.SAYIT_MOTION, typeof DeclaredSayItMotion.SAYIT_MOTION>,
+  true satisfies Mutual<typeof HomeMotion.MOTION, typeof DeclaredHomeMotion.MOTION>,
+  true satisfies Mutual<HomeMotion.PlantMotion, DeclaredHomeMotion.PlantMotion>,
+  true satisfies Mutual<typeof HomeMotion.endMotionOf, typeof DeclaredHomeMotion.endMotionOf>,
   true satisfies Mutual<Field.PlantStage, DeclaredField.PlantStage>,
   true satisfies Mutual<Field.FieldPassage, DeclaredField.FieldPassage>,
   true satisfies Mutual<Field.Field, DeclaredField.Field>,
