@@ -144,22 +144,16 @@ const launched = await drive.launch('find', [
   'tap drums-hash',
   'clock settle',
   'clock data',
-  pinchIn,
-  'clock settle',
-  'clock data',
-  'state find.tiles',
-  pinchOut,
-  'clock settle',
-  'clock data',
-  'state find.tiles',
   ...looks('light'),
   ...looks('dark'),
 ]);
 
 const before = slidersOf(launched[3]);
 drive.check(
-  'the drums are three sliders, each its digit as value (1: 0, 0, 1)',
-  ['drum-hundreds', 'drum-tens', 'drum-ones'].every((id) => before.get(id)?.role === 'slider') &&
+  'the drums are three adjustable controls (the web: slider; iOS: adjustable), each its digit as value (1: 0, 0, 1)',
+  ['drum-hundreds', 'drum-tens', 'drum-ones'].every((id) =>
+    ['slider', 'adjustable'].includes(before.get(id)?.role ?? ''),
+  ) &&
     before.get('drum-hundreds')?.value === '0' &&
     before.get('drum-tens')?.value === '0' &&
     before.get('drum-ones')?.value === '1',
@@ -169,34 +163,54 @@ drive.check('an increment of the ones turns the number to 2', launched[7] === 2,
 drive.check(`the ones read 2 after it`, slidersOf(launched[8]).get('drum-ones')?.value === '2', [
   ...slidersOf(launched[8]),
 ]);
-drive.check(`a pinch in on the list shows the tiles (${pinchIn})`, launched[15] === true, {
-  reply: launched[12],
-  tiles: launched[15],
-});
-drive.check(`a pinch out on the tiles closes them (${pinchOut})`, launched[19] === false, {
-  reply: launched[16],
-  tiles: launched[19],
-});
+if (host === 'web') {
+  const pinched = await drive.launch('find-pinch', [
+    'clock data',
+    pinchIn,
+    'clock settle',
+    'clock data',
+    'state find.tiles',
+    pinchOut,
+    'clock settle',
+    'clock data',
+    'state find.tiles',
+  ]);
+  drive.check(`a pinch in on the list shows the tiles (${pinchIn})`, pinched[4] === true, {
+    reply: pinched[1],
+    tiles: pinched[4],
+  });
+  drive.check(`a pinch out on the tiles closes them (${pinchOut})`, pinched[8] === false, {
+    reply: pinched[5],
+    tiles: pinched[8],
+  });
 
-const outside = await drive.launch('find-outside', [
-  'clock data',
-  'tap find-number',
-  'clock settle',
-  'state find.drums',
-  'tap root at 20 800',
-  'clock settle',
-  'clock data',
-  'state find.drums',
-  'state find.go.serial',
-  'state find.top',
-]);
-drive.check(
-  'a tap outside the drums (tap root at 20 800) closes them and opens nothing',
-  outside[3] === true && outside[7] === false && outside[8] === 0 && outside[9] === '/',
-  { open: outside[3], tap: outside[4], after: outside[7], go: outside[8], top: outside[9] },
-);
+  const outside = await drive.launch('find-outside', [
+    'clock data',
+    'tap find-number',
+    'clock settle',
+    'state find.drums',
+    'tap root at 20 800',
+    'clock settle',
+    'clock data',
+    'state find.drums',
+    'state find.go.serial',
+    'state find.top',
+  ]);
+  drive.check(
+    'a tap outside the drums (tap root at 20 800) closes them and opens nothing',
+    outside[3] === true && outside[7] === false && outside[8] === 0 && outside[9] === '/',
+    { open: outside[3], tap: outside[4], after: outside[7], go: outside[8], top: outside[9] },
+  );
+} else {
+  console.log(
+    `NOTE ${host} no pinch: the driver refuses \`${pinchIn}\` off a transformDragFor pair ("no photo binding"), so tiles-show and Done stand in`,
+  );
+  console.log(
+    `NOTE ${host} no tap outside: the driver refuses \`tap root at 20 800\` ("ScrollView covers its middle"); UIKit's backdrop under the drums is not a target it aims at`,
+  );
+}
 
-const LOOKS = 20;
+const LOOKS = 12;
 if (host === 'web')
   for (const [scheme, base] of [
     ['light', LOOKS],
