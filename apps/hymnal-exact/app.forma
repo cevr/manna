@@ -44,3 +44,8 @@ theme
   AccentColorText = onAccent
   Canvas = ground
   CanvasText = ink
+  duration.fade = 150ms
+  duration.exit = 150ms
+  duration.bar-in = 250ms
+  duration.bar-out = 150ms
+  easing.out = cubic-bezier(0.23, 1, 0.32, 1)

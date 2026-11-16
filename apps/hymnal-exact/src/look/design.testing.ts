@@ -28,30 +28,51 @@ export interface Pair {
   readonly dark: string;
 }
 
-/** The brand: each colour token's pair, and each token that names another (a role set to a brand colour). */
+/**
+ * The brand: each colour token's pair, each token that names another (a
+ * role set to a brand colour), and each motion token (`duration.…`,
+ * `easing.…`) with its value as written.
+ */
 export interface Brand {
   readonly colours: ReadonlyMap<string, Pair>;
   readonly names: ReadonlyMap<string, string>;
+  readonly motion: ReadonlyMap<string, string>;
   readonly others: ReadonlyArray<string>;
 }
+
+/** A motion token's line: its name and its value as written. */
+const MOTION = /^\s+((?:duration|easing)\.\S+)\s*=\s*(.+?)\s*$/u;
+
+/** The lines of the `theme` block, its comments and blanks left out. */
+const themeLines = (text: string): ReadonlyArray<string> => {
+  const lines = text.split('\n');
+  const start = lines.findIndex((line) => line.trim() === 'theme');
+  const shown = lines
+    .slice(start + 1)
+    .filter((line) => line.trim() !== '' && !line.trim().startsWith('//'));
+  const end = shown.findIndex((line) => !line.startsWith('  '));
+  return end < 0 ? shown : shown.slice(0, end);
+};
 
 /** `app.forma`'s `theme` block, read token by token. */
 export const brandOf = (text: string): Brand => {
   const colours = new Map<string, Pair>();
   const names = new Map<string, string>();
+  const motion = new Map<string, string>();
   const others: Array<string> = [];
-  const lines = text.split('\n');
-  const start = lines.findIndex((line) => line.trim() === 'theme');
-  for (const line of lines.slice(start + 1)) {
-    if (line.trim() === '' || line.trim().startsWith('//')) continue;
-    if (!line.startsWith('  ')) break;
+  for (const line of themeLines(text)) {
+    const moving = MOTION.exec(line);
+    if (moving) {
+      motion.set(moving[1] ?? '', moving[2] ?? '');
+      continue;
+    }
     const token = /^\s+(\S+)\s*=\s*(.+?)\s*$/u.exec(line);
     const pair = /^light-dark\((#[0-9a-f]+),\s*(#[0-9a-f]+)\)$/iu.exec(token?.[2] ?? '');
     if (token && pair) colours.set(token[1] ?? '', { light: pair[1] ?? '', dark: pair[2] ?? '' });
     else if (token && /^[\w-]+$/u.test(token[2] ?? '')) names.set(token[1] ?? '', token[2] ?? '');
     else others.push(line.trim());
   }
-  return { colours, names, others };
+  return { colours, names, motion, others };
 };
 
 /** A text a Contract file draws: where, the colour it is drawn in and the ground under it, as named there. */

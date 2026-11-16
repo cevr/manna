@@ -9,9 +9,15 @@
         "test:web",
         "test:chords",
         "test:moves",
-        "test:find"
+        "test:find",
+        "test:motion"
       ],
       "outputs": []
+    },
+    "test:motion": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
     },
     "test:find": {
       "dependsOn": ["^transit"],
@@ -35,7 +41,9 @@
         "!src/chords/**/*.test.*",
         "!src/find/**/*.test.*",
         "!src/list/headers.test.ts",
-        "!src/no-bucket.test.ts"
+        "!src/no-bucket.test.ts",
+        "!src/look/motion.test.ts",
+        "!src/settings/feel.test.ts"
       ]
     },
     "test:web": {

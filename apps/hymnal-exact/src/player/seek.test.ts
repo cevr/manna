@@ -227,12 +227,13 @@ describe('the player’s Contract file keeps the current app’s numbers and the
   });
 
   it('fills its buttons with button and onButton, names no colour, and the tint is the brand’s accent', () => {
-    const filled = /component PlayerFilled\n[\s\S]*?\n {4}button ([^\n]*)\n {6}text ([^\n]*)/u.exec(
-      contract,
-    );
+    const filled =
+      /component PlayerFilled\n[\s\S]*?\n {4}button ([^\n]*)\n(?: {6}:active\n(?: {8}[^\n]*\n)*)? {6}text ([^\n]*)/u.exec(
+        contract,
+      );
     expect(filled?.[1]).toContain('background-color="button"');
     expect(filled?.[1]).toContain('color="onButton"');
-    expect(filled?.[2]).toContain('color="onButton"');
+    expect(filled?.[2]).toBe('label font-weight=600');
     expect(contract).not.toContain('bordered-prominent');
     expect(contract.match(/PlayerFilled\(/gu)?.length).toBe(3);
     expect(contract).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|light-dark\(/iu);

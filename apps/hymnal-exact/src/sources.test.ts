@@ -85,6 +85,7 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
         expect(() => sources.settingsLooks([route(random)])).not.toThrow();
+        expect(() => sources.settingsFeelOf([route(random)])).not.toThrow();
         const list = numbers(random);
         const tab = pick(random, ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture', '', 'x']);
         expect(() => sources.listTabRows([tab, list, numbers(random)])).not.toThrow();
@@ -124,6 +125,7 @@ describe('the data module runs where Exact runs it', () => {
       'playerStep',
       'recentAfter',
       'recentRows',
+      'settingsFeelOf',
       'settingsLooks',
     ]);
   });

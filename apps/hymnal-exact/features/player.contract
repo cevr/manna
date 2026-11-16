@@ -5,6 +5,7 @@
 // file draws its view and turns the element's events into calls, each
 // naming its load and the seek it follows. A seek the step sends is a
 // `fastSeek` on the element, taken once by its serial.
+use hy-rise, hy-sink, hy-fade-in, hy-fade-out from "./motion.contract"
 
 shape PlayerBar
   shown: bool
@@ -105,6 +106,11 @@ members HymnalExact
       else if player.go.kind == "replace"
         nav = go(nav, player.go.path)
   action playerAsk(kind: string, value: number)
+    if settingsFeel
+      if kind == "page" or kind == "bar" or kind == "play"
+        haptic("impact-light")
+      else if kind == "stanza"
+        haptic("selection")
     send playerStepped = playerStep(kind, 0, 0, value, "")
   action playerHeard(kind: string, id: number, value: number)
     send playerStepped = playerStep(kind, id, player.seek, value, "")
@@ -153,6 +159,8 @@ component PlayerDock
     ticked: action
     broke: action
     remote: action
+  inject
+    motionStill: bool
   view
     column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not player.dock)
       for l in (player.src == "" ? [] : [player.load]) key=l
@@ -164,7 +172,7 @@ component PlayerDock
           waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
           pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
       if player.dock
-        row testId="bar" align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
+        row testId="bar" animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both") align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
           button press=ask("open", 0) flex="1 1 12rem" min-width=0 min-height=44 testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
             column gap=2 align-items="flex-start"
               text `${player.bar.number} · ${player.bar.title}` testId="bar-hymn"
@@ -184,12 +192,15 @@ component PlayerBarRoom
     id: string
   inject
     playerShown: PlayerView
+    motionStill: bool
   view
     if playerShown.dock
-      column min-height="5rem" flex-shrink=0 testId=id
+      column min-height="5rem" flex-shrink=0 testId=id -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
 
 // A filled button in the brand's roles: `button` under `onButton`, so it
-// reads in dark whatever the platform's tint is.
+// reads in dark whatever the platform's tint is; held, it takes the
+// `pressed` fill under `onPressed`, as the current AccentButton does, and
+// gives a little (0.97) on the host's own press curve.
 component PlayerFilled
   props
     label: string
@@ -199,7 +210,11 @@ component PlayerFilled
     pressed: bool
   view
     button press=press appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 min-width=44 aria-label=name aria-pressed=pressed testId=id
-      text label color="onButton" font-weight=600
+      :active
+        background-color = "pressed"
+        color = "onPressed"
+        -exact-press-scale = 0.97
+      text label font-weight=600
 
 // A hymn page's own Play: Pause while its hymn sounds, Try again after a
 // failure, nothing for a hymn with no recording.

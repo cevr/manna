@@ -39,6 +39,7 @@ component HymnalExact
   members "./features/favourites.contract"
   members "./features/chords.contract"
   members "./features/find.contract"
+  members "./features/motion.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -61,6 +62,9 @@ component HymnalExact
     findDismiss = findDismissed
     findTileList = findTileNumbers
     findWheel = findWheeled
+    motionStill = motionStill
+    settingsFeel = settingsFeel
+    settingsFeelSwitch = settingsFeelSet
   action follow(url: string)
     nav = go(nav, url)
   view

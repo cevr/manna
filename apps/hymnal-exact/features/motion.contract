@@ -1,0 +1,22 @@
+// Motion: the frames the hymnal's moving parts play, and `motionStill`,
+// the platform's Reduce Motion, on which every motion row is a choice:
+// still, a part fades or holds; else it plays its full motion. The times
+// and curves are app.forma's motion tokens (`duration.…`, `easing.…`), named
+// in each row; src/look/motion.test.ts holds every row to that rule.
+
+// The docked bar rises from the screen's foot, and sinks back into it.
+keyframes hy-rise
+  from translate="0px 100%" opacity=0
+
+keyframes hy-sink
+  to translate="0px 100%" opacity=0
+
+// Under Reduce Motion a part only fades in and out.
+keyframes hy-fade-in
+  from opacity=0
+
+keyframes hy-fade-out
+  to opacity=0
+
+members HymnalExact
+  derive motionStill = settingsMedia.prefersReducedMotion

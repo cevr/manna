@@ -12,17 +12,31 @@ shape SettingsLook
 
 shape SettingsMedia
   prefersColorScheme: string
+  prefersReducedMotion: bool
+
+shape SettingsFeel
+  on: bool
 
 // `settingsScheme` is the scheme the root is drawn in from the first frame,
 // as `shownOf` says: the kept choice is read before it, so a kept Dark never
 // paints light first; `setScheme` takes the platform's own (sheets, bars).
+// Sounds and haptics is on until the reader turns it off, kept as its
+// word (`settingsFeelKept`, "on" or "off") and read by `feelOf`
+// (src/settings/feel.ts); every `haptic` of the app plays only under it.
 members HymnalExact
   state settingsLook = "system" persist
+  state settingsFeelKept = "on" persist
   resource settingsLooks = settingsLooks(settingsLook) as shape SettingsLook[] else empty()
   resource settingsMedia = exactViewport() as shape SettingsMedia
+  resource settingsFelt = settingsFeelOf(settingsFeelKept) as shape SettingsFeel else empty(on=true)
+  derive settingsFeel = settingsFelt.on
   derive settingsScheme = settingsLook == "dark" or settingsLook == "light" ? settingsLook : (settingsMedia.prefersColorScheme == "dark" ? "dark" : "light")
   action settingsChoose(look: string)
     settingsLook = look
+    if settingsFeel
+      haptic("selection")
+  action settingsFeelSet(on: bool)
+    settingsFeelKept = on ? "on" : "off"
   action settingsApply
     setScheme(settingsLook)
   action settingsOpen
@@ -40,6 +54,18 @@ component SettingsGear
   view
     button press=settingsGear aria-label="Settings" testId="gear"
       image "symbol:settings"
+
+// Sounds and haptics: a switch, on until the reader turns it off, as the
+// current hymnal's `feel`.
+component SettingsFeelRow
+  inject
+    settingsFeel: bool
+    settingsFeelSwitch: action
+  view
+    section
+      row
+        text "Sounds and haptics" flex=1 min-width=0
+        input type="checkbox" switch checked=settingsFeel change=settingsFeelSwitch aria-label="Sounds and haptics" testId="settings-feel"
 
 component SettingsSheet
   props
@@ -66,6 +92,7 @@ component SettingsSheet
         // Each feature with a setting adds its row here, one call line
         // (README.md, "Settings").
         ChordsRow()
+        SettingsFeelRow()
         section
           link href=path("about") testId="about-row"
             row flex=1 min-width=0 align-items="center"
