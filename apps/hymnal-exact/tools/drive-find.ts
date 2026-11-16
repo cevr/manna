@@ -11,6 +11,8 @@
  *   them, where the driver can pinch: the web's is a trackpad's, a wheel
  *   with Control held; iOS's is `tap … pinch`, and what each driver gave is
  *   printed beside the check;
+ * - a tap outside the drums closes them and opens nothing (on iOS a tap
+ *   on UIKit's backdrop, which only a drive can aim at a point);
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels.
  *
@@ -175,6 +177,24 @@ drive.check(`a pinch out on the tiles closes them (${pinchOut})`, launched[19] =
   reply: launched[16],
   tiles: launched[19],
 });
+
+const outside = await drive.launch('find-outside', [
+  'clock data',
+  'tap find-number',
+  'clock settle',
+  'state find.drums',
+  'tap root at 20 800',
+  'clock settle',
+  'clock data',
+  'state find.drums',
+  'state find.go.serial',
+  'state find.top',
+]);
+drive.check(
+  'a tap outside the drums (tap root at 20 800) closes them and opens nothing',
+  outside[3] === true && outside[7] === false && outside[8] === 0 && outside[9] === '/',
+  { open: outside[3], tap: outside[4], after: outside[7], go: outside[8], top: outside[9] },
+);
 
 const LOOKS = 20;
 if (host === 'web')
