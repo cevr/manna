@@ -19,9 +19,9 @@
  *   (`src/web/pages.ts`), and an unknown hymn is the not-found page;
  * - `measure`: the bytes and times of `/` and `/hymns/100`, cold (cache
  *   emptied) and warm, five each, medians against `tools/web/budget.json`
- *   (bytes always; times only at a load of 5 or less, each allowed a
- *   tenth or 20 ms over, whichever is more); `--write-budget`
- *   writes it from this run, and `--throttle` measures over a slow phone
+ *   (bytes always; times only at a load of 5 or less, by `allowedOver` of
+ *   `tools/web/budget.ts`, which writes the budget from five or more such
+ *   runs' `--json` reports), and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
  * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
  *   stanza choice; Chrome closed as a person closes it and opened again on
@@ -31,7 +31,7 @@
  * but for the recordings' bucket after a press of Play, which the drive
  * answers itself with silence (`tools/recordings.ts`), so nothing reaches
  * the network. `bun tools/drive-web.ts [check…] [--server plain|exact]
- * [--write-budget] [--json <file>]`.
+ * [--json <file>]`.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -42,6 +42,7 @@ import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { placeOf } from '../src/web/place.ts';
 import { answer, checkoutPort } from './recordings.ts';
+import { allowedOver, type Budget, isTime, MAX_LOAD, TIME_SLACK_MS } from './web/budget.ts';
 import { type Page, launchChrome } from './web/chrome.ts';
 
 const app = join(import.meta.dir, '..');
@@ -59,8 +60,6 @@ const PORT = server === 'exact' ? 8778 : checkoutPort();
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
 const budgetFile = join(import.meta.dir, 'web/budget.json');
-/** A time's least allowance over its budget: the spread of a median of five at a load of 5 or less, 9 to 20 ms over four such runs. */
-const TIME_SLACK_MS = 20;
 const report: Record<string, unknown> = { server, origin };
 
 const hymns = readWords();
@@ -413,9 +412,10 @@ const measureOnce = async (page: Page, path: string, cold: boolean) => {
 
 const measure = async (page: Page) => {
   const load = loadavg()[0] ?? 0;
-  const budget = existsSync(budgetFile)
-    ? (JSON.parse(readFileSync(budgetFile, 'utf8')) as Record<string, Record<string, number>>)
-    : {};
+  const limits =
+    (existsSync(budgetFile)
+      ? (JSON.parse(readFileSync(budgetFile, 'utf8')) as Partial<Budget>).limits
+      : undefined) ?? {};
   const measured: Record<string, Record<string, number>> = {};
   const loads: Record<string, unknown> = {};
   const throttled = args.includes('--throttle');
@@ -458,28 +458,18 @@ const measure = async (page: Page) => {
     console.log('throttled (150 ms, 1.6 Mbit/s down): measured only, no budget');
     return;
   }
-  if (args.includes('--write-budget')) {
-    writeFileSync(
-      budgetFile,
-      `${JSON.stringify({ measuredAtLoad: Math.round(load * 10) / 10, ...measured }, null, 2)}\n`,
-    );
-    console.log(`wrote ${budgetFile}`);
-    return;
-  }
   const over: Array<string> = [];
-  const timesChecked = load <= 5;
+  const timesChecked = load <= MAX_LOAD;
   for (const [key, values] of Object.entries(measured))
     for (const [name, value] of Object.entries(values)) {
-      const limit = budget[key]?.[name];
-      if (limit === undefined || (name.endsWith('Ms') && !timesChecked)) continue;
-      const allowed = name.endsWith('Ms')
-        ? Math.max(limit * 1.1, limit + TIME_SLACK_MS)
-        : limit * 1.1;
+      const limit = limits[key]?.[name];
+      if (limit === undefined || (isTime(name) && !timesChecked)) continue;
+      const allowed = allowedOver(name, limit);
       if (value > allowed) over.push(`${key} ${name} ${value} > ${Math.floor(allowed)}`);
     }
   check(
     `bytes and times within tools/web/budget.json + 10% (a time + ${TIME_SLACK_MS} ms at least) (times ${timesChecked ? 'checked' : `not checked: load ${load.toFixed(1)}`})`,
-    budget['/ cold'] !== undefined && over.length === 0,
+    limits['/ cold'] !== undefined && over.length === 0,
     over,
   );
 };
