@@ -1,0 +1,86 @@
+// Find: a reference or some words → places and verses, as the reader types,
+// offline. Every rule is `findRead` (src/find/find.ts), over the word index
+// the data module imports; this file holds the query, asks only while it
+// has one, and draws the answer (`FindResults`). Go to (hs-read-chapter)
+// draws the box and opens a row; until then a driver's launch draws a field
+// on Your verses (features/garden.contract) for the tests and the speed
+// drive (tools/drive-find.ts), which reads `findTimes`: under a driver's
+// launch, each answer's time since its keystroke, in ms, and in
+// `findTimedQueries` the query each answered. `findOpenIt`
+// keeps the place a row opened, for the tests, until Go to opens it.
+
+shape FindPlace
+  label: string
+  book: number
+  chapter: number
+  verse: number
+
+shape FindHit
+  reference: string
+  book: number
+  chapter: number
+  verse: number
+  before: string
+  match: string
+  after: string
+
+shape FindShown
+  query: string
+  places: FindPlace[]
+  hits: FindHit[]
+  more: number
+  line: string
+
+fn findMoreText(n: number): string = n == 1 ? "1 more verse has these words" : `${n} more verses have these words`
+
+members HeartseedExact
+  state findQuery = ""
+  state findTypedAt = 0
+  state findTimes: number[] = []
+  state findTimedQueries: string[] = []
+  resource findShown = findRead(findQuery, 50) when findQuery != "" as shape FindShown else empty()
+  action findType(text: string)
+    findQuery = text
+    if gardenDriven.on
+      findTypedAt = performanceNow()
+  action findClear
+    findQuery = ""
+  task findAnswered when gardenDriven.on and findQuery != "" and findShown.query == findQuery key=findShown.query
+    change(findTimed)
+  action findTimed
+    findTimes = findTimes.concat([performanceNow() - findTypedAt])
+    findTimedQueries = findTimedQueries.concat([findShown.query])
+  state findOpened = ""
+  action findOpenIt(book: number, chapter: number, verse: number)
+    findOpened = `${book} ${chapter} ${verse}`
+
+// The answer to a query: the place it names, then the verses that hold its
+// words, each a row of its reference and its words around the match, the
+// match in the sun's colour; then how many more verses hold the words, or
+// the line when nothing does. `open` is handed the row's book, chapter and
+// verse (0 for a chapter's top).
+component FindResults
+  props
+    found: FindShown
+    open: action
+  view
+    column gap=4 testId="find-results"
+      for p in found.places key=`${p.book}-${p.chapter}-${p.verse}`
+        row role="button" press=open(p.book, p.chapter, p.verse) aria-label=`Go to ${p.label}` min-height=44 align-items="center" gap=12 padding="0 12px" border-radius=12 -exact-press-scale=0.97 testId="find-place"
+          :active
+            background-color = "hs.hearing"
+          text p.label font="-exact-headline" flex=1 testId="find-place-label"
+          text "Go to" font="-exact-footnote" color="hs.sun" font-weight=600 aria-hidden=true
+      for h in found.hits key=`${h.book}-${h.chapter}-${h.verse}`
+        column role="button" press=open(h.book, h.chapter, h.verse) aria-label=h.reference min-height=44 justify-content="center" gap=2 padding="8px 12px" border-radius=12 -exact-press-scale=0.97 testId=`find-hit-${h.book}-${h.chapter}-${h.verse}`
+          :active
+            background-color = "hs.hearing"
+          text h.reference font="-exact-subheadline" font-weight=600 testId="find-hit-reference"
+          text color="hs.quiet"
+            text h.before
+            text h.match color="hs.sun" font-weight=600
+            text h.after
+      if found.more > 0
+        text findMoreText(found.more) font="-exact-footnote" color="-exact-secondary-label" padding="8px 12px" testId="find-more"
+      if found.line != ""
+        text found.line color="-exact-secondary-label" padding="8px 12px" testId="find-line"

@@ -7,6 +7,7 @@
 // A driver's launch (HEARTSEED_GARDEN_DRIVE set, app.json's `env`) adds
 // the plant buttons and a test control under each verse; a plain launch
 // has none, and plants only through Add verses (features/add.contract).
+use FindResults, FindShown from "./find.contract"
 
 shape GardenTime
   epochAtZero: number
@@ -145,6 +146,11 @@ component YourVerses
     shown: action
     back: action
     add: action
+    findQuery: string
+    found: FindShown
+    findType: action
+    findClear: action
+    findOpen: action
   view
     scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem" testId="verses"
@@ -161,6 +167,16 @@ component YourVerses
               text "Plant a verse of Psalm 119"
             button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
               text "Plant Psalm 23:1-2"
+        // hs-find-index: find's test field, a driver's launch alone; hs-read-chapter moves find to Go to and deletes it.
+        if driven
+          column gap=8 testId="find-drive"
+            row gap=8 align-items="center"
+              input type="search" value=findQuery input=findType placeholder="Find a verse" aria-label="Find a verse" flex=1 testId="find-field"
+              button press=findClear buttonStyle="bordered" testId="find-clear"
+                text "Clear"
+            if findQuery != ""
+              FindResults(found=found, open=findOpen)
+        // hs-find-index: end.
         if garden.limitLine != ""
           text garden.limitLine color="-exact-secondary-label" testId="full"
         else if answer == "Short"
