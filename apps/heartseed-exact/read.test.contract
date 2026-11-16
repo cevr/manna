@@ -61,6 +61,9 @@ test "After a plant of John 3:16-18 a fresh Read shows John 3, on its first vers
   reload
   clock data
   clock settle
+  tap "tab-read"
+  clock data
+  clock settle
   expect state nav.tab == "read"
   expect text "read-title-read" == "John 3"
   expect no failures

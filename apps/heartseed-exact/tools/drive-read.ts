@@ -31,7 +31,7 @@ import { readPng } from './png';
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const shots = process.env.SHOTS ?? join(app, '.exact/shots');
-const own = join(app, '.exact/shots');
+const own = shots;
 mkdirSync(shots, { recursive: true });
 mkdirSync(own, { recursive: true });
 /** A driver's launch: `makeDrive`'s agent inherits this process's environment as it started, so the drive runs itself again with the launch's variable set (the web's build reads it, the simulator's launch through `SIMCTL_CHILD_`). */
