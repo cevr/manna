@@ -81,7 +81,8 @@ bun run build:web                  # dist/, about 5 s
 bun run serve:web                  # Exact's serve of dist/ on http://127.0.0.1:8766/
 bun tools/web/serve.ts dist        # the same by the one rule alone, as a static host serves it
 bun tools/drive-web.ts             # every hymn's address, not-found, script off, bytes and times, a returning reader
-bun tools/drive-web.ts measure --write-budget   # writes tools/web/budget.json from five loads of each
+bun tools/drive-web.ts measure --json run-1.json   # one run's report; five or more at load ≤ 5
+bun tools/web/budget.ts run-*.json   # writes tools/web/budget.json: each limit the runs' median, the runs kept beside it
 ```
 
 The rules' tests (`src/web/*.test.ts`) are the unit-test part `test:web`, the chords' page, declarations and data-host tests the part `test:chords`, their moves, line rule and shapes the part `test:moves`, the rest `test:app`, so each part stays under the gate's 1 s budget; turbo's `test` runs all four.
