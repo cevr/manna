@@ -1,17 +1,26 @@
 // Heartseed's ticks, the hymnal's kinds on the same kinds of tap (owner,
-// q114): a selection tick when a setting is chosen here, as when a grade
-// is chosen (today.contract's `todayGradeIt`). Settings' own actions stay
-// as they are; the sheet is handed these, each a tick and then the choice.
-// iOS's System Haptics governs them: Heartseed has no Sounds and haptics
-// row (README, "Motion"). src/look/motion.test.ts holds each tick.
+// q114): a selection tick when a grade is chosen (today.contract's
+// `todayGradeIt`), when a setting is chosen here and when a verse of the
+// chooser is ticked or unticked. Every tick is `feelTick`, the one `haptic`
+// of the app, which plays only while Sounds and haptics is on
+// (`settingsFeel`, features/settings.contract; owner, q116). The Settings
+// sheet and the chooser are handed the actions below, each a tick and then
+// the feature's own action, left as it is. src/look/motion.test.ts holds
+// each tick and the gate.
 
 members HeartseedExact
+  action feelTick
+    if settingsFeel
+      haptic("selection")
   action feelChooseMinutes(value: string)
-    haptic("selection")
+    feelTick()
     settingsChooseMinutes(value)
   action feelChooseVoice(value: string)
-    haptic("selection")
+    feelTick()
     settingsChooseVoice(value)
   action feelChooseAppearance(value: string)
-    haptic("selection")
+    feelTick()
     settingsChooseAppearance(value)
+  action feelChooseVerse(verse: number)
+    feelTick()
+    chooserTapIt(verse)

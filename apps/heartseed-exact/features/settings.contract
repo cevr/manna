@@ -1,5 +1,5 @@
 // Settings: the sheet the header's gear opens, with the session's minutes,
-// the voice and the appearance, then About. Each choice is kept as plain
+// the voice and the appearance, Sounds and haptics, then About. Each choice is kept as plain
 // text by `persist` and read by src/settings/choices.ts (`settingsOf`), the
 // current Heartseed's rule: a kept text names its choice exactly, or the
 // default stands. The session reads `settingsMinutes` and `settingsVoice`;
@@ -17,11 +17,21 @@ shape SettingsView
   voiceOptions: SettingsOption[]
   appearanceOptions: SettingsOption[]
 
+shape SettingsFeel
+  on: bool
+
+// Sounds and haptics is on until the reader turns it off, as the hymnal's
+// row (owner, q116), kept as its word (`settingsFeelKept`, "on" or "off")
+// and read by `feelAnswer` (src/settings/feel.ts); every tick of the app
+// plays only under it, through `feelTick` (features/feel.contract).
 members HeartseedExact
   state settingsMinutesKept = "" persist
   state settingsVoiceKept = "" persist
   state settingsAppearanceKept = "" persist
+  state settingsFeelKept = "on" persist
   resource settings = settingsOf(settingsMinutesKept, settingsVoiceKept, settingsAppearanceKept) as shape SettingsView else settingsOf("", "", "")
+  resource settingsFelt = settingsFeelOf(settingsFeelKept) as shape SettingsFeel else empty(on=true)
+  derive settingsFeel = settingsFelt.on
   derive settingsMinutes = settings.minutes
   derive settingsVoice = settings.voice
   derive settingsAppearance = settings.appearance
@@ -37,6 +47,8 @@ members HeartseedExact
     settingsVoiceKept = value
   action settingsChooseAppearance(value: string)
     settingsAppearanceKept = value
+  action settingsFeelSet(on: bool)
+    settingsFeelKept = on ? "on" : "off"
   task settingsScheme key=settingsAppearance
     change(settingsShowScheme)
   action settingsShowScheme
@@ -65,6 +77,8 @@ component SettingsSheet
     minutes: action
     voice: action
     appearance: action
+    feel: bool
+    feelSwitch: action
     about: action
     done: action
   view
@@ -78,5 +92,8 @@ component SettingsSheet
           SettingsChoice(line="A day's tending", group="Minutes", name="minutes", chosen=`${settings.minutes}`, options=settings.minutesOptions, choose=minutes)
           SettingsChoice(line="Reads new verses aloud", group="Voice", name="voice", chosen=settings.voice, options=settings.voiceOptions, choose=voice)
           SettingsChoice(line="Appearance", group="Appearance", name="appearance", chosen=settings.appearance, options=settings.appearanceOptions, choose=appearance)
+          row gap=12 align-items="center" min-height="44px"
+            text "Sounds and haptics" font="-exact-headline" flex=1 min-width=0
+            input type="checkbox" switch checked=feel change=feelSwitch aria-label="Sounds and haptics" testId="settings-feel"
           button press=about buttonStyle="bordered" testId="about-row"
             text "About"
