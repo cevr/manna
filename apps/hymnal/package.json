@@ -58,9 +58,13 @@
     },
     "./follow/seek-targets": "./src/follow/seek-targets.ts",
     "./player/scrub-rules": "./src/player/scrub-rules.ts",
+    "./hymns/chords": "./src/hymns/chords.ts",
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/search": "./src/hymns/search.ts",
+    "./hymns/shapes": "./src/hymns/shapes.ts",
+    "./hymns/simple": "./src/hymns/simple.ts",
     "./hymns/text": "./src/hymns/text.ts",
+    "./vite/chords": "./vite/chords.ts",
     "./vite/indexes": "./vite/indexes.ts",
     "./vite/timing": "./vite/timing.ts",
     "./vite/words": "./vite/words.ts"

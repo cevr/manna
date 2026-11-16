@@ -3,6 +3,7 @@
 // has a setting, then About, pushed in the sheet. The choice is kept across
 // launches and applied to the whole app at once through the host's scheme
 // (src/look/look.ts holds its rules to the current hymnal's).
+use ChordsRow from "./chords.contract"
 
 shape SettingsLook
   value: string
@@ -64,6 +65,7 @@ component SettingsSheet
                   image "symbol:checkmark" aria-hidden=true
         // Each feature with a setting adds its row here, one call line
         // (README.md, "Settings").
+        ChordsRow()
         section
           link href=path("about") testId="about-row"
             row flex=1 min-width=0 align-items="center"

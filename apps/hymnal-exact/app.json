@@ -16,6 +16,15 @@
   "server": {
     "database": false
   },
+  "verify": {
+    "accept": [
+      {
+        "finding": "target",
+        "node": "chord-*",
+        "why": "A chord is tapped where it is printed, over its syllable at the words' size, as in the current hymnal: a box of 44 pt (24 px on the web) would push every chorded line apart or cover the next chord's tap, and the chord's place over its syllable is the feature (ex-hy-chords findings, the chord's tap)."
+      }
+    ]
+  },
   "host": {
     "web": {},
     "ios": {
