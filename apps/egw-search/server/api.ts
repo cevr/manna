@@ -256,4 +256,41 @@ export const SearchGroup = HttpApiGroup.make('search')
     }),
   );
 
-export class SearchApi extends HttpApi.make('EGWSearch').add(SearchGroup) {}
+/** The pack's wire format; a reader refuses any other. */
+export const COMMENTARY_FORMAT = 1;
+
+/** Ellen White's Bible Commentary as one pack a phone downloads and keeps.
+ *
+ *  `notes` holds each paragraph of 1BC-7BC linked to a Bible verse, once, as
+ *  its short reference code and its plain text. `verses` is keyed
+ *  `book.chapter`; each linked verse (0 for a whole chapter) carries the
+ *  indexes of its notes. `version` is made of `count` and `sum`, so an
+ *  unchanged corpus answers the same version. */
+export const CommentaryPackSchema = S.Struct({
+  format: S.Literal(COMMENTARY_FORMAT),
+  version: S.String,
+  count: S.Finite,
+  sum: S.Finite,
+  notes: S.Array(S.Tuple([S.String, S.String])),
+  verses: S.Record(S.String, S.Array(S.Tuple([S.Finite, S.Array(S.Finite)]))),
+});
+export type CommentaryPack = S.Schema.Type<typeof CommentaryPackSchema>;
+
+export class CommentaryFailed extends S.TaggedError<CommentaryFailed>()(
+  'CommentaryFailed',
+  { message: S.String },
+  { httpApiStatus: 500 },
+) {}
+
+/** The commentary pack, apart from search so the page's client and search's
+ *  tests stay as they are. `If-None-Match` naming the current version
+ *  answers `304` with no body. */
+export const CommentaryGroup = HttpApiGroup.make('commentary').add(
+  HttpApiEndpoint.get('pack', '/api/commentary/pack', {
+    headers: { 'if-none-match': S.optional(S.String) },
+    success: CommentaryPackSchema,
+    error: [CommentaryFailed],
+  }),
+);
+
+export class SearchApi extends HttpApi.make('EGWSearch').add(SearchGroup).add(CommentaryGroup) {}

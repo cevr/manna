@@ -13,12 +13,17 @@ import { HttpApiBuilder } from 'effect/http-api';
 import type { SearchService } from '@manna/core/search';
 
 import { SearchApi } from '../api.js';
+import { CommentaryGroupLive, type CommentaryPacks } from '../commentary-api.js';
 import { SearchGroupLive } from '../search-api.js';
 import type { VectorIndexLoad } from '../vector-index.js';
 import { type ReportStore, syncRoutes } from './sync-pages.ts';
 
 /** What the router's handlers read. */
-export type SearchServices = SearchService | SqlClient.SqlClient | VectorIndexLoad;
+export type SearchServices =
+  | SearchService
+  | SqlClient.SqlClient
+  | VectorIndexLoad
+  | CommentaryPacks;
 
 /**
  * `build` with none of its caller's services in reach.
@@ -41,8 +46,14 @@ export const searchRouter = (
   store: ReportStore,
   scope: Scope.Scope,
 ) => {
+  const given = Layer.succeedContext(services);
   const api = HttpApiBuilder.layer(SearchApi).pipe(
-    Layer.provide(SearchGroupLive.pipe(Layer.provide(Layer.succeedContext(services)))),
+    Layer.provide(
+      Layer.mergeAll(
+        SearchGroupLive.pipe(Layer.provide(given)),
+        CommentaryGroupLive.pipe(Layer.provide(given)),
+      ),
+    ),
     Layer.provide(Layer.mergeAll(Etag.layer, HttpPlatform.layer)),
   );
   const build = HttpRouter.toHttpEffect(Layer.mergeAll(api, syncRoutes(store))).pipe(
