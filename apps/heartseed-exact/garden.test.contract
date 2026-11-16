@@ -125,11 +125,11 @@ test "It survives a relaunch"
   tap "shelf-plant"
   clock data
   clock settle
-  reload
-  clock data
+  back
   clock data
   clock settle
-  back
+  reload
+  clock data
   clock data
   clock settle
   expect tree has "list-passage-0-43-3-16-18"
