@@ -7,8 +7,8 @@
  * launch sets `HEARTSEED_GARDEN_DRIVE` (and `find.test.contract` holds a
  * plain launch to drawing none). The app bundles no word index (q126):
  * the drive writes the pack from `bible.db` (`tools/find.ts`), checks it
- * is the pack of the app's own text, and serves it on the loopback port
- * `app.ts` grants, which `HEARTSEED_FIND_PACK` names to the launch:
+ * is the pack of the app's own text, and serves it on a free loopback
+ * port, which `HEARTSEED_FIND_PACK` names to the launch:
  *
  * - "fear not" finds the verses `findRead` finds here, in the source, the
  *   first row named by its reference, and its press hands its place; a
@@ -40,10 +40,10 @@ import { FIXED } from '../src/find/fixed';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-/** The loopback port `app.ts` grants a driver's launch for the pack. */
-const PORT = 4797;
-const origin = `http://127.0.0.1:${PORT}`;
 if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
+  const probe = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response() });
+  const free = `http://127.0.0.1:${probe.port}`;
+  await probe.stop(true);
   const self = Bun.spawn(
     ['bun', '--preload', join(import.meta.dir, 'setup.ts'), import.meta.path, host],
     {
@@ -53,8 +53,8 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
         ...process.env,
         HEARTSEED_GARDEN_DRIVE: '1',
         SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE: '1',
-        HEARTSEED_FIND_PACK: origin,
-        SIMCTL_CHILD_HEARTSEED_FIND_PACK: origin,
+        HEARTSEED_FIND_PACK: free,
+        SIMCTL_CHILD_HEARTSEED_FIND_PACK: free,
       },
     },
   );
@@ -67,15 +67,18 @@ const served = await Bun.file(FIND_OUT).text();
 const CORS = { 'access-control-allow-origin': '*' };
 /** Whether the server hands the pack; the last launch is refused it, as a phone that has not downloaded it yet. */
 let serving = true;
+/** The pack's origin, a port the parent found free; the launches the agent makes are told it, and `app.ts`'s development grant takes it. */
+const origin = process.env.HEARTSEED_FIND_PACK ?? '';
 const server = Bun.serve({
   hostname: '127.0.0.1',
-  port: PORT,
+  port: Number(new URL(origin).port),
   fetch: (request) =>
     serving && new URL(request.url).pathname === '/find.json'
       ? new Response(served, { headers: { ...CORS, 'content-type': 'application/json' } })
       : new Response('not found', { status: 404, headers: CORS }),
 });
-const drive = makeDrive({ name: 'drive-find', host, appDir: app });
+/** Each agent run waits its turn at the machine's Exact build lock, which other units' iOS tests hold for many minutes, so a run is given longer than the kit's 15. */
+const drive = makeDrive({ name: 'drive-find', host, appDir: app, timeoutMs: 45 * 60 * 1000 });
 const store = `find-${host}-${Date.now().toString(36)}`;
 const shot = (name: string) => `screenshot .exact/shots/find-${host}-${name}.png`;
 
@@ -215,6 +218,7 @@ const timedOnSimulator = async () => {
     'perf frames live 1000',
     'state findTimes',
     'state findTimedQueries',
+    'state findShown',
   ];
   const timedSaid = replyOf(
     timed,
@@ -226,6 +230,7 @@ const timedOnSimulator = async () => {
   return {
     times: (timedSaid('state findTimes') as ReadonlyArray<number> | undefined) ?? [],
     queries: (timedSaid('state findTimedQueries') as ReadonlyArray<string> | undefined) ?? [],
+    last: timedSaid('state findShown') as Shown | undefined,
   };
 };
 const timedInBun = () => {
@@ -237,9 +242,15 @@ const timedInBun = () => {
       return performance.now() - start;
     }),
     queries: keystrokes,
+    last: cold(keystrokes.at(-1) ?? '', 50) as Shown,
   };
 };
-const { times, queries } = host === 'ios' ? await timedOnSimulator() : timedInBun();
+const { times, queries, last } = host === 'ios' ? await timedOnSimulator() : timedInBun();
+drive.check(
+  'the timed answers came from the pack: the last keystroke found verses',
+  (last?.hits?.length ?? 0) > 0,
+  last,
+);
 const slowest = times
   .map((time, at) => [time, queries[at] ?? ''] as const)
   .sort((a, b) => b[0] - a[0])
@@ -252,11 +263,13 @@ if (host !== 'ios')
   console.log(
     'times web: the web drive has no wall clock (`--live` is Apple only): the source in Bun, keystroke by keystroke',
   );
-const sorted = [...times].sort((a, b) => a - b);
+/** The first answer is held to its own bar (the index's first decode, and here the pack's fetch); the median and the worst are the keystrokes' after it. */
+const after = times.slice(1);
+const sorted = [...after].sort((a, b) => a - b);
 const median = sorted[Math.floor(sorted.length / 2)] ?? Number.NaN;
 const worst = sorted.at(-1) ?? Number.NaN;
 const firstTime = times[0] ?? Number.NaN;
-const worstAt = queries[times.indexOf(worst)] ?? '';
+const worstAt = queries[after.indexOf(worst) + 1] ?? '';
 console.log(
   `times ${host}: ${times.length} answers of ${keystrokes.length} keystrokes; first ${firstTime.toFixed(1)} ms, median ${median.toFixed(1)} ms, worst ${worst.toFixed(1)} ms (${JSON.stringify(worstAt)}); ${Number.isNaN(load) ? 'the data module loaded in under 50 ms (Exact prints no time below it)' : `the data module loaded in ${load} ms`}`,
 );
@@ -270,11 +283,19 @@ drive.check(
   firstTime < FIRST_BAR,
   firstTime,
 );
-drive.check(`a keystroke's answer, median under ${MEDIAN_BAR} ms`, median < MEDIAN_BAR, median);
-drive.check(`a keystroke's answer, worst under ${WORST_BAR} ms`, worst < WORST_BAR, {
-  worst,
-  query: worstAt,
-});
+drive.check(
+  `a keystroke's answer after the first, median under ${MEDIAN_BAR} ms`,
+  median < MEDIAN_BAR,
+  median,
+);
+drive.check(
+  `a keystroke's answer after the first, worst under ${WORST_BAR} ms`,
+  worst < WORST_BAR,
+  {
+    worst,
+    query: worstAt,
+  },
+);
 const before = Number(process.env.FIND_BEFORE ?? Number.NaN);
 if (!Number.isNaN(before))
   drive.check(
