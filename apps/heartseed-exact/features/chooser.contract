@@ -61,7 +61,7 @@ members HeartseedExact
   derive chooserChapterArg = match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" }
   resource chooserBooksShown = chooserBooks() as shape ChooserBooks else empty()
   resource chooserChaptersShown = chooserChapters(chooserBookArg) as shape ChooserChapters else empty()
-  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer, garden.singles.length) as shape ChooserShown else empty()
+  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer, garden.singles.map(v => v.reference).join("|")) as shape ChooserShown else empty()
   resource chooserWords = textOf(chooserShown.book, chooserShown.chapter, 1, chooserShown.count) as shape TextPassage else empty()
   mutation chooserTapped as shape ChooserRange queue then chooserTook
   mutation chooserPlanted as shape GardenChange queue refreshes garden then chooserLanded

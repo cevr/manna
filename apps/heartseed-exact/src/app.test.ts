@@ -361,7 +361,17 @@ const addCallOf = (random: Random, now: number): readonly [string, readonly unkn
         [book, chapter, first, last, random.pick([1, 16, 0, 200, 2.5, Number.NaN])],
       ];
     case 7:
-      return ['chooserRead', [book, chapter, first, last, answer, random.pick([0, 19, 20, -1])]];
+      return [
+        'chooserRead',
+        [
+          book,
+          chapter,
+          first,
+          last,
+          answer,
+          random.pick(['', 'John 3:16', 'John 3:16|John 3:17', '|']),
+        ],
+      ];
     default:
       return gardenCallOf(random, now);
   }

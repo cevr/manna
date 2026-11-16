@@ -24,6 +24,7 @@ import {
   MOST_SINGLES,
   MOST_VERSES,
   passageReference,
+  verseReference,
 } from '@manna/heartseed/passages';
 import { Option } from 'effect';
 
@@ -183,18 +184,29 @@ const lineOf = (answer: string, reference: string, short: boolean, room: boolean
   return { line: notPlantedLine(reference), lineId: 'chooser-alert' };
 };
 
+/** The verses of `passage` the single verses `held` (by reference) lack: those a join would add. */
+const newSingles = (
+  passage: { book: number; chapter: number; first: number; last: number },
+  held: ReadonlySet<string>,
+) =>
+  Array.from({ length: passage.last - passage.first + 1 }, (_, index) =>
+    verseReference(passage.book, passage.chapter, passage.first + index),
+  ).filter((reference) => !held.has(reference)).length;
+
 /**
  * The verses step over the chapter the route names, the range chosen, the
- * last plant's answer for it (empty for none) and the count of single
- * verses held. A range of one or two verses is offered to the single
- * verses (`singles`) while they have room for each of its verses.
+ * last plant's answer for it (empty for none) and the references of the
+ * single verses held. A range of one or two verses is offered to the single
+ * verses (`singles`) as `Passages.join` judges it: while some verse of it
+ * is not single yet and the single verses have room for those, with their
+ * limit line when they have none, and neither once every verse is single.
  */
 export const chooserShown = (
   bookText: string,
   chapterText: string,
   range: ChooserRange,
   answer: string,
-  singlesHeld: number,
+  singles: ReadonlyArray<string>,
 ): ChooserShown => {
   const cap = `${LEAST_VERSES} to ${MOST_VERSES} verses`;
   return Option.match(placeOf(bookText, chapterText), {
@@ -224,10 +236,12 @@ export const chooserShown = (
       const passage = Option.map(chosen, (each) => ({ book: book.number, chapter, ...each }));
       const reference = Option.match(passage, { onNone: () => '', onSome: passageReference });
       const short = Option.exists(passage, isShort);
-      const room = Option.exists(
-        passage,
-        (each) => singlesHeld + each.last - each.first + 1 <= MOST_SINGLES,
-      );
+      const held = new Set(singles);
+      const adds = Option.match(passage, {
+        onNone: () => 0,
+        onSome: (each) => newSingles(each, held),
+      });
+      const room = held.size + adds <= MOST_SINGLES;
       return {
         found: true,
         book: book.number,
@@ -251,10 +265,10 @@ export const chooserShown = (
           },
         ),
         plant: Option.isSome(passage) && !short,
-        singles: short && room,
+        singles: short && adds > 0 && room,
         ...Option.match(passage, {
           onNone: () => ({ line: '', lineId: '' }),
-          onSome: () => lineOf(answer, reference, short, room),
+          onSome: () => lineOf(answer, reference, short, adds === 0 || room),
         }),
       };
     },
