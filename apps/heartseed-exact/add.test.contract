@@ -138,3 +138,202 @@ test "At three lists the rows say the limit"
   clock settle
   expect text "offer-state-pick-proverbs-20-15-1-1" == "Plant"
   expect no failures
+
+test "At twenty single verses a short pick says its limit"
+  at "/add/bible/43/3"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  tap "verse-2"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-3"
+  clock data
+  tap "verse-4"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-5"
+  clock data
+  tap "verse-6"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-7"
+  clock data
+  tap "verse-8"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-9"
+  clock data
+  tap "verse-10"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-11"
+  clock data
+  tap "verse-12"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-13"
+  clock data
+  tap "verse-14"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-15"
+  clock data
+  tap "verse-16"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-17"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-19"
+  clock data
+  tap "plant-singles"
+  clock data
+  clock settle
+  expect state garden.singles.length == 19
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-19"
+  clock data
+  tap "verse-20"
+  clock data
+  expect tree missing "chooser-singles-limit"
+  expect enabled "plant-singles"
+  tap "plant-singles"
+  clock data
+  clock settle
+  expect state garden.singles.length == 20
+  expect state garden.singles.19.reference == "John 3:20"
+  expect text "add-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  tap "shelf-proverbs"
+  clock data
+  clock settle
+  tap "offer-pick-proverbs-20-4-23-23"
+  clock data
+  clock settle
+  expect text "shelf-count" == "1 verse"
+  expect tree missing "shelf-plant"
+  expect text "shelf-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  back
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-21"
+  clock data
+  expect tree missing "plant-singles"
+  expect tree missing "plant-list"
+  expect text "chooser-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  tap "verse-21"
+  clock data
+  tap "verse-1"
+  clock data
+  tap "verse-2"
+  clock data
+  expect tree missing "plant-singles"
+  expect tree missing "chooser-singles-limit"
+  expect no failures
