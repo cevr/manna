@@ -1,7 +1,7 @@
 /* oxlint-disable effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): the varint digits pick an alphabet by a plain branch. */
 
 /**
- * The word index's pack (`find.gen.json`, written by `tools/find.ts`) and
+ * The word index's pack (`find.json`, written by `tools/find.ts`) and
  * the codes it is written in, which the writer and the reader share. Every
  * number is text in an alphabet of the 93 printable ASCII characters but
  * the quote and the backslash, so the JSON holds it unescaped:
@@ -27,16 +27,18 @@
  * - `tabled`: the words in more than one verse in `TABLED_SHARE`, the stop
  *   words among them, by id: their places are in the verse table, not in
  *   lists, and `marks` holds the verses each is in;
- * - `table`: per verse its count of tokens, its count of tabled words, and
- *   each tabled word as the gap from the one before (from -1) times the
- *   count of tabled words, plus its id;
+ * - `sizes`: per verse its count of tokens and the length in characters of
+ *   its row of `table`, so the reader finds every verse's row without
+ *   reading the rows;
+ * - `table`: per verse its tabled words, each as the gap from the one
+ *   before (from -1) times the count of tabled words, plus its id;
  * - `classes`: per prefix whose untabled words have more than `BIG_CLASS`
  *   tokens, the verses one of its words (any) is in;
  * - `chapters`: per chapter in canon order its count of verses.
  *
  * `FIND_FORMAT` is the pack's format; a reader refuses another.
  */
-export const FIND_FORMAT = 1;
+export const FIND_FORMAT = 2;
 
 /** A stop word is in more than one verse in this many. */
 export const STOP_SHARE = 4;
@@ -59,6 +61,7 @@ export interface FindPack {
   readonly format: number;
   readonly verses: number;
   readonly chapters: string;
+  readonly sizes: string;
   readonly table: string;
   readonly stops: ReadonlyArray<string>;
   readonly tabled: ReadonlyArray<string>;
@@ -130,6 +133,18 @@ export const bitmapOf = (members: Iterable<number>, size: number): string => {
 /** Whether `verse` is in the bitmap. */
 export const hasBit = (bitmap: string, verse: number): boolean =>
   ((digitAt(bitmap, Math.floor(verse / 6)) >> (verse % 6)) & 1) === 1;
+
+/** The verses of the bitmap among `size`, in order. */
+export const bitsOf = (bitmap: string, size: number): Int32Array => {
+  const verses: Array<number> = [];
+  for (let six = 0; six < bitmap.length; six += 1) {
+    const digit = digitAt(bitmap, six);
+    if (digit === 0) continue;
+    for (let bit = 0; bit < 6; bit += 1)
+      if (((digit >> bit) & 1) === 1 && six * 6 + bit < size) verses.push(six * 6 + bit);
+  }
+  return Int32Array.from(verses);
+};
 
 /** The front-coded text of `words`, sorted. */
 export const frontCoded = (words: ReadonlyArray<string>): string => {

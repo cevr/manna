@@ -130,19 +130,19 @@ export const findPackOf = (
   const stops = vocabulary.filter(inShare(STOP_SHARE));
   const tabled = vocabulary.filter(inShare(tabledShare));
   const stopIds = new Map(tabled.map((word, id) => [word, id]));
-  const table = corpusCounts.verses
-    .map((words) => {
-      const entries: Array<string> = [];
-      let before = -1;
-      words.forEach((word, at) => {
-        const id = stopIds.get(word);
-        if (id === undefined) return;
-        entries.push(varint((at - before - 1) * tabled.length + id));
-        before = at;
-      });
-      return varint(words.length) + varint(entries.length) + entries.join('');
-    })
-    .join('');
+  const rows = corpusCounts.verses.map((words) => {
+    const entries: Array<string> = [];
+    let before = -1;
+    words.forEach((word, at) => {
+      const id = stopIds.get(word);
+      if (id === undefined) return;
+      entries.push(varint((at - before - 1) * tabled.length + id));
+      before = at;
+    });
+    return { tokens: words.length, entries: entries.join('') };
+  });
+  const sizes = rows.map((row) => varint(row.tokens) + varint(row.entries.length)).join('');
+  const table = rows.map((row) => row.entries).join('');
   const marks = tabled.map((word) => bitmapOf(corpusCounts.versesOf.get(word) ?? [], size));
 
   const sums = new Map<string, number>();
@@ -180,6 +180,7 @@ export const findPackOf = (
     format: FIND_FORMAT,
     verses: size,
     chapters: corpusCounts.chapters.map(varint).join(''),
+    sizes,
     table,
     stops,
     tabled,

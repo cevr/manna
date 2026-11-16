@@ -46,11 +46,10 @@ interface Letter {
   readonly decoded: Map<number, WordList>;
 }
 
-/** The verse table: where each verse's tokens start, and where its tabled words are written. */
+/** The verse table: where each verse's tokens start, and where its row of tabled words starts in `table` (each verse's ends where the next one's starts). */
 interface Table {
   readonly tokenStarts: Int32Array;
   readonly tabledAt: Int32Array;
-  readonly tabledCount: Int32Array;
 }
 
 /** A verse's place in the canon. */
@@ -68,6 +67,8 @@ export interface FindIndex {
   readonly tabled: ReadonlyArray<string>;
   /** Whether the tabled word of `id` is in `verse`. */
   readonly tabledIn: (id: number, verse: number) => boolean;
+  /** The bitmap of the verses the tabled word of `id` is in. */
+  readonly marksOf: (id: number) => string;
   /** The bitmap of a prefix whose list is never decoded whole, if the prefix is one. */
   readonly classOf: (prefix: string) => string | undefined;
   /** Whether `verse` is in a class's bitmap. */
@@ -82,8 +83,8 @@ export interface FindIndex {
   readonly tokenStart: (verse: number) => number;
   /** The verse the token is in. */
   readonly verseOf: (token: number) => number;
-  /** The tabled words of `verse`: each its place among the verse's tokens and its id, in order. */
-  readonly tabledOf: (verse: number) => Array<readonly [number, number]>;
+  /** Writes the tabled words of `verse` into `places` (each its place among the verse's tokens) and `ids`, in order, as far as they hold; their count. */
+  readonly tabledInto: (verse: number, places: Int32Array, ids: Int32Array) => number;
   /** The book, chapter and verse number of `verse`. */
   readonly placeOf: (verse: number) => VersePlace;
 }
@@ -187,18 +188,14 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
     if (table !== undefined) return table;
     const size = pack.verses;
     const tokenStarts = new Int32Array(size + 1);
-    const tabledAt = new Int32Array(size);
-    const tabledCount = new Int32Array(size);
+    const tabledAt = new Int32Array(size + 1);
     const cursor = { at: 0 };
     for (let verse = 0; verse < size; verse += 1) {
-      tokenStarts[verse + 1] = (tokenStarts[verse] ?? 0) + readVarint(pack.table, cursor);
-      const entries = readVarint(pack.table, cursor);
-      tabledAt[verse] = cursor.at;
-      tabledCount[verse] = entries;
-      for (let each = 0; each < entries; each += 1) readVarint(pack.table, cursor);
+      tokenStarts[verse + 1] = (tokenStarts[verse] ?? 0) + readVarint(pack.sizes, cursor);
+      tabledAt[verse + 1] = (tabledAt[verse] ?? 0) + readVarint(pack.sizes, cursor);
     }
     counts.table += size;
-    table = { tokenStarts, tabledAt, tabledCount };
+    table = { tokenStarts, tabledAt };
     TABLES.set(pack, table);
     return table;
   };
@@ -231,6 +228,7 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
     counts,
     tabled: known ? pack.tabled : [],
     tabledIn: (id, verse) => hasBit(pack.marks[id] ?? '', verse),
+    marksOf: (id) => (known ? (pack.marks[id] ?? '') : ''),
     classOf: (prefix) => (known ? pack.classes[prefix] : undefined),
     inClass: hasBit,
     wordsFrom: (prefix) => {
@@ -252,18 +250,22 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
     },
     tokenStart: (verse) => tableOf().tokenStarts[verse] ?? 0,
     verseOf: (token) => lastAtMost(tableOf().tokenStarts, token),
-    tabledOf: (verse) => {
-      const { tabledAt, tabledCount } = tableOf();
-      const ids = pack.tabled.length;
+    tabledInto: (verse, places, ids) => {
+      const { tabledAt } = tableOf();
+      const tabled = pack.tabled.length;
       const cursor = { at: tabledAt[verse] ?? 0 };
-      const entries: Array<readonly [number, number]> = [];
+      const end = tabledAt[verse + 1] ?? 0;
+      const room = Math.min(places.length, ids.length);
+      let count = 0;
       let before = -1;
-      for (let each = 0; each < (tabledCount[verse] ?? 0); each += 1) {
+      while (cursor.at < end && count < room) {
         const value = readVarint(pack.table, cursor);
-        before += Math.floor(value / ids) + 1;
-        entries.push([before, value % ids]);
+        before += Math.floor(value / tabled) + 1;
+        places[count] = before;
+        ids[count] = value % tabled;
+        count += 1;
       }
-      return entries;
+      return count;
     },
     placeOf: (verse) => {
       const firsts = chaptersOf();

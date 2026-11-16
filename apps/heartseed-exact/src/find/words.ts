@@ -22,20 +22,54 @@ const APOSTROPHE = 39;
 const inWord = (code: number) =>
   code === APOSTROPHE || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
 
-/** The words of `text` in order, each with its place. */
-export const tokensOf = (text: string): Array<Token> => {
-  const tokens: Array<Token> = [];
+/** Writes where each word of `text` starts and ends into `starts` and `ends`, in order, as far as they hold and at most `most` words; the count written. */
+export const boundsInto = (
+  text: string,
+  starts: Int32Array,
+  ends: Int32Array,
+  most: number = starts.length,
+): number => {
+  const words = Math.min(most, starts.length, ends.length);
+  const size = text.length;
+  let count = 0;
   let at = 0;
-  while (at < text.length) {
-    while (at < text.length && !inWord(text.charCodeAt(at))) at += 1;
+  while (at < size && count < words) {
+    while (at < size && !inWord(text.charCodeAt(at))) at += 1;
     let start = at;
-    while (at < text.length && inWord(text.charCodeAt(at))) at += 1;
+    while (at < size && inWord(text.charCodeAt(at))) at += 1;
     let end = at;
     while (start < end && text.charCodeAt(start) === APOSTROPHE) start += 1;
     while (end > start && text.charCodeAt(end - 1) === APOSTROPHE) end -= 1;
-    if (end > start) tokens.push({ word: text.slice(start, end).toLowerCase(), start, end });
+    if (end > start) {
+      starts[count] = start;
+      ends[count] = end;
+      count += 1;
+    }
   }
-  return tokens;
+  return count;
+};
+
+/** Whether the word of `text` from `start` to `end` is `word` (or starts with it, for a `prefix`), in lower case, read in place. */
+export const wordIs = (text: string, start: number, end: number, word: string, prefix: boolean) => {
+  if (end - start < word.length || (!prefix && end - start !== word.length)) return false;
+  for (let at = 0; at < word.length; at += 1) {
+    const code = text.charCodeAt(start + at);
+    const lower = code >= 65 && code <= 90 ? code + 32 : code;
+    if (lower !== word.charCodeAt(at)) return false;
+  }
+  return true;
+};
+
+/** The words of `text` in order, each with its place. */
+export const tokensOf = (text: string): Array<Token> => {
+  const starts = new Int32Array(text.length);
+  const ends = new Int32Array(text.length);
+  const count = boundsInto(text, starts, ends);
+  return Array.from({ length: count }, (_, at) => {
+    const start = starts[at] ?? 0;
+    const end = ends[at] ?? 0;
+    return { word: text.slice(start, end).toLowerCase(), start, end };
+  });
 };
 
 /** The words of `text` in order. */
