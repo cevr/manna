@@ -37,7 +37,7 @@ shape ListShown
 
 members HeartseedExact
   state listAsking = ""
-  derive listSlug = match stack(nav).filter(x => x.name == "list").at(-1) { case some(t) => t.params.id, case none => "" }
+  derive listSlug = match readGardenStack.filter(x => x.name == "list").at(-1) { case some(t) => t.params.id, case none => "" }
   resource listShown = listRead(listSlug, gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape ListShown else empty()
   action listPractice(slug: string)
     listAsking = ""

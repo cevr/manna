@@ -5,6 +5,7 @@ import { addSources } from './src/add/sources';
 import { chooserSources } from './src/chooser/sources';
 import { gardenSources } from './src/garden/sources';
 import { homeSources } from './src/home/sources';
+import { readSources } from './src/read/place';
 import { settingsSources } from './src/settings/choices';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
@@ -29,6 +30,7 @@ const sources: Sources = {
   ...todaySources(garden),
   ...readerSources,
   ...textSources,
+  ...readSources,
 };
 
 export const answer: Answer = (source, args, store, storage, native) =>

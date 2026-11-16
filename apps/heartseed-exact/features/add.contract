@@ -53,8 +53,8 @@ shape AddList
 members HeartseedExact
   state addAnswer = ""
   state addShelf = ""
-  derive addOpen = stack(nav).filter(x => x.name == "add").length > 0
-  derive addListArg = match stack(nav).filter(x => x.name == "addList").at(-1) { case some(t) => t.params.list, case none => "" }
+  derive addOpen = readGardenStack.filter(x => x.name == "add").length > 0
+  derive addListArg = match readGardenStack.filter(x => x.name == "addList").at(-1) { case some(t) => t.params.list, case none => "" }
   resource addShown = addRead(addShelf, homeMarkOf(garden)) with gardenAt, gardenTime.seed when addOpen as shape AddShown else empty()
   resource addListShown = addList(addListArg, addAnswer, homeMarkOf(garden)) with gardenAt, gardenTime.seed when addListArg != "" as shape AddList else empty()
   mutation addPlanted as shape GardenChange queue refreshes garden then addLanded

@@ -57,8 +57,8 @@ members HeartseedExact
   state chooserFirst = 0
   state chooserLast = 0
   state chooserAnswer = ""
-  derive chooserBookArg = match stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").at(-1) { case some(t) => t.params.book, case none => "" }
-  derive chooserChapterArg = match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" }
+  derive chooserBookArg = readChooses ? `${readBook}` : (match stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").at(-1) { case some(t) => t.params.book, case none => "" })
+  derive chooserChapterArg = readChooses ? `${readChapter}` : (match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" })
   resource chooserBooksShown = chooserBooks() as shape ChooserBooks else empty()
   resource chooserChaptersShown = chooserChapters(chooserBookArg) as shape ChooserChapters else empty()
   resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer, garden.singles.map(v => v.reference).join("|")) as shape ChooserShown else empty()
@@ -141,7 +141,7 @@ component ChooserVersesPage
         column gap=4 padding=20 max-width="40rem" testId="chooser-verses"
           text shown.heading role="heading" aria-level=2
           for v in words.verses key=v.verse
-            button role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` disabled=pending press=tap(v.verse) min-height="44px" text-align="start" testId=`verse-${v.verse}`
+            button role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` disabled=pending press=tap(v.verse) min-height="44px" text-align="start" id=`verse-${v.verse}` testId=`verse-${v.verse}`
               text `${v.verse} ${v.text}` overflow-wrap="break-word" hyphens="auto"
       column gap=6 padding="12px 20px" flex-shrink=0 testId="chooser-footer"
         if shown.chosen

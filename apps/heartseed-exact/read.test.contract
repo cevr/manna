@@ -1,0 +1,202 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "The app opens on Garden, with home"
+  clock data
+  clock settle
+  expect state nav.tab == "garden"
+  expect tree has "home"
+  expect tree has "tab-garden"
+  expect tree has "tab-read"
+  expect text "title" == "Heartseed"
+  expect no failures
+
+test "Read shows John 1 on a fresh store"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  expect text "read-title-read" == "John 1"
+  expect state readBook == 43
+  expect state readChapter == 1
+  expect state readVerse == 0
+  expect tree has "verse-1"
+  expect tree has "verse-51"
+  expect tree missing "verse-52"
+  expect no failures
+
+test "After a plant of John 3:16-18 a fresh Read shows John 3, on its first verse"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  expect text "read-title-read" == "John 3"
+  expect state readBook == 43
+  expect state readChapter == 3
+  expect state readVerse == 16
+  expect tree has "verse-36"
+  expect tree missing "verse-37"
+  reload
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  expect text "read-title-read" == "John 3"
+  expect no failures
+
+test "Garden again shows home with no row built"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  back
+  clock data
+  clock settle
+  expect state homeShown.rows.length == 1
+  tap "tab-read"
+  clock data
+  clock settle
+  perf
+    tap "tab-garden"
+    clock data
+    clock settle
+  expect perf built "Home" == 0
+  expect perf built "HomePlantButton" == 0
+  expect tree has "home"
+  expect state nav.tab == "garden"
+  expect no failures
+
+test "A Garden route pushed is still there after a visit to Read"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect tree has "add-verses"
+  tap "tab-read"
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect state nav.tab == "garden"
+  expect tree has "add-verses"
+  expect state readGardenTab.length == 2
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect state readGardenTab.length == 1
+  expect tree has "home"
+  expect no failures
+
+test "The gear opens Settings over Read, and Done returns to Read"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "gear"
+  clock settle
+  expect tree has "settings"
+  expect state nav.tab == "read"
+  expect state motionSheetUp == true
+  tap "settings-done"
+  clock settle
+  expect tree missing "settings"
+  expect state nav.tab == "read"
+  expect state readTop.name == "read"
+  expect text "read-title-read" == "John 1"
+  expect no failures
+
+test "A verse tapped in Read is chosen, and Plant is offered at three"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "verse-1"
+  clock data
+  expect text "range-count" == "1 verse"
+  expect tree missing "plant-list"
+  tap "verse-3"
+  clock data
+  expect text "range-count" == "3 verses"
+  expect tree has "plant-list"
+  expect no failures
+
+test "A followed reference opens on Read, and Back finds the chapter left"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  type "root" "/read/at/19/23/1"
+  clock data
+  clock settle
+  expect state readTop.name == "readAt"
+  expect text "read-title-readAt" == "Psalms 23"
+  expect state readBook == 19
+  expect state readChapter == 23
+  expect state readVerse == 1
+  back
+  clock data
+  clock settle
+  expect state readTop.name == "read"
+  expect text "read-title-read" == "John 1"
+  expect state readBook == 43
+  expect no failures
+
+test "A Garden address typed while Read is up selects Garden"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  type "root" "/add"
+  clock data
+  clock settle
+  expect state nav.tab == "garden"
+  expect state readGardenTab.length == 2
+  expect tree has "add-verses"
+  tap "tab-read"
+  clock settle
+  expect state readTop.name == "read"
+  expect no failures

@@ -45,3 +45,6 @@ theme
   -exact-tertiary-label = hs.quiet
   -exact-system-red = hs.miss
   -exact-system-orange = hs.miss
+
+icons
+  icon.sprout = icon(svg "icons/sprout.svg")

@@ -1,0 +1,63 @@
+// The Read tab: a chapter of the Bible at the place the reader was last,
+// kept across launches (`readBookKept`, `readChapterKept`), else the
+// chapter of the first verse in the field, else John 1 (`readPlaceOf`,
+// src/read/place.ts). `readBook`, `readChapter` and `readVerse` say what
+// the Read tab's top entry shows: the kept place at its root (`/read`),
+// the route's own at a followed reference (`readAt`). `readOpenAt` selects
+// Read, pops it to its root, keeps the place and opens on the verse;
+// `readFollow` pushes `readAt`, whose Back is named after the chapter
+// left. Each lands with the verse's row as its fragment, so the host
+// brings that row into view. Every step is src/read/nav.ts's `navStep`,
+// which read.test.ts holds these actions to.
+// The Garden's screens read their routes from `readGardenStack`: the
+// Garden tab's stack, unless a Garden route was pushed onto Read and is
+// up, so a screen kept under the other tab keeps what it shows. The
+// chapter Read shows is the chooser's verses page for the place
+// (`readChooses`), unless a chooser route of Add verses is up.
+
+shape ReadPlace
+  id: number
+  book: number
+  chapter: number
+  verse: number
+  name: string
+
+// The id of a tab's top entry under any Settings sheet: the one entry of
+// that tab whose screen body is drawn.
+fn readTopOf(s: Entry[]): number = match s.filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.id, case none => 0 }
+
+members HeartseedExact
+  state readBookKept = "" persist
+  state readChapterKept = "" persist
+  state readOpenVerse = 0
+  derive readTabStack = match nav.tabs.filter(t => t.name == "read").at(0) { case some(t) => t.stack, case none => stack(nav) }
+  derive readTop = match readTabStack.filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t, case none => top(nav) }
+  derive readUp = readTop.name == "read" or readTop.name == "readAt"
+  derive readGardenTab = match nav.tabs.filter(t => t.name == "garden").at(0) { case some(t) => t.stack, case none => stack(nav) }
+  derive readGardenStack = (nav.tab == "read" and not readUp) ? stack(nav) : readGardenTab
+  derive readChooses = (nav.tab == "read" and readUp) or stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").length == 0
+  derive readFirst = match garden.lists.map(l => l.verses.map(v => v.reference)).flat().at(0) { case some(r) => r, case none => (match garden.singles.at(0) { case some(v) => v.reference, case none => "" }) }
+  resource readKept = readPlaceOf(readBookKept, readChapterKept, readFirst) as shape ReadPlace else readPlaceOf("", "", "")
+  resource readAts = readAtOf(x.id, x.params.book, x.params.chapter, x.params.verse) for x in readTabStack.filter(y => y.name == "readAt") key=x.id as shape ReadPlace
+  derive readTopAt = match readAts.filter(p => p.id == readTop.id).at(0) { case some(p) => p, case none => readKept }
+  derive readShown = readTop.name == "readAt" ? readTopAt : readKept
+  derive readBook = readShown.book
+  derive readChapter = readShown.chapter
+  derive readVerse = readTop.name == "readAt" ? readTopAt.verse : (readOpenVerse > 0 ? readOpenVerse : readKept.verse)
+
+  action readOpenAt(book: number, chapter: number, verse: number)
+    readBookKept = `${book}`
+    readChapterKept = `${chapter}`
+    readOpenVerse = verse
+    chooserFirst = 0
+    chooserLast = 0
+    chooserAnswer = ""
+    nav = open(nav, path("read") + `#verse-${verse}`)
+  action readFollow(book: number, chapter: number, verse: number)
+    chooserFirst = 0
+    chooserLast = 0
+    chooserAnswer = ""
+    if nav.tab == "read"
+      nav = push(nav, path("readAt", `${book}`, `${chapter}`, `${verse}`) + `#verse-${verse}`)
+    else
+      nav = push(select(nav, "read"), path("readAt", `${book}`, `${chapter}`, `${verse}`) + `#verse-${verse}`)

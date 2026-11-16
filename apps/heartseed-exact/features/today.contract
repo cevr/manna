@@ -124,9 +124,9 @@ members HeartseedExact
   derive today = match todayStepped { case some(v) => v, case none => todayBooted }
   derive todayFinals = todayHeardState.results.map(r => r.alternatives.slice(0, 1).map(a => a.transcript).join("")).join(" ")
   derive todayInterim = match todayHeardState.interim { case some(i) => i.alternatives.slice(0, 1).map(a => a.transcript).join(""), case none => "" }
-  derive todayRoute = match stack(nav).filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.name, case none => "" }
-  derive todaySlug = match stack(nav).filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.params.slug, case none => "" }
-  derive todayCueArg = match stack(nav).filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.params.cue, case none => "" }
+  derive todayRoute = match readGardenStack.filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => (t.name == "garden" ? "home" : t.name), case none => "" }
+  derive todaySlug = match readGardenStack.filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.params.slug, case none => "" }
+  derive todayCueArg = match readGardenStack.filter(x => not x.name.startsWith("settings")).at(-1) { case some(t) => t.params.cue, case none => "" }
   derive todayOpenKey = `${todayRoute}|${todaySlug}|${todayCueArg}|${settingsMinutes}|${settingsVoice}`
 
   task todayArrived when current(todayBooted) key=todayOpenKey
