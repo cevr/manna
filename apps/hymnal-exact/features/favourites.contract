@@ -15,6 +15,11 @@ members HymnalExact
   action favouriteKeep
     match favouriteToggled
       case some(f)
+        if settingsFeel
+          if f.numbers.length > favouriteList.length
+            haptic("success")
+          else if f.numbers.length < favouriteList.length
+            haptic("impact-light")
         favouriteList = f.numbers
       case none
         favouriteList = favouriteList

@@ -9,6 +9,7 @@
 // follow the step's `query` (features/list.contract `listRows`), which is
 // empty once the search closes, wherever it was open.
 use PlayerView from "./player.contract"
+use hy-fade-in, hy-fade-out from "./motion.contract"
 
 shape ListRow
   number: number
@@ -54,6 +55,18 @@ shape FindView
 // by its path, without the query or fragment a launch may add.
 fn findSearchingAt(v: FindView, url: string): bool = url == v.searchAt or url.startsWith(`${v.searchAt}?`) or url.startsWith(`${v.searchAt}#`)
 
+// The drums pop in from a little smaller, a panel over the page.
+keyframes hy-pop
+  from opacity=0 scale=0.96
+
+// The tiles grow in from a little larger, and fade out a little larger
+// again (the current AllAtOnce's zoom).
+keyframes hy-zoom-in
+  from opacity=0 scale=1.06
+
+keyframes hy-zoom-out
+  to opacity=0 scale=1.06
+
 members HymnalExact
   state findGone = 0
   state findDrumsUp = false
@@ -76,6 +89,8 @@ members HymnalExact
     listQuery = v
     send findStepped = findStep("query", v, 0, 0)
   action findTurn(drum: string, n: number)
+    if settingsFeel
+      haptic("selection")
     send findStepped = findStep("turn", drum, n, 0)
   action findWheeled(e: WheelEvent)
     if e.ctrlKey
@@ -89,7 +104,6 @@ members HymnalExact
       showModal("find-drums")
     else if findDrumsUp and not find.drums
       findDrumsUp = false
-      close("find-drums")
     if find.go.serial > findGone
       findGone = find.go.serial
       if find.go.how == "push"
@@ -121,10 +135,11 @@ component FindBar
     findOpen: action
     favouriteNumbers: number[]
     playerShown: PlayerView
+    motionStill: bool
   view
     if entry.id == findTop
       column flex=(results and findShown.results ? "1000 1 0px" : "none") min-height=0 testId="find"
-        row gap=8 align-items="center" flex-wrap="wrap" padding="4px 16px" testId="find-bar"
+        row gap=8 align-items="center" flex-wrap="wrap" padding="4px 16px" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
           if findShown.searchDrawn
             button press=findSearchOn disabled=(not findShown.searchReach) aria-pressed=(findShown.chosen == "search") flex="1 1 8rem" min-height=44 testId="find-search"
               row gap=6 align-items="center"
@@ -133,11 +148,13 @@ component FindBar
           if findShown.boxDrawn
             input type="search" value=findText input=findTyped placeholder="Number, title or first line"
               aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) flex="1 1 10rem" min-width=0 testId="search"
+              animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
           button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) disabled=(not findShown.hashReach)
             aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") min-width=44 min-height=44 flex-shrink=0 testId="find-number"
             text "#" font="-exact-title3"
           if findShown.cancelDrawn
             button press=findSearchOff disabled=(not findShown.cancelReach) min-height=44 flex-shrink=0 testId="find-cancel"
+              animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
               text "Cancel"
           if findShown.tilesControl
             button press=findPress("tilesShow", 0) aria-label="All at once" min-width=44 min-height=44 flex-shrink=0 testId="tiles-show"
@@ -157,24 +174,33 @@ component FindBar
 // hundreds stop at 0 and 6; the tens and ones turn one past each end, which
 // the step wraps (`turn`), so an increment at 9 dials 0. Open goes to the
 // hymn; the `#` here, a tap outside, Escape or a swipe down close them.
+// Drawn only while the step has them open, they pop in, and fade out as
+// the `if` drops them; Open presses as `PlayerFilled` does.
 component FindDrums
   inject
     findShown: FindView
     findPress: action
     findDismiss: action
+    motionStill: bool
   view
-    dialog id="find-drums" closedby="any" cancel=findDismiss aria-label="Find a hymn by number"
-      background-color="-exact-secondary-background" border-radius=16 padding=16 max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box" testId="drums"
-      column gap=12 width="17.5rem" max-width="100%"
-        row gap=12 align-items="center"
-          text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
-          button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
-            text "#" font="-exact-title3"
-        FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
-        FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
-        FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
-        button press=findPress("open", 0) appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 testId="drums-open"
-          text `Open ${findShown.number}` color="onButton" font-weight=600 text-align="center"
+    if findShown.drums
+      dialog id="find-drums" closedby="any" cancel=findDismiss aria-label="Find a hymn by number"
+        background-color="-exact-secondary-background" border-radius=16 padding=16 max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box" testId="drums"
+        animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-pop duration.panel easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.exit ease-out both")
+        column gap=12 width="17.5rem" max-width="100%"
+          row gap=12 align-items="center"
+            text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
+            button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
+              text "#" font="-exact-title3"
+          FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
+          FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
+          FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
+          button press=findPress("open", 0) appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 testId="drums-open"
+            :active
+              background-color = "pressed"
+              color = "onPressed"
+              -exact-press-scale = 0.97
+            text `Open ${findShown.number}` font-weight=600 text-align="center"
 
 component FindDrum
   props
@@ -200,8 +226,10 @@ component FindTiles
     findPress: action
     findTileList: number[]
     findWheel: action
+    motionStill: bool
   view
     column flex=1 min-height=0 testId="tiles"
+      animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-zoom-in duration.tiles-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-zoom-out duration.tiles-out ease-out both")
       row align-items="center" padding="4px 16px"
         text "All at once" flex=1 color="-exact-secondary-label"
         button press=findPress("tilesDone", 0) min-height=44 testId="tiles-done"

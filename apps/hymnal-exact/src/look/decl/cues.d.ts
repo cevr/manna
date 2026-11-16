@@ -4,7 +4,16 @@
  * `tsconfig.json` maps it here); it names only those cues, and the repo's
  * typecheck reads the source itself.
  */
-type Told = 'play' | 'pause' | 'choose' | 'press' | 'tab' | 'favourite-on' | 'favourite-off';
+type Told =
+  | 'play'
+  | 'pause'
+  | 'choose'
+  | 'press'
+  | 'tab'
+  | 'favourite-on'
+  | 'favourite-off'
+  | 'chords-on'
+  | 'chords-off';
 
 /** A moment a control gives. */
 export type Cue = { readonly _tag: string };

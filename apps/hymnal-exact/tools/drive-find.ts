@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, effect/noKnownValueWidening, eslint/no-await-in-loop, node/no-process-env -- a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads its replies and a screenshot's pixels and prints what it found; its shots folder is named by SHOTS. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, effect/noKnownValueWidening, effect/noNewPromise, eslint/no-await-in-loop, node/no-process-env -- a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads its replies and a screenshot's pixels and prints what it found; its shots folder is named by SHOTS. */
 
 /**
  * Finding's live checks (spec B), which a `.test.contract` cannot hold at
@@ -14,10 +14,25 @@
  * - a tap outside the drums closes them and opens nothing (on iOS a tap
  *   on UIKit's backdrop, which only a drive can aim at a point);
  * - on the web, a section header's glyphs are painted in the brand's muted
- *   role, light and dark, from a screenshot's pixels.
+ *   role, light and dark, from a screenshot's pixels;
+ * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
+ *   after `#`, scaled between 0.96 and 1 and fading, by Open's fill drawn
+ *   lighter than once settled) and are gone once the clock settles after a
+ *   close; Open held down paints the brand's `pressed`, light and dark; the
+ *   tiles grow in from a little larger (60 ms after All at once, scaled
+ *   above 1) and Done leaves the list at the row it showed; the search's
+ *   Cancel fades in (100 ms after Search, its words drawn lighter than once
+ *   settled), and Cancel folds the bar; with chords on, a chord fades in
+ *   over its syllable (60 ms after the page shows); under Reduce Motion the
+ *   drums and the tiles are at scale 1 throughout. A closed exit and a
+ *   reopen leave one drums, open.
  *
- * The bar's three rows, the drums and the tiles are kept in SHOTS, light
- * and dark. Exits 1 on any failed check.
+ * A transform in flight reads at its end on iOS, so iOS reads the end
+ * values and films the drums, the tiles, the bar and the chords under
+ * `--timing platform` (`ios-<name>.png` and its frames). The agent's
+ * server is the recordings' fixture on this checkout's own port. The
+ * bar's three rows, the drums and the tiles are kept in SHOTS, light and
+ * dark. Exits 1 on any failed check.
  */
 
 import { join } from 'node:path';
@@ -26,13 +41,46 @@ import { makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { pixelAt } from './pixel.ts';
+import { checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const shots = process.env.SHOTS ?? join(app, '.exact/shots/find');
 const shotFile = (name: string) => join(shots, `${name}-${host}.png`);
 const shot = (name: string) => `screenshot ${shotFile(name)}`;
-const drive = makeDrive({ name: 'drive-find', host, appDir: app });
+const backend = `http://127.0.0.1:${checkoutPort()}`;
+const env = { ...process.env, HYMNAL_RECORDINGS: backend };
+const processes = {
+  spawn: (argv: ReadonlyArray<string>, cwd: string) => {
+    const child = Bun.spawn([...argv], {
+      cwd,
+      env,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+    });
+    return {
+      pid: child.pid,
+      ended: Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]).then(([stdout, stderr, code]) => ({ code, stdout, stderr })),
+    };
+  },
+  signal: (pid: number, signal: 'SIGTERM') => {
+    if (pid < -1) process.kill(pid, signal);
+  },
+  sleep: (ms: number) => Bun.sleep(ms),
+};
+const drive = makeDrive({ name: 'drive-find', host, appDir: app, processes });
+const runId = Date.now().toString(36);
+/** A first launch on a fresh store of its own, the agent's server on this checkout's port. */
+const launch = (store: string, ops: ReadonlyArray<string>, flags: ReadonlyArray<string> = []) =>
+  drive.run(
+    [...flags, '--backend', backend, '--storage', `${store}-${runId}`, '--reset-storage'],
+    ops,
+  );
 
 type Scheme = 'light' | 'dark';
 
@@ -64,13 +112,13 @@ const frameOf = (reply: unknown): { frame?: Frame; width: number; height: number
  * The glyph pixel of `frame` in the shot `name` farthest from the ground:
  * a text's core, where antialiasing leaves its colour whole.
  */
-const corePixel = async (name: string, reply: unknown, scheme: Scheme) => {
+const corePixel = async (name: string, reply: unknown, scheme: Scheme, span = 120) => {
   const { frame, width, height } = frameOf(reply);
   if (frame === undefined || width === 0 || height === 0) return [];
   const ground = channels(theme[scheme].ground);
   const points: Array<{ x: number; y: number }> = [];
   for (let y = frame.y + frame.h * 0.3; y <= frame.y + frame.h * 0.7; y += frame.h / 8)
-    for (let x = frame.x + 1; x < frame.x + Math.min(frame.w, 120); x += 1)
+    for (let x = frame.x + 1; x < frame.x + Math.min(frame.w, span); x += 1)
       points.push({ x: x / width, y: y / height });
   let core: ReadonlyArray<number> = [];
   for (const at of points) {
@@ -131,7 +179,7 @@ const looks = (scheme: Scheme) => [
   'clock settle',
 ];
 
-const launched = await drive.launch('find', [
+const launched = await launch('find', [
   'clock data',
   'tap find-number',
   'clock settle',
@@ -164,7 +212,7 @@ drive.check(`the ones read 2 after it`, slidersOf(launched[8]).get('drum-ones')?
   ...slidersOf(launched[8]),
 ]);
 if (host === 'web') {
-  const pinched = await drive.launch('find-pinch', [
+  const pinched = await launch('find-pinch', [
     'clock data',
     pinchIn,
     'clock settle',
@@ -184,7 +232,7 @@ if (host === 'web') {
     tiles: pinched[8],
   });
 
-  const outside = await drive.launch('find-outside', [
+  const outside = await launch('find-outside', [
     'clock data',
     'tap find-number',
     'clock settle',
@@ -227,5 +275,316 @@ if (host === 'web')
       { core, muted, ink },
     );
   }
+
+/** A run's ops, each a step with an optional name its reply is read back by. */
+const named = (steps: ReadonlyArray<string | readonly [string, string]>) => {
+  const ops = steps.map((step) => (Array.isArray(step) ? step[1] : step) as string);
+  const at = new Map(
+    steps.flatMap((step, index) =>
+      Array.isArray(step) ? [[step[0] as string, index] as const] : [],
+    ),
+  );
+  return {
+    ops,
+    reply: (replies: ReadonlyArray<unknown>, name: string) => replies[at.get(name) ?? -1],
+  };
+};
+
+/** The colour inside a filled button: a little in from its leading edge, at its middle. */
+const fillPixel = async (name: string, reply: unknown) => {
+  const { frame, width, height } = frameOf(reply);
+  if (frame === undefined || width === 0 || height === 0) return [];
+  return pixelAt(shotFile(name), {
+    x: (frame.x + 6) / width,
+    y: (frame.y + frame.h / 2) / height,
+  }).catch(() => []);
+};
+
+/** A frame's width at a moment over its width at rest: its scale then. */
+const scaleOf = (moving: unknown, resting: unknown) => {
+  const [now, rest] = [frameOf(moving).frame, frameOf(resting).frame];
+  if (now === undefined || rest === undefined || rest.w === 0) return Number.NaN;
+  return now.w / rest.w;
+};
+
+/** Whether a tree reply lists a node of `testId`, and how many. */
+const countIn = (tree: unknown, testId: string) =>
+  JSON.stringify(tree ?? null).split(`"testId":"${testId}"`).length - 1;
+
+/** Opens the drums, holds Open down for a shot, lets go (which opens hymn 1) and comes back. */
+const heldOpen = (scheme: Scheme): ReadonlyArray<string | readonly [string, string]> => [
+  `prefer prefers-color-scheme ${scheme}`,
+  'clock settle',
+  'tap find-number',
+  'clock settle',
+  [`open-${scheme}`, 'layout drums-open'],
+  'tap drums-open down',
+  shot(`open-${scheme}`),
+  'tap up',
+  'clock settle',
+  'clock data',
+  'back',
+  'clock settle',
+];
+
+const moving = named([
+  'clock data',
+  'prefer prefers-color-scheme light',
+  'clock settle',
+  'tap find-number',
+  'clock +100',
+  ['drums-100', 'layout drums'],
+  ['fill-100', 'layout drums-open'],
+  shot('drums-100'),
+  'clock settle',
+  ['drums-end', 'layout drums'],
+  ['fill-end', 'layout drums-open'],
+  shot('drums-end'),
+  'tap drums-hash',
+  'clock settle',
+  ...heldOpen('light'),
+  ...heldOpen('dark'),
+  'prefer prefers-color-scheme light',
+  'clock settle',
+  'tap find-number',
+  'clock settle',
+  host === 'web' ? 'tap root at 20 800' : 'tap drums-hash',
+  'clock settle',
+  ['drums-gone', 'tree'],
+  'tap find-number',
+  'clock +50',
+  'tap drums-hash',
+  'clock settle',
+  'tap find-number',
+  'clock settle',
+  ['drums-again', 'tree'],
+  ['drums-open', 'state find.drums'],
+  'tap drums-hash',
+  'clock settle',
+  ['row-before', 'layout hymn-1'],
+  'tap tiles-show',
+  'clock data',
+  'clock +60',
+  ['tiles-60', 'layout tiles'],
+  'clock settle',
+  ['tiles-end', 'layout tiles'],
+  'tap tiles-done',
+  'clock settle',
+  ['row-after', 'layout hymn-1'],
+  ['tiles-gone', 'tree'],
+  'tap find-search',
+  'clock +100',
+  ['cancel-100', 'layout find-cancel'],
+  shot('bar-100'),
+  'clock settle',
+  ['cancel-end', 'layout find-cancel'],
+  shot('bar-end'),
+  'tap find-cancel',
+  'clock settle',
+  ['folded', 'state find.row'],
+]);
+const moved = await launch('find-motion', moving.ops);
+const at = (name: string) => moving.reply(moved, name);
+
+const drumsScale = scaleOf(at('drums-100'), at('drums-end'));
+if (host === 'web') {
+  drive.check(
+    '100 ms after #, the drums are popping in: scaled between 0.96 and 1',
+    drumsScale >= 0.96 && drumsScale < 0.9999,
+    { drumsScale, at: frameOf(at('drums-100')).frame, end: frameOf(at('drums-end')).frame },
+  );
+  const [fading, whole] = [
+    await fillPixel('drums-100', at('fill-100')),
+    await fillPixel('drums-end', at('fill-end')),
+  ];
+  const ground = channels(theme.light.ground);
+  drive.check(
+    '100 ms after #, the drums are fading in: Open’s fill drawn lighter than once settled, and not gone',
+    fading.length === 3 &&
+      whole.length === 3 &&
+      distance(fading, ground) < distance(whole, ground) - 2 &&
+      distance(fading, ground) > 2,
+    { fading, whole, ground },
+  );
+} else
+  drive.check('settled, the drums show', frameOf(at('drums-end')).frame !== undefined, {
+    end: frameOf(at('drums-end')).frame,
+  });
+
+for (const scheme of ['light', 'dark'] as const) {
+  const painted = await fillPixel(`open-${scheme}`, at(`open-${scheme}`));
+  const want = channels(theme[scheme].pressed);
+  drive.check(
+    `held down, the drums’ Open paints the brand’s ${scheme} pressed fill`,
+    painted.length === 3 && distance(painted, want) <= 2,
+    { painted, want },
+  );
+}
+
+drive.check(
+  `closed (${host === 'web' ? 'a tap outside' : 'the drums’ #'}), the drums are gone once the clock settles`,
+  at('drums-gone') !== undefined && countIn(at('drums-gone'), 'drums') === 0,
+  countIn(at('drums-gone'), 'drums'),
+);
+drive.check(
+  'opened again after a close, one drums shows, open',
+  countIn(at('drums-again'), 'drums') === 1 && at('drums-open') === true,
+  { drums: countIn(at('drums-again'), 'drums'), open: at('drums-open') },
+);
+
+const tilesScale = scaleOf(at('tiles-60'), at('tiles-end'));
+if (host === 'web')
+  drive.check(
+    '60 ms after All at once, the tiles are growing in: scaled above 1',
+    tilesScale > 1.0001,
+    {
+      tilesScale,
+    },
+  );
+const [rowBefore, rowAfter] = [frameOf(at('row-before')).frame, frameOf(at('row-after')).frame];
+drive.check(
+  'Done and the clock settled, the tiles are gone and the list is at the row it showed',
+  countIn(at('tiles-gone'), 'tiles') === 0 &&
+    rowBefore !== undefined &&
+    rowAfter !== undefined &&
+    Math.abs(rowBefore.y - rowAfter.y) <= 0.5,
+  { rowBefore, rowAfter, tiles: countIn(at('tiles-gone'), 'tiles') },
+);
+
+if (host === 'web') {
+  const [fading, whole] = [
+    await corePixel('bar-100', at('cancel-100'), 'light', 60),
+    await corePixel('bar-end', at('cancel-end'), 'light', 60),
+  ];
+  const ground = channels(theme.light.ground);
+  drive.check(
+    '100 ms after Search, Cancel is fading in: its words drawn lighter than once settled, and not gone',
+    fading.length === 3 &&
+      whole.length === 3 &&
+      distance(fading, ground) < distance(whole, ground) - 2 &&
+      distance(fading, ground) > 2,
+    { fading, whole },
+  );
+}
+drive.check(
+  'Cancel and the clock settled, the bar is folded',
+  at('folded') === 'folded',
+  at('folded'),
+);
+
+const still = named([
+  'clock data',
+  'prefer prefers-reduced-motion reduce',
+  'clock settle',
+  ['still', 'state motionStill'],
+  'tap find-number',
+  'clock +100',
+  ['drums-100', 'layout drums'],
+  'clock settle',
+  ['drums-end', 'layout drums'],
+  'tap drums-hash',
+  'clock settle',
+  'tap tiles-show',
+  'clock data',
+  'clock +60',
+  ['tiles-60', 'layout tiles'],
+  'clock settle',
+  ['tiles-end', 'layout tiles'],
+]);
+const stilled = await launch('find-still', still.ops);
+const stillAt = (name: string) => still.reply(stilled, name);
+drive.check('Reduce Motion reads as motionStill', stillAt('still') === true, stillAt('still'));
+for (const [part, mid, end] of [
+  ['drums', 'drums-100', 'drums-end'],
+  ['tiles', 'tiles-60', 'tiles-end'],
+] as const) {
+  const scale = scaleOf(stillAt(mid), stillAt(end));
+  drive.check(
+    `under Reduce Motion the ${part} do not scale: at scale 1 as they show`,
+    Math.abs(scale - 1) < 0.0001,
+    {
+      scale,
+    },
+  );
+}
+
+const chords = named([
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'clock data',
+  'tap chords-toggle',
+  'clock settle',
+  'clock data',
+  'tap settings-done',
+  'clock settle',
+  'tap hymn-2',
+  'clock data',
+  'clock +60',
+  ['chord-60', 'layout chord-1-1-1'],
+  shot('chord-60'),
+  'clock settle',
+  ['chord-end', 'layout chord-1-1-1'],
+  shot('chord-end'),
+]);
+const chorded = await launch('find-chords', chords.ops);
+const chordAt = (name: string) => chords.reply(chorded, name);
+if (host === 'web') {
+  const [fading, whole] = [
+    await corePixel('chord-60', chordAt('chord-60'), 'light', 40),
+    await corePixel('chord-end', chordAt('chord-end'), 'light', 40),
+  ];
+  const ground = channels(theme.light.ground);
+  drive.check(
+    '60 ms after the page shows with chords on, a chord is fading in: drawn lighter than once settled, and not gone',
+    fading.length === 3 &&
+      whole.length === 3 &&
+      distance(fading, ground) < distance(whole, ground) - 2 &&
+      distance(fading, ground) > 2,
+    { fading, whole },
+  );
+} else
+  drive.check(
+    'settled, a chord shows over its syllable',
+    frameOf(chordAt('chord-end')).frame !== undefined,
+    {
+      end: frameOf(chordAt('chord-end')).frame,
+    },
+  );
+
+if (host === 'ios') {
+  const film = (name: string) => `screenshot ${join(shots, `ios-${name}.png`)} over 600 every 50`;
+  await launch(
+    'find-film',
+    [
+      'clock settle',
+      'tap find-number',
+      film('drums'),
+      'clock settle',
+      'tap drums-hash',
+      'clock settle',
+      'tap tiles-show',
+      film('tiles'),
+      'clock settle',
+      'tap tiles-done',
+      film('tiles-done'),
+      'clock settle',
+      'tap find-search',
+      film('bar'),
+      'clock settle',
+      'tap find-cancel',
+      'clock settle',
+      'tap gear',
+      'clock settle',
+      'tap chords-toggle',
+      'clock settle',
+      'tap settings-done',
+      'clock settle',
+      'tap hymn-2',
+      film('chords'),
+    ],
+    ['--timing', 'platform'],
+  );
+}
 
 process.exit(drive.finish());

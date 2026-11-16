@@ -48,4 +48,9 @@ theme
   duration.exit = 150ms
   duration.bar-in = 250ms
   duration.bar-out = 150ms
+  duration.panel = 250ms
+  duration.tiles-in = 180ms
+  duration.tiles-out = 140ms
+  duration.growth = 250ms
+  easing.growth = -exact-spring(632, 50, 1)
   easing.out = cubic-bezier(0.23, 1, 0.32, 1)

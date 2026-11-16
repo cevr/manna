@@ -6,7 +6,9 @@
  *
  * - the motion tokens are the calm basis (the owner's q113, 150–250 ms):
  *   each named one has exactly its value, no duration is over 250 ms and
- *   no spring overshoots (a damping ratio under 1);
+ *   no spring overshoots (a damping ratio under 1); the tiles' times are
+ *   the current `All at once`'s (`tileTimes`), and the find bar grows on
+ *   a spring of ratio 1 that settles over `duration.growth`;
  * - every motion row (`animation=`, `transition=`, `-exact-exit-animation=`,
  *   `-exact-layout-transition=`) is a choice on `motionStill` whose still
  *   arm only fades (keyframes of opacity alone, a transition of opacity)
@@ -26,7 +28,9 @@ import { describe, expect, it } from 'bun:test';
 
 import * as body from '@manna/hymnal-app/feel/body';
 import * as cues from '@manna/hymnal-app/feel/cues';
+import * as tiles from '@manna/hymnal-app/home/tile-times';
 
+import type * as TilesDecl from '../find/decl/tile-times';
 import type * as BodyDecl from './decl/body';
 import type * as CuesDecl from './decl/cues';
 import { appFile, brandOf, contractFiles } from './design.testing.ts';
@@ -45,36 +49,84 @@ type Held<T> = {
 const held = {
   body: { bodyOf: body.bodyOf } satisfies Held<typeof BodyDecl>,
   cues: { plain: cues.plain } satisfies Held<typeof CuesDecl>,
+  tiles: { tileTimes: tiles.tileTimes } satisfies Held<typeof TilesDecl>,
 };
 
-/** The motion tokens this unit adds, each with exactly its value. */
+/** The longest a transition or an animation may run (q113). */
+const LONGEST_MS = 250;
+
+/** The motion tokens, each with exactly its value. */
 const TOKENS = {
   'duration.fade': '150ms',
   'duration.exit': '150ms',
   'duration.bar-in': '250ms',
   'duration.bar-out': '150ms',
   'easing.out': 'cubic-bezier(0.23, 1, 0.32, 1)',
+  'duration.panel': '250ms',
+  'duration.growth': '250ms',
 };
 
-/** The longest a transition or an animation may run (q113). */
-const LONGEST_MS = 250;
+/**
+ * The tiles' tokens, each the current `All at once`'s time
+ * (`tileTimes`): the zoom in and out, and the still cross-fade.
+ */
+const TILE_TOKENS = {
+  'duration.tiles-in': tiles.tileTimes.in,
+  'duration.tiles-out': tiles.tileTimes.out,
+  'duration.fade': tiles.tileTimes.fade,
+};
+
+/**
+ * The find bar's growth spring: critically damped (a ratio of 1, no
+ * bounce) and settling over `duration.growth`, the current bar's 0.30 s
+ * growth shortened by q113. For a mass of 1 over `d` seconds, the
+ * stiffness is (2π/d)² and the damping 4π·ratio/d, each rounded.
+ */
+const growthSpring = (seconds: number) =>
+  `-exact-spring(${Math.round(((2 * Math.PI) / seconds) ** 2)}, ${Math.round((4 * Math.PI) / seconds)}, 1)`;
 
 /** The press of a filled button: q113's gentle one. */
 const PRESS_SCALE = '0.97';
 
-/** The cue each `haptic(` call is told by, by its action and the condition it stands under. */
+type Cue = Parameters<typeof body.bodyOf>[0];
+
+/** A dial's detent cue, as the current app tells a turn of `dial`. */
+const detent = (dial: 'key' | 'capo' | 'hundreds' | 'tens' | 'ones') => {
+  const cue = { _tag: 'detent', dial, at: 0 } as const;
+  return cue;
+};
+
+/** The cues each `haptic(` call is told by, by its action and the condition it stands under. */
 const HAPTICS: ReadonlyArray<{
   readonly action: string;
   readonly when: string;
-  readonly cues: ReadonlyArray<Parameters<typeof cues.plain>[0]>;
+  readonly cues: ReadonlyArray<Cue>;
 }> = [
   {
     action: 'playerAsk',
     when: 'if kind == "page" or kind == "bar" or kind == "play"',
-    cues: ['play', 'pause'],
+    cues: [cues.plain('play'), cues.plain('pause')],
   },
-  { action: 'playerAsk', when: 'else if kind == "stanza"', cues: ['choose'] },
-  { action: 'settingsChoose', when: '', cues: ['choose'] },
+  { action: 'playerAsk', when: 'else if kind == "stanza"', cues: [cues.plain('choose')] },
+  { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
+  {
+    action: 'favouriteKeep',
+    when: 'if f.numbers.length > favouriteList.length',
+    cues: [cues.plain('favourite-on')],
+  },
+  {
+    action: 'favouriteKeep',
+    when: 'else if f.numbers.length < favouriteList.length',
+    cues: [cues.plain('favourite-off')],
+  },
+  { action: 'listChoose', when: 'if name != listTab', cues: [cues.plain('tab')] },
+  { action: 'chordsSet', when: '', cues: [cues.plain('chords-on'), cues.plain('chords-off')] },
+  { action: 'chordsStep', when: '', cues: [detent('key'), detent('capo')] },
+  {
+    action: 'findTurn',
+    when: '',
+    cues: [detent('hundreds'), detent('tens'), detent('ones')],
+  },
 ];
 
 const brand = brandOf(appFile('app.forma'));
@@ -190,14 +242,29 @@ const springRatios = (text: string) =>
     return (damping ?? 0) / (2 * Math.sqrt((stiffness ?? 0) * (mass ?? 1)));
   });
 
-/** The `:active` block of a component: each of its rows, by name. */
-const pressOf = (text: string, component: string): ReadonlyMap<string, string> => {
+/** The lines under the first line `opens` matches, as far as its indent holds them. */
+const blockAfter = (text: string, opens: (line: string) => boolean): ReadonlyArray<string> => {
   const lines = text.split('\n');
-  const start = lines.findIndex((line) => line.trim() === `component ${component}`);
+  const start = lines.findIndex(opens);
+  if (start < 0) return [];
+  const indent = (lines[start] ?? '').search(/\S/u);
+  const end = lines.findIndex(
+    (line, index) => index > start && line.trim() !== '' && line.search(/\S/u) <= indent,
+  );
+  return lines.slice(start + 1, end < 0 ? undefined : end);
+};
+
+/** A component's lines. */
+const componentOf = (text: string, name: string) =>
+  blockAfter(text, (line) => line.trim() === `component ${name}`);
+
+/** The lines of the element whose `testId` is `testId`. */
+const elementOf = (text: string, testId: string) =>
+  blockAfter(text, (line) => line.includes(`testId="${testId}"`));
+
+/** The first `:active` block among `body`'s lines: each of its rows, by name. */
+const pressOf = (body: ReadonlyArray<string>): ReadonlyMap<string, string> => {
   const block = new Map<string, string>();
-  if (start < 0) return block;
-  const end = lines.findIndex((line, index) => index > start && /^\S/u.test(line));
-  const body = lines.slice(start + 1, end < 0 ? undefined : end);
   const active = body.findIndex((line) => line.trim() === ':active');
   if (active < 0) return block;
   const indent = (body[active] ?? '').search(/\S/u);
@@ -316,6 +383,22 @@ describe('the finders find a planted defect', () => {
     );
   });
 
+  it('a pressed look, on a component or on one element', () => {
+    const text = [
+      'component A',
+      '  view',
+      '    button testId="b"',
+      '      :active',
+      '        color = "onPressed"',
+      '      text "B"',
+      '    button testId="c"',
+      '      text "C"',
+    ].join('\n');
+    expect(Object.fromEntries(pressOf(componentOf(text, 'A')))).toEqual({ color: 'onPressed' });
+    expect(Object.fromEntries(pressOf(elementOf(text, 'b')))).toEqual({ color: 'onPressed' });
+    expect(pressOf(elementOf(text, 'c')).size).toBe(0);
+  });
+
   it('a haptic outside the setting, and its cue and action', () => {
     const text = [
       'members X',
@@ -338,6 +421,7 @@ describe('the hymnal’s motion is calm', () => {
   it('holds each declaration to its current source', () => {
     expect(held.body.bodyOf).toBe(body.bodyOf);
     expect(held.cues.plain).toBe(cues.plain);
+    expect(held.tiles.tileTimes).toBe(tiles.tileTimes);
   });
 
   it('has each motion token with exactly its value', () => {
@@ -375,13 +459,27 @@ describe('the hymnal’s motion is calm', () => {
     for (const { file, text } of files) expect(literalsOf(file, text)).toEqual([]);
   });
 
+  it('times the tiles as the current All at once does', () => {
+    for (const [name, ms] of Object.entries(TILE_TOKENS))
+      expect({ name, value: brand.motion.get(name) }).toEqual({ name, value: `${ms}ms` });
+  });
+
+  it('grows the find bar on a spring with no bounce, settling over duration.growth', () => {
+    const seconds = msOf('duration.growth', brand.motion) / 1000;
+    expect(brand.motion.get('easing.growth')).toBe(growthSpring(seconds));
+    expect(springRatios(brand.motion.get('easing.growth') ?? '')[0]).toBeCloseTo(1, 1);
+  });
+
   it('presses the filled buttons to the brand’s pressed roles, at 0.97', () => {
-    const press = pressOf(appFile('features/player.contract'), 'PlayerFilled');
-    expect(Object.fromEntries(press)).toEqual({
-      'background-color': 'pressed',
-      color: 'onPressed',
-      '-exact-press-scale': PRESS_SCALE,
-    });
+    for (const body of [
+      componentOf(appFile('features/player.contract'), 'PlayerFilled'),
+      elementOf(appFile('features/find.contract'), 'drums-open'),
+    ])
+      expect(Object.fromEntries(pressOf(body))).toEqual({
+        'background-color': 'pressed',
+        color: 'onPressed',
+        '-exact-press-scale': PRESS_SCALE,
+      });
     expect(brand.colours.has('pressed') && brand.colours.has('onPressed')).toBe(true);
   });
 });
@@ -405,7 +503,7 @@ describe('the hymnal’s haptics are the current Feel seam’s, under Sounds and
         expect({ at: haptic.at, cue, kind: haptic.kind }).toEqual({
           at: haptic.at,
           cue,
-          kind: exactName(body.bodyOf(cues.plain(cue)).haptic),
+          kind: exactName(body.bodyOf(cue).haptic),
         });
     }
   });

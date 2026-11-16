@@ -8,6 +8,7 @@
 // a line is a wrapping row of words, a word a wrapping row of pairs, a pair
 // its chord over its syllable, so a break falls between pairs, never
 // inside one) and the shapes (shape.ts).
+use hy-fade-in from "./motion.contract"
 
 shape ChordsBox
   text: string
@@ -92,8 +93,12 @@ members HymnalExact
   derive chordsGripOpen = match stack(nav).filter(e => e.name == "chord").at(-1) { case some(e) => e.params.grip, case none => "" }
   resource chordsGripShown = chordsGrip(chordsGripOpen) as shape ChordsGripPage
   action chordsSet(on: bool)
+    if settingsFeel
+      haptic("impact-light")
     chordsOn = on
   action chordsStep(n: number, step: string)
+    if settingsFeel
+      haptic("selection")
     send chordsMoved = chordsMove(chordsMoves, n, step)
   action chordsKeep
     match chordsMoved
@@ -158,6 +163,8 @@ component ChordsLines
     chords: ChordsPage
     k: number
     part: ChordsPart
+  inject
+    motionStill: bool
   view
     column gap=6
       for l in part.lines key=l.at
@@ -171,8 +178,10 @@ component ChordsLines
                   else
                     if b.grip == ""
                       text b.chord color="chord" padding-right="0.3em" testId=`chord-${k}-${l.at}-${w.at + bi}`
+                        animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
                     else
                       link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${l.at}-${w.at + bi}`
+                        animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
                         text b.chord color="chord" padding-right="0.3em"
                   text b.text testId=`syllable-${k}-${l.at}-${w.at + bi}`
 

@@ -43,6 +43,9 @@ members HymnalExact
   resource listGroups = listTabRows(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : []) when listTab != "Sections" as shape TabGroup[] else empty()
   mutation listOpening as shape ListOpening queue then listOpened
   action listChoose(name: string)
+    if settingsFeel
+      if name != listTab
+        haptic("selection")
     listTab = name
   action listOpen(n: number)
     send listOpening = listOpening(top(nav).url, n)
