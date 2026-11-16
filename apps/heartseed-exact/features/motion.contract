@@ -7,8 +7,9 @@
 // opacity alone, `hs-leave` takes an ask out 4px up, `hs-fade-out` takes
 // it out by opacity alone under reduced motion, and `hs-pulse` is the
 // listening ring's loop, grown by the current app's 0.4 as it fades.
-// `motionSheetUp` holds the words' colour still while Settings is up, so a
-// scheme chosen there switches them at once instead of smearing them.
+// A word's colour eases only while Hear it or Say it runs, and
+// `motionSheetUp` holds it still while Settings is up, so a scheme change
+// (chosen there or the system's) switches the words at once.
 
 keyframes hs-rise
   from opacity=0 translate="0px 8px"

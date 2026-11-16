@@ -246,9 +246,9 @@ component TodayRecital
         for w in today.words key=w.index
           if w.peekable
             button press=peek(w.index) aria-label=w.label min-width=44 min-height=44 testId=`word-${w.index}`
-              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase) transition=((still or sheet) ? "none" : "color duration.light ease")
+              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase) transition=((still or sheet or not (today.canStop or today.canFinish)) ? "none" : "color duration.light ease")
           else
-            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) transition=((still or sheet) ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
+            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) transition=((still or sheet or not (today.canStop or today.canFinish)) ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
       if today.helpLine != ""
         text today.helpLine color="-exact-secondary-label" testId="help-line"
       if today.canNext

@@ -108,14 +108,23 @@ interface Frame {
 interface Laid {
   readonly viewport?: { readonly w?: number };
   readonly node?: {
-    readonly space?: { readonly viewport?: Frame; readonly local?: { readonly w: number } };
-    readonly style?: Record<string, { readonly computed?: string; readonly value?: string }>;
+    readonly space?: {
+      readonly viewport?: Frame;
+      readonly local?: { readonly w: number };
+      readonly capture?: { readonly scale?: number };
+    };
+    readonly style?: Record<
+      string,
+      { readonly computed?: string; readonly value?: string | number }
+    >;
   };
 }
 
-/** A `layout` reply's opacity, as the driver reports an authored one mid-flight. */
-const opacityOf = (reply: unknown) =>
-  Number((reply as Laid | undefined)?.node?.style?.['opacity']?.computed ?? Number.NaN);
+/** A `layout` reply's opacity, as the driver reports an authored one: the web's computed in flight, iOS's its value. */
+const opacityOf = (reply: unknown) => {
+  const opacity = (reply as Laid | undefined)?.node?.style?.['opacity'];
+  return Number(opacity?.computed ?? opacity?.value ?? Number.NaN);
+};
 
 /** A `layout` reply's frame in the viewport. */
 const frameOf = (reply: unknown) => (reply as Laid | undefined)?.node?.space?.viewport;
@@ -181,7 +190,9 @@ const wordInk = (layout: unknown, shot: string, scheme: Scheme) => {
   const frame = frameOf(layout);
   if (frame === undefined) return undefined;
   const image = readPng(join(app, shot));
-  const scale = image.width / ((layout as Laid).viewport?.w ?? image.width);
+  const scale =
+    (layout as Laid).node?.space?.capture?.scale ??
+    image.width / ((layout as Laid).viewport?.w ?? image.width);
   return inkIn(image, frame, scale, channelsOf(theme[scheme].ground));
 };
 
@@ -269,7 +280,6 @@ const words = async () => {
         frameOf(got[laid]) !== undefined,
         got[laid],
       );
-      continue;
     }
     const probe = script(...lead);
     const reads = Array.from({ length: 60 }, () => probe.step('clock +10', 'state today.lit'));
@@ -306,7 +316,7 @@ const words = async () => {
 /** B4: a scheme chosen in Settings with Today under the sheet. */
 const scheme = async () => {
   const shot = join(SAMPLES, `${host}-4-scheme.png`);
-  const s = script(
+  const lead = [
     'prefer prefers-color-scheme light',
     'clock data',
     'clock settle',
@@ -317,18 +327,35 @@ const scheme = async () => {
     'tap appearance-dark',
     'clock data',
     'tap settings-done',
-  );
+  ];
+  const flags = [
+    ...port,
+    '--storage',
+    `motion-4-${stamp}`,
+    '--reset-storage',
+    '--url',
+    '/cue/full',
+  ];
+  if (ios) await drive.run([...flags, ...timing], script(...lead, ...film('4-scheme')).ops);
+  const s = script(...lead);
   const laid = s.step('clock +90', 'layout word-0');
-  s.step(`screenshot ${shot}`, ...film('4-scheme'));
-  const got = await drive.run(
-    [...port, ...timing, '--storage', `motion-4-${stamp}`, '--reset-storage', '--url', '/cue/full'],
-    s.ops,
-  );
-  if (!ios) {
-    const ink = wordInk(got[laid], shot, 'dark') ?? [];
-    const at = along(ink, channelsOf(theme.light.ink), channelsOf(theme.dark.ink));
-    drive.check('B4 after a scheme switch no word is mid-way', at > 1 - MARGIN, { ink, at });
-  }
+  s.step(`screenshot ${shot}`);
+  const got = await drive.run(flags, s.ops);
+  const ink = wordInk(got[laid], shot, 'dark') ?? [];
+  const at = along(ink, channelsOf(theme.light.ink), channelsOf(theme.dark.ink));
+  drive.check('B4 after a scheme switch no word is mid-way', at > 1 - MARGIN, { ink, at });
+
+  const flipped = join(SAMPLES, `${host}-4-system.png`);
+  const f = script('prefer prefers-color-scheme light', 'clock data', 'clock settle');
+  const flipLaid = f.step('prefer prefers-color-scheme dark', 'clock +90', 'layout word-0');
+  f.step(`screenshot ${flipped}`);
+  const flip = await drive.run(flags, f.ops);
+  const quiet = wordInk(flip[flipLaid], flipped, 'dark') ?? [];
+  const flipAt = along(quiet, channelsOf(theme.light.quiet), channelsOf(theme.dark.quiet));
+  drive.check('B4 after a system scheme flip no word is mid-way', flipAt > 1 - MARGIN, {
+    ink: quiet,
+    at: flipAt,
+  });
 };
 
 /** B6 and B7: home's ask, and a plant's press. */
@@ -513,7 +540,7 @@ const ending = async () => {
     s.step(...film('5-end'));
     if (!reduce) s.step('clock +350');
     const first = ios ? [] : rows();
-    s.step('clock settle');
+    s.step('clock settle', `screenshot ${join(SHOTS, `${host}-5-end-${name}-settled.png`)}`);
     const rest = rows();
     const got = await later(s.ops);
     nextVerse(reduce, got[early], got[settled]);
