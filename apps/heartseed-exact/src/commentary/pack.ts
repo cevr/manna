@@ -131,17 +131,6 @@ export const checkPack = (body: string): PackCheck => {
   return { _tag: 'Good', pack: read.value };
 };
 
-/** How far into a kept file its version is looked for: the fields before `notes`. */
-const HEAD = 256;
-
-/**
- * The version a kept file names, read from its head alone, so finding what
- * is kept parses nothing; empty when its head names none. A kept file was
- * checked whole before its one atomic write.
- */
-export const versionAt = (text: string): string =>
-  /"version":"(\d+-[0-9a-f]{8})"/u.exec(text.slice(0, HEAD))?.[1] ?? '';
-
 /** One note as a chapter's reader shows it. */
 export interface CommentaryNoteShown {
   ref: string;

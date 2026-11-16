@@ -20,19 +20,25 @@ import { describe, expect, it } from 'bun:test';
 
 import { bodyOf, madePack } from '../test/commentary-packs';
 import { seeded, type Random } from '../test/random';
-import { checkPack as checkBody, type CommentaryPack, type PackCheck } from './pack';
+import { checkPack as checkBody, type CommentaryPack, type PackCheck } from '../commentary/pack';
 import {
   NOTHING_KEPT,
   START,
   WEEK,
   due,
+  keptIn,
   keptOf,
-  step,
-  type Command,
+  keptWith,
+  step as stepWith,
+  type Command as AnyCommand,
   type Heard,
+  type Input,
   type Kept,
   type Machine,
 } from './step';
+
+/** The step over the commentary's pack and check, the walk's pack. */
+type Command = AnyCommand<CommentaryPack>;
 
 const DAY = 24 * 60 * 60 * 1000;
 const HISTORIES = 300;
@@ -88,6 +94,8 @@ const checkPack = (body: string): PackCheck => {
   checked.set(body, check);
   return check;
 };
+
+const step = (machine: Machine, input: Input) => stepWith(machine, input, checkPack);
 
 const bodies = new WeakMap<CommentaryPack, string>();
 
@@ -412,5 +420,28 @@ describe('the download, model-based', () => {
     world = happen(world, { _tag: 'keep' });
     expect(world.persisted.version).toBe(second.version);
     expect(versionIn(world.file)).toBe(second.version);
+  });
+});
+
+describe('what Contract persists of every pack', () => {
+  it("sets one pack's line and leaves every other pack's as it was", () => {
+    const random = seeded(24);
+    const names = ['commentary', 'crossrefs', 'lexicon', 'words'];
+    let text = '';
+    const model = new Map<string, Kept>();
+    for (let at = 0; at < 400; at++) {
+      const name = random.pick(names);
+      const kept: Kept = {
+        version: `${random.below(3000)}-${random.below(0xffffffff).toString(16).padStart(8, '0')}`,
+        checkedAt: random.below(2 ** 40),
+      };
+      text = keptWith(text, name, kept);
+      model.set(name, kept);
+      for (const each of names) expect(keptIn(text, each)).toEqual(model.get(each) ?? NOTHING_KEPT);
+    }
+    expect(text.split('\n').length).toBe(model.size);
+    expect(keptIn('', 'commentary')).toEqual(NOTHING_KEPT);
+    expect(keptIn('commentary 3-0000abcd', 'commentary')).toEqual(NOTHING_KEPT);
+    expect(keptWith('commentary 3-0000abcd 5', 'commentary', NOTHING_KEPT)).toBe('');
   });
 });

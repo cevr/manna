@@ -1,21 +1,4 @@
-/* oxlint-disable effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a plain step over plain records. */
-
-/**
- * The commentary's download, as one pure step: what this launch knows of
- * the kept pack, the one fetch in flight, and what each input does to them.
- * A showing of the Read tab (`Ask`, `force` false) fetches when no pack is
- * kept, the last try failed, or the last good check is more than a week
- * from now; Try again (`force` true) fetches unless one is in flight. An
- * answer that is not the current fetch's changes nothing. A `200` whose
- * body passes `checkPack` is written whole (`Write`); only once the write
- * lands is its version kept (`Keep`). A launch takes what is kept from the
- * file itself at its first ask (`keptOf`), so a relaunch between the write
- * and the version reads the new file, names it, and fetches again. A `304` keeps the
- * check's time. Anything else keeps what was there and marks the try
- * failed, so the next showing or Try again fetches.
- */
-
-import { checkPack, type CommentaryPack } from './pack';
+/* oxlint-disable effect/noTernary, effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): a plain step over plain records, and a persisted line's parts split from text. */
 
 /** How long a good check holds before the next showing asks again: 7 days. */
 export const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -29,6 +12,19 @@ export interface Kept {
 /** No pack, never checked. */
 export const NOTHING_KEPT: Kept = { version: '', checkedAt: 0 };
 
+/** A pack as a check answers it: whatever it holds, and its version. */
+export interface Versioned {
+  readonly version: string;
+}
+
+/** A body checked: the pack it holds, or the first check it failed. */
+export type Checked<P extends Versioned> =
+  | { readonly _tag: 'Good'; readonly pack: P }
+  | { readonly _tag: 'Bad'; readonly fault: string };
+
+/** A pack's check: a body is kept only when this answers `Good`. */
+export type Check<P extends Versioned> = (body: string) => Checked<P>;
+
 /**
  * What a launch takes as kept at its first ask: the version of the file on
  * disk, and the persisted check's time only when the persisted version is
@@ -40,7 +36,7 @@ export const keptOf = (fileVersion: string, persisted: Kept): Kept => ({
   checkedAt: fileVersion !== '' && persisted.version === fileVersion ? persisted.checkedAt : 0,
 });
 
-/** One launch's view of the download. */
+/** One launch's view of one pack's download. */
 export interface Machine {
   /** What this launch takes as kept: as found at its first ask (`keptOf`), then each good check's. */
   readonly kept: Kept;
@@ -84,32 +80,32 @@ export type Input =
   | { readonly _tag: 'Wrote'; readonly id: number; readonly now: number; readonly ok: boolean };
 
 /** What the step asks the host to do. */
-export type Command =
+export type Command<P extends Versioned> =
   | { readonly _tag: 'Fetch'; readonly id: number; readonly version: string }
-  | {
-      readonly _tag: 'Write';
-      readonly id: number;
-      readonly body: string;
-      readonly pack: CommentaryPack;
-    }
+  | { readonly _tag: 'Write'; readonly id: number; readonly body: string; readonly pack: P }
   | { readonly _tag: 'Keep'; readonly kept: Kept };
 
 /** A step's result: the next machine and what to do. */
-export interface Stepped {
+export interface Stepped<P extends Versioned> {
   readonly state: Machine;
-  readonly commands: ReadonlyArray<Command>;
+  readonly commands: ReadonlyArray<Command<P>>;
 }
 
 /** Whether a check is owed at `now`: no pack, or the last good check more than a week away either way. */
 export const due = (kept: Kept, now: number): boolean =>
   kept.version === '' || Math.abs(now - kept.checkedAt) > WEEK;
 
-const still = (state: Machine): Stepped => ({ state, commands: [] });
+const still = <P extends Versioned>(state: Machine): Stepped<P> => ({ state, commands: [] });
 
-const failedTry = (state: Machine): Stepped =>
+const failedTry = <P extends Versioned>(state: Machine): Stepped<P> =>
   still({ ...state, current: 0, writing: '', failed: true });
 
-const ask = (state: Machine, now: number, force: boolean, found: Kept): Stepped => {
+const ask = <P extends Versioned>(
+  state: Machine,
+  now: number,
+  force: boolean,
+  found: Kept,
+): Stepped<P> => {
   const loaded = state.loaded ? state : { ...state, kept: found, loaded: true };
   if (loaded.current !== 0) return still(loaded);
   if (!force && !loaded.failed && !due(loaded.kept, now)) return still(loaded);
@@ -120,10 +116,15 @@ const ask = (state: Machine, now: number, force: boolean, found: Kept): Stepped 
   };
 };
 
-const answered = (state: Machine, now: number, heard: Heard): Stepped => {
+const answered = <P extends Versioned>(
+  state: Machine,
+  now: number,
+  heard: Heard,
+  check: Check<P>,
+): Stepped<P> => {
   switch (heard._tag) {
     case 'Body': {
-      const checked = checkPack(heard.body);
+      const checked = check(heard.body);
       if (checked._tag === 'Bad') return failedTry(state);
       return {
         state: { ...state, writing: checked.pack.version },
@@ -144,30 +145,44 @@ const answered = (state: Machine, now: number, heard: Heard): Stepped => {
   }
 };
 
-const wrote = (state: Machine, now: number, ok: boolean): Stepped => {
+const wrote = <P extends Versioned>(state: Machine, now: number, ok: boolean): Stepped<P> => {
   if (!ok) return failedTry(state);
   const kept = { version: state.writing, checkedAt: now };
   return {
-    state: {
-      ...state,
-      kept,
-      current: 0,
-      writing: '',
-      failed: false,
-    },
+    state: { ...state, kept, current: 0, writing: '', failed: false },
     commands: [{ _tag: 'Keep', kept }],
   };
 };
 
-/** One input's step. */
-export const step = (state: Machine, input: Input): Stepped => {
+/**
+ * One pack's download, as one pure step: what this launch knows of the
+ * kept pack, the one fetch in flight, and what each input does to them.
+ * Every pack the reader downloads (the commentary, and the study packs
+ * after it, q126) runs this same step, a body checked by the pack's own
+ * `check`. A showing of the Read tab (`Ask`, `force` false) fetches when
+ * no pack is kept, the last try failed, or the last good check is more
+ * than a week from now; Try again (`force` true) fetches unless one is in
+ * flight. An answer that is not the current fetch's changes nothing. A
+ * `200` whose body passes the check is written whole (`Write`); only once
+ * the write lands is its version kept (`Keep`). A launch takes what is
+ * kept from the file itself at its first ask (`keptOf`), so a relaunch
+ * between the write and the version reads the new file, names it, and
+ * fetches again. A `304` keeps the check's time. Anything else keeps what
+ * was there and marks the try failed, so the next showing or Try again
+ * fetches.
+ */
+export const step = <P extends Versioned>(
+  state: Machine,
+  input: Input,
+  check: Check<P>,
+): Stepped<P> => {
   switch (input._tag) {
     case 'Ask':
       return ask(state, input.now, input.force, input.found);
     case 'Answered':
       if (input.id !== state.current || state.current === 0 || state.writing !== '')
         return still(state);
-      return answered(state, input.now, input.heard);
+      return answered(state, input.now, input.heard, check);
     case 'Wrote':
       if (input.id !== state.current || state.current === 0 || state.writing === '')
         return still(state);
@@ -175,43 +190,25 @@ export const step = (state: Machine, input: Input): Stepped => {
   }
 };
 
-/** The quiet line at the chapter's foot while the commentary is on its way. */
-export const GETTING_LINE = "Getting Ellen White's commentary…";
-
-/** The line at the chapter's foot for `LANDED_MS` after the first pack lands. */
-export const LANDED_LINE = 'Commentary is on this phone now.';
-
-/** How long the landed line shows: 3 seconds (the contract's `after`, held to this by `sources.test.ts`). */
-export const LANDED_MS = 3000;
-
-/** The study sheet's Commentary tab while no pack is kept. */
-export const WAITING_LINE =
-  'The commentary is still on its way. It needs a connection once, then it works offline.';
-
-/** What the reader is shown of the download. */
-export interface CommentaryState {
-  /** `none` (never fetched), `fetching`, `ready` (a pack is kept), `failed` (no pack, and the last try failed). */
-  phase: string;
-  version: string;
-  /** What the Commentary tab says: empty when ready. */
-  line: string;
-  /** The chapter's foot: the quiet line while it is on its way, the landed line for a moment, else empty. */
-  foot: string;
-  /** Whether Try again shows. */
-  retry: boolean;
-}
-
-/** What the reader is shown, from the kept version, a fetch in flight, the last try failed, and a first pack just landed. With a pack kept an update or a failed update shows nothing. */
-export const shownOf = (
-  version: string,
-  busy: boolean,
-  failed: boolean,
-  landed: boolean,
-): CommentaryState => {
-  if (version !== '')
-    return { phase: 'ready', version, line: '', foot: landed ? LANDED_LINE : '', retry: false };
-  if (busy)
-    return { phase: 'fetching', version, line: WAITING_LINE, foot: GETTING_LINE, retry: false };
-  if (failed) return { phase: 'failed', version, line: WAITING_LINE, foot: '', retry: true };
-  return { phase: 'none', version, line: WAITING_LINE, foot: GETTING_LINE, retry: false };
+/**
+ * What Contract persists of every pack, as one string (`packsKept`): a
+ * line per pack, `<name> <version> <checkedAt>`, in name order. A name it
+ * does not hold is `NOTHING_KEPT`.
+ */
+export const keptIn = (text: string, name: string): Kept => {
+  for (const line of text.split('\n')) {
+    const [each, version, checkedAt] = line.split(' ');
+    if (each === name && version !== undefined && checkedAt !== undefined)
+      return { version, checkedAt: Number(checkedAt) || 0 };
+  }
+  return NOTHING_KEPT;
 };
+
+/** `text` with `name`'s line set to `kept` (or left out for none), every other pack's line as it was. */
+export const keptWith = (text: string, name: string, kept: Kept): string =>
+  [
+    ...text.split('\n').filter((line) => line !== '' && line.split(' ')[0] !== name),
+    ...(kept.version === '' ? [] : [`${name} ${kept.version} ${kept.checkedAt}`]),
+  ]
+    .sort()
+    .join('\n');

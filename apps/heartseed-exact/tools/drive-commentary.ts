@@ -4,9 +4,9 @@
  * The commentary's live checks (the spec's live table), on the host named
  * (`bun tools/drive-commentary.ts web|ios`), against `tools/commentary-fixture.ts`
  * on this checkout's own port; the app's launch names it in
- * `HEARTSEED_COMMENTARY_BASE` (the web's build reads it, the simulator's
+ * `HEARTSEED_PACKS_BASE` (the web's build reads it, the simulator's
  * launch through `SIMCTL_CHILD_`), which also draws the probe on Your
- * verses (`commentary-fetch` is the Read tab's first showing). Checks: a
+ * verses (`packs-fetch` is the Read tab's first showing). Checks: a
  * first fetch shows the quiet line while the fixture holds its answer, then
  * lands, says so for 3 seconds and goes quiet; a relaunch with the fixture
  * stopped reads the kept pack; a relaunch 8 days on asks once with
@@ -97,7 +97,7 @@ const heard = async (): Promise<Array<{ tag: string }>> =>
 
 /** A launch names the fixture, or (plain) nothing. */
 const nameFixture = (on: boolean) => {
-  for (const name of ['HEARTSEED_COMMENTARY_BASE', 'SIMCTL_CHILD_HEARTSEED_COMMENTARY_BASE'])
+  for (const name of ['HEARTSEED_PACKS_BASE', 'SIMCTL_CHILD_HEARTSEED_PACKS_BASE'])
     if (on) process.env[name] = origin;
     else delete process.env[name];
 };
@@ -150,8 +150,48 @@ interface Counts {
   verses: Array<{ verse: number; notes: number }>;
 }
 
+/** The commentary's line in `packsKept` (`src/packs/step.ts`, `keptWith`). */
+const keptLine = (text: unknown) => {
+  const line = String(text ?? '')
+    .split('\n')
+    .find((each) => each.startsWith('commentary '));
+  const [, version = '', checkedAt = '0'] = (line ?? '').split(' ');
+  return { version, checkedAt: Number(checkedAt) };
+};
+
+/** The drive's own reads, each the agent's ops it takes: `shown` is the one status's line and Try again over the commentary's own state; `kept …` the commentary's line of `packsKept`. */
+interface DriveRead {
+  readonly ops: ReadonlyArray<string>;
+  readonly read: (replies: Array<unknown>) => unknown;
+}
+
+const READS = {
+  shown: {
+    ops: ['state packsShown', 'state commentaryShown'],
+    read: ([packs, shown]) => {
+      const status = packs as { foot?: string; retry?: boolean } | undefined;
+      return shown === undefined || shown === null || status === undefined
+        ? undefined
+        : { ...(shown as object), foot: status.foot, retry: status.retry };
+    },
+  },
+  'kept version': { ops: ['state packsKept'], read: ([text]) => keptLine(text).version },
+  'kept checkedAt': { ops: ['state packsKept'], read: ([text]) => keptLine(text).checkedAt },
+} satisfies Record<string, DriveRead>;
+
+/** The drive's own read named `op`, or none for an op the agent takes as it is. */
+const readNamed = (op: string): DriveRead | undefined =>
+  op in READS ? READS[op as keyof typeof READS] : undefined;
+
 /** Runs `ops` on `store` (fresh, or kept from its last run) at day `day`; each op's reply by the op and its nth use. */
-const go = async (store: string, kept: boolean, day: number, ops: ReadonlyArray<string>) => {
+const go = async (store: string, kept: boolean, day: number, logical: ReadonlyArray<string>) => {
+  const spans: Array<{ readonly at: number; readonly count: number }> = [];
+  const ops: Array<string> = [];
+  for (const op of logical) {
+    const real = readNamed(op)?.ops ?? [op];
+    spans.push({ at: ops.length, count: real.length });
+    ops.push(...real);
+  }
   const flags = [
     '--storage',
     store,
@@ -165,7 +205,11 @@ const go = async (store: string, kept: boolean, day: number, ops: ReadonlyArray<
   const replies = await drive.run(flags, ops);
   return (op: string, nth = 0): unknown => {
     let seen = -1;
-    return replies[ops.findIndex((each) => each === op && ++seen === nth)];
+    const span = spans[logical.findIndex((each) => each === op && ++seen === nth)];
+    if (span === undefined) return undefined;
+    const answered = replies.slice(span.at, span.at + span.count);
+    const reader = readNamed(op);
+    return reader === undefined ? answered[0] : reader.read(answered);
   };
 };
 
@@ -181,13 +225,8 @@ const expectedCounts = (pack: 'first' | 'second') =>
 const first = FIXTURE_PACKS.first;
 const second = FIXTURE_PACKS.second;
 
-const fetchOps = ['tap commentary-fetch', 'clock data', 'clock settle'];
-const readOps = [
-  'state commentaryShown',
-  'state commentaryKept',
-  'state commentaryProbeCounts',
-  'tree',
-];
+const fetchOps = ['tap packs-fetch', 'clock data', 'clock settle'];
+const readOps = ['shown', 'kept version', 'state commentaryProbeCounts', 'tree'];
 
 /** First fetch: the line while the fixture holds its answer, the landing, the landed line's 3 seconds, one request. */
 const firstFetch = async (store: string) => {
@@ -195,30 +234,28 @@ const firstFetch = async (store: string) => {
   const landing = await go(store, false, 0, [
     'clock data',
     'clock settle',
-    'tap commentary-fetch',
-    'state commentaryShown',
+    'tap packs-fetch',
+    'shown',
     'tree',
     shot('getting'),
     'clock data',
     'clock settle',
-    'state commentaryShown',
-    'state commentaryKept',
+    'shown',
+    'kept version',
     'tree',
     shot('landed'),
     'clock +3100',
     'clock settle',
-    'state commentaryShown',
+    'shown',
     'tree',
     'state commentaryProbeCounts',
   ]);
-  const getting = landing('state commentaryShown') as Shown | undefined;
-  const landed = landing('state commentaryShown', 1) as Shown | undefined;
-  const quiet = landing('state commentaryShown', 2) as Shown | undefined;
+  const getting = landing('shown') as Shown | undefined;
+  const landed = landing('shown', 1) as Shown | undefined;
+  const quiet = landing('shown', 2) as Shown | undefined;
   drive.check(
     'first fetch: the quiet line shows while the fixture holds its answer',
-    getting?.phase === 'fetching' &&
-      getting.foot === GETTING &&
-      has(landing('tree'), 'commentary-line'),
+    getting?.phase === 'fetching' && getting.foot === GETTING && has(landing('tree'), 'packs-line'),
     getting,
   );
   drive.check(
@@ -226,14 +263,14 @@ const firstFetch = async (store: string) => {
     landed?.phase === 'ready' &&
       landed.version === first.version &&
       landed.foot === LANDED &&
-      landing('state commentaryKept') === first.version &&
-      has(landing('tree', 1), 'commentary-line'),
-    { landed, kept: landing('state commentaryKept') },
+      landing('kept version') === first.version &&
+      has(landing('tree', 1), 'packs-line'),
+    { landed, kept: landing('kept version') },
   );
   drive.check(
     "first fetch: the landed line goes after 3 seconds, and the counts are the pack's",
     quiet?.foot === '' &&
-      !has(landing('tree', 2), 'commentary-line') &&
+      !has(landing('tree', 2), 'packs-line') &&
       countsOf(landing('state commentaryProbeCounts') as Counts) === expectedCounts('first'),
     { quiet, counts: landing('state commentaryProbeCounts') },
   );
@@ -249,7 +286,7 @@ const kept = async (store: string) => {
   await steer({ holdMs: 0 });
   await stopFixture();
   const offline = await go(store, true, 1, ['clock data', 'clock settle', ...fetchOps, ...readOps]);
-  const keptShown = offline('state commentaryShown') as Shown | undefined;
+  const keptShown = offline('shown') as Shown | undefined;
   drive.check(
     "kept: a relaunch with the fixture stopped is ready, and a chapter's counts read",
     keptShown?.phase === 'ready' &&
@@ -264,19 +301,19 @@ const kept = async (store: string) => {
     'clock settle',
     ...fetchOps,
     ...readOps,
-    'state commentaryChecked',
+    'kept checkedAt',
   ]);
-  const week = later('state commentaryShown') as Shown | undefined;
+  const week = later('shown') as Shown | undefined;
   const asked = await heard();
   drive.check(
     '304: a relaunch 8 days on asks once, with If-None-Match, and the pack is unchanged',
     asked.length === 1 &&
       asked[0]?.tag === `"${first.version}"` &&
       week?.version === first.version &&
-      Number(later('state commentaryChecked')) >= START + 8 * DAY &&
-      Number(later('state commentaryChecked')) < START + 9 * DAY &&
+      Number(later('kept checkedAt')) >= START + 8 * DAY &&
+      Number(later('kept checkedAt')) < START + 9 * DAY &&
       countsOf(later('state commentaryProbeCounts') as Counts) === expectedCounts('first'),
-    { asked, week, checked: later('state commentaryChecked') },
+    { asked, week, checked: later('kept checkedAt') },
   );
 };
 
@@ -284,14 +321,14 @@ const kept = async (store: string) => {
 const updates = async (store: string) => {
   await steer({ pack: 'second', reply: 'cut', times: 0 });
   const bad = await go(store, true, 16, ['clock data', 'clock settle', ...fetchOps, ...readOps]);
-  const badShown = bad('state commentaryShown') as Shown | undefined;
+  const badShown = bad('shown') as Shown | undefined;
   drive.check(
     'a bad update: a cut-short answer keeps the old pack, says nothing, and the old counts read',
     (await heard()).length === 2 &&
       badShown?.phase === 'ready' &&
       badShown.version === first.version &&
       badShown.foot === '' &&
-      !has(bad('tree'), 'commentary-retry') &&
+      !has(bad('tree'), 'packs-retry') &&
       countsOf(bad('state commentaryProbeCounts') as Counts) === expectedCounts('first'),
     { badShown, counts: bad('state commentaryProbeCounts') },
   );
@@ -303,11 +340,11 @@ const updates = async (store: string) => {
     ...fetchOps,
     ...readOps,
   ]);
-  const renewedShown = renewed('state commentaryShown') as Shown | undefined;
+  const renewedShown = renewed('shown') as Shown | undefined;
   drive.check(
     "a new version: after the check the counts are the new pack's",
     renewedShown?.version === second.version &&
-      renewed('state commentaryKept') === second.version &&
+      renewed('kept version') === second.version &&
       countsOf(renewed('state commentaryProbeCounts') as Counts) === expectedCounts('second'),
     { renewedShown, counts: renewed('state commentaryProbeCounts') },
   );
@@ -323,28 +360,28 @@ const failures = async () => {
       ...fetchOps,
       ...readOps,
       shot(`failed-${reply}`),
-      'tap commentary-retry',
+      'tap packs-retry',
       'clock data',
       'clock settle',
-      'state commentaryShown',
-      'state commentaryKept',
+      'shown',
+      'kept version',
     ]);
-    const failed = run('state commentaryShown') as Shown | undefined;
-    const retried = run('state commentaryShown', 1) as Shown | undefined;
+    const failed = run('shown') as Shown | undefined;
+    const retried = run('shown', 1) as Shown | undefined;
     drive.check(
       `${reply}: on a fresh store it fails, nothing is kept, and Try again shows`,
       failed?.phase === 'failed' &&
         failed.retry &&
         failed.foot === '' &&
-        run('state commentaryKept') === '' &&
+        run('kept version') === '' &&
         (run('state commentaryProbeCounts') as Counts | undefined)?.have === false &&
-        has(run('tree'), 'commentary-retry'),
-      { failed, kept: run('state commentaryKept'), counts: run('state commentaryProbeCounts') },
+        has(run('tree'), 'packs-retry'),
+      { failed, kept: run('kept version'), counts: run('state commentaryProbeCounts') },
     );
     drive.check(
       `${reply}: the fixture then answers well and Try again lands it`,
-      retried?.phase === 'ready' && run('state commentaryKept', 1) === first.version,
-      { retried, kept: run('state commentaryKept', 1) },
+      retried?.phase === 'ready' && run('kept version', 1) === first.version,
+      { retried, kept: run('kept version', 1) },
     );
   }
 };
@@ -358,20 +395,20 @@ const refusal = async () => {
     'clock settle',
     ...fetchOps,
     ...readOps,
-    'tap commentary-retry',
+    'tap packs-retry',
     'clock data',
     'clock settle',
-    'state commentaryShown',
+    'shown',
   ]);
-  const refusedShown = refused('state commentaryShown') as Shown | undefined;
+  const refusedShown = refused('shown') as Shown | undefined;
   drive.check(
     'refused: with the fixture down it fails, nothing is kept, Try again shows, and Try again while down fails again',
     refusedShown?.phase === 'failed' &&
       refusedShown.retry &&
-      refused('state commentaryKept') === '' &&
-      has(refused('tree'), 'commentary-retry') &&
-      (refused('state commentaryShown', 1) as Shown | undefined)?.phase === 'failed',
-    { refusedShown, again: refused('state commentaryShown', 1) },
+      refused('kept version') === '' &&
+      has(refused('tree'), 'packs-retry') &&
+      (refused('shown', 1) as Shown | undefined)?.phase === 'failed',
+    { refusedShown, again: refused('shown', 1) },
   );
   await startFixture();
   await steer({ pack: 'first', reply: 'well', times: 0 });
@@ -383,9 +420,9 @@ const refusal = async () => {
   ]);
   drive.check(
     'refused: with the fixture up the next try lands it',
-    (back('state commentaryShown') as Shown | undefined)?.phase === 'ready' &&
-      back('state commentaryKept') === first.version,
-    back('state commentaryShown'),
+    (back('shown') as Shown | undefined)?.phase === 'ready' &&
+      back('kept version') === first.version,
+    back('shown'),
   );
 };
 
@@ -406,18 +443,18 @@ const plainRow = async () => {
   const plain = await go(storeOf('plain'), false, 0, [
     'clock data',
     'clock settle',
-    'state commentaryPlace',
-    'state commentaryShown',
+    'state packsPlace',
+    'shown',
     'tree',
   ]);
-  const place = plain('state commentaryPlace') as { base?: string; fixture?: boolean } | undefined;
+  const place = plain('state packsPlace') as { base?: string; fixture?: boolean } | undefined;
   drive.check(
     'plain launch: the base is egw.cvr.im, and the driver-only button is absent',
     place?.base === 'https://egw.cvr.im' &&
       place.fixture === false &&
-      !has(plain('tree'), 'commentary-fetch') &&
-      (plain('state commentaryShown') as Shown | undefined)?.phase === 'none',
-    { place, shown: plain('state commentaryShown') },
+      !has(plain('tree'), 'packs-fetch') &&
+      (plain('shown') as Shown | undefined)?.phase === 'none',
+    { place, shown: plain('shown') },
   );
 };
 

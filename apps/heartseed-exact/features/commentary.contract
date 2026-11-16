@@ -1,37 +1,12 @@
 // Ellen White's Bible Commentary, downloaded once and kept on the phone
-// (owner, q123). Every rule is src/commentary/: the protocol is one pure
-// `step`, held per launch by the data sources (`commentaryAsk`), the pack's
-// checks and its reader are pack.ts. This file keeps what outlives a launch
-// (the kept version and the time of its last good check, by `persist`, kept
-// only after the file is written), sends the asks, and draws the quiet line
-// at a chapter's foot (`CommentaryLine`). `commentaryFetch` is the Read
-// tab's first showing in a launch; `commentaryRetry` is Try again. A
-// driver's launch that names a fixture (HEARTSEED_COMMENTARY_BASE, app.json's
-// `env`) also draws `CommentaryProbe` on Your verses, until the Read tab
-// calls `commentaryFetch` itself.
+// (owner, q123): the first pack of the one downloader (features/packs.contract,
+// src/packs/). Its check and reader are src/commentary/pack.ts, its pack's
+// address and words src/commentary/sources.ts. `commentaryShown` (a `PackState`) is
+// what the Commentary tab is shown (its line, its Try again, and `version`,
+// the reader's `mark`). A driver's fixture launch reads John 1's counts
+// (`commentaryProbeCounts`).
 
-use hs-fade, hs-fade-out from "./motion.contract"
-
-shape CommentaryTime
-  epochAtZero: number
-  seed: number
-
-shape CommentaryState
-  phase: string
-  version: string
-  line: string
-  foot: string
-  retry: bool
-
-shape CommentaryAnswer
-  version: string
-  checkedAt: number
-  failed: bool
-  landed: bool
-
-shape CommentaryBase
-  base: string
-  fixture: bool
+use PackState from "./packs.contract"
 
 shape CommentaryNote
   ref: string
@@ -54,56 +29,5 @@ shape CommentaryCounts
   verses: CommentaryVerseCount[]
 
 members HeartseedExact
-  resource commentaryTime = exactTime() as shape CommentaryTime
-  resource commentaryPlace = commentaryBase() as shape CommentaryBase
-  state commentaryKept = "" persist
-  state commentaryChecked = 0 persist
-  state commentaryLanded = false
-  mutation commentaryFetched as shape CommentaryAnswer then commentaryTook
-  derive commentaryBusy = pending(commentaryFetched)
-  derive commentaryAnswer = match commentaryFetched { case some(a) => a, case none => CommentaryAnswer(version=commentaryKept, checkedAt=commentaryChecked, failed=false, landed=false) }
-  derive commentaryFailed = failed(commentaryFetched) or commentaryAnswer.failed
-  resource commentaryShown = commentaryView(commentaryKept, commentaryBusy, commentaryFailed, commentaryLanded) as shape CommentaryState else empty()
-  resource commentaryProbeCounts = commentaryCounts(43, 1, commentaryKept) when commentaryPlace.fixture as shape CommentaryCounts else empty()
-
-  action commentaryFetch
-    send commentaryFetched = commentaryAsk(commentaryKept, commentaryChecked, false, commentaryTime.epochAtZero + performanceNow())
-  action commentaryRetry
-    send commentaryFetched = commentaryAsk(commentaryKept, commentaryChecked, true, commentaryTime.epochAtZero + performanceNow())
-  action commentaryTook
-    commentaryKept = commentaryAnswer.version
-    commentaryChecked = commentaryAnswer.checkedAt
-    if commentaryAnswer.landed
-      commentaryLanded = true
-  task commentaryLandedShown when commentaryLanded key=commentaryLanded
-    after(3000, commentaryLandedOver)
-  action commentaryLandedOver
-    commentaryLanded = false
-
-// The quiet line at a chapter's foot: while the commentary is on its way,
-// and for 3 seconds once it first lands. Nothing while a pack is kept.
-component CommentaryLine
-  props
-    shown: CommentaryState
-    still: bool
-  view
-    if shown.foot != ""
-      text shown.foot role="status" font="-exact-footnote" color="-exact-secondary-label" text-align="center" padding=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="commentary-line"
-
-// A driver's fixture launch only: the Read tab's first showing as a button,
-// Try again when the last try failed, and the line.
-component CommentaryProbe
-  props
-    shown: CommentaryState
-    fetch: action
-    retry: action
-    still: bool
-  view
-    column gap=8 padding=20 testId="commentary-probe"
-      button press=fetch buttonStyle="bordered" testId="commentary-fetch"
-        text "Fetch the commentary"
-      if shown.retry
-        text shown.line testId="commentary-waiting"
-        button press=retry buttonStyle="bordered" testId="commentary-retry"
-          text "Try again"
-      CommentaryLine(shown=shown, still=still)
+  resource commentaryShown = packView("commentary", packsKept, packsBusy, packsFailed) as shape PackState else empty()
+  resource commentaryProbeCounts = commentaryCounts(43, 1, commentaryShown.version) when packsPlace.fixture as shape CommentaryCounts else empty()

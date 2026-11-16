@@ -10,7 +10,7 @@
         "test:add-b",
         "test:add-shelves",
         "test:chooser",
-        "test:commentary",
+        "test:packs",
         "test:garden-a",
         "test:garden-b",
         "test:garden-c",
@@ -25,7 +25,7 @@
         "test:session-calls",
         "test:text"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_COMMENTARY_BASE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_PACKS_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -44,7 +44,7 @@
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_COMMENTARY_BASE"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_PACKS_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -288,7 +288,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },
-    "test:commentary": {
+    "test:packs": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [

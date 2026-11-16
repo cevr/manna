@@ -15,7 +15,7 @@ use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
 use AddVersesPage, AddListPage from "./features/add.contract"
 use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
-use CommentaryProbe from "./features/commentary.contract"
+use PacksProbe from "./features/packs.contract"
 
 routes nav
   home "/"
@@ -43,6 +43,7 @@ component HeartseedExact
   members "./features/list.contract"
   members "./features/add.contract"
   members "./features/chooser.contract"
+  members "./features/packs.contract"
   members "./features/commentary.contract"
   members "./features/motion.contract"
   members "./features/feel.contract"
@@ -65,9 +66,9 @@ component HeartseedExact
             ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill)
           if e.name == "verses"
             YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
-            // hs-commentary: a fixture launch's probe, until the Read tab calls commentaryFetch; removed at the join.
-            if commentaryPlace.fixture
-              CommentaryProbe(shown=commentaryShown, fetch=commentaryFetch, retry=commentaryRetry, still=motionStill)
+            // hs-commentary: a fixture launch's probe, until the Read tab calls packsFetch; removed at the join.
+            if packsPlace.fixture
+              PacksProbe(shown=packsShown, fetch=packsFetch, retry=packsRetry, still=motionStill)
             // hs-commentary: end of the probe.
           if e.name == "add"
             AddVersesPage(add=addShown, bible=addOpenBible, toggle=addToggle, open=addOpenList)

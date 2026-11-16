@@ -1,7 +1,8 @@
-// The commentary's download (src/commentary/step.ts, sources.ts): two
-// launches of the app over one storage (a relaunch, or two web pages at
-// once), each fetching the pack, writing it to the one file, then keeping
-// its version (Contract's `persist`, after the fetch call answers). A
+// One pack's download (src/packs/step.ts, sources.ts): two launches of
+// the app over one storage (a relaunch, or two web pages at once), each
+// fetching the pack, writing it to its one file, then keeping its version
+// (Contract's `persist`, after the fetch call answers). Every pack has its
+// own file, machine and line of `packsKept`, so one pack is the model. A
 // launch takes what is kept from the file's own version at its first ask
 // (`keptOf`). The server may answer either of two versions. A write may
 // fail, and a launch may be relaunched at any point, losing what it held
@@ -12,11 +13,11 @@
 // Property: the file is whole (absent, or a whole pack), and the version
 // kept is never ahead of it: it names a pack the file has held. Checked by
 // hand: `quint run --invariant=safe --max-steps=12
-// src/commentary/commentary.qnt` finds no violation; with ATOMIC false it
-// finds one (a launch's write is cut by a relaunch, or fails, after its
-// first part). `quint typecheck` runs in test:slow; `step.test.ts` walks
-// the step itself in Bun.
-module commentary {
+// src/packs/packs.qnt` finds no violation; with ATOMIC false it finds one
+// (a launch's write is cut by a relaunch, or fails, after its first
+// part). `quint typecheck` runs in test:slow; `step.test.ts` walks the
+// step itself in Bun.
+module packs {
   pure val LAUNCHES: Set[int] = Set(0, 1)
   pure val VERSIONS: Set[int] = Set(1, 2)
   // Whether a body reaches the file in one write.

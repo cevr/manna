@@ -1,0 +1,90 @@
+// The packs the reader downloads once and keeps on the phone (owner, q123
+// and q126): Ellen White's commentary, and the study packs after it. One
+// downloader serves them all (src/packs/): each pack's protocol is one pure
+// `step`, held per launch by the data sources (`packsAsk`), with the pack's
+// own check. This file keeps what outlives a launch (every pack's version
+// and the time of its last good check, as one `persist` string, kept only
+// after each file is written), sends the asks, and draws the one quiet
+// status line at a chapter's foot (`PacksLine`). `packsFetch` is the Read
+// tab's first showing in a launch; `packsRetry` is Try again. A driver's
+// launch that names a fixture (HEARTSEED_PACKS_BASE, app.json's `env`)
+// also draws `PacksProbe` on Your verses, until the Read tab calls
+// `packsFetch` itself.
+
+use hs-fade, hs-fade-out from "./motion.contract"
+
+shape PacksTime
+  epochAtZero: number
+  seed: number
+
+shape PacksState
+  phase: string
+  missing: number
+  foot: string
+  retry: bool
+
+shape PackState
+  phase: string
+  version: string
+  line: string
+  retry: bool
+
+shape PacksAnswer
+  kept: string
+  failed: bool
+  landed: string
+
+shape PacksBase
+  base: string
+  fixture: bool
+
+members HeartseedExact
+  resource packsTime = exactTime() as shape PacksTime
+  resource packsPlace = packsBase() as shape PacksBase
+  state packsKept = "" persist
+  state packsLanded = ""
+  mutation packsFetched as shape PacksAnswer then packsTook
+  derive packsBusy = pending(packsFetched)
+  derive packsAnswer = match packsFetched { case some(a) => a, case none => PacksAnswer(kept=packsKept, failed=false, landed="") }
+  derive packsFailed = failed(packsFetched) or packsAnswer.failed
+  resource packsShown = packsView(packsKept, packsBusy, packsFailed, packsLanded) as shape PacksState else empty()
+
+  action packsFetch
+    send packsFetched = packsAsk(packsKept, false, packsTime.epochAtZero + performanceNow())
+  action packsRetry
+    send packsFetched = packsAsk(packsKept, true, packsTime.epochAtZero + performanceNow())
+  action packsTook
+    packsKept = packsAnswer.kept
+    if packsAnswer.landed != ""
+      packsLanded = packsAnswer.landed
+  task packsLandedShown when packsLanded != "" key=packsLanded
+    after(3000, packsLandedOver)
+  action packsLandedOver
+    packsLanded = ""
+
+// The one quiet line at a chapter's foot: while a pack is on its way, and
+// for 3 seconds once packs first land. Nothing while every pack is kept.
+component PacksLine
+  props
+    shown: PacksState
+    still: bool
+  view
+    if shown.foot != ""
+      text shown.foot role="status" font="-exact-footnote" color="-exact-secondary-label" text-align="center" padding=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="packs-line"
+
+// A driver's fixture launch only: the Read tab's first showing as a button,
+// Try again when the last try failed, and the line.
+component PacksProbe
+  props
+    shown: PacksState
+    fetch: action
+    retry: action
+    still: bool
+  view
+    column gap=8 padding=20 testId="packs-probe"
+      button press=fetch buttonStyle="bordered" testId="packs-fetch"
+        text "Fetch the packs"
+      if shown.retry
+        button press=retry buttonStyle="bordered" testId="packs-retry"
+          text "Try again"
+      PacksLine(shown=shown, still=still)
