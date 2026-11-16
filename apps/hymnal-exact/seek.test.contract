@@ -7,9 +7,19 @@
 // checked as a lower bound after `clock +N real`. A drag held between two
 // moves is the drive's (tools/drive-player.ts): a test's read cannot assert
 // while a finger is down; here `type` moves the bar as a release does.
+// Each test opens on Settings and turns Sounds and haptics off before it
+// plays (the owner's rule; src/look/quiet.test.ts).
 
 test "A drag moves the place once, at release"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -34,7 +44,15 @@ test "A drag moves the place once, at release"
   expect state player.phase == "playing"
 
 test "Paused stays paused through a seek"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -60,7 +78,15 @@ test "Paused stays paused through a seek"
   expect state player.at <= 61
 
 test "Playing goes on through a seek"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -79,7 +105,15 @@ test "Playing goes on through a seek"
   expect text "toggle" == "Pause"
 
 test "The lock screen's position moves it"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -102,7 +136,15 @@ test "The lock screen's position moves it"
   expect state player.at <= 155
 
 test "Only the chosen stanzas sound"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -130,7 +172,15 @@ test "Only the chosen stanzas sound"
   expect text "total" == "2:16"
 
 test "A stanza's place"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"
@@ -155,7 +205,15 @@ test "A stanza's place"
   expect state player.place <= 124.7
 
 test "Nothing sits under the bar"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   expect tree missing "bar-room-hymn"
@@ -174,7 +232,15 @@ test "Nothing sits under the bar"
 // One VoiceOver swipe on the bar (an arrow key on the web) moves the place
 // 10 s, held at the start; a drag still lands where it is let go.
 test "An adjust of the bar moves the place 10 s"
-  at "/hymns/2"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
   tap "play"

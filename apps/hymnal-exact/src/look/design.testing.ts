@@ -22,6 +22,10 @@ export const contractFiles = (): ReadonlyArray<string> => [
     .map((name) => `features/${name}`),
 ];
 
+/** Every authored test file of the app (`*.test.contract`), by its path under the app's folder. */
+export const testFiles = (): ReadonlyArray<string> =>
+  readdirSync(app).filter((name) => name.endsWith('.test.contract'));
+
 /** A colour token: its light and dark values as written. */
 export interface Pair {
   readonly light: string;

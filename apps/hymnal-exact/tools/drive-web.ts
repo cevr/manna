@@ -41,6 +41,7 @@ import { join } from 'node:path';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { placeOf } from '../src/web/place.ts';
+import { QUIET_STORED } from './quiet.ts';
 import { answer, checkoutPort } from './recordings.ts';
 import { allowedOver, type Budget, isTime, MAX_LOAD, TIME_SLACK_MS } from './web/budget.ts';
 import { type Page, launchChrome } from './web/chrome.ts';
@@ -494,6 +495,8 @@ const returning = async () => {
   /** Play pressed on hymn 2's page, the full player opened once the bar shows: its stanzas' chips. */
   const playerOf = async (on: Page) => {
     await step('play shown', waitFor(on, has('play'), 5000));
+    if (!(await on.evaluate<boolean>(QUIET_STORED)))
+      throw new Error('Sounds and haptics is on: no Play is made with it on (tools/quiet.ts)');
     played = true;
     await step('tap play', tap(on, '[data-testid="play"]'));
     const bar = await waitFor(on, has('bar-title'), 4000);
@@ -508,6 +511,10 @@ const returning = async () => {
   };
   await step('settings', open(page, '/settings'));
   await step('appearance shown', waitFor(page, has('appearance-dark'), 5000));
+  await step('tap sounds and haptics', tap(page, '[data-testid="settings-feel"]'));
+  const quiet = await waitFor(page, QUIET_STORED, 3000);
+  await step('sounds and haptics off', quiet);
+  if (!quiet) throw new Error('Sounds and haptics did not turn off: no Play is made with it on');
   const lightFirst = !(await page.evaluate<boolean>(isDark));
   await step('tap dark', tap(page, '[data-testid="appearance-dark"]'));
   const darkSet = await waitFor(page, isDark, 3000);

@@ -35,6 +35,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { pixelAt } from './pixel.ts';
+import { QUIET_ANSWER, QUIET_CHECK, QUIET_PATH, quietOps } from './quiet.ts';
 import { LONG_HYMN, MISSING_HYMN, checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
@@ -94,7 +95,8 @@ const run = async (
   flags: ReadonlyArray<string>,
   path: string,
   ops: ReadonlyArray<string>,
-  onReply: (index: number, reply: unknown) => Promise<void> | void = () => undefined,
+  onReply: (index: number, reply: unknown) => Promise<'stop' | void> | 'stop' | void = () =>
+    undefined,
 ) => {
   const child = Bun.spawn(
     ['bun', 'run', 'exact', 'agent', host, '--json', '--url', path, ...flags, ...ops],
@@ -111,7 +113,7 @@ const run = async (
       rest = lines.pop() ?? '';
       for (const line of lines.filter(isReply)) {
         replies.push(JSON.parse(line));
-        await onReply(replies.length - 1, replies.at(-1));
+        if ((await onReply(replies.length - 1, replies.at(-1))) === 'stop') stop(child);
       }
     }
     if (isReply(rest)) replies.push(JSON.parse(rest));
@@ -128,6 +130,51 @@ const run = async (
       `agent ${host} exited ${code} with ${replies.length} of ${ops.length} replies\n${err.slice(-2000)}`,
     );
   return replies.slice(-ops.length);
+};
+
+/**
+ * A run that plays (`run`'s arguments): `ops` on a store whose Sounds and
+ * haptics is off, stopped before its first op unless it reads off. A store
+ * it is not yet off on (a new one, or a web store Chrome lost at its
+ * deadline) is first turned quiet at Settings by the shared step
+ * (`tools/quiet.ts`), up to three times; a kept store already quiet is not
+ * touched, since the step turns the switch over.
+ */
+const quietRun = async (
+  flags: ReadonlyArray<string>,
+  path: string,
+  ops: ReadonlyArray<string>,
+  onReply: (index: number, reply: unknown) => Promise<void> | void = () => undefined,
+) => {
+  const kept = flags.map((flag) => (flag === '--reset-storage' ? '--keep-storage' : flag));
+  let fresh = flags.includes('--reset-storage');
+  let loudBefore = fresh;
+  for (let tries = 0; tries < 3; tries++) {
+    if (loudBefore) {
+      const turned = await run(fresh ? flags : kept, QUIET_PATH, quietOps);
+      fresh = false;
+      if (replyTo(quietOps, turned, QUIET_CHECK) !== QUIET_ANSWER)
+        throw new Error(`Settings did not turn Sounds and haptics off: ${JSON.stringify(turned)}`);
+    }
+    let loud = false;
+    const replies = await run(kept, path, [QUIET_CHECK, ...ops], async (index, reply) => {
+      if (index === 0 && reply !== QUIET_ANSWER) {
+        loud = true;
+        return 'stop';
+      }
+      if (index > 0) await onReply(index - 1, reply);
+    }).catch((error: unknown) => {
+      if (loud) return undefined;
+      throw error;
+    });
+    if (replies !== undefined) return replies.slice(1);
+    if (loudBefore)
+      console.log(
+        `again ${host}: the store lost Sounds and haptics off before Play; turned off once more`,
+      );
+    loudBefore = true;
+  }
+  throw new Error('Sounds and haptics did not stay off on the store: no Play was made');
 };
 
 let failed = 0;
@@ -170,7 +217,7 @@ const replyTo = (
 ) => replies[ops.flatMap((each, index) => (each === op ? [index] : []))[nth] ?? -1];
 
 let server: Child | undefined = await fixture();
-const downReplies = await run(
+const downReplies = await quietRun(
   ['--storage', `${store}-down`, '--keep-storage'],
   '/hymns/1',
   down,
@@ -216,7 +263,7 @@ const missingOps = [
   'tree',
   shot('missing'),
 ];
-const missing = await run(
+const missing = await quietRun(
   ['--storage', `${store}-missing`, '--reset-storage'],
   `/hymns/${MISSING_HYMN}`,
   missingOps,
@@ -277,7 +324,11 @@ const onDisk = async (name: string, text: string) => {
   return false;
 };
 
-let chose = await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, chooseOps);
+let chose = await quietRun(
+  ['--storage', store, '--reset-storage'],
+  `/hymns/${LONG_HYMN}`,
+  chooseOps,
+);
 if (
   replyTo(chooseOps, chose, 'state playerKept') === CHOICE &&
   !(await onDisk(store, JSON.stringify(CHOICE)))
@@ -285,7 +336,7 @@ if (
   console.log(
     `again ${host}: the browser quit before it wrote its store (Exact killed it at its deadline); the choice once more`,
   );
-  chose = await run(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, chooseOps);
+  chose = await quietRun(['--storage', store, '--reset-storage'], `/hymns/${LONG_HYMN}`, chooseOps);
 }
 const chosen = replyTo(chooseOps, chose, 'state playerKept');
 check('a stanza choice is kept as it is made', chosen === CHOICE, chosen);
@@ -303,7 +354,7 @@ const keptOps = [
   'state player.total',
   shot('relaunched'),
 ];
-const kept = await run(['--storage', store, '--keep-storage'], `/hymns/${LONG_HYMN}`, keptOps);
+const kept = await quietRun(['--storage', store, '--keep-storage'], `/hymns/${LONG_HYMN}`, keptOps);
 const keptChoice = replyTo(keptOps, kept, 'state playerKept');
 const chips = replyTo(keptOps, kept, 'state player.chips');
 const total = replyTo(keptOps, kept, 'state player.total');
@@ -443,7 +494,7 @@ const seekOps = [
   'tree --ax',
   shot('settings-open'),
 ];
-const seekReplies = await run(
+const seekReplies = await quietRun(
   ['--storage', `${store}-seek`, '--reset-storage'],
   `/hymns/${LONG_HYMN}`,
   seekOps,

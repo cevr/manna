@@ -43,6 +43,7 @@
         "!src/list/headers.test.ts",
         "!src/no-bucket.test.ts",
         "!src/look/motion.test.ts",
+        "!src/look/quiet.test.ts",
         "!src/settings/feel.test.ts"
       ]
     },

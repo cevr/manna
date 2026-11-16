@@ -35,6 +35,7 @@ import { theme } from '@manna/hymnal-app/theme';
 
 import { sourcesAt } from '../src/sources.ts';
 import { pixelAt } from './pixel.ts';
+import { quietOps } from './quiet.ts';
 import { checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
@@ -153,16 +154,8 @@ const corePixel = async (name: string, reply: unknown, scheme: Scheme) => {
   return core;
 };
 
-const feelOff = [
-  'tap gear',
-  'clock settle',
-  'clock data',
-  'tap settings-feel',
-  'clock settle',
-  'clock data',
-  'tap settings-done',
-  'clock settle',
-];
+/** Settings opened from the list, then the shared quiet step (`tools/quiet.ts`): every run here turns Sounds and haptics off before it plays. */
+const feelOff = ['tap gear', 'clock settle', ...quietOps];
 
 const scrollDown = [
   'tap hymn-words drag 0 -600',
