@@ -5,8 +5,9 @@
 // draws its view and turns presses into calls. A found hymn goes where the
 // step says (`go`, taken once by its serial); the drums are a dialog the
 // step's `drums` opens and closes, and a tap outside it closes them and
-// fires nothing else. The search box's text is `listQuery`, which the
-// home list's search reads (features/list.contract).
+// fires nothing else. The search box's text is `listQuery`; the rows found
+// follow the step's `query` (features/list.contract `listRows`), which is
+// empty once the search closes, wherever it was open.
 use PlayerView from "./player.contract"
 
 shape ListRow
