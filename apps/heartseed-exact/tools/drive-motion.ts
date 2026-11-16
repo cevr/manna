@@ -32,7 +32,9 @@ import { join } from 'node:path';
 import { makeDrive } from '@manna/exact-kit/drive';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
-import { readPng, type Image } from './png';
+import { readPng } from './png';
+
+type Image = ReturnType<typeof readPng>;
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
@@ -486,6 +488,12 @@ const nextVerse = (reduce: boolean, early: unknown, settled: unknown) => {
       'B2 the next verse comes in: at +100 its opacity is strictly between 0 and 1, then 1',
       midway(opacityOf(early)) && opacityOf(settled) === 1,
       [opacityOf(early), opacityOf(settled)],
+    );
+  else
+    drive.check(
+      'B2 the next verse shows, and rests at opacity 1',
+      frameOf(early) !== undefined && opacityOf(settled) === 1,
+      [frameOf(early), opacityOf(settled)],
     );
 };
 
