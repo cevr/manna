@@ -16,8 +16,19 @@ bun tools/drive-garden.ts web   # the garden: a recall's day, peek, Show all, a 
 bun tools/drive-home.ts web  # home: a pressed plant, the buttons' names, Move back, a relaunch (also: ios)
 bun tools/drive-join.ts web  # home and the session: a verse said through, then its plant and the card on home (also: ios)
 bun tools/drive-add.ts web   # Add verses on a plain launch: a chooser list kept across a relaunch, Psalm 119, one verse through the chooser and twenty single verses, no test control (also: ios)
-bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:add-a, -b, -shelves, test:chooser, test:garden-a, -b, -c, -bytes, test:home-a, -b, -c, -asks, test:session-a, -b, -c, -calls and test:text
+bun tools/drive-read.ts web  # the tabs: the bar's names and colours, the Read place, a verse brought into view, a session kept across tabs, a relaunch (also: ios)
+bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:add-a, -b, -shelves, test:chooser, test:garden-a, -b, -c, -bytes, test:home-a, -b, -c, -asks, test:session-a, -b, -c, -calls, test:text and test:read
 ```
+
+## Tabs and the Read tab
+
+Two tabs at the foot, the platform's own bar (`app.contract`): **Garden** (a sprout, `assets/icons/sprout.svg`; first, and where the app opens) and **Read** (an open book). Garden holds every screen below, each at its own address (`tab garden "/"`, every route nested under it as before); Read is `tab read "/read"`, with `readAt` (`/read/at/:book/:chapter/:verse`) pushed for a followed reference. The bar is drawn on `hs.ground`, the chosen tab in the tint (`AccentColor`) and the other in `hs.quiet`, both at AA, in light and dark; switching is the platform's own motion and makes no tick of ours.
+
+- Each tab is a stack of its own, kept with its scroll while the other shows; tapping the tab shown pops it to its root (`pick`). A location naming the other tab's route selects that tab first, a Settings location stays on the tab shown (`follow`). The gear opens Settings over whichever tab is up, and Done returns to it; the bar hides while the sheet is up.
+- Home stays drawn under a pushed route; Today and the Read chapter are drawn only in their tab's top entry (`readTopOf`), and the gear only in the top entry of the tab shown (`settingsUnderId`). The Garden's screens read their routes from `readGardenStack` (the Garden tab's stack, unless a Garden route was pushed onto Read and is up), so a screen kept under Read keeps what it shows, and showing Read neither lets Today's held item go nor makes the plan again (`todayRoute` is the Garden tab's top, its root handed on as `home`).
+- **The place** (`features/read.contract`, `src/read/place.ts`): `readBookKept` and `readChapterKept` by `persist`; `readPlaceOf(keptBook, keptChapter, first)` answers the kept chapter when it names one of the canon, else the chapter of the first verse in the field (`first`, opening on that verse), else John 1. `readBook`, `readChapter` and `readVerse` say what the Read tab's top entry shows (a followed reference's own place through `readAtOf`). `readOpenAt(book, chapter, verse)` selects Read, pops it to its root, keeps the place and opens on the verse; `readFollow(book, chapter, verse)` pushes `readAt`, whose heading is its chapter, so Back is named after the chapter left. Each lands with the verse's row (`verse-<n>`) as its fragment, which the host brings into view.
+- **The chapter** is the chooser's verses page for now (`ChooserVersesPage`, its tap, Plant and Add to single verses as under Add verses): `chooserBookArg` and `chooserChapterArg` read the Read place unless a chooser route of Add verses is up.
+- Every step is `navStep` in `src/read/nav.ts`, a router written as Exact's own composed as each action composes it. `src/read/read.test.ts` holds the Contract's actions and the route table to it, `nav.model.test.ts` walks 200 generated readers through it beside a small model of what the reader sees (the other tab untouched, `readOpenAt` at Read's root, Back from a followed reference, Settings over the tab shown, a reselect at the root), and `place.property.test.ts` holds the place over generated kept texts and gardens. `bun run test:read` runs them; `read.test.contract` and `tools/drive-read.ts` run live (a driver's launch adds `ReadDriven`, the two ways in that no screen calls yet).
 
 ## Home
 
@@ -139,18 +150,19 @@ Both read the current Heartseed's `versesOf` (`@manna/heartseed/kjv`, declared b
 
 ## Where a feature's files go
 
-| Path                       | What                                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `app.contract`             | The root view: per feature one `use` line, one `members` line, one route and one branch of the stack    |
-| `app.ts`                   | The data module: per feature one spread of its sources into `sources`, and its grants                   |
-| `features/<name>.contract` | A feature's members of the root (`members HeartseedExact`: its states, resources, calls) and its screen |
-| `src/<name>/**`            | A feature's logic: pure TypeScript, imported by `app.ts`, tested in Bun                                 |
-| `<name>.test.contract`     | A feature's contract tests, beside `app.contract`: `exact test` and `verify` read only those            |
-| `app.test.contract`        | The app's own test: its name heads the first screen                                                     |
-| `tools/`                   | Host scripts: `prepare.ts`, and drives a `.test.contract` cannot hold                                   |
-| `strings/en.json`          | The purpose strings of the app's grants                                                                 |
-| `app.forma`                | The brand: the current palette's roles as tokens, the platform's roles drawn in them, the rounded face  |
-| `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`             |
+| Path                       | What                                                                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `app.contract`             | The root view: the two tabs; per feature one `use` line, one `members` line, one route under its tab and one branch of the stack |
+| `app.ts`                   | The data module: per feature one spread of its sources into `sources`, and its grants                                            |
+| `features/<name>.contract` | A feature's members of the root (`members HeartseedExact`: its states, resources, calls) and its screen                          |
+| `src/<name>/**`            | A feature's logic: pure TypeScript, imported by `app.ts`, tested in Bun                                                          |
+| `<name>.test.contract`     | A feature's contract tests, beside `app.contract`: `exact test` and `verify` read only those                                     |
+| `app.test.contract`        | The app's own test: its name heads the first screen                                                                              |
+| `tools/`                   | Host scripts: `prepare.ts`, and drives a `.test.contract` cannot hold                                                            |
+| `strings/en.json`          | The purpose strings of the app's grants                                                                                          |
+| `app.forma`                | The brand: the current palette's roles as tokens, the platform's roles drawn in them, the rounded face                           |
+| `assets/icons/`            | The app's own icons, named in `app.forma`'s `icons` (the Garden tab's sprout)                                                    |
+| `exact.mjs`                | The kit's launcher, for Exact's own `bun exact.mjs` calls; `bun run exact` is `manna-exact`                                      |
 
 A feature's names start with its own (`today…`), since its members share the root's one namespace. Logic of the current Heartseed is imported through its package's exports, never copied: `src/no-copy.test.ts` fails on a copy. A Bun test of a module `app.ts` imports runs it under `withDataHost` (`@manna/exact-kit/data-host/testing`) to fail where Hermes would, as `src/app.test.ts` does.
 
