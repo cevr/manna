@@ -27,7 +27,8 @@ Strong's own text is in the public domain.
 The 4,710 entries that were defective (a definition that began with `null`
 and its pronunciation, written twice, with no letter, or with Greek or Hebrew
 words dropped) were refilled from Open Scriptures' JSON edition of the two
-dictionaries; every other entry is as it was. That edition says in each
+dictionaries; every other entry is as it was, except that each Hebrew entry
+with no lemma took the source's lemma (3,557). That edition says in each
 file: "Copyright 2009 (Greek), 2010 (Hebrew), Open Scriptures. CC-BY-SA.
 Derived from XML" (the Greek XML by Ulrik Petersen, the Hebrew by David
 Instone-Brewer and David Troidl). Credit Open Scriptures wherever the lexicon
@@ -44,3 +45,11 @@ is shown, and share an adapted lexicon under the same terms.
   The tool refuses a file whose SHA-256 differs, leaves every sound entry as
   it is, and run again changes nothing. Without `--source` it applies the
   rules alone (`packages/scripts/src/strongs-clean/rules.ts`).
+- Into the databases: `bible.db` is built from this file, every field
+  (`lemma`, `xlit`, `pron`, `def`, `kjvDef` into the `strongs` table), so a
+  rebuild carries every repair. The CLI reads `~/.bible/bible.db`; rebuild and
+  install a local copy with
+  `bun run --cwd packages/core sync:bible:force && cp packages/core/data/bible.db ~/.bible/bible.db`.
+  `manna init` on a new machine installs the pinned release
+  (`BIBLE_ARTIFACT_RELEASE` in `packages/core/src/corpus-supply/file-artifact.ts`),
+  which carries the repair only once a new release is published and pinned.
