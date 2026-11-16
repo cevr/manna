@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- Exact's app folder cannot import effect (docs/exact.md): a host helper the reading fonts' tests read the bundled files through. */
+/* oxlint-disable effect/noNodeBuiltinImport -- Exact's app folder cannot import effect (docs/exact.md): a host helper the reading fonts' tests read the bundled files through. */
 
 /**
  * The reading fonts as files (`assets/fonts/<key>/`): each family's folder,

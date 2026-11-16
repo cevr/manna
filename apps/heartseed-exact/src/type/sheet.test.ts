@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): a regex group that did not match is undefined. */
-
 /**
  * The Aa sheet as its Contract writes it (spec, "What must be true of the
  * sheet"): a modal route of medium and large height over the screen it
