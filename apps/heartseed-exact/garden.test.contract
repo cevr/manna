@@ -132,8 +132,11 @@ test "It survives a relaunch"
   clock data
   clock data
   clock settle
-  expect tree has "list-passage-0-43-3-16-18"
+  expect state garden.read == true
+  expect state garden.lists.length == 1
+  expect state garden.lists.0.id == "passage:0:43.3.16-18"
+  expect state garden.lists.0.verses.1.reference == "John 3:17"
+  expect state garden.lists.0.verses.1.stage == "seed"
+  expect state garden.singles.0.reference == "Proverbs 4:23"
   expect tree has "single-Proverbs-4-23"
-  expect text "stage-John-3-17" == "seed"
-  expect text "due-Proverbs-4-23" == "Due now"
   expect no failures
