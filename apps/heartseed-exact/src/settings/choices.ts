@@ -11,6 +11,8 @@ import { APPEARANCES, appearanceOf } from '@manna/heartseed/appearance';
 import { MINUTES, type Minutes } from '@manna/heartseed/session';
 import { CHOICES, type Choice as Voice } from '@manna/heartseed/voice/reading';
 
+import { feelAnswer, type FeelAnswer } from './feel';
+
 /** One choice as the sheet offers it: the text kept, the words shown. */
 export interface SettingsOption {
   readonly value: string;
@@ -54,8 +56,9 @@ export const settingsView = (minutes: string, voice: string, appearance: string)
   appearanceOptions: APPEARANCES.map((each) => ({ value: each, label: titled(each) })),
 });
 
-/** The settings' one data source, as `app.ts` registers it: the view of the kept texts, answered at once. */
+/** The settings' data sources, as `app.ts` registers them: the view of the kept texts, and whether Sounds and haptics is on, each answered at once. */
 export const settingsSources = {
   settingsOf: ([minutes, voice, appearance]: readonly [string, string, string]): SettingsView =>
     settingsView(minutes, voice, appearance),
+  settingsFeelOf: ([kept]: readonly [string]): FeelAnswer => feelAnswer(kept),
 };

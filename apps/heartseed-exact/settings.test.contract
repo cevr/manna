@@ -44,3 +44,26 @@ test "a choice shows and is kept"
   expect state settingsMinutes == 10
   expect state settingsVoice == "him"
   expect state settingsAppearance == "dark"
+
+test "Sounds and haptics is on until turned off, and stays off"
+  tap "gear"
+  clock settle
+  clock data
+  expect state settingsFeel == true
+  expect state settingsFeelKept == "on"
+  tap "settings-feel"
+  clock data
+  expect state settingsFeel == false
+  expect state settingsFeelKept == "off"
+  tap "settings-done"
+  clock settle
+  reload
+  clock data
+  tap "gear"
+  clock settle
+  clock data
+  expect state settingsFeel == false
+  tap "settings-feel"
+  clock data
+  expect state settingsFeel == true
+  expect state settingsFeelKept == "on"

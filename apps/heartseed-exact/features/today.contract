@@ -217,7 +217,7 @@ members HeartseedExact
   action todayShowAllIt
     send todayStepped = todayShowAll(todayTime.epochAtZero + performanceNow())
   action todayGradeIt(grade: number)
-    haptic("selection")
+    feelTick()
     send todayStepped = todayGrade(grade)
   action todayNextIt
     send todayStepped = todayNext(todayTime.utcOffset, todayTime.epochAtZero + performanceNow(), todayTime.seed)

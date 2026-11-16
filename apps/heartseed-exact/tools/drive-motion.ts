@@ -16,7 +16,9 @@
  *    closes;
  * 5. the run's end brings its rows in one after another; under reduce all
  *    show at once;
- * 6. home's ask fades in, and is gone after Keep;
+ * 6. home's ask fades in, and is gone after Keep: on the web its frame
+ *    still draws it 60 ms on, and matches the settled screen once its exit
+ *    and the slide under it are done (pixels of screenshots);
  * 7. a plant pressed scales to 0.97.
  *
  * Opacity is read from `layout` (the animated nodes author `opacity=1` so
@@ -26,12 +28,14 @@
  * `.exact/shots/`. Exits 1 on any failed check.
  */
 
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
+import { themeLines } from '../src/look/brand';
+import { readBrand } from './look';
 import { readPng } from './png';
 
 type Image = ReturnType<typeof readPng>;
@@ -193,6 +197,32 @@ const wordInk = (layout: unknown, shot: string, scheme: Scheme) => {
 };
 
 const MARGIN = 0.08;
+
+/** A token of the brand's motion in milliseconds (`150ms`). */
+const tokenMs = (name: string) =>
+  Number(/^(\d+)ms$/u.exec(themeLines(readBrand()).get(name) ?? '')?.[1]);
+
+/** When a kept ask has left: its exit (`duration.exit`) and the rows' slide under it (`duration.ask`) done, and a frame on. */
+const ASK_GONE_MS = Math.max(tokenMs('duration.exit'), tokenMs('duration.ask')) + 50;
+
+/** More pixels of the ask's frame than this, changed from the settled screen, show the ask still drawn. */
+const ASK_DRAWN = 500;
+
+/** No more pixels of the ask's frame than this may differ from the settled screen once it has left. */
+const ASK_TRACE = 0;
+
+/** How many pixels inside `frame` differ, by more than a faint shade, between two screenshots. */
+const changedIn = (image: Image, other: Image, frame: Frame, scale: number) => {
+  let changed = 0;
+  for (let y = Math.ceil(frame.y * scale); y < Math.floor((frame.y + frame.h) * scale); y++)
+    for (let x = Math.ceil(frame.x * scale); x < Math.floor((frame.x + frame.w) * scale); x++) {
+      const at = (y * image.width + x) * image.channels;
+      const one = [image.rows[at] ?? 0, image.rows[at + 1] ?? 0, image.rows[at + 2] ?? 0];
+      const two = [other.rows[at] ?? 0, other.rows[at + 1] ?? 0, other.rows[at + 2] ?? 0];
+      if (distance(one, two) > 24) changed += 1;
+    }
+  return changed;
+};
 
 /** B1: the ring behind Done, under full and reduced motion. */
 const pulse = async () => {
@@ -370,7 +400,18 @@ const home = async () => {
     'tap single-remove-Psalms-119-1',
   );
   const asked = s.step('clock +60', 'layout ask-Psalms-119-1');
-  s.step('clock settle', 'tap ask-no', ...film('6-ask'));
+  const rest = s.step('clock settle', 'layout ask-Psalms-119-1');
+  const shot = (moment: string) => join(SAMPLES, `${stamp}-6-ask-${moment}.png`);
+  s.step('tap ask-no', ...film('6-ask'));
+  if (!ios)
+    s.step(
+      'clock +60',
+      `screenshot ${shot('leaving')}`,
+      `clock +${ASK_GONE_MS - 60}`,
+      `screenshot ${shot('gone')}`,
+      'clock settle',
+      `screenshot ${shot('settled')}`,
+    );
   const kept = s.step('clock settle', 'tree');
   const pressed = s.step('tap plant-John-3-16 down', 'clock settle', 'layout plant-John-3-16');
   s.step('tap up');
@@ -393,6 +434,27 @@ const home = async () => {
       opacityOf(got[asked]),
     );
   drive.check('B6 after Keep the ask is gone', !holds(got[kept], 'ask-Psalms-119-1'), 'ask');
+  if (!ios) {
+    const frame = frameOf(got[rest]);
+    const width = (got[rest] as Laid | undefined)?.viewport?.w;
+    const [leaving, gone, settled] = ['leaving', 'gone', 'settled'].map((moment) =>
+      existsSync(join(app, shot(moment))) ? readPng(join(app, shot(moment))) : undefined,
+    );
+    const changed = (image: Image | undefined) =>
+      frame === undefined || image === undefined || settled === undefined
+        ? Number.NaN
+        : changedIn(image, settled, frame, image.width / (width ?? image.width));
+    drive.check(
+      'B6 the leaving ask is still drawn 60 ms after Keep',
+      changed(leaving) > ASK_DRAWN,
+      { frame, changed: changed(leaving) },
+    );
+    drive.check(
+      `B6 the leaving ask is gone ${ASK_GONE_MS} ms after Keep, its exit and the slide under it done`,
+      changed(gone) <= ASK_TRACE,
+      { frame, changed: changed(gone) },
+    );
+  }
   drive.check(
     'B7 a plant pressed scales to 0.97',
     Math.abs(scaleOf(got[pressed]) - PRESS) < 0.005,

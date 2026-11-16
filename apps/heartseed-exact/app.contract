@@ -72,10 +72,10 @@ component HeartseedExact
           if e.name == "addBook"
             ChooserChaptersPage(book=chooserChaptersShown, open=chooserOpenChapter)
           if e.name == "addChapter"
-            ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=chooserTapIt, plant=chooserPlantIt, join=chooserJoinIt)
+            ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=feelChooseVerse, plant=chooserPlantIt, join=chooserJoinIt)
       for e in stack(nav).filter(x => x.name.startsWith("settings")) key=e.id
         if e.name == "settings"
-          SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, about=aboutOpen, done=settingsDone)
+          SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, done=settingsDone)
         if e.name == "settingsAbout"
           AboutPage(route=e.id, licences=aboutOpenLicences)
         if e.name == "settingsLicences"
