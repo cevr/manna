@@ -23,7 +23,10 @@
  *   instead, for comparison;
  * - the data module's load as Exact prints it (`the module's top level
  *   took N ms`), against `FIND_BEFORE`, the same number from a launch
- *   without the index, when given.
+ *   without the index, when given;
+ * - a last launch the server refuses the pack, as a phone that has not
+ *   downloaded it: a reference still answers, and words say
+ *   `DOWNLOADING_LINE`.
  *
  * Screenshots go to `.exact/shots/find-<host>-*`. Exits 1 on any failed
  * check.
@@ -62,11 +65,13 @@ const { corpusOfDb, findPack, FIND_OUT, writeFind } = await import('./find');
 writeFind(FIND_OUT, corpusOfDb());
 const served = await Bun.file(FIND_OUT).text();
 const CORS = { 'access-control-allow-origin': '*' };
+/** Whether the server hands the pack; the last launch is refused it, as a phone that has not downloaded it yet. */
+let serving = true;
 const server = Bun.serve({
   hostname: '127.0.0.1',
   port: PORT,
   fetch: (request) =>
-    new URL(request.url).pathname === '/find.json'
+    serving && new URL(request.url).pathname === '/find.json'
       ? new Response(served, { headers: { ...CORS, 'content-type': 'application/json' } })
       : new Response('not found', { status: 404, headers: CORS }),
 });
@@ -253,7 +258,7 @@ const worst = sorted.at(-1) ?? Number.NaN;
 const firstTime = times[0] ?? Number.NaN;
 const worstAt = queries[times.indexOf(worst)] ?? '';
 console.log(
-  `times ${host}: ${times.length} answers of ${keystrokes.length} keystrokes; first ${firstTime.toFixed(1)} ms, median ${median.toFixed(1)} ms, worst ${worst.toFixed(1)} ms (${JSON.stringify(worstAt)}); load ${load} ms`,
+  `times ${host}: ${times.length} answers of ${keystrokes.length} keystrokes; first ${firstTime.toFixed(1)} ms, median ${median.toFixed(1)} ms, worst ${worst.toFixed(1)} ms (${JSON.stringify(worstAt)}); ${Number.isNaN(load) ? 'the data module loaded in under 50 ms (Exact prints no time below it)' : `the data module loaded in ${load} ms`}`,
 );
 drive.check(
   `every keystroke answered (${times.length} of ${keystrokes.length})`,
@@ -277,6 +282,41 @@ if (!Number.isNaN(before))
     load - before <= LOAD_BAR,
     load,
   );
+
+serving = false;
+const unpacked = [
+  'clock data',
+  'clock settle',
+  typedFear('john 3:16'),
+  'clock data',
+  'clock settle',
+  'state findShown',
+  typedFear('fear not'),
+  'clock data',
+  'clock settle',
+  'state findShown',
+  'tree',
+  shot('downloading'),
+];
+const unpackedSaid = replyOf(
+  unpacked,
+  await drive.run(
+    ['--storage', `${store}-unpacked`, '--reset-storage', '--url', '/verses'],
+    unpacked,
+  ),
+);
+const { DOWNLOADING_LINE } = await import('../src/find/find');
+const johnUnpacked = unpackedSaid('state findShown', 0) as Shown | undefined;
+const fearUnpacked = unpackedSaid('state findShown', 1) as Shown | undefined;
+drive.check(
+  'with no pack, a reference still answers its place, and words say word search is downloading',
+  johnUnpacked?.places?.[0]?.label === 'John 3:16' &&
+    johnUnpacked.line === DOWNLOADING_LINE &&
+    fearUnpacked?.hits?.length === 0 &&
+    fearUnpacked.line === DOWNLOADING_LINE &&
+    holds(unpackedSaid('tree'), 'find-line'),
+  { john: johnUnpacked, fear: fearUnpacked },
+);
 
 await server.stop(true);
 process.exit(drive.finish());

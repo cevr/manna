@@ -11,9 +11,9 @@ import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
 
-/** Today listens on the device; the garden keeps its keys in one file of the app's data, the only file the app writes; a driver's launch fetches find's word index from the loopback `tools/drive-find.ts` serves. */
+/** Today listens on the device; the garden keeps its keys in one file of the app's data, the only file the app writes; a development build may fetch over http, which a driver's launch uses for find's word index from the loopback `tools/drive-find.ts` serves. The grant names no loopback origin: one that did would make Exact's test runner start every test at a URL with an `authFixture` query, which `go(nav, "/add")` then no longer finds in the stack. */
 export const grants =
-  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\nnet.fetch http://127.0.0.1:4797';
+  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\ndevelopment net.fetch http:';
 
 /** A driver's launch (`tools/drive-garden.ts`) sets this, and Your verses shows its test controls; a plain launch has none. */
 const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
