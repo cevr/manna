@@ -104,6 +104,14 @@
       "types": "./exact/letters.d.ts",
       "default": "./src/sayit/letters.ts"
     },
+    "./sayit/motion": {
+      "types": "./exact/sayit-motion.d.ts",
+      "default": "./src/sayit/motion.ts"
+    },
+    "./home/motion": {
+      "types": "./exact/home-motion.d.ts",
+      "default": "./src/home/motion.ts"
+    },
     "./kjv": {
       "types": "./exact/kjv.d.ts",
       "default": "./src/kjv.ts"

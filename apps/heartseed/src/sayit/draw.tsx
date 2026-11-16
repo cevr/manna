@@ -25,10 +25,11 @@ import Animated, {
 import { themed, useThemed } from '../look';
 import type { Cue, Mark } from '../matcher';
 import { lettersOf, PEEK_SHOWN_MS } from './letters';
+import { SAYIT_MOTION } from './motion';
 import { wordOf, type Ink, type ShownWord } from './screen';
 
 /** A word lights with a short fade; under Reduce Motion it shows at once. */
-const LIGHT = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
+const LIGHT = FadeIn.duration(SAYIT_MOTION.light).reduceMotion(ReduceMotion.System);
 
 /** One source word drawn as `wordOf` shows it: a mark to peek at, or its text in its ink, an unseen one in a slot its width. */
 export function Word({
@@ -280,7 +281,7 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
     if (!busy) return;
     pulse.value = withRepeat(
       withTiming(1, {
-        duration: 1200,
+        duration: SAYIT_MOTION.pulse,
         easing: Easing.out(Easing.quad),
         reduceMotion: ReduceMotion.System,
       }),
@@ -290,7 +291,7 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
   }, [busy, pulse]);
   const ring = useAnimatedStyle(() => ({
     opacity: 1 - pulse.value,
-    transform: [{ scale: 1 + pulse.value * 0.4 }],
+    transform: [{ scale: 1 + pulse.value * SAYIT_MOTION.pulseGrowth }],
   }));
   return <Animated.View aria-hidden style={[look.ring, ring]} />;
 }

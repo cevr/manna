@@ -132,6 +132,8 @@ test "On a hymn's page a found hymn takes its place"
   clock settle
   clock data
   expect text "hymn-title" == "Great Is Thy Faithfulness"
+  expect state recentList.0 == 100
+  expect state recentList.1 == 2
   back
   clock settle
   expect text "title" == "Hymns"
@@ -151,10 +153,16 @@ test "On a hymn's page a found hymn takes its place"
   clock data
   expect text "hymn-title" == "Great Is Thy Faithfulness"
   expect tree missing "find-list"
+  expect state recentList.0 == 100
   back
   clock settle
+  clock data
   expect text "title" == "Hymns"
   expect tree missing "hymn-title"
+  expect state find.row == "folded"
+  expect state find.query == ""
+  expect tree has "section-adoration-and-praise"
+  expect tree has "hymn-1"
 
 test "On Recent the bar stands too"
   tap "hymn-2"
@@ -190,3 +198,18 @@ test "On Recent the bar stands too"
   clock data
   expect tree missing "find-list"
   expect tree has "recent-2"
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "100"
+  clock settle
+  clock data
+  expect tree has "find-list"
+  back
+  clock settle
+  clock data
+  expect text "title" == "Hymns"
+  expect state find.row == "folded"
+  expect state find.query == ""
+  expect tree has "section-adoration-and-praise"
+  expect tree has "hymn-1"

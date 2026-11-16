@@ -37,7 +37,7 @@ fn listRowId(g: TabGroup, n: number, kind: string): string = g.repeats.includes(
 members HymnalExact
   state listQuery = ""
   state listTab = "Sections" persist
-  resource listRows = hymnRows(listQuery) as shape RowSection[] else empty()
+  resource listRows = hymnRows(find.query) as shape RowSection[] else empty()
   resource listTabNames = listTabs() as shape string[] else empty()
   resource listTitleOf = listTitles() when listTab != "Sections" as shape string[] else empty()
   resource listGroups = listTabRows(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : []) when listTab != "Sections" as shape TabGroup[] else empty()

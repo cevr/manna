@@ -20,6 +20,7 @@ use speak, cancelSpeech, speechSynthesisState, speechUtterance, speechSynthesisV
 use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-capture"
 use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, SpeechRecognitionInfo, SpeechRecognitionState, SpeechRecognitionPhrase from "@exact/speech-recognition"
 use SessionShown, SessionCounts, SessionEnd, SessionNothing from "./session.contract"
+use hs-rise, hs-fade, hs-pulse from "./motion.contract"
 
 shape TodayTime
   epochAtZero: number
@@ -216,6 +217,7 @@ members HeartseedExact
   action todayShowAllIt
     send todayStepped = todayShowAll(todayTime.epochAtZero + performanceNow())
   action todayGradeIt(grade: number)
+    haptic("selection")
     send todayStepped = todayGrade(grade)
   action todayNextIt
     send todayStepped = todayNext(todayTime.utcOffset, todayTime.epochAtZero + performanceNow(), todayTime.seed)
@@ -235,16 +237,18 @@ component TodayRecital
     grade: action
     next: action
     again: action
+    still: bool
+    sheet: bool
   view
-    column gap=20
+    column gap=20 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
       text today.reference role="heading" aria-level=2 testId=(today.session.mode == "run" ? "item-reference" : "reference")
       row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
         for w in today.words key=w.index
           if w.peekable
             button press=peek(w.index) aria-label=w.label min-width=44 min-height=44 testId=`word-${w.index}`
-              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase)
+              text w.shown font="-exact-title3" line-height=1.5 color=todayWordColor(w, today.phase) transition=((still or sheet or not (today.canStop or today.canFinish)) ? "none" : "color duration.light ease")
           else
-            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
+            text w.shown font="-exact-title3" line-height=1.5 max-width="100%" hyphens="auto" color=todayWordColor(w, today.phase) transition=((still or sheet or not (today.canStop or today.canFinish)) ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=`word-${w.index}`
       if today.helpLine != ""
         text today.helpLine color="-exact-secondary-label" testId="help-line"
       if today.canNext
@@ -266,8 +270,11 @@ component TodayRecital
           button press=showAll buttonStyle="bordered" testId="show-all"
             text "Show all"
         if today.canFinish
-          button press=finish buttonStyle="filled" testId="finish"
-            text "Done"
+          column position="relative"
+            column position="absolute" inset=0 border-radius=999 background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId="ring"
+            column position="relative"
+              button press=finish buttonStyle="filled" testId="finish"
+                text "Done"
         else if today.canNext
           button press=again buttonStyle="bordered" testId="again"
             text "Say it again"
@@ -298,6 +305,8 @@ component Today
     again: action
     add: action
     home: action
+    still: bool
+    sheet: bool
   view
     scroll id="content" navigationScroll="content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem"
@@ -305,6 +314,7 @@ component Today
         if today.session.mode == "run" and today.session.nothing
           SessionNothing(add=add)
         else if today.session.mode == "run" and today.session.ended
-          SessionEnd(session=today.session, home=home)
+          SessionEnd(session=today.session, home=home, still=still)
         else if today.session.mode == "cued" or today.session.item
-          TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again)
+          for k in [today.reference] key=k
+            TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again, still=still, sheet=sheet)

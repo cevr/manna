@@ -335,6 +335,9 @@ describe('finding, against the model and the current app’s rules', () => {
         } else expect(shown.go).toEqual(before.go);
         expect(shown.go.serial).toBe(m.goes);
 
+        if (shown.searchAt === '')
+          expect({ ...where, query: shown.query }).toEqual({ ...where, query: '' });
+
         if (shown.tiles) expect(shown.top).toBe(HOME);
         expect(shown.tiles).toBe(shown.top === HOME && m.tiles);
         if (input.kind === 'tilesDone' && beforeView.tiles && !before.drums) {

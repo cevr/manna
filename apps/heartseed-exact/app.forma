@@ -27,6 +27,14 @@ theme
   hs.furrow = light-dark(#c3b6a0, #57523e)
   hs.sun = light-dark(#80641f, #d4a640)  pair=hs.ground
   family.hs = ui-rounded, system-ui
+  duration.fade = 150ms
+  duration.exit = 150ms
+  duration.light = 180ms
+  duration.rise = 250ms
+  duration.ask = 200ms
+  duration.pulse = 1200ms
+  easing.out = cubic-bezier(0.23, 1, 0.32, 1)
+  easing.pulse = cubic-bezier(0.5, 1, 0.89, 1)
   AccentColor = light-dark(#2c4542, #a88a62)
   Canvas = hs.ground
   CanvasText = hs.ink

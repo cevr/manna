@@ -1,47 +1,394 @@
 {
-  "measuredAtLoad": 4,
-  "/ cold": {
-    "bytes": 385187,
-    "html": 13836,
-    "script": 371044,
-    "css": 0,
-    "data": 307,
-    "wasm": 0,
-    "rowMs": 109,
-    "readyMs": 109,
-    "loadMs": 121
-  },
-  "/ warm": {
-    "bytes": 724,
-    "html": 180,
-    "script": 372,
-    "css": 0,
-    "data": 172,
-    "wasm": 0,
-    "rowMs": 79,
-    "readyMs": 79,
-    "loadMs": 90
-  },
-  "/hymns/100 cold": {
-    "bytes": 385162,
-    "html": 13811,
-    "script": 371044,
-    "css": 0,
-    "data": 307,
-    "wasm": 0,
-    "wordsMs": 106,
-    "readyMs": 106,
-    "loadMs": 119
-  },
-  "/hymns/100 warm": {
-    "bytes": 724,
-    "html": 180,
-    "script": 372,
-    "css": 0,
-    "data": 172,
-    "wasm": 0,
-    "wordsMs": 94,
-    "readyMs": 94,
-    "loadMs": 104
+  "from": "the median of 7 drive-web measure runs at a load of 5 or less",
+  "runs": [
+    {
+      "load": 4.2,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 110,
+          "readyMs": 110,
+          "loadMs": 124
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 69,
+          "readyMs": 69,
+          "loadMs": 81
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 118,
+          "readyMs": 118,
+          "loadMs": 131
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 77,
+          "readyMs": 77,
+          "loadMs": 88
+        }
+      }
+    },
+    {
+      "load": 4.4,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 100,
+          "readyMs": 100,
+          "loadMs": 115
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 63,
+          "readyMs": 63,
+          "loadMs": 75
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 117,
+          "readyMs": 117,
+          "loadMs": 131
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 77,
+          "readyMs": 77,
+          "loadMs": 89
+        }
+      }
+    },
+    {
+      "load": 4.2,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 106,
+          "readyMs": 106,
+          "loadMs": 122
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 63,
+          "readyMs": 63,
+          "loadMs": 75
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 116,
+          "readyMs": 116,
+          "loadMs": 129
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 81,
+          "readyMs": 81,
+          "loadMs": 92
+        }
+      }
+    },
+    {
+      "load": 4.4,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 103,
+          "readyMs": 103,
+          "loadMs": 117
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 64,
+          "readyMs": 64,
+          "loadMs": 75
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 125,
+          "readyMs": 125,
+          "loadMs": 139
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 77,
+          "readyMs": 77,
+          "loadMs": 88
+        }
+      }
+    },
+    {
+      "load": 4.6,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 102,
+          "readyMs": 102,
+          "loadMs": 117
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 64,
+          "readyMs": 64,
+          "loadMs": 75
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 119,
+          "readyMs": 119,
+          "loadMs": 133
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 78,
+          "readyMs": 78,
+          "loadMs": 89
+        }
+      }
+    },
+    {
+      "load": 4.3,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 105,
+          "readyMs": 105,
+          "loadMs": 119
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 63,
+          "readyMs": 63,
+          "loadMs": 75
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 117,
+          "readyMs": 117,
+          "loadMs": 129
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 78,
+          "readyMs": 78,
+          "loadMs": 89
+        }
+      }
+    },
+    {
+      "load": 4.3,
+      "measured": {
+        "/ cold": {
+          "bytes": 640418,
+          "html": 14142,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "rowMs": 103,
+          "readyMs": 103,
+          "loadMs": 119
+        },
+        "/ warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "rowMs": 62,
+          "readyMs": 62,
+          "loadMs": 72
+        },
+        "/hymns/100 cold": {
+          "bytes": 640464,
+          "html": 14188,
+          "script": 625969,
+          "css": 0,
+          "data": 307,
+          "wasm": 0,
+          "wordsMs": 117,
+          "readyMs": 117,
+          "loadMs": 130
+        },
+        "/hymns/100 warm": {
+          "bytes": 724,
+          "html": 180,
+          "script": 372,
+          "css": 0,
+          "data": 172,
+          "wasm": 0,
+          "wordsMs": 75,
+          "readyMs": 75,
+          "loadMs": 86
+        }
+      }
+    }
+  ],
+  "limits": {
+    "/ cold": {
+      "bytes": 640418,
+      "html": 14142,
+      "script": 625969,
+      "css": 0,
+      "data": 307,
+      "wasm": 0,
+      "rowMs": 103,
+      "readyMs": 103,
+      "loadMs": 119
+    },
+    "/ warm": {
+      "bytes": 724,
+      "html": 180,
+      "script": 372,
+      "css": 0,
+      "data": 172,
+      "wasm": 0,
+      "rowMs": 63,
+      "readyMs": 63,
+      "loadMs": 75
+    },
+    "/hymns/100 cold": {
+      "bytes": 640464,
+      "html": 14188,
+      "script": 625969,
+      "css": 0,
+      "data": 307,
+      "wasm": 0,
+      "wordsMs": 117,
+      "readyMs": 117,
+      "loadMs": 131
+    },
+    "/hymns/100 warm": {
+      "bytes": 724,
+      "html": 180,
+      "script": 372,
+      "css": 0,
+      "data": 172,
+      "wasm": 0,
+      "wordsMs": 77,
+      "readyMs": 77,
+      "loadMs": 89
+    }
   }
 }
