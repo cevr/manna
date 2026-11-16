@@ -1,0 +1,8 @@
+{
+  "mcp": {
+    "servers": {
+      "lab": { "type": "remote", "url": "http://localhost:8229/mcp", "oauth": false },
+      "fal": { "type": "remote", "url": "https://mcp.fal.ai/mcp-relay" }
+    }
+  }
+}

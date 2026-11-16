@@ -8,3 +8,4 @@
 /.env.local
 /src/hymns/*.gen.json
 /src/player/timing.gen.ts
+/src/chords/chords.gen.ts
