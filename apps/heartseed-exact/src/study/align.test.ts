@@ -4,9 +4,10 @@
  * Lining up as a property: a made-up verse of distinct words, and a tagged
  * copy of it with words split, joined, dropped or added at random. A shown
  * word that survives unchanged keeps its numbers; no shown word takes a
- * number from a word it does not match; a verse equal in words takes its
- * tags word for word; and a verse where under 80% of the tagged words find
- * their shown word carries none.
+ * number from a word it does not match; a verse equal in words whose words
+ * are alike takes its tags word for word, and one where a word stands
+ * against another is lined up by its words; and a verse is bare exactly
+ * when under 80% of the tagged words find their shown word.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -101,25 +102,78 @@ describe('lining up the tags with the shown words', () => {
     expect(aligned).toBeGreaterThan(RUNS / 4);
   });
 
-  it('a verse equal in words takes its tags word for word, whatever the words', () => {
+  it('a verse equal in words whose words are alike (æ written out, an older spelling one letter apart) takes its tags word for word', () => {
     const random = seeded(42);
     for (let run = 0; run < RUNS; run++) {
-      const shown = Array.from({ length: 1 + random.below(30) }, (_, index) => wordAt(index));
-      const tagged = shown.map((_, index) => ({
-        text: random.chance(0.1) ? 'Cæsar' : (shown[index] ?? ''),
-        numbers: [index + 1],
-        added: random.chance(0.2),
-      }));
+      const shown = Array.from({ length: 1 + random.below(30) }, (_, index) =>
+        dressed(random, `${wordAt(index)}ae${wordAt(index)}`),
+      );
+      const tagged = shown.map((word, index) => {
+        const letters = lettersOf(word);
+        const spelt = random.pick([
+          letters,
+          letters.replace('ae', 'æ'),
+          `${letters.slice(0, -1)}z`,
+          `${letters}s`,
+          letters.slice(1),
+        ]);
+        return { text: spelt, numbers: [index + 1], added: random.chance(0.2) };
+      });
       const result = alignVerse(shown, tagged);
       expect(result.kind).toBe('equal');
       expect(result.tags).toEqual(tagged.map(({ numbers, added }) => ({ numbers, added })));
     }
   });
 
+  it('a verse equal in words where a word stands against another lines up by its words, so no number moves to a word it does not match', () => {
+    const random = seeded(43);
+    let moved = 0;
+    for (let run = 0; run < RUNS; run++) {
+      const words = Array.from({ length: 3 + random.below(30) }, (_, index) => wordAt(index));
+      const cut = random.below(words.length - 1);
+      const tagged = [
+        ...words.slice(0, cut).map((text, index) => ({ text, numbers: [index + 1], added: false })),
+        { text: '(', numbers: [], added: false },
+        ...words.slice(cut, -1).map((text, index) => ({
+          text,
+          numbers: [cut + index + 1],
+          added: false,
+        })),
+      ];
+      const result = alignVerse(words, tagged);
+      expect(result.kind).not.toBe('equal');
+      if (result.tags === undefined) continue;
+      moved++;
+      result.tags.forEach((tag, at) => {
+        expect(tag.numbers).toEqual(at === words.length - 1 ? [] : [at + 1]);
+      });
+    }
+    expect(moved).toBeGreaterThan(RUNS / 2);
+  });
+
+  it("a verse is bare exactly when under 80% of its tagged words find their shown word (the spec's floor, held apart from ALIGN_FLOOR)", () => {
+    const random = seeded(44);
+    for (let run = 0; run < RUNS; run++) {
+      const size = 5 + random.below(40);
+      const found = Math.ceil(0.5 * size) + random.below(Math.floor(0.5 * size) + 1);
+      const tagged = Array.from({ length: size }, (_, index) => ({
+        text: wordAt(index),
+        numbers: [index + 1],
+        added: false,
+      }));
+      const shown = [
+        ...tagged.map((word, index) => (index < found ? word.text : `x${wordAt(500 + index)}`)),
+        `x${wordAt(999)}`,
+      ];
+      const result = alignVerse(shown, tagged);
+      expect(result.kind).toBe(found * 5 < size * 4 ? 'bare' : 'aligned');
+    }
+  });
+
   it('words the tagged text lacks take none, and a verse whose tagged words mostly find nothing is bare', () => {
-    const title = ['A', 'Psalm', 'of', 'David.'];
-    const verse = ['LORD,', 'how', 'are', 'they', 'increased'];
-    const tagged = ['Lord,', 'how', 'are', 'they', 'increased'].map((text, index) => ({
+    const title = ['Abc', 'bcd', 'cde', 'def.'];
+    const verse = ['EFG,', 'fgh', 'ghi', 'hij', 'ijk'];
+    const tagged = ['Efg,', 'fgh', 'ghi', 'hij', 'ijk'].map((text, index) => ({
       text,
       numbers: [index + 1],
       added: false,

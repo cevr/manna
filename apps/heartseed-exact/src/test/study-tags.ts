@@ -4,26 +4,34 @@
  * The tags pack against `kjv-strongs.json` over a run of the canon's
  * chapters (each test part takes one, so the asset is parsed once per
  * part): every verse has one token per shown word; a verse equal in word
- * count carries the asset's numbers word for word; at least 99% of the
- * asset's numbered words keep their numbers; under 0.5% of verses are bare.
+ * count whose words are alike carries the asset's numbers word for word,
+ * and one whose words are not moves no number onto a word it does not
+ * match; at least 99% of the asset's numbered words keep their numbers;
+ * under 0.5% of verses are bare.
  */
 
 import { describe, expect, it } from 'bun:test';
 
 import { assetWords } from '../../tools/study';
+import { alike } from '../study/align';
 import { buildTags } from '../study/build';
 import { studyPackOf } from '../study/pack';
 import { wordsRead } from '../study/read';
 import { letterOf } from '../study/tags';
+import { lettersOf } from '../study/words';
 import { appSource } from './study-assets';
 
-/** The checks over chapters `from` to `to` (indexes, `to` excluded), named `name`, the aligned and bare verses held under `ceiling` (the counts measured when it was written). */
+/** A word's letters with `æ` written out, as the alignment compares them. */
+const foldOf = (word: string) => lettersOf(word).replace(/æ/gu, 'ae');
+
+/** The checks over chapters `from` to `to` (indexes, `to` excluded), named `name`, the aligned, bare and unlike (equal in count, a word against another) verses held under `ceiling` (the counts measured when it was written). */
 export const tagsChecks = (
   name: string,
   from: number,
   to: number,
-  ceiling: { readonly aligned: number; readonly bare: number },
+  ceiling: { readonly aligned: number; readonly bare: number; readonly unlike: number },
 ) => {
+  const unlike: Array<string> = [];
   const source = appSource();
   const asset = assetWords();
   const built = buildTags({ ...source, words: (key) => asset.get(key) }, from, to);
@@ -43,6 +51,22 @@ export const tagsChecks = (
       if (tokens !== '' && tokens.split(' ').length !== words.length) faults.push('count');
       if (tagged.length !== words.length) return faults;
       const letter = letterOf(book);
+      const numbersOf = (numbers: ReadonlyArray<number>) =>
+        numbers.map((n) => `${letter}${n}`).join('+');
+      if (!tagged.every((word, at) => alike(foldOf(words[at]?.text ?? ''), foldOf(word.text)))) {
+        unlike.push(`${book}.${chapter}.${verse}`);
+        const moved = words.some(
+          (word) =>
+            word.numbers.length > 0 &&
+            !tagged.some(
+              (each) =>
+                foldOf(each.text) === foldOf(word.text) &&
+                numbersOf(each.numbers) === word.numbers.join('+'),
+            ),
+        );
+        if (moved) faults.push('moved');
+        return faults;
+      }
       const same = tagged.every(
         (word, at) =>
           (words[at]?.numbers ?? []).join('+') ===
@@ -62,7 +86,9 @@ export const tagsChecks = (
           for (const fault of faultsOf(index, verse, chapterTokens[verse - 1] ?? ''))
             wrong.push(`${book}.${chapter}.${verse} ${fault}`);
       }
+      process.stdout.write(`study tags ${name}: unlike ${unlike.length} at ${unlike.join(' ')}\n`);
       expect(wrong).toEqual([]);
+      expect(unlike.length).toBeLessThanOrEqual(ceiling.unlike);
     });
 
     it("at least 99% of the asset's numbered words keep their numbers, and under 0.5% of verses are bare", () => {

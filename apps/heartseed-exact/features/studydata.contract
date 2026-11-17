@@ -51,6 +51,13 @@ shape StudyRender
   word: string
   count: number
 
+shape StudyTurning
+  on: bool
+
+shape StudyTurn
+  piece: string
+  times: number
+
 shape StudyEntry
   have: bool
   found: bool
@@ -75,3 +82,19 @@ members HeartseedExact
   resource studyProbeLongest = studyWords(19, 119, 176, studyTagsShown.version) when packsPlace.fixture as shape StudyWords else empty()
   resource studyProbeLast = studyXrefs(66, 22, 21, studyXrefsShown.version) when packsPlace.fixture as shape StudyXrefs else empty()
   resource studyProbeOutside = studyXrefs(66, 23, 1, studyXrefsShown.version) when packsPlace.fixture as shape StudyXrefs else empty()
+  // A driver's measure of the downloader's turns (`tools/drive-studydata.ts
+  // ios turns`, src/study/turns.ts): each does one step of a pack's check
+  // 40 times in one turn, which the data host refuses naming its CPU time.
+  // Asked only on a launch that names HEARTSEED_TURN_PROBE.
+  resource studyTurning = studyTurning() as shape StudyTurning
+  resource studyTurnCommentaryParse = studyTurn("app:/data/commentary.json", "parse", 40, commentaryShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnXrefsParse = studyTurn("app:/data/xrefs.json", "parse", 40, studyXrefsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnTagsParse = studyTurn("app:/data/tags.json", "parse", 40, studyTagsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnLexiconParse = studyTurn("app:/data/lexicon.json", "parse", 40, studyLexiconShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnWordsParse = studyTurn("app:/data/words.json", "parse", 40, studyWordsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnWordsWrite = studyTurn("app:/data/words.json", "write", 40, studyWordsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnTagsDecode = studyTurn("app:/data/tags.json", "decode", 40, studyTagsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnTagsEncode = studyTurn("app:/data/tags.json", "encode", 40, studyTagsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnTagsSlice = studyTurn("app:/data/tags.json", "slice", 40, studyTagsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnWordsDecode = studyTurn("app:/data/words.json", "decode", 40, studyWordsShown.version) when studyTurning.on as shape StudyTurn else empty()
+  resource studyTurnWordsEncode = studyTurn("app:/data/words.json", "encode", 40, studyWordsShown.version) when studyTurning.on as shape StudyTurn else empty()

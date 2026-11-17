@@ -7,8 +7,12 @@
  * whole before it is kept.
  */
 
+import type { Paced } from './paced';
 import type { PackWords } from './shown';
-import type { Check, Versioned } from './step';
+import type { Checked, Versioned } from './step';
+
+/** A pack's check in steps (`src/packs/paced.ts`): a body is kept only when it ends `Good`. */
+export type PacedCheck<P extends Versioned> = (body: string) => Paced<Checked<P>>;
 
 /** One downloadable pack. */
 export interface PackSpec<P extends Versioned> extends PackWords {
@@ -16,8 +20,8 @@ export interface PackSpec<P extends Versioned> extends PackWords {
   readonly path: string;
   /** Its one file: `app:/data/commentary.json`, which `app.ts` grants `fs.read` and `fs.write`. */
   readonly file: string;
-  /** Whether a body is a pack to keep, and the pack it holds. */
-  readonly check: Check<P>;
+  /** Whether a body is a pack to keep, and the pack it holds, in steps the downloader runs a turn each. */
+  readonly check: PacedCheck<P>;
 }
 
 /** How far into a kept file its version is looked for: the fields before its body. */

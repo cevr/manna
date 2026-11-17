@@ -5,4 +5,4 @@
 
 import { tagsChecks } from '../test/study-tags';
 
-tagsChecks('Genesis to Malachi', 0, 929, { aligned: 226, bare: 0 });
+tagsChecks('Genesis to Malachi', 0, 929, { aligned: 226, bare: 0, unlike: 0 });

@@ -11,6 +11,7 @@
  */
 
 import { versionOf } from '../commentary/pack';
+import { atOnce, sumPaced, type Paced } from '../packs/paced';
 import { sumOf } from '../text/sum';
 
 /** The study packs' format this app reads. */
@@ -100,15 +101,22 @@ const parsedOf = (body: string): Parsed => {
  */
 export const studyCheckOf =
   (parts?: number) =>
-  (body: string): StudyCheck => {
+  (body: string): StudyCheck =>
+    atOnce(studyCheckPaced(parts)(body));
+
+/** `studyCheckOf` in steps (`src/packs/paced.ts`): the parse, the fields, then the sum `SLICE` code units a step, so the downloader holds no turn of the data host past its budget. */
+export const studyCheckPaced = (parts?: number) =>
+  function* checked(body: string): Paced<StudyCheck> {
     const read = parsedOf(body);
     if (!read.ok) return { _tag: 'Bad', fault: 'json' };
+    yield undefined;
     if (!hasFields(read.value)) return { _tag: 'Bad', fault: 'fields' };
     const pack = read.value;
     if (pack.format !== STUDY_FORMAT) return { _tag: 'Bad', fault: 'format' };
     if (pack.count !== pack.parts.length) return { _tag: 'Bad', fault: 'count' };
     if (parts !== undefined && pack.count !== parts) return { _tag: 'Bad', fault: 'parts' };
-    const sum = partsSum(pack.parts);
+    yield undefined;
+    const sum = yield* sumPaced(pack.parts);
     if (pack.sum !== sum) return { _tag: 'Bad', fault: 'sum' };
     if (pack.version !== versionOf(pack.count, sum)) return { _tag: 'Bad', fault: 'version' };
     return { _tag: 'Good', pack };
