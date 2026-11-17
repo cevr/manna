@@ -71,6 +71,8 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
       `--user-data-dir=${profile}`,
       '--remote-debugging-port=0',
       '--mute-audio',
+      '--use-mock-keychain',
+      '--password-store=basic',
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-background-networking',
