@@ -15,6 +15,7 @@ import type { SearchService } from '@manna/core/search';
 import { SearchApi } from '../api.js';
 import { CommentaryGroupLive, type CommentaryPacks } from '../commentary-api.js';
 import { SearchGroupLive } from '../search-api.js';
+import { StudyGroupLive, type StudyPacks } from '../study-api.js';
 import type { VectorIndexLoad } from '../vector-index.js';
 import { type ReportStore, syncRoutes } from './sync-pages.ts';
 
@@ -23,7 +24,8 @@ export type SearchServices =
   | SearchService
   | SqlClient.SqlClient
   | VectorIndexLoad
-  | CommentaryPacks;
+  | CommentaryPacks
+  | StudyPacks;
 
 /**
  * `build` with none of its caller's services in reach.
@@ -52,6 +54,7 @@ export const searchRouter = (
       Layer.mergeAll(
         SearchGroupLive.pipe(Layer.provide(given)),
         CommentaryGroupLive.pipe(Layer.provide(given)),
+        StudyGroupLive.pipe(Layer.provide(given)),
       ),
     ),
     Layer.provide(Layer.mergeAll(Etag.layer, HttpPlatform.layer)),
