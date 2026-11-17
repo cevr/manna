@@ -68,6 +68,7 @@ members HeartseedExact
   state chooserTitleGone = false
   // The chapter's scroll height, as its resize event hears it: a verse opened on lands a third of the way down it. A hidden tab's 0 is not kept.
   state chooserScrollHeight = 0
+  state chooserLandRoom = 0
   action chooserScrollSized(w: number, h: number)
     if h > 0
       chooserScrollHeight = h
@@ -96,9 +97,15 @@ members HeartseedExact
   task chooserMoved when readUp key=`${readBook}.${readChapter}`
     change(chooserClear)
   // Each opening on a verse (`readOpenings`) lands it a third of the way down once the chapter is up, past the fragment the host lands while the tab is still coming in.
+  // A verse taller than the two thirds below that line lands higher, so all of it shows.
   task chooserLanding when readUp and readOpenings > 0 key=readOpenings
     change(chooserLand)
   action chooserLand
+    if readOpenVerse > 0
+      chooserLandRoom = min(chooserScrollHeight / 3, max(0, chooserScrollHeight - frame(`verse-${readOpenVerse}`).height - 16))
+  task chooserLandingScroll when readUp and readOpenings > 0 key=`${readOpenings}:${chooserLandRoom}`
+    change(chooserLandScroll)
+  action chooserLandScroll
     if readOpenVerse > 0
       scrollIntoView(`verse-${readOpenVerse}`, block="start", behavior="instant")
   // The bar rising shortens the page: the verse a range ends on is kept in view above it.
@@ -177,7 +184,7 @@ component ChapterPage
                 text `${shown.next.name} ›`
       PacksLine(shown=packs, still=still)
       if shown.up
-        column gap=8 padding="12px 20px" flex-shrink=0 background-color="hs.card" border-top-left-radius=16 border-top-right-radius=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="chapter-bar"
+        column gap=8 padding="12px 20px" flex-shrink=1 min-height=0 max-height="70%" overflow-y="auto" background-color="hs.card" border-top-left-radius=16 border-top-right-radius=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="chapter-bar"
           row gap=12 align-items="center"
             text shown.reference font="-exact-headline" flex=1 testId="range-line"
             text shown.countText font="-exact-footnote" color="hs.quiet" testId="range-count"
