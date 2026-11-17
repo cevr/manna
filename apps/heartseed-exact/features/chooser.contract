@@ -159,9 +159,9 @@ component ChapterPage
       scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room resize=sized flex=1 min-height=0 testId="chapter-scroll"
         column gap=4 padding-top=8 padding-bottom=32 testId="chapter"
           column gap=6 padding="0px 20px 12px" max-width="40rem"
-            button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" min-height=44 display="flex" flex-direction="row" align-items="center" gap=8 color="hs.ink" -exact-press-scale=0.97 testId="chapter-title"
-              text shown.heading font="-exact-large-title" font-weight=700
-              image "symbol:chooser" color="hs.quiet" width=16 height=16 aria-hidden=true
+            button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" max-width="100%" min-height=44 display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" gap=8 color="hs.ink" -exact-press-scale=0.97 testId="chapter-title"
+              text shown.heading font="-exact-large-title" font-weight=700 min-width=0 overflow-wrap="break-word"
+              image "symbol:chooser" font="-exact-headline" color="hs.quiet" aria-hidden=true
             if shown.fieldLine != ""
               text shown.fieldLine font="-exact-footnote" color="hs.quiet" testId="chapter-field"
             text "Tap a verse to plant or study it." font="-exact-footnote" color="hs.quiet" testId="chapter-hint"

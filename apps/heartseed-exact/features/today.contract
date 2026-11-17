@@ -244,9 +244,9 @@ component TodayRecital
   view
     column gap=20 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
       row gap=8 align-items="center"
-        text today.reference role="heading" aria-level=2 flex=1 testId=(today.session.mode == "run" ? "item-reference" : "reference")
+        text today.reference role="heading" aria-level=2 flex=1 min-width=0 overflow-wrap="break-word" testId=(today.session.mode == "run" ? "item-reference" : "reference")
         if chapter != ""
-          button press=read aria-label=`Read ${chapter}` min-width=44 min-height=44 color="hs.quiet" testId="today-read"
+          button press=read aria-label=`Read ${chapter}` min-width=44 min-height=44 flex-shrink=0 color="hs.quiet" testId="today-read"
             image "symbol:book"
       row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
         for w in today.words key=w.index

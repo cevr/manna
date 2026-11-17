@@ -299,7 +299,15 @@ a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
-a.step('tap verse-170', ...settle);
+/** At the largest text `ReadDriven`'s buttons cover the middle where the agent brings a verse, so the verse is chosen at the default size and the text grown after. */
+a.step(
+  'prefer root-font-size 17',
+  ...settle,
+  'tap verse-170',
+  ...settle,
+  `prefer root-font-size ${LARGEST}`,
+  ...settle,
+);
 const largestFooter = a.step('layout chapter-bar');
 const largestBar = a.step(BAR);
 const largestTab = native ? largestBar : a.step('layout tab-read');

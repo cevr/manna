@@ -81,14 +81,15 @@ members HeartseedExact
 
 // A driver's launch only (`gardenDriven`, as Your verses' test controls):
 // the two ways into Read no screen calls yet, for tools/drive-read.ts.
-// They float at the chapter's foot and take no room of its own, so the
-// drive measures the chapter as a plain launch lays it out.
+// They float at the chapter's head and take no room of its own, so the
+// drive measures the chapter as a plain launch lays it out, and a verse
+// the agent brings into view stays clear of them.
 component ReadDriven
   props
     open: action
     follow: action
   view
-    row gap=4 padding="4px 8px" font-size="11px" position="absolute" left=0 right=0 bottom=0 testId="read-driven"
+    row gap=8 padding="8px 20px" flex-wrap="wrap" position="absolute" left=0 right=0 top=0 testId="read-driven"
       button press=open(19, 119, 176) buttonStyle="bordered" testId="read-open-psalm"
         text "Open Psalm 119:176"
       button press=open(43, 3, 0) buttonStyle="bordered" testId="read-open-john"
