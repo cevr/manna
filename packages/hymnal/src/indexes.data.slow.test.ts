@@ -339,13 +339,18 @@ const stanzaBatch = (name: IndexName) => {
   };
 };
 
-/** Neighbouring pairs `before` holds strictly ordered, none within two rows of the last one taken. */
-const strictPairs = <R>(rows: ReadonlyArray<R>, before: (a: R, b: R) => boolean) => {
+/** Neighbouring pairs `precedes` holds strictly ordered, none within two rows of the last one taken. */
+const strictPairs = <R>(rows: ReadonlyArray<R>, precedes: (a: R, b: R) => boolean) => {
   const out: Array<number> = [];
   for (let i = 0; i + 1 < rows.length; i++) {
     const [a, b] = [rows[i], rows[i + 1]];
     const last = out.at(-1);
-    if (a !== undefined && b !== undefined && (last === undefined || i >= last + 3) && before(a, b))
+    if (
+      a !== undefined &&
+      b !== undefined &&
+      (last === undefined || i >= last + 3) &&
+      precedes(a, b)
+    )
       out.push(i);
   }
   return out;

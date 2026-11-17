@@ -258,7 +258,10 @@ const placeOf = (starts: ReadonlyArray<readonly number[]>, tick: number): Place 
     );
 
 const causesOf = (rows: readonly Mismatch[]) =>
-  rows.reduce<Record<string, number>>((o, r) => ({ ...o, [r.cause]: (o[r.cause] ?? 0) + 1 }), {});
+  rows.reduce<Record<string, number>>((o, r) => {
+    o[r.cause] = (o[r.cause] ?? 0) + 1;
+    return o;
+  }, {});
 
 const placeAt = (starts: ReadonlyArray<readonly number[]>, tick: number): Place | undefined => {
   const found = placeOf(starts, tick);

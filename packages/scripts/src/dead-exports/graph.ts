@@ -70,17 +70,23 @@ const mentionsOf = (program: Program): ReadonlySet<string> => {
   return found;
 };
 
-/** Whether `exported` passes on the binding `entry` of import `i`: `export { x }` of it, or `export default x`. */
+/**
+ * Whether `exported` passes on the binding `entry` of import `i`: `export { x }`
+ * of it, or `export default x`. The parser reads `export { x }` of an imported
+ * `x` as the indirect export of what `x` imports, so an `import * as ns` passed
+ * on reads as the namespace re-export of its module.
+ */
 const passesBinding = (i: StaticImport, entry: ImportEntry, exported: ExportEntry): boolean =>
   Option.match(Option.fromNullishOr(exported.moduleRequest), {
     onNone: () => exported.localName.name === entry.localName.value,
-    onSome: (request) =>
-      request.value === i.moduleRequest.value &&
-      entry.importName.kind !== 'NamespaceObject' &&
-      Option.makeEquivalence(Equivalence.String)(
+    onSome: (request) => {
+      if (request.value !== i.moduleRequest.value) return false;
+      if (entry.importName.kind === 'NamespaceObject') return exported.importName.kind === 'All';
+      return Option.makeEquivalence(Equivalence.String)(
         nameOf(exported.importName),
         nameOf(entry.importName),
-      ),
+      );
+    },
   });
 
 /** The names the module's own code mentions, read from its syntax tree only when it exports an import again. */

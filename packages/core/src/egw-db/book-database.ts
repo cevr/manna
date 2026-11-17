@@ -1130,9 +1130,10 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraphs_fts`);
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraph_bible_refs`);
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraphs`);
-      yield* sql
-        .unsafe(`UPDATE sync_status SET status = 'pending'`)
-        .pipe(Effect.catch(() => Effect.void));
+      const syncTable = yield* sql<{
+        readonly name: string;
+      }>`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_status'`;
+      if (syncTable.length > 0) yield* sql.unsafe(`UPDATE sync_status SET status = 'pending'`);
     }
 
     yield* sql.unsafe(`

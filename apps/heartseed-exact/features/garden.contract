@@ -8,6 +8,8 @@
 // the plant buttons and a test control under each verse; a plain launch
 // has none, and plants only through Add verses (features/add.contract).
 
+use TypeColumn, TypeView from "./type.contract"
+
 shape GardenTime
   epochAtZero: number
   utcOffset: number
@@ -87,6 +89,12 @@ members HeartseedExact
   mutation gardenMoved as shape GardenVerseChange queue refreshes garden
   derive gardenLine = match gardenPlanted { case some(c) => c.line, case none => "" }
   derive gardenAnswer = match gardenPlanted { case some(c) => c.answer, case none => "" }
+  // hs-read-type's sample, until hs-read-chapter: Psalm 119 under the reading settings, a driver's launch only.
+  resource gardenTypeSample = textVerses(19, 119) when gardenDriven.on as shape string[] else empty()
+  action gardenTypeAa
+    scrollIntoView("type-sample", block="start", behavior="instant")
+    typeOpen()
+  // hs-read-type's sample ends.
 
   action gardenPlantRange(book: number, chapter: number, first: number, last: number)
     gardenClock = performanceNow()
@@ -145,8 +153,11 @@ component YourVerses
     shown: action
     back: action
     add: action
+    type: TypeView
+    sample: string[]
+    aa: action
   view
-    scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0
+    scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0 testId="verses-content"
       column gap=20 padding=20 max-width="40rem" testId="verses"
         text "Your verses" role="heading" aria-level=2
         if garden.read and garden.lists.length == 0 and garden.singles.length == 0
@@ -184,3 +195,13 @@ component YourVerses
                   GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
                 button press=remove(`single:${v.reference}`) buttonStyle="bordered" testId=`remove-single-${v.slug}`
                   text "Remove"
+        // hs-read-type's sample, until hs-read-chapter: Psalm 119 under the reading settings, a driver's launch only.
+        if driven
+          column gap=12 id="type-sample" testId="type-sample"
+            button press=aa aria-label="Text settings" buttonStyle="bordered" align-self="flex-start" testId="type-aa"
+              text "Aa"
+            TypeColumn(type=type)
+              text "Psalm 119" align-self="flex-start" testId="type-probe"
+              for v, i in sample key=i
+                text v testId=`type-verse-${i + 1}`
+        // hs-read-type's sample ends.

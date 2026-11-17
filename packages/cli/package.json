@@ -20,7 +20,7 @@
   "dependencies": {
     "@effect/platform-bun": "catalog:",
     "@manna/core": "workspace:*",
-    "ai": "^7.0.165",
+    "ai": "^7.0.173",
     "cheerio": "^1.2.0",
     "date-fns": "^4.4.0",
     "effect": "catalog:",

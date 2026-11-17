@@ -3,8 +3,9 @@
 /**
  * The licences About ships are the current Heartseed's (spec A5): the
  * module `tools/licences.ts` writes, which `app.ts` imports, holds what
- * `apps/heartseed/vite/licence.ts` derives, byte for byte, and nothing
- * else; and each is named by its own first lines.
+ * `apps/heartseed/vite/licence.ts` derives, byte for byte, first, then the
+ * seven bundled reading fonts' (held by `src/type/fonts.test.ts`), eight in
+ * all; and each is named by its own first lines.
  */
 
 import { expect, it } from 'bun:test';
@@ -16,7 +17,7 @@ import { aboutSources, licenceName } from './sources';
 
 it("ships the current Heartseed's licence text, byte for byte", async () => {
   const written = writeLicences();
-  expect(written).toEqual([readLicence()]);
+  expect([written.length, written[0]]).toEqual([8, readLicence()]);
   const shipped: { readonly default: unknown } = await import(LICENCES_FILE);
   expect(shipped.default).toEqual(written);
 });

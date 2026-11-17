@@ -365,9 +365,9 @@ const holdingOf = (
 
 /** `singles`, then `more`, each range kept at its first place alone: every verse once, in order. */
 const joined = (singles: ReadonlyArray<Range>, more: ReadonlyArray<Range>): ReadonlyArray<Range> =>
-  [...singles, ...more].reduce<ReadonlyArray<Range>>((all, range) => {
-    if (all.some((each) => sameRange(each, range))) return all;
-    return [...all, rangeOf(range)];
+  [...singles, ...more].reduce<Array<Range>>((all, range) => {
+    if (!all.some((each) => sameRange(each, range))) all.push(rangeOf(range));
+    return all;
   }, []);
 
 /** Each verse of `range` as a one-verse range, in order. */

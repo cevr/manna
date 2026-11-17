@@ -75,8 +75,8 @@ describe('a cutout on the stand-in takes the face path it takes on a canvas', ()
     [0, 120],
   ];
 
-  /** Whether a cutout drawn after `before` soft-lit its pastel over the face (the two-pass draw). */
-  const layers = (before: (ctx: CanvasRenderingContext2D) => void) =>
+  /** Whether a cutout drawn after `prepare` soft-lit its pastel over the face (the two-pass draw). */
+  const layers = (prepare: (ctx: CanvasRenderingContext2D) => void) =>
     withDom(() => {
       let softLit = false;
       const { ctx } = recorder(400, 400, {
@@ -85,7 +85,7 @@ describe('a cutout on the stand-in takes the face path it takes on a canvas', ()
           if (key === 'globalCompositeOperation' && args[0] === 'soft-light') softLit = true;
         },
       });
-      before(ctx);
+      prepare(ctx);
       cutout(ctx, [...square], { color: '#c8643a', grain: 0.6 }, { seed: 7, boil: 0 });
       return softLit;
     });

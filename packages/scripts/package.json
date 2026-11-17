@@ -25,7 +25,7 @@
     "@manna/film": "workspace:*",
     "effect": "catalog:",
     "minimatch": "10.2.5",
-    "oxc-parser": "0.157.0",
+    "oxc-parser": "0.159.0",
     "pdf-parse": "^2.4.5"
   },
   "devDependencies": {

@@ -1,0 +1,181 @@
+// The reading settings live (hs-read-type), on a plain launch: the Aa sheet
+// opened on its own route, each control's choice read back as the rules
+// read it, Reset, and a choice kept across a reload. What a test cannot read
+// (the sample's drawn size and face, a radio's checked state, a relaunch on
+// iOS, the files the web fetches) is tools/drive-type.ts.
+
+test "The Aa sheet opens with the defaults, Reset unavailable"
+  at "/type"
+  clock data
+  clock settle
+  expect tree has "type-sheet"
+  expect text "type-size" == "18 pt"
+  expect state typeShown.font == "newyork"
+  expect state typeShown.size == 18
+  expect state typeShown.line == "comfortable"
+  expect state typeShown.letter == "normal"
+  expect state typeShown.width == "medium"
+  expect enabled "type-smaller"
+  expect enabled "type-larger"
+  expect disabled "type-reset"
+
+test "The size steps by two from 14 to 38, each end disabling its button"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-larger"
+  clock data
+  expect text "type-size" == "20 pt"
+  expect state typeSizeKept == "20"
+  expect enabled "type-reset"
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-larger"
+  clock data
+  expect text "type-size" == "38 pt"
+  expect disabled "type-larger"
+  tap "type-smaller"
+  clock data
+  expect text "type-size" == "36 pt"
+  tap "type-larger"
+  clock data
+  expect text "type-size" == "38 pt"
+
+test "The smallest size disables its button"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-smaller"
+  clock data
+  tap "type-smaller"
+  clock data
+  expect text "type-size" == "14 pt"
+  expect disabled "type-smaller"
+  expect enabled "type-larger"
+
+test "Each of the eleven fonts is read as chosen"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-font-sf"
+  clock data
+  expect state typeShown.font == "sf"
+  tap "type-font-rounded"
+  clock data
+  expect state typeShown.font == "rounded"
+  tap "type-font-mono"
+  clock data
+  expect state typeShown.font == "mono"
+  tap "type-font-literata"
+  clock data
+  expect state typeShown.font == "literata"
+  tap "type-font-sourceserif"
+  clock data
+  expect state typeShown.font == "sourceserif"
+  tap "type-font-merriweather"
+  clock data
+  expect state typeShown.font == "merriweather"
+  tap "type-font-lora"
+  clock data
+  expect state typeShown.font == "lora"
+  tap "type-font-inter"
+  clock data
+  expect state typeShown.font == "inter"
+  tap "type-font-atkinson"
+  clock data
+  expect state typeShown.font == "atkinson"
+  tap "type-font-opendyslexic"
+  clock data
+  expect state typeShown.font == "opendyslexic"
+  tap "type-font-newyork"
+  clock data
+  expect state typeShown.font == "newyork"
+  expect disabled "type-reset"
+
+test "Each spacing and width is read as chosen"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-line-snug"
+  clock data
+  expect state typeShown.line == "snug"
+  expect state typeShown.lineHeight == 1.35
+  tap "type-line-airy"
+  clock data
+  expect state typeShown.line == "airy"
+  expect state typeShown.lineHeight == 1.9
+  tap "type-letter-wide"
+  clock data
+  expect state typeShown.letter == "wide"
+  tap "type-letter-wider"
+  clock data
+  expect state typeShown.letter == "wider"
+  tap "type-width-narrow"
+  clock data
+  expect state typeShown.width == "narrow"
+  expect state typeShown.side == 44
+  tap "type-width-wide"
+  clock data
+  expect state typeShown.width == "wide"
+  expect state typeShown.measure == "44rem"
+
+test "Reset returns all five to the default"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-larger"
+  clock data
+  tap "type-font-lora"
+  clock data
+  tap "type-line-snug"
+  clock data
+  tap "type-letter-wider"
+  clock data
+  tap "type-width-narrow"
+  clock data
+  expect enabled "type-reset"
+  tap "type-reset"
+  clock data
+  expect state typeShown.font == "newyork"
+  expect state typeShown.size == 18
+  expect state typeShown.line == "comfortable"
+  expect state typeShown.letter == "normal"
+  expect state typeShown.width == "medium"
+  expect state typeShown.differs == false
+  expect disabled "type-reset"
+
+test "A choice is kept across a reload"
+  at "/type"
+  clock data
+  clock settle
+  tap "type-font-literata"
+  clock data
+  tap "type-larger"
+  clock data
+  tap "type-line-airy"
+  clock data
+  tap "type-letter-wide"
+  clock data
+  tap "type-width-narrow"
+  clock data
+  reload
+  clock data
+  expect state typeShown.font == "literata"
+  expect state typeShown.size == 20
+  expect state typeShown.line == "airy"
+  expect state typeShown.letter == "wide"
+  expect state typeShown.width == "narrow"

@@ -37,6 +37,11 @@ export const CHARACTERS = {
       'Lucifer matching the reference character exactly: youthful beardless face, golden curly shoulder-length hair, jeweled gold armor, crimson mantle, great golden wings',
     ref: 'what-is-truth/images/day3/01-covering-cherub.png',
   },
+  paul: {
+    descriptor:
+      'the apostle Paul, a weathered older man of slight build with a balding head, a full greying dark beard and deep-set earnest eyes, in a plain brown wool robe',
+    ref: 'reading-111/images/s02-philippians-1-23.png',
+  },
 } as const;
 
 export type Character = keyof typeof CHARACTERS;

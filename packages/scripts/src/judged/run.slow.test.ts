@@ -739,9 +739,9 @@ describe("a judged rule's store", () => {
     }).pipe(withFs),
   );
 
-  /** The real file system, but writing the store's partial file first does `before` to that path. */
+  /** The real file system, but writing the store's partial file first does `prewrite` to that path. */
   const writingPartial = (
-    before: (fs: FileSystem.FileSystem, partial: string) => Effect.Effect<void, unknown>,
+    prewrite: (fs: FileSystem.FileSystem, partial: string) => Effect.Effect<void, unknown>,
   ) =>
     Layer.effect(
       FileSystem.FileSystem,
@@ -751,7 +751,7 @@ describe("a judged rule's store", () => {
           writeFileString: (file, data, options) =>
             Effect.flatMap(
               Effect.orDie(
-                Effect.when(before(fs, file), Effect.succeed(file.endsWith('.partial'))),
+                Effect.when(prewrite(fs, file), Effect.succeed(file.endsWith('.partial'))),
               ),
               () => fs.writeFileString(file, data, options),
             ),
@@ -938,7 +938,7 @@ describe('a judged rule never fails on its model', () => {
   const retried = (
     refused: number,
     waits: readonly [number, number],
-    before: (storeFile: string) => Effect.Effect<unknown, unknown, FileSystem.FileSystem> = () =>
+    prepare: (storeFile: string) => Effect.Effect<unknown, unknown, FileSystem.FileSystem> = () =>
       Effect.void,
   ) => {
     const typesafe = typesafeAnswering(
@@ -953,7 +953,7 @@ describe('a judged rule never fails on its model', () => {
     return Effect.gen(function* () {
       const options = yield* judging;
       const outcome = yield* ticking(
-        Effect.andThen(before(options.storeFile), judgeBy(historyComment, ITEMS, options)),
+        Effect.andThen(prepare(options.storeFile), judgeBy(historyComment, ITEMS, options)),
       );
       expect(outcome.findings).toEqual([
         { file: 'src/a.ts', line: 3, start: 0, p: 0.96, kept: true },
