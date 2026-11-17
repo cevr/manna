@@ -22,6 +22,22 @@ Cache API keeps nothing, so every ask reads D1). For development,
 `bun run --cwd apps/egw-search dev` runs Vite on port 5273 with `/api`
 proxied to the server on port 3101.
 
+`/api/study/:name` serves Heartseed's other packs, built from `bible.db`
+rather than this corpus: `xrefs` (OpenBible.info's cross-references, CC BY),
+`tags` and `lexicon` (Open Scriptures' Strong's numbers and dictionaries,
+CC BY-SA) and `words` (the word index find reads). The Worker reads them from
+the R2 bucket `heartseed-study-packs` (`StudyPackFiles`, adopted and retained;
+the deploy creates it), the Bun server from `EGW_STUDY_DIR` or
+`~/.bible/study`; each answers its version as its `ETag`, `304` for
+`If-None-Match`, and `404` until it is published. `bible.db` lives on the
+owner's Mac alone, so no deploy builds them: after a rebuild of `bible.db`, or
+a change to their builder (`apps/heartseed-exact/tools/study.ts`), run
+
+```sh
+bun run --cwd apps/egw-search study:publish            # build, upload, and check each answers 304
+bun run --cwd apps/egw-search study:publish --dry-run  # build and check only, no credentials
+```
+
 ## Deploy
 
 Production is a Cloudflare Worker (`server/cloudflare/Search.ts`) declared in
