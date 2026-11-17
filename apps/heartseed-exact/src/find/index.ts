@@ -81,6 +81,8 @@ export interface FindIndex {
   readonly holds: (word: string) => boolean;
   /** The list of `word`, which the index holds and does not table. */
   readonly listOf: (word: string) => WordList;
+  /** Every token of the untabled words that start with `prefix`, sorted: their lists, which lie one after another in the pack, decoded at once and never kept as lists. */
+  readonly tokensFrom: (prefix: string) => Int32Array;
   /** The first token of `verse`, and of the verse after the last for `size`. */
   readonly tokenStart: (verse: number) => number;
   /** The verse the token is in. */
@@ -143,6 +145,29 @@ const firstFrom = (words: ReadonlyArray<string>, word: string) => {
     else high = middle;
   }
   return low;
+};
+
+/** Decodes the list that lies in `text` from `from` to `end` into `into` from `at`; where the next value goes. */
+const listInto = (text: string, from: number, end: number, into: Int32Array, at: number) => {
+  let cursor = from;
+  let count = at;
+  let last = -1;
+  while (cursor < end) {
+    let value = 0;
+    let code = text.charCodeAt(cursor);
+    let digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+    cursor += 1;
+    while (digit >= ENDS) {
+      value = value * GOES_ON + (digit - ENDS);
+      code = text.charCodeAt(cursor);
+      digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+      cursor += 1;
+    }
+    last += value * ENDS + digit + 1;
+    into[count] = last;
+    count += 1;
+  }
+  return count;
 };
 
 /** The index over `pack`, decoding nothing yet. */
@@ -260,6 +285,27 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
       const place = found(word);
       if (place === undefined) return { values: [], upTo: () => [], all: () => [] };
       return listAt(place[0], place[1]);
+    },
+    tokensFrom: (prefix) => {
+      const letter = letterOf(prefix.charAt(0));
+      if (letter === undefined || prefix === '') return new Int32Array(0);
+      const first = firstFrom(letter.words, prefix);
+      let after = first;
+      while (after < letter.words.length && (letter.words[after] ?? '').startsWith(prefix))
+        after += 1;
+      const from = letter.starts[first] ?? 0;
+      const tokens = new Int32Array((letter.starts[after] ?? 0) - from);
+      let count = 0;
+      for (let word = first; word < after; word += 1)
+        count = listInto(
+          letter.lists,
+          letter.starts[word] ?? 0,
+          letter.starts[word + 1] ?? 0,
+          tokens,
+          count,
+        );
+      counts.entries += count;
+      return tokens.subarray(0, count).sort();
     },
     tokenStart: (verse) => tableOf().tokenStarts[verse] ?? 0,
     verseOf: (token) => lastAtMost(tableOf().tokenStarts, token),

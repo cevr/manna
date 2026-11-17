@@ -81,6 +81,23 @@ it('with no word index, answers a reference, says words are downloading, and ans
   ).toBe(DOWNLOADING_LINE);
 });
 
+it('answers a keystroke that takes back or changes a letter as a fresh find does', () => {
+  const pack = findPack();
+  const typing = findWith(findIndexOf(pack));
+  for (const query of [
+    'in the be',
+    'in the b',
+    'in the s',
+    'in the sa',
+    'in the s',
+    'in th',
+    'in the be',
+  ])
+    expect(withDataHost(() => typing(query, LIMIT))).toEqual(
+      withDataHost(() => findWith(findIndexOf(pack))(query, LIMIT)),
+    );
+});
+
 it('cuts a long text at word edges around its match', () => {
   const words = Array.from({ length: 60 }, (_, at) => `w${at}`);
   const text = words.join(' ');

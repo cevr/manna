@@ -28,14 +28,16 @@
  * check places the listed and tabled terms first, then checks a class's
  * place in the verse's text for at most `SPARSE` verses, and past them by
  * its words' lists, read only as far as the walk has come. Only those
- * texts and the hits' are read.
+ * texts and the hits' are read. A keystroke that narrows the query before
+ * it (the same words, the last typed on) checks below where that walk
+ * stopped only the phrases it found, and walks on from there.
  */
 
 import { BIBLE_BOOKS, parseBibleQuery } from '@manna/core/bible';
 import { versesOf } from '@manna/heartseed/kjv';
 import { passageReference, verseReference } from '@manna/heartseed/passages';
 
-import type { FindIndex, WordList } from './index';
+import type { FindIndex } from './index';
 import { bitsOf, versesInAll } from './pack';
 import { boundsInto, queryOf, wordIs } from './words';
 
@@ -117,7 +119,6 @@ type Term =
       readonly word: string;
       readonly prefix: boolean;
       readonly bitmap: string;
-      readonly members: ReadonlyArray<WordList>;
       readonly tabledIds: ReadonlyArray<number>;
     };
 
@@ -217,18 +218,6 @@ export const placesOnly = (query: string): FindShown => {
   return { query, places: placesOf(query), hits: [], more: 0, line: DOWNLOADING_LINE };
 };
 
-/** Every token of `lists`, each decoded whole, sorted. */
-const mergedOf = (lists: ReadonlyArray<WordList>): Int32Array => {
-  const all = lists.map((list) => list.all());
-  const tokens = new Int32Array(all.reduce((sum, list) => sum + list.length, 0));
-  let filled = 0;
-  for (const list of all) {
-    tokens.set(list, filled);
-    filled += list.length;
-  }
-  return tokens.sort();
-};
-
 /** The verses in `one` or `other` (each sorted, each verse once), sorted, each once. */
 const unionOf = (one: Int32Array, other: Int32Array): Int32Array => {
   const union = new Int32Array(one.length + other.length);
@@ -246,6 +235,12 @@ const unionOf = (one: Int32Array, other: Int32Array): Int32Array => {
   }
   return union.subarray(0, size);
 };
+
+/** A phrase walk: the phrases it found, every one among the verses up to `upTo`, the verse it stopped at (all when it walked every verse). */
+interface Walk {
+  readonly phrases: ReadonlySet<number>;
+  readonly upTo: number;
+}
 
 /** The phrase check's buffers, reused verse after verse: a term's marks, the verse's tabled places and ids, the firsts still standing, and the text's word bounds. */
 interface Scratch {
@@ -417,15 +412,17 @@ export const findWith = (index: FindIndex) => {
   const tokensOfClass = (term: Extract<Term, { kind: 'class' }>) => {
     const kept = classTokens.get(term.word);
     if (kept !== undefined) return kept;
-    const made = mergedOf(term.members);
+    const made = index.tokensFrom(term.word);
     classTokens.set(term.word, made);
     return made;
   };
 
+  const tabledIdOf = new Map(index.tabled.map((word, id) => [word, id]));
+
   const termMade = (word: string, prefix: boolean): Term => {
     if (!prefix) {
-      const id = index.tabled.indexOf(word);
-      if (id >= 0) return { kind: 'tabled', word, prefix, id, bitmap: index.marksOf(id) };
+      const id = tabledIdOf.get(word);
+      if (id !== undefined) return { kind: 'tabled', word, prefix, id, bitmap: index.marksOf(id) };
       if (!index.holds(word)) return { kind: 'none', word, prefix };
       return {
         kind: 'list',
@@ -439,20 +436,12 @@ export const findWith = (index: FindIndex) => {
     const members = index.wordsFrom(word);
     if (members.length === 0) return { kind: 'none', word, prefix };
     const tabledIds = members.flatMap((member) => {
-      const id = index.tabled.indexOf(member);
-      return id >= 0 ? [id] : [];
+      const id = tabledIdOf.get(member);
+      return id === undefined ? [] : [id];
     });
-    const words = members.filter((member) => !index.tabled.includes(member));
+    const words = members.filter((member) => !tabledIdOf.has(member));
     const bitmap = index.classOf(word);
-    if (bitmap !== undefined)
-      return {
-        kind: 'class',
-        word,
-        prefix,
-        bitmap,
-        members: words.map(index.listOf),
-        tabledIds,
-      };
+    if (bitmap !== undefined) return { kind: 'class', word, prefix, bitmap, tabledIds };
     const [only] = words;
     if (words.length === 1 && tabledIds.length === 0 && only !== undefined)
       return {
@@ -463,7 +452,7 @@ export const findWith = (index: FindIndex) => {
         verses: versesOfWord(only),
         tabledIds,
       };
-    const tokens = mergedOf(words.map(index.listOf));
+    const tokens = index.tokensFrom(word);
     const verses = [versesOfTokens(tokens), ...tabledIds.map(versesOfTabled)].reduce(unionOf);
     return { kind: 'prefix', word, prefix, tokens, verses, tabledIds };
   };
@@ -500,14 +489,19 @@ export const findWith = (index: FindIndex) => {
     return found;
   };
 
-  /** The words of `verse`, its text read and counted once per query. */
+  const noVerses: ReadonlyArray<string> = [];
+  let lastChapter = { book: 0, chapter: 0, verses: noVerses };
+
+  /** The words of `verse`, its text read and counted once per query; the chapter last read is kept split, as the walk reads its verses one after another. */
   const textOf = (verse: number, read: Set<number>) => {
     const place = index.placeOf(verse);
     if (!read.has(verse)) {
       read.add(verse);
       index.counts.texts += 1;
     }
-    return versesOf(place.book, place.chapter)[place.verse - 1] ?? '';
+    if (lastChapter.book !== place.book || lastChapter.chapter !== place.chapter)
+      lastChapter = { ...place, verses: versesOf(place.book, place.chapter) };
+    return lastChapter.verses[place.verse - 1] ?? '';
   };
 
   /** The verses of `found` where the terms stand together in order, in order, until `limit` are found. */
@@ -516,7 +510,8 @@ export const findWith = (index: FindIndex) => {
     found: ReadonlyArray<number>,
     limit: number,
     read: Set<number>,
-  ) => {
+    seed: Walk | undefined,
+  ): Walk => {
     const classed = terms.some(spread);
     const tabledUsed = terms.some((term) => tabledIdsOf(term).length > 0);
     const tabledBy = terms.map((term) => {
@@ -564,11 +559,33 @@ export const findWith = (index: FindIndex) => {
       return count > 0;
     };
     const phrases = new Set<number>();
+    let upTo = Number.POSITIVE_INFINITY;
     for (const verse of found) {
+      if (seed !== undefined && verse <= seed.upTo && !seed.phrases.has(verse)) continue;
       if (together(verse)) phrases.add(verse);
-      if (phrases.size >= limit) break;
+      if (phrases.size >= limit) {
+        upTo = verse;
+        break;
+      }
     }
-    return phrases;
+    return { phrases, upTo };
+  };
+
+  /** The last walk of a query of several words: its words, the verse it walked to, and the phrases it found up to there. */
+  let lastWalk:
+    | (Walk & { readonly words: ReadonlyArray<string>; readonly typing: boolean })
+    | undefined;
+
+  /** The last walk, if `words` (the last being typed) narrows its query, its last word typed too: the same words, and a last word that starts with its own. Then its phrases are the only ones up to where it walked. */
+  const seedOf = (words: ReadonlyArray<string>, typing: boolean): Walk | undefined => {
+    const last = lastWalk;
+    if (last === undefined || !typing || !last.typing || last.words.length !== words.length)
+      return undefined;
+    const end = words.length - 1;
+    const narrows = words.every((word, at) =>
+      at === end ? word.startsWith(last.words[at] ?? '') : word === last.words[at],
+    );
+    return narrows ? last : undefined;
   };
 
   /** A hit for `verse`: its reference, and its text cut around the first match. */
@@ -612,8 +629,12 @@ export const findWith = (index: FindIndex) => {
     const terms = words.map((word, at) => termOf(word, typing && at === words.length - 1));
     const found = terms.some((term) => term.kind === 'none') ? [] : allWordsOf(terms);
     const read = new Set<number>();
-    const phrases =
-      terms.length === 1 ? new Set(found.slice(0, limit)) : phrasesOf(terms, found, limit, read);
+    let phrases: ReadonlySet<number> = new Set(found.slice(0, limit));
+    if (terms.length > 1) {
+      const walk = phrasesOf(terms, found, limit, read, seedOf(words, typing));
+      lastWalk = { ...walk, words, typing };
+      phrases = walk.phrases;
+    }
     const chosen = [...phrases].slice(0, limit);
     for (const verse of found) {
       if (chosen.length >= limit) break;

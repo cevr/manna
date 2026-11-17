@@ -6,7 +6,8 @@
  * then again, and of the model. The answer must be the model's verses in
  * the model's order with the model's count, each hit holding the query's
  * words and cut from its own verse, within the work bound, and a second
- * ask decodes nothing and answers the same. The `find-*.test.ts` parts
+ * ask decodes nothing and answers the same, as does a keystroke typed
+ * after the ones before it into one find, which narrows their walk. The `find-*.test.ts` parts
  * each check one run of the queries, so each part stays under a second.
  */
 
@@ -74,9 +75,14 @@ const holdsAll = (verse: ModelVerse, query: string) => {
   );
 };
 
+/** Whether `find` answers `query` as `shown`. */
+const answersAlike = (find: ReturnType<typeof findWith>, query: string, shown: FindShown) =>
+  JSON.stringify(withDataHost(() => find(query, LIMIT))) === JSON.stringify(shown);
+
 /** What is wrong with find's answers to `queries`; empty when nothing is. */
 export const findFailures = (queries: ReadonlyArray<Drawn>): Array<string> => {
   const failures: Array<string> = [];
+  const typing = findWith(findIndexOf(pack));
   for (const { kind, query } of queries) {
     const index = findIndexOf(pack);
     const find = findWith(index);
@@ -98,13 +104,19 @@ export const findFailures = (queries: ReadonlyArray<Drawn>): Array<string> => {
       failures.push(`${said}: asked again, decoded ${index.counts.entries - cold.entries}`);
     if (JSON.stringify(again) !== JSON.stringify(shown))
       failures.push(`${said}: asked again, answers otherwise`);
-    for (const hit of shown.hits) {
-      const verse = verses[verseOf(hit)];
-      if (verse === undefined || !holdsAll(verse, query))
-        failures.push(`${said}: a hit lacks a word`);
-      else if (hit.match === '' || !verse.text.includes(hit.before + hit.match + hit.after))
-        failures.push(`${said}: a hit is no cut of its verse`);
-    }
+    if (kind === 'typed' && !answersAlike(typing, query, shown))
+      failures.push(`${said}: typed after the keystrokes before it, answers otherwise`);
+    failures.push(...hitFailures(said, query, shown));
   }
   return failures;
 };
+
+/** What is wrong with the hits `shown` answers `query`: a hit that lacks a word, or is no cut of its verse. */
+const hitFailures = (said: string, query: string, shown: FindShown): Array<string> =>
+  shown.hits.flatMap((hit) => {
+    const verse = verses[verseOf(hit)];
+    if (verse === undefined || !holdsAll(verse, query)) return [`${said}: a hit lacks a word`];
+    if (hit.match === '' || !verse.text.includes(hit.before + hit.match + hit.after))
+      return [`${said}: a hit is no cut of its verse`];
+    return [];
+  });
