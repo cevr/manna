@@ -188,7 +188,9 @@ component FindBar
 // `findDrumsKey`, so each closes through the step and the `if` drops a
 // dialog still open, which fades as the `#` closes it. The browser's own
 // light dismiss would close the dialog first, so its exit would play unseen.
-// Under Reduce Motion they leave at once.
+// Under Reduce Motion they leave at once. The panel draws the edge and the
+// lift a dialog draws on the web (a hairline in `line`, a long soft shadow
+// of `shadow` at 24 %), since the dialog itself is a clear window.
 component FindDrums
   inject
     findShown: FindView
@@ -211,7 +213,8 @@ component FindDrumsPanel
     findPress: action
   view
     column max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box"
-      background-color="-exact-secondary-background" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
+      background-color="-exact-secondary-background" border="1px solid line" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
+      box-shadow="0 16px 48px color-mix(in srgb, shadow 24%, transparent)"
       column gap=12 width="17.5rem" max-width="100%"
         row gap=12 align-items="center"
           text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
