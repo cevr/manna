@@ -4,12 +4,13 @@ import { aboutSources } from './src/about/sources';
 import { addSources } from './src/add/sources';
 import { chooserSources } from './src/chooser/sources';
 import { COMMENTARY, commentarySources } from './src/commentary/sources';
-import { findSources, packAt } from './src/find/sources';
+import { findSources } from './src/find/sources';
 import { gardenSources } from './src/garden/sources';
 import { homeSources } from './src/home/sources';
 import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
+import { findPackFrom, STUDY_PACKS, studySources } from './src/study/sources';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
@@ -27,7 +28,7 @@ import { typeSources } from './src/type/choices';
  * `go(nav, "/add")` then no longer finds in the stack.
  */
 export const grants =
-  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\nfs.read app:/data/commentary.json\nfs.write app:/data/commentary.json\nnet.fetch https://egw.cvr.im\ndevelopment net.fetch http:';
+  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\nfs.read app:/data/commentary.json\nfs.write app:/data/commentary.json\nfs.read app:/data/xrefs.json\nfs.write app:/data/xrefs.json\nfs.read app:/data/tags.json\nfs.write app:/data/tags.json\nfs.read app:/data/lexicon.json\nfs.write app:/data/lexicon.json\nfs.read app:/data/words.json\nfs.write app:/data/words.json\nnet.fetch https://egw.cvr.im\ndevelopment net.fetch http:';
 
 /** A driver's launch (`tools/drive-garden.ts`) sets this, and Your verses shows its test controls; a plain launch has none. */
 const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
@@ -39,7 +40,7 @@ const FIND_PACK = import.meta.env.HEARTSEED_FIND_PACK ?? '';
 const PACKS_BASE = import.meta.env.HEARTSEED_PACKS_BASE ?? '';
 
 const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
-const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY] });
+const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY, ...STUDY_PACKS] });
 
 const sources: Sources = {
   ...settingsSources,
@@ -55,7 +56,8 @@ const sources: Sources = {
   ...typeSources,
   ...packs.sources,
   ...commentarySources(packs),
-  ...findSources(packAt(FIND_PACK)),
+  ...studySources(packs),
+  ...findSources(findPackFrom(packs, FIND_PACK)),
 };
 
 export const answer: Answer = (source, args, store, storage, native) =>

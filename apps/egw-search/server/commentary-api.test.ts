@@ -12,6 +12,7 @@ import { CommentaryMemoryLive, namesVersion } from './commentary-api.js';
 import { countedCorpus, madeUpCorpus, madeUpPack } from './commentary-fixture.js';
 import { notesSum } from './commentary.js';
 import { SearchGroupLive } from './search-api.js';
+import { studyGroupOver } from './study-api.js';
 import { VectorIndexLoad } from './vector-index.js';
 
 const decodePack = S.decodeUnknownSync(S.fromJsonString(CommentaryPackSchema));
@@ -144,6 +145,7 @@ describe('the Bun server', () => {
               Layer.mergeAll(
                 SearchGroupLive.pipe(Layer.provide(search)),
                 CommentaryMemoryLive.pipe(Layer.provide(corpus.layer)),
+                studyGroupOver(),
               ),
             ),
             Layer.provide([Etag.layer, HttpPlatform.layer]),

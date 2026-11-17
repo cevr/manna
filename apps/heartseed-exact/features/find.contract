@@ -38,7 +38,7 @@ members HeartseedExact
   state findTypedAt = 0
   state findTimes: number[] = []
   state findTimedQueries: string[] = []
-  resource findShown = findRead(findQuery, 50) when findQuery != "" as shape FindShown else empty()
+  resource findShown = findRead(findQuery, 50, studyWordsShown.version) when findQuery != "" as shape FindShown else empty()
   action findType(text: string)
     findQuery = text
     if gardenDriven.on

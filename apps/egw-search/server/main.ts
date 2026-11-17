@@ -52,6 +52,7 @@ import { layerBunEmbedder } from '@manna/core/search/bun';
 
 import { SearchApi } from './api.js';
 import { CommentaryMemoryLive } from './commentary-api.js';
+import { StudyGroupLive, StudyPacks } from './study-api.js';
 import { SearchGroupLive } from './search-api.js';
 import { teardown } from './teardown.js';
 import { lateVectorIndex } from './vector-index.js';
@@ -317,6 +318,10 @@ const searchLayer = Layer.mergeAll(
 const GroupLive = Layer.mergeAll(
   SearchGroupLive.pipe(Layer.provide(searchLayer), Layer.provide(TunedSqlLive)),
   CommentaryMemoryLive.pipe(Layer.provide(ParagraphsLive)),
+  StudyGroupLive.pipe(
+    Layer.provide(StudyPacks.layerDirectory(process.env['EGW_STUDY_DIR'] ?? at('study'))),
+    Layer.provide(BunServices.layer),
+  ),
 );
 
 const ApiLive = HttpApiBuilder.layer(SearchApi).pipe(Layer.provide(GroupLive));

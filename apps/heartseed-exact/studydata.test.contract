@@ -1,0 +1,24 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+// A plain launch: no study pack is on the phone until the downloader
+// fetches it from egw.cvr.im, so each says it is on its way, and no probe
+// reads. The fetch and the reads run against the fixture in
+// tools/drive-studydata.ts, which a test cannot start or name (README,
+// "Study data").
+
+test "Before any fetch every study pack is on its way, with no Try again"
+  at "/verses"
+  clock data
+  expect state studyXrefsShown.phase == "none"
+  expect state studyXrefsShown.version == ""
+  expect state studyXrefsShown.line == "The cross-references are still on their way. They need a connection once, then they work offline."
+  expect state studyXrefsShown.retry == false
+  expect state studyTagsShown.phase == "none"
+  expect state studyTagsShown.line == "The Hebrew and Greek words are still on their way. They need a connection once, then they work offline."
+  expect state studyLexiconShown.phase == "none"
+  expect state studyLexiconShown.line == "Strong's dictionary is still on its way. It needs a connection once, then it works offline."
+  expect state studyWordsShown.phase == "none"
+  expect state studyWordsShown.line == "Word search is still on its way. It needs a connection once, then it works offline."
+  expect no failures

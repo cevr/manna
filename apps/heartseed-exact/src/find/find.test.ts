@@ -21,6 +21,18 @@ const LIMIT = 50;
 const find = findWith(findIndexOf(findPack()));
 const ask = (query: string) => withDataHost(() => find(query, LIMIT));
 
+/** A storage no test source reads: each pack here is handed in. */
+const STORAGE = {
+  fs: {
+    readFile: async () => new ArrayBuffer(0),
+    atomicWriteFile: async () => undefined,
+  },
+};
+
+/** `query` asked of `sources` as Contract asks it, under the kept index's `mark`. */
+const asked = (sources: ReturnType<typeof findSources>, query: string, mark = '') =>
+  sources.findRead([query, LIMIT, mark], { forget: () => {} }, STORAGE);
+
 it('answers nothing to an empty query or one of marks and numbers alone', () => {
   for (const query of ['', ' ', '...', ', ; !', '316', '12:4'])
     expect(ask(query)).toEqual({ query, places: [], hits: [], more: 0, line: '' });
@@ -60,25 +72,43 @@ it('says the line when no verse and no place answers', () => {
 
 it('with no word index, answers a reference, says words are downloading, and answers an empty query nothing', async () => {
   for (const sources of [findSources(packAt('')), findSources(() => Promise.resolve(undefined))]) {
-    const john = await sources.findRead(['john 3:16', LIMIT]);
+    const john = await asked(sources, 'john 3:16');
     expect(john.places.map((place) => place.label)).toEqual(['John 3:16']);
     expect(john.line).toBe(DOWNLOADING_LINE);
-    expect(await sources.findRead(['fear not', LIMIT])).toEqual({
+    expect(await asked(sources, 'fear not')).toEqual({
       query: 'fear not',
       places: [],
       hits: [],
       more: 0,
       line: DOWNLOADING_LINE,
     });
-    expect((await sources.findRead(['', LIMIT])).line).toBe('');
+    expect((await asked(sources, '')).line).toBe('');
   }
   const pack = findPack();
   const served = findSources(() => Promise.resolve(pack));
-  expect(await served.findRead(['fear not', LIMIT])).toEqual(find('fear not', LIMIT));
+  expect(await asked(served, 'fear not')).toEqual(find('fear not', LIMIT));
   expect(
-    (await findSources(() => Promise.resolve({ ...pack, format: 0 })).findRead(['fear not', LIMIT]))
-      .line,
+    (
+      await asked(
+        findSources(() => Promise.resolve({ ...pack, format: 0 })),
+        'fear not',
+      )
+    ).line,
   ).toBe(DOWNLOADING_LINE);
+});
+
+it('asks for the pack again under a new mark: an index downloaded after the first query is read', async () => {
+  const pack = findPack();
+  const marks: Array<string> = [];
+  const sources = findSources((mark) => {
+    marks.push(mark);
+    if (mark === '') return Promise.resolve(undefined);
+    return Promise.resolve(pack);
+  });
+  expect((await asked(sources, 'fear not')).line).toBe(DOWNLOADING_LINE);
+  expect((await asked(sources, 'fear not')).line).toBe(DOWNLOADING_LINE);
+  expect(await asked(sources, 'fear not', '31102-0000000a')).toEqual(find('fear not', LIMIT));
+  expect(marks).toEqual(['', '31102-0000000a']);
 });
 
 it('answers a keystroke that takes back or changes a letter as a fresh find does', () => {

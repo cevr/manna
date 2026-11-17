@@ -23,6 +23,7 @@ import { EGWParagraphDatabase } from '@manna/core/egw-db';
 
 import { SearchApi } from './api.js';
 import { CommentaryMemoryLive } from './commentary-api.js';
+import { studyGroupOver } from './study-api.js';
 import { SearchGroupLive } from './search-api.js';
 import { lateVectorIndex } from './vector-index.js';
 
@@ -65,6 +66,7 @@ const serve = (gate: Latch.Latch, bytes: ArrayBuffer) =>
       HttpApiBuilder.layer(SearchApi).pipe(
         Layer.provide(SearchGroupLive),
         Layer.provide(CommentaryMemoryLive.pipe(Layer.provide(EGWParagraphDatabase.Test()))),
+        Layer.provide(studyGroupOver()),
         Layer.provide(search),
         Layer.provide(SqliteClient.layer({ filename: ':memory:' })),
         Layer.provide([Etag.layer, HttpPlatform.layer]),

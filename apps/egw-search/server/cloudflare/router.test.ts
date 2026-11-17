@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { BunServices } from '@effect/platform-bun';
 import { SqliteClient } from '@effect/sql-sqlite-bun';
-import { Effect, Layer, Logger, Schema as S, Scope } from 'effect';
+import { Effect, Layer, Logger, Option, Schema as S, Scope } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 
 import { GOLDEN_TOPIC_QUERY, goldenSearchLayer } from '@manna/core/search/testing';
@@ -10,6 +10,7 @@ import { NO_SELECTION } from '@manna/core/writings';
 import { CommentaryPackSchema, SearchRequest, type SearchSlot } from '../api.js';
 import { CommentaryPacks, edgeStore } from '../commentary-api.js';
 import { countedCorpus, madeUpCorpus, madeUpPack } from '../commentary-fixture.js';
+import { StudyPacks } from '../study-api.js';
 import { VectorIndexLoad } from '../vector-index.js';
 import { searchRouter } from './router.ts';
 
@@ -27,6 +28,10 @@ const memoryCache = () => {
   return { kept, open: () => settled(cache) };
 };
 
+/** The study packs' bucket, as `bun run study:publish` leaves it: the tags alone published. */
+const STUDY_TAGS = '{"format":1,"version":"1-00c0ffee","count":1,"sum":12648430,"parts":["-"]}';
+const STUDY_BUCKET = new Map([['tags.json', STUDY_TAGS]]);
+
 /** The Worker's services over a counted made-up corpus and an edge cache. */
 const servicesOver = (
   corpus: ReturnType<typeof countedCorpus>,
@@ -37,6 +42,7 @@ const servicesOver = (
     Layer.succeed(VectorIndexLoad, VectorIndexLoad.of({ readiness: Effect.succeed('ready') })),
     SqliteClient.layer({ filename: ':memory:' }),
     CommentaryPacks.layerStore(edgeStore(cache.open)).pipe(Layer.provide(corpus.layer)),
+    StudyPacks.layerRead((key) => Effect.succeed(Option.fromUndefinedOr(STUDY_BUCKET.get(key)))),
   ).pipe(Layer.orDie);
 
 /**
@@ -189,6 +195,22 @@ describe('the commentary pack through the Worker router', () => {
         const ask = yield* packRouter(countedCorpus(madeUpCorpus, { failing: true }), cache);
         expect((yield* ask('https://egw.example/api/commentary/pack')).status).toBe(500);
         expect(cache.kept.size).toBe(0);
+      }),
+    ));
+});
+
+describe('the study packs through the Worker router', () => {
+  test('a published pack is answered from its bucket, 304 for its version, and one not published is 404', () =>
+    run(
+      Effect.gen(function* () {
+        const ask = yield* packRouter(countedCorpus(madeUpCorpus), memoryCache());
+        const tags = yield* ask('https://egw.example/api/study/tags');
+        expect([tags.status, tags.body, tags.etag]).toEqual([200, STUDY_TAGS, '"1-00c0ffee"']);
+        const same = yield* ask('https://egw.example/api/study/tags', {
+          'if-none-match': tags.etag,
+        });
+        expect([same.status, same.body]).toEqual([304, '']);
+        expect((yield* ask('https://egw.example/api/study/xrefs')).status).toBe(404);
       }),
     ));
 });

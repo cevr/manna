@@ -36,6 +36,7 @@ test "Read's first showing asks for the packs, and Garden asks for none"
   clock settle
   expect state readAskedPacks == false
   expect state packsShown.phase == "none"
+  expect state packsShown.missing == 5
   tap "tab-read"
   clock data
   clock settle

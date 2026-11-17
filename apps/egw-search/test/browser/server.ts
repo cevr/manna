@@ -34,6 +34,7 @@ import {
   type SearchSlot,
 } from '../../server/api.js';
 import { CommentaryMemoryLive } from '../../server/commentary-api.js';
+import { studyGroupOver } from '../../server/study-api.js';
 import { EGWParagraphDatabase } from '@manna/core/egw-db';
 
 /** The Playwright config passes its port as `PORT`. */
@@ -167,6 +168,7 @@ const SearchFixtureLive = HttpApiBuilder.group(SearchApi, 'search', (handlers) =
 const ApiLive = HttpApiBuilder.layer(SearchApi).pipe(
   Layer.provide(SearchFixtureLive),
   Layer.provide(CommentaryMemoryLive.pipe(Layer.provide(EGWParagraphDatabase.Test()))),
+  Layer.provide(studyGroupOver()),
 );
 
 const FixtureRoutes = HttpRouter.use((router) =>

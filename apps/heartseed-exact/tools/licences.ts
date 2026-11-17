@@ -27,12 +27,29 @@ export const LICENCES_FILE = join(import.meta.dir, '..', 'src', 'about', 'licenc
 export const fontLicence = (family: string, ofl: string): string =>
   `${family}\nSIL Open Font License, Version 1.1\n\n${ofl}`;
 
-/** The licences' texts in the order About lists them: the current app's own, then each bundled reading font's (`assets/fonts/<key>/OFL.txt`) in the sheet's order. */
+/** The credits of the study packs' sources (`src/study/`), which the phone downloads: their names over how each is licensed. */
+export const STUDY_CREDITS: ReadonlyArray<string> = [
+  [
+    'Cross-references',
+    'from OpenBible.info, Creative Commons Attribution License',
+    '',
+    "The reader's cross-references are OpenBible.info's (https://www.openbible.info/labs/cross-references/), each verse's first six, used under the Creative Commons Attribution License.",
+  ].join('\n'),
+  [
+    "Hebrew and Greek words and Strong's dictionary",
+    'from Open Scriptures, Creative Commons Attribution-ShareAlike',
+    '',
+    "The Strong's numbers behind the KJV's words and the Hebrew and Greek dictionaries are Open Scriptures' (https://github.com/openscriptures), used under the Creative Commons Attribution-ShareAlike license; the renderings each entry lists are counted from them.",
+  ].join('\n'),
+];
+
+/** The licences' texts in the order About lists them: the current app's own, then each bundled reading font's (`assets/fonts/<key>/OFL.txt`) in the sheet's order, then the study packs' credits. */
 export const licenceTexts = (): string[] => [
   readLicence(),
   ...TYPE_FONTS.filter((font) => font.bundled !== '').map((font) =>
     fontLicence(font.bundled, readFileSync(join(FONTS_DIR, font.key, 'OFL.txt'), 'utf8')),
   ),
+  ...STUDY_CREDITS,
 ];
 
 /** Writes the shipped licences module, when its text changed, and answers the texts. */
