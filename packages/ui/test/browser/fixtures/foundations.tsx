@@ -196,7 +196,7 @@ function Transition() {
   return (
     <>
       <style>{`
-        #box { transition: opacity 200ms; }
+        #box { transition: opacity 1s; }
         #box[data-starting-style], #box[data-ending-style] { opacity: 0; }
       `}</style>
       <button type="button" id="toggle" onClick={() => setOpen((value) => !value)}>
