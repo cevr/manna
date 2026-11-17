@@ -14,7 +14,9 @@
 import { BIBLE_BOOKS } from '@manna/core/bible';
 
 import {
+  ENDS,
   FIND_FORMAT,
+  GOES_ON,
   frontDecoded,
   hasBit,
   readVarint,
@@ -167,12 +169,23 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
     const kept = letter.decoded.get(at);
     if (kept !== undefined) return kept;
     const end = letter.starts[at + 1] ?? 0;
-    const cursor = { at: letter.starts[at] ?? 0 };
+    const text = letter.lists;
+    let cursor = letter.starts[at] ?? 0;
     const values: Array<number> = [];
     let last = -1;
     const upTo = (limit: number) => {
-      while (cursor.at < end && (last < 0 || last < limit)) {
-        last += readVarint(letter.lists, cursor) + 1;
+      while (cursor < end && (last < 0 || last < limit)) {
+        let value = 0;
+        let code = text.charCodeAt(cursor);
+        let digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+        cursor += 1;
+        while (digit >= ENDS) {
+          value = value * GOES_ON + (digit - ENDS);
+          code = text.charCodeAt(cursor);
+          digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+          cursor += 1;
+        }
+        last += value * ENDS + digit + 1;
         values.push(last);
         counts.entries += 1;
       }
@@ -253,16 +266,28 @@ export const findIndexOf = (pack: FindPack): FindIndex => {
     tabledInto: (verse, places, ids) => {
       const { tabledAt } = tableOf();
       const tabled = pack.tabled.length;
-      const cursor = { at: tabledAt[verse] ?? 0 };
+      const text = pack.table;
       const end = tabledAt[verse + 1] ?? 0;
       const room = Math.min(places.length, ids.length);
+      let at = tabledAt[verse] ?? 0;
       let count = 0;
       let before = -1;
-      while (cursor.at < end && count < room) {
-        const value = readVarint(pack.table, cursor);
-        before += Math.floor(value / tabled) + 1;
+      while (at < end && count < room) {
+        let value = 0;
+        let code = text.charCodeAt(at);
+        let digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+        at += 1;
+        while (digit >= ENDS) {
+          value = value * GOES_ON + (digit - ENDS);
+          code = text.charCodeAt(at);
+          digit = code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+          at += 1;
+        }
+        value = value * ENDS + digit;
+        const gap = Math.floor(value / tabled);
+        before += gap + 1;
         places[count] = before;
-        ids[count] = value % tabled;
+        ids[count] = value - gap * tabled;
         count += 1;
       }
       return count;

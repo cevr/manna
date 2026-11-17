@@ -36,7 +36,7 @@ import { versesOf } from '@manna/heartseed/kjv';
 import { passageReference, verseReference } from '@manna/heartseed/passages';
 
 import type { FindIndex, WordList } from './index';
-import { bitsOf } from './pack';
+import { bitsOf, versesInAll } from './pack';
 import { boundsInto, queryOf, tokensOf, wordIs } from './words';
 
 /** A place the query names: Go to opens it at `verse` (0 for the chapter's top). */
@@ -102,7 +102,7 @@ type Term =
       readonly word: string;
       readonly prefix: boolean;
       readonly id: number;
-      readonly verses: ArrayLike<number>;
+      readonly bitmap: string;
     }
   | {
       readonly kind: 'prefix';
@@ -117,7 +117,6 @@ type Term =
       readonly word: string;
       readonly prefix: boolean;
       readonly bitmap: string;
-      readonly verses: ArrayLike<number>;
       readonly members: ReadonlyArray<WordList>;
       readonly tabledIds: ReadonlyArray<number>;
     };
@@ -215,33 +214,6 @@ const placesOf = (query: string): Array<FindPlace> => {
   }
 };
 
-/** A class's list at its next token: the `at`th of its values. */
-interface Head {
-  token: number;
-  at: number;
-  readonly list: WordList;
-}
-
-/** Restores the min-heap of `heads` by token from `parent` down, after its head moved on. */
-const siftDown = (heads: Array<Head>, parent: number) => {
-  const size = heads.length;
-  let at = parent;
-  for (;;) {
-    const left = at * 2 + 1;
-    const right = left + 1;
-    let least = at;
-    if (left < size && (heads[left]?.token ?? 0) < (heads[least]?.token ?? 0)) least = left;
-    if (right < size && (heads[right]?.token ?? 0) < (heads[least]?.token ?? 0)) least = right;
-    if (least === at) return;
-    const kept = heads[at];
-    const moved = heads[least];
-    if (kept === undefined || moved === undefined) return;
-    heads[at] = moved;
-    heads[least] = kept;
-    at = least;
-  }
-};
-
 /** What find shows with no word index (none downloaded yet, or one of another format): the place a query names, and for a query with words, that word search is downloading. */
 export const placesOnly = (query: string): FindShown => {
   const { words } = queryOf(query);
@@ -249,41 +221,16 @@ export const placesOnly = (query: string): FindShown => {
   return { query, places: placesOf(query), hits: [], more: 0, line: DOWNLOADING_LINE };
 };
 
-/** A min-heap of a class's lists by their first token from `from`, decoding each list only that far. */
-const headsFrom = (members: ReadonlyArray<WordList>, from: number) => {
-  const heads: Array<Head> = [];
-  for (const list of members) {
-    const at = firstFrom(list.upTo(from), from);
-    const token = nextOf(list, at);
-    if (token >= 0) heads.push({ token, at, list });
+/** Every token of `lists`, each decoded whole, sorted. */
+const mergedOf = (lists: ReadonlyArray<WordList>): Int32Array => {
+  const all = lists.map((list) => list.all());
+  const tokens = new Int32Array(all.reduce((sum, list) => sum + list.length, 0));
+  let filled = 0;
+  for (const list of all) {
+    tokens.set(list, filled);
+    filled += list.length;
   }
-  for (let at = (heads.length >>> 1) - 1; at >= 0; at -= 1) siftDown(heads, at);
-  return heads;
-};
-
-/** Marks in `marked` each place of the class's tokens before `end` (from `start`), moving its heads past them. */
-const markHeads = (heads: Array<Head>, start: number, end: number, marked: Uint8Array) => {
-  for (;;) {
-    const head = heads[0];
-    if (head === undefined || head.token >= end) return;
-    if (head.token >= start) marked[head.token - start] = 1;
-    head.at += 1;
-    head.token = nextOf(head.list, head.at);
-    if (head.token < 0) {
-      const last = heads.pop();
-      if (last !== undefined && heads.length > 0) heads[0] = last;
-    }
-    siftDown(heads, 0);
-  }
-};
-
-/** The next token of `list` after its `at`th, decoding one more entry when needed; -1 at its end. */
-const nextOf = (list: WordList, at: number) => {
-  if (at < list.values.length) return list.values[at] ?? -1;
-  const last = list.values.at(-1);
-  if (last === undefined) return -1;
-  list.upTo(last + 1);
-  return at < list.values.length ? (list.values[at] ?? -1) : -1;
+  return tokens.sort();
 };
 
 /** The verses in `one` or `other` (each sorted, each verse once), sorted, each once. */
@@ -339,13 +286,50 @@ const markTerm = (scratch: Scratch, verse: VerseAt, term: Term, tabledBy?: Uint8
   if (tabledBy !== undefined)
     for (let each = 0; each < verse.tabled; each += 1)
       if (tabledBy[ids[each] ?? 0] === 1) marked[places[each] ?? 0] = 1;
-  if (term.kind !== 'list' && term.kind !== 'prefix') return;
+  if (term.kind === 'list' || term.kind === 'prefix') markTokens(scratch, verse, term.tokens);
+};
+
+/** Marks in `scratch.marked` the verse's tokens among `tokens` (sorted). */
+const markTokens = (scratch: Scratch, verse: VerseAt, tokens: ArrayLike<number>) => {
   const end = verse.start + verse.length;
-  for (let each = firstFrom(term.tokens, verse.start); each < term.tokens.length; each += 1) {
-    const token = term.tokens[each] ?? end;
+  for (let each = firstFrom(tokens, verse.start); each < tokens.length; each += 1) {
+    const token = tokens[each] ?? end;
     if (token >= end) return;
-    marked[token - verse.start] = 1;
+    scratch.marked[token - verse.start] = 1;
   }
+};
+
+/**
+ * The firsts below `count` where every fixed term (`fixed`, the terms' places, each a tabled word) stands, read
+ * from the verse's tabled words alone, sorted by place: the first fixed term's entries anchor them, and each other
+ * fixed term is the entry at its place after it. Written into `scratch.firsts`; how many.
+ */
+const firstsByTable = (
+  scratch: Scratch,
+  verse: VerseAt,
+  count: number,
+  fixed: ReadonlyArray<number>,
+  tabledBy: ReadonlyArray<Uint8Array>,
+) => {
+  const { places, ids, firsts } = scratch;
+  const [anchor = 0] = fixed;
+  const anchored = tabledBy[anchor];
+  let found = 0;
+  if (anchored === undefined) return found;
+  for (let each = 0; each < verse.tabled; each += 1) {
+    const first = (places[each] ?? 0) - anchor;
+    if (first < 0 || first >= count || anchored[ids[each] ?? 0] !== 1) continue;
+    let next = each;
+    const stands = fixed.every((at) => {
+      const place = first + at;
+      while (next < verse.tabled && (places[next] ?? 0) < place) next += 1;
+      return next < verse.tabled && places[next] === place && tabledBy[at]?.[ids[next] ?? 0] === 1;
+    });
+    if (!stands) continue;
+    firsts[found] = first;
+    found += 1;
+  }
+  return found;
 };
 
 /** Keeps the first `count` firsts whose word `at` places on is marked; how many are kept. */
@@ -431,21 +415,21 @@ export const findWith = (index: FindIndex) => {
     return made;
   };
 
-  const classVerses = new Map<string, Int32Array>();
+  const classTokens = new Map<string, Int32Array>();
 
-  /** The verses of a class, from its bitmap; kept for the launch. */
-  const versesOfClass = (prefix: string, bitmap: string) => {
-    const kept = classVerses.get(prefix);
+  /** A class's untabled words' tokens, merged once its phrase check has read `SPARSE` texts; kept for the launch. */
+  const tokensOfClass = (term: Extract<Term, { kind: 'class' }>) => {
+    const kept = classTokens.get(term.word);
     if (kept !== undefined) return kept;
-    const made = bitsOf(bitmap, index.size);
-    classVerses.set(prefix, made);
+    const made = mergedOf(term.members);
+    classTokens.set(term.word, made);
     return made;
   };
 
   const termMade = (word: string, prefix: boolean): Term => {
     if (!prefix) {
       const id = index.tabled.indexOf(word);
-      if (id >= 0) return { kind: 'tabled', word, prefix, id, verses: versesOfTabled(id) };
+      if (id >= 0) return { kind: 'tabled', word, prefix, id, bitmap: index.marksOf(id) };
       if (!index.holds(word)) return { kind: 'none', word, prefix };
       return {
         kind: 'list',
@@ -470,7 +454,6 @@ export const findWith = (index: FindIndex) => {
         word,
         prefix,
         bitmap,
-        verses: versesOfClass(word, bitmap),
         members: words.map(index.listOf),
         tabledIds,
       };
@@ -484,48 +467,40 @@ export const findWith = (index: FindIndex) => {
         verses: versesOfWord(only),
         tabledIds,
       };
-    const lists = words.map((member) => index.listOf(member).all());
-    const tokens = new Int32Array(lists.reduce((sum, list) => sum + list.length, 0));
-    let filled = 0;
-    for (const list of lists) {
-      tokens.set(list, filled);
-      filled += list.length;
-    }
-    tokens.sort();
+    const tokens = mergedOf(words.map(index.listOf));
     const verses = [versesOfTokens(tokens), ...tabledIds.map(versesOfTabled)].reduce(unionOf);
     return { kind: 'prefix', word, prefix, tokens, verses, tabledIds };
   };
 
-  /** The verses that hold every term, in canon order. */
-  const allWordsOf = (terms: ReadonlyArray<Term>) => {
+  /** The verses that hold every term, in canon order: walked from the smallest listed term's verses, or, with none, the terms' bitmaps read together. */
+  const allWordsOf = (terms: ReadonlyArray<Term>): Array<number> => {
+    if (terms.some((term) => term.kind === 'none')) return [];
     const listed = terms.filter(
-      (term): term is Exclude<Term, { kind: 'none' }> => term.kind !== 'none',
+      (term): term is Extract<Term, { kind: 'list' | 'prefix' }> =>
+        term.kind === 'list' || term.kind === 'prefix',
+    );
+    const bitmaps = terms.flatMap((term) =>
+      term.kind === 'tabled' || term.kind === 'class' ? [term.bitmap] : [],
     );
     const driver = listed.reduce<(typeof listed)[number] | undefined>(
       (least, term) =>
         least === undefined || term.verses.length < least.verses.length ? term : least,
       undefined,
     );
-    const others = terms.filter((term) => term !== driver);
+    if (driver === undefined) return versesInAll(bitmaps, index.size);
+    const others = listed.filter((term) => term !== driver);
     const pointers = others.map(() => 0);
-    const holds = (verse: number) =>
-      others.every((term, at) => {
-        if (term.kind === 'none') return false;
-        if (term.kind === 'tabled') return index.tabledIn(term.id, verse);
-        if (term.kind === 'class') return index.inClass(term.bitmap, verse);
-        let pointer = pointers[at] ?? 0;
+    const found: Array<number> = [];
+    for (let at = 0; at < driver.verses.length; at += 1) {
+      const verse = driver.verses[at] ?? 0;
+      const held = others.every((term, each) => {
+        let pointer = pointers[each] ?? 0;
         while (pointer < term.verses.length && (term.verses[pointer] ?? 0) < verse) pointer += 1;
-        pointers[at] = pointer;
+        pointers[each] = pointer;
         return term.verses[pointer] === verse;
       });
-    const found: Array<number> = [];
-    if (driver === undefined) {
-      for (let verse = 0; verse < index.size; verse += 1) if (holds(verse)) found.push(verse);
-    } else
-      for (let at = 0; at < driver.verses.length; at += 1) {
-        const verse = driver.verses[at] ?? 0;
-        if (holds(verse)) found.push(verse);
-      }
+      if (held && bitmaps.every((bitmap) => index.inClass(bitmap, verse))) found.push(verse);
+    }
     return found;
   };
 
@@ -546,7 +521,6 @@ export const findWith = (index: FindIndex) => {
     limit: number,
     read: Set<number>,
   ) => {
-    const heads = terms.map((): Array<Head> | undefined => undefined);
     const classed = terms.some(spread);
     const tabledUsed = terms.some((term) => tabledIdsOf(term).length > 0);
     const tabledBy = terms.map((term) => {
@@ -554,6 +528,8 @@ export const findWith = (index: FindIndex) => {
       for (const id of tabledIdsOf(term)) of[id] = 1;
       return of;
     });
+    const fixed = terms.flatMap((term, at) => (spread(term) ? [] : [at]));
+    const tabledOnly = fixed.length > 0 && fixed.every((at) => terms[at]?.kind === 'tabled');
     let scratch = scratchOf(0);
     let texts = 0;
     /** Whether the terms stand together in `verse`: the listed and tabled terms placed first, then a class's word by the text or the class's lists. */
@@ -567,12 +543,15 @@ export const findWith = (index: FindIndex) => {
         tabled: tabledUsed ? index.tabledInto(verse, scratch.places, scratch.ids) : 0,
       };
       let count = Math.max(0, length - terms.length + 1);
-      for (let first = 0; first < count; first += 1) scratch.firsts[first] = first;
-      for (let place = 0; place < terms.length && count > 0; place += 1) {
-        const term = terms[place];
-        if (term === undefined || spread(term)) continue;
-        markTerm(scratch, at, term, tabledBy[place]);
-        count = keepMarked(scratch, count, place);
+      if (tabledOnly) count = firstsByTable(scratch, at, count, fixed, tabledBy);
+      else {
+        for (let first = 0; first < count; first += 1) scratch.firsts[first] = first;
+        for (let place = 0; place < terms.length && count > 0; place += 1) {
+          const term = terms[place];
+          if (term === undefined || spread(term)) continue;
+          markTerm(scratch, at, term, tabledBy[place]);
+          count = keepMarked(scratch, count, place);
+        }
       }
       if (count === 0 || !classed) return count > 0;
       if (texts < SPARSE) {
@@ -583,9 +562,7 @@ export const findWith = (index: FindIndex) => {
         const term = terms[place];
         if (term === undefined || term.kind !== 'class') continue;
         markTerm(scratch, at, term, tabledBy[place]);
-        const made = heads[place] ?? headsFrom(term.members, start);
-        heads[place] = made;
-        markHeads(made, start, start + length, scratch.marked);
+        markTokens(scratch, at, tokensOfClass(term));
         count = keepMarked(scratch, count, place);
       }
       return count > 0;

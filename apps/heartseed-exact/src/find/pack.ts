@@ -71,8 +71,8 @@ export interface FindPack {
 }
 
 /** The varint's ending digits; the digits before them have the alphabet's other 47 values. */
-const ENDS = 46;
-const GOES_ON = 47;
+export const ENDS = 46;
+export const GOES_ON = 47;
 
 /** The shared-length marks of a front-coded word, none a letter or an apostrophe. */
 export const SHARED = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -144,6 +144,22 @@ export const bitsOf = (bitmap: string, size: number): Int32Array => {
       if (((digit >> bit) & 1) === 1 && six * 6 + bit < size) verses.push(six * 6 + bit);
   }
   return Int32Array.from(verses);
+};
+
+/** The verses among `size` in every one of the bitmaps (all verses for none), in order. */
+export const versesInAll = (bitmaps: ReadonlyArray<string>, size: number): Array<number> => {
+  const verses: Array<number> = [];
+  for (let six = 0; six * 6 < size; six += 1) {
+    let digit = 63;
+    for (let each = 0; each < bitmaps.length && digit !== 0; each += 1) {
+      const code = (bitmaps[each] ?? '').charCodeAt(six);
+      digit &= code - 32 - (code > 34 ? 1 : 0) - (code > 92 ? 1 : 0);
+    }
+    if (digit === 0) continue;
+    for (let bit = 0; bit < 6; bit += 1)
+      if (((digit >> bit) & 1) === 1 && six * 6 + bit < size) verses.push(six * 6 + bit);
+  }
+  return verses;
 };
 
 /** The front-coded text of `words`, sorted. */

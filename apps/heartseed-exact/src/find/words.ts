@@ -33,10 +33,20 @@ export const boundsInto = (
   const size = text.length;
   let count = 0;
   let at = 0;
+  let code = text.charCodeAt(0);
   while (at < size && count < words) {
-    while (at < size && !inWord(text.charCodeAt(at))) at += 1;
+    while (
+      at < size &&
+      code !== APOSTROPHE &&
+      (code < 65 || code > 122 || (code > 90 && code < 97))
+    )
+      code = text.charCodeAt((at += 1));
     let start = at;
-    while (at < size && inWord(text.charCodeAt(at))) at += 1;
+    while (
+      at < size &&
+      (code === APOSTROPHE || (code >= 65 && code <= 122 && (code <= 90 || code >= 97)))
+    )
+      code = text.charCodeAt((at += 1));
     let end = at;
     while (start < end && text.charCodeAt(start) === APOSTROPHE) start += 1;
     while (end > start && text.charCodeAt(end - 1) === APOSTROPHE) end -= 1;
