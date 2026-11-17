@@ -17,11 +17,13 @@ const pathsOf = (inputs: ReadonlyArray<Input>) =>
     return [];
   });
 
-/** A stage kind's source files, as `stageSources` makes them its inputs. */
-const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
-  Effect.map(stageSources, (all) => pathsOf(all[kind]));
-
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
+
+// oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
+const SOURCES = await Effect.runPromise(stageSources.pipe(Effect.provide(local)));
+
+/** A stage kind's source files, as `stageSources` makes them its inputs. */
+const sourceFiles = (kind: keyof typeof SOURCES) => Effect.succeed(pathsOf(SOURCES[kind]));
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
 const UNMATTE = new URL('../../core/unmatte.ts', import.meta.url).pathname;
 /** A file of the render page's, by its path from the framework's `src`. */
@@ -70,7 +72,7 @@ describe('stage sources', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const cache = yield* fs.makeTempDirectoryScoped({ prefix: 'cast-sources-' });
-      const sources = yield* stageSources;
+      const sources = SOURCES;
       const stages: ReadonlyArray<Stage<never>> = [
         {
           id: 'renders:front@m',
@@ -128,7 +130,7 @@ describe('stage sources', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const cache = yield* fs.makeTempDirectoryScoped({ prefix: 'cast-sources-' });
-      const sources = yield* stageSources;
+      const sources = SOURCES;
       const film = new URL('../../../../../apps/animations/src/films/in-its-order', import.meta.url)
         .pathname;
       const stages: ReadonlyArray<Stage<never>> = [

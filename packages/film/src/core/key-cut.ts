@@ -11,10 +11,10 @@ export const INK_WIDTH = 7.75;
 /** How far past the house line a drawn outline may run and still be taken into it, px. */
 const OUTLINE_SLACK = 6;
 
-export type KeyPt = readonly [number, number];
+type KeyPt = readonly [number, number];
 
 /** Drawn px = s × view px + (dx, dy); `error` the mean channel difference over the still pixels; `ground` the drawing's paper. */
-export interface KeyFit {
+interface KeyFit {
   readonly s: number;
   readonly dx: number;
   readonly dy: number;
@@ -23,7 +23,7 @@ export interface KeyFit {
 }
 
 /** A limb's bones in the frame's px: root to elbow (radius `rUpper`), elbow to wrist (radius `rFore`). */
-export interface Limb {
+interface Limb {
   readonly root: KeyPt;
   readonly elbow: KeyPt;
   readonly wrist: KeyPt;
@@ -32,7 +32,7 @@ export interface Limb {
 }
 
 /** The cut limb's pixels (opaque inside, clear outside) and its box's top left in the frame. */
-export interface LimbCut {
+interface LimbCut {
   readonly raster: Raster;
   readonly at: KeyPt;
 }
@@ -57,7 +57,7 @@ const away = (c: Rgb, d: Rgb) =>
   Math.abs(c[0] - d[0]) + Math.abs(c[1] - d[1]) + Math.abs(c[2] - d[2]);
 
 /** The paper: the median of the border's pixels, channel by channel. */
-export const groundOfKey = (r: Raster): Rgb => {
+const groundOfKey = (r: Raster): Rgb => {
   const cs: Rgb[] = [];
   for (let x = 0; x < r.width; x += 2) cs.push(rgbAt(r, x), rgbAt(r, (r.height - 1) * r.width + x));
   for (let y = 0; y < r.height; y += 2)

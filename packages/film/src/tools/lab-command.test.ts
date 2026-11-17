@@ -14,6 +14,7 @@ import {
 import * as BunTerminal from '@effect/platform-bun/BunTerminal';
 import * as Tool from 'effect/ai/Tool';
 import * as Command from 'effect/cli/Command';
+import * as TerminalCapabilities from 'effect/cli/TerminalCapabilities';
 import { labSubcommands } from './events-cli.ts';
 import { fieldsOf } from './lab-fields.ts';
 import { labCommand } from './lab-command.ts';
@@ -166,11 +167,13 @@ const helpOf = (args: ReadonlyArray<string>) =>
         Effect.provideService(Console.Console, printingTo(lines)),
         // oxlint-disable-next-line effect/noInlineProvide -- each help run's terminal is this run's own, printing to its lines
         Effect.provide(
-          Layer.mergeAll(
-            Stdio.layerTest({}),
-            formatAsIs,
-            BunTerminal.layer,
-            ConfigProvider.layer(ConfigProvider.fromUnknown({})),
+          Layer.mergeAll(TerminalCapabilities.layer, formatAsIs, BunTerminal.layer).pipe(
+            Layer.provideMerge(
+              Layer.mergeAll(
+                Stdio.layerTest({}),
+                ConfigProvider.layer(ConfigProvider.fromUnknown({})),
+              ),
+            ),
           ),
         ),
       ),

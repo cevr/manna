@@ -5,7 +5,7 @@ import type { Raster } from './raster.ts';
 export const KEY_JOIN_INK = 96;
 
 /** Whether `rgb` (0-255) reads as the line's `ink`. */
-export const inkLike = (r: number, g: number, b: number, ink: Rgb) =>
+const inkLike = (r: number, g: number, b: number, ink: Rgb) =>
   Math.hypot(r - ink[0], g - ink[1], b - ink[2]) <= KEY_JOIN_INK;
 
 /**

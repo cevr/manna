@@ -28,7 +28,7 @@ export const pictureOn = (params: URLSearchParams): Picture =>
   });
 
 /** A Board render's catalogue variant when `--variant` names none: `board`, its review copy `board-review`. */
-export const boardVariant = (review: boolean): RenderVariantName =>
+const boardVariant = (review: boolean): RenderVariantName =>
   RenderVariantName.make(
     Bool.match(review, { onTrue: () => 'board-review', onFalse: () => 'board' }),
   );

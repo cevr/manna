@@ -6,7 +6,7 @@ type Pt = readonly [number, number];
 type Rgb = readonly [number, number, number];
 
 /** How many times the canvas a given frame is drawn at. */
-export const FRAME_ZOOM = 2;
+const FRAME_ZOOM = 2;
 
 /** A kept view to draw: its puppet and its sheet's paper. */
 interface FrameView {
