@@ -45,7 +45,8 @@ const LETTER = /[\p{L}\p{N}]/u;
 /** The model's words: the verse split at spaces, each with where it starts and ends. */
 const words = text.split(' ').reduce<{ start: number; end: number }[]>((spans, word) => {
   const start = spans.length === 0 ? 0 : (spans.at(-1)?.end ?? 0) + 1;
-  return [...spans, { start, end: start + word.length }];
+  spans.push({ start, end: start + word.length });
+  return spans;
 }, []);
 const wordText = (index: number) => text.slice(words[index]!.start, words[index]!.end);
 

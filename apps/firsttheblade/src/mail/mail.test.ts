@@ -362,7 +362,7 @@ describe('signing up', () => {
       expect(yield* letters).toHaveLength(0);
       const ann = yield* (yield* Tokens).idOf(Address.make('ann@example.com'));
       expect(yield* (yield* Addresses).find(ann)).toEqual(Option.none());
-      expect((yield* (yield* Subscriber).state(ann))._tag).toBe('None');
+      expect((yield* (yield* Subscriber).get(ann))._tag).toBe('None');
     }));
 
   test('an address that does not read is sent to the page that asks again', () =>
@@ -811,7 +811,7 @@ describe('a sign-up never confirmed', () => {
       for (const address of ['ann@example.com', 'ben@example.com']) {
         const id = yield* tokens.idOf(Address.make(address));
         expect(yield* addresses.find(id)).toEqual(Option.none());
-        expect((yield* subscribers.state(id))._tag).toBe('None');
+        expect((yield* subscribers.get(id))._tag).toBe('None');
       }
       const cal = yield* tokens.idOf(Address.make('cal@example.com'));
       expect(yield* addresses.find(cal)).toEqual(Option.some(Address.make('cal@example.com')));

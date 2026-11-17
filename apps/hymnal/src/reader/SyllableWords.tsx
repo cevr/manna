@@ -217,10 +217,10 @@ const readAs = (boxed: boolean, label: string) => {
 
 /** Each word's first syllable's place in its line, from 0. */
 const wordStarts = (words: ReadonlyArray<Word>): ReadonlyArray<number> =>
-  words.reduce<Array<number>>(
-    (starts, word, w) => [...starts, (starts[w - 1] ?? 0) + (words[w - 1]?.length ?? 0)],
-    [],
-  );
+  words.reduce<Array<number>>((starts, _, w) => {
+    starts.push((starts[w - 1] ?? 0) + (words[w - 1]?.length ?? 0));
+    return starts;
+  }, []);
 
 const styles = StyleSheet.create({
   line: { flexDirection: 'row', flexWrap: 'wrap' },

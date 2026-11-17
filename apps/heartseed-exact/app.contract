@@ -10,9 +10,10 @@
 // opens over whichever tab is up.
 // A feature adds one `use` line, one `members` line, one route and one
 // branch of the stack's view (README, "Where a feature's files go"). The
-// Settings sheet's routes (`settings…`) are drawn by their own loop in
-// each tab: a sheet is a route of its own, not the shared column, and the
-// screen under it stays drawn. Home stays drawn under every pushed route,
+// Settings sheet's routes (`settings…`) and the Aa sheet (`typeSheet`) are
+// drawn by loops of their own in each tab: a sheet is a route of its own,
+// not the shared column, it opens over whichever tab is up, and the screen
+// under it stays drawn (`readSheetOf`). Home stays drawn under every pushed route,
 // so Back finds it with no row built again. Today and the Read chapter
 // are drawn only in the top entry of their tab (`readTopOf`), so a pushed
 // route leaves one copy of their ids, and the gear only in the top entry
@@ -25,7 +26,8 @@ use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
 use AddVersesPage, AddListPage from "./features/add.contract"
 use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
-use readTopOf, ReadDriven from "./features/read.contract"
+use readTopOf, readSheetOf, ReadDriven from "./features/read.contract"
+use TypeSheet from "./features/type.contract"
 use PacksProbe from "./features/packs.contract"
 
 routes nav
@@ -43,6 +45,7 @@ routes nav
         addBook "/add/bible/:book"
           addChapter "/add/bible/:book/:chapter"
       addList "/add/lists/:list"
+    typeSheet "/type"
   tab read "/read"
     readAt "/read/at/:book/:chapter/:verse"
 
@@ -61,12 +64,13 @@ component HeartseedExact
   members "./features/motion.contract"
   members "./features/feel.contract"
   members "./features/read.contract"
+  members "./features/type.contract"
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
     if url.startsWith("/read") and nav.tab != "read"
       nav = go(select(nav, "read"), url)
-    else if not url.startsWith("/read") and not url.startsWith("/settings") and nav.tab != "garden"
+    else if not url.startsWith("/read") and not url.startsWith("/settings") and not url.startsWith("/type") and nav.tab != "garden"
       nav = go(select(nav, "garden"), url)
     else
       nav = go(nav, url)
@@ -75,7 +79,7 @@ component HeartseedExact
       column flex=1 min-height=0 position="relative"
         for t in nav.tabs key=t.name
           column role="tabpanel" id=`panel-${t.name}` testId=`panel-${t.name}` position="absolute" inset=0
-            for e in t.stack.filter(x => not x.name.startsWith("settings")) key=e.id
+            for e in t.stack.filter(x => not readSheetOf(x.name)) key=e.id
               column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name == "garden" ? "home" : e.name}`
                 header display="flex" align-items="center"
                   if e.name == "read" or e.name == "readAt"
@@ -90,7 +94,7 @@ component HeartseedExact
                 if e.name == "list"
                   ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill)
                 if e.name == "verses"
-                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
+                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt, type=typeShown, sample=gardenTypeSample, aa=gardenTypeAa)
                   // hs-commentary: a fixture launch's probe, which tools/drive-commentary.ts taps (the Read tab asks on its own first showing).
                   if packsPlace.fixture
                     PacksProbe(shown=packsShown, fetch=packsFetch, retry=packsRetry, still=motionStill)
@@ -116,7 +120,9 @@ component HeartseedExact
                 AboutPage(route=e.id, licences=aboutOpenLicences)
               if e.name == "settingsLicences"
                 LicencesPage(route=e.id, licences=aboutLicences.licences)
-      row role="tablist" testId="tabs" display=(motionSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"
+            for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
+              TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
+      row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"
         button role="tab" aria-controls="panel-garden" aria-selected=(nav.tab == "garden") press=pick("garden") testId="tab-garden" flex=1 min-height="44px" display="flex" flex-direction="column" align-items="center" justify-content="center"
           image "symbol:icon.sprout"
           text "Garden"

@@ -64,7 +64,25 @@ Write `outputs/decks/<slug>/manifest.json`:
 `id` = `sNN-book-ch-v` (zero-padded, sorts in deck order). `side` = which
 side the **image panel** sits on; alternate strictly.
 
-### 2. Generate the paintings (`okra image`)
+### 2. Reuse every painting that exists
+
+A verse already painted in any deck is never painted again: its beat takes
+`sourceImage` (the painting's path relative to the new deck dir) instead of a
+`concept`. Before writing concepts, look each reference up across every deck:
+
+```bash
+rg -A8 '"ref": "John 11:11"' packages/cli/outputs/decks/*/manifest.json
+```
+
+- **Same verse, or a range that holds it** (Ecclesiastes 9:5-6 for 9:5,
+  1 Corinthians 15:51-52 for 15:52) → reuse that painting.
+- **A painting made earlier in the same batch** (a verse two new decks
+  share) is reused too: generate it in the first deck, point the second at it.
+- A verse repeated within one deck (the appeal) reuses its own painting.
+- Paint only what no deck holds yet. Reused paintings keep the series one
+  family and cost no generation time.
+
+### 3. Generate the paintings (`okra image`)
 
 One landscape painting per verse + one for the title. Prompt template
 (the series style — keep it verbatim, swap only the Subject):
@@ -107,7 +125,7 @@ okra image "<prompt>" --ref <existing series painting> --size 1536x1024 \
   skip-if-exists guard and one retry, logging failures — then rerun the
   batch script to sweep stragglers.
 
-### 3. Crop two copies per painting (sips)
+### 4. Crop two copies per painting (sips)
 
 The generated ~1536×1024 painting becomes **two center crops**:
 
@@ -117,7 +135,7 @@ The generated ~1536×1024 painting becomes **two center crops**:
 `sips -c <height> <width> <src> --out <dst>` center-crops. Compute crop
 dims from actual pixel size (codex output size varies slightly).
 
-### 3b. Diagram slides (line chronologies)
+### 4b. Diagram slides (line chronologies)
 
 Timelines/chronologies follow the _Just Another Book_ day-2 grammar: black
 canvas, one big bold title, a single horizontal line, span labels above
@@ -129,7 +147,7 @@ system .ttc, all white on black). In the manifest they are
 `{"type": "diagram", "id": "..."}` entries — one slide, no full-bleed
 pair, no crops.
 
-### 4. Build or sync the .key (one command, edits in place)
+### 5. Build or sync the .key (one command, edits in place)
 
 ```bash
 bun skills/bible/scripts/deck/sync_deck.ts outputs/decks/<slug> [--prune]
@@ -163,7 +181,7 @@ x=131 (image right) / x=984 (image left), y centered by the verse box's
 measured height; reference line "Helvetica Neue" 30pt gray
 (`{39321, 39321, 39321}`) below the verse.
 
-### 5. Verify visually — always
+### 6. Verify visually — always
 
 ```applescript
 export theDoc to POSIX file "/tmp/deck-export" as slide images ¬
@@ -218,6 +236,8 @@ them again.
   teaching doc and whiteboard carry everything else.
 - **Don't paraphrase or retype verses** — manifest text comes from
   `manna verse --json`, cleaned mechanically.
+- **Don't paint a verse any deck already holds** — reuse its painting
+  (`sourceImage`); generate only what is new.
 - **Don't generate images without the style template + `--ref`** — decks
   must stay visually one family.
 - **Don't hand-write the AppleScript** — generate from the manifest so the

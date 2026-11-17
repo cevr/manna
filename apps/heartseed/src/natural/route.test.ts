@@ -118,11 +118,11 @@ const settle = Effect.gen(function* () {
 });
 
 /** A stop that holds for a turn, so a caller that does not wait for it is seen going on early. */
-const held = (inflight: { count: number }, after: () => void) =>
+const held = (inflight: { count: number }, onTurn: () => void) =>
   Effect.gen(function* () {
     inflight.count += 1;
     yield* Effect.yieldNow;
-    after();
+    onTurn();
     inflight.count -= 1;
   });
 

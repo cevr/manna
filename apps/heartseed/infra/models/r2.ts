@@ -26,6 +26,7 @@ import { AuthProviders } from 'alchemy/Auth';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect, Layer, Option, Predicate, Schema, Stream } from 'effect';
 import { FetchHttpClient, HttpClientError } from 'effect/http';
+import { SecureRandom } from 'effect/crypto';
 
 import type { MirrorObject } from './plan.ts';
 import type { PutMetadata } from './stores.ts';
@@ -194,10 +195,12 @@ export const TargetR2 = Layer.effect(
 /**
  * R2 behind the owner's profile, built only for a real run. The empty
  * `AuthProviders` registry is the one the Cloudflare auth layer registers
- * into, as the Alchemy CLI starts it.
+ * into, as the Alchemy CLI starts it. Alchemy's profile reads draw on a
+ * `SecureRandom`, Web Crypto's here.
  */
 export const TargetR2Writes = TargetR2.pipe(
   Layer.provide(Cloudflare.CloudflareApiLive()),
   Layer.provide(Layer.succeed(AuthProviders, AuthProviders.of({}))),
   Layer.provide(FetchHttpClient.layer),
+  Layer.provide(SecureRandom.layerWebCrypto),
 );

@@ -27,7 +27,7 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@solidjs/compiler": "catalog:"
   }
 }

@@ -76,6 +76,7 @@ const ROUTES: readonly NavRoute[] = [
   garden('addBook', /^\/add\/bible\/[^/]+$/u, 'addBible'),
   garden('addChapter', /^\/add\/bible\/[^/]+\/[^/]+$/u, 'addBook'),
   garden('addList', /^\/add\/lists\/[^/]+$/u, 'add'),
+  garden('typeSheet', /^\/type$/u),
   { name: 'read', pattern: /^\/read$/u, parent: '', tab: 'read' },
   { name: 'readAt', pattern: /^\/read\/at\/[^/]+\/[^/]+\/[^/]+$/u, parent: 'read', tab: 'read' },
 ];
@@ -210,10 +211,15 @@ export const go = (nav: Nav, location: string): Nav => {
 export const readAtPath = (book: number, chapter: number, verse: number) =>
   `/read/at/${book}/${chapter}/${verse}#verse-${verse}`;
 
-/** `follow(url)`: a location of the other tab's routes selects that tab first; a Settings location stays on the tab shown. */
+/** `follow(url)`: a location of the other tab's routes selects that tab first; a sheet's location (Settings, Aa) stays on the tab shown. */
 const followOf = (nav: Nav, url: string): Nav => {
   if (url.startsWith('/read') && nav.tab !== 'read') return go(select(nav, 'read'), url);
-  if (!url.startsWith('/read') && !url.startsWith('/settings') && nav.tab !== 'garden')
+  if (
+    !url.startsWith('/read') &&
+    !url.startsWith('/settings') &&
+    !url.startsWith('/type') &&
+    nav.tab !== 'garden'
+  )
     return go(select(nav, 'garden'), url);
   return go(nav, url);
 };

@@ -12,6 +12,7 @@ import { settingsSources } from './src/settings/choices';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
+import { typeSources } from './src/type/choices';
 
 /**
  * Today listens on the device; the garden keeps its keys in one file of the
@@ -42,6 +43,7 @@ const sources: Sources = {
   ...readerSources,
   ...textSources,
   ...readSources,
+  ...typeSources,
   ...packs.sources,
   ...commentarySources(packs),
 };

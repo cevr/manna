@@ -26,7 +26,7 @@
  */
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
-import * as DomainCloudflare from '@alchemy.run/cloudflare/Domain';
+import * as DomainCloudflare from '@alchemy.run/domain/Cloudflare';
 import { Effect, Layer, Option, Schema } from 'effect';
 
 import { Background } from '../mail/background.ts';
@@ -157,9 +157,12 @@ export const layerCloudflare = Layer.unwrap(
       Layer.succeed(Background, background),
       Layer.succeed(AdminToken, adminToken),
       Layer.succeed(ContactInbox, contactInbox),
-      layerWebCrypto,
       layerSite,
-    ).pipe(Layer.provideMerge(layerTables), Layer.provideMerge(services));
+    ).pipe(
+      Layer.provideMerge(layerTables),
+      Layer.provideMerge(services),
+      Layer.provideMerge(layerWebCrypto),
+    );
   }),
 );
 

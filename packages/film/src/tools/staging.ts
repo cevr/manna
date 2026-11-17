@@ -71,14 +71,15 @@ export interface StagingRequest {
 
 /** Each line's words, `[from, to)` in the beat's words. */
 const wordRanges = (lines: ReadonlyArray<Line>) =>
-  lines.reduce<ReadonlyArray<{ readonly line: Line; readonly from: number; readonly to: number }>>(
+  lines.reduce<Array<{ readonly line: Line; readonly from: number; readonly to: number }>>(
     (ranges, line) => {
       const from = Option.getOrElse(
         Option.map(Arr.last(ranges), (r) => r.to),
         () => 0,
       );
       const words = line.text.split(/\s+/).filter((w) => w.length > 0).length;
-      return [...ranges, { line, from, to: from + words }];
+      ranges.push({ line, from, to: from + words });
+      return ranges;
     },
     [],
   );

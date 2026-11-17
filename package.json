@@ -42,7 +42,7 @@
     "prepare": "(test -d .git && lefthook install || true) && effect-tsgo patch --force"
   },
   "devDependencies": {
-    "@effect/tsgo": "0.67.5",
+    "@effect/tsgo": "0.70.0",
     "@types/bun": "1.4.4",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "agent-tail-core": "^0.4.0",
@@ -50,14 +50,14 @@
     "effect": "catalog:",
     "effect-bun-test": "0.5.0",
     "lefthook": "^2.2.2",
-    "oxfmt": "^0.77.0",
-    "oxlint": "^1.92.0",
-    "oxlint-plugin-effect": "0.32.1",
-    "turbo": "^2.11.10",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
+    "oxlint-plugin-effect": "0.32.3",
+    "turbo": "^2.11.11",
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "@effect/platform-node-shared": "4.1.2",
+    "@effect/platform-node-shared": "4.1.4",
     "@react-navigation/bottom-tabs": "8.0.0-alpha.57",
     "@react-navigation/core": "8.0.0-alpha.41",
     "@react-navigation/drawer": "8.0.0-alpha.58",
@@ -65,29 +65,29 @@
     "@react-navigation/native": "8.0.0-alpha.51",
     "@react-navigation/native-stack": "8.0.0-alpha.59",
     "@react-navigation/routers": "8.0.0-alpha.21",
-    "effect": "4.1.2",
-    "rolldown": "1.2.16"
+    "effect": "4.1.4",
+    "rolldown": "1.2.19"
   },
   "packageManager": "bun@1.4.4",
   "catalog": {
-    "@effect/ai-typesafe": "4.1.2",
-    "@effect/atom-react": "4.1.2",
-    "@effect/platform-bun": "4.1.2",
-    "@effect/platform-node": "4.1.2",
-    "@effect/platform-node-shared": "4.1.2",
-    "@effect/sql-d1": "4.1.2",
-    "@effect/sql-sqlite-bun": "4.1.2",
-    "@effect/vitest": "4.1.2",
+    "@effect/ai-typesafe": "4.1.4",
+    "@effect/atom-react": "4.1.4",
+    "@effect/platform-bun": "4.1.4",
+    "@effect/platform-node": "4.1.4",
+    "@effect/platform-node-shared": "4.1.4",
+    "@effect/sql-d1": "4.1.4",
+    "@effect/sql-sqlite-bun": "4.1.4",
+    "@effect/vitest": "4.1.4",
     "@solidjs/compiler": "2.0.0-rc.21",
     "@solidjs/web": "2.0.0-rc.21",
-    "effect": "4.1.2",
+    "effect": "4.1.4",
     "effect-bun-test": "0.5.0",
-    "effect-machine": "0.32.0",
+    "effect-machine": "0.32.1",
     "solid-js": "2.0.0-rc.21",
     "vite-plugin-solid": "3.0.0-next.27"
   },
   "patchedDependencies": {
-    "@alchemy.run/domain@2.0.0-beta.85": "patches/@alchemy.run%2Fdomain@2.0.0-beta.85.patch",
+    "@alchemy.run/domain@2.0.0-beta.87": "patches/@alchemy.run%2Fdomain@2.0.0-beta.87.patch",
     "one@2.15.1": "patches/one@2.15.1.patch"
   }
 }

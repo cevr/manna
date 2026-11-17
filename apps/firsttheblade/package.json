@@ -31,7 +31,7 @@
     "verify:stage": "bun --no-env-file scripts/verify/cli.ts stage"
   },
   "dependencies": {
-    "@alchemy.run/domain": "2.0.0-beta.85",
+    "@alchemy.run/domain": "2.0.0-beta.87",
     "@manna/brand": "workspace:*",
     "@manna/ui": "workspace:*",
     "@solidjs/web": "catalog:",
@@ -39,16 +39,16 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
-    "@alchemy.run/cloudflare": "2.0.0-beta.85",
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
     "@effect/platform-bun": "catalog:",
     "@effect/platform-node": "catalog:",
-    "@playwright/test": "1.65.0",
-    "alchemy": "2.0.0-beta.85",
+    "@playwright/test": "1.65.1",
+    "alchemy": "2.0.0-beta.87",
     "effect-bun-test": "catalog:",
     "lightningcss": "1.33.0",
     "parse5": "8.1.1",
     "sharp": "0.35.5",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vite-plugin-solid": "catalog:"
   }
 }

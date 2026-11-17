@@ -1816,9 +1816,7 @@ export const DriveLive = Layer.effect(
       step: (...args: A) => Effect.Effect<X, E, Host>,
     ) =>
       hosted((...args: A) =>
-        Effect.flatMap(driverEnv(args[0]), (env) =>
-          Effect.provideService(step(...args), DriverEnv, env),
-        ),
+        Effect.provideServiceEffect(step(...args), DriverEnv, driverEnv(args[0])),
       );
     return Drive.of({
       readSession: hosted(readSession),

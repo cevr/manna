@@ -70,7 +70,7 @@ const slug = (ref: string) =>
     .replace(/^-|-$/g, '');
 
 const verseText = (lookupRef: string) => {
-  const result = Bun.spawnSync(['bible', 'verse', lookupRef, '--json'], { stderr: 'inherit' });
+  const result = Bun.spawnSync(['manna', 'verse', lookupRef, '--json'], { stderr: 'inherit' });
   if (result.exitCode !== 0) throw new Error(`Verse lookup failed: ${lookupRef}`);
   const payload = JSON.parse(result.stdout.toString()) as {
     verses: ReadonlyArray<{ text: string }>;
