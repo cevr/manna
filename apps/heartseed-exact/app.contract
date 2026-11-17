@@ -15,7 +15,8 @@
 // not the shared column, it opens over whichever tab is up, and the screen
 // under it stays drawn (`readSheetOf`). Home stays drawn under every pushed route,
 // so Back finds it with no row built again. Today and the Read chapter
-// are drawn only in the top entry of their tab (`readTopOf`), so a pushed
+// (with its header's magnifier and Aa) are drawn only in the top entry of
+// their tab (`readTopOf`), so a pushed
 // route leaves one copy of their ids, and the gear only in the top entry
 // of the tab shown (`settingsUnderId`), so a driver finds one.
 use Today, TodayView from "./features/today.contract"
@@ -86,11 +87,13 @@ component HeartseedExact
               column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name == "garden" ? "home" : e.name}`
                 header display="flex" align-items="center"
                   if e.name == "read" or e.name == "readAt"
-                    button press=gotoOpenFind aria-label="Find a verse, a chapter or words" testId="chapter-find"
-                      image "symbol:search"
+                    if e.id == readTopOf(t.stack)
+                      button press=gotoOpenFind aria-label="Find a verse, a chapter or words" testId="chapter-find"
+                        image "symbol:search"
                     text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=2 flex=1 opacity=(chooserTitleGone ? 1 : 0) testId=`read-title-${e.name}`
-                    button press=typeOpen aria-label="Text settings" testId="chapter-aa"
-                      text "Aa"
+                    if e.id == readTopOf(t.stack)
+                      button press=typeOpen aria-label="Text settings" testId="chapter-aa"
+                        text "Aa"
                   else
                     text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
                   if e.id == settingsUnderId
@@ -112,8 +115,8 @@ component HeartseedExact
                   AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
                 if (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
                   ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chooserLandRoom, sized=chooserScrollSized, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill)
-                if gardenDriven.on and (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
-                  ReadDriven(open=readOpenAt, follow=readFollow)
+                    if gardenDriven.on
+                      ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
                   Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
             for e in t.stack.filter(x => x.name.startsWith("settings")) key=e.id
