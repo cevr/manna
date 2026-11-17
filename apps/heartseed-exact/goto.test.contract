@@ -140,6 +140,32 @@ test "A reference typed in Go to opens its place, and Cancel clears the box"
   expect tree has "verse-landed"
   expect no failures
 
+test "Words typed in Go to before the word pack is down say so, and a reference still opens"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-find"
+  clock data
+  clock settle
+  type "goto-find" "fear not"
+  clock data
+  clock settle
+  expect tree has "find-results"
+  expect state findShown.hits == []
+  expect text "find-line" == "Word search is still downloading. A reference like John 3:16 works now."
+  type "goto-find" "john 3:16"
+  clock data
+  clock settle
+  tap "find-place"
+  clock data
+  clock settle
+  expect tree missing "goto"
+  expect state chapterShown.heading == "John 3"
+  expect state readVerse == 16
+  expect no failures
+
 test "Any passage in Add verses opens Go to over Read"
   clock data
   clock settle

@@ -22,6 +22,9 @@ test "Three verses planted and due: home's card offers Start"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -48,6 +51,9 @@ test "Start opens Today on the plan's first item"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
@@ -81,6 +87,9 @@ test "A tap on a plant opens Today on that verse"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -110,6 +119,9 @@ test "Back from Today returns home at the scroll it left"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -125,6 +137,9 @@ test "Back from Today returns home at the scroll it left"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -138,6 +153,9 @@ test "Back from Today returns home at the scroll it left"
   tap "verse-24"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back

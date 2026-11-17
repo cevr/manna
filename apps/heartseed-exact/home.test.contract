@@ -36,6 +36,9 @@ test "A list is a row of plants, with no icon and no glyph"
     clock data
     clock settle
   expect perf built "HomePlantButton" == 3
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -67,6 +70,9 @@ test "Single verses sit under the lists"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"
@@ -116,6 +122,9 @@ test "The card offers the day's one action"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-proverbs"
   clock data
   clock settle
@@ -156,6 +165,9 @@ test "A plant starts its verse"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
@@ -220,6 +232,9 @@ test "Back keeps the place"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -235,6 +250,9 @@ test "Back keeps the place"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -248,6 +266,9 @@ test "Back keeps the place"
   tap "verse-24"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"
@@ -423,6 +444,9 @@ test "The limits speak"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -438,6 +462,9 @@ test "The limits speak"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-any"
   clock settle
   tap "book-43"
@@ -451,6 +478,9 @@ test "The limits speak"
   tap "verse-24"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
