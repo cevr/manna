@@ -123,10 +123,11 @@ public struct Take: Codable, Hashable, Sendable, Identifiable {
   public var created: Date
   public var clips: [Clip]
 
+  /// `created` is kept to the whole second, as the project file writes it.
   public init(id: TakeID, name: String, created: Date, clips: [Clip]) {
     self.id = id
     self.name = name
-    self.created = created
+    self.created = Date(timeIntervalSince1970: created.timeIntervalSince1970.rounded(.down))
     self.clips = clips
   }
 }

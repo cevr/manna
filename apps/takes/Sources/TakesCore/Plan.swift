@@ -5,7 +5,12 @@ extension Project {
     guard let beat = document.beats.first(where: { $0.id == id }), let take = beat.keptTake else {
       return []
     }
-    return take.clips.flatMap { clip in
+    return plan(of: take)
+  }
+
+  /// A take's clips as runs of source frames, in order, kept or not.
+  public func plan(of take: Take) -> [Segment] {
+    take.clips.flatMap { clip in
       clip.segments.map { Segment(source: clip.source, range: $0) }
     }
   }

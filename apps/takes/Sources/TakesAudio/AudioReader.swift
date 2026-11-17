@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import TakesCore
 
 /// Reads any audio file AVFoundation can open as mono samples, by frame range, at a chosen rate.
 public enum AudioReader {
@@ -49,7 +50,7 @@ public enum AudioReader {
 
   /// The number of samples `count` frames at `from` become at `to`.
   public static func resampledCount(_ count: Int, from: Int, to: Int) -> Int {
-    Int((Double(count) * Double(to) / Double(from)).rounded())
+    Timeline.renderedCount(count, from: from, to: to)
   }
 
   private static func average(_ buffer: AVAudioPCMBuffer) -> [Float] {
