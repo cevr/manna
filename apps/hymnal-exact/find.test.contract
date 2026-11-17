@@ -67,14 +67,13 @@ test "The drums hold to the book"
   expect state find.ones == 0
   expect text "drums-number" == "690"
 
-// On iOS a tap on UIKit's backdrop is `tap root at <x> <y>`, a drive's
-// step only: tools/drive-find.ts holds it there.
-test "A tap outside closes the drums and opens nothing" on web
+// Outside the panel is `drums-outside`, the window-wide box beneath it.
+test "A tap outside closes the drums and opens nothing"
   tap "find-number"
   clock settle
   clock data
   expect state find.drums == true
-  tap "root" drag 0 0 from 20 860
+  tap "drums-outside" drag 0 0 from 20 20
   clock settle
   clock data
   expect state find.drums == false

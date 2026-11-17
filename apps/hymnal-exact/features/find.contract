@@ -113,6 +113,10 @@ members HymnalExact
   action findDismissed
     findDrumsUp = false
     send findStepped = findStep("drumsClose", "", 0, 0)
+  action findDrumsKeyed(k: string)
+    if k == "Escape"
+      preventDefault()
+      send findStepped = findStep("drumsClose", "", 0, 0)
 
 // The find bar of the screen `entry` draws, shown while that screen is on
 // top. Folded: Search and the `#` (and, on the home list, All at once);
@@ -176,31 +180,52 @@ component FindBar
 // hymn; the `#` here, a tap outside, Escape or a swipe down close them.
 // Drawn only while the step has them open, they pop in, and fade out as
 // the `if` drops them; Open presses as `PlayerFilled` does.
+//
+// The dialog fills the window, its panel in the middle: a tap outside the
+// panel lands on `drums-outside` beneath it, a box that hears the pointer
+// as the page's backdrop does (no control, so no stop for a reader or for
+// Tab; the `#` is the drums' close button), and Escape is claimed by
+// `findDrumsKey`, so each closes through the step and the `if` drops a
+// dialog still open, which fades as the `#` closes it. The browser's own
+// light dismiss would close the dialog first, so its exit would play unseen.
+// Under Reduce Motion they leave at once.
 component FindDrums
   inject
     findShown: FindView
     findPress: action
     findDismiss: action
+    findDrumsKey: action
     motionStill: bool
   view
     if findShown.drums
-      dialog id="find-drums" closedby="any" cancel=findDismiss aria-label="Find a hymn by number"
-        background-color="-exact-secondary-background" border-radius=16 padding=16 max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box" testId="drums"
-        animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-pop duration.panel easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.exit ease-out both")
-        column gap=12 width="17.5rem" max-width="100%"
-          row gap=12 align-items="center"
-            text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
-            button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
-              text "#" font="-exact-title3"
-          FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
-          FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
-          FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
-          button press=findPress("open", 0) appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 testId="drums-open"
-            :active
-              background-color = "pressed"
-              color = "onPressed"
-              -exact-press-scale = 0.97
-            text `Open ${findShown.number}` font-weight=600 text-align="center"
+      dialog id="find-drums" closedby="closerequest" cancel=findDismiss key=findDrumsKey aria-label="Find a hymn by number"
+        background-color="transparent" border="none" padding=0 margin=0 width="100%" height="100%" max-width="100%" max-height="100%" box-sizing="border-box" testId="drums"
+        animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-pop duration.panel easing.out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.exit ease-out both")
+        column width="100%" height="100%" align-items="center" justify-content="center" padding=16 box-sizing="border-box" position="relative"
+          FindDrumsPanel()
+          column pointerup=findPress("drumsClose", 0) position="absolute" top=0 right=0 bottom=0 left=0 testId="drums-outside"
+
+component FindDrumsPanel
+  inject
+    findShown: FindView
+    findPress: action
+  view
+    column max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box"
+      background-color="-exact-secondary-background" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
+      column gap=12 width="17.5rem" max-width="100%"
+        row gap=12 align-items="center"
+          text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
+          button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
+            text "#" font="-exact-title3"
+        FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
+        FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
+        FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
+        button press=findPress("open", 0) appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 testId="drums-open"
+          :active
+            background-color = "pressed"
+            color = "onPressed"
+            -exact-press-scale = 0.97
+          text `Open ${findShown.number}` font-weight=600 text-align="center"
 
 component FindDrum
   props
