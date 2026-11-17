@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- a model written plainly beside the port's Option code: an oracle in a second style. */
+/* oxlint-disable effect/noTernary -- a model written plainly beside the port's Option code: an oracle in a second style. */
 
 /**
  * The chapter's bar, model-based (spec, acceptance 2): generated histories

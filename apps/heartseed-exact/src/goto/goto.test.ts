@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- a test's oracle: a reference outside the pool reads as no chapter. */
-
 /**
  * Go to's rules as properties (spec, acceptance 3): over generated fields,
  * Where your verses grow lists each chapter of the field once, in field
