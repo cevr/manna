@@ -30,6 +30,7 @@ use GotoSheet, GotoBookPage from "./features/goto.contract"
 use readTopOf, readSheetOf, ReadDriven from "./features/read.contract"
 use TypeSheet from "./features/type.contract"
 use PacksProbe from "./features/packs.contract"
+use StudySheet from "./features/study.contract"
 
 routes nav
   tab garden "/"
@@ -48,6 +49,7 @@ routes nav
     readAt "/read/at/:book/:chapter/:verse"
     gotoSheet "/read/goto"
       gotoBook "/read/goto/:book"
+    studySheet "/read/study/:book/:chapter/:verse/:tab"
 
 component HeartseedExact
   members "./features/today.contract"
@@ -68,6 +70,7 @@ component HeartseedExact
   members "./features/read.contract"
   members "./features/find.contract"
   members "./features/type.contract"
+  members "./features/study.contract"
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
@@ -111,7 +114,7 @@ component HeartseedExact
                 if e.name == "addList"
                   AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
                 if (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
-                  ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chooserLandRoom, sized=chooserScrollSized, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill)
+                  ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chooserLandRoom, sized=chooserScrollSized, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill, select=studySelected, holds=studyHolds, held=(studyHeld != ""), study=studyBarShown, open=studyOpen)
                 if gardenDriven.on and (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
                   ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
@@ -128,6 +131,8 @@ component HeartseedExact
                 GotoSheet(route=e.id, query=findQuery, found=findShown, type=findType, clear=findClear, open=gotoOpenAt, grow=gotoGrowShown, books=gotoBooksShown, book=gotoOpenBook, done=gotoDone)
               if e.name == "gotoBook"
                 GotoBookPage(route=e.id, book=gotoBookShown, open=gotoOpenAt, done=gotoDone)
+            for e in t.stack.filter(x => x.name == "studySheet") key=e.id
+              StudySheet(route=e.id, tab=e.params.tab, sheet=studySheetShown, word=studyWordShown, unfolded=studyUnfolded, type=typeShown, retry=commentaryShown.retry, still=motionStill, choose=studyTab, tapWord=studyWordTap, fold=studyFold, follow=studyFollow, move=studyMove, again=packsRetry, done=studyDone)
             for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
               TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
       row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"

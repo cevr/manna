@@ -9,7 +9,7 @@ test "Go to opens a book, then a chapter, on the chapter screen"
   clock data
   clock settle
   expect text "chapter-title" == "John 1"
-  expect text "chapter-hint" == "Tap a verse to plant or study it."
+  expect text "chapter-hint" == "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek."
   expect tree missing "chapter-field"
   tap "chapter-title"
   clock data

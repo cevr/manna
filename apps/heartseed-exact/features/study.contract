@@ -1,0 +1,315 @@
+// Study (q118, q120, q122): the bar's three study buttons for one chosen
+// verse, the study sheet with its three tabs (Cross-refs, Words,
+// Commentary), and the long press on a word. What each draws is
+// src/studyview/ (`studyBarRead`, `studySheetRead`, `studyWordRead`,
+// `studyReturnRead`), over the packs the one downloader keeps, read through
+// their own readers; this file holds the sheet's state and draws it.
+// The sheet is a modal route (`studySheet`, at the medium and large
+// heights, opening large) over the Read tab. A hold is the verse's text
+// selection (gesture.md in the unit's notes): a one-word selection hands
+// its offsets to `studyHold`, then the verse's text is built again
+// (`studyHolds` in its key), which clears the selection and its handles.
+// Following a cross-reference closes the sheet and pushes the chapter;
+// Back reopens the sheet on Cross-refs for the verse left (`studyBacks`,
+// src/studyview/back.ts). src/studyview/contract.test.ts holds the
+// actions here to src/studyview/step.ts.
+
+use TypeColumn, TypeView from "./type.contract"
+use hs-fade, hs-rise from "./motion.contract"
+
+shape StudyButton
+  tab: string
+  label: string
+  line: string
+  name: string
+
+shape StudyBarVerse
+  verse: number
+  buttons: StudyButton[]
+
+shape StudyBarShown
+  verses: StudyBarVerse[]
+
+shape StudyTabShown
+  tab: string
+  label: string
+  count: string
+  name: string
+
+shape StudyXrefRow
+  index: number
+  reference: string
+  text: string
+  book: number
+  chapter: number
+  verse: number
+  name: string
+
+shape StudyWordShown
+  index: number
+  text: string
+  tagged: bool
+  added: bool
+  name: string
+
+shape StudyNoteShown
+  index: number
+  key: string
+  ref: string
+  text: string
+  folds: bool
+
+shape StudyChip
+  verse: number
+  label: string
+  name: string
+
+shape StudyFeet
+  xrefs: string
+  words: string
+  commentary: string
+
+shape StudySheetShown
+  found: bool
+  heading: string
+  place: string
+  tabs: StudyTabShown[]
+  xrefsLine: string
+  xrefs: StudyXrefRow[]
+  wordsLine: string
+  caption: string
+  hint: string
+  supplied: string
+  words: StudyWordShown[]
+  notesLine: string
+  notes: StudyNoteShown[]
+  chipsLine: string
+  chips: StudyChip[]
+  feet: StudyFeet
+
+shape StudyEntryShown
+  key: string
+  number: string
+  found: bool
+  big: string
+  bigItalic: bool
+  xlit: string
+  pron: string
+  heading: string
+  def: string
+  defLine: string
+  folds: bool
+  rendersLine: string
+  renders: string[]
+  missing: string
+
+shape StudyWordOpen
+  open: bool
+  index: number
+  text: string
+  line: string
+  entries: StudyEntryShown[]
+
+shape StudyReturn
+  backs: string
+  reopen: bool
+  book: number
+  chapter: number
+  verse: number
+  row: number
+  key: string
+
+members HeartseedExact
+  // Whether a hold has ever landed: the chapter's hint and the Words tab's caption drop their hold clause after it.
+  state studyHeld = "" persist
+  state studyHolds = 0
+  state studyWord = ""
+  state studyUnfolded: string[] = []
+  state studyBacks = ""
+  state studyRow = -1
+  derive studyAt = match stack(nav).filter(x => x.name == "studySheet").at(-1) { case some(e) => e, case none => top(nav) }
+  derive studyUp = studyAt.name == "studySheet"
+  derive studyPlace = `${studyAt.params.book}.${studyAt.params.chapter}.${studyAt.params.verse}`
+  resource studyBarShown = studyBarRead(readBook, readChapter, studyXrefsShown.version, studyTagsShown.version, commentaryShown.version) when readUp as shape StudyBarShown else empty()
+  resource studySheetShown = studySheetRead(studyAt.params.book, studyAt.params.chapter, studyAt.params.verse, studyXrefsShown.version, studyTagsShown.version, commentaryShown.version, studyHeld != "") when studyUp as shape StudySheetShown else empty()
+  resource studyWordShown = studyWordRead(studyAt.params.book, studyAt.params.chapter, studyAt.params.verse, studyWord, studyTagsShown.version, studyLexiconShown.version) when studyUp as shape StudyWordOpen else empty()
+  resource studyReturnShown = studyReturnRead(studyBacks, readTop.id, readTabStack.map(x => `${x.id}`).join(" ")) as shape StudyReturn else empty()
+
+  action studyOpen(verse: number, tab: string)
+    studyWord = ""
+    studyUnfolded = []
+    studyRow = -1
+    nav = push(nav, path("studySheet", `${readBook}`, `${readChapter}`, `${verse}`, tab))
+  action studySelected(verse: number, s: Selection)
+    if s.text != "" and not s.text.includes(" ") and not studyUp
+      studyHold(verse, s.start, s.end)
+  action studyHold(verse: number, start: number, end: number)
+    feelTick()
+    studyHolds = studyHolds + 1
+    studyHeld = "held"
+    studyUnfolded = []
+    studyRow = -1
+    studyWord = `${readBook}.${readChapter}.${verse}:o${start}`
+    nav = push(nav, path("studySheet", `${readBook}`, `${readChapter}`, `${verse}`, "words"))
+  action studyTab(tab: string)
+    feelTick()
+    nav = replace(nav, path("studySheet", studyAt.params.book, studyAt.params.chapter, studyAt.params.verse, tab))
+  action studyWordTap(index: number)
+    studyWord = `${studyPlace}:i${index}`
+  action studyFold(key: string)
+    if studyUnfolded.includes(key)
+      studyUnfolded = studyUnfolded.filter(k => k != key)
+    else
+      studyUnfolded = studyUnfolded.concat([key])
+  action studyMove(verse: number)
+    feelTick()
+    studyWord = ""
+    studyUnfolded = []
+    nav = replace(nav, path("studySheet", studyAt.params.book, studyAt.params.chapter, `${verse}`, "commentary"))
+  action studyFollow(book: number, chapter: number, verse: number, row: number)
+    studyBacks = studyBacks == "" ? `${readTop.id} ${studyAt.params.book} ${studyAt.params.chapter} ${studyAt.params.verse} ${row} 0` : `${studyBacks};${readTop.id} ${studyAt.params.book} ${studyAt.params.chapter} ${studyAt.params.verse} ${row} 0`
+    chooserFirst = 0
+    chooserLast = 0
+    chooserAnswer = ""
+    nav = push(back(nav), path("readAt", `${book}`, `${chapter}`, `${verse}`) + `#verse-${verse}`)
+  action studyDone
+    nav = back(nav)
+  task studyReturning when studyReturnShown.key != "" key=studyReturnShown.key
+    after(1, studyReturned)
+  action studyReturned
+    studyBacks = studyReturnShown.backs
+    if studyReturnShown.reopen
+      studyWord = ""
+      studyUnfolded = []
+      studyRow = studyReturnShown.row
+      nav = push(nav, path("studySheet", `${studyReturnShown.book}`, `${studyReturnShown.chapter}`, `${studyReturnShown.verse}`, "xrefs"))
+  // Back from a followed reference reopens the sheet scrolled to the row followed.
+  task studyRowShown when studyUp and studyRow >= 0 and studySheetShown.xrefs.length > studyRow key=`${studyAt.id}:${studyRow}`
+    after(1, studyRowScroll)
+  action studyRowScroll
+    scrollIntoView(`study-xref-${studyRow}`, block="center", behavior="instant")
+    studyRow = -1
+
+// The bar's study row for the one verse chosen: three quiet buttons of
+// equal width, each its label over what it holds.
+component StudyBar
+  props
+    buttons: StudyButton[]
+    verse: number
+    open: action
+  view
+    row gap=8 align-items="stretch" testId="study-bar"
+      for b in buttons key=b.tab
+        button press=open(verse, b.tab) buttonStyle="bordered" aria-label=b.name flex=1 min-width=0 min-height=52 display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 testId=`study-${b.tab}`
+          text b.label font-size="min(-exact-subheadline, 17px)" text-align="center" white-space="nowrap"
+          if b.line != ""
+            text b.line font-size="min(-exact-footnote, 14px)" color="-exact-secondary-label" text-align="center" white-space="nowrap" testId=`study-${b.tab}-line`
+
+// The study sheet: the reference, Done, the three tabs with their counts,
+// and the tab shown.
+component StudySheet
+  props
+    route: number
+    tab: string
+    sheet: StudySheetShown
+    word: StudyWordOpen
+    unfolded: string[]
+    type: TypeView
+    retry: bool
+    still: bool
+    choose: action
+    tapWord: action
+    fold: action
+    follow: action
+    move: action
+    again: action
+    done: action
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationDetent="medium large" navigationInitialDetent="large" navigationScroll="study-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="study-sheet"
+      header display="flex" align-items="center"
+        text sheet.heading role="heading" aria-level=2 flex=1 testId="study-heading"
+        button press=done testId="study-done"
+          text "Done"
+      scroll id="study-scroll" flex=1 min-height=0 testId="study-scroll"
+        column gap=16 padding=20 padding-bottom="7rem"
+          row role="tablist" aria-label="Study" align-self="stretch" flex-wrap="wrap" testId="study-tabs"
+            for t in sheet.tabs key=t.tab
+              button role="tab" aria-selected=(tab == t.tab) aria-label=t.name press=choose(t.tab) flex-grow=1 flex-shrink=1 flex-basis="auto" testId=`study-tab-${t.tab}`
+                text (t.count == "" ? t.label : `${t.label} ${t.count}`)
+          if tab == "xrefs"
+            column gap=12 testId="study-xrefs"
+              if sheet.xrefsLine != ""
+                text sheet.xrefsLine color="-exact-secondary-label" testId="study-xrefs-line"
+              for r in sheet.xrefs key=r.index
+                button press=follow(r.book, r.chapter, r.verse, r.index) appearance="none" aria-label=r.name min-height=44 display="flex" flex-direction="row" align-items="flex-start" gap=8 padding="12px 14px" border-radius=14 background-color="hs.card" color="hs.ink" text-align="start" -exact-press-scale=0.97 id=`study-xref-${r.index}` testId=`study-xref-${r.index}`
+                  column flex=1 min-width=0 gap=4
+                    text r.reference font="-exact-headline"
+                    text r.text line-clamp=3 color="-exact-secondary-label" overflow-wrap="break-word"
+                  image "symbol:forward-chevron" color="hs.quiet" aria-hidden=true
+              text sheet.feet.xrefs font="-exact-footnote" color="-exact-secondary-label" testId="study-xrefs-foot"
+          if tab == "words"
+            column gap=12 testId="study-words"
+              if sheet.wordsLine != ""
+                text sheet.wordsLine color="-exact-secondary-label" testId="study-words-line"
+              if sheet.caption != ""
+                text sheet.caption font="-exact-footnote" color="-exact-secondary-label" testId="study-words-caption"
+              if sheet.hint != ""
+                text sheet.hint font="-exact-footnote" color="-exact-secondary-label" testId="study-words-hint"
+              if sheet.supplied != ""
+                text sheet.supplied font="-exact-footnote" color="-exact-secondary-label" testId="study-words-supplied"
+              TypeColumn(type=type)
+                row flex-wrap="wrap" column-gap="0.3em" row-gap=4 margin="0px -2px" testId="study-verse"
+                  for w in sheet.words key=w.index
+                    if w.tagged
+                      button press=tapWord(w.index) appearance="none" aria-label=w.name aria-pressed=(word.open and word.index == w.index) min-height=44 padding="0px 2px" border-radius=6 background-color=(word.open and word.index == w.index ? "hs.hearing" : "hs.ground") color="hs.ink" font-style=(w.added ? "italic" : "normal") border-bottom-width=1 border-bottom-style="dotted" border-bottom-color="hs.quiet" testId=`study-word-${w.index}`
+                        text w.text
+                    else
+                      text w.text min-height=44 padding="0px 2px" display="flex" align-items="center" font-style=(w.added ? "italic" : "normal") testId=`study-word-${w.index}`
+              if word.open
+                column gap=12 padding=16 border-radius=16 background-color="hs.card" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.light easing.out both") testId="study-entry"
+                  if word.line != ""
+                    text word.line color="-exact-secondary-label" testId="study-entry-line"
+                  for e in word.entries key=e.key
+                    column gap=6 testId=`study-entry-${e.number}`
+                      text e.big font-family="system-ui" font-size="2rem" font-style=(e.bigItalic ? "italic" : "normal") testId="study-lemma"
+                      if e.xlit != ""
+                        text e.xlit color="-exact-secondary-label"
+                      if e.pron != ""
+                        text e.pron color="-exact-secondary-label"
+                      text e.heading font="-exact-subheadline" testId="study-number"
+                      if e.missing != ""
+                        text e.missing color="-exact-secondary-label" testId="study-entry-missing"
+                      if e.def != ""
+                        text e.def line-clamp=(e.folds and not unfolded.includes(e.key) ? 5 : 0) overflow-wrap="break-word" testId="study-def"
+                        if e.folds
+                          button press=fold(e.key) min-height=44 align-self="flex-start" testId="study-def-fold"
+                            text (unfolded.includes(e.key) ? "Show less" : "Show the full entry")
+                      if e.defLine != ""
+                        text e.defLine font-style="italic" color="-exact-secondary-label" testId="study-def-none"
+                      if e.rendersLine != ""
+                        text e.rendersLine font="-exact-subheadline" font-weight=600 testId="study-renders-line"
+                        row gap=6 flex-wrap="wrap" testId="study-renders"
+                          for r in e.renders key=r
+                            text r font="-exact-footnote" padding="4px 10px" border-radius=10 background-color="hs.ground" testId="study-render"
+              text sheet.feet.words font="-exact-footnote" color="-exact-secondary-label" testId="study-words-foot"
+          if tab == "commentary"
+            column gap=16 testId="study-commentary"
+              if sheet.notesLine != ""
+                text sheet.notesLine color="-exact-secondary-label" testId="study-notes-line"
+              if retry
+                button press=again buttonStyle="bordered" min-height=44 align-self="flex-start" testId="study-retry"
+                  text "Try again"
+              for n in sheet.notes key=n.key
+                column gap=6 testId=`study-note-${n.index}`
+                  text n.ref font="-exact-headline" testId="study-note-ref"
+                  text n.text line-clamp=(n.folds and not unfolded.includes(n.key) ? 6 : 0) overflow-wrap="break-word" testId="study-note-text"
+                  if n.folds
+                    button press=fold(n.key) min-height=44 align-self="flex-start" testId=`study-note-fold-${n.index}`
+                      text (unfolded.includes(n.key) ? "Show less" : "Read it all")
+              if sheet.chipsLine != ""
+                text sheet.chipsLine font="-exact-subheadline" testId="study-chips-line"
+                row gap=8 flex-wrap="wrap" testId="study-chips"
+                  for c in sheet.chips key=c.verse
+                    button press=move(c.verse) buttonStyle="bordered" aria-label=c.name min-width=44 min-height=44 testId=`study-chip-${c.verse}`
+                      text c.label
+              text sheet.feet.commentary font="-exact-footnote" color="-exact-secondary-label" testId="study-commentary-foot"

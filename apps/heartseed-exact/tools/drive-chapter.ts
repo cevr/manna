@@ -12,7 +12,8 @@
  *   field"); the title, the magnifier, Aa and the clear button named;
  * - the bar: it leaves the chapter's last verse in view above it, sits
  *   above the tab bar, offers one filled button at most, and at the
- *   largest text size clips nothing;
+ *   largest text size clips nothing, its button in view once the bar
+ *   (which then scrolls inside 70 % of the screen) is scrolled to its end;
  * - opening on a verse: Psalm 119:105 read from Today's book button is in
  *   view a third of the way down, within one line;
  * - kept: a relaunch on the kept storage opens the chapter left;
@@ -221,7 +222,7 @@ const largest = {
   bar: a.step('layout chapter-bar'),
   line: a.step('layout range-line'),
   clear: a.step('layout chapter-clear'),
-  button: a.step('layout plant-singles'),
+  button: a.step('tap chapter-bar wheel 0 2000', 'clock settle', 'layout plant-singles'),
 };
 const largestTabs = a.step(BAR);
 both(a, 'largest');
@@ -428,7 +429,7 @@ const clipped = Object.entries(largest).filter(([, at]) => {
   );
 });
 drive.check(
-  'the bar: at the largest text size nothing of it is clipped',
+  'the bar: at the largest text size nothing of it is clipped, its button in view once the bar scrolls to its end',
   clipped.length === 0,
   clipped.map(([name, at]) => [name, laid(first, at)?.node?.visible]),
 );
