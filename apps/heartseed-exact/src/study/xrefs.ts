@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a pack's strings written and read by plain splits. */
+/* oxlint-disable effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a pack's strings written and read by plain splits. */
 
 /** One reference as the pack keeps it: `last` is `verse` for one verse. */
 export interface XrefPlace {

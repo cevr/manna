@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a test over plain records. */
+/* oxlint-disable effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a test over plain records. */
 
 /**
  * The lexicon pack against `strongs.json` and the tags, the whole Bible:

@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- Exact's app folder cannot import effect (docs/exact.md): a test over plain records. */
-
 /**
  * The cross-references pack against its asset, the whole Bible: every
  * verse's answer is the asset's first 6 for it, in its order, each naming a

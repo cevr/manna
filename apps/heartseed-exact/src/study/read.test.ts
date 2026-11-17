@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNewError, effect/noNullish, effect/noTernary, effect/noThrowStatement, eslint/no-await-in-loop -- Exact's app folder cannot import effect (docs/exact.md): the test awaits each answer in turn, as the host asks them, over a stand-in server and a storage that answers at once. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNewError, effect/noNullish, effect/noTernary, effect/noThrowStatement -- Exact's app folder cannot import effect (docs/exact.md): the test awaits each answer in turn, as the host asks them, over a stand-in server and a storage that answers at once. */
 
 /**
  * The readers and their sources, over made-up packs at the canon's own
