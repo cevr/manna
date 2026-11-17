@@ -1,9 +1,9 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAs, effect/noTryCatch -- Exact's app folder cannot import effect (docs/exact.md): a host script that reads bible.db read only (closed whatever its queries do) or, for the tests, the assets bible.db is built from, reads SQLite's untyped rows by the columns it asked for, and writes the three study packs, with the build rule itself the pure src/study/build.ts. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAs, effect/noTryCatch -- Exact's app folder cannot import effect (docs/exact.md): a host script that reads bible.db read only (closed whatever its queries do) or, for the tests, the assets bible.db is built from, reads SQLite's untyped rows by the columns it asked for, and writes the study packs, with the build rule itself the pure src/study/build.ts. */
 
 /**
- * Builds the reader's three study packs (q126): the cross-references, the
- * Strong's tags lined up with the app's own KJV, and the lexicon with how
- * the KJV renders each number. They are built from `bible.db`
+ * Builds the reader's study packs (q126): the cross-references, the
+ * Strong's tags lined up with the app's own KJV, the lexicon with how
+ * the KJV renders each number, and find's word index. They are built from `bible.db`
  * (`packages/core/data/bible.db`, built from the assets in
  * `packages/core/assets` and kept on the owner's Mac alone), the one
  * database every tool reads, never from a separate copy; egw.cvr.im serves
@@ -12,7 +12,9 @@
  * tests hold the packs to them without the database.
  *
  * `bun tools/study.ts [--db <bible.db>] [--out <dir>]` writes
- * `xrefs.json`, `tags.json` and `lexicon.json` into `<dir>` and prints
+ * `xrefs.json`, `tags.json` and `lexicon.json`, and find's word index
+ * `words.json` (`tools/find.ts`'s index of the same database), into
+ * `<dir>` and prints
  * their versions and how the tags lined up.
  */
 
@@ -29,7 +31,9 @@ import {
 } from '../src/study/build';
 import { canonChapters } from '../src/study/canon';
 import { studyBodyOf, studyPackOf, type StudyPack } from '../src/study/pack';
+import { wordsBodyOf, wordsPackOf } from '../src/study/words-pack';
 import type { XrefPlace } from '../src/study/xrefs';
+import { corpusOfDb, findPackOf } from './find';
 import { corpus } from './kjv';
 
 const ROOT = join(import.meta.dir, '..', '..', '..');
@@ -222,14 +226,26 @@ export const studyPacks = (built: StudyBuilt): Record<(typeof STUDY_NAMES)[numbe
   lexicon: studyPackOf(built.lexicon),
 });
 
-/** Writes the packs of `built` into `dir` as `<name>.json`; answers each one's version and bytes. */
-export const writeStudy = (dir: string, built: StudyBuilt) => {
-  mkdirSync(dir, { recursive: true });
+/** Each pack's version and body: the three of `built`, and find's word index of `chapters`. */
+export const studyBodies = (built: StudyBuilt, chapters: ReadonlyArray<string>) => {
   const packs = studyPacks(built);
-  return STUDY_NAMES.map((name) => {
-    const body = studyBodyOf(packs[name]);
+  const words = wordsPackOf(findPackOf(chapters));
+  return [
+    ...STUDY_NAMES.map((name) => ({
+      name,
+      version: packs[name].version,
+      body: studyBodyOf(packs[name]),
+    })),
+    { name: 'words', version: words.version, body: wordsBodyOf(words) },
+  ];
+};
+
+/** Writes the packs of `built` and the word index of `chapters` into `dir` as `<name>.json`; answers each one's version and bytes. */
+export const writeStudy = (dir: string, built: StudyBuilt, chapters: ReadonlyArray<string>) => {
+  mkdirSync(dir, { recursive: true });
+  return studyBodies(built, chapters).map(({ name, version, body }) => {
     writeFileSync(join(dir, `${name}.json`), body);
-    return { name, version: packs[name].version, bytes: Buffer.byteLength(body) };
+    return { name, version, bytes: Buffer.byteLength(body) };
   });
 };
 
@@ -244,7 +260,7 @@ if (import.meta.main) {
   const db = flagOf(args, '--db', BIBLE_DB);
   const out = flagOf(args, '--out', join(import.meta.dir, '..', '.exact', 'study'));
   const built = buildStudy(dbSource(db));
-  for (const pack of writeStudy(out, built))
+  for (const pack of writeStudy(out, built, corpusOfDb(db)))
     process.stdout.write(`study ${pack.name} ${pack.version} ${pack.bytes} bytes\n`);
   const { equal, aligned, bare: left, numbered, kept } = built.counts;
   process.stdout.write(

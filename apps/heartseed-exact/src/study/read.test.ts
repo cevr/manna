@@ -27,9 +27,6 @@ import { xrefsChapterText } from './xrefs';
 
 const STORE = { forget: () => {} };
 
-/** The splits the imports above made: none. */
-const SPLIT_AT_IMPORT = studySplits.length;
-
 /** A chapter pack of `CANON_CHAPTERS` parts, `at` set at the chapter of `book` `chapter`. */
 const chapterPack = (book: number, chapter: number, part: string): StudyPack =>
   studyPackOf(
@@ -234,10 +231,10 @@ describe('the sources, through the one downloader', () => {
 });
 
 describe('the readers', () => {
-  it('split nothing at import, one chapter for a verse, one block for an entry', () => {
-    expect(SPLIT_AT_IMPORT).toBe(0);
+  it('split nothing when a pack is made, one chapter for a verse, one block for an entry', () => {
     const before = studySplits.length;
     const pack = studyPackOf(TAGS.parts);
+    expect(studySplits.length).toBe(before);
     wordsRead(pack, 43, 3, 16);
     wordsRead(pack, 43, 3, 17);
     expect(studySplits.slice(before)).toEqual([`tags:${chapterIndex(43, 3)}`]);

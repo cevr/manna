@@ -11,6 +11,7 @@
 
 import type { FileStorage } from '@manna/exact-kit/storage';
 
+import { packAt, type PackFrom } from '../find/sources';
 import type { ExactStore, packSources } from '../packs/sources';
 import type { PackSpec } from '../packs/spec';
 import { CANON_CHAPTERS } from './canon';
@@ -25,6 +26,7 @@ import {
   type StudyWords,
   type StudyXrefs,
 } from './read';
+import { checkWords, type WordsPack } from './words-pack';
 
 /** OpenBible.info's cross-references, each verse's first 6, as egw.cvr.im serves them. */
 export const STUDY_XREFS: PackSpec<StudyPack> = {
@@ -62,11 +64,32 @@ export const STUDY_LEXICON: PackSpec<StudyPack> = {
   check: studyCheckOf(),
 };
 
+/** Find's word index, as egw.cvr.im serves it (`tools/find.ts`'s index in a pack's fields). */
+export const STUDY_WORDS: PackSpec<WordsPack> = {
+  name: 'words',
+  path: '/api/study/words',
+  file: 'app:/data/words.json',
+  title: 'the word search',
+  noun: 'Word search',
+  waiting: 'Word search is still on its way. It needs a connection once, then it works offline.',
+  check: checkWords,
+};
+
 /** The study packs, in the order the downloader asks them. */
-export const STUDY_PACKS = [STUDY_XREFS, STUDY_TAGS, STUDY_LEXICON] as const;
+export const STUDY_PACKS = [STUDY_XREFS, STUDY_TAGS, STUDY_LEXICON, STUDY_WORDS] as const;
 
 /** The downloader the study packs are read through. */
 type Packs = Pick<ReturnType<typeof packSources>, 'packOf'>;
+
+/**
+ * Find's word index: a driver's launch's, served at `origin`
+ * (`tools/drive-find.ts`), else the one the downloader keeps, read under
+ * its kept version.
+ */
+export const findPackFrom = (packs: Packs, origin: string): PackFrom => {
+  if (origin !== '') return packAt(origin);
+  return async (mark, storage) => (await packs.packOf(STUDY_WORDS, mark, storage))?.find;
+};
 
 /** The study packs' reader sources over `packs`. */
 export const studySources = (packs: Packs) => ({

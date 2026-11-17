@@ -94,14 +94,13 @@ interface StudyServed {
  */
 const studyServed = async (): Promise<Record<string, StudyServed>> => {
   await loadPreload();
-  const { assetSource, studyPacks } = await import('./study');
+  const { assetSource, studyBodies } = await import('./study');
   const { buildStudy } = await import('../src/study/build');
-  const { studyBodyOf } = await import('../src/study/pack');
-  const packs = studyPacks(buildStudy(assetSource()));
+  const { corpus } = await import('./kjv');
   return Object.fromEntries(
-    Object.entries(packs).map(([name, made]) => [
+    studyBodies(buildStudy(assetSource()), corpus()).map(({ name, version, body }) => [
       name,
-      { version: made.version, body: studyBodyOf(made) },
+      { version, body },
     ]),
   );
 };

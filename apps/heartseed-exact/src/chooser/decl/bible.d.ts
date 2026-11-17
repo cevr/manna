@@ -8,3 +8,28 @@ export interface Book {
 
 /** The 66 books in canon order. */
 export declare const BIBLE_BOOKS: readonly Book[];
+
+/** A place of the canon as find reads a query (`src/find/find.ts`): a verse, a range of verses, a chapter, a range of chapters, a book, or no place (words to search). */
+export type ParsedBibleQuery =
+  | {
+      readonly _tag: 'single';
+      readonly ref: { readonly book: number; readonly chapter: number; readonly verse: number };
+    }
+  | { readonly _tag: 'chapter'; readonly ref: { readonly book: number; readonly chapter: number } }
+  | {
+      readonly _tag: 'verseRange';
+      readonly ref: {
+        readonly start: { readonly book: number; readonly chapter: number; readonly verse: number };
+        readonly end: { readonly book: number; readonly chapter: number; readonly verse: number };
+      };
+    }
+  | {
+      readonly _tag: 'chapterRange';
+      readonly start: { readonly book: number; readonly chapter: number };
+      readonly end: { readonly book: number; readonly chapter: number };
+    }
+  | { readonly _tag: 'fullBook'; readonly ref: { readonly book: number } }
+  | { readonly _tag: 'search'; readonly query: string };
+
+/** The place `query` names, read as core reads a reference ("john 3:16", "ps 23", "ruth"); `search` when it names none. */
+export declare const parseBibleQuery: (query: string) => ParsedBibleQuery;

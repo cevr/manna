@@ -1,0 +1,48 @@
+/**
+ * The fixed queries the speed drive (`tools/drive-find.ts`) types a
+ * character at a time, and the model-based test holds to the model and the
+ * work bound at every keystroke: phrases a memoriser looks for, one and two
+ * letters, stop words first, a six-word phrase, and a word the Bible lacks.
+ */
+export const FIXED: ReadonlyArray<string> = [
+  'still waters',
+  'fear not',
+  'the lord is my shepherd',
+  'in the beginning',
+  'a',
+  'th',
+  'and the',
+  'love one another',
+  'in the beginning was the word',
+  'xylophone',
+  'god so loved the world',
+  'grace',
+  'faith hope charity',
+  'blessed are the',
+  'the lord bless thee',
+  'let there be light',
+  'be still and know',
+  'jesus wept',
+  'my peace i give',
+  'i am the way',
+  'seek ye first',
+  'trust in the lord',
+  'the word was god',
+  'lamb of god',
+  'living water',
+  'bread of life',
+  'good shepherd',
+  'kingdom of heaven',
+  "lord's",
+  'o lord',
+  'thy will be done',
+  'shall not want',
+  'valley of the shadow',
+  'my cup runneth over',
+  'goodness and mercy',
+  'the fear of the lord',
+  'comfort ye',
+  'verily verily',
+  'son of man',
+  's',
+];
