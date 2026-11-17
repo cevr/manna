@@ -17,9 +17,8 @@
  * - the worst case: Psalm 119 at 38 pt, Airy, Wider, Narrow, OpenDyslexic,
  *   then again at the largest system text size: all 176 verses built, none
  *   wider than its column, the last reached by scrolling in parts;
- * - the live preview: with the sheet up (medium on the web; large on iOS,
- *   which scrolls a medium sheet only by raising it), a size step changes
- *   the text's size while the sheet stays up with its scroll kept; the time
+ * - the live preview: with the sheet at medium, a size step changes the
+ *   text's size while the sheet stays up with its scroll kept; the time
  *   from a tap to settled, measured as the agent's replies arrive, under
  *   200 ms at the median;
  * - Reduce Motion: the sheet's own nodes carry no translate, scale or
@@ -128,9 +127,9 @@ const fontSizeOf = (replies: readonly unknown[], at: number) => {
       '',
   );
 };
-/** How far the scroll nearest a laid-out node is scrolled: a scroll's own layout lists its ancestors', so the sheet's is read from a control inside it. */
+/** How far the scroll nearest a laid-out node is scrolled: a scroll's own layout lists its ancestors', so the sheet's is read from a control inside it; iOS lists the sheet's presentation first, with no id. */
 const innerScrollOf = (replies: readonly unknown[], at: number) =>
-  laid(replies, at)?.node?.scroll?.[0]?.sy ?? -1;
+  (laid(replies, at)?.node?.scroll ?? []).findLast((entry) => Number.isInteger(entry.id))?.sy ?? -1;
 
 /** How many of a tree's nodes are the sample's verses, by their test ids alone. */
 const versesIn = (replies: readonly unknown[], at: number) =>
@@ -186,18 +185,14 @@ for (const font of [...FONTS.slice(1), FONTS[0] ?? 'newyork']) {
 }
 a.step(shot('fonts-light'));
 /**
- * The sheet scrolled by a little, so the size buttons stay in view (the agent brings a tap's target into view first, which would scroll the sheet itself).
- * On the web the medium sheet scrolls its content: to its top, then down. On iOS a drag up on a medium sheet raises it to large before its content scrolls, so the scroll is kept at large there.
+ * The medium sheet scrolled to its top, then by a little, so the size buttons stay in view (the agent brings a tap's target into view first, which would scroll the sheet itself).
+ * The web's touch takes about 8 px of slop before it scrolls; iOS's drag scrolls by its whole length.
  */
 a.step(
-  ...(web
-    ? ['tap type-scroll drag 0 300', 'clock settle', 'tap type-scroll drag 0 -26', 'clock settle']
-    : [
-        'tap type-scroll drag 0 -400',
-        'clock settle',
-        'tap type-scroll drag 0 -60',
-        'clock settle',
-      ]),
+  'tap type-scroll drag 0 300',
+  'clock settle',
+  `tap type-scroll drag 0 ${web ? -26 : -12}`,
+  'clock settle',
 );
 const scrollBefore = a.step('layout type-larger');
 const sizeBefore = a.step('layout type-probe');
@@ -283,7 +278,7 @@ console.log(
   `WIDTH ${host} at 18 pt, "Psalm 119" wide and the sample tall: ${FONTS.map((font) => `${font} ${widths[font]}/${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
 );
 drive.check(
-  `live preview: a size step changes the text’s size with the sheet up (${web ? 'medium' : 'large, where iOS scrolls a sheet'})`,
+  'live preview: a size step changes the text’s size with the sheet at medium',
   fontSizeOf(first, sizeAfter) > fontSizeOf(first, sizeBefore),
   [fontSizeOf(first, sizeBefore), fontSizeOf(first, sizeAfter)],
 );
