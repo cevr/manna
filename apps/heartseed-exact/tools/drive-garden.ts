@@ -16,6 +16,8 @@
 
 import { join } from 'node:path';
 
+import { claimAppPort } from '@manna/exact-kit/port';
+
 import './setup';
 
 const host = process.argv[2] ?? 'web';
@@ -23,8 +25,11 @@ const app = join(import.meta.dir, '..');
 const DRIVE_MS = 20 * 60 * 1000;
 const DAY = 86_400_000;
 
-/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8774'] : [];
+/** Chrome keeps a named store per port, so every web launch here, the relaunch too, is on one port of the app's this drive holds to its end. */
+const port =
+  host === 'web'
+    ? ['--port', String((await claimAppPort(app, { label: 'drive-garden web' })).port)]
+    : [];
 
 const run = async (flags: readonly string[], ops: readonly string[]) => {
   const child = Bun.spawn(

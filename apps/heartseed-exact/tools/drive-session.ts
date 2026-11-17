@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noTernary, node/no-process-env, no-await-in-loop -- Exact's app folder cannot import effect (docs/exact.md): a host script that picks its port by host, drives the built app through `bun run exact agent`, awaits each launch in turn, and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, node/no-process-env, no-await-in-loop -- Exact's app folder cannot import effect (docs/exact.md): a host script that picks its port by host, drives the built app through `bun run exact agent`, awaits each launch in turn, and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * The daily session's live checks (spec B), on the host named
@@ -42,8 +42,6 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
 }
 const drive = makeDrive({ name: 'drive-session', host, appDir: app });
 const store = `session-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so every web launch here, each relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8772'] : [];
 const SOWN = Date.parse('2026-11-14T12:00:00Z');
 const DAY = 86_400_000;
 const ZONE = 'America/New_York';
@@ -127,10 +125,7 @@ let launches = 0;
 const later = async (ops: readonly string[]) => {
   launches += 1;
   const at = new Date(SOWN + LATER + launches * 60_000).toISOString();
-  return drive.run(
-    [...port, '--storage', store, '--keep-storage', '--epoch', at, '--time-zone', ZONE],
-    ops,
-  );
+  return drive.run(['--storage', store, '--keep-storage', '--epoch', at, '--time-zone', ZONE], ops);
 };
 
 /** The ops of a launch that also reads Today and the garden at its end, and the indexes of both reads. */
@@ -141,7 +136,6 @@ const reading = (ops: readonly string[]) => {
 
 await drive.run(
   [
-    ...port,
     '--storage',
     store,
     '--reset-storage',

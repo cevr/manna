@@ -52,8 +52,8 @@ const drive = makeDrive({
   timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
 });
 const store = `chapter-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so every web launch here takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8771', '--size', '390x844'] : [];
+/** Every web launch here is a phone's width. */
+const size = host === 'web' ? ['--size', '390x844'] : [];
 const native = host === 'ios';
 /** Dynamic Type's largest body size, AX5. */
 const LARGEST = 53;
@@ -239,7 +239,7 @@ a.step(
 a.step('tap chapter-find', ...settle, 'type goto-find "psalm 119:105"', ...settle);
 both(a, 'go-search');
 a.step('tap goto-done', ...settle);
-const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
+const first = await drive.run([...size, '--storage', store, '--reset-storage'], a.ops);
 const viewWidth = laid(first, width)?.viewport?.w ?? 390;
 
 for (const which of ['light', 'dark'] as const) {
@@ -484,7 +484,7 @@ const openedType = b.step('state typeShown');
 const openedVerse = b.step('state readVerse');
 const openedHeight = b.step('state chooserScrollHeight');
 both(b, 'opened');
-const second = await drive.run([...port, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
+const second = await drive.run([...size, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
 const verseFrame = frameOf(second, opened);
 const scrollFrame = frameOf(second, scroll);
 const type = second[openedType] as { size?: number; lineHeight?: number } | undefined;
@@ -510,7 +510,7 @@ drive.check(
 const c = script();
 c.step(...settle, 'tap tab-read', ...settle);
 const kept = c.step('state chapterShown.heading');
-const again = await drive.run([...port, '--storage', `${store}-opened`, '--keep-storage'], c.ops);
+const again = await drive.run([...size, '--storage', `${store}-opened`, '--keep-storage'], c.ops);
 drive.check('kept: a relaunch opens the chapter left', again[kept] === 'Psalms 119', again[kept]);
 
 process.exit(drive.finish());

@@ -1,5 +1,6 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
+  Array as Arr,
   ConfigProvider,
   Effect,
   Option,
@@ -16,7 +17,7 @@ import { ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { EXACT_BASE } from './pin.ts';
-import { runExact } from './run.ts';
+import { PortClaims, runExact } from './run.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;
@@ -163,6 +164,7 @@ const running = (
   files: Readonly<Record<string, string>>,
 ) => {
   const spawned: Array<Spawned> = [];
+  const claims: Array<Claimed> = [];
   return runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
     Effect.result,
     Effect.provide(
@@ -170,11 +172,39 @@ const running = (
         BunServices.layer,
         memoryFs(files),
         Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned)),
+        Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
     ),
-    Effect.map((result) => ({ result, spawned })),
+    Effect.map((result) => ({ result, spawned, claims })),
   );
+};
+
+/** A port the stand-in claims were asked to hold: one claimed from a range, or one taken, and whether it was given back. */
+interface Claimed {
+  readonly asked: 'claimed' | number;
+  readonly port: number;
+  given: boolean;
+}
+
+/** Claims that hold no port: a range's claim answers its first port, a take the port; each is marked given when its scope closes. */
+const claimsStandIn = (claims: Array<Claimed>) => {
+  const holding = (asked: Claimed['asked'], port: number) =>
+    Effect.acquireRelease(
+      Effect.sync(() => {
+        const claimed: Claimed = { asked, port, given: false };
+        claims.push(claimed);
+        return claimed;
+      }),
+      (claimed) =>
+        Effect.sync(() => {
+          claimed.given = true;
+        }),
+    ).pipe(Effect.map((claimed) => claimed.port));
+  return {
+    claim: (range: readonly [number, number]) => holding('claimed', range[0]),
+    take: (port: number) => holding(port, port),
+  };
 };
 
 /** The pin and the apps' committed files, which every run but a refused one needs. */
@@ -348,6 +378,37 @@ const mustRefuse = (
   );
 };
 
+/**
+ * The rule, written out: the port a run holds while its child runs. None for a verb other than `test`, `verify`
+ * and `agent`, or one on a native host; else the page's port its arguments or the caller's `EXACT_PORT` name, else
+ * one claimed from the spare range.
+ */
+const listenerFor = (
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+): 'none' | 'claimed' | number => {
+  if (!['test', 'verify', 'agent'].includes(args[0] ?? '') || mustLock(args)) return 'none';
+  const named = args.flatMap((a, i) => {
+    if (a === '--port') return [args[i + 1] ?? ''];
+    if (a.startsWith('--port=')) return [a.slice(7)];
+    return [];
+  });
+  const port = named[0] ?? callerPorts.EXACT_PORT;
+  if (port === '') return 'claimed';
+  return Number(port);
+};
+
+/**
+ * The range a child is held to and the turns it is told it holds, for `listener`: a claimed port is the range's
+ * first (the stand-in's) and the range is it alone; a named one keeps the spare range; none holds no turn ("").
+ */
+const rangeHeld = (app: App, listener: ReturnType<typeof listenerFor>) => {
+  const [lo, hi] = APPS[app].spare;
+  if (listener === 'claimed') return { lo, hi: lo, turns: String(lo) };
+  if (listener === 'none') return { lo, hi, turns: '' };
+  return { lo, hi, turns: String(listener) };
+};
+
 /** The rule, written out: what runs under the build lock. */
 const mustLock = (args: ReadonlyArray<string>) =>
   args[0] === 'ios' ||
@@ -417,13 +478,15 @@ const ranAsPlanned = (
 ) => {
   const locked =
     child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  const { lo, hi, turns } = rangeHeld(app, listenerFor(args, callerPorts));
   return (
     child.extendEnv &&
     child.env['EXACT'] === clone &&
     child.env['EXACT_FEEDBACK'] === '0' &&
     child.env['EXACT_SIM'] === APPS[app].simulator &&
-    child.env['PORT_LO'] === String(APPS[app].spare[0]) &&
-    child.env['PORT_HI'] === String(APPS[app].spare[1]) &&
+    child.env['PORT_LO'] === String(lo) &&
+    child.env['PORT_HI'] === String(hi) &&
+    Option.getOrElse(Rec.get(child.env, 'EXACT_PORT_TURNS'), () => '') === turns &&
     portsHeld(child, app, args, callerPorts) &&
     locked === mustLock(args) &&
     (locked || child.command === 'bun') &&
@@ -468,7 +531,11 @@ describe('the exact wrapper', () => {
                 Rec.get(caller, 'EXACT'),
                 () => `${PROBE}/home/${DEFAULT_CLONE}`,
               );
-              const { result: ran, spawned } = yield* running(
+              const {
+                result: ran,
+                spawned,
+                claims,
+              } = yield* running(
                 app,
                 args,
                 caller,
@@ -479,11 +546,17 @@ describe('the exact wrapper', () => {
                 return (
                   ran._tag === 'Failure' &&
                   ran.failure._tag === 'ExactRefused' &&
-                  spawned.length === 0
+                  spawned.length === 0 &&
+                  claims.length === 0
                 );
               const [git, child, ...more] = spawned;
               if (ran._tag !== 'Success' || !git || !child || more.length > 0) return false;
+              const listener = listenerFor(args, callerPorts);
               return (
+                Bun.deepEquals(
+                  claims.map((c) => [c.asked, c.given]),
+                  Arr.filter([[listener, true]], () => listener !== 'none'),
+                ) &&
                 git.command === 'git' &&
                 git.args.join(' ') === `-C ${clone} rev-parse HEAD` &&
                 ranAsPlanned(child, app, args, callerPorts, clone)
@@ -679,7 +752,7 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    "serves the web loop on the app own port, every other web host in its spare range without the caller's EXACT_PORT, and refuses a caller's EXACT_PORT not the app's",
+    "serves the web loop on the app own port, every other web host on a port it claims from its spare range without the caller's EXACT_PORT, and refuses a caller's EXACT_PORT not the app's",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -697,7 +770,25 @@ describe('the exact wrapper', () => {
           head,
           files,
         );
-        expect(tested.spawned[1]?.env).toMatchObject({ PORT_LO: '8770', PORT_HI: '8774' });
+        expect(tested.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8770',
+          EXACT_PORT_TURNS: '8770',
+        });
+        expect(tested.claims).toEqual([{ asked: 'claimed', port: 8770, given: true }]);
+        const driven = yield* running(
+          'heartseed-exact',
+          ['agent', 'web', '--port', '8772', 'tree'],
+          { HOME: PROBE, EXACT_PORT_TURNS: '8772' },
+          head,
+          files,
+        );
+        expect(driven.claims).toEqual([{ asked: 8772, port: 8772, given: true }]);
+        expect(driven.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8774',
+          EXACT_PORT_TURNS: '8772',
+        });
         expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT']);
         const hymnals = yield* running(
           'hymnal-exact',

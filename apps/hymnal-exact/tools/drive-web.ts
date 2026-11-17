@@ -38,6 +38,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
 
+import { claimAppPort } from '@manna/exact-kit/port';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { placeOf } from '../src/web/place.ts';
@@ -57,7 +58,10 @@ const server = flag('--server') ?? 'plain';
 const CHECKS = ['addresses', 'notfound', 'noscript', 'measure', 'return'] as const;
 const named = args.filter((arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--'));
 const checks = named.length > 0 ? named : [...CHECKS];
-const PORT = server === 'exact' ? 8778 : checkoutPort();
+const PORT =
+  server === 'exact'
+    ? (await claimAppPort(app, { label: 'drive-web --server exact' })).port
+    : checkoutPort();
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
 const budgetFile = join(import.meta.dir, 'web/budget.json');
