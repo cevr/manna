@@ -115,6 +115,8 @@ interface Entry {
   held: { readonly mark: string; readonly pack: Promise<Versioned | undefined> } | undefined;
   reads: number;
   job: Job | undefined;
+  /** When its job came to be owed, in the launch's count: the first owed is run first. */
+  owedAt: number;
   /** Whether it settled since the last answer, which then answers at once. */
   news: boolean;
   /** Whether its fetch landed its first pack since the last answer. */
@@ -182,6 +184,7 @@ export const packSources = (options: PacksOptions) => {
     held: undefined,
     reads: 0,
     job: undefined,
+    owedAt: 0,
     news: false,
     landed: false,
   }));
@@ -237,6 +240,13 @@ export const packSources = (options: PacksOptions) => {
       wakers.push(resolve);
     });
 
+  /** The launch's count of jobs owed, so the first owed is run first. */
+  let owing = 0;
+  const owe = (entry: Entry, job: Job) => {
+    entry.job = job;
+    entry.owedAt = ++owing;
+  };
+
   /** `entry` settled if it is no longer out: news for the next answer. */
   const told = (entry: Entry) => {
     if (!isOut(entry)) entry.news = true;
@@ -257,7 +267,7 @@ export const packSources = (options: PacksOptions) => {
   ) => {
     const heard = await hear(entry, version);
     if (heard._tag === 'Body' && entry.machine.current === id && entry.machine.writing === '')
-      entry.job = { _tag: 'Check', id, version, now, body: heard.body, storage };
+      owe(entry, { _tag: 'Check', id, version, now, body: heard.body, storage });
     else
       apply(entry, {
         _tag: 'Answered',
@@ -318,7 +328,7 @@ export const packSources = (options: PacksOptions) => {
       if (command._tag === 'Fetch') void flown(entry, command.id, command.version, now, storage);
     const mark = entry.machine.kept.version;
     if (!isOut(entry) && mark !== '' && entry.held?.mark !== mark)
-      entry.job = { _tag: 'Read', mark, storage };
+      owe(entry, { _tag: 'Read', mark, storage });
     told(entry);
   };
 
@@ -360,7 +370,8 @@ export const packSources = (options: PacksOptions) => {
 
   /**
    * The next answer: at once when a pack settled since the last one or none
-   * is out; else one pack's owed work run in this call's own turns; else
+   * is out; else the first owed pack's work (in the order the packs landed)
+   * run in this call's own turns; else
    * at the next landing, whatever the others do. Work runs only from a
    * call's own turn, never after a wake, which may come in another call's
    * turn, and the call answers once that work is done: on Hermes a yield of
@@ -368,7 +379,12 @@ export const packSources = (options: PacksOptions) => {
    */
   const nextAnswer = async (kept: string): Promise<PacksAnswer> => {
     if (!entries.some((entry) => entry.news)) {
-      const owed = entries.find((entry) => entry.job !== undefined);
+      const owed = entries
+        .filter((entry) => entry.job !== undefined)
+        .reduce<Entry | undefined>(
+          (first, entry) => (first === undefined || entry.owedAt < first.owedAt ? entry : first),
+          undefined,
+        );
       if (owed !== undefined) await work(owed);
       else if (entries.some(isOut)) await woken();
     }

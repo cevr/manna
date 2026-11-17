@@ -146,19 +146,23 @@ const hostOf = () => {
     return answer;
   };
 
-  /** An ask as `features/packs.contract` follows it: `packsWait` a turn after each answer that says `more`. */
+  /** Every answer's kept line, in the order they came. */
+  const answers: Array<string> = [];
   const ask = async (kept: string, force: boolean) => {
     let answer = await send('packsAsk', () => sources.packsAsk([kept, force, NOW], STORE, storage));
+    answers.push(answer.kept);
     while (answer.more) {
       await turn();
       const last = answer.kept;
       answer = await send('packsWait', () => sources.packsWait([last]));
+      answers.push(answer.kept);
     }
     return answer;
   };
 
   return {
     joined,
+    answers,
     ask,
     version: (name: string) => made.get(name)?.version ?? '',
     release: (name: string, outcome: Outcome) => {
@@ -195,6 +199,27 @@ describe('every step of a check runs in a turn of a call still answering', () =>
     const landed = await again;
     expect({ joined: host.joined, failed: landed.failed }).toEqual({ joined: [], failed: false });
     expect(keptIn(landed.kept, 'commentary').version).toBe(host.version('commentary'));
+  });
+
+  it('bodies owed together are checked in the order they landed, a slow pack after a quick one', async () => {
+    const host = hostOf();
+    const asked = host.ask('', false);
+    await drained();
+    for (const name of ['xrefs', 'commentary', 'tags'])
+      expect(host.release(name, 'well')).toBe(true);
+    await drained();
+    for (const name of ['lexicon', 'words']) expect(host.release(name, 'well')).toBe(true);
+    await asked;
+    const firstKept = host.answers
+      .map((kept) => NAMES.filter((name) => keptIn(kept, name).version !== ''))
+      .filter((names) => names.length > 0)
+      .slice(0, 3);
+    expect(firstKept).toEqual([
+      ['xrefs'],
+      ['commentary', 'xrefs'],
+      ['commentary', 'tags', 'xrefs'],
+    ]);
+    expect(host.joined).toEqual([]);
   });
 
   it('every pack lands at once: each is checked in turns of a call still answering', async () => {
