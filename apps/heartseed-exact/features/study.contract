@@ -245,7 +245,7 @@ component StudySheet
                   column flex=1 min-width=0 gap=4
                     text r.reference font="-exact-headline"
                     text r.text line-clamp=3 color="-exact-secondary-label" overflow-wrap="break-word"
-                  image "symbol:chevron-forward" color="hs.quiet" aria-hidden=true
+                  image "symbol:forward-chevron" color="hs.quiet" aria-hidden=true
               text sheet.feet.xrefs font="-exact-footnote" color="-exact-secondary-label" testId="study-xrefs-foot"
           if tab == "words"
             column gap=12 testId="study-words"

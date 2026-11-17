@@ -1,0 +1,84 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+// The study sheet on a plain launch, where no pack is on the phone yet:
+// the bar's three buttons with what they can say before a pack (Words
+// its language, no count on Cross-refs or Commentary), each tab's waiting
+// line, a tick-free tab change, Done back to the chapter with its verse
+// still chosen, and the hold: the default agent's long press on a verse's
+// text selects a word, which opens Words, drops the hint's second clause
+// and leaves the verses chosen as they were. The packs' rows (6
+// cross-references, G25, the fixture's notes, the chapter's chips, a
+// followed reference and Back) run against the fixture in
+// tools/drive-study.ts, which a test cannot start or name. Counts, numbers
+// and names only: no verse's words.
+
+test "John 3:16's three study buttons, before any pack"
+  at "/read/at/43/3/16"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  clock settle
+  expect tree has "study-bar"
+  expect text "study-xrefs" == "Cross-refs"
+  expect tree missing "study-xrefs-line"
+  expect text "study-words-line" == "Greek"
+  expect tree missing "study-commentary-line"
+  expect state studyBarShown.verses.15.buttons.1.name == "Hebrew and Greek words of John 3:16"
+  expect state studyBarShown.verses.15.buttons.0.name == "Cross-references of John 3:16"
+  expect state studyBarShown.verses.15.buttons.2.name == "Ellen White's commentary on John 3:16"
+  expect no failures
+
+test "Each tab says the pack is on its way, and Done keeps the verse chosen"
+  at "/read/at/43/3/16"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  clock settle
+  tap "study-commentary"
+  clock data
+  clock settle
+  expect tree has "study-sheet"
+  expect text "study-heading" == "John 3:16"
+  expect text "study-notes-line" == "The commentary is still on its way. It needs a connection once, then it works offline."
+  expect text "study-commentary-foot" == "From the SDA Bible Commentary, volumes 1-7, Ellen G. White comments."
+  tap "study-tab-xrefs"
+  clock data
+  clock settle
+  expect text "study-xrefs-line" == "The cross-references are still on their way. They need a connection once, then they work offline."
+  expect text "study-xrefs-foot" == "Cross-references from OpenBible.info."
+  tap "study-tab-words"
+  clock data
+  clock settle
+  expect text "study-words-line" == "The Hebrew and Greek words are still on their way. They need a connection once, then they work offline."
+  expect state studySheetShown.words.length == 25
+  tap "study-done"
+  clock data
+  clock settle
+  expect tree missing "study-sheet"
+  expect state chooserFirst == 16
+  expect state chooserLast == 16
+  expect no failures
+
+test "A long press on a word opens Words on its verse and chooses nothing"
+  at "/read/at/43/3/16"
+  clock data
+  clock settle
+  expect text "chapter-hint" == "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek."
+  tap "verse-text-16" contextmenu
+  clock data
+  clock settle
+  expect tree has "study-sheet"
+  expect state studyAt.params.verse == "16"
+  expect state studyAt.params.tab == "words"
+  expect state studyHeld == "held"
+  expect state chooserFirst == 0
+  expect state studyWordShown.open == true
+  tap "study-done"
+  clock data
+  clock settle
+  expect text "chapter-hint" == "Tap a verse to plant or study it."
+  expect no failures
