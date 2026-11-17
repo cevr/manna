@@ -1,0 +1,172 @@
+// The reader's text settings (q118, q121): the Aa sheet and the column
+// Scripture is drawn in. Each choice is kept as plain text by `persist` and
+// read by src/type/choices.ts (`typeOf`): the text when it is exactly a
+// choice, else the default (New York, 18 pt, Comfortable, Normal, Medium).
+// `TypeColumn` sets the family, size, line height, letter spacing, side
+// room and measure, so what a screen draws inside inherits them. A bundled
+// family is chosen by a literal (Exact refuses one named by a text from
+// state, and a `fn`'s answer reaches the page as such a text), so the
+// family is a chain of literals keyed on the font's key, written where it
+// is drawn: the column and each font's tile.
+// Labels, buttons and the sheet stay in the app's face (`family.hs`).
+// The seven bundled families are their upstream files, unmodified, under
+// assets/fonts/<key>/ beside each one's OFL.txt (assets/fonts/SOURCES.md).
+
+font "Literata"
+  400 = "assets/fonts/literata/Literata-Regular.ttf"
+  400 italic = "assets/fonts/literata/Literata-Italic.ttf"
+
+font "Source Serif 4"
+  400 = "assets/fonts/sourceserif/SourceSerif4-Regular.ttf"
+  400 italic = "assets/fonts/sourceserif/SourceSerif4-It.ttf"
+
+font "Merriweather"
+  400 = "assets/fonts/merriweather/Merriweather-Regular.ttf"
+  400 italic = "assets/fonts/merriweather/Merriweather-Italic.ttf"
+
+font "Lora"
+  400 = "assets/fonts/lora/Lora-Regular.ttf"
+  400 italic = "assets/fonts/lora/Lora-Italic.ttf"
+
+font "Inter"
+  400 = "assets/fonts/inter/Inter-Regular.ttf"
+  400 italic = "assets/fonts/inter/Inter-Italic.ttf"
+
+font "Atkinson Hyperlegible"
+  400 = "assets/fonts/atkinson/AtkinsonHyperlegible-Regular.ttf"
+  400 italic = "assets/fonts/atkinson/AtkinsonHyperlegible-Italic.ttf"
+
+font "OpenDyslexic"
+  400 = "assets/fonts/opendyslexic/OpenDyslexic-Regular.otf"
+  400 italic = "assets/fonts/opendyslexic/OpenDyslexic-Italic.otf"
+
+shape TypeOption
+  value: string
+  label: string
+  kind: string
+  spoken: string
+
+shape TypeView
+  font: string
+  size: number
+  line: string
+  letter: string
+  width: string
+  fontSize: string
+  lineHeight: number
+  letterSpacing: string
+  side: number
+  measure: string
+  sizeLabel: string
+  sizeSpoken: string
+  smaller: string
+  larger: string
+  smallerEnabled: bool
+  largerEnabled: bool
+  differs: bool
+  fonts: TypeOption[]
+  lines: TypeOption[]
+  letters: TypeOption[]
+  widths: TypeOption[]
+
+members HeartseedExact
+  state typeFontKept = "" persist
+  state typeSizeKept = "" persist
+  state typeLineKept = "" persist
+  state typeLetterKept = "" persist
+  state typeWidthKept = "" persist
+  resource typeShown = typeOf(typeFontKept, typeSizeKept, typeLineKept, typeLetterKept, typeWidthKept) as shape TypeView else typeOf("", "", "", "", "")
+
+  action typeOpen
+    nav = push(nav, "/type")
+  action typeDone
+    nav = back(nav)
+  task typeReveal when top(nav).name == "typeSheet" key=top(nav).id
+    change(typeRevealFont)
+  action typeRevealFont
+    scrollIntoView(`type-font-${typeShown.font}`, block="nearest", inline="center", behavior="instant")
+  action typeChooseFont(value: string)
+    feelTick()
+    typeFontKept = value
+  action typeChooseSize(value: string)
+    feelTick()
+    typeSizeKept = value
+  action typeChooseLine(value: string)
+    feelTick()
+    typeLineKept = value
+  action typeChooseLetter(value: string)
+    feelTick()
+    typeLetterKept = value
+  action typeChooseWidth(value: string)
+    feelTick()
+    typeWidthKept = value
+  action typeReset
+    feelTick()
+    typeFontKept = ""
+    typeSizeKept = ""
+    typeLineKept = ""
+    typeLetterKept = ""
+    typeWidthKept = ""
+
+component TypeColumn
+  props
+    type: TypeView
+  slot
+  view
+    column font-family=(type.font == "sf" ? "system-ui, sans-serif" : (type.font == "rounded" ? "ui-rounded, system-ui, sans-serif" : (type.font == "mono" ? "ui-monospace, Menlo, monospace" : (type.font == "literata" ? "Literata, ui-serif, Georgia, serif" : (type.font == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (type.font == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (type.font == "lora" ? "Lora, ui-serif, Georgia, serif" : (type.font == "inter" ? "Inter, system-ui, sans-serif" : (type.font == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (type.font == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font-size=type.fontSize line-height=type.lineHeight letter-spacing=type.letterSpacing padding-left=type.side padding-right=type.side max-width=type.measure width="100%" align-self="center" box-sizing="border-box" hyphens="auto" overflow-wrap="break-word" testId="type-column"
+      children
+
+component TypeSegments
+  props
+    line: string
+    group: string
+    name: string
+    chosen: string
+    options: TypeOption[]
+    choose: action
+  view
+    column gap=8
+      text line font="-exact-subheadline" color="-exact-secondary-label"
+      row role="radiogroup" aria-label=group align-self="stretch" flex-wrap="wrap"
+        for o in options key=o.value
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) flex-grow=1 flex-shrink=1 flex-basis="5rem" testId=`${name}-${o.value}`
+            text o.label
+
+component TypeSheet
+  props
+    route: number
+    type: TypeView
+    font: action
+    size: action
+    line: action
+    letter: action
+    width: action
+    reset: action
+    done: action
+  view
+    column navigationKey=`${route}` navigationPresentation="modal" navigationDetent="medium large" navigationScroll="type-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="type-sheet"
+      header display="flex" align-items="center"
+        text "Text" role="heading" aria-level=2 flex=1
+        button press=done testId="type-done"
+          text "Done"
+      scroll id="type-scroll" flex=1 min-height=0 testId="type-scroll"
+        column gap=20 padding=20 padding-bottom=96
+          row gap=12 align-items="center" flex-wrap="wrap"
+            button press=size(type.smaller) disabled=(not type.smallerEnabled) buttonStyle="bordered" aria-label="Smaller text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-smaller"
+              text "A" font-size="0.9rem"
+            text type.sizeLabel role="status" aria-label=type.sizeSpoken min-width="4.5rem" text-align="center" color="-exact-secondary-label" font-variant-numeric="tabular-nums" testId="type-size"
+            button press=size(type.larger) disabled=(not type.largerEnabled) buttonStyle="bordered" aria-label="Larger text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-larger"
+              text "A" font-size="1.4rem"
+          column gap=8
+            text "Font" font="-exact-subheadline" color="-exact-secondary-label"
+            row role="radiogroup" aria-label="Font" id="type-fonts" overflow-x="auto" overflow-y="hidden" gap=8 padding-bottom=4 testId="type-fonts"
+              for f in type.fonts key=f.value
+                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 min-width="6rem" min-height=84 padding=8 border-radius=14 border-width=2 border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 id=`type-font-${f.value}` testId=`type-font-${f.value}`
+                  text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font-size="1.6rem" line-height="normal"
+                  text f.label font="-exact-caption1" text-align="center"
+                  text f.kind font="-exact-caption2" color="-exact-secondary-label"
+          TypeSegments(line="Line spacing", group="Line spacing", name="type-line", chosen=type.line, options=type.lines, choose=line)
+          TypeSegments(line="Letter spacing", group="Letter spacing", name="type-letter", chosen=type.letter, options=type.letters, choose=letter)
+          TypeSegments(line="Line width", group="Line width", name="type-width", chosen=type.width, options=type.widths, choose=width)
+          button press=reset disabled=(not type.differs) min-height=44 align-self="flex-start" testId="type-reset"
+            text "Reset to the default"
