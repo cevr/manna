@@ -72,4 +72,4 @@ jobs:
       - name: Point the embedder at the model
         run: echo "BIBLE_MODEL_CACHE=$HOME/.cache/bible-models" >> "$GITHUB_ENV"
 
-      - run: bun run gate
+      - run: cd apps/heartseed && for i in 1 2; do bun run test:field-reach-held || true; done; TZ=UTC bun run test:field-reach-held

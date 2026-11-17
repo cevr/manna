@@ -49,6 +49,7 @@ describe('the way to the field', () => {
       if (atom !== sayItView) return registry.subscribe(atom, f, options);
       hold.subscribers += 1;
       const mine = hold.subscribers;
+      console.log('SUB', mine, 'on', hold.on, (new Error().stack ?? '').split('\n').slice(2, 9).map((l) => l.trim()).join(' <- '));
       return registry.subscribe(
         atom,
         (value) => {
@@ -101,7 +102,9 @@ describe('the way to the field', () => {
     expect(await until(() => button('Say it') !== undefined)).toBe(true);
     hold.on = true;
     await act(async () => click(button('Say it')));
-    expect(await until(() => button('Listening') !== undefined)).toBe(true);
+    const ok = await until(() => button('Listening') !== undefined);
+    console.log('LISTEN', ok, 'subs', hold.subscribers, 'held', hold.held.length, 'buttons', [...host.querySelectorAll('[role="button"]')].map((n) => n.getAttribute('aria-label')).join('|'), 'headings', headings().join('|'));
+    expect(ok).toBe(true);
     const tapped = { at: 0 };
     const watch = new MutationObserver(() => {
       if (tapped.at > 0 || button('Your field') === undefined) return;
