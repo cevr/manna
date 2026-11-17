@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noAs, effect/noTernary, effect/noTryCatch, effect/noUnsafeDictionaryType, eslint/no-await-in-loop, node/no-process-env, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the corpus it measures, drives the built app through `bun run exact agent`, one process group per run and one launch at a time, reads its untyped JSON replies by the fields it checks, and prints what it found. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noAs, effect/noTernary, effect/noUnsafeDictionaryType, eslint/no-await-in-loop, node/no-process-env, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the corpus it measures, drives the built app through `bun run exact agent`, one process group per run and one launch at a time, reads its untyped JSON replies by the fields it checks, and prints what it found. */
 
 /**
  * The reading settings' live checks a `.test.contract` cannot make (spec,
@@ -43,18 +43,6 @@ const app = join(import.meta.dir, '..');
 const web = host === 'web';
 const drive = makeDrive({ name: 'drive-type', host, appDir: app });
 const store = `type-${host}-${Date.now().toString(36)}`;
-/** Whether nothing listens on `port` now. */
-const isFree = (port: number) => {
-  try {
-    Bun.listen({ hostname: '127.0.0.1', port, socket: { data: () => undefined } }).stop(true);
-    return true;
-  } catch {
-    return false;
-  }
-};
-/** Chrome keeps a named store per port, so every web launch takes the one of the app's spare ports (8770-8774) free when the drive starts, or `TYPE_PORT`: other drives and verifies on the host share them. */
-const SPARE = [8774, 8773, 8772, 8771, 8770];
-const port = web ? ['--port', process.env.TYPE_PORT ?? String(SPARE.find(isFree) ?? 8774)] : [];
 const size = web ? ['--size', '390x844'] : [];
 const shots = process.env.TYPE_SHOTS ?? join(app, '.exact', 'shots');
 mkdirSync(shots, { recursive: true });
@@ -230,10 +218,7 @@ const largest = {
 a.step(...DRAGS, 'clock settle');
 const reachedLargest = a.step('layout verse-176');
 a.step('prefer prefers-color-scheme dark', 'clock settle', shot('largest-end-dark'));
-const first = await drive.run(
-  [...port, ...size, '--storage', store, '--reset-storage', ...PSALM],
-  a.ops,
-);
+const first = await drive.run([...size, '--storage', store, '--reset-storage', ...PSALM], a.ops);
 
 const widths = Object.fromEntries(FONTS.map((font) => [font, widthOf(first, probes[font] ?? -1)]));
 const families = Object.fromEntries(
@@ -316,10 +301,7 @@ b.step('clock data', 'clock settle');
 const keptState = b.step('state typeShown');
 const keptProbe = b.step('layout verse-1');
 b.step(shot('kept-light'));
-const again = await drive.run(
-  [...port, ...size, '--storage', store, '--keep-storage', ...PSALM],
-  b.ops,
-);
+const again = await drive.run([...size, '--storage', store, '--keep-storage', ...PSALM], b.ops);
 const kept = again[keptState] as Record<string, unknown> | undefined;
 drive.check(
   'kept: a relaunch reads the font, the size and the three spacings chosen',
@@ -371,7 +353,7 @@ const timedOps = [
   ...Array.from({ length: STEPS }, () => ['clock settle', 'clock settle']).flat(),
 ];
 const arrivals = await timedRun(
-  [...port, ...size, '--storage', `${store}-timed`, '--reset-storage', ...PSALM],
+  [...size, '--storage', `${store}-timed`, '--reset-storage', ...PSALM],
   timedOps,
 );
 const median = (values: readonly number[]) =>

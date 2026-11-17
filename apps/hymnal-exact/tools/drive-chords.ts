@@ -27,7 +27,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { readChords } from '@manna/hymnal-app/vite/chords';
 
 import { breaksOf, type Place } from '../src/chords/rows.ts';
@@ -45,12 +45,12 @@ const shot = (name: string) => `screenshot ${join(shots, `${name}-${host}.png`)}
  * a run.
  */
 const backend = `http://127.0.0.1:${checkoutPort()}`;
-const env = { ...process.env, HYMNAL_RECORDINGS: backend };
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
-      env,
+      env: { ...process.env, HYMNAL_RECORDINGS: backend },
       stdout: 'pipe',
       stderr: 'pipe',
       detached: true,

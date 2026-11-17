@@ -12,7 +12,8 @@
  *   field"); the title, the magnifier, Aa and the clear button named;
  * - the bar: it leaves the chapter's last verse in view above it, sits
  *   above the tab bar, offers one filled button at most, and at the
- *   largest text size clips nothing;
+ *   largest text size clips nothing, its button in view once the bar
+ *   (which then scrolls inside 70 % of the screen) is scrolled to its end;
  * - opening on a verse: Psalm 119:105 read from Today's book button is in
  *   view a third of the way down, within one line;
  * - kept: a relaunch on the kept storage opens the chapter left;
@@ -51,8 +52,8 @@ const drive = makeDrive({
   timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
 });
 const store = `chapter-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so every web launch here takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8771', '--size', '390x844'] : [];
+/** Every web launch here is a phone's width. */
+const size = host === 'web' ? ['--size', '390x844'] : [];
 const native = host === 'ios';
 /** Dynamic Type's largest body size, AX5. */
 const LARGEST = 53;
@@ -221,7 +222,7 @@ const largest = {
   bar: a.step('layout chapter-bar'),
   line: a.step('layout range-line'),
   clear: a.step('layout chapter-clear'),
-  button: a.step('layout plant-singles'),
+  button: a.step('tap chapter-bar wheel 0 2000', 'clock settle', 'layout plant-singles'),
 };
 const largestTabs = a.step(BAR);
 both(a, 'largest');
@@ -238,7 +239,7 @@ a.step(
 a.step('tap chapter-find', ...settle, 'type goto-find "psalm 119:105"', ...settle);
 both(a, 'go-search');
 a.step('tap goto-done', ...settle);
-const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
+const first = await drive.run([...size, '--storage', store, '--reset-storage'], a.ops);
 const viewWidth = laid(first, width)?.viewport?.w ?? 390;
 
 for (const which of ['light', 'dark'] as const) {
@@ -428,7 +429,7 @@ const clipped = Object.entries(largest).filter(([, at]) => {
   );
 });
 drive.check(
-  'the bar: at the largest text size nothing of it is clipped',
+  'the bar: at the largest text size nothing of it is clipped, its button in view once the bar scrolls to its end',
   clipped.length === 0,
   clipped.map(([name, at]) => [name, laid(first, at)?.node?.visible]),
 );
@@ -483,7 +484,7 @@ const openedType = b.step('state typeShown');
 const openedVerse = b.step('state readVerse');
 const openedHeight = b.step('state chooserScrollHeight');
 both(b, 'opened');
-const second = await drive.run([...port, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
+const second = await drive.run([...size, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
 const verseFrame = frameOf(second, opened);
 const scrollFrame = frameOf(second, scroll);
 const type = second[openedType] as { size?: number; lineHeight?: number } | undefined;
@@ -509,7 +510,7 @@ drive.check(
 const c = script();
 c.step(...settle, 'tap tab-read', ...settle);
 const kept = c.step('state chapterShown.heading');
-const again = await drive.run([...port, '--storage', `${store}-opened`, '--keep-storage'], c.ops);
+const again = await drive.run([...size, '--storage', `${store}-opened`, '--keep-storage'], c.ops);
 drive.check('kept: a relaunch opens the chapter left', again[kept] === 'Psalms 119', again[kept]);
 
 process.exit(drive.finish());

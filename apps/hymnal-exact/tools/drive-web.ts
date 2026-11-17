@@ -46,11 +46,12 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
 
+import { claimAppPort } from '@manna/exact-kit/port';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
-import { answer, checkoutPort } from './recordings.ts';
+import { answer } from './recordings.ts';
 import { allowedOver, type Budget, isTime, MAX_LOAD, TIME_SLACK_MS } from './web/budget.ts';
 import { CALL_MS, type Chrome, type Page, launchChrome } from './web/chrome.ts';
 import { makeStall } from './web/stall.ts';
@@ -77,7 +78,8 @@ const checks =
   named.length > 0
     ? named
     : CHECKS.filter((name) => server !== 'exact' || name !== 'measure').map(String);
-const PORT = server === 'exact' ? 8778 : checkoutPort();
+/** The site's port, either host's, claimed from the app's spare range for the whole run, so the reopen finds its store. */
+const PORT = (await claimAppPort(app, { label: `drive-web --server ${server}` })).port;
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
 const budgetFile = join(import.meta.dir, 'web/budget.json');

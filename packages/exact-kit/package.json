@@ -10,6 +10,7 @@
     "./main": "./src/main.ts",
     "./prepare": "./src/prepare/prepare.ts",
     "./drive": "./src/drive/drive.ts",
+    "./port": "./src/drive/port.ts",
     "./effect": {
       "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"

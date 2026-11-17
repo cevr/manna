@@ -15,7 +15,8 @@ manna/
 │   ├── hymnal/         # The hymnal app: One 2.22 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
 │   ├── heartseed-exact/ # Heartseed ported to Exact (Contract view, TypeScript data), beside apps/heartseed until it replaces it (@manna/heartseed-exact; docs/exact.md)
 │   ├── hymnal-exact/   # The hymnal ported to Exact, iOS and the web first (@manna/hymnal-exact; docs/exact.md)
-│   └── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
+│   ├── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
+│   └── takes/          # Native macOS voice-take editor: beats, record, Parakeet transcript, cut by text, WAV export (@manna/takes)
 ├── packages/
 │   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
 │   ├── cli/            # The `manna` CLI (@manna/cli)

@@ -78,6 +78,12 @@ const ROUTES: readonly NavRoute[] = [
   { name: 'readAt', pattern: /^\/read\/at\/[^/]+\/[^/]+\/[^/]+$/u, parent: 'read', tab: 'read' },
   { name: 'gotoSheet', pattern: /^\/read\/goto$/u, parent: 'read', tab: 'read' },
   { name: 'gotoBook', pattern: /^\/read\/goto\/[^/]+$/u, parent: 'gotoSheet', tab: 'read' },
+  {
+    name: 'studySheet',
+    pattern: /^\/read\/study\/[^/]+\/[^/]+\/[^/]+\/[^/]+$/u,
+    parent: 'read',
+    tab: 'read',
+  },
 ];
 
 const ROOTS: Readonly<Record<NavTab, string>> = { garden: '/', read: '/read' };

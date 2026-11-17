@@ -84,13 +84,14 @@ it('nests every route under Garden at its address, Garden first, then Read and r
     'garden',
     'read',
   ]);
-  expect(routes.slice(-4)).toEqual([
+  expect(routes.slice(-5)).toEqual([
     [1, 'tab', 'read', '/read'],
     [2, '', 'readAt', '/read/at/:book/:chapter/:verse'],
     [2, '', 'gotoSheet', '/read/goto'],
     [3, '', 'gotoBook', '/read/goto/:book'],
+    [2, '', 'studySheet', '/read/study/:book/:chapter/:verse/:tab'],
   ]);
-  const garden = routes.slice(1, -4);
+  const garden = routes.slice(1, -5);
   expect(garden.every((each) => Number(each[0]) >= 2 && !String(each[3]).startsWith('/read'))).toBe(
     true,
   );
