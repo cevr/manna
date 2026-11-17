@@ -3,9 +3,8 @@
 // Go to (features/goto.contract), the magnifier opens it with the find box
 // ready, Aa opens the text settings; the verses flow inside `TypeColumn`,
 // each one control (a checkbox named by its reference), a planted verse
-// marked by a leaf line and its number in the sun (a chosen verse's
-// number is in the ink: the sun and the quiet ink are under AA on the
-// hearing colour), and said ("in your
+// marked by a leaf line and its number in the sun (in the quiet ink while
+// chosen: the sun is under AA on the hearing colour), and said ("in your
 // field" after its reference). A tap is the chooser's
 // (`chapterTap`, over src/chooser/chooser.ts's `chooserTap`: a second tap
 // ends a range, clipped at 20; a tap on the one verse chosen clears it),
@@ -177,7 +176,7 @@ component ChapterPage
                 if v.verse == opened and not still
                   column class=ChapterLanded position="absolute" inset=0 border-radius=12 opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
                 text overflow-wrap="break-word" hyphens="auto" position="relative"
-                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=((shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.ink" : (shown.planted.filter(p => p == v.verse).length > 0 ? "hs.sun" : "hs.quiet")) testId=`verse-number-${v.verse}`
+                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
                   text ` ${v.text}`
           row gap=12 padding="24px 20px 8px" flex-wrap="wrap" max-width="40rem" testId="chapter-turn"
             if shown.previous.found
