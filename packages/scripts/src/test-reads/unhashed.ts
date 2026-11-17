@@ -42,7 +42,7 @@ const joined = (directory: string, file: string) => {
 };
 
 /** The mark `preload.ts` puts before a path the run created: a write to a path that did not exist. */
-export const CREATED = '+';
+const CREATED = '+';
 
 /**
  * A task's log (`preload.ts`'s lines) read: the paths its tests read, less
