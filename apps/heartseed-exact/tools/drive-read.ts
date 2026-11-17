@@ -10,8 +10,8 @@
  * each tab's mark by pixel, light and dark, the chosen tab in the tint and
  * the other in the quiet ink, both at AA on the ground; `readOpenAt` to
  * Psalm 119:176 brings that verse into view, above the bar, and a tap on
- * verse 170 (the last lie under `ReadDriven`'s buttons) raises the chapter's bar above the tab bar too, also at the largest
- * text size;
+ * verse 170 raises the chapter's bar above the tab bar too, also at the
+ * largest text size;
  * `readFollow` to John 3:16 and Back to the chapter left; a session
  * started in Garden, then Read and back, holds its item and its recital;
  * and a relaunch on the kept storage opens Read on the place kept. No
@@ -164,7 +164,10 @@ const paintOf = (shot: string, frame: Frame, width: number) => {
     }
   const ground = [...counts.entries()].toSorted((a, b) => b[1] - a[1])[0]?.[0] ?? '#000000';
   const mark = [...counts.keys()].toSorted((a, b) => contrast(b, ground) - contrast(a, ground))[0];
-  return { ground, mark: mark ?? ground };
+  /** The pixel nearest a colour: over a floating glass bar the content under it shows through, so the farthest pixel can be the page's text, not the tab's mark. */
+  const nearest = (hex: string) =>
+    [...counts.keys()].toSorted((a, b) => distance(a, hex) - distance(b, hex))[0] ?? ground;
+  return { ground, mark: mark ?? ground, nearest };
 };
 
 /** The step that reads the bar's frame: its `layout` on the web, the tree on iOS. */
@@ -215,7 +218,7 @@ const barChecks = (
     const frame = tabs[tab];
     if (frame === undefined) continue;
     const paint = paintOf(at.path, frame, width);
-    const { mark } = paint;
+    const mark = native && tab === chosen ? paint.nearest(TINT[scheme]) : paint.mark;
     if (tab === chosen)
       drive.check(
         `${scheme} ${chosen}: ${tab}'s mark is the tint`,
@@ -297,7 +300,7 @@ a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
-/** At the largest text `ReadDriven`'s buttons cover the middle where the agent brings a verse, so the verse is chosen at the default size and the text grown after. */
+/** The verse is chosen at the default size and the text grown after, so the bar it raises is measured at the largest text. */
 a.step(
   'prefer root-font-size 17',
   ...settle,
@@ -384,9 +387,21 @@ drive.check(
   Bun.deepEquals(placeOf(first[left]).slice(0, 2), [19, 119]),
   first[left],
 );
-const largestLast = aboveBar(first, largestVerse, largestBar);
+/** At the largest text Psalm 119:176 can be taller than the room between iOS's navigation bar and the tab bar: then its start is in view, below the one and above the other. */
+const largestLast = (() => {
+  const shown = aboveBar(first, largestVerse, largestBar);
+  const nav = native
+    ? elementsOf(first[largestBar]).find((element) => element.native?.class === 'UINavigationBar')
+        ?.frame
+    : undefined;
+  const navBottom = nav === undefined ? 0 : nav.y + nav.h;
+  const { frame, bar } = shown;
+  if (shown.ok || frame === undefined || bar === undefined) return { ...shown, navBottom };
+  const tall = frame.h > bar.y - navBottom;
+  return { ...shown, navBottom, tall, ok: tall && frame.y >= navBottom - 0.5 && frame.y < bar.y };
+})();
 drive.check(
-  'at the largest text, Psalm 119:176 is in view above the bar',
+  'at the largest text, Psalm 119:176 is in view above the bar (its start, when taller than the room)',
   largestLast.ok,
   largestLast,
 );

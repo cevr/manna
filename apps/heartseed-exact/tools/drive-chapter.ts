@@ -15,7 +15,8 @@
  *   largest text size clips nothing, its button in view once the bar
  *   (which then scrolls inside 70 % of the screen) is scrolled to its end;
  * - opening on a verse: Psalm 119:105 read from Today's book button is in
- *   view a third of the way down, within one line;
+ *   view a third of the way down what the reader sees of the chapter (on
+ *   iOS, between UIKit's navigation bar and tab bar), within one line;
  * - kept: a relaunch on the kept storage opens the chapter left;
  * - motion: the bar's rise runs 150-250 ms; under Reduce Motion it moves
  *   by no translate;
@@ -77,7 +78,7 @@ interface Element {
   readonly role?: string;
   readonly name?: string;
   readonly states?: { readonly checked?: boolean };
-  readonly native?: { readonly class?: string };
+  readonly native?: { readonly class?: string; readonly identifier?: string };
   readonly frame?: Frame;
 }
 
@@ -96,14 +97,21 @@ const frameOf = (replies: readonly unknown[], at: number) =>
   laid(replies, at)?.node?.space?.viewport;
 const elementsOf = (reply: unknown) =>
   (reply as { ax?: { elements?: ReadonlyArray<Element> } } | undefined)?.ax?.elements ?? [];
+/** An element by its test id; on iOS a header control the navigation bar draws is UIKit's bar item, which carries the id as its identifier. */
 const element = (reply: unknown, testId: string) =>
-  elementsOf(reply).find((each) => each.testId === testId && each.role !== 'StaticText');
+  elementsOf(reply).find(
+    (each) =>
+      (each.testId === testId || each.native?.identifier === testId) && each.role !== 'StaticText',
+  );
 /** The tab bar's frame: its `layout` on the web, UIKit's `UITabBar` from `tree --ax` on iOS. */
 const BAR = native ? 'tree --ax' : 'layout tabs';
 const barOf = (replies: readonly unknown[], at: number) =>
   native
     ? elementsOf(replies[at]).find((each) => each.native?.class === 'UITabBar')?.frame
     : frameOf(replies, at);
+/** UIKit's navigation bar's frame from `tree --ax` on iOS; the web's header is in flow, above the scroll. */
+const navOf = (reply: unknown) =>
+  elementsOf(reply).find((each) => each.native?.class === 'UINavigationBar')?.frame;
 
 const hexOf = (rgb: readonly number[]) =>
   `#${rgb.map((each) => each.toString(16).padStart(2, '0')).join('')}`;
@@ -197,13 +205,14 @@ const range = a.step('state chapterShown');
 const rangeLine = a.step('layout range-line');
 both(a, 'range');
 a.step('tap plant-list', ...settle);
-const planted = verseSteps(a, 16);
+/** The range's middle verse: the bar keeps the range's last verse in view, which can carry its first under iOS's navigation bar. */
+const planted = verseSteps(a, 17);
 const plantedLine = a.step('layout chapter-planted');
 const landed = a.step('state chapterShown');
 both(a, 'planted');
 const axPlanted = a.step('tree --ax');
 a.step('tap chapter-clear', ...settle);
-const field = verseSteps(a, 16);
+const field = verseSteps(a, 17);
 both(a, 'field');
 a.step(...Array.from({ length: 4 }, () => 'tap chapter-scroll wheel 0 20000'), 'clock settle');
 a.step('tap verse-36', ...settle);
@@ -275,19 +284,26 @@ for (const which of ['light', 'dark'] as const) {
   const numberFrame = frameOf(first, field.number);
   const plantedFrame = frameOf(first, field.verse);
   if (numberFrame !== undefined && plantedFrame !== undefined) {
-    for (const [scene, at, name] of [
-      ['planted', planted.number, 'chosen'],
-      ['field', field.number, 'at rest'],
+    /**
+     * A number is a small glyph: its antialiased pixels never reach its colour, so the darkest one reads under the
+     * role's own ratio. The pixels name the role (the mark within reach of it, the ground read under it), and the
+     * role's colour is held to AA on that ground.
+     */
+    for (const [scene, at, name, role] of [
+      ['planted', planted.number, 'chosen', theme[which].quiet],
+      ['field', field.number, 'at rest', theme[which].sun],
     ] as const) {
       const frame = frameOf(first, at);
       const number =
         frame === undefined ? undefined : paintOf(shotPath(scene, which), frame, viewWidth);
       drive.check(
-        `${which} colours: a planted verse's number, ${name}, at AA on its ground`,
-        number !== undefined && contrast(number.mark, number.ground) >= 4.5,
+        `${which} colours: a planted verse's number, ${name}, is drawn in its role at AA on its ground`,
+        number !== undefined &&
+          distance(number.mark, role) <= 24 &&
+          contrast(role, number.ground) >= 4.5,
         number === undefined
           ? 'not laid out'
-          : `${contrast(number.mark, number.ground).toFixed(2)} (${number.mark} on ${number.ground})`,
+          : `${contrast(role, number.ground).toFixed(2)} (role ${role}, darkest pixel ${number.mark}, on ${number.ground})`,
       );
     }
     const line = paintOf(
@@ -368,10 +384,19 @@ drive.check(
     ),
   restVerses.slice(0, 3).map((each) => [each.testId, each.role, each.name]),
 );
+/** The navigation bar's buttons: UIKit's `_UIButtonBarButton`s, each the name VoiceOver reads (the control's `aria-label`). */
+const barButtons = elementsOf(first[axRest])
+  .filter((each) => each.native?.class === '_UIButtonBarButton')
+  .map((each) => each.name);
 const named = Object.fromEntries(
-  ['chapter-title', 'chapter-find', 'chapter-aa'].map((id) => [
+  [
+    ['chapter-title', 'John 3, choose another chapter'],
+    ['chapter-find', 'Find a verse, a chapter or words'],
+    ['chapter-aa', 'Text settings'],
+  ].map(([id = '', name]) => [
     id,
-    element(first[axRest], id)?.name,
+    element(first[axRest], id)?.name ??
+      (native && id !== 'chapter-title' ? barButtons.find((each) => each === name) : undefined),
   ]),
 );
 drive.check(
@@ -379,7 +404,12 @@ drive.check(
   named['chapter-title'] === 'John 3, choose another chapter' &&
     named['chapter-find'] === 'Find a verse, a chapter or words' &&
     named['chapter-aa'] === 'Text settings',
-  named,
+  {
+    named,
+    header: elementsOf(first[axRest])
+      .filter((each) => (each.frame?.y ?? 999) < 120 && each.role !== 'StaticText')
+      .map((each) => [each.testId, each.role, each.name, each.native]),
+  },
 );
 const chosenAx = element(first[axChosen], 'verse-16');
 drive.check(
@@ -483,13 +513,23 @@ const scroll = b.step('layout chapter-scroll');
 const openedType = b.step('state typeShown');
 const openedVerse = b.step('state readVerse');
 const openedHeight = b.step('state chooserScrollHeight');
+const openedBars = native ? b.step('tree --ax') : -1;
 both(b, 'opened');
 const second = await drive.run([...size, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
 const verseFrame = frameOf(second, opened);
 const scrollFrame = frameOf(second, scroll);
 const type = second[openedType] as { size?: number; lineHeight?: number } | undefined;
 const oneLine = (type?.size ?? 18) * (type?.lineHeight ?? 1.6);
-const third = scrollFrame === undefined ? Number.NaN : scrollFrame.y + scrollFrame.h / 3;
+/** What the reader sees of the chapter: its scroll, less what UIKit's navigation bar and tab bar lie over on iOS. */
+const seen = (() => {
+  if (scrollFrame === undefined) return undefined;
+  const nav = native ? navOf(second[openedBars]) : undefined;
+  const tabs = native ? barOf(second, openedBars) : undefined;
+  const top = Math.max(scrollFrame.y, nav === undefined ? 0 : nav.y + nav.h);
+  const bottom = Math.min(scrollFrame.y + scrollFrame.h, tabs === undefined ? Infinity : tabs.y);
+  return { top, bottom, nav, tabs };
+})();
+const third = seen === undefined ? Number.NaN : seen.top + (seen.bottom - seen.top) / 3;
 drive.check(
   "opening on a verse: Psalm 119:105 from Today's button is in view, a third down, within one line",
   second[todayAt] === 'Psalms 119:105' &&
@@ -503,6 +543,7 @@ drive.check(
     third,
     oneLine,
     scroll: scrollFrame,
+    seen,
     height: second[openedHeight],
   },
 );
