@@ -257,12 +257,23 @@ const second = FIXTURE_PACKS.second;
 const fetchOps = ['tap packs-fetch', 'clock data', 'clock settle'];
 const readOps = ['shown', 'kept version', 'state commentaryProbeCounts', 'tree'];
 
-/** Contract's follow-ups while the commentary is held: each `packsWait` is sent an `after(1, …)` past an answer, and a study pack's body is checked in the next one's own turns. */
-const FOLLOWS = Array.from({ length: 4 }, () => ['clock +1', 'clock data']).flat();
+/** How many times the first fetch reads the packs while the commentary is held. */
+const POLLS = 5;
+
+/** Contract's follow-ups while the commentary is held, the packs read after each: each `packsWait` is sent an `after(1, …)` past an answer, and a study pack's body is checked in the next one's own turns. One poll that sees a study pack kept before the commentary passes. */
+const FOLLOWS = Array.from({ length: POLLS }, () => [
+  'clock +1',
+  'clock data',
+  'packs',
+  'kept names',
+]).flat();
+
+/** How long the fixture holds the commentary on a first fetch: an iOS agent op takes longer than a web one. */
+const HOLD_MS = host === 'ios' ? 6000 : 2500;
 
 /** First fetch: the line while the fixture holds its answer, the landing, the landed line's 3 seconds, one request. */
 const firstFetch = async (store: string) => {
-  await steer({ pack: 'first', reply: 'well', times: 0, holdMs: 2500 });
+  await steer({ pack: 'first', reply: 'well', times: 0, holdMs: HOLD_MS });
   const landing = await go(store, false, 0, [
     'clock data',
     'clock settle',
@@ -272,8 +283,6 @@ const firstFetch = async (store: string) => {
     shot('getting'),
     'clock data',
     ...FOLLOWS,
-    'packs',
-    'kept names',
     'clock data',
     'clock settle',
     'shown',
@@ -289,8 +298,16 @@ const firstFetch = async (store: string) => {
   const getting = landing('shown') as Shown | undefined;
   const landed = landing('shown', 1) as Shown | undefined;
   const quiet = landing('shown', 2) as Shown | undefined;
-  const apart = landing('packs') as { phase?: string; missing?: number; foot?: string } | undefined;
-  const keptApart = (landing('kept names') as Array<string> | undefined) ?? [];
+  const polls = Array.from({ length: POLLS }, (_, nth) => ({
+    apart: landing('packs', nth) as { phase?: string; missing?: number; foot?: string } | undefined,
+    kept: (landing('kept names', nth) as Array<string> | undefined) ?? [],
+  }));
+  const isApart = ({ apart, kept: keptApart }: (typeof polls)[number]) =>
+    apart?.phase === 'fetching' &&
+    keptApart.length > 0 &&
+    !keptApart.includes('commentary') &&
+    apart.missing === EVERY_PACK.length - keptApart.length &&
+    apart.foot === gettingLine(EVERY_PACK.filter((pack) => !keptApart.includes(pack.name)));
   drive.check(
     'first fetch: the quiet line shows while the fixture holds its answer',
     getting?.phase === 'fetching' && getting.foot === GETTING && has(landing('tree'), 'packs-line'),
@@ -298,12 +315,8 @@ const firstFetch = async (store: string) => {
   );
   drive.check(
     'first fetch: each study pack is kept as it lands, counted and named, while the commentary is still held',
-    apart?.phase === 'fetching' &&
-      keptApart.length > 0 &&
-      !keptApart.includes('commentary') &&
-      apart.missing === EVERY_PACK.length - keptApart.length &&
-      apart.foot === gettingLine(EVERY_PACK.filter((pack) => !keptApart.includes(pack.name))),
-    { apart, kept: keptApart },
+    polls.some(isApart),
+    polls,
   );
   drive.check(
     'first fetch: the pack lands, ready, and the landed line shows',
