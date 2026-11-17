@@ -122,6 +122,9 @@ const PROBES = [
   'state studyProbeLast',
   'state studyProbeOutside',
   'state studyProbeCounts',
+  'tap tab-read',
+  'clock data',
+  'clock settle',
   'tap chapter-find',
   'clock data',
   'clock settle',
@@ -160,7 +163,14 @@ interface Replies {
 const go = async (kept: boolean, before: ReadonlyArray<string>) => {
   const ops = [...before, ...PROBES];
   const replies = await drive.run(
-    ['--storage', store, kept ? '--keep-storage' : '--reset-storage', '--url', '/read', ...webPort],
+    [
+      '--storage',
+      store,
+      kept ? '--keep-storage' : '--reset-storage',
+      '--url',
+      '/verses',
+      ...webPort,
+    ],
     ops,
   );
   const took = /top level took (\d+) ms/u.exec(JSON.stringify(replies[ops.indexOf('logs')] ?? ''));

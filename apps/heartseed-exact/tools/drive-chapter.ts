@@ -223,6 +223,7 @@ const largest = {
   clear: a.step('layout chapter-clear'),
   button: a.step('layout plant-singles'),
 };
+const largestTabs = a.step(BAR);
 both(a, 'largest');
 a.step('prefer root-font-size 17', 'tap chapter-clear', ...settle);
 a.step('prefer prefers-reduced-motion reduce', 'clock settle', 'tap verse-2');
@@ -430,6 +431,15 @@ drive.check(
   'the bar: at the largest text size nothing of it is clipped',
   clipped.length === 0,
   clipped.map(([name, at]) => [name, laid(first, at)?.node?.visible]),
+);
+const largestBar = frameOf(first, largest.bar);
+const largestTabBar = barOf(first, largestTabs);
+drive.check(
+  'the bar: at the largest text size it still sits above the tab bar',
+  largestBar !== undefined &&
+    largestTabBar !== undefined &&
+    largestBar.y + largestBar.h <= largestTabBar.y + 0.5,
+  { largestBar, largestTabBar },
 );
 
 /** The style rows that would move the bar, and its animation's duration in ms. */

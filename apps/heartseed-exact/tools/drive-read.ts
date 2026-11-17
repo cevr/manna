@@ -10,7 +10,7 @@
  * each tab's mark by pixel, light and dark, the chosen tab in the tint and
  * the other in the quiet ink, both at AA on the ground; `readOpenAt` to
  * Psalm 119:176 brings that verse into view, above the bar, and a tap on
- * it raises the chapter's bar above the tab bar too, also at the largest
+ * verse 170 (the last lie under `ReadDriven`'s buttons) raises the chapter's bar above the tab bar too, also at the largest
  * text size;
  * `readFollow` to John 3:16 and Back to the chapter left; a session
  * started in Garden, then Read and back, holds its item and its recital;
@@ -287,7 +287,7 @@ const psalm = a.step('state readShown');
 const psalmVerse = a.step('state readVerse');
 const psalmKept = a.step('state readBookKept');
 const lastVerse = a.step('layout verse-176');
-a.step('tap verse-176', ...settle);
+a.step('tap verse-170', ...settle);
 const footer = a.step('layout chapter-bar');
 const barAtPsalm = a.step(BAR);
 a.step(`screenshot ${join(own, `read-${host}-psalm.png`)}`);
@@ -299,7 +299,7 @@ a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
-a.step('tap verse-176', ...settle);
+a.step('tap verse-170', ...settle);
 const largestFooter = a.step('layout chapter-bar');
 const largestBar = a.step(BAR);
 const largestTab = native ? largestBar : a.step('layout tab-read');
@@ -362,7 +362,7 @@ const shownLast = aboveBar(first, lastVerse, barAtPsalm);
 drive.check('Psalm 119:176 is in view, above the bar', shownLast.ok, shownLast);
 const shownFooter = aboveBar(first, footer, barAtPsalm);
 drive.check(
-  "the chapter's bar, raised by a tap on verse 176, is above the tab bar",
+  "the chapter's bar, raised by a tap on verse 170, is above the tab bar",
   shownFooter.ok,
   shownFooter,
 );
