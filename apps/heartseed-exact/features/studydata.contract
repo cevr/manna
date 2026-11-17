@@ -1,0 +1,75 @@
+// The study data the reader shows offline (q118, q120, q126): each verse's
+// cross-references, the Hebrew or Greek behind each word, and each word's
+// lexicon entry, from three packs the one downloader keeps
+// (features/packs.contract, src/packs/): xrefs, tags and lexicon. Their
+// checks and readers are src/study/, their addresses and words
+// src/study/sources.ts. Each `…Shown` (a `PackState`) is what the study
+// sheet is shown for that pack (its line, its Try again, and `version`, the
+// reader's `mark`). This file holds the shapes the reader's sources answer
+// and draws nothing; a driver's fixture launch reads a few verses
+// (`studyProbe…`), so tools/drive-studydata.ts can hold the downloaded
+// packs to their counts, numbers and fingerprints.
+
+use PackState from "./packs.contract"
+
+shape StudyVerseCount
+  verse: number
+  xrefs: number
+  words: number
+
+shape StudyCounts
+  xrefsHave: bool
+  wordsHave: bool
+  verses: StudyVerseCount[]
+
+shape StudyXref
+  reference: string
+  book: number
+  chapter: number
+  verse: number
+  last: number
+  text: string
+
+shape StudyXrefs
+  have: bool
+  refs: StudyXref[]
+
+shape StudyWord
+  index: number
+  text: string
+  start: number
+  end: number
+  numbers: string[]
+  added: bool
+
+shape StudyWords
+  have: bool
+  words: StudyWord[]
+
+shape StudyRender
+  word: string
+  count: number
+
+shape StudyEntry
+  have: bool
+  found: bool
+  number: string
+  language: string
+  lemma: string
+  xlit: string
+  pron: string
+  def: string
+  renders: StudyRender[]
+  total: number
+
+members HeartseedExact
+  resource studyXrefsShown = packView("xrefs", packsKept, packsBusy, packsFailed) as shape PackState else empty()
+  resource studyTagsShown = packView("tags", packsKept, packsBusy, packsFailed) as shape PackState else empty()
+  resource studyLexiconShown = packView("lexicon", packsKept, packsBusy, packsFailed) as shape PackState else empty()
+  resource studyProbeCounts = studyCounts(43, 3, studyXrefsShown.version, studyTagsShown.version) when packsPlace.fixture as shape StudyCounts else empty()
+  resource studyProbeXrefs = studyXrefs(43, 3, 16, studyXrefsShown.version) when packsPlace.fixture as shape StudyXrefs else empty()
+  resource studyProbeWords = studyWords(43, 3, 16, studyTagsShown.version) when packsPlace.fixture as shape StudyWords else empty()
+  resource studyProbeEntry = studyEntry("G25", studyLexiconShown.version) when packsPlace.fixture as shape StudyEntry else empty()
+  resource studyProbeLongest = studyWords(19, 119, 176, studyTagsShown.version) when packsPlace.fixture as shape StudyWords else empty()
+  resource studyProbeLast = studyXrefs(66, 22, 21, studyXrefsShown.version) when packsPlace.fixture as shape StudyXrefs else empty()
+  resource studyProbeOutside = studyXrefs(66, 23, 1, studyXrefsShown.version) when packsPlace.fixture as shape StudyXrefs else empty()

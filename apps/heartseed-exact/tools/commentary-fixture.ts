@@ -3,7 +3,9 @@
 /**
  * egw.cvr.im's `GET /api/commentary/pack` as a drive meets it, on
  * `127.0.0.1:$PORT`: a made-up pack (no commentary's text) with its
- * `ETag`, and `304` for an `If-None-Match` naming its version. The drive
+ * `ETag`, and `304` for an `If-None-Match` naming its version; and its
+ * `GET /api/study/<name>`, the study packs built from the assets, always
+ * well (`studyServed`), so every pack the app asks for lands. The drive
  * steers it over `POST /fixture` (`{ "pack": "first"|"second", "reply":
  * "well"|"fail"|"cut"|"sum", "times": n, "holdMs": n }`: which pack it
  * serves, how answers go wrong (a `500`, a body cut short, or one with a
@@ -79,6 +81,31 @@ export const fixturePacks = async (): Promise<FixturePacks> => {
   return { first: packFor(41, 0), second: packFor(42, 2), bodyOf };
 };
 
+/** A study pack as the fixture serves it. */
+interface StudyServed {
+  readonly version: string;
+  readonly body: string;
+}
+
+/**
+ * The study packs egw.cvr.im serves at `/api/study/<name>`, built as
+ * `tools/study.ts` builds them but from the assets `bible.db` is built from,
+ * so every checkout can serve them: always well, `304` for their version.
+ */
+const studyServed = async (): Promise<Record<string, StudyServed>> => {
+  await loadPreload();
+  const { assetSource, studyPacks } = await import('./study');
+  const { buildStudy } = await import('../src/study/build');
+  const { studyBodyOf } = await import('../src/study/pack');
+  const packs = studyPacks(buildStudy(assetSource()));
+  return Object.fromEntries(
+    Object.entries(packs).map(([name, made]) => [
+      name,
+      { version: made.version, body: studyBodyOf(made) },
+    ]),
+  );
+};
+
 /** How the fixture answers now. */
 interface Mode {
   pack: 'first' | 'second';
@@ -98,6 +125,7 @@ const CORS = {
 const fixture = (packs: FixturePacks) => {
   const mode: Mode = { pack: 'first', reply: 'well', times: 0, holdMs: 0 };
   const heard: Array<{ tag: string }> = [];
+  const studyBodies = studyServed();
 
   /** This answer's reply: the mode's, counted down to `well` when it is for a number of times. */
   const replyNow = () => {
@@ -127,10 +155,21 @@ const fixture = (packs: FixturePacks) => {
     return new Response(body, { headers: json });
   };
 
+  const study = async (request: Request, name: string): Promise<Response> => {
+    const served = (await studyBodies)[name];
+    if (served === undefined) return new Response('not found', { status: 404, headers: CORS });
+    const head = { ...CORS, etag: `"${served.version}"`, 'cache-control': 'public, max-age=3600' };
+    if (request.headers.get('if-none-match') === `"${served.version}"`)
+      return new Response(null, { status: 304, headers: head });
+    return new Response(served.body, { headers: { ...head, 'content-type': 'application/json' } });
+  };
+
   const answer = async (request: Request): Promise<Response> => {
     const path = new URL(request.url).pathname;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (path === '/api/commentary/pack' && request.method === 'GET') return pack(request);
+    if (path.startsWith('/api/study/') && request.method === 'GET')
+      return study(request, path.slice('/api/study/'.length));
     if (path === '/fixture' && request.method === 'POST') {
       Object.assign(mode, (await request.json()) as Partial<Mode>);
       return Response.json(mode);

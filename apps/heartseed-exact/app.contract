@@ -48,6 +48,7 @@ component HeartseedExact
   members "./features/chooser.contract"
   members "./features/packs.contract"
   members "./features/commentary.contract"
+  members "./features/studydata.contract"
   members "./features/motion.contract"
   members "./features/feel.contract"
   members "./features/type.contract"

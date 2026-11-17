@@ -22,9 +22,13 @@
 import { join } from 'node:path';
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { gettingLine, landedLine } from '../src/packs/shown';
 import { checkoutPort, fixturePacks } from './commentary-fixture';
 
 const FIXTURE_PACKS = await fixturePacks();
+/** Loaded after the preload `fixturePacks` loads, as the packs' modules read the text. */
+const { COMMENTARY } = await import('../src/commentary/sources');
+const { STUDY_PACKS } = await import('../src/study/sources');
 
 const host = process.argv[2] ?? 'web';
 const live = process.argv[3] === 'live';
@@ -32,8 +36,9 @@ const app = join(import.meta.dir, '..');
 const DAY = 86_400_000;
 const START = Date.UTC(2026, 10, 16, 12);
 const epochAt = (days: number) => new Date(START + days * DAY).toISOString().replace('.000Z', 'Z');
-const GETTING = "Getting Ellen White's commentary…";
-const LANDED = 'Commentary is on this phone now.';
+const EVERY_PACK = [COMMENTARY, ...STUDY_PACKS];
+const GETTING = gettingLine(EVERY_PACK);
+const LANDED = landedLine(EVERY_PACK);
 
 /** A free port from this checkout's own, so two checkouts' drives never meet. */
 const freePort = async () => {
