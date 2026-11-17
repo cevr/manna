@@ -2021,6 +2021,17 @@
       }
     },
     {
+      // A Chrome launched for the DevTools protocol uses a mock keychain and
+      // a plain password store, or macOS asks the owner for a login keychain
+      // each run (packages/scripts/lint/chrome-mock-keychain.ts). A test's
+      // argument lists are data about launches, never launches.
+      "files": ["apps/**/*.ts", "packages/**/*.ts", "apps/**/*.mjs", "packages/**/*.mjs"],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/fixtures/**"],
+      "rules": {
+        "manna/chrome-mock-keychain": "error"
+      }
+    },
+    {
       // The film's browser suite (`test:e2e`) runs outside the budget, on
       // real Chrome workers, and sizes its own timeouts; it still runs every
       // test (packages/film/README.md, the E2E suite).
