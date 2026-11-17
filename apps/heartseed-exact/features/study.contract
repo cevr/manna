@@ -201,9 +201,9 @@ component StudyBar
     row gap=8 align-items="stretch" testId="study-bar"
       for b in buttons key=b.tab
         button press=open(verse, b.tab) buttonStyle="bordered" aria-label=b.name flex=1 min-width=0 min-height=52 display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 testId=`study-${b.tab}`
-          text b.label text-align="center"
+          text b.label font-size="min(-exact-subheadline, 17px)" text-align="center" white-space="nowrap"
           if b.line != ""
-            text b.line font-size="0.8em" color="-exact-secondary-label" text-align="center" testId=`study-${b.tab}-line`
+            text b.line font-size="min(-exact-footnote, 14px)" color="-exact-secondary-label" text-align="center" white-space="nowrap" testId=`study-${b.tab}-line`
 
 // The study sheet: the reference, Done, the three tabs with their counts,
 // and the tab shown.
