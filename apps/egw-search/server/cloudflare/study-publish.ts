@@ -20,6 +20,7 @@ import { AuthProviders } from 'alchemy/Auth';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
+import { SecureRandom } from 'effect/crypto';
 import { FetchHttpClient, HttpClient, HttpClientRequest } from 'effect/http';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
@@ -126,10 +127,11 @@ const prepared = Effect.gen(function* () {
   return built;
 }).pipe(Effect.scoped);
 
-/** R2 and egw.cvr.im behind the owner's profile, built only for a real run. */
+/** R2 and egw.cvr.im behind the owner's profile, built only for a real run; Alchemy's profile reads draw on a `SecureRandom`, Web Crypto's here. */
 const CloudflareWrites = Cloudflare.CloudflareApiLive().pipe(
   Layer.provide(Layer.succeed(AuthProviders, AuthProviders.of({}))),
   Layer.provideMerge(FetchHttpClient.layer),
+  Layer.provide(SecureRandom.layerWebCrypto),
 );
 
 const studyPublish = Command.make('study-publish', {
