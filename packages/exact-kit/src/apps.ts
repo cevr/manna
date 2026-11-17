@@ -9,15 +9,12 @@ export interface ExactApp {
   readonly quiet: boolean;
 }
 
-/** The folder names of the apps the wrapper runs. */
-export type ExactAppName = 'heartseed-exact' | 'hymnal-exact' | 'lab';
-
 /**
  * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
  * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
  * A run that listens in the spare range claims its port first (`claimPort`), so runs of every checkout share it.
  */
-export const APPS: Readonly<Record<ExactAppName, ExactApp>> = {
+export const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
   'heartseed-exact': {
     simulator: 'verify-heartseed-exact',
     port: 8765,

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noAs, effect/noTernary, effect/noTryCatch, effect/noUnsafeDictionaryType, eslint/no-await-in-loop, node/no-process-env, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the corpus it measures, drives the built app through `bun run exact agent`, one process group per run and one launch at a time, reads its untyped JSON replies by the fields it checks, and prints what it found. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noAs, effect/noTernary, effect/noUnsafeDictionaryType, eslint/no-await-in-loop, node/no-process-env, import/no-unassigned-import -- a host script that imports the tests' chapters preload for the corpus it measures, drives the built app through `bun run exact agent`, one process group per run and one launch at a time, reads its untyped JSON replies by the fields it checks, and prints what it found. */
 
 /**
  * The reading settings' live checks a `.test.contract` cannot make (spec,

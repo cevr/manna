@@ -7,7 +7,7 @@ import { APPS } from '../apps.ts';
  * A port this process holds for its run, and how to give it back (once; the process's end gives it back too).
  * Every launch of the run passes this one port, so a web relaunch finds the store it left.
  */
-export interface Claim {
+interface Claim {
   readonly port: number;
   readonly give: () => void;
 }
@@ -26,10 +26,10 @@ const TURNS = 'EXACT_PORT_TURNS';
  * The loopback port that holds `port`'s turn, as Exact's own port lock places it: whoever listens there holds
  * `port`, and the kernel frees it when that process ends however it ends, so a crash leaves no stale claim.
  */
-export const turnPort = (port: number) => (port + 10000 <= 65535 ? port + 10000 : port - 10000);
+const turnPort = (port: number) => (port + 10000 <= 65535 ? port + 10000 : port - 10000);
 
 /** The ports this process or an ancestor holds, as `EXACT_PORT_TURNS` names them. */
-export const heldPorts = (env: Record<string, string | undefined> = process.env) =>
+const heldPorts = (env: Record<string, string | undefined> = process.env) =>
   (env[TURNS] ?? '')
     .split(',')
     .filter((p) => p !== '')
@@ -171,7 +171,7 @@ export const takePort = async (port: number, options: ClaimOptions = {}): Promis
 };
 
 /** The spare port range of the app whose folder is `appDir`, the range its runs claim from. */
-export const appRange = (appDir: string): readonly [number, number] => {
+const appRange = (appDir: string): readonly [number, number] => {
   const name = basename(appDir);
   const app = Object.entries(APPS).find(([folder]) => folder === name)?.[1];
   if (app) return app.spare;
@@ -180,5 +180,5 @@ export const appRange = (appDir: string): readonly [number, number] => {
 };
 
 /** A port of the app's spare range in `appDir` for this process's run: `claimPort` over `appRange(appDir)`. */
-export const claimAppPort = (appDir: string, options: ClaimOptions = {}) =>
+export const claimAppPort = async (appDir: string, options: ClaimOptions = {}) =>
   claimPort(appRange(appDir), options);

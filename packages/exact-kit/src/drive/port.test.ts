@@ -3,7 +3,14 @@ import { createServer } from 'node:net';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { appRange, claimPort, heldPorts, takePort, turnPort } from './port.ts';
+import { claimAppPort, claimPort, takePort } from './port.ts';
+
+/** The ports this process holds, as `EXACT_PORT_TURNS` names them for the processes it starts. */
+const heldPorts = () =>
+  (process.env['EXACT_PORT_TURNS'] ?? '')
+    .split(',')
+    .filter((p) => p !== '')
+    .map(Number);
 
 /** Ports no run of the apps uses, below the Mac's ephemeral range, for the claims these tests make. */
 const LO = 47_310;
@@ -109,14 +116,12 @@ describe('claimPort', () => {
       }),
   );
 
-  it.effect("each app's runs claim from its own spare range, and turns sit 10000 away", () =>
-    Effect.sync(() => {
-      expect(appRange('/x/apps/heartseed-exact')).toEqual([8770, 8774]);
-      expect(appRange('/x/apps/hymnal-exact')).toEqual([8775, 8779]);
-      expect(appRange('/x/packages/exact-kit/lab')).toEqual([8774, 8774]);
-      expect(() => appRange('/x/apps/heartseed')).toThrow('heartseed');
-      expect(turnPort(8770)).toBe(18770);
-      expect(turnPort(60000)).toBe(50000);
+  it.effect('refuses a drive of an app the wrapper does not run, naming it', () =>
+    Effect.promise(async () => {
+      const refused = await claimAppPort('/x/apps/heartseed').catch(
+        (error: Error) => error.message,
+      );
+      expect(refused).toContain('heartseed is not an app the wrapper runs');
     }),
   );
 });

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noTernary, node/no-process-env, no-await-in-loop -- Exact's app folder cannot import effect (docs/exact.md): a host script that picks its port by host, drives the built app through `bun run exact agent`, awaits each launch in turn, and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, node/no-process-env, no-await-in-loop -- Exact's app folder cannot import effect (docs/exact.md): a host script that picks its port by host, drives the built app through `bun run exact agent`, awaits each launch in turn, and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * The daily session's live checks (spec B), on the host named
