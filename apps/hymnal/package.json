@@ -135,7 +135,7 @@
     "@manna/hymnal": "workspace:*",
     "@react-navigation/native": "8.0.0-alpha.51",
     "effect": "catalog:",
-    "one": "2.15.1",
+    "one": "2.22.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-native": "0.88.1",
