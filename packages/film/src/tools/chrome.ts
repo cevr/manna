@@ -47,6 +47,14 @@ const QUIET = [
  */
 const SILENT = ['--mute-audio', '--disable-audio-output', '--disable-component-update'];
 
+/**
+ * The flags that keep Chrome out of the host's keychain: a mock keychain and
+ * a plain password store. On macOS a Chrome run with `HOME` moved (a sandboxed
+ * agent's scratch home) finds no login keychain there, and without these the
+ * system asks the owner for one ("A keychain cannot be found").
+ */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
 /** The flags the launcher owns: a caller's own profile or debugging transport is dropped. */
 const OWNED = ['--user-data-dir=', '--remote-debugging-'];
 
@@ -54,7 +62,7 @@ const OWNED = ['--user-data-dir=', '--remote-debugging-'];
  * Chrome's whole command line on `platform` for a caller's `requested`
  * flags, in `profile`: Bun 1.4.4's list in its order, `--disable-gpu` unless
  * the caller asks for the GPU on macOS (`drawsOnGpu`), the silent flags,
- * then the caller's own in their order (Chrome takes the last of a repeated
+ * the keychain flags, then the caller's own in their order (Chrome takes the last of a repeated
  * switch), less any profile or debugging flag of theirs.
  */
 export const chromeFlags = (
@@ -71,6 +79,7 @@ export const chromeFlags = (
   }),
   ...QUIET,
   ...SILENT,
+  ...KEYCHAIN,
   ...requested.filter((flag) => !OWNED.some((owned) => flag.startsWith(owned))),
 ];
 
