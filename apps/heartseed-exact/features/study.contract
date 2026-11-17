@@ -231,10 +231,10 @@ component StudySheet
         button press=done testId="study-done"
           text "Done"
       scroll id="study-scroll" flex=1 min-height=0 testId="study-scroll"
-        column gap=16 padding=20 padding-bottom=96
-          row role="tablist" aria-label="Study" align-self="stretch" testId="study-tabs"
+        column gap=16 padding=20 padding-bottom="7rem"
+          row role="tablist" aria-label="Study" align-self="stretch" flex-wrap="wrap" testId="study-tabs"
             for t in sheet.tabs key=t.tab
-              button role="tab" aria-selected=(tab == t.tab) aria-label=t.name press=choose(t.tab) flex=1 testId=`study-tab-${t.tab}`
+              button role="tab" aria-selected=(tab == t.tab) aria-label=t.name press=choose(t.tab) flex-grow=1 flex-shrink=1 flex-basis="auto" testId=`study-tab-${t.tab}`
                 text (t.count == "" ? t.label : `${t.label} ${t.count}`)
           if tab == "xrefs"
             column gap=12 testId="study-xrefs"
