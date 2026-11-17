@@ -113,6 +113,7 @@ const webPort = host === 'web' ? ['--port', '8773'] : [];
 const store = `studydata-${host}-${Date.now().toString(36)}`;
 
 const PROBES = [
+  'logs',
   'state studyXrefsShown',
   'state studyTagsShown',
   'state studyLexiconShown',
@@ -168,6 +169,10 @@ const go = async (kept: boolean, before: ReadonlyArray<string>) => {
       ...webPort,
     ],
     ops,
+  );
+  const took = /top level took (\d+) ms/u.exec(JSON.stringify(replies[ops.indexOf('logs')] ?? ''));
+  console.log(
+    `study ${kept ? 'kept' : 'fresh'} launch: the data module's top level took ${took?.[1] ?? '?'} ms`,
   );
   return (op: string): Replies => (replies[ops.lastIndexOf(op)] ?? {}) as Replies;
 };
