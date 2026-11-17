@@ -1,26 +1,16 @@
 /**
- * Extract Bible scripture references from EGW paragraphs.
+ * The `paragraph_bible_refs` rows of EGW paragraphs: which verses each
+ * paragraph comments on, so a reader can ask "show me EGW commentary on
+ * Genesis 3:1" without an FTS scan.
  *
- * EGW paragraphs may contain inline `ScriptureRef` AST nodes (rendered as
- * `<span class="egwlink_bible" title="Genesis 3:1" data-link="1965.119">`).
- * The `paragraph_bible_refs` table joins those refs back to paragraphs, so
- * the renderer can ask "show me EGW commentary on Genesis 3:1" without an
- * FTS scan.
- *
- * The indexer is the natural call site: it already has the decoded paragraphs
- * in hand and writes them to `paragraphs`; this extractor produces the rows
- * that need to be written to `paragraph_bible_refs` in the same transaction.
- *
- * Title parsing uses `parseBibleQuery`, which is canonical for the rest of the
- * codebase (search bar, reference lookup). If a title fails to parse (e.g.,
- * a non-English title we don't yet handle), we skip — better to drop a single
- * reference than to fail the whole index pass.
+ * The verses are read by `commentary-links.ts`, the one reading the stored
+ * rows, the study and the commentary pack share; this module keys them by
+ * paragraph and book for storage.
  */
 
 import { Option, Predicate } from 'effect';
 
-import { parseBibleQuery } from '../bible/parse.js';
-import type { Node } from './ast.js';
+import { citationVerses, type VersesReader } from './commentary-links.js';
 import type { Paragraph } from './schemas.js';
 
 interface ExtractedBibleRef {
@@ -44,112 +34,29 @@ export const paragraphRefcode = (paragraph: Paragraph, bookId: number): string =
   );
 };
 
-/** The `Node` variants that carry inline `children`. */
-type ContainerNode = Extract<Node, { readonly children: readonly Node[] }>;
-
-const CONTAINER_TAGS: readonly ContainerNode['_tag'][] = [
-  'Emphasis',
-  'Comment',
-  'ScriptureRef',
-  'BookRef',
-  'Unknown',
-];
-
-const isContainerNode: Predicate.Refinement<Node, ContainerNode> = (
-  node: Node,
-): node is ContainerNode => CONTAINER_TAGS.some((tag) => Predicate.isTagged(node, tag));
-
-const walkScriptureRefs = (nodes: readonly Node[], out: { readonly title: string }[]): void => {
-  for (const node of nodes) {
-    if (node._tag === 'ScriptureRef') {
-      out.push({ title: node.title });
-    }
-    if (isContainerNode(node)) {
-      walkScriptureRefs(node.children, out);
-    }
-  }
-};
-
 /**
- * Walk all ScriptureRef nodes in `paragraphs`, parse each `title` via
- * `parseBibleQuery`, and yield the rows expected by
- * `EGWParagraphDatabase.storeBibleRefsBatch`.
- *
- * Behavior:
- * - `single` / `verseRange` → emits one row per concrete verse (rangeStart..rangeEnd)
- *   so a query like "Genesis 3:1-5" hydrates all five verse-anchored lookups.
- * - `chapter` → one row with an absent `bibleVerse` (commentary on the whole chapter).
- * - `fullBook`, `chapterRange`, `search` → skipped (too coarse to anchor to a verse
- *   row meaningfully; the chapter renderer wouldn't surface those either way).
- * - Parse failures → silently skipped. The catalog of EGW titles is large and
- *   imperfect; per-ref failures shouldn't abort a chapter index pass.
- *
- * Duplicates are removed (a paragraph that mentions "Genesis 3:1" twice should
- * still produce a single (book,chapter,verse) row — the PK on the destination
- * table would dedupe anyway, but skipping here saves transaction work).
+ * The rows `paragraphs` link, in order: each paragraph's verses as `read`
+ * reads them (its citations by default; a volume laid out by verse headings
+ * passes `readerFor(code)`), one row per verse, a whole chapter as an absent
+ * `bibleVerse`, each (paragraph, verse) once.
  */
 export const extractScriptureRefs = (
   paragraphs: readonly Paragraph[],
   bookId: number,
   refcodeOf: (paragraph: Paragraph, bookId: number) => string = paragraphRefcode,
+  read: VersesReader = citationVerses,
 ): readonly ExtractedBibleRef[] => {
+  const verses = read(paragraphs);
   const seen = new Set<string>();
   const out: ExtractedBibleRef[] = [];
-
-  for (const paragraph of paragraphs) {
+  paragraphs.forEach((paragraph, index) => {
     const refCode = refcodeOf(paragraph, bookId);
-    const titles: { readonly title: string }[] = [];
-    walkScriptureRefs(paragraph.nodes, titles);
-
-    for (const { title } of titles) {
-      const parsed = parseBibleQuery(title);
-      const rows = expandParsed(parsed);
-      for (const row of rows) {
-        const key = `${refCode}|${String(row.bibleBook)}|${String(row.bibleChapter)}|${String(Option.getOrElse(row.bibleVerse, () => -1))}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push({ bookId, refCode, ...row });
-      }
+    for (const row of verses[index] ?? []) {
+      const key = `${refCode}|${String(row.bibleBook)}|${String(row.bibleChapter)}|${String(Option.getOrElse(row.bibleVerse, () => -1))}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ bookId, refCode, ...row });
     }
-  }
+  });
   return out;
-};
-
-const expandParsed = (
-  parsed: ReturnType<typeof parseBibleQuery>,
-): readonly { bibleBook: number; bibleChapter: number; bibleVerse: Option.Option<number> }[] => {
-  switch (parsed._tag) {
-    case 'single': {
-      return [
-        {
-          bibleBook: parsed.ref.book,
-          bibleChapter: parsed.ref.chapter,
-          bibleVerse: Option.some(parsed.ref.verse),
-        },
-      ];
-    }
-    case 'chapter':
-      return [
-        { bibleBook: parsed.ref.book, bibleChapter: parsed.ref.chapter, bibleVerse: Option.none() },
-      ];
-    case 'verseRange': {
-      const rows: {
-        bibleBook: number;
-        bibleChapter: number;
-        bibleVerse: Option.Option<number>;
-      }[] = [];
-      for (let v = parsed.ref.start.verse; v <= parsed.ref.end.verse; v++) {
-        rows.push({
-          bibleBook: parsed.ref.start.book,
-          bibleChapter: parsed.ref.start.chapter,
-          bibleVerse: Option.some(v),
-        });
-      }
-      return rows;
-    }
-    case 'chapterRange':
-    case 'fullBook':
-    case 'search':
-      return [];
-  }
 };

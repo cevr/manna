@@ -21,11 +21,10 @@ import {
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { HttpApiBuilder } from 'effect/http-api';
 
-import { nodesToText } from '@manna/core/egw';
+import { nodesToText, volumeVerses } from '@manna/core/egw';
 import { EGWParagraphDatabase } from '@manna/core/egw-db';
 
 import { CommentaryFailed, SearchApi } from './api.js';
-import { volumeVerses } from './commentary-links.js';
 import { builtPack, type BuiltPack, COMMENTARY_BOOKS, type CommentaryLink } from './commentary.js';
 
 /** How long a built pack is kept and may be cached downstream. */

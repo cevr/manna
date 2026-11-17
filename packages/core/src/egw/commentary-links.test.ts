@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 
-import { cite } from './commentary-fixture.js';
 import {
+  citationVerses,
   citedVerses,
   type CitedVerse,
+  readerFor,
+  volumeReader,
   volumeVerses,
   type VolumeParagraph,
 } from './commentary-links.js';
@@ -19,6 +21,12 @@ const label = (verse: CitedVerse): string =>
 
 const labels = (verses: readonly CitedVerse[]): string[] => verses.map(label);
 
+const cite = (title: string, printed: string): Node => ({
+  _tag: 'ScriptureRef',
+  title,
+  dataLink: '1965.1',
+  children: [{ _tag: 'Text', text: printed }],
+});
 const text = (value: string): Node => ({ _tag: 'Text', text: value });
 const strong = (...children: Node[]): Node => ({
   _tag: 'Unknown',
@@ -66,6 +74,7 @@ describe('a citation', () => {
   test('a first segment it cannot place names the title, never less', () => {
     expect(labels(citedVerses('Jude 1:14', 'Jude 14, 15'))).toEqual(['65.1:14', '65.1:15']);
     expect(labels(citedVerses('Romans 8:1', 'made up'))).toEqual(['45.8:1']);
+    expect(labels(citedVerses('Romans 8:1', ''))).toEqual(['45.8:1']);
   });
 
   test('a title that names no verse names nothing', () => {
@@ -107,6 +116,14 @@ describe("a volume's paragraphs", () => {
   });
 });
 
+describe('a book outside the commentary', () => {
+  test('is read for its citations alone: an opening citation is no heading', () => {
+    const paragraphs = [heading('John 1:14', '14'), plain(), sectionTitle(cite('John 1:1', '1'))];
+    expect(readerFor('GC')(paragraphs).map(labels)).toEqual([['43.1:14'], [], ['43.1:1']]);
+    expect(readerFor('5BC')(paragraphs).map(labels)).toEqual([['43.1:14'], ['43.1:14'], []]);
+  });
+});
+
 /** A seeded generator, so a failure names the seed that made it. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
@@ -134,16 +151,18 @@ const madeParagraph = (made: Made): VolumeParagraph => {
   }
 };
 
+const madeVolume = (below: (n: number) => number): Made[] =>
+  Array.from({ length: below(30) }, (): Made => {
+    const kind = below(6);
+    if (kind === 0) return { kind: 'title' };
+    if (kind === 1) return { kind: 'heading', verse: below(20) + 1 };
+    return { kind: 'plain', cites: Array.from({ length: below(3) }, () => below(5) + 1) };
+  });
+
 describe('a volume, generated', () => {
   test("each paragraph's verses are its heading's and its own citations', once each", () => {
     for (let seed = 1; seed <= 200; seed++) {
-      const below = seeded(seed);
-      const made: Made[] = Array.from({ length: below(30) }, (): Made => {
-        const kind = below(6);
-        if (kind === 0) return { kind: 'title' };
-        if (kind === 1) return { kind: 'heading', verse: below(20) + 1 };
-        return { kind: 'plain', cites: Array.from({ length: below(3) }, () => below(5) + 1) };
-      });
+      const made = madeVolume(seeded(seed));
       let under: string[] = [];
       const expected = made.map((paragraph) => {
         if (paragraph.kind === 'title') {
@@ -157,6 +176,33 @@ describe('a volume, generated', () => {
         return [...new Set([...under, ...paragraph.cites.map((verse) => `41.2:${String(verse)}`)])];
       });
       expect([seed, volumeVerses(made.map(madeParagraph)).map(labels)]).toEqual([seed, expected]);
+    }
+  });
+
+  test('read in parts, a volume gives what it gives read whole', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const below = seeded(seed);
+      const paragraphs = madeVolume(below).map(madeParagraph);
+      const read = volumeReader();
+      const parts: (readonly CitedVerse[])[] = [];
+      for (let from = 0; from < paragraphs.length;) {
+        const to = from + below(5) + 1;
+        parts.push(...read(paragraphs.slice(from, to)));
+        from = to;
+      }
+      expect([seed, parts.map(labels)]).toEqual([seed, volumeVerses(paragraphs).map(labels)]);
+    }
+  });
+
+  test("a book's citations are each paragraph's own, whatever stands before it", () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const made = madeVolume(seeded(seed));
+      const expected = made.map((paragraph) => {
+        if (paragraph.kind === 'title') return [];
+        if (paragraph.kind === 'heading') return [`43.3:${String(paragraph.verse)}`];
+        return [...new Set(paragraph.cites.map((verse) => `41.2:${String(verse)}`))];
+      });
+      expect([seed, citationVerses(made.map(madeParagraph)).map(labels)]).toEqual([seed, expected]);
     }
   });
 });

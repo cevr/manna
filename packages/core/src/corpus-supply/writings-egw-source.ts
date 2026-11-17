@@ -8,6 +8,7 @@ import {
   type VerseReference,
 } from '../bible/model.js';
 import { EGWApiClient } from '../egw/client.js';
+import { readerFor, type VersesReader } from '../egw/commentary-links.js';
 import { extractScriptureRefs, paragraphRefcode } from '../egw/extract.js';
 import { chapterIdFromTocItem, isChapterHeading } from '../egw/parse.js';
 import * as EGWSchemas from '../egw/schemas.js';
@@ -170,11 +171,12 @@ const publicationOf = (
   );
 
 /** One chapter's paragraphs as the archive keeps them, with the Scripture
- *  they cite. */
+ *  they comment on as `read`, the publication's reader, reads them. */
 const archiveChapter = (
   publication: Publication,
   paragraphs: readonly EGWSchemas.Paragraph[],
   requestedId: EGWSchemas.Book['book_id'],
+  read: VersesReader,
 ): Effect.Effect<ArchiveChapter, CorpusContributionRejectedError> =>
   Effect.gen(function* () {
     const canonicalRequestedId = publicationId(requestedId);
@@ -218,11 +220,15 @@ const archiveChapter = (
           }),
       });
     });
-    const bibleReferences = extractScriptureRefs(paragraphs, requestedId, (paragraph, bookId) =>
-      Option.getOrElse(
-        paragraph.para_id,
-        () => `book-${String(bookId)}-para-${String(paragraph.puborder)}`,
-      ),
+    const bibleReferences = extractScriptureRefs(
+      paragraphs,
+      requestedId,
+      (paragraph, bookId) =>
+        Option.getOrElse(
+          paragraph.para_id,
+          () => `book-${String(bookId)}-para-${String(paragraph.puborder)}`,
+        ),
+      read,
     ).map((reference) => {
       let scripture: ChapterReference | VerseReference = BibleReference.chapter(
         reference.bibleBook,
@@ -325,6 +331,7 @@ export const layerEgwWritingsAssetSource: Layer.Layer<
       const archived = Stream.unwrap(
         Effect.sync(() => {
           const seen = new Set<string>();
+          const read = readerFor(book.code);
           let kept = 0;
           const noParagraphs = Effect.suspend(() => {
             if (kept > 0) return Effect.void;
@@ -340,7 +347,7 @@ export const layerEgwWritingsAssetSource: Layer.Layer<
             Stream.filter((paragraphs) => paragraphs.length > 0),
             Stream.mapEffect((paragraphs) => {
               kept += paragraphs.length;
-              return archiveChapter(publication, paragraphs, requestedId);
+              return archiveChapter(publication, paragraphs, requestedId, read);
             }),
             Stream.concat(Stream.fromEffect(noParagraphs).pipe(Stream.drain)),
           );

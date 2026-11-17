@@ -1,6 +1,7 @@
 /**
- * Which verses each paragraph of a commentary volume comments on, read from
- * the paragraphs themselves.
+ * Which verses each paragraph comments on, read from the paragraphs
+ * themselves: the one reading the stored link rows, the study and the
+ * commentary pack share.
  *
  * Two readings, both from the paragraph's nodes:
  *
@@ -8,22 +9,24 @@
  *   `title` as context: "John 1:1-3, 14" titled "John 1:1" names verses 1, 2,
  *   3 and 14; "14" titled "John 1:14" names John 1:14; "2:9" moves to chapter
  *   2 of the title's book. The title alone names only the first verse;
- * - the volumes are laid out as verse headings, a paragraph that opens with a
- *   bold citation ("1-3", "14"), and the paragraphs under a heading, up to the
- *   next heading or section title, comment on the verses it names.
+ * - the Bible Commentary volumes are laid out as verse headings, a paragraph
+ *   that opens with a bold citation ("1-3", "14"), and the paragraphs under a
+ *   heading, up to the next heading or section title, comment on the verses
+ *   it names. Section titles (`h1`-`h6`) of a volume are never notes.
  *
- * Section titles (`h1`-`h6`) are never notes.
+ * Every book is read for its citations; only a volume laid out by verse
+ * headings (`readsVerseHeadings`) is read for its headings too.
  */
 
 import { Array as Arr, Option } from 'effect';
 
-import { parseBibleQuery } from '@manna/core/bible';
-import type { Schemas } from '@manna/core/egw';
+import { parseBibleQuery } from '../bible/parse.js';
+import type { Paragraph } from './schemas.js';
 
-type Node = Schemas.Paragraph['nodes'][number];
+type Node = Paragraph['nodes'][number];
 
-/** A paragraph of a volume as the reading needs it, in publication order. */
-export type VolumeParagraph = Pick<Schemas.Paragraph, 'nodes' | 'element_type'>;
+/** A paragraph as the reading needs it, in publication order. */
+export type VolumeParagraph = Pick<Paragraph, 'nodes' | 'element_type'>;
 
 /** A verse, or a whole chapter when `bibleVerse` is none. */
 export interface CitedVerse {
@@ -31,6 +34,26 @@ export interface CitedVerse {
   readonly bibleChapter: number;
   readonly bibleVerse: Option.Option<number>;
 }
+
+/** Each paragraph's verses, in the order given. */
+export type VersesReader = (
+  paragraphs: readonly VolumeParagraph[],
+) => readonly (readonly CitedVerse[])[];
+
+/** The Bible Commentary's volumes, the books laid out by verse headings. */
+export const VERSE_HEADING_BOOKS: readonly string[] = [
+  '1BC',
+  '2BC',
+  '3BC',
+  '4BC',
+  '5BC',
+  '6BC',
+  '7BC',
+  '7ABC',
+];
+
+/** Whether the book `code` names is read for its verse headings. */
+export const readsVerseHeadings = (code: string): boolean => VERSE_HEADING_BOOKS.includes(code);
 
 interface Place {
   readonly book: number;
@@ -182,18 +205,33 @@ const keyOf = (cited: CitedVerse): string =>
 const once = (verses: readonly CitedVerse[]): readonly CitedVerse[] =>
   Arr.dedupeWith(verses, (left, right) => keyOf(left) === keyOf(right));
 
-/** Each paragraph's verses, in the order given: its own citations and the
- *  verses of the heading it stands under. */
-export const volumeVerses = (
-  paragraphs: readonly VolumeParagraph[],
-): readonly (readonly CitedVerse[])[] => {
+/** Each paragraph's own citations, once each. */
+export const citationVerses: VersesReader = (paragraphs) =>
+  paragraphs.map((paragraph) => once(citationsIn(paragraph.nodes)));
+
+/** A reader of one volume given in parts, in publication order: the heading a
+ *  part ends under carries into the next, so reading a volume chapter by
+ *  chapter gives what reading it whole gives. Each paragraph's verses are its
+ *  own citations and the verses of the heading it stands under. */
+export const volumeReader = (): VersesReader => {
   let section: readonly CitedVerse[] = [];
-  return paragraphs.map((paragraph) => {
-    if (isSectionTitle(paragraph)) {
-      section = [];
-      return [];
-    }
-    section = Option.getOrElse(headingOf(paragraph.nodes), () => section);
-    return once([...section, ...citationsIn(paragraph.nodes)]);
-  });
+  return (paragraphs) =>
+    paragraphs.map((paragraph) => {
+      if (isSectionTitle(paragraph)) {
+        section = [];
+        return [];
+      }
+      section = Option.getOrElse(headingOf(paragraph.nodes), () => section);
+      return once([...section, ...citationsIn(paragraph.nodes)]);
+    });
+};
+
+/** A whole volume's paragraphs read at once (`volumeReader`). */
+export const volumeVerses: VersesReader = (paragraphs) => volumeReader()(paragraphs);
+
+/** The reader for the book `code` names: its headings and citations for a
+ *  volume laid out by verse headings, its citations alone for any other. */
+export const readerFor = (code: string): VersesReader => {
+  if (readsVerseHeadings(code)) return volumeReader();
+  return citationVerses;
 };
