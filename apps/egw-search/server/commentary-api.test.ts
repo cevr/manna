@@ -5,7 +5,7 @@ import { Effect, Layer, Logger, Option, Schema as S, type Scope } from 'effect';
 import { Etag, HttpPlatform, HttpRouter } from 'effect/http';
 import { HttpApiBuilder, HttpApiTest } from 'effect/http-api';
 
-import type { VolumeParagraph } from '@manna/core/egw';
+import type { Schemas } from '@manna/core/egw';
 import { SearchService } from '@manna/core/search';
 
 import { CommentaryPackSchema, SearchApi } from './api.js';
@@ -16,7 +16,7 @@ import { SearchGroupLive } from './search-api.js';
 import { studyGroupOver } from './study-api.js';
 import { VectorIndexLoad } from './vector-index.js';
 
-type Node = VolumeParagraph['nodes'][number];
+type Node = Schemas.Paragraph['nodes'][number];
 
 const decodePack = S.decodeUnknownSync(S.fromJsonString(CommentaryPackSchema));
 

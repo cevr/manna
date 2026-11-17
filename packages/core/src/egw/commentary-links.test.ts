@@ -1,16 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 
-import {
-  citationVerses,
-  citedVerses,
-  type CitedVerse,
-  readerFor,
-  volumeReader,
-  volumeVerses,
-  type VolumeParagraph,
-} from './commentary-links.js';
+import { citationVerses, readerFor, type VersesReader, volumeVerses } from './commentary-links.js';
 
+type VolumeParagraph = Parameters<VersesReader>[0][number];
+type CitedVerse = ReturnType<VersesReader>[number][number];
 type Node = VolumeParagraph['nodes'][number];
 
 const label = (verse: CitedVerse): string =>
@@ -34,6 +28,10 @@ const strong = (...children: Node[]): Node => ({
   className: '',
   children,
 });
+
+/** The verses one citation names, read as a paragraph holding it alone. */
+const citedVerses = (title: string, printed: string): readonly CitedVerse[] =>
+  citationVerses([{ nodes: [cite(title, printed)] }])[0] ?? [];
 
 const plain = (...nodes: Node[]): VolumeParagraph => ({ nodes: [text('made up '), ...nodes] });
 const heading = (title: string, printed: string): VolumeParagraph => ({
@@ -183,7 +181,7 @@ describe('a volume, generated', () => {
     for (let seed = 1; seed <= 200; seed++) {
       const below = seeded(seed);
       const paragraphs = madeVolume(below).map(madeParagraph);
-      const read = volumeReader();
+      const read = readerFor('5BC');
       const parts: (readonly CitedVerse[])[] = [];
       for (let from = 0; from < paragraphs.length;) {
         const to = from + below(5) + 1;

@@ -15,7 +15,7 @@
  *   it names. Section titles (`h1`-`h6`) of a volume are never notes.
  *
  * Every book is read for its citations; only a volume laid out by verse
- * headings (`readsVerseHeadings`) is read for its headings too.
+ * headings (`readerFor`) is read for its headings too.
  */
 
 import { Array as Arr, Option } from 'effect';
@@ -26,10 +26,10 @@ import type { Paragraph } from './schemas.js';
 type Node = Paragraph['nodes'][number];
 
 /** A paragraph as the reading needs it, in publication order. */
-export type VolumeParagraph = Pick<Paragraph, 'nodes' | 'element_type'>;
+type VolumeParagraph = Pick<Paragraph, 'nodes' | 'element_type'>;
 
 /** A verse, or a whole chapter when `bibleVerse` is none. */
-export interface CitedVerse {
+interface CitedVerse {
   readonly bibleBook: number;
   readonly bibleChapter: number;
   readonly bibleVerse: Option.Option<number>;
@@ -41,7 +41,7 @@ export type VersesReader = (
 ) => readonly (readonly CitedVerse[])[];
 
 /** The Bible Commentary's volumes, the books laid out by verse headings. */
-export const VERSE_HEADING_BOOKS: readonly string[] = [
+const VERSE_HEADING_BOOKS: readonly string[] = [
   '1BC',
   '2BC',
   '3BC',
@@ -51,9 +51,6 @@ export const VERSE_HEADING_BOOKS: readonly string[] = [
   '7BC',
   '7ABC',
 ];
-
-/** Whether the book `code` names is read for its verse headings. */
-export const readsVerseHeadings = (code: string): boolean => VERSE_HEADING_BOOKS.includes(code);
 
 interface Place {
   readonly book: number;
@@ -149,7 +146,7 @@ const segmentAt = (place: Place, segment: string): Option.Option<Read> =>
 /** The verses one citation names: its printed `text` read in the context of
  *  its `title`. A first segment the reading cannot place names the title's
  *  own verses, so a citation never names less than its title. */
-export const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
+const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
   Option.match(named(parseBibleQuery(title)), {
     onNone: () => [],
     onSome: (head) => {
@@ -213,7 +210,7 @@ export const citationVerses: VersesReader = (paragraphs) =>
  *  part ends under carries into the next, so reading a volume chapter by
  *  chapter gives what reading it whole gives. Each paragraph's verses are its
  *  own citations and the verses of the heading it stands under. */
-export const volumeReader = (): VersesReader => {
+const volumeReader = (): VersesReader => {
   let section: readonly CitedVerse[] = [];
   return (paragraphs) =>
     paragraphs.map((paragraph) => {
@@ -232,6 +229,6 @@ export const volumeVerses: VersesReader = (paragraphs) => volumeReader()(paragra
 /** The reader for the book `code` names: its headings and citations for a
  *  volume laid out by verse headings, its citations alone for any other. */
 export const readerFor = (code: string): VersesReader => {
-  if (readsVerseHeadings(code)) return volumeReader();
+  if (VERSE_HEADING_BOOKS.includes(code)) return volumeReader();
   return citationVerses;
 };
