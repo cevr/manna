@@ -6,7 +6,8 @@
   "env": [
     { "name": "HEARTSEED_GARDEN_DRIVE", "launch": true },
     { "name": "HEARTSEED_FIND_PACK", "launch": true },
-    { "name": "HEARTSEED_PACKS_BASE", "launch": true }
+    { "name": "HEARTSEED_PACKS_BASE", "launch": true },
+    { "name": "HEARTSEED_TURN_PROBE", "launch": true }
   ],
   "display": "standalone",
   "app": {

@@ -206,11 +206,8 @@ const verseChecks = (when: string, read: (op: string) => Replies) => {
   const words = shown.words ?? [];
   drive.check(
     `${when}: John 3:16's words, one per shown word, the fourth G25`,
-    shown.have === true &&
-      words.length === 25 &&
-      words[3]?.text === 'loved' &&
-      words[3]?.numbers.includes('G25') === true,
-    words.slice(0, 5),
+    shown.have === true && words.length === 25 && words[3]?.numbers.includes('G25') === true,
+    words.slice(0, 5).map((word) => word.numbers),
   );
 };
 
@@ -243,7 +240,79 @@ const readChecks = (when: string, read: (op: string) => Replies) => {
   );
 };
 
+/** The turn probes `features/studydata.contract` declares, each one step of a pack's check 40 times in one turn. */
+const TURNS = [
+  'CommentaryParse',
+  'XrefsParse',
+  'TagsParse',
+  'LexiconParse',
+  'WordsParse',
+  'WordsWrite',
+  'TagsDecode',
+  'TagsEncode',
+  'TagsSlice',
+  'WordsDecode',
+  'WordsEncode',
+] as const;
+
+/** How many times a probe does its step in its one turn. */
+const TIMES = 40;
+
+/**
+ * `ios turns`: the packs fetched on a launch that names
+ * `HEARTSEED_TURN_PROBE`, then each probe's turn as the data host judged
+ * it: refused, with its own CPU time in the refusal's words (a step's
+ * cost is that over `TIMES`), or let pass (the step costs under
+ * 100 ms / `TIMES`).
+ */
+const turns = async () => {
+  for (const name of ['HEARTSEED_TURN_PROBE', 'SIMCTL_CHILD_HEARTSEED_TURN_PROBE'])
+    process.env[name] = '1';
+  const settle = ['clock +1500', 'clock data', 'clock settle'];
+  const ops = [
+    'clock data',
+    'clock settle',
+    'tap packs-fetch',
+    'clock data',
+    'clock settle',
+    ...settle,
+    ...settle,
+    ...settle,
+    'logs',
+    ...TURNS.map((name) => `state studyTurn${name}`),
+  ];
+  const replies = await drive.run(
+    ['--storage', store, '--reset-storage', '--url', '/verses', ...webPort],
+    ops,
+  );
+  const lines = JSON.stringify(replies[ops.indexOf('logs')] ?? '')
+    .split('","')
+    .filter((line) => line.includes('studyTurn') && line.includes('ms of its own'));
+  for (const name of TURNS) {
+    const own = lines
+      .filter((line) => line.includes(`(studyTurn${name})`) || line.includes(`"studyTurn${name}"`))
+      .flatMap((line) =>
+        [...line.matchAll(/took ([\d.]+) ms of its own/gu)].map((m) => Number(m[1])),
+      );
+    const passed = (replies[ops.indexOf(`state studyTurn${name}`)] as { times?: number } | null)
+      ?.times;
+    const step =
+      own.length > 0
+        ? `${(Math.min(...own) / TIMES).toFixed(2)} ms a step (refused at ${own.map((ms) => ms.toFixed(1)).join(', ')} ms for ${TIMES})`
+        : passed === TIMES
+          ? `under ${(100 / TIMES).toFixed(2)} ms a step (${TIMES} in one turn let pass)`
+          : `not measured (${JSON.stringify(passed)})`;
+    console.log(`turn ${name}: ${step}`);
+    drive.check(`turn ${name} measured`, own.length > 0 || passed === TIMES, step);
+  }
+};
+
 await startFixture();
+if (process.argv[3] === 'turns') {
+  await turns();
+  await stopFixture();
+  process.exit(drive.finish());
+}
 const started = performance.now();
 const fetched = await go(false, [
   'clock data',

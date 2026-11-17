@@ -41,7 +41,12 @@
         "test:study-lexicon",
         "test:type"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK", "HEARTSEED_PACKS_BASE"],
+      "env": [
+        "HEARTSEED_GARDEN_DRIVE",
+        "HEARTSEED_FIND_PACK",
+        "HEARTSEED_PACKS_BASE",
+        "HEARTSEED_TURN_PROBE"
+      ],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -62,7 +67,12 @@
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK", "HEARTSEED_PACKS_BASE"],
+      "env": [
+        "HEARTSEED_GARDEN_DRIVE",
+        "HEARTSEED_FIND_PACK",
+        "HEARTSEED_PACKS_BASE",
+        "HEARTSEED_TURN_PROBE"
+      ],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",

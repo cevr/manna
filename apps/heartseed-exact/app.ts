@@ -12,6 +12,7 @@ import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
 import { findPackFrom, STUDY_PACKS, studySources } from './src/study/sources';
+import { turnSources } from './src/study/turns';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
@@ -40,6 +41,9 @@ const FIND_PACK = import.meta.env.HEARTSEED_FIND_PACK ?? '';
 /** A driver's launch (`tools/drive-commentary.ts`) names its fixture here; a plain launch fetches every pack from egw.cvr.im. */
 const PACKS_BASE = import.meta.env.HEARTSEED_PACKS_BASE ?? '';
 
+/** A driver's launch (`tools/drive-studydata.ts ios turns`) sets this, and the study probe measures the downloader's turns (`src/study/turns.ts`); a plain launch asks nothing of it. */
+const TURN_PROBE = import.meta.env.HEARTSEED_TURN_PROBE ?? '';
+
 const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
 const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY, ...STUDY_PACKS] });
 
@@ -59,6 +63,7 @@ const sources: Sources = {
   ...packs.sources,
   ...commentarySources(packs),
   ...studySources(packs),
+  ...turnSources(TURN_PROBE !== ''),
   ...findSources(findPackFrom(packs, FIND_PACK)),
 };
 
