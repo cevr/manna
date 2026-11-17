@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch, effect/noNewPromise -- Exact's data module answers a Promise and its app folder cannot import effect (docs/exact.md): each pack's one fetch with the host's `fetch` (its `exactTimeout` outside the DOM's RequestInit), a refused fetch or write is the network's or the disk's answer, not a defect, a pack read once is held as its Promise, and the protocol itself is the pure `step`. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch, effect/noNewPromise, effect/noThrowStatement -- Exact's data module answers a Promise and its app folder cannot import effect (docs/exact.md): each pack's one fetch with the host's `fetch` (its `exactTimeout` outside the DOM's RequestInit), a refused fetch or write is the network's or the disk's answer, not a defect, a call let go mid-job rethrows the host's AbortError once its job is owed again, a pack read once is held as its Promise, and the protocol itself is the pure `step`. */
 
 /**
  * The one downloader every pack the reader keeps runs through (q126), as
@@ -7,15 +7,19 @@
  * names one (`HEARTSEED_PACKS_BASE`). Each pack has its own machine, the
  * pure `step`, held here between calls. `packsAsk` is the Read tab shown
  * or Try again (Contract's `packsFetch` and `packsRetry`): it asks every
- * pack at once and joins any fetch in flight, each settled apart
- * (whatever throws in one is that pack's failed try). It answers as soon
- * as one pack settles, with every pack's kept line as it stands and
- * `more` while any is still out; Contract then sends `packsWait`, which
- * answers at the next settle, until none is out. So a pack's status is
- * kept the moment it settles, whatever another's slow fetch does. A body is checked in steps a turn each (`paced.ts`), and the data host
- * gets a turn back before its write, so no turn of the call nears the
- * host's budget whatever a pack's size: one turn over it refuses the whole
- * call, every pack's answer with it. Contract keeps every pack's version and check time in one `persist`
+ * pack at once and joins any fetch in flight, each settled apart. It
+ * answers as soon as one pack settles, with every pack's kept line as it
+ * stands and `more` while any is still out; Contract then sends
+ * `packsWait`, which answers at the next settle, until none is out. So a
+ * pack's status is kept the moment it settles, whatever another's slow
+ * fetch does. A fetch's answer may land after the call that made it has
+ * answered, and on Hermes such a call's `scheduler.yield()` does not end
+ * its turn; so a landing runs no check: a body waits as its pack's job,
+ * and each call runs one job, in steps a turn each (`paced.ts`) from its
+ * own turn, the data host getting a turn back before the write, and
+ * answers once it is done. No turn nears the host's budget whatever a
+ * pack's size: one turn over it refuses the whole call, every pack's
+ * answer with it (`turns.test.ts`). Contract keeps every pack's version and check time in one `persist`
  * string from each answer, after each file is written. A pack's reader
  * (`packOf`) reads its kept file on first use per launch and version, and
  * a pack a fetch just wrote is held parsed, so it is never read again.
@@ -23,7 +27,7 @@
 
 import type { FileStorage } from '@manna/exact-kit/storage';
 
-import { inTurns, nextTurn } from './paced';
+import { inTurns, nextTurn, type Paced } from './paced';
 import { packShownOf, packsShownOf, type PacksState, type PackState } from './shown';
 import { versionAt, type PackSpec } from './spec';
 import {
@@ -92,34 +96,52 @@ const hostFetch: Fetcher = (url, init) => fetch(url, init);
 /** The body's bytes, as the file keeps them. */
 const bytesOf = (text: string) => new TextEncoder().encode(text);
 
-/** One pack's launch: its machine, its fetch in flight, the pack held parsed, how often its file was read, its asks still out, and what it has to tell the next answer. */
+/** A pack's work owed to the next ask's own turns: a body its fetch heard, to check and write, or its kept file, to read ahead. */
+type Job =
+  | {
+      readonly _tag: 'Check';
+      readonly id: number;
+      readonly version: string;
+      readonly now: number;
+      readonly body: string;
+      readonly storage: FileStorage;
+    }
+  | { readonly _tag: 'Read'; readonly mark: string; readonly storage: FileStorage };
+
+/** One pack's launch: its machine, the pack held parsed, how often its file was read, its work owed, and what it has to tell the next answer. */
 interface Entry {
   readonly spec: PackSpec<Versioned>;
   machine: Machine;
-  flight: Promise<boolean> | undefined;
   held: { readonly mark: string; readonly pack: Promise<Versioned | undefined> } | undefined;
   reads: number;
-  /** This pack's asks not yet settled, the latest last. */
-  out: Array<Promise<void>>;
+  job: Job | undefined;
   /** Whether it settled since the last answer, which then answers at once. */
   news: boolean;
   /** Whether its fetch landed its first pack since the last answer. */
   landed: boolean;
 }
 
-/** `body` checked by `spec`'s check a step a turn, a check that throws as a bad body. */
+/** Whether `entry` is still out: its fetch in flight, or its work owed. */
+const isOut = (entry: Entry) => entry.machine.current !== 0 || entry.job !== undefined;
+
+/** `body` checked by `spec`'s check a step a turn, a check that throws as a bad body; a pause that throws (the call let go) throws. */
 const checkedIn = async (
   spec: PackSpec<Versioned>,
   body: string,
   pause: () => Promise<void>,
 ): Promise<Checked<Versioned>> => {
+  await pause();
+  return inTurns(safely(spec, body), pause);
+};
+
+/** `spec`'s check of `body`, a step that throws ending it as a bad body. */
+function* safely(spec: PackSpec<Versioned>, body: string): Paced<Checked<Versioned>> {
   try {
-    await pause();
-    return await inTurns(spec.check(body), pause);
+    return yield* spec.check(body);
   } catch {
     return { _tag: 'Bad', fault: 'threw' };
   }
-};
+}
 
 /** The kept file's pack, or none: no file, a file that does not decode, or a pack that fails its checks. */
 const packIn = async (
@@ -157,10 +179,9 @@ export const packSources = (options: PacksOptions) => {
   const entries: ReadonlyArray<Entry> = options.packs.map((spec) => ({
     spec,
     machine: START,
-    flight: undefined,
     held: undefined,
     reads: 0,
-    out: [],
+    job: undefined,
     news: false,
     landed: false,
   }));
@@ -204,44 +225,65 @@ export const packSources = (options: PacksOptions) => {
     }
   };
 
-  /** One fetch to its end, its body checked a step a turn; whether it landed the pack's first file. */
-  const fetched = async (
+  /** The asks waiting for the next pack to land or settle. */
+  let wakers: Array<() => void> = [];
+  const wake = () => {
+    const woken = wakers;
+    wakers = [];
+    for (const each of woken) each();
+  };
+  const woken = () =>
+    new Promise<void>((resolve) => {
+      wakers.push(resolve);
+    });
+
+  /** `entry` settled if it is no longer out: news for the next answer. */
+  const told = (entry: Entry) => {
+    if (!isOut(entry)) entry.news = true;
+  };
+
+  /**
+   * One fetch heard, in whatever turn its answer lands: a body is kept as
+   * `entry`'s job for an ask's own turns, any other answer stepped at once.
+   * It runs no check: the call that made the fetch may have answered by
+   * then, and an answered call's yield does not end its turn.
+   */
+  const flown = async (
     entry: Entry,
     id: number,
     version: string,
     now: number,
     storage: FileStorage,
-  ): Promise<boolean> => {
+  ) => {
     const heard = await hear(entry, version);
-    const checked =
-      heard._tag === 'Body' ? await checkedIn(entry.spec, heard.body, pause) : undefined;
-    const write = apply(entry, { _tag: 'Answered', id, now, heard }, checked).find(
-      (command) => command._tag === 'Write',
-    );
+    if (heard._tag === 'Body' && entry.machine.current === id && entry.machine.writing === '')
+      entry.job = { _tag: 'Check', id, version, now, body: heard.body, storage };
+    else
+      apply(entry, {
+        _tag: 'Answered',
+        id,
+        now,
+        heard: heard._tag === 'Body' ? { _tag: 'Refused' } : heard,
+      });
+    told(entry);
+    wake();
+  };
+
+  /** A heard body checked a step a turn, written, and kept; whether its fetch landed the pack's first file. */
+  const landing = async (entry: Entry, job: Extract<Job, { _tag: 'Check' }>) => {
+    const { id, now, body, storage } = job;
+    const checked = await checkedIn(entry.spec, body, pause);
+    const write = apply(
+      entry,
+      { _tag: 'Answered', id, now, heard: { _tag: 'Body', body } },
+      checked,
+    ).find((command) => command._tag === 'Write');
     if (write?._tag === 'Write') {
       const ok = await written(entry, storage, write.body);
       apply(entry, { _tag: 'Wrote', id, now, ok });
       if (ok) entry.held = { mark: write.pack.version, pack: Promise.resolve(write.pack) };
     }
-    return version === '' && entry.machine.kept.version !== '';
-  };
-
-  /** `fetched`, settled apart: whatever throws in one pack's fetch is that try's failure (a refusal), and no other pack's. */
-  const fetchOnce = async (
-    entry: Entry,
-    id: number,
-    version: string,
-    now: number,
-    storage: FileStorage,
-  ): Promise<boolean> => {
-    try {
-      return await fetched(entry, id, version, now, storage);
-    } catch {
-      apply(entry, { _tag: 'Answered', id, now, heard: { _tag: 'Refused' } });
-      if (entry.machine.current === id && entry.machine.writing !== '')
-        apply(entry, { _tag: 'Wrote', id, now, ok: false });
-      return false;
-    }
+    if (job.version === '' && entry.machine.kept.version !== '') entry.landed = true;
   };
 
   /** The kept pack for `mark`, read from the file once per launch and mark; none for no mark. */
@@ -261,35 +303,39 @@ export const packSources = (options: PacksOptions) => {
     return pack;
   };
 
-  /** One pack asked: a fetch started or joined and awaited, else its kept pack read ahead; whether its first file landed. */
+  /** One pack asked: a fetch started (one in flight is joined), else its kept file owed a read ahead. */
   const askOne = async (
     entry: Entry,
     kept: string,
     force: boolean,
     now: number,
     storage: FileStorage,
-  ): Promise<boolean> => {
+  ) => {
     const found = entry.machine.loaded
       ? NOTHING_KEPT
       : keptOf(await fileVersion(entry.spec.file, storage), keptIn(kept, entry.spec.name));
     for (const command of apply(entry, { _tag: 'Ask', now, force, found }))
-      if (command._tag === 'Fetch')
-        entry.flight = fetchOnce(entry, command.id, command.version, now, storage);
-    if (entry.machine.current !== 0 && entry.flight !== undefined) return await entry.flight;
-    await settled(entry, entry.machine.kept.version, storage);
-    return false;
+      if (command._tag === 'Fetch') void flown(entry, command.id, command.version, now, storage);
+    const mark = entry.machine.kept.version;
+    if (!isOut(entry) && mark !== '' && entry.held?.mark !== mark)
+      entry.job = { _tag: 'Read', mark, storage };
+    told(entry);
   };
 
-  /** `asked`, counted out of `entry` until it settles; then `entry` has news for the next answer. */
-  const track = (entry: Entry, asked: Promise<boolean>) => {
-    const done: Promise<void> = asked
-      .catch(() => false)
-      .then((landed) => {
-        entry.out = entry.out.filter((each) => each !== done);
-        entry.news = true;
-        if (landed) entry.landed = true;
-      });
-    entry.out.push(done);
+  /** `entry`'s job run in this call's own turns; a call let go mid-check leaves it owed to the next. */
+  const work = async (entry: Entry) => {
+    const job = entry.job;
+    if (job === undefined) return;
+    entry.job = undefined;
+    try {
+      if (job._tag === 'Read') await settled(entry, job.mark, job.storage);
+      else await landing(entry, job);
+    } catch (error) {
+      entry.job ??= job;
+      throw error;
+    }
+    told(entry);
+    wake();
   };
 
   /** Every pack as it stands: the kept line of each this launch has read (`kept`'s for the rest), and what is news since the last answer, now told. */
@@ -303,7 +349,7 @@ export const packSources = (options: PacksOptions) => {
         .filter((entry) => entry.landed)
         .map((entry) => entry.spec.name)
         .join(' '),
-      more: entries.some((entry) => entry.out.length > 0),
+      more: entries.some(isOut),
     };
     for (const entry of entries) {
       entry.news = false;
@@ -312,10 +358,20 @@ export const packSources = (options: PacksOptions) => {
     return answer;
   };
 
-  /** The next answer: at once when a pack settled since the last one or none is out, else at the next pack's settle, whatever the others do. */
+  /**
+   * The next answer: at once when a pack settled since the last one or none
+   * is out; else one pack's owed work run in this call's own turns; else
+   * at the next landing, whatever the others do. Work runs only from a
+   * call's own turn, never after a wake, which may come in another call's
+   * turn, and the call answers once that work is done: on Hermes a yield of
+   * a call that has answered does not end its turn.
+   */
   const nextAnswer = async (kept: string): Promise<PacksAnswer> => {
-    const out = entries.flatMap((entry) => entry.out);
-    if (out.length > 0 && !entries.some((entry) => entry.news)) await Promise.race(out);
+    if (!entries.some((entry) => entry.news)) {
+      const owed = entries.find((entry) => entry.job !== undefined);
+      if (owed !== undefined) await work(owed);
+      else if (entries.some(isOut)) await woken();
+    }
     return answerOf(kept);
   };
 
@@ -369,10 +425,10 @@ export const packSources = (options: PacksOptions) => {
         [kept, force, now]: readonly [string, boolean, number],
         _store: ExactStore,
         storage: FileStorage,
-      ): Promise<PacksAnswer> => {
-        for (const entry of entries) track(entry, askOne(entry, kept, force, now, storage));
-        return nextAnswer(kept);
-      },
+      ): Promise<PacksAnswer> =>
+        Promise.all(entries.map((entry) => askOne(entry, kept, force, now, storage))).then(() =>
+          nextAnswer(kept),
+        ),
       /** Contract's follow-up while an answer said `more`: the next pack's settle, or at once with none out. */
       packsWait: ([kept]: readonly [string]): Promise<PacksAnswer> => nextAnswer(kept),
     },
