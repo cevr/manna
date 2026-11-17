@@ -386,9 +386,21 @@ drive.check(
   Bun.deepEquals(placeOf(first[left]).slice(0, 2), [19, 119]),
   first[left],
 );
-const largestLast = aboveBar(first, largestVerse, largestBar);
+/** At the largest text Psalm 119:176 can be taller than the room between iOS's navigation bar and the tab bar: then its start is in view, below the one and above the other. */
+const largestLast = (() => {
+  const shown = aboveBar(first, largestVerse, largestBar);
+  const nav = native
+    ? elementsOf(first[largestBar]).find((element) => element.native?.class === 'UINavigationBar')
+        ?.frame
+    : undefined;
+  const navBottom = nav === undefined ? 0 : nav.y + nav.h;
+  const { frame, bar } = shown;
+  if (shown.ok || frame === undefined || bar === undefined) return { ...shown, navBottom };
+  const tall = frame.h > bar.y - navBottom;
+  return { ...shown, navBottom, tall, ok: tall && frame.y >= navBottom - 0.5 && frame.y < bar.y };
+})();
 drive.check(
-  'at the largest text, Psalm 119:176 is in view above the bar',
+  'at the largest text, Psalm 119:176 is in view above the bar (its start, when taller than the room)',
   largestLast.ok,
   largestLast,
 );

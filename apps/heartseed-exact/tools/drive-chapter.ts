@@ -204,13 +204,14 @@ const range = a.step('state chapterShown');
 const rangeLine = a.step('layout range-line');
 both(a, 'range');
 a.step('tap plant-list', ...settle);
-const planted = verseSteps(a, 16);
+/** The range's middle verse: the bar keeps the range's last verse in view, which can carry its first under iOS's navigation bar. */
+const planted = verseSteps(a, 17);
 const plantedLine = a.step('layout chapter-planted');
 const landed = a.step('state chapterShown');
 both(a, 'planted');
 const axPlanted = a.step('tree --ax');
 a.step('tap chapter-clear', ...settle);
-const field = verseSteps(a, 16);
+const field = verseSteps(a, 17);
 both(a, 'field');
 a.step(...Array.from({ length: 4 }, () => 'tap chapter-scroll wheel 0 20000'), 'clock settle');
 a.step('tap verse-36', ...settle);
@@ -386,7 +387,12 @@ drive.check(
   named['chapter-title'] === 'John 3, choose another chapter' &&
     named['chapter-find'] === 'Find a verse, a chapter or words' &&
     named['chapter-aa'] === 'Text settings',
-  named,
+  {
+    named,
+    header: elementsOf(first[axRest])
+      .filter((each) => (each.frame?.y ?? 999) < 120 && each.role !== 'StaticText')
+      .map((each) => [each.testId, each.role, each.name, each.native]),
+  },
 );
 const chosenAx = element(first[axChosen], 'verse-16');
 drive.check(
