@@ -1,8 +1,10 @@
 /**
  * No Contract file writes a colour (A4): a colour is a brand role or a
  * platform role the brand sets, by name, so the brand alone says each
- * shade. The finder is tried against a planted literal of each kind first,
- * so a finder that finds nothing cannot pass.
+ * shade. `transparent` is no shade, a box that paints nothing (the drums'
+ * window-wide dialog, which must name a fill to be the top layer on iOS),
+ * so it may be written. The finder is tried against a planted literal of
+ * each kind first, so a finder that finds nothing cannot pass.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -12,7 +14,7 @@ import { appFile, contractFiles } from './design.testing.ts';
 const COLOURS = [
   'aliceblue|antiquewhite|aqua|beige|black|blue|brown|crimson|cyan|fuchsia|gold|gray|grey|green',
   'indigo|ivory|lavender|lime|magenta|maroon|navy|olive|orange|pink|plum|purple|red|salmon',
-  'silver|tan|teal|tomato|turquoise|violet|wheat|white|yellow|transparent',
+  'silver|tan|teal|tomato|turquoise|violet|wheat|white|yellow',
 ].join('|');
 
 const LITERAL = new RegExp(
@@ -42,6 +44,7 @@ describe('no Contract file writes a colour', () => {
     ])
       expect(literals(planted)).toHaveLength(1);
     expect(literals('      text "x" color="ink" background-color="-exact-background"')).toEqual([]);
+    expect(literals('      dialog background-color="transparent"')).toEqual([]);
   });
 
   for (const file of contractFiles())

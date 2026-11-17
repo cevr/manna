@@ -11,8 +11,15 @@
  *   them, where the driver can pinch: the web's is a trackpad's, a wheel
  *   with Control held; iOS's is `tap … pinch`, and what each driver gave is
  *   printed beside the check;
- * - a tap outside the drums closes them and opens nothing (on iOS a tap
- *   on UIKit's backdrop, which only a drive can aim at a point);
+ * - a tap outside the drums closes them and opens nothing: a tap at the
+ *   top left of `drums-outside`, the window-wide press beneath the panel;
+ * - each way the drums close (the `#`, a tap outside, and on the web
+ *   Escape) fades them: 50 ms in, the page differs both from the open
+ *   drums and from the settled page (pixels of screenshots), and once the
+ *   clock settles the drums are gone; under Reduce Motion they leave at
+ *   once, 50 ms in already the settled page. iOS's screenshots under the
+ *   agent's clock do not show the fade, so there the counts are printed and
+ *   only the close is held;
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels;
  * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
