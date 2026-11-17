@@ -74,9 +74,42 @@ const startFixture = async () => {
 
 for (const name of ['HEARTSEED_PACKS_BASE', 'SIMCTL_CHILD_HEARTSEED_PACKS_BASE'])
   process.env[name] = origin;
+/** A driven launch draws find's test field on Your verses (`features/find.contract`). */
+for (const name of ['HEARTSEED_GARDEN_DRIVE', 'SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE'])
+  process.env[name] = '1';
 
-const drive = makeDrive({ name: 'drive-studydata', host, appDir: app });
-const webPort = host === 'web' ? ['--port', '8775'] : [];
+/** The kit's machine, but each run started with this drive's environment, which names the fixture. */
+const processes = {
+  spawn: (argv: ReadonlyArray<string>, cwd: string) => {
+    const child = Bun.spawn([...argv], {
+      cwd,
+      env: { ...process.env },
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+    });
+    return {
+      pid: child.pid,
+      ended: Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]).then(([stdout, stderr, code]) => ({ code, stdout, stderr })),
+    };
+  },
+  signal: (pid: number, signal: 'SIGTERM') => {
+    try {
+      process.kill(pid, signal);
+    } catch {}
+  },
+  sleep: (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms).unref();
+    }),
+};
+
+const drive = makeDrive({ name: 'drive-studydata', host, appDir: app, processes });
+const webPort = host === 'web' ? ['--port', '8773'] : [];
 const store = `studydata-${host}-${Date.now().toString(36)}`;
 
 const PROBES = [
