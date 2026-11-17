@@ -1011,6 +1011,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1085,6 +1086,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1156,6 +1158,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1227,6 +1230,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1284,6 +1288,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1332,6 +1337,7 @@
                   "**/lab",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1499,6 +1505,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1908,6 +1915,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
