@@ -15,7 +15,7 @@ import { packAt, type PackFrom } from '../find/sources';
 import type { ExactStore, packSources } from '../packs/sources';
 import type { PackSpec } from '../packs/spec';
 import { CANON_CHAPTERS } from './canon';
-import { studyCheckOf, type StudyPack } from './pack';
+import { studyCheckPaced, type StudyPack } from './pack';
 import {
   countsRead,
   entryRead,
@@ -26,7 +26,7 @@ import {
   type StudyWords,
   type StudyXrefs,
 } from './read';
-import { checkWords, type WordsPack } from './words-pack';
+import { checkWordsPaced, type WordsPack } from './words-pack';
 
 /** OpenBible.info's cross-references, each verse's first 6, as egw.cvr.im serves them. */
 export const STUDY_XREFS: PackSpec<StudyPack> = {
@@ -37,7 +37,7 @@ export const STUDY_XREFS: PackSpec<StudyPack> = {
   noun: 'Cross-references',
   waiting:
     'The cross-references are still on their way. They need a connection once, then they work offline.',
-  check: studyCheckOf(CANON_CHAPTERS),
+  check: studyCheckPaced(CANON_CHAPTERS),
 };
 
 /** The Hebrew and Greek behind each word of the KJV, as egw.cvr.im serves them. */
@@ -49,7 +49,7 @@ export const STUDY_TAGS: PackSpec<StudyPack> = {
   noun: 'Hebrew and Greek words',
   waiting:
     'The Hebrew and Greek words are still on their way. They need a connection once, then they work offline.',
-  check: studyCheckOf(CANON_CHAPTERS),
+  check: studyCheckPaced(CANON_CHAPTERS),
 };
 
 /** Strong's dictionaries, with how the KJV renders each word, as egw.cvr.im serves them. */
@@ -61,7 +61,7 @@ export const STUDY_LEXICON: PackSpec<StudyPack> = {
   noun: "Strong's dictionary",
   waiting:
     "Strong's dictionary is still on its way. It needs a connection once, then it works offline.",
-  check: studyCheckOf(),
+  check: studyCheckPaced(),
 };
 
 /** Find's word index, as egw.cvr.im serves it (`tools/find.ts`'s index in a pack's fields). */
@@ -72,7 +72,7 @@ export const STUDY_WORDS: PackSpec<WordsPack> = {
   title: 'the word search',
   noun: 'Word search',
   waiting: 'Word search is still on its way. It needs a connection once, then it works offline.',
-  check: checkWords,
+  check: checkWordsPaced,
 };
 
 /** The study packs, in the order the downloader asks them. */

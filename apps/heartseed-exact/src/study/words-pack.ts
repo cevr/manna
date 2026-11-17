@@ -10,6 +10,7 @@
 
 import { versionOf } from '../commentary/pack';
 import { FIND_FORMAT, type FindPack } from '../find/pack';
+import { atOnce, sumPaced, type Paced } from '../packs/paced';
 import { sumOf } from '../text/sum';
 import { STUDY_FORMAT } from './pack';
 
@@ -95,16 +96,22 @@ const hasFields = (value: unknown): value is WordsPack =>
   isFind(value.find);
 
 /** `body` checked whole: it parses, has every field, both formats are this app's, `count` is the index's verses, and the sum and version are the index's. */
-export const checkWords = (body: string): WordsCheck => {
+export const checkWords = (body: string): WordsCheck => atOnce(checkWordsPaced(body));
+
+/** `checkWords` in steps (`src/packs/paced.ts`): the parse, the fields, the index written again, then the sum `SLICE` code units a step. */
+export function* checkWordsPaced(body: string): Paced<WordsCheck> {
   const read = parsedOf(body);
   if (!read.ok) return { _tag: 'Bad', fault: 'json' };
+  yield undefined;
   if (!hasFields(read.value)) return { _tag: 'Bad', fault: 'fields' };
   const pack = read.value;
   if (pack.format !== STUDY_FORMAT || pack.find.format !== FIND_FORMAT)
     return { _tag: 'Bad', fault: 'format' };
   if (pack.count !== pack.find.verses) return { _tag: 'Bad', fault: 'count' };
-  const sum = sumOf(JSON.stringify(pack.find));
+  const written = JSON.stringify(pack.find);
+  yield undefined;
+  const sum = yield* sumPaced([written]);
   if (pack.sum !== sum) return { _tag: 'Bad', fault: 'sum' };
   if (pack.version !== versionOf(pack.count, sum)) return { _tag: 'Bad', fault: 'version' };
   return { _tag: 'Good', pack };
-};
+}

@@ -7,8 +7,12 @@
  * names one (`HEARTSEED_PACKS_BASE`). Each pack has its own machine, the
  * pure `step`, held here between calls. `packsAsk` is the Read tab shown
  * or Try again (Contract's `packsFetch` and `packsRetry`): it asks every
- * pack at once, joins any fetch in flight, and answers once all settle;
- * Contract keeps every pack's version and check time in one `persist`
+ * pack at once, joins any fetch in flight, and answers once all settle,
+ * each settled apart (whatever throws in one is that pack's failed try).
+ * A body is checked in steps a turn each (`paced.ts`), and the data host
+ * gets a turn back before its write, so no turn of the call nears the
+ * host's budget whatever a pack's size: one turn over it refuses the whole
+ * call, every pack's answer with it. Contract keeps every pack's version and check time in one `persist`
  * string from that answer, after each file is written. A pack's reader
  * (`packOf`) reads its kept file on first use per launch and version, and
  * a pack a fetch just wrote is held parsed, so it is never read again.
@@ -16,6 +20,7 @@
 
 import type { FileStorage } from '@manna/exact-kit/storage';
 
+import { inTurns, nextTurn } from './paced';
 import { packShownOf, packsShownOf, type PacksState, type PackState } from './shown';
 import { versionAt, type PackSpec } from './spec';
 import {
@@ -25,6 +30,7 @@ import {
   NOTHING_KEPT,
   START,
   step,
+  type Checked,
   type Heard,
   type Input,
   type Machine,
@@ -73,6 +79,8 @@ export interface PacksOptions {
   readonly setting: string;
   readonly packs: ReadonlyArray<PackSpec<Versioned>>;
   readonly fetcher?: Fetcher;
+  /** What ends a turn between a check's steps and before a write (`nextTurn`, the host's `scheduler.yield()`, by default). */
+  readonly pause?: () => Promise<void>;
 }
 
 const hostFetch: Fetcher = (url, init) => fetch(url, init);
@@ -89,14 +97,30 @@ interface Entry {
   reads: number;
 }
 
+/** `body` checked by `spec`'s check a step a turn, a check that throws as a bad body. */
+const checkedIn = async (
+  spec: PackSpec<Versioned>,
+  body: string,
+  pause: () => Promise<void>,
+): Promise<Checked<Versioned>> => {
+  try {
+    await pause();
+    return await inTurns(spec.check(body), pause);
+  } catch {
+    return { _tag: 'Bad', fault: 'threw' };
+  }
+};
+
 /** The kept file's pack, or none: no file, a file that does not decode, or a pack that fails its checks. */
 const packIn = async (
   spec: PackSpec<Versioned>,
   storage: FileStorage,
+  pause: () => Promise<void>,
 ): Promise<Versioned | undefined> => {
   try {
     const bytes = await storage.fs.readFile(spec.file);
-    const checked = spec.check(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    const body = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const checked = await checkedIn(spec, body, pause);
     return checked._tag === 'Good' ? checked.pack : undefined;
   } catch {
     return undefined;
@@ -119,6 +143,7 @@ const fileVersion = async (file: string, storage: FileStorage): Promise<string> 
 export const packSources = (options: PacksOptions) => {
   const base = baseOf(options.setting);
   const fetcher = options.fetcher ?? hostFetch;
+  const pause = options.pause ?? nextTurn;
   const entries: ReadonlyArray<Entry> = options.packs.map((spec) => ({
     spec,
     machine: START,
@@ -128,8 +153,13 @@ export const packSources = (options: PacksOptions) => {
   }));
   const named = new Map(entries.map((entry) => [entry.spec.name, entry]));
 
-  const apply = (entry: Entry, input: Input) => {
-    const stepped = step(entry.machine, input, entry.spec.check);
+  /** `input` stepped, a body's check already run in turns (`checked`); none is run inside the step. */
+  const apply = (entry: Entry, input: Input, checked?: Checked<Versioned>) => {
+    const stepped = step(
+      entry.machine,
+      input,
+      (): Checked<Versioned> => checked ?? { _tag: 'Bad', fault: 'unchecked' },
+    );
     entry.machine = stepped.state;
     return stepped.commands;
   };
@@ -153,6 +183,7 @@ export const packSources = (options: PacksOptions) => {
 
   const written = async (entry: Entry, storage: FileStorage, body: string) => {
     try {
+      await pause();
       await storage.fs.atomicWriteFile(entry.spec.file, bytesOf(body));
       return true;
     } catch {
@@ -160,8 +191,8 @@ export const packSources = (options: PacksOptions) => {
     }
   };
 
-  /** One fetch to its end; whether it landed the pack's first file. */
-  const fetchOnce = async (
+  /** One fetch to its end, its body checked a step a turn; whether it landed the pack's first file. */
+  const fetched = async (
     entry: Entry,
     id: number,
     version: string,
@@ -169,7 +200,9 @@ export const packSources = (options: PacksOptions) => {
     storage: FileStorage,
   ): Promise<boolean> => {
     const heard = await hear(entry, version);
-    const write = apply(entry, { _tag: 'Answered', id, now, heard }).find(
+    const checked =
+      heard._tag === 'Body' ? await checkedIn(entry.spec, heard.body, pause) : undefined;
+    const write = apply(entry, { _tag: 'Answered', id, now, heard }, checked).find(
       (command) => command._tag === 'Write',
     );
     if (write?._tag === 'Write') {
@@ -180,12 +213,30 @@ export const packSources = (options: PacksOptions) => {
     return version === '' && entry.machine.kept.version !== '';
   };
 
+  /** `fetched`, settled apart: whatever throws in one pack's fetch is that try's failure (a refusal), and no other pack's. */
+  const fetchOnce = async (
+    entry: Entry,
+    id: number,
+    version: string,
+    now: number,
+    storage: FileStorage,
+  ): Promise<boolean> => {
+    try {
+      return await fetched(entry, id, version, now, storage);
+    } catch {
+      apply(entry, { _tag: 'Answered', id, now, heard: { _tag: 'Refused' } });
+      if (entry.machine.current === id && entry.machine.writing !== '')
+        apply(entry, { _tag: 'Wrote', id, now, ok: false });
+      return false;
+    }
+  };
+
   /** The kept pack for `mark`, read from the file once per launch and mark; none for no mark. */
   const packFor = (entry: Entry, mark: string, storage: FileStorage) => {
     if (mark === '') return Promise.resolve(undefined);
     if (entry.held?.mark === mark) return entry.held.pack;
     entry.reads++;
-    const pack = packIn(entry.spec, storage);
+    const pack = packIn(entry.spec, storage, pause);
     entry.held = { mark, pack };
     return pack;
   };
@@ -268,7 +319,7 @@ export const packSources = (options: PacksOptions) => {
         storage: FileStorage,
       ): Promise<PacksAnswer> => {
         const landed = await Promise.all(
-          entries.map((entry) => askOne(entry, kept, force, now, storage)),
+          entries.map((entry) => askOne(entry, kept, force, now, storage).catch(() => false)),
         );
         return {
           kept: entries.reduce(
