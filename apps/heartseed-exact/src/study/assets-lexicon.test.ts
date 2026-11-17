@@ -4,10 +4,9 @@
  * The lexicon pack against `strongs.json` and the tags, the whole Bible:
  * every entry's fields are the asset's; its total is how often the tags
  * carry it, and its renderings are counted from those words; `language`
- * follows the letter; a number the tags use is found exactly when the
- * asset has it (the asset lacks some, held under the count found when this
- * was written); the longest definition and the entry with the most
- * renderings are read whole.
+ * follows the letter; every number the tags use is in the asset and found;
+ * the longest definition and the entry with the most renderings are read
+ * whole.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -18,9 +17,6 @@ import { buildLexicon, buildTags, tallyOf, topRenders } from './build';
 import { RENDERS_KEPT, type Render } from './lexicon';
 import { studyPackOf } from './pack';
 import { entryRead } from './read';
-
-/** How many distinct numbers the tags use that `strongs.json` lacks (Greek numbers its dictionary skips). */
-const LACKED_CEILING = 751;
 
 const source = appSource();
 const words = assetWords();
@@ -68,13 +64,11 @@ describe('the lexicon pack, against strongs.json and the tags', () => {
     expect(lexicon.length).toBeGreaterThan(13_000);
   });
 
-  it('a number the tags use is found exactly when the asset has it', () => {
+  it('every number the tags use is in the asset and found', () => {
     const used = [...tally.totals.keys()];
-    const wrong = used.filter((number) => entryRead(pack, number).found !== known.has(number));
-    const lacked = used.filter((number) => !known.has(number));
-    expect(wrong).toEqual([]);
-    expect(lacked.length).toBeLessThanOrEqual(LACKED_CEILING);
-    expect(lacked.every((number) => entryRead(pack, number).language !== '')).toBe(true);
+    expect(used.length).toBeGreaterThan(14_000);
+    expect(used.filter((number) => !known.has(number))).toEqual([]);
+    expect(used.filter((number) => !entryRead(pack, number).found)).toEqual([]);
   });
 
   it('the longest definition and the entry with the most renderings read whole', () => {
