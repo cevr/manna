@@ -20,8 +20,12 @@ rows, so a deploy carries the current reading: a citation names every verse
 its printed text names ("John 1:1-3, 14"), not only its title's first verse,
 and each paragraph under a verse heading ("14") comments on that verse. After
 a deploy, once the edge's hour has passed, check the served pack against the
-one the local corpus builds (one GET, counts only; exits non-zero on any
-difference):
+one the local corpus builds (one GET, references and counts only). D1 follows
+the weekly sync and the local file does not, so the verse counts drift apart;
+the check prints that drift and judges the code instead: it exits non-zero
+when more than 1% of the notes both packs hold (by paragraph reference) link
+other verses live, when either pack holds more than 5% of its notes alone, or
+when John 1:14 has fewer than ten notes live:
 
 ```sh
 bun run --cwd apps/egw-search commentary:check
