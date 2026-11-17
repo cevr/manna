@@ -55,8 +55,6 @@ const drive = makeDrive({
   timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
 });
 const store = `read-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so both web launches take one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8772'] : [];
 /** The tint, as `app.forma`'s `AccentColor`: the ink by day, the soil by night. */
 const TINT: Readonly<Record<Scheme, string>> = { light: theme.light.ink, dark: theme.dark.soil };
 /** Dynamic Type's largest body size, AX5. */
@@ -335,7 +333,7 @@ a.step(...dark, `screenshot ${join(shots, `read-${host}-session-dark.png`)}`, ..
 a.step('prefer extension speech-recognition.heard="for god so"', 'clock +15000', 'clock settle');
 a.step('tap finish', 'clock settle');
 const graded = a.step('state today.phase');
-const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
+const first = await drive.run(['--storage', store, '--reset-storage'], a.ops);
 
 drive.check(
   'the bar names its two tabs, Garden selected at launch',
@@ -443,7 +441,7 @@ b.step(...light, ...settle, 'tap tab-read', ...settle);
 const relaunched = b.step('state readShown');
 const keptBook = b.step('state readBookKept');
 b.step(`screenshot ${join(own, `read-${host}-relaunched.png`)}`);
-const again = await drive.run([...port, '--storage', store, '--keep-storage'], b.ops);
+const again = await drive.run(['--storage', store, '--keep-storage'], b.ops);
 drive.check(
   'a relaunch opens Read on Psalm 119, the place kept',
   Bun.deepEquals(placeOf(again[relaunched]).slice(0, 2), [19, 119]) && again[keptBook] === '19',

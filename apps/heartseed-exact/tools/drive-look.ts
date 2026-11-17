@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters -- Exact's app folder cannot import effect (docs/exact.md): a host script that drives the built app through `bun run exact agent`, awaits each run, and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters -- Exact's app folder cannot import effect (docs/exact.md): a host script that drives the built app through `bun run exact agent`, awaits each run, and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * The look's live checks (spec B2-B4), which a `.test.contract` cannot hold
@@ -27,8 +27,6 @@ const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const drive = makeDrive({ name: 'drive-look', host, appDir: app });
 const store = `look-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so both web launches take one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8773'] : [];
 const SAMPLES = join('.exact', 'drive-look');
 mkdirSync(join(app, SAMPLES), { recursive: true });
 
@@ -157,7 +155,7 @@ const lightHolds = a.ground('settings');
 a.step('prefer prefers-color-scheme light', 'tap appearance-dark', 'clock data');
 a.step('tap settings-done', 'clock settle');
 const darkClosed = a.ground('ground-home');
-const first = await drive.run([...port, '--storage', store, '--reset-storage'], a.ops);
+const first = await drive.run(['--storage', store, '--reset-storage'], a.ops);
 
 groundIs('B4 Home is on the light ground under a light system', first, todayLight, 'light');
 inkIs("B4 Home's greeting is the light ink", first[inkLight], 'light');
@@ -179,7 +177,7 @@ b.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const relaunched = b.ground('ground-home');
 b.step('tap gear', 'clock settle');
 const kept = b.step('tree --ax');
-const again = await drive.run([...port, '--storage', store, '--keep-storage'], b.ops);
+const again = await drive.run(['--storage', store, '--keep-storage'], b.ops);
 groundIs('B3 Dark holds after a relaunch under a light system', again, relaunched, 'dark');
 drive.check(
   'B2 each choice is kept after a relaunch',

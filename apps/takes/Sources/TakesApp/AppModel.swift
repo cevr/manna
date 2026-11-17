@@ -51,7 +51,7 @@ final class AppModel {
   private(set) var peaks: [SourceID: Peaks] = [:]
 
   private let transcriber: Transcriber
-  private let recorder = Recorder()
+  private let recorder: any Microphone
   private let player = Player()
   @ObservationIgnored private var transcribing: [SourceID: Task<Void, Never>] = [:]
   @ObservationIgnored private var saving: Task<Void, Never>?
@@ -63,8 +63,9 @@ final class AppModel {
   static let lastProjectKey = "lastProject"
   static let inputKey = "inputUID"
 
-  init(transcriber: Transcriber = Transcriber()) {
+  init(transcriber: Transcriber = Transcriber(), microphone: any Microphone = Recorder()) {
     self.transcriber = transcriber
+    self.recorder = microphone
     refreshDevices()
     watch = InputDeviceWatch { Task { @MainActor in self.refreshDevices() } }
     recorder.onInterruption = { Task { @MainActor in self.stopRecording() } }
@@ -344,16 +345,16 @@ final class AppModel {
     }
   }
 
-  private func startRecording(session: Bool) async {
+  func startRecording(session: Bool) async {
     guard let folder, recording == nil else { return }
-    guard await Recorder.requestPermission() else {
+    guard await recorder.permitted() else {
       say("Takes may not use the microphone: allow it in System Settings ▸ Privacy ▸ Microphone")
       if let settings = Recorder.privacySettings { NSWorkspace.shared.open(settings) }
       return
     }
     stopPlaying()
     do {
-      try recorder.start(device: input, folder: folder)
+      try recorder.start(device: input, folder: folder, source: .make())
     } catch {
       say("Could not record: \(error)")
       return
@@ -372,36 +373,55 @@ final class AppModel {
     }
   }
 
+  /// Next Beat (→) works only while a session take records, whatever the window shows.
+  var canMarkNextBeat: Bool { recording?.session == true }
+
   /// Marks the next beat in a session take, and shows its note.
   func nextBeat() {
-    guard let recording, recording.session, recorder.mark() != nil else { return }
+    guard canMarkNextBeat, recorder.mark() != nil else { return }
     if let index = beats.firstIndex(where: { $0.id == selectedBeat }), index + 1 < beats.count {
       selectedBeat = beats[index + 1].id
+      selectedTake = nil
+      selection = nil
     }
   }
 
+  /// Stops recording at once, closing the file, then lays it on the beats.
   func stopRecording() {
-    guard let state = recording else { return }
+    guard let stopped = endRecording() else { return }
+    Task { await lay(stopped.made, from: stopped.state) }
+  }
+
+  /// Stops recording and lays the recording on the beats: one take, or one per beat of a session.
+  func stoppingRecording() async {
+    guard let stopped = endRecording() else { return }
+    await lay(stopped.made, from: stopped.state)
+  }
+
+  private func endRecording() -> (made: Recording, state: Capture)? {
+    guard let state = recording else { return nil }
     metering?.cancel()
     level = -160
     recording = nil
-    guard let made = recorder.stop() else { return }
+    guard let made = recorder.stop() else { return nil }
     guard made.frames > 0 else {
       say("Nothing was recorded")
-      return
+      return nil
     }
     editor.add(made.asSource)
-    Task {
-      do {
-        let edit = try await Work.edit(of: made, in: project, beat: state.beat)
-        apply(edit)
-        land(on: state.beat)
-        save()
-        transcribe(made.asSource)
-        say("Recorded \(Self.duration(made.frames, rate: made.rate))")
-      } catch {
-        say("The recording is kept in audio/ but could not be split: \(error)")
-      }
+    return (made, state)
+  }
+
+  private func lay(_ made: Recording, from state: Capture) async {
+    do {
+      let edit = try await Work.edit(of: made, in: project, beat: state.beat)
+      apply(edit)
+      land(on: state.beat)
+      save()
+      transcribe(made.asSource)
+      say("Recorded \(Self.duration(made.frames, rate: made.rate))")
+    } catch {
+      say("The recording is kept in audio/ but could not be split: \(error)")
     }
   }
 

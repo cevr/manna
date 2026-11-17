@@ -2,7 +2,7 @@ import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Path } from 'effect';
 
-import { runExact } from './run.ts';
+import { PortClaims, runExact } from './run.ts';
 
 /** `bun run exact <args>` in an app: the wrapper over `exact-cli.ts`, its refusal printed, its exit code the child's. */
 export const main = (appDir: string, args: ReadonlyArray<string>) =>
@@ -14,6 +14,6 @@ export const main = (appDir: string, args: ReadonlyArray<string>) =>
     Effect.catchTag('ExactRefused', (refused) => Effect.as(Console.error(refused.message), 2)),
     // oxlint-disable-next-line effect/noGlobals -- the wrapper exits with its child's code, as `bun exact.mjs` does
     Effect.flatMap((code) => Effect.sync(() => process.exit(code))),
-    Effect.provide(BunServices.layer),
+    Effect.provide([BunServices.layer, PortClaims.live]),
     BunRuntime.runMain,
   );

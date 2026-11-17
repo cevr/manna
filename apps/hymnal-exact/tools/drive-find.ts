@@ -45,7 +45,7 @@
 
 import { join } from 'node:path';
 
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { changedPixels, pixelAt } from './pixel.ts';
@@ -57,12 +57,12 @@ const shots = process.env.SHOTS ?? join(app, '.exact/shots/find');
 const shotFile = (name: string) => join(shots, `${name}-${host}.png`);
 const shot = (name: string) => `screenshot ${shotFile(name)}`;
 const backend = `http://127.0.0.1:${checkoutPort()}`;
-const env = { ...process.env, HYMNAL_RECORDINGS: backend };
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
-      env,
+      env: { ...process.env, HYMNAL_RECORDINGS: backend },
       stdout: 'pipe',
       stderr: 'pipe',
       detached: true,

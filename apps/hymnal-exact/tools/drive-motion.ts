@@ -30,7 +30,7 @@
 
 import { join } from 'node:path';
 
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { sourcesAt } from '../src/sources.ts';
@@ -44,14 +44,12 @@ const shots = process.env.SHOTS ?? join(app, '.exact/shots/motion');
 const shotFile = (name: string) => join(shots, `${name}-${host}.png`);
 const shot = (name: string) => `screenshot ${shotFile(name)}`;
 const backend = `http://127.0.0.1:${checkoutPort()}`;
-/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8777'] : [];
-const env = { ...process.env, HYMNAL_RECORDINGS: backend };
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
-      env,
+      env: { ...process.env, HYMNAL_RECORDINGS: backend },
       stdout: 'pipe',
       stderr: 'pipe',
       detached: true,
@@ -222,7 +220,7 @@ const first = named([
 ]);
 
 const firstRun = () =>
-  drive.run([...port, '--backend', backend, '--storage', store, '--reset-storage'], first.ops);
+  drive.run(['--backend', backend, '--storage', store, '--reset-storage'], first.ops);
 const firstReplies = await firstRun();
 const read = (name: string) => first.reply(firstReplies, name);
 
@@ -289,7 +287,7 @@ if (host === 'web')
 else drive.check('Settings closed, the bar is back', againEnd !== undefined, { againEnd });
 
 const kept = await drive.run(
-  [...port, '--backend', backend, '--storage', store, '--keep-storage'],
+  ['--backend', backend, '--storage', store, '--keep-storage'],
   ['clock data', 'state settingsFeelKept', 'state settingsFeel'],
 );
 drive.check(
@@ -320,7 +318,7 @@ const still = named([
   shot('still-end'),
 ]);
 const stillReplies = await drive.run(
-  [...port, '--backend', backend, '--storage', `${store}-still`, '--reset-storage'],
+  ['--backend', backend, '--storage', `${store}-still`, '--reset-storage'],
   still.ops,
 );
 const stillRead = (name: string) => still.reply(stillReplies, name);

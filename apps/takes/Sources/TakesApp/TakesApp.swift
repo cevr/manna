@@ -67,6 +67,9 @@ struct TakesCommands: Commands {
         .keyboardShortcut("r").disabled(!model.hasProject)
       Button(recordTitle(session: true)) { model.toggleRecording(session: true) }
         .keyboardShortcut("r", modifiers: [.command, .shift]).disabled(!model.hasProject)
+      Button("Next Beat") { model.nextBeat() }
+        .keyboardShortcut(.rightArrow, modifiers: [])
+        .disabled(!model.canMarkNextBeat)
       Divider()
       Button("Play Beat") { model.togglePlay() }.keyboardShortcut("p")
       Button("Play Film") { model.playFilm() }.keyboardShortcut("p", modifiers: [.command, .shift])

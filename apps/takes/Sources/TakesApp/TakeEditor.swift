@@ -4,8 +4,8 @@ import TakesAudio
 import TakesCore
 
 /// A take's clips, each as its words over its waveform. Bare keys act here only, while the editor
-/// has focus, so they never reach a text field: ⌫ cuts, Space plays, R records, → marks the next
-/// beat in a session take.
+/// has focus, so they never reach a text field: ⌫ cuts, Space plays, R records. → (next beat in
+/// a session take) is the Record menu's Next Beat, so it works whatever the window shows.
 struct TakeEditor: View {
   let model: AppModel
   let beat: Beat
@@ -42,11 +42,10 @@ struct TakeEditor: View {
     .focusable()
     .focusEffectDisabled()
     .focused($focused)
-    .onKeyPress(keys: [.delete, .deleteForward, .space, .rightArrow, "r"]) { press in
+    .onKeyPress(keys: [.delete, .deleteForward, .space, "r"]) { press in
       switch press.key {
       case .delete, .deleteForward: model.cut()
       case .space: model.togglePlay()
-      case .rightArrow: model.nextBeat()
       default: model.toggleRecording(session: false)
       }
       return .handled

@@ -52,8 +52,6 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
 }
 const drive = makeDrive({ name: 'drive-motion', host, appDir: app });
 const ios = host === 'ios';
-/** Chrome keeps a named store per port, so every web launch here takes one of the app's spare ports. */
-const port = ios ? [] : ['--port', '8771'];
 const SHOTS = join('.exact', 'shots');
 const SAMPLES = join('.exact', 'drive-motion');
 mkdirSync(join(app, SHOTS), { recursive: true });
@@ -240,15 +238,7 @@ const pulse = async () => {
     const late = s.step('clock +600', 'layout ring');
     const after = s.step('tap finish', 'clock settle', 'tree');
     const got = await drive.run(
-      [
-        ...port,
-        ...timing,
-        '--storage',
-        `motion-1-${stamp}`,
-        '--reset-storage',
-        '--url',
-        '/cue/none',
-      ],
+      [...timing, '--storage', `motion-1-${stamp}`, '--reset-storage', '--url', '/cue/none'],
       s.ops,
     );
     const [one, two] = [opacityOf(got[early]), opacityOf(got[late])];
@@ -289,14 +279,7 @@ const words = async () => {
       'tap hear',
       'clock +700',
     ];
-    const flags = [
-      ...port,
-      '--storage',
-      `motion-3-${stamp}`,
-      '--reset-storage',
-      '--url',
-      '/cue/full',
-    ];
+    const flags = ['--storage', `motion-3-${stamp}`, '--reset-storage', '--url', '/cue/full'];
     if (ios) {
       const filmed = script(...lead, ...film(`3-word-${name}`));
       const laid = filmed.step('layout word-0');
@@ -354,14 +337,7 @@ const scheme = async () => {
     'clock data',
     'tap settings-done',
   ];
-  const flags = [
-    ...port,
-    '--storage',
-    `motion-4-${stamp}`,
-    '--reset-storage',
-    '--url',
-    '/cue/full',
-  ];
+  const flags = ['--storage', `motion-4-${stamp}`, '--reset-storage', '--url', '/cue/full'];
   if (ios) await drive.run([...flags, ...timing], script(...lead, ...film('4-scheme')).ops);
   const s = script(...lead);
   const laid = s.step('clock +90', 'layout word-0');
@@ -417,7 +393,6 @@ const home = async () => {
   s.step('tap up');
   const got = await drive.run(
     [
-      ...port,
       ...timing,
       '--storage',
       `motion-6-${stamp}`,
@@ -479,7 +454,6 @@ const slugOf = (reference: string) => reference.replace(/[ :]/gu, '-');
 const sown = async (store: string) => {
   await drive.run(
     [
-      ...port,
       '--storage',
       store,
       '--reset-storage',
@@ -505,17 +479,7 @@ const sown = async (store: string) => {
     launches += 1;
     const at = new Date(SOWN + LATER + launches * 60_000).toISOString();
     return drive.run(
-      [
-        ...port,
-        ...timing,
-        '--storage',
-        store,
-        '--keep-storage',
-        '--epoch',
-        at,
-        '--time-zone',
-        ZONE,
-      ],
+      [...timing, '--storage', store, '--keep-storage', '--epoch', at, '--time-zone', ZONE],
       ops,
     );
   };
