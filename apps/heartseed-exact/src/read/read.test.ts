@@ -45,6 +45,7 @@ it("holds readOpenAt and readFollow to navStep, each landing on the verse's row"
       '    readBookKept = `${book}`',
       '    readChapterKept = `${chapter}`',
       '    readOpenVerse = verse',
+      '    readOpenings = readOpenings + 1',
       '    chooserFirst = 0',
       '    chooserLast = 0',
       '    chooserAnswer = ""',

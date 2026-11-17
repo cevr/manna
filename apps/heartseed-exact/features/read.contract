@@ -35,6 +35,7 @@ members HeartseedExact
   state readBookKept = "" persist
   state readChapterKept = "" persist
   state readOpenVerse = 0
+  state readOpenings = 0
   derive readTabStack = match nav.tabs.filter(t => t.name == "read").at(0) { case some(t) => t.stack, case none => stack(nav) }
   derive readTop = match readTabStack.filter(x => not readSheetOf(x.name)).at(-1) { case some(t) => t, case none => top(nav) }
   derive readSheetUp = stack(nav).filter(x => readSheetOf(x.name)).length > 0
@@ -64,6 +65,7 @@ members HeartseedExact
     readBookKept = `${book}`
     readChapterKept = `${chapter}`
     readOpenVerse = verse
+    readOpenings = readOpenings + 1
     chooserFirst = 0
     chooserLast = 0
     chooserAnswer = ""

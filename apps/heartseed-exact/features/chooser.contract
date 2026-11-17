@@ -3,7 +3,9 @@
 // Go to (features/goto.contract), the magnifier opens it with the find box
 // ready, Aa opens the text settings; the verses flow inside `TypeColumn`,
 // each one control (a checkbox named by its reference), a planted verse
-// marked by a leaf line and its number in the sun. A tap is the chooser's
+// marked by a leaf line and its number in the sun (in the quiet ink while
+// chosen: the sun is under AA on the hearing colour), and said ("in your
+// field" after its reference). A tap is the chooser's
 // (`chapterTap`, over src/chooser/chooser.ts's `chooserTap`: a second tap
 // ends a range, clipped at 20; a tap on the one verse chosen clears it),
 // with a tick. The bar rises while something is chosen: the reference, a
@@ -57,9 +59,6 @@ shape ChapterShown
   previous: GotoChapter
   next: GotoChapter
 
-shape ChapterViewport
-  height: number
-
 members HeartseedExact
   state chooserFirst = 0
   state chooserLast = 0
@@ -67,12 +66,16 @@ members HeartseedExact
   state chooserPlace = ""
   state chooserTapPlace = ""
   state chooserTitleGone = false
+  // The chapter's scroll height, as its resize event hears it: a verse opened on lands a third of the way down it. A hidden tab's 0 is not kept.
+  state chooserScrollHeight = 0
+  action chooserScrollSized(w: number, h: number)
+    if h > 0
+      chooserScrollHeight = h
   derive chooserBookArg = `${readBook}`
   derive chooserChapterArg = `${readChapter}`
   derive chooserField = garden.lists.map(l => l.verses.map(v => v.reference)).flat().concat(garden.singles.map(v => v.reference)).join("|")
   resource chapterShown = chapterRead(chooserBookArg, chooserChapterArg, chooserPlace, chooserFirst, chooserLast, chooserAnswer, garden.singles.map(v => v.reference).join("|"), chooserField) as shape ChapterShown else empty()
   resource chooserWords = textOf(chapterShown.book, chapterShown.chapter, 1, chapterShown.count) as shape TextPassage else empty()
-  resource chapterViewport = exactViewport() as shape ChapterViewport
   mutation chooserTapped as shape ChooserRange queue then chooserTook
   mutation chooserPlanted as shape GardenChange queue refreshes garden then chooserLanded
 
@@ -92,6 +95,20 @@ members HeartseedExact
     chooserAnswer = ""
   task chooserMoved when readUp key=`${readBook}.${readChapter}`
     change(chooserClear)
+  // Each opening on a verse (`readOpenings`) lands it a third of the way down once the chapter is up, past the fragment the host lands while the tab is still coming in.
+  task chooserLanding when readUp and readOpenings > 0 key=readOpenings
+    change(chooserLand)
+  action chooserLand
+    if readOpenVerse > 0
+      scrollIntoView(`verse-${readOpenVerse}`, block="start", behavior="instant")
+  // The bar rising shortens the page: the verse a range ends on is kept in view above it.
+  task chooserKept when chapterShown.up key=`${chapterShown.first}-${chapterShown.last}`
+    change(chooserKeepInView)
+  action chooserKeepInView
+    if motionStill
+      scrollIntoView(`verse-${chapterShown.last}`, block="nearest", behavior="instant")
+    else
+      scrollIntoView(`verse-${chapterShown.last}`, block="nearest", behavior="smooth")
   action chooserPlantIt
     if chapterShown.plant and not pending(chooserPlanted)
       gardenClock = performanceNow()
@@ -118,6 +135,7 @@ component ChapterPage
     type: TypeView
     opened: number
     room: number
+    sized: action
     pending: bool
     tap: action
     clear: action
@@ -131,7 +149,7 @@ component ChapterPage
     still: bool
   view
     column flex=1 min-height=0 display="flex" flex-direction="column"
-      scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room flex=1 min-height=0 testId="chapter-scroll"
+      scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room resize=sized flex=1 min-height=0 testId="chapter-scroll"
         column gap=4 padding-top=8 padding-bottom=32 testId="chapter"
           column gap=6 padding="0px 20px 12px" max-width="40rem"
             button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" min-height=44 display="flex" flex-direction="row" align-items="center" gap=8 color="hs.ink" -exact-press-scale=0.97 testId="chapter-title"
@@ -142,13 +160,13 @@ component ChapterPage
             text "Tap a verse to plant or study it." font="-exact-footnote" color="hs.quiet" testId="chapter-hint"
           TypeColumn(type=type)
             for v in words.verses key=v.verse
-              row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width=3 border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-radius=12 padding="6px 10px" margin="0px -10px" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
+              row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=(shown.planted.filter(p => p == v.verse).length > 0 ? `${shown.heading}:${v.verse}, in your field` : `${shown.heading}:${v.verse}`) aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width=3 border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-radius=12 padding="6px 10px" margin="0px -10px" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
                 :checked
                   background-color = "hs.hearing"
                 if v.verse == opened and not still
                   column class=ChapterLanded position="absolute" inset=0 border-radius=12 opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
                 text overflow-wrap="break-word" hyphens="auto" position="relative"
-                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
+                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
                   text ` ${v.text}`
           row gap=12 padding="24px 20px 8px" flex-wrap="wrap" max-width="40rem" testId="chapter-turn"
             if shown.previous.found

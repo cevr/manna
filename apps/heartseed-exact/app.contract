@@ -111,7 +111,7 @@ component HeartseedExact
                 if e.name == "addList"
                   AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
                 if (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
-                  ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chapterViewport.height / 3, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill)
+                  ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chooserScrollHeight / 3, sized=chooserScrollSized, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill)
                 if gardenDriven.on and (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
                   ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
