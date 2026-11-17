@@ -85,25 +85,23 @@ members HeartseedExact
     change(typeRevealFont)
   action typeRevealFont
     scrollIntoView(`type-font-${typeShown.font}`, block="nearest", inline="center", behavior="instant")
-  action typeTick
-    haptic("selection")
   action typeChooseFont(value: string)
-    typeTick()
+    feelTick()
     typeFontKept = value
   action typeChooseSize(value: string)
-    typeTick()
+    feelTick()
     typeSizeKept = value
   action typeChooseLine(value: string)
-    typeTick()
+    feelTick()
     typeLineKept = value
   action typeChooseLetter(value: string)
-    typeTick()
+    feelTick()
     typeLetterKept = value
   action typeChooseWidth(value: string)
-    typeTick()
+    feelTick()
     typeWidthKept = value
   action typeReset
-    typeTick()
+    feelTick()
     typeFontKept = ""
     typeSizeKept = ""
     typeLineKept = ""

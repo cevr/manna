@@ -72,10 +72,6 @@ describe('a screen reader and a finger', () => {
 });
 
 describe('each choice ticks, then is kept', () => {
-  it('typeTick plays a selection', () => {
-    expect(bodyOf(type, 'typeTick').trim()).toBe('haptic("selection")');
-  });
-
   for (const [prop, action, kept] of [
     ['font', 'typeChooseFont', 'typeFontKept'],
     ['size', 'typeChooseSize', 'typeSizeKept'],
@@ -90,7 +86,7 @@ describe('each choice ticks, then is kept', () => {
           .trim()
           .split('\n')
           .map((line) => line.trim()),
-      ).toEqual(['typeTick()', `${kept} = value`]);
+      ).toEqual(['feelTick()', `${kept} = value`]);
     });
 
   it('Reset ticks, then empties all five', () => {
@@ -101,7 +97,7 @@ describe('each choice ticks, then is kept', () => {
         .split('\n')
         .map((line) => line.trim()),
     ).toEqual([
-      'typeTick()',
+      'feelTick()',
       'typeFontKept = ""',
       'typeSizeKept = ""',
       'typeLineKept = ""',
@@ -116,6 +112,6 @@ describe('each choice ticks, then is kept', () => {
         '  action typeChooseFont(value: string)\n    typeFontKept = value\n',
         'typeChooseFont',
       ),
-    ).not.toContain('typeTick');
+    ).not.toContain('feelTick');
   });
 });
