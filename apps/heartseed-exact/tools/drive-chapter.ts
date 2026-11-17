@@ -14,7 +14,8 @@
  *   above the tab bar, offers one filled button at most, and at the
  *   largest text size clips nothing;
  * - opening on a verse: Psalm 119:105 read from Today's book button is in
- *   view a third of the way down, within one line;
+ *   view a third of the way down what the reader sees of the chapter (on
+ *   iOS, between UIKit's navigation bar and tab bar), within one line;
  * - kept: a relaunch on the kept storage opens the chapter left;
  * - motion: the bar's rise runs 150-250 ms; under Reduce Motion it moves
  *   by no translate;
@@ -76,7 +77,7 @@ interface Element {
   readonly role?: string;
   readonly name?: string;
   readonly states?: { readonly checked?: boolean };
-  readonly native?: { readonly class?: string };
+  readonly native?: { readonly class?: string; readonly identifier?: string };
   readonly frame?: Frame;
 }
 
@@ -95,14 +96,21 @@ const frameOf = (replies: readonly unknown[], at: number) =>
   laid(replies, at)?.node?.space?.viewport;
 const elementsOf = (reply: unknown) =>
   (reply as { ax?: { elements?: ReadonlyArray<Element> } } | undefined)?.ax?.elements ?? [];
+/** An element by its test id; on iOS a header control the navigation bar draws is UIKit's bar item, which carries the id as its identifier. */
 const element = (reply: unknown, testId: string) =>
-  elementsOf(reply).find((each) => each.testId === testId && each.role !== 'StaticText');
+  elementsOf(reply).find(
+    (each) =>
+      (each.testId === testId || each.native?.identifier === testId) && each.role !== 'StaticText',
+  );
 /** The tab bar's frame: its `layout` on the web, UIKit's `UITabBar` from `tree --ax` on iOS. */
 const BAR = native ? 'tree --ax' : 'layout tabs';
 const barOf = (replies: readonly unknown[], at: number) =>
   native
     ? elementsOf(replies[at]).find((each) => each.native?.class === 'UITabBar')?.frame
     : frameOf(replies, at);
+/** UIKit's navigation bar's frame from `tree --ax` on iOS; the web's header is in flow, above the scroll. */
+const navOf = (reply: unknown) =>
+  elementsOf(reply).find((each) => each.native?.class === 'UINavigationBar')?.frame;
 
 const hexOf = (rgb: readonly number[]) =>
   `#${rgb.map((each) => each.toString(16).padStart(2, '0')).join('')}`;
@@ -482,13 +490,23 @@ const scroll = b.step('layout chapter-scroll');
 const openedType = b.step('state typeShown');
 const openedVerse = b.step('state readVerse');
 const openedHeight = b.step('state chooserScrollHeight');
+const openedBars = native ? b.step('tree --ax') : -1;
 both(b, 'opened');
 const second = await drive.run([...port, '--storage', `${store}-opened`, '--reset-storage'], b.ops);
 const verseFrame = frameOf(second, opened);
 const scrollFrame = frameOf(second, scroll);
 const type = second[openedType] as { size?: number; lineHeight?: number } | undefined;
 const oneLine = (type?.size ?? 18) * (type?.lineHeight ?? 1.6);
-const third = scrollFrame === undefined ? Number.NaN : scrollFrame.y + scrollFrame.h / 3;
+/** What the reader sees of the chapter: its scroll, less what UIKit's navigation bar and tab bar lie over on iOS. */
+const seen = (() => {
+  if (scrollFrame === undefined) return undefined;
+  const nav = native ? navOf(second[openedBars]) : undefined;
+  const tabs = native ? barOf(second, openedBars) : undefined;
+  const top = Math.max(scrollFrame.y, nav === undefined ? 0 : nav.y + nav.h);
+  const bottom = Math.min(scrollFrame.y + scrollFrame.h, tabs === undefined ? Infinity : tabs.y);
+  return { top, bottom, nav, tabs };
+})();
+const third = seen === undefined ? Number.NaN : seen.top + (seen.bottom - seen.top) / 3;
 drive.check(
   "opening on a verse: Psalm 119:105 from Today's button is in view, a third down, within one line",
   second[todayAt] === 'Psalms 119:105' &&
@@ -502,6 +520,7 @@ drive.check(
     third,
     oneLine,
     scroll: scrollFrame,
+    seen,
     height: second[openedHeight],
   },
 );

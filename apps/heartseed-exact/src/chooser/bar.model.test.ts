@@ -121,12 +121,25 @@ const plant = (random: Random, run: Run, seen: Seen): Seen => {
   return { chosen: seen.chosen, landed: shown.first };
 };
 
-/** Another chapter shown, or the same opened again: on the frame before `chooserMoved` the range already reads as none. */
+/** Another chapter shown, or the same opened again: on the frame before `chooserMoved` the range already reads as none, and a tap that lands then starts a range afresh on the new chapter. */
 const move = (random: Random, run: Run, seen: Seen): Seen => {
   const { key } = chapterOf(run);
   run.at = random.below(CHAPTERS.length);
   const moved = chapterOf(run).key !== key;
   if (moved) expect({ key, left: show(run).up }).toEqual({ key, left: false });
+  if (moved && random.chance(0.5)) {
+    const { book, chapter, count } = chapterOf(run);
+    const verse = 1 + random.below(count);
+    const range = chapterTap(
+      `${book}`,
+      `${chapter}`,
+      run.place,
+      { first: run.first, last: run.last },
+      run.answer,
+      verse,
+    );
+    expect({ key, verse, range }).toEqual({ key, verse, range: { first: verse, last: verse } });
+  }
   if (!moved && random.chance(0.5)) return seen;
   cleared(run);
   return NOTHING;

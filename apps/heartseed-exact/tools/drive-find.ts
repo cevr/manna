@@ -222,10 +222,9 @@ const keystrokes = FIXED.flatMap((query) =>
 const KEY_WAIT = 150;
 const timedOnSimulator = async () => {
   const timed = [
-    'clock data',
-    'clock settle',
-    ...opened,
     'perf frames live 2000',
+    'tap chapter-find',
+    'perf frames live 1000',
     ...keystrokes.flatMap((query) => [typedFear(query), `perf frames live ${KEY_WAIT}`]),
     'perf frames live 1000',
     'state findTimes',

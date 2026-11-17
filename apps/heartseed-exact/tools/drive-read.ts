@@ -10,8 +10,8 @@
  * each tab's mark by pixel, light and dark, the chosen tab in the tint and
  * the other in the quiet ink, both at AA on the ground; `readOpenAt` to
  * Psalm 119:176 brings that verse into view, above the bar, and a tap on
- * verse 170 (the last lie under `ReadDriven`'s buttons) raises the chapter's bar above the tab bar too, also at the largest
- * text size;
+ * verse 170 raises the chapter's bar above the tab bar too, also at the
+ * largest text size;
  * `readFollow` to John 3:16 and Back to the chapter left; a session
  * started in Garden, then Read and back, holds its item and its recital;
  * and a relaunch on the kept storage opens Read on the place kept. No
@@ -299,7 +299,7 @@ a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
-/** At the largest text `ReadDriven`'s buttons cover the middle where the agent brings a verse, so the verse is chosen at the default size and the text grown after. */
+/** The verse is chosen at the default size and the text grown after, so the bar it raises is measured at the largest text. */
 a.step(
   'prefer root-font-size 17',
   ...settle,
