@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noNewError, effect/noThrowStatement -- a model test over plain records, its seed named by the throw that fails it. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- a model test over plain records, its seed named in the failing line. */
 
 /**
  * The study sheet, model-based: 300 generated readers choose a verse, open

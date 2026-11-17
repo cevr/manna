@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a test over plain records read from the assets. */
+/* oxlint-disable effect/noTernary -- Exact's app folder cannot import effect (docs/exact.md): a test over plain records read from the assets. */
 
 /**
  * The longest things the sheet shows, found here in the assets `bible.db`

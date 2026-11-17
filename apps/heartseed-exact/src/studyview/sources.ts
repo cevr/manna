@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNewPromise, effect/noTernary, effect/noNullish -- Exact's data module answers a Promise, and its app folder cannot import effect (docs/exact.md): a source reads its packs at once. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNewPromise, effect/noTernary -- Exact's data module answers a Promise, and its app folder cannot import effect (docs/exact.md): a source reads its packs at once. */
 
 /**
  * The study sheet's sources (q118, q120, q122), over the packs the one
