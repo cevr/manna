@@ -64,6 +64,7 @@ component HeartseedExact
   members "./features/motion.contract"
   members "./features/feel.contract"
   members "./features/read.contract"
+  members "./features/find.contract"
   members "./features/type.contract"
   action pick(name: string)
     nav = select(nav, name)
@@ -94,7 +95,7 @@ component HeartseedExact
                 if e.name == "list"
                   ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill)
                 if e.name == "verses"
-                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt, type=typeShown, sample=gardenTypeSample, aa=gardenTypeAa)
+                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt, type=typeShown, sample=gardenTypeSample, aa=gardenTypeAa, findQuery=findQuery, found=findShown, findType=findType, findClear=findClear, findOpen=findOpenIt)
                   // hs-commentary: a fixture launch's probe, which tools/drive-commentary.ts taps (the Read tab asks on its own first showing).
                   if packsPlace.fixture
                     PacksProbe(shown=packsShown, fetch=packsFetch, retry=packsRetry, still=motionStill)

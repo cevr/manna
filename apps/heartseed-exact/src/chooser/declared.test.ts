@@ -19,6 +19,9 @@ const DECLARED: readonly true[] = [
   true satisfies Gives<typeof Bible.BIBLE_BOOKS, typeof DeclaredBible.BIBLE_BOOKS>,
   true satisfies Gives<Bible.Book, DeclaredBible.Book>,
   true satisfies Gives<DeclaredBible.Book['testament'], Bible.Book['testament']>,
+  true satisfies Gives<typeof Bible.parseBibleQuery, typeof DeclaredBible.parseBibleQuery>,
+  true satisfies Gives<Bible.ParsedBibleQuery, DeclaredBible.ParsedBibleQuery>,
+  true satisfies Gives<DeclaredBible.ParsedBibleQuery['_tag'], Bible.ParsedBibleQuery['_tag']>,
 ];
 
 it("core's canon, as the chooser declares it, is its source's", () => {
