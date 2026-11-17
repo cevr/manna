@@ -42,7 +42,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "./scripts/build-native.sh check && bun test --parallel --path-ignore-patterns='**/*.slow.test.*'",
+    "test": "./scripts/build-native.sh check && bun test --parallel --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/bible-db/strongs-rows.test.ts",
+    "test:strongs": "bun test ./src/bible-db/strongs-rows.test.ts",
     "test:slow": "bun test .slow.test.",
     "test:watch": "bun test --watch",
     "sync:bible": "bun run src/sync/bible-sync-main.ts",
