@@ -15,7 +15,8 @@
  * refused, `500`, cut short and a changed character each fail on a fresh
  * store with the commentary not kept (the study packs kept) and Try again shown, and the next try lands; a
  * bad update leaves the old counts; a plain launch takes egw.cvr.im and has
- * no probe. `live` as the second argument (iOS, once `hs-bc-api` is
+ * no probe; and no run has a turn of the data host refused over its
+ * 100 ms budget (the agent's stderr names each). `live` as the second argument (iOS, once `hs-bc-api` is
  * deployed) downloads the real pack on a plain launch and prints its
  * version, count and time, no text. Exits 1 on any failed check.
  */
@@ -108,7 +109,12 @@ const nameFixture = (on: boolean) => {
     else delete process.env[name];
 };
 
-/** The kit's machine, but each run started with this drive's environment as it is then (the fixture named or not). */
+/** What the agent said of a turn refused over the data host's 100 ms budget, run by run: `go` takes and checks them. */
+let overruns: Array<string> = [];
+const overrunsIn = (stderr: string) =>
+  [...stderr.matchAll(/[^\n]{0,160}over the 100 ms budget[^\n]{0,40}/gu)].map((match) => match[0]);
+
+/** The kit's machine, but each run started with this drive's environment as it is then (the fixture named or not), its stderr read for refused turns. */
 const processes = {
   ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
@@ -125,7 +131,10 @@ const processes = {
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
         child.exited,
-      ]).then(([stdout, stderr, code]) => ({ code, stdout, stderr })),
+      ]).then(([stdout, stderr, code]) => {
+        overruns.push(...overrunsIn(stderr));
+        return { code, stdout, stderr };
+      }),
     };
   },
   signal: (pid: number, signal: 'SIGTERM') => {
@@ -216,7 +225,13 @@ const go = async (store: string, kept: boolean, day: number, logical: ReadonlyAr
     '--epoch',
     epochAt(day),
   ];
+  overruns = [];
   const replies = await drive.run(flags, ops);
+  drive.check(
+    `${store.replace(`commentary-${host}-`, '').replace(`-${stamp}`, '')} day ${day}: no turn of the data host is refused over its 100 ms budget`,
+    overruns.length === 0,
+    overruns,
+  );
   return (op: string, nth = 0): unknown => {
     let seen = -1;
     const span = spans[logical.findIndex((each) => each === op && ++seen === nth)];
