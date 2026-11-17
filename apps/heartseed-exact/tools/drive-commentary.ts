@@ -39,7 +39,6 @@ const DAY = 86_400_000;
 const START = Date.UTC(2026, 10, 16, 12);
 const epochAt = (days: number) => new Date(START + days * DAY).toISOString().replace('.000Z', 'Z');
 const EVERY_PACK = [COMMENTARY, ...STUDY_PACKS];
-const GETTING = gettingLine(EVERY_PACK);
 const LANDED = landedLine(EVERY_PACK);
 
 /** A free port from this checkout's own, so two checkouts' drives never meet. */
@@ -199,6 +198,7 @@ const READS = {
   },
   packs: { ops: ['state packsShown'], read: ([packs]) => packs },
   'kept names': { ops: ['state packsKept'], read: ([text]) => keptNames(text) },
+  'kept at the tap': { ops: ['state packsKept'], read: ([text]) => keptNames(text) },
   'kept version': { ops: ['state packsKept'], read: ([text]) => keptLine(text).version },
   'kept checkedAt': { ops: ['state packsKept'], read: ([text]) => keptLine(text).checkedAt },
 } satisfies Record<string, DriveRead>;
@@ -279,6 +279,7 @@ const firstFetch = async (store: string) => {
     'clock settle',
     'tap packs-fetch',
     'shown',
+    'kept at the tap',
     'tree',
     shot('getting'),
     'clock data',
@@ -296,6 +297,7 @@ const firstFetch = async (store: string) => {
     'state commentaryProbeCounts',
   ]);
   const getting = landing('shown') as Shown | undefined;
+  const keptAtTap = (landing('kept at the tap') as Array<string> | undefined) ?? [];
   const landed = landing('shown', 1) as Shown | undefined;
   const quiet = landing('shown', 2) as Shown | undefined;
   const polls = Array.from({ length: POLLS }, (_, nth) => ({
@@ -310,8 +312,11 @@ const firstFetch = async (store: string) => {
     apart.foot === gettingLine(EVERY_PACK.filter((pack) => !keptApart.includes(pack.name)));
   drive.check(
     'first fetch: the quiet line shows while the fixture holds its answer',
-    getting?.phase === 'fetching' && getting.foot === GETTING && has(landing('tree'), 'packs-line'),
-    getting,
+    getting?.phase === 'fetching' &&
+      !keptAtTap.includes('commentary') &&
+      getting.foot === gettingLine(EVERY_PACK.filter((pack) => !keptAtTap.includes(pack.name))) &&
+      has(landing('tree'), 'packs-line'),
+    { getting, kept: keptAtTap },
   );
   drive.check(
     'first fetch: each study pack is kept as it lands, counted and named, while the commentary is still held',
