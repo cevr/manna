@@ -30,8 +30,16 @@
  * Every request is recorded by origin: one not the local server's fails,
  * but for the recordings' bucket after a press of Play, which the drive
  * answers itself with silence (`tools/recordings.ts`), so nothing reaches
- * the network. `bun tools/drive-web.ts [check…] [--server plain|exact]
- * [--json <file>]`.
+ * the network. `bun tools/drive-web.ts [web] [check…] [--server plain|exact]
+ * [--json <file>]`: `web`, the host other drives name, is the only one;
+ * a name that is no check is refused. With `--server exact`, `measure`
+ * runs only when named: its budget is the plain host's cache rule.
+ *
+ * Each check runs under a stall watchdog (`tools/web/stall.ts`): a check
+ * that takes no step (an open, a wait, a tap) for `STALL_MS`, or throws,
+ * fails by its name and the step it was at, and the checks after it fail as
+ * not run. `addresses` prints its progress every hundred hymns, since its
+ * 695 opens take minutes under load.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -44,7 +52,8 @@ import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
 import { answer, checkoutPort } from './recordings.ts';
 import { allowedOver, type Budget, isTime, MAX_LOAD, TIME_SLACK_MS } from './web/budget.ts';
-import { type Page, launchChrome } from './web/chrome.ts';
+import { CALL_MS, type Chrome, type Page, launchChrome } from './web/chrome.ts';
+import { makeStall } from './web/stall.ts';
 
 const app = join(import.meta.dir, '..');
 const dist = join(app, 'dist');
@@ -55,8 +64,19 @@ const flag = (name: string) => {
 };
 const server = flag('--server') ?? 'plain';
 const CHECKS = ['addresses', 'notfound', 'noscript', 'measure', 'return'] as const;
-const named = args.filter((arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--'));
-const checks = named.length > 0 ? named : [...CHECKS];
+const named = args.filter(
+  (arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--') && arg !== 'web',
+);
+const unknown = named.filter((name) => !(CHECKS as ReadonlyArray<string>).includes(name));
+if (unknown.length > 0) {
+  console.error(`drive-web: no check named ${unknown.join(', ')}; the checks: ${CHECKS.join(' ')}`);
+  process.exit(2);
+}
+/** The budget is the plain host's cache rule (`tools/web/serve.ts`); Exact's serve keeps its own, so `measure` runs there only when named. */
+const checks =
+  named.length > 0
+    ? named
+    : CHECKS.filter((name) => server !== 'exact' || name !== 'measure').map(String);
 const PORT = server === 'exact' ? 8778 : checkoutPort();
 const origin = `http://127.0.0.1:${PORT}`;
 const BUCKET = 'https://hymns.cvr.im';
@@ -79,6 +99,43 @@ const check = (name: string, ok: boolean, detail?: unknown) => {
   );
 };
 
+/** A check's steps may pause for a DevTools call's whole bound and a page's load: past that with no step, it is stuck. */
+const STALL_MS = CALL_MS + 15_000;
+const stall = makeStall(STALL_MS);
+const { mark } = stall;
+let halted: string | undefined;
+
+/**
+ * `body` run as the check `name` under the watchdog. A check that throws or
+ * stalls fails by its name and step, and every check after it fails as not
+ * run, since the page it leaves is in no known state.
+ */
+const run = async (name: string, body: () => Promise<unknown>) => {
+  if (halted !== undefined) {
+    check(`${name}: not run (${halted})`, false);
+    return;
+  }
+  const ended = await stall.watch(body);
+  if (ended.ended === 'done') return;
+  halted = `${name} ${ended.ended} at "${ended.step}"`;
+  check(
+    ended.ended === 'stalled'
+      ? `${name} ran to its end: it stalled at "${ended.step}" (no step in ${STALL_MS / 1000} s)`
+      : `${name} ran to its end: it threw at "${ended.step}"`,
+    false,
+    ended,
+  );
+};
+
+/** Every Chrome the drive opened, closed at its end whatever became of its check. */
+const launched: Array<Chrome> = [];
+const launch = async (profile: string, fresh: boolean) => {
+  mark(`launch Chrome on ${profile}`);
+  const chrome = await launchChrome(profile, fresh);
+  launched.push(chrome);
+  return chrome;
+};
+
 type Child = ReturnType<typeof Bun.spawn>;
 const groups = new Set<Child>();
 const stop = (child: Child) => {
@@ -89,9 +146,18 @@ const stop = (child: Child) => {
     groups.delete(child);
   }
 };
-process.on('exit', () => {
+/** The server's and every Chrome's process groups stopped, at the drive's exit or when it is stopped itself. */
+const stopAll = () => {
   for (const child of groups) stop(child);
-});
+  for (const chrome of launched) chrome.stopNow();
+};
+process.on('exit', stopAll);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const)
+  process.on(signal, () => {
+    console.log(`drive-web: stopped by ${signal}`);
+    stopAll();
+    process.exit(1);
+  });
 
 /** The built site, a release: its marker says so, and its page script holds no agent mode. */
 const marker = existsSync(join(dist, '.exact-build.json'))
@@ -100,8 +166,13 @@ const marker = existsSync(join(dist, '.exact-build.json'))
       target?: string;
     })
   : undefined;
-if (marker === undefined) {
-  console.error('drive-web: no built site in dist/: bun run build:web first');
+/** Whether `dist/` holds the pages `tools/web/pages.ts` writes after Exact's build. */
+const pagesWritten = () =>
+  existsSync(join(dist, 'hymns/100/index.html')) && existsSync(join(dist, '404.html'));
+if (marker === undefined || !pagesWritten()) {
+  console.error(
+    `drive-web: ${marker === undefined ? 'no built site' : 'a built site without its pages (tools/web/pages.ts)'} in dist/: bun run build:web first`,
+  );
   process.exit(2);
 }
 const appJs = readFileSync(join(dist, 'app.js'), 'utf8');
@@ -125,7 +196,7 @@ const startServer = async () => {
   });
   groups.add(child);
   for (let tries = 0; tries < 100; tries++) {
-    const up = await fetch(`${origin}/robots.txt`).then(
+    const up = await fetch(`${origin}/robots.txt`, { signal: AbortSignal.timeout(2000) }).then(
       (r) => r.ok,
       () => false,
     );
@@ -159,14 +230,17 @@ const watch = async (page: Page) => {
         headers: request.headers,
       }),
     );
-    void response.arrayBuffer().then((body) =>
-      page.send('Fetch.fulfillRequest', {
-        requestId: params.requestId,
-        responseCode: response.status,
-        responseHeaders: [...response.headers].map(([name, value]) => ({ name, value })),
-        body: Buffer.from(body).toString('base64'),
-      }),
-    );
+    void response
+      .arrayBuffer()
+      .then((body) =>
+        page.send('Fetch.fulfillRequest', {
+          requestId: params.requestId,
+          responseCode: response.status,
+          responseHeaders: [...response.headers].map(([name, value]) => ({ name, value })),
+          body: Buffer.from(body).toString('base64'),
+        }),
+      )
+      .catch((error: unknown) => console.log(`drive-web: the bucket's answer not given: ${error}`));
   });
 };
 
@@ -185,6 +259,7 @@ const MARKS = `(() => {
 
 /** Whether `expression` holds in the page within `ms`. */
 const waitFor = async (page: Page, expression: string, ms = 10_000) => {
+  mark(`wait for ${expression.slice(0, 120)}`);
   const until = Date.now() + ms;
   while (Date.now() < until) {
     if (await page.evaluate<boolean>(`Boolean(${expression})`).catch(() => false)) return true;
@@ -195,6 +270,7 @@ const waitFor = async (page: Page, expression: string, ms = 10_000) => {
 
 /** `path` opened as typed: its document's status, once it has loaded (and, with script, once the app is ready). */
 const open = async (page: Page, path: string, script = true) => {
+  mark(`open ${path}`);
   let status = 0;
   const off = page.on('Network.responseReceived', (params) => {
     if (params.type === 'Document') status = (params.response as { status: number }).status;
@@ -219,10 +295,12 @@ const open = async (page: Page, path: string, script = true) => {
  * which a pointer, a key and an assistive tool all make: a pointer pressed
  * through `Input.dispatchMouseEvent` reached a link but not Play's button.
  */
-const tap = (page: Page, selector: string) =>
-  page.evaluate<boolean>(
+const tap = (page: Page, selector: string) => {
+  mark(`tap ${selector}`);
+  return page.evaluate<boolean>(
     `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.scrollIntoView({ block: 'center' }); el.click(); return true; })()`,
   );
+};
 
 /** The screen the page shows: its document title names it, the hymn's by its number. */
 const screenOf = async (page: Page) =>
@@ -243,6 +321,10 @@ const addresses = async (page: Page) => {
       5000,
     );
     if (status !== 200 || !ready || !shown) wrong.push({ n: hymn.number, status, ready, shown });
+    if (hymn.number % 100 === 0)
+      console.log(
+        `addresses: ${hymn.number} of ${hymns.length} opened (${((Date.now() - started) / 1000).toFixed(0)} s)`,
+      );
   }
   const seconds = (Date.now() - started) / 1000;
   report.addresses = { hymns: hymns.length, seconds, wrong: wrong.length };
@@ -483,13 +565,16 @@ const LIGHT_SYSTEM = [{ name: 'prefers-color-scheme', value: 'light' }];
 
 const returning = async () => {
   const profile = join(app, '.exact/web-return-profile');
-  const first = await launchChrome(profile, true);
+  const first = await launch(profile, true);
   await watch(first.page);
   await first.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
   const page = first.page;
   const trace: Array<unknown> = [];
   let firstPlayLost = 0;
-  const step = async (name: string, done: Promise<unknown>) => trace.push([name, await done]);
+  const step = async (name: string, done: Promise<unknown>) => {
+    mark(name);
+    trace.push([name, await done]);
+  };
   const has = (id: string) => `document.querySelector('[data-testid="${id}"]')`;
   const chips = `[...document.querySelectorAll('[data-testid="player"] [data-testid^="stanza-"]')].map((b) => b.getAttribute('aria-pressed'))`;
   /** Play pressed on hymn 2's page, the full player opened once the bar shows: its stanzas' chips. */
@@ -540,13 +625,14 @@ const returning = async () => {
   await Bun.sleep(500);
   const chosen = await page.evaluate<Array<string | null>>(chips);
   await step('kept', page.evaluate(`localStorage.getItem('exact.state.playerKept')`));
+  mark('close Chrome');
   const closed = await first.close();
   check(
     'Chrome closed as a person closes it (Browser.close), not stopped',
     closed === 'closed',
     closed,
   );
-  const second = await launchChrome(profile, false);
+  const second = await launch(profile, false);
   await watch(second.page);
   await second.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
   await step('reopen', open(second.page, '/'));
@@ -583,20 +669,37 @@ const returning = async () => {
   );
 };
 
+const ON_ONE_PAGE = {
+  addresses,
+  notfound: notFound,
+  noscript: noScript,
+  measure,
+} as const satisfies Record<
+  Exclude<(typeof CHECKS)[number], 'return'>,
+  (page: Page) => Promise<void>
+>;
+
 const serverChild = await startServer();
 try {
-  if (checks.some((name) => name !== 'return')) {
-    const chrome = await launchChrome(join(app, '.exact/web-drive-profile'), true);
-    await watch(chrome.page);
-    await chrome.page.send('Page.addScriptToEvaluateOnNewDocument', { source: MARKS });
-    if (checks.includes('addresses')) await addresses(chrome.page);
-    if (checks.includes('notfound')) await notFound(chrome.page);
-    if (checks.includes('noscript')) await noScript(chrome.page);
-    if (checks.includes('measure')) await measure(chrome.page);
-    await chrome.close();
+  const onePage = Object.entries(ON_ONE_PAGE).filter(([name]) => checks.includes(name));
+  if (onePage.length > 0) {
+    const opened: { chrome?: Chrome } = {};
+    await run('launch Chrome', async () => {
+      const chrome = await launch(join(app, '.exact/web-drive-profile'), true);
+      await watch(chrome.page);
+      mark('add the marks script');
+      await chrome.page.send('Page.addScriptToEvaluateOnNewDocument', { source: MARKS });
+      opened.chrome = chrome;
+    });
+    for (const [name, body] of onePage)
+      await run(name, async () =>
+        opened.chrome === undefined ? undefined : body(opened.chrome.page),
+      );
+    await opened.chrome?.close();
   }
-  if (checks.includes('return')) await returning();
+  if (checks.includes('return')) await run('return', returning);
 } finally {
+  for (const chrome of launched) await chrome.close();
   stop(serverChild);
 }
 
@@ -613,6 +716,10 @@ check(
   `every request is the local server's, but the bucket after Play, answered by the drive (${requests.length} requests, ${foreign.length - beforePlay.length} to the bucket)`,
   beforePlay.length === 0,
   beforePlay.slice(0, 5),
+);
+check(
+  "dist/ still holds its pages (Exact's serve builds the site again, without them, when a source changed since build:web: run it again)",
+  pagesWritten(),
 );
 
 const out = flag('--json');
