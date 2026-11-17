@@ -20,7 +20,8 @@ let package = Package(
       name: "TakesApp", dependencies: ["TakesCore", "TakesAudio", "TakesTranscribe"],
       swiftSettings: strict + [.defaultIsolation(MainActor.self)]),
     .testTarget(
-      name: "TakesTests", dependencies: ["TakesCore", "TakesAudio", "TakesTranscribe"],
+      name: "TakesTests",
+      dependencies: ["TakesCore", "TakesAudio", "TakesTranscribe", "TakesApp"],
       resources: [.copy("Fixtures")], swiftSettings: strict),
   ]
 )
