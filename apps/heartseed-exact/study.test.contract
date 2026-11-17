@@ -2,13 +2,16 @@ epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
-// The study sheet on a plain launch, where no pack is on the phone yet:
+// The study sheet on a plain launch, where no pack is on the phone yet
+// (egw.cvr.im refused, so a simulator with a network fetches nothing):
 // the bar's three buttons with what they can say before a pack (Words
 // its language, no count on Cross-refs or Commentary), each tab's waiting
 // line, a tick-free tab change, Done back to the chapter with its verse
-// still chosen, and the hold: the default agent's long press on a verse's
-// text selects a word, which opens Words, drops the hint's second clause
-// and leaves the verses chosen as they were. The packs' rows (6
+// still chosen, and the hint's hold clause before any hold. The hold
+// itself (a word selected opens Words, drops the clause, chooses no
+// verse) is tools/drive-study.ts's: on iOS the default agent refuses
+// `contextmenu` and `dblclick` on the verse's text ("no contextmenu
+// handler"), so it runs there as a real press. The packs' rows (6
 // cross-references, G25, the fixture's notes, the chapter's chips, a
 // followed reference and Back) run against the fixture in
 // tools/drive-study.ts, which a test cannot start or name. Counts, numbers
@@ -16,6 +19,7 @@ seed 7
 
 test "John 3:16's three study buttons, before any pack"
   at "/read/at/43/3/16"
+  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   tap "verse-16"
@@ -33,6 +37,7 @@ test "John 3:16's three study buttons, before any pack"
 
 test "Each tab says the pack is on its way, and Done keeps the verse chosen"
   at "/read/at/43/3/16"
+  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   tap "verse-16"
@@ -63,22 +68,11 @@ test "Each tab says the pack is on its way, and Done keeps the verse chosen"
   expect state chooserLast == 16
   expect no failures
 
-test "A long press on a word opens Words on its verse and chooses nothing"
+test "Before the first hold the chapter's hint says how to hold a word"
   at "/read/at/43/3/16"
+  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   expect text "chapter-hint" == "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek."
-  tap "verse-text-16" contextmenu
-  clock data
-  clock settle
-  expect tree has "study-sheet"
-  expect state studyAt.params.verse == "16"
-  expect state studyAt.params.tab == "words"
-  expect state studyHeld == "held"
-  expect state chooserFirst == 0
-  expect state studyWordShown.open == true
-  tap "study-done"
-  clock data
-  clock settle
-  expect text "chapter-hint" == "Tap a verse to plant or study it."
+  expect state studyHeld == ""
   expect no failures
