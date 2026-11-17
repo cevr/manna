@@ -96,12 +96,15 @@ const endField = (span: Span, patch: CuePatch) => {
  * millisecond (`toMs`), the one rounding the source writer applies. What a
  * write is judged by before it lands, so the judgement is of what lands.
  */
-export const writtenPatch = (patch: CuePatch): CuePatch =>
-  CUE_PATCH_KEYS.reduce<CuePatch>((written, key) => {
-    const value = patch[key];
-    if (!Predicate.isNumber(value)) return written;
-    return { ...written, [key]: toMs(value) };
-  }, patch);
+export const writtenPatch = (patch: CuePatch): CuePatch => ({
+  ...patch,
+  ...Object.fromEntries(
+    CUE_PATCH_KEYS.flatMap((key) => {
+      const value = patch[key];
+      return Predicate.isNumber(value) ? [[key, toMs(value)] as const] : [];
+    }),
+  ),
+});
 
 /**
  * `span` with a lab edit applied. A span ends one way, so a `dur` replaces

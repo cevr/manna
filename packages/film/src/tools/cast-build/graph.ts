@@ -2,7 +2,6 @@ import {
   Array as Arr,
   Clock,
   Effect,
-  Exit,
   FileSystem,
   Option,
   Path,
@@ -589,12 +588,9 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         }),
       );
     }).pipe(
-      Effect.onExit((exit) => {
-        if (Exit.isSuccess(exit)) return Effect.void;
-        return store
-          .update(manifest, (current) => unmarked(current, key, build))
-          .pipe(Effect.ignore);
-      }),
+      Effect.onError(() =>
+        store.update(manifest, (current) => unmarked(current, key, build)).pipe(Effect.ignore),
+      ),
     );
   /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
   const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
@@ -674,12 +670,9 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         waited: { ...done.waited, [key]: waited },
       }));
     }).pipe(
-      Effect.onExit((exit) => {
-        if (Exit.isSuccess(exit)) return Effect.void;
-        return store
-          .update(manifest, (current) => unmarked(current, key, build))
-          .pipe(Effect.ignore);
-      }),
+      Effect.onError(() =>
+        store.update(manifest, (current) => unmarked(current, key, build)).pipe(Effect.ignore),
+      ),
     );
   /** A decision's outcome: the run made, when it is this build's to make. */
   const settle = <R>(stage: Stage<R>, key: string, start: number, decision: Decision) => {

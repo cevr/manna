@@ -79,16 +79,16 @@ const savedFor = (root: string, given: Given) =>
     );
   });
 
-/** The record at `root` over its stills as they stand, the approval `of` gives for them, and the earlier approvals `before` gives, each approval's ask saved beside it. */
+/** The record at `root` over its stills as they stand, the approval `of` gives for them, and the earlier approvals `earlierOf` gives, each approval's ask saved beside it. */
 const recordWith = (
   root: string,
   of: (stills: Approved['stills']) => Approved['approval'],
-  before: (stills: Approved['stills']) => Approved['earlier'] = () => [],
+  earlierOf: (stills: Approved['stills']) => Approved['earlier'] = () => [],
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const stills = Object.fromEntries(yield* hashedStills(root));
-    const record: Approved = { approval: of(stills), earlier: before(stills), stills };
+    const record: Approved = { approval: of(stills), earlier: earlierOf(stills), stills };
     const json = yield* Schema.encodeEffect(Schema.fromJsonString(Approved, { space: 2 }))(record);
     yield* fs.writeFileString(`${root}/${RECORD}`, `${json}\n`);
     const given = [record.approval, ...record.earlier].filter(Schema.is(Given));
@@ -109,16 +109,16 @@ const givenOn = (ask: string, shown: Record<string, string>): Approved['earlier'
   shown,
 });
 
-/** The record at `root` turned approved on `ASK`, its shown files those `shows` gives for its stills, with an earlier approval on `EARLIER` of each set `before` gives. */
+/** The record at `root` turned approved on `ASK`, its shown files those `shows` gives for its stills, with an earlier approval on `EARLIER` of each set `earlierOf` gives. */
 const approvedWith = (
   root: string,
   shows: (stills: Approved['stills']) => Record<string, string>,
-  before: (stills: Approved['stills']) => ReadonlyArray<Record<string, string>> = () => [],
+  earlierOf: (stills: Approved['stills']) => ReadonlyArray<Record<string, string>> = () => [],
 ) =>
   recordWith(
     root,
     (stills) => givenOn(ASK, shows(stills)),
-    (stills) => before(stills).map((shown) => givenOn(EARLIER, shown)),
+    (stills) => earlierOf(stills).map((shown) => givenOn(EARLIER, shown)),
   );
 
 const shownAll = (stills: Approved['stills']) =>

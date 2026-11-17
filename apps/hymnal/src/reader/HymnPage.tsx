@@ -434,10 +434,10 @@ const Sections = memo(function Sections({
 
 /** Each section's first line's place in the hymn as sung, from 0: the sections are its runs. */
 const firstLines = (sections: ReadonlyArray<Section>): ReadonlyArray<number> =>
-  sections.reduce<Array<number>>(
-    (firsts, _, k) => [...firsts, (firsts[k - 1] ?? 0) + (sections[k - 1]?.lines.length ?? 0)],
-    [],
-  );
+  sections.reduce<Array<number>>((firsts, _, k) => {
+    firsts.push((firsts[k - 1] ?? 0) + (sections[k - 1]?.lines.length ?? 0));
+    return firsts;
+  }, []);
 
 interface BodyProps {
   readonly section: Section;

@@ -944,16 +944,16 @@ const leastStep = (x: AlignStep, y: AlignStep) =>
 const stepFrom = (
   a: ReadonlyArray<ProbeChange>,
   b: ReadonlyArray<ProbeChange>,
-  after: (i: number, j: number) => AlignStep,
+  bestAfter: (i: number, j: number) => AlignStep,
   i: number,
   j: number,
 ): AlignStep | undefined => {
   const [ca, cb] = [a[i], b[j]];
   const steps: AlignStep[] = [];
-  if (ca !== undefined) steps.push([after(i + 1, j)[0] + 1, after(i + 1, j)[1], LEAVE_A]);
-  if (cb !== undefined) steps.push([after(i, j + 1)[0] + 1, after(i, j + 1)[1], LEAVE_B]);
+  if (ca !== undefined) steps.push([bestAfter(i + 1, j)[0] + 1, bestAfter(i + 1, j)[1], LEAVE_A]);
+  if (cb !== undefined) steps.push([bestAfter(i, j + 1)[0] + 1, bestAfter(i, j + 1)[1], LEAVE_B]);
   if (ca !== undefined && cb !== undefined && ca.kind === cb.kind) {
-    const [l, d] = after(i + 1, j + 1);
+    const [l, d] = bestAfter(i + 1, j + 1);
     steps.push([l, d + Math.abs(ca.at - cb.at), PAIR]);
   }
   return steps.length === 0 ? undefined : steps.reduce(leastStep);

@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index b2e9105655b0b08d9e686b9a27e2fe1e554e432b..6661e9b97487f9989344daf8dca4ab8e7c4a4ced 100644
+--- a/package.json
++++ b/package.json
+@@ -47,7 +47,6 @@
+       "bun": "./src/Rivet/index.ts",
+       "default": "./lib/Rivet/index.js"
+     },
+-    "./internal": null,
+     "./*": {
+       "types": "./lib/*.d.ts",
+       "bun": "./src/*.ts",
