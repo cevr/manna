@@ -61,7 +61,7 @@ it('draws a filled button only under its offer, and runs it only while offered',
     /button press=practise buttonStyle="bordered"/u,
   );
   expect(blockUnder(chooser, 'if shown.already')).toBe(
-    '            text "Already in your field." role="status" color="hs.quiet" testId="chapter-already"',
+    '              text "Already in your field." role="status" color="hs.quiet" testId="chapter-already"',
   );
   expect(blockUnder(chooser, 'action chooserPlantIt')).toContain(
     'if chapterShown.plant and not pending(chooserPlanted)',
