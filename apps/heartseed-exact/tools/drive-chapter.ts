@@ -283,19 +283,26 @@ for (const which of ['light', 'dark'] as const) {
   const numberFrame = frameOf(first, field.number);
   const plantedFrame = frameOf(first, field.verse);
   if (numberFrame !== undefined && plantedFrame !== undefined) {
-    for (const [scene, at, name] of [
-      ['planted', planted.number, 'chosen'],
-      ['field', field.number, 'at rest'],
+    /**
+     * A number is a small glyph: its antialiased pixels never reach its colour, so the darkest one reads under the
+     * role's own ratio. The pixels name the role (the mark within reach of it, the ground read under it), and the
+     * role's colour is held to AA on that ground.
+     */
+    for (const [scene, at, name, role] of [
+      ['planted', planted.number, 'chosen', theme[which].quiet],
+      ['field', field.number, 'at rest', theme[which].sun],
     ] as const) {
       const frame = frameOf(first, at);
       const number =
         frame === undefined ? undefined : paintOf(shotPath(scene, which), frame, viewWidth);
       drive.check(
-        `${which} colours: a planted verse's number, ${name}, at AA on its ground`,
-        number !== undefined && contrast(number.mark, number.ground) >= 4.5,
+        `${which} colours: a planted verse's number, ${name}, is drawn in its role at AA on its ground`,
+        number !== undefined &&
+          distance(number.mark, role) <= 24 &&
+          contrast(role, number.ground) >= 4.5,
         number === undefined
           ? 'not laid out'
-          : `${contrast(number.mark, number.ground).toFixed(2)} (${number.mark} on ${number.ground})`,
+          : `${contrast(role, number.ground).toFixed(2)} (role ${role}, darkest pixel ${number.mark}, on ${number.ground})`,
       );
     }
     const line = paintOf(
@@ -376,10 +383,19 @@ drive.check(
     ),
   restVerses.slice(0, 3).map((each) => [each.testId, each.role, each.name]),
 );
+/** The navigation bar's buttons: UIKit's `_UIButtonBarButton`s, each the name VoiceOver reads (the control's `aria-label`). */
+const barButtons = elementsOf(first[axRest])
+  .filter((each) => each.native?.class === '_UIButtonBarButton')
+  .map((each) => each.name);
 const named = Object.fromEntries(
-  ['chapter-title', 'chapter-find', 'chapter-aa'].map((id) => [
+  [
+    ['chapter-title', 'John 3, choose another chapter'],
+    ['chapter-find', 'Find a verse, a chapter or words'],
+    ['chapter-aa', 'Text settings'],
+  ].map(([id = '', name]) => [
     id,
-    element(first[axRest], id)?.name,
+    element(first[axRest], id)?.name ??
+      (native && id !== 'chapter-title' ? barButtons.find((each) => each === name) : undefined),
   ]),
 );
 drive.check(

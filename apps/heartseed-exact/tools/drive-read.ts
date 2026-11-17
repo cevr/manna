@@ -166,7 +166,10 @@ const paintOf = (shot: string, frame: Frame, width: number) => {
     }
   const ground = [...counts.entries()].toSorted((a, b) => b[1] - a[1])[0]?.[0] ?? '#000000';
   const mark = [...counts.keys()].toSorted((a, b) => contrast(b, ground) - contrast(a, ground))[0];
-  return { ground, mark: mark ?? ground };
+  /** The pixel nearest a colour: over a floating glass bar the content under it shows through, so the farthest pixel can be the page's text, not the tab's mark. */
+  const nearest = (hex: string) =>
+    [...counts.keys()].toSorted((a, b) => distance(a, hex) - distance(b, hex))[0] ?? ground;
+  return { ground, mark: mark ?? ground, nearest };
 };
 
 /** The step that reads the bar's frame: its `layout` on the web, the tree on iOS. */
@@ -217,7 +220,7 @@ const barChecks = (
     const frame = tabs[tab];
     if (frame === undefined) continue;
     const paint = paintOf(at.path, frame, width);
-    const { mark } = paint;
+    const mark = native && tab === chosen ? paint.nearest(TINT[scheme]) : paint.mark;
     if (tab === chosen)
       drive.check(
         `${scheme} ${chosen}: ${tab}'s mark is the tint`,
