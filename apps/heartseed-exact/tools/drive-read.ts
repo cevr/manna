@@ -46,7 +46,13 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   });
   process.exit(again.exitCode ?? 1);
 }
-const drive = makeDrive({ name: 'drive-read', host, appDir: app });
+/** An iOS run waits its turn on the shared simulator's lock before it starts (wave3's lesson 18), and its timeout counts that wait. */
+const drive = makeDrive({
+  name: 'drive-read',
+  host,
+  appDir: app,
+  timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
+});
 const store = `read-${host}-${Date.now().toString(36)}`;
 /** Chrome keeps a named store per port, so both web launches take one of the app's spare ports. */
 const port = host === 'web' ? ['--port', '8772'] : [];
@@ -87,22 +93,49 @@ interface Accessible {
       readonly role?: string;
       readonly name?: string;
       readonly states?: { readonly selected?: boolean; readonly checked?: boolean };
+      readonly native?: { readonly class?: string };
+      readonly frame?: Frame;
     }>;
   };
 }
 
+/**
+ * iOS draws the bar with UIKit (`UITabBar`, a `_UITabButton` per tab), outside Exact's
+ * layout: `layout` answers no frame for it, and its tabs carry no test id of ours. There
+ * the bar and its tabs are read from `tree --ax`, by class and by name; on the web, by
+ * `layout` of their test ids.
+ */
+const native = host === 'ios';
+const elementsOf = (reply: unknown) => (reply as Accessible | undefined)?.ax?.elements ?? [];
+const tabButtonsOf = (reply: unknown) =>
+  elementsOf(reply).filter((element) => element.native?.class === '_UITabButton');
+
+/** A node's frame in the viewport: from `layout` on the web, and on iOS the bar's or a tab's from `tree --ax`. */
 const frameOf = (reply: unknown) => (reply as Laid | undefined)?.node?.space?.viewport;
+const barFrameOf = (reply: unknown) =>
+  native
+    ? elementsOf(reply).find((element) => element.native?.class === 'UITabBar')?.frame
+    : frameOf(reply);
+const tabFrameOf = (reply: unknown, tab: 'garden' | 'read') =>
+  native
+    ? tabButtonsOf(reply).find((element) => element.name?.toLowerCase() === tab)?.frame
+    : frameOf(reply);
 
 /** The bar's tabs as `tree --ax` reads them: each tab's test id, its name, and whether it is selected. */
 const tabsOf = (reply: unknown) =>
-  ((reply as Accessible | undefined)?.ax?.elements ?? [])
-    .filter((element) => element.testId === 'tab-garden' || element.testId === 'tab-read')
-    .filter((element) => element.role !== 'StaticText')
-    .map((element) => ({
-      id: element.testId,
-      name: element.name,
-      selected: element.states?.selected === true,
-    }));
+  (native
+    ? tabButtonsOf(reply).map((element) => ({
+        ...element,
+        testId: `tab-${element.name?.toLowerCase() ?? ''}`,
+      }))
+    : elementsOf(reply)
+        .filter((element) => element.testId === 'tab-garden' || element.testId === 'tab-read')
+        .filter((element) => element.role !== 'StaticText')
+  ).map((element) => ({
+    id: element.testId,
+    name: element.name,
+    selected: element.states?.selected === true,
+  }));
 
 const hexOf = (rgb: readonly number[]) =>
   `#${rgb.map((each) => each.toString(16).padStart(2, '0')).join('')}`;
@@ -135,14 +168,22 @@ const paintOf = (shot: string, frame: Frame, width: number) => {
   return { ground, mark: mark ?? ground };
 };
 
-/** The bar read at one scheme: the tabs' layouts and a screenshot. */
-const barSteps = (s: ReturnType<typeof script>, name: string) => ({
-  bar: s.step('layout tabs'),
-  garden: s.step('layout tab-garden'),
-  read: s.step('layout tab-read'),
-  shot: s.step(`screenshot ${join(own, `read-${host}-${name}.png`)}`),
-  path: join(own, `read-${host}-${name}.png`),
-});
+/** The step that reads the bar's frame: its `layout` on the web, the tree on iOS. */
+const BAR = native ? 'tree --ax' : 'layout tabs';
+
+/** The bar read at one scheme: the bar's and the tabs' frames, the viewport's width and a screenshot. */
+const barSteps = (s: ReturnType<typeof script>, name: string) => {
+  const width = s.step('layout root');
+  const bar = s.step(BAR);
+  return {
+    width,
+    bar,
+    garden: native ? bar : s.step('layout tab-garden'),
+    read: native ? bar : s.step('layout tab-read'),
+    shot: s.step(`screenshot ${join(own, `read-${host}-${name}.png`)}`),
+    path: join(own, `read-${host}-${name}.png`),
+  };
+};
 
 /** The bar's checks at one scheme, the tab `chosen` selected. */
 const barChecks = (
@@ -151,9 +192,12 @@ const barChecks = (
   scheme: Scheme,
   chosen: 'garden' | 'read',
 ) => {
-  const width = (replies[at.bar] as Laid | undefined)?.viewport?.w ?? 0;
-  const bar = frameOf(replies[at.bar]);
-  const tabs = { garden: frameOf(replies[at.garden]), read: frameOf(replies[at.read]) };
+  const width = (replies[at.width] as Laid | undefined)?.viewport?.w ?? 0;
+  const bar = barFrameOf(replies[at.bar]);
+  const tabs = {
+    garden: tabFrameOf(replies[at.garden], 'garden'),
+    read: tabFrameOf(replies[at.read], 'read'),
+  };
   if (bar === undefined || tabs.garden === undefined || tabs.read === undefined || width === 0) {
     drive.check(`${scheme} ${chosen}: the bar and its tabs are laid out`, false, {
       bar,
@@ -171,18 +215,30 @@ const barChecks = (
   for (const tab of ['garden', 'read'] as const) {
     const frame = tabs[tab];
     if (frame === undefined) continue;
-    const { mark } = paintOf(at.path, frame, width);
-    const want = tab === chosen ? TINT[scheme] : theme[scheme].quiet;
-    const role = tab === chosen ? 'the tint' : 'hs.quiet';
+    const paint = paintOf(at.path, frame, width);
+    const { mark } = paint;
+    if (tab === chosen)
+      drive.check(
+        `${scheme} ${chosen}: ${tab}'s mark is the tint`,
+        distance(mark, TINT[scheme]) <= 24,
+        `${mark} for ${TINT[scheme]}`,
+      );
+    else if (native)
+      drive.check(
+        `${scheme} ${chosen}: ${tab}'s mark is UIKit's own unselected ink, not the tint`,
+        distance(mark, TINT[scheme]) > 24,
+        `${mark}, the tint ${TINT[scheme]}`,
+      );
+    else
+      drive.check(
+        `${scheme} ${chosen}: ${tab}'s mark is hs.quiet`,
+        distance(mark, theme[scheme].quiet) <= 24,
+        `${mark} for ${theme[scheme].quiet}`,
+      );
     drive.check(
-      `${scheme} ${chosen}: ${tab}'s mark is ${role}`,
-      distance(mark, want) <= 24,
-      `${mark} for ${want}`,
-    );
-    drive.check(
-      `${scheme} ${chosen}: ${tab}'s mark reads at AA on the bar`,
-      contrast(mark, ground) >= 4.5,
-      contrast(mark, ground).toFixed(2),
+      `${scheme} ${chosen}: ${tab}'s mark reads at AA on the ground under it`,
+      contrast(mark, paint.ground) >= 4.5,
+      `${contrast(mark, paint.ground).toFixed(2)} (${mark} on ${paint.ground})`,
     );
     drive.check(
       `${scheme} ${chosen}: ${tab}'s target is 44 points or more`,
@@ -195,7 +251,7 @@ const barChecks = (
 /** Whether a node lies inside the viewport and wholly above the bar. */
 const aboveBar = (replies: readonly unknown[], node: number, bar: number) => {
   const frame = frameOf(replies[node]);
-  const top = frameOf(replies[bar]);
+  const top = barFrameOf(replies[bar]);
   const visible = (replies[node] as Laid | undefined)?.node?.visible;
   const inView = visible?.inViewport === true && visible.clipped !== true;
   if (frame === undefined || top === undefined) return { ok: false, frame, bar: top, inView };
@@ -231,19 +287,19 @@ const psalmVerse = a.step('state readVerse');
 const psalmKept = a.step('state readBookKept');
 const lastVerse = a.step('layout verse-176');
 const footer = a.step('layout chooser-footer');
-const barAtPsalm = a.step('layout tabs');
+const barAtPsalm = a.step(BAR);
 a.step(`screenshot ${join(own, `read-${host}-psalm.png`)}`);
 a.step('tap read-follow-john', ...moved);
 const followed = a.step('state readShown');
 const followedVerse = a.step('layout verse-16');
-const barAtJohn = a.step('layout tabs');
+const barAtJohn = a.step(BAR);
 a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
 const largestFooter = a.step('layout chooser-footer');
-const largestBar = a.step('layout tabs');
-const largestTab = a.step('layout tab-read');
+const largestBar = a.step(BAR);
+const largestTab = native ? largestBar : a.step('layout tab-read');
 a.step(`screenshot ${join(own, `read-${host}-largest.png`)}`);
 a.step('prefer root-font-size 17', 'clock settle', 'tap tab-garden', ...settle);
 a.step('type root /verses', ...settle, 'tap plant-three', ...settle, 'type root /', ...settle);
@@ -327,7 +383,7 @@ drive.check(
   largestFoot.ok,
   largestFoot,
 );
-const largestRead = frameOf(first[largestTab]);
+const largestRead = tabFrameOf(first[largestTab], 'read');
 drive.check(
   "at the largest text, Read's tab is still 44 points or more",
   largestRead !== undefined && largestRead.h >= 44,
