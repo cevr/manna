@@ -257,6 +257,9 @@ const second = FIXTURE_PACKS.second;
 const fetchOps = ['tap packs-fetch', 'clock data', 'clock settle'];
 const readOps = ['shown', 'kept version', 'state commentaryProbeCounts', 'tree'];
 
+/** Contract's follow-ups while the commentary is held: each `packsWait` is sent an `after(1, …)` past an answer, and a study pack's body is checked in the next one's own turns. */
+const FOLLOWS = Array.from({ length: 4 }, () => ['clock +1', 'clock data']).flat();
+
 /** First fetch: the line while the fixture holds its answer, the landing, the landed line's 3 seconds, one request. */
 const firstFetch = async (store: string) => {
   await steer({ pack: 'first', reply: 'well', times: 0, holdMs: 2500 });
@@ -268,6 +271,7 @@ const firstFetch = async (store: string) => {
     'tree',
     shot('getting'),
     'clock data',
+    ...FOLLOWS,
     'packs',
     'kept names',
     'clock data',
