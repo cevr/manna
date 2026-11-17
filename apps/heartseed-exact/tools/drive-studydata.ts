@@ -15,7 +15,7 @@
 
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 
 import { checkoutPort } from './commentary-fixture';
 
@@ -77,6 +77,7 @@ for (const name of ['HEARTSEED_PACKS_BASE', 'SIMCTL_CHILD_HEARTSEED_PACKS_BASE']
 
 /** The kit's machine, but each run started with this drive's environment, which names the fixture. */
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
@@ -106,7 +107,6 @@ const processes = {
 };
 
 const drive = makeDrive({ name: 'drive-studydata', host, appDir: app, processes });
-const webPort = host === 'web' ? ['--port', '8773'] : [];
 const store = `studydata-${host}-${Date.now().toString(36)}`;
 
 const PROBES = [
@@ -163,14 +163,7 @@ interface Replies {
 const go = async (kept: boolean, before: ReadonlyArray<string>) => {
   const ops = [...before, ...PROBES];
   const replies = await drive.run(
-    [
-      '--storage',
-      store,
-      kept ? '--keep-storage' : '--reset-storage',
-      '--url',
-      '/verses',
-      ...webPort,
-    ],
+    ['--storage', store, kept ? '--keep-storage' : '--reset-storage', '--url', '/verses'],
     ops,
   );
   const took = /top level took (\d+) ms/u.exec(JSON.stringify(replies[ops.indexOf('logs')] ?? ''));
@@ -281,10 +274,7 @@ const turns = async () => {
     'logs',
     ...TURNS.map((name) => `state studyTurn${name}`),
   ];
-  const replies = await drive.run(
-    ['--storage', store, '--reset-storage', '--url', '/verses', ...webPort],
-    ops,
-  );
+  const replies = await drive.run(['--storage', store, '--reset-storage', '--url', '/verses'], ops);
   const lines = JSON.stringify(replies[ops.indexOf('logs')] ?? '')
     .split('","')
     .filter((line) => line.includes('studyTurn') && line.includes('ms of its own'));

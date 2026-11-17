@@ -23,7 +23,7 @@
 
 import { join } from 'node:path';
 
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { appFile, brandOf } from '../src/look/design.testing.ts';
@@ -41,8 +41,15 @@ const shot = (name: string) => `screenshot ${shotFile(name)}`;
  * orchestrator's to stop, not this drive's.
  */
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
-    const child = Bun.spawn([...argv], { cwd, stdout: 'pipe', stderr: 'pipe', detached: true });
+    const child = Bun.spawn([...argv], {
+      cwd,
+      env: { ...process.env },
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+    });
     return {
       pid: child.pid,
       ended: Promise.all([

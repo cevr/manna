@@ -20,7 +20,7 @@
  */
 
 import { join } from 'node:path';
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 
 import { gettingLine, landedLine } from '../src/packs/shown';
 import { checkoutPort, fixturePacks } from './commentary-fixture';
@@ -109,6 +109,7 @@ const nameFixture = (on: boolean) => {
 
 /** The kit's machine, but each run started with this drive's environment as it is then (the fixture named or not). */
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
@@ -138,7 +139,6 @@ const processes = {
 };
 
 const drive = makeDrive({ name: 'drive-commentary', host, appDir: app, processes });
-const webPort = host === 'web' ? ['--port', '8773'] : [];
 const stamp = Date.now().toString(36);
 const storeOf = (name: string) => `commentary-${host}-${name}-${stamp}`;
 
@@ -205,7 +205,6 @@ const go = async (store: string, kept: boolean, day: number, logical: ReadonlyAr
     '/verses',
     '--epoch',
     epochAt(day),
-    ...webPort,
   ];
   const replies = await drive.run(flags, ops);
   return (op: string, nth = 0): unknown => {

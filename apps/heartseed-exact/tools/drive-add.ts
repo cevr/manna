@@ -27,8 +27,6 @@ const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const drive = makeDrive({ name: 'drive-add', host, appDir: app });
 const store = `add-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8774'] : [];
 const shot = (name: string) => `screenshot .exact/shots/add-${host}-${name}.png`;
 const SINGLES_LIMIT = '20 single verses, the most for now. Remove one to add another.';
 
@@ -132,10 +130,7 @@ const chosen = [
   'state chapterShown.reference',
   shot('psalm-119'),
 ];
-const first = replyOf(
-  chosen,
-  await drive.run([...port, '--storage', store, '--reset-storage'], chosen),
-);
+const first = replyOf(chosen, await drive.run(['--storage', store, '--reset-storage'], chosen));
 const offered = first('state chapterShown') as { reference?: string; plant?: boolean } | undefined;
 drive.check(
   'the chapter offers Plant for John 3:16-18',
@@ -159,10 +154,7 @@ drive.check(
 );
 
 const reread = ['clock data', 'clock settle', 'state garden', shot('relaunched')];
-const again = replyOf(
-  reread,
-  await drive.run([...port, '--storage', store, '--keep-storage'], reread),
-);
+const again = replyOf(reread, await drive.run(['--storage', store, '--keep-storage'], reread));
 const kept = again('state garden') as Garden | undefined;
 drive.check(
   'relaunched on the kept storage, the garden reads the list',
@@ -215,7 +207,7 @@ const sown = [
 ];
 const full = replyOf(
   sown,
-  await drive.run([...port, '--storage', `${store}-singles`, '--reset-storage'], sown),
+  await drive.run(['--storage', `${store}-singles`, '--reset-storage'], sown),
 );
 const single = full('state chapterShown', 0) as
   | { reference?: string; singles?: boolean; plant?: boolean }
@@ -255,10 +247,7 @@ drive.check(
 const plain = ['clock data', 'clock settle', 'state gardenDriven', 'tree', shot('plain-verses')];
 const looked = replyOf(
   plain,
-  await drive.run(
-    [...port, '--storage', `${store}-plain`, '--reset-storage', '--url', '/verses'],
-    plain,
-  ),
+  await drive.run(['--storage', `${store}-plain`, '--reset-storage', '--url', '/verses'], plain),
 );
 const tree = JSON.stringify(looked('tree') ?? '');
 drive.check(

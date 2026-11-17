@@ -34,6 +34,8 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { claimAppPort } from '@manna/exact-kit/port';
+
 import { pixelAt } from './pixel.ts';
 import { QUIET_ANSWER, QUIET_CHECK, QUIET_PATH, quietOps } from './quiet.ts';
 import { LONG_HYMN, MISSING_HYMN, checkoutPort } from './recordings.ts';
@@ -43,6 +45,11 @@ const app = join(import.meta.dir, '..');
 const FIXTURE_PORT = checkoutPort();
 const origin = `http://127.0.0.1:${FIXTURE_PORT}`;
 const DRIVE_MS = 15 * 60 * 1000;
+/** Chrome keeps a named store per port, so every web run here, each relaunch too, is on one port of the app's this drive holds to its end; claimed before `env`, which then names its turn. */
+const port =
+  host === 'web'
+    ? ['--port', String((await claimAppPort(app, { label: 'drive-player web' })).port)]
+    : [];
 const env = { ...process.env, HYMNAL_RECORDINGS: origin };
 
 type Child = ReturnType<typeof Bun.spawn>;
@@ -99,7 +106,7 @@ const run = async (
     undefined,
 ) => {
   const child = Bun.spawn(
-    ['bun', 'run', 'exact', 'agent', host, '--json', '--url', path, ...flags, ...ops],
+    ['bun', 'run', 'exact', 'agent', host, '--json', ...port, '--url', path, ...flags, ...ops],
     { cwd: app, env, stdout: 'pipe', stderr: 'pipe', detached: true },
   );
   groups.add(child);

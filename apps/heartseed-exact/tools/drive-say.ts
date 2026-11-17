@@ -21,6 +21,7 @@
 
 import { join } from 'node:path';
 
+import { claimAppPort } from '@manna/exact-kit/port';
 import { readPassage } from '@manna/heartseed/passage';
 
 const host = process.argv[2] ?? 'web';
@@ -39,10 +40,18 @@ const spokenOf = (text: string) =>
     .map((word) => HEARD[word] ?? word)
     .join(' ');
 
+/** Chrome keeps a named store per port, so every web launch here, each relaunch too, is on one port of the app's this drive holds to its end. */
+const port =
+  host === 'web'
+    ? ['--port', String((await claimAppPort(app, { label: 'drive-say web' })).port)]
+    : [];
+
 const run = async (flags: readonly string[], ops: readonly string[]) => {
   const started = performance.now();
-  const child = Bun.spawn(['bun', 'run', 'exact', 'agent', host, '--json', ...flags, ...ops], {
+  const argv = ['bun', 'run', 'exact', 'agent', host, '--json', ...port, ...flags, ...ops];
+  const child = Bun.spawn(argv, {
     cwd: app,
+    env: { ...process.env },
     stdout: 'pipe',
     stderr: 'pipe',
     detached: true,
