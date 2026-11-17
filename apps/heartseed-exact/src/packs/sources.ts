@@ -7,13 +7,16 @@
  * names one (`HEARTSEED_PACKS_BASE`). Each pack has its own machine, the
  * pure `step`, held here between calls. `packsAsk` is the Read tab shown
  * or Try again (Contract's `packsFetch` and `packsRetry`): it asks every
- * pack at once, joins any fetch in flight, and answers once all settle,
- * each settled apart (whatever throws in one is that pack's failed try).
- * A body is checked in steps a turn each (`paced.ts`), and the data host
+ * pack at once and joins any fetch in flight, each settled apart
+ * (whatever throws in one is that pack's failed try). It answers as soon
+ * as one pack settles, with every pack's kept line as it stands and
+ * `more` while any is still out; Contract then sends `packsWait`, which
+ * answers at the next settle, until none is out. So a pack's status is
+ * kept the moment it settles, whatever another's slow fetch does. A body is checked in steps a turn each (`paced.ts`), and the data host
  * gets a turn back before its write, so no turn of the call nears the
  * host's budget whatever a pack's size: one turn over it refuses the whole
  * call, every pack's answer with it. Contract keeps every pack's version and check time in one `persist`
- * string from that answer, after each file is written. A pack's reader
+ * string from each answer, after each file is written. A pack's reader
  * (`packOf`) reads its kept file on first use per launch and version, and
  * a pack a fetch just wrote is held parsed, so it is never read again.
  */
@@ -47,11 +50,12 @@ const FETCH_MS = 60_000;
 export const baseOf = (setting: string): string =>
   /^http:\/\/127\.0\.0\.1:\d{2,5}$/u.test(setting) ? setting : PACKS_HOST;
 
-/** What an ask answers: every pack's kept version and check time (`keptWith`), whether any pack's last try failed, and the names of those whose fetch landed their first pack on the phone. */
+/** What an ask answers: every pack's kept version and check time (`keptWith`), whether any pack's last try failed, the names of those whose fetch landed their first pack on the phone since the last answer, and whether any pack is still out (Contract then waits for the next with `packsWait`). */
 export interface PacksAnswer {
   kept: string;
   failed: boolean;
   landed: string;
+  more: boolean;
 }
 
 /** Where the packs are fetched from, and whether that is a driver's fixture. */
@@ -88,13 +92,19 @@ const hostFetch: Fetcher = (url, init) => fetch(url, init);
 /** The body's bytes, as the file keeps them. */
 const bytesOf = (text: string) => new TextEncoder().encode(text);
 
-/** One pack's launch: its machine, its fetch in flight, the pack held parsed, how often its file was read. */
+/** One pack's launch: its machine, its fetch in flight, the pack held parsed, how often its file was read, its asks still out, and what it has to tell the next answer. */
 interface Entry {
   readonly spec: PackSpec<Versioned>;
   machine: Machine;
   flight: Promise<boolean> | undefined;
   held: { readonly mark: string; readonly pack: Promise<Versioned | undefined> } | undefined;
   reads: number;
+  /** This pack's asks not yet settled, the latest last. */
+  out: Array<Promise<void>>;
+  /** Whether it settled since the last answer, which then answers at once. */
+  news: boolean;
+  /** Whether its fetch landed its first pack since the last answer. */
+  landed: boolean;
 }
 
 /** `body` checked by `spec`'s check a step a turn, a check that throws as a bad body. */
@@ -150,6 +160,9 @@ export const packSources = (options: PacksOptions) => {
     flight: undefined,
     held: undefined,
     reads: 0,
+    out: [],
+    news: false,
+    landed: false,
   }));
   const named = new Map(entries.map((entry) => [entry.spec.name, entry]));
 
@@ -267,11 +280,50 @@ export const packSources = (options: PacksOptions) => {
     return false;
   };
 
-  const wordsOf = (names: string) =>
-    names.split(' ').flatMap((name) => {
-      const entry = named.get(name);
-      return entry === undefined ? [] : [entry.spec];
-    });
+  /** `asked`, counted out of `entry` until it settles; then `entry` has news for the next answer. */
+  const track = (entry: Entry, asked: Promise<boolean>) => {
+    const done: Promise<void> = asked
+      .catch(() => false)
+      .then((landed) => {
+        entry.out = entry.out.filter((each) => each !== done);
+        entry.news = true;
+        if (landed) entry.landed = true;
+      });
+    entry.out.push(done);
+  };
+
+  /** Every pack as it stands: the kept line of each this launch has read (`kept`'s for the rest), and what is news since the last answer, now told. */
+  const answerOf = (kept: string): PacksAnswer => {
+    const answer = {
+      kept: entries
+        .filter((entry) => entry.machine.loaded)
+        .reduce((text, entry) => keptWith(text, entry.spec.name, entry.machine.kept), kept),
+      failed: entries.some((entry) => entry.machine.failed),
+      landed: entries
+        .filter((entry) => entry.landed)
+        .map((entry) => entry.spec.name)
+        .join(' '),
+      more: entries.some((entry) => entry.out.length > 0),
+    };
+    for (const entry of entries) {
+      entry.news = false;
+      entry.landed = false;
+    }
+    return answer;
+  };
+
+  /** The next answer: at once when a pack settled since the last one or none is out, else at the next pack's settle, whatever the others do. */
+  const nextAnswer = async (kept: string): Promise<PacksAnswer> => {
+    const out = entries.flatMap((entry) => entry.out);
+    if (out.length > 0 && !entries.some((entry) => entry.news)) await Promise.race(out);
+    return answerOf(kept);
+  };
+
+  /** The specs `names` lists, in the packs' own order. */
+  const wordsOf = (names: string) => {
+    const listed = new Set(names.split(' '));
+    return entries.filter((entry) => listed.has(entry.spec.name)).map((entry) => entry.spec);
+  };
 
   return {
     /** How many times this launch read `name`'s kept file (a test's counter). */
@@ -313,26 +365,16 @@ export const packSources = (options: PacksOptions) => {
         const words = entry?.spec ?? { name, title: name, noun: name, waiting: '' };
         return packShownOf(words, keptIn(kept, name).version, busy, failed);
       },
-      packsAsk: async (
+      packsAsk: (
         [kept, force, now]: readonly [string, boolean, number],
         _store: ExactStore,
         storage: FileStorage,
       ): Promise<PacksAnswer> => {
-        const landed = await Promise.all(
-          entries.map((entry) => askOne(entry, kept, force, now, storage).catch(() => false)),
-        );
-        return {
-          kept: entries.reduce(
-            (text, entry) => keptWith(text, entry.spec.name, entry.machine.kept),
-            kept,
-          ),
-          failed: entries.some((entry) => entry.machine.failed),
-          landed: entries
-            .filter((_, index) => landed[index])
-            .map((entry) => entry.spec.name)
-            .join(' '),
-        };
+        for (const entry of entries) track(entry, askOne(entry, kept, force, now, storage));
+        return nextAnswer(kept);
       },
+      /** Contract's follow-up while an answer said `more`: the next pack's settle, or at once with none out. */
+      packsWait: ([kept]: readonly [string]): Promise<PacksAnswer> => nextAnswer(kept),
     },
   };
 };

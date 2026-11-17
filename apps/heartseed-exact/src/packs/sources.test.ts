@@ -19,11 +19,12 @@ import { appText } from '../../tools/commentary-fixture';
 import { readOf, versionOf, type CommentaryPack } from '../commentary/pack';
 import { COMMENTARY, commentarySources } from '../commentary/sources';
 import { bodyOf, madePack } from '../test/commentary-packs';
+import { askSettled, type PacksSettled } from '../test/packs-asked';
 import { seeded, type Random } from '../test/random';
 import { sumOf } from '../text/sum';
 import { nextTurn, SLICE, sumPaced, type Paced } from './paced';
 import { LANDED_MS, landedLine, gettingLine, type PackWords } from './shown';
-import { baseOf, PACKS_HOST, packSources, type PacksAnswer } from './sources';
+import { baseOf, PACKS_HOST, packSources } from './sources';
 import type { PackSpec } from './spec';
 import { keptIn, WEEK, type Checked } from './step';
 
@@ -195,7 +196,11 @@ const launch = (
   pause: () => Promise<void> = nextTurn,
 ) => {
   const downloader = packSources({ setting, packs, fetcher: server.fetcher, pause });
-  return { ...downloader, reader: commentarySources(downloader) };
+  return {
+    ...downloader,
+    names: packs.map((pack) => pack.name),
+    reader: commentarySources(downloader),
+  };
 };
 
 type Launch = ReturnType<typeof launch>;
@@ -205,19 +210,18 @@ interface Persisted {
   kept: string;
 }
 
-/** A fetch call as Contract sends it, started inside the data host; Contract keeps its answer. */
+/** A fetch call as Contract sends and follows it (`askSettled`); Contract keeps its answer, every pack it landed named in the packs' order. */
 const ask = async (
   launched: Launch,
   storage: Storage,
   persisted: Persisted,
   now: number,
   force = false,
-): Promise<PacksAnswer> => {
-  const answer = await withDataHost(() =>
-    launched.sources.packsAsk([persisted.kept, force, now], STORE, storage),
-  );
+): Promise<PacksSettled> => {
+  const answer = await askSettled(launched.sources, [persisted.kept, force, now], storage);
   persisted.kept = answer.kept;
-  return answer;
+  const landed = new Set(answer.landed.split(' '));
+  return { ...answer, landed: launched.names.filter((name) => landed.has(name)).join(' ') };
 };
 
 const kept = (persisted: Persisted, name = 'commentary') => keptIn(persisted.kept, name);

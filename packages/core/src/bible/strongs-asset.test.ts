@@ -38,7 +38,8 @@ it.effect(
       );
       const lexicon = yield* Schema.decodeEffect(Lexicon)(text);
       const numbers = Object.keys(lexicon);
-      expect(numbers).toHaveLength(13_434);
+      expect(numbers.filter((number) => number.startsWith('G'))).toHaveLength(5_523);
+      expect(numbers.filter((number) => number.startsWith('H'))).toHaveLength(8_674);
       expect(numbers.filter((number) => !/^[GH][1-9]\d*$/u.test(number))).toEqual([]);
       expect(
         Object.entries(lexicon).flatMap(([number, entry]) =>

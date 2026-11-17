@@ -11,8 +11,15 @@
  *   them, where the driver can pinch: the web's is a trackpad's, a wheel
  *   with Control held; iOS's is `tap … pinch`, and what each driver gave is
  *   printed beside the check;
- * - a tap outside the drums closes them and opens nothing (on iOS a tap
- *   on UIKit's backdrop, which only a drive can aim at a point);
+ * - a tap outside the drums closes them and opens nothing: a tap at the
+ *   top left of `drums-outside`, the window-wide press beneath the panel;
+ * - each way the drums close (the `#`, a tap outside, and on the web
+ *   Escape) fades them: 50 ms in, the page differs both from the open
+ *   drums and from the settled page (pixels of screenshots), and once the
+ *   clock settles the drums are gone; under Reduce Motion they leave at
+ *   once, 50 ms in already the settled page. iOS's screenshots under the
+ *   agent's clock do not show the fade, so there the counts are printed and
+ *   only the close is held;
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels;
  * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
@@ -41,7 +48,7 @@ import { join } from 'node:path';
 import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
-import { pixelAt } from './pixel.ts';
+import { changedPixels, pixelAt } from './pixel.ts';
 import { checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
@@ -148,6 +155,13 @@ const slidersOf = (reply: unknown) => {
   );
 };
 
+/** Whether a tree reply lists a node of `testId`, and how many. */
+const countIn = (tree: unknown, testId: string) =>
+  JSON.stringify(tree ?? null).split(`"testId":"${testId}"`).length - 1;
+
+/** A tap outside the drums' panel: on the window-wide press beneath it, at its top left. */
+const OUTSIDE = 'tap drums-outside at 20 20';
+
 const pinchIn =
   host === 'web' ? 'tap hymn-list wheel 0 40 modifiers Control' : 'tap hymn-list pinch 0.5';
 const pinchOut = host === 'web' ? 'tap tiles wheel 0 -60 modifiers Control' : 'tap tiles pinch 2';
@@ -232,31 +246,96 @@ if (host === 'web') {
     reply: pinched[5],
     tiles: pinched[8],
   });
-
-  const outside = await launch('find-outside', [
-    'clock data',
-    'tap find-number',
-    'clock settle',
-    'state find.drums',
-    'tap root at 20 800',
-    'clock settle',
-    'clock data',
-    'state find.drums',
-    'state find.go.serial',
-    'state find.top',
-  ]);
-  drive.check(
-    'a tap outside the drums (tap root at 20 800) closes them and opens nothing',
-    outside[3] === true && outside[7] === false && outside[8] === 0 && outside[9] === '/',
-    { open: outside[3], tap: outside[4], after: outside[7], go: outside[8], top: outside[9] },
-  );
-} else {
+} else
   console.log(
     `NOTE ${host} no pinch: the driver refuses \`${pinchIn}\` off a transformDragFor pair ("no photo binding"), so tiles-show and Done stand in`,
   );
-  console.log(
-    `NOTE ${host} no tap outside: the driver refuses \`tap root at 20 800\` ("ScrollView covers its middle"); UIKit's backdrop under the drums is not a target it aims at`,
-  );
+
+const outside = await launch('find-outside', [
+  'clock data',
+  'tap find-number',
+  'clock settle',
+  'state find.drums',
+  OUTSIDE,
+  'clock settle',
+  'clock data',
+  'state find.drums',
+  'state find.go.serial',
+  'state find.top',
+]);
+drive.check(
+  `a tap outside the drums (${OUTSIDE}) closes them and opens nothing`,
+  outside[3] === true && outside[7] === false && outside[8] === 0 && outside[9] === '/',
+  { open: outside[3], tap: outside[4], after: outside[7], go: outside[8], top: outside[9] },
+);
+
+/** Each way the drums close, and its step: the `#`, a tap outside, and on the web Escape. */
+const closings = [
+  ['hash', 'tap drums-hash'],
+  ['outside', OUTSIDE],
+  ...(host === 'web' ? [['escape', 'type drums-hash key Escape'] as const] : []),
+] as const;
+
+/** Opens the drums, closes them one way, and shoots them as they close, 50 ms in, and settled. */
+const closing = (way: string, close: string, still: string) => [
+  'tap find-number',
+  'clock settle',
+  shot(`close-${way}${still}-0`),
+  close,
+  'clock +50',
+  shot(`close-${way}${still}-50`),
+  'clock settle',
+  shot(`close-${way}${still}-end`),
+  'tree',
+  'state find.drums',
+];
+
+for (const still of [false, true]) {
+  const tag = still ? '-still' : '';
+  const ops = [
+    'clock data',
+    'prefer prefers-color-scheme light',
+    ...(still ? ['prefer prefers-reduced-motion reduce'] : []),
+    'clock settle',
+    ...closings.flatMap(([way, close]) => closing(way, close, tag)),
+  ];
+  const closed = await launch(`find-close${tag}`, ops);
+  const first = still ? 4 : 3;
+  const each = closing('', '', '').length;
+  for (const [index, [way, close]] of closings.entries()) {
+    const at = first + index * each;
+    const [moving, after] = [
+      await changedPixels(
+        shotFile(`close-${way}${tag}-0`),
+        shotFile(`close-${way}${tag}-50`),
+      ).catch(() => -1),
+      await changedPixels(
+        shotFile(`close-${way}${tag}-50`),
+        shotFile(`close-${way}${tag}-end`),
+      ).catch(() => -1),
+    ];
+    const gone = countIn(closed[at + 8], 'drums') === 0 && closed[at + 9] === false;
+    const counts = { moved: moving, left: after, gone };
+    if (host !== 'web') {
+      drive.check(
+        `closed by ${close}${still ? ' under Reduce Motion' : ''}, the drums are gone once the clock settles`,
+        gone,
+        counts,
+      );
+      console.log(`NOTE ${host} ${way}${tag}: changed px 0→50 ${moving}, 50→settled ${after}`);
+    } else if (still)
+      drive.check(
+        `under Reduce Motion, closed by ${close}, the drums leave at once: 50 ms in is the settled page, and they are gone`,
+        moving > 0 && after === 0 && gone,
+        counts,
+      );
+    else
+      drive.check(
+        `closed by ${close}, the drums fade: 50 ms in they have begun to leave and have not left, and once settled they are gone`,
+        moving > 0 && after > 0 && gone,
+        counts,
+      );
+  }
 }
 
 const LOOKS = 12;
@@ -308,10 +387,6 @@ const scaleOf = (moving: unknown, resting: unknown) => {
   return now.w / rest.w;
 };
 
-/** Whether a tree reply lists a node of `testId`, and how many. */
-const countIn = (tree: unknown, testId: string) =>
-  JSON.stringify(tree ?? null).split(`"testId":"${testId}"`).length - 1;
-
 /** Opens the drums, holds Open down for a shot, lets go (which opens hymn 1) and comes back. */
 const heldOpen = (scheme: Scheme): ReadonlyArray<string | readonly [string, string]> => [
   `prefer prefers-color-scheme ${scheme}`,
@@ -349,7 +424,7 @@ const moving = named([
   'clock settle',
   'tap find-number',
   'clock settle',
-  host === 'web' ? 'tap root at 20 800' : 'tap drums-hash',
+  OUTSIDE,
   'clock settle',
   ['drums-gone', 'tree'],
   'tap find-number',
@@ -423,7 +498,7 @@ for (const scheme of ['light', 'dark'] as const) {
 }
 
 drive.check(
-  `closed (${host === 'web' ? 'a tap outside' : 'the drums’ #'}), the drums are gone once the clock settles`,
+  'closed by a tap outside, the drums are gone once the clock settles',
   at('drums-gone') !== undefined && countIn(at('drums-gone'), 'drums') === 0,
   countIn(at('drums-gone'), 'drums'),
 );

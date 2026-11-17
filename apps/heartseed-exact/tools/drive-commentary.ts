@@ -7,12 +7,13 @@
  * `HEARTSEED_PACKS_BASE` (the web's build reads it, the simulator's
  * launch through `SIMCTL_CHILD_`), which also draws the probe on Your
  * verses (`packs-fetch` is the Read tab's first showing). Checks: a
- * first fetch shows the quiet line while the fixture holds its answer, then
+ * first fetch shows the quiet line while the fixture holds its answer, keeps
+ * each study pack as it lands while the commentary is still held, then
  * lands, says so for 3 seconds and goes quiet; a relaunch with the fixture
  * stopped reads the kept pack; a relaunch 8 days on asks once with
  * `If-None-Match` and keeps the pack on a `304`; a new version replaces it;
  * refused, `500`, cut short and a changed character each fail on a fresh
- * store with nothing kept and Try again shown, and the next try lands; a
+ * store with the commentary not kept (the study packs kept) and Try again shown, and the next try lands; a
  * bad update leaves the old counts; a plain launch takes egw.cvr.im and has
  * no probe. `live` as the second argument (iOS, once `hs-bc-api` is
  * deployed) downloads the real pack on a plain launch and prints its
@@ -155,6 +156,13 @@ interface Counts {
   verses: Array<{ verse: number; notes: number }>;
 }
 
+/** The names of the packs `packsKept` holds (`src/packs/step.ts`, `keptWith`). */
+const keptNames = (text: unknown) =>
+  String(text ?? '')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => line.split(' ')[0] ?? '');
+
 /** The commentary's line in `packsKept` (`src/packs/step.ts`, `keptWith`). */
 const keptLine = (text: unknown) => {
   const line = String(text ?? '')
@@ -180,6 +188,8 @@ const READS = {
         : { ...(shown as object), foot: status.foot, retry: status.retry };
     },
   },
+  packs: { ops: ['state packsShown'], read: ([packs]) => packs },
+  'kept names': { ops: ['state packsKept'], read: ([text]) => keptNames(text) },
   'kept version': { ops: ['state packsKept'], read: ([text]) => keptLine(text).version },
   'kept checkedAt': { ops: ['state packsKept'], read: ([text]) => keptLine(text).checkedAt },
 } satisfies Record<string, DriveRead>;
@@ -243,6 +253,9 @@ const firstFetch = async (store: string) => {
     'tree',
     shot('getting'),
     'clock data',
+    'packs',
+    'kept names',
+    'clock data',
     'clock settle',
     'shown',
     'kept version',
@@ -257,10 +270,21 @@ const firstFetch = async (store: string) => {
   const getting = landing('shown') as Shown | undefined;
   const landed = landing('shown', 1) as Shown | undefined;
   const quiet = landing('shown', 2) as Shown | undefined;
+  const apart = landing('packs') as { phase?: string; missing?: number; foot?: string } | undefined;
+  const keptApart = (landing('kept names') as Array<string> | undefined) ?? [];
   drive.check(
     'first fetch: the quiet line shows while the fixture holds its answer',
     getting?.phase === 'fetching' && getting.foot === GETTING && has(landing('tree'), 'packs-line'),
     getting,
+  );
+  drive.check(
+    'first fetch: each study pack is kept as it lands, counted and named, while the commentary is still held',
+    apart?.phase === 'fetching' &&
+      keptApart.length > 0 &&
+      !keptApart.includes('commentary') &&
+      apart.missing === EVERY_PACK.length - keptApart.length &&
+      apart.foot === gettingLine(EVERY_PACK.filter((pack) => !keptApart.includes(pack.name))),
+    { apart, kept: keptApart },
   );
   drive.check(
     'first fetch: the pack lands, ready, and the landed line shows',
@@ -363,6 +387,7 @@ const failures = async () => {
       'clock settle',
       ...fetchOps,
       ...readOps,
+      'kept names',
       shot(`failed-${reply}`),
       'tap packs-retry',
       'clock data',
@@ -372,15 +397,23 @@ const failures = async () => {
     ]);
     const failed = run('shown') as Shown | undefined;
     const retried = run('shown', 1) as Shown | undefined;
+    const keptOthers = (run('kept names') as Array<string> | undefined) ?? [];
     drive.check(
-      `${reply}: on a fresh store it fails, nothing is kept, and Try again shows`,
+      `${reply}: on a fresh store the commentary fails and is not kept, the study packs stay kept, and Try again shows`,
       failed?.phase === 'failed' &&
         failed.retry &&
         failed.foot === '' &&
         run('kept version') === '' &&
+        keptOthers.length === EVERY_PACK.length - 1 &&
+        !keptOthers.includes('commentary') &&
         (run('state commentaryProbeCounts') as Counts | undefined)?.have === false &&
         has(run('tree'), 'packs-retry'),
-      { failed, kept: run('kept version'), counts: run('state commentaryProbeCounts') },
+      {
+        failed,
+        kept: run('kept version'),
+        others: keptOthers,
+        counts: run('state commentaryProbeCounts'),
+      },
     );
     drive.check(
       `${reply}: the fixture then answers well and Try again lands it`,

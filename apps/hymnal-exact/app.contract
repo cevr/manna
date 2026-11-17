@@ -60,6 +60,7 @@ component HymnalExact
     findOpen = listOpen
     findDial = findTurn
     findDismiss = findDismissed
+    findDrumsKey = findDrumsKeyed
     findTileList = findTileNumbers
     findWheel = findWheeled
     motionStill = motionStill

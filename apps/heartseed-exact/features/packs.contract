@@ -6,7 +6,10 @@
 // and the time of its last good check, as one `persist` string, kept only
 // after each file is written), sends the asks, and draws the one quiet
 // status line at a chapter's foot (`PacksLine`). `packsFetch` is the Read
-// tab's first showing in a launch; `packsRetry` is Try again. A driver's
+// tab's first showing in a launch; `packsRetry` is Try again. An ask
+// answers as soon as one pack settles, `more` while others are out, and
+// `packsFollow` asks for the next settle (`packsWait`), so each pack's
+// line is kept the moment it lands, whatever the others do. A driver's
 // launch that names a fixture (HEARTSEED_PACKS_BASE, app.json's `env`)
 // also draws `PacksProbe` on Your verses, until the Read tab calls
 // `packsFetch` itself.
@@ -33,6 +36,7 @@ shape PacksAnswer
   kept: string
   failed: bool
   landed: string
+  more: bool
 
 shape PacksBase
   base: string
@@ -43,9 +47,11 @@ members HeartseedExact
   resource packsPlace = packsBase() as shape PacksBase
   state packsKept = "" persist
   state packsLanded = ""
+  state packsRound = 0
   mutation packsFetched as shape PacksAnswer then packsTook
-  derive packsBusy = pending(packsFetched)
-  derive packsAnswer = match packsFetched { case some(a) => a, case none => PacksAnswer(kept=packsKept, failed=false, landed="") }
+  derive packsAnswer = match packsFetched { case some(a) => a, case none => PacksAnswer(kept=packsKept, failed=false, landed="", more=false) }
+  derive packsMore = packsAnswer.more and not failed(packsFetched)
+  derive packsBusy = pending(packsFetched) or packsMore
   derive packsFailed = failed(packsFetched) or packsAnswer.failed
   resource packsShown = packsView(packsKept, packsBusy, packsFailed, packsLanded) as shape PacksState else empty()
 
@@ -56,7 +62,13 @@ members HeartseedExact
   action packsTook
     packsKept = packsAnswer.kept
     if packsAnswer.landed != ""
-      packsLanded = packsAnswer.landed
+      packsLanded = packsLanded == "" ? packsAnswer.landed : packsLanded + " " + packsAnswer.landed
+    if packsAnswer.more
+      packsRound = packsRound + 1
+  task packsFollow when packsMore key=packsRound
+    after(1, packsWaitNext)
+  action packsWaitNext
+    send packsFetched = packsWait(packsKept)
   task packsLandedShown when packsLanded != "" key=packsLanded
     after(3000, packsLandedOver)
   action packsLandedOver

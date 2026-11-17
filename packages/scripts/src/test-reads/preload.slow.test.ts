@@ -57,7 +57,54 @@ fs.writeFileSync(resultPath, JSON.stringify({
 }));
 `;
 
+const CREATE_FIXTURE = `import * as fs from 'node:fs';
+import * as fsp from 'node:fs/promises';
+
+const [dir] = process.argv.slice(2);
+fs.writeFileSync(dir + '/sync.txt', 'made');
+await fsp.writeFile(dir + '/promise.txt', 'made');
+await Bun.write(dir + '/bun.txt', 'made');
+fs.writeFileSync(dir + '/scratch.txt', 'made');
+fs.renameSync(dir + '/scratch.txt', dir + '/moved.txt');
+fs.writeFileSync(dir + '/there.txt', 'again');
+fs.readFileSync(dir + '/sync.txt');
+`;
+
 describe('the read recorder test:reads preloads', () => {
+  it.effect.layer(BunServices.layer)(
+    'marks each path a write creates, and not one that was there before it',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const spawner = yield* ChildProcessSpawner;
+        const dir = yield* fs.realPath(
+          yield* fs.makeTempDirectoryScoped({ prefix: 'test-reads-created-' }),
+        );
+        yield* fs.writeFileString(path.join(dir, 'there.txt'), 'before');
+        const fixture = path.join(dir, 'create.ts');
+        yield* fs.writeFileString(fixture, CREATE_FIXTURE);
+        const log = path.join(dir, 'create.reads');
+        yield* fs.writeFileString(log, '');
+        const exit = yield* spawner.exitCode(
+          ChildProcess.make('bun', [fixture, dir], {
+            cwd: dir,
+            env: readsEnv(path.join(import.meta.dir, 'preload.ts'), log),
+            extendEnv: true,
+            forceKillAfter: '5 seconds',
+          }),
+        );
+        expect(Number(exit)).toBe(0);
+        const lines = (yield* fs.readFileString(log)).split('\n');
+        expect(lines.filter((line) => line.startsWith('+')).toSorted()).toEqual(
+          ['bun.txt', 'moved.txt', 'promise.txt', 'scratch.txt', 'sync.txt'].map(
+            (file) => `+${path.join(dir, file)}`,
+          ),
+        );
+        expect(lines).toContain(path.join(dir, 'sync.txt'));
+      }).pipe(Effect.scoped),
+  );
+
   it.effect.layer(BunServices.layer)(
     'preserves own property keys for every name in READS and SYNC_READS',
     () =>
