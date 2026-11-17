@@ -36,14 +36,14 @@ const PART = /^test:[^:]+$/u;
 /**
  * The unit-test tasks of `dry` (a dry run of `turbo run test`), by workspace,
  * then task: each `<ws>#test` with a command, and each `<ws>#test:<part>`
- * with a command that a commandless `<ws>#test` depends on. A task the test
- * run reaches for another reason (a `transit` or a `build` given a script) is
- * none.
+ * with a command that `<ws>#test` depends on, whether that `test` has a
+ * command of its own or not. A task the test run reaches for another reason
+ * (a `transit` or a `build` given a script) is none.
  */
 export const unitTests = (dry: Pick<DryRun, 'tasks'>): ReadonlyArray<UnitTest> => {
   const parts = new Set(
     dry.tasks
-      .filter((task) => task.task === 'test' && task.command === NO_COMMAND)
+      .filter((task) => task.task === 'test')
       .flatMap((test) => test.dependencies.filter((id) => id.startsWith(`${test.package}#`))),
   );
   return dry.tasks

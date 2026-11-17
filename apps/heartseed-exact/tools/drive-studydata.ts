@@ -9,8 +9,10 @@
  * 6 cross-references, its words one per shown word with G25 fourth, G25's
  * entry found, Psalm 119:176 and Revelation 22:21 answering, a verse
  * outside the canon empty, and find answering "fear not" from the
- * downloaded index; a relaunch with the fixture stopped reads the same.
- * Prints the fetch's wall time. Exits 1 on any failed check.
+ * downloaded index; a relaunch with the fixture stopped reads the same; and
+ * no turn of the data host is refused over its 100 ms budget, the packs'
+ * checks and their answers each pack apart included. Prints the fetch's wall
+ * time. Exits 1 on any failed check.
  */
 
 import { loadavg } from 'node:os';
@@ -173,7 +175,16 @@ const go = async (kept: boolean, before: ReadonlyArray<string>) => {
     ],
     ops,
   );
-  const took = /top level took (\d+) ms/u.exec(JSON.stringify(replies[ops.indexOf('logs')] ?? ''));
+  const logs = JSON.stringify(replies[ops.indexOf('logs')] ?? '');
+  const took = /top level took (\d+) ms/u.exec(logs);
+  const refused = [...logs.matchAll(/[^"]{0,120}over the 100 ms budget[^"]{0,60}/gu)].map(
+    (match) => match[0],
+  );
+  drive.check(
+    `${kept ? 'kept' : 'fetched'}: no turn of the data host is refused over its 100 ms budget`,
+    logs.includes('"lines"') && refused.length === 0,
+    refused,
+  );
   console.log(
     `study ${kept ? 'kept' : 'fresh'} launch: the data module's top level took ${took?.[1] ?? '?'} ms`,
   );

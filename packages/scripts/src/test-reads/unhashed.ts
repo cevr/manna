@@ -41,6 +41,29 @@ const joined = (directory: string, file: string) => {
   return parts.join('/');
 };
 
+/** The mark `preload.ts` puts before a path the run created: a write to a path that did not exist. */
+const CREATED = '+';
+
+/**
+ * A task's log (`preload.ts`'s lines) read: the paths its tests read, less
+ * each path it created or `before` holds (the paths the tasks run before it
+ * created), and the paths created by it or before it. A file that did not
+ * exist when turbo hashed the run holds only what the run wrote into it, so it
+ * is no input of the task; once it exists, turbo hashes it where an input
+ * names it.
+ */
+export const readLog = (log: string, before: ReadonlySet<string>) => {
+  const lines = log.split('\n').filter((line) => line !== '');
+  const created = new Set([
+    ...before,
+    ...lines.filter((line) => line.startsWith(CREATED)).map((line) => line.slice(CREATED.length)),
+  ]);
+  return {
+    reads: lines.filter((line) => !line.startsWith(CREATED) && !created.has(line)),
+    created,
+  };
+};
+
 /**
  * The paths among `reads` (absolute) that lie under `root`, outside any
  * `node_modules` and `.git`, that `hashed` does not hold: from the root,
