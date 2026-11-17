@@ -11,10 +11,9 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
 import { findPackOf } from '../../tools/find';
 import { packSources } from '../packs/sources';
+import { askSettled } from '../test/packs-asked';
 import { STUDY_PACKS, STUDY_WORDS, findPackFrom } from './sources';
 import { checkWords, wordsBodyOf, wordsPackOf } from './words-pack';
-
-const STORE = { forget: () => {} };
 
 const FIND = findPackOf([
   'In the beginning God created the heaven and the earth.\nAnd the earth was without form',
@@ -78,9 +77,7 @@ describe('the word index pack', () => {
     });
     const from = findPackFrom(packs, '');
     expect(await withDataHost(() => from('', storage))).toBeUndefined();
-    const answer = await withDataHost(() =>
-      packs.sources.packsAsk(['', false, 1000], STORE, storage),
-    );
+    const answer = await askSettled(packs.sources, ['', false, 1000], storage);
     expect(answer.kept).toContain(`words ${PACK.version}`);
     expect(await withDataHost(() => from(PACK.version, storage))).toEqual(FIND);
   });
