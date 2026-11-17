@@ -310,7 +310,7 @@
         "@manna/core": "workspace:*",
         "@manna/film": "workspace:*",
         "effect-bun-test": "catalog:",
-        "node-av": "6.2.0",
+        "node-av": "7.1.0",
       },
     },
     "packages/scripts": {
@@ -1260,7 +1260,11 @@
 
     "@seydx/node-av-linux-arm64": ["@seydx/node-av-linux-arm64@6.2.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-eZKoLLO3mxUbs777gVpjQf5rRlf3qzeDMmnojBHCHaJVVTKCNvvQAgMUQY8qT4aIF8Apvoz2WKpabc8bVH8jQw=="],
 
+    "@seydx/node-av-linux-arm64-musl": ["@seydx/node-av-linux-arm64-musl@7.1.0", "", { "os": "linux", "cpu": "arm64", "libc": "musl" }, "sha512-+tO5urXPIDX6xuNz8i8Tvh6K5nEovBoR3A06FUX45g7/FJqmxoaTuC6gVdXiKs5zdZpmpO3HOUvZ5Krh/mk8Ww=="],
+
     "@seydx/node-av-linux-x64": ["@seydx/node-av-linux-x64@6.2.0", "", { "os": "linux", "cpu": "x64" }, "sha512-fbKzcCBfUKMQTQskjj+IXuQvjXC2sSyYlQEdfieVEe8t0e9zdWj9ab136ws7DqIzam7hohpKEknLOXrNkAzG7w=="],
+
+    "@seydx/node-av-linux-x64-musl": ["@seydx/node-av-linux-x64-musl@7.1.0", "", { "os": "linux", "cpu": "x64", "libc": "musl" }, "sha512-9ghWmcmiYy1Ob5MmS0krnrg8pNI93zqoE4oLw66p8bMsabd+PDaOm/VJK31uJ6bJtIafbMDHpwBH9YdArEbR+g=="],
 
     "@seydx/node-av-win32-arm64-msvc": ["@seydx/node-av-win32-arm64-msvc@6.2.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-g0vIqNOkBEyIFgJUAhiOLS0kLn/SBJxtChHl2zBPwxgSRXo/BzGttbGdaJ51YSrD9ds0mn12oGBRImRH+sCx4w=="],
 
@@ -2654,6 +2658,8 @@
 
     "@jest/types/chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
+    "@manna/hymnal/node-av": ["node-av@7.1.0", "", { "optionalDependencies": { "@seydx/node-av-darwin-arm64": "7.1.0", "@seydx/node-av-darwin-x64": "7.1.0", "@seydx/node-av-linux-arm64": "7.1.0", "@seydx/node-av-linux-arm64-musl": "7.1.0", "@seydx/node-av-linux-x64": "7.1.0", "@seydx/node-av-linux-x64-musl": "7.1.0", "@seydx/node-av-win32-arm64-msvc": "7.1.0", "@seydx/node-av-win32-x64-msvc": "7.1.0" }, "peerDependencies": { "@seydx/node-av-ffmpeg": "*", "werift": ">=0.24.3" }, "optionalPeers": ["@seydx/node-av-ffmpeg", "werift"], "hasInstallScript": true }, "sha512-OwVz4qUfanN7LLVWsD1oURDbsurYQfa+qLHK7+U+WiG7NSlfGGKWlb0EuEWkvLa3YnpyBdjZRCuey/9kv25CKg=="],
+
     "@poppinss/colors/kleur": ["kleur@4.1.5", "", {}, "sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ=="],
 
     "@react-native-community/cli/commander": ["commander@9.5.0", "", {}, "sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ=="],
@@ -2863,6 +2869,18 @@
     "@jest/types/chalk/ansi-styles": ["ansi-styles@4.3.0", "", { "dependencies": { "color-convert": "^2.0.1" } }, "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg=="],
 
     "@jest/types/chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-darwin-arm64": ["@seydx/node-av-darwin-arm64@7.1.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-PwaOUa6OIeuSiLlxvNPd3ugtDfrIUjY3txntX46knhwLklrKYdbQ0Qr3AOlsjYBM0ngE375+T2TNsNeHcy48Dw=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-darwin-x64": ["@seydx/node-av-darwin-x64@7.1.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-Qs82k3CFMEduYFuY5zCsoEZtpj1StTEF3tQNOwGNuFJ6g0RIcW73VCNYTpJju1Yi6zy5+40yFLjcMsPdVk1mIg=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-linux-arm64": ["@seydx/node-av-linux-arm64@7.1.0", "", { "os": "linux", "cpu": "arm64", "libc": "glibc" }, "sha512-Zj51b3ts4HbB0usIyhEXj4VPe6JhuEiZ57Aq0dNNKVbW+sg6HWBIh8NAN3AlWsoD+h1WFE2sVKUsdQqCcoKSGg=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-linux-x64": ["@seydx/node-av-linux-x64@7.1.0", "", { "os": "linux", "cpu": "x64", "libc": "glibc" }, "sha512-YYnz994Lxf47UVZB6CTVxmu2Dmd1bsXGojggBcm5YxFbNXFMGUcNHttLhnTxMD2DQ+UIIM1BtsImsdY4QB78Gw=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-win32-arm64-msvc": ["@seydx/node-av-win32-arm64-msvc@7.1.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-HJPB/kfNt5K81MxpfrsIBq9pkD3MJGJM+YSBjq6cOnAkfLdI6FAGPD43VIwnCNnCaOKFMTllpYN+hjDQS0fiBg=="],
+
+    "@manna/hymnal/node-av/@seydx/node-av-win32-x64-msvc": ["@seydx/node-av-win32-x64-msvc@7.1.0", "", { "os": "win32", "cpu": "x64" }, "sha512-MJ0U87HImXxYBk/dSMo2u36DU5WTkxNe29Nim9CJNwxqtsoVVcuPZ7c/oHT2FX4fz32AoWLKsqUwvkw4ZwV/7w=="],
 
     "@react-native-community/cli-server-api/open/is-wsl": ["is-wsl@1.1.0", "", {}, "sha512-gfygJYZ2gLTDlmbWMI0CE2MwnFzSN/2SZfkMlItC4K/JBlsWVDB0bO6XhqcY13YXE7iMcAJnzTCJjPiTeJJ0Mw=="],
 
