@@ -43,7 +43,7 @@ func generateWords(_ random: inout SplitMix64, count: Int, grid: Int, from start
   var cursor = start
   for index in 0..<count {
     let previousEnd = words.last?.end ?? start
-    let beforePrevious = words.count >= 2 ? words[words.count - 2].end : start
+    let beforePrevious = if words.count >= 2 { words[words.count - 2].end } else { start }
     var wordStart = cursor
     switch random.int(0...2) {
     case 0: wordStart = previousEnd + grid * random.int(1...3)

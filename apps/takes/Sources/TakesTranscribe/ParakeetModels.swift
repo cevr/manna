@@ -17,7 +17,7 @@ public enum ParakeetModels {
   /// What the app says when the models cannot load: recording and editing go on without them.
   public static func absentMessage(_ directory: URL, detail: String = "") -> String {
     let path = directory.path(percentEncoded: false)
-    let tail = detail.isEmpty ? "" : " (\(detail))"
+    let tail = if detail.isEmpty { "" } else { " (\(detail))" }
     return "Parakeet models not found at \(path)\(tail) — recording and editing still work"
   }
 }

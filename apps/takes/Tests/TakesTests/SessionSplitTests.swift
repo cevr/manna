@@ -7,7 +7,8 @@ private let rate = 1_000
 private func noise(_ random: inout SplitMix64, frames: Int) -> [Float] {
   (0..<frames).map { _ in
     let level = Float.random(in: 0.2...1, using: &random)
-    return random.chance(0.5) ? level : -level
+    if random.chance(0.5) { return level }
+    return -level
   }
 }
 

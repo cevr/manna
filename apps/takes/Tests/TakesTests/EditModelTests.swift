@@ -184,7 +184,9 @@ private struct Model {
       let to = random.int(0...reference.beats.count)
       var next = reference
       let moved = next.beats.remove(at: from)
-      next.beats.insert(moved, at: to > from ? to - 1 : to)
+      var at = to
+      if to > from { at -= 1 }
+      next.beats.insert(moved, at: at)
       commit(.moveBeats(offsets: [from], to: to), next)
     case 4, 5:
       guard let beat = random.pick(reference.beats), let source = random.pick(sources) else {
@@ -236,7 +238,8 @@ private struct Model {
       next.withClip(ref) { clip in
         for frame in range where clip.bounds.contains(frame) { clip.cut[frame] = !restore }
       }
-      commit(restore ? .restoreRange(ref, range) : .cutRange(ref, range), next)
+      let edit: Edit = if restore { .restoreRange(ref, range) } else { .cutRange(ref, range) }
+      commit(edit, next)
     case 10, 11:
       guard let ref = randomRef(&random) else { return }
       let selection = randomSelection(&random, ref)
@@ -245,7 +248,9 @@ private struct Model {
       if let range = wordRange(ref, selection) {
         next.withClip(ref) { clip in for frame in range { clip.cut[frame] = !restore } }
       }
-      commit(restore ? .restoreWords(ref, selection) : .cutWords(ref, selection), next)
+      let edit: Edit =
+        if restore { .restoreWords(ref, selection) } else { .cutWords(ref, selection) }
+      commit(edit, next)
     case 12:
       guard let ref = randomRef(&random), let clip = reference.clip(ref) else { return }
       let lower = random.int(-5...(clip.cut.count - 1))
@@ -270,10 +275,13 @@ private struct Model {
         next = copied
         if move { next.withClip(ref) { clip in for frame in range { clip.cut[frame] = true } } }
       }
-      commit(
-        move
-          ? .moveWords(ref, selection, to: target.id, new)
-          : .copyWords(ref, selection, to: target.id, new), next)
+      let edit: Edit =
+        if move {
+          .moveWords(ref, selection, to: target.id, new)
+        } else {
+          .copyWords(ref, selection, to: target.id, new)
+        }
+      commit(edit, next)
       if move, originKept, reference == next {
         let after = Intervals.count(runs(editor.project.filmPlan).map(\.range))
         #expect(after == before, "a move kept the film's length: \(log)")

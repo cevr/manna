@@ -4,8 +4,10 @@ import Testing
 /// A word's own frames: its span less what it shares with the words either side.
 private func core(_ words: [Word], _ index: Int) -> Range<Int> {
   let word = words[index]
-  let lower = max(word.start, index > 0 ? words[index - 1].end : word.start)
-  let upper = min(word.end, index + 1 < words.count ? words[index + 1].start : word.end)
+  var lower = word.start
+  if index > 0 { lower = max(lower, words[index - 1].end) }
+  var upper = word.end
+  if index + 1 < words.count { upper = min(upper, words[index + 1].start) }
   return lower..<max(lower, upper)
 }
 
@@ -40,7 +42,7 @@ private func meets(_ range: Range<Int>, _ other: Range<Int>) -> Bool {
     for index in words.indices where !(first...last).contains(index) {
       #expect(!meets(cut, core(words, index)), "word \(index) entered by \(cut): \(context)")
     }
-    let before = first > 0 ? words[first - 1].end : Int.min
+    let before = if first > 0 { words[first - 1].end } else { Int.min }
     if words[first].start - pad >= before, words[first].start - pad >= bounds.lowerBound,
       first > 0
     {

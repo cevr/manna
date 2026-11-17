@@ -11,7 +11,11 @@ public enum Script {
         lines.append("_(no take)_")
       } else {
         let words = project.words(of: project.plan(beat: beat.id)).map(\.text)
-        lines.append(words.isEmpty ? "_(no words)_" : words.joined(separator: " "))
+        if words.isEmpty {
+          lines.append("_(no words)_")
+        } else {
+          lines.append(words.joined(separator: " "))
+        }
       }
       lines.append("")
     }

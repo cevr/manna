@@ -17,7 +17,8 @@ public enum Names {
         dash = true
       }
     }
-    return slug.isEmpty ? "beat" : slug
+    if slug.isEmpty { return "beat" }
+    return slug
   }
 
   /// `01-hook.wav`: the beat's 1-based position, two digits, then its slug.
@@ -27,7 +28,7 @@ public enum Names {
 
   /// The audio file a new source is copied or recorded to, relative to the project folder.
   public static func sourceFile(id: SourceID, extension ext: String) -> String {
-    let suffix = ext.isEmpty ? "" : ".\(ext.lowercased())"
+    let suffix = if ext.isEmpty { "" } else { ".\(ext.lowercased())" }
     return "\(ProjectFile.audioFolder)/\(id.rawValue)\(suffix)"
   }
 }

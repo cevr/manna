@@ -39,7 +39,8 @@ public enum SessionSplit {
       let samples = try read(origin..<limit)
       var energy = [Double](repeating: 0, count: limit - origin + 1)
       for index in origin..<limit {
-        let sample = Double(samples.indices.contains(index - origin) ? samples[index - origin] : 0)
+        var sample = 0.0
+        if samples.indices.contains(index - origin) { sample = Double(samples[index - origin]) }
         energy[index - origin + 1] = energy[index - origin] + sample * sample
       }
       var best = min(max(marker, lower), upper)
