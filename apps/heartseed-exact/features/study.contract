@@ -137,6 +137,7 @@ members HeartseedExact
 
   action studyOpen(verse: number, tab: string)
     studyWord = ""
+    studyUnfolded = []
     studyRow = -1
     nav = push(nav, path("studySheet", `${readBook}`, `${readChapter}`, `${verse}`, tab))
   action studySelected(verse: number, s: Selection)
@@ -146,6 +147,7 @@ members HeartseedExact
     feelTick()
     studyHolds = studyHolds + 1
     studyHeld = "held"
+    studyUnfolded = []
     studyRow = -1
     studyWord = `${readBook}.${readChapter}.${verse}:o${start}`
     nav = push(nav, path("studySheet", `${readBook}`, `${readChapter}`, `${verse}`, "words"))
@@ -162,6 +164,7 @@ members HeartseedExact
   action studyMove(verse: number)
     feelTick()
     studyWord = ""
+    studyUnfolded = []
     nav = replace(nav, path("studySheet", studyAt.params.book, studyAt.params.chapter, `${verse}`, "commentary"))
   action studyFollow(book: number, chapter: number, verse: number, row: number)
     studyBacks = studyBacks == "" ? `${readTop.id} ${studyAt.params.book} ${studyAt.params.chapter} ${studyAt.params.verse} ${row} 0` : `${studyBacks};${readTop.id} ${studyAt.params.book} ${studyAt.params.chapter} ${studyAt.params.verse} ${row} 0`
@@ -177,6 +180,7 @@ members HeartseedExact
     studyBacks = studyReturnShown.backs
     if studyReturnShown.reopen
       studyWord = ""
+      studyUnfolded = []
       studyRow = studyReturnShown.row
       nav = push(nav, path("studySheet", `${studyReturnShown.book}`, `${studyReturnShown.chapter}`, `${studyReturnShown.verse}`, "xrefs"))
   // Back from a followed reference reopens the sheet scrolled to the row followed.
