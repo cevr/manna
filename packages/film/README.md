@@ -844,8 +844,10 @@ background-throttling flags, `--disable-ipc-flooding-protection`,
 `--no-startup-window`), `--disable-gpu` unless the caller asks for the GPU
 on macOS (`GPU_FLAG`, `--enable-gpu`; `tools/chrome-gpu.ts`, `drawsOnGpu`),
 `--mute-audio`, `--disable-audio-output`, `--disable-component-update`
-(Chrome downloads no components, about 130 MB, into a new profile), then the
-caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
+(Chrome downloads no components, about 130 MB, into a new profile),
+`--use-mock-keychain` and `--password-store=basic` (Chrome never reaches
+the host's keychain, so a run with `HOME` moved raises no "A keychain cannot
+be found" dialog), then the caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
 one Bun 1.4.4 would find, searched here as Bun searches (`chromeSearch`: the
 browsers it names on `$PATH`, then its app bundles in `/Applications` and
 `~/Applications`, then Playwright's headless shell), else Playwright's
