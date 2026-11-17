@@ -28,12 +28,15 @@ import { theme } from '@manna/hymnal-app/theme';
 
 import { appFile, brandOf } from '../src/look/design.testing.ts';
 import { pixelAt } from './pixel.ts';
+import { checkoutPort } from './recordings.ts';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const shots = process.env.SHOTS ?? join(app, '.exact/shots/settings');
 const shotFile = (name: string) => join(shots, `${name}-${host}.png`);
 const shot = (name: string) => `screenshot ${shotFile(name)}`;
+/** The agent's server is the recordings' fixture on this checkout's own port (`--backend`), as the find drive has it, so another checkout's run on 4797 never refuses this one. */
+const backend = `http://127.0.0.1:${checkoutPort()}`;
 /**
  * The machine as the kit's drive sees it, but that it signals only a run's
  * own process group when the run overruns (a negative pid), never a single
@@ -45,7 +48,7 @@ const processes = {
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
-      env: { ...process.env },
+      env: { ...process.env, HYMNAL_RECORDINGS: backend },
       stdout: 'pipe',
       stderr: 'pipe',
       detached: true,
@@ -165,36 +168,39 @@ const looks = (scheme: Scheme) => [
   shot(`list-${scheme}`),
 ];
 
-const launched = await drive.launch('settings', [
-  'clock data',
-  ...looks('light'),
-  ...looks('dark'),
-  'tap hymn-1',
-  'clock settle',
-  'clock data',
-  'layout hymn-topic',
-  'layout hymn-title',
-  shot('hymn-dark'),
-  'prefer prefers-color-scheme light',
-  'clock settle',
-  'layout hymn-topic',
-  'layout hymn-title',
-  shot('hymn-light'),
-  'back',
-  'clock settle',
-  'tap gear',
-  'clock settle',
-  'clock data',
-  shot('sheet-light'),
-  'tap appearance-dark',
-  'clock settle',
-  'clock data',
-  'layout hymn-list',
-  shot('sheet-dark'),
-  'tap settings-done',
-  'clock settle',
-  shot('dark-at-once'),
-]);
+const launched = await drive.run(
+  ['--backend', backend, '--storage', 'settings', '--reset-storage'],
+  [
+    'clock data',
+    ...looks('light'),
+    ...looks('dark'),
+    'tap hymn-1',
+    'clock settle',
+    'clock data',
+    'layout hymn-topic',
+    'layout hymn-title',
+    shot('hymn-dark'),
+    'prefer prefers-color-scheme light',
+    'clock settle',
+    'layout hymn-topic',
+    'layout hymn-title',
+    shot('hymn-light'),
+    'back',
+    'clock settle',
+    'tap gear',
+    'clock settle',
+    'clock data',
+    shot('sheet-light'),
+    'tap appearance-dark',
+    'clock settle',
+    'clock data',
+    'layout hymn-list',
+    shot('sheet-dark'),
+    'tap settings-done',
+    'clock settle',
+    shot('dark-at-once'),
+  ],
+);
 
 for (const [scheme, base] of [
   ['light', 1],
@@ -220,27 +226,30 @@ drive.check(
 await expectPainted(`Dark at once: the sheet`, 'sheet-dark', 'dark', 'ground');
 await expectPainted(`Dark at once: the list`, 'dark-at-once', 'dark', 'ground');
 
-const again = await drive.relaunch('settings', [
-  'prefer prefers-color-scheme light',
-  shot('first-frame'),
-  'clock data',
-  shot('kept'),
-  'tap gear',
-  'clock settle',
-  'clock data',
-  'state settingsLooks',
-  'tap appearance-system',
-  'clock settle',
-  'clock data',
-  'tap settings-done',
-  'clock settle',
-  'prefer prefers-color-scheme dark',
-  'clock settle',
-  shot('system-dark'),
-  'prefer prefers-color-scheme light',
-  'clock settle',
-  shot('system-light'),
-]);
+const again = await drive.run(
+  ['--backend', backend, '--storage', 'settings', '--keep-storage'],
+  [
+    'prefer prefers-color-scheme light',
+    shot('first-frame'),
+    'clock data',
+    shot('kept'),
+    'tap gear',
+    'clock settle',
+    'clock data',
+    'state settingsLooks',
+    'tap appearance-system',
+    'clock settle',
+    'clock data',
+    'tap settings-done',
+    'clock settle',
+    'prefer prefers-color-scheme dark',
+    'clock settle',
+    shot('system-dark'),
+    'prefer prefers-color-scheme light',
+    'clock settle',
+    shot('system-light'),
+  ],
+);
 
 await expectPainted(`kept: the first frame`, 'first-frame', 'dark', 'ground');
 await expectPainted(`kept: the list`, 'kept', 'dark', 'ground');
