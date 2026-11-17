@@ -10,6 +10,7 @@
         "test:add-b",
         "test:add-shelves",
         "test:chooser",
+        "test:packs",
         "test:garden-a",
         "test:garden-b",
         "test:garden-c",
@@ -32,7 +33,7 @@
         "test:find-f",
         "test:find-g"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK", "HEARTSEED_PACKS_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -51,7 +52,7 @@
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK"],
+      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_FIND_PACK", "HEARTSEED_PACKS_BASE"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -404,6 +405,19 @@
         "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
         "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:packs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },

@@ -1,0 +1,33 @@
+// Ellen White's Bible Commentary, downloaded once and kept on the phone
+// (owner, q123): the first pack of the one downloader (features/packs.contract,
+// src/packs/). Its check and reader are src/commentary/pack.ts, its pack's
+// address and words src/commentary/sources.ts. `commentaryShown` (a `PackState`) is
+// what the Commentary tab is shown (its line, its Try again, and `version`,
+// the reader's `mark`). A driver's fixture launch reads John 1's counts
+// (`commentaryProbeCounts`).
+
+use PackState from "./packs.contract"
+
+shape CommentaryNote
+  ref: string
+  text: string
+
+shape CommentaryVerse
+  verse: number
+  notes: CommentaryNote[]
+
+shape CommentaryRead
+  have: bool
+  verses: CommentaryVerse[]
+
+shape CommentaryVerseCount
+  verse: number
+  notes: number
+
+shape CommentaryCounts
+  have: bool
+  verses: CommentaryVerseCount[]
+
+members HeartseedExact
+  resource commentaryShown = packView("commentary", packsKept, packsBusy, packsFailed) as shape PackState else empty()
+  resource commentaryProbeCounts = commentaryCounts(43, 1, commentaryShown.version) when packsPlace.fixture as shape CommentaryCounts else empty()

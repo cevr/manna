@@ -3,17 +3,29 @@ import licences from './src/about/licences';
 import { aboutSources } from './src/about/sources';
 import { addSources } from './src/add/sources';
 import { chooserSources } from './src/chooser/sources';
+import { COMMENTARY, commentarySources } from './src/commentary/sources';
 import { findSources, packAt } from './src/find/sources';
 import { gardenSources } from './src/garden/sources';
 import { homeSources } from './src/home/sources';
+import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
 
-/** Today listens on the device; the garden keeps its keys in one file of the app's data, the only file the app writes; a development build may fetch over http, which a driver's launch uses for find's word index from the loopback `tools/drive-find.ts` serves. The grant names no loopback origin: one that did would make Exact's test runner start every test at a URL with an `authFixture` query, which `go(nav, "/add")` then no longer finds in the stack. */
+/**
+ * Today listens on the device; the garden keeps its keys in one file of the
+ * app's data, and each downloaded pack its own file, fetched from
+ * egw.cvr.im, or in a development build from a driver's loopback fixture
+ * on the port its checkout chose (`src/packs/sources.ts`, `baseOf`). The
+ * same `development net.fetch http:` grant lets a driver's launch fetch
+ * find's word index from the loopback `tools/drive-find.ts` serves. The
+ * grant names no loopback origin: one that did would make Exact's test
+ * runner start every test at a URL with an `authFixture` query, which
+ * `go(nav, "/add")` then no longer finds in the stack.
+ */
 export const grants =
-  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\ndevelopment net.fetch http:';
+  'device.microphone purpose.microphone\ndevice.speech-recognition purpose.recognition\nfs.read app:/data/heartseed.json\nfs.write app:/data/heartseed.json\nfs.read app:/data/commentary.json\nfs.write app:/data/commentary.json\nnet.fetch https://egw.cvr.im\ndevelopment net.fetch http:';
 
 /** A driver's launch (`tools/drive-garden.ts`) sets this, and Your verses shows its test controls; a plain launch has none. */
 const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
@@ -21,7 +33,11 @@ const GARDEN_DRIVE = import.meta.env.HEARTSEED_GARDEN_DRIVE ?? '';
 /** Where a driver's launch is served the word index (`tools/drive-find.ts`); a plain launch has none until the downloader hands find its pack. */
 const FIND_PACK = import.meta.env.HEARTSEED_FIND_PACK ?? '';
 
+/** A driver's launch (`tools/drive-commentary.ts`) names its fixture here; a plain launch fetches every pack from egw.cvr.im. */
+const PACKS_BASE = import.meta.env.HEARTSEED_PACKS_BASE ?? '';
+
 const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
+const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY] });
 
 const sources: Sources = {
   ...settingsSources,
@@ -33,6 +49,8 @@ const sources: Sources = {
   ...todaySources(garden),
   ...readerSources,
   ...textSources,
+  ...packs.sources,
+  ...commentarySources(packs),
   ...findSources(packAt(FIND_PACK)),
 };
 
