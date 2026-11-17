@@ -29,7 +29,7 @@ Launch the bundle with `open`, not its binary from a terminal: macOS gives the m
 | -------- | --------------------------------------------------------- |
 | ⌘R       | Record a take on the selected beat, or stop               |
 | ⇧⌘R      | Record a session take                                     |
-| →        | In a session take: the next beat                          |
+| →        | Record ▸ Next Beat, while a session take records          |
 | ⌫        | Cut the selected words or waveform range (editor focused) |
 | Space    | Play or stop the take shown (editor focused)              |
 | R        | Record or stop (editor focused)                           |
@@ -39,7 +39,7 @@ Launch the bundle with `open`, not its binary from a terminal: macOS gives the m
 | ⌘E / ⇧⌘E | Export to `<project>/export/` / to a folder you pick      |
 | ⌘N / ⌘O  | New project / open a project folder                       |
 
-The bare keys act only while the take editor has focus (click a word or the waveform), so they never reach the title or note fields.
+⌫, Space and R act only while the take editor has focus (click a word or the waveform), so they never reach the title or note fields. → is a menu command, enabled only while a session take records, so it works on a beat with no take yet.
 
 ## Editing
 
@@ -55,7 +55,7 @@ Takes loads the models from `~/Library/Application Support/FluidAudio/Models/par
 
 ## Export
 
-Per beat with a kept take, `NN-slug.wav` (`01-hook.wav`): 48 kHz, 24-bit, mono, rendered from the edits. A beat without one gets no WAV. `script.md` lists `## N. Title` for each beat with the words of its edited audio, `_(no take)_` where there is none.
+Per beat with a kept take, `NN-slug.wav` (`01-hook.wav`): 48 kHz, 24-bit, mono, rendered from the edits. A beat without one gets no WAV. `script.md` lists `## N. Title` for each beat with the words of its edited audio, `_(no take)_` where there is none. A hidden `.takes-export.json` in the folder lists the WAVs Takes wrote there; the next export removes those no beat names any more (after a rename, reorder or delete), so the folder holds one WAV per beat. A file Takes did not write is never removed.
 
 ## Code
 
