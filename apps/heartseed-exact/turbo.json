@@ -87,7 +87,8 @@
         "$TURBO_ROOT$/apps/heartseed/data/kjv-hearings.json",
         "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/src/bible/**",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "src/about/licences.ts"
       ]
     },
     "test:garden-a": {
@@ -198,7 +199,9 @@
         "$TURBO_ROOT$/apps/heartseed/src/**",
         "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
         "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "src/about/licences.ts",
+        "src/text/kjv.gen.json"
       ]
     },
     "test:find": {

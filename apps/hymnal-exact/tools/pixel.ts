@@ -37,10 +37,8 @@ const rowsOf = (data: Uint8Array, height: number, stride: number, step: number) 
   return rows;
 };
 
-export const pixelAt = async (
-  path: string,
-  at: { readonly x: number; readonly y: number },
-): Promise<ReadonlyArray<number>> => {
+/** A screenshot's size, bytes per pixel and unfiltered rows. */
+const decoded = async (path: string) => {
   const bytes = new Uint8Array(await Bun.file(path).arrayBuffer());
   const view = new DataView(bytes.buffer);
   const chunks: Array<Uint8Array> = [];
@@ -62,8 +60,37 @@ export const pixelAt = async (
     joined.set(chunk, offset);
     return offset + chunk.length;
   }, 0);
-  const rows = rowsOf(inflateSync(joined), height, width * step, step);
+  return { width, height, step, rows: rowsOf(inflateSync(joined), height, width * step, step) };
+};
+
+export const pixelAt = async (
+  path: string,
+  at: { readonly x: number; readonly y: number },
+): Promise<ReadonlyArray<number>> => {
+  const { width, height, step, rows } = await decoded(path);
   const x = Math.min(width - 1, Math.round(at.x * (width - 1)));
   const row = rows[Math.min(height - 1, Math.round(at.y * (height - 1)))] ?? new Uint8Array();
   return [row[x * step] ?? -1, row[x * step + 1] ?? -1, row[x * step + 2] ?? -1];
+};
+
+/**
+ * How many pixels two screenshots of one size paint apart, by more than
+ * `tolerance` in any of red, green and blue: a part still moving between two
+ * moments shows as a count above 0. Shots of two sizes count every pixel.
+ */
+export const changedPixels = async (a: string, b: string, tolerance = 2): Promise<number> => {
+  const one = await decoded(a);
+  const two = await decoded(b);
+  if (one.width !== two.width || one.height !== two.height) return one.width * one.height;
+  let changed = 0;
+  for (let y = 0; y < one.height; y++) {
+    const [left, right] = [one.rows[y] ?? new Uint8Array(), two.rows[y] ?? new Uint8Array()];
+    for (let x = 0; x < one.width; x++) {
+      const apart = [0, 1, 2].some(
+        (c) => Math.abs((left[x * one.step + c] ?? 0) - (right[x * two.step + c] ?? 0)) > tolerance,
+      );
+      if (apart) changed += 1;
+    }
+  }
+  return changed;
 };

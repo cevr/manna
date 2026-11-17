@@ -28,7 +28,12 @@ The 4,710 entries that were defective (a definition that began with `null`
 and its pronunciation, written twice, with no letter, or with Greek or Hebrew
 words dropped) were refilled from Open Scriptures' JSON edition of the two
 dictionaries; every other entry is as it was, except that each Hebrew entry
-with no lemma took the source's lemma (3,557). That edition says in each
+with no lemma took the source's lemma (3,557). The 763 Greek numbers the
+lexicon lacked (751 of them used by the tags in `kjv-strongs.json`) were added
+from the same edition in the same style: its lemma, transliteration
+(`translit`) and definition, a dash, the KJV's renderings. The lexicon now
+holds all 5,523 Greek and 8,674 Hebrew numbers, and every number the tags use
+(`packages/core/src/bible/strongs-tags.test.ts`). That edition says in each
 file: "Copyright 2009 (Greek), 2010 (Hebrew), Open Scriptures. CC-BY-SA.
 Derived from XML" (the Greek XML by Ulrik Petersen, the Hebrew by David
 Instone-Brewer and David Troidl). Credit Open Scriptures wherever the lexicon
@@ -43,7 +48,8 @@ is shown, and share an adapted lexicon under the same terms.
 - Repair: download both files into one directory outside the repository, then
   `bun run --cwd packages/scripts strongs:clean --source <that directory>`.
   The tool refuses a file whose SHA-256 differs, leaves every sound entry as
-  it is, and run again changes nothing. Without `--source` it applies the
+  it is, adds each number only the source has in its numeric place, and run
+  again changes nothing. Without `--source` it applies the
   rules alone (`packages/scripts/src/strongs-clean/rules.ts`).
 - Into the databases: `bible.db` is built from this file, every field
   (`lemma`, `xlit`, `pron`, `def`, `kjvDef` into the `strongs` table), so a

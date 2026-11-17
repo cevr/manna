@@ -228,13 +228,55 @@ const bytesOf = (entry: LexiconEntry) =>
 /** Whether two entries would be written the same: the same fields, in the same order, with the same values. */
 const same = (left: LexiconEntry, right: LexiconEntry) => bytesOf(left) === bytesOf(right);
 
+/** A number's place in the lexicon: the Greek numbers first, then the Hebrew, each in its numeric order. */
+const rank = (number: string) => Number(!isGreek(number)) * 1e6 + Number(number.slice(1));
+
+/** A number as the lexicon keys it: `G` or `H`, then the number with no leading zero or suffix. */
+const KEY = /^[GH][1-9]\d*$/u;
+
 /**
- * Both stages over a whole lexicon as the file stores it: the repaired
+ * Stage 3: each number the source has and the lexicon lacks, as a new entry
+ * in the sound style (the source's lemma, transliteration and definition, and
+ * for Hebrew its pronunciation and renderings), in numeric order. A source
+ * entry with no definition to give is not added.
+ */
+const addedFrom = (
+  lexicon: Readonly<Record<string, Stored>>,
+  sources: Readonly<Record<string, SourceEntry>>,
+): ReadonlyArray<readonly [string, LexiconEntry]> =>
+  Object.entries(sources)
+    .filter(
+      ([number, source]) =>
+        KEY.test(number) && !Object.hasOwn(lexicon, number) && hasLetter(styled(number, source)),
+    )
+    .map(
+      ([number, source]) => [number, fromSource(number, { lemma: '', def: '' }, source)] as const,
+    )
+    .toSorted(([left], [right]) => rank(left) - rank(right));
+
+/** The stored entries in their order, each added one placed before the first stored number it precedes. */
+const merged = (
+  stored: ReadonlyArray<readonly [string, Stored]>,
+  added: ReadonlyArray<readonly [string, Stored]>,
+) => {
+  const pending = [...added];
+  const out: Array<readonly [string, Stored]> = [];
+  for (const row of stored) {
+    while (pending.length > 0 && rank(pending[0]?.[0] ?? '') < rank(row[0]))
+      out.push(...pending.splice(0, 1));
+    out.push(row);
+  }
+  return [...out, ...pending];
+};
+
+/**
+ * All three stages over a whole lexicon as the file stores it: the repaired
  * lexicon (an entry neither stage changes is the stored one, its fields in
  * their order; a sound one with no lemma takes the source's lemma in place,
- * every other byte kept), the numbers stage 1 alone changed, those stage 2
- * refilled, those given only a lemma, and those still defective. Without
- * sources, stage 1 alone.
+ * every other byte kept; a number only the source has is added in its
+ * place), the numbers stage 3 added, those stage 1 alone changed, those
+ * stage 2 refilled, those given only a lemma, and those still defective.
+ * Without sources, stage 1 alone.
  */
 export const repair = (
   lexicon: Readonly<Record<string, Stored>>,
@@ -271,11 +313,19 @@ export const repair = (
         }),
     ),
   ]);
+  const added = Option.match(sources, {
+    onNone: () => [],
+    onSome: (all) => addedFrom(lexicon, all),
+  });
   return {
-    lexicon: Object.fromEntries(written),
+    lexicon: Object.fromEntries(merged(written, added)),
+    added: added.map(([number]) => number),
     cleaned: changed.filter(byRule).map((row) => row.number),
     refilled: changed.filter((row) => !byRule(row)).map((row) => row.number),
     lemmas: rows.filter((row) => Option.isSome(lemmaOf(row))).map((row) => row.number),
-    defective: rows.filter((row) => !isSound(row.repaired)).map((row) => row.number),
+    defective: [
+      ...rows.filter((row) => !isSound(row.repaired)).map((row) => row.number),
+      ...added.filter(([, entry]) => !isSound(entry)).map(([number]) => number),
+    ],
   };
 };

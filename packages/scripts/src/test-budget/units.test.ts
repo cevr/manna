@@ -53,6 +53,31 @@ describe("a workspace's unit-test tasks", () => {
     });
   });
 
+  test('are a test with a command and each part it depends on, both run by the gate', () => {
+    const dry: DryRun = {
+      tasks: [
+        task(
+          '@manna/heartseed-exact#test',
+          'bun test --path-ignore-patterns=src/app.test.ts ./src',
+          [
+            '@manna/core#transit',
+            '@manna/heartseed-exact#test:app',
+            '@manna/heartseed-exact#test:find',
+          ],
+        ),
+        task('@manna/heartseed-exact#test:app', 'bun test ./src/app.test.ts'),
+        task('@manna/heartseed-exact#test:find', 'bun test ./src/find'),
+        task('@manna/heartseed-exact#test:slow', 'quint typecheck src/garden/writes.qnt'),
+        task('@manna/core#transit', '<NONEXISTENT>'),
+      ],
+    };
+    expect(unitTests(dry).map((unit) => unit.taskId)).toEqual([
+      '@manna/heartseed-exact#test',
+      '@manna/heartseed-exact#test:app',
+      '@manna/heartseed-exact#test:find',
+    ]);
+  });
+
   test('are not a task the test run reaches for another reason, though it has a command', () => {
     const dry: DryRun = {
       tasks: [
