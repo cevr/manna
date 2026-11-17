@@ -13,6 +13,7 @@
     "plan": "vite build && alchemy plan alchemy.run.ts --stage prod",
     "deploy": "turbo run test:slow --filter=@manna/egw-search && alchemy deploy alchemy.run.ts --stage prod",
     "study:publish": "bun server/cloudflare/study-publish.ts",
+    "commentary:check": "bun server/cloudflare/commentary-check.ts",
     "test:deploy": "vite build && bun test ./tests/deploy.integration.ts",
     "test:browser": "bun run build && playwright test --config=test/browser/playwright.config.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",

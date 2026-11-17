@@ -13,8 +13,23 @@ beside `/api/search`, `/api/search/batch`, `/api/commentary/pack` and `/health`.
 `/api/commentary/pack` is Ellen White's Bible Commentary as one JSON pack that
 Heartseed downloads and keeps: each paragraph of 1BC-7BC linked to a Bible
 verse, once, and each verse's notes (`server/commentary.ts` is the rule). It is
-built from the corpus the server holds, so it follows the weekly sync. Its
-`ETag` is its version, made of its note count and an FNV-1a sum of its notes, so
+built from the corpus the server holds, so it follows the weekly sync. The
+links are read from the paragraphs themselves when the pack is built
+(`server/commentary-links.ts`), not from the stored `paragraph_bible_refs`
+rows, so a deploy carries the current reading: a citation names every verse
+its printed text names ("John 1:1-3, 14"), not only its title's first verse,
+and each paragraph under a verse heading ("14") comments on that verse. After
+a deploy, once the edge's hour has passed, check the served pack against the
+one the local corpus builds (one GET, counts only; exits non-zero on any
+difference):
+
+```sh
+bun run --cwd apps/egw-search commentary:check
+```
+
+`server/commentary-corpus.slow.test.ts` (in `test:slow`) builds the pack over
+the local corpus, read-only, and skips, saying so, where there is none. The
+pack's `ETag` is its version, made of its note count and an FNV-1a sum of its notes, so
 an `If-None-Match` naming it answers `304`. The Bun server keeps the built pack
 in memory for an hour; the Worker keeps it in the edge cache for an hour, so D1
 is read for it at most once an hour per edge (on a `workers.dev` stage the
