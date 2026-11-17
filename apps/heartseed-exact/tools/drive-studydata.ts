@@ -74,9 +74,6 @@ const startFixture = async () => {
 
 for (const name of ['HEARTSEED_PACKS_BASE', 'SIMCTL_CHILD_HEARTSEED_PACKS_BASE'])
   process.env[name] = origin;
-/** A driven launch draws find's test field on Your verses (`features/find.contract`). */
-for (const name of ['HEARTSEED_GARDEN_DRIVE', 'SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE'])
-  process.env[name] = '1';
 
 /** The kit's machine, but each run started with this drive's environment, which names the fixture. */
 const processes = {
@@ -125,7 +122,10 @@ const PROBES = [
   'state studyProbeLast',
   'state studyProbeOutside',
   'state studyProbeCounts',
-  'type find-field "fear not"',
+  'tap chapter-find',
+  'clock data',
+  'clock settle',
+  'type goto-find "fear not"',
   'clock data',
   'clock settle',
   'state findShown',
@@ -160,14 +160,7 @@ interface Replies {
 const go = async (kept: boolean, before: ReadonlyArray<string>) => {
   const ops = [...before, ...PROBES];
   const replies = await drive.run(
-    [
-      '--storage',
-      store,
-      kept ? '--keep-storage' : '--reset-storage',
-      '--url',
-      '/verses',
-      ...webPort,
-    ],
+    ['--storage', store, kept ? '--keep-storage' : '--reset-storage', '--url', '/read', ...webPort],
     ops,
   );
   const took = /top level took (\d+) ms/u.exec(JSON.stringify(replies[ops.indexOf('logs')] ?? ''));

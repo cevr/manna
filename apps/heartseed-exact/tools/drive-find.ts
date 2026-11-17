@@ -3,17 +3,19 @@
 /**
  * Find's live checks and its speed budget (spec: Live, and The speed
  * budget), on the host named (`bun tools/drive-find.ts web|ios`). Find's
- * field is drawn on Your verses under a driver's launch alone, so every
- * launch sets `HEARTSEED_GARDEN_DRIVE` (and `find.test.contract` holds a
- * plain launch to drawing none). The app bundles no word index (q126):
+ * box is Go to's (`goto-find`, opened by the chapter's magnifier); the
+ * drive re-runs itself once with `HEARTSEED_FIND_PACK` set (and
+ * `HEARTSEED_GARDEN_DRIVE` as the mark that it has). The app bundles no
+ * word index (q126):
  * the drive writes the pack from `bible.db` (`tools/find.ts`), checks it
  * is the pack of the app's own text, and serves it on a free loopback
  * port, which `HEARTSEED_FIND_PACK` names to the launch:
  *
  * - "fear not" finds the verses `findRead` finds here, in the source, the
- *   first row named by its reference, and its press hands its place; a
- *   reference ("john 3:16") answers its place first; a word the Bible
- *   lacks says the line; Clear leaves no rows;
+ *   first row named by its reference, and its press closes Go to on the
+ *   chapter at that verse; a reference ("john 3:16") answers its place
+ *   first, and its row opens it; a word the Bible lacks says the line;
+ *   Cancel leaves no rows;
  * - on the simulator's wall clock (`--live`), the fixed queries
  *   (`src/find/fixed.ts`) typed a character at a time, each keystroke's
  *   answer timed by the app itself (`findTimes`: `performanceNow()` from
@@ -124,12 +126,17 @@ const fearHere = source('fear not', 50);
 const first = fearHere.hits[0];
 const firstRow =
   first === undefined ? 'find-hit-none' : `find-hit-${first.book}-${first.chapter}-${first.verse}`;
-const typedFear = (text: string) => `type find-field ${JSON.stringify(text)}`;
+const typedFear = (text: string) => `type goto-find ${JSON.stringify(text)}`;
+/** The chapter's magnifier, which opens Go to with its find box focused. */
+const opened = ['tap chapter-find', 'clock data', 'clock settle'];
+/** Where the reader stands after a row's press: book, chapter and verse. */
+const standing = ['state readBook', 'state readChapter', 'state readVerse', 'state readTop.name'];
 
 const live = [
   'clock data',
   'clock settle',
   'logs',
+  ...opened,
   typedFear('fear not'),
   'clock data',
   'clock settle',
@@ -137,8 +144,10 @@ const live = [
   'tree',
   shot('fear-not'),
   `tap ${firstRow}`,
+  'clock data',
   'clock settle',
-  'state findOpened',
+  ...standing,
+  ...opened,
   typedFear('john 3:16'),
   'clock data',
   'clock settle',
@@ -146,14 +155,16 @@ const live = [
   'tree',
   shot('place'),
   'tap find-place',
+  'clock data',
   'clock settle',
-  'state findOpened',
+  ...standing,
+  ...opened,
   typedFear('xylophone'),
   'clock data',
   'clock settle',
   'state findShown',
   'tree',
-  'tap find-clear',
+  'tap goto-cancel',
   'clock data',
   'clock settle',
   'state findQuery',
@@ -161,7 +172,7 @@ const live = [
 ];
 const said = replyOf(
   live,
-  await drive.run(['--storage', store, '--reset-storage', '--url', '/verses'], live),
+  await drive.run(['--storage', store, '--reset-storage', '--url', '/read'], live),
 );
 const load = loadOf(said('logs'));
 
@@ -175,11 +186,13 @@ drive.check(
     holds(said('tree', 0), firstRow),
   { app: fear?.hits?.slice(0, 3), more: fear?.more, source: fearHere.hits.slice(0, 3) },
 );
+/** Where the `n`th row's press left the reader: book, chapter, verse, and the Read route on top. */
+const stoodAt = (n: number) =>
+  `${said('state readBook', n)} ${said('state readChapter', n)} ${said('state readVerse', n)} ${said('state readTop.name', n)}`;
 drive.check(
-  "a row's press hands its book, chapter and verse",
-  first !== undefined &&
-    said('state findOpened', 0) === `${first.book} ${first.chapter} ${first.verse}`,
-  said('state findOpened', 0),
+  "a row's press closes Go to on the chapter at its verse",
+  first !== undefined && stoodAt(0) === `${first.book} ${first.chapter} ${first.verse} read`,
+  stoodAt(0),
 );
 const place = said('state findShown', 1) as Shown | undefined;
 drive.check(
@@ -187,11 +200,7 @@ drive.check(
   place?.places?.[0]?.label === 'John 3:16' && holds(said('tree', 1), 'find-place'),
   place?.places,
 );
-drive.check(
-  'the place row hands its place',
-  said('state findOpened', 1) === '43 3 16',
-  said('state findOpened', 1),
-);
+drive.check('the place row opens its place', stoodAt(1) === '43 3 16 read', stoodAt(1));
 const none = said('state findShown', 2) as Shown | undefined;
 drive.check(
   'a word the Bible lacks says the line, and no row',
@@ -201,7 +210,7 @@ drive.check(
   none,
 );
 drive.check(
-  'Clear leaves no rows',
+  'Cancel leaves no rows',
   said('state findQuery') === '' && !holds(said('tree', 3), 'find-results'),
   said('state findQuery'),
 );
@@ -213,6 +222,9 @@ const keystrokes = FIXED.flatMap((query) =>
 const KEY_WAIT = 150;
 const timedOnSimulator = async () => {
   const timed = [
+    'clock data',
+    'clock settle',
+    ...opened,
     'perf frames live 2000',
     ...keystrokes.flatMap((query) => [typedFear(query), `perf frames live ${KEY_WAIT}`]),
     'perf frames live 1000',
@@ -223,7 +235,7 @@ const timedOnSimulator = async () => {
   const timedSaid = replyOf(
     timed,
     await drive.run(
-      ['--live', '--storage', `${store}-timed`, '--reset-storage', '--url', '/verses'],
+      ['--live', '--storage', `${store}-timed`, '--reset-storage', '--url', '/read'],
       timed,
     ),
   );
@@ -308,6 +320,7 @@ serving = false;
 const unpacked = [
   'clock data',
   'clock settle',
+  ...opened,
   typedFear('john 3:16'),
   'clock data',
   'clock settle',
@@ -322,7 +335,7 @@ const unpacked = [
 const unpackedSaid = replyOf(
   unpacked,
   await drive.run(
-    ['--storage', `${store}-unpacked`, '--reset-storage', '--url', '/verses'],
+    ['--storage', `${store}-unpacked`, '--reset-storage', '--url', '/read'],
     unpacked,
   ),
 );
