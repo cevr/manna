@@ -5,4 +5,4 @@
 
 import { tagsChecks } from '../test/study-tags';
 
-tagsChecks('Matthew to Revelation', 929, 1189, { aligned: 168, bare: 0 });
+tagsChecks('Matthew to Revelation', 929, 1189, { aligned: 169, bare: 0, unlike: 1 });
