@@ -1,0 +1,33 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+// A plain launch: every pack's base is egw.cvr.im, nothing is fetched
+// until the Read tab asks, and the driver's probe is absent. Every fetch,
+// check and relaunch runs against the fixture in tools/drive-commentary.ts,
+// which a test cannot start or name (README, "The downloads").
+
+test "A plain launch takes the packs from egw.cvr.im and draws no probe"
+  at "/verses"
+  clock data
+  clock settle
+  expect state packsPlace.base == "https://egw.cvr.im"
+  expect state packsPlace.fixture == false
+  expect tree has "verses"
+  expect tree missing "packs-probe"
+  expect tree missing "packs-fetch"
+  expect no failures
+
+test "Before any fetch the commentary is on its way, with no Try again"
+  at "/verses"
+  clock data
+  expect state packsShown.phase == "none"
+  expect state packsShown.missing == 1
+  expect state packsShown.foot == "Getting Ellen White's commentary…"
+  expect state packsShown.retry == false
+  expect state commentaryShown.phase == "none"
+  expect state commentaryShown.version == ""
+  expect state commentaryShown.line == "The commentary is still on its way. It needs a connection once, then it works offline."
+  expect state commentaryShown.retry == false
+  expect state packsKept == ""
+  expect no failures

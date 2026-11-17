@@ -35,6 +35,16 @@ members HeartseedExact
   derive readUp = readTop.name == "read" or readTop.name == "readAt"
   derive readGardenTab = match nav.tabs.filter(t => t.name == "garden").at(0) { case some(t) => t.stack, case none => stack(nav) }
   derive readGardenStack = (nav.tab == "read" and not readUp) ? stack(nav) : readGardenTab
+  // The Read tab's first showing in a launch asks for every pack
+  // (`packsFetch`'s ask, in the background); the packs' one quiet line
+  // stands at the Read chapter's foot.
+  state readAskedPacks = false
+  task readAsksPacks when nav.tab == "read" key=nav.tab
+    change(readAskPacks)
+  action readAskPacks
+    if not readAskedPacks
+      readAskedPacks = true
+      send packsFetched = packsAsk(packsKept, false, packsTime.epochAtZero + performanceNow())
   derive readChooses = (nav.tab == "read" and readUp) or stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").length == 0
   derive readFirst = match garden.lists.map(l => l.verses.map(v => v.reference)).flat().at(0) { case some(r) => r, case none => (match garden.singles.at(0) { case some(v) => v.reference, case none => "" }) }
   resource readKept = readPlaceOf(readBookKept, readChapterKept, readFirst) as shape ReadPlace else readPlaceOf("", "", "")

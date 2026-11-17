@@ -28,6 +28,20 @@ test "Read shows John 1 on a fresh store"
   expect tree missing "verse-52"
   expect no failures
 
+test "Read's first showing asks for the packs, and Garden asks for none"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect state readAskedPacks == false
+  expect state packsShown.phase == "none"
+  tap "tab-read"
+  clock data
+  clock settle
+  expect state readAskedPacks == true
+  expect state packsPlace.fixture == false
+
 test "After a plant of John 3:16-18 a fresh Read shows John 3, on its first verse"
   clock data
   clock settle

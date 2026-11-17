@@ -11,6 +11,7 @@
 // The words are `textOf`'s.
 use GardenChange from "./garden.contract"
 use TextPassage from "./text.contract"
+use PacksState, PacksLine from "./packs.contract"
 
 shape ChooserBook
   number: number
@@ -135,6 +136,9 @@ component ChooserVersesPage
     tap: action
     plant: action
     join: action
+    packs: PacksState
+    packsUp: bool
+    still: bool
   view
     column flex=1 min-height=0 display="flex" flex-direction="column"
       scroll id="chooser-verses" navigationScroll="chooser-verses" flex=1 min-height=0
@@ -143,6 +147,8 @@ component ChooserVersesPage
           for v in words.verses key=v.verse
             button role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` disabled=pending press=tap(v.verse) min-height="44px" text-align="start" id=`verse-${v.verse}` testId=`verse-${v.verse}`
               text `${v.verse} ${v.text}` overflow-wrap="break-word" hyphens="auto"
+      if packsUp
+        PacksLine(shown=packs, still=still)
       column gap=6 padding="12px 20px" flex-shrink=0 testId="chooser-footer"
         if shown.chosen
           row gap=12 justify-content="space-between"
