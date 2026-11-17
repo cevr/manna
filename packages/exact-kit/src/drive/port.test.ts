@@ -5,13 +5,6 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { claimAppPort, claimPort, takePort } from './port.ts';
 
-/** The ports this process holds, as `EXACT_PORT_TURNS` names them for the processes it starts. */
-const heldPorts = () =>
-  (process.env['EXACT_PORT_TURNS'] ?? '')
-    .split(',')
-    .filter((p) => p !== '')
-    .map(Number);
-
 /** Ports no run of the apps uses, below the Mac's ephemeral range, for the claims these tests make. */
 const LO = 47_310;
 const RANGE = [LO, LO + 3] as const;
@@ -52,10 +45,16 @@ describe('claimPort', () => {
         const [a, b] = await Promise.all([claimPort(RANGE), claimPort(RANGE)]);
         expect(a.port).not.toBe(b.port);
         expect([a.port, b.port].every((p) => p >= RANGE[0] && p <= RANGE[1])).toBe(true);
-        expect(heldPorts()).toEqual(expect.arrayContaining([a.port, b.port]));
+        const whileHeld = await claimPort([a.port, a.port], { waitMs: 0, say: () => {} }).then(
+          () => 'claimed',
+          () => 'refused',
+        );
+        expect(whileHeld).toBe('refused');
         a.give();
         b.give();
-        expect(heldPorts()).toEqual([]);
+        const again = await claimPort([a.port, a.port], { waitMs: 0 });
+        expect(again.port).toBe(a.port);
+        again.give();
       }),
   );
 
@@ -108,7 +107,6 @@ describe('claimPort', () => {
         const relaunch = await takePort(drive.port, { waitMs: 0 });
         expect(relaunch.port).toBe(drive.port);
         relaunch.give();
-        expect(heldPorts()).toContain(drive.port);
         const other = await claimPort(RANGE);
         expect(other.port).not.toBe(drive.port);
         other.give();
