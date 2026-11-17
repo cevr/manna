@@ -74,9 +74,6 @@ const startFixture = async () => {
 
 for (const name of ['HEARTSEED_PACKS_BASE', 'SIMCTL_CHILD_HEARTSEED_PACKS_BASE'])
   process.env[name] = origin;
-/** A driven launch draws find's test field on Your verses (`features/find.contract`). */
-for (const name of ['HEARTSEED_GARDEN_DRIVE', 'SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE'])
-  process.env[name] = '1';
 
 /** The kit's machine, but each run started with this drive's environment, which names the fixture. */
 const processes = {
@@ -125,7 +122,13 @@ const PROBES = [
   'state studyProbeLast',
   'state studyProbeOutside',
   'state studyProbeCounts',
-  'type find-field "fear not"',
+  'tap tab-read',
+  'clock data',
+  'clock settle',
+  'tap chapter-find',
+  'clock data',
+  'clock settle',
+  'type goto-find "fear not"',
   'clock data',
   'clock settle',
   'state findShown',

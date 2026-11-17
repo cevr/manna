@@ -6,6 +6,7 @@ import { chooserSources } from './src/chooser/sources';
 import { COMMENTARY, commentarySources } from './src/commentary/sources';
 import { findSources } from './src/find/sources';
 import { gardenSources } from './src/garden/sources';
+import { gotoSources } from './src/goto/sources';
 import { homeSources } from './src/home/sources';
 import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
@@ -49,6 +50,7 @@ const sources: Sources = {
   ...homeSources(),
   ...addSources(),
   ...chooserSources,
+  ...gotoSources,
   ...todaySources(garden),
   ...readerSources,
   ...textSources,

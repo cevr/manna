@@ -43,6 +43,9 @@ test "The plan's first item shows, new pieces first heard"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-proverbs"
   clock data
   clock settle
@@ -91,6 +94,9 @@ test "Minutes shape the plan"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"

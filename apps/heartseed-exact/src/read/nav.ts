@@ -72,13 +72,12 @@ const ROUTES: readonly NavRoute[] = [
   garden('cued', /^\/cue\/[^/]+$/u),
   garden('verses', /^\/verses$/u),
   garden('add', /^\/add$/u),
-  garden('addBible', /^\/add\/bible$/u, 'add'),
-  garden('addBook', /^\/add\/bible\/[^/]+$/u, 'addBible'),
-  garden('addChapter', /^\/add\/bible\/[^/]+\/[^/]+$/u, 'addBook'),
   garden('addList', /^\/add\/lists\/[^/]+$/u, 'add'),
   garden('typeSheet', /^\/type$/u),
   { name: 'read', pattern: /^\/read$/u, parent: '', tab: 'read' },
   { name: 'readAt', pattern: /^\/read\/at\/[^/]+\/[^/]+\/[^/]+$/u, parent: 'read', tab: 'read' },
+  { name: 'gotoSheet', pattern: /^\/read\/goto$/u, parent: 'read', tab: 'read' },
+  { name: 'gotoBook', pattern: /^\/read\/goto\/[^/]+$/u, parent: 'gotoSheet', tab: 'read' },
 ];
 
 const ROOTS: Readonly<Record<NavTab, string>> = { garden: '/', read: '/read' };

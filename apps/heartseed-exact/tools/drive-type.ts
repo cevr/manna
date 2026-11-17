@@ -2,13 +2,13 @@
 
 /**
  * The reading settings' live checks a `.test.contract` cannot make (spec,
- * the drive table), on a driver's launch of Your verses, where Psalm 119 is
- * drawn in `TypeColumn` under an Aa button (`bun tools/drive-type.ts
- * web|ios`; every launch sets `HEARTSEED_GARDEN_DRIVE`):
+ * the drive table), on the chapter screen opened at Psalm 119
+ * (`/read/at/19/119/1`), its verses drawn in `TypeColumn` under the
+ * header's Aa button (`bun tools/drive-type.ts web|ios`, plain launches):
  *
  * - each font draws: each sets its own family on the text, each draws the
- *   sample (its first line's width, "Psalm 119" on a line of its own, or
- *   the whole sample's height) other than the default, and each bundled
+ *   chapter (its first verse's width or the whole chapter's height)
+ *   other than the default, and each bundled
  *   family as no other font does, so none falls back to a system face;
  * - the web's font files: what a default launch fetches (Exact's web host
  *   preloads every declared face, so this is a note, not a check);
@@ -40,14 +40,6 @@ import { TYPE_FONTS } from '../src/type/choices';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
-  const self = Bun.spawn(['bun', import.meta.path, host], {
-    stdout: 'inherit',
-    stderr: 'inherit',
-    env: { ...process.env, HEARTSEED_GARDEN_DRIVE: '1', SIMCTL_CHILD_HEARTSEED_GARDEN_DRIVE: '1' },
-  });
-  process.exit(await self.exited);
-}
 const web = host === 'web';
 const drive = makeDrive({ name: 'drive-type', host, appDir: app });
 const store = `type-${host}-${Date.now().toString(36)}`;
@@ -80,8 +72,10 @@ const WORST = [
   'type-letter-wider',
   'type-width-narrow',
 ];
-/** The page scrolled in parts by the wheel, 20,000 px each (a drag is held to eight viewports a stroke), enough of them to pass Psalm 119's end at the largest text. */
-const DRAGS = Array.from({ length: 100 }, () => 'tap verses-content wheel 0 20000');
+/** The chapter scrolled in parts by the wheel, 20,000 px each (a drag is held to eight viewports a stroke), enough of them to pass Psalm 119's end at the largest text. */
+const DRAGS = Array.from({ length: 100 }, () => 'tap chapter-scroll wheel 0 20000');
+/** Psalm 119 on the chapter screen, where every launch opens. */
+const PSALM = ['--url', '/read/at/19/119/1'];
 
 interface Frame {
   readonly x: number;
@@ -131,7 +125,7 @@ const fontSizeOf = (replies: readonly unknown[], at: number) => {
 const innerScrollOf = (replies: readonly unknown[], at: number) =>
   (laid(replies, at)?.node?.scroll ?? []).findLast((entry) => Number.isInteger(entry.id))?.sy ?? -1;
 
-/** How many of a tree's nodes are the sample's verses, by their test ids alone. */
+/** How many of a tree's nodes are the chapter's verses, by their test ids alone. */
 const versesIn = (replies: readonly unknown[], at: number) =>
   (
     (
@@ -139,7 +133,7 @@ const versesIn = (replies: readonly unknown[], at: number) =>
         | { readonly nodes?: ReadonlyArray<{ readonly props?: { readonly testId?: string } }> }
         | undefined
     )?.nodes ?? []
-  ).filter((node) => /^type-verse-\d+$/u.test(node.props?.testId ?? '')).length;
+  ).filter((node) => /^verse-\d+$/u.test(node.props?.testId ?? '')).length;
 
 /** The worst case's checks over one pass: every verse built, none wider than its column, the last reached. */
 const worstChecks = (name: string, replies: readonly unknown[], at: Record<string, number>) => {
@@ -174,13 +168,13 @@ const worstChecks = (name: string, replies: readonly unknown[], at: Record<strin
 const a = script();
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const probes: Record<string, number> = {};
-/** Each font's whole sample: iOS lays a line out in thirds of a point, so one short line can measure the same in two faces, and 176 verses wrapped in them cannot. */
+/** Each font's whole chapter: iOS lays a line out in thirds of a point, so one short line can measure the same in two faces, and 176 verses wrapped in them cannot. */
 const columns: Record<string, number> = {};
-a.step('tap type-aa', 'clock data', 'clock settle');
+a.step('tap chapter-aa', 'clock data', 'clock settle');
 a.step(shot('sheet-light'));
 for (const font of [...FONTS.slice(1), FONTS[0] ?? 'newyork']) {
   a.step(`tap type-font-${font}`, 'clock data', 'clock settle');
-  probes[font] = a.step('layout type-probe');
+  probes[font] = a.step('layout verse-1');
   columns[font] = a.step('layout type-column');
 }
 a.step(shot('fonts-light'));
@@ -195,9 +189,9 @@ a.step(
   'clock settle',
 );
 const scrollBefore = a.step('layout type-larger');
-const sizeBefore = a.step('layout type-probe');
+const sizeBefore = a.step('layout verse-1');
 a.step('tap type-larger', 'clock data', 'clock settle');
-const sizeAfter = a.step('layout type-probe');
+const sizeAfter = a.step('layout verse-1');
 const scrollAfter = a.step('layout type-larger');
 const sheetUp = a.step('layout type-sheet');
 a.step(...WORST.flatMap((id) => [`tap ${id}`, 'clock data']));
@@ -211,33 +205,33 @@ a.step('prefer prefers-color-scheme dark', 'clock settle', shot('worst-sheet-dar
 a.step('prefer prefers-color-scheme light', 'tap type-done', 'clock settle');
 const worst = {
   column: a.step('layout type-column'),
-  first: a.step('layout type-verse-1'),
-  longest: a.step(`layout type-verse-${longest}`),
-  last: a.step('layout type-verse-176'),
+  first: a.step('layout verse-1'),
+  longest: a.step(`layout verse-${longest}`),
+  last: a.step('layout verse-176'),
   tree: a.step('tree'),
 };
 a.step(shot('worst-light'));
 a.step(...DRAGS, 'clock settle');
-const reached = a.step('layout type-verse-176');
+const reached = a.step('layout verse-176');
 a.step(shot('worst-end-light'));
 a.step('prefer prefers-reduced-motion reduce', 'clock settle');
-a.step('tap type-aa', 'clock +16');
+a.step('tap chapter-aa', 'clock +16');
 const stillSheet = a.step('layout type-sheet');
 const stillColumn = a.step('layout type-scroll');
 a.step('clock settle', 'tap type-done', 'clock settle');
 a.step('prefer root-font-size 53', 'clock data', 'clock settle');
 const largest = {
   column: a.step('layout type-column'),
-  first: a.step('layout type-verse-1'),
-  longest: a.step(`layout type-verse-${longest}`),
-  last: a.step('layout type-verse-176'),
+  first: a.step('layout verse-1'),
+  longest: a.step(`layout verse-${longest}`),
+  last: a.step('layout verse-176'),
   tree: a.step('tree'),
 };
 a.step(...DRAGS, 'clock settle');
-const reachedLargest = a.step('layout type-verse-176');
+const reachedLargest = a.step('layout verse-176');
 a.step('prefer prefers-color-scheme dark', 'clock settle', shot('largest-end-dark'));
 const first = await drive.run(
-  [...port, ...size, '--storage', store, '--reset-storage', '--url', '/verses'],
+  [...port, ...size, '--storage', store, '--reset-storage', ...PSALM],
   a.ops,
 );
 
@@ -256,26 +250,26 @@ drive.check(
 const heights = Object.fromEntries(
   FONTS.map((font) => [font, frameOf(first, columns[font] ?? -1)?.h ?? Number.NaN]),
 );
-/** Whether two fonts draw the sample differently: its first line's width or the whole sample's height. */
+/** Whether two fonts draw the chapter differently: its first verse's width or the whole chapter's height. */
 const differ = (one: string, other: string) =>
   Math.abs((widths[one] ?? 0) - (widths[other] ?? 0)) > 0.1 ||
   Math.abs((heights[one] ?? 0) - (heights[other] ?? 0)) > 0.5;
 const drawn = (font: string) => Number.isFinite(widths[font]) && Number.isFinite(heights[font]);
 drive.check(
-  'each of the ten other fonts draws the sample other than the default does (the first line’s width or the whole sample’s height)',
+  'each of the ten other fonts draws the chapter other than the default does (the first verse’s width or the whole chapter’s height)',
   FONTS.slice(1).every((font) => drawn(font) && differ(font, FONTS[0] ?? '')),
   { widths, heights },
 );
 const BUNDLED = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => font.key);
 drive.check(
-  'each of the seven bundled fonts draws the sample as no other font does (its own file, not a fallback)',
+  'each of the seven bundled fonts draws the chapter as no other font does (its own file, not a fallback)',
   BUNDLED.every(
     (font) => drawn(font) && FONTS.every((other) => other === font || differ(font, other)),
   ),
   { widths, heights },
 );
 console.log(
-  `WIDTH ${host} at 18 pt, "Psalm 119" wide and the sample tall: ${FONTS.map((font) => `${font} ${widths[font]}/${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
+  `WIDTH ${host} at 18 pt, verse 1 wide and Psalm 119 tall: ${FONTS.map((font) => `${font} ${widths[font]}/${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
 );
 drive.check(
   'live preview: a size step changes the text’s size with the sheet at medium',
@@ -320,10 +314,10 @@ drive.check(
 const b = script();
 b.step('clock data', 'clock settle');
 const keptState = b.step('state typeShown');
-const keptProbe = b.step('layout type-probe');
+const keptProbe = b.step('layout verse-1');
 b.step(shot('kept-light'));
 const again = await drive.run(
-  [...port, ...size, '--storage', store, '--keep-storage', '--url', '/verses'],
+  [...port, ...size, '--storage', store, '--keep-storage', ...PSALM],
   b.ops,
 );
 const kept = again[keptState] as Record<string, unknown> | undefined;
@@ -371,13 +365,13 @@ const timedRun = async (flags: readonly string[], ops: readonly string[]) => {
 const STEPS = 7;
 const timedOps = [
   'clock data',
-  'tap type-aa',
+  'tap chapter-aa',
   'clock settle',
   ...Array.from({ length: STEPS }, () => ['tap type-larger', 'clock settle']).flat(),
   ...Array.from({ length: STEPS }, () => ['clock settle', 'clock settle']).flat(),
 ];
 const arrivals = await timedRun(
-  [...port, ...size, '--storage', `${store}-timed`, '--reset-storage', '--url', '/verses'],
+  [...port, ...size, '--storage', `${store}-timed`, '--reset-storage', ...PSALM],
   timedOps,
 );
 const median = (values: readonly number[]) =>

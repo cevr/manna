@@ -25,7 +25,8 @@ use YourVerses from "./features/garden.contract"
 use Home from "./features/home.contract"
 use ListPage from "./features/list.contract"
 use AddVersesPage, AddListPage from "./features/add.contract"
-use ChooserBooksPage, ChooserChaptersPage, ChooserVersesPage from "./features/chooser.contract"
+use ChapterPage from "./features/chooser.contract"
+use GotoSheet, GotoBookPage from "./features/goto.contract"
 use readTopOf, readSheetOf, ReadDriven from "./features/read.contract"
 use TypeSheet from "./features/type.contract"
 use PacksProbe from "./features/packs.contract"
@@ -41,13 +42,12 @@ routes nav
     cued "/cue/:cue"
     verses "/verses"
     add "/add"
-      addBible "/add/bible"
-        addBook "/add/bible/:book"
-          addChapter "/add/bible/:book/:chapter"
       addList "/add/lists/:list"
     typeSheet "/type"
   tab read "/read"
     readAt "/read/at/:book/:chapter/:verse"
+    gotoSheet "/read/goto"
+      gotoBook "/read/goto/:book"
 
 component HeartseedExact
   members "./features/today.contract"
@@ -59,6 +59,7 @@ component HeartseedExact
   members "./features/list.contract"
   members "./features/add.contract"
   members "./features/chooser.contract"
+  members "./features/goto.contract"
   members "./features/packs.contract"
   members "./features/commentary.contract"
   members "./features/studydata.contract"
@@ -85,18 +86,22 @@ component HeartseedExact
               column navigationKey=`${e.id}` position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId=`ground-${e.name == "garden" ? "home" : e.name}`
                 header display="flex" align-items="center"
                   if e.name == "read" or e.name == "readAt"
-                    text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=1 flex=1 testId=`read-title-${e.name}`
+                    button press=gotoOpenFind aria-label="Find a verse, a chapter or words" testId="chapter-find"
+                      image "symbol:search"
+                    text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=2 flex=1 opacity=(chooserTitleGone ? 1 : 0) testId=`read-title-${e.name}`
+                    button press=typeOpen aria-label="Text settings" testId="chapter-aa"
+                      text "Aa"
                   else
                     text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
                   if e.id == settingsUnderId
                     button press=settingsOpen aria-label="Settings" testId="gear"
                       image "symbol:settings"
                 if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == readTopOf(t.stack)
-                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp)
+                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday)
                 if e.name == "list"
-                  ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill)
+                  ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill, chapter=gotoListPlace.name, read=gotoReadList)
                 if e.name == "verses"
-                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt, type=typeShown, sample=gardenTypeSample, aa=gardenTypeAa, findQuery=findQuery, found=findShown, findType=findType, findClear=findClear, findOpen=findOpenIt)
+                  YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
                   // hs-commentary: a fixture launch's probe, which tools/drive-commentary.ts taps (the Read tab asks on its own first showing).
                   if packsPlace.fixture
                     PacksProbe(shown=packsShown, fetch=packsFetch, retry=packsRetry, still=motionStill)
@@ -105,12 +110,8 @@ component HeartseedExact
                   AddVersesPage(add=addShown, bible=addOpenBible, toggle=addToggle, open=addOpenList)
                 if e.name == "addList"
                   AddListPage(list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
-                if e.name == "addBible"
-                  ChooserBooksPage(books=chooserBooksShown, open=chooserOpenBook)
-                if e.name == "addBook"
-                  ChooserChaptersPage(book=chooserChaptersShown, open=chooserOpenChapter)
-                if e.name == "addChapter" or ((e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack))
-                  ChooserVersesPage(shown=chooserShown, words=chooserWords, pending=pending(chooserPlanted), tap=feelChooseVerse, plant=chooserPlantIt, join=chooserJoinIt, packs=packsShown, packsUp=(e.name != "addChapter"), still=motionStill)
+                if (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
+                  ChapterPage(shown=chapterShown, words=chooserWords, type=typeShown, opened=readVerse, room=chooserLandRoom, sized=chooserScrollSized, pending=pending(chooserPlanted), tap=feelChooseVerse, clear=chooserClear, plant=chooserPlantIt, join=chooserJoinIt, practise=chooserPractise, goto=gotoOpen, read=readOpenAt, seen=chooserTitleSeen, packs=packsShown, still=motionStill)
                 if gardenDriven.on and (e.name == "read" or e.name == "readAt") and e.id == readTopOf(t.stack)
                   ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
@@ -122,6 +123,11 @@ component HeartseedExact
                 AboutPage(route=e.id, licences=aboutOpenLicences)
               if e.name == "settingsLicences"
                 LicencesPage(route=e.id, licences=aboutLicences.licences)
+            for e in t.stack.filter(x => x.name == "gotoSheet" or x.name == "gotoBook") key=e.id
+              if e.name == "gotoSheet"
+                GotoSheet(route=e.id, query=findQuery, found=findShown, type=findType, clear=findClear, open=gotoOpenAt, grow=gotoGrowShown, books=gotoBooksShown, book=gotoOpenBook, done=gotoDone)
+              if e.name == "gotoBook"
+                GotoBookPage(route=e.id, book=gotoBookShown, open=gotoOpenAt, done=gotoDone)
             for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
               TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
       row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"

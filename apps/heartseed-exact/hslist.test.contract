@@ -22,6 +22,9 @@ test "A list's page shows its verses with stage and due"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -56,6 +59,9 @@ test "Practice this list reads its line and starts its verse"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -88,6 +94,9 @@ test "Remove this list asks, then returns home without the row"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"

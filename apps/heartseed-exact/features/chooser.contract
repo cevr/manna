@@ -1,42 +1,38 @@
-// The chooser: Add verses' Any passage. Three pushed routes: the books
-// under their testaments (`/add/bible`), a book's chapters
-// (`/add/bible/:book`), and a chapter's verses with their words
-// (`/add/bible/:book/:chapter`). Every rule is src/chooser/chooser.ts's,
-// over the current Heartseed's `tapVerse`: a tap asks `chooserTap` for the
-// range after it, and `chooserRead` says what the footer offers (the
-// range, the cap, Plant at 3 verses or more, the short line under 3 with
-// Add to single verses while they have room, and a plant's line). Plant
-// goes through the garden's `gardenPlant`, Add to single verses through
-// its `gardenJoin`; once either lands the reader is back at Add verses.
-// The words are `textOf`'s.
+// The chapter screen (q119): the Read tab's one screen that reads and
+// chooses, at the Read place (`readBook`, `readChapter`). Its title opens
+// Go to (features/goto.contract), the magnifier opens it with the find box
+// ready, Aa opens the text settings; the verses flow inside `TypeColumn`,
+// each one control (a checkbox named by its reference), a planted verse
+// marked by a leaf line and its number in the sun (in the quiet ink while
+// chosen: the sun is under AA on the hearing colour), and said ("in your
+// field" after its reference). A tap is the chooser's
+// (`chapterTap`, over src/chooser/chooser.ts's `chooserTap`: a second tap
+// ends a range, clipped at 20; a tap on the one verse chosen clears it),
+// with a tick. The bar rises while something is chosen: the reference, a
+// clear button, the study row's slot for one verse, and what
+// `chapterRead` offers (src/chooser/bar.ts over `chooserShown`): Plant at
+// 3 verses or more, the short line with Add to single verses under 3, the
+// limit lines, "Already in your field." with no button, and once a plant
+// lands "Planted." with Practise it now. The reader stays on the chapter.
+// Plant goes through the garden's `gardenPlant`, Add to single verses
+// through its `gardenJoin`. The words are `textOf`'s.
 use GardenChange from "./garden.contract"
 use TextPassage from "./text.contract"
 use PacksState, PacksLine from "./packs.contract"
+use TypeColumn, TypeView from "./type.contract"
+use GotoChapter from "./goto.contract"
+use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
-shape ChooserBook
-  number: number
-  name: string
-  chapters: number
-
-shape ChooserTestament
-  label: string
-  books: ChooserBook[]
-
-shape ChooserBooks
-  heading: string
-  testaments: ChooserTestament[]
-
-shape ChooserChapters
-  found: bool
-  number: number
-  name: string
-  chapters: number[]
+// A verse opened on: a layer of the hearing colour under its words fades
+// out once, so its ground eases from the hearing colour to the page's.
+keyframes hs-landed
+  from opacity=1
 
 shape ChooserRange
   first: number
   last: number
 
-shape ChooserShown
+shape ChapterShown
   found: bool
   book: number
   chapter: number
@@ -53,115 +49,168 @@ shape ChooserShown
   singles: bool
   line: string
   lineId: string
+  planted: number[]
+  fieldLine: string
+  up: bool
+  study: bool
+  already: bool
+  landed: bool
+  practise: string
+  previous: GotoChapter
+  next: GotoChapter
 
 members HeartseedExact
   state chooserFirst = 0
   state chooserLast = 0
   state chooserAnswer = ""
-  derive chooserBookArg = readChooses ? `${readBook}` : (match stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").at(-1) { case some(t) => t.params.book, case none => "" })
-  derive chooserChapterArg = readChooses ? `${readChapter}` : (match stack(nav).filter(x => x.name == "addChapter").at(-1) { case some(t) => t.params.chapter, case none => "" })
-  resource chooserBooksShown = chooserBooks() as shape ChooserBooks else empty()
-  resource chooserChaptersShown = chooserChapters(chooserBookArg) as shape ChooserChapters else empty()
-  resource chooserShown = chooserRead(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, chooserAnswer, garden.singles.map(v => v.reference).join("|")) as shape ChooserShown else empty()
-  resource chooserWords = textOf(chooserShown.book, chooserShown.chapter, 1, chooserShown.count) as shape TextPassage else empty()
+  state chooserPlace = ""
+  state chooserTapPlace = ""
+  state chooserTitleGone = false
+  // The chapter's scroll height, as its resize event hears it: a verse opened on lands a third of the way down it. A hidden tab's 0 is not kept.
+  state chooserScrollHeight = 0
+  state chooserLandRoom = 0
+  action chooserScrollSized(w: number, h: number)
+    if h > 0
+      chooserScrollHeight = h
+  derive chooserBookArg = `${readBook}`
+  derive chooserChapterArg = `${readChapter}`
+  derive chooserField = garden.lists.map(l => l.verses.map(v => v.reference)).flat().concat(garden.singles.map(v => v.reference)).join("|")
+  resource chapterShown = chapterRead(chooserBookArg, chooserChapterArg, chooserPlace, chooserFirst, chooserLast, chooserAnswer, garden.singles.map(v => v.reference).join("|"), chooserField) as shape ChapterShown else empty()
+  resource chooserWords = textOf(chapterShown.book, chapterShown.chapter, 1, chapterShown.count) as shape TextPassage else empty()
   mutation chooserTapped as shape ChooserRange queue then chooserTook
   mutation chooserPlanted as shape GardenChange queue refreshes garden then chooserLanded
 
-  action chooserOpenBook(book: number)
-    nav = push(nav, path("addBook", `${book}`))
-  action chooserOpenChapter(chapter: number)
-    chooserFirst = 0
-    chooserLast = 0
-    chooserAnswer = ""
-    nav = push(nav, path("addChapter", chooserBookArg, `${chapter}`))
   action chooserTapIt(verse: number)
     if not pending(chooserPlanted)
+      chooserTapPlace = `${chooserBookArg}.${chooserChapterArg}`
+      send chooserTapped = chapterTap(chooserBookArg, chooserChapterArg, chooserPlace, chooserFirst, chooserLast, chooserAnswer, verse)
       chooserAnswer = ""
-      send chooserTapped = chooserTap(chooserBookArg, chooserChapterArg, chooserFirst, chooserLast, verse)
   derive chooserTappedRange = match chooserTapped { case some(r) => r, case none => ChooserRange(first=chooserFirst, last=chooserLast) }
   action chooserTook
     chooserFirst = chooserTappedRange.first
     chooserLast = chooserTappedRange.last
+    chooserPlace = chooserTapPlace
+  action chooserClear
+    chooserFirst = 0
+    chooserLast = 0
+    chooserAnswer = ""
+  task chooserMoved when readUp key=`${readBook}.${readChapter}`
+    change(chooserClear)
+  // Each opening on a verse (`readOpenings`) lands it a third of the way down once the chapter is up, past the fragment the host lands while the tab is still coming in.
+  // A verse taller than the two thirds below that line lands higher, so all of it shows.
+  task chooserLanding when readUp and readOpenings > 0 key=readOpenings
+    change(chooserLand)
+  action chooserLand
+    if readOpenVerse > 0
+      chooserLandRoom = min(chooserScrollHeight / 3, max(0, chooserScrollHeight - frame(`verse-${readOpenVerse}`).height - 16))
+  task chooserLandingScroll when readUp and readOpenings > 0 key=`${readOpenings}:${chooserLandRoom}`
+    change(chooserLandScroll)
+  action chooserLandScroll
+    if readOpenVerse > 0
+      scrollIntoView(`verse-${readOpenVerse}`, block="start", behavior="instant")
+  // The bar rising shortens the page: the verse a range ends on is kept in view above it.
+  task chooserKept when chapterShown.up key=`${chapterShown.first}-${chapterShown.last}`
+    change(chooserKeepInView)
+  action chooserKeepInView
+    if motionStill
+      scrollIntoView(`verse-${chapterShown.last}`, block="nearest", behavior="instant")
+    else
+      scrollIntoView(`verse-${chapterShown.last}`, block="nearest", behavior="smooth")
   action chooserPlantIt
-    if chooserShown.plant and not pending(chooserPlanted)
+    if chapterShown.plant and not pending(chooserPlanted)
       gardenClock = performanceNow()
-      send chooserPlanted = gardenPlant(chooserShown.book, chooserShown.chapter, chooserShown.first, chooserShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+      send chooserPlanted = gardenPlant(chapterShown.book, chapterShown.chapter, chapterShown.first, chapterShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
   action chooserJoinIt
-    if chooserShown.singles and not pending(chooserPlanted)
+    if chapterShown.singles and not pending(chooserPlanted)
       gardenClock = performanceNow()
-      send chooserPlanted = gardenJoin(chooserShown.book, chooserShown.chapter, chooserShown.first, chooserShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+      send chooserPlanted = gardenJoin(chapterShown.book, chapterShown.chapter, chapterShown.first, chapterShown.last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
   derive chooserLandedAnswer = match chooserPlanted { case some(c) => c.answer, case none => "" }
   action chooserLanded
     chooserAnswer = chooserLandedAnswer
-    if chooserLandedAnswer == "Planted" or chooserLandedAnswer == "Already"
-      chooserFirst = 0
-      chooserLast = 0
-      chooserAnswer = ""
-      nav = go(nav, "/add")
+  action chooserPractise
+    if chapterShown.practise != ""
+      follow(path("start", chapterShown.practise))
+  action chooserTitleSeen(e: IntersectionObserverEntry)
+    chooserTitleGone = not e.isIntersecting
 
-component ChooserBooksPage
+// The chapter: the title that opens Go to, the field's line and the hint,
+// the verses, the chapter before and after, the packs' line, and the bar.
+component ChapterPage
   props
-    books: ChooserBooks
-    open: action
-  view
-    scroll id="chooser-books" navigationScroll="chooser-books" flex=1 min-height=0
-      column gap=16 padding=20 max-width="40rem" testId="chooser-books"
-        text books.heading role="heading" aria-level=2
-        for t in books.testaments key=t.label
-          column gap=8
-            text t.label font="-exact-headline"
-            row gap=8 flex-wrap="wrap"
-              for b in t.books key=b.number
-                button press=open(b.number) buttonStyle="bordered" min-height="44px" aria-label=b.name testId=`book-${b.number}`
-                  text b.name
-
-component ChooserChaptersPage
-  props
-    book: ChooserChapters
-    open: action
-  view
-    scroll id="chooser-chapters" navigationScroll="chooser-chapters" flex=1 min-height=0
-      column gap=16 padding=20 max-width="40rem" testId="chooser-chapters"
-        text book.name role="heading" aria-level=2
-        row gap=8 flex-wrap="wrap"
-          for c in book.chapters key=c
-            button press=open(c) buttonStyle="bordered" min-width="44px" min-height="44px" aria-label=`${book.name} ${c}` testId=`chapter-${c}`
-              text `${c}`
-
-component ChooserVersesPage
-  props
-    shown: ChooserShown
+    shown: ChapterShown
     words: TextPassage
+    type: TypeView
+    opened: number
+    room: number
+    sized: action
     pending: bool
     tap: action
+    clear: action
     plant: action
     join: action
+    practise: action
+    goto: action
+    read: action
+    seen: action
     packs: PacksState
-    packsUp: bool
     still: bool
   view
     column flex=1 min-height=0 display="flex" flex-direction="column"
-      scroll id="chooser-verses" navigationScroll="chooser-verses" flex=1 min-height=0
-        column gap=4 padding=20 max-width="40rem" testId="chooser-verses"
-          text shown.heading role="heading" aria-level=2
-          for v in words.verses key=v.verse
-            button role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=`${shown.heading}:${v.verse}` disabled=pending press=tap(v.verse) min-height="44px" text-align="start" id=`verse-${v.verse}` testId=`verse-${v.verse}`
-              text `${v.verse} ${v.text}` overflow-wrap="break-word" hyphens="auto"
-      if packsUp
-        PacksLine(shown=packs, still=still)
-      column gap=6 padding="12px 20px" flex-shrink=0 testId="chooser-footer"
-        if shown.chosen
-          row gap=12 justify-content="space-between"
-            text shown.reference font="-exact-headline" testId="range-line"
-            text shown.countText testId="range-count"
-        text shown.cap color="-exact-secondary-label"
-        if shown.line != ""
-          text shown.line role="alert" testId=shown.lineId
-        if shown.short != ""
-          text shown.short testId="short-line"
-        if shown.plant
-          button press=plant buttonStyle="filled" disabled=pending testId="plant-list"
-            text "Plant"
-        if shown.singles
-          button press=join buttonStyle="filled" disabled=pending testId="plant-singles"
-            text "Add to single verses"
+      scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room resize=sized flex=1 min-height=0 testId="chapter-scroll"
+        column gap=4 padding-top=8 padding-bottom=32 testId="chapter"
+          column gap=6 padding="0px 20px 12px" max-width="40rem"
+            button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" max-width="100%" min-height=44 display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" gap=8 color="hs.ink" -exact-press-scale=0.97 testId="chapter-title"
+              text shown.heading font="-exact-large-title" font-weight=700 min-width=0 overflow-wrap="break-word"
+              image "symbol:chooser" font="-exact-headline" color="hs.quiet" aria-hidden=true
+            if shown.fieldLine != ""
+              text shown.fieldLine font="-exact-footnote" color="hs.quiet" testId="chapter-field"
+            text "Tap a verse to plant or study it." font="-exact-footnote" color="hs.quiet" testId="chapter-hint"
+          TypeColumn(type=type)
+            for v in words.verses key=v.verse
+              row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=(shown.planted.filter(p => p == v.verse).length > 0 ? `${shown.heading}:${v.verse}, in your field` : `${shown.heading}:${v.verse}`) aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width=3 border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-radius=12 padding="6px 10px" margin="0px -10px" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
+                :checked
+                  background-color = "hs.hearing"
+                if v.verse == opened and not still
+                  column class=ChapterLanded position="absolute" inset=0 border-radius=12 opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
+                text overflow-wrap="break-word" hyphens="auto" position="relative"
+                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
+                  text ` ${v.text}`
+          row gap=12 padding="24px 20px 8px" flex-wrap="wrap" max-width="40rem" testId="chapter-turn"
+            if shown.previous.found
+              button press=read(shown.previous.book, shown.previous.chapter, 0) buttonStyle="bordered" min-height=44 aria-label=`Previous chapter, ${shown.previous.name}` testId="chapter-previous"
+                text `‹ ${shown.previous.name}`
+            if shown.next.found
+              button press=read(shown.next.book, shown.next.chapter, 0) buttonStyle="bordered" min-height=44 aria-label=`Next chapter, ${shown.next.name}` margin-left="auto" testId="chapter-next"
+                text `${shown.next.name} ›`
+      PacksLine(shown=packs, still=still)
+      if shown.up
+        column gap=8 padding="12px 20px" flex-shrink=1 min-height=0 max-height="70%" overflow-y="auto" background-color="hs.card" border-top-left-radius=16 border-top-right-radius=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="chapter-bar"
+          row gap=12 align-items="center"
+            text shown.reference font="-exact-headline" flex=1 testId="range-line"
+            text shown.countText font="-exact-footnote" color="hs.quiet" testId="range-count"
+            button press=clear aria-label="Clear the selection" min-width=44 min-height=44 testId="chapter-clear"
+              image "symbol:close"
+          if shown.study
+            row gap=8 testId="chapter-study"
+          if shown.landed
+            text "Planted." role="status" testId="chapter-planted"
+            button press=practise buttonStyle="bordered" min-height=44 testId="chapter-practise"
+              text "Practise it now"
+          if shown.already
+            text "Already in your field." role="status" color="hs.quiet" testId="chapter-already"
+          if shown.cap != ""
+            text shown.cap font="-exact-footnote" color="hs.quiet"
+          if shown.line != ""
+            text shown.line role="alert" testId=shown.lineId
+          if shown.short != ""
+            text shown.short testId="short-line"
+          if shown.plant
+            button press=plant buttonStyle="filled" disabled=pending min-height=44 testId="plant-list"
+              text "Plant"
+          if shown.singles
+            button press=join buttonStyle="filled" disabled=pending min-height=44 testId="plant-singles"
+              text "Add to single verses"
+
+// The opened verse's layer, under its words while it fades.
+style ChapterLanded
+  background-color = "hs.hearing"

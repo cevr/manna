@@ -12,8 +12,8 @@
 // The Garden's screens read their routes from `readGardenStack`: the
 // Garden tab's stack, unless a Garden route was pushed onto Read and is
 // up, so a screen kept under the other tab keeps what it shows. The
-// chapter Read shows is the chooser's verses page for the place
-// (`readChooses`), unless a chooser route of Add verses is up.
+// chapter Read shows is the chapter screen for the place
+// (features/chooser.contract).
 
 shape ReadPlace
   id: number
@@ -23,8 +23,9 @@ shape ReadPlace
   name: string
 
 // Whether a route is a sheet over a tab (Settings and its pages, the Aa
-// sheet), drawn by a loop of its own over the screen under it.
-fn readSheetOf(name: string): bool = name.startsWith("settings") or name == "typeSheet"
+// sheet, Go to and its book), drawn by a loop of its own over the screen
+// under it.
+fn readSheetOf(name: string): bool = name.startsWith("settings") or name == "typeSheet" or name.startsWith("goto")
 
 // The id of a tab's top entry under any sheet: the one entry of that tab
 // whose screen body is drawn.
@@ -34,6 +35,7 @@ members HeartseedExact
   state readBookKept = "" persist
   state readChapterKept = "" persist
   state readOpenVerse = 0
+  state readOpenings = 0
   derive readTabStack = match nav.tabs.filter(t => t.name == "read").at(0) { case some(t) => t.stack, case none => stack(nav) }
   derive readTop = match readTabStack.filter(x => not readSheetOf(x.name)).at(-1) { case some(t) => t, case none => top(nav) }
   derive readSheetUp = stack(nav).filter(x => readSheetOf(x.name)).length > 0
@@ -50,7 +52,6 @@ members HeartseedExact
     if not readAskedPacks
       readAskedPacks = true
       send packsFetched = packsAsk(packsKept, false, packsTime.epochAtZero + performanceNow())
-  derive readChooses = (nav.tab == "read" and readUp) or stack(nav).filter(x => x.name == "addBook" or x.name == "addChapter").length == 0
   derive readFirst = match garden.lists.map(l => l.verses.map(v => v.reference)).flat().at(0) { case some(r) => r, case none => (match garden.singles.at(0) { case some(v) => v.reference, case none => "" }) }
   resource readKept = readPlaceOf(readBookKept, readChapterKept, readFirst) as shape ReadPlace else readPlaceOf("", "", "")
   resource readAts = readAtOf(x.id, x.params.book, x.params.chapter, x.params.verse) for x in readTabStack.filter(y => y.name == "readAt") key=x.id as shape ReadPlace
@@ -64,6 +65,7 @@ members HeartseedExact
     readBookKept = `${book}`
     readChapterKept = `${chapter}`
     readOpenVerse = verse
+    readOpenings = readOpenings + 1
     chooserFirst = 0
     chooserLast = 0
     chooserAnswer = ""
@@ -79,14 +81,15 @@ members HeartseedExact
 
 // A driver's launch only (`gardenDriven`, as Your verses' test controls):
 // the two ways into Read no screen calls yet, for tools/drive-read.ts.
-// They float at the chapter's foot and take no room of its own, so the
-// drive measures the chapter as a plain launch lays it out.
+// They float at the chapter's head and take no room of its own, so the
+// drive measures the chapter as a plain launch lays it out, and a verse
+// the agent brings into view stays clear of them.
 component ReadDriven
   props
     open: action
     follow: action
   view
-    row gap=8 padding="8px 20px" flex-wrap="wrap" position="absolute" left=0 right=0 bottom=0 testId="read-driven"
+    row gap=8 padding="8px 20px" flex-wrap="wrap" position="absolute" left=0 right=0 top=0 testId="read-driven"
       button press=open(19, 119, 176) buttonStyle="bordered" testId="read-open-psalm"
         text "Open Psalm 119:176"
       button press=open(43, 3, 0) buttonStyle="bordered" testId="read-open-john"

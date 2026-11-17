@@ -38,6 +38,9 @@ test "Three verses make a list"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   back
   clock data
   clock settle
@@ -51,7 +54,7 @@ test "Three verses make a list"
   expect tree missing "good-John-3-16"
   expect no failures
 
-test "A short pick is a single verse; fewer than three in the chooser is no list"
+test "A short pick is a single verse; fewer than three on the chapter is no list"
   at "/verses"
   clock data
   clock settle
@@ -81,9 +84,8 @@ test "A short pick is a single verse; fewer than three in the chooser is no list
   clock data
   expect text "short-line" == "A list holds at least 3 verses."
   expect tree missing "plant-list"
-  back
-  clock settle
-  back
+  tap "tab-garden"
+  clock data
   clock settle
   back
   clock data
@@ -114,6 +116,9 @@ test "It survives a relaunch"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"

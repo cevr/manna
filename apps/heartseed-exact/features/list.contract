@@ -63,6 +63,8 @@ component ListPage
     yes: action
     no: action
     still: bool
+    chapter: string
+    read: action
   view
     scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0
       column gap=16 padding=20 max-width="40rem" testId="list-page"
@@ -72,6 +74,9 @@ component ListPage
           button press=practice(list.startSlug) buttonStyle="filled" testId="list-practice"
             text "Practice this list"
           text list.startLine color="-exact-secondary-label" testId="list-line"
+        if chapter != ""
+          button press=read buttonStyle="bordered" align-self="flex-start" min-height=44 testId="list-read"
+            text `Read ${chapter}`
         for v in list.verses key=v.slug
           column gap=4 -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
             text v.reference font="-exact-headline"

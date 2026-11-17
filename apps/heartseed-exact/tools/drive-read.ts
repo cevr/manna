@@ -9,8 +9,9 @@
  * by `tree --ax`, their names and the one selected; the bar's ground and
  * each tab's mark by pixel, light and dark, the chosen tab in the tint and
  * the other in the quiet ink, both at AA on the ground; `readOpenAt` to
- * Psalm 119:176 brings that verse into view, above the bar, with the
- * chooser's footer above it too, also at the largest text size;
+ * Psalm 119:176 brings that verse into view, above the bar, and a tap on
+ * verse 170 (the last lie under `ReadDriven`'s buttons) raises the chapter's bar above the tab bar too, also at the largest
+ * text size;
  * `readFollow` to John 3:16 and Back to the chapter left; a session
  * started in Garden, then Read and back, holds its item and its recital;
  * and a relaunch on the kept storage opens Read on the place kept. No
@@ -286,7 +287,8 @@ const psalm = a.step('state readShown');
 const psalmVerse = a.step('state readVerse');
 const psalmKept = a.step('state readBookKept');
 const lastVerse = a.step('layout verse-176');
-const footer = a.step('layout chooser-footer');
+a.step('tap verse-170', ...settle);
+const footer = a.step('layout chapter-bar');
 const barAtPsalm = a.step(BAR);
 a.step(`screenshot ${join(own, `read-${host}-psalm.png`)}`);
 a.step('tap read-follow-john', ...moved);
@@ -297,7 +299,16 @@ a.step('back', ...settle);
 const left = a.step('state readShown');
 a.step(`prefer root-font-size ${LARGEST}`, 'tap read-open-psalm', ...moved);
 const largestVerse = a.step('layout verse-176');
-const largestFooter = a.step('layout chooser-footer');
+/** At the largest text `ReadDriven`'s buttons cover the middle where the agent brings a verse, so the verse is chosen at the default size and the text grown after. */
+a.step(
+  'prefer root-font-size 17',
+  ...settle,
+  'tap verse-170',
+  ...settle,
+  `prefer root-font-size ${LARGEST}`,
+  ...settle,
+);
+const largestFooter = a.step('layout chapter-bar');
 const largestBar = a.step(BAR);
 const largestTab = native ? largestBar : a.step('layout tab-read');
 a.step(`screenshot ${join(own, `read-${host}-largest.png`)}`);
@@ -358,7 +369,11 @@ drive.check(
 const shownLast = aboveBar(first, lastVerse, barAtPsalm);
 drive.check('Psalm 119:176 is in view, above the bar', shownLast.ok, shownLast);
 const shownFooter = aboveBar(first, footer, barAtPsalm);
-drive.check("the chooser's footer is above the bar", shownFooter.ok, shownFooter);
+drive.check(
+  "the chapter's bar, raised by a tap on verse 170, is above the tab bar",
+  shownFooter.ok,
+  shownFooter,
+);
 drive.check(
   'readFollow shows John 3 on verse 16',
   Bun.deepEquals(placeOf(first[followed]), [43, 3, 16]),
@@ -379,7 +394,7 @@ drive.check(
 );
 const largestFoot = aboveBar(first, largestFooter, largestBar);
 drive.check(
-  "at the largest text, the chooser's footer is above the bar",
+  "at the largest text, the chapter's bar is above the tab bar",
   largestFoot.ok,
   largestFoot,
 );

@@ -43,7 +43,7 @@ test "Read's first showing asks for the packs, and Garden asks for none"
   expect state readAskedPacks == true
   expect state packsPlace.fixture == false
 
-test "After a plant of John 3:16-18 a fresh Read shows John 3, on its first verse"
+test "After a plant of John 3:16-18 on its chapter, Read stays on John 3 across a relaunch"
   clock data
   clock settle
   tap "add-list"
@@ -64,13 +64,15 @@ test "After a plant of John 3:16-18 a fresh Read shows John 3, on its first vers
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "tab-read"
   clock data
   clock settle
   expect text "read-title-read" == "John 3"
   expect state readBook == 43
   expect state readChapter == 3
-  expect state readVerse == 16
   expect tree has "verse-36"
   expect tree missing "verse-37"
   reload
@@ -102,6 +104,9 @@ test "Garden again shows home with no row built"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
