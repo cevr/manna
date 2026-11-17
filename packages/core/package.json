@@ -42,8 +42,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "./scripts/build-native.sh check && bun test --parallel --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/bible-db/strongs-rows.test.ts",
-    "test:strongs": "bun test ./src/bible-db/strongs-rows.test.ts",
+    "test": "./scripts/build-native.sh check && bun test --parallel --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/bible-db/strongs-rows.test.ts --path-ignore-patterns=src/bible/strongs-tags.test.ts --path-ignore-patterns=src/platform-bun --path-ignore-patterns=src/wiki --path-ignore-patterns=src/content-update --path-ignore-patterns=src/corpus-supply --path-ignore-patterns=src/sync --path-ignore-patterns=src/hymnal --path-ignore-patterns=src/webster --path-ignore-patterns=src/writings",
+    "test:supply": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/content-update ./src/corpus-supply ./src/sync ./src/hymnal ./src/webster ./src/writings",
+    "test:strongs": "bun test --parallel ./src/bible-db/strongs-rows.test.ts ./src/bible/strongs-tags.test.ts",
+    "test:platform": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/platform-bun",
+    "test:wiki": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/wiki",
     "test:slow": "bun test .slow.test.",
     "test:watch": "bun test --watch",
     "sync:bible": "bun run src/sync/bible-sync-main.ts",
