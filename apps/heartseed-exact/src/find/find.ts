@@ -25,10 +25,9 @@
  * places are in the verse table; a prefix of several words, their lists
  * merged; a prefix of many tokens (a class, `BIG_CLASS`), a bitmap. The
  * verses that hold every term are walked from the smallest set. The phrase
- * check places the listed and tabled terms first, then checks a class's
- * place in the verse's text for at most `SPARSE` verses, and past them by
- * its words' lists, read only as far as the walk has come. Only those
- * texts and the hits' are read. A keystroke that narrows the query before
+ * check places the listed and tabled terms first, then a class's place by
+ * its words' lists, decoded at once the first time a walk needs them. Only
+ * the hits' texts are read. A keystroke that narrows the query before
  * it (the same words, the last typed on) checks below where that walk
  * stopped only the phrases it found, and walks on from there.
  */
@@ -81,9 +80,6 @@ export const CUT_BEFORE = 40;
 
 /** A hit's words in all, at most, unless its match alone is longer. */
 export const CUT_ALL = 120;
-
-/** All-words verses at most this many: a prefix of many tokens is checked in their text, not its lists. */
-export const SPARSE = 300;
 
 /** The query words' terms kept between queries, so typing on asks the index for none it answered. */
 const TERMS_KEPT = 64;
@@ -336,27 +332,6 @@ const keepMarked = (scratch: Scratch, count: number, at: number) => {
   return kept;
 };
 
-/** Keeps the first `count` firsts where each spread term's word in `text` is the term's, read in place; how many are kept. */
-const keepByText = (scratch: Scratch, terms: ReadonlyArray<Term>, count: number, text: string) => {
-  const { firsts, starts, ends } = scratch;
-  const words = boundsInto(text, starts, ends, (firsts[count - 1] ?? 0) + terms.length);
-  const standsAt = (first: number) =>
-    terms.every((term, at) => {
-      const place = first + at;
-      if (!spread(term)) return true;
-      if (place >= words) return false;
-      return wordIs(text, starts[place] ?? 0, ends[place] ?? 0, term.word, term.prefix);
-    });
-  let kept = 0;
-  for (let each = 0; each < count; each += 1) {
-    const first = firsts[each] ?? 0;
-    if (!standsAt(first)) continue;
-    firsts[kept] = first;
-    kept += 1;
-  }
-  return kept;
-};
-
 /** Find over `index`: `findRead` reads the corpus's verses to cut its hits. */
 export const findWith = (index: FindIndex) => {
   /** The verses of sorted tokens, each once, in order. */
@@ -408,7 +383,7 @@ export const findWith = (index: FindIndex) => {
 
   const classTokens = new Map<string, Int32Array>();
 
-  /** A class's untabled words' tokens, merged once its phrase check has read `SPARSE` texts; kept for the launch. */
+  /** A class's untabled words' tokens, decoded at once the first time a phrase check needs them; kept for the launch. */
   const tokensOfClass = (term: Extract<Term, { kind: 'class' }>) => {
     const kept = classTokens.get(term.word);
     if (kept !== undefined) return kept;
@@ -509,7 +484,6 @@ export const findWith = (index: FindIndex) => {
     terms: ReadonlyArray<Term>,
     found: ReadonlyArray<number>,
     limit: number,
-    read: Set<number>,
     seed: Walk | undefined,
   ): Walk => {
     const classed = terms.some(spread);
@@ -522,8 +496,7 @@ export const findWith = (index: FindIndex) => {
     const fixed = terms.flatMap((term, at) => (spread(term) ? [] : [at]));
     const tabledOnly = fixed.length > 0 && fixed.every((at) => terms[at]?.kind === 'tabled');
     let scratch = scratchOf(0);
-    let texts = 0;
-    /** Whether the terms stand together in `verse`: the listed and tabled terms placed first, then a class's word by the text or the class's lists. */
+    /** Whether the terms stand together in `verse`: the listed and tabled terms placed first, then a class's word by the class's lists. */
     const together = (verse: number) => {
       const start = index.tokenStart(verse);
       const length = index.tokenStart(verse + 1) - start;
@@ -545,10 +518,6 @@ export const findWith = (index: FindIndex) => {
         }
       }
       if (count === 0 || !classed) return count > 0;
-      if (texts < SPARSE) {
-        texts += 1;
-        return keepByText(scratch, terms, count, textOf(verse, read)) > 0;
-      }
       for (let place = 0; place < terms.length && count > 0; place += 1) {
         const term = terms[place];
         if (term === undefined || term.kind !== 'class') continue;
@@ -631,7 +600,7 @@ export const findWith = (index: FindIndex) => {
     const read = new Set<number>();
     let phrases: ReadonlySet<number> = new Set(found.slice(0, limit));
     if (terms.length > 1) {
-      const walk = phrasesOf(terms, found, limit, read, seedOf(words, typing));
+      const walk = phrasesOf(terms, found, limit, seedOf(words, typing));
       lastWalk = { ...walk, words, typing };
       phrases = walk.phrases;
     }
