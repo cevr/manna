@@ -1,17 +1,22 @@
 import {
   Array as Arr,
   Config,
+  Context,
   Duration,
   Effect,
   FileSystem,
+  Layer,
   Option,
   Path,
   Result,
   Schema,
+  type Scope,
   Stream,
 } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+import { APPS, type ExactApp } from './apps.ts';
+import { claimPort, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
 
 /** How a clone comes to the pin. */
@@ -22,37 +27,6 @@ const DEFAULT_CLONE = 'Developer/vendor/exact';
 
 /** The lock every native build and drive waits on, one at a time on this Mac. */
 const BUILD_LOCK = '/tmp/manna-exact-build.lock';
-
-/**
- * An app this wrapper runs: its simulator, its web port and its spare ports, and whether it is quiet: a quiet
- * app's plain launch would speak through the simulator, so it is looked at under the agent alone.
- */
-interface ExactApp {
-  readonly simulator: string;
-  readonly port: number;
-  readonly spare: readonly [number, number];
-  readonly quiet: boolean;
-}
-
-/**
- * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
- * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
- */
-const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
-  'heartseed-exact': {
-    simulator: 'verify-heartseed-exact',
-    port: 8765,
-    spare: [8770, 8774],
-    quiet: true,
-  },
-  'hymnal-exact': {
-    simulator: 'verify-hymnal-exact',
-    port: 8766,
-    spare: [8775, 8779],
-    quiet: false,
-  },
-  lab: { simulator: 'verify-heartseed-exact', port: 8774, spare: [8774, 8774], quiet: true },
-};
 
 /** The hosts a drive runs natively on this Mac: the simulator and the Mac itself. */
 const NATIVE_HOSTS: ReadonlyArray<string> = ['ios', 'macos', 'mac'];
@@ -196,6 +170,61 @@ const ownsPort = (app: ExactApp, port: number) =>
   port === app.port || (port >= app.spare[0] && port <= app.spare[1]);
 
 /**
+ * The port a run of `args` holds while its child runs, so no run of another checkout serves there meanwhile: none
+ * for a verb that serves no page of its own on the spare range (`web` and `serve` keep the app's own port, a native
+ * host none), else the page's port `args` or the caller's `EXACT_PORT` names (`Option.some` of it), else one
+ * claimed from the spare range (`Option.none`), which the child is then held to.
+ */
+const listenerOf = (
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+): Option.Option<Option.Option<number>> => {
+  if (!['test', 'verify', 'agent'].includes(args[0] ?? '') || isNative(args)) return Option.none();
+  const named = Option.orElse(Arr.head(portsOf(args)), () => callerPorts.EXACT_PORT);
+  return Option.some(Option.map(named, Number));
+};
+
+/**
+ * Holds a port for the child's run, given back when the run's scope closes: one of a range claimed, or one port
+ * taken, each waited for while a run of any checkout holds it. The live one is the turns of `drive/port.ts`; a test
+ * hands a stand-in.
+ */
+export class PortClaims extends Context.Service<
+  PortClaims,
+  {
+    readonly claim: (
+      range: readonly [number, number],
+      label: string,
+    ) => Effect.Effect<number, ExactRefused, Scope.Scope>;
+    readonly take: (
+      port: number,
+      label: string,
+    ) => Effect.Effect<number, ExactRefused, Scope.Scope>;
+  }
+>()('@manna/exact-kit/PortClaims') {
+  static readonly live = Layer.succeed(
+    PortClaims,
+    PortClaims.of({
+      claim: (range, label) => held(() => claimPort(range, { label })),
+      take: (port, label) => held(() => takePort(port, { label })),
+    }),
+  );
+}
+
+/** A port held from `claim` until the scope closes; a claim that runs out of waiting is refused. */
+const held = (claim: () => Promise<{ readonly port: number; readonly give: () => void }>) =>
+  Effect.map(
+    Effect.acquireRelease(
+      Effect.tryPromise({
+        try: claim,
+        catch: (error) => ExactRefused.make({ reason: String(error) }),
+      }),
+      (claimed) => Effect.sync(claimed.give),
+    ),
+    (claimed) => claimed.port,
+  );
+
+/**
  * The run of `args` for `app`, whose clone is at `clone`, with the caller's port variables: refused for
  * a verb that publishes or rewrites the launcher, a feedback send, a quiet app's launch outside the agent,
  * another device or simulator, or a port not the app's; else the child's variables, set over whatever the caller's held: the clone,
@@ -307,7 +336,8 @@ const appNamed = (name: string) =>
  * Runs Exact's `args` for the app in `appDir` through `launcher` (exact-cli.ts): refused before any
  * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
  * clone is at the pin, then run with the plan's
- * variables over the caller's, a native build or drive under the build lock. The child's exit code.
+ * variables over the caller's, a native build or drive under the build lock, a web page's port held while it runs
+ * (`listenerOf`). The child's exit code.
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
   appDir: string,
@@ -342,13 +372,38 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const lock = Arr.filter(['lockf', '-k', BUILD_LOCK], () => planned.locked);
   const [command = 'bun', ...rest] = [...lock, 'bun', launcher, appDir, name, ...planned.args];
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const claims = yield* PortClaims;
+  const turns = yield* Config.option(Config.String('EXACT_PORT_TURNS'));
+  const label = `exact ${args.slice(0, 2).join(' ')} in ${appDir}`;
+  const withTurn = (port: number) =>
+    Arr.dedupe([
+      ...Option.getOrElse(turns, () => '')
+        .split(',')
+        .filter((t) => t !== ''),
+      String(port),
+    ]).join(',');
   return yield* Effect.scoped(
-    Effect.flatMap(
-      spawner.spawn(
+    Effect.gen(function* () {
+      const listener = yield* Effect.forEach(
+        Option.toArray(listenerOf(args, callerPorts)),
+        (named) =>
+          Option.match(named, {
+            onNone: () =>
+              Effect.map(claims.claim(app.spare, label), (port) => ({
+                PORT_LO: String(port),
+                PORT_HI: String(port),
+                EXACT_PORT_TURNS: withTurn(port),
+              })),
+            onSome: (port) =>
+              Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurn(port) }),
+          }),
+      );
+      const handle = yield* spawner.spawn(
         ChildProcess.make(command, rest, {
           cwd: appDir,
           env: {
             ...planned.env,
+            ...listener[0],
             ...Object.fromEntries(
               // oxlint-disable-next-line effect/noNullish -- the spawner removes a variable set to undefined from the inherited environment
               planned.removed.map((name) => [name, undefined]),
@@ -360,8 +415,8 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
           stderr: 'inherit',
           forceKillAfter: Duration.seconds(5),
         }),
-      ),
-      (handle) => handle.exitCode,
-    ),
+      );
+      return yield* handle.exitCode;
+    }),
   );
 });

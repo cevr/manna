@@ -1,3 +1,5 @@
+import { claimAppPort } from './port.ts';
+
 /** A process the drive started, in a process group of its own: its pid, and its end. */
 interface Started {
   readonly pid: number;
@@ -16,6 +18,8 @@ interface Processes {
   readonly spawn: (argv: ReadonlyArray<string>, cwd: string) => Started;
   readonly signal: (pid: number, signal: 'SIGTERM') => void;
   readonly sleep: (ms: number) => Promise<void>;
+  /** A web port of the app in `appDir` held for the rest of this process (`claimAppPort`), claimed for `label`. */
+  readonly claim: (appDir: string, label: string) => Promise<number>;
 }
 
 /** Whether `line` of an agent's output is one of its JSON replies. */
@@ -43,7 +47,8 @@ interface DriveOptions {
 /**
  * A drive: steps run through `bun run exact agent <host> --json` in the app's folder, each run's JSON replies, one
  * `PASS`/`FAIL` line per check, and at the end the exit code. A run that fails is reported as a failed step and
- * the drive goes on, its replies all `undefined`, so later checks are still reported. The one signal a drive sends
+ * the drive goes on, its replies all `undefined`, so later checks are still reported. On the web every run is on
+ * one port of the app's the drive claims and holds to its end. The one signal a drive sends
  * is to a run's own group when it overruns. Exact's touch runner on iOS (`xcodebuild … exact-touches-<udid>`) is
  * kept on purpose and idles out by itself, and another run may be reusing it, so `finish` signals nothing.
  */
@@ -71,9 +76,27 @@ export const makeDrive = (options: DriveOptions) => {
     print(`${ok ? 'PASS' : 'FAIL'} ${options.host} ${name}${ok ? '' : `: ${JSON.stringify(got)}`}`);
   };
 
+  let claimed: Promise<number> | undefined;
+  /**
+   * On the web, `--port` and the port this drive claims, the first time it is asked, and holds to its end: every
+   * launch, a relaunch too, is on the one port, so it finds the store the last one left, and no run of another
+   * checkout serves there meanwhile. None when `flags` names a port or the host is not the web.
+   */
+  const portFlags = async (flags: ReadonlyArray<string>) => {
+    if (options.host !== 'web' || flags.some((f) => f === '--port' || f.startsWith('--port=')))
+      return [];
+    claimed ??= processes.claim(options.appDir, `${options.name} ${options.host}`);
+    return ['--port', String(await claimed)];
+  };
+
   /** Runs `ops` with the agent's `flags`; their replies, or as many `undefined`s and a failed step. */
   const run = async (flags: ReadonlyArray<string>, ops: ReadonlyArray<string>) => {
-    const argv = ['bun', 'run', 'exact', 'agent', options.host, '--json', ...flags, ...ops];
+    const argv = [
+      ...['bun', 'run', 'exact', 'agent', options.host, '--json'],
+      ...(await portFlags(flags)),
+      ...flags,
+      ...ops,
+    ];
     const started = processes.spawn(argv, options.appDir);
     const { code, stdout, stderr } = await watch(started);
     const replies = stdout
@@ -114,10 +137,20 @@ export const makeDrive = (options: DriveOptions) => {
   };
 };
 
-/** The machine: Bun's spawn in a group of its own, `process.kill`, `setTimeout`. */
-const bunProcesses: Processes = {
+/**
+ * The machine: Bun's spawn in a group of its own with this process's environment as it is at the spawn (so a run
+ * inherits the port turns the drive holds), `process.kill`, `setTimeout`, and a port of the app claimed through
+ * `claimAppPort`. A drive that starts its runs its own way keeps `claim` from here.
+ */
+export const bunProcesses: Processes = {
   spawn: (argv, cwd) => {
-    const child = Bun.spawn([...argv], { cwd, stdout: 'pipe', stderr: 'pipe', detached: true });
+    const child = Bun.spawn([...argv], {
+      cwd,
+      env: { ...process.env },
+      stdout: 'pipe',
+      stderr: 'pipe',
+      detached: true,
+    });
     return {
       pid: child.pid,
       ended: Promise.all([
@@ -136,4 +169,5 @@ const bunProcesses: Processes = {
     new Promise((resolve) => {
       setTimeout(resolve, ms).unref();
     }),
+  claim: async (appDir, label) => (await claimAppPort(appDir, { label })).port,
 };
