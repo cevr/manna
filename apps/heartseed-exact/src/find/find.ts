@@ -37,7 +37,7 @@ import { passageReference, verseReference } from '@manna/heartseed/passages';
 
 import type { FindIndex, WordList } from './index';
 import { bitsOf, versesInAll } from './pack';
-import { boundsInto, queryOf, tokensOf, wordIs } from './words';
+import { boundsInto, queryOf, wordIs } from './words';
 
 /** A place the query names: Go to opens it at `verse` (0 for the chapter's top). */
 export interface FindPlace {
@@ -130,10 +130,6 @@ const tabledIdsOf = (term: Term): ReadonlyArray<number> => {
 
 /** Whether a term stands for many words' lists, read in the phrase check only as far as needed: a prefix's. */
 const spread = (term: Term) => term.kind === 'class';
-
-/** Whether a word of a verse is the term's. */
-const matches = (term: Term, word: string) =>
-  term.prefix ? word.startsWith(term.word) : word === term.word;
 
 /** The first index of `values` (sorted) at least `value`. */
 const firstFrom = (values: ArrayLike<number>, value: number) => {
@@ -584,16 +580,18 @@ export const findWith = (index: FindIndex) => {
   ): FindHit => {
     const place = index.placeOf(verse);
     const text = textOf(verse, read);
-    const tokens = tokensOf(text);
+    if (text.length > hitBounds.starts.length) hitBounds = scratchOf(text.length);
+    const { starts, ends } = hitBounds;
+    const words = boundsInto(text, starts, ends);
+    const isAt = (term: Term, at: number) =>
+      wordIs(text, starts[at] ?? 0, ends[at] ?? 0, term.word, term.prefix);
     let span: readonly [number, number] = [0, 0];
-    for (let first = 0; first < tokens.length; first += 1) {
+    for (let first = 0; first < words; first += 1) {
       const found = phrase
-        ? first + terms.length <= tokens.length &&
-          terms.every((term, at) => matches(term, tokens[first + at]?.word ?? ''))
-        : terms.some((term) => matches(term, tokens[first]?.word ?? ''));
+        ? first + terms.length <= words && terms.every((term, at) => isAt(term, first + at))
+        : terms.some((term) => isAt(term, first));
       if (found) {
-        const last = phrase ? tokens[first + terms.length - 1] : tokens[first];
-        span = [tokens[first]?.start ?? 0, last?.end ?? 0];
+        span = [starts[first] ?? 0, ends[phrase ? first + terms.length - 1 : first] ?? 0];
         break;
       }
     }
@@ -603,6 +601,8 @@ export const findWith = (index: FindIndex) => {
       ...cutOf(text, span[0], span[1]),
     };
   };
+
+  let hitBounds = scratchOf(0);
 
   /** What find shows for `query`: at most `limit` hits. */
   const findRead = (query: string, limit: number): FindShown => {
