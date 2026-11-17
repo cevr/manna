@@ -75,7 +75,7 @@ describe('every named gap', () => {
       const read = (yield* Effect.forEach(MEMBERS, gapsOf)).flat(2);
       for (const { opened, box, ...gap } of read)
         expect({ ...gap, opened }).toEqual({ ...gap, opened: [box] });
-      expect(read.length).toBe(13);
+      expect(read.length).toBe(22);
     }),
   );
 });

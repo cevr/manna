@@ -4,7 +4,7 @@
   "from": "threeQuarterLeft",
   "bones": [],
   "pose": { "numbers": {}, "root": [187.946588, 332.498702], "scale": 0.893175 },
-  "scores": { "front": 17215.529406, "threeQuarterLeft": 16947.729318 },
-  "ms": 5667,
+  "scores": { "front": 17215.529406, "threeQuarterLeft": 16948.185176 },
+  "ms": 5878,
   "rasters": 103
 }
