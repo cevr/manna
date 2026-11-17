@@ -1,5 +1,6 @@
 // Add verses (`/add`): the current Heartseed's shelves in its order, as a
-// grouped list. Any passage opens the chooser (features/chooser.contract);
+// grouped list. Any passage selects the Read tab and opens Go to over its
+// chapter (features/goto.contract);
 // every other shelf (the picks, the promises, each section of Haskell's
 // Bible Handbook) is a head that opens in place, one at a time, as the
 // current sheet's shelves do, and lists its rows, one per list, each its
@@ -62,7 +63,7 @@ members HeartseedExact
   action addOpenIt
     nav = push(nav, "/add")
   action addOpenBible
-    nav = push(nav, "/add/bible")
+    nav = open(nav, path("gotoSheet"))
   action addOpenList(slug: string)
     addAnswer = ""
     nav = push(nav, path("addList", slug))

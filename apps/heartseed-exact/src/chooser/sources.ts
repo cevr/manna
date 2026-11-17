@@ -1,43 +1,14 @@
 /**
- * The chooser's data sources, as `app.ts` registers them. Each answers at
- * once from the canon and the corpus the data module imports, and touches
- * no storage: `chooserBooks` the books step, `chooserChapters` a book's
- * chapters, `chooserTap` the range after a tap, and `chooserRead` the
- * verses step's footer, given the single verses held, their references
- * joined by `|`. A route's book and chapter arrive as its text.
+ * The chapter screen's data sources, as `app.ts` registers them. Each
+ * answers at once from the canon and the corpus the data module imports,
+ * and touches no storage: `chapterTap` the range after a tap and
+ * `chapterRead` the chapter's field marks and its bar (`./bar.ts`, over the
+ * chooser's rules in `./chooser.ts`), given the single verses' and the
+ * field's references, each joined by `|`. A place's book and chapter
+ * arrive as its text.
  */
 
-import {
-  chooserBooks,
-  chooserChapters,
-  chooserShown,
-  chooserTap,
-  type ChooserBooks,
-  type ChooserChapters,
-  type ChooserRange,
-  type ChooserShown,
-} from './chooser';
+import { chapterSources } from './bar';
 
-/** The chooser's sources. */
-export const chooserSources = {
-  chooserBooks: (): ChooserBooks => chooserBooks(),
-  chooserChapters: ([book]: readonly [string]): ChooserChapters => chooserChapters(book),
-  chooserTap: ([book, chapter, first, last, verse]: readonly [
-    string,
-    string,
-    number,
-    number,
-    number,
-  ]): ChooserRange => chooserTap(book, chapter, { first, last }, verse),
-  chooserRead: ([book, chapter, first, last, answer, singles]: readonly [
-    string,
-    string,
-    number,
-    number,
-    string,
-    string,
-  ]): ChooserShown => chooserShown(book, chapter, { first, last }, answer, singlesOf(singles)),
-};
-
-/** The single verses' references as the contract hands them, joined by `|`. */
-const singlesOf = (text: string) => text.split('|').filter((reference) => reference !== '');
+/** The chapter screen's sources. */
+export const chooserSources = chapterSources;

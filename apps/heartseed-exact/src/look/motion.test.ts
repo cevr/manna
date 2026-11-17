@@ -458,7 +458,7 @@ describe('Heartseed ticks as the hymnal does (q114)', () => {
     });
 
   it("ticking or unticking a verse of the chooser ticks a selection, then the chooser's tap", () => {
-    const action = actions.get(handed('ChooserVersesPage', 'tap'));
+    const action = actions.get(handed('ChapterPage', 'tap'));
     expect(ticks(action)).toBe(true);
     expect(action?.split('\n').slice(1)).toEqual(['    chooserTapIt(verse)']);
   });

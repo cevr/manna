@@ -1,0 +1,231 @@
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "The title and the magnifier open Go to, and Done closes it"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock data
+  clock settle
+  expect tree has "goto"
+  expect tree missing "goto-grow"
+  expect state gotoBooksShown.testaments.0.label == "Old Testament"
+  expect state gotoBooksShown.testaments.1.books.0.name == "Matthew"
+  tap "goto-done"
+  clock settle
+  expect tree missing "goto"
+  expect state readTop.name == "read"
+  tap "chapter-find"
+  clock data
+  clock settle
+  expect tree has "goto"
+  expect state gotoFind == true
+  tap "book-19"
+  clock data
+  clock settle
+  expect state gotoBookShown.chapters.length == 150
+  tap "goto-book-done"
+  clock settle
+  expect tree missing "goto"
+  expect tree missing "goto-book"
+  expect state readTop.name == "read"
+  expect no failures
+
+test "A chapter chosen in Go to is kept across a relaunch"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock settle
+  tap "book-19"
+  clock data
+  clock settle
+  tap "chapter-23"
+  clock data
+  clock settle
+  expect state chapterShown.heading == "Psalms 23"
+  reload
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  expect state chapterShown.heading == "Psalms 23"
+  expect text "read-title-read" == "Psalms 23"
+  expect no failures
+
+test "Where your verses grow lists the field's chapters, and a book marks them"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "chapter-next"
+  clock data
+  clock settle
+  expect state chapterShown.heading == "John 4"
+  tap "chapter-title"
+  clock data
+  clock settle
+  expect text "grow-43-3" == "John 3"
+  expect state gotoGrowShown.length == 1
+  tap "book-43"
+  clock data
+  clock settle
+  expect tree has "chapter-planted-3"
+  expect tree missing "chapter-planted-4"
+  expect state gotoBookShown.chapters.3.current == true
+  back
+  clock settle
+  tap "grow-43-3"
+  clock data
+  clock settle
+  expect tree missing "goto"
+  expect state chapterShown.heading == "John 3"
+  expect state chapterShown.planted.0 == 16
+  expect state chapterShown.planted.2 == 18
+  expect no failures
+
+test "A reference typed in Go to opens its place, and Cancel clears the box"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-find"
+  clock data
+  clock settle
+  type "goto-find" "zzzz"
+  clock data
+  clock settle
+  expect tree has "find-results"
+  tap "goto-cancel"
+  clock data
+  clock settle
+  expect state findQuery == ""
+  expect tree missing "find-results"
+  type "goto-find" "psalm 23:4"
+  clock data
+  clock settle
+  expect state findShown.places.0.label == "Psalms 23:4"
+  tap "find-place"
+  clock data
+  clock settle
+  expect tree missing "goto"
+  expect state findQuery == ""
+  expect state readBook == 19
+  expect state readChapter == 23
+  expect state readVerse == 4
+  expect tree has "verse-landed"
+  expect no failures
+
+test "Any passage in Add verses opens Go to over Read"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  expect tree has "goto"
+  expect state readGardenTab.length == 2
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  expect state readTop.name == "read"
+  expect state chapterShown.heading == "John 3"
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect tree has "add-verses"
+  expect no failures
+
+test "Read John 3 on a list's page and on Today opens the chapter on the verse"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock settle
+  tap "book-1"
+  clock data
+  clock settle
+  tap "chapter-1"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  tap "row-title-passage-0-43-3-16-18"
+  clock data
+  clock settle
+  expect text "list-read" == "Read John 3"
+  tap "list-read"
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  expect state readTop.name == "read"
+  expect state chapterShown.heading == "John 3"
+  expect state readVerse == 16
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect tree has "list-page"
+  tap "list-practice"
+  clock data
+  clock settle
+  expect tree has "today-read"
+  tap "today-read"
+  clock data
+  clock settle
+  expect state nav.tab == "read"
+  expect state chapterShown.heading == "John 3"
+  expect state readVerse == 16
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect state todayRoute == "start"
+  expect tree has "today-read"
+  expect no failures

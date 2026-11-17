@@ -7,10 +7,6 @@
 // A driver's launch (HEARTSEED_GARDEN_DRIVE set, app.json's `env`) adds
 // the plant buttons and a test control under each verse; a plain launch
 // has none, and plants only through Add verses (features/add.contract).
-use FindResults, FindShown from "./find.contract"
-
-use TypeColumn, TypeView from "./type.contract"
-
 shape GardenTime
   epochAtZero: number
   utcOffset: number
@@ -90,13 +86,6 @@ members HeartseedExact
   mutation gardenMoved as shape GardenVerseChange queue refreshes garden
   derive gardenLine = match gardenPlanted { case some(c) => c.line, case none => "" }
   derive gardenAnswer = match gardenPlanted { case some(c) => c.answer, case none => "" }
-  // hs-read-type's sample, until hs-read-chapter: Psalm 119 under the reading settings, a driver's launch only.
-  resource gardenTypeSample = textVerses(19, 119) when gardenDriven.on as shape string[] else empty()
-  action gardenTypeAa
-    scrollIntoView("type-sample", block="start", behavior="instant")
-    typeOpen()
-  // hs-read-type's sample ends.
-
   action gardenPlantRange(book: number, chapter: number, first: number, last: number)
     gardenClock = performanceNow()
     send gardenPlanted = gardenPlant(book, chapter, first, last, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
@@ -154,14 +143,6 @@ component YourVerses
     shown: action
     back: action
     add: action
-    type: TypeView
-    sample: string[]
-    aa: action
-    findQuery: string
-    found: FindShown
-    findType: action
-    findClear: action
-    findOpen: action
   view
     scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0 testId="verses-content"
       column gap=20 padding=20 max-width="40rem" testId="verses"
@@ -178,16 +159,6 @@ component YourVerses
               text "Plant a verse of Psalm 119"
             button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
               text "Plant Psalm 23:1-2"
-        // hs-find-index: find's test field, a driver's launch alone; hs-read-chapter moves find to Go to and deletes it.
-        if driven
-          column gap=8 testId="find-drive"
-            row gap=8 align-items="center"
-              input type="search" value=findQuery input=findType placeholder="Find a verse" aria-label="Find a verse" flex=1 testId="find-field"
-              button press=findClear buttonStyle="bordered" testId="find-clear"
-                text "Clear"
-            if findQuery != ""
-              FindResults(found=found, open=findOpen)
-        // hs-find-index: end.
         if garden.limitLine != ""
           text garden.limitLine color="-exact-secondary-label" testId="full"
         else if answer == "Short"
@@ -211,13 +182,3 @@ component YourVerses
                   GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
                 button press=remove(`single:${v.reference}`) buttonStyle="bordered" testId=`remove-single-${v.slug}`
                   text "Remove"
-        // hs-read-type's sample, until hs-read-chapter: Psalm 119 under the reading settings, a driver's launch only.
-        if driven
-          column gap=12 id="type-sample" testId="type-sample"
-            button press=aa aria-label="Text settings" buttonStyle="bordered" align-self="flex-start" testId="type-aa"
-              text "Aa"
-            TypeColumn(type=type)
-              text "Psalm 119" align-self="flex-start" testId="type-probe"
-              for v, i in sample key=i
-                text v testId=`type-verse-${i + 1}`
-        // hs-read-type's sample ends.

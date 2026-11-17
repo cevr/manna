@@ -239,9 +239,15 @@ component TodayRecital
     again: action
     still: bool
     sheet: bool
+    chapter: string
+    read: action
   view
     column gap=20 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
-      text today.reference role="heading" aria-level=2 testId=(today.session.mode == "run" ? "item-reference" : "reference")
+      row gap=8 align-items="center"
+        text today.reference role="heading" aria-level=2 flex=1 testId=(today.session.mode == "run" ? "item-reference" : "reference")
+        if chapter != ""
+          button press=read aria-label=`Read ${chapter}` min-width=44 min-height=44 color="hs.quiet" testId="today-read"
+            image "symbol:book"
       row testId="passage" flex-wrap="wrap" column-gap=8 row-gap=4
         for w in today.words key=w.index
           if w.peekable
@@ -307,6 +313,8 @@ component Today
     home: action
     still: bool
     sheet: bool
+    chapter: string
+    read: action
   view
     scroll id="content" navigationScroll="content" flex=1 min-height=0
       column gap=20 padding=20 max-width="40rem"
@@ -317,4 +325,4 @@ component Today
           SessionEnd(session=today.session, home=home, still=still)
         else if today.session.mode == "cued" or today.session.item
           for k in [today.reference] key=k
-            TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again, still=still, sheet=sheet)
+            TodayRecital(today=today, hear=hear, stop=stop, say=say, finish=finish, peek=peek, showAll=showAll, grade=grade, next=next, again=again, still=still, sheet=sheet, chapter=chapter, read=read)
