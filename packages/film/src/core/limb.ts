@@ -29,7 +29,7 @@ const INK_Y = ((INK_L + 16) / 116) ** 3;
 const KNOT = 2;
 
 /** The shoulder stub's feather, and the offset used to read inside a painted edge, px. */
-export const FEATHER = 2;
+const FEATHER = 2;
 
 /** The shortest a bone of the chain may be, px: two feathers, so the regions' borders never meet. */
 const SHORTEST = 2 * FEATHER;

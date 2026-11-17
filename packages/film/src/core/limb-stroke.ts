@@ -40,14 +40,14 @@ type Affine = Float64Array;
  * rigid piece of the posed limb: the upper arm (its shoulder bone's drawn map
  * inverted), the forearm (its elbow bone's) and the hand (its wrist bone's).
  */
-export interface LimbFrames {
+interface LimbFrames {
   readonly upper: Affine;
   readonly fore: Affine;
   readonly hand: Affine;
 }
 
 /** The premultiplied bilinear sample of a limb's part at the rest point `(sx, sy)` into `into` (rewritten whole): colour 0..255, alpha 0..1. */
-export type LimbSample = (sx: number, sy: number, into: Float64Array) => void;
+type LimbSample = (sx: number, sy: number, into: Float64Array) => void;
 
 const mapped = (m: Affine, x: number, y: number): Pt => [
   m[0]! * x + m[2]! * y + m[4]!,

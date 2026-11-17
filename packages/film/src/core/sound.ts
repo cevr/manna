@@ -179,7 +179,7 @@ export type ScoreOptionState =
   | { readonly _tag: 'Missing' };
 
 /** A partial score's range: the scene it was composed through, where its music ends, and where the film does. */
-export interface PartialRange {
+interface PartialRange {
   readonly through: string;
   /** Film seconds its music ends at: the scene's end and `MUSIC_TAIL`. */
   readonly to: number;

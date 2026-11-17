@@ -345,7 +345,7 @@ export const PartGrain = Schema.Struct({
 const RegionVerdict = Schema.Literals(['within', 'outside', 'unverified']);
 
 /** A line where the paint of `part` meets the paint of `meets` under the moving part `under` (four ways, both lighter than the ink in the answer): the mean L* step across it, `part` less `meets`, of the laid paint and of the answer at the same pixels, and how many pairs it was read on. */
-export const PartStep = Schema.Struct({
+const PartStep = Schema.Struct({
   part: Schema.String,
   meets: Schema.String,
   under: Schema.String,
@@ -356,7 +356,7 @@ export const PartStep = Schema.Struct({
 });
 
 /** One painted region's specks (the paint of `part` under the moving part `under`) against its part's kept cloth within 24 px of it. */
-export const RegionSpeck = Schema.Struct({
+const RegionSpeck = Schema.Struct({
   part: Schema.String,
   under: Schema.String,
   painted: SpeckRead,
@@ -368,7 +368,7 @@ export const RegionSpeck = Schema.Struct({
 const ChromaRead = Schema.Struct({ chroma: Schema.Finite, px: Schema.Int });
 
 /** One painted region's chroma (the paint of `part` under the moving part `under`) against its part's kept cloth within 6 px of each painted pixel: the read cell whose paint is greyest against its cloth, and how many cells were read (0, unread: chroma and px 0). */
-export const RegionChroma = Schema.Struct({
+const RegionChroma = Schema.Struct({
   part: Schema.String,
   under: Schema.String,
   painted: ChromaRead,

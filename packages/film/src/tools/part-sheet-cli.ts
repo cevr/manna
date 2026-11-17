@@ -282,7 +282,7 @@ const inputOf = (
 };
 
 /** One run of a view's part sheet: what it is called, the view cut, its hidden entry, its folder, and whether it calls okra, lays again or checks. */
-export interface PartsJob {
+interface PartsJob {
   readonly label: string;
   readonly command: string;
   readonly kind: string;

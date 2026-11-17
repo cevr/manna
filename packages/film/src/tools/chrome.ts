@@ -75,7 +75,7 @@ export const chromeFlags = (
 ];
 
 /** A view's viewport, and where the page's `console.*` calls go (dropped when not given). */
-export interface ViewOptions {
+interface ViewOptions {
   readonly width: number;
   readonly height: number;
   readonly console?: (type: string, ...args: ReadonlyArray<unknown>) => void;

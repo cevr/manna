@@ -71,7 +71,7 @@ const LockJson = Schema.fromJsonString(Lock, { space: 2 });
 const encoder = new TextEncoder();
 
 /** A clip the lock reports: its member and its id (`raise/clip-b`); its stage is `eval:clip:<clip>@<member>`. */
-export interface LockClip {
+interface LockClip {
   readonly member: string;
   readonly clip: string;
 }
