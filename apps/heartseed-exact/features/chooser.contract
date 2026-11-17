@@ -21,6 +21,7 @@ use TextPassage from "./text.contract"
 use PacksState, PacksLine from "./packs.contract"
 use TypeColumn, TypeView from "./type.contract"
 use GotoChapter from "./goto.contract"
+use StudyBar, StudyBarShown from "./study.contract"
 use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
 // A verse opened on: a layer of the hearing colour under its words fades
@@ -154,6 +155,11 @@ component ChapterPage
     seen: action
     packs: PacksState
     still: bool
+    select: action
+    holds: number
+    held: bool
+    study: StudyBarShown
+    open: action
   view
     column flex=1 min-height=0 display="flex" flex-direction="column"
       scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room resize=sized flex=1 min-height=0 testId="chapter-scroll"
@@ -164,7 +170,7 @@ component ChapterPage
               image "symbol:chooser" font="-exact-headline" color="hs.quiet" aria-hidden=true
             if shown.fieldLine != ""
               text shown.fieldLine font="-exact-footnote" color="hs.quiet" testId="chapter-field"
-            text "Tap a verse to plant or study it." font="-exact-footnote" color="hs.quiet" testId="chapter-hint"
+            text (held ? "Tap a verse to plant or study it." : "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek.") font="-exact-footnote" color="hs.quiet" testId="chapter-hint"
           TypeColumn(type=type)
             for v in words.verses key=v.verse
               row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=(shown.planted.filter(p => p == v.verse).length > 0 ? `${shown.heading}:${v.verse}, in your field` : `${shown.heading}:${v.verse}`) aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width=3 border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-radius=12 padding="6px 10px" margin="0px -10px" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
@@ -172,9 +178,10 @@ component ChapterPage
                   background-color = "hs.hearing"
                 if v.verse == opened and not still
                   column class=ChapterLanded position="absolute" inset=0 border-radius=12 opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
-                text overflow-wrap="break-word" hyphens="auto" position="relative"
-                  text `${v.verse}` font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
-                  text ` ${v.text}`
+                for k in [holds] key=k
+                  text overflow-wrap="break-word" hyphens="auto" position="relative" user-select="text" selectionchange=select(v.verse) testId=`verse-text-${v.verse}`
+                    text `${v.verse}` user-select="none" font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
+                    text ` ${v.text}`
           row gap=12 padding="24px 20px 8px" flex-wrap="wrap" max-width="40rem" testId="chapter-turn"
             if shown.previous.found
               button press=read(shown.previous.book, shown.previous.chapter, 0) buttonStyle="bordered" min-height=44 aria-label=`Previous chapter, ${shown.previous.name}` testId="chapter-previous"
@@ -191,7 +198,9 @@ component ChapterPage
             button press=clear aria-label="Clear the selection" min-width=44 min-height=44 testId="chapter-clear"
               image "symbol:close"
           if shown.study
-            row gap=8 testId="chapter-study"
+            column testId="chapter-study"
+              for s in study.verses.filter(x => x.verse == shown.first) key=s.verse
+                StudyBar(buttons=s.buttons, verse=s.verse, open=open)
           if shown.landed
             text "Planted." role="status" testId="chapter-planted"
             button press=practise buttonStyle="bordered" min-height=44 testId="chapter-practise"

@@ -12,6 +12,7 @@ import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
 import { findPackFrom, STUDY_PACKS, studySources } from './src/study/sources';
+import { studyviewSources } from './src/studyview/sources';
 import { textSources } from './src/text/sources';
 import { readerSources } from './src/today/reader';
 import { todaySources } from './src/today/sources';
@@ -59,6 +60,7 @@ const sources: Sources = {
   ...packs.sources,
   ...commentarySources(packs),
   ...studySources(packs),
+  ...studyviewSources(packs),
   ...findSources(findPackFrom(packs, FIND_PACK)),
 };
 
