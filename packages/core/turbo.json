@@ -3,6 +3,27 @@
   "extends": ["//"],
   "tasks": {
     "test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test:strongs", "test:platform", "test:wiki", "test:supply"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
+    },
+    "test:strongs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
+    },
+    "test:platform": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
+    },
+    "test:supply": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
+    },
+    "test:wiki": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "dist-native/**"]
     },
     "test:slow": {
