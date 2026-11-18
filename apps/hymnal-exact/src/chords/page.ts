@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's data module cannot import effect (docs/exact.md): a fingering, a key or a chord the current app's decoders leave out is undefined, and its rules branch plainly. */
+/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a fingering, a key or a chord the current app's decoders leave out is undefined. */
 
 /**
  * The hymn page with chords on: each section as the current hymnal shows
