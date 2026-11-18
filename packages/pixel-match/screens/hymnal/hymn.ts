@@ -116,7 +116,19 @@ export const rows: ReadonlyArray<Row> = [
       steps: [{ open: 'hymns/999', expect: 'label=No hymn 999' }, { wait: 600 }],
       web: [{ open: 'hymns/999', expect: 'label=No hymn 999.' }, { wait: 600 }],
     },
-    exact: { ops: exactHymn(999) },
+    exact: {
+      ops: exactHymn(999),
+      masks: [
+        {
+          x: 20,
+          y: 280,
+          width: 252,
+          height: 63,
+          reason:
+            "the port's Home link (notfound-home), Exact-only: the port's drives and tests leave not-found by it, and One's page has none (measured by layout on iOS)",
+        },
+      ],
+    },
   },
   {
     id: 'hymn.reading',
