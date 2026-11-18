@@ -7,7 +7,7 @@ that: it captures the One apps as references, drives the port to the same
 state, and scores the pair with a strict diff.
 
 ```bash
-bun run pixel ref <app> [<id>…] [--web]           # One references (the reference simulator booted and installed)
+bun run pixel ref <app> [<id>…] [--web] [--repin]  # One references under the pinned One commit (the reference simulator booted and installed)
 bun run pixel shot <app> <id>… [--scheme light|dark] [--size <size>]  # the port against them
 bun run pixel report [--unit <unit>]              # tmp/pixel-match/report.json
 ```
@@ -77,8 +77,18 @@ beside it. The `.json` records the commit, fixture, the cell's start
 (`hour`) with the host's zone (`timeZone`), simulator or browser, the tree's
 digest and the picture's hash.
 
-- `<one>` is the last commit that changed a One app or the packages they
-  draw from.
+- `<one>` is the pinned One commit, the one line of
+  `packages/pixel-match/one-commit` (`src/pin.ts`). A port's refactor under a
+  One app's folder lands as a commit there, so the key is pinned rather than
+  read from git, or every reference would read as missing.
+- When git's last commit under `apps/heartseed`, `apps/hymnal`,
+  `packages/hymnal` or `packages/core` is not the pin, every command prints
+  one line on stderr naming both and the files changed under those paths
+  since the pin. Read them: a change to what One draws makes the references
+  stale. `pixel ref` then refuses to capture. `pixel ref … --repin` captures
+  under the new commit and rewrites the pin; take every row of both apps
+  that way, since the references under the old pin are not read once it
+  moves. Commit the pin with them.
 - `PIXEL_REF` defaults to `tmp/pixel-match/ref` in the checkout.
 
 References hold hymn and verse words. Never commit or publish them.
