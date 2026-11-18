@@ -13,6 +13,10 @@
 // Back reopens the sheet on Cross-refs for the verse left (`studyBacks`,
 // src/studyview/back.ts). src/studyview/contract.test.ts holds the
 // actions here to src/studyview/step.ts.
+// Drawn in One's look, every measure a token of app.forma: the sheet as
+// One's Settings page sheet (its own header, Done the outlined pill), the
+// tabs and chips as the Minutes pills, a cross-reference as a list's verse
+// row, a word's entry as Today's card; the verse keeps the reader's type.
 
 use TypeColumn, TypeView from "./type.contract"
 use hs-fade, hs-rise from "./motion.contract"
@@ -191,19 +195,20 @@ members HeartseedExact
     studyRow = -1
 
 // The bar's study row for the one verse chosen: three quiet buttons of
-// equal width, each its label over what it holds.
+// equal width, each its label over what it holds, drawn as One's wide
+// outlined pill (src/field/plot.tsx `pill` and `wide`).
 component StudyBar
   props
     buttons: StudyButton[]
     verse: number
     open: action
   view
-    row gap=8 align-items="stretch" testId="study-bar"
+    row gap="space.s8" align-items="stretch" testId="study-bar"
       for b in buttons key=b.tab
-        button press=open(verse, b.tab) buttonStyle="bordered" aria-label=b.name flex=1 min-width=0 min-height=52 display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 testId=`study-${b.tab}`
-          text b.label font-size="min(-exact-subheadline, 17px)" text-align="center" white-space="nowrap"
+        button press=open(verse, b.tab) appearance="none" aria-label=b.name flex=1 min-width=0 min-height="size.row" display="flex" flex-direction="column" align-items="center" justify-content="center" gap="space.s2" padding-left="space.s6" padding-right="space.s6" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`study-${b.tab}`
+          text b.label font="type.label" text-align="center" overflow-wrap="anywhere"
           if b.line != ""
-            text b.line font-size="min(-exact-footnote, 14px)" color="-exact-secondary-label" text-align="center" white-space="nowrap" testId=`study-${b.tab}-line`
+            text b.line font="type.caption" color="hs.quiet" text-align="center" overflow-wrap="anywhere" testId=`study-${b.tab}-line`
 
 // The study sheet: the reference, Done, the three tabs with their counts,
 // and the tab shown.
@@ -226,90 +231,92 @@ component StudySheet
     done: action
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationDetent="medium large" navigationInitialDetent="large" navigationScroll="study-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="study-sheet"
-      header display="flex" align-items="center"
-        text sheet.heading role="heading" aria-level=2 flex=1 testId="study-heading"
-        button press=done testId="study-done"
-          text "Done"
+      header appearance="none" display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page"
+        text sheet.heading role="heading" aria-level=2 font="type.sheet-title" flex-shrink=1 testId="study-heading"
+        button press=done appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="study-done"
+          text "Done" font="type.label"
       scroll id="study-scroll" flex=1 min-height=0 testId="study-scroll"
-        column gap=16 padding=20 padding-bottom="7rem"
-          row role="tablist" aria-label="Study" align-self="stretch" flex-wrap="wrap" testId="study-tabs"
+        column gap="space.section" padding-top="space.s8" padding-bottom="space.s24" padding-left="space.page" padding-right="space.page"
+          row role="tablist" aria-label="Study" appearance="none" align-self="stretch" flex-wrap="wrap" gap="space.s8" testId="study-tabs"
             for t in sheet.tabs key=t.tab
-              button role="tab" aria-selected=(tab == t.tab) aria-label=t.name press=choose(t.tab) flex-grow=1 flex-shrink=1 flex-basis="auto" testId=`study-tab-${t.tab}`
-                text (t.count == "" ? t.label : `${t.label} ${t.count}`)
+              button role="tab" aria-selected=(tab == t.tab) aria-label=t.name press=choose(t.tab) appearance="none" min-height="size.target" padding-left="space.s14" padding-right="space.s14" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(tab == t.tab ? "hs.ink" : "hs.card") color=(tab == t.tab ? "hs.on-ink" : "hs.ink") -exact-press-opacity="opacity.pressed" testId=`study-tab-${t.tab}`
+                text (t.count == "" ? t.label : `${t.label} ${t.count}`) font="type.label"
           if tab == "xrefs"
-            column gap=12 testId="study-xrefs"
+            column gap="space.s4" testId="study-xrefs"
               if sheet.xrefsLine != ""
-                text sheet.xrefsLine color="-exact-secondary-label" testId="study-xrefs-line"
+                text sheet.xrefsLine font="type.small" color="hs.quiet" testId="study-xrefs-line"
               for r in sheet.xrefs key=r.index
-                button press=follow(r.book, r.chapter, r.verse, r.index) appearance="none" aria-label=r.name min-height=44 display="flex" flex-direction="row" align-items="flex-start" gap=8 padding="12px 14px" border-radius=14 background-color="hs.card" color="hs.ink" text-align="start" -exact-press-scale=0.97 id=`study-xref-${r.index}` testId=`study-xref-${r.index}`
-                  column flex=1 min-width=0 gap=4
-                    text r.reference font="-exact-headline"
-                    text r.text line-clamp=3 color="-exact-secondary-label" overflow-wrap="break-word"
-                  image "symbol:forward-chevron" color="hs.quiet" aria-hidden=true
-              text sheet.feet.xrefs font="-exact-footnote" color="-exact-secondary-label" testId="study-xrefs-foot"
+                button press=follow(r.book, r.chapter, r.verse, r.index) appearance="none" aria-label=r.name min-height="size.row-tall" display="flex" flex-direction="row" align-items="center" gap="space.s12" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r16" color="hs.ink" text-align="start" id=`study-xref-${r.index}` testId=`study-xref-${r.index}`
+                  :active
+                    background-color = "hs.card"
+                  column flex=1 min-width=0 gap="space.s2"
+                    text r.reference font="type.strong"
+                    text r.text line-clamp=3 font="type.small" color="hs.quiet" overflow-wrap="break-word"
+                  text "›" font="type.chevron" color="hs.quiet" aria-hidden=true
+              text sheet.feet.xrefs font="type.caption" color="hs.quiet" testId="study-xrefs-foot"
           if tab == "words"
-            column gap=12 testId="study-words"
+            column gap="space.s12" testId="study-words"
               if sheet.wordsLine != ""
-                text sheet.wordsLine color="-exact-secondary-label" testId="study-words-line"
+                text sheet.wordsLine font="type.small" color="hs.quiet" testId="study-words-line"
               if sheet.caption != ""
-                text sheet.caption font="-exact-footnote" color="-exact-secondary-label" testId="study-words-caption"
+                text sheet.caption font="type.note" color="hs.quiet" testId="study-words-caption"
               if sheet.hint != ""
-                text sheet.hint font="-exact-footnote" color="-exact-secondary-label" testId="study-words-hint"
+                text sheet.hint font="type.note" color="hs.quiet" testId="study-words-hint"
               if sheet.supplied != ""
-                text sheet.supplied font="-exact-footnote" color="-exact-secondary-label" testId="study-words-supplied"
+                text sheet.supplied font="type.note" color="hs.quiet" testId="study-words-supplied"
               TypeColumn(type=type)
-                row flex-wrap="wrap" column-gap="0.3em" row-gap=4 margin="0px -2px" testId="study-verse"
+                row flex-wrap="wrap" column-gap="space.s6" row-gap="space.s4" margin-left="calc(space.s2 * -1)" margin-right="calc(space.s2 * -1)" testId="study-verse"
                   for w in sheet.words key=w.index
                     if w.tagged
-                      button press=tapWord(w.index) appearance="none" aria-label=w.name aria-pressed=(word.open and word.index == w.index) min-height=44 padding="0px 2px" border-radius=6 background-color=(word.open and word.index == w.index ? "hs.hearing" : "hs.ground") color="hs.ink" font-style=(w.added ? "italic" : "normal") border-bottom-width=1 border-bottom-style="dotted" border-bottom-color="hs.quiet" testId=`study-word-${w.index}`
+                      button press=tapWord(w.index) appearance="none" aria-label=w.name aria-pressed=(word.open and word.index == w.index) min-height="size.target" padding-left="space.s2" padding-right="space.s2" border-radius="radius.r4" background-color=(word.open and word.index == w.index ? "hs.hearing" : "hs.ground") color="hs.ink" font-style=(w.added ? "italic" : "normal") border-bottom-width="line.hair" border-bottom-style="dotted" border-bottom-color="hs.quiet" testId=`study-word-${w.index}`
                         text w.text
                     else
-                      text w.text min-height=44 padding="0px 2px" display="flex" align-items="center" font-style=(w.added ? "italic" : "normal") testId=`study-word-${w.index}`
+                      text w.text min-height="size.target" padding-left="space.s2" padding-right="space.s2" display="flex" align-items="center" font-style=(w.added ? "italic" : "normal") testId=`study-word-${w.index}`
               if word.open
-                column gap=12 padding=16 border-radius=16 background-color="hs.card" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.light easing.out both") testId="study-entry"
+                column gap="space.s8" padding="space.s16" border-radius="radius.r20" background-color="hs.card" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.light easing.out both") testId="study-entry"
                   if word.line != ""
-                    text word.line color="-exact-secondary-label" testId="study-entry-line"
+                    text word.line font="type.small" color="hs.quiet" testId="study-entry-line"
                   for e in word.entries key=e.key
-                    column gap=6 testId=`study-entry-${e.number}`
-                      text e.big font-family="system-ui" font-size="2rem" font-style=(e.bigItalic ? "italic" : "normal") testId="study-lemma"
+                    column gap="space.s6" testId=`study-entry-${e.number}`
+                      text e.big font="type.title" font-family="system-ui" font-style=(e.bigItalic ? "italic" : "normal") testId="study-lemma"
                       if e.xlit != ""
-                        text e.xlit color="-exact-secondary-label"
+                        text e.xlit font="type.small" color="hs.quiet"
                       if e.pron != ""
-                        text e.pron color="-exact-secondary-label"
-                      text e.heading font="-exact-subheadline" testId="study-number"
+                        text e.pron font="type.small" color="hs.quiet"
+                      text e.heading font="type.label" testId="study-number"
                       if e.missing != ""
-                        text e.missing color="-exact-secondary-label" testId="study-entry-missing"
+                        text e.missing font="type.small" color="hs.quiet" testId="study-entry-missing"
                       if e.def != ""
-                        text e.def line-clamp=(e.folds and not unfolded.includes(e.key) ? 5 : 0) overflow-wrap="break-word" testId="study-def"
+                        text e.def line-clamp=(e.folds and not unfolded.includes(e.key) ? 5 : 0) font="type.body" overflow-wrap="break-word" testId="study-def"
                         if e.folds
-                          button press=fold(e.key) min-height=44 align-self="flex-start" testId="study-def-fold"
-                            text (unfolded.includes(e.key) ? "Show less" : "Show the full entry")
+                          button press=fold(e.key) appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" align-self="flex-start" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="study-def-fold"
+                            text (unfolded.includes(e.key) ? "Show less" : "Show the full entry") font="type.label"
                       if e.defLine != ""
-                        text e.defLine font-style="italic" color="-exact-secondary-label" testId="study-def-none"
+                        text e.defLine font="type.small" font-style="italic" color="hs.quiet" testId="study-def-none"
                       if e.rendersLine != ""
-                        text e.rendersLine font="-exact-subheadline" font-weight=600 testId="study-renders-line"
-                        row gap=6 flex-wrap="wrap" testId="study-renders"
+                        text e.rendersLine font="type.label" testId="study-renders-line"
+                        row gap="space.s6" flex-wrap="wrap" testId="study-renders"
                           for r in e.renders key=r
-                            text r font="-exact-footnote" padding="4px 10px" border-radius=10 background-color="hs.ground" testId="study-render"
-              text sheet.feet.words font="-exact-footnote" color="-exact-secondary-label" testId="study-words-foot"
+                            text r font="type.small" padding-top="space.s4" padding-bottom="space.s4" padding-left="space.s10" padding-right="space.s10" border-radius="radius.r12" background-color="hs.ground" testId="study-render"
+              text sheet.feet.words font="type.caption" color="hs.quiet" testId="study-words-foot"
           if tab == "commentary"
-            column gap=16 testId="study-commentary"
+            column gap="space.s16" testId="study-commentary"
               if sheet.notesLine != ""
-                text sheet.notesLine color="-exact-secondary-label" testId="study-notes-line"
+                text sheet.notesLine font="type.small" color="hs.quiet" testId="study-notes-line"
               if retry
-                button press=again buttonStyle="bordered" min-height=44 align-self="flex-start" testId="study-retry"
-                  text "Try again"
+                button press=again appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" align-self="flex-start" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="study-retry"
+                  text "Try again" font="type.label"
               for n in sheet.notes key=n.key
-                column gap=6 testId=`study-note-${n.index}`
-                  text n.ref font="-exact-headline" testId="study-note-ref"
-                  text n.text line-clamp=(n.folds and not unfolded.includes(n.key) ? 6 : 0) overflow-wrap="break-word" testId="study-note-text"
+                column gap="space.s6" testId=`study-note-${n.index}`
+                  text n.ref font="type.strong" testId="study-note-ref"
+                  text n.text line-clamp=(n.folds and not unfolded.includes(n.key) ? 6 : 0) font="type.body" overflow-wrap="break-word" testId="study-note-text"
                   if n.folds
-                    button press=fold(n.key) min-height=44 align-self="flex-start" testId=`study-note-fold-${n.index}`
-                      text (unfolded.includes(n.key) ? "Show less" : "Read it all")
+                    button press=fold(n.key) appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" align-self="flex-start" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`study-note-fold-${n.index}`
+                      text (unfolded.includes(n.key) ? "Show less" : "Read it all") font="type.label"
               if sheet.chipsLine != ""
-                text sheet.chipsLine font="-exact-subheadline" testId="study-chips-line"
-                row gap=8 flex-wrap="wrap" testId="study-chips"
+                text sheet.chipsLine font="type.label" testId="study-chips-line"
+                row gap="space.s8" flex-wrap="wrap" testId="study-chips"
                   for c in sheet.chips key=c.verse
-                    button press=move(c.verse) buttonStyle="bordered" aria-label=c.name min-width=44 min-height=44 testId=`study-chip-${c.verse}`
-                      text c.label
-              text sheet.feet.commentary font="-exact-footnote" color="-exact-secondary-label" testId="study-commentary-foot"
+                    button press=move(c.verse) appearance="none" aria-label=c.name min-width="size.target" min-height="size.target" padding-left="space.s14" padding-right="space.s14" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`study-chip-${c.verse}`
+                      text c.label font="type.label"
+              text sheet.feet.commentary font="type.caption" color="hs.quiet" testId="study-commentary-foot"

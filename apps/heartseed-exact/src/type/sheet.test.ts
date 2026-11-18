@@ -2,9 +2,9 @@
  * The Aa sheet as its Contract writes it (spec, "What must be true of the
  * sheet"): a modal route of medium and large height over the screen it
  * previews, opened by `typeOpen` and closed by Done; each control a named
- * radio group; each font's tile named by its name and kind and at least 84
- * points tall, the chosen one ringed in the ink; every button at least 44
- * points; the size announced as it changes; and each choice, Reset among
+ * radio group; each font's tile named by its name and kind and as wide as
+ * One's big button, the chosen one ringed in the ink; every button a
+ * target tall; the size announced as it changes; and each choice, Reset among
  * them, a selection tick before it is kept.
  */
 
@@ -53,17 +53,17 @@ describe('a screen reader and a finger', () => {
     ]);
   });
 
-  it('each tile is a radio named by its spoken name, 84 points tall, the chosen one ringed in the ink', () => {
+  it('each tile is a radio named by its spoken name, a target at least, the chosen one ringed in the ink', () => {
     const tile = lineOf(type, 'type-font-');
     expect(tile).toContain('role="radio"');
     expect(tile).toContain('aria-label=f.spoken');
-    expect(tile).toContain('min-height=84');
+    expect(tile).toContain('min-width="size.button"');
     expect(tile).toContain('border-color=(type.font == f.value ? "hs.ink" : "hs.card")');
   });
 
-  it('the size buttons, the size and Reset: 44 points, announced, named', () => {
+  it('the size buttons, the size and Reset: a target tall, announced, named', () => {
     for (const id of ['type-smaller', 'type-larger', 'type-reset'])
-      expect([id, lineOf(type, id).includes('min-height=44')]).toEqual([id, true]);
+      expect([id, lineOf(type, id).includes('min-height="size.target"')]).toEqual([id, true]);
     expect(lineOf(type, 'type-smaller')).toContain('aria-label="Smaller text"');
     expect(lineOf(type, 'type-larger')).toContain('aria-label="Larger text"');
     expect(lineOf(type, 'type-size')).toContain('role="status" aria-label=type.sizeSpoken');
