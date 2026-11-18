@@ -92,15 +92,18 @@ members HeartseedExact
       addAnswer = ""
       nav = go(nav, "/add")
 
-// A shelf's head: One's card (`head`), its title and its note.
+// A shelf's head: One's card (`head`), its title and its note. A title
+// (here and on an offer) is a hairline taller, as React Native rounds a
+// text's height up to the pixel grid, so the line under it sits where
+// One's does.
 component AddHead
   props
     title: string
     note: string
   view
     column flex=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
-      text title font="type.strong" overflow-wrap="break-word"
-      text note font="type.small" overflow-wrap="break-word" padding-bottom="line.hair"
+      text title font="type.strong" overflow-wrap="break-word" padding-bottom="line.hair"
+      text note font="type.small" overflow-wrap="break-word"
 
 component AddVersesPage
   props
@@ -129,7 +132,7 @@ component AddVersesPage
               for r in s.rows key=r.id
                 button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
                   column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
-                    text r.title font="type.strong" overflow-wrap="break-word"
+                    text r.title font="type.strong" overflow-wrap="break-word" padding-bottom="line.hair"
                     text r.count font="type.small"
                   if r.offer == "plant"
                     row align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink"
