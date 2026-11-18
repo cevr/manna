@@ -1,16 +1,16 @@
-// The home list: the tab row over the list of the tab in use, and the find
-// bar at its foot, where iOS keeps a search (the tab row stays in UIKit's
-// bar only while the list follows it directly); the bar's search over every hymn (app.ts `hymnRows`, `listTabRows`;
-// src/list/rows.ts, src/home/tabs.ts) shows while it is open here with
-// words in its box (features/find.contract). Sections is every hymn under
-// the hymnal's topical sections, under the Recent shelf; another tab is
-// asked for only once it is chosen. A found hymn opens as the current app
-// opens one (`listOpening`). All at once, the tiles, lies over the list,
-// which stays built where it stood beneath; a section's header is drawn in
-// the muted role.
-use EmptyState from "exact:content"
+// The home list, as the current app's home: its own title row and gear (no
+// navigation bar), the tab row, and the list of the tab in use, and the
+// find bar at its foot. The bar's search over every hymn (app.ts `hymnRows`,
+// `listTabRows`; src/list/rows.ts, src/home/tabs.ts) draws its results in
+// the list's place while it is open here with words in its box
+// (features/find.contract). Sections is every hymn under the hymnal's
+// topical sections, under the Recent shelf; another tab is asked for only
+// once it is chosen. A found hymn opens as the current app opens one
+// (`listOpening`). All at once, the tiles, lies over the list, which stays
+// built where it stood beneath; a group's header is drawn in the muted
+// role.
 use PlayerView from "./player.contract"
-use FindBar, FindTiles, FindView, findSearchingAt, FoundRow, ListRow, RowSection from "./find.contract"
+use FindBar, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
 
 shape TabGroup
   slug: string
@@ -93,15 +93,8 @@ component HymnList
             text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap"
       if findShown.homeTiles
         FindTiles()
-      if sections.length == 0 and query.trim() != "" and findSearchingAt(findShown, entry.url)
-        column flex=1 min-height=0 testId="none-found"
-          EmptyState(symbol="symbol:search", title=`No hymn matches “${query.trim()}”.`, message="Try its number, or a line you remember.")
-      else if query.trim() != "" and findSearchingAt(findShown, entry.url)
-        list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 testId="hymn-list"
-          section
-            for s in sections key=s.slug
-              for r in s.rows key=r.number
-                FoundRow(number=r.number, title=r.title, star=favourites.includes(r.number), open=open)
+      if findShown.results and findSearchingAt(findShown, entry.url)
+        column flex="none" testId="home-searching"
       else if tab == "Sections"
         list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" wheel=findWheel testId="hymn-list"
           if recent.shelf.length > 0
@@ -128,7 +121,7 @@ component HymnList
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
-      FindBar(entry=entry, results=false)
+      FindBar(entry=entry, results=true)
       ListBarRoom(shown=playerShown.bar.shown)
 
 // The room the player's docked bar takes under a screen's list while it
