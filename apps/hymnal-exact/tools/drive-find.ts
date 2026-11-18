@@ -275,7 +275,15 @@ const closings = [
   ...(host === 'web' ? [['escape', 'type drums-hash key Escape'] as const] : []),
 ] as const;
 
-/** Opens the drums, closes them one way, and shoots them as they close, 50 ms in, and settled. */
+/**
+ * How far apart a channel may be, of 255, for the settled page under Reduce
+ * Motion: once the drums close by a press inside them (the `#`, Escape),
+ * Chrome repaints the edges of the bar's glass disks over the list a little
+ * after, 1 to 3 levels on a handful of pixels, where a leaving drums
+ * differs by thousands of pixels far over it.
+ */
+const EDGE_SETTLE = 4;
+
 const closing = (way: string, close: string, still: string) => [
   'tap find-number',
   'clock settle',
@@ -311,6 +319,7 @@ for (const still of [false, true]) {
       await changedPixels(
         shotFile(`close-${way}${tag}-50`),
         shotFile(`close-${way}${tag}-end`),
+        still ? EDGE_SETTLE : undefined,
       ).catch(() => -1),
     ];
     const gone = countIn(closed[at + 8], 'drums') === 0 && closed[at + 9] === false;

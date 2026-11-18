@@ -136,11 +136,11 @@ shape FindPlaces
   pad: number
   rowGap: number
 
-// How far the bar's foot stands over the window's, as the current app's
-// bar stands (`findRoom`): over the keyboard while it is up, over the
-// player's resting bar while it docks, and else docked just over the
-// bottom inset.
-fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboardHeight > 0 ? port.keyboardHeight + at.gap : (overBar ? port.safeAreaBottom + at.rest + at.gap : port.safeAreaBottom + at.lift)
+// How far the bar's foot stands over the screen's, as the current app's
+// bar stands (`findRoom`): just over the keyboard while it is up (the
+// screen then ends at the keys), over the player's resting bar while it
+// docks, and else docked just over the bottom inset.
+fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboardHeight > 0 ? at.gap : (overBar ? port.safeAreaBottom + at.rest + at.gap : port.safeAreaBottom + at.lift)
 
 // The find bar of the screen `entry` draws, shown while that screen is on
 // top, drawn as the current app's (src/home/FindBar.tsx): a capsule of
@@ -181,8 +181,8 @@ component FindBar
             if findRows.length == 0
               text `No hymn matches “${findText.trim()}”.` font="type.body" color="muted" padding="space.s16" testId="none-found"
             else
-              list id=`find-list-${entry.id}` appearance="auto" listStyle="plain" flex=1 min-height=0 testId="find-list"
-                section
+              scroll id=`find-list-${entry.id}` flex=1 min-height=0 testId="find-list"
+                column
                   for s in findRows key=s.slug
                     for r in s.rows key=r.number
                       FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
@@ -400,8 +400,11 @@ component FoundRow
     star: bool
     open: action
   view
-    button press=open(number) appearance="none" testId=`hymn-${number}`
+    button press=open(number) appearance="none" display="flex" flex-direction="column" align-items="stretch" testId=`hymn-${number}`
+      :active
+        background-color = "soft"
       HymnRowText(number=number, title=title, star=(star ? `star-${number}` : ""))
+      column height="line.hair" margin-left="calc(space.s16 + size.number + space.s12)" background-color="line" aria-hidden=true
 
 // A hymn's row's words, as the current app draws a list's row
 // (src/reader/HymnList.native.tsx): its number in the accent, at least
