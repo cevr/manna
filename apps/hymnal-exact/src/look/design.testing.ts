@@ -14,6 +14,9 @@ const app = new URL('../../', import.meta.url);
 /** An app file's text, by its path under the app's folder. */
 export const appFile = (path: string) => readFileSync(new URL(path, app), 'utf8');
 
+/** A file of the current hymnal (One), by its path under that app's folder. */
+export const oneFile = (path: string) => readFileSync(new URL(`../hymnal/${path}`, app), 'utf8');
+
 /** Every Contract file the view reads: `app.contract` and each `features/*.contract`. */
 export const contractFiles = (): ReadonlyArray<string> => [
   'app.contract',
@@ -34,18 +37,24 @@ export interface Pair {
 
 /**
  * The brand: each colour token's pair, each token that names another (a
- * role set to a brand colour), and each motion token (`duration.…`,
- * `easing.…`) with its value as written.
+ * role set to a brand colour), each motion token (`duration.…`,
+ * `easing.…`) and each measure token (`type.…`, `space.…`, …,
+ * `src/look/tokens.ts`) with its value as written.
  */
 export interface Brand {
   readonly colours: ReadonlyMap<string, Pair>;
   readonly names: ReadonlyMap<string, string>;
   readonly motion: ReadonlyMap<string, string>;
+  readonly measures: ReadonlyMap<string, string>;
   readonly others: ReadonlyArray<string>;
 }
 
 /** A motion token's line: its name and its value as written. */
 const MOTION = /^\s+((?:duration|easing)\.\S+)\s*=\s*(.+?)\s*$/u;
+
+/** A measure token's line (`src/look/tokens.ts`): its name and its value as written, a kind after the name (`: length`) left off. */
+const MEASURE =
+  /^\s+((?:type|space|radius|size|line|opacity)\.[\w.-]+)(?::\s*[\w-]+)?\s*=\s*(.+?)\s*$/u;
 
 /** The lines of the `theme` block, its comments and blanks left out. */
 const themeLines = (text: string): ReadonlyArray<string> => {
@@ -58,25 +67,32 @@ const themeLines = (text: string): ReadonlyArray<string> => {
   return end < 0 ? shown : shown.slice(0, end);
 };
 
+/** Each line `read` matches, as its name and value, into `into`. */
+const readInto = (lines: ReadonlyArray<string>, read: RegExp, into: Map<string, string>) => {
+  for (const line of lines) {
+    const found = read.exec(line);
+    if (found) into.set(found[1] ?? '', found[2] ?? '');
+  }
+};
+
 /** `app.forma`'s `theme` block, read token by token. */
 export const brandOf = (text: string): Brand => {
   const colours = new Map<string, Pair>();
   const names = new Map<string, string>();
   const motion = new Map<string, string>();
+  const measures = new Map<string, string>();
   const others: Array<string> = [];
-  for (const line of themeLines(text)) {
-    const moving = MOTION.exec(line);
-    if (moving) {
-      motion.set(moving[1] ?? '', moving[2] ?? '');
-      continue;
-    }
+  const lines = themeLines(text);
+  readInto(lines, MOTION, motion);
+  readInto(lines, MEASURE, measures);
+  for (const line of lines.filter((each) => !MOTION.test(each) && !MEASURE.test(each))) {
     const token = /^\s+(\S+)\s*=\s*(.+?)\s*$/u.exec(line);
     const pair = /^light-dark\((#[0-9a-f]+),\s*(#[0-9a-f]+)\)$/iu.exec(token?.[2] ?? '');
     if (token && pair) colours.set(token[1] ?? '', { light: pair[1] ?? '', dark: pair[2] ?? '' });
     else if (token && /^[\w-]+$/u.test(token[2] ?? '')) names.set(token[1] ?? '', token[2] ?? '');
     else others.push(line.trim());
   }
-  return { colours, names, motion, others };
+  return { colours, names, motion, measures, others };
 };
 
 /** A text a Contract file draws: where, the colour it is drawn in and the ground under it, as named there. */
