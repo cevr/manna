@@ -77,14 +77,34 @@ const drained = async () => {
 
 type Outcome = 'well' | 'fail';
 
-/** The data host's turns, a server that holds each request until the test lets it go, and Contract's follow-up. */
-const hostOf = () => {
+/** What a native host lets independent reads hold at once: each running read counts its ceiling (Exact's reference, `exactIndependentHttp`). */
+const INDEPENDENT_BYTES = 68 * 1024 * 1024;
+
+/** The data host's turns, a server that holds each request until the test lets it go, and Contract's follow-up; `files`, another launch's, makes this one a relaunch. */
+const hostOf = (files = new Map<string, ArrayBuffer>()) => {
   let current: Call | undefined;
   /** The calls whose yield went on at once, its turn not ended: one entry a step joined to the turn before. */
   const joined: Array<string> = [];
   const held = new Map<string, Array<(outcome: Outcome) => void>>();
-  const files = new Map<string, ArrayBuffer>();
   const made = new Map(NAMES.map((name) => [name, madeOf(name)]));
+  /** The host's ordered lane: a fetch that does not leave it lands only after every one before it on it. */
+  let lane: Promise<void> = Promise.resolve();
+  /** The ceilings of the independent reads running, and the reads waiting for room beside them. */
+  let running = 0;
+  let waiting: Array<() => void> = [];
+  const room = async (ceiling: number) => {
+    for (;;) {
+      if (running + ceiling <= INDEPENDENT_BYTES) break;
+      await new Promise<void>((resolve) => waiting.push(resolve));
+    }
+    running += ceiling;
+  };
+  const freed = (ceiling: number) => {
+    running -= ceiling;
+    const woken = waiting;
+    waiting = [];
+    for (const each of woken) each();
+  };
 
   /** Exact's `scheduler.yield()`: refused in a call let go (its job owed again), at once in one that has answered, else a turn of its own. */
   const pause = () => {
@@ -105,20 +125,35 @@ const hostOf = () => {
     );
   };
 
-  /** A fetch lands as the call that made it, and only after that call's earlier fetches have: Exact hands the host a call's fetches one at a time, in the order made. */
-  const fetcher = async (url: string) => {
+  /**
+   * A fetch lands as the call that made it, and only after that call's
+   * earlier fetches have: Exact hands the host a call's fetches one at a
+   * time, in the order made. One that does not leave the ordered lane
+   * (`exactIndependentHttp`) lands after every fetch before it on the lane
+   * too; one that leaves it waits for room for its ceiling beside the
+   * independent reads running, and a reply over its ceiling is refused.
+   */
+  const fetcher = async (url: string, init: RequestInit) => {
     const owner = current;
     const name = new URL(url).pathname.split('/')[2] ?? '';
+    const ceiling = (init as { exactIndependentHttp?: { maxResponseBytes: number } })
+      .exactIndependentHttp?.maxResponseBytes;
     const before = owner?.landed ?? Promise.resolve();
     const heard = new Promise<Outcome>((resolve) =>
       held.set(name, [...(held.get(name) ?? []), resolve]),
     );
-    const landing = Promise.all([heard, before]).then(([each]) => each);
+    const queued = ceiling === undefined ? lane : room(ceiling);
+    const landing = Promise.all([heard, before, queued]).then(([each]) => each);
     if (owner !== undefined) owner.landed = landing.then(() => {});
+    if (ceiling === undefined) lane = landing.then(() => {});
     const outcome = await landing;
+    if (ceiling !== undefined) freed(ceiling);
     current = owner;
     if (outcome === 'fail') return { status: 500, text: async () => 'Internal error' };
-    return { status: 200, text: async () => JSON.stringify(made.get(name)) };
+    const body = JSON.stringify(made.get(name));
+    if (ceiling !== undefined && body.length > ceiling)
+      throw Object.assign(new Error('over the ceiling'), { name: 'FetchError' });
+    return { status: 200, text: async () => body };
   };
 
   /** A storage step answers in a turn of its own, as the call that asked it. */
@@ -150,7 +185,7 @@ const hostOf = () => {
     },
   };
 
-  const { sources } = packSources({
+  const { sources, reads } = packSources({
     setting: 'http://127.0.0.1:4801',
     packs: NAMES.map(specOf),
     fetcher,
@@ -214,7 +249,11 @@ const hostOf = () => {
     joined,
     waits,
     answers,
+    files,
+    reads,
     ask,
+    /** One pack asked alone, as its mutation sends it and follows it. */
+    one: askOne,
     version: (name: string) => made.get(name)?.version ?? '',
     release: (name: string, outcome: Outcome) => {
       const resolve = held.get(name)?.shift();
@@ -283,6 +322,31 @@ describe('every step of a check runs in a turn of a call still answering', () =>
       joined: [],
     });
     for (const name of NAMES) expect(keptIn(landed.kept, name).version).toBe(host.version(name));
+  });
+
+  it('Try again while a relaunch reads its kept pack: the call that made the fetch answers before it lands, and its body is checked in no turn of that call', async () => {
+    const first = hostOf();
+    const asked = first.ask('', false);
+    await drained();
+    for (const name of NAMES) expect(first.release(name, 'well')).toBe(true);
+    const { kept } = await asked;
+
+    const host = hostOf(first.files);
+    const reading = host.one('lexicon', kept, false);
+    for (let each = 0; each < 40 && host.reads('lexicon') === 0; each++) await turn();
+    expect(host.reads('lexicon')).toBe(1);
+    const again = host.one('lexicon', kept, true);
+    await drained();
+    expect(host.waits).toEqual(['lexicon']);
+    expect(host.release('lexicon', 'well')).toBe(true);
+    await drained();
+    const [overtaken, landed] = await Promise.all([reading, again]);
+    expect({ overtaken, joined: host.joined, waits: host.waits }).toEqual({
+      overtaken: undefined,
+      joined: [],
+      waits: ['lexicon', 'lexicon'],
+    });
+    expect(keptIn(landed?.kept ?? '', 'lexicon').version).toBe(host.version('lexicon'));
   });
 
   it('every pack lands at once: each is checked in turns of a call still answering', async () => {
