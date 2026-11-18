@@ -207,14 +207,25 @@ component FindDrums
           FindDrumsPanel()
           column pointerup=findPress("drumsClose", 0) position="absolute" top=0 right=0 bottom=0 left=0 testId="drums-outside"
 
+// The edge and the lift are the web's alone, as a web dialog's are; on iOS
+// the panel lies flat over the dimmed page. Contract names no host, so
+// `findDrumsWeb` reads the page fact that tells the web apart: only the web
+// takes no picture of a node into a share (`canSharePictures`, true on iOS
+// and the Mac). src/find/edge.test.ts holds both branches.
+shape FindPage
+  canSharePictures: bool
+
 component FindDrumsPanel
   inject
     findShown: FindView
     findPress: action
+  resource findDrumsPage = exactPage() as shape FindPage
+  derive findDrumsWeb = not findDrumsPage.canSharePictures
   view
     column max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box"
-      background-color="-exact-secondary-background" border="1px solid line" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
-      box-shadow="0 16px 48px color-mix(in srgb, shadow 24%, transparent)"
+      background-color="-exact-secondary-background" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
+      border=(findDrumsWeb ? "1px solid line" : "none")
+      box-shadow=(findDrumsWeb ? "0 16px 48px color-mix(in srgb, shadow 24%, transparent)" : "none")
       column gap=12 width="17.5rem" max-width="100%"
         row gap=12 align-items="center"
           text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
