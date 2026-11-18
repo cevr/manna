@@ -4,7 +4,8 @@
  * `pixel shot <app> <id>… [--scheme light|dark] [--size <size>]`: the port
  * against the One reference. For each iOS cell asked, the port is launched
  * on its Exact simulator through `bun run exact agent ios` (the wrapper, its
- * lock, its simulator) on a fresh store and on the agent's clock at the
+ * lock, its simulator) on the row's fixture written to its store (an empty
+ * store for a row with none, `seedPort`) and on the agent's clock at the
  * reference's hour (`portClock`), set to the cell's scheme, driven by the
  * row's ops and its screen taken with Exact's `compare` against the
  * reference; `scoreShot` then scores the pair.
@@ -14,6 +15,8 @@ import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { hostZone, portClock } from './clock.ts';
+import { storeOf } from './fixtures.ts';
+import { PORT_STORES, writePortStore } from './port-store.ts';
 import { overrideStatusBar, run } from './ios.ts';
 import { cellName, cellsOf, IOS, type AppName, type Cell, type Row } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
@@ -56,6 +59,22 @@ const dropOneRoutes = (root: string) => {
   }
 };
 
+/**
+ * Writes `row`'s fixture into the port's named store on the simulator
+ * (`port-store.ts`), made at this instant as the reference's was at its
+ * own; whether it did. A row with no fixture, or an app whose port store
+ * is not described, starts from an empty store (`--reset-storage`).
+ */
+const seedPort = (app: AppName, row: Row, udid: string) => {
+  const port = PORT_STORES[app];
+  if (port === undefined || row.fixture === undefined) return false;
+  const store = storeOf(app, row.fixture, new Date());
+  if (store === undefined) throw new Error(`${row.id}: no fixture ${row.fixture}`);
+  const container = run(['xcrun', 'simctl', 'get_app_container', udid, port.bundle, 'data']).trim();
+  writePortStore(container, port, `pm-${row.id}`, store);
+  return true;
+};
+
 /** Takes and scores the port's iOS cell of `row`. */
 const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   const side = row.exact;
@@ -74,6 +93,7 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   mkdirSync(dirname(files.screen), { recursive: true });
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
+  const seeded = seedPort(cell.app, row, udid);
   const edges =
     side.band === undefined ? [] : [`layout ${side.band.top}`, `layout ${side.band.bottom}`];
   const ops = [
@@ -100,7 +120,7 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
       clock.timeZone,
       '--storage',
       `pm-${row.id}`,
-      '--reset-storage',
+      seeded ? '--keep-storage' : '--reset-storage',
       ...ops,
     ],
     join(frame.root, 'apps', `${cell.app}-exact`),
