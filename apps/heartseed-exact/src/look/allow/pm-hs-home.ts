@@ -1,0 +1,40 @@
+import type { AllowList } from '@manna/exact-kit/look';
+
+/** The measures `pm-hs-home` still writes as literals, by file, with how often: each a token of `app.forma` to be, taken off as it is (`measures.test.ts`). */
+export const allowed = {
+  'features/home.contract': {
+    'width=8': 2,
+    'height=8': 2,
+    'border-radius=4': 1,
+    'width=24': 2,
+    'height=3': 2,
+    'margin="14px 0"': 2,
+    'border-radius=2': 2,
+    'width=48': 2,
+    'min-height=44': 3,
+    'gap=2': 2,
+    'padding="4px 0"': 1,
+    'border-radius=12': 3,
+    '-exact-press-scale=0.97': 2,
+    'gap=20': 1,
+    'padding=20': 1,
+    'max-width="40rem"': 1,
+    'gap=8': 7,
+    'padding=16': 1,
+    'border-radius=16': 1,
+    'gap=4': 1,
+    'height=2': 1,
+    'border-radius=1': 1,
+    'flex-basis="12rem"': 1,
+    'gap=12': 1,
+  },
+  'features/list.contract': {
+    'gap=16': 1,
+    'padding=20': 1,
+    'max-width="40rem"': 1,
+    'min-height=44': 1,
+    'gap=4': 2,
+    'gap=12': 1,
+    'gap=8': 4,
+  },
+} satisfies AllowList;

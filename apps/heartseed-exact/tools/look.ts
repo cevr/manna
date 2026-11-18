@@ -14,6 +14,10 @@ const app = join(import.meta.dir, '..');
 /** The brand file's text. */
 export const readBrand = (): string => readFileSync(join(app, 'app.forma'), 'utf8');
 
+/** A file of the current Heartseed (One), by its path from that app's folder. */
+export const readOne = (path: string): string =>
+  readFileSync(join(app, '..', 'heartseed', path), 'utf8');
+
 /** Each Contract file a screen is drawn from, by its path from the app's folder, and its text. */
 export const readContracts = (): ReadonlyMap<string, string> =>
   new Map(
