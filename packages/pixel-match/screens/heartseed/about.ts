@@ -11,6 +11,16 @@ const ABOUT: ReadonlyArray<Step> = [
   { wait: 800 },
 ];
 
+/** The port's way to About: the gear's sheet, then its `About` row. */
+const EXACT_ABOUT: ReadonlyArray<string> = [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'tap about-row',
+  'clock data',
+  'clock settle',
+];
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'about.page',
@@ -19,16 +29,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hs-fresh',
     one: { steps: ABOUT },
-    exact: {
-      ops: [
-        'clock data',
-        'tap gear',
-        'clock settle',
-        'tap about-row',
-        'clock data',
-        'clock settle',
-      ],
-    },
+    exact: { ops: EXACT_ABOUT },
   },
   {
     id: 'about.licences',
@@ -36,5 +37,6 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hs-fresh',
     one: { steps: [...ABOUT, { tap: 'label=Licences' }, { wait: 600 }] },
+    exact: { ops: [...EXACT_ABOUT, 'tap licences-row', 'clock data', 'clock settle'] },
   },
 ];
