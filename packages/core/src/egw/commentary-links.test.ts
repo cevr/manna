@@ -80,6 +80,12 @@ describe('a citation', () => {
     expect(labels(citedVerses('John 1:4', 'John 1:4, 5'))).toEqual(['43.1:4', '43.1:5']);
     expect(labels(citedVerses('John 1:1', '1'))).toEqual(['43.1:1']);
     expect(labels(citedVerses('John 9:9', '9'))).toEqual(['43.9:9']);
+    expect(labels(citedVerses('Isaiah 55:1', '55-58'))).toEqual([
+      '23.55:*',
+      '23.56:*',
+      '23.57:*',
+      '23.58:*',
+    ]);
   });
 
   test('a chapter list names each chapter', () => {

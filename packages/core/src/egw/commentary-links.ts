@@ -164,15 +164,22 @@ const segmentAt = (place: Place, segment: string): Option.Option<Read> =>
     named(parseBibleQuery(segment)),
   ]);
 
-/** Whether `segment`, the first of a citation whose title is `head`, is its
- *  chapter printed bare: the library links "chapter 9" as text "9" titled
- *  "<Book> 9:1". Chapter 1's "1" stays verse 1, since "<Book> 1:1" printed
- *  "1" is a verse heading as often as a chapter. */
-const isBareChapter = (head: Read, segment: string): boolean =>
-  head.place.chapter > 1 &&
-  segment === String(head.place.chapter) &&
-  head.verses.length === 1 &&
-  head.verses.every((cited) => Option.contains(cited.bibleVerse, 1));
+/** The chapters `segment` names when it is the first of a citation whose
+ *  title is `head` and prints that title's chapter bare: the library links
+ *  "chapter 9" as text "9", and chapters 55 to 58 as "55-58", titled
+ *  "<Book> 9:1" and "<Book> 55:1". Chapter 1's "1" stays verse 1, since
+ *  "<Book> 1:1" printed "1" is a verse heading as often as a chapter. */
+const bareChapters = (head: Read, segment: string): Option.Option<Read> =>
+  Option.flatMap(groups(VERSES, segment), (found) => {
+    const from = at(found, 0, 0);
+    const opensChapter =
+      head.place.chapter > 1 &&
+      from === head.place.chapter &&
+      head.verses.length === 1 &&
+      head.verses.every((cited) => Option.contains(cited.bibleVerse, 1));
+    if (!opensChapter) return Option.none();
+    return Option.some(chapterSpan(head.place, from, at(found, 1, from)));
+  });
 
 /** The verses one citation names: its printed `text` read in the context of
  *  its `title`. A first segment the reading cannot place names the title's
@@ -189,8 +196,7 @@ const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
           .replace(/^and\s+/i, '')
           .replace(/[.:]$/, '');
         let read = segmentAt(place, segment);
-        if (index === 0 && isBareChapter(head, segment))
-          read = Option.some(chapterSpan(head.place, head.place.chapter, head.place.chapter));
+        if (index === 0) read = Option.orElse(bareChapters(head, segment), () => read);
         if (Option.isSome(read)) {
           place = read.value.place;
           out.push(...read.value.verses);
