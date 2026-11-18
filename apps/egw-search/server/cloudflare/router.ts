@@ -14,6 +14,7 @@ import type { SearchService } from '@manna/core/search';
 
 import { SearchApi } from '../api.js';
 import { CommentaryGroupLive, type CommentaryPacks } from '../commentary-api.js';
+import { PackCorsLive } from '../pack-cors.js';
 import { SearchGroupLive } from '../search-api.js';
 import { StudyGroupLive, type StudyPacks } from '../study-api.js';
 import type { VectorIndexLoad } from '../vector-index.js';
@@ -59,7 +60,7 @@ export const searchRouter = (
     ),
     Layer.provide(Layer.mergeAll(Etag.layer, HttpPlatform.layer)),
   );
-  const build = HttpRouter.toHttpEffect(Layer.mergeAll(api, syncRoutes(store))).pipe(
+  const build = HttpRouter.toHttpEffect(Layer.mergeAll(api, syncRoutes(store), PackCorsLive)).pipe(
     Scope.provide(scope),
   );
   return Effect.contextWith((context: Context.Context<FileSystem.FileSystem | Path.Path>) =>

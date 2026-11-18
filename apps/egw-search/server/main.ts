@@ -28,15 +28,7 @@
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { BunHttpServer, BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, Layer } from 'effect';
-import {
-  Etag,
-  HttpMiddleware,
-  HttpPlatform,
-  HttpRouter,
-  HttpServer,
-  HttpStaticServer,
-} from 'effect/http';
-import { HttpApiBuilder } from 'effect/http-api';
+import { Etag, HttpMiddleware, HttpPlatform, HttpRouter, HttpServer } from 'effect/http';
 import { SqlClient } from 'effect/sql';
 
 import { EGWParagraphDatabase } from '@manna/core/egw-db';
@@ -50,7 +42,7 @@ import {
 } from '@manna/core/search';
 import { layerBunEmbedder } from '@manna/core/search/bun';
 
-import { SearchApi } from './api.js';
+import { bunRoutes } from './bun-routes.js';
 import { CommentaryMemoryLive } from './commentary-api.js';
 import { StudyGroupLive, StudyPacks } from './study-api.js';
 import { SearchGroupLive } from './search-api.js';
@@ -324,27 +316,10 @@ const GroupLive = Layer.mergeAll(
   ),
 );
 
-const ApiLive = HttpApiBuilder.layer(SearchApi).pipe(Layer.provide(GroupLive));
-
-/** The built client, served from the same router as the API.
- *
- *  In development Vite owns the UI on its own port and proxies `/api` here,
- *  so this layer is dead weight; in production there is no Vite, and without
- *  it the root would 404 while `/api/search` answered perfectly. `spa: true`
- *  sends unknown paths to `index.html`, so a deep link is the client's to
- *  route: the page draws its own not-found view for any path but `/`.
- *
- *  The API is merged *after* the static server so an explicitly declared
- *  route always wins over a file that happens to share its path. */
+/** Where the built client is read from, served from the same router as the API (`./bun-routes.ts`). */
 const STATIC_ROOT = process.env['EGW_SEARCH_STATIC_DIR'] ?? `${import.meta.dir}/../dist`;
 
-const StaticLive = HttpStaticServer.layer({
-  root: STATIC_ROOT,
-  spa: true,
-  index: 'index.html',
-});
-
-const RouterLive = Layer.mergeAll(StaticLive, ApiLive);
+const RouterLive = bunRoutes(GroupLive, STATIC_ROOT);
 
 const HttpLive = Layer.unwrap(
   HttpRouter.toHttpEffect(RouterLive).pipe(

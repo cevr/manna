@@ -60,6 +60,12 @@ bun run --cwd apps/egw-search study:publish            # build, upload, and chec
 bun run --cwd apps/egw-search study:publish --dry-run  # build and check only, no credentials
 ```
 
+Heartseed's web build reads both packs from another origin, so those paths
+alone answer any origin (`server/pack-cors.ts`, a global middleware of either
+host's router): they expose the `ETag` and answer the preflight that
+`If-None-Match` makes a browser send. Every other path carries no CORS
+headers.
+
 ## Deploy
 
 Production is a Cloudflare Worker (`server/cloudflare/Search.ts`) declared in

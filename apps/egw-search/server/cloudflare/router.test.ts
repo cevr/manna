@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { BunServices } from '@effect/platform-bun';
 import { SqliteClient } from '@effect/sql-sqlite-bun';
+import type * as Http from 'alchemy/Http';
+import { makeRequestEffect } from 'alchemy/Workers/Workerd/HttpServer';
 import { Effect, Layer, Logger, Option, Schema as S, Scope } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 
@@ -136,6 +138,14 @@ describe('searchRouter built inside the first request', () => {
 
 const decodePack = S.decodeUnknownSync(S.fromJsonString(CommentaryPackSchema));
 
+/** A Web request answered through alchemy's Worker bridge, as the deployed
+ *  Worker's `fetch` answers it: the response's own handlers (CORS) applied. */
+const bridged = <R>(
+  request: Request,
+  fetch: Http.HttpEffect<R>,
+): Effect.Effect<Response, never, R> =>
+  makeRequestEffect(request as unknown as Parameters<typeof makeRequestEffect>[0], fetch);
+
 /** The Worker's router over `corpus` and `cache`, built on the first ask, and
  *  an ask of the pack through it. */
 const packRouter = (
@@ -146,17 +156,23 @@ const packRouter = (
     const scope = yield* Scope.Scope;
     const context = yield* Layer.build(servicesOver(corpus, cache));
     const app = yield* Effect.cached(searchRouter(context, store, scope));
-    return (url: string, headers: Record<string, string> = {}) =>
-      Effect.flatten(app).pipe(
-        Effect.provideService(
-          HttpServerRequest.HttpServerRequest,
-          HttpServerRequest.fromWeb(new Request(url, { headers })),
-        ),
-        Effect.flatMap((response) =>
+    return (url: string, headers: Record<string, string> = {}, method = 'GET') =>
+      bridged(new Request(url, { method, headers }), Effect.flatten(app)).pipe(
+        Effect.flatMap((web) =>
           Effect.gen(function* () {
-            const web = HttpServerResponse.toWeb(response);
             const body = yield* Effect.promise(() => web.text());
-            return { status: web.status, etag: web.headers.get('etag') ?? '', body };
+            const header = (name: string) => web.headers.get(name) ?? '';
+            return {
+              status: web.status,
+              etag: header('etag'),
+              body,
+              cors: {
+                origin: header('access-control-allow-origin'),
+                exposed: header('access-control-expose-headers'),
+                methods: header('access-control-allow-methods'),
+                headers: header('access-control-allow-headers'),
+              },
+            };
           }),
         ),
       );
@@ -211,6 +227,56 @@ describe('the study packs through the Worker router', () => {
         });
         expect([same.status, same.body]).toEqual([304, '']);
         expect((yield* ask('https://egw.example/api/study/xrefs')).status).toBe(404);
+      }),
+    ));
+});
+
+describe('the packs across origins through the Worker router', () => {
+  /** A page on another origin, as Heartseed's web build is to egw.cvr.im. */
+  const origin = { origin: 'http://127.0.0.1:4999' };
+  const read = { origin: '*', exposed: 'etag', methods: '', headers: '' };
+
+  test('a pack, its 304 and a pack not published carry the origin and expose the ETag', () =>
+    run(
+      Effect.gen(function* () {
+        const ask = yield* packRouter(countedCorpus(madeUpCorpus), memoryCache());
+        const pack = yield* ask('https://egw.example/api/commentary/pack', origin);
+        expect([pack.status, pack.cors]).toEqual([200, read]);
+        const same = yield* ask('https://egw.example/api/commentary/pack', {
+          ...origin,
+          'if-none-match': pack.etag,
+        });
+        expect([same.status, same.cors]).toEqual([304, read]);
+        const tags = yield* ask('https://egw.example/api/study/tags', origin);
+        expect([tags.status, tags.cors]).toEqual([200, read]);
+        const tagsSame = yield* ask('https://egw.example/api/study/tags', {
+          ...origin,
+          'if-none-match': tags.etag,
+        });
+        expect([tagsSame.status, tagsSame.cors]).toEqual([304, read]);
+        const absent = yield* ask('https://egw.example/api/study/xrefs', origin);
+        expect([absent.status, absent.cors.origin]).toEqual([404, '*']);
+      }),
+    ));
+
+  test("If-None-Match's preflight is answered for the packs alone", () =>
+    run(
+      Effect.gen(function* () {
+        const ask = yield* packRouter(countedCorpus(madeUpCorpus), memoryCache());
+        const preflight = {
+          ...origin,
+          'access-control-request-method': 'GET',
+          'access-control-request-headers': 'if-none-match',
+        };
+        for (const path of ['/api/commentary/pack', '/api/study/words']) {
+          const answer = yield* ask(`https://egw.example${path}`, preflight, 'OPTIONS');
+          expect([path, answer.status, answer.cors.origin]).toEqual([path, 204, '*']);
+          expect([answer.cors.methods, answer.cors.headers]).toEqual(['GET', 'if-none-match']);
+        }
+        const search = yield* ask('https://egw.example/api/search/batch', preflight, 'OPTIONS');
+        expect([search.status, search.cors.origin]).toEqual([404, '']);
+        const health = yield* ask('https://egw.example/health', origin);
+        expect([health.status, health.cors.origin]).toEqual([200, '']);
       }),
     ));
 });
