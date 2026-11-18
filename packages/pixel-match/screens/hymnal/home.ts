@@ -4,7 +4,7 @@
  * file (`Home.tsx`): a title, Settings and the search field over the whole
  * list, with no tab row, so the tabs' rows are not drawn there.
  */
-import type { Row, Step } from '../../src/model.ts';
+import type { MaskSpec, Row, Step } from '../../src/model.ts';
 
 const unit = 'pm-hy-home';
 
@@ -34,6 +34,40 @@ const SLOW_PANS: ReadonlyArray<Step> = Array.from({ length: 3 }, () => ({
 }));
 const RECENT: Step = { open: 'recent', expect: 'label=Recent' };
 
+/** Why the rail's numbers are masked: the port has no rail yet (`hymn.rail`'s gap), only its gutter. */
+const NO_RAIL = 'the rail is a gap (hymn.rail): the port keeps its gutter, not its numbers';
+
+/**
+ * Each of the rail's six numbers on the Sections list at its top, in
+ * points, read from the reference's ink (x 1112 to 1166, a label 22 device
+ * pixels tall, at 3 px a point), with a point's room round each.
+ */
+const RAIL_AT_TOP: ReadonlyArray<MaskSpec> = [155, 275, 395, 514, 634, 753].map((y) => ({
+  x: 370,
+  y,
+  width: 20,
+  height: 9,
+  reason: NO_RAIL,
+}));
+
+/** The port's way to a home tab: the home list's tab button. */
+const tabOps = (name: string): ReadonlyArray<string> => [
+  'clock data',
+  `tap tab-${name}`,
+  'clock settle',
+  'clock data',
+  'clock settle',
+];
+
+/** The port's way to Recent: its route, opened at the stack's root. */
+const RECENT_OPS: ReadonlyArray<string> = [
+  'clock data',
+  'type root /recent',
+  'clock settle',
+  'clock data',
+  'clock settle',
+];
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'home.sections',
@@ -42,7 +76,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-fresh',
     one: { steps: [HOME], web: [HOME_WEB] },
-    exact: { ops: ['clock data', 'clock settle'] },
+    exact: { ops: ['clock data', 'clock settle'], masks: RAIL_AT_TOP },
   },
   {
     id: 'home.scrolled',
@@ -50,6 +84,10 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-fresh',
     one: { steps: [HOME, ...SLOW_PANS, { wait: 1500 }], web: [HOME_WEB, TO_100, { wait: 800 }] },
+    exact: {
+      ops: ['clock data', 'clock settle', 'tap hymn-list drag 0 -1500', 'clock settle'],
+      masks: RAIL_AT_TOP,
+    },
   },
   {
     id: 'home.pinned-tabs',
@@ -61,11 +99,46 @@ export const rows: ReadonlyArray<Row> = [
       notDrawn: { web: NO_TABS },
     },
   },
-  { id: 'home.lists-empty', unit, kind: 'match', fixture: 'hy-fresh', one: tab('Lists') },
-  { id: 'home.lists', unit, kind: 'match', fixture: 'hy-used', one: tab('Lists') },
-  { id: 'home.topics', unit, kind: 'match', fixture: 'hy-fresh', one: tab('Topics') },
-  { id: 'home.metres', unit, kind: 'match', fixture: 'hy-fresh', one: tab('Metres') },
-  { id: 'home.scripture', unit, kind: 'match', fixture: 'hy-fresh', one: tab('Scripture') },
+  {
+    id: 'home.lists-empty',
+    unit,
+    kind: 'match',
+    fixture: 'hy-fresh',
+    one: tab('Lists'),
+    exact: { ops: tabOps('lists') },
+  },
+  {
+    id: 'home.lists',
+    unit,
+    kind: 'match',
+    fixture: 'hy-used',
+    one: tab('Lists'),
+    exact: { ops: tabOps('lists') },
+  },
+  {
+    id: 'home.topics',
+    unit,
+    kind: 'match',
+    fixture: 'hy-fresh',
+    one: tab('Topics'),
+    exact: { ops: tabOps('topics') },
+  },
+  {
+    id: 'home.metres',
+    unit,
+    kind: 'match',
+    fixture: 'hy-fresh',
+    one: tab('Metres'),
+    exact: { ops: tabOps('metres') },
+  },
+  {
+    id: 'home.scripture',
+    unit,
+    kind: 'match',
+    fixture: 'hy-fresh',
+    one: tab('Scripture'),
+    exact: { ops: tabOps('scripture') },
+  },
   { id: 'home.shelf', unit, kind: 'exact-only' },
   {
     id: 'home.row-pressed',
@@ -73,6 +146,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-fresh',
     one: { steps: [HOME], web: [HOME_WEB], hold: 'label=1, Praise to the Lord' },
+    exact: { ops: ['clock data', 'clock settle', 'tap hymn-1 down'], masks: RAIL_AT_TOP },
   },
   {
     id: 'recent.page',
@@ -80,6 +154,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-used',
     one: { steps: [RECENT, { wait: 600 }], web: [{ open: 'recent', expect: '' }] },
+    exact: { ops: RECENT_OPS },
   },
   {
     id: 'recent.empty',
@@ -87,5 +162,6 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-fresh',
     one: { steps: [RECENT, { wait: 600 }], web: [{ open: 'recent', expect: '' }] },
+    exact: { ops: RECENT_OPS },
   },
 ];
