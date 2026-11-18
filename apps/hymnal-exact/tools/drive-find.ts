@@ -17,9 +17,8 @@
  *   Escape) fades them: 50 ms in, the page differs both from the open
  *   drums and from the settled page (pixels of screenshots), and once the
  *   clock settles the drums are gone; under Reduce Motion they leave at
- *   once, 50 ms in already the settled page. iOS's screenshots under the
- *   agent's clock do not show the fade, so there the counts are printed and
- *   only the close is held;
+ *   once, 50 ms in already the settled page, on both hosts (the counts are
+ *   printed beside the checks);
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels;
  * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
@@ -316,14 +315,8 @@ for (const still of [false, true]) {
     ];
     const gone = countIn(closed[at + 8], 'drums') === 0 && closed[at + 9] === false;
     const counts = { moved: moving, left: after, gone };
-    if (host !== 'web') {
-      drive.check(
-        `closed by ${close}${still ? ' under Reduce Motion' : ''}, the drums are gone once the clock settles`,
-        gone,
-        counts,
-      );
-      console.log(`NOTE ${host} ${way}${tag}: changed px 0→50 ${moving}, 50→settled ${after}`);
-    } else if (still)
+    console.log(`NOTE ${host} ${way}${tag}: changed px 0→50 ${moving}, 50→settled ${after}`);
+    if (still)
       drive.check(
         `under Reduce Motion, closed by ${close}, the drums leave at once: 50 ms in is the settled page, and they are gone`,
         moving > 0 && after === 0 && gone,
