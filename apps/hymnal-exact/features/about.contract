@@ -1,6 +1,8 @@
 // About, pushed in the Settings sheet: who made the sounds the recordings are
 // played on, as their licences ask (src/settings/about.ts, the current
-// hymnal's credits). A licence with an address opens it.
+// hymnal's credits). A licence with an address opens it. Drawn as the current
+// hymnal draws its About (src/about.tsx): a footnote heading over one group
+// between hairlines, every measure a token of app.forma (src/look/tokens.ts).
 
 shape AboutCredit
   part: string
@@ -21,19 +23,19 @@ component AboutScreen
     entry: Entry
     page: AboutPage
   view
-    column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 testId="about"
-      header display="flex" align-items="center" padding="8px 16px"
+    column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 background-color="ground" testId="about"
+      header display="flex" align-items="center" padding="space.s8 space.s16"
         text "About" role="heading" aria-level=2
-      list id="about-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        section
-          header
-            text "Recordings"
-          text page.lead testId="about-lead"
-          for c in page.credits key=c.part
-            column gap=2 align-items="flex-start" testId=`about-${c.part}`
-              text `${c.part}: ${c.work} by ${c.author}`
-              if c.url == ""
-                text c.licence color="-exact-secondary-label"
-              else
-                link href=c.url min-height=44 min-width=44 display="flex" align-items="center" testId=`about-licence-${c.part}`
-                  text c.licence
+      scroll id="about-list" flex=1 min-height=0
+        column gap="space.s8" padding="space.s16"
+          text "Recordings" role="heading" aria-level=3 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" margin-top="space.s16"
+          column gap="space.s8" padding="space.s11 space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+            text page.lead font="type.small" color="ink" testId="about-lead"
+            for c in page.credits key=c.part
+              column align-items="flex-start" testId=`about-${c.part}`
+                text `${c.part}: ${c.work} by ${c.author}` font="type.small" color="ink"
+                if c.url == ""
+                  text c.licence font="type.small" color="-exact-secondary-label"
+                else
+                  link href=c.url min-height="size.target" min-width="size.target" display="flex" align-items="center" testId=`about-licence-${c.part}`
+                    text c.licence font="type.small"
