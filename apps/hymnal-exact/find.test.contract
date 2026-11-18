@@ -67,13 +67,15 @@ test "The drums hold to the book"
   expect state find.ones == 0
   expect text "drums-number" == "690"
 
-// Outside the panel is `drums-outside`, the window-wide box beneath it.
+// Outside the panel is `drums-outside`, the window-wide box beneath it. The
+// touch lands 200 down, below iOS's status bar, which takes a touch at its
+// top left before the app's window sees it.
 test "A tap outside closes the drums and opens nothing"
   tap "find-number"
   clock settle
   clock data
   expect state find.drums == true
-  tap "drums-outside" drag 0 0 from 20 20
+  tap "drums-outside" drag 0 0 from 20 200
   clock settle
   clock data
   expect state find.drums == false
