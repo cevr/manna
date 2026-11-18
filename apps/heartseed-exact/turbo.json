@@ -477,9 +477,11 @@
     },
     "test:packs": {
       "dependsOn": ["^transit"],
+      "env": ["EXACT"],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/exact-kit/src/pin.ts",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/apps/heartseed/package.json",
         "$TURBO_ROOT$/apps/heartseed/src/**",
