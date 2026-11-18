@@ -185,7 +185,10 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
   const file = refFile(frame, cell);
   mkdirSync(join(file, '..'), { recursive: true });
   const shot = await capture(frame, cell.app, udid, side.hold, file);
-  if (shot === undefined) return 'moving: no two takes 500 ms apart were the same bytes';
+  if (shot === undefined) {
+    unlinkSync(file);
+    return 'moving: no two takes 500 ms apart were the same bytes';
+  }
   const tree = treeOf(frame, cell.app, `pm-${row.id}`);
   if (tree.overlay) {
     unlinkSync(file);

@@ -45,7 +45,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'gap',
     sweep: true,
     fixture: 'hs-new',
-    one: { steps: [WELCOME] },
+    one: { steps: [WELCOME], reduceMotion: true },
   },
   { id: 'first.grows', unit, kind: 'gap', sweep: true, fixture: 'hs-new', one: { steps: GROWS } },
   { id: 'first.hear', unit, kind: 'gap', fixture: 'hs-new', one: { steps: HEAR } },
