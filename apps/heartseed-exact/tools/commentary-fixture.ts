@@ -6,7 +6,7 @@
  * `ETag`, and `304` for an `If-None-Match` naming its version; and its
  * `GET /api/study/<name>`, the study packs built from the assets, always
  * well (`studyServed`), so every pack the app asks for lands. The drive
- * steers it over `POST /fixture` (`{ "pack": "first"|"second", "reply":
+ * steers it over `POST /fixture` (`{ "pack": "first"|"relinked"|"second", "reply":
  * "well"|"fail"|"cut"|"sum", "times": n, "holdMs": n }`: which pack it
  * serves, how answers go wrong (a `500`, a body cut short, or one with a
  * changed character) and for how many before it answers well again (0 for
@@ -41,6 +41,8 @@ export const checkoutPort = (): number =>
 /** The two packs the fixture serves, and a pack's body as sent. */
 export interface FixturePacks {
   readonly first: CommentaryPack;
+  /** `first` with its verse 14 note moved to verse 15, the notes the same. */
+  readonly relinked: CommentaryPack;
   readonly second: CommentaryPack;
   readonly bodyOf: (pack: CommentaryPack) => string;
 }
@@ -59,7 +61,7 @@ export const fixturePacks = async (): Promise<FixturePacks> => {
   await loadPreload();
   const { bodyOf, madePack, packOf } = await loadPacks();
   const { seeded } = await loadRandom();
-  const packFor = (seed: number, extra: number): CommentaryPack => {
+  const packFor = (seed: number, extra: number, last = 14): CommentaryPack => {
     const made = madePack(seeded(seed), 30);
     const notes = [
       ...made.notes,
@@ -74,11 +76,11 @@ export const fixturePacks = async (): Promise<FixturePacks> => {
       '43.1': [
         [0, [first]],
         [1, [first + 1]],
-        [14, Array.from({ length: 1 + extra }, (_, index) => first + 2 + index)],
+        [last, Array.from({ length: 1 + extra }, (_, index) => first + 2 + index)],
       ],
     });
   };
-  return { first: packFor(41, 0), second: packFor(42, 2), bodyOf };
+  return { first: packFor(41, 0), relinked: packFor(41, 0, 15), second: packFor(42, 2), bodyOf };
 };
 
 /** A study pack as the fixture serves it. */
@@ -107,7 +109,7 @@ const studyServed = async (): Promise<Record<string, StudyServed>> => {
 
 /** How the fixture answers now. */
 interface Mode {
-  pack: 'first' | 'second';
+  pack: 'first' | 'relinked' | 'second';
   reply: 'well' | 'fail' | 'cut' | 'sum';
   /** How many answers go wrong before the fixture answers well again; 0 for every one. */
   times: number;

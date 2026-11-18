@@ -11,7 +11,8 @@
  * each study pack as it lands while the commentary is still held, then
  * lands, says so for 3 seconds and goes quiet; a relaunch with the fixture
  * stopped reads the kept pack; a relaunch 8 days on asks once with
- * `If-None-Match` and keeps the pack on a `304`; a new version replaces it;
+ * `If-None-Match` and keeps the pack on a `304`; a pack with one link moved
+ * and the same notes has a new version and replaces it; a new version replaces it;
  * refused, `500`, cut short and a changed character each fail on a fresh
  * store with the commentary not kept (the study packs kept) and Try again shown, and the next try lands; a
  * bad update leaves the old counts; a plain launch takes egw.cvr.im and has
@@ -246,7 +247,7 @@ const has = (tree: unknown, id: string) => JSON.stringify(tree ?? '').includes(`
 const shot = (name: string) => `screenshot .exact/shots/commentary-${host}-${name}.png`;
 const countsOf = (counts: Counts | undefined) =>
   JSON.stringify(counts?.verses.map(({ verse, notes }) => [verse, notes]) ?? null);
-const expectedCounts = (pack: 'first' | 'second') =>
+const expectedCounts = (pack: 'first' | 'relinked' | 'second') =>
   JSON.stringify(
     (FIXTURE_PACKS[pack].verses['43.1'] ?? []).map(([verse, indexes]) => [verse, indexes.length]),
   );
@@ -379,7 +380,7 @@ const kept = async (store: string) => {
   );
 };
 
-/** A bad update, then a new version, over the kept store. */
+/** A bad update, one link moved under the same notes, then a new version, over the kept store. */
 const updates = async (store: string) => {
   await steer({ pack: 'second', reply: 'cut', times: 0 });
   const bad = await go(store, true, 16, ['clock data', 'clock settle', ...fetchOps, ...readOps]);
@@ -395,8 +396,34 @@ const updates = async (store: string) => {
     { badShown, counts: bad('state commentaryProbeCounts') },
   );
 
+  await steer({ pack: 'relinked', reply: 'well', times: 0 });
+  const relinked = await go(store, true, 16, [
+    'clock data',
+    'clock settle',
+    ...fetchOps,
+    ...readOps,
+  ]);
+  const relinkedShown = relinked('shown') as Shown | undefined;
+  const asked = await heard();
+  drive.check(
+    "one link moved, the notes the same: the pack's version is new, the check asks with the old one and replaces the kept pack",
+    JSON.stringify(FIXTURE_PACKS.relinked.notes) === JSON.stringify(first.notes) &&
+      FIXTURE_PACKS.relinked.version !== first.version &&
+      asked.at(-1)?.tag === `"${first.version}"` &&
+      relinkedShown?.version === FIXTURE_PACKS.relinked.version &&
+      relinked('kept version') === FIXTURE_PACKS.relinked.version &&
+      countsOf(relinked('state commentaryProbeCounts') as Counts) === expectedCounts('relinked') &&
+      expectedCounts('relinked') !== expectedCounts('first'),
+    {
+      versions: [first.version, FIXTURE_PACKS.relinked.version],
+      asked: asked.at(-1),
+      relinkedShown,
+      counts: relinked('state commentaryProbeCounts'),
+    },
+  );
+
   await steer({ pack: 'second', reply: 'well', times: 0 });
-  const renewed = await go(store, true, 16, [
+  const renewed = await go(store, true, 24, [
     'clock data',
     'clock settle',
     ...fetchOps,
