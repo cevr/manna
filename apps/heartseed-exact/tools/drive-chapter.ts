@@ -306,11 +306,8 @@ for (const which of ['light', 'dark'] as const) {
           : `${contrast(role, number.ground).toFixed(2)} (role ${role}, darkest pixel ${number.mark}, on ${number.ground})`,
       );
     }
-    const line = paintOf(
-      shotPath('field', which),
-      { ...plantedFrame, x: plantedFrame.x + 0.5, w: 2 },
-      viewWidth,
-    ).ground;
+    /** The line is `line.slot`, 2 pt: the whole pixels inside it, at any scale of the shot. */
+    const line = paintOf(shotPath('field', which), { ...plantedFrame, w: 2 }, viewWidth).ground;
     drive.check(
       `${which} colours: the planted line is hs.leaf`,
       distance(line, theme[which].leaf) <= 12,

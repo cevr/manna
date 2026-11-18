@@ -184,7 +184,7 @@ component ChapterPage
                   column class=ChapterLanded position="absolute" inset=0 border-radius="radius.r12" opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
                 for k in [holds] key=k
                   text overflow-wrap="break-word" hyphens="auto" position="relative" user-select="text" selectionchange=select(v.verse) testId=`verse-text-${v.verse}`
-                    text `${v.verse}` user-select="none" font-size=(`calc(${type.fontSize} * 0.62)`) font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
+                    text `${v.verse}` user-select="none" font-size=(`${type.size * 0.62 / 17}rem`) font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
                     text ` ${v.text}`
           row gap="space.s12" padding-top="space.s24" padding-left="space.s20" padding-right="space.s20" padding-bottom="space.s8" flex-wrap="wrap" testId="chapter-turn"
             if shown.previous.found

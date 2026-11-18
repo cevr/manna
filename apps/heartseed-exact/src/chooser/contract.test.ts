@@ -14,6 +14,8 @@
 import { expect, it } from 'bun:test';
 import { join } from 'node:path';
 
+import { TYPE_ROOT_POINTS } from '../type/choices';
+
 const APP = join(import.meta.dir, '../..');
 const read = (path: string) => Bun.file(join(APP, path)).text();
 
@@ -67,6 +69,11 @@ it('draws a filled button only under its offer, and runs it only while offered',
   expect(blockUnder(chooser, 'action chooserJoinIt')).toContain(
     'if chapterShown.singles and not pending(chooserPlanted)',
   );
+});
+
+it("draws a verse's number at 0.62 of the reader's size, in rem over the type root", async () => {
+  const chooser = await read('features/chooser.contract');
+  expect(chooser).toContain(`font-size=(\`\${type.size * 0.62 / ${TYPE_ROOT_POINTS}}rem\`)`);
 });
 
 it('clears the range when the chapter changes', async () => {
