@@ -5,7 +5,8 @@
  * by the same taps, over the row's fixture written to its store; a recital
  * is the agent's recognizer, granted and told what it hears. Its band runs
  * from the bottom of `today-top` (the top of Today's content, under the
- * navigation bar) to the top of the tab bar (`tabs`).
+ * navigation bar) to the top of `today-bottom` (the foot of Today's content,
+ * over the tab bar: UIKit's tab bar answers `layout tabs` with no box).
  */
 import type { Row, Step } from '../../src/model.ts';
 import { banded, TODAY_BAND } from './band.ts';
@@ -36,7 +37,7 @@ const LONG_SEED = 'Isaiah 41:10, seed, ready today';
 const SAID: ReadonlyArray<Step> = [...SEED, { tap: 'label=Say it' }, { wait: 5000 }];
 
 /** The port's Today band: from the top of Today's content to the tab bar. */
-const BAND = { top: 'today-top', bottom: 'tabs' };
+const BAND = { top: 'today-top', bottom: 'today-bottom' };
 
 /** The port's way to home with its data read. */
 const PORT_HOME = ['clock data', 'clock settle'];

@@ -422,3 +422,5 @@ component Today
               TodayRecital(today=today, peek=peek, still=still, sheet=sheet, chapter=chapter, read=read)
       if today.session.mode == "cued" or (today.session.item and not today.session.nothing and not today.session.ended)
         TodayFoot(today=today, hear=hear, stop=stop, say=say, finish=finish, showAll=showAll, grade=grade, next=next, again=again, still=still)
+      // The foot of Today's band, over the tab bar, which `pixel shot` reads: the tab bar UIKit draws has no box of its own there.
+      column height=0 flex-shrink=0 aria-hidden=true testId="today-bottom"
