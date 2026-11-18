@@ -93,12 +93,12 @@ component HeartseedExact
                     if e.id == readTopOf(t.stack)
                       button press=gotoOpenFind aria-label="Find a verse, a chapter or words" testId="chapter-find"
                         image "symbol:search"
-                    text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=2 flex=1 opacity=(chooserTitleGone ? 1 : 0) testId=`read-title-${e.name}`
+                    text (e.name == "read" ? readKept.name : readAts.filter(p => p.id == e.id).map(p => p.name).join("")) role="heading" aria-level=2 font="type.strong" flex=1 opacity=(chooserTitleGone ? 1 : 0) testId=`read-title-${e.name}`
                     if e.id == readTopOf(t.stack)
                       button press=typeOpen aria-label="Text settings" testId="chapter-aa"
                         text "Aa"
                   else
-                    text "Heartseed" role="heading" aria-level=1 flex=1 testId="title"
+                    text "Heartseed" role="heading" aria-level=1 font="type.title" flex=1 testId="title"
                   if e.id == settingsUnderId
                     button press=settingsOpen aria-label="Settings" testId="gear"
                       image "symbol:settings"
@@ -139,9 +139,9 @@ component HeartseedExact
             for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
               TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
       row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"
-        button role="tab" aria-controls="panel-garden" aria-selected=(nav.tab == "garden") press=pick("garden") testId="tab-garden" flex=1 min-height="44px" display="flex" flex-direction="column" align-items="center" justify-content="center"
+        button role="tab" aria-controls="panel-garden" aria-selected=(nav.tab == "garden") press=pick("garden") testId="tab-garden" flex=1 min-height="size.target" display="flex" flex-direction="column" align-items="center" justify-content="center"
           image "symbol:icon.sprout"
           text "Garden"
-        button role="tab" aria-controls="panel-read" aria-selected=(nav.tab == "read") press=pick("read") testId="tab-read" flex=1 min-height="44px" display="flex" flex-direction="column" align-items="center" justify-content="center"
+        button role="tab" aria-controls="panel-read" aria-selected=(nav.tab == "read") press=pick("read") testId="tab-read" flex=1 min-height="size.target" display="flex" flex-direction="column" align-items="center" justify-content="center"
           image "symbol:book"
           text "Read"
