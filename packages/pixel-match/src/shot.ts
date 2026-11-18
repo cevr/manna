@@ -152,7 +152,7 @@ const shootCell = (
     ...side.ops,
     'clock settle',
     ...edges,
-    `screenshot ${files.screen} compare ${refFile(frame, cell)}`,
+    `screenshot ${files.screen} window compare ${refFile(frame, cell)}`,
   ];
   const out = run(
     [
@@ -162,6 +162,8 @@ const shootCell = (
       'agent',
       'ios',
       '--json',
+      '--scale',
+      String(IOS.scale),
       '--storage',
       `pm-${row.id}`,
       '--reset-storage',
