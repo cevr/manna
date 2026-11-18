@@ -76,7 +76,7 @@ component SettingsChoice
       text line font="type.label"
       row role="radiogroup" appearance="none" aria-label=group display="flex" flex-direction="row" gap="space.s8" flex-wrap=(fill ? "nowrap" : "wrap")
         for o in options key=o.value
-          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" flex=(fill ? 1 : 0) min-height="size.target" padding-left=(fill ? "0px" : "space.s14") padding-right=(fill ? "0px" : "space.s14") border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" flex-grow=(fill ? 1 : 0) flex-shrink=(fill ? 1 : 0) flex-basis=(fill ? "0%" : "auto") min-height="size.target" padding-left=(fill ? "0px" : "space.s14") padding-right=(fill ? "0px" : "space.s14") border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
             text o.label font="type.label"
 
 component SettingsButton
