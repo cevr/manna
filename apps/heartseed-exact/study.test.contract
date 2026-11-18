@@ -1,9 +1,10 @@
+fail fetch "https://egw.cvr.im"
 epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
 // The study sheet on a plain launch, where no pack is on the phone yet
-// (egw.cvr.im refused, so a simulator with a network fetches nothing):
+// (egw.cvr.im refused by the file's first line, as in every test file):
 // the bar's three buttons with what they can say before a pack (Words
 // its language, no count on Cross-refs or Commentary), each tab's waiting
 // line, a tick-free tab change, Done back to the chapter with its verse
@@ -19,7 +20,6 @@ seed 7
 
 test "John 3:16's three study buttons, before any pack"
   at "/read/at/43/3/16"
-  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   tap "verse-16"
@@ -37,7 +37,6 @@ test "John 3:16's three study buttons, before any pack"
 
 test "Each tab says the pack is on its way, and Done keeps the verse chosen"
   at "/read/at/43/3/16"
-  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   tap "verse-16"
@@ -70,7 +69,6 @@ test "Each tab says the pack is on its way, and Done keeps the verse chosen"
 
 test "Before the first hold the chapter's hint says how to hold a word"
   at "/read/at/43/3/16"
-  fail fetch "https://egw.cvr.im"
   clock data
   clock settle
   expect text "chapter-hint" == "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek."

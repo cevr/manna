@@ -1,3 +1,5 @@
+fail fetch "https://egw.cvr.im"
+
 // The reading settings live (hs-read-type), on a plain launch: the Aa sheet
 // opened on its own route, each control's choice read back as the rules
 // read it, Reset, and a choice kept across a reload. What a test cannot read
