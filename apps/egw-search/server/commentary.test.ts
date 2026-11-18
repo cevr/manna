@@ -5,8 +5,8 @@ import {
   builtPack,
   COMMENTARY_BOOKS,
   type CommentaryLink,
-  notesSum,
   packOf,
+  packSum,
   sumOf,
   versionOf,
 } from './commentary.js';
@@ -144,7 +144,7 @@ describe('the commentary pack', () => {
       const pack = packOf(generate(seed));
       expect(pack.format).toBe(1);
       expect(pack.count).toBe(pack.notes.length);
-      expect(pack.sum).toBe(notesSum(pack.notes));
+      expect(pack.sum).toBe(packSum(pack.notes, pack.verses));
       expect(pack.version).toBe(`${String(pack.count)}-${pack.sum.toString(16).padStart(8, '0')}`);
       expect(pack.version).toMatch(/^\d+-[0-9a-f]{8}$/);
     }
@@ -177,6 +177,95 @@ describe('the commentary pack', () => {
     expect(checked).toBeGreaterThan(100);
   });
 
+  test('one link moved to another verse, the notes unchanged, changes the version', () => {
+    let checked = 0;
+    for (const seed of SEEDS) {
+      const links = generate(seed);
+      const at = links.findIndex(isCommentary);
+      for (const moved of Option.toArray(Option.fromUndefinedOr(links[at]))) {
+        const changed = links.with(at, { ...moved, bibleVerse: Option.some(99) });
+        const before = packOf(links);
+        const after = packOf(changed);
+        expect(after.notes).toEqual(before.notes);
+        expect([seed, after.version]).not.toEqual([seed, before.version]);
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(100);
+  });
+
+  test('any one-field edit of a pack changes its sum', () => {
+    type Pack = ReturnType<typeof packOf>;
+    type Edit = (pack: Pack, random: ReturnType<typeof seeded>) => Option.Option<Pack>;
+    const verseEdit =
+      (
+        change: (
+          entry: readonly [number, readonly number[]],
+          count: number,
+        ) => Option.Option<readonly [number, readonly number[]]>,
+      ): Edit =>
+      (pack, random) => {
+        const keys = Object.keys(pack.verses);
+        if (keys.length === 0) return Option.none();
+        const key = random.pick(keys);
+        const chapter = pack.verses[key] ?? [];
+        const at = random.below(chapter.length);
+        return Option.map(change(chapter[at] ?? [0, []], pack.count), (entry) => ({
+          ...pack,
+          verses: { ...pack.verses, [key]: chapter.with(at, entry) },
+        }));
+      };
+    const noteEdit =
+      (change: (note: readonly [string, string]) => readonly [string, string]): Edit =>
+      (pack, random) => {
+        if (pack.notes.length === 0) return Option.none();
+        const at = random.below(pack.notes.length);
+        return Option.some({
+          ...pack,
+          notes: pack.notes.with(at, change(pack.notes[at] ?? ['', ''])),
+        });
+      };
+    const edits = {
+      'a verse renumbered': verseEdit(([verse, indexes]) => Option.some([verse + 100, indexes])),
+      'an index dropped': verseEdit(([verse, indexes]) =>
+        Option.some([verse, indexes.slice(1)] as const),
+      ),
+      'an index pointed elsewhere': verseEdit(([verse, indexes], count) =>
+        Option.filter(
+          Option.some([
+            verse,
+            [...indexes.slice(0, -1), ((indexes.at(-1) ?? 0) + 1) % count],
+          ] as const),
+          () => count > 1,
+        ),
+      ),
+      'a chapter moved': (pack, random) => {
+        const keys = Object.keys(pack.verses);
+        if (keys.length === 0) return Option.none();
+        const key = random.pick(keys);
+        const { [key]: moved = [], ...rest } = pack.verses;
+        return Option.some({ ...pack, verses: { ...rest, [`${key}0`]: moved } });
+      },
+      'a reference changed': noteEdit(([reference, text]) => [`${reference}x`, text]),
+      'a text changed': noteEdit(([reference, text]) => [reference, `${text}x`]),
+    } satisfies Record<string, Edit>;
+    for (const [name, edit] of Object.entries(edits)) {
+      let checked = 0;
+      for (const seed of SEEDS) {
+        const pack = packOf(generate(seed));
+        for (const edited of Option.toArray(edit(pack, seeded(seed + 2000)))) {
+          expect([name, seed, packSum(edited.notes, edited.verses)]).not.toEqual([
+            name,
+            seed,
+            pack.sum,
+          ]);
+          checked += 1;
+        }
+      }
+      expect([name, checked > 100]).toEqual([name, true]);
+    }
+  });
+
   test('links to no Bible book are left out', () => {
     const link: CommentaryLink = {
       bookCode: '1BC',
@@ -207,5 +296,25 @@ describe('the shared vector', () => {
     expect(['a', '1BC 24.1\nx', ''].map(sumOf)).toEqual([
       3_826_002_220, 377_222_876, 2_166_136_261,
     ]);
+  });
+
+  test("packSum answers the numbers Heartseed's test writes", () => {
+    expect([
+      packSum([], {}),
+      packSum([['1BC 1.1', 'ka lo']], { '1.1': [[0, [0]]] }),
+      packSum(
+        [
+          ['1BC 1.1', 'ka lo'],
+          ['2BC 3.4', 'mi'],
+        ],
+        {
+          '1.1': [
+            [0, [0]],
+            [3, [0, 1]],
+          ],
+          '19.92': [[16, [1]]],
+        },
+      ),
+    ]).toEqual([2_166_136_261, 1_493_375_448, 3_273_295_273]);
   });
 });

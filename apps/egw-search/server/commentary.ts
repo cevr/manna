@@ -51,9 +51,28 @@ export const sumOf = (text: string): number => {
   return hash >>> 0;
 };
 
-/** The sum over every note's reference and text, joined by `\n` in order. */
-export const notesSum = (notes: CommentaryPack['notes']): number =>
-  sumOf(notes.flatMap(([reference, text]) => [reference, text]).join('\n'));
+/** One chapter of the verse map as text: its key, then each verse as
+ *  `<verse>:<indexes joined by ,>`, space-separated. */
+const chapterText = ([key, verses]: readonly [string, CommentaryPack['verses'][string]]): string =>
+  [key, ...verses.map(([verse, indexes]) => `${String(verse)}:${indexes.join(',')}`)].join(' ');
+
+/** The texts a pack's sum covers, in order: every note's reference and text,
+ *  then each chapter of the verse map as `chapterText` writes it, in the
+ *  map's order. The same list as Heartseed's `packTexts`
+ *  (`apps/heartseed-exact/src/commentary/pack.ts`), held to it by the shared
+ *  vector in both sides' tests. */
+const packTexts = (
+  notes: CommentaryPack['notes'],
+  verses: CommentaryPack['verses'],
+): readonly string[] => [
+  ...notes.flatMap(([reference, text]) => [reference, text]),
+  ...Object.entries(verses).map(chapterText),
+];
+
+/** The sum over the whole pack: `packTexts` joined by `\n`, so a changed note
+ *  or a changed link gives another version. */
+export const packSum = (notes: CommentaryPack['notes'], verses: CommentaryPack['verses']): number =>
+  sumOf(packTexts(notes, verses).join('\n'));
 
 /** `<count>-<sum as 8 hex digits>`. */
 export const versionOf = (count: number, sum: number): string =>
@@ -128,7 +147,7 @@ export const packOf = (links: Iterable<CommentaryLink>): CommentaryPack => {
   }
 
   const notes = ordered.map((link) => [link.reference, link.text] as const);
-  const sum = notesSum(notes);
+  const sum = packSum(notes, verses);
   return {
     format: COMMENTARY_FORMAT,
     version: versionOf(notes.length, sum),

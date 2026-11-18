@@ -4,8 +4,8 @@
  * The pack's checks and its reader, over generated made-up packs: every
  * good pack passes; each single corruption fails, by the check it breaks;
  * a chapter reads exactly the pack's notes for it, verses ascending. And
- * the shared vector: `sumOf` answers the numbers `hs-bc-api`'s test writes,
- * so the phone and the server sum alike.
+ * the shared vector: `sumOf` and `packSum` answer the numbers egw-search's
+ * test writes, so the phone and the server sum alike.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -16,6 +16,7 @@ import { seeded, type Random } from '../test/random';
 import {
   checkPack,
   countsOf,
+  packSum,
   readOf,
   versionOf,
   type CommentaryPack,
@@ -41,6 +42,26 @@ describe('the shared vector', () => {
   it("sumOf answers the numbers hs-bc-api's test writes", () => {
     expect(['a', '1BC 24.1\nx', ''].map(sumOf)).toEqual([3826002220, 377222876, 2166136261]);
   });
+
+  it("packSum answers the numbers egw-search's test writes", () => {
+    expect([
+      packSum([], {}),
+      packSum([['1BC 1.1', 'ka lo']], { '1.1': [[0, [0]]] }),
+      packSum(
+        [
+          ['1BC 1.1', 'ka lo'],
+          ['2BC 3.4', 'mi'],
+        ],
+        {
+          '1.1': [
+            [0, [0]],
+            [3, [0, 1]],
+          ],
+          '19.92': [[16, [1]]],
+        },
+      ),
+    ]).toEqual([2166136261, 1493375448, 3273295273]);
+  });
 });
 
 describe('the checks', () => {
@@ -61,12 +82,74 @@ describe('the checks', () => {
     }
   });
 
-  it('a byte dropped anywhere before the verses fails (the sum covers the notes, not the index)', () => {
+  it('a byte dropped anywhere fails (the sum covers the notes and the verse map)', () => {
     const random = seeded(16);
     for (let run = 0; run < PACKS; run++) {
       const body = bodyOf(fullPack(random));
-      const at = random.below(body.indexOf('"verses"'));
+      const at = random.below(body.length);
       expect(faultOf(body.slice(0, at) + body.slice(at + 1))).not.toBe('good');
+    }
+  });
+
+  it('a pack whose verse map changed, its sum and version kept, fails its sum', () => {
+    const random = seeded(17);
+    const edits: ReadonlyArray<
+      readonly [string, (pack: CommentaryPack, key: string, at: number) => CommentaryPack]
+    > = [
+      [
+        'a verse renumbered',
+        (pack, key, at) => ({
+          ...pack,
+          verses: {
+            ...pack.verses,
+            [key]: (pack.verses[key] ?? []).map(([verse, indexes], i) =>
+              i === at ? ([verse + 100, indexes] as const) : ([verse, indexes] as const),
+            ),
+          },
+        }),
+      ],
+      [
+        'an index dropped',
+        (pack, key, at) => ({
+          ...pack,
+          verses: {
+            ...pack.verses,
+            [key]: (pack.verses[key] ?? []).map(([verse, indexes], i) =>
+              i === at ? ([verse, indexes.slice(1)] as const) : ([verse, indexes] as const),
+            ),
+          },
+        }),
+      ],
+      [
+        'a verse dropped',
+        (pack, key, at) => ({
+          ...pack,
+          verses: {
+            ...pack.verses,
+            [key]: (pack.verses[key] ?? []).filter((_, i) => i !== at),
+          },
+        }),
+      ],
+      [
+        'a chapter moved',
+        (pack, key) => ({
+          ...pack,
+          verses: Object.fromEntries(
+            Object.entries(pack.verses).map(([name, verses]) => [
+              name === key ? `${name}0` : name,
+              verses,
+            ]),
+          ),
+        }),
+      ],
+    ];
+    for (let run = 0; run < PACKS; run++) {
+      const pack = fullPack(random);
+      const keys = Object.keys(pack.verses);
+      const key = keys[random.below(keys.length)] ?? '1.1';
+      const at = random.below((pack.verses[key] ?? []).length);
+      for (const [name, edit] of edits)
+        expect([name, faultOf(bodyOf(edit(pack, key, at)))]).toEqual([name, 'sum']);
     }
   });
 

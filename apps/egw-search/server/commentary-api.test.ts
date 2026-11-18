@@ -11,7 +11,7 @@ import { SearchService } from '@manna/core/search';
 import { CommentaryPackSchema, SearchApi } from './api.js';
 import { CommentaryMemoryLive, namesVersion } from './commentary-api.js';
 import { cite, countedCorpus, madeUpCorpus, madeUpPack } from './commentary-fixture.js';
-import { notesSum } from './commentary.js';
+import { packSum } from './commentary.js';
 import { SearchGroupLive } from './search-api.js';
 import { studyGroupOver } from './study-api.js';
 import { VectorIndexLoad } from './vector-index.js';
@@ -69,7 +69,7 @@ describe('GET /api/commentary/pack', () => {
         expect(answer.etag).toBe(`"${pack.version}"`);
         expect({ notes: pack.notes, verses: pack.verses }).toEqual(madeUpPack);
         expect(pack.count).toBe(3);
-        expect(pack.sum).toBe(notesSum(pack.notes));
+        expect(pack.sum).toBe(packSum(pack.notes, pack.verses));
       }),
     ));
 

@@ -264,8 +264,10 @@ export const COMMENTARY_FORMAT = 1;
  *  `notes` holds each paragraph of 1BC-7BC linked to a Bible verse, once, as
  *  its short reference code and its plain text. `verses` is keyed
  *  `book.chapter`; each linked verse (0 for a whole chapter) carries the
- *  indexes of its notes. `version` is made of `count` and `sum`, so an
- *  unchanged corpus answers the same version. */
+ *  indexes of its notes. `sum` covers the notes and the verse map
+ *  (`packSum` of `commentary.ts`), and `version` is made of `count` and
+ *  `sum`, so an unchanged pack answers the same version and any change
+ *  another. */
 export const CommentaryPackSchema = S.Struct({
   format: S.Literal(COMMENTARY_FORMAT),
   version: S.String,

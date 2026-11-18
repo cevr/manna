@@ -36,8 +36,9 @@ bun run --cwd apps/egw-search commentary:check
 
 `server/commentary-corpus.slow.test.ts` (in `test:slow`) builds the pack over
 the local corpus, read-only, and skips, saying so, where there is none. The
-pack's `ETag` is its version, made of its note count and an FNV-1a sum of its notes, so
-an `If-None-Match` naming it answers `304`. The Bun server keeps the built pack
+pack's `ETag` is its version, made of its note count and an FNV-1a sum of the
+whole pack (its notes and its verse map, `packSum`), so a changed note or link
+gives a new version, and an `If-None-Match` naming the current one answers `304`. The Bun server keeps the built pack
 in memory for an hour; the Worker keeps it in the edge cache for an hour, so D1
 is read for it at most once an hour per edge (on a `workers.dev` stage the
 Cache API keeps nothing, so every ask reads D1). For development,
