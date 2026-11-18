@@ -1,8 +1,8 @@
-/* oxlint-disable effect/noTernary -- a property test's arithmetic: a byte moved up or down past the limit. */
+/* oxlint-disable effect/noTernary, effect/noNullish -- a property test's arithmetic: a byte moved up or down past the limit; a pair scored whole has no bands (undefined, as `scorePair` takes it). */
 import { describe, expect, test } from 'bun:test';
 import { Arbitrary, Effect, Schema } from 'effect';
 
-import { bandsOf, diff, ladder, type Mask } from './diff.ts';
+import { bandsOf, diff, ladder, scorePair, type Mask } from './diff.ts';
 import { decodePng, encodePng, isBlank, type Picture } from './png.ts';
 
 const int = (minimum: number, maximum: number) =>
@@ -26,20 +26,24 @@ const mask = Arbitrary.map(
   ([x, y, width, height]): Mask => ({ x, y, width, height, reason: 'drawn' }),
 );
 
-/** A case: a picture, masks over it, a channel limit and the pixels to change. */
+/** A case: a picture, masks over it, a channel limit and the pixels to change, each with the colour (0 red, 1 green, 2 blue) moved. */
 const cases = Arbitrary.all([
   picture,
   Arbitrary.array(mask, { maxLength: 3 }),
   int(0, 64),
-  Arbitrary.array(int(0, 80), { maxLength: 20 }),
+  Arbitrary.array(Arbitrary.all([int(0, 80), int(0, 2)]), { maxLength: 20 }),
 ]);
 
-/** `picture` with red at each of `pixels` moved more than `channel` away. */
-const changed = (base: Picture, pixels: ReadonlyArray<number>, channel: number): Picture => {
+/** `picture` with the colour each pick names at its pixel moved more than `channel` away. */
+const changed = (
+  base: Picture,
+  picks: ReadonlyArray<readonly [number, number]>,
+  channel: number,
+): Picture => {
   const rgba = Uint8Array.from(base.rgba);
-  for (const at of pixels) {
-    const red = rgba[at * 4] ?? 0;
-    rgba[at * 4] = red > 255 - (channel + 1) ? red - (channel + 1) : red + channel + 1;
+  for (const [at, colour] of picks) {
+    const byte = rgba[at * 4 + colour] ?? 0;
+    rgba[at * 4 + colour] = byte > 255 - (channel + 1) ? byte - (channel + 1) : byte + channel + 1;
   }
   return { ...base, rgba };
 };
@@ -69,9 +73,10 @@ describe('the strict diff', () => {
         const [x, y] = [at % base.width, Math.floor(at / base.width)];
         return masks.some((m) => x >= m.x && x < m.x + m.width && y >= m.y && y < m.y + m.height);
       };
-      const pixels = [...new Set(picks.filter((at) => at < base.width * base.height))];
-      const outside = pixels.filter((at) => !under(at));
-      const scored = diff(base, changed(base, pixels, channel), masks, channel);
+      const inside = picks.filter(([at]) => at < base.width * base.height);
+      const once = [...new Map(inside.map(([at, colour]) => [at, colour] as const)).entries()];
+      const outside = once.map(([at]) => at).filter((at) => !under(at));
+      const scored = diff(base, changed(base, once, channel), masks, channel);
       return (
         scored._tag === 'Scored' &&
         scored.differing === outside.length &&
@@ -138,6 +143,51 @@ describe('the strict diff', () => {
         );
       },
     ));
+
+  test("a scored pair's picture is the whole reference's pixels, its total the band's", () =>
+    holds(
+      Arbitrary.all([picture, int(0, 9), int(0, 9), int(0, 1)]),
+      ([base, first, last, foot]) => {
+        const band = { top: Math.min(first, last), bottom: Math.max(first, last) };
+        const anchor = foot === 1 ? 'bottom' : 'top';
+        const banded = scorePair(base, base, [], 0, { reference: band, screen: band, anchor });
+        const whole = scorePair(base, base, [], 0, undefined);
+        const height = Math.min(band.bottom, base.height) - Math.min(band.top, base.height);
+        return (
+          banded.picture === base.width * base.height &&
+          banded.scored._tag === 'Scored' &&
+          banded.scored.total === base.width * height &&
+          whole.picture === base.width * base.height &&
+          whole.scored._tag === 'Scored' &&
+          whole.scored.total === whole.picture
+        );
+      },
+    ));
+
+  test("a mask drawn on the reference's whole picture covers the same row once the band is cut", () => {
+    /** A picture 3 wide and `height` tall, black, with row `red` red. */
+    const rows = (height: number, red: number): Picture => ({
+      width: 3,
+      height,
+      rgba: Uint8Array.from({ length: 3 * height * 4 }, (_, i) =>
+        (i % 4 === 0 && Math.floor(i / 12) === red) || i % 4 === 3 ? 255 : 0,
+      ),
+    });
+    const reference = rows(8, -1);
+    const screen = rows(10, 7);
+    const bands = {
+      reference: { top: 2, bottom: Number.POSITIVE_INFINITY },
+      screen: { top: 4, bottom: 10 },
+      anchor: 'top',
+    } as const;
+    const row5: Mask = { x: 0, y: 5, width: 3, height: 1, reason: 'the row the screen differs on' };
+    const masked = scorePair(reference, screen, [row5], 0, bands).scored;
+    const bare = scorePair(reference, screen, [], 0, bands).scored;
+    expect(masked._tag === 'Scored' && [masked.differing, masked.masked, masked.total]).toEqual([
+      0, 3, 18,
+    ]);
+    expect(bare._tag === 'Scored' && bare.differing).toBe(3);
+  });
 
   test('the ladder counts fewer pixels at a looser channel', () => {
     const base: Picture = {

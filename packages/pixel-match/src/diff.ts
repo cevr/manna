@@ -198,6 +198,48 @@ export const bandsOf = (
   };
 };
 
+/** Where a banded pair's two bands lie, and which edge they are laid at. */
+export interface Banding {
+  readonly reference: Band;
+  readonly screen: Band;
+  readonly anchor: 'top' | 'bottom';
+}
+
+/**
+ * Scores a whole reference against a whole screen at `channel`: over the
+ * whole pictures, or over their bands (`bandsOf`) when `bands` is given,
+ * the masks (drawn on the reference's whole picture) moved up with the
+ * reference's band. `picture` is the whole reference's pixels, beside the
+ * score's `total`, the band's; the pair as scored and its masks so laid
+ * come back for the ladder and the diff picture.
+ */
+export const scorePair = (
+  wholeReference: Picture,
+  wholeScreen: Picture,
+  masks: ReadonlyArray<Mask>,
+  channel: number,
+  bands: Banding | undefined,
+) => {
+  const picture = wholeReference.width * wholeReference.height;
+  if (bands === undefined)
+    return {
+      reference: wholeReference,
+      screen: wholeScreen,
+      laid: masks,
+      picture,
+      scored: diff(wholeReference, wholeScreen, masks, channel),
+    };
+  const cut = bandsOf(wholeReference, bands.reference, wholeScreen, bands.screen, bands.anchor);
+  const laid = masks.map((mask) => ({ ...mask, y: mask.y - cut.offset }));
+  return {
+    reference: cut.reference,
+    screen: cut.screen,
+    laid,
+    picture,
+    scored: diff(cut.reference, cut.screen, laid, channel),
+  };
+};
+
 /** The differing count of one pair at each channel limit asked, as the calibration reports it. */
 export const ladder = (
   reference: Picture,
