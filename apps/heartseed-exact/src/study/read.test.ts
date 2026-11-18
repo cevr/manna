@@ -155,7 +155,7 @@ describe('the sources, through the one downloader', () => {
     expect(
       (await withDataHost(() => offline.reader.studyEntry(['G25', ''], STORE, storage))).have,
     ).toBe(false);
-    const offlineAsk = await askSettled(offline.sources, ['', false, 1000], storage);
+    const offlineAsk = await askSettled(offline, ['', false, 1000], storage);
     expect(offlineAsk.failed).toBe(true);
     expect(storage.files.size).toBe(0);
 
@@ -163,7 +163,7 @@ describe('the sources, through the one downloader', () => {
     const partly = launch(
       serverOf(served({ xrefs: studyBodyOf(XREFS), tags: corrupt, lexicon: studyBodyOf(LEXICON) })),
     );
-    const answer = await askSettled(partly.sources, ['', false, 2000], storage);
+    const answer = await askSettled(partly, ['', false, 2000], storage);
     expect(answer.failed).toBe(true);
     expect([...storage.files.keys()].sort()).toEqual([STUDY_LEXICON.file, STUDY_XREFS.file].sort());
     const xrefsMark = versionIn(answer.kept, 'xrefs');
@@ -204,7 +204,7 @@ describe('the sources, through the one downloader', () => {
     });
 
     const fixed = launch(serverOf(served({ tags: studyBodyOf(TAGS) })));
-    const again = await askSettled(fixed.sources, [answer.kept, true, 3000], storage);
+    const again = await askSettled(fixed, [answer.kept, true, 3000], storage);
     const tagsMark = versionIn(again.kept, 'tags');
     expect(tagsMark).toBe(TAGS.version);
     const words = await withDataHost(() =>

@@ -61,10 +61,12 @@ const specOf = (name: string): PackSpec<MadePack> => ({
   check: checkMade,
 });
 
-/** One call of the data host: its name, and whether it has given its value. */
+/** One call of the data host: its name, whether it has given its value, whether a newer send let it go before it did, and its last fetch's landing, which its next waits for. */
 interface Call {
   readonly name: string;
   answered: boolean;
+  letGo: boolean;
+  landed: Promise<void>;
 }
 
 /** A host's turn ends between events. */
@@ -84,8 +86,13 @@ const hostOf = () => {
   const files = new Map<string, ArrayBuffer>();
   const made = new Map(NAMES.map((name) => [name, madeOf(name)]));
 
+  /** Exact's `scheduler.yield()`: refused in a call let go (its job owed again), at once in one that has answered, else a turn of its own. */
   const pause = () => {
     const call = current;
+    if (call?.letGo === true)
+      return Promise.reject(
+        Object.assign(new Error('the answer was let go'), { name: 'AbortError' }),
+      );
     if (call === undefined || call.answered) {
       joined.push(call?.name ?? 'none');
       return Promise.resolve();
@@ -98,32 +105,48 @@ const hostOf = () => {
     );
   };
 
+  /** A fetch lands as the call that made it, and only after that call's earlier fetches have: Exact hands the host a call's fetches one at a time, in the order made. */
   const fetcher = async (url: string) => {
     const owner = current;
     const name = new URL(url).pathname.split('/')[2] ?? '';
-    const outcome = await new Promise<Outcome>((resolve) =>
-      held.set(name, [
-        ...(held.get(name) ?? []),
-        (each) => {
-          current = owner;
-          resolve(each);
-        },
-      ]),
+    const before = owner?.landed ?? Promise.resolve();
+    const heard = new Promise<Outcome>((resolve) =>
+      held.set(name, [...(held.get(name) ?? []), resolve]),
     );
+    const landing = Promise.all([heard, before]).then(([each]) => each);
+    if (owner !== undefined) owner.landed = landing.then(() => {});
+    const outcome = await landing;
+    current = owner;
     if (outcome === 'fail') return { status: 500, text: async () => 'Internal error' };
     return { status: 200, text: async () => JSON.stringify(made.get(name)) };
   };
 
+  /** A storage step answers in a turn of its own, as the call that asked it. */
+  const stepped = <T>(run: () => T) => {
+    const owner = current;
+    return new Promise<T>((resolve, reject) =>
+      setImmediate(() => {
+        current = owner;
+        try {
+          resolve(run());
+        } catch (error) {
+          reject(error);
+        }
+      }),
+    );
+  };
   const storage = {
     fs: {
-      readFile: async (path: string) => {
-        const file = files.get(path);
-        if (file === undefined) throw Object.assign(new Error('no file'), { code: 'ENOENT' });
-        return file;
-      },
-      atomicWriteFile: async (path: string, bytes: Uint8Array) => {
-        files.set(path, Uint8Array.from(bytes).buffer);
-      },
+      readFile: (path: string) =>
+        stepped(() => {
+          const file = files.get(path);
+          if (file === undefined) throw Object.assign(new Error('no file'), { code: 'ENOENT' });
+          return file;
+        }),
+      atomicWriteFile: (path: string, bytes: Uint8Array) =>
+        stepped(() => {
+          files.set(path, Uint8Array.from(bytes).buffer);
+        }),
     },
   };
 
@@ -134,9 +157,14 @@ const hostOf = () => {
     pause,
   });
 
-  /** A call started in a turn of its own, answered once its value is given. */
-  const send = (name: string, run: () => Promise<PacksAnswer>) => {
-    const call: Call = { name, answered: false };
+  /** Each pack's latest call: a newer send lets the one before go, as Contract's newest-wins mutation does. */
+  const latest = new Map<string, Call>();
+  /** A call started in a turn of its own, answered once its value is given or a newer send of its pack lets it go. */
+  const send = (pack: string, name: string, run: () => Promise<PacksAnswer>) => {
+    const call: Call = { name, answered: false, letGo: false, landed: Promise.resolve() };
+    const before = latest.get(pack);
+    if (before !== undefined && !before.answered) before.letGo = true;
+    latest.set(pack, call);
     current = call;
     const answer = withDataHost(run);
     const given = () => {
@@ -148,20 +176,43 @@ const hostOf = () => {
 
   /** Every answer's kept line, in the order they came. */
   const answers: Array<string> = [];
-  const ask = async (kept: string, force: boolean) => {
-    let answer = await send('packsAsk', () => sources.packsAsk([kept, force, NOW], STORE, storage));
-    answers.push(answer.kept);
-    while (answer.more) {
+  /** Each pack's follow-up `packsWait`, in the order sent: a timer Contract arms, which a drive's frozen clock holds back. */
+  const waits: Array<string> = [];
+  /** One pack asked as its mutation sends it, and followed while its answer says `more`. */
+  const askOne = async (name: string, kept: string, force: boolean) => {
+    const asked = send(name, `packsAsk ${name}`, () =>
+      sources.packsAsk([name, kept, force, NOW], STORE, storage),
+    );
+    let mine = latest.get(name);
+    /** A call let go may end refused: Contract forgets its reply either way. */
+    let answer = await asked.catch(() => undefined);
+    for (;;) {
+      if (latest.get(name) !== mine) return undefined;
+      if (answer === undefined) throw new Error(`${name}: a call no newer send let go was refused`);
+      answers.push(answer.kept);
+      if (!answer.more) return answer;
       await turn();
       const last = answer.kept;
-      answer = await send('packsWait', () => sources.packsWait([last]));
-      answers.push(answer.kept);
+      waits.push(name);
+      const waited = send(name, `packsWait ${name}`, () => sources.packsWait([name, last]));
+      mine = latest.get(name);
+      answer = await waited.catch(() => undefined);
     }
-    return answer;
+  };
+  /** Every pack asked at once, a call each, as `packsFetch` and `packsRetry` send them: the last answer's kept line, and whether any pack's last try failed. */
+  const ask = async (kept: string, force: boolean) => {
+    const settled = await Promise.all(NAMES.map((name) => askOne(name, kept, force)));
+    return {
+      kept: answers.at(-1) ?? kept,
+      failed: settled.some((answer) => answer?.failed === true),
+      /** Whether a newer ask let any of these calls go before they settled. */
+      overtaken: settled.some((answer) => answer === undefined),
+    };
   };
 
   return {
     joined,
+    waits,
     answers,
     ask,
     version: (name: string) => made.get(name)?.version ?? '',
@@ -201,25 +252,37 @@ describe('every step of a check runs in a turn of a call still answering', () =>
     expect(keptIn(landed.kept, 'commentary').version).toBe(host.version('commentary'));
   });
 
-  it('bodies owed together are checked in the order they landed, a slow pack after a quick one', async () => {
+  it('a slow pack holds back no other: each study pack is kept while the commentary is still held', async () => {
     const host = hostOf();
     const asked = host.ask('', false);
     await drained();
-    for (const name of ['xrefs', 'commentary', 'tags'])
-      expect(host.release(name, 'well')).toBe(true);
+    for (const name of NAMES.slice(1)) expect(host.release(name, 'well')).toBe(true);
     await drained();
-    for (const name of ['lexicon', 'words']) expect(host.release(name, 'well')).toBe(true);
-    await asked;
-    const firstKept = host.answers
-      .map((kept) => NAMES.filter((name) => keptIn(kept, name).version !== ''))
-      .filter((names) => names.length > 0)
-      .slice(0, 3);
-    expect(firstKept).toEqual([
-      ['xrefs'],
-      ['commentary', 'xrefs'],
-      ['commentary', 'tags', 'xrefs'],
-    ]);
+    const whileHeld = host.answers.at(-1) ?? '';
+    expect(NAMES.filter((name) => keptIn(whileHeld, name).version !== '')).toEqual(NAMES.slice(1));
+    expect(host.waits).toEqual([]);
+    expect(host.release('commentary', 'well')).toBe(true);
+    const answer = await asked;
+    expect(keptIn(answer.kept, 'commentary').version).toBe(host.version('commentary'));
     expect(host.joined).toEqual([]);
+  });
+
+  it('Try again while every fetch is out joins them: the bodies are checked by the newer calls, in turns of their own', async () => {
+    const host = hostOf();
+    const first = host.ask('', false);
+    await drained();
+    const again = host.ask('', true);
+    await drained();
+    for (const name of NAMES) {
+      expect(host.release(name, 'well')).toBe(true);
+      await drained();
+    }
+    const [overtaken, landed] = await Promise.all([first, again]);
+    expect({ overtaken: overtaken.overtaken, joined: host.joined }).toEqual({
+      overtaken: true,
+      joined: [],
+    });
+    for (const name of NAMES) expect(keptIn(landed.kept, name).version).toBe(host.version(name));
   });
 
   it('every pack lands at once: each is checked in turns of a call still answering', async () => {

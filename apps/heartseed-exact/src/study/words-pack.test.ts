@@ -77,7 +77,7 @@ describe('the word index pack', () => {
     });
     const from = findPackFrom(packs, '');
     expect(await withDataHost(() => from('', storage))).toBeUndefined();
-    const answer = await askSettled(packs.sources, ['', false, 1000], storage);
+    const answer = await askSettled(packs, ['', false, 1000], storage);
     expect(answer.kept).toContain(`words ${PACK.version}`);
     expect(await withDataHost(() => from(PACK.version, storage))).toEqual(FIND);
   });
