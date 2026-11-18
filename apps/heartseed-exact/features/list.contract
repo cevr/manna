@@ -121,7 +121,7 @@ component ListPage
             text list.startLine font="type.small" color="hs.quiet" testId="list-line"
         if chapter != ""
           HomePill(name=`Read ${chapter}`, label=`Read ${chapter}`, press=read, icon="", id="list-read")
-      scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0
+      scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0 testId="list-scroll"
         column gap="space.s4" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
           for v in list.verses key=v.slug
             column gap="space.s4" -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
