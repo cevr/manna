@@ -88,6 +88,22 @@ describe('a citation', () => {
     ]);
   });
 
+  test("a first segment read in another book than the title's names the title", () => {
+    expect(labels(citedVerses('Ezekiel 1:22', 'Ez 1:22'))).toEqual(['26.1:22']);
+    expect(labels(citedVerses('Isaiah 53:5', 'Isaiah 53:5; 1 Peter 2:24'))).toEqual([
+      '23.53:5',
+      '60.2:24',
+    ]);
+  });
+
+  test('a chapter past its book’s last names nothing', () => {
+    expect(labels(citedVerses('Hebrews 11:21', 'Hebrews 11:21, 48:15, 13:2'))).toEqual([
+      '58.11:21',
+      '58.13:2',
+    ]);
+    expect(labels(citedVerses('Psalms 150:1', '150, 151'))).toEqual(['19.150:*']);
+  });
+
   test('a chapter list names each chapter', () => {
     expect(labels(citedVerses('Revelation 21:1', 'Revelation 21, 22'))).toEqual([
       '66.21:*',

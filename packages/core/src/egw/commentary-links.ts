@@ -20,6 +20,7 @@
 
 import { Array as Arr, Option } from 'effect';
 
+import { getBibleBook } from '../bible/canon.js';
 import { parseBibleQuery } from '../bible/parse.js';
 import type { Paragraph } from './schemas.js';
 
@@ -182,8 +183,10 @@ const bareChapters = (head: Read, segment: string): Option.Option<Read> =>
   });
 
 /** The verses one citation names: its printed `text` read in the context of
- *  its `title`. A first segment the reading cannot place names the title's
- *  own verses, so a citation never names less than its title. */
+ *  its `title`. A first segment the reading cannot place, or places in
+ *  another book than the title's (an abbreviation such as "Ez" read as the
+ *  wrong book), names the title's own verses, so a citation never names less
+ *  than its title. A chapter past its book's last is no verse. */
 const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
   Option.match(named(parseBibleQuery(title)), {
     onNone: () => [],
@@ -196,15 +199,22 @@ const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
           .replace(/^and\s+/i, '')
           .replace(/[.:]$/, '');
         let read = segmentAt(place, segment);
-        if (index === 0) read = Option.orElse(bareChapters(head, segment), () => read);
+        if (index === 0)
+          read = Option.orElse(bareChapters(head, segment), () =>
+            Option.filter(read, (first) => first.place.book === head.place.book),
+          );
         if (Option.isSome(read)) {
           place = read.value.place;
           out.push(...read.value.verses);
         } else if (index === 0) out.push(...head.verses);
       });
-      return out;
+      return out.filter(inCanon);
     },
   });
+
+/** Whether `cited`'s chapter is one its book has. */
+const inCanon = (cited: CitedVerse): boolean =>
+  Option.exists(getBibleBook(cited.bibleBook), (book) => cited.bibleChapter <= book.chapters);
 
 const isBlank = (node: Node): boolean => node._tag === 'Text' && node.text.trim().length === 0;
 
