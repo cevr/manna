@@ -100,7 +100,7 @@ component AddHead
   view
     column flex=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
       text title font="type.strong" overflow-wrap="break-word"
-      text note font="type.small" overflow-wrap="break-word"
+      text note font="type.small" overflow-wrap="break-word" padding-bottom="line.hair"
 
 component AddVersesPage
   props
@@ -112,27 +112,27 @@ component AddVersesPage
     done: action
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationScroll="add-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="add-sheet"
-      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page" flex-shrink=0
+      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page" flex-shrink=0 background-color="hs.ground"
         text "Add a list" role="heading" aria-level=1 font="type.sheet-title" testId="add-title"
-        button press=done aria-label="Done" display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="add-done"
+        button press=done aria-label="Done" display="flex" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="add-done"
           text "Done" font="type.label"
       scroll id="add-scroll" flex=1 min-height=0 testId="add-verses"
         column gap="space.s8" padding-top="space.s8" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page"
           for s in add.shelves key=s.id
             column gap="space.s4"
               if s.kind == "bible"
-                button press=bible aria-label=s.title display="flex" flex-direction="row" align-items="center" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                button press=bible aria-label=s.title display="flex" flex-direction="row" align-items="center" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
                   AddHead(title=s.title, note=s.note)
               if s.kind != "bible"
-                button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open display="flex" flex-direction="row" align-items="center" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open display="flex" flex-direction="row" align-items="center" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
                   AddHead(title=s.title, note=s.note)
               for r in s.rows key=r.id
-                button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
+                button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
                   column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
                     text r.title font="type.strong" overflow-wrap="break-word"
                     text r.count font="type.small"
                   if r.offer == "plant"
-                    row align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink"
+                    row align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink"
                       text r.offerText font="type.plant" color="hs.on-ink" testId=`offer-state-${r.slug}`
                   if r.offer != "plant" and r.offerText != ""
                     text r.offerText font="type.small" testId=`offer-state-${r.slug}`
@@ -165,5 +165,5 @@ component AddListPage
         if list.line != ""
           text list.line role="alert" font="type.note-strong" testId=`shelf-${list.lineId}`
         if list.row.offer == "plant"
-          button press=plant aria-label="Plant" disabled=pending display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink" color="hs.on-ink" opacity=(pending ? "opacity.disabled" : 1) -exact-press-opacity="opacity.pressed" testId="shelf-plant"
+          button press=plant aria-label="Plant" disabled=pending display="flex" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink" color="hs.on-ink" opacity=(pending ? "opacity.disabled" : 1) -exact-press-opacity="opacity.pressed" testId="shelf-plant"
             text "Plant" font="type.plant"

@@ -25,6 +25,22 @@ const EXACT_SHEET: ReadonlyArray<string> = [
   'clock settle',
 ];
 
+/**
+ * The scroll that puts `Seven Churches` where One's reference has it: its
+ * card's top 1951 pt into the shelves, measured on both pictures (One's
+ * card edge, the port's `layout` of the shelf at no scroll).
+ */
+const HANDBOOK_SCROLL = 'tap add-verses drag 0 -1951';
+
+/** The scroll indicator the drag leaves showing at the capture; One's had faded. */
+const INDICATOR = {
+  x: 394,
+  y: 560,
+  width: 8,
+  height: 280,
+  reason: "the scroll indicator the port's drag leaves showing, faded in One's capture",
+};
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'add.sheet',
@@ -57,7 +73,15 @@ export const rows: ReadonlyArray<Row> = [
       ],
     },
     exact: {
-      ops: [...EXACT_SHEET, 'tap shelf-handbook-bhb-1808', 'clock data', 'clock settle'],
+      ops: [
+        ...EXACT_SHEET,
+        HANDBOOK_SCROLL,
+        'clock settle',
+        'tap shelf-handbook-bhb-1808',
+        'clock data',
+        'clock settle',
+      ],
+      masks: [INDICATOR],
     },
   },
   {
