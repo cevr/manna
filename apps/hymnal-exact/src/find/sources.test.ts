@@ -11,9 +11,9 @@
 import { describe, expect, test } from 'bun:test';
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
-import * as measures from '@manna/hymnal-app/player/find-measures';
 
 import { book } from '../hymns/book.ts';
+import { oneFile } from '../look/design.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { findSources } from './sources.ts';
 
@@ -83,15 +83,23 @@ describe('finding’s sources', () => {
   });
 
   test('the bar’s and the drums’ places are the current app’s measures', () => {
+    const constant = (path: string, name: string): number => {
+      const found = new RegExp(`^export const ${name} = (\\d+);$`, 'mu').exec(oneFile(path));
+      expect(found).not.toBeNull();
+      return Number(found?.[1]);
+    };
+    const bar = 'src/player/bar.ts';
+    expect(oneFile(bar)).toContain('export const DOCKED_LIFT = (REST - HASH) / 2;');
+    const [rest, hash] = [constant(bar, 'REST'), constant(bar, 'HASH')];
     const places = withDataHost(() => findSources(book).findPlaces());
     expect(places).toEqual({
-      hash: measures.HASH,
-      gap: measures.HASH_GAP,
-      lift: measures.DOCKED_LIFT,
-      rest: measures.REST,
-      detent: measures.DETENT,
-      pad: measures.PANEL_PAD,
-      rowGap: measures.ROW_GAP,
+      hash,
+      gap: constant(bar, 'HASH_GAP'),
+      lift: (rest - hash) / 2,
+      rest,
+      detent: constant('src/player/dial.ts', 'DETENT'),
+      pad: constant('src/player/DialPanel.tsx', 'PANEL_PAD'),
+      rowGap: constant('src/player/DialPanel.tsx', 'ROW_GAP'),
     });
   });
 

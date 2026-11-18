@@ -126,7 +126,7 @@ shape FindPort
   safeAreaBottom: number
 
 // The current app's measures of the bar and the drums, in points
-// (`findPlaces`, src/find/sources.ts, from its find-measures module).
+// (`findPlaces`, src/find/sources.ts, as One's bar.ts, dial.ts and DialPanel.tsx hold them).
 shape FindPlaces
   hash: number
   gap: number

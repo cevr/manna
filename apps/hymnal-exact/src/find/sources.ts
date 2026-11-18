@@ -14,18 +14,23 @@
  * velocity; `wheel` the delta. A kind it does not know changes nothing.
  */
 
-import {
-  DETENT,
-  DOCKED_LIFT,
-  HASH,
-  HASH_GAP,
-  PANEL_PAD,
-  REST,
-  ROW_GAP,
-} from '@manna/hymnal-app/player/find-measures';
-
 import type { Book } from '../hymns/book.ts';
 import { initial, type Input, type State, step, type View, view } from './step.ts';
+
+/** The player's bar at rest, over the home indicator (the current app's `REST`, src/player/bar.ts). */
+const REST = 56;
+/** The find bar's height and each round control's side in it (`HASH`, bar.ts). */
+const HASH = 44;
+/** The room between the find bar and what it rides over (`HASH_GAP`, bar.ts). */
+const HASH_GAP = 8;
+/** How far the docked bar's foot stands over the bottom inset: centred in the resting bar (`DOCKED_LIFT`, bar.ts). */
+const DOCKED_LIFT = (REST - HASH) / 2;
+/** One stop of a drum (`DETENT`, src/player/dial.ts). */
+const DETENT = 52;
+/** The drums' panel's room round its rows (`PANEL_PAD`, src/player/DialPanel.tsx). */
+const PANEL_PAD = 8;
+/** The room between the panel's rows (`ROW_GAP`, DialPanel.tsx). */
+const ROW_GAP = 10;
 
 /**
  * The current app's measures of the find bar and the drums, in points, as
