@@ -145,4 +145,26 @@ describe('the line rule (A3)', () => {
     expect(breaksOf([[3], [4, 4, 4]], 6, 1)).toEqual([[[0, 0]], [[1, 0]], [[1, 1]], [[1, 2]]]);
     expect(breaksOf([], 10, 1)).toEqual([]);
   });
+
+  test('a row but the first is narrower by the hanging indent', () => {
+    expect(breaksOf([[4], [4], [4], [4]], 9, 1, 2)).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      [[2, 0]],
+      [[3, 0]],
+    ]);
+    expect(breaksOf([[4], [4], [4], [4]], 9, 1)).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      [
+        [2, 0],
+        [3, 0],
+      ],
+    ]);
+    expect(breaksOf([[2], [4, 4]], 9, 1, 2)).toEqual([[[0, 0]], [[1, 0]], [[1, 1]]]);
+  });
 });

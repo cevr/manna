@@ -174,7 +174,10 @@ component ChordsNotice
 // first (the current app's boxes, `boxesOf` in `SyllableWords.tsx`). A
 // word wider than the row breaks between its pairs (src/chords/rows.ts).
 // A text's box is a device pixel taller than its line, as React Native's
-// text measure makes it on iOS (docs: agent-pitfalls).
+// text measure makes it on iOS (docs: agent-pitfalls). The words' gap is
+// each word's right margin, and the row reaches as far past its box, so a
+// row's last word's margin never breaks it: a gap between words only, as
+// the current app's `columnGap` (a `column-gap` takes no `calc`).
 component ChordsLines
   props
     chords: ChordsPage
@@ -182,7 +185,7 @@ component ChordsLines
     part: ChordsPart
   view
     for l in part.lines key=l.at
-      row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" margin-bottom="space.s8"
+      row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" margin-bottom="space.s8" margin-right="calc(0px - space.s4 * 1.25)"
         padding-left="calc(space.s20 * 1.05)" testId=`line-${k}-${l.at}`
         for w, wi in l.words key=w.at
           if wi == 0

@@ -24,16 +24,20 @@ export type Place = readonly [word: number, box: number];
 
 /**
  * The rows of a line whose words' pairs are `words` wide (each word its
- * pairs' widths), on rows `width` wide with `gap` between two words.
+ * pairs' widths), on rows `width` wide with `gap` between two words; a
+ * row but the first is set in by `indent`, the hanging indent, and so is
+ * that much narrower.
  */
 export const breaksOf = (
   words: ReadonlyArray<ReadonlyArray<number>>,
   width: number,
   gap: number,
+  indent = 0,
 ): Array<Array<Place>> => {
   const rows: Array<Array<Place>> = [];
   let row: Array<Place> = [];
   let used = 0;
+  const room = () => (rows.length === 0 ? width : width - indent);
   const close = () => {
     if (row.length > 0) rows.push(row);
     row = [];
@@ -41,19 +45,19 @@ export const breaksOf = (
   };
   words.forEach((pairs, w) => {
     const wide = pairs.reduce((sum, pair) => sum + pair, 0);
-    if (row.length > 0 && used + gap + wide <= width) {
+    if (row.length > 0 && used + gap + wide <= room()) {
       row.push(...pairs.map((_, b): Place => [w, b]));
       used += gap + wide;
       return;
     }
     close();
-    if (wide <= width) {
+    if (wide <= room()) {
       row = pairs.map((_, b): Place => [w, b]);
       used = wide;
       return;
     }
     pairs.forEach((pair, b) => {
-      if (row.length > 0 && used + pair > width) close();
+      if (row.length > 0 && used + pair > room()) close();
       row.push([w, b]);
       used += pair;
     });
