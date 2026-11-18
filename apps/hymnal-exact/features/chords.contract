@@ -27,6 +27,7 @@ shape ChordsPart
   key: string
   label: string
   text: string
+  refrain: bool
   lines: ChordsLine[]
 
 shape ChordsPage
@@ -135,55 +136,92 @@ component ChordsKeys
     chordsPress: action
   view
     if chords.kind == "chords" and chords.number == number
-      column gap=12 testId="chords-keys"
-        column gap=2
-          text "Key" color="-exact-secondary-label"
-          row align-items="center" gap=12
-            text chords.sounding font="-exact-headline" flex=1 min-width=0 testId="key-sounding"
+      column gap="space.s12" testId="chords-keys"
+        column gap="space.s4"
+          text "Key" font="type.part" color="muted"
+          row align-items="center" gap="space.s12"
+            text chords.sounding font="type.strong" color="ink" flex=1 min-width=0 testId="key-sounding"
             button press=chordsPress(chords.number, "down") aria-label="Key down" testId="transpose-down"
               image "symbol:minus"
             button press=chordsPress(chords.number, "up") aria-label="Key up" testId="transpose-up"
               image "symbol:add"
-        column gap=2
-          text (chords.capo == 0 ? "No capo, played in" : `Capo ${chords.capo}, played in`) color="-exact-secondary-label" testId="capo"
-          row align-items="center" gap=12
-            text chords.played font="-exact-headline" flex=1 min-width=0 testId="key-played"
+        column gap="space.s4"
+          text (chords.capo == 0 ? "No capo, played in" : `Capo ${chords.capo}, played in`) font="type.part" color="muted" testId="capo"
+          row align-items="center" gap="space.s12"
+            text chords.played font="type.strong" color="ink" flex=1 min-width=0 testId="key-played"
             button press=chordsPress(chords.number, "capo-down") disabled=(not chords.capoDown) aria-label="Capo down" testId="capo-down"
               image "symbol:minus"
             button press=chordsPress(chords.number, "capo-up") disabled=(not chords.capoUp) aria-label="Capo up" testId="capo-up"
               image "symbol:add"
-    if chords.kind == "none" and chords.number == number
-      text "No chords for this hymn yet." font="-exact-footnote" color="-exact-secondary-label" testId="no-chords"
 
-// A section's lines under their chords: each line a wrapping row of words,
-// each word a wrapping row of pairs, each pair its chord (a link to its
+// While chords are on and the hymn has none, a quiet notice says so over
+// its words (the current app's `ChordNotice`).
+component ChordsNotice
+  props
+    chords: ChordsPage
+    number: number
+  view
+    if chords.kind == "none" and chords.number == number
+      text "No chords for this hymn yet." font="type.footnote" color="muted" testId="no-chords"
+
+// A section's lines under their chords, as the current app's boxed
+// `SyllableLine` draws them: each line a wrapping row of words, set in by
+// the hanging indent with its first word drawn back out, its words' feet
+// together; each word a row of pairs, each pair its chord (a link to its
 // shape, or a blank as tall) over its syllable, their left edges together.
+// Where a word goes on, its hyphen sits beside a syllable with no chord, and
+// centred in the room a chord leaves after one with a chord or the line's
+// first (the current app's boxes, `boxesOf` in `SyllableWords.tsx`). A
+// word wider than the row breaks between its pairs (src/chords/rows.ts).
+// A text's box is a device pixel taller than its line, as React Native's
+// text measure makes it on iOS (docs: agent-pitfalls).
 component ChordsLines
   props
     chords: ChordsPage
     k: number
     part: ChordsPart
+  view
+    for l in part.lines key=l.at
+      row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" margin-bottom="space.s8"
+        padding-left="calc(space.s20 * 1.05)" testId=`line-${k}-${l.at}`
+        for w, wi in l.words key=w.at
+          if wi == 0
+            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.s20 * 1.05)" margin-right="calc(space.s4 * 1.25)"
+              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
+          else
+            row flex-wrap="wrap" align-items="flex-end" margin-right="calc(space.s4 * 1.25)"
+              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
+
+// A word's pairs: each its chord over its syllable.
+component ChordsPairs
+  props
+    chords: ChordsPage
+    k: number
+    line: ChordsLine
+    word: ChordsWord
+    refrain: bool
   inject
     motionStill: bool
   view
-    column gap=6
-      for l in part.lines key=l.at
-        row flex-wrap="wrap" column-gap="0.35em" row-gap=4 testId=`line-${k}-${l.at}`
-          for w in l.words key=w.at
-            row flex-wrap="wrap"
-              for b, bi in w.boxes key=bi
-                column align-items="flex-start" testId=`pair-${k}-${l.at}-${w.at + bi}`
-                  if b.chord == ""
-                    text " " aria-hidden=true
-                  else
-                    if b.grip == ""
-                      text b.chord color="chord" padding-right="0.3em" testId=`chord-${k}-${l.at}-${w.at + bi}`
-                        animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
-                    else
-                      link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${l.at}-${w.at + bi}`
-                        animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
-                        text b.chord color="chord" padding-right="0.3em"
-                  text b.text testId=`syllable-${k}-${l.at}-${w.at + bi}`
+    for b, bi in word.boxes key=bi
+      column testId=`pair-${k}-${line.at}-${word.at + bi}`
+        if b.chord == ""
+          text "​" font="type.chord" padding-right="space.s6" aria-hidden=true
+        else
+          if b.grip == ""
+            text b.chord font="type.chord" color="chord" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}`
+              animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
+          else
+            link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}`
+              animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
+              text b.chord font="type.chord" color="chord" padding-right="space.s6" padding-bottom="-exact-hairline"
+        row
+          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}`
+            text b.text
+            if bi < word.boxes.length - 1 and b.chord == "" and not (word.at == 1 and bi == 0)
+              text "-" color="muted"
+          if bi < word.boxes.length - 1 and (b.chord != "" or (word.at == 1 and bi == 0))
+            text "-" font="type.line" color="muted" font-style=(refrain ? "italic" : "normal") flex-grow=1 text-align="center" padding-bottom="-exact-hairline" aria-hidden=true
 
 // A chord's shape over the page: each chord a box, its strings down from
 // the low E, the frets across (an SVG), the marks over the nut, and each
@@ -195,27 +233,43 @@ component ChordsGripScreen
     ready: bool
     done: action
   view
-    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="shape-scroll" position="absolute" inset=0
-      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
-        text (not ready ? "" : page.has ? page.name : "No shape") role="heading" aria-level=2 testId="shape-name"
-        button press=done testId="shape-done"
-          text "Done"
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="medium large" navigationGrabber="visible" navigationScroll="shape-scroll" position="absolute" inset=0
       scroll id="shape-scroll" flex=1 min-height=0
-        column align-items="center" gap=24 padding=24
-          for b, bi in page.boxes key=bi
-            column align-items="center" gap=8
-              text (b.playedAs == "" ? b.name : `${b.name}, played as ${b.playedAs}`) font="-exact-headline"
-              view position="relative" width=page.width height=page.height role="img" aria-label=`${b.name}: ${b.frets}` testId=(bi == 0 ? "shape" : `shape-${bi}`)
-                svg position="absolute" left=0 top=0 width=page.width height=page.height viewBox=`0 0 ${page.width} ${page.height}` color="-exact-label"
-                  for x in b.stringsX key=x
-                    line x1=x y1=b.top x2=x y2=b.bottom stroke="currentColor" stroke-width=1
-                  for y, fi in b.fretsY key=fi
-                    line x1=b.left y1=y x2=b.right y2=y stroke="currentColor" stroke-width=(fi == 0 and b.nut ? 4 : 1)
-                for m, mi in b.marks key=mi
-                  text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font-size="min(-exact-footnote, 13px)" testId=`shape-${bi}-mark-${mi}`
-                for d, di in b.dots key=di
-                  text `${d.finger}` position="absolute" left=(d.x - page.dot / 2) top=(d.y - page.dot / 2) width=page.dot height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size="min(-exact-caption2, 11px)" font-weight=700 color="-exact-background" testId=`shape-${bi}-dot-${di}`
-                for r, ri in b.barres key=ri
-                  text `${r.finger}` position="absolute" left=r.x top=r.y width=r.width height=page.dot border-radius=(page.dot / 2) background-color="-exact-label" line-height=`${page.dot}px` text-align="center" font-size="min(-exact-caption2, 11px)" font-weight=700 color="-exact-background" testId=`shape-${bi}-barre-${ri}`
-                if b.firstLabel != ""
-                  text b.firstLabel position="absolute" left=0 top=b.top width=(b.left - 8) text-align="right" font-size="min(-exact-caption1, 12px)" color="-exact-secondary-label" testId=(bi == 0 ? "shape-first" : `shape-first-${bi}`)
+        column padding="space.s16 space.s20 space.s40" gap="space.s16"
+          row justify-content="flex-end" align-items="center" gap="space.s24"
+            text (not ready ? "" : page.has ? page.name : "No chord") role="heading" aria-level=2 flex=1 min-width=0 opacity=0 testId="shape-name"
+            view role="button" press=done aria-label="Done" testId="shape-done"
+              text "Done" font="type.strong" color="accent"
+          row flex-wrap="wrap" justify-content="center" gap="space.s24"
+            if ready and not page.has
+              text "No chord" font="type.note" color="muted"
+            for b, bi in page.boxes key=bi
+              column align-items="center" gap="space.s6"
+                text b.name font="type.name" color="ink" aria-hidden=true
+                if b.playedAs != ""
+                  text `Played as ${b.playedAs}` font="type.note" color="muted" aria-hidden=true
+                ChordsShapeBox(page=page, b=b, bi=bi)
+
+// One chord's box: its strings down from the low E, the frets across (an
+// SVG), the marks over the nut, and each finger a filled dot (a barre a
+// filled bar) with its number, at the current app's measures (`ChordBox`).
+component ChordsShapeBox
+  props
+    page: ChordsGripPage
+    b: ChordsGripBox
+    bi: number
+  view
+    view position="relative" width=page.width height=page.height role="img" aria-label=(b.playedAs == "" ? `${b.name}: ${b.frets}` : `${b.name}, played as ${b.playedAs}: ${b.frets}`) testId=(bi == 0 ? "shape" : `shape-${bi}`)
+      svg position="absolute" left=0 top=0 width=page.width height=page.height viewBox=`0 0 ${page.width} ${page.height}` color="ink"
+        for x in b.stringsX key=x
+          line x1=x y1=b.top x2=x y2=b.bottom stroke="currentColor" stroke-width=1
+        for y, fi in b.fretsY key=fi
+          line x1=b.left y1=y x2=b.right y2=y stroke="currentColor" stroke-width=(fi == 0 and b.nut ? 4 : 1)
+      for m, mi in b.marks key=mi
+        text m.text position="absolute" left=(m.x - page.dot / 2) top=0 width=page.dot text-align="center" font="type.mark" color="ink" testId=`shape-${bi}-mark-${mi}`
+      for d, di in b.dots key=di
+        text `${d.finger}` position="absolute" left=(d.x - page.dot / 2) top=(d.y - page.dot / 2) width=page.dot height=page.dot border-radius=(page.dot / 2) background-color="accent" font="type.finger" line-height=`${page.dot}px` text-align="center" color="onAccent" testId=`shape-${bi}-dot-${di}`
+      for r, ri in b.barres key=ri
+        text `${r.finger}` position="absolute" left=r.x top=r.y width=r.width height=page.dot border-radius=(page.dot / 2) background-color="accent" font="type.finger" line-height=`${page.dot}px` text-align="center" color="onAccent" testId=`shape-${bi}-barre-${ri}`
+      if b.firstLabel != ""
+        text b.firstLabel position="absolute" left=0 top=b.top width=b.left box-sizing="border-box" padding-right="space.s4" text-align="right" font="type.first" color="muted" testId=(bi == 0 ? "shape-first" : `shape-first-${bi}`)

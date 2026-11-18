@@ -1,8 +1,9 @@
 // The page an address no screen has opens (src/web/place.ts `placeOf`): the
 // route table's bare `notfound`, and a hymn's address for a number the
-// hymnal has not (the hymn page's answer of number 0). It says so and links
-// home. A host sends such an address the built `404.html` (src/web/served.ts),
-// whose script draws this screen.
+// hymnal has not (the hymn page's answer of number 0). A hymn's says so as
+// the current app does (`NoHymn`, its header `No hymn <n>`); any other says
+// there is no such page. Each links home. A host sends such an address the
+// built `404.html` (src/web/served.ts), whose script draws this screen.
 use EmptyState from "exact:content"
 
 component NotFound
@@ -11,10 +12,23 @@ component NotFound
   view
     column navigationKey=`${entry.id}` position="absolute" inset=0
       display="flex" flex-direction="column" testId="notfound"
-      head title="No Such Page"
-      header display="flex" align-items="center" padding="8px 16px"
-        text "No Such Page" role="heading" aria-level=2 testId="notfound-title"
-      column flex=1 min-height=0
-        EmptyState(symbol="symbol:alert", title="No Such Page", message="The hymnal has 695 hymns.")
-          link href="/" min-width=44 min-height=44 padding="0 12px" display="flex" align-items="center" justify-content="center" testId="notfound-home"
-            text "All Hymns"
+      if entry.name == "hymn"
+        head title=`No hymn ${entry.params.n}`
+        header display="flex" align-items="center" padding="space.s8 space.s16"
+          text `No hymn ${entry.params.n}` role="heading" aria-level=2 testId="notfound-title"
+        column flex=1 min-height=0 padding="space.s8 space.s20 space.s48" align-items="flex-start"
+          text `No hymn ${entry.params.n}.` font="type.line" color="ink" testId="notfound-hymn"
+          NotFoundHome()
+      else
+        head title="No Such Page"
+        header display="flex" align-items="center" padding="space.s8 space.s16"
+          text "No Such Page" role="heading" aria-level=2 testId="notfound-title"
+        column flex=1 min-height=0
+          EmptyState(symbol="symbol:alert", title="No Such Page", message="The hymnal has 695 hymns.")
+            NotFoundHome()
+
+// The way home, a target of the platform's least size.
+component NotFoundHome
+  view
+    link href="/" min-width="size.target" min-height="size.target" padding="0 space.s12" display="flex" align-items="center" justify-content="center" testId="notfound-home"
+      text "All Hymns"
