@@ -107,7 +107,12 @@ It returns the scored, differing and masked counts and the largest
 rules. PNGs are read and written by `src/png.ts` over node's zlib.
 
 `pixel shot` drives the port through `bun run exact agent ios` on its Exact
-simulator, from a fresh store, with the row's ops. It takes the screen with
+simulator, from a fresh store, with the row's ops. It first removes
+`apps/<app>/app/routes.d.ts`, the route types One's dev server writes while
+a reference is taken. Each port imports its One app's package. Exact's bake
+stages every declaration file of that package, and this file pulls in `one`'s
+declarations. That takes the bake over its 64 MiB cap, and the port does not
+build. It takes the screen with
 Exact's `compare` against the reference, then scores the pair at the
 threshold's channel (16). It writes, under `tmp/pixel-match/shots/`:
 

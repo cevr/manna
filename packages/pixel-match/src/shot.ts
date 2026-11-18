@@ -11,7 +11,7 @@
  * picture and Exact's `compare` text are written beside the screen.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { bandsOf, diff, diffPicture, ladder, type Band, type Mask } from './diff.ts';
@@ -107,6 +107,23 @@ const score = (
   return result;
 };
 
+/**
+ * Removes the route types One's dev server writes into each One app
+ * (`apps/<app>/app/routes.d.ts`, ignored by git) while a reference is taken
+ * in the same checkout. Each port imports its One app's package, and Exact's
+ * bake stages every declaration in a package it reaches: that file names
+ * `one`, whose 31.7 MiB of declarations take the bake over its 64 MiB cap,
+ * so the port does not build. The next dev server start writes it again.
+ */
+const dropOneRoutes = (root: string) => {
+  for (const app of ['heartseed', 'hymnal']) {
+    const routes = join(root, 'apps', app, 'app', 'routes.d.ts');
+    if (!existsSync(routes)) continue;
+    unlinkSync(routes);
+    console.log(`removed ${routes}: One's generated route types take the port's bake over its cap`);
+  }
+};
+
 /** Takes and scores the port's iOS cell of `row`. */
 const shootCell = (
   frame: { readonly root: string; readonly refs: string; readonly one: string },
@@ -116,6 +133,7 @@ const shootCell = (
   const side = row.exact;
   if (side === undefined) throw new Error(`${row.id}: no Exact side written yet`);
   if (!existsSync(refFile(frame, cell))) throw new Error(`${cellName(cell)}: no reference`);
+  dropOneRoutes(frame.root);
   const udid = udidOfName(EXACT_SIMULATORS[cell.app]);
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
