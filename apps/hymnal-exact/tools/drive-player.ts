@@ -195,6 +195,7 @@ const shot = (name: string) => `screenshot .exact/shots/player-${host}-${name}.p
 const down = [
   'clock data',
   'state player.origin',
+  'clock settle',
   'tap play',
   'clock data',
   'clock +12000 real',
@@ -259,6 +260,7 @@ check(
 
 const missingOps = [
   'clock data',
+  'clock settle',
   'tap play',
   'clock data',
   'clock +4000 real',
@@ -294,6 +296,7 @@ check(
 const CHOICE = `${LONG_HYMN}:1.3`;
 const chooseOps = [
   'clock data',
+  'clock settle',
   'tap play',
   'clock data',
   'clock +3000 real',
@@ -350,6 +353,7 @@ check('a stanza choice is kept as it is made', chosen === CHOICE, chosen);
 const keptOps = [
   'clock data',
   'state playerKept',
+  'clock settle',
   'tap play',
   'clock data',
   'clock +3000 real',
