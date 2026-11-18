@@ -2,18 +2,24 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   ConfigProvider,
+  Deferred,
+  Duration,
   Effect,
+  Exit,
+  Fiber,
   Option,
   Record as Rec,
   FileSystem,
   Layer,
   Path,
+  Schedule,
   Schema,
   Sink,
   Stream,
 } from 'effect';
 import * as Arbitrary from 'effect/Arbitrary';
-import { ChildProcessSpawner } from 'effect/process';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
+import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { EXACT_BASE } from './pin.ts';
@@ -64,6 +70,21 @@ When an iPhone app is ready to try, run \`bun exact.mjs share\` and send its lin
 <!-- exact:end -->
 `;
 
+/**
+ * A launcher standing in for `exact-cli.ts`: it starts a `sleep` that outlives it in its process group, as Exact's
+ * test runners do, writes its pid beside the app as `exited.pid` (or `waited.pid` when the last argument is `wait`),
+ * then exits, or waits to be stopped.
+ */
+const LINGERING = `const { spawn } = require('node:child_process');
+const { writeFileSync } = require('node:fs');
+const [appDir] = process.argv.slice(2);
+const waits = process.argv.at(-1) === 'wait';
+const kept = spawn('sleep', ['20'], { stdio: 'ignore' });
+writeFileSync(appDir + (waits ? '/waited.pid' : '/exited.pid'), String(kept.pid));
+if (waits) setInterval(() => {}, 1000);
+else process.exit(0);
+`;
+
 /** The repo's root, from this file. */
 const repoRoot = Effect.gen(function* () {
   const path = yield* Path.Path;
@@ -94,15 +115,17 @@ const appFiles = Effect.gen(function* () {
   return Object.fromEntries(entries);
 }).pipe(Effect.provide(BunServices.layer));
 
-/** A file system over `files` (absolute path → text) that only reads, touching no disk. */
+/** A file system over `files` (absolute path → text, read as each read runs) that only reads, touching no disk. */
 const memoryFs = (files: Readonly<Record<string, string>>) => {
   const missing = FileSystem.makeNoop({});
   return FileSystem.layerNoop({
     readFileString: (file) =>
-      Option.match(Rec.get(files, file), {
-        onNone: () => missing.readFileString(file),
-        onSome: Effect.succeed,
-      }),
+      Effect.suspend(() =>
+        Option.match(Rec.get(files, file), {
+          onNone: () => missing.readFileString(file),
+          onSome: Effect.succeed,
+        }),
+      ),
   });
 };
 
@@ -115,10 +138,10 @@ interface Spawned {
   readonly extendEnv: boolean;
 }
 
-const handleOf = (stdout: string, exitCode: number) =>
+const handleOf = (stdout: string, exitCode: number, exited: Effect.Effect<void> = Effect.void) =>
   ChildProcessSpawner.makeHandle({
     pid: ChildProcessSpawner.ProcessId(0),
-    exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(exitCode)),
+    exitCode: Effect.as(exited, ChildProcessSpawner.ExitCode(exitCode)),
     isRunning: Effect.succeed(false),
     kill: () => Effect.void,
     stdin: Sink.drain,
@@ -130,8 +153,15 @@ const handleOf = (stdout: string, exitCode: number) =>
     unref: Effect.succeed(Effect.void),
   });
 
-/** A spawner that starts nothing: it keeps each command, answers git's `rev-parse` with `head` (none: no clone), and every other command with 0. */
-const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
+/**
+ * A spawner that starts nothing: it keeps each command, answers git's `rev-parse` with `head` (none: no clone), and
+ * every other command with 0 once `exited` ends.
+ */
+const standIn = (
+  head: Option.Option<string>,
+  spawned: Array<Spawned>,
+  exited: Effect.Effect<void> = Effect.void,
+) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf('', 0));
     const env = Object.entries(
@@ -149,36 +179,45 @@ const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
     if (command.command === 'git' && Option.isNone(head)) return Effect.succeed(handleOf('', 128));
     if (command.command === 'git')
       return Effect.succeed(handleOf(`${Option.getOrElse(head, () => '')}\n`, 0));
-    return Effect.succeed(handleOf('', 0));
+    return Effect.succeed(handleOf('', 0, exited));
   });
 
 /** The caller's environment: what the wrapper may read (`HOME`, `EXACT`, `EXACT_PORT`) and what it must override. */
 type Caller = Readonly<Record<string, string>>;
 
-/** `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`, and the caller's `caller`. */
+/**
+ * `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`
+ * and whose child ends once `exited` does, and the caller's `caller`; `claims` and `spawned` are filled as it runs.
+ */
 const running = (
   app: App | 'heartseed',
   args: ReadonlyArray<string>,
   caller: Caller,
   head: Option.Option<string>,
   files: Readonly<Record<string, string>>,
-) => {
-  const spawned: Array<Spawned> = [];
-  const claims: Array<Claimed> = [];
-  return runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
+  {
+    exited = Effect.void,
+    claims = [],
+    spawned = [],
+  }: {
+    readonly exited?: Effect.Effect<void>;
+    readonly claims?: Array<Claimed>;
+    readonly spawned?: Array<Spawned>;
+  } = {},
+) =>
+  runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
     Effect.result,
     Effect.provide(
       Layer.mergeAll(
         BunServices.layer,
         memoryFs(files),
-        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned)),
+        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned, exited)),
         Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
     ),
     Effect.map((result) => ({ result, spawned, claims })),
   );
-};
 
 /** Ports the stand-in claims were asked to hold: a block claimed from a range, or one port taken, and whether they were given back. */
 interface Claimed {
@@ -840,6 +879,143 @@ describe('the exact wrapper', () => {
         if (hymnals.result._tag !== 'Failure') return;
         expect(hymnals.result.failure.message).toContain('EXACT_PORT=8281');
       }),
+  );
+
+  it.effect(
+    "a verify gives its ports back once Exact records its host's run, while its child runs on; another host's record, none, or a test's keeps them to the end",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const record = `${PROBE}/apps/heartseed-exact/.exact/verify/last.json`;
+        const runFor = (args: ReadonlyArray<string>, folder: Record<string, string>) =>
+          Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const claims: Array<Claimed> = [];
+            const fiber = yield* Effect.forkChild(
+              running('heartseed-exact', args, { HOME: PROBE }, head, folder, {
+                exited: Deferred.await(done),
+                claims,
+              }),
+            );
+            yield* TestClock.adjust('3 seconds');
+            const given = () => claims.map((c) => c.given);
+            const end = Effect.andThen(Deferred.done(done, Exit.void), Fiber.join(fiber));
+            return { claims, given, end };
+          });
+
+        const named = { ...files, [record]: '{"web":1000,"ios":5}' };
+        const verify = yield* runFor(['verify', 'web'], named);
+        expect(verify.claims.map((c) => c.ports)).toEqual([[8770, 8774]]);
+        expect(verify.given()).toEqual([false]);
+        named[record] = '{"web":1000,"ios":9}';
+        yield* TestClock.adjust('3 seconds');
+        expect(verify.given()).toEqual([false]);
+        named[record] = '{"web":1200,"ios":9}';
+        yield* TestClock.adjust('3 seconds');
+        expect(verify.given()).toEqual([true]);
+        expect((yield* verify.end).result._tag).toBe('Success');
+
+        const bare = { ...files };
+        const first = yield* runFor(['verify', '--json'], bare);
+        yield* TestClock.adjust('3 seconds');
+        expect(first.given()).toEqual([false]);
+        bare[record] = '{"web":800}';
+        yield* TestClock.adjust('3 seconds');
+        expect(first.given()).toEqual([true]);
+        yield* first.end;
+
+        const never = yield* runFor(['verify', 'web'], { ...files });
+        yield* TestClock.adjust('30 minutes');
+        expect(never.given()).toEqual([false]);
+        yield* never.end;
+        expect(never.given()).toEqual([true]);
+
+        const tested = { ...files };
+        const test = yield* runFor(['test', 'web'], tested);
+        tested[record] = '{"web":800}';
+        yield* TestClock.adjust('3 seconds');
+        expect(test.given()).toEqual([false]);
+        yield* test.end;
+      }),
+  );
+
+  it.scopedLive(
+    'ends what its child left in its process group when the child exits or the run is interrupted',
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'exact-kit-tree-' });
+        const appDir = path.join(dir, 'heartseed-exact');
+        yield* fs.makeDirectory(appDir);
+        yield* fs.writeFileString(
+          path.join(appDir, 'exact.mjs'),
+          files[`${PROBE}/apps/heartseed-exact/exact.mjs`] ?? '',
+        );
+        const launcher = path.join(dir, 'launcher.cjs');
+        yield* fs.writeFileString(launcher, LINGERING);
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const alive = (pid: number) =>
+          spawner
+            .string(
+              ChildProcess.make('ps', ['-p', String(pid), '-o', 'pid='], {
+                forceKillAfter: Duration.seconds(5),
+              }),
+            )
+            .pipe(
+              Effect.map((out) => out.trim() !== ''),
+              Effect.orElseSucceed(() => false),
+            );
+        const left: Array<number> = [];
+        yield* Effect.addFinalizer(() =>
+          Effect.forEach(left, (pid) =>
+            Effect.flatMap(alive(pid), (still) =>
+              Effect.sync(() => {
+                if (still && pid > 1) process.kill(pid, 'SIGKILL');
+              }),
+            ),
+          ),
+        );
+        const pidOf = (run: string) =>
+          Effect.map(fs.readFileString(path.join(appDir, `${run}.pid`)), Number);
+        const runIn = (args: ReadonlyArray<string>) =>
+          runExact(appDir, args, launcher).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(PortClaims, claimsStandIn([])),
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: PROBE, EXACT: `${PROBE}/clone` }),
+                ),
+                Layer.effect(
+                  ChildProcessSpawner.ChildProcessSpawner,
+                  Effect.map(ChildProcessSpawner.ChildProcessSpawner, (real) =>
+                    ChildProcessSpawner.make((command) => {
+                      if (command._tag === 'StandardCommand' && command.command === 'git')
+                        return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
+                      return real.spawn(command);
+                    }),
+                  ),
+                ),
+              ).pipe(Layer.provideMerge(BunServices.layer)),
+            ),
+          );
+
+        expect(Number(yield* runIn(['contract', 'build']))).toBe(0);
+        const exited = yield* pidOf('exited');
+        left.push(exited);
+        expect(yield* alive(exited)).toBe(false);
+
+        const fiber = yield* Effect.forkChild(runIn(['contract', 'build', 'wait']));
+        const waited = yield* pidOf('waited').pipe(
+          Effect.retry({ schedule: Schedule.spaced('10 millis'), times: 300 }),
+        );
+        left.push(waited);
+        expect(yield* alive(waited)).toBe(true);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* alive(waited)).toBe(false);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.effect('docs/exact.md names the pin the wrapper runs at, then the base it is made from', () =>

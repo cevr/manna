@@ -4,14 +4,16 @@ import {
   Context,
   Duration,
   Effect,
+  Exit,
   FileSystem,
   Layer,
   Option,
   Path,
   Record as Rec,
   Result,
+  Schedule,
   Schema,
-  type Scope,
+  Scope,
   Stream,
 } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -200,6 +202,47 @@ const PAGES = {
 /** How many ports a run of `verb` claims, as `PAGES` says: one for a verb it does not name. */
 const pagesOf = (verb: string) => Option.getOrElse(Rec.get<string, number>(PAGES, verb), () => 1);
 
+/** Each host's last run time, as Exact's `verify` records it in the app's `.exact/verify/last.json`. */
+const LastRuns = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Finite));
+
+/** How often a `verify` run's record is read for its pages' end. */
+const PAGES_READ = Duration.seconds(1);
+
+/** The host a `verify` run's pages are on: the one it names, else the web, which both apps ship (Exact's `shippedHost`). */
+const verifyHost = (args: ReadonlyArray<string>) =>
+  Option.getOrElse(
+    Option.filter(Option.fromUndefinedOr(args[1]), (host) => !host.startsWith('-')),
+    () => 'web',
+  );
+
+/**
+ * For a `verify` run: an effect that ends once its pages have closed, when Exact's `verify` records a new run of its
+ * host in the app's `.exact/verify/last.json`. The pinned Exact writes that record after its pages, Chrome profiles
+ * and server are closed and before its `contract verify` (difftest, which opens no socket and may run for half an hour)
+ * ends, so the ports may go back then (`scripts/verify.mjs`, `deviceMain`). The record as it stands is read now,
+ * before the run starts; a run that never records keeps its ports to its end.
+ */
+const pagesEnd = (appDir: string, args: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const host = verifyHost(args);
+    const file = path.join(appDir, '.exact', 'verify', 'last.json');
+    const recorded = fs.readFileString(file).pipe(
+      Effect.map((text) => Option.flatMap(Schema.decodeOption(LastRuns)(text), Rec.get(host))),
+      Effect.orElseSucceed(() => Option.none<number>()),
+    );
+    const before = yield* recorded;
+    return {
+      closed: Effect.asVoid(
+        Effect.repeat(recorded, {
+          until: (now) => Option.isSome(now) && !Option.contains(before, now.value),
+          schedule: Schedule.spaced(PAGES_READ),
+        }),
+      ),
+    };
+  });
+
 /**
  * Holds ports for the child's run, given back when the run's scope closes: a block of adjacent ports of a range
  * claimed, or one port taken, each waited for while a run of any checkout holds it. The live one is the turns of `drive/port.ts`; a test
@@ -361,7 +404,8 @@ const appNamed = (name: string) =>
  * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
  * clone is at the pin, then run with the plan's
  * variables over the caller's, a native build or drive under the build lock, a web page's port held while it runs
- * (`listenerOf`). The child's exit code.
+ * (`listenerOf`), or a `verify`'s until its pages close (`pagesEnd`). The child runs in a process group of its own,
+ * ended with whatever it left there when it exits or the run is stopped. The child's exit code.
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
   appDir: string,
@@ -408,6 +452,7 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
     ]).join(',');
   return yield* Effect.scoped(
     Effect.gen(function* () {
+      const pages = yield* Scope.fork(yield* Effect.scope);
       const listener = yield* Effect.forEach(
         Option.toArray(listenerOf(args, callerPorts)),
         (named) =>
@@ -421,6 +466,10 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
             onSome: (port) =>
               Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurns([port]) }),
           }),
+      ).pipe(Scope.provide(pages));
+      const pagesClosed = yield* Effect.forEach(
+        Arr.filter(listener, () => args[0] === 'verify'),
+        () => pagesEnd(appDir, args),
       );
       const handle = yield* spawner.spawn(
         ChildProcess.make(command, rest, {
@@ -439,6 +488,9 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
           stderr: 'inherit',
           forceKillAfter: Duration.seconds(5),
         }),
+      );
+      yield* Effect.forEach(pagesClosed, ({ closed }) =>
+        Effect.forkScoped(Effect.andThen(closed, Scope.close(pages, Exit.void))),
       );
       return yield* handle.exitCode;
     }),
