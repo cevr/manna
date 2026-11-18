@@ -57,20 +57,28 @@ const chapterText = ([key, verses]: readonly [string, CommentaryPack['verses'][s
   [key, ...verses.map(([verse, indexes]) => `${String(verse)}:${indexes.join(',')}`)].join(' ');
 
 /** The texts a pack's sum covers, in order: every note's reference and text,
- *  then each chapter of the verse map as `chapterText` writes it, in the
- *  map's order. The same list as Heartseed's `packTexts`
- *  (`apps/heartseed-exact/src/commentary/pack.ts`), held to it by the shared
- *  vector in both sides' tests. */
+ *  each after its length in decimal, then each chapter of the verse map as
+ *  `chapterText` writes it, in the map's order. The lengths make the joined
+ *  text name one pack whatever a note holds, a `\n` included; a chapter's
+ *  text holds only digits, `.`, `:`, `,` and spaces. The same list as
+ *  Heartseed's `packTexts` (`apps/heartseed-exact/src/commentary/pack.ts`),
+ *  held to it by the shared vector in both sides' tests. */
 const packTexts = (
   notes: CommentaryPack['notes'],
   verses: CommentaryPack['verses'],
 ): readonly string[] => [
-  ...notes.flatMap(([reference, text]) => [reference, text]),
+  ...notes.flatMap(([reference, text]) => [
+    String(reference.length),
+    reference,
+    String(text.length),
+    text,
+  ]),
   ...Object.entries(verses).map(chapterText),
 ];
 
 /** The sum over the whole pack: `packTexts` joined by `\n`, so a changed note
- *  or a changed link gives another version. */
+ *  or a changed link gives another version, and no two packs of one count
+ *  join to the same text. */
 export const packSum = (notes: CommentaryPack['notes'], verses: CommentaryPack['verses']): number =>
   sumOf(packTexts(notes, verses).join('\n'));
 

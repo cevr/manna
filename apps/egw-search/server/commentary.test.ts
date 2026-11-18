@@ -197,6 +197,8 @@ describe('the commentary pack', () => {
   test('any one-field edit of a pack changes its sum', () => {
     type Pack = ReturnType<typeof packOf>;
     type Edit = (pack: Pack, random: ReturnType<typeof seeded>) => Option.Option<Pack>;
+    const versesText = (verses: Pack['verses'][string]) =>
+      verses.map(([verse, indexes]) => `${String(verse)}:${indexes.join(',')}`).join(' ');
     const verseEdit =
       (
         change: (
@@ -230,15 +232,85 @@ describe('the commentary pack', () => {
       'an index dropped': verseEdit(([verse, indexes]) =>
         Option.some([verse, indexes.slice(1)] as const),
       ),
-      'an index pointed elsewhere': verseEdit(([verse, indexes], count) =>
-        Option.filter(
-          Option.some([
-            verse,
-            [...indexes.slice(0, -1), ((indexes.at(-1) ?? 0) + 1) % count],
-          ] as const),
-          () => count > 1,
+      'an index pointed elsewhere': (pack, random) =>
+        verseEdit(([verse, indexes], count) => {
+          const at = random.below(indexes.length);
+          return Option.filter(
+            Option.some([verse, indexes.with(at, ((indexes[at] ?? 0) + 1) % count)] as const),
+            () => count > 1,
+          );
+        })(pack, random),
+      'an index added': verseEdit(([verse, indexes], count) =>
+        Option.map(
+          Option.fromUndefinedOr(
+            Array.from({ length: count }, (_, index) => index).find(
+              (index) => !indexes.includes(index),
+            ),
+          ),
+          (index) => [verse, [...indexes, index].sort((a, b) => a - b)] as const,
         ),
       ),
+      'a verse dropped': (pack, random) => {
+        const keys = Object.keys(pack.verses);
+        if (keys.length === 0) return Option.none();
+        const key = random.pick(keys);
+        const chapter = pack.verses[key] ?? [];
+        const at = random.below(chapter.length);
+        return Option.some({
+          ...pack,
+          verses: { ...pack.verses, [key]: chapter.filter((_, index) => index !== at) },
+        });
+      },
+      "two chapters' verses swapped": (pack, random) => {
+        const keys = Object.keys(pack.verses);
+        const [left = '', right = ''] = random.shuffled(keys);
+        const leftVerses = pack.verses[left] ?? [];
+        const rightVerses = pack.verses[right] ?? [];
+        return Option.filter(
+          Option.some({
+            ...pack,
+            verses: { ...pack.verses, [left]: rightVerses, [right]: leftVerses },
+          }),
+          () => keys.length > 1 && versesText(leftVerses) !== versesText(rightVerses),
+        );
+      },
+      'the chapters in another order': (pack, random) => {
+        const entries = Object.entries(pack.verses);
+        const reordered = random.shuffled(entries);
+        return Option.filter(
+          Option.some({ ...pack, verses: Object.fromEntries(reordered) }),
+          () => reordered.map(([key]) => key).join(' ') !== entries.map(([key]) => key).join(' '),
+        );
+      },
+      'two notes swapped': (pack, random) => {
+        if (pack.notes.length < 2) return Option.none();
+        const [left = 0, right = 0] = random.shuffled(pack.notes.map((_, index) => index));
+        const leftNote = pack.notes[left] ?? ['', ''];
+        const rightNote = pack.notes[right] ?? ['', ''];
+        return Option.filter(
+          Option.some({
+            ...pack,
+            notes: pack.notes.with(left, rightNote).with(right, leftNote),
+          }),
+          () => leftNote.join('\n') !== rightNote.join('\n'),
+        );
+      },
+      'two texts swapped': (pack, random) => {
+        if (pack.notes.length < 2) return Option.none();
+        const [left = 0, right = 0] = random.shuffled(pack.notes.map((_, index) => index));
+        const [leftReference = '', leftText = ''] = pack.notes[left] ?? [];
+        const [rightReference = '', rightText = ''] = pack.notes[right] ?? [];
+        return Option.filter(
+          Option.some({
+            ...pack,
+            notes: pack.notes
+              .with(left, [leftReference, rightText] as const)
+              .with(right, [rightReference, leftText] as const),
+          }),
+          () => leftText !== rightText,
+        );
+      },
+
       'a chapter moved': (pack, random) => {
         const keys = Object.keys(pack.verses);
         if (keys.length === 0) return Option.none();
@@ -264,6 +336,28 @@ describe('the commentary pack', () => {
       }
       expect([name, checked > 100]).toEqual([name, true]);
     }
+  });
+
+  test('a line moved across a note boundary, every line the same, changes the sum', () => {
+    const lines = (notes: readonly (readonly [string, string])[]) => notes.flat().join('\n');
+    let checked = 0;
+    for (const seed of SEEDS) {
+      const pack = packOf(generate(seed));
+      const at = seeded(seed + 3000).below(pack.notes.length);
+      const [reference = '', text = ''] = pack.notes[at] ?? [];
+      const [nextReference = '', nextText = ''] = pack.notes[at + 1] ?? [];
+      if (at + 1 >= pack.notes.length) continue;
+      const before = pack.notes
+        .with(at, [reference, text] as const)
+        .with(at + 1, [nextReference, `${nextText}\nq`] as const);
+      const after = pack.notes
+        .with(at, [reference, `${text}\n${nextReference}`] as const)
+        .with(at + 1, [nextText, 'q'] as const);
+      expect(lines(after)).toBe(lines(before));
+      expect([seed, packSum(after, pack.verses)]).not.toEqual([seed, packSum(before, pack.verses)]);
+      checked += 1;
+    }
+    expect(checked).toBeGreaterThan(100);
   });
 
   test('links to no Bible book are left out', () => {
@@ -315,6 +409,25 @@ describe('the shared vector', () => {
           '19.92': [[16, [1]]],
         },
       ),
-    ]).toEqual([2_166_136_261, 1_493_375_448, 3_273_295_273]);
+    ]).toEqual([2_166_136_261, 1_914_939_250, 4_063_412_732]);
+  });
+
+  test("packSum tells apart the two packs Heartseed's test writes, which join alike line by line", () => {
+    expect([
+      packSum(
+        [
+          ['1BC 1.1', 'ka\nlo'],
+          ['2BC 3.4', 'mi'],
+        ],
+        { '1.1': [[0, [0, 1]]] },
+      ),
+      packSum(
+        [
+          ['1BC 1.1', 'ka'],
+          ['lo\n2BC 3.4', 'mi'],
+        ],
+        { '1.1': [[0, [0, 1]]] },
+      ),
+    ]).toEqual([3_892_575_022, 1_686_813_255]);
   });
 });

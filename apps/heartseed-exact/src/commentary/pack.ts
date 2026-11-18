@@ -46,12 +46,17 @@ export type PackCheck =
 const chapterText = ([key, verses]: readonly [string, ReadonlyArray<CommentaryVerseNotes>]) =>
   [key, ...verses.map(([verse, indexes]) => `${verse}:${indexes.join(',')}`)].join(' ');
 
-/** The texts a pack's sum covers, in order: every note's reference and text, then each chapter of `verses` as `chapterText` writes it, in the map's order; the same list as egw-search's `packTexts` (`apps/egw-search/server/commentary.ts`), held to it by the shared vector in both sides' tests. */
+/** The texts a pack's sum covers, in order: every note's reference and text, each after its length in decimal, then each chapter of `verses` as `chapterText` writes it, in the map's order. The lengths make the joined text name one pack whatever a note holds, a `\n` included. The same list as egw-search's `packTexts` (`apps/egw-search/server/commentary.ts`), held to it by the shared vector in both sides' tests. */
 const packTexts = (
   notes: ReadonlyArray<CommentaryNote>,
   verses: CommentaryPack['verses'],
 ): ReadonlyArray<string> => [
-  ...notes.flatMap(([reference, text]) => [reference, text]),
+  ...notes.flatMap(([reference, text]) => [
+    `${reference.length}`,
+    reference,
+    `${text.length}`,
+    text,
+  ]),
   ...Object.entries(verses).map(chapterText),
 ];
 
