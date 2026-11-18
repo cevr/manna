@@ -32,7 +32,7 @@ test "Read shows John 1 on a fresh store"
 test "Read's first showing asks for the packs, and Garden asks for none"
   clock data
   clock settle
-  tap "add-list"
+  type "root" "/verses"
   clock data
   clock settle
   expect state readAskedPacks == false
@@ -67,6 +67,9 @@ test "After a plant of John 3:16-18 on its chapter, Read stays on John 3 across 
   clock settle
   tap "tab-garden"
   clock data
+  clock settle
+  expect tree has "add-sheet"
+  back
   clock settle
   tap "tab-read"
   clock data
@@ -130,10 +133,10 @@ test "Garden again shows home with no row built"
 test "A Garden route pushed is still there after a visit to Read"
   clock data
   clock settle
-  tap "add-list"
+  type "root" "/verses"
   clock data
   clock settle
-  expect tree has "add-verses"
+  expect tree has "verses"
   tap "tab-read"
   clock data
   clock settle
@@ -142,7 +145,7 @@ test "A Garden route pushed is still there after a visit to Read"
   clock data
   clock settle
   expect state nav.tab == "garden"
-  expect tree has "add-verses"
+  expect tree has "verses"
   expect state readGardenTab.length == 2
   tap "tab-garden"
   clock data
@@ -214,12 +217,12 @@ test "A Garden address typed while Read is up selects Garden"
   tap "tab-read"
   clock data
   clock settle
-  type "root" "/add"
+  type "root" "/verses"
   clock data
   clock settle
   expect state nav.tab == "garden"
   expect state readGardenTab.length == 2
-  expect tree has "add-verses"
+  expect tree has "verses"
   tap "tab-read"
   clock settle
   expect state readTop.name == "read"

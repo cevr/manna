@@ -1,16 +1,23 @@
-// Add verses (`/add`): the current Heartseed's shelves in its order, as a
-// grouped list. Any passage selects the Read tab and opens Go to over its
-// chapter (features/goto.contract);
+// Add verses (`/add`): a page sheet drawn as the current Heartseed's Add a
+// list sheet (src/shelves/sheet.tsx): its own header row (the heading and
+// a bordered Done), then the shelves in its order, each a card head with
+// its title and note. Any passage selects the Read tab and opens Go to
+// over its chapter (features/goto.contract), the sheet kept in the Garden
+// tab for its return;
 // every other shelf (the picks, the promises, each section of Haskell's
 // Bible Handbook) is a head that opens in place, one at a time, as the
-// current sheet's shelves do, and lists its rows, one per list, each its
-// title, its count and what it offers now (`addShelf` names the open one).
-// A row opens its list (`/add/lists/:list`): its verses with their words
-// and Plant. What each screen draws is src/add/shelves.ts's answer, the
-// current app's rules (`SHELVES`, `offerStateOf`, `plantsSingly`) over the
-// garden one call reads; Plant is the garden's `addPlant`, through its
-// queue, and once it lands the reader is back at Add verses. Each screen's
-// node names start with its own, since the screens under it stay drawn.
+// current sheet's shelves do, and lists its rows under it, one per list,
+// each its title, its count and what it offers now, `Plant` drawn as the
+// sheet's filled pill (`addShelf` names the open one).
+// A row opens its list (`/add/lists/:list`), pushed inside the sheet: its
+// verses with their words and Plant. What each screen draws is
+// src/add/shelves.ts's answer, the current app's rules (`SHELVES`,
+// `offerStateOf`, `plantsSingly`) over the garden one call reads; Plant is
+// the garden's `addPlant`, through its queue, and once it lands the reader
+// is back at Add verses. Each screen's node names start with its own,
+// since the screens under it stay drawn. Every measure is a token of
+// app.forma; the space a shelf's icon takes in One is the head's leading
+// padding (`space.s54`), as the drawings are not yet assets of the port.
 use GardenShown, GardenChange from "./garden.contract"
 use homeMarkOf from "./home.contract"
 
@@ -64,6 +71,8 @@ members HeartseedExact
     nav = push(nav, "/add")
   action addOpenBible
     nav = open(nav, path("gotoSheet"))
+  action addDone
+    nav = back(nav)
   action addOpenList(slug: string)
     addAnswer = ""
     nav = push(nav, path("addList", slug))
@@ -83,58 +92,78 @@ members HeartseedExact
       addAnswer = ""
       nav = go(nav, "/add")
 
+// A shelf's head: One's card (`head`), its title and its note.
+component AddHead
+  props
+    title: string
+    note: string
+  view
+    column flex=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
+      text title font="type.strong" overflow-wrap="break-word"
+      text note font="type.small" overflow-wrap="break-word"
+
 component AddVersesPage
   props
+    route: number
     add: AddShown
     bible: action
     toggle: action
     open: action
+    done: action
   view
-    column flex=1 min-height=0 display="flex" flex-direction="column"
-      list id="add-list" navigationScroll="add-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0 testId="add-verses"
-        for s in add.shelves key=s.id
-          section
-            if s.kind == "bible"
-              button press=bible aria-label=s.title testId=`shelf-${s.slug}`
-                column flex=1 min-width=0 gap=2
-                  text s.title overflow-wrap="break-word"
-                  text s.note color="-exact-secondary-label"
-            if s.kind != "bible"
-              button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open testId=`shelf-${s.slug}`
-                column flex=1 min-width=0 gap=2
-                  text s.title overflow-wrap="break-word"
-                  text s.note color="-exact-secondary-label"
-            for r in s.rows key=r.id
-              button press=open(r.slug) aria-label=r.title testId=`offer-${r.slug}`
-                row gap=12 flex=1 min-width=0 align-items="center"
-                  column flex=1 min-width=0 gap=2
-                    text r.title overflow-wrap="break-word"
-                    text r.count color="-exact-secondary-label"
-                  if r.offerText != ""
-                    text r.offerText color="-exact-secondary-label" testId=`offer-state-${r.slug}`
-      if add.line != ""
-        text add.line role="alert" padding="12px 20px" flex-shrink=0 testId=`add-${add.lineId}`
+    column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationScroll="add-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="add-sheet"
+      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page" flex-shrink=0
+        text "Add a list" role="heading" aria-level=1 font="type.sheet-title" testId="add-title"
+        button press=done aria-label="Done" display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="add-done"
+          text "Done" font="type.label"
+      scroll id="add-scroll" flex=1 min-height=0 testId="add-verses"
+        column gap="space.s8" padding-top="space.s8" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page"
+          for s in add.shelves key=s.id
+            column gap="space.s4"
+              if s.kind == "bible"
+                button press=bible aria-label=s.title display="flex" flex-direction="row" align-items="center" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                  AddHead(title=s.title, note=s.note)
+              if s.kind != "bible"
+                button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open display="flex" flex-direction="row" align-items="center" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                  AddHead(title=s.title, note=s.note)
+              for r in s.rows key=r.id
+                button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
+                  column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
+                    text r.title font="type.strong" overflow-wrap="break-word"
+                    text r.count font="type.small"
+                  if r.offer == "plant"
+                    row align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink"
+                      text r.offerText font="type.plant" color="hs.on-ink" testId=`offer-state-${r.slug}`
+                  if r.offer != "plant" and r.offerText != ""
+                    text r.offerText font="type.small" testId=`offer-state-${r.slug}`
+      column padding-top="space.s8" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" flex-shrink=0
+        if add.line != ""
+          text add.line role="alert" font="type.note-strong" testId=`add-${add.lineId}`
 
+// A list's page, pushed inside the sheet: its title as the sheet's
+// heading, its count, each verse's reference and words, and Plant as the
+// sheet's filled pill.
 component AddListPage
   props
+    route: number
     list: AddList
     pending: bool
     plant: action
   view
-    column flex=1 min-height=0 display="flex" flex-direction="column"
-      scroll id="shelf-scroll" navigationScroll="shelf-scroll" flex=1 min-height=0
-        column gap=12 padding=20 max-width="40rem" testId="shelf-list"
-          text list.row.title role="heading" aria-level=2 overflow-wrap="break-word" testId="shelf-title"
-          text list.row.count color="-exact-secondary-label" testId="shelf-count"
+    column navigationKey=`${route}` navigationScroll="shelf-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="add-list-page"
+      scroll id="shelf-scroll" flex=1 min-height=0
+        column gap="space.s12" padding-top="space.s8" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page" testId="shelf-list"
+          text list.row.title role="heading" aria-level=2 font="type.sheet-title" overflow-wrap="break-word" testId="shelf-title"
+          text list.row.count font="type.small" testId="shelf-count"
           for v in list.verses key=v.slug
-            column gap=2 testId=`shelf-verse-${v.slug}`
-              text v.reference font="-exact-headline"
-              text v.text overflow-wrap="break-word" hyphens="auto"
-      column gap=6 padding="12px 20px" flex-shrink=0
+            column gap="space.s2" testId=`shelf-verse-${v.slug}`
+              text v.reference font="type.strong"
+              text v.text font="type.body" overflow-wrap="break-word" hyphens="auto"
+      column gap="space.s6" padding-top="space.s8" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" flex-shrink=0
         if list.row.offer == "in field"
-          text list.row.offerText testId="shelf-state"
+          text list.row.offerText font="type.small" testId="shelf-state"
         if list.line != ""
-          text list.line role="alert" testId=`shelf-${list.lineId}`
+          text list.line role="alert" font="type.note-strong" testId=`shelf-${list.lineId}`
         if list.row.offer == "plant"
-          button press=plant buttonStyle="filled" disabled=pending testId="shelf-plant"
-            text "Plant"
+          button press=plant aria-label="Plant" disabled=pending display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink" color="hs.on-ink" opacity=(pending ? "opacity.disabled" : 1) -exact-press-opacity="opacity.pressed" testId="shelf-plant"
+            text "Plant" font="type.plant"

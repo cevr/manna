@@ -120,6 +120,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('space.s18', [PLOT, 'pill', 'paddingHorizontal']),
   length('space.s20', [INDEX, 'toField', 'paddingHorizontal']),
   length('space.s24', [FIELD, 'top', 'paddingHorizontal']),
+  length('space.s54', [SHELVES, 'offer', 'paddingLeft']),
 
   length('radius.r4', [DRAW, 'hearing', 'borderRadius']),
   length('radius.r12', [PLOT, 'open', 'borderRadius']),

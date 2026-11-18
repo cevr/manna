@@ -66,6 +66,7 @@ theme
   space.s18: length = 18px
   space.s20: length = 20px
   space.s24: length = 24px
+  space.s54: length = 54px
   radius.r4: length = 4px
   radius.r12: length = 12px
   radius.r16: length = 16px
