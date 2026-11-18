@@ -20,7 +20,9 @@
       "default": "./src/storage/store.ts"
     },
     "./data-host/testing": "./src/data-host/testing.ts",
-    "./no-copy/testing": "./src/no-copy/testing.ts"
+    "./no-copy/testing": "./src/no-copy/testing.ts",
+    "./look": "./src/look/allow.ts",
+    "./look/testing": "./src/look/testing.ts"
   },
   "scripts": {
     "exact": "bun lab/tools/prepare.ts && cd lab && bun ../src/bin.ts",
