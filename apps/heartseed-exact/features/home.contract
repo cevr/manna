@@ -15,7 +15,9 @@
 // ink once sown and in soil before. No icon beside a list's name, no stage
 // glyph and no legend (owner, hsrows). An ask is a state of its row
 // (`homeAsking`, the id its Yes removes; src/home/asks.ts), opened by
-// Remove, closed by any other tap. Every measure is a token of app.forma;
+// Remove, closed by any other tap. `home-band` marks the top of home's
+// content under the bar, where the pixel match's band starts (`pixel
+// shot`, packages/pixel-match/screens/heartseed/home.ts). Every measure is a token of app.forma;
 // the icons are the current app's own pictures (`assets/home`, a link to
 // apps/heartseed/assets/home), each in the scheme shown.
 use GardenVerse, GardenShown from "./garden.contract"
@@ -163,6 +165,7 @@ component Home
     still: bool
   view
     column flex=1 min-height=0 testId="home"
+      column height=0 aria-hidden=true testId="home-band"
       column gap="space.s12" padding-left="space.page" padding-right="space.page" padding-bottom="space.s8"
         row align-items="center" gap="space.s8" testId="greeting"
           image homeIconOf(home.greetingIcon, scheme) width="glyph.greeting" height="glyph.greeting" aria-hidden=true

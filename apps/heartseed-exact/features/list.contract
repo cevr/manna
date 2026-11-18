@@ -12,8 +12,9 @@
 // is `listRead`'s answer (src/list/page.ts), the current Heartseed's rules
 // over the garden one call reads. An ask is a state of its row
 // (`listAsking`: `remove` for the list, else the verse's reference),
-// opened by its button and closed by any other tap. Every measure is a
-// token of app.forma.
+// opened by its button and closed by any other tap. `list-band` marks the
+// top of the page's content under the bar, where the pixel match's band
+// starts. Every measure is a token of app.forma.
 use homeMarkOf, homeIconOf, HomePill from "./home.contract"
 use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
@@ -106,6 +107,7 @@ component ListPage
     read: action
   view
     column flex=1 min-height=0 testId="list-page"
+      column height=0 aria-hidden=true testId="list-band"
       column gap="space.s10" padding-top="space.s10" padding-left="space.page" padding-right="space.page" padding-bottom="space.s8"
         row align-items="center" gap="space.s10"
           if list.icon != ""
