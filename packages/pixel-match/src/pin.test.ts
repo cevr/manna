@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNewPromise, effect/noAs -- the pin is a file in a git checkout: the test makes a scratch repository of its own, commits under the One paths, runs the command line in it (two runs at once, to stay inside the test budget), and removes it once read. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNewPromise -- the pin is a file in a git checkout: the test makes a scratch repository of its own, commits under the One paths, runs the command line in it (two runs at once, to stay inside the test budget), and removes it once read. */
 import { describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,11 +7,11 @@ import { dirname, join } from 'node:path';
 import { Option } from 'effect';
 
 import { run } from './ios.ts';
-import { driftLine, driftOf, readPin, refKey, writePin, type Git } from './pin.ts';
+import { driftLine, driftOf, readPin, refKey, writePin } from './pin.ts';
 
 const scratch = mkdtempSync(`${tmpdir()}/pixel-pin-`);
 
-const git: Git = (args) =>
+const git = (args: ReadonlyArray<string>) =>
   run(
     [
       'git',

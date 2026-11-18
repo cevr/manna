@@ -16,10 +16,10 @@ import { join } from 'node:path';
 import { Option } from 'effect';
 
 /** The folders whose commits can change what One draws. */
-export const ONE_PATHS = ['apps/heartseed', 'apps/hymnal', 'packages/hymnal', 'packages/core'];
+const ONE_PATHS = ['apps/heartseed', 'apps/hymnal', 'packages/hymnal', 'packages/core'];
 
 /** Runs `git <args>` in the checkout; its stdout. */
-export type Git = (args: ReadonlyArray<string>) => string;
+type Git = (args: ReadonlyArray<string>) => string;
 
 const pinFile = (root: string) => join(root, 'packages', 'pixel-match', 'one-commit');
 
@@ -31,7 +31,7 @@ export const writePin = (root: string, commit: string) =>
   writeFileSync(pinFile(root), `${commit}\n`);
 
 /** The pin, git's last commit under the One paths, and the files changed under them between the two. */
-export interface Drift {
+interface Drift {
   readonly pinned: string;
   readonly latest: string;
   readonly changed: ReadonlyArray<string>;
