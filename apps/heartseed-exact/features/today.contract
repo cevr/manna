@@ -407,7 +407,9 @@ component Today
     chapter: string
     read: action
   view
-    column flex=1 min-height=0
+    column flex=1 min-height=0 testId="today"
+      // The top of Today's band under the navigation bar, which `pixel shot` reads (docs/pixel-match.md).
+      column height=0 flex-shrink=0 aria-hidden=true testId="today-top"
       scroll id="content" navigationScroll="content" flex=1 min-height=0
         column gap="space.section" padding-top="space.s20" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page"
           SessionCounts(session=today.session)
