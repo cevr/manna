@@ -27,11 +27,11 @@ export const PORT_STORES: Partial<
 };
 
 /** The named agent store's tree in the app's data container. */
-export const storeTree = (container: string, bundle: string, name: string) =>
+const storeTree = (container: string, bundle: string, name: string) =>
   join(container, 'Library', 'Caches', 'exact', bundle, 'agent', name);
 
 /** The store file's text: the pairs as the port's store writes them, or bytes no store wrote, so every read of a broken store fails. */
-export const storeText = (store: Store) => {
+const storeText = (store: Store) => {
   if (store._tag === 'Broken') return 'not a store';
   return JSON.stringify(store.pairs);
 };

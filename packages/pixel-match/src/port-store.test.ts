@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { storeOf } from './fixtures.ts';
-import { PORT_STORES, storeTree, writePortStore } from './port-store.ts';
+import { PORT_STORES, writePortStore } from './port-store.ts';
 
 const HEARTSEED = PORT_STORES.heartseed ?? { bundle: '', file: '' };
 const NOW = new Date(2026, 10, 18, 13, 30);
@@ -32,7 +32,7 @@ describe("a fixture in the port's store", () => {
 
   it('empties what a former drive kept in the store first', () => {
     const container = mkdtempSync(join(tmpdir(), 'pm-store-'));
-    const tree = storeTree(container, HEARTSEED.bundle, 'pm-home.due');
+    const tree = join(container, 'Library/Caches/exact/app.heartseed.exact/agent/pm-home.due');
     mkdirSync(join(tree, 'kv'), { recursive: true });
     writeFileSync(join(tree, 'kv', 'kept'), 'a choice');
     writePortStore(container, HEARTSEED, 'pm-home.due', { _tag: 'Pairs', pairs: [] });
