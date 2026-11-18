@@ -25,6 +25,7 @@ const LIVE = 'src/player/LivePlayer.tsx';
 const ACCENT = 'src/player/AccentButton.tsx';
 const HOME = 'src/home/Home.native.tsx';
 const TABS = 'src/home/TabRow.tsx';
+const LIST = 'src/reader/HymnList.native.tsx';
 
 const type = (
   name: string,
@@ -69,7 +70,12 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.name', [CHORD, 'name'], [LIVE, 'hashText']),
   type('type.chevron', [SETTINGS, 'chevron']),
   type('type.strong', [SETTINGS, 'check'], [CHORD, 'done'], [LIVE, 'actText']),
-  type('type.body', [SETTINGS, 'label', 'body'], [PLAYER, 'switchLabel', 'body']),
+  type('type.body', [SETTINGS, 'label', 'body'], [PLAYER, 'switchLabel', 'body'], [LIST, 'empty']),
+  type('type.large-title', [HOME, 'titleWords']),
+  type('type.topic', [TABS, 'name'], [LIST, 'topicName']),
+  type('type.see-all', [LIST, 'seeAll']),
+  type('type.row-number', [LIST, 'number']),
+  type('type.row-title', [LIST, 'title'], [LIST, 'star']),
   type('type.line', [HYMN, 'line']),
   type('type.small', [ABOUT, 'credit', 'body'], [BAR, 'title']),
   type('type.label', [ACCENT, 'title'], [BAR, 'number']),
@@ -83,10 +89,18 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.note', [CHORD, 'note']),
 
   length('space.s4', [PLAYER, 'position', 'gap']),
-  length('space.s8', [SETTINGS, 'page', 'gap'], [ABOUT, 'group', 'gap']),
+  length('space.s6', [TABS, 'tab', 'paddingVertical']),
+  length(
+    'space.s8',
+    [SETTINGS, 'page', 'gap'],
+    [ABOUT, 'group', 'gap'],
+    [TABS, 'row', 'gap'],
+    [TABS, 'row', 'paddingVertical'],
+    [HOME, 'title', 'paddingRight'],
+  ),
   length('space.s10', [HYMN, 'words', 'gap']),
   length('space.s11', [SETTINGS, 'row', 'paddingVertical'], [ABOUT, 'group', 'paddingVertical']),
-  length('space.s12', [TABS, 'tab', 'paddingHorizontal']),
+  length('space.s12', [TABS, 'tab', 'paddingHorizontal'], [LIST, 'row', 'gap']),
   length(
     'space.s16',
     [SETTINGS, 'page', 'padding'],
@@ -94,7 +108,13 @@ export const TOKENS: ReadonlyArray<Token> = [
     [ABOUT, 'group', 'paddingHorizontal'],
     [SETTINGS, 'heading', 'marginLeft'],
     [SETTINGS, 'section', 'marginTop'],
+    [HOME, 'title', 'paddingLeft'],
+    [TABS, 'row', 'paddingHorizontal'],
+    [LIST, 'row', 'paddingHorizontal'],
+    [LIST, 'topic', 'paddingHorizontal'],
+    [LIST, 'empty', 'padding'],
   ),
+  length('space.s64', [LIST, 'separator', 'left']),
   length('space.s20', [HYMN, 'page', 'paddingHorizontal']),
   length('space.s24', [SETTINGS, 'page', 'paddingTop'], [HYMN, 'sections', 'gap']),
 
@@ -104,17 +124,70 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('radius.pill', [HOME, 'settings', 'borderRadius']),
 
   length('size.target', [SETTINGS, 'row', 'minHeight'], [HOME, 'settings', 'width']),
-  length('size.button', [ACCENT, 'button', 'minHeight']),
+  length('size.button', [ACCENT, 'button', 'minHeight'], [LIST, 'number', 'minWidth']),
 
   measure('hairline')(
     'line.hair',
     [SETTINGS, 'group', 'borderWidth'],
     [ABOUT, 'group', 'borderWidth'],
+    [LIST, 'topic', 'borderBottomWidth'],
+    [LIST, 'separator', 'height'],
   ),
 
   measure('number')(
     'opacity.pressed',
     [HOME, 'pressed', 'opacity'],
     [PLAYER, 'pressed', 'opacity'],
+    [TABS, 'pressed', 'opacity'],
   ),
+];
+
+/**
+ * A length no One style says, measured in device pixels at 3 px a point
+ * from the One reference against the port's screen (`bun run pixel shot`).
+ * Mostly a text's move off its line box, written as a `top` on the text:
+ * React Native on iOS lays a `Text` with a `lineHeight` out other than CSS
+ * does (it puts the line's extra leading elsewhere, and rounds the box up a
+ * device pixel), so the same type token draws its glyphs a few pixels
+ * apart. And the gear's box: One's `imageScale: large` symbol in its 28 pt
+ * frame draws smaller than a symbol fitted to that frame.
+ */
+export interface Nudge {
+  readonly name: string;
+  /** The length in device pixels: for a move, down (up when negative). */
+  readonly pixels: number;
+  readonly why: string;
+}
+
+export const NUDGES: ReadonlyArray<Nudge> = [
+  {
+    name: 'nudge.title',
+    pixels: -1,
+    why: 'home’s `Hymns` (Home.native.tsx titleWords) in its 49 pt row',
+  },
+  {
+    name: 'nudge.topic',
+    pixels: -2.5,
+    why: 'a topic or shelf name (HymnList.native.tsx topicName) in its 36 pt row',
+  },
+  {
+    name: 'nudge.row',
+    pixels: 4,
+    why: 'a hymn row’s title and star (HymnList.native.tsx title, star) in its 44 pt row',
+  },
+  {
+    name: 'nudge.number',
+    pixels: 3,
+    why: 'a hymn row’s number (HymnList.native.tsx number) in its 44 pt row',
+  },
+  {
+    name: 'nudge.gear',
+    pixels: 78,
+    why: 'the gear’s symbol box, so its mark is as large as Gear.ios.tsx’s `gearshape` at `imageScale: large`',
+  },
+  {
+    name: 'nudge.gear-left',
+    pixels: -2,
+    why: 'the gear’s mark across its 44 pt button, where Gear.ios.tsx’s symbol sits',
+  },
 ];

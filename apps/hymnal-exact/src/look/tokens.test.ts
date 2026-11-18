@@ -12,7 +12,7 @@ import { describe, expect, it } from 'bun:test';
 import { styleIn } from '@manna/exact-kit/look/testing';
 
 import { appFile, brandOf, oneFile } from './design.testing.ts';
-import { TOKENS, type Source, type Token } from './tokens.ts';
+import { NUDGES, TOKENS, type Source, type Token } from './tokens.ts';
 
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
@@ -68,7 +68,7 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
 /** The ramps the texts drawn in `style` name, `none` for a text that names none. */
 const rampsOf = (text: string, style: string) =>
   new Set(
-    [...text.matchAll(/<Text\b[^>]*>/gu)]
+    [...text.matchAll(/<Text\b(?:=>|[^>])*>/gu)]
       .map(([tag]) => tag)
       .filter((tag) => new RegExp(`styles\\.${style}\\b`, 'u').test(tag))
       .map((tag) => /dynamicTypeRamp="(\w+)"/u.exec(tag)?.[1] ?? 'none'),
@@ -83,11 +83,27 @@ const read = (file: string) => {
   return text;
 };
 
+/**
+ * `props` with each value that names a number constant of `text`
+ * (`lineHeight: line`, where the file says `const line = 22;`) read as
+ * that number.
+ */
+const constantsIn = (text: string, props: ReadonlyMap<string, string>) =>
+  new Map(
+    [...props].map(([key, value]) => [
+      key,
+      /^[a-z]\w*$/iu.test(value)
+        ? (new RegExp(`\\bconst ${value} = (-?\\d+(?:\\.\\d+)?);`, 'u').exec(text)?.[1] ?? value)
+        : value,
+    ]),
+  );
+
 /** The value each source of `token` gives, in `app.forma`'s terms. */
 const valuesOf = (token: Token, reader: (file: string) => string) =>
   token.from.map((source) => {
-    const props = styleIn(reader(source.file), source.style);
-    return props === undefined ? undefined : formaOf(token, props, source);
+    const text = reader(source.file);
+    const props = styleIn(text, source.style);
+    return props === undefined ? undefined : formaOf(token, constantsIn(text, props), source);
   });
 
 const brand = brandOf(appFile('app.forma'));
@@ -107,8 +123,13 @@ describe('every measure of the brand is the current hymnal’s', () => {
           });
     });
 
-  it('the brand writes no measure the list does not trace to One', () => {
-    const traced = new Set(TOKENS.map((token) => token.name));
+  for (const nudge of NUDGES)
+    it(`${nudge.name} moves ${nudge.why} ${nudge.pixels} device pixels`, () => {
+      expect(brand.measures.get(nudge.name)).toBe(`${short(nudge.pixels / 3)}px`);
+    });
+
+  it('the brand writes no measure the list does not trace to One or to a measured nudge', () => {
+    const traced = new Set([...TOKENS, ...NUDGES].map((token) => token.name));
     expect([...brand.measures.keys()].filter((name) => !traced.has(name))).toEqual([]);
   });
 
@@ -121,5 +142,10 @@ describe('every measure of the brand is the current hymnal’s', () => {
     expect(
       titles.map((title) => valuesOf(title, resized)[0] === brand.measures.get(title.name)),
     ).toEqual([false]);
+    const relined = (file: string) => read(file).replace('const line = 22;', 'const line = 23;');
+    const rows = TOKENS.filter((token) => token.name === 'type.row-title');
+    expect(rows.map((row) => valuesOf(row, relined)[0] === brand.measures.get(row.name))).toEqual([
+      false,
+    ]);
   });
 });

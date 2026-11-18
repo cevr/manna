@@ -54,7 +54,7 @@ const MOTION = /^\s+((?:duration|easing)\.\S+)\s*=\s*(.+?)\s*$/u;
 
 /** A measure token's line (`src/look/tokens.ts`): its name and its value as written, a kind after the name (`: length`) left off. */
 const MEASURE =
-  /^\s+((?:type|space|radius|size|line|opacity)\.[\w.-]+)(?::\s*[\w-]+)?\s*=\s*(.+?)\s*$/u;
+  /^\s+((?:type|space|radius|size|line|opacity|nudge)\.[\w.-]+)(?::\s*[\w-]+)?\s*=\s*(.+?)\s*$/u;
 
 /** The lines of the `theme` block, its comments and blanks left out. */
 const themeLines = (text: string): ReadonlyArray<string> => {
