@@ -118,7 +118,7 @@ const treeOf = (frame: Frame, app: AppName, name: string) => {
 };
 
 /** The rect of `target` on screen in points, from the driver's own session; none when it is not there. */
-const rectOf = (app: AppName, target: string) => {
+const rectOf = (frame: Frame, app: AppName, target: string) => {
   const [by = '', ...rest] = target.split('=');
   const answer = Bun.spawnSync(
     [
@@ -130,16 +130,20 @@ const rectOf = (app: AppName, target: string) => {
       '--session',
       CONFIG[app].driverSession,
     ],
-    { stdout: 'pipe', stderr: 'ignore' },
+    {
+      stdout: 'pipe',
+      stderr: 'ignore',
+      env: { ...Bun.env, HOME: join(frame.root, 'tmp', CONFIG[app].simulator, 'home') },
+    },
   );
   if (answer.exitCode !== 0) return undefined;
   return rectIn(answer.stdout.toString());
 };
 
 /** The top of a banded row's band in device pixels, read from the screen's tree now (`OneBand`). */
-const bandTopOf = (app: AppName, band: OneBand) => {
+const bandTopOf = (frame: Frame, app: AppName, band: OneBand) => {
   const rects = band.targets.flatMap((target) => {
-    const rect = rectOf(app, target);
+    const rect = rectOf(frame, app, target);
     return rect === undefined ? [] : [rect];
   });
   if (rects.length === 0) throw new Error(`band: none of ${band.targets.join(', ')} is on screen`);
@@ -242,7 +246,7 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
   let band: (OneBand & { readonly top: number }) | undefined;
   if (oneBand !== undefined)
     try {
-      band = { ...oneBand, top: bandTopOf(cell.app, oneBand) };
+      band = { ...oneBand, top: bandTopOf(frame, cell.app, oneBand) };
     } catch (error) {
       unlinkSync(file);
       return String(error instanceof Error ? error.message : error);

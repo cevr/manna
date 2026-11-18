@@ -140,6 +140,8 @@ const shootCell = (
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
   const oneBand = referenceBandOf(frame, cell);
+  if (row.one?.band !== undefined && oneBand === undefined)
+    throw new Error(`${cellName(cell)}: a banded row whose reference keeps no band: take it again`);
   if (oneBand !== undefined && side.band === undefined)
     throw new Error(`${row.id}: a banded row whose Exact side names no band`);
   const edges =
