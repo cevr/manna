@@ -1,7 +1,9 @@
 import { build } from 'bun';
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Inspectable, Path, Schema, SchemaGetter } from 'effect';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+import { cliDefines } from './cli-defines.js';
 import { envDefineTarget } from './env-define-target.js';
 
 class BuildError extends Schema.TaggedError<BuildError>()('BuildError', {
@@ -36,6 +38,20 @@ const loadEnvDefines = Effect.fn('loadEnvDefines')(function* (rootDir: string) {
   }
 
   return defines;
+});
+
+/** The short commit the build compiles, which `manna --version` prints. */
+const headCommit = Effect.fn('headCommit')(function* (rootDir: string) {
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const output = yield* spawner
+    .string(
+      ChildProcess.make('git', ['rev-parse', '--short', 'HEAD'], {
+        cwd: rootDir,
+        forceKillAfter: '5 seconds',
+      }),
+    )
+    .pipe(Effect.mapError((cause) => new BuildError({ cause })));
+  return output.trim();
 });
 
 /** Assets the compiled binary reads from disk rather than embedding. Each is
@@ -164,10 +180,9 @@ const program = Effect.gen(function* () {
   yield* fs.makeDirectory(binDir, { recursive: true });
   yield* Effect.log('Bundling and compiling to binary...');
 
-  const cliDefines = {
-    ...envDefines,
-    'globalThis.__MANNA_CLI_ROOT__': yield* encodeJson(rootDir),
-  };
+  const commit = yield* headCommit(rootDir);
+  yield* Effect.log(`Stamping commit ${commit}`);
+  const defines = { ...envDefines, ...cliDefines(commit) };
   const binaryPath = path.join(binDir, 'manna');
   const buildResult = yield* Effect.tryPromise({
     try: () =>
@@ -175,7 +190,7 @@ const program = Effect.gen(function* () {
         entrypoints: [path.join(rootDir, 'src/main.ts')],
         target: 'bun',
         minify: false,
-        define: cliDefines,
+        define: defines,
         compile: {
           target: 'bun-darwin-arm64',
           outfile: binaryPath,
@@ -213,8 +228,10 @@ const program = Effect.gen(function* () {
   yield* stageDataAssets({ fs, path, rootDir, binDir });
   yield* stageOnnxDylibs({ fs, path, rootDir, binDir });
   const nodeModulesBin = path.join(rootDir, 'node_modules/.bin/manna');
-  yield* fs.copyFile(binaryPath, nodeModulesBin);
-  yield* Effect.log(`✅ Copied to: ${nodeModulesBin}`);
+  yield* fs.makeDirectory(path.dirname(nodeModulesBin), { recursive: true });
+  yield* fs.remove(nodeModulesBin, { force: true });
+  yield* fs.symlink(path.relative(path.dirname(nodeModulesBin), binaryPath), nodeModulesBin);
+  yield* Effect.log(`✅ Linked ${nodeModulesBin} → ${binaryPath}`);
 });
 
 program.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);

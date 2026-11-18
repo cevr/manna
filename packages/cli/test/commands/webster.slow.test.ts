@@ -102,7 +102,6 @@ it.scoped(
           entrypoints: [`${root}/packages/cli/src/main.ts`],
           target: 'bun',
           compile: { outfile: executable, autoloadBunfig: false },
-          define: { 'globalThis.__MANNA_CLI_ROOT__': '"/nonexistent/webster-build-root"' },
           plugins: [
             {
               name: 'text-only-sharp',
@@ -140,7 +139,7 @@ it.scoped(
         expect(notice).toContain(word);
       const destination = `${home}/.bible/webster.db`;
       const candidates = dataCandidates(
-        { executableDir: bin, buildRoot: Option.none() },
+        { executableDir: bin, installRoot: Option.none() },
         'webster.db',
       );
       const input = {

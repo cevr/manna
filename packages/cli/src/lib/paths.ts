@@ -1,10 +1,26 @@
 import { Option } from 'effect';
 
-/** Populated at build time via a `globalThis.__MANNA_CLI_ROOT__` define; absent in dev. */
-type CliBuildGlobals = { readonly __MANNA_CLI_ROOT__?: string };
+const parentDir = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')));
 
-const buildRoot = (): Option.Option<string> =>
-  Option.fromNullishOr((globalThis as CliBuildGlobals).__MANNA_CLI_ROOT__);
+/** Whether this module runs inside a Bun-compiled binary, whose bundled
+ *  modules live under Bun's embedded `/$bunfs/` root. */
+const isCompiled = (): boolean => import.meta.dir.startsWith('/$bunfs/');
+
+/** The CLI root of a compiled binary that sits at `<root>/bin/manna`.
+ *
+ *  Resolved at run time from the executable's own path, so a binary built in
+ *  one checkout and installed into another finds the checkout it sits in, not
+ *  the one it was built in. Bun reports `process.execPath` with symlinks
+ *  resolved, so `~/.bun/bin/manna` linking to `<root>/bin/manna` resolves to
+ *  `<root>`. */
+export const installRoot = (executablePath: string): string => parentDir(parentDir(executablePath));
+
+/** The root of an installed binary; absent when the CLI runs from source. */
+const runningInstallRoot = (): Option.Option<string> =>
+  Option.some(process.execPath).pipe(
+    Option.filter(() => isCompiled()),
+    Option.map(installRoot),
+  );
 
 const sourceRoot = (): string => {
   const sourceSuffix = '/src/lib';
@@ -14,7 +30,7 @@ const sourceRoot = (): string => {
   return import.meta.dir;
 };
 
-export const getCliRoot = (): string => Option.getOrElse(buildRoot(), sourceRoot);
+export const getCliRoot = (): string => Option.getOrElse(runningInstallRoot(), sourceRoot);
 
 export const getOutputsPath = (...segments: string[]): string =>
   [getCliRoot(), 'outputs', ...segments].join('/');
@@ -23,30 +39,22 @@ export const getOutputsPath = (...segments: string[]): string =>
  *  `getOutputsPath` and the chime asset are. A caller's `process.cwd()` is not
  *  a location the CLI owns — an installed binary is run from anywhere — so a
  *  bundled artifact must be addressed relative to the binary's own root. Kept
- *  pure and parameterised on `cliRoot` so the derivation is unit-testable; the
- *  packaged install itself is only exercisable end to end. */
+ *  pure and parameterised on `cliRoot` so the derivation is unit-testable. */
 export const getDataPath = (cliRoot: string, ...segments: string[]): string =>
   [cliRoot, 'data', ...segments].join('/');
 
-/** Where a compiled binary's bundled assets are: beside the executable.
+/** Where a compiled binary's bundled assets are: beside the executable first,
+ *  then in its install root's `data/`.
  *
- *  `__MANNA_CLI_ROOT__` is baked in at build time, so it names the *build
- *  machine's* checkout. That path is right only while the binary stays where it
- *  was compiled — copy it to another machine, install it into a prefix, or
- *  delete the checkout, and the define points at a directory that no longer
- *  exists. The executable's own location is the one thing that travels with the
- *  binary, so an installed copy resolves its data there first.
- *
- *  Order matters and is deliberate: exe-adjacent wins, because a binary that
- *  ships its own `data/` must use that copy rather than whatever happens to sit
- *  in a stale checkout. The build root is the fallback, which is what makes
- *  `bun src/main.ts` in the workspace keep working — there `process.execPath` is
- *  the Bun binary itself, and no `data/` sits beside it. */
+ *  Exe-adjacent wins, because a binary that ships its own `data/` must use that
+ *  copy. The install root (`<root>/bin/manna` → `<root>/data/`) is the
+ *  fallback, for the package's own data slot. From source there is no install
+ *  root, and `process.execPath` is the Bun binary itself. */
 interface DataResolution {
   /** Directory of the running executable — `path.dirname(process.execPath)`. */
   readonly executableDir: string;
-  /** The build-time root, absent in dev. */
-  readonly buildRoot: Option.Option<string>;
+  /** The installed binary's root, absent when running from source. */
+  readonly installRoot: Option.Option<string>;
   /** Whether a candidate directory holds the asset. Injected so the ordering
    *  rule is testable without touching a filesystem. */
   readonly exists: (candidate: string) => boolean;
@@ -56,11 +64,11 @@ interface DataResolution {
  *  order is a fact a test can assert rather than a behaviour only a packaged
  *  install could reveal. */
 export const dataCandidates = (
-  resolution: Pick<DataResolution, 'executableDir' | 'buildRoot'>,
+  resolution: Pick<DataResolution, 'executableDir' | 'installRoot'>,
   ...segments: string[]
 ): readonly string[] => [
   getDataPath(resolution.executableDir, ...segments),
-  ...Option.match(resolution.buildRoot, {
+  ...Option.match(resolution.installRoot, {
     onNone: (): readonly string[] => [],
     onSome: (root) => [getDataPath(root, ...segments)],
   }),
@@ -68,7 +76,7 @@ export const dataCandidates = (
 
 /** The first candidate that exists, or the exe-adjacent path when none does —
  *  so a caller reporting a missing artifact names the location an install is
- *  expected to carry it, not a checkout the user may never have had. */
+ *  expected to carry it. */
 export const resolveDataPath = (resolution: DataResolution, ...segments: string[]): string => {
   const candidates = dataCandidates(resolution, ...segments);
   return Option.getOrElse(
@@ -77,22 +85,18 @@ export const resolveDataPath = (resolution: DataResolution, ...segments: string[
   );
 };
 
-/** The running executable's directory. For a Bun-compiled binary this is where
- *  its `data/` sits; in dev it is wherever the `bun` binary lives, which is why
- *  the build root is still consulted as a fallback. */
-const executableDir = (): string =>
-  process.execPath.slice(0, Math.max(0, process.execPath.lastIndexOf('/')));
-
 /** The candidates for one packaged asset in the running process, in resolution
  *  order. The caller decides which exists — this module stays free of a
  *  filesystem so the ordering rule is a pure, tested fact. */
 export const packagedDataCandidates = (...segments: string[]): readonly string[] =>
-  dataCandidates({ executableDir: executableDir(), buildRoot: buildRoot() }, ...segments);
+  dataCandidates(
+    { executableDir: parentDir(process.execPath), installRoot: runningInstallRoot() },
+    ...segments,
+  );
 
 /** How to start this same CLI again, as a spawnable command.
  *
- *  Two shapes, decided by the same build-time fact `getCliRoot` turns on:
- *  a compiled binary IS the CLI, so it re-invokes itself; in the workspace the
+ *  A compiled binary IS the CLI, so it re-invokes itself; from source the
  *  running executable is Bun, and the entrypoint travels as the first
  *  argument. Derived from `process.execPath` because that is the one path
  *  guaranteed to name the currently running executable — a `manna` found on
@@ -103,7 +107,7 @@ interface SelfInvocation {
 }
 
 export const selfInvocation = (): SelfInvocation =>
-  Option.match(buildRoot(), {
+  Option.match(runningInstallRoot(), {
     onSome: (): SelfInvocation => ({ command: process.execPath, args: [] }),
     onNone: (): SelfInvocation => ({
       command: process.execPath,

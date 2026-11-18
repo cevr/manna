@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { dataCandidates, getDataPath, resolveDataPath } from '../../src/lib/paths.js';
+import { dataCandidates, getDataPath, installRoot, resolveDataPath } from '../../src/lib/paths.js';
 
 describe('CLI install-owned data paths', () => {
   it('derives the topics artifact from the CLI root, not the caller cwd', () => {
@@ -19,19 +19,25 @@ describe('CLI install-owned data paths', () => {
   });
 });
 
-/** `__MANNA_CLI_ROOT__` is baked into the binary at build time, so it names the
- *  build machine's checkout. A binary that is copied, installed into a prefix,
- *  or shipped to another machine must not follow that path — it points at a
- *  directory that need not exist. These assert the resolution order that makes
- *  the copy work: exe-adjacent first, build root only as the dev fallback. */
+describe('installed binary root', () => {
+  it('is the checkout package the binary sits in, wherever it was built', () => {
+    expect(installRoot('/Users/me/manna/packages/cli/bin/manna')).toBe(
+      '/Users/me/manna/packages/cli',
+    );
+  });
+});
+
+/** A binary that is copied, installed into a prefix or shipped to another
+ *  machine reads the data that travels with it. These assert the resolution
+ *  order: exe-adjacent first, the install root's `data/` after. */
 describe('moved-binary data resolution', () => {
-  const BUILD_ROOT = '/Users/builder/checkout/packages/cli';
+  const INSTALL_ROOT = '/usr/local/lib/bible';
 
   it('prefers the data directory beside the executable', () => {
     const resolved = resolveDataPath(
       {
         executableDir: '/usr/local/lib/bible/bin',
-        buildRoot: Option.some(BUILD_ROOT),
+        installRoot: Option.some(INSTALL_ROOT),
         exists: () => true,
       },
       'topics.db',
@@ -39,32 +45,32 @@ describe('moved-binary data resolution', () => {
     expect(resolved).toBe('/usr/local/lib/bible/bin/data/topics.db');
   });
 
-  it('never reaches the build root once the binary carries its own data', () => {
+  it('lists the install root after the executable directory', () => {
     expect(
       dataCandidates(
-        { executableDir: '/usr/local/lib/bible/bin', buildRoot: Option.some(BUILD_ROOT) },
+        { executableDir: '/usr/local/lib/bible/bin', installRoot: Option.some(INSTALL_ROOT) },
         'topics.db',
       ),
-    ).toEqual(['/usr/local/lib/bible/bin/data/topics.db', `${BUILD_ROOT}/data/topics.db`]);
+    ).toEqual(['/usr/local/lib/bible/bin/data/topics.db', `${INSTALL_ROOT}/data/topics.db`]);
   });
 
-  it('falls back to the build root in dev, where no data sits beside bun', () => {
+  it("falls back to the install root's data when none sits beside the binary", () => {
     const resolved = resolveDataPath(
       {
-        executableDir: '/Users/dev/.bun/bin',
-        buildRoot: Option.some(BUILD_ROOT),
-        exists: (candidate) => candidate === `${BUILD_ROOT}/data/topics.db`,
+        executableDir: '/usr/local/lib/bible/bin',
+        installRoot: Option.some(INSTALL_ROOT),
+        exists: (candidate) => candidate === `${INSTALL_ROOT}/data/topics.db`,
       },
       'topics.db',
     );
-    expect(resolved).toBe(`${BUILD_ROOT}/data/topics.db`);
+    expect(resolved).toBe(`${INSTALL_ROOT}/data/topics.db`);
   });
 
   it('reports the exe-adjacent path when the artifact is nowhere', () => {
     const resolved = resolveDataPath(
       {
         executableDir: '/usr/local/lib/bible/bin',
-        buildRoot: Option.some(BUILD_ROOT),
+        installRoot: Option.some(INSTALL_ROOT),
         exists: () => false,
       },
       'topics.db',
@@ -72,10 +78,10 @@ describe('moved-binary data resolution', () => {
     expect(resolved).toBe('/usr/local/lib/bible/bin/data/topics.db');
   });
 
-  it('offers only the exe-adjacent path when there is no build root', () => {
+  it('offers only the exe-adjacent path when running from source', () => {
     expect(
       dataCandidates(
-        { executableDir: '/usr/local/lib/bible/bin', buildRoot: Option.none() },
+        { executableDir: '/usr/local/lib/bible/bin', installRoot: Option.none() },
         'topics.db',
       ),
     ).toEqual(['/usr/local/lib/bible/bin/data/topics.db']);
