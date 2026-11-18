@@ -7,8 +7,10 @@
  * build could read it). Every `*.test.contract` opens with the launch line
  * `fail fetch "https://egw.cvr.im"`, so on every host each pack's fetch is
  * refused and a plain launch has no pack; and no line passes a fetch
- * there again. What a pack does once it lands runs against the loopback
- * fixture in the drives (`tools/commentary-fixture.ts`).
+ * there again, or counts its refusal: Exact's `fail fetch "<prefix>" times N`
+ * replaces the unlimited one for that prefix, so the fetches after the Nth
+ * would reach the server. What a pack does once it lands runs against the
+ * loopback fixture in the drives (`tools/commentary-fixture.ts`).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -23,16 +25,19 @@ const REFUSED = `fail fetch "${PACKS_HOST}"`;
 /** Why a contract test's text may reach the packs' host, or nothing when it cannot. */
 const reachesLive = (text: string): ReadonlyArray<string> => {
   const launch = (text.split(/^test /mu)[0] ?? '').split('\n');
-  const passed = text
-    .split('\n')
-    .filter((line) => /^\s*pass fetch "([^"]*)"/u.test(line) && reaches(line));
+  const lines = text.split('\n');
+  const passed = lines.filter((line) => /^\s*pass fetch "[^"]*"/u.test(line) && reaches(line));
+  const counted = lines.filter(
+    (line) => /^\s*fail fetch "[^"]*"\s+times\b/u.test(line) && reaches(line),
+  );
   return [
     ...[`no launch line ${REFUSED}`].filter(() => !launch.includes(REFUSED)),
     ...passed.map((line) => `passes a fetch to it: ${line.trim()}`),
+    ...counted.map((line) => `counts its refusal, so later fetches reach it: ${line.trim()}`),
   ];
 };
 
-/** Whether a `pass fetch "<prefix>"` line lets a fetch of the packs' host through. */
+/** Whether a `pass fetch "<prefix>"` or `fail fetch "<prefix>"` line names a prefix the packs' host's fetches share. */
 const reaches = (line: string): boolean => {
   const prefix = /"([^"]*)"/u.exec(line)?.[1] ?? '';
   return PACKS_HOST.startsWith(prefix) || prefix.startsWith(PACKS_HOST);
@@ -72,7 +77,19 @@ describe('the check', () => {
       ]);
   });
 
+  it('refuses a counted refusal of egw.cvr.im, as a launch line or a step', () => {
+    for (const prefix of ['https://egw.cvr.im', 'https://egw.cvr.im/api/study', 'https://'])
+      for (const counted of [`fail fetch "${prefix}" times 2`, `fail fetch "${prefix}"  times 1`]) {
+        const why = `counts its refusal, so later fetches reach it: ${counted}`;
+        expect(reachesLive(`${REFUSED}\n${planted}  ${counted}\n`)).toEqual([why]);
+        expect(reachesLive(`${REFUSED}\n${counted}\n${planted}`)).toEqual([why]);
+      }
+  });
+
   it('passes a file that refuses it, whatever else it passes', () => {
+    expect(
+      reachesLive(`${REFUSED}\n${planted}  fail fetch "http://127.0.0.1:4801" times 1\n`),
+    ).toEqual([]);
     expect(reachesLive(`${REFUSED}\n${planted}`)).toEqual([]);
     expect(reachesLive(`${REFUSED}\n${planted}  pass fetch "http://127.0.0.1:4801"\n`)).toEqual([]);
   });
