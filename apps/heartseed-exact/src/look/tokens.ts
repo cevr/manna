@@ -6,7 +6,7 @@ export interface Source {
 }
 
 /** What a token holds, and so how its value is written. */
-export type Kind = 'type' | 'length' | 'hairline' | 'number' | 'shadow';
+export type Kind = 'type' | 'length' | 'border' | 'hairline' | 'number' | 'shadow';
 
 export interface Token {
   readonly name: string;
@@ -64,6 +64,8 @@ const number = measure('number');
  * Native's `fontSize` does, so a size is written in `rem` (the body size,
  * 17 pt at the default size on iOS) and a line height as its share of the
  * size. A space, radius or size does not scale, so it is written in px.
+ * A border width is written as React Native draws it on a 3× iPhone, on
+ * the device pixel grid (1.5 pt is drawn 5 px wide, 1.6667 pt).
  */
 export const TOKENS: ReadonlyArray<Token> = [
   type('type.title', [DRAW, 'title']),
@@ -166,7 +168,11 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('line.furrow', [PLOT, 'soil', 'height']),
 
   measure('hairline')('line.hair', [ABOUT, 'row', 'borderTopWidth']),
-  length('line.edge', [PLOT, 'pill', 'borderWidth'], [SETTINGS, 'button', 'borderWidth']),
+  measure('border')(
+    'line.edge',
+    [PLOT, 'pill', 'borderWidth'],
+    [SETTINGS, 'button', 'borderWidth'],
+  ),
   length('line.slot', [DRAW, 'slot', 'borderBottomWidth']),
 
   number('opacity.pressed', [DRAW, 'pressed', 'opacity']),
