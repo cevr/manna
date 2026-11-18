@@ -115,7 +115,7 @@ const largestRegion = (map: Uint8Array, width: number, height: number) => {
 };
 
 /** Scores `screen` against `reference` at `channel`, the pixels under `masks` left out. */
-export const diff = (
+const diff = (
   reference: Picture,
   screen: Picture,
   masks: ReadonlyArray<Mask>,
@@ -176,7 +176,7 @@ export interface Band {
  * `offset` is how far down the reference's band starts in its own picture,
  * so masks drawn on the reference move with it.
  */
-export const bandsOf = (
+const bandsOf = (
   reference: Picture,
   referenceBand: Band,
   screen: Picture,

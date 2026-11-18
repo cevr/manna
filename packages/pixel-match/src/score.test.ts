@@ -7,7 +7,7 @@ import { dirname } from 'node:path';
 import type { Cell, Row } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
 import { encodePng, type Picture } from './png.ts';
-import { edgesIn, scoreShot } from './shot.ts';
+import { scoreShot } from './score.ts';
 
 const scratch = mkdtempSync(`${tmpdir()}/pixel-shot-`);
 
@@ -47,12 +47,7 @@ const row: Row = {
 };
 
 describe("the port's banded scoring, from the agent's replies to the result", () => {
-  test("the two layout replies are the band between the bar's foot and the tab bar's top, in device pixels", () => {
-    expect(edgesIn(agentOut)).toEqual({ top: 6, bottom: 12 });
-    expect(edgesIn('{"ok":true}\n{"ok":true}\n{"ok":true}')).toBeUndefined();
-  });
-
-  test("a reference banded under One's header against a screen banded between the bars scores the shared rows only", () => {
+  test("a reference banded under One's header against a screen banded between the bars, from the bar's foot to the tab bar's top, scores the shared rows only", () => {
     const content = (y: number) => 40 + y * 10;
     const reference = striped(12, (y) => (y < 3 ? 250 : content(y - 3)));
     const screen = striped(15, (y) => (y < 6 || y >= 12 ? 5 : content(y - 6)));
@@ -67,6 +62,8 @@ describe("the port's banded scoring, from the agent's replies to the result", ()
     mkdirSync(dirname(files.screen), { recursive: true });
     writeFileSync(files.screen, encodePng(screen));
 
+    const noRects = () => scoreShot(frame, row, cell, '{"ok":true}\n{"ok":true}\n{"ok":true}');
+    expect(noRects).toThrow("no rect in the agent's layout replies");
     const result = scoreShot(frame, row, cell, agentOut);
     const written = JSON.parse(readFileSync(files.result, 'utf8')).differing;
     rmSync(scratch, { recursive: true, force: true });

@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Arbitrary, Effect, Schema } from 'effect';
 
-import { bandsOf, diff, ladder, scorePair, type Mask } from './diff.ts';
+import { ladder, scorePair, type Mask } from './diff.ts';
 import { decodePng, encodePng, isBlank, type Picture } from './png.ts';
 
 const int = (minimum: number, maximum: number) =>
@@ -47,6 +47,10 @@ const changed = (
   }
   return { ...base, rgba };
 };
+
+/** The strict diff of two whole pictures: `scorePair` with no bands. */
+const diff = (reference: Picture, screen: Picture, masks: ReadonlyArray<Mask>, channel: number) =>
+  scorePair(reference, screen, masks, channel, undefined).scored;
 
 const holds = <A>(arbitrary: Arbitrary.Arbitrary<A>, property: (value: A) => boolean) =>
   expect(
@@ -132,14 +136,14 @@ describe('the strict diff', () => {
           anchor === 'top'
             ? { top: top + shift, bottom: bottom + shift + 2 }
             : { top, bottom: Math.min(bottom, base.height) + shift };
-        const cut = bandsOf(base, { top, bottom }, padded, longer, anchor);
-        const scored = diff(cut.reference, cut.screen, [], 0);
+        const bands = { reference: { top, bottom }, screen: longer, anchor } as const;
+        const { scored, reference } = scorePair(base, padded, [], 0, bands);
         const height = Math.max(0, Math.min(bottom, base.height) - Math.min(top, base.height));
         return (
           scored._tag === 'Scored' &&
           scored.differing === 0 &&
-          cut.reference.height === height &&
-          (anchor === 'bottom' || cut.offset === Math.min(top, base.height))
+          reference.height === height &&
+          scored.total === base.width * height
         );
       },
     ));
