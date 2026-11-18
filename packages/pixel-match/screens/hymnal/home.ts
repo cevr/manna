@@ -30,6 +30,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-fresh',
     one: { steps: [HOME], web: [HOME_WEB] },
+    exact: { ops: ['clock data', 'clock settle'] },
   },
   {
     id: 'home.scrolled',

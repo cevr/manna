@@ -19,6 +19,16 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hs-fresh',
     one: { steps: ABOUT },
+    exact: {
+      ops: [
+        'clock data',
+        'tap gear',
+        'clock settle',
+        'tap about-row',
+        'clock data',
+        'clock settle',
+      ],
+    },
   },
   {
     id: 'about.licences',
