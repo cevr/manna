@@ -6,7 +6,7 @@
  * still writing some keeps them in its allow list (`allow/<unit>.ts`),
  * which it empties as it draws its screens in One's tokens; an entry it no
  * longer needs fails here too, so the list only shrinks. `pm-tokens`'
- * files have none.
+ * files have none, nor has a unit once it lands (`LANDED`).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -44,6 +44,9 @@ const ALLOWED = new Map<string, AllowList>([
   ['pm-hy-settings', settings],
 ]);
 
+/** The screen units whose screens have landed in One's tokens: each keeps an empty list (its spec's acceptance). */
+const LANDED: ReadonlyArray<string> = ['pm-hy-home'];
+
 /** What `file`'s unit lets it keep. */
 const allowanceOf = (file: string) => ALLOWED.get(OWNER.get(file) ?? '')?.[file] ?? {};
 
@@ -62,6 +65,12 @@ describe('no Contract file writes a measure', () => {
     );
     expect(strays).toEqual([]);
     expect(contractFiles().filter((file) => !OWNER.has(file))).toEqual([]);
+  });
+
+  it('a unit that has landed keeps an empty list', () => {
+    expect(LANDED.map((unit) => [unit, ALLOWED.get(unit)])).toEqual(
+      LANDED.map((unit) => [unit, {}]),
+    );
   });
 
   it('finds a measure planted in a file of pm-tokens', () => {
