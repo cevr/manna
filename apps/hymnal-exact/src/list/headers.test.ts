@@ -5,7 +5,9 @@
  * iOS draws a plain list's headers and the current app draws its topics:
  * each `text` under a `section`'s `header` in the list's Contract files
  * names `-exact-secondary-label` (the brand's `muted`), with no host
- * condition, so the web draws it so too. The reader is tried against a
+ * condition, so the web draws it so too. The home list heads its groups
+ * with a row of its own (`ListHeader`, the current app's topic row, which
+ * UIKit's one-text header cannot draw), its name in `muted`. The reader is tried against a
  * planted header first, so one that finds no header cannot pass; that no
  * file writes a colour literal is `look/literal.test.ts`.
  */
@@ -60,8 +62,13 @@ describe('section headers are drawn in the muted role', () => {
     expect(headerTexts('header\n  text "Hymns" role="heading"')).toEqual([]);
   });
 
-  it('the home list draws its headers', () => {
-    expect(headerTexts(appFile('features/list.contract')).length).toBeGreaterThanOrEqual(3);
+  it('the home list heads each group with its own header row, its name muted', () => {
+    const list = appFile('features/list.contract');
+    const headed = list.match(/^\s*ListHeader\(.*\n\s*for (?:r in s\.rows|n in g\.numbers)\b/gmu);
+    expect(headed?.map((line) => line.trim().split('(')[0])).toEqual(['ListHeader', 'ListHeader']);
+    const row = list.slice(list.indexOf('component ListHeader'));
+    const name = /^\s*text name .*$/mu.exec(row)?.[0] ?? '';
+    expect(name).toContain('color="muted"');
   });
 
   for (const file of FILES)
