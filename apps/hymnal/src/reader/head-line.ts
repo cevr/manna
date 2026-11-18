@@ -1,6 +1,7 @@
+import type { Passage } from '@manna/hymnal/indexes';
 import { Array as Arr, Option } from 'effect';
 
-import { type Passage, passageText } from '../hymns/indexes';
+import { passageText } from '../hymns/passage-text';
 
 /** The head line's words: the section, and the first passage with how many more follow it. */
 export const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
