@@ -3,7 +3,16 @@ import { createServer } from 'node:net';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { claimAppPort, claimPort, claimPorts, takePort } from './port.ts';
+import { claimAppPort, claimPorts, takePort } from './port.ts';
+
+/** A claim of one port of `range`: a block of one, read as its port. */
+const claimPort = async (
+  range: readonly [number, number],
+  options?: Parameters<typeof claimPorts>[2],
+) => {
+  const { lo, give } = await claimPorts(range, 1, options);
+  return { port: lo, give };
+};
 
 /** Ports no run of the apps uses, below the Mac's ephemeral range, for the claims these tests make. */
 const LO = 47_310;
@@ -15,9 +24,9 @@ const elsewhere = async (range: readonly [number, number]) => {
     [
       'bun',
       '-e',
-      `const { claimPort } = await import(${JSON.stringify(`${import.meta.dir}/port.ts`)});
-       const { port } = await claimPort([${range[0]}, ${range[1]}], { label: 'run b', waitMs: 0 });
-       console.log(port);
+      `const { claimPorts } = await import(${JSON.stringify(`${import.meta.dir}/port.ts`)});
+       const { lo } = await claimPorts([${range[0]}, ${range[1]}], 1, { label: 'run b', waitMs: 0 });
+       console.log(lo);
        for await (const _ of process.stdin) {}`,
     ],
     {

@@ -186,7 +186,7 @@ export const claimPorts = async (
 };
 
 /** A port of `range` for this process's run, as `claimPorts` claims a block of one. */
-export const claimPort = async (
+const claimPort = async (
   range: readonly [number, number],
   options: ClaimOptions = {},
 ): Promise<Claim> => {

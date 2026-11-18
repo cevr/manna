@@ -12,7 +12,7 @@ export interface ExactApp {
 /**
  * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
  * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
- * A run that listens in the spare range claims its port first (`claimPort`), so runs of every checkout share it.
+ * A run that listens in the spare range claims its ports first (`claimPorts`), so runs of every checkout share it.
  */
 export const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
   'heartseed-exact': {
