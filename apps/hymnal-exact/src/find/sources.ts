@@ -14,8 +14,46 @@
  * velocity; `wheel` the delta. A kind it does not know changes nothing.
  */
 
+import {
+  DETENT,
+  DOCKED_LIFT,
+  HASH,
+  HASH_GAP,
+  PANEL_PAD,
+  REST,
+  ROW_GAP,
+} from '@manna/hymnal-app/player/find-measures';
+
 import type { Book } from '../hymns/book.ts';
 import { initial, type Input, type State, step, type View, view } from './step.ts';
+
+/**
+ * The current app's measures of the find bar and the drums, in points, as
+ * `findPlaces()` answers them for `features/find.contract` to place the bar
+ * and size the drums by: the bar's side (`hash`), its room over what it
+ * rides (`gap`), its lift when docked (`lift`), the player's bar at rest
+ * (`rest`), a drum's stop (`detent`), and the drums' panel's padding and
+ * row gap (`pad`, `rowGap`).
+ */
+export interface Places {
+  readonly hash: number;
+  readonly gap: number;
+  readonly lift: number;
+  readonly rest: number;
+  readonly detent: number;
+  readonly pad: number;
+  readonly rowGap: number;
+}
+
+const places: Places = {
+  hash: HASH,
+  gap: HASH_GAP,
+  lift: DOCKED_LIFT,
+  rest: REST,
+  detent: DETENT,
+  pad: PANEL_PAD,
+  rowGap: ROW_GAP,
+};
 
 const DRUMS = ['hundreds', 'tens', 'ones'] as const;
 
@@ -70,6 +108,7 @@ export const findSources = (book: Book, counts: { tiles: number } = { tiles: 0 }
       state = input === undefined ? { ...state, serial: state.serial + 1 } : step(state, input);
       return view(state);
     },
+    findPlaces: (): Places => places,
     findTiles: (): Array<number> => {
       counts.tiles += 1;
       return book.hymns.map((hymn) => hymn.number);

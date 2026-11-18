@@ -104,6 +104,7 @@ theme
   size.grabber-line: length = 5px
   size.slider: length = 32px
   line.hair: length = -exact-hairline
+  line.panel: length = 1px
   opacity.pressed: number = 0.6
   nudge.title: length = -0.3333px
   nudge.topic: length = -1px

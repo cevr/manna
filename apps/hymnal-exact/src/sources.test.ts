@@ -114,6 +114,7 @@ describe('the data module runs where Exact runs it', () => {
       'chordsMove',
       'chordsPage',
       'favouritesAfter',
+      'findPlaces',
       'findStep',
       'findTiles',
       'hymnPage',

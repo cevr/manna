@@ -36,6 +36,10 @@ const CHIP = 'src/player/Chip.tsx';
 const STANZAS = 'src/player/StanzaChips.tsx';
 const PLAY_PAGE = 'src/player/PlayPage.tsx';
 const SCRUBBER = 'src/player/Scrubber.ios.tsx';
+const FIND = 'src/home/FindBar.tsx';
+const DRUMS = 'src/player/FindDrums.tsx';
+const MAGNIFIER = 'src/home/Magnifier.ios.tsx';
+const PANEL = 'src/player/DialPanel.tsx';
 
 const type = (
   name: string,
@@ -79,8 +83,8 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.head', [PLAYER, 'head']),
   type('type.name', [CHORD, 'name'], [LIVE, 'hashText']),
   type('type.chevron', [SETTINGS, 'chevron']),
-  type('type.strong', [SETTINGS, 'check'], [CHORD, 'done'], [LIVE, 'actText']),
-  type('type.body', [SETTINGS, 'label', 'body'], [PLAYER, 'switchLabel', 'body'], [LIST, 'empty']),
+  type('type.strong', [SETTINGS, 'check'], [CHORD, 'done'], [LIVE, 'actText'], [DRUMS, 'digit']),
+  type('type.body', [SETTINGS, 'label', 'body'], [PLAYER, 'switchLabel', 'body'], [LIST, 'empty'], [FIND, 'cancelWords']),
   type('type.large-title', [HOME, 'titleWords']),
   type('type.topic', [TABS, 'name'], [LIST, 'topicName']),
   type('type.see-all', [LIST, 'seeAll']),
@@ -181,7 +185,13 @@ export const TOKENS: ReadonlyArray<Token> = [
   ),
   length('size.button', [ACCENT, 'button', 'minHeight'], [LIST, 'number', 'minWidth']),
   length('size.mark', [STAR, 'mark', 'width'], [STAR, 'mark', 'height']),
-  length('size.glyph', [MARK, 'mark', 'width'], [MARK, 'mark', 'height']),
+  length(
+    'size.glyph',
+    [MARK, 'mark', 'width'],
+    [MARK, 'mark', 'height'],
+    [MAGNIFIER, 'mark', 'width'],
+    [MAGNIFIER, 'mark', 'height'],
+  ),
   length('size.grabber', [BAR, 'grabber', 'width']),
   length('size.grabber-line', [BAR, 'grabber', 'height']),
   length('size.slider', [SCRUBBER, 'bar', 'height']),
@@ -193,6 +203,7 @@ export const TOKENS: ReadonlyArray<Token> = [
     [LIST, 'topic', 'borderBottomWidth'],
     [LIST, 'separator', 'height'],
   ),
+  length('line.panel', [PANEL, 'panel', 'borderWidth']),
 
   measure('number')(
     'opacity.pressed',

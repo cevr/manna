@@ -22,8 +22,8 @@
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels;
  * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
- *   after `#`, scaled between 0.96 and 1 and fading, by Open's fill drawn
- *   lighter than once settled) and are gone once the clock settles after a
+ *   after `#`, scaled between 0.96 and 1, and 40 ms after it fading, by
+ *   Open's light fill drawn nearer the page than once settled) and are gone once the clock settles after a
  *   close; Open held down paints the brand's `pressed`, light and dark; the
  *   tiles grow in from a little larger (60 ms after All at once, scaled
  *   above 1) and Done leaves the list at the row it showed; the search's
@@ -401,10 +401,11 @@ const moving = named([
   'prefer prefers-color-scheme light',
   'clock settle',
   'tap find-number',
-  'clock +100',
+  'clock +40',
+  ['fill-40', 'layout drums-open'],
+  shot('drums-40'),
+  'clock +60',
   ['drums-100', 'layout drums'],
-  ['fill-100', 'layout drums-open'],
-  shot('drums-100'),
   'clock settle',
   ['drums-end', 'layout drums'],
   ['fill-end', 'layout drums-open'],
@@ -463,12 +464,12 @@ if (host === 'web') {
     { drumsScale, at: frameOf(at('drums-100')).frame, end: frameOf(at('drums-end')).frame },
   );
   const [fading, whole] = [
-    await fillPixel('drums-100', at('fill-100')),
+    await fillPixel('drums-40', at('fill-40')),
     await fillPixel('drums-end', at('fill-end')),
   ];
   const ground = channels(theme.light.ground);
   drive.check(
-    '100 ms after #, the drums are fading in: Open’s fill drawn lighter than once settled, and not gone',
+    '40 ms after #, the drums are fading in: Open’s fill drawn lighter than once settled, and not gone',
     fading.length === 3 &&
       whole.length === 3 &&
       distance(fading, ground) < distance(whole, ground) - 2 &&

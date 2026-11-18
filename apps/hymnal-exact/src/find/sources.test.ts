@@ -11,6 +11,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
+import * as measures from '@manna/hymnal-app/player/find-measures';
 
 import { book } from '../hymns/book.ts';
 import { below, pick, seeded } from '../test/random.ts';
@@ -79,6 +80,19 @@ describe('finding’s sources', () => {
     expect(tiles).toEqual(book.hymns.map((hymn) => hymn.number));
     expect(JSON.stringify(tiles)).toMatch(/^\[\d+(,\d+)*\]$/u);
     expect(new TextEncoder().encode(JSON.stringify(tiles)).length).toBeLessThan(4096);
+  });
+
+  test('the bar’s and the drums’ places are the current app’s measures', () => {
+    const places = withDataHost(() => findSources(book).findPlaces());
+    expect(places).toEqual({
+      hash: measures.HASH,
+      gap: measures.HASH_GAP,
+      lift: measures.DOCKED_LIFT,
+      rest: measures.REST,
+      detent: measures.DETENT,
+      pad: measures.PANEL_PAD,
+      rowGap: measures.ROW_GAP,
+    });
   });
 
   test('a screen is named by its path, without the query or fragment a launch adds', () => {

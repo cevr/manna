@@ -118,11 +118,42 @@ members HymnalExact
       preventDefault()
       send findStepped = findStep("drumsClose", "", 0, 0)
 
+// The device's facts the bar is placed by: the software keyboard's height
+// over the window's foot and the safe area's insets, in points.
+shape FindPort
+  keyboardHeight: number
+  safeAreaTop: number
+  safeAreaBottom: number
+
+// The current app's measures of the bar and the drums, in points
+// (`findPlaces`, src/find/sources.ts, from its find-measures module).
+shape FindPlaces
+  hash: number
+  gap: number
+  lift: number
+  rest: number
+  detent: number
+  pad: number
+  rowGap: number
+
+// How far the bar's foot stands over the window's, as the current app's
+// bar stands (`findRoom`): over the keyboard while it is up, over the
+// player's resting bar while it docks, and else docked just over the
+// bottom inset.
+fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboardHeight > 0 ? port.keyboardHeight + at.gap : (overBar ? port.safeAreaBottom + at.rest + at.gap : port.safeAreaBottom + at.lift)
+
 // The find bar of the screen `entry` draws, shown while that screen is on
-// top. Folded: Search and the `#` (and, on the home list, All at once);
-// searching here: the box, the `#` and Cancel; on the tiles: the `#`
-// alone. With `results`, a search's hymns show under it, taking the
-// screen's place.
+// top, drawn as the current app's (src/home/FindBar.tsx): a capsule of
+// glass at the screen's foot, at its right edge, holding Search's
+// magnifier and the `#`. Searching here, the capsule grows leftward into
+// the search box, the chosen mark (a disk in `glassChosen`) behind its
+// magnifier, the `#` keeps its trailing end, and Cancel stands at the
+// bar's right in the accent; while the drums are open the mark lies
+// behind the `#`; on the tiles the `#` stands alone on its own disk. All
+// at once (the port's way to the tiles where a pinch cannot reach) is a
+// disk of glass of its own before the capsule. With `results`, while the
+// search is open here its ground covers the screen from under the status
+// bar, as the current app's results do, and lists the hymns found.
 component FindBar
   props
     entry: Entry
@@ -140,57 +171,94 @@ component FindBar
     favouriteNumbers: number[]
     playerShown: PlayerView
     motionStill: bool
+  resource findBarPort = exactViewport() as shape FindPort
+  resource findBarPlaces = findPlaces() as shape FindPlaces
   view
     if entry.id == findTop
-      column flex=(results and findShown.results ? "1000 1 0px" : "none") min-height=0 testId="find"
-        row gap=8 align-items="center" flex-wrap="wrap" padding="4px 16px" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
-          if findShown.searchDrawn
-            button press=findSearchOn disabled=(not findShown.searchReach) aria-pressed=(findShown.chosen == "search") flex="1 1 8rem" min-height=44 testId="find-search"
-              row gap=6 align-items="center"
-                image "symbol:search"
-                text "Search"
-          if findShown.boxDrawn
-            input type="search" value=findText input=findTyped placeholder="Number, title or first line"
-              aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) flex="1 1 10rem" min-width=0 testId="search"
-              animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
-          button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) disabled=(not findShown.hashReach)
-            aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") min-width=44 min-height=44 flex-shrink=0 testId="find-number"
-            text "#" font="-exact-title3"
-          if findShown.cancelDrawn
-            button press=findSearchOff disabled=(not findShown.cancelReach) min-height=44 flex-shrink=0 testId="find-cancel"
-              animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
-              text "Cancel"
-          if findShown.tilesControl
-            button press=findPress("tilesShow", 0) aria-label="All at once" min-width=44 min-height=44 flex-shrink=0 testId="tiles-show"
-              image "symbol:layers"
-        if results and findShown.results
-          if findRows.length == 0
-            text `No hymn matches “${findText.trim()}”.` padding=16 color="-exact-secondary-label" testId="none-found"
-          else
-            list id=`find-list-${entry.id}` appearance="auto" listStyle="plain" flex=1 min-height=0 testId="find-list"
-              section
-                for s in findRows key=s.slug
-                  for r in s.rows key=r.number
-                    FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+      if results and findShown.boxDrawn
+        column position="absolute" inset=0 z-index=1 background-color="ground" padding-top=`${findBarPort.safeAreaTop}px` testId="find-results"
+          if findShown.results
+            if findRows.length == 0
+              text `No hymn matches “${findText.trim()}”.` font="type.body" color="muted" padding="space.s16" testId="none-found"
+            else
+              list id=`find-list-${entry.id}` appearance="auto" listStyle="plain" flex=1 min-height=0 testId="find-list"
+                section
+                  for s in findRows key=s.slug
+                    for r in s.rows key=r.number
+                      FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+      row position="absolute" left="space.s16" right="space.s16" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock)}px` z-index=2
+        align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
+        if findShown.tilesControl
+          button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0
+            border-radius="radius.pill" background-color="glass" color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
+            image "symbol:layers" width="size.glyph" height="size.glyph"
+        if findShown.row == "tiles"
+          FindHash(look=(findShown.chosen == "hash" ? "aloneChosen" : "alone"))
+        else
+          row height="size.target" border-radius="radius.pill" background-color="glass" overflow="hidden" align-items="center"
+            flex=(findShown.boxDrawn ? "1 1 0px" : "none") min-width=0 testId="find-capsule"
+            if findShown.searchDrawn
+              button press=findSearchOn appearance="none" disabled=(not findShown.searchReach) aria-label="Search" aria-pressed=(findShown.chosen == "search")
+                width="size.target" height="size.target" flex-shrink=0 color="onGlass" display="flex" align-items="center" justify-content="center" testId="find-search"
+                :active
+                  opacity = "opacity.pressed"
+                image "symbol:search" width="size.glyph" height="size.glyph"
+            if findShown.boxDrawn
+              column width="size.target" height="size.target" flex-shrink=0 border-radius="radius.pill" background-color="glassChosen" color="onGlassChosen"
+                align-items="center" justify-content="center" aria-hidden=true testId="find-chosen"
+                animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both")
+                image "symbol:search" width="size.glyph" height="size.glyph"
+              input type="search" value=findText input=findTyped placeholder="Number, title or first line"
+                aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) appearance="none" flex=1 min-width=0 height="size.target"
+                padding=0 border="none" background-color="transparent" font="type.body" color="onGlass" testId="search"
+                animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
+            FindHash(look=(findShown.chosen == "hash" ? "chosen" : "unchosen"))
+        if findShown.cancelDrawn
+          button press=findSearchOff appearance="none" disabled=(not findShown.cancelReach) min-height="size.target" flex-shrink=0 color="accent" testId="find-cancel"
+            animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
+            :active
+              opacity = "opacity.pressed"
+            text "Cancel" font="type.body"
+
+// The `#` that opens and closes the drums, as the current app draws it
+// (LivePlayer's `hash`): in the capsule over no fill (`unchosen`) or over
+// the chosen disk (`chosen`), and on the tiles alone on a disk of glass
+// (`alone`) or the chosen disk (`aloneChosen`).
+component FindHash
+  props
+    look: string
+  inject
+    findShown: FindView
+    findPress: action
+    playerShown: PlayerView
+  view
+    button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) appearance="none" disabled=(not findShown.hashReach)
+      aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") width="size.target" height="size.target" flex-shrink=0
+      border-radius="radius.pill" display="flex" align-items="center" justify-content="center"
+      background-color=(look == "chosen" or look == "aloneChosen" ? "glassChosen" : look == "alone" ? "glass" : "transparent")
+      color=(look == "chosen" or look == "aloneChosen" ? "onGlassChosen" : "onGlass") testId="find-number"
+      :active
+        opacity = "opacity.pressed"
+      text "#" font="type.name"
 
 // The drums: a hymn's number dialled on three, hundreds, tens and ones,
 // each the platform's adjustable control with its digit as its value. The
 // hundreds stop at 0 and 6; the tens and ones turn one past each end, which
 // the step wraps (`turn`), so an increment at 9 dials 0. Open goes to the
-// hymn; the `#` here, a tap outside, Escape or a swipe down close them.
+// hymn; the `#`, a tap outside, Escape or a swipe down close them.
 // Drawn only while the step has them open, they pop in, and fade out as
-// the `if` drops them; Open presses as `PlayerFilled` does.
+// the `if` drops them; Open presses as the current app's does.
 //
-// The dialog fills the window, its panel in the middle: a tap outside the
-// panel lands on `drums-outside` beneath it, a box that hears the pointer
-// as the page's backdrop does (no control, so no stop for a reader or for
-// Tab; the `#` is the drums' close button), and Escape is claimed by
+// The dialog fills the window, its panel standing over the find bar, as
+// the current app's drums stand over the `#`: a tap outside the panel
+// lands on `drums-outside` beneath it, a box that hears the pointer as the
+// page's backdrop does (no control, so no stop for a reader or for Tab;
+// the `#` is the drums' close button), and Escape is claimed by
 // `findDrumsKey`, so each closes through the step and the `if` drops a
 // dialog still open, which fades as the `#` closes it. The browser's own
-// light dismiss would close the dialog first, so its exit would play unseen.
-// Under Reduce Motion they leave at once. The panel draws the edge and the
-// lift a dialog draws on the web (a hairline in `line`, a long soft shadow
-// of `shadow` at 24 %), since the dialog itself is a clear window.
+// light dismiss would close the dialog first, so its exit would play
+// unseen. Under Reduce Motion they leave at once. The dialog itself is a
+// clear window over the page; the bar's `#` stays over it, in reach.
 component FindDrums
   inject
     findShown: FindView
@@ -198,49 +266,71 @@ component FindDrums
     findDismiss: action
     findDrumsKey: action
     motionStill: bool
+    playerShown: PlayerView
+  resource findDrumsPort = exactViewport() as shape FindPort
+  resource findDrumsPlaces = findPlaces() as shape FindPlaces
   view
     if findShown.drums
       dialog id="find-drums" closedby="closerequest" cancel=findDismiss key=findDrumsKey aria-label="Find a hymn by number"
         background-color="transparent" border="none" padding=0 margin=0 width="100%" height="100%" max-width="100%" max-height="100%" box-sizing="border-box" testId="drums"
         animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-pop duration.panel easing.out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.exit ease-out both")
-        column width="100%" height="100%" align-items="center" justify-content="center" padding=16 box-sizing="border-box" position="relative"
-          FindDrumsPanel()
+        column width="100%" height="100%" justify-content="flex-end" box-sizing="border-box" position="relative"
+          padding-left="space.s16" padding-right="space.s16"
+          padding-bottom=`${findFoot(findDrumsPort, findDrumsPlaces, playerShown.dock) + findDrumsPlaces.hash + findDrumsPlaces.gap}px`
           column pointerup=findPress("drumsClose", 0) position="absolute" top=0 right=0 bottom=0 left=0 testId="drums-outside"
+          FindDrumsPanel()
+          FindHashOver()
 
-// The edge and the lift are the web's alone, as a web dialog's are; on iOS
-// the panel lies flat over the dimmed page. Contract names no host, so
-// `findDrumsWeb` reads the page fact that tells the web apart: only the web
-// takes no picture of a node into a share (`canSharePictures`, true on iOS
-// and the Mac). src/find/edge.test.ts holds both branches.
-shape FindPage
-  canSharePictures: bool
+// The `#` over the open drums, where the bar's stands, as their close
+// button: the dialog lies over the page and its bar, so the `#` is drawn
+// again in it, on the chosen disk, and closes them.
+component FindHashOver
+  inject
+    findShown: FindView
+    findPress: action
+    playerShown: PlayerView
+  resource findOverPort = exactViewport() as shape FindPort
+  resource findOverPlaces = findPlaces() as shape FindPlaces
+  view
+    button press=findPress("drumsOpen", 0) appearance="none" aria-label="Close" aria-pressed=true
+      position="absolute" right="space.s16" bottom=`${findFoot(findOverPort, findOverPlaces, playerShown.dock)}px`
+      width="size.target" height="size.target" border-radius="radius.pill" background-color="glassChosen" color="onGlassChosen"
+      display="flex" align-items="center" justify-content="center" testId="drums-hash"
+      :active
+        opacity = "opacity.pressed"
+      text "#" font="type.name"
 
+// The panel: the current app's dial panel (src/player/DialPanel.tsx) in
+// `panel` with an `edge` line, round at half a stop and its padding, the
+// three drums side by side, each an equal share of the width, and Open
+// under them as a pill. The dialled number is said, not shown: the
+// current app draws none.
 component FindDrumsPanel
   inject
     findShown: FindView
     findPress: action
-  resource findDrumsPage = exactPage() as shape FindPage
-  derive findDrumsWeb = not findDrumsPage.canSharePictures
+  resource findPanelPlaces = findPlaces() as shape FindPlaces
   view
-    column max-width="100%" max-height="100%" overflow-y="auto" box-sizing="border-box"
-      background-color="-exact-secondary-background" border-radius=16 padding=16 position="relative" z-index=1 testId="drums-panel"
-      border=(findDrumsWeb ? "1px solid line" : "none")
-      box-shadow=(findDrumsWeb ? "0 16px 48px color-mix(in srgb, shadow 24%, transparent)" : "none")
-      column gap=12 width="17.5rem" max-width="100%"
-        row gap=12 align-items="center"
-          text `${findShown.number}` font="-exact-large-title" font-variant-numeric="tabular-nums" flex=1 aria-label=`Hymn ${findShown.number}` testId="drums-number"
-          button press=findPress("drumsOpen", 0) aria-label="Close" aria-pressed=true min-width=44 min-height=44 testId="drums-hash"
-            text "#" font="-exact-title3"
-        FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6)
-        FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10)
-        FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10)
-        button press=findPress("open", 0) appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 testId="drums-open"
-          :active
-            background-color = "pressed"
-            color = "onPressed"
-            -exact-press-scale = 0.97
-          text `Open ${findShown.number}` font-weight=600 text-align="center"
+    column position="relative" z-index=1 background-color="panel" border-width="line.panel" border-style="solid" border-color="edge"
+      border-radius=`${findPanelPlaces.detent / 2 + findPanelPlaces.pad}px` padding=`${findPanelPlaces.pad}px` gap=`${findPanelPlaces.rowGap}px`
+      overflow="hidden" testId="drums-panel"
+      text `${findShown.number}` aria-label=`Hymn ${findShown.number}` position="absolute" opacity=0 testId="drums-number"
+      row gap=`${findPanelPlaces.rowGap}px`
+        FindDrum(drum="hundreds", label="Hundreds", digit=findShown.hundreds, low=0, high=6, wraps=false)
+        FindDrum(drum="tens", label="Tens", digit=findShown.tens, low=-1, high=10, wraps=true)
+        FindDrum(drum="ones", label="Ones", digit=findShown.ones, low=-1, high=10, wraps=true)
+      button press=findPress("open", 0) appearance="none" aria-label=`Open ${findShown.number}` testId="drums-open"
+        min-height="size.target" border-radius="radius.pill" background-color="pill" color="onPill" display="flex" align-items="center" justify-content="center"
+        :active
+          background-color = "pressed"
+          color = "onPressed"
+          -exact-press-scale = 0.97
+        text "Open" font="type.strong"
 
+// A drum: a window of three stops, the digit at the notch in `chord` and
+// the one above and below it in `muted` (none past an end that does not
+// wrap), with the platform's adjustable control over it, its digit its
+// value, so VoiceOver and a reader's arrows turn it a step at a time.
 component FindDrum
   props
     drum: string
@@ -248,14 +338,31 @@ component FindDrum
     digit: number
     low: number
     high: number
+    wraps: bool
   inject
     findDial: action
+  resource findDrumPlaces = findPlaces() as shape FindPlaces
   view
-    row gap=12 align-items="center" flex-wrap="wrap"
-      text label flex="1 0 5.5rem"
-      text `${digit}` font-variant-numeric="tabular-nums" min-width="1.5rem" aria-hidden=true
-      input type="range" min=low max=high step=1 value=digit input=findDial(drum) aria-label=label
-        aria-valuetext=`${digit}` flex="1 1 8rem" min-width=0 testId=`drum-${drum}`
+    column flex="1 1 0px" min-width=0 position="relative" testId=`drum-face-${drum}`
+      for at in [-1, 0, 1] key=at
+        FindStop(digit=digit, at=at, wraps=wraps, high=high, detent=findDrumPlaces.detent)
+      input type="range" min=low max=high step=1 value=digit input=findDial(drum) aria-label=label aria-valuetext=`${digit}`
+        position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 testId=`drum-${drum}`
+
+// One stop of a drum, `at` stops from its notch: the digit there, which
+// wraps round the drum's ten (or none past its end).
+component FindStop
+  props
+    digit: number
+    at: number
+    wraps: bool
+    high: number
+    detent: number
+  view
+    row height=`${detent}px` align-items="center" justify-content="center" aria-hidden=true
+      if wraps or (digit + at >= 0 and digit + at < high + 1)
+        text `${wraps ? (digit + at + 10) % 10 : digit + at}` font="type.strong" font-variant-numeric="tabular-nums"
+          color=(at == 0 ? "chord" : "muted")
 
 // All at once: every hymn's number in one grid over the home list, which
 // stays where it stood beneath. A tile opens its hymn; Done returns to the
@@ -267,17 +374,22 @@ component FindTiles
     findWheel: action
     motionStill: bool
   view
-    column flex=1 min-height=0 testId="tiles"
+    column flex=1 min-height=0 background-color="ground" testId="tiles"
       animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-zoom-in duration.tiles-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-zoom-out duration.tiles-out ease-out both")
-      row align-items="center" padding="4px 16px"
-        text "All at once" flex=1 color="-exact-secondary-label"
-        button press=findPress("tilesDone", 0) min-height=44 testId="tiles-done"
-          text "Done"
+      row align-items="center" padding="space.s11 space.s8 space.s11 space.s16"
+        text "All at once" role="heading" aria-level=2 flex=1 font="type.strong" color="ink"
+        button press=findPress("tilesDone", 0) appearance="none" min-height="size.target" min-width="size.target" padding="0 space.s8" color="accent" testId="tiles-done"
+          :active
+            opacity = "opacity.pressed"
+          text "Done" font="type.strong"
       scroll id="find-tiles" flex=1 min-height=0 wheel=findWheel testId="find-tiles"
-        row flex-wrap="wrap" gap=6 padding=16
+        row flex-wrap="wrap" gap="space.s10" padding="0 space.s16 space.s16"
           for n in findTileList key=n
-            button press=findPress("tile", n) aria-label=`Hymn ${n}` min-width="2.75rem" min-height=44 testId=`tile-${n}`
-              text `${n}` font-variant-numeric="tabular-nums"
+            button press=findPress("tile", n) appearance="none" aria-label=`Hymn ${n}` min-width="size.target" min-height="size.target"
+              border-radius="radius.r12" background-color="soft" color="ink" testId=`tile-${n}`
+              :active
+                opacity = "opacity.pressed"
+              text `${n}` font="type.strong" font-variant-numeric="tabular-nums"
 
 // A found hymn's row: a hymn's row whose press opens the hymn as a found
 // hymn opens (`listOpening`).
@@ -288,19 +400,22 @@ component FoundRow
     star: bool
     open: action
   view
-    button press=open(number) testId=`hymn-${number}`
+    button press=open(number) appearance="none" testId=`hymn-${number}`
       HymnRowText(number=number, title=title, star=(star ? `star-${number}` : ""))
 
-// A hymn's row's words: its number, then its title, and a star when `star`
-// names one (its `testId`).
+// A hymn's row's words, as the current app draws a list's row
+// (src/reader/HymnList.native.tsx): its number in the accent, at least
+// `size.button` wide and set right, then its title, and a star in the
+// accent when `star` names one (its `testId`), on a row at least a target
+// tall.
 component HymnRowText
   props
     number: number
     title: string
     star: string
   view
-    row gap=12 flex=1 min-width=0 align-items="baseline"
-      text `${number}` font-variant-numeric="tabular-nums" min-width="2.5rem"
-      text title flex=1 min-width=0
+    row gap="space.s12" flex=1 min-width=0 min-height="size.target" padding="0 space.s16" align-items="center"
+      text `${number}` font="type.strong" font-variant-numeric="tabular-nums" min-width="size.button" text-align="right" color="accent"
+      text title flex=1 min-width=0 font="type.body" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
       if star != ""
-        image "symbol:star-fill" aria-label="Favourite" testId=star
+        image "symbol:star-fill" aria-label="Favourite" color="accent" testId=star
