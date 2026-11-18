@@ -63,14 +63,23 @@ export const breaksOf = (
   return rows;
 };
 
+type Pair = ChordsLine['words'][number]['boxes'][number];
+
+/** A pair's syllable as it is drawn: with a hyphen where its word goes on (`more`). */
+export const drawnText = (box: Pair, more: boolean): string => (more ? `${box.text}-` : box.text);
+
 /** A pair's width in characters: its syllable (with its hyphen) or its chord and the space after it, the wider. */
-export const pairWidth = (box: ChordsLine['words'][number]['boxes'][number]): number =>
-  Math.max(box.text.length, box.chord.length === 0 ? 0 : box.chord.length + 1);
+export const pairWidth = (box: Pair, more: boolean): number =>
+  Math.max(drawnText(box, more).length, box.chord.length === 0 ? 0 : box.chord.length + 1);
+
+/** Each pair's width in a word, its last with no hyphen. */
+export const wordWidths = (boxes: ReadonlyArray<Pair>): Array<number> =>
+  boxes.map((box, b) => pairWidth(box, b < boxes.length - 1));
 
 /** The rows of `line` on a page `width` characters wide, its words a character apart. */
 export const rowsOf = (line: ChordsLine, width: number): Array<Array<Place>> =>
   breaksOf(
-    line.words.map((word) => word.boxes.map(pairWidth)),
+    line.words.map((word) => wordWidths(word.boxes)),
     width,
     1,
   );

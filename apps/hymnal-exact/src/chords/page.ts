@@ -14,7 +14,7 @@
  * of the line, each from 1 (`line-<k>-<i>`, `chord-<k>-<i>-<j>`); a word
  * carries its first syllable's `j`, so its `b`th syllable (from 0) is
  * `at + b`. The answer is kept small, as the longest hymn's is hundreds of
- * syllables: a syllable is its text (a hyphen after it where its word goes
+ * syllables: a syllable is its text (its hyphen drawn where its word goes
  * on), its chords and its shape's code.
  */
 
@@ -39,8 +39,8 @@ import { canStep, moveOf } from './move.ts';
 import { chordsCode, keyCode } from './shape.ts';
 
 /**
- * A syllable with the chords over it: its text, with a hyphen where its
- * word goes on; `chord` "" where none changes; `grip` its chords' part of
+ * A syllable with the chords over it: its text (the view draws the hyphen
+ * after it where its word goes on); `chord` "" where none changes; `grip` its chords' part of
  * the shape's route (the page's `code`, `_`, then this), "" where it has none.
  */
 export interface ChordsBox {
@@ -69,6 +69,8 @@ export interface ChordsPart {
   readonly key: string;
   readonly label: string;
   readonly text: string;
+  /** Whether the part is the refrain, drawn set in and sloped. */
+  readonly refrain: boolean;
   readonly lines: Array<ChordsLine>;
 }
 
@@ -119,8 +121,8 @@ const lineOf = (words: ReadonlyArray<Word>, at: number, key: Key): ChordsLine =>
       syllables += word.length;
       return {
         at: first,
-        boxes: word.map((box, b) => ({
-          text: b < word.length - 1 ? `${box.text}-` : box.text,
+        boxes: word.map((box) => ({
+          text: box.text,
           chord: box.chords.map((chord) => format(chord, key)).join(' '),
           grip: chordsCode(box.chords, key),
         })),
@@ -149,10 +151,18 @@ const chordedPage = (book: Book, number: number, chords: HymnChords, move: Move)
     capoUp: canStep(move, 'capo-up'),
     parts: page.parts.map((part, k) => {
       const section = sections[k];
-      if (section === undefined || section._tag === 'Words') return { ...part, lines: [] };
+      if (section === undefined || section._tag === 'Words')
+        return {
+          key: part.key,
+          label: part.label,
+          text: part.text,
+          refrain: part.refrain,
+          lines: [],
+        };
       return {
         key: part.key,
         label: part.label,
+        refrain: part.refrain,
         text: '',
         lines: section.lines.map((words, i) => lineOf(words, i + 1, played)),
       };
