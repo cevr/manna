@@ -31,7 +31,16 @@
 import { oneAtATime, makeQueue } from '../garden/writes';
 import type { FileStorage } from '@manna/exact-kit/storage';
 import { offsetAt } from '@manna/heartseed/day';
-import { cueIn, shownAllCap, stageOf, type GardenView } from '@manna/heartseed/garden';
+import {
+  cueIn,
+  shownAllCap,
+  stageOf,
+  withHelp,
+  type GardenView,
+  type ReadGarden,
+  type Stage,
+} from '@manna/heartseed/garden';
+import type { Help } from '@manna/heartseed/sayit';
 import { tendedOf } from '@manna/heartseed/home/grown';
 import { countsOf, type Item, type Minutes, type TextPiece } from '@manna/heartseed/session';
 import { shownOf, type Shown } from '@manna/heartseed/session/run';
@@ -99,7 +108,40 @@ export interface SessionShown {
   recorded: number;
   grown: SessionGrown[];
   wire: SessionWire;
+  stage: string;
+  stageLine: string;
 }
+
+/** Each stage as Today's stage line shows it, as the current Heartseed's `STAGE_NAMES` does. */
+const STAGE_LINES: Readonly<Record<Stage, string>> = {
+  seed: 'A seed',
+  blade: 'A blade',
+  ear: 'An ear',
+  'full corn': 'Full corn',
+};
+
+/** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, and the line Today shows of it; none for an unread garden, which claims no stage. */
+export const stageShown = (
+  garden: Option.Option<ReadGarden>,
+  reference: string,
+  help: Option.Option<Help>,
+): { readonly stage: string; readonly stageLine: string } =>
+  Option.match(garden, {
+    onNone: () => ({ stage: '', stageLine: '' }),
+    onSome: (read) => {
+      const laid = Option.match(
+        Option.filter(help, (taken) => taken.reference === reference),
+        { onNone: () => read, onSome: (taken) => withHelp(read, taken) },
+      );
+      return Option.match(Option.fromUndefinedOr(laid.plants.get(reference)), {
+        onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet' }),
+        onSome: (plant) => {
+          const stage = stageOf(plant);
+          return { stage, stageLine: STAGE_LINES[stage] };
+        },
+      });
+    },
+  });
 
 /** Today's screen: the recital's, and the session's around it. */
 export interface TodayScreen extends TodayView {
@@ -366,6 +408,7 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
             })),
         }),
         wire,
+        ...stageShown(read, state.passage.reference, state.help),
       },
     };
   };

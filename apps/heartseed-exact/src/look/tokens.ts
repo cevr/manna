@@ -111,6 +111,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('space.s2', [PLOT, 'names', 'gap']),
   length('space.s4', [PLOT, 'plots', 'gap']),
   length('space.s6', [PLOT, 'pill', 'gap']),
+  length('space.s7', [DRAW, 'verse', 'columnGap']),
   length('space.s8', [ABOUT, 'content', 'paddingTop'], [ABOUT, 'bar', 'paddingBottom']),
   length('space.s10', [INDEX, 'passage', 'gap']),
   length('space.s12', [FIELD, 'top', 'gap']),
@@ -131,6 +132,10 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('size.row', [FIELD, 'endRow', 'minHeight']),
   length('size.row-tall', [LIST, 'row', 'minHeight']),
   length('size.button', [DRAW, 'button', 'width'], [DRAW, 'button', 'height']),
+  length('size.dot', [DRAW, 'dot', 'width'], [DRAW, 'dot', 'height']),
+  length('size.mark', [DRAW, 'mark', 'width'], [DRAW, 'stageRow', 'minHeight']),
+  length('size.slot', [DRAW, 'slot', 'height'], [DRAW, 'unsaid', 'lineHeight']),
+  length('size.mark-tall', [DRAW, 'mark', 'height']),
 
   measure('hairline')('line.hair', [ABOUT, 'row', 'borderTopWidth']),
   length('line.edge', [PLOT, 'pill', 'borderWidth'], [SETTINGS, 'button', 'borderWidth']),

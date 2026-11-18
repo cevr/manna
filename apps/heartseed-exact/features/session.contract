@@ -46,13 +46,17 @@ shape SessionShown
   recorded: number
   grown: SessionGrown[]
   wire: SessionWire
+  stage: string
+  stageLine: string
 
+// The counts line, as the current Today's `Counts`: in ink, a little apart
+// from the verse under it.
 component SessionCounts
   props
     session: SessionShown
   view
     if session.mode == "run" and session.counts != "" and not session.ended and not session.nothing
-      text session.counts color="-exact-secondary-label" testId="counts"
+      text session.counts font="type.label" color="hs.ink" margin-bottom="space.s12" testId="counts"
 
 // The run's end's entrances: the n-th grown row (and "Back to your field"
 // after the last) enters after `sessionEndDelay(n)` ms, the first
@@ -68,19 +72,19 @@ component SessionEnd
     home: action
     still: bool
   view
-    column gap=12 testId="run-end"
-      text "The field is tended" role="heading" aria-level=2 opacity=1 animation=(still ? "none" : "hs-rise duration.rise easing.out both") testId="run-end-heading"
+    column gap="space.s16" padding-top="space.s8" padding-bottom="space.s8" testId="run-end"
+      text "The field is tended" role="heading" aria-level=2 font="type.strong" color="hs.ink" opacity=1 animation=(still ? "none" : "hs-rise duration.rise easing.out both") testId="run-end-heading"
       for g, i in session.grown key=g.slug
-        text `${g.reference}, ${g.stage}` opacity=1 animation=((still or not sessionEndEnters(i)) ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(i)}ms both`) testId=`grown-${g.slug}`
+        text `${g.reference}, ${g.stage}` font="type.body" color="hs.ink" min-height="size.target" opacity=1 animation=((still or not sessionEndEnters(i)) ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(i)}ms both`) testId=`grown-${g.slug}`
       column opacity=1 animation=(still ? "none" : `hs-rise duration.rise easing.out ${sessionEndDelay(session.grown.length)}ms both`) testId="to-home-place"
-        button press=home buttonStyle="filled" testId="to-home"
+        button press=home appearance="none" align-self="flex-start" display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink" color="hs.on-ink" font="type.label" -exact-press-opacity="opacity.pressed" testId="to-home"
           text "Back to your field"
 
 component SessionNothing
   props
     add: action
   view
-    column gap=12
-      text "Nothing is planted yet." testId="nothing"
-      button press=add buttonStyle="filled" testId="today-add"
+    column gap="space.s12"
+      text "Nothing is planted yet." font="type.body" color="hs.ink" testId="nothing"
+      button press=add appearance="none" align-self="flex-start" display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink" color="hs.on-ink" font="type.label" -exact-press-opacity="opacity.pressed" testId="today-add"
         text "Add verses"

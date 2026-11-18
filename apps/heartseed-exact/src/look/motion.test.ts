@@ -284,7 +284,14 @@ describe('the Contract names its timings by token', () => {
 
   it('every press scales to 0.97', () => {
     const scales = [...contracts.values()].flatMap((text) =>
-      [...text.matchAll(/-exact-press-scale=(\S+)/gu)].map((match) => Number(match[1])),
+      [...text.matchAll(/-exact-press-scale=(\S+)/gu)].map((match) => {
+        const written = (match[1] ?? '').replaceAll('"', '');
+        const typed = new RegExp(
+          `^\\s+${written.replaceAll('.', '\\.')}:\\s*number\\s*=\\s*(\\S+)`,
+          'mu',
+        );
+        return Number(typed.exec(readBrand())?.[1] ?? written);
+      }),
     );
     expect(scales.length).toBeGreaterThanOrEqual(2);
     expect(scales.filter((scale) => scale !== PRESS_SCALE)).toEqual([]);

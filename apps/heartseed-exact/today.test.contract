@@ -9,13 +9,17 @@ test "Today shows the passage under no cue, every word a hidden slot"
   expect text "reference" == "Isaiah 41:10"
   expect state today.cue == "none"
   expect state today.words.length == 37
-  expect text "word-0" == "____"
+  expect state today.words.0.shown == "____"
+  expect state today.words.0.face == "slot"
   expect state today.words.0.label == "Word 1"
   expect state today.words.0.peekable == true
   expect state today.cap == 4
   expect enabled "hear"
   expect enabled "say"
   expect enabled "show-all"
+  expect text "hear" == "Listen"
+  expect text "say" == "Say it"
+  expect text "show-all" == "Show all"
   expect tree missing "last"
   expect tree missing "result"
   expect tree missing "refused"
@@ -35,8 +39,9 @@ test "First letters: a tap on a word shows it a moment, and the try counts as Ha
   at "/cue/initials"
   clock settle
   expect state today.cue == "initials"
-  expect text "word-0" == "F"
-  expect text "word-3" == "f"
+  expect text "face-0-letter" == "F"
+  expect text "face-3-letter" == "f"
+  expect state today.words.3.face == "letters"
   expect state today.words.3.label == "f"
   tap "word-3"
   clock settle
@@ -49,7 +54,7 @@ test "First letters: a tap on a word shows it a moment, and the try counts as Ha
   expect text "word-3" == "for"
   clock +200
   clock settle
-  expect text "word-3" == "f"
+  expect text "face-3-letter" == "f"
   expect state today.peeking == -1
   expect state today.cap == 2
   expect no failures

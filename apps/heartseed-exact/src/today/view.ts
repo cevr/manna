@@ -27,10 +27,21 @@ import {
   type TodayState,
 } from './step';
 
+/**
+ * How a word is drawn, as the current Heartseed's `Word` and `Unsaid` draw
+ * it: its text, its first letter with the rest laid out unseen, an empty
+ * slot its width, or a missed word's mark.
+ */
+export type WordFace = 'text' | 'letters' | 'slot' | 'mark';
+
 interface WordView {
   readonly index: number;
   readonly text: string;
   readonly shown: string;
+  readonly face: WordFace;
+  readonly head: string;
+  readonly letter: string;
+  readonly tail: string;
   readonly label: string;
   readonly silent: boolean;
   readonly lit: boolean;
@@ -177,6 +188,14 @@ const faceOf = (state: TodayState, text: string, index: number, shows: boolean) 
   return { shown: hiddenOf(text, state.cue), label: hiddenLabel(text, index, state.cue) };
 };
 
+/** How a word is drawn: a missed word as its mark, a word shown as its text, else as the cue hides it. */
+const drawnAs = (state: TodayState, shows: boolean, mark: string): WordFace => {
+  if (mark === 'miss') return 'mark';
+  if (shows) return 'text';
+  if (state.cue === 'initials') return 'letters';
+  return 'slot';
+};
+
 const wordOf = (
   state: TodayState,
   marks: readonly Mark[],
@@ -186,10 +205,15 @@ const wordOf = (
   const mark = markOf(state, marks, index);
   const shows = showsText(state, index, mark);
   const peekable = canPeek(state);
+  const letters = lettersOf(text);
   return {
     index,
     text,
     ...faceOf(state, text, index, shows),
+    face: drawnAs(state, shows, mark),
+    head: letters.before,
+    letter: letters.cue,
+    tail: letters.after,
     silent: !shows && !peekable && state.cue === 'none',
     lit: index < state.reached,
     mark,

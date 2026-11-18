@@ -57,6 +57,7 @@ theme
   space.s2: length = 2px
   space.s4: length = 4px
   space.s6: length = 6px
+  space.s7: length = 7px
   space.s8: length = 8px
   space.s10: length = 10px
   space.s12: length = 12px
@@ -75,6 +76,10 @@ theme
   size.row: length = 52px
   size.row-tall: length = 56px
   size.button: length = 132px
+  size.dot: length = 8px
+  size.mark: length = 28px
+  size.slot: length = 30px
+  size.mark-tall: length = 36px
   line.hair: length = -exact-hairline
   line.edge: length = 1.5px
   line.slot: length = 2px
