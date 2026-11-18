@@ -15,6 +15,7 @@ import { existsSync, lstatSync, mkdirSync, readlinkSync, symlinkSync, unlinkSync
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { writeHomeIcons } from './home-icons';
 import { writeKjv } from './kjv';
 import { writeLicences } from './licences';
 
@@ -45,3 +46,4 @@ if (problems.length > 0) {
 
 writeLicences();
 writeKjv();
+writeHomeIcons();

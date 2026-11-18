@@ -43,7 +43,7 @@ test "A list is a row of plants, with no icon and no glyph"
   back
   clock data
   clock settle
-  expect text "row-title-passage-0-43-3-16-18" == "John 3:16-18"
+  expect text "row-name-passage-0-43-3-16-18" == "John 3:16-18"
   expect text "row-caption-passage-0-43-3-16-18" == "3 verses · 1 ready today"
   expect tree has "plant-John-3-16"
   expect tree has "plant-John-3-17"

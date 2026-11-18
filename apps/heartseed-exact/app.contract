@@ -105,7 +105,7 @@ component HeartseedExact
                 if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == readTopOf(t.stack)
                   Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday)
                 if e.name == "list"
-                  ListPage(list=listShown, asking=listAsking, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill, chapter=gotoListPlace.name, read=gotoReadList)
+                  ListPage(list=listShown, asking=listAsking, scheme=homeScheme, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill, chapter=gotoListPlace.name, read=gotoReadList)
                 if e.name == "verses"
                   YourVerses(garden=garden, line=gardenLine, answer=gardenAnswer, driven=gardenDriven.on, plant=gardenPlantRange, remove=gardenRemoveIt, good=gardenRecallGood, peeked=gardenRecallPeeked, shown=gardenRecallShown, back=gardenMoveBack, add=addOpenIt)
                   // hs-commentary: a fixture launch's probe, which tools/drive-commentary.ts taps (the Read tab asks on its own first showing).
@@ -117,7 +117,7 @@ component HeartseedExact
                     if gardenDriven.on
                       ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
-                  Home(home=homeShown, asking=homeAsking, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
+                  Home(home=homeShown, asking=homeAsking, scheme=homeScheme, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
             for e in t.stack.filter(x => x.name.startsWith("settings")) key=e.id
               if e.name == "settings"
                 SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, done=settingsDone)

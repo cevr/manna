@@ -1,15 +1,23 @@
-// Home (`/`): the greeting by the reader's local hour, the Today card, a
-// row per list, the single verses under the lists, and Add a list at the
-// foot. What it draws is `homeRead`'s answer (src/home/sources.ts): the
-// current Heartseed's rules over the garden one call reads, the session's
-// view (`today.session.wire`) and the call's time. A row is its title
-// (which opens the list's page), its caption and its plants; a plant is a
-// button named by its reference and stage, drawn as the current home draws
-// it: a gold dot when the plan holds it open, over a dash in ink once sown
-// and in soil before. No icon beside a list's name, no stage glyph and no
-// legend (owner, hsrows). An ask is a state of its row (`homeAsking`, the
-// id its Yes removes; src/home/asks.ts), opened by Remove, closed by any
-// other tap.
+// Home (`/`), drawn as the current Heartseed draws its field
+// (src/field/screen.tsx, card.tsx, plot.tsx, singles.tsx): fixed above the
+// scroll, the greeting by the reader's local hour with its sun or moon and
+// the Today card; in the scroll, `Your field` with the days sown and the
+// harvest, the label `Lists`, a row per list, the single verses under the
+// lists, and Add a list (or the limit line) at the foot. The navigation
+// bar and its gear stand for the current app's own header (owner, q2), so
+// home draws no Settings row at its foot. What it draws is `homeRead`'s
+// answer (src/home/sources.ts): the current Heartseed's rules over the
+// garden one call reads, the session's view (`today.session.wire`) and the
+// call's time. A row is its title and caption as one button with a
+// chevron (which opens the list's page), then its plants and its furrow; a
+// plant is a button named by its reference and stage, drawn as the current
+// home draws it: a gold dot when the plan holds it open, over a dash in
+// ink once sown and in soil before. No icon beside a list's name, no stage
+// glyph and no legend (owner, hsrows). An ask is a state of its row
+// (`homeAsking`, the id its Yes removes; src/home/asks.ts), opened by
+// Remove, closed by any other tap. Every measure is a token of app.forma;
+// the icons are the current app's own pictures (`assets/home`, a link to
+// apps/heartseed/assets/home), each in the scheme shown.
 use GardenVerse, GardenShown from "./garden.contract"
 use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
@@ -47,6 +55,9 @@ shape HomeCard
 shape HomeShown
   read: bool
   greeting: string
+  greetingIcon: string
+  sown: string
+  harvest: string
   card: HomeCard
   rows: HomeRow[]
   singles: HomeSingle[]
@@ -54,14 +65,22 @@ shape HomeShown
   addsList: bool
   limitLine: string
 
+shape HomeMedia
+  prefersColorScheme: string
+
 // A verse as the mark of the garden home last read: a change to any asks
 // home again.
 fn homeVerseMark(v: GardenVerse): string = `${v.slug}.${v.recalls}.${v.stage}.${v.due}`
 
 fn homeMarkOf(g: GardenShown): string = `${g.read}|${g.lists.map(l => `${l.id}:${l.verses.map(v => homeVerseMark(v)).join(",")}`).join(";")}|${g.singles.map(v => homeVerseMark(v)).join(",")}`
 
+// The current app's picture `name` in the scheme shown, as its `Icon` picks it.
+fn homeIconOf(name: string, scheme: string): string = `assets/home/${name}-${scheme == "dark" ? "dark" : "light"}.png`
+
 members HeartseedExact
   state homeAsking = ""
+  resource homeMedia = exactViewport() as shape HomeMedia
+  derive homeScheme = homeMedia.prefersColorScheme
   resource homeShown = homeRead(gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape HomeShown else empty()
   action homeBegin
     homeAsking = ""
@@ -85,35 +104,55 @@ members HeartseedExact
   action homeNo
     homeAsking = ""
 
-// A plant: one button over its drawing, named by its reference and stage.
+// A plant's drawing, hidden from the screen reader: the gold dot when
+// ready (else its room), then the dash, ink once sown and soil before.
 component HomePlantMark
   props
     ready: bool
     sown: bool
   view
     if ready
-      column width=8 height=8 border-radius=4 background-color="hs.sun" aria-hidden=true
+      column width="size.dot" height="size.dot" border-radius="radius.r4" background-color="hs.sun" aria-hidden=true
     else
-      column width=8 height=8 aria-hidden=true
+      column width="size.dot" height="size.dot" aria-hidden=true
     if sown
-      column width=24 height=3 margin="14px 0" border-radius=2 background-color="hs.ink" aria-hidden=true
+      column width="size.dash" height="line.dash" margin-top="space.s14" margin-bottom="space.s14" border-radius="radius.dash" background-color="hs.ink" aria-hidden=true
     else
-      column width=24 height=3 margin="14px 0" border-radius=2 background-color="hs.soil" aria-hidden=true
+      column width="size.dash" height="line.dash" margin-top="space.s14" margin-bottom="space.s14" border-radius="radius.dash" background-color="hs.soil" aria-hidden=true
 
+// A plant: one button over its drawing, named by its reference and stage,
+// filled `hearing` while pressed.
 component HomePlantButton
   props
     plant: HomePlant
     start: action
   view
-    column role="button" press=start(plant.slug) aria-label=plant.label width=48 min-height=44 align-items="center" gap=2 padding="4px 0" border-radius=12 -exact-press-scale=0.97 testId=`plant-${plant.id}`
+    column role="button" press=start(plant.slug) aria-label=plant.label width="size.plot" min-height="size.target" align-items="center" gap="space.s2" padding-top="space.s4" padding-bottom="space.s4" border-radius="radius.r12" testId=`plant-${plant.id}`
       :active
         background-color = "hs.hearing"
       HomePlantMark(ready=plant.ready, sown=plant.sown)
+
+// A pill of the field (the current app's `Control`): outlined in ink, at
+// least 44 pt tall, named `name`, its words `label` after an optional
+// picture.
+component HomePill
+  props
+    name: string
+    label: string
+    press: action
+    icon: string
+    id: string
+  view
+    button press=press aria-label=name display="flex" flex-direction="row" align-self="flex-start" align-items="center" justify-content="center" gap="space.s6" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
+      if icon != ""
+        image icon width="glyph.control" height="glyph.control" aria-hidden=true
+      text label font="type.label" color="hs.ink"
 
 component Home
   props
     home: HomeShown
     asking: string
+    scheme: string
     begin: action
     start: action
     open: action
@@ -123,58 +162,69 @@ component Home
     no: action
     still: bool
   view
-    scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
-      column gap=20 padding=20 max-width="40rem" testId="home"
-        text home.greeting role="heading" aria-level=2 testId="greeting"
-        if home.read
-          column gap=8 padding=16 border-radius=16 background-color="hs.card" testId="today-card"
+    column flex=1 min-height=0 testId="home"
+      column gap="space.s12" padding-left="space.page" padding-right="space.page" padding-bottom="space.s8"
+        row align-items="center" gap="space.s8" testId="greeting"
+          image homeIconOf(home.greetingIcon, scheme) width="glyph.greeting" height="glyph.greeting" aria-hidden=true
+          text home.greeting role="heading" aria-level=2 font="type.label" color="hs.sun"
+        if home.read and (home.card.line != "" or home.card.action != "none")
+          column gap="space.s8" padding="space.s16" border-radius="radius.r20" background-color="hs.card" testId="today-card"
             if home.card.line != ""
-              text home.card.line font="-exact-headline" testId="today-line"
+              text home.card.line font="type.strong" color="hs.ink" testId="today-line"
             if home.card.parts != ""
-              text home.card.parts color="-exact-secondary-label" testId="today-parts"
+              text home.card.parts font="type.small" color="hs.ink" testId="today-parts"
             if home.card.action == "start"
-              button press=begin buttonStyle="filled" testId="today-action"
-                text home.card.label
+              button press=begin aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
+                text home.card.label font="type.label" color="hs.on-ink"
             else if home.card.action == "practice"
-              button press=start(home.card.slug) buttonStyle="filled" testId="today-action"
-                text home.card.label
-        for r in home.rows key=r.id
-          column gap=8 testId=`row-${r.slug}`
-            column role="button" press=open(r.slug) aria-label=`Open ${r.title}` min-height=44 justify-content="center" border-radius=12 -exact-press-scale=0.97 testId=`row-title-${r.slug}`
-              :active
-                background-color = "hs.hearing"
-              text r.title font="-exact-headline"
-            text r.caption font="-exact-footnote" color="-exact-secondary-label" testId=`row-caption-${r.slug}`
-            row flex-wrap="wrap" gap=4
-              for p in r.plants key=p.id
-                HomePlantButton(plant=p, start=start)
-            column height=2 border-radius=1 background-color="hs.furrow" aria-hidden=true
-        if home.singlesShown
-          column gap=8 testId="singles"
-            text "Single verses" role="heading" aria-level=3
-            for s in home.singles key=s.slug
-              column gap=8 -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
-                row gap=8 align-items="center" flex-wrap="wrap"
-                  row role="button" press=start(s.slug) aria-label=s.label flex-grow=1 flex-basis="12rem" min-height=44 align-items="center" gap=12 border-radius=12 testId=`single-button-${s.slug}`
-                    :active
-                      background-color = "hs.hearing"
-                    column width=48 align-items="center" gap=2 aria-hidden=true
-                      HomePlantMark(ready=s.ready, sown=s.sown)
-                    text s.reference flex=1 testId=`single-${s.slug}`
-                  if s.removeId != "" and asking != s.removeId
-                    button press=ask(s.removeId) aria-label=`Remove ${s.reference}` buttonStyle="bordered" testId=`single-remove-${s.slug}`
-                      text "Remove"
-                if s.removeId != "" and asking == s.removeId
-                  column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
-                    text s.ask color="-exact-secondary-label"
-                    row gap=8 flex-wrap="wrap"
-                      button press=yes buttonStyle="bordered" testId="ask-yes"
-                        text "Remove"
-                      button press=no buttonStyle="bordered" testId="ask-no"
-                        text "Keep"
-        if home.read and home.addsList
-          column -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
-            button press=add buttonStyle="bordered" testId="add-list"
-              text "Add a list"
-        if home.limitLine != ""
-          text home.limitLine color="-exact-secondary-label" -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId="limit-line"
+              button press=start(home.card.slug) aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
+                text home.card.label font="type.label" color="hs.on-ink"
+      scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
+        column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
+          if home.read
+            column gap="space.s6"
+              text "Your field" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="field-title"
+              text home.sown font="type.strong" color="hs.ink" testId="sown"
+              text home.harvest font="type.strong" color="hs.ink" testId="harvest"
+            text "Lists" font="type.caption-strong" color="hs.ink" testId="lists-label"
+          column gap="space.s16"
+            for r in home.rows key=r.id
+              column gap="space.s8" testId=`row-${r.slug}`
+                row role="button" press=open(r.slug) aria-label=`Open ${r.title}` align-items="center" gap="space.s8" min-height="size.target" border-radius="radius.r12" testId=`row-title-${r.slug}`
+                  :active
+                    background-color = "hs.hearing"
+                  column flex=1 gap="space.s2"
+                    text r.title font="type.strong" color="hs.ink" testId=`row-name-${r.slug}`
+                    text r.caption font="type.caption" color="hs.quiet" testId=`row-caption-${r.slug}`
+                  text "›" font="type.chevron" color="hs.quiet" aria-hidden=true
+                row flex-wrap="wrap" gap="space.s4"
+                  for p in r.plants key=p.id
+                    HomePlantButton(plant=p, start=start)
+                column height="line.furrow" border-radius="radius.r1" background-color="hs.furrow" aria-hidden=true
+            if home.singlesShown
+              column gap="space.s4" testId="singles"
+                text "Single verses" font="type.caption-strong" color="hs.ink"
+                for s in home.singles key=s.slug
+                  column gap="space.s6" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
+                    row align-items="center" gap="space.s8"
+                      row role="button" press=start(s.slug) aria-label=s.label flex=1 min-height="size.target" align-items="center" gap="space.s10" padding-left="space.s4" padding-right="space.s4" border-radius="radius.r12" testId=`single-button-${s.slug}`
+                        :active
+                          background-color = "hs.hearing"
+                        column width="size.drawing" align-items="center" gap="space.s2" aria-hidden=true
+                          HomePlantMark(ready=s.ready, sown=s.sown)
+                        text s.reference font="type.strong" color="hs.ink" testId=`single-${s.slug}`
+                      if s.removeId != "" and asking != s.removeId
+                        button press=ask(s.removeId) aria-label=`Remove ${s.reference}` display="flex" justify-content="center" min-height="size.target" padding-left="space.s12" padding-right="space.s12" border-radius="radius.r12" -exact-press-opacity="opacity.pressed" testId=`single-remove-${s.slug}`
+                          text "Remove" font="type.label" color="hs.miss"
+                    if s.removeId != "" and asking == s.removeId
+                      column gap="space.s8" padding-left="space.ask" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
+                        text s.ask font="type.note-strong" color="hs.ink"
+                        row gap="space.s8"
+                          HomePill(name="Remove", label="Remove", press=yes, icon="", id="ask-yes")
+                          HomePill(name="Keep", label="Keep", press=no, icon="", id="ask-no")
+          if home.read and (home.addsList or home.limitLine != "")
+            column gap="space.s8" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
+              if home.addsList
+                HomePill(name="Add a list", label="Add a list", press=add, icon=homeIconOf("add", scheme), id="add-list")
+              if home.limitLine != ""
+                text home.limitLine font="type.note" color="hs.ink" testId="limit-line"

@@ -19,8 +19,10 @@ import { listCaptionOf, listLineOf, listStartOf, type ListStart } from '@manna/h
 import { passageReference } from '@manna/heartseed/passages';
 import { Match, Option } from 'effect';
 
+import { startOf } from '@manna/heartseed/home/start';
+
 import { plantIn, slugOf, verseIn, type At, type GardenVerse } from '../garden/view';
-import { groundOf, type HomeIn } from '../home/home';
+import { groundOf, type Ground, type HomeIn } from '../home/home';
 
 /** Each stage as the current list page says it. */
 export const STAGE_WORDS: Readonly<Record<Stage | 'not planted', string>> = {
@@ -31,7 +33,21 @@ export const STAGE_WORDS: Readonly<Record<Stage | 'not planted', string>> = {
   'not planted': 'Not planted yet',
 };
 
-/** One verse of the page: its spoken name, its stage and due in words, and the stage Move back takes it to (empty when it cannot move back). */
+/** The icon each stage is drawn with on a list's page, as the current list page draws it (its `DRAWN`): full corn as `corn`. */
+export const DRAWN: Readonly<Record<Stage, string>> = {
+  seed: 'seed',
+  blade: 'blade',
+  ear: 'ear',
+  'full corn': 'corn',
+};
+
+/** A row's stage in words, then ` · ready today` when the plan holds its verse open, as the current list page writes it. */
+export const stageLineOf = (stage: string, ready: boolean) => {
+  if (ready) return `${stage} · ready today`;
+  return stage;
+};
+
+/** One verse of the page: its spoken name, its stage and due in words, its stage's icon (empty before it is planted), whether a tap starts it, and the stage Move back takes it to (empty when it cannot move back). */
 export interface ListVerse {
   reference: string;
   slug: string;
@@ -39,6 +55,9 @@ export interface ListVerse {
   ready: boolean;
   sown: boolean;
   stage: string;
+  stageLine: string;
+  drawn: string;
+  starts: boolean;
   due: string;
   backTo: string;
   backAsk: string;
@@ -51,6 +70,8 @@ export interface ListShown {
   id: string;
   slug: string;
   title: string;
+  /** The list's icon beside its title, as the current list page draws it (the current app's `iconOf`). */
+  icon: string;
   caption: string;
   verses: ListVerse[];
   start: string;
@@ -67,6 +88,7 @@ const NONE: ListShown = {
   id: '',
   slug: '',
   title: '',
+  icon: '',
   caption: '',
   verses: [],
   start: 'none',
@@ -115,23 +137,27 @@ export const backAskOf = (reference: string, to: Stage) =>
   `Move ${reference} back to ${STAGE_WORDS[to].toLowerCase()}?`;
 
 const verseOf = (
-  input: HomeIn,
+  ground: Ground,
   reference: string,
   at: At,
   ready: ReadonlySet<string>,
   label: string,
 ): ListVerse => {
-  const { garden } = input.held;
+  const { garden } = ground.held;
   const shown = verseIn(garden, reference, at);
   const stage = Option.map(plantIn(garden, reference), stageOf);
   const to = Option.flatMap(stage, backOf);
+  const words = STAGE_WORDS[Option.getOrElse(stage, (): Stage | 'not planted' => 'not planted')];
   return {
     reference,
     slug: shown.slug,
     label,
     ready: ready.has(reference),
     sown: Option.isSome(stage),
-    stage: STAGE_WORDS[Option.getOrElse(stage, (): Stage | 'not planted' => 'not planted')],
+    stage: words,
+    stageLine: stageLineOf(words, ready.has(reference)),
+    drawn: Option.match(stage, { onNone: () => '', onSome: (each) => DRAWN[each] }),
+    starts: Option.isSome(startOf(ground.view, ground.garden, reference)),
     due: dueText(shown),
     backTo: Option.match(to, { onNone: () => '', onSome: (each) => STAGE_WORDS[each] }),
     backAsk: Option.match(to, { onNone: () => '', onSome: (each) => backAskOf(reference, each) }),
@@ -159,9 +185,10 @@ export const listPageOf = (input: HomeIn, slug: string): ListShown =>
               id: furrow.id,
               slug,
               title: furrow.title,
+              icon: furrow.icon,
               caption: listCaptionOf(furrow.plants),
               verses: furrow.plants.map((plant) =>
-                verseOf(input, plant.reference, input.at, ready, plant.label),
+                verseOf(ground, plant.reference, input.at, ready, plant.label),
               ),
               ...startShown(start),
               startLine: Option.getOrElse(listLineOf(start), () => ''),
