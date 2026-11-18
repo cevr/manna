@@ -135,14 +135,15 @@ const expectDrawn = (name: string, reply: unknown, scheme: Scheme, role: Role) =
 };
 
 /**
- * Two points at the screen's trailing edge, halfway down and a little
- * lower: inside every screen's padding, clear of its words and bars. A
- * list's row separator, one point high, can lie under one of them, never
- * both.
+ * Two points at the screen's trailing edge, seven tenths down and a little
+ * lower: inside every screen's padding, clear of its words and bars, and
+ * below the half-height sheet's Done, so the web's pointer left there after
+ * closing the sheet hovers no row they read. A list's row separator, one
+ * point high, can lie under one of them, never both.
  */
 const EDGES = [
-  { x: 0.985, y: 0.55 },
-  { x: 0.985, y: 0.56 },
+  { x: 0.985, y: 0.7 },
+  { x: 0.985, y: 0.71 },
 ];
 
 /** Checks the colour painted at one of `EDGES` in the shot `name` is the brand's `role`. */
