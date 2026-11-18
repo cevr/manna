@@ -7,8 +7,8 @@
 // none the current app's words for it. The find bar stands at its foot, and
 // its results take the list's place while its search is open here
 // (features/find.contract).
-use HymnRow, ListBarRoom, RecentView from "./list.contract"
-use PlayerView from "./player.contract"
+use HymnRow, RecentView from "./list.contract"
+use PlayerBarRoom from "./player.contract"
 use FindBar, FindView, findSearchingAt from "./find.contract"
 
 shape RecentList
@@ -35,7 +35,6 @@ component RecentScreen
     recent: RecentView
     favourites: number[]
   inject
-    playerShown: PlayerView
     findShown: FindView
   view
     column navigationKey=`${entry.id}` navigationScroll="recent-list" position="absolute" inset=0
@@ -54,4 +53,4 @@ component RecentScreen
             for r in recent.all key=r.number
               HymnRow(number=r.number, title=r.title, id=`recent-${r.number}`, star=(favourites.includes(r.number) ? `recent-star-${r.number}` : ""), gutter=false)
       FindBar(entry=entry, results=true)
-      ListBarRoom(shown=playerShown.bar.shown)
+      PlayerBarRoom(id="bar-room-recent")

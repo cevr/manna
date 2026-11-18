@@ -1,6 +1,7 @@
 // The home list, as the current app's home: its own title row and gear (no
-// navigation bar), the tab row, and the list of the tab in use, and the
-// find bar at its foot. The bar's search over every hymn (app.ts `hymnRows`,
+// navigation bar) and the tab row, scrolling away above the list of the tab
+// in use, whose group headers stay at its top, and the find bar at its
+// foot. The bar's search over every hymn (app.ts `hymnRows`,
 // `listTabRows`; src/list/rows.ts, src/home/tabs.ts) draws its results in
 // the list's place while it is open here with words in its box
 // (features/find.contract). Sections is every hymn under the hymnal's
@@ -9,7 +10,7 @@
 // (`listOpening`). All at once, the tiles, lies over the list, which stays
 // built where it stood beneath; a group's header is drawn in the muted
 // role.
-use PlayerView from "./player.contract"
+use PlayerBarRoom from "./player.contract"
 use FindBar, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
 
 shape TabGroup
@@ -72,38 +73,31 @@ component HymnList
     favourites: number[]
     open: action
   inject
-    playerShown: PlayerView
     findShown: FindView
     findWheel: action
-    settingsGear: action
   view
     column navigationKey=`${entry.id}` navigationBar="none" navigationScroll="hymn-list" position="absolute" inset=0
+      -exact-safe-area="top" padding-top="var(--exact-safe-area-inset-top)"
       display="flex" flex-direction="column" background-color="ground"
-      row align-items="center" padding-left="space.s16" padding-right="space.s8" flex-shrink=0 testId="title-row"
-        text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" line-clamp=1 testId="title"
-        button press=settingsGear aria-label="Settings" appearance="none" width="size.target" height="size.target" display="flex" align-items="center" justify-content="center"
-          border-radius="radius.pill" -exact-press-opacity="opacity.pressed" flex-shrink=0 testId="gear"
-          image "symbol:settings" width="nudge.gear" height="nudge.gear" position="relative" left="nudge.gear-left" object-fit="contain" color="accent"
-      row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8"
-        padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" display=(findShown.homeTiles ? "none" : "flex") testId="tabs"
-        for t in tabs key=t
-          button role="tab" aria-selected=(tab == t) press=choose(t) appearance="none" flex-shrink=0
-            padding-left="space.s12" padding-right="space.s12" padding-top="space.s6" padding-bottom="space.s6" border-radius="radius.r16"
-            background-color=(tab == t ? "selected" : "transparent") -exact-press-opacity="opacity.pressed" testId=`tab-${t.toLowerCase()}`
-            text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap"
       if findShown.homeTiles
+        HomeTitle(own=false)
         FindTiles()
       if findShown.results and findSearchingAt(findShown, entry.url)
+        HomeTitle(own=true)
+        HomeTabs(tab=tab, tabs=tabs, choose=choose)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" wheel=findWheel testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel testId="hymn-list"
+          HomeTitle(own=true)
+          HomeTabs(tab=tab, tabs=tabs, choose=choose)
           if recent.shelf.length > 0
             section testId="recent-shelf"
               link href=path("recent") aria-label="Recent, see all" display="flex" flex-direction="row" align-items="center" justify-content="space-between"
                 padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" margin-right="size.target"
-                border-bottom-width="line.hair" border-bottom-style="solid" border-bottom-color="line" background-color="ground" testId="recent-all"
+                position="relative" background-color="ground" testId="recent-all"
                 text "Recent" font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId="recent-header"
                 text "See all ›" font="type.see-all" color="accent" line-clamp=1
+                column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
               for r in recent.shelf key=r.number
                 HymnRow(number=r.number, title=r.title, id=`shelf-${r.number}`, star=(favourites.includes(r.number) ? `shelf-star-${r.number}` : ""), gutter=true)
           for s in sections key=s.slug
@@ -112,31 +106,60 @@ component HymnList
               for r in s.rows key=r.number
                 HymnRow(number=r.number, title=r.title, id=`hymn-${r.number}`, star=(favourites.includes(r.number) ? `star-${r.number}` : ""), gutter=true)
       else if groups.length == 0 and tab == "Lists"
-        column flex=1 min-height=0 testId="hymn-list"
+        column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
+          HomeTitle(own=true)
+          HomeTabs(tab=tab, tabs=tabs, choose=choose)
           text "No hymns here yet." font="type.body" color="muted" padding="space.s16" testId="lists-empty"
       else
-        list id="hymn-list" appearance="auto" listStyle="plain" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" wheel=findWheel testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel testId="hymn-list"
+          HomeTitle(own=true)
+          HomeTabs(tab=tab, tabs=tabs, choose=choose)
           for g in groups key=g.slug
             section
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
       FindBar(entry=entry, results=true)
-      ListBarRoom(shown=playerShown.bar.shown)
+      PlayerBarRoom(id="bar-room")
 
-// The room the player's docked bar takes under a screen's list while it
-// shows: the bar lies over the stack's foot (a route is a child of the
-// navigation root), so the screen leaves room for it under its last row.
-component ListBarRoom
+// Home's title row, as the current app's: "Hymns" and the Settings gear.
+// It scrolls away with the list, as the current app's list header does;
+// over All at once it stands alone above the tiles (`own` false: its
+// copy in the hidden list keeps the ids).
+component HomeTitle
   props
-    shown: bool
+    own: bool
+  inject
+    settingsGear: action
   view
-    if shown
-      column min-height="5rem" flex-shrink=0 testId="bar-room"
+    row align-items="center" padding-left="space.s16" padding-right="space.s8" flex-shrink=0 testId=(own ? "title-row" : "tiles-title-row")
+      text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" line-clamp=1 testId=(own ? "title" : "tiles-title")
+      button press=settingsGear aria-label="Settings" appearance="none" width="size.target" height="size.target" display="flex" align-items="center" justify-content="center"
+        border-radius="radius.pill" -exact-press-opacity="opacity.pressed" flex-shrink=0 testId=(own ? "gear" : "tiles-gear")
+        image "symbol:settings" width="nudge.gear" height="nudge.gear" position="relative" left="nudge.gear-left" object-fit="contain" color="accent"
+
+// Home's tab row, as the current app's: a pill for each way to show the
+// hymns, the chosen one filled; it scrolls away with the list.
+component HomeTabs
+  props
+    tab: string
+    tabs: string[]
+    choose: action
+  view
+    row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8"
+      padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" testId="tabs"
+      for t in tabs key=t
+        button role="tab" aria-selected=(tab == t) press=choose(t) appearance="none" flex-shrink=0
+          padding-left="space.s12" padding-right="space.s12" padding-top="space.s6" padding-bottom="space.s6" border-radius="radius.r16"
+          background-color=(tab == t ? "selected" : "transparent") -exact-press-opacity="opacity.pressed" testId=`tab-${t.toLowerCase()}`
+          text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap"
 
 // A group's header, as the current app's topic row: its name, quiet, on
-// the ground over a hairline. With `gutter` it ends before the Sections
-// list's rail gutter, as every row of that list does.
+// the ground over a hairline, as tall as its text's line and its padding
+// at every text size. It stays at the list's top while its group's rows
+// scroll under it, until the next group's header pushes it off, as the
+// current app's pinned topic does. With `gutter` it ends before the
+// Sections list's rail gutter, as every row of that list does.
 component ListHeader
   props
     name: string
@@ -144,12 +167,14 @@ component ListHeader
     gutter: bool
   view
     row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
-      height="size.button" min-height=0 box-sizing="border-box" margin-right=(gutter ? "size.target" : "0px") border-bottom-width="line.hair" border-bottom-style="solid" border-bottom-color="line" background-color="ground"
+      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground"
       text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
+      column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
 
 // A hymn's row, as the current app's: its number in the accent, then its
 // title, and a star at the row's end when it is a favourite; a hairline
-// under it from the title's edge; a press opens the hymn. `id` is the
+// under it from the title's edge; as tall as its line and its padding at
+// every text size, as the current app's row grows; a press opens the hymn. `id` is the
 // row's `testId` and `star` its star's, each unique on its screen; no star
 // when `star` is "". With `gutter` the row ends before the Sections list's
 // rail gutter.
@@ -163,7 +188,7 @@ component HymnRow
   view
     link href=path("hymn", `${number}`) display="flex" flex-direction="row" align-items="center" gap="space.s12"
       padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
-      height="size.target" min-height=0 box-sizing="border-box" margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" testId=id
+      margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" testId=id
       :active
         background-color="soft"
       text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"

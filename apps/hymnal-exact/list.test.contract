@@ -1,16 +1,18 @@
 test "The book opens on its list."
   expect text "hymn-1" == "1Praise to the Lord"
   expect tree has "section-adoration-and-praise"
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
-  tap "hymn-list" drag 0 -3600
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
+  tap "hymn-list" drag 0 -3200
   clock settle
   expect tree has "section-sentences-and-responses"
   expect text "hymn-695" == "695Praise God, From Whom All Blessings"
