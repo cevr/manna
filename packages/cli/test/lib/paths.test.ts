@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { dataCandidates, getDataPath, installRoot, resolveDataPath } from '../../src/lib/paths.js';
+import { dataCandidates, getCliRoot, getDataPath, resolveDataPath } from '../../src/lib/paths.js';
 
 describe('CLI install-owned data paths', () => {
   it('derives the topics artifact from the CLI root, not the caller cwd', () => {
@@ -19,10 +19,16 @@ describe('CLI install-owned data paths', () => {
   });
 });
 
-describe('installed binary root', () => {
-  it('is the checkout package the binary sits in, wherever it was built', () => {
-    expect(installRoot('/Users/me/manna/packages/cli/bin/manna')).toBe(
-      '/Users/me/manna/packages/cli',
+describe('CLI root', () => {
+  it('is the checkout package a compiled binary sits in, wherever it was built', () => {
+    expect(
+      getCliRoot({ executablePath: '/Users/me/manna/packages/cli/bin/manna', compiled: true }),
+    ).toBe('/Users/me/manna/packages/cli');
+  });
+
+  it('is the source package when run by bun from source', () => {
+    expect(getCliRoot({ executablePath: '/Users/me/.bun/bin/bun', compiled: false })).toBe(
+      new URL('../..', import.meta.url).pathname.replace(/\/$/u, ''),
     );
   });
 });

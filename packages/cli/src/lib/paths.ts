@@ -2,24 +2,30 @@ import { Option } from 'effect';
 
 const parentDir = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')));
 
-/** Whether this module runs inside a Bun-compiled binary, whose bundled
- *  modules live under Bun's embedded `/$bunfs/` root. */
-const isCompiled = (): boolean => import.meta.dir.startsWith('/$bunfs/');
+/** The running process: its executable, and whether it is a Bun-compiled
+ *  binary, whose bundled modules live under Bun's embedded `/$bunfs/` root. */
+interface CliProcess {
+  readonly executablePath: string;
+  readonly compiled: boolean;
+}
 
-/** The CLI root of a compiled binary that sits at `<root>/bin/manna`.
+const runningProcess = (): CliProcess => ({
+  executablePath: process.execPath,
+  compiled: import.meta.dir.startsWith('/$bunfs/'),
+});
+
+/** The root of a compiled binary that sits at `<root>/bin/manna`; absent when
+ *  the CLI runs from source.
  *
  *  Resolved at run time from the executable's own path, so a binary built in
  *  one checkout and installed into another finds the checkout it sits in, not
  *  the one it was built in. Bun reports `process.execPath` with symlinks
  *  resolved, so `~/.bun/bin/manna` linking to `<root>/bin/manna` resolves to
  *  `<root>`. */
-export const installRoot = (executablePath: string): string => parentDir(parentDir(executablePath));
-
-/** The root of an installed binary; absent when the CLI runs from source. */
-const runningInstallRoot = (): Option.Option<string> =>
-  Option.some(process.execPath).pipe(
-    Option.filter(() => isCompiled()),
-    Option.map(installRoot),
+const installRoot = (cli: CliProcess): Option.Option<string> =>
+  Option.some(cli.executablePath).pipe(
+    Option.filter(() => cli.compiled),
+    Option.map((executablePath) => parentDir(parentDir(executablePath))),
   );
 
 const sourceRoot = (): string => {
@@ -30,7 +36,8 @@ const sourceRoot = (): string => {
   return import.meta.dir;
 };
 
-export const getCliRoot = (): string => Option.getOrElse(runningInstallRoot(), sourceRoot);
+export const getCliRoot = (cli: CliProcess = runningProcess()): string =>
+  Option.getOrElse(installRoot(cli), sourceRoot);
 
 export const getOutputsPath = (...segments: string[]): string =>
   [getCliRoot(), 'outputs', ...segments].join('/');
@@ -90,7 +97,7 @@ export const resolveDataPath = (resolution: DataResolution, ...segments: string[
  *  filesystem so the ordering rule is a pure, tested fact. */
 export const packagedDataCandidates = (...segments: string[]): readonly string[] =>
   dataCandidates(
-    { executableDir: parentDir(process.execPath), installRoot: runningInstallRoot() },
+    { executableDir: parentDir(process.execPath), installRoot: installRoot(runningProcess()) },
     ...segments,
   );
 
@@ -107,7 +114,7 @@ interface SelfInvocation {
 }
 
 export const selfInvocation = (): SelfInvocation =>
-  Option.match(runningInstallRoot(), {
+  Option.match(installRoot(runningProcess()), {
     onSome: (): SelfInvocation => ({ command: process.execPath, args: [] }),
     onNone: (): SelfInvocation => ({
       command: process.execPath,
