@@ -33,7 +33,10 @@ export const rows: ReadonlyArray<Row> = [
     unit: 'ex-hy-offline',
     kind: 'gap',
     fixture: 'hy-fresh',
-    one: { steps: [SETTINGS, { scroll: 'label=Downloads', direction: 'down' }, { wait: 800 }] },
+    one: {
+      steps: [SETTINGS, { scroll: 'label=DOWNLOADS', direction: 'down' }, { wait: 800 }],
+      web: [SETTINGS, { scroll: 'label=Downloads', direction: 'down' }, { wait: 800 }],
+    },
   },
   {
     id: 'settings.tuner',
@@ -41,7 +44,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'gap',
     fixture: 'hy-chords',
     one: {
-      steps: [{ open: 'tuner', expect: 'label=Tuner' }, { wait: 1000 }],
+      steps: [{ open: 'tuner', expect: 'label=Auto' }, { wait: 1000 }],
       web: [{ open: 'tuner', expect: 'id=tuner-screen' }, { wait: 1000 }],
     },
   },

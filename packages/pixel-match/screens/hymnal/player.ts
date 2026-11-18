@@ -96,7 +96,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-paused',
     one: {
-      steps: [...SHEET, { pan: 'label=Sheet Grabber', dx: 0, dy: -500 }, { wait: 1200 }],
+      steps: [...SHEET, { pan: 'label=Sheet Grabber', dx: 0, dy: -420 }, { wait: 1200 }],
       notDrawn: { web: NO_DETENTS },
     },
   },
@@ -108,7 +108,7 @@ export const rows: ReadonlyArray<Row> = [
     one: {
       steps: [
         ...SHEET,
-        { pan: 'label=Sheet Grabber', dx: 0, dy: -500 },
+        { pan: 'label=Sheet Grabber', dx: 0, dy: -420 },
         { scroll: 'id=stanza-2', direction: 'down' },
         { tap: 'id=stanza-2' },
         { wait: 800 },
@@ -129,7 +129,7 @@ export const rows: ReadonlyArray<Row> = [
     one: {
       steps: [
         ...SHEET,
-        { pan: 'label=Sheet Grabber', dx: 0, dy: -500 },
+        { pan: 'label=Sheet Grabber', dx: 0, dy: -420 },
         { scroll: 'label=Keep screen on', direction: 'down' },
         { wait: 800 },
       ],

@@ -10,7 +10,8 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-fresh',
     one: {
-      steps: [
+      steps: [SETTINGS, { scroll: 'label=ABOUT', direction: 'down' }, { wait: 1000 }],
+      web: [
         SETTINGS,
         { scroll: 'label=About', direction: 'down' },
         { tap: 'label=About' },
