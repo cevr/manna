@@ -93,6 +93,14 @@ describe('a citation', () => {
       '27.11:*',
       '27.12:*',
     ]);
+    expect(labels(citedVerses('Exodus 3:1', 'Chap. 3, 4'))).toEqual(['2.3:*', '2.4:*']);
+    expect(labels(citedVerses('Galatians 3:1', 'Galatians chap. 3, 4'))).toEqual([
+      '48.3:*',
+      '48.4:*',
+    ]);
+    expect(labels(citedVerses('Isaiah 56:1', 'chaps. 56, 58'))).toEqual(['23.56:*', '23.58:*']);
+    expect(labels(citedVerses('Acts 17:2', 'Chap. 17:2'))).toEqual(['44.17:2']);
+    expect(labels(citedVerses('Revelation 1:1', 'Verses 1, 3'))).toEqual(['66.1:1', '66.1:3']);
     expect(labels(citedVerses('Revelation 21:1', 'Revelation 21, 22:1-2'))).toEqual([
       '66.21:*',
       '66.22:1',

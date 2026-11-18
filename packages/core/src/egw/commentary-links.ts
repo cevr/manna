@@ -126,9 +126,9 @@ const named = (parsed: ReturnType<typeof parseBibleQuery>): Option.Option<Read> 
   }
 };
 
-const CHAPTER_VERSES = /^(?:ch(?:apter|\.)?\s*)?(\d+):(\d+)(?:\s*[-–]\s*(\d+))?$/i;
+const CHAPTER_VERSES = /^(?:ch(?:ap(?:ter)?s?)?\.?\s*)?(\d+):(\d+)(?:\s*[-–]\s*(\d+))?$/i;
 const VERSES = /^(\d+)(?:\s*[-–]\s*(\d+))?$/;
-const WHOLE_CHAPTER = /^ch(?:apters?|\.)?\s*(\d+)$/i;
+const WHOLE_CHAPTER = /^(?:[1-3]?\s?[a-z][a-z.]*\s+)?ch(?:ap(?:ter)?s?)?\.?\s*(\d+)$/i;
 
 /** The groups of `pattern` in `text`, when it matches whole. */
 const groups = (pattern: RegExp, text: string): Option.Option<readonly Option.Option<number>[]> =>
