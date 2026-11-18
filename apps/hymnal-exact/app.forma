@@ -97,3 +97,6 @@ theme
   nudge.number: length = 1px
   nudge.gear: length = 26px
   nudge.gear-left: length = -0.6667px
+  nudge.settings-heading: length = -0.6667px
+  nudge.settings-title: length = 0.6667px
+  nudge.settings-body: length = -0.2222px

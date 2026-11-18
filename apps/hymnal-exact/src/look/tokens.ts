@@ -190,4 +190,19 @@ export const NUDGES: ReadonlyArray<Nudge> = [
     pixels: -2,
     why: 'the gear’s mark across its 44 pt button, where Gear.ios.tsx’s symbol sits',
   },
+  {
+    name: 'nudge.settings-heading',
+    pixels: -2,
+    why: 'what follows a Settings group heading (settings.tsx heading), whose footnote line box is two device pixels taller under its glyphs,',
+  },
+  {
+    name: 'nudge.settings-title',
+    pixels: 2,
+    why: 'what follows the Settings title (settings.tsx title), whose line box is two device pixels shorter,',
+  },
+  {
+    name: 'nudge.settings-body',
+    pixels: -0.6667,
+    why: 'a Settings row’s label (settings.tsx label), whose body line box is two thirds of a device pixel taller,',
+  },
 ];
