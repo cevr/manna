@@ -63,9 +63,10 @@ const PACK_BYTES = 12 * 1024 * 1024;
 export const baseOf = (setting: string): string =>
   /^http:\/\/127\.0\.0\.1:\d{2,5}$/u.test(setting) ? setting : PACKS_HOST;
 
-/** What an ask of one pack answers: every pack's kept version and check time (`keptWith`), whether this pack's last try failed, its name when its fetch landed its first file on the phone since its last answer, and whether it is still out (Contract then waits for its next with `packsWait`). */
+/** What an ask of one pack answers: every pack's kept version and check time (`keptWith`), and the launch's count of answers when it was given (Contract keeps `kept` only from an answer given after the one it keeps, as packs' answers may land in any order); whether this pack's last try failed, its name when its fetch landed its first file on the phone since its last answer, and whether it is still out (Contract then waits for its next with `packsWait`). */
 export interface PacksAnswer {
   kept: string;
+  at: number;
   failed: boolean;
   landed: string;
   more: boolean;
@@ -349,12 +350,16 @@ export const packSources = (options: PacksOptions) => {
     wake(entry);
   };
 
+  /** The launch's count of answers given. */
+  let given = 0;
+
   /** `entry` as it stands, with every pack's kept line this launch has read (`kept`'s for the rest), and its news since its last answer, now told. */
   const answerOf = (entry: Entry, kept: string): PacksAnswer => {
     const answer = {
       kept: entries
         .filter((each) => each.machine.loaded)
         .reduce((text, each) => keptWith(text, each.spec.name, each.machine.kept), kept),
+      at: ++given,
       failed: entry.machine.failed,
       landed: entry.landed ? entry.spec.name : '',
       more: isOut(entry),
@@ -380,9 +385,9 @@ export const packSources = (options: PacksOptions) => {
     return answerOf(entry, kept);
   };
 
-  /** What an ask of a pack this launch does not have answers: nothing to keep, nothing out. */
+  /** What an ask of a pack this launch does not have answers: nothing to keep (`at` 0, never newer), nothing out. */
   const unknown = (kept: string): Promise<PacksAnswer> =>
-    Promise.resolve({ kept, failed: false, landed: '', more: false });
+    Promise.resolve({ kept, at: 0, failed: false, landed: '', more: false });
 
   /** The specs `names` lists, in the packs' own order. */
   const wordsOf = (names: string) => {

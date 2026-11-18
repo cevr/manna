@@ -622,6 +622,9 @@ describe('the contract', () => {
         slot.replace('Fetched', 'Busy'),
       );
     }
+    expect(contract).toContain(
+      '    if answer.at > packsKeptAt\n      packsKept = answer.kept\n      packsKeptAt = answer.at\n',
+    );
     expect(contract.match(/packsAsk\(/gu)?.length).toBe(packs.length);
     expect(contract.match(/packsWait\(/gu)?.length).toBe(packs.length);
     expect(appText('features/read.contract')).not.toContain('packsAsk(');

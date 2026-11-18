@@ -152,9 +152,16 @@ const contractOf = (
   { names, sources }: Pick<ReturnType<typeof packSources>, 'names' | 'sources'>,
   storage: Storage,
   persisted = '',
+  /** How many of the host's turns a reply takes to land: packs' replies land in any order. */
+  late: () => number = () => 0,
 ) => {
   let kept = persisted;
+  let keptAt = 0;
   let landed = '';
+  const after = (turns: number, then: () => void) => {
+    if (turns <= 0) then();
+    else setImmediate(() => after(turns - 1, then));
+  };
 
   /** One pack's newest-wins mutation: its slot, its sends, whether one is out, whether the last failed. */
   const slots = new Map(
@@ -171,19 +178,23 @@ const contractOf = (
     slot.pending = true;
     slot.refused = false;
     call().then(
-      (reply) => {
-        if (id !== slot.sent) return;
-        slot.pending = false;
-        slot.answer = reply;
-        kept = reply.kept;
-        if (reply.landed !== '')
-          landed = landed === '' ? reply.landed : `${landed} ${reply.landed}`;
-        if (reply.more === true)
-          setImmediate(() => {
-            if (id === slot.sent)
-              send(name, () => withDataHost(() => sources.packsWait([name, kept])));
-          });
-      },
+      (reply) =>
+        after(late(), () => {
+          if (id !== slot.sent) return;
+          slot.pending = false;
+          slot.answer = reply;
+          if (reply.at > keptAt) {
+            kept = reply.kept;
+            keptAt = reply.at;
+          }
+          if (reply.landed !== '')
+            landed = landed === '' ? reply.landed : `${landed} ${reply.landed}`;
+          if (reply.more === true)
+            setImmediate(() => {
+              if (id === slot.sent)
+                send(name, () => withDataHost(() => sources.packsWait([name, kept])));
+            });
+        }),
       () => {
         if (id !== slot.sent) return;
         slot.pending = false;
@@ -216,7 +227,12 @@ const contractOf = (
 };
 
 /** A launch over `names`' made-up packs, on a fresh storage or a kept one, with Contract's persisted line. */
-const launched = (names: ReadonlyArray<string>, storage = storageOf(), persisted = '') => {
+const launched = (
+  names: ReadonlyArray<string>,
+  storage = storageOf(),
+  persisted = '',
+  late?: () => number,
+) => {
   const made = new Map(names.map((name, index) => [name, madeOf([name, `${index}`, 'ka lo'])]));
   const server = heldServer(made);
   const downloader = packSources({
@@ -228,7 +244,7 @@ const launched = (names: ReadonlyArray<string>, storage = storageOf(), persisted
     version: (name: string) => made.get(name)?.version ?? 'none',
     server,
     storage,
-    contract: contractOf(downloader, storage, persisted),
+    contract: contractOf(downloader, storage, persisted, late),
   };
 };
 
@@ -361,10 +377,10 @@ describe('each pack settles apart', () => {
     };
   };
 
-  /** One generated run: packs held and let go in any order, one or two at once, well or not, Try again and a showing pressed between. */
+  /** One generated run: packs held and let go in any order, one or two at once, well or not, Try again and a showing pressed between, and each reply landing up to 3 turns late. */
   const run = async (random: Random) => {
     const names = ['alpha', 'beta', 'gamma', 'delta'].slice(0, 2 + random.below(3));
-    const { version, server, contract } = launched(names);
+    const { version, server, contract } = launched(names, storageOf(), '', () => random.below(4));
     const model = modelOf(names);
     const log: Array<string> = [];
     contract.fetch(false);

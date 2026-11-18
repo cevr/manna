@@ -38,6 +38,7 @@ shape PackState
 
 shape PacksAnswer
   kept: string
+  at: number
   failed: bool
   landed: string
   more: bool
@@ -55,6 +56,7 @@ members HeartseedExact
   resource packsPlace = packsBase() as shape PacksBase
   state packsKept = "" persist
   state packsLanded = ""
+  state packsKeptAt = 0
   derive packsBusy = packsCommentaryBusy or packsXrefsBusy or packsTagsBusy or packsLexiconBusy or packsWordsBusy
   derive packsFailed = packsCommentaryFailed or packsXrefsFailed or packsTagsFailed or packsLexiconFailed or packsWordsFailed
   resource packsShown = packsView(packsKept, packsBusy, packsFailed, packsLanded) as shape PacksState else empty()
@@ -71,9 +73,12 @@ members HeartseedExact
     send packsLexiconFetched = packsAsk("lexicon", packsKept, force, now)
     send packsWordsFetched = packsAsk("words", packsKept, force, now)
   // An answer of one pack: every pack's kept line as the data module knows
-  // it, and the pack's own landing.
+  // it, kept only from an answer given after the one kept (packs' answers
+  // land in any order), and the pack's own landing.
   action packsTake(answer: PacksAnswer)
-    packsKept = answer.kept
+    if answer.at > packsKeptAt
+      packsKept = answer.kept
+      packsKeptAt = answer.at
     if answer.landed != ""
       packsLanded = packsLanded == "" ? answer.landed : packsLanded + " " + answer.landed
 
