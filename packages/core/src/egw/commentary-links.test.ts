@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 
+import { getBibleBook } from '../bible/canon.js';
+import { kjvChapterEnds } from '../bible/chapter-ends.js';
 import { citationVerses, readerFor, type VersesReader, volumeVerses } from './commentary-links.js';
 
 type VolumeParagraph = Parameters<VersesReader>[0][number];
@@ -145,6 +147,106 @@ describe('a citation', () => {
 
   test('a title that names no verse names nothing', () => {
     expect(citedVerses('made up', 'John 3:16')).toEqual([]);
+  });
+});
+
+describe("a citation past its chapter's last verse", () => {
+  test('a range stops at the last verse', () => {
+    expect(labels(citedVerses('John 21:24', 'John 21:24-26'))).toEqual(['43.21:24', '43.21:25']);
+    expect(labels(citedVerses('John 21:24', '21:24, 25'))).toEqual(['43.21:24', '43.21:25']);
+    expect(labels(citedVerses('Psalms 1:1', '1:1-20'))).toEqual(
+      Array.from({ length: 6 }, (_, at) => `19.1:${String(at + 1)}`),
+    );
+  });
+
+  test('a range whose end prints the next chapter and its verse runs into that chapter', () => {
+    expect(labels(citedVerses('Mark 8:27', 'Mark 8:27-91'))).toEqual([
+      ...Array.from({ length: 12 }, (_, at) => `41.8:${String(at + 27)}`),
+      '41.9:1',
+    ]);
+    expect(labels(citedVerses('Hebrews 5:12', '5:12-61, 3'))).toEqual([
+      '58.5:12',
+      '58.5:13',
+      '58.5:14',
+      '58.6:1',
+      '58.6:3',
+    ]);
+    expect(labels(citedVerses('Hebrews 5:12', 'Hebrews 5:12-60'))).toEqual([
+      '58.5:12',
+      '58.5:13',
+      '58.5:14',
+    ]);
+  });
+
+  test('a verse past the end, or a range starting there, names nothing', () => {
+    expect(labels(citedVerses('Matthew 13:54', 'Matthew 13:54-58, 101'))).toEqual([
+      '40.13:54',
+      '40.13:55',
+      '40.13:56',
+      '40.13:57',
+      '40.13:58',
+    ]);
+    expect(labels(citedVerses('Daniel 12:8', '12:8-10, 15-17'))).toEqual([
+      '27.12:8',
+      '27.12:9',
+      '27.12:10',
+    ]);
+    expect(labels(citedVerses('Numbers 23:24', 'Numbers 23:24, 249'))).toEqual(['4.23:24']);
+  });
+
+  test('the verse counts are passed in', () => {
+    const tens = (book: number, chapter: number) =>
+      Option.filter(Option.some(10), () => book === 43 && chapter <= 3);
+    const paragraphs = [plain(cite('John 1:9', 'John 1:9-12')), plain(cite('John 3:9', '3:9-41'))];
+    expect(readerFor('GC', tens)(paragraphs).map(labels)).toEqual([
+      ['43.1:9', '43.1:10'],
+      ['43.3:9', '43.3:10'],
+    ]);
+    expect(readerFor('GC')(paragraphs).map(labels)).toEqual([
+      ['43.1:9', '43.1:10', '43.1:11', '43.1:12'],
+      [...Array.from({ length: 28 }, (_, at) => `43.3:${String(at + 9)}`), '43.4:1'],
+    ]);
+  });
+
+  test("no stored link, generated, names a verse past its chapter's last", () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const below = seeded(seed);
+      const paragraphs = Array.from({ length: below(4) + 1 }, () => {
+        const book = below(66) + 1;
+        const name = Option.getOrThrow(getBibleBook(book)).name;
+        const chapters = Option.getOrThrow(getBibleBook(book)).chapters;
+        const chapter = below(chapters) + 1;
+        const last = Option.getOrThrow(kjvChapterEnds(book, chapter));
+        const from = below(last + 5) + 1;
+        const to = from + below(90);
+        const lostColon = `${String(chapter + 1)}${String(below(30) + 1)}`;
+        const printings = [
+          `${name} ${String(chapter)}:${String(from)}-${String(to)}`,
+          `${String(chapter)}:${String(from)}-${String(to)}`,
+          `${String(chapter)}:${String(from)}-${lostColon}, ${String(below(40) + 1)}`,
+          `${String(from)}-${String(to)}, ${String(to + 1)}`,
+          `${String(from)}, ${String(to)}`,
+          `${name} ${String(chapter)}:${String(to)}`,
+        ];
+        return plain(
+          cite(
+            `${name} ${String(chapter)}:${String(from)}`,
+            printings[below(printings.length)] ?? '',
+          ),
+        );
+      });
+      const code = ['5BC', 'GC'][below(2)] ?? 'GC';
+      const rows = readerFor(code)(paragraphs).flat();
+      const past = rows.filter((row) =>
+        Option.exists(row.bibleVerse, (number) =>
+          Option.match(kjvChapterEnds(row.bibleBook, row.bibleChapter), {
+            onNone: () => true,
+            onSome: (last) => number < 1 || number > last,
+          }),
+        ),
+      );
+      expect([seed, past.map(label)]).toEqual([seed, []]);
+    }
   });
 });
 

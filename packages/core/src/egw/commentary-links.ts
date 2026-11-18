@@ -15,12 +15,13 @@
  *   it names. Section titles (`h1`-`h6`) of a volume are never notes.
  *
  * Every book is read for its citations; only a volume laid out by verse
- * headings (`readerFor`) is read for its headings too.
+ * headings (`readerFor`) is read for its headings too. Every verse named lies
+ * in its chapter as the given `ChapterEnds` (the KJV's by default) count it.
  */
 
 import { Array as Arr, Option } from 'effect';
 
-import { getBibleBook } from '../bible/canon.js';
+import { type ChapterEnds, kjvChapterEnds } from '../bible/chapter-ends.js';
 import { parseBibleQuery } from '../bible/parse.js';
 import type { Paragraph } from './schemas.js';
 
@@ -86,6 +87,45 @@ const span = (place: Place, from: number, to: number): readonly CitedVerse[] => 
   return Arr.makeBy(to - from + 1, (at) => verse(place, from + at));
 };
 
+/** The verse a range's end names in the chapter after the place's when its
+ *  digits print that chapter's number and then one of its verses: "8:27-91"
+ *  is 8:27-9:1 with its colon lost. */
+const nextChapterEnd = (ends: ChapterEnds, place: Place, to: number): Option.Option<number> => {
+  const next = String(place.chapter + 1);
+  const digits = String(to);
+  if (!digits.startsWith(next) || digits.length === next.length) return Option.none();
+  const rest = digits.slice(next.length);
+  if (rest.startsWith('0')) return Option.none();
+  const named = Number.parseInt(rest, 10);
+  return Option.map(
+    Option.filter(ends(place.book, place.chapter + 1), (last) => named <= last),
+    () => named,
+  );
+};
+
+/** Verses `from` to `to` of the place's chapter, read against where it ends:
+ *  a range that starts in the chapter and ends past its last verse stops
+ *  there, or runs into the next chapter when its end prints that chapter and
+ *  a verse of it (`nextChapterEnd`), leaving the place in that chapter. A
+ *  verse that starts past the chapter's last is none. */
+const range = (ends: ChapterEnds, place: Place, from: number, to: number): Read => {
+  if (to < from || to - from > MAX_RANGE) return { place, verses: [] };
+  return Option.match(ends(place.book, place.chapter), {
+    onNone: () => ({ place, verses: [] }),
+    onSome: (last): Read => {
+      if (to <= last) return { place, verses: span(place, from, to) };
+      if (from > last) return { place, verses: [] };
+      return Option.match(nextChapterEnd(ends, place, to), {
+        onNone: () => ({ place, verses: span(place, from, last) }),
+        onSome: (named) => {
+          const next = { book: place.book, chapter: place.chapter + 1, chapters: false };
+          return { place: next, verses: [...span(place, from, last), ...span(next, 1, named)] };
+        },
+      });
+    },
+  });
+};
+
 /** Whole chapters `from` to `to` of the place's book, and the place at the
  *  last of them. */
 const chapterSpan = (place: Place, from: number, to: number): Read => {
@@ -99,7 +139,10 @@ const chapterSpan = (place: Place, from: number, to: number): Read => {
 };
 
 /** What a parsed reference names, and the place it leaves the reading at. */
-const named = (parsed: ReturnType<typeof parseBibleQuery>): Option.Option<Read> => {
+const named = (
+  ends: ChapterEnds,
+  parsed: ReturnType<typeof parseBibleQuery>,
+): Option.Option<Read> => {
   switch (parsed._tag) {
     case 'single': {
       const place = { book: parsed.ref.book, chapter: parsed.ref.chapter, chapters: false };
@@ -111,10 +154,7 @@ const named = (parsed: ReturnType<typeof parseBibleQuery>): Option.Option<Read> 
         chapter: parsed.ref.start.chapter,
         chapters: false,
       };
-      return Option.some({
-        place,
-        verses: span(place, parsed.ref.start.verse, parsed.ref.end.verse),
-      });
+      return Option.some(range(ends, place, parsed.ref.start.verse, parsed.ref.end.verse));
     }
     case 'chapter': {
       const place = { book: parsed.ref.book, chapter: parsed.ref.chapter, chapters: true };
@@ -146,23 +186,23 @@ const at = (found: readonly Option.Option<number>[], index: number, fallback: nu
 
 /** One printed segment of a citation ("1:1-3", "14", "Chapter 2", "Heb. 2:14")
  *  read at `place`: the verses it names and the place it leaves. */
-const segmentAt = (place: Place, segment: string): Option.Option<Read> =>
+const segmentAt = (ends: ChapterEnds, place: Place, segment: string): Option.Option<Read> =>
   Option.firstSomeOf([
     Option.map(groups(CHAPTER_VERSES, segment), (found) => {
       const moved = { book: place.book, chapter: at(found, 0, place.chapter), chapters: false };
       const from = at(found, 1, 1);
-      return { place: moved, verses: span(moved, from, at(found, 2, from)) };
+      return range(ends, moved, from, at(found, 2, from));
     }),
     Option.map(groups(VERSES, segment), (found): Read => {
       const from = at(found, 0, 1);
       if (place.chapters) return chapterSpan(place, from, at(found, 1, from));
-      return { place, verses: span(place, from, at(found, 1, from)) };
+      return range(ends, place, from, at(found, 1, from));
     }),
     Option.map(groups(WHOLE_CHAPTER, segment), (found) => {
       const moved = { book: place.book, chapter: at(found, 0, place.chapter), chapters: true };
       return { place: moved, verses: [wholeChapter(moved)] };
     }),
-    named(parseBibleQuery(segment)),
+    named(ends, parseBibleQuery(segment)),
   ]);
 
 /** The chapters `segment` names when it is the first of a citation whose
@@ -182,13 +222,26 @@ const bareChapters = (head: Read, segment: string): Option.Option<Read> =>
     return Option.some(chapterSpan(head.place, from, at(found, 1, from)));
   });
 
+/** Whether `cited` lies in the Bible `ends` counts: a chapter its book has,
+ *  and a verse no later than that chapter's last. */
+const within =
+  (ends: ChapterEnds) =>
+  (cited: CitedVerse): boolean =>
+    Option.exists(ends(cited.bibleBook, cited.bibleChapter), (last) =>
+      Option.match(cited.bibleVerse, {
+        onNone: () => true,
+        onSome: (number) => number >= 1 && number <= last,
+      }),
+    );
+
 /** The verses one citation names: its printed `text` read in the context of
  *  its `title`. A first segment the reading cannot place, or places in
  *  another book than the title's (an abbreviation such as "Ez" read as the
  *  wrong book), names the title's own verses, so a citation never names less
- *  than its title. A chapter past its book's last is no verse. */
-const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
-  Option.match(named(parseBibleQuery(title)), {
+ *  than its title. A chapter or verse past its book's or chapter's last is
+ *  no verse. */
+const citedVerses = (ends: ChapterEnds, title: string, text: string): readonly CitedVerse[] =>
+  Option.match(named(ends, parseBibleQuery(title)), {
     onNone: () => [],
     onSome: (head) => {
       let place = head.place;
@@ -198,7 +251,7 @@ const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
           .trim()
           .replace(/^and\s+/i, '')
           .replace(/[.:]$/, '');
-        let read = segmentAt(place, segment);
+        let read = segmentAt(ends, place, segment);
         if (index === 0)
           read = Option.orElse(bareChapters(head, segment), () =>
             Option.filter(read, (first) => first.place.book === head.place.book),
@@ -208,13 +261,9 @@ const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
           out.push(...read.value.verses);
         } else if (index === 0) out.push(...head.verses);
       });
-      return out.filter(inCanon);
+      return out.filter(within(ends));
     },
   });
-
-/** Whether `cited`'s chapter is one its book has. */
-const inCanon = (cited: CitedVerse): boolean =>
-  Option.exists(getBibleBook(cited.bibleBook), (book) => cited.bibleChapter <= book.chapters);
 
 const isBlank = (node: Node): boolean => node._tag === 'Text' && node.text.trim().length === 0;
 
@@ -227,21 +276,25 @@ const textOf = (nodes: readonly Node[]): string =>
     })
     .join('');
 
-const citationsIn = (nodes: readonly Node[]): readonly CitedVerse[] =>
+const citationsIn = (ends: ChapterEnds, nodes: readonly Node[]): readonly CitedVerse[] =>
   nodes.flatMap((node) => {
-    if (node._tag === 'ScriptureRef') return citedVerses(node.title, textOf(node.children));
-    if ('children' in node) return citationsIn(node.children);
+    if (node._tag === 'ScriptureRef') return citedVerses(ends, node.title, textOf(node.children));
+    if ('children' in node) return citationsIn(ends, node.children);
     return [];
   });
 
 /** The citation a paragraph opens with, bold or bare: a verse heading. */
-const headingOf = (nodes: readonly Node[]): Option.Option<readonly CitedVerse[]> =>
+const headingOf = (
+  ends: ChapterEnds,
+  nodes: readonly Node[],
+): Option.Option<readonly CitedVerse[]> =>
   Option.flatMap(
     Arr.findFirst(nodes, (node) => !isBlank(node)),
     (first): Option.Option<readonly CitedVerse[]> => {
       if (first._tag === 'ScriptureRef')
-        return Option.some(citedVerses(first.title, textOf(first.children)));
-      if (first._tag === 'Unknown' && first.tag === 'strong') return headingOf(first.children);
+        return Option.some(citedVerses(ends, first.title, textOf(first.children)));
+      if (first._tag === 'Unknown' && first.tag === 'strong')
+        return headingOf(ends, first.children);
       return Option.none();
     },
   );
@@ -255,15 +308,20 @@ const keyOf = (cited: CitedVerse): string =>
 const once = (verses: readonly CitedVerse[]): readonly CitedVerse[] =>
   Arr.dedupeWith(verses, (left, right) => keyOf(left) === keyOf(right));
 
+/** Each paragraph's own citations, once each, read against `ends`. */
+const citationReader =
+  (ends: ChapterEnds): VersesReader =>
+  (paragraphs) =>
+    paragraphs.map((paragraph) => once(citationsIn(ends, paragraph.nodes)));
+
 /** Each paragraph's own citations, once each. */
-export const citationVerses: VersesReader = (paragraphs) =>
-  paragraphs.map((paragraph) => once(citationsIn(paragraph.nodes)));
+export const citationVerses: VersesReader = citationReader(kjvChapterEnds);
 
 /** A reader of one volume given in parts, in publication order: the heading a
  *  part ends under carries into the next, so reading a volume chapter by
  *  chapter gives what reading it whole gives. Each paragraph's verses are its
  *  own citations and the verses of the heading it stands under. */
-const volumeReader = (): VersesReader => {
+const volumeReader = (ends: ChapterEnds): VersesReader => {
   let section: readonly CitedVerse[] = [];
   return (paragraphs) =>
     paragraphs.map((paragraph) => {
@@ -271,17 +329,18 @@ const volumeReader = (): VersesReader => {
         section = [];
         return [];
       }
-      section = Option.getOrElse(headingOf(paragraph.nodes), () => section);
-      return once([...section, ...citationsIn(paragraph.nodes)]);
+      section = Option.getOrElse(headingOf(ends, paragraph.nodes), () => section);
+      return once([...section, ...citationsIn(ends, paragraph.nodes)]);
     });
 };
 
 /** A whole volume's paragraphs read at once (`volumeReader`). */
-export const volumeVerses: VersesReader = (paragraphs) => volumeReader()(paragraphs);
+export const volumeVerses: VersesReader = (paragraphs) => volumeReader(kjvChapterEnds)(paragraphs);
 
 /** The reader for the book `code` names: its headings and citations for a
- *  volume laid out by verse headings, its citations alone for any other. */
-export const readerFor = (code: string): VersesReader => {
-  if (VERSE_HEADING_BOOKS.includes(code)) return volumeReader();
-  return citationVerses;
+ *  volume laid out by verse headings, its citations alone for any other,
+ *  every verse within the chapters `ends` counts. */
+export const readerFor = (code: string, ends: ChapterEnds = kjvChapterEnds): VersesReader => {
+  if (VERSE_HEADING_BOOKS.includes(code)) return volumeReader(ends);
+  return citationReader(ends);
 };
