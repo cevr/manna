@@ -23,6 +23,7 @@ use TypeColumn, TypeView from "./type.contract"
 use GotoChapter from "./goto.contract"
 use StudyBar, StudyBarShown from "./study.contract"
 use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
+use ReadPill, ReadPlant from "./read.contract"
 
 // A verse opened on: a layer of the hearing colour under its words fades
 // out once, so its ground eases from the hearing colour to the page's.
@@ -166,65 +167,65 @@ component ChapterPage
       // What the reader sees of the chapter: the screen less the bars over it (iOS's navigation and tab bars; none on the web).
       column id="chapter-seen" position="absolute" top="var(--exact-safe-area-inset-top)" bottom="var(--exact-safe-area-inset-bottom)" left=0 width=0 pointer-events="none" aria-hidden=true
       scroll id="chapter-scroll" navigationScroll="chapter-scroll" scroll-padding-top=room resize=sized flex=1 min-height=0 testId="chapter-scroll"
-        column gap=4 padding-top=8 padding-bottom=32 testId="chapter"
-          column gap=6 padding="0px 20px 12px" max-width="40rem"
-            button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" max-width="100%" min-height=44 display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" gap=8 color="hs.ink" -exact-press-scale=0.97 testId="chapter-title"
-              text shown.heading font="-exact-large-title" font-weight=700 min-width=0 overflow-wrap="break-word"
-              image "symbol:chooser" font="-exact-headline" color="hs.quiet" aria-hidden=true
+        column gap="space.s4" padding-top="space.s8" padding-bottom="space.section" testId="chapter"
+          column gap="space.s10" padding-left="space.s20" padding-right="space.s20" padding-bottom="space.s8"
+            button press=goto intersect=seen appearance="none" aria-label=`${shown.heading}, choose another chapter` align-self="flex-start" max-width="100%" min-height="size.target" display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" gap="space.s8" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="chapter-title"
+              text shown.heading font="type.title" min-width=0 overflow-wrap="break-word"
+              image "symbol:chooser" font="type.strong" color="hs.quiet" aria-hidden=true
             if shown.fieldLine != ""
-              text shown.fieldLine font="-exact-footnote" color="hs.quiet" testId="chapter-field"
-            text (held ? "Tap a verse to plant or study it." : "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek.") font="-exact-footnote" color="hs.quiet" testId="chapter-hint"
+              text shown.fieldLine font="type.small" color="hs.quiet" testId="chapter-field"
+            text (held ? "Tap a verse to plant or study it." : "Tap a verse to plant or study it. Hold a word for its Hebrew or Greek.") font="type.small" color="hs.quiet" testId="chapter-hint"
           TypeColumn(type=type)
             for v in words.verses key=v.verse
-              row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=(shown.planted.filter(p => p == v.verse).length > 0 ? `${shown.heading}:${v.verse}, in your field` : `${shown.heading}:${v.verse}`) aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width=3 border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-top-left-radius=(shown.chosen and v.verse > shown.first and v.verse <= shown.last ? 0 : 12) border-top-right-radius=(shown.chosen and v.verse > shown.first and v.verse <= shown.last ? 0 : 12) border-bottom-left-radius=(shown.chosen and v.verse >= shown.first and v.verse < shown.last ? 0 : 12) border-bottom-right-radius=(shown.chosen and v.verse >= shown.first and v.verse < shown.last ? 0 : 12) box-sizing="border-box" min-height=44 padding="6px 10px" margin="0px -10px" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
+              row role="checkbox" aria-checked=(shown.chosen and v.verse >= shown.first and v.verse <= shown.last) aria-label=(shown.planted.filter(p => p == v.verse).length > 0 ? `${shown.heading}:${v.verse}, in your field` : `${shown.heading}:${v.verse}`) aria-valuetext=v.text press=tap(v.verse) disabled=pending border-left-width="line.slot" border-left-style="solid" border-left-color=(shown.planted.filter(p => p == v.verse).length > 0 ? "hs.leaf" : "hs.ground") border-top-left-radius=(shown.chosen and v.verse > shown.first and v.verse <= shown.last ? "0px" : "radius.r12") border-top-right-radius=(shown.chosen and v.verse > shown.first and v.verse <= shown.last ? "0px" : "radius.r12") border-bottom-left-radius=(shown.chosen and v.verse >= shown.first and v.verse < shown.last ? "0px" : "radius.r12") border-bottom-right-radius=(shown.chosen and v.verse >= shown.first and v.verse < shown.last ? "0px" : "radius.r12") box-sizing="border-box" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s10" padding-right="space.s10" margin-left="calc(space.s10 * -1)" margin-right="calc(space.s10 * -1)" background-color="hs.ground" position="relative" id=`verse-${v.verse}` testId=`verse-${v.verse}`
                 :checked
                   background-color = "hs.hearing"
                 if v.verse == opened and not still
-                  column class=ChapterLanded position="absolute" inset=0 border-radius=12 opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
+                  column class=ChapterLanded position="absolute" inset=0 border-radius="radius.r12" opacity=0 pointer-events="none" aria-hidden=true animation=(still ? "none" : "hs-landed duration.rise easing.out") testId="verse-landed"
                 for k in [holds] key=k
                   text overflow-wrap="break-word" hyphens="auto" position="relative" user-select="text" selectionchange=select(v.verse) testId=`verse-text-${v.verse}`
-                    text `${v.verse}` user-select="none" font-size="0.62em" font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
+                    text `${v.verse}` user-select="none" font-size=(`calc(${type.fontSize} * 0.62)`) font-variant-numeric="tabular-nums" color=(shown.planted.filter(p => p == v.verse).length > 0 and not (shown.chosen and v.verse >= shown.first and v.verse <= shown.last) ? "hs.sun" : "hs.quiet") testId=`verse-number-${v.verse}`
                     text ` ${v.text}`
-          row gap=12 padding="24px 20px 8px" flex-wrap="wrap" max-width="40rem" testId="chapter-turn"
+          row gap="space.s12" padding-top="space.s24" padding-left="space.s20" padding-right="space.s20" padding-bottom="space.s8" flex-wrap="wrap" testId="chapter-turn"
             if shown.previous.found
-              button press=read(shown.previous.book, shown.previous.chapter, 0) buttonStyle="bordered" min-height=44 aria-label=`Previous chapter, ${shown.previous.name}` testId="chapter-previous"
-                text `‹ ${shown.previous.name}`
+              button press=read(shown.previous.book, shown.previous.chapter, 0) class=ReadPill aria-label=`Previous chapter, ${shown.previous.name}` testId="chapter-previous"
+                text `‹ ${shown.previous.name}` font="type.label"
             if shown.next.found
-              button press=read(shown.next.book, shown.next.chapter, 0) buttonStyle="bordered" min-height=44 aria-label=`Next chapter, ${shown.next.name}` margin-left="auto" testId="chapter-next"
-                text `${shown.next.name} ›`
+              button press=read(shown.next.book, shown.next.chapter, 0) class=ReadPill aria-label=`Next chapter, ${shown.next.name}` margin-left="auto" testId="chapter-next"
+                text `${shown.next.name} ›` font="type.label"
           children
       PacksLine(shown=packs, still=still)
       // The bar's ground is a plain box and its parts scroll inside its padding: a scroller at the route's foot takes iOS's tab bar as its own inset and runs under it, where a plain box is lifted above it with the route.
       if shown.up
-        column padding="12px 20px" flex-shrink=1 min-height=0 max-height="70%" display="flex" flex-direction="column" background-color="hs.card" border-top-left-radius=16 border-top-right-radius=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="chapter-bar"
-          column gap=8 min-height=0 flex-shrink=1 overflow-y="auto" testId="chapter-bar-parts"
-            row gap=12 align-items="center"
-              text shown.reference font="-exact-headline" flex=1 testId="range-line"
-              text shown.countText font="-exact-footnote" color="hs.quiet" testId="range-count"
-              button press=clear aria-label="Clear the selection" min-width=44 min-height=44 testId="chapter-clear"
-                image "symbol:close"
+        column padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s20" padding-right="space.s20" flex-shrink=1 min-height=0 max-height="70%" display="flex" flex-direction="column" background-color="hs.card" border-top-left-radius="radius.r16" border-top-right-radius="radius.r16" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="chapter-bar"
+          column gap="space.s8" min-height=0 flex-shrink=1 overflow-y="auto" testId="chapter-bar-parts"
+            row gap="space.s12" align-items="center"
+              text shown.reference font="type.strong" flex=1 testId="range-line"
+              text shown.countText font="type.small" color="hs.quiet" testId="range-count"
+              button press=clear aria-label="Clear the selection" appearance="none" min-width="size.target" min-height="size.target" display="flex" align-items="center" justify-content="center" color="hs.quiet" -exact-press-opacity="opacity.pressed" testId="chapter-clear"
+                image "symbol:close" font="type.strong"
             if shown.study
               column testId="chapter-study"
                 for s in study.verses.filter(x => x.verse == shown.first) key=s.verse
                   StudyBar(buttons=s.buttons, verse=s.verse, open=open)
             if shown.landed
-              text "Planted." role="status" testId="chapter-planted"
-              button press=practise buttonStyle="bordered" min-height=44 testId="chapter-practise"
-                text "Practise it now"
+              text "Planted." role="status" font="type.note-strong" testId="chapter-planted"
+              button press=practise class=ReadPill testId="chapter-practise"
+                text "Practise it now" font="type.label"
             if shown.already
-              text "Already in your field." role="status" color="hs.quiet" testId="chapter-already"
+              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already"
             if shown.cap != ""
-              text shown.cap font="-exact-footnote" color="hs.quiet"
+              text shown.cap font="type.small" color="hs.quiet"
             if shown.line != ""
-              text shown.line role="alert" testId=shown.lineId
+              text shown.line role="alert" font="type.note" testId=shown.lineId
             if shown.short != ""
-              text shown.short testId="short-line"
+              text shown.short font="type.note" testId="short-line"
             if shown.plant
-              button press=plant buttonStyle="filled" disabled=pending min-height=44 testId="plant-list"
-                text "Plant"
+              button press=plant class=ReadPlant disabled=pending testId="plant-list"
+                text "Plant" font="type.plant"
             if shown.singles
-              button press=join buttonStyle="filled" disabled=pending min-height=44 testId="plant-singles"
-                text "Add to single verses"
+              button press=join class=ReadPlant disabled=pending testId="plant-singles"
+                text "Add to single verses" font="type.plant"
 
 // The opened verse's layer, under its words while it fades.
 style ChapterLanded

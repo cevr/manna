@@ -89,10 +89,55 @@ component ReadDriven
     open: action
     follow: action
   view
-    row gap=8 padding="8px 20px" flex-wrap="wrap" testId="read-driven"
-      button press=open(19, 119, 176) buttonStyle="bordered" testId="read-open-psalm"
-        text "Open Psalm 119:176"
-      button press=open(43, 3, 0) buttonStyle="bordered" testId="read-open-john"
-        text "Open John 3"
-      button press=follow(43, 3, 16) buttonStyle="bordered" testId="read-follow-john"
-        text "Follow John 3:16"
+    row gap="space.s8" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s20" padding-right="space.s20" flex-wrap="wrap" testId="read-driven"
+      button press=open(19, 119, 176) class=ReadPill testId="read-open-psalm"
+        text "Open Psalm 119:176" font="type.label"
+      button press=open(43, 3, 0) class=ReadPill testId="read-open-john"
+        text "Open John 3" font="type.label"
+      button press=follow(43, 3, 16) class=ReadPill testId="read-follow-john"
+        text "Follow John 3:16" font="type.label"
+
+// The Read tab's screens (the chapter, Go to, find, Your verses) are
+// Exact's own, drawn in the current Heartseed's parts: these are its two
+// buttons, each label a `type.label` or `type.plant` text inside.
+
+// One's quiet pill (src/field/plot.tsx `pill`): the ink's ring round a
+// label, pressed at One's opacity.
+style ReadPill
+  appearance = "none"
+  display = "flex"
+  flex-direction = "row"
+  align-items = "center"
+  justify-content = "center"
+  align-self = "flex-start"
+  min-height = "size.target"
+  padding-left = "space.s18"
+  padding-right = "space.s18"
+  border-radius = "radius.pill"
+  border-width = "line.edge"
+  border-style = "solid"
+  border-color = "hs.ink"
+  color = "hs.ink"
+  -exact-press-opacity = "opacity.pressed"
+  :disabled
+    opacity = "opacity.disabled"
+
+// One's Plant (src/shelves/sheet.tsx `plant`): the ink's pill, its label
+// in the ground's colour; while a plant is pending it stands at One's
+// disabled opacity.
+style ReadPlant
+  appearance = "none"
+  display = "flex"
+  flex-direction = "row"
+  align-items = "center"
+  justify-content = "center"
+  align-self = "flex-start"
+  min-height = "size.target"
+  padding-left = "space.s18"
+  padding-right = "space.s18"
+  border-radius = "radius.pill"
+  background-color = "hs.ink"
+  color = "hs.on-ink"
+  -exact-press-opacity = "opacity.pressed"
+  :disabled
+    opacity = "opacity.disabled"
