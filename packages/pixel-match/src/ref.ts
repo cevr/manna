@@ -230,6 +230,14 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
   const fixture = row.fixture ?? '';
   const udid = prepare(frame, side, cell, fixture, now);
   await drive(frame, cell.app, side);
+  const oneBand = side.band;
+  let band: (OneBand & { readonly top: number }) | undefined;
+  if (oneBand !== undefined)
+    try {
+      band = { ...oneBand, top: bandTopOf(frame, cell.app, oneBand) };
+    } catch (error) {
+      return String(error instanceof Error ? error.message : error);
+    }
   const file = refFile(frame, cell);
   mkdirSync(join(file, '..'), { recursive: true });
   const shot = await capture(frame, cell.app, udid, side.hold, file);
@@ -242,15 +250,6 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
     unlinkSync(file);
     return 'refused: a development overlay is in the tree';
   }
-  const oneBand = side.band;
-  let band: (OneBand & { readonly top: number }) | undefined;
-  if (oneBand !== undefined)
-    try {
-      band = { ...oneBand, top: bandTopOf(frame, cell.app, oneBand) };
-    } catch (error) {
-      unlinkSync(file);
-      return String(error instanceof Error ? error.message : error);
-    }
   const metadata = { ...metadataOf(frame, cell, fixture, now, udid, tree.digest, shot), band };
   writeFileSync(file.replace(/\.png$/, '.json'), `${JSON.stringify(metadata, null, 2)}\n`);
   return undefined;
