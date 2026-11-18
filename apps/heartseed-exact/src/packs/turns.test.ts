@@ -61,10 +61,11 @@ const specOf = (name: string): PackSpec<MadePack> => ({
   check: checkMade,
 });
 
-/** One call of the data host: its name, whether it has given its value, and its last fetch's landing, which its next waits for. */
+/** One call of the data host: its name, whether it has given its value, whether a newer send let it go before it did, and its last fetch's landing, which its next waits for. */
 interface Call {
   readonly name: string;
   answered: boolean;
+  letGo: boolean;
   landed: Promise<void>;
 }
 
@@ -85,8 +86,13 @@ const hostOf = () => {
   const files = new Map<string, ArrayBuffer>();
   const made = new Map(NAMES.map((name) => [name, madeOf(name)]));
 
+  /** Exact's `scheduler.yield()`: refused in a call let go (its job owed again), at once in one that has answered, else a turn of its own. */
   const pause = () => {
     const call = current;
+    if (call?.letGo === true)
+      return Promise.reject(
+        Object.assign(new Error('the answer was let go'), { name: 'AbortError' }),
+      );
     if (call === undefined || call.answered) {
       joined.push(call?.name ?? 'none');
       return Promise.resolve();
@@ -155,9 +161,9 @@ const hostOf = () => {
   const latest = new Map<string, Call>();
   /** A call started in a turn of its own, answered once its value is given or a newer send of its pack lets it go. */
   const send = (pack: string, name: string, run: () => Promise<PacksAnswer>) => {
-    const call: Call = { name, answered: false, landed: Promise.resolve() };
+    const call: Call = { name, answered: false, letGo: false, landed: Promise.resolve() };
     const before = latest.get(pack);
-    if (before !== undefined) before.answered = true;
+    if (before !== undefined && !before.answered) before.letGo = true;
     latest.set(pack, call);
     current = call;
     const answer = withDataHost(run);
@@ -170,22 +176,27 @@ const hostOf = () => {
 
   /** Every answer's kept line, in the order they came. */
   const answers: Array<string> = [];
+  /** Each pack's follow-up `packsWait`, in the order sent: a timer Contract arms, which a drive's frozen clock holds back. */
+  const waits: Array<string> = [];
   /** One pack asked as its mutation sends it, and followed while its answer says `more`. */
   const askOne = async (name: string, kept: string, force: boolean) => {
     const asked = send(name, `packsAsk ${name}`, () =>
       sources.packsAsk([name, kept, force, NOW], STORE, storage),
     );
     let mine = latest.get(name);
-    let answer = await asked;
+    /** A call let go may end refused: Contract forgets its reply either way. */
+    let answer = await asked.catch(() => undefined);
     for (;;) {
       if (latest.get(name) !== mine) return undefined;
+      if (answer === undefined) throw new Error(`${name}: a call no newer send let go was refused`);
       answers.push(answer.kept);
       if (!answer.more) return answer;
       await turn();
       const last = answer.kept;
+      waits.push(name);
       const waited = send(name, `packsWait ${name}`, () => sources.packsWait([name, last]));
       mine = latest.get(name);
-      answer = await waited;
+      answer = await waited.catch(() => undefined);
     }
   };
   /** Every pack asked at once, a call each, as `packsFetch` and `packsRetry` send them: the last answer's kept line, and whether any pack's last try failed. */
@@ -201,6 +212,7 @@ const hostOf = () => {
 
   return {
     joined,
+    waits,
     answers,
     ask,
     version: (name: string) => made.get(name)?.version ?? '',
@@ -248,6 +260,7 @@ describe('every step of a check runs in a turn of a call still answering', () =>
     await drained();
     const whileHeld = host.answers.at(-1) ?? '';
     expect(NAMES.filter((name) => keptIn(whileHeld, name).version !== '')).toEqual(NAMES.slice(1));
+    expect(host.waits).toEqual([]);
     expect(host.release('commentary', 'well')).toBe(true);
     const answer = await asked;
     expect(keptIn(answer.kept, 'commentary').version).toBe(host.version('commentary'));

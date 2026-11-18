@@ -11,9 +11,10 @@
  * own call because Exact hands the host a call's fetches one at a time, in
  * the order made, and its fetch leaves the host's ordered lane
  * (`exactIndependentHttp`), so one slow pack holds back no other. A call
- * answers as soon as its pack settles, or with `more` once its fetch has
- * landed; Contract then sends `packsWait` for that pack, which answers at
- * its next settle, until it is no longer out. A fetch's answer may land
+ * answers as soon as its pack settles: the call that made the fetch checks
+ * its body itself; one that joined a fetch answers `more` once it has
+ * landed, and Contract then sends `packsWait` for that pack, which answers
+ * at its next settle, until it is no longer out. A fetch's answer may land
  * after the call that made it has answered, and on Hermes such a call's
  * `scheduler.yield()` does not end its turn; so a landing runs no check: a
  * body waits as its pack's job, and a call runs it, in steps a turn each
@@ -134,6 +135,9 @@ interface Entry {
 
 /** Whether `entry` is still out: its fetch in flight, or its work owed. */
 const isOut = (entry: Entry) => entry.machine.current !== 0 || entry.job !== undefined;
+
+/** Whether `entry` owes the check of a body the fetch `id` heard. */
+const madeBy = (entry: Entry, id: number) => entry.job?._tag === 'Check' && entry.job.id === id;
 
 /** `body` checked by `spec`'s check a step a turn, a check that throws as a bad body; a pause that throws (the call let go) throws. */
 const checkedIn = async (
@@ -315,23 +319,28 @@ export const packSources = (options: PacksOptions) => {
     return pack;
   };
 
-  /** One pack asked: a fetch started (one in flight is joined), else its kept file owed a read ahead. */
+  /** One pack asked: a fetch started (one in flight is joined), else its kept file owed a read ahead; the id of the fetch this ask made, if it made one. */
   const askOne = async (
     entry: Entry,
     kept: string,
     force: boolean,
     now: number,
     storage: FileStorage,
-  ) => {
+  ): Promise<number | undefined> => {
     const found = entry.machine.loaded
       ? NOTHING_KEPT
       : keptOf(await fileVersion(entry.spec.file, storage), keptIn(kept, entry.spec.name));
+    let made: number | undefined;
     for (const command of apply(entry, { _tag: 'Ask', now, force, found }))
-      if (command._tag === 'Fetch') void flown(entry, command.id, command.version, now, storage);
+      if (command._tag === 'Fetch') {
+        made = command.id;
+        void flown(entry, command.id, command.version, now, storage);
+      }
     const mark = entry.machine.kept.version;
     if (!isOut(entry) && mark !== '' && entry.held?.mark !== mark)
       entry.job = { _tag: 'Read', mark, storage };
     told(entry);
+    return made;
   };
 
   /** `entry`'s job run in this call's own turns; a call let go mid-check leaves it owed to the next. */
@@ -372,15 +381,21 @@ export const packSources = (options: PacksOptions) => {
   /**
    * `entry`'s next answer: at once when it settled since its last one or is
    * not out; else its owed work run in this call's own turns; else at its
-   * next landing. Work runs only from a call's own turn, never after a wake,
-   * which may come in another call's turn (the one that made a joined
-   * fetch), and the call answers once that work is done: on Hermes a yield
-   * of a call that has answered does not end its turn.
+   * next landing, and when that landing is of the fetch this call made
+   * (`made`), its body checked in this call's own turns first, so a pack
+   * asked alone is kept with no follow-up. Other work runs only from a
+   * call's own turn, never after a wake, which may come in another call's
+   * turn (the one that made a joined fetch), and the call answers once that
+   * work is done: on Hermes a yield of a call that has answered does not
+   * end its turn.
    */
-  const nextAnswer = async (entry: Entry, kept: string): Promise<PacksAnswer> => {
+  const nextAnswer = async (entry: Entry, kept: string, made?: number): Promise<PacksAnswer> => {
     if (!entry.news) {
       if (entry.job !== undefined) await work(entry);
-      else if (isOut(entry)) await woken(entry);
+      else if (isOut(entry)) {
+        await woken(entry);
+        if (made !== undefined && madeBy(entry, made)) await work(entry);
+      }
     }
     return answerOf(entry, kept);
   };
@@ -446,7 +461,7 @@ export const packSources = (options: PacksOptions) => {
         const entry = named.get(name);
         return entry === undefined
           ? unknown(kept)
-          : askOne(entry, kept, force, now, storage).then(() => nextAnswer(entry, kept));
+          : askOne(entry, kept, force, now, storage).then((made) => nextAnswer(entry, kept, made));
       },
       /** Contract's follow-up while `name`'s answer said `more`: its next settle, or at once when it is not out. */
       packsWait: ([name, kept]: readonly [string, string]): Promise<PacksAnswer> => {
