@@ -16,14 +16,32 @@ const SHEET: ReadonlyArray<Step> = [
 ];
 const BOOKS: ReadonlyArray<Step> = [...SHEET, { tap: 'label=Any passage' }, { wait: 600 }];
 
+/** The port's way to the sheet: home's `Add a list`. */
+const EXACT_SHEET: ReadonlyArray<string> = [
+  'clock data',
+  'clock settle',
+  'tap add-list',
+  'clock data',
+  'clock settle',
+];
+
 export const rows: ReadonlyArray<Row> = [
-  { id: 'add.sheet', unit, kind: 'match', sweep: true, fixture: 'hs-fresh', one: { steps: SHEET } },
+  {
+    id: 'add.sheet',
+    unit,
+    kind: 'match',
+    sweep: true,
+    fixture: 'hs-fresh',
+    one: { steps: SHEET },
+    exact: { ops: EXACT_SHEET },
+  },
   {
     id: 'add.shelf-open',
     unit,
     kind: 'match',
     fixture: 'hs-fresh',
     one: { steps: [...SHEET, { tap: 'label=Psalms' }, { wait: 500 }] },
+    exact: { ops: [...EXACT_SHEET, 'tap shelf-psalms', 'clock data', 'clock settle'] },
   },
   {
     id: 'add.handbook',
@@ -37,6 +55,9 @@ export const rows: ReadonlyArray<Row> = [
         { tap: 'label=Seven Churches' },
         { wait: 500 },
       ],
+    },
+    exact: {
+      ops: [...EXACT_SHEET, 'tap shelf-handbook-bhb-1808', 'clock data', 'clock settle'],
     },
   },
   {
