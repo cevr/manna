@@ -33,3 +33,9 @@ export interface Field {
 
 /** The field of a read garden over the rows asked for, then each other verse planted. */
 export declare const fieldOf: (garden: ReadGarden, passages: ReadonlyArray<FieldPassage>) => Field;
+
+/** The days sown as the field's heading writes them. */
+export declare const sownText: (days: number) => string;
+
+/** The verses at full corn as the field's heading writes them. */
+export declare const harvestText: (verses: number) => string;

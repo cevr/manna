@@ -150,6 +150,8 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<Field.FieldPassage, DeclaredField.FieldPassage>,
   true satisfies Mutual<Field.Field, DeclaredField.Field>,
   true satisfies Mutual<typeof Field.fieldOf, typeof DeclaredField.fieldOf>,
+  true satisfies Mutual<typeof Field.sownText, typeof DeclaredField.sownText>,
+  true satisfies Mutual<typeof Field.harvestText, typeof DeclaredField.harvestText>,
   true satisfies Mutual<typeof Home.fieldPassagesWith, typeof DeclaredHome.fieldPassagesWith>,
   true satisfies Mutual<Shelves.Shelf, DeclaredShelves.Shelf>,
   true satisfies Mutual<typeof Shelves.SHELVES, typeof DeclaredShelves.SHELVES>,
