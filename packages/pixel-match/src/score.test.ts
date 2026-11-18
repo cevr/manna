@@ -22,11 +22,11 @@ const striped = (height: number, shade: (y: number) => number): Picture => ({
   ),
 });
 
-/** The agent's `--json` replies: a tap, the two `layout` replies (in points), the screenshot's. */
+/** The agent's `--json` replies, shaped as the iOS agent prints them: a tap, `layout band` and the whole-tree `layout` (in points), the screenshot's. The screen's band runs from `band`'s foot (2 pt) to the foot of `scroll`'s scrollport (4 pt). */
 const agentOut = [
   '{"ok":true,"op":"tap"}',
-  '{"ok":true,"node":{"id":"bar","frame":{"x":0,"y":0,"width":1.3,"height":2}}}',
-  '{"ok":true,"node":{"id":"tabs","frame":{"x":0,"y":4,"width":1.3,"height":1}}}',
+  '{"node":{"absolute":{"x":0,"y":0,"w":1.3,"h":2},"props":{"testId":"band"}}}',
+  '{"nodes":[{"id":5,"testId":"tabs","x":0,"y":0,"w":0,"h":0},{"id":9,"testId":"scroll","x":0,"y":2,"w":1.3,"h":3,"port":[0,2,1.3,2]}]}',
   '{"ok":true,"compare":"no box differs"}',
 ].join('\n');
 
@@ -43,7 +43,7 @@ const row: Row = {
   unit: 'pm-harness',
   kind: 'match',
   one: { steps: [], band: { targets: ['id=greeting'], edge: 'top' } },
-  exact: { ops: ['tap x'], band: { top: 'bar', bottom: 'tabs' } },
+  exact: { ops: ['tap x'], band: { top: 'band', bottom: 'scroll' } },
 };
 
 describe("the port's banded scoring, from the agent's replies to the result", () => {
@@ -63,7 +63,7 @@ describe("the port's banded scoring, from the agent's replies to the result", ()
     writeFileSync(files.screen, encodePng(screen));
 
     const noRects = () => scoreShot(frame, row, cell, '{"ok":true}\n{"ok":true}\n{"ok":true}');
-    expect(noRects).toThrow("no rect in the agent's layout replies");
+    expect(noRects).toThrow("the band's edges are not in the agent's layout replies");
     const result = scoreShot(frame, row, cell, agentOut);
     const written = JSON.parse(readFileSync(files.result, 'utf8')).differing;
     rmSync(scratch, { recursive: true, force: true });

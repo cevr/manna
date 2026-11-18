@@ -10,8 +10,10 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
+import { Option } from 'effect';
+
+import { agentBand } from './agent-band.ts';
 import { diffPicture, ladder, scorePair, type Band, type Banding, type Mask } from './diff.ts';
-import { rectIn } from './ios.ts';
 import { cellName, IOS, type Cell, type MaskSpec, type Row } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
 import { decodePng, encodePng } from './png.ts';
@@ -57,20 +59,6 @@ export const referenceOf = (frame: Frame, cell: Cell) => {
 };
 
 /**
- * The port's band in device pixels from the agent's `--json` output: the
- * agent prints one JSON line per op (`agent.mjs`, `JSON.stringify` of each
- * reply), so the two `layout` replies are the two lines before the last,
- * the screenshot's. From the bottom of the first node to the top of the
- * second; none when either holds no rect.
- */
-const edgesIn = (out: string): Band | undefined => {
-  const replies = out.trim().split('\n').slice(-3);
-  const [top, bottom] = [rectIn(replies[0] ?? ''), rectIn(replies[1] ?? '')];
-  if (top === undefined || bottom === undefined) return undefined;
-  return { top: (top.y + top.height) * IOS.scale, bottom: bottom.y * IOS.scale };
-};
-
-/**
  * Scores the port's screen of `cell`, already on disk, against its
  * reference, given the agent's `--json` output `out` of the drive that took
  * it. The result, also written beside the screen with the diff picture.
@@ -80,10 +68,12 @@ export const scoreShot = (frame: Frame, row: Row, cell: Cell, out: string) => {
   const compare = out.trim().split('\n').slice(-12).join('\n');
   let bands: Banding | undefined;
   if (oneBand !== undefined) {
-    const screenBand = edgesIn(out);
+    const side = row.exact?.band;
+    const screenBand =
+      side === undefined ? undefined : Option.getOrUndefined(agentBand(out, side, IOS.scale));
     if (screenBand === undefined)
       throw new Error(
-        `${row.id}: no rect in the agent's layout replies: ${out.trim().split('\n').slice(-3, -1).join(' | ').slice(0, 400)}`,
+        `${row.id}: the band's edges are not in the agent's layout replies (${side?.top}'s box, ${side?.bottom}'s port): ${out.trim().split('\n').slice(-3, -1).join(' | ').slice(0, 400)}`,
       );
     bands = { reference: oneBand, screen: screenBand, anchor: row.anchor ?? 'top' };
   }

@@ -7,8 +7,9 @@
  * `@manna/exact-kit/storage`), so the fixture's pairs are written there, in
  * the named agent store the drive opens (`--storage pm-<id> --keep-storage`).
  * A named store on an Apple host lives under the app's data container at
- * `Library/Caches/exact/<app id>/agent/<name>`, its `app:/` tree in
- * `data` (Exact's `host/apple/src/picker.rs`, `app_dirs`); the whole tree
+ * `Library/Caches/exact/<app id>/agent/<name>`, which is its `app:/` root
+ * (`app:/data/heartseed.json` is `<name>/data/heartseed.json`, as an
+ * agent drive's store on the simulator shows); the whole tree
  * is emptied first, as `--reset-storage` empties it, so nothing a former
  * drive kept (a choice, a file) is left.
  */
@@ -45,7 +46,7 @@ export const writePortStore = (
 ) => {
   const tree = storeTree(container, port.bundle, name);
   rmSync(tree, { recursive: true, force: true });
-  const file = join(tree, 'data', port.file);
+  const file = join(tree, port.file);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, storeText(store));
   return file;

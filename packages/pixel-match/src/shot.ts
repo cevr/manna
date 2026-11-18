@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { bandOps } from './agent-band.ts';
 import { hostZone, portClock } from './clock.ts';
 import { storeOf } from './fixtures.ts';
 import { PORT_STORES, writePortStore } from './port-store.ts';
@@ -94,8 +95,7 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
   const seeded = seedPort(cell.app, row, udid);
-  const edges =
-    side.band === undefined ? [] : [`layout ${side.band.top}`, `layout ${side.band.bottom}`];
+  const edges = side.band === undefined ? [] : bandOps(side.band);
   const ops = [
     `prefer prefers-color-scheme ${cell.scheme}`,
     'clock settle',

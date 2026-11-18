@@ -16,11 +16,11 @@ export const HOME: Step = { open: '/', expect: 'id=today-card' };
 const OPEN_PSALM: Step = { scroll: 'label=Open Psalms 23:1-5', direction: 'down' };
 export const FOOT: Step = { scroll: 'label=How Heartseed works', direction: 'down' };
 
-/** The port's band on home: from `home-band`, the zero-high top of home's content under the navigation bar, to the tab bar, each read with the agent's `layout` at the capture. */
-const EXACT_BAND = { top: 'home-band', bottom: 'tabs' };
+/** The port's band on home: from `home-band`, the zero-high top of home's content under the navigation bar, to the foot of home's scrollport, where the tab bar's inset begins (`agent-band.ts`). */
+const EXACT_BAND = { top: 'home-band', bottom: 'home-scroll' };
 
-/** The port's band on a list's page: from `list-band`, the top of the page's content under the bar. */
-const LIST_EXACT_BAND = { top: 'list-band', bottom: 'tabs' };
+/** The port's band on a list's page: from `list-band`, the top of the page's content under the bar, to the foot of its scrollport. */
+const LIST_EXACT_BAND = { top: 'list-band', bottom: 'list-scroll' };
 
 /** The port's home over the fixture, its garden read and the session's plan made. */
 const EXACT_HOME: ReadonlyArray<string> = ['clock data', 'clock settle', 'clock data'];

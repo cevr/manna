@@ -20,7 +20,7 @@ describe("a fixture in the port's store", () => {
     expect(file).toBe(
       join(
         container,
-        'Library/Caches/exact/app.heartseed.exact/agent/pm-home.lists/data/data/heartseed.json',
+        'Library/Caches/exact/app.heartseed.exact/agent/pm-home.lists/data/heartseed.json',
       ),
     );
     const pairs: unknown = JSON.parse(readFileSync(file, 'utf8'));
