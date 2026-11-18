@@ -48,7 +48,7 @@ export type Step =
   | { readonly fill: string; readonly value: string }
   | { readonly wait: number }
   | { readonly pinch: string; readonly scale: number }
-  | { readonly pan: string; readonly dx: number; readonly dy: number }
+  | { readonly pan: string; readonly dx: number; readonly dy: number; readonly ms?: number }
   | { readonly back: true }
   | { readonly relaunch: true };
 

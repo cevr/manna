@@ -80,7 +80,17 @@ const commandOf = (
   if ('relaunch' in step) return { args: ['relaunch'] };
   if ('pinch' in step) return { args: ['gesture', 'pinch', step.pinch, String(step.scale)] };
   if ('pan' in step)
-    return { args: ['gesture', 'pan', step.pan, '--', String(step.dx), String(step.dy)] };
+    return {
+      args: [
+        'gesture',
+        'pan',
+        step.pan,
+        ...(step.ms === undefined ? [] : ['--ms', String(step.ms)]),
+        '--',
+        String(step.dx),
+        String(step.dy),
+      ],
+    };
   return { wait: step.wait };
 };
 

@@ -20,6 +20,18 @@ const tab = (name: string): Row['one'] => ({
 });
 
 const TO_100: Step = { scroll: 'label=100, Great Is Thy Faithfulness', direction: 'down' };
+/**
+ * The list scrolled under a sticky section header on iOS: three slow pans of
+ * a fixed length land on the same pixel each time, where scrolling until a
+ * row shows stops wherever the last fling's momentum leaves it (two takes
+ * an hour apart differed by 25 points).
+ */
+const SLOW_PANS: ReadonlyArray<Step> = Array.from({ length: 3 }, () => ({
+  pan: '201,700',
+  dx: 0,
+  dy: -500,
+  ms: 2000,
+}));
 const RECENT: Step = { open: 'recent', expect: 'label=Recent' };
 
 export const rows: ReadonlyArray<Row> = [
@@ -37,7 +49,7 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hy-fresh',
-    one: { steps: [HOME, TO_100, { wait: 800 }], web: [HOME_WEB, TO_100, { wait: 800 }] },
+    one: { steps: [HOME, ...SLOW_PANS, { wait: 1500 }], web: [HOME_WEB, TO_100, { wait: 800 }] },
   },
   {
     id: 'home.pinned-tabs',
