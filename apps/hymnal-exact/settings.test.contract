@@ -3,7 +3,8 @@ test "The gear opens Settings; Done and Back close it."
   clock settle
   clock data
   expect tree has "settings"
-  expect text "appearance-system" == "System"
+  expect text "appearance-system" == "System✓"
+  expect text "appearance-system-label" == "System"
   expect text "appearance-light" == "Light"
   expect text "appearance-dark" == "Dark"
   tap "settings-done"
@@ -30,6 +31,8 @@ test "Dark at once, and kept."
   expect state settingsLook == "dark"
   expect state settingsLooks.2 .chosen == true
   expect state settingsLooks.0 .chosen == false
+  expect text "appearance-dark" == "Dark✓"
+  expect text "appearance-system" == "System"
   tap "settings-done"
   clock settle
   reload

@@ -3,12 +3,11 @@
 // has a setting, then About, pushed in the sheet. The choice is kept across
 // launches and applied to the whole app at once through the host's scheme
 // (src/look/look.ts holds its rules to the current hymnal's).
-use ChordsRow from "./chords.contract"
-
 shape SettingsLook
   value: string
   label: string
   chosen: bool
+  divided: bool
 
 shape SettingsMedia
   prefersColorScheme: string
@@ -55,6 +54,31 @@ component SettingsGear
     button press=settingsGear aria-label="Settings" testId="gear"
       image "symbol:settings"
 
+// A group's heading, as the current hymnal's `Heading`: footnote type in the
+// muted role, upper case, set in from the group's edge; `apart` stands it
+// off the group above.
+component SettingsHeading
+  props
+    words: string
+    apart: bool
+  view
+    text words role="heading" aria-level=2 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" margin-top=(apart ? "space.s16" : 0)
+
+// A row holding a switch, alone in its own group, as the current hymnal's
+// `ChordsSwitch` and `FeelSwitch`: the label, then UIKit's switch; `apart`
+// stands the group off the one above.
+component SettingsSwitchRow
+  props
+    label: string
+    on: bool
+    turn: action
+    id: string
+    apart: bool
+  view
+    row align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16" margin-top=(apart ? "space.s16" : 0) border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+      text label font="type.body" color="ink" flex=1 min-width=0 aria-hidden=true
+      input type="checkbox" switch checked=on change=turn aria-label=label testId=id
+
 // Sounds and haptics: a switch, on until the reader turns it off, as the
 // current hymnal's `feel`.
 component SettingsFeelRow
@@ -62,11 +86,25 @@ component SettingsFeelRow
     settingsFeel: bool
     settingsFeelSwitch: action
   view
-    section
-      row
-        text "Sounds and haptics" flex=1 min-width=0
-        input type="checkbox" switch checked=settingsFeel change=settingsFeelSwitch aria-label="Sounds and haptics" testId="settings-feel"
+    SettingsSwitchRow(label="Sounds and haptics", on=settingsFeel, turn=settingsFeelSwitch, id="settings-feel", apart=true)
 
+// Chords: whether the chords show, the same setting as the player sheet's
+// switch, through the root's `chordsSwitchOn` and `chordsSwitch`.
+component SettingsChordsRow
+  inject
+    chordsSwitchOn: bool
+    chordsSwitch: action
+  view
+    SettingsHeading(words="Chords", apart=true)
+    SettingsSwitchRow(label="Chords", on=chordsSwitchOn, turn=chordsSwitch, id="chords-toggle", apart=false)
+
+// The sheet, drawn as the current hymnal's Settings (app/(hymnal)/settings.tsx
+// in a form sheet of half and full height with its grabber, src/sheets.ts):
+// its own title, Appearance's choices in one hairline group with the chosen
+// one ticked, a group a switch, and About, pushed in the sheet, as a row
+// with its chevron. Done, which the current hymnal's sheet has not (the
+// owner keeps it, q1), sits at the title's trailing end without growing its
+// row; a swipe down closes the sheet too.
 component SettingsSheet
   props
     entry: Entry
@@ -74,27 +112,30 @@ component SettingsSheet
     choose: action
     done: action
   view
-    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="settings-list" position="absolute" inset=0 testId="settings"
-      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
-        text "Settings" role="heading" aria-level=2
-        button press=done testId="settings-done"
-          text "Done"
-      list id="settings-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        section
-          header
-            text "Appearance"
-          for l in looks key=l.value
-            button role="radio" aria-checked=l.chosen press=choose(l.value) testId=`appearance-${l.value}`
-              row flex=1 min-width=0 align-items="center"
-                text l.label flex=1 min-width=0
-                if l.chosen
-                  image "symbol:checkmark" aria-hidden=true
-        // Each feature with a setting adds its row here, one call line
-        // (README.md, "Settings").
-        ChordsRow()
-        SettingsFeelRow()
-        section
-          link href=path("about") testId="about-row"
-            row flex=1 min-width=0 align-items="center"
-              text "About" flex=1 min-width=0
-              image "symbol:forward-chevron" aria-hidden=true
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="50% large" navigationGrabber="visible" navigationScroll="settings-list" position="absolute" inset=0 background-color="ground" testId="settings"
+      scroll id="settings-list" flex=1 min-height=0
+        column gap="space.s8" padding="space.s24 space.s16 space.s16"
+          row position="relative" align-items="center" margin-bottom="space.s8"
+            text "Settings" role="heading" aria-level=1 font="type.sheet-title" color="ink" flex=1 min-width=0
+            button press=done appearance="none" position="absolute" top=0 bottom=0 right=0 display="flex" align-items="center" justify-content="flex-end" min-width="size.target" -exact-hit-slop="space.s8" testId="settings-done"
+              :active
+                opacity = "opacity.pressed"
+              text "Done" font="type.strong" color="accent"
+          SettingsHeading(words="Appearance", apart=false)
+          column role="radiogroup" aria-label="Appearance" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+            for l in looks key=l.value
+              button role="radio" aria-label=l.label aria-checked=l.chosen press=choose(l.value) appearance="none" padding=0 border-top-width=(l.divided ? "line.hair" : 0) border-top-style="solid" border-top-color="line" testId=`appearance-${l.value}`
+                :active
+                  background-color = "soft"
+                row flex=1 min-width=0 align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16"
+                  text l.label font="type.body" color="ink" flex=1 min-width=0 text-align="start" testId=`appearance-${l.value}-label`
+                  text (l.chosen ? "✓" : "") font="type.strong" color="accent" aria-hidden=true
+          // Each feature with a setting adds its row here, one call line
+          // (README.md, "Settings").
+          SettingsChordsRow()
+          SettingsFeelRow()
+          link href=path("about") display="flex" flex-direction="row" align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16" margin-top="space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden" testId="about-row"
+            :active
+              background-color = "soft"
+            text "About" font="type.body" color="ink" flex=1 min-width=0
+            text "›" font="type.chevron" color="muted" aria-hidden=true

@@ -1,7 +1,7 @@
 /**
  * Settings' sources as Exact's data module runs them (under `withDataHost`,
  * so what Hermes lacks fails here): the Appearance rows answer any kept
- * text with one row chosen, and About answers the current hymnal's own
+ * text with one row chosen and every row but the first divided, and About answers the current hymnal's own
  * recording credits, each licence's address where it has one.
  */
 
@@ -26,10 +26,11 @@ describe('Settings’ sources', () => {
         expect(rows.map((row) => row.label)).toEqual(['System', 'Light', 'Dark']);
         expect(rows.filter((row) => row.chosen)).toHaveLength(1);
         expect(rows).toEqual(
-          rows.map(() => ({
+          rows.map((_, k) => ({
             value: expect.any(String),
             label: expect.any(String),
             chosen: expect.any(Boolean),
+            divided: k > 0,
           })),
         );
       }
