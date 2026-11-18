@@ -16,6 +16,7 @@ import { egwCommentary } from './egw/commentary.js';
 import { egwDownload } from './egw/download.js';
 import { ServiceLayer } from './egw/layers.js';
 import { egwLookup, lookupReference } from './egw/lookup.js';
+import { egwRelink } from './egw/relink.js';
 import { egwReport } from './egw/report.js';
 import { egwDaemon } from './egw/search-daemon.js';
 import { egwSearch, localSearch } from './egw/search.js';
@@ -36,6 +37,7 @@ export const egwWithSubcommands = Command.make('egw', { query }, (args) =>
       yield* Console.log('       manna egw study <subject>');
       yield* Console.log('       manna egw search <query> [--remote]');
       yield* Console.log('       manna egw sync [--json]');
+      yield* Console.log('       manna egw relink [code...]');
       yield* Console.log('       manna egw report [name] [--web]');
       yield* Console.log('');
       yield* Console.log('Examples:');
@@ -69,6 +71,7 @@ export const egwWithSubcommands = Command.make('egw', { query }, (args) =>
     egwLookup,
     egwCommentary,
     egwSync,
+    egwRelink,
     egwReport,
     egwDaemon,
   ]),

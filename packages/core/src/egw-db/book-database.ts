@@ -50,6 +50,8 @@ import {
 } from '../db/schema-version.js';
 import * as EGWSchemas from '../egw/schemas.js';
 import { Node, nodesToText } from '../egw/ast.js';
+import { readerFor } from '../egw/commentary-links.js';
+import { extractScriptureRefs } from '../egw/extract.js';
 import { headingLevel, isChapterHeading, isFurniture } from '../egw/parse.js';
 import {
   type ArchiveChapter,
@@ -111,6 +113,14 @@ export const BookRow = Schema.Struct({
 });
 
 export type BookRow = Schema.Schema.Type<typeof BookRow>;
+
+/** What `relinkBibleRefs` did: the books it read, their paragraphs, and the
+ *  link rows they now have. */
+interface RelinkReport {
+  readonly books: number;
+  readonly paragraphs: number;
+  readonly links: number;
+}
 
 const { refcode_long, puborder, element_type, element_subtype } = EGWSchemas.Paragraph.fields;
 
@@ -811,32 +821,16 @@ export interface EGWParagraphDatabaseService {
     bibleChapter: number,
   ) => Effect.Effect<readonly number[], ParagraphDatabaseError>;
   /**
-   * One-shot population of `paragraph_bible_refs` from already-indexed
-   * paragraphs. Skips when the table is non-empty (so a healthy install pays
-   * a single COUNT(*) on boot, nothing more). When empty, streams every
-   * paragraph through `extract` (extractor lives in the caller — typically
-   * `extractScriptureRefs` from `@manna/core/egw`) and inserts the produced
-   * rows in per-book batches.
-   *
-   * Exists because `storeBibleRefsBatch` was added after `storeParagraphsBatch`
-   * was already populating the cache for users in the wild; without this they
-   * would never see EGW commentary on Bible verses until they re-fetched
-   * every chapter.
-   *
-   * Returns `{ scanned, inserted }` so callers can log throughput.
+   * Replaces the `paragraph_bible_refs` rows of each book `codes` names
+   * (every book when `codes` is empty) with the rows its stored paragraphs
+   * give today, read in publication order by `readerFor` of its code: the
+   * same reading an install makes, run over the paragraphs already stored,
+   * so a changed reading reaches an installed corpus without a download.
+   * Each book is replaced in one transaction.
    */
-  readonly backfillBibleRefs: (
-    extract: (
-      paragraphs: readonly EGWSchemas.Paragraph[],
-      bookId: number,
-    ) => readonly {
-      bookId: number;
-      refCode: string;
-      bibleBook: number;
-      bibleChapter: number;
-      bibleVerse: Option.Option<number>;
-    }[],
-  ) => Effect.Effect<{ scanned: number; inserted: number }, ParagraphDatabaseError>;
+  readonly relinkBibleRefs: (
+    codes: readonly string[],
+  ) => Effect.Effect<RelinkReport, ParagraphDatabaseError>;
 
   readonly setSyncStatus: (
     bookId: number,
@@ -2469,40 +2463,58 @@ export class EGWParagraphDatabase extends Context.Service<
           .unsafe(`INSERT INTO paragraphs_fts(paragraphs_fts) VALUES('rebuild')`)
           .pipe(Effect.asVoid);
 
-        const backfillBibleRefs = (
-          extract: (
-            paragraphs: readonly EGWSchemas.Paragraph[],
-            bookId: number,
-          ) => readonly {
-            bookId: number;
-            refCode: string;
-            bibleBook: number;
-            bibleChapter: number;
-            bibleVerse: Option.Option<number>;
-          }[],
-        ) =>
+        const relinkBook = (book: { readonly book_id: number; readonly book_code: string }) =>
           Effect.gen(function* () {
-            const existing = yield* sql<{ n: number }>`
-            SELECT COUNT(*) AS n FROM paragraph_bible_refs LIMIT 1
+            const rows = yield* sql<ParagraphRow>`
+            SELECT * FROM paragraphs WHERE book_id = ${book.book_id} ORDER BY puborder
           `;
-            if ((existing[0]?.n ?? 0) > 0) {
-              return { scanned: 0, inserted: 0 };
-            }
+            const refCodes = new Map<EGWSchemas.Paragraph, string>();
+            const paragraphs = yield* Effect.forEach(rows, (row) =>
+              Effect.map(rowToParagraph(row), (paragraph) => {
+                refCodes.set(paragraph, row.ref_code);
+                return paragraph;
+              }),
+            );
+            const links = extractScriptureRefs(
+              paragraphs,
+              book.book_id,
+              (paragraph) => refCodes.get(paragraph) ?? '',
+              readerFor(book.book_code),
+            );
+            yield* sql.withTransaction(
+              Effect.gen(function* () {
+                yield* sql`DELETE FROM paragraph_bible_refs WHERE para_book_id = ${book.book_id}`;
+                for (const link of links) {
+                  yield* storeBibleRef(
+                    link.bookId,
+                    link.refCode,
+                    link.bibleBook,
+                    link.bibleChapter,
+                    link.bibleVerse,
+                  );
+                }
+              }),
+            );
+            return { paragraphs: rows.length, links: links.length };
+          });
 
-            let scanned = 0;
-            let inserted = 0;
-            const books = yield* Stream.runCollect(getAllBooks);
+        const relinkBibleRefs = (codes: readonly string[]) =>
+          Effect.gen(function* () {
+            let named: Effect.Effect<
+              readonly { readonly book_id: number; readonly book_code: string }[],
+              ParagraphDatabaseError
+            > = Effect.map(Stream.runCollect(getAllBooks), (all) => Array.from(all));
+            if (codes.length > 0)
+              named = Effect.map(Effect.forEach(codes, getBooksByCode), (found) => found.flat());
+            const books = yield* named;
+            const report = { books: 0, paragraphs: 0, links: 0 };
             for (const book of books) {
-              const paragraphs = yield* Stream.runCollect(getParagraphsByBook(book.book_id));
-              const arr = Array.from(paragraphs);
-              scanned += arr.length;
-              const refs = extract(arr, book.book_id);
-              if (refs.length > 0) {
-                const wrote = yield* storeBibleRefsBatch(refs);
-                inserted += wrote;
-              }
+              const relinked = yield* relinkBook(book);
+              report.books += 1;
+              report.paragraphs += relinked.paragraphs;
+              report.links += relinked.links;
             }
-            return { scanned, inserted };
+            return report;
           });
 
         return EGWParagraphDatabase.of({
@@ -2546,7 +2558,7 @@ export class EGWParagraphDatabase extends Context.Service<
           paragraphChanges,
           pruneParagraphChanges,
           rebuildFtsIndex,
-          backfillBibleRefs,
+          relinkBibleRefs,
         });
       }),
     );
@@ -2933,7 +2945,7 @@ export class EGWParagraphDatabase extends Context.Service<
           ),
         pruneParagraphChanges: () => Effect.succeed(0),
         rebuildFtsIndex: Effect.void,
-        backfillBibleRefs: () => Effect.succeed({ scanned: 0, inserted: 0 }),
+        relinkBibleRefs: () => Effect.succeed({ books: 0, paragraphs: 0, links: 0 }),
       }),
     );
 }

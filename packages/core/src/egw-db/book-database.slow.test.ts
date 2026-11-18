@@ -1202,6 +1202,65 @@ describe('EGWParagraphDatabase', () => {
           expect(results[0]?.bookCode).toBe('1BC');
         }),
       ));
+
+    test('relinks the named books from their stored paragraphs, replacing only their rows', () =>
+      runTest(
+        Effect.gen(function* () {
+          const db = yield* EGWParagraphDatabase;
+          const heading: Paragraph['nodes'] = [
+            {
+              _tag: 'Unknown',
+              tag: 'strong',
+              className: '',
+              children: [
+                {
+                  _tag: 'ScriptureRef',
+                  title: 'John 1:14',
+                  dataLink: '',
+                  children: [{ _tag: 'Text', text: '14' }],
+                },
+              ],
+            },
+            { _tag: 'Text', text: ' made up' },
+          ];
+          yield* db.storeParagraphsBatch(
+            [{ ...mockParagraph(1, '5BC 1.1'), nodes: heading }, mockParagraph(2, '5BC 1.2')],
+            mockBook(94, '5BC'),
+          );
+          yield* db.storeParagraphsBatch(
+            [{ ...mockParagraph(1, 'GC 1.1'), nodes: heading }, mockParagraph(2, 'GC 1.2')],
+            mockBook(1, 'GC'),
+          );
+          const stale = (bookId: number, refCode: string) => ({
+            bookId,
+            refCode,
+            bibleBook: 1,
+            bibleChapter: 1,
+            bibleVerse: Option.some(1),
+          });
+          yield* db.storeBibleRefsBatch([stale(94, '5BC 1.2'), stale(1, 'GC 1.2')]);
+
+          const report = yield* db.relinkBibleRefs(['5BC']);
+
+          expect(report).toEqual({ books: 1, paragraphs: 2, links: 2 });
+          const onVerse = yield* db.getParagraphsByBibleRef(43, 1, 14);
+          expect(onVerse.map((row) => Option.getOrNull(row.refcode_short))).toEqual([
+            '5BC 1.1',
+            '5BC 1.2',
+          ]);
+          const onStale = yield* db.getParagraphsByBibleRef(1, 1, 1);
+          expect(onStale.map((row) => Option.getOrNull(row.refcode_short))).toEqual(['GC 1.2']);
+
+          const all = yield* db.relinkBibleRefs([]);
+          expect(all).toEqual({ books: 2, paragraphs: 4, links: 3 });
+          const relinked = yield* db.getParagraphsByBibleRef(43, 1, 14);
+          expect(relinked.map((row) => Option.getOrNull(row.refcode_short))).toEqual([
+            '5BC 1.1',
+            '5BC 1.2',
+            'GC 1.1',
+          ]);
+        }),
+      ));
   });
 
   describe('book operations', () => {

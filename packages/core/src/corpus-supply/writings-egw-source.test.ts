@@ -364,6 +364,74 @@ describe('direct EGW Writings asset source', () => {
     }),
   );
 
+  it.effect(
+    "links a commentary volume's paragraphs to the verse heading they stand under, across chapters",
+    () =>
+      Effect.gen(function* () {
+        const installed: PublicationArchive[] = [];
+        const heading: Paragraph = {
+          ...paragraph,
+          para_id: Option.some('bc-1'),
+          nodes: [
+            {
+              _tag: 'Unknown',
+              tag: 'strong',
+              className: '',
+              children: [
+                {
+                  _tag: 'ScriptureRef',
+                  title: 'John 1:14',
+                  dataLink: '1965.1',
+                  children: [{ _tag: 'Text', text: '14' }],
+                },
+              ],
+            },
+            { _tag: 'Text', text: ' made up' },
+          ],
+        };
+        const under: Paragraph = {
+          ...paragraph,
+          para_id: Option.some('bc-2'),
+          nodes: [{ _tag: 'Text', text: 'made up' }],
+          puborder: 2,
+        };
+        const database = EGWParagraphDatabase.Test({
+          needsSync: () => true,
+          installPublication: (archive: PublicationArchive) => {
+            installed.push(archive);
+            return archive.paragraphs.length;
+          },
+        });
+        const source = layerEgwWritingsAssetSource.pipe(
+          Layer.provide(
+            Layer.succeed(
+              EGWApiClient,
+              EGWApiClient.of({
+                ...api,
+                getBook: () => Effect.succeed({ ...book, code: '5BC' }),
+                getBookToc: () =>
+                  Effect.succeed([toc, { ...toc, para_id: Option.some('chapter-2'), puborder: 2 }]),
+                getChapterContent: (_, chapterId) => {
+                  if (chapterId === '2') return Effect.succeed([under]);
+                  return Effect.succeed([heading]);
+                },
+              }),
+            ),
+          ),
+        );
+        const layer = CorpusSupply.layer.pipe(Layer.provide(source), Layer.provide(database));
+
+        yield* ensureWritings(layer);
+
+        const onJohn = { _tag: 'verse', book: 43, chapter: 1, verse: 14 };
+        expect(installed[0]?.bibleReferences).toHaveLength(2);
+        expect(installed[0]?.bibleReferences).toMatchObject([
+          { paragraphRefcode: 'bc-1', scripture: onJohn },
+          { paragraphRefcode: 'bc-2', scripture: onJohn },
+        ]);
+      }),
+  );
+
   it.effect('uses the stable paragraph ID when provider refcodes are empty', () =>
     Effect.gen(function* () {
       const installed: PublicationArchive[] = [];
