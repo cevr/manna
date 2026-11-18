@@ -36,6 +36,23 @@ test "The shelves, in order"
   expect tree missing "add-limit"
   expect no failures
 
+test "Add a list is a sheet over home, and Done closes it"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect tree has "add-sheet"
+  expect text "add-title" == "Add a list"
+  expect text "add-done" == "Done"
+  expect tree has "shelf-any"
+  tap "add-done"
+  clock settle
+  expect tree missing "add-sheet"
+  expect state readGardenTab.length == 1
+  expect tree has "add-list"
+  expect no failures
+
 test "A pick shows its verses before it is planted, then plants"
   at "/add"
   clock data
@@ -251,6 +268,11 @@ test "At twenty single verses a short pick says its limit"
   expect text "shelf-count" == "1 verse"
   expect tree missing "shelf-plant"
   expect text "shelf-singles-limit" == "20 single verses, the most for now. Remove one to add another."
+  back
+  clock settle
+  tap "add-done"
+  clock settle
+  expect tree missing "add-sheet"
   tap "tab-read"
   clock data
   clock settle
