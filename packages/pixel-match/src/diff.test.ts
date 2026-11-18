@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { Arbitrary, Effect, Schema } from 'effect';
 
 import { diff, ladder, largestRegion, maskMap, type Mask } from './diff.ts';
-import { decodePng, encodePng, type Picture } from './png.ts';
+import { decodePng, encodePng, isBlank, type Picture } from './png.ts';
 
 const int = (minimum: number, maximum: number) =>
   Arbitrary.schema(Schema.Int.check(Schema.isBetween({ minimum, maximum })));
@@ -130,5 +130,12 @@ describe('the PNG codec', () => {
 
   test('bytes that are no PNG are refused', () => {
     expect(() => decodePng(Uint8Array.from([1, 2, 3]), 'junk')).toThrow('junk: not a PNG');
+  });
+
+  test('a picture of one colour is blank; one pixel else is not', () => {
+    const rgba = new Uint8Array(4 * 4 * 4).fill(240);
+    expect(isBlank(encodePng({ width: 4, height: 4, rgba }))).toBe(true);
+    rgba[21] = 12;
+    expect(isBlank(encodePng({ width: 4, height: 4, rgba }))).toBe(false);
   });
 });

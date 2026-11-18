@@ -6,6 +6,9 @@ import type { Row, Step } from '../../src/model.ts';
 
 const unit = 'pm-hy-hymn';
 
+/** The first hymn the chord book holds no chords for (`hasChords` false over `vite/chords.ts`'s book, read at the One commit). */
+export const NO_CHORDS = 181;
+
 export const hymn = (number: number): Step => ({
   open: `hymns/${number}`,
   expect: 'label=Stanza 1',
@@ -62,7 +65,7 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hy-chords',
-    one: { steps: [hymn(0), { wait: 600 }] },
+    one: { steps: [hymn(NO_CHORDS), { wait: 600 }] },
   },
   {
     id: 'hymn.chord-sheet',
@@ -82,7 +85,10 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hy-fresh',
-    one: { steps: [{ open: 'hymns/999', expect: 'label=No hymn 999' }, { wait: 600 }] },
+    one: {
+      steps: [{ open: 'hymns/999', expect: 'label=No hymn 999' }, { wait: 600 }],
+      web: [{ open: 'hymns/999', expect: 'label=No hymn 999.' }, { wait: 600 }],
+    },
   },
   {
     id: 'hymn.reading',

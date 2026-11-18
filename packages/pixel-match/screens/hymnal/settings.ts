@@ -40,6 +40,9 @@ export const rows: ReadonlyArray<Row> = [
     unit: 'ex-hy-tuner',
     kind: 'gap',
     fixture: 'hy-chords',
-    one: { steps: [{ open: 'tuner', expect: 'label=Tuner' }, { wait: 1000 }] },
+    one: {
+      steps: [{ open: 'tuner', expect: 'label=Tuner' }, { wait: 1000 }],
+      web: [{ open: 'tuner', expect: 'id=tuner-screen' }, { wait: 1000 }],
+    },
   },
 ];

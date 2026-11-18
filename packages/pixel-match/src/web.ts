@@ -19,6 +19,7 @@ import { chromium, type Locator, type Page } from '@playwright/test';
 import { storeOf } from './fixtures.ts';
 import { cellName, cellsOf, viewportOf, type Cell, type Row, type Step } from './model.ts';
 import { refFile } from './paths.ts';
+import { isBlank } from './png.ts';
 import type { Frame } from './ref.ts';
 
 /** The loopback port the One web build is served on: the first of the hymnal's reference range after the dev server's. */
@@ -55,7 +56,8 @@ const locate = (page: Page, target: string): Locator => {
 
 const doStep = async (page: Page, base: string, step: Step) => {
   if ('open' in step) {
-    await page.goto(`${base}/${step.open.replace(/^\//, '')}`);
+    await page.goto(`${base}/${step.open.replace(/^\//, '')}`, { waitUntil: 'networkidle' });
+    if (step.expect === '') return page.waitForTimeout(1500);
     await locate(page, step.expect).waitFor({ timeout: 20_000 });
     return;
   }
@@ -149,9 +151,15 @@ const takeCell = async (
     }, pairs);
     const page = await context.newPage();
     for (const step of side.web ?? side.steps) await doStep(page, base, step);
+    if (side.hold !== undefined) {
+      await locate(page, side.hold).hover();
+      await page.mouse.down();
+    }
     await page.waitForTimeout(400);
     const shot = await stillShot(page);
+    if (side.hold !== undefined) await page.mouse.up();
     if (shot === undefined) return 'moving: no two takes 500 ms apart were the same bytes';
+    if (isBlank(shot)) return 'blank: the page drew nothing';
     const file = refFile(frame, cell);
     mkdirSync(join(file, '..'), { recursive: true });
     writeFileSync(file, shot);

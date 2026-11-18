@@ -19,6 +19,20 @@ const HELD: ReadonlyArray<Step> = [
 ];
 const SHEET: ReadonlyArray<Step> = [...HELD, { tap: 'label=Open player' }, { wait: 1200 }];
 
+/**
+ * Why the docked bar has no web cell: in headless Chromium One's web home
+ * is never reached with a hymn held. A hymn pushed from home's list does
+ * not start (Play stays Play), and from a hymn loaded at its route the
+ * stack's back link does not leave the page; a fresh load of `/` drops the
+ * held hymn.
+ */
+const NO_DOCK =
+  "One's web home is not reached with a hymn held in headless Chromium: a pushed hymn's Play does not start, and a hymn loaded at its route has no way back to home that keeps it";
+
+/** Why `player.full` has no web cell. */
+const NO_DETENTS =
+  "One's web player is one page with no sheet detents: player.half is its whole picture";
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'bar.page',
@@ -33,21 +47,33 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hy-paused',
-    one: { steps: [...HELD, { back: true }, HOME, { wait: 800 }] },
+    one: { steps: [...HELD, { back: true }, HOME, { wait: 800 }], notDrawn: { web: NO_DOCK } },
   },
   {
     id: 'bar.pressed',
     unit,
     kind: 'match',
     fixture: 'hy-paused',
-    one: { steps: [...HELD, { back: true }, HOME], hold: 'label=Play hymn 1' },
+    one: {
+      steps: [...HELD, { back: true }, HOME],
+      hold: 'label=Play hymn 1',
+      notDrawn: { web: NO_DOCK },
+    },
   },
   {
     id: 'bar.no-recording',
     unit,
     kind: 'match',
     fixture: 'hy-fresh',
-    one: { steps: [hymn(13), { tap: 'label=Play hymn 13' }, { wait: 2000 }] },
+    one: {
+      steps: [
+        hymn(13),
+        { tap: 'label=Play hymn 13' },
+        { wait: 2000 },
+        { tap: 'label=Pause hymn 13' },
+        { wait: 800 },
+      ],
+    },
   },
   {
     id: 'bar.dials',
@@ -69,7 +95,10 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     sweep: true,
     fixture: 'hy-paused',
-    one: { steps: [...SHEET, { pan: 'label=Sheet Grabber', dx: 0, dy: -500 }, { wait: 1200 }] },
+    one: {
+      steps: [...SHEET, { pan: 'label=Sheet Grabber', dx: 0, dy: -500 }, { wait: 1200 }],
+      notDrawn: { web: NO_DETENTS },
+    },
   },
   {
     id: 'player.chips-chosen',
@@ -80,6 +109,12 @@ export const rows: ReadonlyArray<Row> = [
       steps: [
         ...SHEET,
         { pan: 'label=Sheet Grabber', dx: 0, dy: -500 },
+        { scroll: 'id=stanza-2', direction: 'down' },
+        { tap: 'id=stanza-2' },
+        { wait: 800 },
+      ],
+      web: [
+        ...SHEET,
         { scroll: 'id=stanza-2', direction: 'down' },
         { tap: 'id=stanza-2' },
         { wait: 800 },
@@ -98,6 +133,7 @@ export const rows: ReadonlyArray<Row> = [
         { scroll: 'label=Keep screen on', direction: 'down' },
         { wait: 800 },
       ],
+      web: [...SHEET, { scroll: 'label=Keep screen on', direction: 'down' }, { wait: 800 }],
     },
   },
 ];

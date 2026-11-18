@@ -118,6 +118,14 @@ export const decodePng = (file: Uint8Array, name = 'picture'): Picture => {
   return { width, height, rgba };
 };
 
+/** Whether every pixel of a PNG is one colour: a page that drew nothing, never a reference. */
+export const isBlank = (file: Uint8Array) => {
+  const { rgba } = decodePng(file);
+  const view = new Uint32Array(rgba.buffer, rgba.byteOffset, rgba.byteLength / 4);
+  const first = view[0];
+  return view.every((pixel) => pixel === first);
+};
+
 const CRC_TABLE = Uint32Array.from({ length: 256 }, (_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
