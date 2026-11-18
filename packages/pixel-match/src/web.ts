@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noTryCatch, effect/noAs, no-await-in-loop -- a host tool that serves a built web app from plain files with Bun and drives a headless Chromium through Playwright, step by step in order; a step that fails fails its cell, which is caught and named. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noTryCatch, no-await-in-loop -- a host tool that serves a built web app from plain files with Bun and drives a headless Chromium through Playwright, step by step in order; a step that fails fails its cell, which is caught and named. */
 
 /**
  * `pixel ref hymnal --web`: the hymnal's web references. The One web build

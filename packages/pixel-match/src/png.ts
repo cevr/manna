@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noThrowStatement, effect/noNewError, effect/noNullish, effect/noTernary -- a host tool's PNG codec over node's zlib (spec: no new dependency): byte arithmetic, where a byte past an array's end is undefined; a file that is no 8-bit RGB(A) PNG is a broken capture, said by a throw. */
+/* oxlint-disable effect/noThrowStatement, effect/noNewError, effect/noNullish, effect/noTernary -- a host tool's PNG codec over node's zlib (spec: no new dependency): byte arithmetic, where a byte past an array's end is undefined; a file that is no 8-bit RGB(A) PNG is a broken capture, said by a throw. */
 
 /**
  * The pictures the harness reads and writes: 8-bit RGB or RGBA PNGs, not

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, effect/noTryCatch -- a host tool that drives the port through `bun run exact agent`, reads its JSON replies and the pictures on disk, and writes the result files: plain TypeScript as the exact-kit's drives are. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noNullish, effect/noTernary, effect/noAs, effect/noTryCatch -- a host tool that drives the port through `bun run exact agent`, reads its JSON replies and the pictures on disk, and writes the result files: plain TypeScript as the exact-kit's drives are. */
 
 /**
  * `pixel shot <app> <id>… [--scheme light|dark] [--size <size>]`: the port
