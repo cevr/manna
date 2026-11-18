@@ -5,6 +5,9 @@ const unit = 'pm-hy-settings';
 
 export const SETTINGS: Step = { open: 'settings', expect: 'label=Appearance' };
 
+/** The port's way to its Settings sheet at its half height: the gear, once the list is in. */
+const GEAR = ['clock data', 'tap gear', 'clock settle'];
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'settings.sheet',
@@ -13,6 +16,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-fresh',
     one: { steps: [SETTINGS, { wait: 1000 }] },
+    exact: { ops: GEAR },
   },
   {
     id: 'settings.chords-on',
@@ -20,6 +24,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-chords',
     one: { steps: [SETTINGS, { scroll: 'label=Chords', direction: 'down' }, { wait: 800 }] },
+    exact: { ops: GEAR },
   },
   {
     id: 'settings.dark-chosen',
@@ -27,6 +32,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-fresh',
     one: { steps: [SETTINGS, { tap: 'label=Dark' }, { wait: 1000 }] },
+    exact: { ops: [...GEAR, 'tap appearance-dark', 'clock settle'] },
   },
   {
     id: 'settings.downloads',
