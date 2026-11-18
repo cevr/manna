@@ -4,8 +4,9 @@
  * `pixel shot <app> <id>… [--scheme light|dark] [--size <size>]`: the port
  * against the One reference. For each iOS cell asked, the port is launched
  * on its Exact simulator through `bun run exact agent ios` (the wrapper, its
- * lock, its simulator) on a fresh store, set to the cell's scheme, driven by
- * the row's ops and its screen taken with Exact's `compare` against the
+ * lock, its simulator) on a fresh store and on the agent's clock at the
+ * reference's hour (`portClock`), set to the cell's scheme, driven by the
+ * row's ops and its screen taken with Exact's `compare` against the
  * reference. The strict diff then scores the pair at the threshold's
  * channel; the result (with the count at channel 0, 4, 8 and 16), the diff
  * picture and Exact's `compare` text are written beside the screen.
@@ -14,7 +15,8 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { bandsOf, diff, diffPicture, ladder, type Band, type Mask } from './diff.ts';
+import { hostZone, portClock } from './clock.ts';
+import { diffPicture, ladder, scorePair, type Band, type Banding, type Mask } from './diff.ts';
 import { overrideStatusBar, rectIn, run } from './ios.ts';
 import {
   cellName,
@@ -27,6 +29,13 @@ import {
 } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
 import { decodePng, encodePng } from './png.ts';
+
+/** Where the checkout and the references are. */
+interface Frame {
+  readonly root: string;
+  readonly refs: string;
+  readonly one: string;
+}
 
 /** The Exact simulators the wrapper drives, by app. */
 const EXACT_SIMULATORS: Readonly<Record<AppName, string>> = {
@@ -63,29 +72,22 @@ const pixelsOf = (masks: ReadonlyArray<MaskSpec>, scale: number): ReadonlyArray<
 
 /** Scores one cell's screen against its reference and writes the result and the diff picture; the result. */
 const score = (
-  frame: { readonly root: string; readonly refs: string; readonly one: string },
+  frame: Frame,
   cell: Cell,
   masks: ReadonlyArray<Mask>,
   compare: string,
-  bands:
-    | { readonly reference: Band; readonly screen: Band; readonly anchor: 'top' | 'bottom' }
-    | undefined,
+  bands: Banding | undefined,
 ) => {
   const files = shotFiles(frame.root, cell);
   const wholeReference = decodePng(readFileSync(refFile(frame, cell)), 'reference');
   const wholeScreen = decodePng(readFileSync(files.screen), 'screen');
-  const picture = wholeReference.width * wholeReference.height;
-  let [reference, screen, laid] = [wholeReference, wholeScreen, masks];
-  if (bands !== undefined) {
-    if (wholeReference.width !== wholeScreen.width)
-      throw new Error(
-        `${cellName(cell)}: reference ${wholeReference.width} wide, screen ${wholeScreen.width}`,
-      );
-    const cut = bandsOf(wholeReference, bands.reference, wholeScreen, bands.screen, bands.anchor);
-    [reference, screen] = [cut.reference, cut.screen];
-    laid = masks.map((mask) => ({ ...mask, y: mask.y - cut.offset }));
-  }
-  const scored = diff(reference, screen, laid, CHANNEL);
+  const { reference, screen, laid, picture, scored } = scorePair(
+    wholeReference,
+    wholeScreen,
+    masks,
+    CHANNEL,
+    bands,
+  );
   if (scored._tag === 'Sizes')
     throw new Error(`${cellName(cell)}: reference ${scored.reference}, screen ${scored.screen}`);
   writeFileSync(files.diff, encodePng(diffPicture(reference, screen, scored)));
@@ -124,26 +126,85 @@ const dropOneRoutes = (root: string) => {
   }
 };
 
+/**
+ * What a reference's metadata gives the port's side: its band (its top read
+ * from One's tree at capture, to the picture's foot; none for a row not
+ * banded) and its hour and zone, for the agent's clock.
+ */
+const referenceOf = (frame: Frame, cell: Cell) => {
+  const metadata = JSON.parse(
+    readFileSync(refFile(frame, cell).replace(/\.png$/, '.json'), 'utf8'),
+  ) as {
+    readonly band?: { readonly top: number };
+    readonly hour: number;
+    readonly timeZone?: string;
+  };
+  const band: Band | undefined =
+    metadata.band === undefined
+      ? undefined
+      : { top: metadata.band.top, bottom: Number.POSITIVE_INFINITY };
+  return { band, taken: { hour: metadata.hour, timeZone: metadata.timeZone } };
+};
+
+/**
+ * The port's band in device pixels from the agent's `--json` output: the
+ * agent prints one JSON line per op (`agent.mjs`, `JSON.stringify` of each
+ * reply), so the two `layout` replies are the two lines before the last,
+ * the screenshot's. From the bottom of the first node to the top of the
+ * second; none when either holds no rect.
+ */
+export const edgesIn = (out: string): Band | undefined => {
+  const replies = out.trim().split('\n').slice(-3);
+  const [top, bottom] = [rectIn(replies[0] ?? ''), rectIn(replies[1] ?? '')];
+  if (top === undefined || bottom === undefined) return undefined;
+  return { top: (top.y + top.height) * IOS.scale, bottom: bottom.y * IOS.scale };
+};
+
+/**
+ * Scores the port's screen of `cell`, already on disk, against its
+ * reference, given the agent's `--json` output `out` of the drive that took
+ * it: a banded row over its two bands, else the whole pictures. The result,
+ * also written beside the screen.
+ */
+export const scoreShot = (frame: Frame, row: Row, cell: Cell, out: string) => {
+  const oneBand = referenceOf(frame, cell).band;
+  const compare = out.trim().split('\n').slice(-12).join('\n');
+  let bands: Banding | undefined;
+  if (oneBand !== undefined) {
+    const screen = edgesIn(out);
+    if (screen === undefined)
+      throw new Error(
+        `${row.id}: no rect in the agent's layout replies: ${out.trim().split('\n').slice(-3, -1).join(' | ').slice(0, 400)}`,
+      );
+    bands = { reference: oneBand, screen, anchor: row.anchor ?? 'top' };
+  }
+  return score(
+    frame,
+    cell,
+    pixelsOf([...(row.one?.masks ?? []), ...(row.exact?.masks ?? [])], IOS.scale),
+    compare,
+    bands,
+  );
+};
+
 /** Takes and scores the port's iOS cell of `row`. */
-const shootCell = (
-  frame: { readonly root: string; readonly refs: string; readonly one: string },
-  row: Row,
-  cell: Cell,
-) => {
+const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   const side = row.exact;
   if (side === undefined) throw new Error(`${row.id}: no Exact side written yet`);
   if (!existsSync(refFile(frame, cell))) throw new Error(`${cellName(cell)}: no reference`);
+  const reference = referenceOf(frame, cell);
+  if (row.one?.band !== undefined && reference.band === undefined)
+    throw new Error(`${cellName(cell)}: a banded row whose reference keeps no band: take it again`);
+  if (reference.band !== undefined && side.band === undefined)
+    throw new Error(`${row.id}: a banded row whose Exact side names no band`);
+  const clock = portClock(reference.taken, new Date(), hostZone());
+  if (clock._tag === 'Refused') throw new Error(`${cellName(cell)}: ${clock.reason}`);
   dropOneRoutes(frame.root);
   const udid = udidOfName(EXACT_SIMULATORS[cell.app]);
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
-  const oneBand = referenceBandOf(frame, cell);
-  if (row.one?.band !== undefined && oneBand === undefined)
-    throw new Error(`${cellName(cell)}: a banded row whose reference keeps no band: take it again`);
-  if (oneBand !== undefined && side.band === undefined)
-    throw new Error(`${row.id}: a banded row whose Exact side names no band`);
   const edges =
     side.band === undefined ? [] : [`layout ${side.band.top}`, `layout ${side.band.bottom}`];
   const ops = [
@@ -164,6 +225,10 @@ const shootCell = (
       '--json',
       '--scale',
       String(IOS.scale),
+      '--epoch',
+      String(clock.epoch),
+      '--time-zone',
+      clock.timeZone,
       '--storage',
       `pm-${row.id}`,
       '--reset-storage',
@@ -172,47 +237,12 @@ const shootCell = (
     join(frame.root, 'apps', `${cell.app}-exact`),
   );
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', IOS.size]);
-  const compare = out.trim().split('\n').slice(-12).join('\n');
-  let bands: Parameters<typeof score>[4];
-  if (oneBand !== undefined) {
-    const replies = out.trim().split('\n').slice(-3);
-    const [top, bottom] = [rectIn(replies[0] ?? ''), rectIn(replies[1] ?? '')];
-    if (top === undefined || bottom === undefined)
-      throw new Error(
-        `${row.id}: no rect in the agent's layout replies: ${replies.slice(0, 2).join(' | ').slice(0, 400)}`,
-      );
-    bands = {
-      reference: oneBand,
-      screen: { top: (top.y + top.height) * IOS.scale, bottom: bottom.y * IOS.scale },
-      anchor: row.anchor ?? 'top',
-    };
-  }
-  return score(
-    frame,
-    cell,
-    pixelsOf([...(row.one?.masks ?? []), ...(side.masks ?? [])], IOS.scale),
-    compare,
-    bands,
-  );
-};
-
-/** A reference's band, from the metadata kept beside it: its top read from One's tree at capture, to the picture's foot; none for a row not banded. */
-const referenceBandOf = (
-  frame: { readonly refs: string; readonly one: string },
-  cell: Cell,
-): Band | undefined => {
-  const metadata = JSON.parse(
-    readFileSync(refFile(frame, cell).replace(/\.png$/, '.json'), 'utf8'),
-  ) as {
-    readonly band?: { readonly top: number };
-  };
-  if (metadata.band === undefined) return undefined;
-  return { top: metadata.band.top, bottom: Number.POSITIVE_INFINITY };
+  return scoreShot(frame, row, cell, out);
 };
 
 /** Shoots the asked iOS cells of `rows`; one line per cell. */
 export const shoot = (
-  frame: { readonly root: string; readonly refs: string; readonly one: string },
+  frame: Frame,
   app: AppName,
   rows: ReadonlyArray<Row>,
   only: { readonly scheme?: string; readonly size?: string },

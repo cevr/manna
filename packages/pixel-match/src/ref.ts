@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { faceAt, faceChanged, hostZone } from './clock.ts';
 import { storeOf } from './fixtures.ts';
 import {
   overrideStatusBar,
@@ -50,13 +51,6 @@ export interface Frame {
 }
 
 const CONFIG = { heartseed: heartseedOne, hymnal: hymnalOne } as const;
-
-/** The face of Heartseed's greeting at a local hour: morning from 04:00, afternoon from 12:00, evening from 18:00. */
-const faceAt = (hour: number) => {
-  if (hour >= 4 && hour < 12) return 'morning';
-  if (hour >= 12 && hour < 18) return 'afternoon';
-  return 'evening';
-};
 
 const script = (frame: Frame, app: AppName) =>
   join(frame.root, 'packages', 'pixel-match', 'src', 'sim', `${app}.ts`);
@@ -201,12 +195,12 @@ const capture = async (
   return shot;
 };
 
-/** The metadata kept beside a reference. */
+/** The metadata kept beside a reference: its hour and `capturedAt` are the still capture's, `startedAt` the cell's start. */
 const metadataOf = (
   frame: Frame,
   cell: Cell,
   fixture: string,
-  now: Date,
+  at: { readonly started: Date; readonly taken: Date },
   udid: string,
   tree: string,
   shot: Uint8Array,
@@ -215,8 +209,10 @@ const metadataOf = (
   one: frame.one,
   head: frame.head,
   fixture,
-  hour: now.getHours(),
-  capturedAt: now.toISOString(),
+  hour: at.taken.getHours(),
+  timeZone: hostZone(),
+  startedAt: at.started.toISOString(),
+  capturedAt: at.taken.toISOString(),
   simulator: CONFIG[cell.app].simulator,
   udid,
   tree,
@@ -224,11 +220,14 @@ const metadataOf = (
 });
 
 /** Takes one iOS cell of `row`; the reason it was not taken, or none. */
-const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Date) => {
-  if (row.clock !== undefined && faceAt(now.getHours()) !== faceAt(Number(row.clock.slice(0, 2))))
+const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, started: Date) => {
+  if (
+    row.clock !== undefined &&
+    faceAt(started.getHours()) !== faceAt(Number(row.clock.slice(0, 2)))
+  )
     return `open: its greeting's face needs a local hour like ${row.clock}`;
   const fixture = row.fixture ?? '';
-  const udid = prepare(frame, side, cell, fixture, now);
+  const udid = prepare(frame, side, cell, fixture, started);
   await drive(frame, cell.app, side);
   const oneBand = side.band;
   let band: (OneBand & { readonly top: number }) | undefined;
@@ -245,12 +244,19 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
     unlinkSync(file);
     return 'moving: no two takes 500 ms apart were the same bytes';
   }
+  const taken = new Date();
+  const changed = cell.app === 'heartseed' ? faceChanged(started, taken) : undefined;
+  if (changed !== undefined) {
+    unlinkSync(file);
+    return changed;
+  }
   const tree = treeOf(frame, cell.app, `pm-${row.id}`);
   if (tree.overlay) {
     unlinkSync(file);
     return 'refused: a development overlay is in the tree';
   }
-  const metadata = { ...metadataOf(frame, cell, fixture, now, udid, tree.digest, shot), band };
+  const at = { started, taken };
+  const metadata = { ...metadataOf(frame, cell, fixture, at, udid, tree.digest, shot), band };
   writeFileSync(file.replace(/\.png$/, '.json'), `${JSON.stringify(metadata, null, 2)}\n`);
   return undefined;
 };

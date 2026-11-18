@@ -58,7 +58,10 @@ For each cell, the harness:
 5. drives the steps;
 6. keeps the screen once two takes 500 ms apart are the same bytes (three
    tries);
-7. refuses the capture if the accessibility tree holds a development
+7. refuses a Heartseed capture whose greeting's face (morning from 04:00,
+   afternoon from 12:00, evening from 18:00) changed between the cell's
+   start and the still capture (`src/clock.ts`);
+8. refuses the capture if the accessibility tree holds a development
    overlay.
 
 `--web` takes the hymnal's web cells from One's production web build
@@ -69,8 +72,10 @@ page loads. A blank page is refused.
 
 A reference goes to
 `$PIXEL_REF/<one>/<app>/<host>/<id>/<scheme>-<size>.png`, with a `.json`
-beside it. The `.json` records the commit, fixture, capture hour, simulator
-or browser, the tree's digest and the picture's hash.
+beside it. The `.json` records the commit, fixture, the cell's start
+(`startedAt`), the still capture's time (`capturedAt`) and local hour
+(`hour`) with the host's zone (`timeZone`), simulator or browser, the tree's
+digest and the picture's hash.
 
 - `<one>` is the last commit that changed a One app or the packages they
   draw from.
@@ -112,7 +117,10 @@ simulator, from a fresh store, with the row's ops. It first removes
 a reference is taken. Each port imports its One app's package. Exact's bake
 stages every declaration file of that package, and this file pulls in `one`'s
 declarations. That takes the bake over its 64 MiB cap, and the port does not
-build. It takes the screen with
+build. The port runs on the agent's clock, not the wall clock: it is
+launched with `--epoch` at half past the reference's recorded hour, today,
+and `--time-zone` the host's zone, so it draws the reference's greeting face.
+A reference recorded in another zone is refused. It takes the screen with
 Exact's `compare` against the reference, then scores the pair at the
 threshold's channel (16). It writes, under `tmp/pixel-match/shots/`:
 
