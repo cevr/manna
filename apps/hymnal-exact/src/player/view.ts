@@ -62,6 +62,8 @@ export interface PlayerView {
   readonly title: string;
   readonly phase: Phase;
   readonly said: string;
+  /** The full player's line under its title (`captionOf`); empty while nothing is held. */
+  readonly caption: string;
   readonly toggle: Toggle;
   /** The place the position bar shows (a drag while one is held) and the length, in sung seconds, and as a clock reads them. */
   readonly at: number;
@@ -81,6 +83,14 @@ export interface PlayerView {
   readonly skipAt: number;
   /** The bar is docked: it shows, and no sheet is up over the stack. */
   readonly dock: boolean;
+  /**
+   * The hymn page shown draws the bar as its own (the current app's
+   * `pageBar`): the player holds no hymn, a hymn page is on top and no sheet
+   * is up over it. Its button plays the page's hymn.
+   */
+  readonly pageBar: boolean;
+  /** The hymn page shown, under a sheet too; 0 off a hymn page. The bar names its hymn only when it is not this one. */
+  readonly onPage: number;
   readonly bar: BarView;
   /** The hymn page shown's own button: Pause while its hymn sounds, else what the player offers it. */
   readonly pageToggle: Toggle;
@@ -109,6 +119,16 @@ export const saidOf = (phase: Phase, why: Held['why']): string => {
   if (why === 'network') return 'The recording needs a connection.';
   if (why === 'missing') return 'This hymn has no recording.';
   return 'The recording could not be played.';
+};
+
+/**
+ * The line under the full player's title, as the current app's sheet says
+ * it (`FullPlayer.tsx` `caption`): what `saidOf` says, `Playing` while the
+ * hymn plays, and `Recording` before it has played.
+ */
+export const captionOf = (phase: Phase, why: Held['why']): string => {
+  if (phase === 'playing') return 'Playing';
+  return saidOf(phase, why) || 'Recording';
 };
 
 /** What the button offers a hymn in `phase`: nothing for a hymn with no recording. */
@@ -201,6 +221,24 @@ const seekView = (state: State, chosen: ReadonlyArray<number>) => {
   };
 };
 
+/** The bars' part of the view: the docked bar, the page's own, the page shown and its button. */
+const barsView = (state: State, titleOf: (number: number) => string) => {
+  const { held } = state;
+  const page = pageOf(state);
+  const bar = barOf(state, titleOf);
+  const up = sheetUp(state);
+  return {
+    dock: bar.shown && !up,
+    pageBar: held === undefined && page !== undefined && !up,
+    onPage: page ?? 0,
+    bar,
+    pageToggle:
+      held !== undefined && page === held.track.number
+        ? toggleOf(held.phase, held.why)
+        : ('play' as const),
+  };
+};
+
 /** The view of `state`, after the step that gave `command`. */
 export const viewOf = (
   state: State,
@@ -211,9 +249,6 @@ export const viewOf = (
   const device = deviceOf(state);
   const session = sessionOf(state);
   const { elapsed, total } = timesOf(state);
-  const page = pageOf(state);
-  const bar = barOf(state, titleOf);
-  const pageHeld = held !== undefined && page === held.track.number;
   const score = held?.track.score;
   const choice = held === undefined ? [] : choiceOf(state, held.track.number);
   const chosen = score?.chosen(choice) ?? [];
@@ -228,15 +263,14 @@ export const viewOf = (
     title: held?.track.title ?? '',
     phase: held?.phase ?? 'none',
     said: held === undefined ? '' : saidOf(held.phase, held.why),
+    caption: held === undefined ? '' : captionOf(held.phase, held.why),
     toggle: held === undefined ? '' : toggleOf(held.phase, held.why),
     at: elapsed,
     length: total,
     elapsed: clock(elapsed),
     total: total > 0 ? clock(total) : '–:––',
     ...seekView(state, chosen),
-    dock: bar.shown && !sheetUp(state),
-    bar,
-    pageToggle: pageHeld ? toggleOf(held.phase, held.why) : 'play',
+    ...barsView(state, titleOf),
     chips: Array.from({ length: score?.count ?? 0 }, (_, index) => ({
       stanza: index + 1,
       chosen: chosen.includes(index + 1),
