@@ -9,7 +9,7 @@
 import { decodeHymn } from '@manna/hymnal-app/hymns/chords';
 
 import type { Book } from '../hymns/book.ts';
-import { shownAt } from './page.ts';
+import { shownAt } from './shown.ts';
 
 export const hymnSources = (
   book: Book,
