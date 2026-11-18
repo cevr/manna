@@ -180,19 +180,22 @@ const running = (
   );
 };
 
-/** A port the stand-in claims were asked to hold: one claimed from a range, or one taken, and whether it was given back. */
+/** Ports the stand-in claims were asked to hold: a block claimed from a range, or one port taken, and whether they were given back. */
 interface Claimed {
   readonly asked: 'claimed' | number;
-  readonly port: number;
+  readonly ports: readonly [number, number];
   given: boolean;
 }
 
-/** Claims that hold no port: a range's claim answers its first port, a take the port; each is marked given when its scope closes. */
+/**
+ * Claims that hold no port: a range's claim of `count` answers that many of its first ports (all of it when it holds
+ * fewer), a take the port; each is marked given when its scope closes.
+ */
 const claimsStandIn = (claims: Array<Claimed>) => {
-  const holding = (asked: Claimed['asked'], port: number) =>
+  const holding = (asked: Claimed['asked'], ports: readonly [number, number]) =>
     Effect.acquireRelease(
       Effect.sync(() => {
-        const claimed: Claimed = { asked, port, given: false };
+        const claimed: Claimed = { asked, ports, given: false };
         claims.push(claimed);
         return claimed;
       }),
@@ -200,10 +203,14 @@ const claimsStandIn = (claims: Array<Claimed>) => {
         Effect.sync(() => {
           claimed.given = true;
         }),
-    ).pipe(Effect.map((claimed) => claimed.port));
+    );
   return {
-    claim: (range: readonly [number, number]) => holding('claimed', range[0]),
-    take: (port: number) => holding(port, port),
+    claim: (range: readonly [number, number], count: number) =>
+      Effect.map(
+        holding('claimed', [range[0], Math.min(range[1], range[0] + count - 1)]),
+        (claimed) => claimed.ports,
+      ),
+    take: (port: number) => Effect.map(holding(port, [port, port]), () => port),
   };
 };
 
@@ -399,12 +406,32 @@ const listenerFor = (
 };
 
 /**
- * The range a child is held to and the turns it is told it holds, for `listener`: a claimed port is the range's
- * first (the stand-in's) and the range is it alone; a named one keeps the spare range; none holds no turn ("").
+ * The rule, written out: how many adjacent ports a run of `verb` off the native hosts claims, so its pages at once
+ * each find one: `verify` the whole spare range, `test` two, `agent` one; never more than the range holds.
  */
-const rangeHeld = (app: App, listener: ReturnType<typeof listenerFor>) => {
+const pagesOf = (app: App, verb: string) => {
   const [lo, hi] = APPS[app].spare;
-  if (listener === 'claimed') return { lo, hi: lo, turns: String(lo) };
+  const size = hi - lo + 1;
+  if (verb === 'verify') return size;
+  if (verb === 'test') return Math.min(2, size);
+  return 1;
+};
+
+/**
+ * The range a child is held to and the turns it is told it holds, for `listener`: a claimed block is the range's
+ * first `pagesOf` ports (the stand-in's) and the child is held to it; a named one keeps the spare range; none holds
+ * no turn ("").
+ */
+const rangeHeld = (
+  app: App,
+  args: ReadonlyArray<string>,
+  listener: ReturnType<typeof listenerFor>,
+) => {
+  const [lo, hi] = APPS[app].spare;
+  if (listener === 'claimed') {
+    const top = lo + pagesOf(app, args[0] ?? '') - 1;
+    return { lo, hi: top, turns: Arr.range(lo, top).join(',') };
+  }
   if (listener === 'none') return { lo, hi, turns: '' };
   return { lo, hi, turns: String(listener) };
 };
@@ -478,7 +505,7 @@ const ranAsPlanned = (
 ) => {
   const locked =
     child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
-  const { lo, hi, turns } = rangeHeld(app, listenerFor(args, callerPorts));
+  const { lo, hi, turns } = rangeHeld(app, args, listenerFor(args, callerPorts));
   return (
     child.extendEnv &&
     child.env['EXACT'] === clone &&
@@ -752,7 +779,7 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    "serves the web loop on the app own port, every other web host on a port it claims from its spare range without the caller's EXACT_PORT, and refuses a caller's EXACT_PORT not the app's",
+    "serves the web loop on the app own port, every other web host on ports it claims from its spare range without the caller's EXACT_PORT (verify all of them, test two, so each page at once finds one), and refuses a caller's EXACT_PORT not the app's",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -772,10 +799,22 @@ describe('the exact wrapper', () => {
         );
         expect(tested.spawned[1]?.env).toMatchObject({
           PORT_LO: '8770',
-          PORT_HI: '8770',
-          EXACT_PORT_TURNS: '8770',
+          PORT_HI: '8771',
+          EXACT_PORT_TURNS: '8770,8771',
         });
-        expect(tested.claims).toEqual([{ asked: 'claimed', port: 8770, given: true }]);
+        expect(tested.claims).toEqual([{ asked: 'claimed', ports: [8770, 8771], given: true }]);
+        const verified = yield* running(
+          'heartseed-exact',
+          ['verify', 'web'],
+          { HOME: PROBE },
+          head,
+          files,
+        );
+        expect(verified.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8774',
+          EXACT_PORT_TURNS: '8770,8771,8772,8773,8774',
+        });
         const driven = yield* running(
           'heartseed-exact',
           ['agent', 'web', '--port', '8772', 'tree'],
@@ -783,7 +822,7 @@ describe('the exact wrapper', () => {
           head,
           files,
         );
-        expect(driven.claims).toEqual([{ asked: 8772, port: 8772, given: true }]);
+        expect(driven.claims).toEqual([{ asked: 8772, ports: [8772, 8772], given: true }]);
         expect(driven.spawned[1]?.env).toMatchObject({
           PORT_LO: '8770',
           PORT_HI: '8774',

@@ -3,7 +3,7 @@ import { createServer } from 'node:net';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { claimAppPort, claimPort, takePort } from './port.ts';
+import { claimAppPort, claimPort, claimPorts, takePort } from './port.ts';
 
 /** Ports no run of the apps uses, below the Mac's ephemeral range, for the claims these tests make. */
 const LO = 47_310;
@@ -112,6 +112,43 @@ describe('claimPort', () => {
         other.give();
         drive.give();
       }),
+  );
+
+  it.effect(
+    'a block claim holds adjacent ports a single claim then passes over, each free to listen on, and never more than the range',
+    () =>
+      Effect.promise(async () => {
+        const block = await claimPorts(RANGE, 2);
+        expect(block.hi - block.lo).toBe(1);
+        const single = await claimPort(RANGE);
+        expect(single.port < block.lo || single.port > block.hi).toBe(true);
+        const servers = await Promise.all(
+          [block.lo, block.hi].map(
+            (port) =>
+              new Promise<ReturnType<typeof createServer>>((done, fail) => {
+                const server = createServer();
+                server.once('error', fail);
+                server.listen(port, '127.0.0.1', () => done(server));
+              }),
+          ),
+        );
+        servers.forEach((s) => s.close());
+        block.give();
+        single.give();
+        const whole = await claimPorts([LO, LO + 1], 5, { waitMs: 0 });
+        expect([whole.lo, whole.hi]).toEqual([LO, LO + 1]);
+        whole.give();
+      }),
+  );
+
+  it.effect('a block claim passes over a block one of whose ports another run holds', () =>
+    Effect.promise(async () => {
+      const theirs = await elsewhere([LO + 1, LO + 1]);
+      const block = await claimPorts(RANGE, 2, { waitMs: 0 });
+      await theirs.end();
+      expect([block.lo, block.hi]).toEqual([LO + 2, LO + 3]);
+      block.give();
+    }),
   );
 
   it.effect('refuses a drive of an app the wrapper does not run, naming it', () =>

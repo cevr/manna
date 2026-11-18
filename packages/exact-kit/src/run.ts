@@ -8,6 +8,7 @@ import {
   Layer,
   Option,
   Path,
+  Record as Rec,
   Result,
   Schema,
   type Scope,
@@ -16,7 +17,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { APPS, type ExactApp } from './apps.ts';
-import { claimPort, takePort } from './drive/port.ts';
+import { claimPorts, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
 
 /** How a clone comes to the pin. */
@@ -172,8 +173,8 @@ const ownsPort = (app: ExactApp, port: number) =>
 /**
  * The port a run of `args` holds while its child runs, so no run of another checkout serves there meanwhile: none
  * for a verb that serves no page of its own on the spare range (`web` and `serve` keep the app's own port, a native
- * host none), else the page's port `args` or the caller's `EXACT_PORT` names (`Option.some` of it), else one
- * claimed from the spare range (`Option.none`), which the child is then held to.
+ * host none), else the page's port `args` or the caller's `EXACT_PORT` names (`Option.some` of it), else a
+ * block of `PAGES` adjacent ports claimed from the spare range (`Option.none`), which the child is then held to.
  */
 const listenerOf = (
   args: ReadonlyArray<string>,
@@ -185,8 +186,23 @@ const listenerOf = (
 };
 
 /**
- * Holds a port for the child's run, given back when the run's scope closes: one of a range claimed, or one port
- * taken, each waited for while a run of any checkout holds it. The live one is the turns of `drive/port.ts`; a test
+ * How many pages a run of each verb serves at once off the native hosts, each on a port of its own, and so how many
+ * adjacent ports of the spare range it claims when no port is named: `verify` all of them (its tests, its large-text
+ * tour and a launch per web size run at once, Exact's `scripts/verify.mjs`), `test` two (a relaunch listens on a fresh
+ * port while the last page may still be letting go of its own), `agent` one (a drive's relaunch keeps its port).
+ */
+const PAGES = {
+  verify: Number.POSITIVE_INFINITY,
+  test: 2,
+  agent: 1,
+} as const;
+
+/** How many ports a run of `verb` claims, as `PAGES` says: one for a verb it does not name. */
+const pagesOf = (verb: string) => Option.getOrElse(Rec.get<string, number>(PAGES, verb), () => 1);
+
+/**
+ * Holds ports for the child's run, given back when the run's scope closes: a block of adjacent ports of a range
+ * claimed, or one port taken, each waited for while a run of any checkout holds it. The live one is the turns of `drive/port.ts`; a test
  * hands a stand-in.
  */
 export class PortClaims extends Context.Service<
@@ -194,8 +210,9 @@ export class PortClaims extends Context.Service<
   {
     readonly claim: (
       range: readonly [number, number],
+      count: number,
       label: string,
-    ) => Effect.Effect<number, ExactRefused, Scope.Scope>;
+    ) => Effect.Effect<readonly [number, number], ExactRefused, Scope.Scope>;
     readonly take: (
       port: number,
       label: string,
@@ -205,14 +222,21 @@ export class PortClaims extends Context.Service<
   static readonly live = Layer.succeed(
     PortClaims,
     PortClaims.of({
-      claim: (range, label) => held(() => claimPort(range, { label })),
-      take: (port, label) => held(() => takePort(port, { label })),
+      claim: (range, count, label) =>
+        held(() =>
+          claimPorts(range, count, { label }).then(({ lo, hi, give }) => ({
+            held: [lo, hi] as const,
+            give,
+          })),
+        ),
+      take: (port, label) =>
+        held(() => takePort(port, { label }).then(({ port: p, give }) => ({ held: p, give }))),
     }),
   );
 }
 
 /** A port held from `claim` until the scope closes; a claim that runs out of waiting is refused. */
-const held = (claim: () => Promise<{ readonly port: number; readonly give: () => void }>) =>
+const held = <A>(claim: () => Promise<{ readonly held: A; readonly give: () => void }>) =>
   Effect.map(
     Effect.acquireRelease(
       Effect.tryPromise({
@@ -221,7 +245,7 @@ const held = (claim: () => Promise<{ readonly port: number; readonly give: () =>
       }),
       (claimed) => Effect.sync(claimed.give),
     ),
-    (claimed) => claimed.port,
+    (claimed) => claimed.held,
   );
 
 /**
@@ -375,12 +399,12 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const claims = yield* PortClaims;
   const turns = yield* Config.option(Config.String('EXACT_PORT_TURNS'));
   const label = `exact ${args.slice(0, 2).join(' ')} in ${appDir}`;
-  const withTurn = (port: number) =>
+  const withTurns = (ports: ReadonlyArray<number>) =>
     Arr.dedupe([
       ...Option.getOrElse(turns, () => '')
         .split(',')
         .filter((t) => t !== ''),
-      String(port),
+      ...ports.map(String),
     ]).join(',');
   return yield* Effect.scoped(
     Effect.gen(function* () {
@@ -389,13 +413,13 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
         (named) =>
           Option.match(named, {
             onNone: () =>
-              Effect.map(claims.claim(app.spare, label), (port) => ({
-                PORT_LO: String(port),
-                PORT_HI: String(port),
-                EXACT_PORT_TURNS: withTurn(port),
+              Effect.map(claims.claim(app.spare, pagesOf(args[0] ?? ''), label), ([lo, hi]) => ({
+                PORT_LO: String(lo),
+                PORT_HI: String(hi),
+                EXACT_PORT_TURNS: withTurns(Arr.range(lo, hi)),
               })),
             onSome: (port) =>
-              Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurn(port) }),
+              Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurns([port]) }),
           }),
       );
       const handle = yield* spawner.spawn(

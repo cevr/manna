@@ -95,31 +95,51 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-/** The claim of `port` through `server`, its turn named in `EXACT_PORT_TURNS` for the processes this one starts. */
-const claimed = (port: number, server: Server): Claim => {
-  hold(port);
+/** A block of ports this process holds for its run, `lo` to `hi` inclusive, and how to give them back. */
+interface Block {
+  readonly lo: number;
+  readonly hi: number;
+  readonly give: () => void;
+}
+
+/** The claim of the ports `lo` up through `servers`, each turn named in `EXACT_PORT_TURNS` for the processes this one starts. */
+const claimed = (lo: number, servers: ReadonlyArray<Server>): Block => {
+  const ports = servers.map((_, i) => lo + i);
+  ports.forEach(hold);
   let given = false;
   return {
-    port,
+    lo,
+    hi: lo + servers.length - 1,
     give: () => {
       if (given) return;
       given = true;
-      server.close();
-      unhold(port);
+      servers.forEach((server) => server.close());
+      ports.forEach(unhold);
     },
   };
 };
 
-/** Tries each port of `ports` once; the first whose turn is free and on which nothing listens. */
-const tryEach = async (ports: ReadonlyArray<number>, card: string) => {
+/** The turns of `ports`, all of them, each free and its port silent; null, with any taken given back, when one is not. */
+const turnsOf = async (ports: ReadonlyArray<number>, card: string) => {
+  const servers: Array<Server> = [];
   for (const port of ports) {
     const server = await listenTurn(port, card);
-    if (!server) continue;
-    if (await answers(port)) {
-      server.close();
-      continue;
+    if (server) servers.push(server);
+    if (!server || (await answers(port))) {
+      servers.forEach((s) => s.close());
+      return null;
     }
-    return claimed(port, server);
+  }
+  return servers;
+};
+
+/** Tries each block of `count` adjacent ports of `ports` once; the first whose turns are free and on which nothing listens. */
+const tryEach = async (ports: ReadonlyArray<number>, count: number, card: string) => {
+  for (const lo of ports) {
+    const block = Array.from({ length: count }, (_, i) => lo + i);
+    if (!block.every((p) => ports.includes(p))) continue;
+    const servers = await turnsOf(block, card);
+    if (servers) return claimed(lo, servers);
   }
   return null;
 };
@@ -129,22 +149,26 @@ const span = ([lo, hi]: readonly [number, number]) =>
   Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
 
 /**
- * A port of `range` for this process's run: the first whose turn no run of any checkout holds and on which
- * nothing listens, held until `give()` or this process's end. A port this process or an ancestor already holds is
- * passed over: it is in use by that holder. With every port taken, it waits (saying once whom for) and rejects after
- * `waitMs`, naming the holders.
+ * `count` adjacent ports of `range` for this process's run (all of it when it holds fewer), for a run that listens
+ * on several pages at once: the first block whose turns no run of any checkout holds and on which nothing listens,
+ * held until `give()` or this process's end. A port this process or an ancestor already holds is passed over: it is
+ * in use by that holder. With no block free, it waits (saying once whom for) and rejects after `waitMs`, naming the
+ * holders.
  */
-export const claimPort = async (
+export const claimPorts = async (
   range: readonly [number, number],
+  count: number,
   { label = 'a run', waitMs = 20 * 60_000, say = (line) => console.error(line) }: ClaimOptions = {},
-): Promise<Claim> => {
+): Promise<Block> => {
   const card = JSON.stringify({ label, pid: process.pid, at: new Date().toISOString() });
   const end = Date.now() + waitMs;
+  const size = Math.max(1, Math.min(count, range[1] - range[0] + 1));
   let told = false;
   for (;;) {
     const mine = heldPorts();
     const free = await tryEach(
       span(range).filter((p) => !mine.includes(p)),
+      size,
       card,
     );
     if (free) return free;
@@ -159,6 +183,15 @@ export const claimPort = async (
     told = true;
     await sleep(500);
   }
+};
+
+/** A port of `range` for this process's run, as `claimPorts` claims a block of one. */
+export const claimPort = async (
+  range: readonly [number, number],
+  options: ClaimOptions = {},
+): Promise<Claim> => {
+  const { lo, give } = await claimPorts(range, 1, options);
+  return { port: lo, give };
 };
 
 /**
