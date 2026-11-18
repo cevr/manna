@@ -34,6 +34,7 @@
     "test:slow": "sh packages/scripts/src/test-slow.sh",
     "gate": "sh packages/scripts/src/gate.sh",
     "dead-exports": "bun packages/scripts/src/dead-exports.ts",
+    "pixel": "bun packages/pixel-match/src/cli.ts",
     "merge-audit": "bun packages/scripts/src/merge-audit.ts",
     "redfirst": "bun packages/scripts/src/redfirst.ts",
     "doc-lines": "bun packages/film/src/fixtures/doc-lines.ts",

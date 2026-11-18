@@ -317,6 +317,18 @@
         "node-av": "7.1.0",
       },
     },
+    "packages/pixel-match": {
+      "name": "@manna/pixel-match",
+      "dependencies": {
+        "@manna/core": "workspace:*",
+        "@manna/heartseed": "workspace:*",
+        "@manna/sim": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@playwright/test": "1.65.1",
+      },
+    },
     "packages/scripts": {
       "name": "@manna/scripts",
       "version": "1.0.0",
@@ -817,6 +829,8 @@
     "@manna/hymnal-app": ["@manna/hymnal-app@workspace:apps/hymnal"],
 
     "@manna/hymnal-exact": ["@manna/hymnal-exact@workspace:apps/hymnal-exact"],
+
+    "@manna/pixel-match": ["@manna/pixel-match@workspace:packages/pixel-match"],
 
     "@manna/screening": ["@manna/screening@workspace:apps/screening"],
 

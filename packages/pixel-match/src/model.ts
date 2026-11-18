@@ -1,0 +1,147 @@
+/**
+ * The inventory as code: one `Row` per state of a screen, with the steps
+ * that reach it in the One app (and, once its unit writes them, in the
+ * port), its fixture and its masks. A row's cells are its matrix: light and
+ * dark at the default text size, the swept sizes in light for a `sweep`
+ * row, and on the web each viewport in each scheme for an app the web
+ * draws. A cell is named `<app>/<host>/<id>/<scheme>/<size or viewport>`,
+ * as `accept.ts` names it.
+ */
+
+export type AppName = 'heartseed' | 'hymnal';
+
+export type Host = 'ios' | 'web';
+
+export type Scheme = 'light' | 'dark';
+
+/** The iOS matrix: the inventory's `matrix.ios`. */
+export const IOS = {
+  schemes: ['light', 'dark'],
+  size: 'large',
+  sweepSizes: ['extra-small', 'extra-extra-extra-large', 'accessibility-extra-extra-extra-large'],
+  sweepScheme: 'light',
+  /** Device pixels a point on the iPhone 17. */
+  scale: 3,
+} as const;
+
+/** The web matrix: the inventory's `matrix.web`. */
+export const WEB = {
+  viewports: ['390x844@2', '1280x800@1'],
+  schemes: ['light', 'dark'],
+} as const;
+
+/** Where each app is drawn. */
+export const HOSTS: Readonly<Record<AppName, ReadonlyArray<Host>>> = {
+  heartseed: ['ios'],
+  hymnal: ['ios', 'web'],
+};
+
+/**
+ * One step of a drive to a row's state. A target is `label=<name>` or
+ * `id=<testID>`, as `@manna/sim` reads it; on the web `label` is the
+ * accessible name and `id` the `data-testid`.
+ */
+export type Step =
+  | { readonly open: string; readonly expect: string }
+  | { readonly tap: string }
+  | { readonly scroll: string; readonly direction: 'up' | 'down' }
+  | { readonly fill: string; readonly value: string }
+  | { readonly wait: number }
+  | { readonly pinch: string; readonly scale: number }
+  | { readonly pan: string; readonly dx: number; readonly dy: number }
+  | { readonly back: true }
+  | { readonly relaunch: true };
+
+/** A rectangle in points left out of the score, and why. */
+export interface MaskSpec {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly reason: string;
+}
+
+/** How one side reaches a row: its steps, the target held down through the capture, its masks, and the hosts it does not draw. */
+export interface Side {
+  readonly steps: ReadonlyArray<Step>;
+  /** A target pressed and held while the picture is taken (`tap <id> down`). */
+  readonly hold?: string;
+  readonly masks?: ReadonlyArray<MaskSpec>;
+  /** Reduce Motion on for the capture, so a pulse or a fade is still. */
+  readonly reduceMotion?: boolean;
+  /** The web steps where they differ from the iOS ones. */
+  readonly web?: ReadonlyArray<Step>;
+  /** Why a host draws no such screen, by host: its cells are not drawable and named so. */
+  readonly notDrawn?: Partial<Record<Host, string>>;
+}
+
+export interface Row {
+  readonly id: string;
+  readonly unit: string;
+  readonly kind: 'match' | 'gap' | 'exact-only';
+  readonly sweep?: boolean;
+  readonly fixture?: string;
+  /** The local hour the row is captured at, when its look depends on it. */
+  readonly clock?: string;
+  /** The One app's side; none for an Exact-only row. */
+  readonly one?: Side;
+  /** The port's side, written by the row's unit; none until then. */
+  readonly exact?: ExactSide;
+}
+
+/**
+ * How the port reaches a row: the ops of `bun run exact agent <host>` that
+ * follow its launch (`tap gear`, `clock settle`, …), its masks, and whether
+ * it starts from the row's fixture written to the port's store. The scheme
+ * is set by the harness (`prefer prefers-color-scheme`); the screenshot is
+ * the harness's last op.
+ */
+export interface ExactSide {
+  readonly ops: ReadonlyArray<string>;
+  readonly masks?: ReadonlyArray<MaskSpec>;
+}
+
+/** One cell of a row's matrix. */
+export interface Cell {
+  readonly app: AppName;
+  readonly host: Host;
+  readonly id: string;
+  readonly scheme: Scheme;
+  /** The text size (iOS) or the viewport (web). */
+  readonly size: string;
+}
+
+export const cellName = (cell: Cell) =>
+  `${cell.app}/${cell.host}/${cell.id}/${cell.scheme}/${cell.size}`;
+
+/** Every cell of `row` in `app`'s matrix; none for an Exact-only row. */
+export const cellsOf = (app: AppName, row: Row): ReadonlyArray<Cell> => {
+  if (row.kind === 'exact-only') return [];
+  const at = (host: Host, scheme: Scheme, size: string): Cell => ({
+    app,
+    host,
+    id: row.id,
+    scheme,
+    size,
+  });
+  const cells: Cell[] = [];
+  if (HOSTS[app].includes('ios')) {
+    cells.push(...IOS.schemes.map((scheme) => at('ios', scheme, IOS.size)));
+    if (row.sweep === true)
+      cells.push(...IOS.sweepSizes.map((size) => at('ios', IOS.sweepScheme, size)));
+  }
+  if (HOSTS[app].includes('web'))
+    cells.push(
+      ...WEB.viewports.flatMap((viewport) =>
+        WEB.schemes.map((scheme) => at('web', scheme, viewport)),
+      ),
+    );
+  return cells;
+};
+
+/** A viewport's width, height and device pixels a CSS pixel: `390x844@2`. */
+export const viewportOf = (viewport: string) => {
+  const [size = '', scale = '1'] = viewport.split('@');
+  const [width = '0', height = '0'] = size.split('x');
+  return { width: Number(width), height: Number(height), scale: Number(scale) };
+};

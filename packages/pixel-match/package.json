@@ -1,0 +1,19 @@
+{
+  "name": "@manna/pixel-match",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test ./src ./screens"
+  },
+  "dependencies": {
+    "@manna/core": "workspace:*",
+    "@manna/heartseed": "workspace:*",
+    "@manna/sim": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}
