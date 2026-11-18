@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- a file no unit owns and a unit with no list are absent as undefined. */
-
 /**
  * No Contract file writes a size, weight, space, radius, line width,
  * shadow, duration or press as a literal: each is a token of `app.forma`
