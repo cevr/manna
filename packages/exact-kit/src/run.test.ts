@@ -882,7 +882,7 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    "a verify gives its ports back once Exact records its host's run, while its child runs on; another host's record, none, or a test's keeps them to the end",
+    "a verify gives its ports back once Exact records its host's run, while its child runs on; another host's record, none, a test's, or a run another verify of the checkout started before it or after its own start keeps them",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -937,6 +937,21 @@ describe('the exact wrapper', () => {
         yield* TestClock.adjust('3 seconds');
         expect(test.given()).toEqual([false]);
         yield* test.end;
+
+        const shared = { ...files };
+        const ranged = yield* runFor(['verify', 'web'], shared);
+        yield* TestClock.adjust('37 seconds');
+        shared[record] = '{"web":10000}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([false]);
+        shared[record] = '{"web":50000}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([false]);
+        yield* TestClock.adjust('54 seconds');
+        shared[record] = '{"web":98500}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([true]);
+        yield* ranged.end;
       }),
   );
 

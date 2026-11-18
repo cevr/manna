@@ -1,5 +1,6 @@
 import {
   Array as Arr,
+  Clock,
   Config,
   Context,
   Duration,
@@ -208,6 +209,16 @@ const LastRuns = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Finit
 /** How often a `verify` run's record is read for its pages' end. */
 const PAGES_READ = Duration.seconds(1);
 
+/**
+ * How long after the wrapper spawns it Exact's `verify` may start its run's clock, which its record counts from
+ * (`scripts/verify.mjs`, `deviceMain`'s `started`). A later start is another run's, so a slower start keeps the ports
+ * to the end, never gives them back early.
+ */
+const VERIFY_START = Duration.seconds(10);
+
+/** How far a record's start may fall before the spawn, for the millisecond each clock rounds to and the record's own rounding. */
+const CLOCK_SLACK = Duration.seconds(1);
+
 /** The host a `verify` run's pages are on: the one it names, else the web, which both apps ship (Exact's `shippedHost`). */
 const verifyHost = (args: ReadonlyArray<string>) =>
   Option.getOrElse(
@@ -220,7 +231,10 @@ const verifyHost = (args: ReadonlyArray<string>) =>
  * host in the app's `.exact/verify/last.json`. The pinned Exact writes that record after its pages, Chrome profiles
  * and server are closed and before its `contract verify` (difftest, which opens no socket and may run for half an hour)
  * ends, so the ports may go back then (`scripts/verify.mjs`, `deviceMain`). The record as it stands is read now,
- * before the run starts; a run that never records keeps its ports to its end.
+ * before the run starts; a run that never records keeps its ports to its end. A record is this run's only when the
+ * run it times started as this one did: its value is the run's length, so the time it is read at less that value
+ * falls between the spawn and `VERIFY_START` after it (with a read's spacing on top). Another `verify` of the same
+ * checkout that names its own port, started before this one or well after it, writes the same record, and keeps them.
  */
 const pagesEnd = (appDir: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
@@ -233,10 +247,19 @@ const pagesEnd = (appDir: string, args: ReadonlyArray<string>) =>
       Effect.orElseSucceed(() => Option.none<number>()),
     );
     const before = yield* recorded;
+    const spawned = yield* Clock.currentTimeMillis;
+    const earliest = spawned - Duration.toMillis(CLOCK_SLACK);
+    const latest = spawned + Duration.toMillis(Duration.sum(VERIFY_START, PAGES_READ));
+    const ours = (length: number, readAt: number) =>
+      readAt - length >= earliest && readAt - length <= latest;
     return {
       closed: Effect.asVoid(
-        Effect.repeat(recorded, {
-          until: (now) => Option.isSome(now) && !Option.contains(before, now.value),
+        Effect.repeat(Effect.zip(recorded, Clock.currentTimeMillis), {
+          until: ([now, readAt]) =>
+            Option.exists(
+              now,
+              (length) => !Option.contains(before, length) && ours(length, readAt),
+            ),
           schedule: Schedule.spaced(PAGES_READ),
         }),
       ),
