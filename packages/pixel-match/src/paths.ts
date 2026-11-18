@@ -12,8 +12,7 @@ import { join } from 'node:path';
 import type { Cell } from './model.ts';
 
 /** The tail of a cell's files: `<app>/<host>/<id>/<scheme>-<size>`. */
-export const cellPath = (cell: Cell) =>
-  join(cell.app, cell.host, cell.id, `${cell.scheme}-${cell.size}`);
+const cellPath = (cell: Cell) => join(cell.app, cell.host, cell.id, `${cell.scheme}-${cell.size}`);
 
 /** A cell's reference picture. */
 export const refFile = (frame: { readonly refs: string; readonly one: string }, cell: Cell) =>

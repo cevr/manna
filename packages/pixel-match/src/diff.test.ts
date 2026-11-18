@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Arbitrary, Effect, Schema } from 'effect';
 
-import { diff, ladder, largestRegion, maskMap, type Mask } from './diff.ts';
+import { diff, ladder, type Mask } from './diff.ts';
 import { decodePng, encodePng, isBlank, type Picture } from './png.ts';
 
 const int = (minimum: number, maximum: number) =>
@@ -65,9 +65,12 @@ describe('the strict diff', () => {
 
   test('k pixels changed outside every mask count k; changed inside a mask, 0', () =>
     holds(cases, ([base, masks, channel, picks]) => {
-      const under = maskMap(base.width, base.height, masks);
+      const under = (at: number) => {
+        const [x, y] = [at % base.width, Math.floor(at / base.width)];
+        return masks.some((m) => x >= m.x && x < m.x + m.width && y >= m.y && y < m.y + m.height);
+      };
       const pixels = [...new Set(picks.filter((at) => at < base.width * base.height))];
-      const outside = pixels.filter((at) => under[at] === 0);
+      const outside = pixels.filter((at) => !under(at));
       const scored = diff(base, changed(base, pixels, channel), masks, channel);
       return (
         scored._tag === 'Scored' &&
@@ -92,12 +95,20 @@ describe('the strict diff', () => {
       return (scored._tag === 'Sizes') === (a.width !== b.width || a.height !== b.height);
     }));
 
-  test('a region is its 8-connected pixels', () => {
-    const corner = Uint8Array.from([1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1]);
-    expect(largestRegion(corner, 4, 4)).toBe(5);
-    const diagonal = Uint8Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-    expect(largestRegion(diagonal, 4, 4)).toBe(4);
-    expect(largestRegion(new Uint8Array(16), 4, 4)).toBe(0);
+  test('the largest region is its 8-connected differing pixels', () => {
+    const black: Picture = { width: 4, height: 4, rgba: new Uint8Array(64) };
+    /** `black` with a red pixel wherever `marks` holds 1. */
+    const marked = (marks: ReadonlyArray<number>): Picture => ({
+      ...black,
+      rgba: Uint8Array.from(black.rgba, (_, i) => (i % 4 === 0 ? (marks[i / 4] ?? 0) * 255 : 0)),
+    });
+    const largest = (marks: ReadonlyArray<number>) => {
+      const scored = diff(black, marked(marks), [], 16);
+      return scored._tag === 'Scored' ? scored.largest : -1;
+    };
+    expect(largest([1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1])).toBe(5);
+    expect(largest([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])).toBe(4);
+    expect(largest(new Array(16).fill(0))).toBe(0);
   });
 
   test('the ladder counts fewer pixels at a looser channel', () => {

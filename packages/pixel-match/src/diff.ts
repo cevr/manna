@@ -36,22 +36,22 @@ export interface Score {
 }
 
 /** A pair scored, with the map of where it differs (1 a differing pixel, 2 a masked one). */
-export interface Scored extends Score {
+interface Scored extends Score {
   readonly _tag: 'Scored';
   readonly map: Uint8Array;
 }
 
 /** Two pictures of two sizes: never counted. */
-export interface Sizes {
+interface Sizes {
   readonly _tag: 'Sizes';
   readonly reference: string;
   readonly screen: string;
 }
 
-export type Diff = Scored | Sizes;
+type Diff = Scored | Sizes;
 
 /** Which pixels lie under some mask, clipped to the picture: 1 under one, else 0. */
-export const maskMap = (width: number, height: number, masks: ReadonlyArray<Mask>) => {
+const maskMap = (width: number, height: number, masks: ReadonlyArray<Mask>) => {
   const under = new Uint8Array(width * height);
   for (const mask of masks) {
     const [left, top] = [Math.max(0, Math.floor(mask.x)), Math.max(0, Math.floor(mask.y))];
@@ -105,7 +105,7 @@ const regionAt = (
 };
 
 /** The size of the largest 8-connected region of the pixels `map` marks 1. */
-export const largestRegion = (map: Uint8Array, width: number, height: number) => {
+const largestRegion = (map: Uint8Array, width: number, height: number) => {
   const seen = new Uint8Array(map.length);
   let largest = 0;
   for (let start = 0; start < map.length; start++)

@@ -10,9 +10,9 @@
 
 export type AppName = 'heartseed' | 'hymnal';
 
-export type Host = 'ios' | 'web';
+type Host = 'ios' | 'web';
 
-export type Scheme = 'light' | 'dark';
+type Scheme = 'light' | 'dark';
 
 /** The iOS matrix: the inventory's `matrix.ios`. */
 export const IOS = {
@@ -25,13 +25,13 @@ export const IOS = {
 } as const;
 
 /** The web matrix: the inventory's `matrix.web`. */
-export const WEB = {
+const WEB = {
   viewports: ['390x844@2', '1280x800@1'],
   schemes: ['light', 'dark'],
 } as const;
 
 /** Where each app is drawn. */
-export const HOSTS: Readonly<Record<AppName, ReadonlyArray<Host>>> = {
+const HOSTS: Readonly<Record<AppName, ReadonlyArray<Host>>> = {
   heartseed: ['ios'],
   hymnal: ['ios', 'web'],
 };
@@ -96,7 +96,7 @@ export interface Row {
  * is set by the harness (`prefer prefers-color-scheme`); the screenshot is
  * the harness's last op.
  */
-export interface ExactSide {
+interface ExactSide {
   readonly ops: ReadonlyArray<string>;
   readonly masks?: ReadonlyArray<MaskSpec>;
 }

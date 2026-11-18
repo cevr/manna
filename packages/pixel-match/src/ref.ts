@@ -49,7 +49,7 @@ export interface Frame {
 const CONFIG = { heartseed: heartseedOne, hymnal: hymnalOne } as const;
 
 /** The face of Heartseed's greeting at a local hour: morning from 04:00, afternoon from 12:00, evening from 18:00. */
-export const faceAt = (hour: number) => {
+const faceAt = (hour: number) => {
   if (hour >= 4 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 18) return 'afternoon';
   return 'evening';
@@ -82,7 +82,7 @@ const commandOf = (
 };
 
 /** The udid of the booted reference simulator, from its drive session. */
-export const udidOf = (frame: Frame, app: AppName) => {
+const udidOf = (frame: Frame, app: AppName) => {
   const session = JSON.parse(
     readFileSync(join(frame.root, 'tmp', CONFIG[app].simulator, 'session.json'), 'utf8'),
   ) as { readonly udid: string };

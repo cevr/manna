@@ -13,12 +13,13 @@
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
 import { stageOf, type Plant, type Stage } from '@manna/heartseed/garden';
+import * as Fsrs from '@manna/heartseed/fsrs';
 import { review, type Card, type Grade } from '@manna/heartseed/fsrs';
 import type { Range } from '@manna/heartseed/passages';
 import { Array as Arr } from 'effect';
 
-/** A card never reviewed: the app's `NEW_CARD`, which its declarations do not export; `fixtures.test.ts` holds the two equal. */
-export const NEW_CARD: Card = {
+/** A card never reviewed: the app's `NEW_CARD`, which its declarations (`exact/fsrs.d.ts`) do not name; checked against the app's own as this module loads. */
+const NEW_CARD: Card = {
   due: 0,
   stability: 0,
   difficulty: 0,
@@ -29,6 +30,9 @@ export const NEW_CARD: Card = {
   state: 'new',
   lastReview: 0,
 };
+const own: unknown = Object.entries(Fsrs).find(([name]) => name === 'NEW_CARD')?.[1];
+if (JSON.stringify(own) !== JSON.stringify(NEW_CARD))
+  throw new Error(`the harness's new card is not the app's: ${JSON.stringify(own)}`);
 
 /** A verse's reference as the app writes it (`Psalms 23:1`): the same call its `verseReference` makes, which this harness cannot import without the app's bundled corpus. */
 const verseReference = (book: number, chapter: number, verse: number) =>
@@ -186,7 +190,7 @@ const LIST_PLANTS = [
 ];
 
 /** Heartseed's fixtures at `now`, by name. */
-export const heartseedFixtures = (now: Date) => ({
+const heartseedFixtures = (now: Date) => ({
   'hs-new': () => garden(now, [], [], []),
   'hs-fresh': () => garden(now, [], [], [plant(OWN, 'seed', false)]),
   'hs-due': () =>
@@ -235,7 +239,7 @@ const fresh = [
 ] as const;
 
 /** The hymnal's fixtures, by name: Sound and Sounds and haptics off in each, as the drives' rules ask. */
-export const hymnalFixtures = {
+const hymnalFixtures = {
   'hy-fresh': (): Store => ({ _tag: 'Pairs', pairs: fresh }),
   'hy-used': (): Store => ({
     _tag: 'Pairs',

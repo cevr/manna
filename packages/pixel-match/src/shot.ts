@@ -35,7 +35,7 @@ const EXACT_SIMULATORS: Readonly<Record<AppName, string>> = {
 };
 
 /** The channel limit a pair is scored at: `accept.ts`'s. */
-export const CHANNEL = 16;
+const CHANNEL = 16;
 
 const udidOfName = (name: string) => {
   const listed = JSON.parse(run(['xcrun', 'simctl', 'list', 'devices', '--json'])) as {
@@ -52,7 +52,7 @@ const udidOfName = (name: string) => {
 };
 
 /** Masks in points as device pixels. */
-export const pixelsOf = (masks: ReadonlyArray<MaskSpec>, scale: number): ReadonlyArray<Mask> =>
+const pixelsOf = (masks: ReadonlyArray<MaskSpec>, scale: number): ReadonlyArray<Mask> =>
   masks.map((mask) => ({
     x: mask.x * scale,
     y: mask.y * scale,
@@ -62,7 +62,7 @@ export const pixelsOf = (masks: ReadonlyArray<MaskSpec>, scale: number): Readonl
   }));
 
 /** Scores one cell's screen against its reference and writes the result and the diff picture; the result. */
-export const score = (
+const score = (
   frame: { readonly root: string; readonly refs: string; readonly one: string },
   cell: Cell,
   masks: ReadonlyArray<Mask>,

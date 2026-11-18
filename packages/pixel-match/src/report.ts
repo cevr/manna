@@ -18,10 +18,10 @@ import { cellName, cellsOf, type AppName } from './model.ts';
 import { refFile, reportFile, shotFiles } from './paths.ts';
 
 /** What one capture run could not take: cell name to reason, by app and host, kept beside the references. */
-export const missedFile = (frame: { readonly refs: string; readonly one: string }) =>
+const missedFile = (frame: { readonly refs: string; readonly one: string }) =>
   join(frame.refs, frame.one, 'missed.json');
 
-export const readMissed = (file: string): Record<string, string> =>
+const readMissed = (file: string): Record<string, string> =>
   existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Record<string, string>) : {};
 
 /** Records what a run missed and forgets what it took, so the file names only cells still without a picture. */
