@@ -116,7 +116,7 @@ component ListPage
         text list.caption font="type.small" color="hs.quiet" testId="list-caption"
         if list.start != "none"
           column gap="space.s6" margin-top="space.s4"
-            button press=practice(list.startSlug) aria-label="Practice this list" display="flex" flex-direction="row" align-items="center" justify-content="center" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="list-practice"
+            button press=practice(list.startSlug) aria-label="Practice this list" display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="list-practice"
               text "Practice this list" font="type.label" color="hs.on-ink"
             text list.startLine font="type.small" color="hs.quiet" testId="list-line"
         if chapter != ""
@@ -126,14 +126,14 @@ component ListPage
           for v in list.verses key=v.slug
             column gap="space.s4" -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
               if v.starts
-                row role="button" press=practice(v.slug) aria-label=v.label align-items="center" gap="space.s12" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r16" testId=`list-row-${v.slug}`
+                row role="button" press=practice(v.slug) aria-label=v.label align-items="center" gap="space.s12" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r16" testId=`list-row-${v.slug}`
                   :active
                     background-color = "hs.card"
                   ListDrawing(verse=v, scheme=scheme)
                   ListNames(verse=v)
                   text "›" font="type.chevron" color="hs.quiet" aria-hidden=true
               else
-                row align-items="center" gap="space.s12" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" testId=`list-row-${v.slug}`
+                row align-items="center" gap="space.s12" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" testId=`list-row-${v.slug}`
                   ListDrawing(verse=v, scheme=scheme)
                   ListNames(verse=v)
               if v.backTo != "" and asking != v.reference
@@ -152,7 +152,7 @@ component ListPage
                 HomePill(name="Keep", label="Keep", press=no, icon="", id="ask-no")
           else if list.removeId != ""
             column gap="space.s6" margin-top="space.s20"
-              button press=ask("remove") aria-label=`Remove ${list.removeName}` display="flex" justify-content="center" align-self="flex-start" min-height="size.target" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r12" testId="list-remove"
+              button press=ask("remove") aria-label=`Remove ${list.removeName}` display="flex" justify-content="center" align-self="flex-start" box-sizing="border-box" min-height="size.target" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r12" testId="list-remove"
                 :active
                   background-color = "hs.card"
                 text "Remove this list" font="type.strong" color="hs.miss"

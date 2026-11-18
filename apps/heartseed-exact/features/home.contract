@@ -17,7 +17,9 @@
 // (`homeAsking`, the id its Yes removes; src/home/asks.ts), opened by
 // Remove, closed by any other tap. `home-band` marks the top of home's
 // content under the bar, where the pixel match's band starts (`pixel
-// shot`, packages/pixel-match/screens/heartseed/home.ts). Every measure is a token of app.forma;
+// shot`, packages/pixel-match/screens/heartseed/home.ts). A box with a
+// least height counts its padding and border in it (`border-box`), as the
+// current app's boxes do. Every measure is a token of app.forma;
 // the icons are the current app's own pictures (`assets/home`, a link to
 // apps/heartseed/assets/home), each in the scheme shown.
 use GardenVerse, GardenShown from "./garden.contract"
@@ -129,7 +131,7 @@ component HomePlantButton
     plant: HomePlant
     start: action
   view
-    column role="button" press=start(plant.slug) aria-label=plant.label width="size.plot" min-height="size.target" align-items="center" gap="space.s2" padding-top="space.s4" padding-bottom="space.s4" border-radius="radius.r12" testId=`plant-${plant.id}`
+    column role="button" press=start(plant.slug) aria-label=plant.label width="size.plot" box-sizing="border-box" min-height="size.target" align-items="center" gap="space.s2" padding-top="space.s4" padding-bottom="space.s4" border-radius="radius.r12" testId=`plant-${plant.id}`
       :active
         background-color = "hs.hearing"
       HomePlantMark(ready=plant.ready, sown=plant.sown)
@@ -145,7 +147,7 @@ component HomePill
     icon: string
     id: string
   view
-    button press=press aria-label=name display="flex" flex-direction="row" align-self="flex-start" align-items="center" justify-content="center" gap="space.s6" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
+    button press=press aria-label=name display="flex" flex-direction="row" align-self="flex-start" align-items="center" justify-content="center" gap="space.s6" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
       if icon != ""
         image icon width="glyph.control" height="glyph.control" aria-hidden=true
       text label font="type.label" color="hs.ink"
@@ -177,10 +179,10 @@ component Home
             if home.card.parts != ""
               text home.card.parts font="type.small" color="hs.ink" testId="today-parts"
             if home.card.action == "start"
-              button press=begin aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
+              button press=begin aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
                 text home.card.label font="type.label" color="hs.on-ink"
             else if home.card.action == "practice"
-              button press=start(home.card.slug) aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
+              button press=start(home.card.slug) aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
                 text home.card.label font="type.label" color="hs.on-ink"
       scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
         column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
@@ -193,7 +195,7 @@ component Home
           column gap="space.s16"
             for r in home.rows key=r.id
               column gap="space.s8" testId=`row-${r.slug}`
-                row role="button" press=open(r.slug) aria-label=`Open ${r.title}` align-items="center" gap="space.s8" min-height="size.target" border-radius="radius.r12" testId=`row-title-${r.slug}`
+                row role="button" press=open(r.slug) aria-label=`Open ${r.title}` align-items="center" gap="space.s8" box-sizing="border-box" min-height="size.target" border-radius="radius.r12" testId=`row-title-${r.slug}`
                   :active
                     background-color = "hs.hearing"
                   column flex=1 gap="space.s2"
@@ -210,14 +212,14 @@ component Home
                 for s in home.singles key=s.slug
                   column gap="space.s6" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
                     row align-items="center" gap="space.s8"
-                      row role="button" press=start(s.slug) aria-label=s.label flex=1 min-height="size.target" align-items="center" gap="space.s10" padding-left="space.s4" padding-right="space.s4" border-radius="radius.r12" testId=`single-button-${s.slug}`
+                      row role="button" press=start(s.slug) aria-label=s.label flex=1 box-sizing="border-box" min-height="size.target" align-items="center" gap="space.s10" padding-left="space.s4" padding-right="space.s4" border-radius="radius.r12" testId=`single-button-${s.slug}`
                         :active
                           background-color = "hs.hearing"
                         column width="size.drawing" align-items="center" gap="space.s2" aria-hidden=true
                           HomePlantMark(ready=s.ready, sown=s.sown)
                         text s.reference font="type.strong" color="hs.ink" testId=`single-${s.slug}`
                       if s.removeId != "" and asking != s.removeId
-                        button press=ask(s.removeId) aria-label=`Remove ${s.reference}` display="flex" justify-content="center" min-height="size.target" padding-left="space.s12" padding-right="space.s12" border-radius="radius.r12" -exact-press-opacity="opacity.pressed" testId=`single-remove-${s.slug}`
+                        button press=ask(s.removeId) aria-label=`Remove ${s.reference}` display="flex" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s12" padding-right="space.s12" border-radius="radius.r12" -exact-press-opacity="opacity.pressed" testId=`single-remove-${s.slug}`
                           text "Remove" font="type.label" color="hs.miss"
                     if s.removeId != "" and asking == s.removeId
                       column gap="space.s8" padding-left="space.ask" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${s.slug}`
