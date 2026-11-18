@@ -118,7 +118,7 @@ component GardenRow
   view
     column gap="space.s2" testId=`plant-${verse.slug}`
       text verse.reference font="type.strong"
-      row gap="space.s12"
+      row column-gap="space.s12" flex-wrap="wrap"
         text verse.stage font="type.small" color="hs.quiet" testId=`stage-${verse.slug}`
         text gardenDueText(verse) font="type.small" color="hs.quiet" testId=`due-${verse.slug}`
       if driven
@@ -179,8 +179,8 @@ component YourVerses
           column gap="space.s12" testId="singles"
             text "Single verses" role="heading" aria-level=3 font="type.caption-strong"
             for v in garden.singles key=v.slug
-              row gap="space.s12" align-items="center" flex-wrap="wrap" testId=`single-${v.slug}`
-                column flex=1 min-width=0
+              column gap="space.s4" align-items="flex-start" testId=`single-${v.slug}`
+                column align-self="stretch" min-width=0
                   GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
                 button press=remove(`single:${v.reference}`) class=GardenRemove testId=`remove-single-${v.slug}`
                   text "Remove" font="type.strong"
