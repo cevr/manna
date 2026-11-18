@@ -75,6 +75,44 @@ describe('a citation', () => {
     expect(labels(citedVerses('Romans 8:1', ''))).toEqual(['45.8:1']);
   });
 
+  test('a chapter printed bare names that whole chapter, never verse N of chapter N', () => {
+    expect(labels(citedVerses('John 9:1', '9'))).toEqual(['43.9:*']);
+    expect(labels(citedVerses('John 1:4', 'John 1:4, 5'))).toEqual(['43.1:4', '43.1:5']);
+    expect(labels(citedVerses('John 1:1', '1'))).toEqual(['43.1:1']);
+    expect(labels(citedVerses('John 9:9', '9'))).toEqual(['43.9:9']);
+  });
+
+  test('a chapter list names each chapter', () => {
+    expect(labels(citedVerses('Revelation 21:1', 'Revelation 21, 22'))).toEqual([
+      '66.21:*',
+      '66.22:*',
+    ]);
+    expect(labels(citedVerses('Revelation 21:1', '21, 22'))).toEqual(['66.21:*', '66.22:*']);
+    expect(labels(citedVerses('Daniel 10:1', 'chapters 10, 11, and 12'))).toEqual([
+      '27.10:*',
+      '27.11:*',
+      '27.12:*',
+    ]);
+    expect(labels(citedVerses('Revelation 21:1', 'Revelation 21, 22:1-2'))).toEqual([
+      '66.21:*',
+      '66.22:1',
+      '66.22:2',
+    ]);
+  });
+
+  test('a bare chapter number, generated, names that chapter whole', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const below = seeded(seed);
+      const chapter = below(49) + 2;
+      const more = below(3);
+      const printed = Array.from({ length: more + 1 }, (_, at) => String(chapter + at)).join(', ');
+      expect([seed, labels(citedVerses(`Psalms ${String(chapter)}:1`, printed))]).toEqual([
+        seed,
+        Array.from({ length: more + 1 }, (_, at) => `19.${String(chapter + at)}:*`),
+      ]);
+    }
+  });
+
   test('a title that names no verse names nothing', () => {
     expect(citedVerses('made up', 'John 3:16')).toEqual([]);
   });

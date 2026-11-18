@@ -52,9 +52,13 @@ const VERSE_HEADING_BOOKS: readonly string[] = [
   '7ABC',
 ];
 
+/** Where a citation's reading stands: its book and chapter, and whether a
+ *  bare number read there names chapters ("Revelation 21, 22") or verses
+ *  ("John 1:1, 14"). */
 interface Place {
   readonly book: number;
   readonly chapter: number;
+  readonly chapters: boolean;
 }
 
 interface Read {
@@ -81,22 +85,38 @@ const span = (place: Place, from: number, to: number): readonly CitedVerse[] => 
   return Arr.makeBy(to - from + 1, (at) => verse(place, from + at));
 };
 
+/** Whole chapters `from` to `to` of the place's book, and the place at the
+ *  last of them. */
+const chapterSpan = (place: Place, from: number, to: number): Read => {
+  if (to < from || to - from > MAX_RANGE) return { place, verses: [] };
+  return {
+    place: { book: place.book, chapter: to, chapters: true },
+    verses: Arr.makeBy(to - from + 1, (at) =>
+      wholeChapter({ book: place.book, chapter: from + at, chapters: true }),
+    ),
+  };
+};
+
 /** What a parsed reference names, and the place it leaves the reading at. */
 const named = (parsed: ReturnType<typeof parseBibleQuery>): Option.Option<Read> => {
   switch (parsed._tag) {
     case 'single': {
-      const place = { book: parsed.ref.book, chapter: parsed.ref.chapter };
+      const place = { book: parsed.ref.book, chapter: parsed.ref.chapter, chapters: false };
       return Option.some({ place, verses: [verse(place, parsed.ref.verse)] });
     }
     case 'verseRange': {
-      const place = { book: parsed.ref.start.book, chapter: parsed.ref.start.chapter };
+      const place = {
+        book: parsed.ref.start.book,
+        chapter: parsed.ref.start.chapter,
+        chapters: false,
+      };
       return Option.some({
         place,
         verses: span(place, parsed.ref.start.verse, parsed.ref.end.verse),
       });
     }
     case 'chapter': {
-      const place = { book: parsed.ref.book, chapter: parsed.ref.chapter };
+      const place = { book: parsed.ref.book, chapter: parsed.ref.chapter, chapters: true };
       return Option.some({ place, verses: [wholeChapter(place)] });
     }
     case 'chapterRange':
@@ -108,7 +128,7 @@ const named = (parsed: ReturnType<typeof parseBibleQuery>): Option.Option<Read> 
 
 const CHAPTER_VERSES = /^(?:ch(?:apter|\.)?\s*)?(\d+):(\d+)(?:\s*[-–]\s*(\d+))?$/i;
 const VERSES = /^(\d+)(?:\s*[-–]\s*(\d+))?$/;
-const WHOLE_CHAPTER = /^ch(?:apter|\.)?\s*(\d+)$/i;
+const WHOLE_CHAPTER = /^ch(?:apters?|\.)?\s*(\d+)$/i;
 
 /** The groups of `pattern` in `text`, when it matches whole. */
 const groups = (pattern: RegExp, text: string): Option.Option<readonly Option.Option<number>[]> =>
@@ -128,20 +148,31 @@ const at = (found: readonly Option.Option<number>[], index: number, fallback: nu
 const segmentAt = (place: Place, segment: string): Option.Option<Read> =>
   Option.firstSomeOf([
     Option.map(groups(CHAPTER_VERSES, segment), (found) => {
-      const moved = { book: place.book, chapter: at(found, 0, place.chapter) };
+      const moved = { book: place.book, chapter: at(found, 0, place.chapter), chapters: false };
       const from = at(found, 1, 1);
       return { place: moved, verses: span(moved, from, at(found, 2, from)) };
     }),
-    Option.map(groups(VERSES, segment), (found) => {
+    Option.map(groups(VERSES, segment), (found): Read => {
       const from = at(found, 0, 1);
+      if (place.chapters) return chapterSpan(place, from, at(found, 1, from));
       return { place, verses: span(place, from, at(found, 1, from)) };
     }),
     Option.map(groups(WHOLE_CHAPTER, segment), (found) => {
-      const moved = { book: place.book, chapter: at(found, 0, place.chapter) };
+      const moved = { book: place.book, chapter: at(found, 0, place.chapter), chapters: true };
       return { place: moved, verses: [wholeChapter(moved)] };
     }),
     named(parseBibleQuery(segment)),
   ]);
+
+/** Whether `segment`, the first of a citation whose title is `head`, is its
+ *  chapter printed bare: the library links "chapter 9" as text "9" titled
+ *  "<Book> 9:1". Chapter 1's "1" stays verse 1, since "<Book> 1:1" printed
+ *  "1" is a verse heading as often as a chapter. */
+const isBareChapter = (head: Read, segment: string): boolean =>
+  head.place.chapter > 1 &&
+  segment === String(head.place.chapter) &&
+  head.verses.length === 1 &&
+  head.verses.every((cited) => Option.contains(cited.bibleVerse, 1));
 
 /** The verses one citation names: its printed `text` read in the context of
  *  its `title`. A first segment the reading cannot place names the title's
@@ -153,7 +184,13 @@ const citedVerses = (title: string, text: string): readonly CitedVerse[] =>
       let place = head.place;
       const out: CitedVerse[] = [];
       text.split(/[;,]/).forEach((raw, index) => {
-        const read = segmentAt(place, raw.trim().replace(/[.:]$/, ''));
+        const segment = raw
+          .trim()
+          .replace(/^and\s+/i, '')
+          .replace(/[.:]$/, '');
+        let read = segmentAt(place, segment);
+        if (index === 0 && isBareChapter(head, segment))
+          read = Option.some(chapterSpan(head.place, head.place.chapter, head.place.chapter));
         if (Option.isSome(read)) {
           place = read.value.place;
           out.push(...read.value.verses);
