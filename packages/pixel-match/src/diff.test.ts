@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Arbitrary, Effect, Schema } from 'effect';
 
-import { diff, ladder, type Mask } from './diff.ts';
+import { bandsOf, diff, ladder, type Mask } from './diff.ts';
 import { decodePng, encodePng, isBlank, type Picture } from './png.ts';
 
 const int = (minimum: number, maximum: number) =>
@@ -110,6 +110,34 @@ describe('the strict diff', () => {
     expect(largest([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])).toBe(4);
     expect(largest(new Array(16).fill(0))).toBe(0);
   });
+
+  test("a picture's band against the same rows of another picture differs nowhere, cut to the shorter band", () =>
+    holds(
+      Arbitrary.all([picture, int(0, 9), int(0, 9), int(0, 4), int(0, 1)]),
+      ([base, first, last, shift, foot]) => {
+        const [top, bottom] = [Math.min(first, last), Math.max(first, last)];
+        const stride = base.width * 4;
+        const padded: Picture = {
+          width: base.width,
+          height: base.height + shift,
+          rgba: Uint8Array.from([...new Uint8Array(shift * stride).fill(200), ...base.rgba]),
+        };
+        const anchor = foot === 1 ? 'bottom' : 'top';
+        const longer =
+          anchor === 'top'
+            ? { top: top + shift, bottom: bottom + shift + 2 }
+            : { top, bottom: Math.min(bottom, base.height) + shift };
+        const cut = bandsOf(base, { top, bottom }, padded, longer, anchor);
+        const scored = diff(cut.reference, cut.screen, [], 0);
+        const height = Math.max(0, Math.min(bottom, base.height) - Math.min(top, base.height));
+        return (
+          scored._tag === 'Scored' &&
+          scored.differing === 0 &&
+          cut.reference.height === height &&
+          (anchor === 'bottom' || cut.offset === Math.min(top, base.height))
+        );
+      },
+    ));
 
   test('the ladder counts fewer pixels at a looser channel', () => {
     const base: Picture = {

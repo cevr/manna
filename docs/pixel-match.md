@@ -116,6 +116,30 @@ threshold's channel (16). It writes, under `tmp/pixel-match/shots/`:
 - a diff picture: the reference, the screen, the differing pixels in red,
   and the masks hatched.
 
+### Heartseed's content band
+
+The port keeps UIKit's navigation bar and tab bar on Heartseed's Garden
+screens (home, a list, Today); One draws its own header row and neither
+bar (owner, q2). So these rows (`screens/heartseed/band.ts`) are scored over
+a band, not the whole picture:
+
+- On the One side, the band runs from an edge read from One's tree when the
+  reference is taken, to the picture's foot. On home it starts at the
+  greeting's top (home has no header row). On a list it starts under the
+  `Your field` back link. On Today it starts under the heading row. The
+  reference's `.json` keeps that top as `band.top`, in device pixels.
+- On the Exact side, the band runs from the bottom of the node `exact.band.top`
+  names (the navigation bar) to the top of the node `exact.band.bottom` names
+  (the tab bar), each read with the agent's `layout` op at the capture. The
+  row's unit writes both with the row's ops; a banded row without them fails.
+- The two bands are laid edge to edge at their tops, or at their feet for a
+  row scrolled to its end (`anchor: 'bottom'`), and cut to the shorter.
+  Masks move with the reference's band and still count toward the mask cap.
+
+The result's `total` is the band's pixels and `picture` the whole
+picture's. The acceptance check fails a band under 60 % of the picture.
+Sheets and every hymnal row are scored whole (`total` equals `picture`).
+
 `pixel report` writes every cell's state to `tmp/pixel-match/report.json`,
 in the format the run's acceptance check reads: its references and its
 results.

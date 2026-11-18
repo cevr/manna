@@ -18,6 +18,7 @@ import { join } from 'node:path';
 import { storeOf } from './fixtures.ts';
 import {
   overrideStatusBar,
+  rectIn,
   run,
   setLook,
   setReduceMotion,
@@ -29,8 +30,10 @@ import {
 import {
   cellName,
   cellsOf,
+  IOS,
   type AppName,
   type Cell,
+  type OneBand,
   type Row,
   type Side,
   type Step,
@@ -102,6 +105,37 @@ const treeOf = (frame: Frame, app: AppName, name: string) => {
     digest: createHash('sha256').update(text).digest('hex').slice(0, 16),
     overlay: OVERLAY.test(text),
   };
+};
+
+/** The rect of `target` on screen in points, from the driver's own session; none when it is not there. */
+const rectOf = (app: AppName, target: string) => {
+  const [by = '', ...rest] = target.split('=');
+  const answer = Bun.spawnSync(
+    [
+      'agent-device',
+      'get',
+      'attrs',
+      `${by}=${JSON.stringify(rest.join('='))}`,
+      '--json',
+      '--session',
+      CONFIG[app].driverSession,
+    ],
+    { stdout: 'pipe', stderr: 'ignore' },
+  );
+  if (answer.exitCode !== 0) return undefined;
+  return rectIn(answer.stdout.toString());
+};
+
+/** The top of a banded row's band in device pixels, read from the screen's tree now (`OneBand`). */
+const bandTopOf = (app: AppName, band: OneBand) => {
+  const rects = band.targets.flatMap((target) => {
+    const rect = rectOf(app, target);
+    return rect === undefined ? [] : [rect];
+  });
+  if (rects.length === 0) throw new Error(`band: none of ${band.targets.join(', ')} is on screen`);
+  const edges = rects.map((rect) => (band.edge === 'bottom' ? rect.y + rect.height : rect.y));
+  const points = band.edge === 'bottom' ? Math.max(...edges) : Math.min(...edges);
+  return Math.round(points * IOS.scale);
 };
 
 /** The app stopped, its store written with `fixture`, the look set and read back, the status bar overridden. */
@@ -194,7 +228,16 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, now: Dat
     unlinkSync(file);
     return 'refused: a development overlay is in the tree';
   }
-  const metadata = metadataOf(frame, cell, fixture, now, udid, tree.digest, shot);
+  const oneBand = side.band;
+  let band: (OneBand & { readonly top: number }) | undefined;
+  if (oneBand !== undefined)
+    try {
+      band = { ...oneBand, top: bandTopOf(cell.app, oneBand) };
+    } catch (error) {
+      unlinkSync(file);
+      return String(error instanceof Error ? error.message : error);
+    }
+  const metadata = { ...metadataOf(frame, cell, fixture, now, udid, tree.digest, shot), band };
   writeFileSync(file.replace(/\.png$/, '.json'), `${JSON.stringify(metadata, null, 2)}\n`);
   return undefined;
 };

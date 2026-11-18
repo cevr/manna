@@ -4,6 +4,7 @@
  * fixture; the port's side is the unit's to write.
  */
 import type { Row, Step } from '../../src/model.ts';
+import { banded, HOME_BAND, LIST_BAND } from './band.ts';
 
 const unit = 'pm-hs-home';
 
@@ -13,7 +14,7 @@ export const HOME: Step = { open: '/', expect: 'id=today-card' };
 const OPEN_PSALM: Step = { scroll: 'label=Open Psalms 23:1-5', direction: 'down' };
 export const FOOT: Step = { scroll: 'label=How Heartseed works', direction: 'down' };
 
-export const rows: ReadonlyArray<Row> = [
+const homeRows: ReadonlyArray<Row> = [
   {
     id: 'home.fresh',
     unit,
@@ -32,8 +33,22 @@ export const rows: ReadonlyArray<Row> = [
     fixture: 'hs-lists',
     one: { steps: [HOME] },
   },
-  { id: 'home.foot', unit, kind: 'match', fixture: 'hs-lists', one: { steps: [HOME, FOOT] } },
-  { id: 'home.limit', unit, kind: 'match', fixture: 'hs-limit', one: { steps: [HOME, FOOT] } },
+  {
+    id: 'home.foot',
+    unit,
+    kind: 'match',
+    fixture: 'hs-lists',
+    anchor: 'bottom',
+    one: { steps: [HOME, FOOT] },
+  },
+  {
+    id: 'home.limit',
+    unit,
+    kind: 'match',
+    fixture: 'hs-limit',
+    anchor: 'bottom',
+    one: { steps: [HOME, FOOT] },
+  },
   {
     id: 'home.single-ask',
     unit,
@@ -70,6 +85,9 @@ export const rows: ReadonlyArray<Row> = [
     fixture: 'hs-lists',
     one: { steps: [HOME], hold: 'label=Psalms 23:1, seed, ready today' },
   },
+];
+
+const listRows: ReadonlyArray<Row> = [
   {
     id: 'list.page',
     unit,
@@ -90,6 +108,7 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hs-lists',
+    anchor: 'bottom',
     one: {
       steps: [
         HOME,
@@ -100,4 +119,9 @@ export const rows: ReadonlyArray<Row> = [
       ],
     },
   },
+];
+
+export const rows: ReadonlyArray<Row> = [
+  ...homeRows.map(banded(HOME_BAND)),
+  ...listRows.map(banded(LIST_BAND)),
 ];

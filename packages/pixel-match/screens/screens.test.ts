@@ -31,6 +31,16 @@ describe('the screens', () => {
       }
   });
 
+  test("Heartseed's Garden rows are scored over a band, its sheets and the hymnal's rows whole", () => {
+    const garden = /^(home|list|today)\./;
+    for (const app of APPS)
+      for (const row of ROWS[app].filter((each) => each.kind !== 'exact-only'))
+        expect([row.id, row.one?.band !== undefined]).toEqual([
+          row.id,
+          app === 'heartseed' && garden.test(row.id),
+        ]);
+  });
+
   test('an Exact-only row has no One side and no cell', () => {
     for (const app of APPS)
       for (const row of ROWS[app].filter((each) => each.kind === 'exact-only')) {

@@ -14,8 +14,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { diff, diffPicture, ladder, type Mask } from './diff.ts';
-import { overrideStatusBar, run } from './ios.ts';
+import { bandsOf, diff, diffPicture, ladder, type Band, type Mask } from './diff.ts';
+import { overrideStatusBar, rectIn, run } from './ios.ts';
 import {
   cellName,
   cellsOf,
@@ -67,11 +67,25 @@ const score = (
   cell: Cell,
   masks: ReadonlyArray<Mask>,
   compare: string,
+  bands:
+    | { readonly reference: Band; readonly screen: Band; readonly anchor: 'top' | 'bottom' }
+    | undefined,
 ) => {
   const files = shotFiles(frame.root, cell);
-  const reference = decodePng(readFileSync(refFile(frame, cell)), 'reference');
-  const screen = decodePng(readFileSync(files.screen), 'screen');
-  const scored = diff(reference, screen, masks, CHANNEL);
+  const wholeReference = decodePng(readFileSync(refFile(frame, cell)), 'reference');
+  const wholeScreen = decodePng(readFileSync(files.screen), 'screen');
+  const picture = wholeReference.width * wholeReference.height;
+  let [reference, screen, laid] = [wholeReference, wholeScreen, masks];
+  if (bands !== undefined) {
+    if (wholeReference.width !== wholeScreen.width)
+      throw new Error(
+        `${cellName(cell)}: reference ${wholeReference.width} wide, screen ${wholeScreen.width}`,
+      );
+    const cut = bandsOf(wholeReference, bands.reference, wholeScreen, bands.screen, bands.anchor);
+    [reference, screen] = [cut.reference, cut.screen];
+    laid = masks.map((mask) => ({ ...mask, y: mask.y - cut.offset }));
+  }
+  const scored = diff(reference, screen, laid, CHANNEL);
   if (scored._tag === 'Sizes')
     throw new Error(`${cellName(cell)}: reference ${scored.reference}, screen ${scored.screen}`);
   writeFileSync(files.diff, encodePng(diffPicture(reference, screen, scored)));
@@ -82,7 +96,9 @@ const score = (
     largest: scored.largest,
     masked: scored.masked,
     total: scored.total,
-    ladder: ladder(reference, screen, masks, [0, 4, 8, 16]),
+    picture,
+    bands,
+    ladder: ladder(reference, screen, laid, [0, 4, 8, 16]),
     masks: masks.map((mask) => mask.reason),
     diff: files.diff,
     compare,
@@ -105,11 +121,17 @@ const shootCell = (
   mkdirSync(dirname(files.screen), { recursive: true });
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
+  const oneBand = referenceBandOf(frame, cell);
+  if (oneBand !== undefined && side.band === undefined)
+    throw new Error(`${row.id}: a banded row whose Exact side names no band`);
+  const edges =
+    side.band === undefined ? [] : [`layout ${side.band.top}`, `layout ${side.band.bottom}`];
   const ops = [
     `prefer prefers-color-scheme ${cell.scheme}`,
     'clock settle',
     ...side.ops,
     'clock settle',
+    ...edges,
     `screenshot ${files.screen} compare ${refFile(frame, cell)}`,
   ];
   const out = run(
@@ -129,12 +151,41 @@ const shootCell = (
   );
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', IOS.size]);
   const compare = out.trim().split('\n').slice(-12).join('\n');
+  let bands: Parameters<typeof score>[4];
+  if (oneBand !== undefined) {
+    const replies = out.trim().split('\n').slice(-3);
+    const [top, bottom] = [rectIn(replies[0] ?? ''), rectIn(replies[1] ?? '')];
+    if (top === undefined || bottom === undefined)
+      throw new Error(
+        `${row.id}: no rect in the agent's layout replies: ${replies.slice(0, 2).join(' | ').slice(0, 400)}`,
+      );
+    bands = {
+      reference: oneBand,
+      screen: { top: (top.y + top.height) * IOS.scale, bottom: bottom.y * IOS.scale },
+      anchor: row.anchor ?? 'top',
+    };
+  }
   return score(
     frame,
     cell,
     pixelsOf([...(row.one?.masks ?? []), ...(side.masks ?? [])], IOS.scale),
     compare,
+    bands,
   );
+};
+
+/** A reference's band, from the metadata kept beside it: its top read from One's tree at capture, to the picture's foot; none for a row not banded. */
+const referenceBandOf = (
+  frame: { readonly refs: string; readonly one: string },
+  cell: Cell,
+): Band | undefined => {
+  const metadata = JSON.parse(
+    readFileSync(refFile(frame, cell).replace(/\.png$/, '.json'), 'utf8'),
+  ) as {
+    readonly band?: { readonly top: number };
+  };
+  if (metadata.band === undefined) return undefined;
+  return { top: metadata.band.top, bottom: Number.POSITIVE_INFINITY };
 };
 
 /** Shoots the asked iOS cells of `rows`; one line per cell. */

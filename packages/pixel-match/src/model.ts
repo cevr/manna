@@ -73,6 +73,21 @@ export interface Side {
   readonly web?: ReadonlyArray<Step>;
   /** Why a host draws no such screen, by host: its cells are not drawable and named so. */
   readonly notDrawn?: Partial<Record<Host, string>>;
+  /** Where a banded row's band starts on the One side (iOS), read from the tree at capture. */
+  readonly band?: OneBand;
+}
+
+/**
+ * The top of a Heartseed row's content band in One's picture (spec,
+ * "Heartseed's content band"): the lowest bottom edge (`edge: bottom`, under
+ * One's header row) or the highest top edge (`edge: top`, a screen with no
+ * header row) of the targets named that are on screen, read from the
+ * accessibility tree when the reference is taken. The band runs to the
+ * picture's foot.
+ */
+export interface OneBand {
+  readonly targets: ReadonlyArray<string>;
+  readonly edge: 'top' | 'bottom';
 }
 
 export interface Row {
@@ -87,6 +102,8 @@ export interface Row {
   readonly one?: Side;
   /** The port's side, written by the row's unit; none until then. */
   readonly exact?: ExactSide;
+  /** Where a banded row's two bands are laid edge to edge: their tops (the default), or their feet for a row scrolled to its end. */
+  readonly anchor?: 'top' | 'bottom';
 }
 
 /**
@@ -99,6 +116,13 @@ export interface Row {
 interface ExactSide {
   readonly ops: ReadonlyArray<string>;
   readonly masks?: ReadonlyArray<MaskSpec>;
+  /**
+   * A banded row's band in the port's picture: from the bottom edge of the
+   * node `top` names (the navigation bar) to the top edge of the node
+   * `bottom` names (the tab bar), each read by the agent's `layout <node>`
+   * at capture. Every banded row's unit writes it with the row's ops.
+   */
+  readonly band?: { readonly top: string; readonly bottom: string };
 }
 
 /** One cell of a row's matrix. */

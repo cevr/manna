@@ -5,6 +5,7 @@
  * first minute are the Debug build's scripted replay.
  */
 import type { Row, Step } from '../../src/model.ts';
+import { banded, HOME_BAND } from './band.ts';
 import { FOOT, HOME } from './home.ts';
 
 const unit = 'ex-hs-first';
@@ -59,11 +60,11 @@ export const rows: ReadonlyArray<Row> = [
     fixture: 'hs-fresh',
     one: { steps: [HOME, FOOT, { tap: 'label=How Heartseed works' }] },
   },
-  {
+  banded(HOME_BAND)({
     id: 'home.tips',
     unit,
     kind: 'gap',
     fixture: 'hs-new',
     one: { steps: [...PLANTED, { tap: 'label=Continue' }] },
-  },
+  }),
 ];

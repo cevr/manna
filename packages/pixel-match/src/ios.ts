@@ -11,6 +11,8 @@ import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { Option, Predicate, Schema } from 'effect';
+
 import type { Store } from './fixtures.ts';
 
 /** Runs a command to its end; its stdout, or a throw with its stderr. */
@@ -139,4 +141,30 @@ export const stillShot = async (udid: string, file: string) => {
     await sleep(700);
   }
   return undefined;
+};
+
+/** A rect's top and height in points: the first object with a numeric `x`, `y`, `width` and `height` in a driver's JSON answer, depth first; none when the text is no JSON or holds none. */
+export const rectIn = (text: string) =>
+  Option.getOrUndefined(Option.flatMap(decodeJson(text), firstRect));
+
+const Rect = Schema.Struct({
+  x: Schema.Finite,
+  y: Schema.Finite,
+  width: Schema.Finite,
+  height: Schema.Finite,
+});
+const isRect = Schema.is(Rect);
+const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
+
+const isJson = Schema.is(Schema.Json);
+
+/** The first rect in a JSON value, depth first. */
+const firstRect = (value: Schema.Json): Option.Option<typeof Rect.Type> => {
+  if (isRect(value)) return Option.some(value);
+  if (!Predicate.isObject(value)) return Option.none();
+  for (const inner of Object.values(value).filter(isJson)) {
+    const found = firstRect(inner);
+    if (Option.isSome(found)) return found;
+  }
+  return Option.none();
 };

@@ -4,6 +4,7 @@
  * build's scripted replay of Say it.
  */
 import type { Row, Step } from '../../src/model.ts';
+import { banded, TODAY_BAND } from './band.ts';
 import { HOME } from './home.ts';
 
 const unit = 'pm-hs-today';
@@ -30,7 +31,7 @@ const LONG_SEED = 'Isaiah 41:10, seed, ready today';
 /** A recital of the seed, said: its result waits for Next. */
 const SAID: ReadonlyArray<Step> = [...SEED, { tap: 'label=Say it' }, { wait: 5000 }];
 
-export const rows: ReadonlyArray<Row> = [
+const todayRows: ReadonlyArray<Row> = [
   { id: 'today.new', unit, kind: 'match', sweep: true, fixture: 'hs-due', one: { steps: NEW } },
   {
     id: 'today.new-lines',
@@ -119,3 +120,5 @@ export const rows: ReadonlyArray<Row> = [
     one: { steps: [{ open: '/', expect: 'label=Say it' }, { wait: 800 }] },
   },
 ];
+
+export const rows: ReadonlyArray<Row> = todayRows.map(banded(TODAY_BAND));

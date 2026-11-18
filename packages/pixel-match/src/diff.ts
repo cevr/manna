@@ -152,6 +152,52 @@ export const diff = (
   };
 };
 
+/** The rows of `picture` from `top`, `height` of them. */
+const rowsOf = (picture: Picture, top: number, height: number): Picture => {
+  const stride = picture.width * 4;
+  return {
+    width: picture.width,
+    height,
+    rgba: picture.rgba.slice(top * stride, (top + height) * stride),
+  };
+};
+
+/** A band of a picture: its top row, and the row under its last. */
+export interface Band {
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/**
+ * The content bands of a pair, laid edge to edge (spec, "Heartseed's
+ * content band"): each picture's rows from its band's top to its bottom,
+ * cut to the shorter of the two, kept from the top (`anchor: top`) or from
+ * the foot (`anchor: bottom`). The bands' edges are clipped to each picture.
+ * `offset` is how far down the reference's band starts in its own picture,
+ * so masks drawn on the reference move with it.
+ */
+export const bandsOf = (
+  reference: Picture,
+  referenceBand: Band,
+  screen: Picture,
+  screenBand: Band,
+  anchor: 'top' | 'bottom',
+) => {
+  const clip = (picture: Picture, band: Band) => {
+    const top = Math.max(0, Math.min(picture.height, Math.round(band.top)));
+    return { top, bottom: Math.max(top, Math.min(picture.height, Math.round(band.bottom))) };
+  };
+  const [a, b] = [clip(reference, referenceBand), clip(screen, screenBand)];
+  const height = Math.min(a.bottom - a.top, b.bottom - b.top);
+  let [aTop, bTop] = [a.top, b.top];
+  if (anchor === 'bottom') [aTop, bTop] = [a.bottom - height, b.bottom - height];
+  return {
+    reference: rowsOf(reference, aTop, height),
+    screen: rowsOf(screen, bTop, height),
+    offset: aTop,
+  };
+};
+
 /** The differing count of one pair at each channel limit asked, as the calibration reports it. */
 export const ladder = (
   reference: Picture,
