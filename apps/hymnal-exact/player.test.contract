@@ -18,16 +18,22 @@ test "Play starts the hymn and the bar shows it"
   clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
-  expect tree missing "bar"
+  expect tree has "bar"
+  expect tree has "bar-grabber"
+  expect tree missing "bar-title"
   tap "play"
   clock data
   clock settle
-  expect text "bar-hymn" == "1 · Praise to the Lord"
+  expect tree has "bar-title"
+  expect tree has "bar-grabber"
+  expect tree missing "bar-hymn"
+  expect state player.bar.number == 1
   clock until state player.phase == "playing" within 10000
   clock +3500 real
   clock data
   expect state player.at >= 3
-  expect text "bar-toggle" == "Pause"
+  expect state player.bar.toggle == "pause"
+  expect tree has "bar-toggle"
   expect mediasession title == "Praise to the Lord"
   expect mediasession has "pause"
 
@@ -52,7 +58,7 @@ test "Pause holds the place; resume goes on."
   clock data
   clock settle
   expect state player.phase == "paused"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.toggle == "play"
   expect state player.at >= 1
   expect state player.at <= 3
   clock +1500 real
@@ -65,7 +71,7 @@ test "Pause holds the place; resume goes on."
   clock +1500 real
   clock data
   expect state player.at >= 2
-  expect text "bar-toggle" == "Pause"
+  expect state player.bar.toggle == "pause"
 
 test "The bar follows across screens"
   at "/settings"
@@ -86,8 +92,10 @@ test "The bar follows across screens"
   clock settle
   clock data
   expect text "title" == "Hymns"
-  expect text "bar-hymn" == "1 · Praise to the Lord"
-  expect text "bar-toggle" == "Pause"
+  expect text "bar-number" == "1"
+  expect text "bar-hymn" == "Praise to the Lord"
+  expect tree missing "bar-grabber"
+  expect state player.bar.toggle == "pause"
   tap "find-search"
   clock settle
   clock data
@@ -96,9 +104,10 @@ test "The bar follows across screens"
   tap "hymn-3"
   clock settle
   clock data
-  expect text "bar-hymn" == "1 · Praise to the Lord"
-  expect text "bar-toggle" == "Pause"
-  expect tree has "bar-page-play"
+  expect text "bar-number" == "1"
+  expect text "bar-hymn" == "Praise to the Lord"
+  expect state player.bar.toggle == "pause"
+  expect text "bar-page-play" == "Play 3"
   tap "bar-page-play"
   clock data
   clock settle
@@ -141,7 +150,8 @@ test "The full player"
   clock settle
   expect tree missing "player"
   expect text "hymn-title" == "All Creatures of Our God and King"
-  expect text "bar-hymn" == "2 · All Creatures of Our God and King"
+  expect state player.bar.number == 2
+  expect tree has "bar-grabber"
 
 test "The lock screen's pause pauses"
   at "/settings"
@@ -162,8 +172,8 @@ test "The lock screen's pause pauses"
   clock data
   clock settle
   expect state player.phase == "paused"
-  expect text "bar-said" == "Paused"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.said == "Paused"
+  expect state player.bar.toggle == "play"
 
 test "It ends"
   at "/settings"
@@ -183,6 +193,7 @@ test "It ends"
   clock until state player.phase == "ended" within 15000
   clock data
   clock settle
-  expect text "bar-said" == "Played to the end"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.said == "Played to the end"
+  expect state player.bar.toggle == "play"
+  expect tree missing "bar-said"
   expect state player.at >= 5

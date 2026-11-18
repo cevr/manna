@@ -226,19 +226,26 @@ describe('the player’s Contract file keeps the current app’s numbers and the
     expect(bar).not.toMatch(/(?:^|\s)step=/u);
   });
 
-  it('fills its buttons with button and onButton, names no colour, and the tint is the brand’s accent', () => {
-    const filled =
-      /component PlayerFilled\n[\s\S]*?\n {4}button ([^\n]*)\n(?: {6}:active\n(?: {8}[^\n]*\n)*)? {6}text ([^\n]*)/u.exec(
+  it('draws its marks and chips in the current app’s roles, names no colour, and the tint is the brand’s accent', () => {
+    const mark =
+      /component PlayerMark\n[\s\S]*?\n {4}button ([^\n]*)\n {6}:active\n {8}([^\n]*)\n {6}image ([^\n]*)/u.exec(
         contract,
       );
-    expect(filled?.[1]).toContain('background-color="button"');
-    expect(filled?.[1]).toContain('color="onButton"');
-    expect(filled?.[2]).toBe('label font-weight=600');
-    expect(contract).not.toContain('bordered-prominent');
-    expect(contract.match(/PlayerFilled\(/gu)?.length).toBe(3);
+    expect(mark?.[2]).toBe('background-color = "soft"');
+    expect(mark?.[3]).toContain('color="button"');
+    const pill = /component PlayerPill\n[\s\S]*?\n {4}button ([^\n]*)\n {6}text ([^\n]*)/u.exec(
+      contract,
+    );
+    expect(pill?.[1]).toContain('background-color=(chosen ? "chosen" : "pill")');
+    expect(pill?.[2]).toContain('color=(chosen ? "onChosen" : "onPill")');
+    expect(contract.match(/PlayerMark\(/gu)?.length).toBe(2);
     expect(contract).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|light-dark\(/iu);
     const brand = brandOf(appFile('app.forma'));
-    expect(brand.colours.has('button') && brand.colours.has('onButton')).toBe(true);
+    expect(
+      ['button', 'soft', 'pill', 'onPill', 'chosen', 'onChosen'].every((role) =>
+        brand.colours.has(role),
+      ),
+    ).toBe(true);
     expect(brand.names.get('AccentColor')).toBe('accent');
   });
 });

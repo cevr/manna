@@ -216,7 +216,9 @@ test "Nothing sits under the bar"
   clock settle
   clock data
   expect state player.origin == "http://127.0.0.1:4797"
-  expect tree missing "bar-room-hymn"
+  expect tree has "bar"
+  expect tree has "bar-room-hymn"
+  expect tree missing "bar-title"
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000

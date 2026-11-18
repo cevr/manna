@@ -490,7 +490,7 @@ const seekOps = [
     'state player.at',
     'state playerGap',
   ]),
-  'tap player-close',
+  'back',
   'clock data',
   'clock settle',
   'back',

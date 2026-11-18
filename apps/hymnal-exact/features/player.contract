@@ -44,6 +44,7 @@ shape PlayerView
   title: string
   phase: string
   said: string
+  caption: string
   toggle: string
   at: number
   length: number
@@ -56,6 +57,8 @@ shape PlayerView
   place: number
   skipAt: number
   dock: bool
+  pageBar: bool
+  onPage: number
   bar: PlayerBar
   pageToggle: string
   chips: PlayerChip[]
@@ -66,6 +69,8 @@ shape PlayerView
   command: string
 
 fn playerLabel(toggle: string): string = toggle == "pause" ? "Pause" : (toggle == "retry" ? "Try again" : "Play")
+// The bar's mark for a button, as the current BarMark.ios.tsx draws it.
+fn playerMark(toggle: string): string = toggle == "pause" ? "symbol:sf/pause.fill" : (toggle == "retry" ? "symbol:sf/arrow.clockwise" : "symbol:sf/play.fill")
 
 members HymnalExact
   state playerKept = "" persist
@@ -150,7 +155,9 @@ members HymnalExact
 // each screen leaves room under its last row): the element is keyed by
 // its load, so a new load is a new element and an old one's events end
 // with it; the bar shows while the player holds a hymn and no sheet is up,
-// and the dock has no box at all otherwise.
+// and the dock has no box at all otherwise. While the player holds none,
+// a hymn page on top shows the same bar as its own (`pageBar`), as the
+// current hymnal's page draws it, so one bar stays put as Play docks it.
 component PlayerDock
   props
     player: PlayerView
@@ -162,7 +169,7 @@ component PlayerDock
   inject
     motionStill: bool
   view
-    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not player.dock)
+    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not (player.dock or player.pageBar))
       for l in (player.src == "" ? [] : [player.load]) key=l
         audio player.src id="audio" paused=player.paused currentTime=player.from testId="audio"
           metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
@@ -171,23 +178,62 @@ component PlayerDock
           durationchange=heard("loaded", l) timeupdate=ticked(l) seeked=heard("seeked", l, 0)
           waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
           pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
-      if player.dock
+      if player.dock or player.pageBar
         column position="absolute" left=0 right=0 bottom=0 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both")
-          row testId="bar" align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
-            button press=ask("open", 0) flex="1 1 12rem" min-width=0 min-height=44 testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
-              column gap=2 align-items="flex-start"
-                text `${player.bar.number} · ${player.bar.title}` testId="bar-hymn"
-                if player.bar.said != ""
-                  text player.bar.said color="-exact-secondary-label" testId="bar-said"
-            if player.bar.page != 0
-              button press=ask("play", player.bar.page) buttonStyle="bordered" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
-                text "Play"
-            if player.bar.toggle != ""
-              button press=ask("bar", 0) buttonStyle="bordered" testId="bar-toggle"
-                text playerLabel(player.bar.toggle)
+          PlayerBarFrame(player=player, ask=ask)
 
-// The room the docked bar takes under a screen's last row while it shows:
-// one call line at the end of a screen's scrolled content.
+// The bar, as the current PlayerBar.tsx draws it: over the home indicator,
+// on the bar's ground under a hairline, one row at the thumb. The opener
+// fills the row: it names the bar's hymn, or shows a grabber at the bar's
+// centre while that hymn is the page's own, and opens the full player.
+// Then the page's compact Play while another hymn sounds over it, and the
+// player's button as a mark. A hymn page's own bar, while nothing is held,
+// shows the grabber and the page's Play. A failure's reason shows under
+// the hymn, where a mark cannot say it.
+component PlayerBarFrame
+  props
+    player: PlayerView
+    ask: action
+  view
+    column testId="bar" role="region" aria-label="Player" background-color="bar" border-top-width="line.hair" border-top-style="solid" border-top-color="line" padding-bottom="var(--exact-safe-area-inset-bottom)"
+      row position="relative" align-items="center" gap="space.s8" padding="0px space.s12" height="calc(size.target + space.s12)"
+        if player.pageBar or (player.bar.number == player.onPage and player.bar.phase != "failed")
+          row position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
+            view width="size.grabber" height="size.grabber-line" border-radius="radius.grabber" background-color="line" testId="bar-grabber"
+        if player.pageBar
+          view flex=1 min-width=0
+          PlayerMark(symbol=playerMark("play"), press=ask("page", player.onPage), id="play", name="Play")
+        else
+          button press=ask("open", 0) appearance="none" flex=1 min-width=0 min-height="size.target" display="flex" flex-direction="column" justify-content="center" align-items="stretch" testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
+            if player.bar.number != player.onPage
+              row gap="space.s8" align-items="center" justify-content="center"
+                text `${player.bar.number}` font="type.label" color="accent" font-variant-numeric="tabular-nums" testId="bar-number"
+                text player.bar.title font="type.small" color="ink" flex=1 min-width=0 line-clamp=1 text-align="left" testId="bar-hymn"
+            if player.bar.phase == "failed" and player.bar.said != ""
+              text player.bar.said font="type.small" color="muted" line-clamp=1 text-align="center" testId="bar-said"
+          if player.bar.page != 0
+            button press=ask("play", player.bar.page) appearance="none" min-height="size.target" min-width="size.target" padding="0px space.s4" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
+              text `Play ${player.bar.page}` font="type.label" color="button" font-variant-numeric="tabular-nums"
+          if player.bar.toggle != ""
+            PlayerMark(symbol=playerMark(player.bar.toggle), press=ask("bar", 0), id="bar-toggle", name=playerLabel(player.bar.toggle))
+
+// A bar button's mark: the symbol at 22 points in the button's role, in a
+// round 44-point target that takes the soft fill while held.
+component PlayerMark
+  props
+    symbol: string
+    press: action
+    id: string
+    name: string
+  view
+    button press=press appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId=id aria-label=name
+      :active
+        background-color = "soft"
+      image symbol width="size.glyph" height="size.glyph" object-fit="contain" color="button" aria-hidden=true
+
+// The room the bar takes under a screen's last row while it shows, docked
+// or the page's own: one call line at the end of a screen's scrolled
+// content, as tall as the bar's row and its hairline.
 component PlayerBarRoom
   props
     id: string
@@ -195,87 +241,63 @@ component PlayerBarRoom
     playerShown: PlayerView
     motionStill: bool
   view
-    if playerShown.dock
-      column min-height="5rem" flex-shrink=0 testId=id -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
+    if playerShown.dock or playerShown.pageBar
+      column min-height="calc(size.target + space.s12)" padding-top="line.hair" flex-shrink=0 testId=id -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
 
-// A filled button in the brand's roles: `button` under `onButton`, so it
-// reads in dark whatever the platform's tint is; held, it takes the
-// `pressed` fill under `onPressed`, as the current AccentButton does, and
-// gives a little (0.97) on the host's own press curve.
-component PlayerFilled
+// The player's chip, as the current Chip.tsx draws it: a pill in the
+// pill's roles, or on the chosen mark while chosen, its word in the chip
+// type, never narrower than a target and dimmed while held.
+component PlayerPill
   props
     label: string
     press: action
     id: string
     name: string
-    pressed: bool
+    chosen: bool
   view
-    button press=press appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 min-width=44 aria-label=name aria-pressed=pressed testId=id
-      :active
-        background-color = "pressed"
-        color = "onPressed"
-        -exact-press-scale = 0.97
-      text label font-weight=600
+    button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" gap="space.s6" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color=(chosen ? "chosen" : "pill") -exact-press-opacity="opacity.pressed" aria-label=name aria-pressed=chosen testId=id
+      text label font="type.chip" color=(chosen ? "onChosen" : "onPill") line-clamp=1
 
-// A hymn page's own Play: Pause while its hymn sounds, Try again after a
-// failure, nothing for a hymn with no recording.
-component PlayerPagePlay
-  props
-    number: number
-  inject
-    playerShown: PlayerView
-    playerPress: action
-  view
-    if not (playerShown.number == number and playerShown.toggle == "")
-      row
-        PlayerFilled(label=(playerShown.number == number ? playerLabel(playerShown.pageToggle) : "Play"), press=playerPress("page", number), id="play", name=(playerShown.number == number ? playerLabel(playerShown.pageToggle) : "Play"), pressed=false)
-
-// The full player, a sheet over the screen it opened from: the hymn's
-// title (a press goes to its page), its place on a bar the reader can move,
-// Play or Pause, and its stanzas, each with a way to its start.
+// The full player, a sheet over the screen it opened from at half the
+// screen, which the grabber pulls to full, as the current FullPlayer.tsx
+// draws it: the hymn's number and title (a press goes to its page), what
+// the player is doing, its place on a bar the reader can move with the
+// time gone and the whole length, Play or Pause in the button's role, and
+// its stanzas as chips, each sung one with a way to its start.
 component PlayerSheet
   props
     entry: Entry
     player: PlayerView
     ask: action
   view
-    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
-      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
-        button id="close" press=ask("close", 0) aria-label="Close" testId="player-close"
-          image "symbol:close"
-        text "Now Playing" role="heading" aria-level=2
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="50% large" navigationGrabber="visible" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
       scroll id="player-sheet" flex=1 min-height=0
-        column padding=20 gap=16
-          button press=ask("title", 0) min-height=44 testId="player-title" aria-label=`Open hymn ${player.number}`
-            text `${player.number} · ${player.title}` font="-exact-title2"
-          input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
-          row gap=8 align-items="baseline"
-            text player.elapsed font-variant-numeric="tabular-nums" testId="elapsed"
-            text "of" color="-exact-secondary-label"
-            text player.total font-variant-numeric="tabular-nums" testId="total"
-          if player.said != ""
-            text player.said color="-exact-secondary-label" testId="player-said"
-          if player.phase == "failed"
-            column gap=8 testId="player-error"
-              if player.toggle == "retry"
-                button press=ask("retry", 0) buttonStyle="bordered" testId="retry"
-                  text "Try again"
-          else if player.toggle != ""
-            row
-              PlayerFilled(label=playerLabel(player.toggle), press=ask("page", player.number), id="toggle", name=playerLabel(player.toggle), pressed=false)
+        column padding="space.s24" gap="space.s16"
+          column role="group" aria-label="Recording" gap="space.s16"
+            button press=ask("title", 0) appearance="none" text-align="left" -exact-press-opacity="opacity.pressed" testId="player-title" aria-label=`Open hymn ${player.number}`
+              text `${player.number} ${player.title}` font="type.head" color="ink" font-variant-numeric="tabular-nums" role="heading" aria-level=1
+            text player.caption font="type.caption" color="muted" testId="player-said"
+            column gap="space.s4"
+              input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") height="size.slider" aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
+              row justify-content="space-between"
+                text player.elapsed font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="elapsed"
+                text player.total font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="total"
+            row justify-content="center" align-items="center" min-height="size.target" gap="space.s8"
+              if player.phase == "failed" and player.toggle == "retry"
+                button press=ask("retry", 0) appearance="none" min-height="size.target" testId="retry"
+                  text "Try again" font="type.body" color="button"
+              else if player.phase != "failed" and player.toggle != ""
+                button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
+                  text playerLabel(player.toggle) font="type.body" color="button"
           if player.chips.length > 0
-            column gap=8
-              text "Stanzas" font="-exact-headline"
-              row gap=8 flex-wrap="wrap"
+            column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
+              text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+              row gap="space.s8" flex-wrap="wrap" align-items="center"
                 for c in player.chips key=c.stanza
-                  if c.chosen
-                    PlayerFilled(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, pressed=true)
-                  else
-                    button press=ask("stanza", c.stanza) aria-pressed=false aria-label=`Stanza ${c.stanza}` buttonStyle="bordered" testId=`stanza-${c.stanza}`
-                      text `${c.stanza}`
+                  PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
               if player.places.length > 0
-                row gap=8 flex-wrap="wrap" align-items="center"
-                  text "Go to" color="-exact-secondary-label"
+                row gap="space.s8" flex-wrap="wrap" align-items="center"
+                  text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
                   for n in player.places key=n
-                    button press=ask("place", n) buttonStyle="bordered" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
-                      text `${n}`
+                    button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
+                      text `${n}` font="type.chip" color="onPill" line-clamp=1

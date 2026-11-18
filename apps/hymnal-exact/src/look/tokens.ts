@@ -31,6 +31,11 @@ const LIST = 'src/reader/HymnList.native.tsx';
 const CHORDS = 'src/reader/Chords.tsx';
 const STAR = 'src/reader/StarMark.ios.tsx';
 const BOX = 'src/reader/ChordBox.tsx';
+const MARK = 'src/player/BarMark.ios.tsx';
+const CHIP = 'src/player/Chip.tsx';
+const STANZAS = 'src/player/StanzaChips.tsx';
+const PLAY_PAGE = 'src/player/PlayPage.tsx';
+const SCRUBBER = 'src/player/Scrubber.ios.tsx';
 
 const type = (
   name: string,
@@ -83,7 +88,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.row-title', [LIST, 'title'], [LIST, 'star']),
   type('type.line', [HYMN, 'line']),
   type('type.small', [ABOUT, 'credit', 'body'], [BAR, 'title']),
-  type('type.label', [ACCENT, 'title'], [BAR, 'number']),
+  type('type.label', [ACCENT, 'title'], [BAR, 'number'], [PLAY_PAGE, 'text']),
   type('type.caption', [PLAYER, 'caption', 'subheadline']),
   type(
     'type.footnote',
@@ -101,13 +106,15 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.mark', [BOX, 'mark']),
   type('type.first', [BOX, 'first']),
   type('type.finger', [BOX, 'finger']),
+  type('type.chip', [CHIP, 'text'], [STANZAS, 'heading']),
 
-  length('space.s4', [PLAYER, 'position', 'gap']),
+  length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
   length(
     'space.s6',
     [TABS, 'tab', 'paddingVertical'],
     [CHORDS, 'chord', 'paddingRight'],
     [CHORDS, 'noChord', 'width'],
+    [CHIP, 'chip', 'gap'],
   ),
   length(
     'space.s8',
@@ -116,10 +123,19 @@ export const TOKENS: ReadonlyArray<Token> = [
     [TABS, 'row', 'gap'],
     [TABS, 'row', 'paddingVertical'],
     [HOME, 'title', 'paddingRight'],
+    [STANZAS, 'section', 'gap'],
+    [STANZAS, 'chips', 'gap'],
+    [PLAYER, 'row', 'gap'],
+    [BAR, 'open', 'gap'],
   ),
   length('space.s10', [HYMN, 'words', 'gap']),
   length('space.s11', [SETTINGS, 'row', 'paddingVertical'], [ABOUT, 'group', 'paddingVertical']),
-  length('space.s12', [TABS, 'tab', 'paddingHorizontal'], [LIST, 'row', 'gap']),
+  length(
+    'space.s12',
+    [TABS, 'tab', 'paddingHorizontal'],
+    [LIST, 'row', 'gap'],
+    [CHIP, 'chip', 'paddingHorizontal'],
+  ),
   length(
     'space.s16',
     [SETTINGS, 'page', 'padding'],
@@ -132,21 +148,43 @@ export const TOKENS: ReadonlyArray<Token> = [
     [LIST, 'row', 'paddingHorizontal'],
     [LIST, 'topic', 'paddingHorizontal'],
     [LIST, 'empty', 'padding'],
+    [PLAYER, 'page', 'gap'],
+    [PLAYER, 'control', 'gap'],
+    [STANZAS, 'section', 'paddingHorizontal'],
   ),
   length('space.s64', [LIST, 'separator', 'left']),
   length('space.s20', [HYMN, 'page', 'paddingHorizontal']),
-  length('space.s24', [SETTINGS, 'page', 'paddingTop'], [HYMN, 'sections', 'gap']),
+  length(
+    'space.s24',
+    [SETTINGS, 'page', 'paddingTop'],
+    [HYMN, 'sections', 'gap'],
+    [PLAYER, 'page', 'padding'],
+  ),
   length('space.s40', [CHORD, 'sheet', 'paddingBottom']),
   length('space.s48', [HYMN, 'page', 'paddingBottom']),
 
   length('radius.r12', [SETTINGS, 'group', 'borderRadius'], [ABOUT, 'group', 'borderRadius']),
-  length('radius.r16', [TABS, 'tab', 'borderRadius']),
+  length('radius.r16', [TABS, 'tab', 'borderRadius'], [CHIP, 'chip', 'borderRadius']),
   length('radius.r18', [ACCENT, 'button', 'borderRadius']),
-  length('radius.pill', [HOME, 'settings', 'borderRadius']),
+  length('radius.pill', [HOME, 'settings', 'borderRadius'], [BAR, 'mark', 'borderRadius']),
+  length('radius.grabber', [BAR, 'grabber', 'borderRadius']),
 
-  length('size.target', [SETTINGS, 'row', 'minHeight'], [HOME, 'settings', 'width']),
+  length(
+    'size.target',
+    [SETTINGS, 'row', 'minHeight'],
+    [HOME, 'settings', 'width'],
+    [BAR, 'mark', 'width'],
+    [BAR, 'open', 'minHeight'],
+    [PLAYER, 'row', 'minHeight'],
+    [CHIP, 'chip', 'minWidth'],
+    [PLAY_PAGE, 'compact', 'minHeight'],
+  ),
   length('size.button', [ACCENT, 'button', 'minHeight'], [LIST, 'number', 'minWidth']),
   length('size.mark', [STAR, 'mark', 'width'], [STAR, 'mark', 'height']),
+  length('size.glyph', [MARK, 'mark', 'width'], [MARK, 'mark', 'height']),
+  length('size.grabber', [BAR, 'grabber', 'width']),
+  length('size.grabber-line', [BAR, 'grabber', 'height']),
+  length('size.slider', [SCRUBBER, 'bar', 'height']),
 
   measure('hairline')(
     'line.hair',

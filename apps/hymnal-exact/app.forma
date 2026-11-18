@@ -78,6 +78,7 @@ theme
   type.mark = 400 0.8235rem/1.2857
   type.first = 400 0.7647rem/1.3846
   type.finger = 700 0.6471rem/1.2727
+  type.chip = 600 0.7647rem/normal
   space.s4: length = 4px
   space.s6: length = 6px
   space.s8: length = 8px
@@ -94,9 +95,14 @@ theme
   radius.r16: length = 16px
   radius.r18: length = 18px
   radius.pill: length = 22px
+  radius.grabber: length = 2.5px
   size.target: length = 44px
   size.button: length = 36px
   size.mark: length = 28px
+  size.glyph: length = 22px
+  size.grabber: length = 36px
+  size.grabber-line: length = 5px
+  size.slider: length = 32px
   line.hair: length = -exact-hairline
   opacity.pressed: number = 0.6
   nudge.title: length = -0.3333px

@@ -14,8 +14,8 @@
  *   arm only fades (keyframes of opacity alone, a transition of opacity)
  *   or is `none`, and names its times by token: no Contract line writes a
  *   time, a curve or a spring;
- * - the filled buttons press to the brand's `pressed` under `onPressed`,
- *   at a scale of 0.97;
+ * - the filled buttons (the find drums' Open) press to the brand's
+ *   `pressed` under `onPressed`, at a scale of 0.97;
  * - every `haptic(` stands under `if settingsFeel`, and plays the kind
  *   the current hymnal's Feel seam gives its cue (`bodyOf(plain(cue))`),
  *   by the table below, which names each call's cue.
@@ -471,10 +471,7 @@ describe('the hymnal’s motion is calm', () => {
   });
 
   it('presses the filled buttons to the brand’s pressed roles, at 0.97', () => {
-    for (const body of [
-      componentOf(appFile('features/player.contract'), 'PlayerFilled'),
-      elementOf(appFile('features/find.contract'), 'drums-open'),
-    ])
+    for (const body of [elementOf(appFile('features/find.contract'), 'drums-open')])
       expect(Object.fromEntries(pressOf(body))).toEqual({
         'background-color': 'pressed',
         color: 'onPressed',

@@ -13,7 +13,7 @@
 // (app.forma), taken from the current app's styles (src/look/tokens.ts).
 // The page keeps one child per line for other features' call lines (Play,
 // the keys, the find bar).
-use PlayerPagePlay, PlayerBarRoom from "./player.contract"
+use PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
 use ChordsKeys, ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
@@ -68,7 +68,6 @@ component HymnPage
                   text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 role="heading" aria-level=1
                 FavouriteStar(number=page.number)
             ChordsNotice(chords=chords, number=page.number)
-            PlayerPagePlay(number=page.number)
             ChordsKeys(chords=chords, number=page.number)
             if chords.kind == "chords" and chords.number == page.number
               for p, k in chords.parts key=p.key
