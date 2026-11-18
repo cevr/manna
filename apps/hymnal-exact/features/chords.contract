@@ -212,14 +212,14 @@ component ChordsPairs
           text "​" font="type.chord" padding-right="space.s6" aria-hidden=true
         else
           if b.grip == ""
-            text b.chord font="type.chord" color="chord" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}`
+            text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
           else
             link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
-              text b.chord font="type.chord" color="chord" padding-right="space.s6" padding-bottom="-exact-hairline"
+              text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline"
         row
-          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}`
+          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}`
             text b.text
             if bi < word.boxes.length - 1 and b.chord == "" and not (word.at == 1 and bi == 0)
               text "-" color="muted"

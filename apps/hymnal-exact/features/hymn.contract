@@ -125,13 +125,15 @@ component HymnLines
             row
               HymnWordText(word=w, refrain=part.refrain)
 
-// A word: one text of its syllables, a muted hyphen between two.
+// A word: one text of its syllables, a muted hyphen between two, on one
+// line with its no-break space kept (iOS drops a trailing space and
+// breaks a shrunk word at its hyphens otherwise).
 component HymnWordText
   props
     word: HymnWord
     refrain: bool
   view
-    text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") padding-bottom="-exact-hairline" aria-hidden=true
+    text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
       for s, si in word.syllables key=si
         if si > 0
           text "-" color="muted"
