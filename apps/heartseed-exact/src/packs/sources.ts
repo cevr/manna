@@ -5,22 +5,24 @@
  * `app.ts` registers its sources. The base is one function, `baseOf`:
  * egw.cvr.im on a plain launch, a loopback fixture's when a driver's launch
  * names one (`HEARTSEED_PACKS_BASE`). Each pack has its own machine, the
- * pure `step`, held here between calls. `packsAsk` is the Read tab shown
- * or Try again (Contract's `packsFetch` and `packsRetry`): it asks every
- * pack at once and joins any fetch in flight, each settled apart. It
- * answers as soon as one pack settles, with every pack's kept line as it
- * stands and `more` while any is still out; Contract then sends
- * `packsWait`, which answers at the next settle, until none is out. So a
- * pack's status is kept the moment it settles, whatever another's slow
- * fetch does. A fetch's answer may land after the call that made it has
- * answered, and on Hermes such a call's `scheduler.yield()` does not end
- * its turn; so a landing runs no check: a body waits as its pack's job,
- * and each call runs one job, in steps a turn each (`paced.ts`) from its
- * own turn, the data host getting a turn back before the write, and
- * answers once it is done. No turn nears the host's budget whatever a
- * pack's size: one turn over it refuses the whole call, every pack's
- * answer with it (`turns.test.ts`). Contract keeps every pack's version and check time in one `persist`
- * string from each answer, after each file is written. A pack's reader
+ * pure `step`, held here between calls. `packsAsk` asks one pack, the
+ * Read tab shown or Try again (Contract's `packsFetch` and `packsRetry`
+ * send one call a pack), and joins its fetch in flight. Each pack is its
+ * own call because Exact hands the host a call's fetches one at a time, in
+ * the order made, and its fetch leaves the host's ordered lane
+ * (`exactIndependentHttp`), so one slow pack holds back no other. A call
+ * answers as soon as its pack settles, or with `more` once its fetch has
+ * landed; Contract then sends `packsWait` for that pack, which answers at
+ * its next settle, until it is no longer out. A fetch's answer may land
+ * after the call that made it has answered, and on Hermes such a call's
+ * `scheduler.yield()` does not end its turn; so a landing runs no check: a
+ * body waits as its pack's job, and a call runs it, in steps a turn each
+ * (`paced.ts`) from its own turn, the data host getting a turn back before
+ * the write, and answers once it is done. No turn nears the host's budget
+ * whatever a pack's size: one turn over it refuses the whole call
+ * (`turns.test.ts`). Every answer carries every pack's kept line as this
+ * launch knows it, and Contract keeps every pack's version and check time
+ * in one `persist` string from each answer, after each file is written. A pack's reader
  * (`packOf`) reads its kept file on first use per launch and version, and
  * a pack a fetch just wrote is held parsed, so it is never read again.
  */
@@ -50,11 +52,18 @@ export const PACKS_HOST = 'https://egw.cvr.im';
 /** How long one fetch may take, headers and body, before it is a failed try. */
 const FETCH_MS = 60_000;
 
+/**
+ * The most a pack's reply may hold (the largest, `tags`, is about 2.6 MB):
+ * an independent read counts this ceiling against the host's 68 MiB, so
+ * every pack's five fit at once.
+ */
+const PACK_BYTES = 12 * 1024 * 1024;
+
 /** Where the packs come from: a loopback fixture a driver's launch names, else egw.cvr.im. */
 export const baseOf = (setting: string): string =>
   /^http:\/\/127\.0\.0\.1:\d{2,5}$/u.test(setting) ? setting : PACKS_HOST;
 
-/** What an ask answers: every pack's kept version and check time (`keptWith`), whether any pack's last try failed, the names of those whose fetch landed their first pack on the phone since the last answer, and whether any pack is still out (Contract then waits for the next with `packsWait`). */
+/** What an ask of one pack answers: every pack's kept version and check time (`keptWith`), whether this pack's last try failed, its name when its fetch landed its first file on the phone since its last answer, and whether it is still out (Contract then waits for its next with `packsWait`). */
 export interface PacksAnswer {
   kept: string;
   failed: boolean;
@@ -108,18 +117,17 @@ type Job =
     }
   | { readonly _tag: 'Read'; readonly mark: string; readonly storage: FileStorage };
 
-/** One pack's launch: its machine, the pack held parsed, how often its file was read, its work owed, and what it has to tell the next answer. */
+/** One pack's launch: its machine, the pack held parsed, how often its file was read, its work owed, the calls waiting for its next landing, and what it has to tell its next answer. */
 interface Entry {
   readonly spec: PackSpec<Versioned>;
   machine: Machine;
   held: { readonly mark: string; readonly pack: Promise<Versioned | undefined> } | undefined;
   reads: number;
   job: Job | undefined;
-  /** When its job came to be owed, in the launch's count: the first owed is run first. */
-  owedAt: number;
-  /** Whether it settled since the last answer, which then answers at once. */
+  wakers: Array<() => void>;
+  /** Whether it settled since its last answer, which then answers at once. */
   news: boolean;
-  /** Whether its fetch landed its first pack since the last answer. */
+  /** Whether its fetch landed its first pack since its last answer. */
   landed: boolean;
 }
 
@@ -184,7 +192,7 @@ export const packSources = (options: PacksOptions) => {
     held: undefined,
     reads: 0,
     job: undefined,
-    owedAt: 0,
+    wakers: [],
     news: false,
     landed: false,
   }));
@@ -209,6 +217,7 @@ export const packSources = (options: PacksOptions) => {
         headers,
         cache: 'no-store',
         exactTimeout: FETCH_MS,
+        exactIndependentHttp: { maxResponseBytes: PACK_BYTES },
       } as RequestInit);
       if (answer.status === 304) return { _tag: 'Same' };
       if (answer.status !== 200) return { _tag: 'Status', status: answer.status };
@@ -228,26 +237,18 @@ export const packSources = (options: PacksOptions) => {
     }
   };
 
-  /** The asks waiting for the next pack to land or settle. */
-  let wakers: Array<() => void> = [];
-  const wake = () => {
-    const woken = wakers;
-    wakers = [];
+  /** The asks of `entry` waiting for its next landing or settle, woken. */
+  const wake = (entry: Entry) => {
+    const woken = entry.wakers;
+    entry.wakers = [];
     for (const each of woken) each();
   };
-  const woken = () =>
+  const woken = (entry: Entry) =>
     new Promise<void>((resolve) => {
-      wakers.push(resolve);
+      entry.wakers.push(resolve);
     });
 
-  /** The launch's count of jobs owed, so the first owed is run first. */
-  let owing = 0;
-  const owe = (entry: Entry, job: Job) => {
-    entry.job = job;
-    entry.owedAt = ++owing;
-  };
-
-  /** `entry` settled if it is no longer out: news for the next answer. */
+  /** `entry` settled if it is no longer out: news for its next answer. */
   const told = (entry: Entry) => {
     if (!isOut(entry)) entry.news = true;
   };
@@ -267,7 +268,7 @@ export const packSources = (options: PacksOptions) => {
   ) => {
     const heard = await hear(entry, version);
     if (heard._tag === 'Body' && entry.machine.current === id && entry.machine.writing === '')
-      owe(entry, { _tag: 'Check', id, version, now, body: heard.body, storage });
+      entry.job = { _tag: 'Check', id, version, now, body: heard.body, storage };
     else
       apply(entry, {
         _tag: 'Answered',
@@ -276,7 +277,7 @@ export const packSources = (options: PacksOptions) => {
         heard: heard._tag === 'Body' ? { _tag: 'Refused' } : heard,
       });
     told(entry);
-    wake();
+    wake(entry);
   };
 
   /** A heard body checked a step a turn, written, and kept; whether its fetch landed the pack's first file. */
@@ -328,7 +329,7 @@ export const packSources = (options: PacksOptions) => {
       if (command._tag === 'Fetch') void flown(entry, command.id, command.version, now, storage);
     const mark = entry.machine.kept.version;
     if (!isOut(entry) && mark !== '' && entry.held?.mark !== mark)
-      owe(entry, { _tag: 'Read', mark, storage });
+      entry.job = { _tag: 'Read', mark, storage };
     told(entry);
   };
 
@@ -345,51 +346,43 @@ export const packSources = (options: PacksOptions) => {
       throw error;
     }
     told(entry);
-    wake();
+    wake(entry);
   };
 
-  /** Every pack as it stands: the kept line of each this launch has read (`kept`'s for the rest), and what is news since the last answer, now told. */
-  const answerOf = (kept: string): PacksAnswer => {
+  /** `entry` as it stands, with every pack's kept line this launch has read (`kept`'s for the rest), and its news since its last answer, now told. */
+  const answerOf = (entry: Entry, kept: string): PacksAnswer => {
     const answer = {
       kept: entries
-        .filter((entry) => entry.machine.loaded)
-        .reduce((text, entry) => keptWith(text, entry.spec.name, entry.machine.kept), kept),
-      failed: entries.some((entry) => entry.machine.failed),
-      landed: entries
-        .filter((entry) => entry.landed)
-        .map((entry) => entry.spec.name)
-        .join(' '),
-      more: entries.some(isOut),
+        .filter((each) => each.machine.loaded)
+        .reduce((text, each) => keptWith(text, each.spec.name, each.machine.kept), kept),
+      failed: entry.machine.failed,
+      landed: entry.landed ? entry.spec.name : '',
+      more: isOut(entry),
     };
-    for (const entry of entries) {
-      entry.news = false;
-      entry.landed = false;
-    }
+    entry.news = false;
+    entry.landed = false;
     return answer;
   };
 
   /**
-   * The next answer: at once when a pack settled since the last one or none
-   * is out; else the first owed pack's work (in the order the packs landed)
-   * run in this call's own turns; else
-   * at the next landing, whatever the others do. Work runs only from a
-   * call's own turn, never after a wake, which may come in another call's
-   * turn, and the call answers once that work is done: on Hermes a yield of
-   * a call that has answered does not end its turn.
+   * `entry`'s next answer: at once when it settled since its last one or is
+   * not out; else its owed work run in this call's own turns; else at its
+   * next landing. Work runs only from a call's own turn, never after a wake,
+   * which may come in another call's turn (the one that made a joined
+   * fetch), and the call answers once that work is done: on Hermes a yield
+   * of a call that has answered does not end its turn.
    */
-  const nextAnswer = async (kept: string): Promise<PacksAnswer> => {
-    if (!entries.some((entry) => entry.news)) {
-      const owed = entries
-        .filter((entry) => entry.job !== undefined)
-        .reduce<Entry | undefined>(
-          (first, entry) => (first === undefined || entry.owedAt < first.owedAt ? entry : first),
-          undefined,
-        );
-      if (owed !== undefined) await work(owed);
-      else if (entries.some(isOut)) await woken();
+  const nextAnswer = async (entry: Entry, kept: string): Promise<PacksAnswer> => {
+    if (!entry.news) {
+      if (entry.job !== undefined) await work(entry);
+      else if (isOut(entry)) await woken(entry);
     }
-    return answerOf(kept);
+    return answerOf(entry, kept);
   };
+
+  /** What an ask of a pack this launch does not have answers: nothing to keep, nothing out. */
+  const unknown = (kept: string): Promise<PacksAnswer> =>
+    Promise.resolve({ kept, failed: false, landed: '', more: false });
 
   /** The specs `names` lists, in the packs' own order. */
   const wordsOf = (names: string) => {
@@ -398,6 +391,8 @@ export const packSources = (options: PacksOptions) => {
   };
 
   return {
+    /** The packs' names, in their order: Contract asks each with a call of its own. */
+    names: entries.map((entry) => entry.spec.name),
     /** How many times this launch read `name`'s kept file (a test's counter). */
     reads: (name: string) => named.get(name)?.reads ?? 0,
     /** The kept pack `spec` names for `mark` (its kept version), or none: a pack's reader. */
@@ -437,16 +432,22 @@ export const packSources = (options: PacksOptions) => {
         const words = entry?.spec ?? { name, title: name, noun: name, waiting: '' };
         return packShownOf(words, keptIn(kept, name).version, busy, failed);
       },
+      /** The pack `name` asked, its own call: the Read tab shown (`force` false) or Try again. */
       packsAsk: (
-        [kept, force, now]: readonly [string, boolean, number],
+        [name, kept, force, now]: readonly [string, string, boolean, number],
         _store: ExactStore,
         storage: FileStorage,
-      ): Promise<PacksAnswer> =>
-        Promise.all(entries.map((entry) => askOne(entry, kept, force, now, storage))).then(() =>
-          nextAnswer(kept),
-        ),
-      /** Contract's follow-up while an answer said `more`: the next pack's settle, or at once with none out. */
-      packsWait: ([kept]: readonly [string]): Promise<PacksAnswer> => nextAnswer(kept),
+      ): Promise<PacksAnswer> => {
+        const entry = named.get(name);
+        return entry === undefined
+          ? unknown(kept)
+          : askOne(entry, kept, force, now, storage).then(() => nextAnswer(entry, kept));
+      },
+      /** Contract's follow-up while `name`'s answer said `more`: its next settle, or at once when it is not out. */
+      packsWait: ([name, kept]: readonly [string, string]): Promise<PacksAnswer> => {
+        const entry = named.get(name);
+        return entry === undefined ? unknown(kept) : nextAnswer(entry, kept);
+      },
     },
   };
 };

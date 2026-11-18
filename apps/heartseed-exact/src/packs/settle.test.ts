@@ -2,8 +2,8 @@
 
 /**
  * Each pack's status settles apart: the downloader's sources driven as
- * `features/packs.contract` drives them (its one newest-wins `packsFetched`,
- * `packsTook`, and `packsFollow` sending `packsWait` while an answer says
+ * `features/packs.contract` drives them (one newest-wins mutation a pack,
+ * its `then`, and its follow-up sending `packsWait` while its answer says
  * `more`), against a reference model of what each pack's line should say,
  * over generated runs where every pack's answer is held until the run lets
  * it go, in any order, well or not, with Try again pressed between. After
@@ -142,54 +142,70 @@ const drained = async () => {
 /**
  * `features/packs.contract`'s members over `sources`: `packsKept`
  * (persisted, so a relaunch starts from it), `packsLanded` (a landing
- * added to one still shown), the one newest-wins `packsFetched` (a later
- * send forgets the reply of the one before), `packsTook`, and
- * `packsFollow`, whose `after(1, …)` sends `packsWait` a turn after an answer
- * that says `more` commits; `packsBusy` and `packsFailed` as the
- * contract derives them.
+ * added to one still shown), one newest-wins mutation a pack (a later
+ * send forgets the reply of the one before), its `then` (`packsTake`), and
+ * its follow-up, whose `after(1, …)` sends `packsWait` a turn after an
+ * answer that says `more` commits; `packsBusy` and `packsFailed` as the
+ * contract derives them, over every pack's.
  */
 const contractOf = (
-  sources: ReturnType<typeof packSources>['sources'],
+  { names, sources }: Pick<ReturnType<typeof packSources>, 'names' | 'sources'>,
   storage: Storage,
   persisted = '',
 ) => {
   let kept = persisted;
   let landed = '';
-  let answer: PacksAnswer | undefined;
-  let sent = 0;
-  let pending = false;
-  let refused = false;
 
-  const send = (call: () => Promise<PacksAnswer>) => {
-    const id = ++sent;
-    pending = true;
-    refused = false;
+  /** One pack's newest-wins mutation: its slot, its sends, whether one is out, whether the last failed. */
+  const slots = new Map(
+    names.map((name) => [
+      name,
+      { answer: undefined as PacksAnswer | undefined, sent: 0, pending: false, refused: false },
+    ]),
+  );
+
+  const send = (name: string, call: () => Promise<PacksAnswer>) => {
+    const slot = slots.get(name);
+    if (slot === undefined) return;
+    const id = ++slot.sent;
+    slot.pending = true;
+    slot.refused = false;
     call().then(
       (reply) => {
-        if (id !== sent) return;
-        pending = false;
-        answer = reply;
+        if (id !== slot.sent) return;
+        slot.pending = false;
+        slot.answer = reply;
         kept = reply.kept;
         if (reply.landed !== '')
           landed = landed === '' ? reply.landed : `${landed} ${reply.landed}`;
         if (reply.more === true)
           setImmediate(() => {
-            if (id === sent) send(() => withDataHost(() => sources.packsWait([kept])));
+            if (id === slot.sent)
+              send(name, () => withDataHost(() => sources.packsWait([name, kept])));
           });
       },
       () => {
-        if (id !== sent) return;
-        pending = false;
-        refused = true;
+        if (id !== slot.sent) return;
+        slot.pending = false;
+        slot.refused = true;
       },
     );
   };
 
-  const busy = () => pending || (answer?.more === true && !refused);
-  const failed = () => refused || answer?.failed === true;
+  const busy = () =>
+    [...slots.values()].some(
+      (slot) => slot.pending || (slot.answer?.more === true && !slot.refused),
+    );
+  const failed = () =>
+    [...slots.values()].some((slot) => slot.refused || slot.answer?.failed === true);
   return {
-    fetch: (force: boolean) =>
-      send(() => withDataHost(() => sources.packsAsk([kept, force, NOW], STORE, storage))),
+    fetch: (force: boolean) => {
+      const asked = kept;
+      for (const name of names)
+        send(name, () =>
+          withDataHost(() => sources.packsAsk([name, asked, force, NOW], STORE, storage)),
+        );
+    },
     kept: () => kept,
     busy,
     shown: () => sources.packsView([kept, busy(), failed(), landed]),
@@ -212,7 +228,7 @@ const launched = (names: ReadonlyArray<string>, storage = storageOf(), persisted
     version: (name: string) => made.get(name)?.version ?? 'none',
     server,
     storage,
-    contract: contractOf(downloader.sources, storage, persisted),
+    contract: contractOf(downloader, storage, persisted),
   };
 };
 

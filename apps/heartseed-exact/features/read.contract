@@ -51,7 +51,7 @@ members HeartseedExact
   action readAskPacks
     if not readAskedPacks
       readAskedPacks = true
-      send packsFetched = packsAsk(packsKept, false, packsTime.epochAtZero + performanceNow())
+      packsFetch()
   derive readFirst = match garden.lists.map(l => l.verses.map(v => v.reference)).flat().at(0) { case some(r) => r, case none => (match garden.singles.at(0) { case some(v) => v.reference, case none => "" }) }
   resource readKept = readPlaceOf(readBookKept, readChapterKept, readFirst) as shape ReadPlace else readPlaceOf("", "", "")
   resource readAts = readAtOf(x.id, x.params.book, x.params.chapter, x.params.verse) for x in readTabStack.filter(y => y.name == "readAt") key=x.id as shape ReadPlace

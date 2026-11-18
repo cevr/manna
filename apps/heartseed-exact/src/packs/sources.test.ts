@@ -18,6 +18,7 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { appText } from '../../tools/commentary-fixture';
 import { readOf, versionOf, type CommentaryPack } from '../commentary/pack';
 import { COMMENTARY, commentarySources } from '../commentary/sources';
+import { STUDY_PACKS } from '../study/sources';
 import { bodyOf, madePack } from '../test/commentary-packs';
 import { askSettled, type PacksSettled } from '../test/packs-asked';
 import { seeded, type Random } from '../test/random';
@@ -218,7 +219,7 @@ const ask = async (
   now: number,
   force = false,
 ): Promise<PacksSettled> => {
-  const answer = await askSettled(launched.sources, [persisted.kept, force, now], storage);
+  const answer = await askSettled(launched, [persisted.kept, force, now], storage);
   persisted.kept = answer.kept;
   const landed = new Set(answer.landed.split(' '));
   return { ...answer, landed: launched.names.filter((name) => landed.has(name)).join(' ') };
@@ -605,6 +606,43 @@ describe('the line', () => {
       });
     }
     expect(appText('features/packs.contract')).toContain(`after(${LANDED_MS}, packsLandedOver)`);
+  });
+});
+
+describe('the contract', () => {
+  it('asks each pack `app.ts` lists from a mutation of its own, and follows it alone', () => {
+    const contract = appText('features/packs.contract');
+    const packs = [COMMENTARY, ...STUDY_PACKS];
+    for (const { name } of packs) {
+      const slot = `packs${name.charAt(0).toUpperCase()}${name.slice(1)}Fetched`;
+      expect(contract).toContain(`mutation ${slot} as shape PacksAnswer then `);
+      expect(contract).toContain(`send ${slot} = packsAsk("${name}", packsKept, force, now)`);
+      expect(contract).toContain(`send ${slot} = packsWait("${name}", packsKept)`);
+      expect(contract.split('\n').find((line) => line.includes('derive packsBusy ='))).toContain(
+        slot.replace('Fetched', 'Busy'),
+      );
+    }
+    expect(contract.match(/packsAsk\(/gu)?.length).toBe(packs.length);
+    expect(contract.match(/packsWait\(/gu)?.length).toBe(packs.length);
+    expect(appText('features/read.contract')).not.toContain('packsAsk(');
+  });
+
+  it("a pack's fetch leaves the host's ordered lane, so a slow one lands after no other", async () => {
+    const inits: Array<RequestInit> = [];
+    const { sources } = packSources({
+      setting: 'http://127.0.0.1:4801',
+      packs: [COMMENTARY],
+      fetcher: async (_url, init) => {
+        inits.push(init);
+        return { status: 500, text: async () => '' };
+      },
+    });
+    await withDataHost(() =>
+      sources.packsAsk(['commentary', '', false, NOW], { forget: () => {} }, storageOf()),
+    );
+    expect(
+      inits.map((init) => (init as { exactIndependentHttp?: unknown }).exactIndependentHttp),
+    ).toEqual([{ maxResponseBytes: 12 * 1024 * 1024 }]);
   });
 });
 
