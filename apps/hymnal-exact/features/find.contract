@@ -151,9 +151,11 @@ fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboa
 // bar's right in the accent; while the drums are open the mark lies
 // behind the `#`; on the tiles the `#` stands alone on its own disk. All
 // at once (the port's way to the tiles where a pinch cannot reach) is a
-// disk of glass of its own before the capsule. With `results`, while the
-// search is open here its ground covers the screen from under the status
-// bar, as the current app's results do, and lists the hymns found.
+// disk of glass of its own before the capsule. With `results`, while a
+// search here has words its ground covers the screen from under the status
+// bar, as the current app's results do, and lists the hymns found; with no
+// words yet the screen stays in view (home's Recent still answers a tap).
+// The bar's own box lets taps through to the page beside its disks.
 component FindBar
   props
     entry: Entry
@@ -175,27 +177,26 @@ component FindBar
   resource findBarPlaces = findPlaces() as shape FindPlaces
   view
     if entry.id == findTop
-      if results and findShown.boxDrawn
+      if results and findShown.results
         column position="absolute" inset=0 z-index=1 background-color="ground" padding-top=`${findBarPort.safeAreaTop}px` testId="find-results"
-          if findShown.results
-            if findRows.length == 0
-              text `No hymn matches “${findText.trim()}”.` font="type.body" color="muted" padding="space.s16" testId="none-found"
-            else
-              scroll id=`find-list-${entry.id}` flex=1 min-height=0 testId="find-list"
-                column
-                  for s in findRows key=s.slug
-                    for r in s.rows key=r.number
-                      FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
-      row position="absolute" left="space.s16" right="space.s16" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock)}px` z-index=2
+          if findRows.length == 0
+            text `No hymn matches “${findText.trim()}”.` font="type.body" color="muted" padding="space.s16" testId="none-found"
+          else
+            scroll id=`find-list-${entry.id}` flex=1 min-height=0 testId="find-list"
+              column
+                for s in findRows key=s.slug
+                  for r in s.rows key=r.number
+                    FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+      row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock)}px` z-index=2
         align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
         if findShown.tilesControl
-          button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0
+          button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0 pointer-events="auto"
             border-radius="radius.pill" background-color="glass" color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
             image "symbol:layers" width="size.glyph" height="size.glyph"
         if findShown.row == "tiles"
           FindHash(look=(findShown.chosen == "hash" ? "aloneChosen" : "alone"))
         else
-          row height="size.target" border-radius="radius.pill" background-color="glass" overflow="hidden" align-items="center"
+          row height="size.target" border-radius="radius.pill" background-color="glass" overflow="hidden" align-items="center" pointer-events="auto"
             flex=(findShown.boxDrawn ? "1 1 0px" : "none") min-width=0 testId="find-capsule"
             if findShown.searchDrawn
               button press=findSearchOn appearance="none" disabled=(not findShown.searchReach) aria-label="Search" aria-pressed=(findShown.chosen == "search")
@@ -214,7 +215,7 @@ component FindBar
                 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
             FindHash(look=(findShown.chosen == "hash" ? "chosen" : "unchosen"))
         if findShown.cancelDrawn
-          button press=findSearchOff appearance="none" disabled=(not findShown.cancelReach) min-height="size.target" flex-shrink=0 color="accent" testId="find-cancel"
+          button press=findSearchOff appearance="none" disabled=(not findShown.cancelReach) min-height="size.target" flex-shrink=0 pointer-events="auto" color="accent" testId="find-cancel"
             animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
             :active
               opacity = "opacity.pressed"
@@ -234,7 +235,7 @@ component FindHash
   view
     button press=findPress("drumsOpen", playerShown.bar.shown ? playerShown.bar.number : 0) appearance="none" disabled=(not findShown.hashReach)
       aria-label="Find a hymn by number" aria-pressed=(findShown.chosen == "hash") width="size.target" height="size.target" flex-shrink=0
-      border-radius="radius.pill" display="flex" align-items="center" justify-content="center"
+      border-radius="radius.pill" display="flex" align-items="center" justify-content="center" pointer-events="auto"
       background-color=(look == "chosen" or look == "aloneChosen" ? "glassChosen" : look == "alone" ? "glass" : "transparent")
       color=(look == "chosen" or look == "aloneChosen" ? "onGlassChosen" : "onGlass") testId="find-number"
       :active
@@ -391,8 +392,10 @@ component FindTiles
                 opacity = "opacity.pressed"
               text `${n}` font="type.strong" font-variant-numeric="tabular-nums"
 
-// A found hymn's row: a hymn's row whose press opens the hymn as a found
-// hymn opens (`listOpening`).
+// A found hymn's row: drawn as list.contract's `HymnRow` (the current
+// app's row: number in the accent, title, a star when a favourite, a
+// hairline from the title's edge), a button whose press opens the hymn as
+// a found hymn opens (`listOpening`).
 component FoundRow
   props
     number: number
@@ -400,25 +403,14 @@ component FoundRow
     star: bool
     open: action
   view
-    button press=open(number) appearance="none" display="flex" flex-direction="column" align-items="stretch" testId=`hymn-${number}`
+    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items="center" gap="space.s12"
+      padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
+      height="size.target" min-height=0 box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
       :active
         background-color = "soft"
-      HymnRowText(number=number, title=title, star=(star ? `star-${number}` : ""))
-      column height="line.hair" margin-left="calc(space.s16 + size.number + space.s12)" background-color="line" aria-hidden=true
-
-// A hymn's row's words, as the current app draws a list's row
-// (src/reader/HymnList.native.tsx): its number in the accent, at least
-// `size.button` wide and set right, then its title, and a star in the
-// accent when `star` names one (its `testId`), on a row at least a target
-// tall.
-component HymnRowText
-  props
-    number: number
-    title: string
-    star: string
-  view
-    row gap="space.s12" flex=1 min-width=0 min-height="size.target" padding="0 space.s16" align-items="center"
-      text `${number}` font="type.strong" font-variant-numeric="tabular-nums" min-width="size.button" text-align="right" color="accent"
-      text title flex=1 min-width=0 font="type.body" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
-      if star != ""
-        image "symbol:star-fill" aria-label="Favourite" color="accent" testId=star
+      text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"
+      row flex=1 min-width=0 align-items="center" gap="space.s12" position="relative" top="nudge.row"
+        text title flex=1 min-width=0 font="type.row-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+        if star
+          text "★" font="type.row-title" color="accent" aria-label="Favourite" testId=`star-${number}`
+      column position="absolute" left="space.s64" right=0 bottom=0 height="line.hair" background-color="line" aria-hidden=true
