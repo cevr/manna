@@ -2,9 +2,11 @@
 // page shown on top of the stack, pushed or put in another page's place,
 // is a visit (`recentAfter`, the current
 // app's `visited`); the home list's shelf shows the latest five, and its
-// header opens this screen with all of them (`recentRows`). The find bar
-// stands under its header, and its results take the list's place while
-// its search is open here (features/find.contract).
+// header opens this screen with all of them (`recentRows`). As the current
+// app's: the stack's bar over a hairline, the rows as home's, and with
+// none the current app's words for it. The find bar stands at its foot, and
+// its results take the list's place while its search is open here
+// (features/find.contract).
 use HymnRow, ListBarRoom, RecentView from "./list.contract"
 use PlayerView from "./player.contract"
 use FindBar, FindView, findSearchingAt from "./find.contract"
@@ -40,6 +42,8 @@ component RecentScreen
       display="flex" flex-direction="column" background-color="ground"
       header
         text "Recent" role="heading" aria-level=2 testId="recent-title"
+      column height=0 flex-shrink=0 position="relative" overflow="visible"
+        column position="absolute" top=0 left=0 right=0 height="line.hair" background-color="line" testId="recent-rule"
       if recent.all.length == 0
         column flex=1 min-height=0 display=(findShown.results and findSearchingAt(findShown, entry.url) ? "none" : "flex") testId="recent-list"
           text "The hymns you open show here." font="type.body" color="muted" padding="space.s16" testId="recent-empty"
