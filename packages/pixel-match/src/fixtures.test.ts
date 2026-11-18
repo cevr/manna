@@ -23,8 +23,12 @@ describe('the fixtures', () => {
     for (const now of NOWS)
       for (const name of Object.keys(heartseedFixtures(now))) {
         const store = storeOf('heartseed', name, now);
-        if (store?._tag === 'Broken') expect(name).toBe('hs-unread');
-        else expect((store?.pairs.length ?? 0) > 0).toBe(name !== 'hs-new');
+        const pairs = store?._tag === 'Pairs' ? store.pairs.length : -1;
+        expect([name, pairs > 0, pairs < 0]).toEqual([
+          name,
+          !['hs-new', 'hs-unread'].includes(name),
+          name === 'hs-unread',
+        ]);
       }
   });
 

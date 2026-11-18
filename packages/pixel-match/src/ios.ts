@@ -96,7 +96,7 @@ const containerOf = (udid: string, bundle: string) =>
 /**
  * Writes `store` as the app's whole store while it is stopped: One's
  * `one_kv` table emptied and filled with the pairs, or for a broken store a
- * file that is no database, so the app's open fails.
+ * file that is no database, so every read of it fails.
  */
 export const writeStore = (udid: string, bundle: string, file: string, store: Store) => {
   const path = join(containerOf(udid, bundle), file);

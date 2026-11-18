@@ -8,16 +8,25 @@ import { HOME } from './home.ts';
 
 const unit = 'pm-hs-today';
 
-/** Today on a seed that is due: said under first letters. */
-const SEED: ReadonlyArray<Step> = [HOME, { tap: 'label=Psalms 23:1, seed, ready today' }];
-/** Today on a blade that is due: said under no cue. */
-const BLADE: ReadonlyArray<Step> = [HOME, { tap: 'label=Psalms 23:2, blade, ready today' }];
-/** Today on the verse not yet planted: the new verse, whole. */
-const NEW: ReadonlyArray<Step> = [
+/** Home's plant `label`, scrolled to (the largest text sizes push it below the fold) and tapped. */
+const plant = (label: string): ReadonlyArray<Step> => [
   HOME,
-  { scroll: 'label=Psalms 23:3, not planted', direction: 'down' },
-  { tap: 'label=Psalms 23:3, not planted' },
+  { scroll: `label=${label}`, direction: 'down' },
+  { tap: `label=${label}` },
 ];
+
+/** Today on a seed that is due: said under first letters. */
+const SEED = plant('Psalms 23:1, seed, ready today');
+/** Today on a blade that is due: said under no cue. */
+const BLADE = plant('Psalms 23:2, blade, ready today');
+/** Today on the verse not yet planted, which the plan holds open: the new verse, whole. */
+const NEW = plant('Psalms 23:3, not planted, ready today');
+/**
+ * A seed due whose verse is longer than ten words: the simulator's replay
+ * (`SIMULATOR_PLAN`, `src/sayit/source.ts`) leaves its eleventh word out,
+ * so its result shows a miss.
+ */
+const LONG_SEED = 'Isaiah 41:10, seed, ready today';
 /** A recital of the seed, said: its result waits for Next. */
 const SAID: ReadonlyArray<Step> = [...SEED, { tap: 'label=Say it' }, { wait: 5000 }];
 
@@ -54,7 +63,13 @@ export const rows: ReadonlyArray<Row> = [
     one: { steps: [...SEED, { tap: 'label=Say it' }, { wait: 800 }], reduceMotion: true },
   },
   { id: 'today.result', unit, kind: 'match', sweep: true, fixture: 'hs-due', one: { steps: SAID } },
-  { id: 'today.result-missed', unit, kind: 'match', fixture: 'hs-due', one: { steps: SAID } },
+  {
+    id: 'today.result-missed',
+    unit,
+    kind: 'match',
+    fixture: 'hs-due',
+    one: { steps: [...plant(LONG_SEED), { tap: 'label=Say it' }, { wait: 9000 }] },
+  },
   {
     id: 'today.alert',
     unit,
@@ -101,6 +116,6 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hs-unread',
-    one: { steps: [{ open: '/', expect: 'id=session' }] },
+    one: { steps: [{ open: '/', expect: 'label=Say it' }, { wait: 800 }] },
   },
 ];

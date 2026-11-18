@@ -4,7 +4,12 @@ import { SHEET } from './settings.ts';
 
 const unit = 'pm-tokens';
 
-const ABOUT: ReadonlyArray<Step> = [...SHEET, { tap: 'label=About' }, { wait: 800 }];
+const ABOUT: ReadonlyArray<Step> = [
+  ...SHEET,
+  { scroll: 'label=About', direction: 'down' },
+  { tap: 'label=About' },
+  { wait: 800 },
+];
 
 export const rows: ReadonlyArray<Row> = [
   {

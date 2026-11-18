@@ -64,6 +64,6 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'gap',
     fixture: 'hs-fresh',
-    one: { steps: [...BOOKS, { tap: 'label=Psalms' }, { tap: 'label=23' }, { wait: 500 }] },
+    one: { steps: [...BOOKS, { tap: 'label=Psalms' }, { tap: 'label=Psalms 23' }, { wait: 500 }] },
   },
 ];

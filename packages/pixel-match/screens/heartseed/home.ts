@@ -8,6 +8,9 @@ import type { Row, Step } from '../../src/model.ts';
 const unit = 'pm-hs-home';
 
 export const HOME: Step = { open: '/', expect: 'id=today-card' };
+
+/** The Psalms list's header scrolled to: the largest text sizes push it below the fold. */
+const OPEN_PSALM: Step = { scroll: 'label=Open Psalms 23:1-5', direction: 'down' };
 export const FOOT: Step = { scroll: 'label=How Heartseed works', direction: 'down' };
 
 export const rows: ReadonlyArray<Row> = [
@@ -73,7 +76,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     sweep: true,
     fixture: 'hs-lists',
-    one: { steps: [HOME, { tap: 'label=Open Psalms 23:1-5' }] },
+    one: { steps: [HOME, OPEN_PSALM, { tap: 'label=Open Psalms 23:1-5' }] },
   },
   {
     id: 'list.unplanted',
@@ -90,6 +93,7 @@ export const rows: ReadonlyArray<Row> = [
     one: {
       steps: [
         HOME,
+        OPEN_PSALM,
         { tap: 'label=Open Psalms 23:1-5' },
         { scroll: 'label=Remove Psalms 23:1-5', direction: 'down' },
         { tap: 'label=Remove Psalms 23:1-5' },
