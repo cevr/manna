@@ -75,7 +75,7 @@ const PORT_SHEET: ReadonlyArray<string> = [
 /** The sheet pulled from half the screen to full by its content. */
 const PORT_FULL: ReadonlyArray<string> = [
   ...PORT_SHEET,
-  'tap player-sheet drag 0 -420',
+  'tap player-title drag 0 -420',
   'clock settle',
 ];
 
