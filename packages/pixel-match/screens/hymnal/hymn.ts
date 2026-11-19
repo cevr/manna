@@ -121,9 +121,9 @@ export const rows: ReadonlyArray<Row> = [
       masks: [
         {
           x: 20,
-          y: 280,
-          width: 252,
-          height: 63,
+          y: 190,
+          width: 101,
+          height: 44,
           reason:
             "the port's Home link (notfound-home), Exact-only: the port's drives and tests leave not-found by it, and One's page has none (measured by layout on iOS)",
         },
