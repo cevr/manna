@@ -37,23 +37,32 @@ const seenOf = (frames: LandFrames) => {
   return { top: scrollTop, height: scrollFoot - scrollTop };
 };
 
+const landed = (frames: LandFrames) => Number.isFinite(frames.landedRoom) && frames.landedRoom >= 0;
+
 /**
  * Where the scroll's padding counts from, in whole points: the scroll's top
  * until a landing has been read, then where that landing shows it (the
  * verse's top less the room it used). On iOS the scroll runs under the
  * navigation bar and the host counts from its top or from under the bar by
- * how the landing reached it, so a landing's own reading settles it. The
- * origin lies between the scroll's top and the seen area's: a reading
- * outside them is a landing the scroll's end stopped short (an early verse,
- * or a chapter that fits), which moves no origin, so it is held there and
- * the room stops growing with each reading.
+ * how the landing reached it, so a landing's own reading settles it.
  */
 export const portOf = (frames: LandFrames) => {
+  if (landed(frames)) return Math.round(measured(frames.landedTop) - frames.landedRoom);
+  return measured(frames.scrollTop);
+};
+
+/**
+ * Whether the last landing's reading shows no origin: the origin lies
+ * between the scroll's top and the seen area's, so a reading outside them is
+ * a verse the scroll's end stopped short of its room (an early verse, a last
+ * one, a chapter that fits the screen). Landing it again would move nothing.
+ */
+export const stoppedShort = (frames: LandFrames) => {
+  if (!landed(frames)) return false;
+  const port = portOf(frames);
   const scrollTop = measured(frames.scrollTop);
-  if (!Number.isFinite(frames.landedRoom) || frames.landedRoom < 0) return scrollTop;
   const seenTop = seenOf(frames).top;
-  const shown = Math.round(measured(frames.landedTop) - frames.landedRoom);
-  return Math.min(Math.max(shown, Math.min(scrollTop, seenTop)), Math.max(scrollTop, seenTop));
+  return port < Math.min(scrollTop, seenTop) || port > Math.max(scrollTop, seenTop);
 };
 
 /**
@@ -62,9 +71,11 @@ export const portOf = (frames: LandFrames) => {
  * reader sees of the chapter, or higher where the verse is taller than the
  * two thirds below that line, so all of it shows with a 16 pt margin under
  * it. The room adds whatever of the bar lies below that origin; on the web
- * the tops are one.
+ * the tops are one. A landing stopped short keeps its room, so its reading
+ * lands nothing again.
  */
 export const landRoom = (frames: LandFrames): number => {
+  if (stoppedShort(frames)) return frames.landedRoom;
   const seen = seenOf(frames);
   const cover = Math.max(0, seen.top - portOf(frames));
   return (

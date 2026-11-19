@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 
-import { landRoom, landSources, portOf, type LandFrames } from './land';
+import { landRoom, landSources, portOf, stoppedShort, type LandFrames } from './land';
 
 const NONE = { landedTop: 0, landedRoom: -1 };
 
@@ -92,13 +92,14 @@ it('takes a read-back with room 0 as read: its origin is where the verse came to
   expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
 });
 
-it('holds an origin read below the seen top at the seen top: no negative cover', () => {
-  const shown = { ...IOS, verseHeight: 70, landedTop: 200, landedRoom: 50 };
-  expect(portOf(shown)).toBe(116);
-  expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
+it('takes an origin read anywhere between the scroll top and the seen top (53 at the largest text)', () => {
+  const shown = { ...IOS, verseHeight: 70, landedTop: 300, landedRoom: 247 };
+  expect(stoppedShort(shown)).toBe(false);
+  expect(portOf(shown)).toBe(53);
+  expect(landRoom(shown)).toBeCloseTo(116 - 53 + (705 - 116) / 3, 6);
 });
 
-/** The web at a phone's height, Psalm 23 or 119 opened on its first verse, as the web probe read it: the scroll cannot go above its top, so the verse rests at 157 whatever the room. */
+/** The web at a phone's height, as the web probe read it: Psalm 23:1 or 119:1 opened on, the scroll cannot go above its top, so the verse rests at 157 whatever the room; Psalm 119:176, the scroll cannot go past its foot, so it rests at 661.75. */
 const WEB = {
   seenTop: 49,
   seenHeight: 789,
@@ -107,27 +108,29 @@ const WEB = {
   verseHeight: 66.1875,
 };
 
-it("settles at the first reading where the scroll's top stopped an early verse short of the room", () => {
+it("keeps the room where the scroll's top stopped an early verse short of it, so one reading settles it", () => {
   const first = landRoom({ ...WEB, ...NONE });
   const shown = { ...WEB, landedTop: 157, landedRoom: first };
-  expect(portOf(shown)).toBe(49);
+  expect(stoppedShort(shown)).toBe(true);
   expect(landRoom(shown)).toBe(first);
 });
 
-it("settles at the first reading where the scroll's foot stopped the chapter's last verse below its third", () => {
+it("keeps the room where the scroll's foot stopped the chapter's last verse below its third", () => {
   const first = landRoom({ ...WEB, scrollHeight: 789, ...NONE });
   const shown = { ...WEB, scrollHeight: 789, landedTop: 661.75, landedRoom: first };
+  expect(stoppedShort(shown)).toBe(true);
   expect(landRoom(shown)).toBe(first);
 });
 
-it("lands iOS's stopped verse at most twice: the second reading under the bar is a fixed point", () => {
+it('keeps the room on iOS where a reading shows an origin below the bar or above the scroll', () => {
   const first = { ...IOS, verseHeight: 70, ...NONE };
-  const stuck = 620;
-  const once = { ...first, landedTop: stuck, landedRoom: landRoom(first) };
-  expect(portOf(once)).toBe(116);
-  const twice = { ...first, landedTop: stuck, landedRoom: landRoom(once) };
-  expect(landRoom(twice)).toBe(landRoom(once));
-  const early = { ...first, landedTop: 150, landedRoom: landRoom(first) };
-  expect(portOf(early)).toBe(0);
-  expect(landRoom(early)).toBe(landRoom(first));
+  const room = landRoom(first);
+  for (const landedTop of [620, 150]) {
+    const shown = { ...first, landedTop, landedRoom: room };
+    expect(stoppedShort(shown)).toBe(true);
+    expect(landRoom(shown)).toBe(room);
+  }
+  const below = { ...first, landedTop: 200, landedRoom: 50 };
+  expect(portOf(below)).toBe(150);
+  expect(landRoom(below)).toBe(50);
 });
