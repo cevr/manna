@@ -30,6 +30,10 @@ use ReadPill, ReadPlant from "./read.contract"
 keyframes hs-landed
   from opacity=1
 
+// Where a verse opened on lands (src/chooser/land.ts): the room above it, the chapter scroll's padding.
+shape ChapterLand
+  room: number
+
 shape ChooserRange
   first: number
   last: number
@@ -70,7 +74,13 @@ members HeartseedExact
   state chooserTitleGone = false
   // The chapter's scroll height, as its resize event hears it: a verse opened on lands a third of the way down it. A hidden tab's 0 is not kept.
   state chooserScrollHeight = 0
-  state chooserLandRoom = 0
+  // The frames the landing reads (`chooserLand`), in the viewport's points.
+  state chooserSeenTop = 0
+  state chooserSeenHeight = 0
+  state chooserScrollTop = 0
+  state chooserVerseHeight = 0
+  resource chooserLanding = chapterLand(chooserSeenTop, chooserSeenHeight, chooserScrollTop, chooserScrollHeight, chooserVerseHeight) as shape ChapterLand else empty()
+  derive chooserLandRoom = chooserLanding.room
   action chooserScrollSized(w: number, h: number)
     if h > 0
       chooserScrollHeight = h
@@ -98,13 +108,15 @@ members HeartseedExact
     chooserAnswer = ""
   task chooserMoved when readUp key=`${readBook}.${readChapter}`
     change(chooserClear)
-  // Each opening on a verse (`readOpenings`) lands it a third of the way down what the reader sees (`chapter-seen`, the scroll's height where no bar lies over it) once the chapter is up, past the fragment the host lands while the tab is still coming in.
-  // A verse taller than the two thirds below that line lands higher, so all of it shows.
-  task chooserLanding when readUp and readOpenings > 0 key=readOpenings
+  // Each opening on a verse (`readOpenings`) lands it a third of the way down what the reader sees (`chapter-seen`, the screen between the bars) once the chapter is up, past the fragment the host lands while the tab is still coming in: `chapterLand` (src/chooser/land.ts) turns the frames read here into the scroll's padding.
+  task chooserLandRead when readUp and readOpenings > 0 key=readOpenings
     change(chooserLand)
   action chooserLand
     if readOpenVerse > 0
-      chooserLandRoom = min((frame("chapter-seen").height > 0 ? frame("chapter-seen").height : chooserScrollHeight) / 3, max(0, (frame("chapter-seen").height > 0 ? frame("chapter-seen").height : chooserScrollHeight) - frame(`verse-${readOpenVerse}`).height - 16))
+      chooserSeenTop = frame("chapter-seen").y
+      chooserSeenHeight = frame("chapter-seen").height
+      chooserScrollTop = frame("chapter-scroll").y
+      chooserVerseHeight = frame(`verse-${readOpenVerse}`).height
   task chooserLandingScroll when readUp and readOpenings > 0 key=`${readOpenings}:${chooserLandRoom}`
     change(chooserLandScroll)
   action chooserLandScroll
