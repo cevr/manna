@@ -24,6 +24,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
 
+import { fixturePort } from './drive/port.ts';
 import { EXACT_BASE } from './pin.ts';
 import { PortClaims, runExact } from './run.ts';
 
@@ -813,6 +814,37 @@ describe('the exact wrapper', () => {
       const macos = yield* running('lab', ['test', 'macos'], { HOME: PROBE }, head, files);
       expect(macos.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
     }),
+  );
+
+  it.effect(
+    "gives test and agent the checkout's own fixture origin unless the caller names one, and no build, dev loop or serve any",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const origin = `http://127.0.0.1:${fixturePort(`${PROBE}/apps/hymnal-exact`)}`;
+        const given = (app: App, args: ReadonlyArray<string>, caller: Caller = {}) =>
+          Effect.map(
+            running(app, args, { HOME: PROBE, ...caller }, head, files),
+            ({ spawned }) => spawned[1]?.env['HYMNAL_RECORDINGS'],
+          );
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeGreaterThanOrEqual(4790);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeLessThanOrEqual(5789);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).not.toBe(
+          fixturePort(`${PROBE}/other/hymnal-exact`),
+        );
+        expect(yield* given('hymnal-exact', ['test', 'web'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['test', 'ios', 'player.test.contract'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['agent', 'web', '--json'])).toBe(origin);
+        expect(
+          yield* given('hymnal-exact', ['test', 'web'], {
+            HYMNAL_RECORDINGS: 'http://127.0.0.1:4797',
+          }),
+        ).toBeUndefined();
+        for (const args of [['web-build', '--out', 'dist'], ['web'], ['serve', 'dist'], ['ios']])
+          expect(yield* given('hymnal-exact', args)).toBeUndefined();
+        expect(yield* given('heartseed-exact', ['test', 'web'])).toBeUndefined();
+      }),
   );
 
   it.effect('refuses an app it does not know', () =>

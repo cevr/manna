@@ -34,6 +34,7 @@ shape PlayerGo
 
 shape PlayerView
   origin: string
+  fixture: bool
   serial: number
   src: string
   load: number

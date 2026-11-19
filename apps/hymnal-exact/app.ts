@@ -5,8 +5,9 @@ import { sourcesAt } from './src/sources.ts';
 
 /**
  * Where the recordings are served: the bucket, unless a development build
- * names a loopback fixture (`HYMNAL_RECORDINGS`, README "The player"). The
- * player takes no other origin (`originOf`).
+ * names a loopback fixture (`HYMNAL_RECORDINGS`, which `bun run exact` sets
+ * to the checkout's own fixture for `test`, `verify` and `agent`; README
+ * "The player"). The player takes no other origin (`originOf`).
  */
 const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';
 

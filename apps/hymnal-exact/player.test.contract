@@ -1,7 +1,8 @@
 // The player against the fixture recordings (tools/recordings.ts, digital
-// silence): run with HYMNAL_RECORDINGS=http://127.0.0.1:4797 (README, "The
-// player"). The first line of each test refuses any other origin, so no
-// test ever asks the bucket. A playing element runs on real time, so its
+// silence), which `bun run exact test` serves on the checkout's own port
+// and names in HYMNAL_RECORDINGS (README, "The player"). Each test holds
+// the player to a loopback fixture before it plays, so no test ever asks
+// the bucket. A playing element runs on real time, so its
 // place is checked as a lower bound after `clock +N real`. Each test opens on
 // Settings and turns Sounds and haptics off before it plays (the owner's
 // rule; src/look/quiet.test.ts holds every test that plays to it).
@@ -17,7 +18,7 @@ test "Play starts the hymn and the bar shows it"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   expect tree has "bar"
   expect tree has "bar-grabber"
   expect tree missing "bar-title"
@@ -48,7 +49,7 @@ test "Pause holds the place; resume goes on."
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -84,7 +85,7 @@ test "The bar follows across screens"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -125,7 +126,7 @@ test "The full player"
   tap "hymn-2"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -164,7 +165,7 @@ test "The lock screen's pause pauses"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -186,7 +187,7 @@ test "It ends"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000

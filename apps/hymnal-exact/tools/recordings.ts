@@ -3,7 +3,7 @@
 /**
  * The recordings' bucket, as a test meets it: `GET` and `HEAD` of
  * `/audio/<set>/sdah/<n>.mp3`, with byte ranges as the bucket answers them,
- * on `127.0.0.1:$PORT` (4797 by default, `app.ts`'s fixture origin). Two
+ * on `127.0.0.1:$PORT` (the checkout's own port by default). Two
  * generated recordings stand in for every hymn's: a short one of
  * `SHORT_SECONDS`, and for hymn `LONG_HYMN` one as long as its timing
  * (`LONG_SECONDS`), so a stanza choice has lines to cut. Both are digital
@@ -13,14 +13,14 @@
  * own port (`checkoutPort`), the one its drives use.
  */
 
-import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { checkoutPort as portOf } from '@manna/exact-kit/port';
 
 export const SHORT_SECONDS = 6;
 export const LONG_HYMN = 2;
 export const LONG_SECONDS = 240;
 export const MISSING_HYMN = 13;
-export const FIXTURE_PORT = 4797;
 
 const RATE = 8000;
 
@@ -108,24 +108,17 @@ export const answer = (request: Request): Response => {
 
 /**
  * This checkout's own fixture port, in 4790–5789 as Exact gives a declared
- * fixture's (one per real app directory), so the drives of two checkouts
- * never meet on one port; the build's keyed grant for 4797 moves to it, as
- * a development build moves a loopback grant.
+ * fixture's (one per real app directory, `@manna/exact-kit/port`'s
+ * `checkoutPort`), so the runs of two checkouts never meet on one port;
+ * `bun run exact` names its origin in `HYMNAL_RECORDINGS` for `test`,
+ * `verify` and `agent`, and the build's keyed grant for 4797 moves to it,
+ * as a development build moves a loopback grant.
  */
-export const checkoutPort = (): number =>
-  4790 +
-  (Number.parseInt(
-    new Bun.CryptoHasher('sha256')
-      .update(realpathSync(join(import.meta.dir, '..')))
-      .digest('hex')
-      .slice(0, 8),
-    16,
-  ) %
-    1000);
+export const checkoutPort = (): number => portOf(join(import.meta.dir, '..'));
 
 if (import.meta.main && process.argv.includes('--port')) console.log(checkoutPort());
 else if (import.meta.main) {
-  const port = Number(process.env.PORT ?? FIXTURE_PORT);
+  const port = Number(process.env.PORT ?? checkoutPort());
   Bun.serve({ hostname: '127.0.0.1', port, fetch: answer });
   console.log(`[recordings] listening port=${port}`);
 }

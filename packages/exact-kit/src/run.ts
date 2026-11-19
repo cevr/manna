@@ -21,7 +21,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { APPS, type ExactApp } from './apps.ts';
-import { claimPorts, takePort } from './drive/port.ts';
+import { claimPorts, fixturePort, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
 import { routeTypesAside } from './route-types.ts';
 
@@ -467,6 +467,30 @@ const headOf = (clone: string) =>
     ),
   );
 
+/** The verbs that start the app's server, its fixture, for their run: `test`, `verify` and `agent`, on any host. */
+const SERVING_VERBS: ReadonlyArray<string> = ['test', 'verify', 'agent'];
+
+/**
+ * The fixture settings a run of `args` for `app` in `appDir` is given: for a serving verb, each of the app's
+ * `fixture` settings the caller leaves unset, as the origin of the checkout's own fixture port (`fixturePort` of its
+ * real path, the folder as given when it has none). Nothing for any other verb, so a build (`web-build`), the dev loop
+ * and `serve` keep the app's own default.
+ */
+const fixtureOf = (app: ExactApp, args: ReadonlyArray<string>, appDir: string) =>
+  Effect.gen(function* () {
+    if (!SERVING_VERBS.includes(args[0] ?? '')) return {};
+    const fs = yield* FileSystem.FileSystem;
+    const real = yield* fs.realPath(appDir).pipe(Effect.orElseSucceed(() => appDir));
+    const origin = `http://127.0.0.1:${fixturePort(real)}`;
+    const unset = yield* Effect.forEach(app.fixture, (name) =>
+      Effect.gen(function* () {
+        const given = yield* Config.option(Config.String(name));
+        return Option.match(given, { onNone: () => [name], onSome: () => [] });
+      }),
+    );
+    return Object.fromEntries(unset.flat().map((name) => [name, origin]));
+  });
+
 /** The app whose folder is `name`, if the wrapper runs it. */
 const appNamed = (name: string) =>
   Option.fromNullishOr(Object.entries(APPS).find(([folder]) => folder === name)?.[1]);
@@ -507,6 +531,7 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   };
   const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts));
   yield* launcherHeld(appDir);
+  const fixture = yield* fixtureOf(app, args, appDir);
   const head = yield* headOf(clone);
   if (head !== EXACT_PIN)
     return yield* ExactRefused.make({
@@ -551,6 +576,7 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
         ChildProcess.make(command, rest, {
           cwd: appDir,
           env: {
+            ...fixture,
             ...planned.env,
             ...listener[0],
             ...Object.fromEntries(

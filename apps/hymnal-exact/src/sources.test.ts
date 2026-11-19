@@ -158,6 +158,19 @@ describe('the data module runs where Exact runs it', () => {
   });
 });
 
+describe('the recordings’ origin', () => {
+  test('the player says a loopback fixture is one on any port, and the bucket or a refused origin is not', async () => {
+    const fixtureOf = (origin: string) =>
+      sourcesAt(origin, [])
+        .playerStep(['screen', 0, 0, 0, '/'])
+        .then((view) => [view.origin, view.fixture]);
+    expect(await fixtureOf('http://127.0.0.1:4797')).toEqual(['http://127.0.0.1:4797', true]);
+    expect(await fixtureOf('http://127.0.0.1:5321')).toEqual(['http://127.0.0.1:5321', true]);
+    expect(await fixtureOf(BUCKET)).toEqual([BUCKET, false]);
+    expect(await fixtureOf('https://example.com')).toEqual([BUCKET, false]);
+  });
+});
+
 describe('size', () => {
   test('the words ship once, under 1 MB', () => {
     const bytes = new TextEncoder().encode(JSON.stringify(readWords())).length;

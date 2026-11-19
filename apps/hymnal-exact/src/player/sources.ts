@@ -64,6 +64,13 @@ const KINDS = new Set(['pause', 'resume', 'stop', 'retry', 'dragStart', 'dragEnd
 /** A way on the bar or the lock screen: back for a negative value, else on. */
 const wayOf = (value: number): 1 | -1 => (value < 0 ? -1 : 1);
 
+/**
+ * What the view is answered: the view, the recordings' origin, and whether
+ * it is a loopback fixture's (`fixture`), which every test that plays holds
+ * before it presses Play, whatever port the run's fixture is on.
+ */
+type Sent = PlayerView & { readonly origin: string; readonly fixture: boolean };
+
 /** The player's sources over `book`, its hymns timed by `timing`, the recordings at `origin`. */
 export const playerSources = (
   book: Book,
@@ -86,11 +93,12 @@ export const playerSources = (
     };
   };
   let state: State = initial;
-  const apply = (input: Input | undefined): PlayerView & { readonly origin: string } => {
-    if (input === undefined) return { ...viewOf(state, undefined, titleOf), origin };
+  const fixture = origin !== BUCKET;
+  const apply = (input: Input | undefined): Sent => {
+    if (input === undefined) return { ...viewOf(state, undefined, titleOf), origin, fixture };
     const next = step(state, input);
     state = next.state;
-    return { ...viewOf(state, next.command, titleOf), origin };
+    return { ...viewOf(state, next.command, titleOf), origin, fixture };
   };
   const play = (number: number) => {
     const track = trackOf(number);
@@ -137,7 +145,7 @@ export const playerSources = (
     number,
     number,
     string,
-  ]): Promise<PlayerView & { readonly origin: string }> => {
+  ]): Promise<Sent> => {
     if (kind === 'screen') return apply({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
     if (kind === 'restore') return apply({ _tag: 'restore', choices: decodeChoices(text) });
     if (kind === 'failed') {
