@@ -15,11 +15,12 @@ import { Linking, Pressable, StyleSheet, Text, View, type ColorValue } from 'rea
 
 import { gemmaTerms } from '../assets/meaning/gemma-terms.js';
 import { color, useAccent } from '~/color';
+import { CREDIT_END, creditHead } from '~/credit';
 
 function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: ColorValue }) {
   return (
     <Text style={styles.credit} dynamicTypeRamp="body">
-      {`${line.part}: ${line.work} by ${line.author}, `}
+      {creditHead(line)}
       {Option.match(Option.fromUndefinedOr(line.licenceUrl), {
         onNone: () => line.licence,
         onSome: (url) => (
@@ -28,7 +29,7 @@ function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: 
           </Text>
         ),
       })}
-      .
+      {CREDIT_END}
     </Text>
   );
 }

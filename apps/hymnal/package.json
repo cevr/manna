@@ -67,6 +67,7 @@
     "./player/drums": "./src/player/drums.ts",
     "./reader/search-mode": "./src/reader/search-mode.ts",
     "./reader/head-line": "./src/reader/head-line.ts",
+    "./credit": "./src/credit.ts",
     "./hymns/chords": "./src/hymns/chords.ts",
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/indexes": "./src/hymns/indexes.ts",
