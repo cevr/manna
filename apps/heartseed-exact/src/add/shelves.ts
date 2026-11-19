@@ -44,12 +44,13 @@ export interface AddRow {
   singly: boolean;
 }
 
-/** One shelf: `kind` is `bible` (the chooser), `lists` (the picks and the promises) or `handbook` (a section of the Handbook); `open` while its rows show, which they hold only then. */
+/** One shelf: `icon` is the name of its home picture, `kind` is `bible` (the chooser), `lists` (the picks and the promises) or `handbook` (a section of the Handbook); `open` while its rows show, which they hold only then. */
 export interface AddShelf {
   id: string;
   slug: string;
   title: string;
   note: string;
+  icon: string;
   kind: string;
   open: boolean;
   rows: AddRow[];
@@ -183,6 +184,7 @@ export const addShownOf = (held: Held, open: string): AddShown => {
         slug,
         title: shelf.title,
         note: shelf.note,
+        icon: shelf.icon,
         kind: kindOf(shelf),
         open: opened,
         rows: rowsOf(

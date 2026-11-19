@@ -127,7 +127,7 @@ component HeartseedExact
                 LicencesPage(route=e.id, licences=aboutLicences.licences)
             for e in t.stack.filter(x => x.name == "add" or x.name == "addList") key=e.id
               if e.name == "add"
-                AddVersesPage(route=e.id, add=addShown, bible=addOpenBible, toggle=addToggle, open=addOpenList, done=addDone)
+                AddVersesPage(route=e.id, add=addShown, scheme=homeScheme, bible=addOpenBible, toggle=addToggle, open=addOpenList, done=addDone)
               if e.name == "addList"
                 AddListPage(route=e.id, list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
             for e in t.stack.filter(x => x.name == "gotoSheet" or x.name == "gotoBook") key=e.id

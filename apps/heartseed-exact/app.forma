@@ -93,6 +93,7 @@ theme
   glyph.greeting: length = 28px
   glyph.control: length = 22px
   glyph.list: length = 32px
+  glyph.shelf: length = 28px
   line.hair: length = -exact-hairline
   line.edge: length = 1.6667px
   line.slot: length = 2px

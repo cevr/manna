@@ -1,4 +1,4 @@
-/** A style of a One file: the style's name in its `StyleSheet.create`, and the property read (none for a type token). */
+/** A style of a One file: the style's name in its `StyleSheet.create` (for a glyph, the `name` its `<Icon>` is given), and the property read (none for a type token). */
 export interface Source {
   readonly file: string;
   readonly style: string;
@@ -6,7 +6,7 @@ export interface Source {
 }
 
 /** What a token holds, and so how its value is written. */
-export type Kind = 'type' | 'length' | 'border' | 'hairline' | 'number' | 'shadow';
+export type Kind = 'type' | 'length' | 'glyph' | 'border' | 'hairline' | 'number' | 'shadow';
 
 export interface Token {
   readonly name: string;
@@ -51,6 +51,7 @@ const measure =
 
 const length = measure('length');
 const number = measure('number');
+const glyph = measure('glyph');
 
 /**
  * The measures of `app.forma` taken from the current Heartseed (One): each
@@ -65,7 +66,9 @@ const number = measure('number');
  * 17 pt at the default size on iOS) and a line height as its share of the
  * size. A space, radius or size does not scale, so it is written in px.
  * A border width is written as React Native draws it on a 3× iPhone, on
- * the device pixel grid (1.5 pt is drawn 5 px wide, 1.6667 pt).
+ * the device pixel grid (1.5 pt is drawn 5 px wide, 1.6667 pt). A glyph is
+ * the `size` of one of the home's pictures (`<Icon name={…} size={…} />`),
+ * in px.
  */
 export const TOKENS: ReadonlyArray<Token> = [
   type('type.title', [DRAW, 'title']),
@@ -116,7 +119,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('space.s7', [DRAW, 'verse', 'columnGap']),
   length('space.s8', [ABOUT, 'content', 'paddingTop'], [ABOUT, 'bar', 'paddingBottom']),
   length('space.s10', [INDEX, 'passage', 'gap']),
-  length('space.s12', [FIELD, 'top', 'gap']),
+  length('space.s12', [FIELD, 'top', 'gap'], [SHELVES, 'head', 'paddingHorizontal']),
   length('space.s14', [SHELVES, 'head', 'gap']),
   length('space.s16', [ABOUT, 'content', 'gap']),
   length('space.s18', [PLOT, 'pill', 'paddingHorizontal']),
@@ -166,6 +169,11 @@ export const TOKENS: ReadonlyArray<Token> = [
     [LIST, 'bare', 'height'],
   ),
   length('line.furrow', [PLOT, 'soil', 'height']),
+
+  glyph('glyph.greeting', [FIELD, 'greeting.icon', 'size']),
+  glyph('glyph.control', [PLOT, 'name', 'size']),
+  glyph('glyph.list', [LIST, 'furrow.icon', 'size']),
+  glyph('glyph.shelf', [SHELVES, 'shelf.icon', 'size']),
 
   measure('hairline')('line.hair', [ABOUT, 'row', 'borderTopWidth']),
   measure('border')(
