@@ -100,10 +100,15 @@ describe('the pinned One commit', () => {
   });
 
   test('on a drift, report keeps the pin and says the drift, ref refuses without --repin, and an empty flag value refuses', async () => {
-    const [report, refused, empty] = await Promise.all([
+    const [report, refused, empty, unknown] = await Promise.all([
       cli('report'),
       cli('ref', 'hymnal', NO_ROW),
       cli('shot', 'hymnal', 'about.page', '--size'),
+      cli('shot', 'hymnal', NO_ROW),
+    ]);
+    expect([unknown.code, unknown.stderr]).toEqual([
+      1,
+      expect.stringContaining(`pixel: no row ${NO_ROW} in hymnal`),
     ]);
     expect([empty.code, empty.stderr]).toEqual([
       1,

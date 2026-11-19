@@ -95,7 +95,7 @@ const writeOwn = (file: string, text: string) => {
 };
 
 /** The persisted states `store`'s pairs are in the port; a key the port names no place for, or a broken store, throws. */
-const statesOf = (states: Readonly<Record<string, StateOf>>, store: Store) => {
+export const statesOf = (states: Readonly<Record<string, StateOf>>, store: Store) => {
   if (store._tag === 'Broken') throw new Error('a broken store has no persisted states to write');
   return store.pairs.flatMap(([key, value]) => {
     const state = new Map(Object.entries(states)).get(key);

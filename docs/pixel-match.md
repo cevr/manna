@@ -78,8 +78,8 @@ For each cell, the harness:
    overlay.
 
 A picture is taken beside the reference (`.taking.png`) and replaces it only
-once kept, so a capture that is refused leaves the cell's earlier
-reference as it was.
+once kept (`keepTaken` in `src/take.ts`), so a capture that is refused
+leaves the cell's earlier reference as it was.
 
 `--web` takes the hymnal's web cells from One's production web build
 (`bun run --cwd apps/hymnal build`, its `dist/client`). It serves the build
@@ -242,10 +242,35 @@ The Settings and Add sheets are scored whole (`total` equals `picture`).
 build in the agent's own Chromium (`bun run exact agent web`, launched with
 `--use-mock-keychain --password-store=basic`), at the reference's viewport
 (`--size 390x844`) and its device scale (`EXACT_SCALE`, Chrome's own scale
-factor, never CDP's emulated one), with the cell's scheme preferred, on an
-empty store. Its ops are the row's `exact.web.ops`, else its iOS ops. iOS
-masks are never laid on a web picture: a web cell lays only
-`exact.web.masks`, in CSS pixels.
+factor, never CDP's emulated one), with the cell's scheme preferred. Its ops
+are the row's `exact.web.ops`, else its iOS ops. iOS masks are never laid
+on a web picture: a web cell lays only `exact.web.masks`, in CSS pixels.
+
+A web cell starts from the same fixture as the reference's page and the
+port's iOS cell (`webSeedOf` in `src/seed.ts`, from the same `seedPlan`),
+Sounds and haptics off with it:
+
+- The hymnal's persisted states are written into the drive's own store
+  (`src/web-store.ts`). On the web a named store (`--storage pm-<id>`) is a
+  Chrome profile of Exact's, and a persisted state lives in the page
+  origin's `localStorage` under `exact.state.@<the app directory's
+  digest>/<name>`. The profile's path, the digest and the browser are
+  Exact's own (`scripts/agent-launch.mjs` at the pin: `webStore`,
+  `appDigest`, `chromium`, `removeDriveStore`), never a copy. The store is
+  emptied, opened by that browser on a page of the cell's origin, written,
+  and the browser closed, which writes `localStorage` to the profile.
+- An origin is its port, and the wrapper serves each drive on a port of the
+  app's spare range, so the cell claims one port
+  (`@manna/exact-kit/port`'s `claimAppPort`), seeds on it, and drives on it
+  (`--port`, `--keep-storage`).
+- The drive reads each seeded state back (`state <name>`) once the page
+  settles, before the row's ops can change it (opening a hymn adds it to
+  Recent). A state that does not read its seeded value refuses the cell
+  (`readBackRefusal`), so a store the page did not read is never scored.
+- A row with no fixture starts from an emptied store (`--reset-storage`).
+- Heartseed's port keeps its fixture in a file (`app:/data/heartseed.json`),
+  which the web host holds in IndexedDB. Heartseed has no web cells, and a
+  web seed of a Heartseed fixture is refused, naming the row.
 
 `pixel report` writes every cell's state to `tmp/pixel-match/report.json`,
 in the format the run's acceptance check reads: its references and its

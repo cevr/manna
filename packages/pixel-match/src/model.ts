@@ -36,6 +36,9 @@ const HOSTS: Readonly<Record<AppName, ReadonlyArray<Host>>> = {
   hymnal: ['ios', 'web'],
 };
 
+/** The hosts `app` is drawn on. */
+export const hostsOf = (app: AppName) => HOSTS[app];
+
 /**
  * One step of a drive to a row's state. A target is `label=<name>` or
  * `id=<testID>`, as `@manna/sim` reads it; on the web `label` is the

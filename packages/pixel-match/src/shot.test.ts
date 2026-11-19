@@ -20,8 +20,11 @@ const cell = (size: string, scheme: Cell['scheme'] = 'dark'): Cell => ({
 });
 
 describe("the port's web cell", () => {
-  test("is the agent's web drive at the reference's viewport, at Chrome's own device scale, in the cell's scheme, on an empty store", () => {
-    const phone = webCommand(row, cell('390x844@2'), 'screen.png', 'ref.png');
+  const RESET = ['--storage', 'pm-about.page', '--reset-storage'];
+  const files = { screen: 'screen.png', reference: 'ref.png' };
+
+  test("is the agent's web drive at the reference's viewport, at Chrome's own device scale, in the cell's scheme, on the store its flags name", () => {
+    const phone = webCommand(row, cell('390x844@2'), files, RESET);
     expect(phone.env).toEqual({ EXACT_SCALE: '2' });
     expect(phone.argv.slice(0, 13)).toEqual([
       'bun',
@@ -44,7 +47,7 @@ describe("the port's web cell", () => {
       'clock settle',
       'screenshot screen.png compare ref.png',
     ]);
-    const desk = webCommand(row, cell('1280x800@1', 'light'), 's.png', 'r.png');
+    const desk = webCommand(row, cell('1280x800@1', 'light'), files, RESET);
     expect([desk.env, desk.argv[7], desk.argv[11]]).toEqual([
       { EXACT_SCALE: '1' },
       '1280x800',
@@ -52,9 +55,31 @@ describe("the port's web cell", () => {
     ]);
   });
 
+  test('a seeded store is kept, and its states are read back before the row’s ops can change them', () => {
+    const argv = webCommand(
+      row,
+      cell('390x844@2'),
+      files,
+      ['--port', '8777', '--storage', 'pm-about.page', '--keep-storage'],
+      ['settingsFeelKept', 'recentList'],
+    ).argv;
+    expect(argv).not.toContain('--reset-storage');
+    expect(argv.slice(8, 16)).toEqual([
+      '--port',
+      '8777',
+      '--storage',
+      'pm-about.page',
+      '--keep-storage',
+      'prefer prefers-color-scheme dark',
+      'clock settle',
+      'state settingsFeelKept',
+    ]);
+    expect(argv.slice(16, 18)).toEqual(['state recentList', 'tap gear']);
+  });
+
   test("takes the row's web ops where they differ from the iOS ones", () => {
     const web = { ...row, exact: { ops: ['tap gear'], web: { ops: ['tap about-link'] } } };
-    expect(webCommand(web, cell('390x844@2'), 's.png', 'r.png').argv.slice(13, -2)).toEqual([
+    expect(webCommand(web, cell('390x844@2'), files, RESET).argv.slice(13, -2)).toEqual([
       'tap about-link',
     ]);
   });

@@ -15,8 +15,9 @@
  * agent web`, launched with `--use-mock-keychain --password-store=basic`)
  * at the reference's viewport (`--size`) and device scale (`EXACT_SCALE`,
  * Chrome's own scale factor, never CDP's emulated one), the cell's scheme
- * preferred, on an empty store, the row's web ops (else its iOS ops), then
- * the screen taken with Exact's `compare` against the reference.
+ * preferred, on the store `webSeedOf` readied (the fixture's states read
+ * back first), the row's web ops (else its iOS ops), then the screen taken
+ * with Exact's `compare` against the reference.
  */
 
 import { edgeOps } from './agent-band.ts';
@@ -62,10 +63,22 @@ export const iosCommand = (
   ];
 };
 
-/** The agent's command line and environment for a web cell. */
-export const webCommand = (row: Row, cell: Cell, screen: string, reference: string) => {
+/**
+ * The agent's command line and environment for a web cell, on the store
+ * its storage flags name; each state in `readBack` is read once the page
+ * has settled, before the row's ops can change it, so the shot can prove
+ * its fixture reached the page.
+ */
+export const webCommand = (
+  row: Row,
+  cell: Cell,
+  files: { readonly screen: string; readonly reference: string },
+  storage: ReadonlyArray<string>,
+  readBack: ReadonlyArray<string> = [],
+) => {
   const side = sideOfRow(row);
   const viewport = viewportOf(cell.size);
+  const { screen, reference } = files;
   return {
     argv: [
       'bun',
@@ -76,11 +89,10 @@ export const webCommand = (row: Row, cell: Cell, screen: string, reference: stri
       '--json',
       '--size',
       `${viewport.width}x${viewport.height}`,
-      '--storage',
-      `pm-${row.id}`,
-      '--reset-storage',
+      ...storage,
       `prefer prefers-color-scheme ${cell.scheme}`,
       'clock settle',
+      ...readBack.map((name) => `state ${name}`),
       ...(side.web?.ops ?? side.ops),
       'clock settle',
       `screenshot ${screen} compare ${reference}`,

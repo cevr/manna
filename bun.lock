@@ -321,6 +321,7 @@
       "name": "@manna/pixel-match",
       "dependencies": {
         "@manna/core": "workspace:*",
+        "@manna/exact-kit": "workspace:*",
         "@manna/heartseed": "workspace:*",
         "@manna/sim": "workspace:*",
         "effect": "catalog:",

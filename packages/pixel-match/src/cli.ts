@@ -19,6 +19,7 @@ import { run } from './ios.ts';
 import type { Frame } from './ref.ts';
 import { takeIos } from './ref.ts';
 import { recordMissed, writeReport } from './report.ts';
+import { rowsAsked } from './rows.ts';
 import { shoot } from './shot.ts';
 import { cellName, cellsOf } from './model.ts';
 import { driftLine, driftOf, readPin, refKey, writePin } from './pin.ts';
@@ -87,14 +88,14 @@ const main = async () => {
       console.error(key.reason);
       return 1;
     }
-    const unknown = ids.filter((id) => !ROWS[app].some((row) => row.id === id));
-    if (unknown.length > 0) {
-      console.error(`pixel: no row ${unknown.join(', ')} in ${app}`);
+    const picked = rowsAsked(app, ROWS[app], ids);
+    if (picked._tag === 'Refused') {
+      console.error(picked.reason);
       return 1;
     }
-    const rows = ROWS[app].filter((row) => ids.length === 0 || ids.includes(row.id));
+    const { rows } = picked;
     if (command === 'shot') {
-      shoot(frame, app, rows, { web: asked.web, scheme: asked.scheme, size: asked.size });
+      await shoot(frame, app, rows, { web: asked.web, scheme: asked.scheme, size: asked.size });
       return 0;
     }
     await take(frame, app, rows, asked.web, key ?? { one: pinned, repin: false });
