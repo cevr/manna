@@ -12,7 +12,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { faceAt, faceChanged, hostZone } from './clock.ts';
@@ -41,6 +41,7 @@ import {
   type Step,
 } from './model.ts';
 import { refFile } from './paths.ts';
+import { keepTaken } from './take.ts';
 import { heartseedOne, hymnalOne } from './sim/apps.ts';
 
 /** The capture's frame: the checkout, where references go, the One commit and the head. */
@@ -252,23 +253,25 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, started:
     return String(error instanceof Error ? error.message : error);
   }
   const file = refFile(frame, cell);
-  const taking = file.replace(/\.png$/, '.taking.png');
-  mkdirSync(join(file, '..'), { recursive: true });
-  const shot = await capture(frame, cell.app, udid, side.hold, taking);
-  const refused = (reason: string) => {
-    unlinkSync(taking);
-    return reason;
-  };
-  if (shot === undefined) return refused('moving: no two takes 500 ms apart were the same bytes');
-  const taken = new Date();
-  const changed = cell.app === 'heartseed' ? faceChanged(started, taken) : undefined;
-  if (changed !== undefined) return refused(changed);
-  const tree = treeOf(frame, cell.app, `pm-${row.id}`);
-  if (tree.overlay) return refused('refused: a development overlay is in the tree');
-  renameSync(taking, file);
+  let taken = started;
+  let digest = '';
+  const kept = await keepTaken(
+    file,
+    (taking) => capture(frame, cell.app, udid, side.hold, taking),
+    () => {
+      taken = new Date();
+      const changed = cell.app === 'heartseed' ? faceChanged(started, taken) : undefined;
+      if (changed !== undefined) return changed;
+      const tree = treeOf(frame, cell.app, `pm-${row.id}`);
+      if (tree.overlay) return 'refused: a development overlay is in the tree';
+      digest = tree.digest;
+      return undefined;
+    },
+  );
+  if (kept._tag === 'Refused') return kept.reason;
   const at = { started, taken };
   const metadata = {
-    ...metadataOf(frame, cell, fixture, at, udid, tree.digest, shot),
+    ...metadataOf(frame, cell, fixture, at, udid, digest, kept.shot),
     band,
     keyboard,
   };

@@ -159,7 +159,7 @@ describe("the port's scoring, from the agent's replies to the result", () => {
     const cell = { ...cellOf('find.synthetic'), app: 'hymnal' as const };
     const reference = striped(12, (y) => (y < 9 ? content(y) : 250));
     const screen = marked(
-      striped(12, (y) => (y < 9 ? content(y) : 5)),
+      striped(12, (y) => (y < 6 ? content(y) : 5)),
       0,
       10,
     );
@@ -172,9 +172,10 @@ describe("the port's scoring, from the agent's replies to the result", () => {
       one: { steps: [] },
       exact: { ops: [] },
     };
-    const up = '{"visible":true,"overlap":1,"top":3}';
+    const up = '{"visible":true,"overlap":1,"top":2}';
     const result = shot(row, cell, agent(up));
-    expect([result.picture, result.total, result.differing, result.masked]).toEqual([48, 36, 0, 0]);
+    expect([result.picture, result.total, result.differing, result.masked]).toEqual([48, 24, 0, 0]);
+    expect(result.bands?.screen).toEqual({ top: 0, bottom: 6 });
     expect(() => shot(row, cell, agent('{"visible":false}'))).toThrow(
       "the band's edges are not in the agent's replies",
     );
