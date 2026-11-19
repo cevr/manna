@@ -1219,12 +1219,21 @@ describe('the exact wrapper', () => {
         );
         yield* fs.writeFileString(
           path.join(appDir, 'package.json'),
-          '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4" } }',
+          '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4", "one": "catalog:" } }',
         );
         yield* fs.symlink(linked, path.join(appDir, 'node_modules', '@manna', 'hymnal-app'));
-        const installed = path.join(appDir, 'node_modules', 'effect', 'app', 'routes.d.ts');
-        yield* fs.makeDirectory(path.dirname(installed), { recursive: true });
-        yield* fs.writeFileString(installed, written);
+        const installedFiles = ['effect', 'one'].map((name) =>
+          path.join(appDir, 'node_modules', name, 'app', 'routes.d.ts'),
+        );
+        yield* Effect.forEach(installedFiles, (installed) =>
+          fs
+            .makeDirectory(path.dirname(installed), { recursive: true })
+            .pipe(Effect.andThen(fs.writeFileString(installed, written))),
+        );
+        const installed = Effect.map(
+          Effect.forEach(installedFiles, (file) => fs.exists(file)),
+          (there) => there.every(Boolean),
+        );
         const seen: Array<boolean> = [];
         const kept: Array<boolean> = [];
         const runWith = (
@@ -1246,7 +1255,7 @@ describe('the exact wrapper', () => {
                       return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
                     return fs.exists(routes).pipe(
                       Effect.tap((there) => Effect.sync(() => seen.push(there))),
-                      Effect.andThen(fs.exists(installed)),
+                      Effect.andThen(installed),
                       Effect.tap((there) => Effect.sync(() => kept.push(there))),
                       Effect.andThen(during),
                       Effect.orDie,
