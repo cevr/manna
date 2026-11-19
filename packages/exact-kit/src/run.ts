@@ -2,6 +2,7 @@ import {
   Array as Arr,
   Clock,
   Config,
+  Console,
   Context,
   Duration,
   Effect,
@@ -227,16 +228,38 @@ const verifyHost = (args: ReadonlyArray<string>) =>
   );
 
 /**
- * For a `verify` run: an effect that ends once its pages have closed, when Exact's `verify` records a new run of its
- * host in the app's `.exact/verify/last.json`. The pinned Exact writes that record after its pages, Chrome profiles
- * and server are closed and before its `contract verify` (difftest, which opens no socket and may run for half an hour)
- * ends, so the ports may go back then (`scripts/verify.mjs`, `deviceMain`). The record as it stands is read now,
- * before the run starts; a run that never records keeps its ports to its end. A record is this run's only when the
- * run it times started as this one did: its value is the run's length, so the time it is read at less that value
- * falls between the spawn and `VERIFY_START` after it (with a read's spacing on top). Another `verify` of the same
- * checkout that names its own port, started before this one or well after it, writes the same record, and keeps them.
+ * How long a `verify` run may go on after Exact records its host's run (`reportEnd`) before the wrapper stops it. What
+ * goes on then is its `contract verify` alone, whose `difftest verify` was seen to spin past an hour in a walk's clock
+ * advance (Exact's `semantics/difftest/src/settle.rs`, `MutationClock::advance`), holding the build lock.
  */
-const pagesEnd = (appDir: string, args: ReadonlyArray<string>) =>
+const SEMANTICS_WAIT = Duration.minutes(2);
+
+/** The code a `verify` the wrapper stopped after its report exits with, as `timeout` does. */
+const STOPPED = 124;
+
+/** One line of the app's `.exact/runs.jsonl`, where Exact's `verify` records its device run's result (`scripts/evidence.mjs`). */
+const RunLine = Schema.fromJsonString(
+  Schema.Struct({
+    at: Schema.String,
+    host: Schema.String,
+    what: Schema.String,
+    result: Schema.String,
+  }),
+);
+
+/**
+ * For a `verify` run: an effect that ends once its device report is written and its pages have closed, when Exact's
+ * `verify` records a new run of its host in the app's `.exact/verify/last.json`. The pinned Exact writes that record
+ * after its pages, Chrome profiles and server are closed, just before it prints the report, and before its `contract
+ * verify` (difftest, which opens no socket) ends, so the ports may go back then (`scripts/verify.mjs`, `deviceMain`).
+ * The record as it stands is read now, before the run starts; a run that never records keeps its ports to its end. A
+ * record is this run's only when the run it times started as this one did: its value is the run's length, so the
+ * time it is read at less that value falls between the spawn and `VERIFY_START` after it (with a read's spacing on
+ * top). Another `verify` of the same checkout that names its own port, started before this one or well after it,
+ * writes the same record, and keeps them. `result` reads what the device run recorded in `.exact/runs.jsonl`, if it
+ * did.
+ */
+const reportEnd = (appDir: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -252,8 +275,24 @@ const pagesEnd = (appDir: string, args: ReadonlyArray<string>) =>
     const latest = spawned + Duration.toMillis(Duration.sum(VERIFY_START, PAGES_READ));
     const ours = (length: number, readAt: number) =>
       readAt - length >= earliest && readAt - length <= latest;
+    const result = fs.readFileString(path.join(appDir, '.exact', 'runs.jsonl')).pipe(
+      Effect.map((text) =>
+        Option.flatMap(Arr.last(text.split('\n').filter((line) => line.trim() !== '')), (line) =>
+          Option.map(
+            Option.filter(
+              Schema.decodeOption(RunLine)(line),
+              (run) => run.what === 'verify' && run.host === host && Date.parse(run.at) >= earliest,
+            ),
+            (run) => run.result,
+          ),
+        ),
+      ),
+      Effect.orElseSucceed(() => Option.none<string>()),
+    );
     return {
-      closed: Effect.asVoid(
+      host,
+      result,
+      written: Effect.asVoid(
         Effect.repeat(Effect.zip(recorded, Clock.currentTimeMillis), {
           until: ([now, readAt]) =>
             Option.exists(
@@ -427,8 +466,10 @@ const appNamed = (name: string) =>
  * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
  * clone is at the pin, then run with the plan's
  * variables over the caller's, a native build or drive under the build lock, a web page's port held while it runs
- * (`listenerOf`), or a `verify`'s until its pages close (`pagesEnd`). The child runs in a process group of its own,
- * ended with whatever it left there when it exits or the run is stopped. The child's exit code.
+ * (`listenerOf`), or a `verify`'s until its report is written (`reportEnd`). The child runs in a process group of its
+ * own, ended with whatever it left there when it exits or the run is stopped. The child's exit code; for a `verify`
+ * still running `SEMANTICS_WAIT` after its report, `STOPPED`, its process group ended (its `scripts/verify.mjs` passes
+ * the signal on to the `contract verify` group it started).
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
   appDir: string,
@@ -490,9 +531,9 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
               Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurns([port]) }),
           }),
       ).pipe(Scope.provide(pages));
-      const pagesClosed = yield* Effect.forEach(
-        Arr.filter(listener, () => args[0] === 'verify'),
-        () => pagesEnd(appDir, args),
+      const report = yield* Effect.forEach(
+        Arr.filter([args[0]], (verb) => verb === 'verify'),
+        () => reportEnd(appDir, args),
       );
       const handle = yield* spawner.spawn(
         ChildProcess.make(command, rest, {
@@ -512,10 +553,27 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
           forceKillAfter: Duration.seconds(5),
         }),
       );
-      yield* Effect.forEach(pagesClosed, ({ closed }) =>
-        Effect.forkScoped(Effect.andThen(closed, Scope.close(pages, Exit.void))),
+      const reported = Arr.head(report);
+      if (Option.isNone(reported)) return yield* handle.exitCode;
+      const verified = reported.value;
+      const exited = yield* Effect.raceFirst(
+        Effect.asSome(handle.exitCode),
+        verified.written.pipe(
+          Effect.andThen(Scope.close(pages, Exit.void)),
+          Effect.andThen(Effect.sleep(SEMANTICS_WAIT)),
+          Effect.as(Option.none<ChildProcessSpawner.ExitCode>()),
+        ),
       );
-      return yield* handle.exitCode;
+      if (Option.isSome(exited)) return exited.value;
+      const result = Option.match(yield* verified.result, {
+        onNone: () => 'recorded no result',
+        onSome: (said) => `recorded "${said}"`,
+      });
+      yield* Console.error(
+        `exact-kit: verify ${verified.host} wrote its report ${Duration.format(SEMANTICS_WAIT)} ago and its contract verify (difftest) has not ended, so the run is stopped, exit ${STOPPED}: the device run ${result} and the report above stands; the semantics check did not finish (docs/exact.md)`,
+      );
+      yield* Effect.ignore(handle.kill({ forceKillAfter: Duration.seconds(5) }));
+      return ChildProcessSpawner.ExitCode(STOPPED);
     }),
   );
 });

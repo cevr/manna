@@ -2,6 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   ConfigProvider,
+  Console,
   Deferred,
   Duration,
   Effect,
@@ -9,6 +10,7 @@ import {
   Fiber,
   Option,
   Record as Rec,
+  Result,
   FileSystem,
   Layer,
   Path,
@@ -138,12 +140,17 @@ interface Spawned {
   readonly extendEnv: boolean;
 }
 
-const handleOf = (stdout: string, exitCode: number, exited: Effect.Effect<void> = Effect.void) =>
+const handleOf = (
+  stdout: string,
+  exitCode: number,
+  exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
+) =>
   ChildProcessSpawner.makeHandle({
     pid: ChildProcessSpawner.ProcessId(0),
     exitCode: Effect.as(exited, ChildProcessSpawner.ExitCode(exitCode)),
     isRunning: Effect.succeed(false),
-    kill: () => Effect.void,
+    kill: () => kill,
     stdin: Sink.drain,
     stdout: Stream.make(new TextEncoder().encode(stdout)),
     stderr: Stream.empty,
@@ -161,6 +168,7 @@ const standIn = (
   head: Option.Option<string>,
   spawned: Array<Spawned>,
   exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
 ) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf('', 0));
@@ -179,7 +187,7 @@ const standIn = (
     if (command.command === 'git' && Option.isNone(head)) return Effect.succeed(handleOf('', 128));
     if (command.command === 'git')
       return Effect.succeed(handleOf(`${Option.getOrElse(head, () => '')}\n`, 0));
-    return Effect.succeed(handleOf('', 0, exited));
+    return Effect.succeed(handleOf('', 0, exited, kill));
   });
 
 /** The caller's environment: what the wrapper may read (`HOME`, `EXACT`, `EXACT_PORT`) and what it must override. */
@@ -197,10 +205,12 @@ const running = (
   files: Readonly<Record<string, string>>,
   {
     exited = Effect.void,
+    kill = Effect.void,
     claims = [],
     spawned = [],
   }: {
     readonly exited?: Effect.Effect<void>;
+    readonly kill?: Effect.Effect<void>;
     readonly claims?: Array<Claimed>;
     readonly spawned?: Array<Spawned>;
   } = {},
@@ -211,7 +221,10 @@ const running = (
       Layer.mergeAll(
         BunServices.layer,
         memoryFs(files),
-        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned, exited)),
+        Layer.succeed(
+          ChildProcessSpawner.ChildProcessSpawner,
+          standIn(head, spawned, exited, kill),
+        ),
         Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
@@ -952,6 +965,75 @@ describe('the exact wrapper', () => {
         yield* TestClock.adjust('3 seconds');
         expect(ranged.given()).toEqual([true]);
         yield* ranged.end;
+      }),
+  );
+
+  it.effect(
+    "a verify on any host whose child still runs two minutes after its report is stopped, exit 124, its group ended, saying the device run's result; one whose child ends first, or that never reports, runs to its child's end",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const at = `${PROBE}/apps/hymnal-exact/.exact`;
+        const start = (args: ReadonlyArray<string>, folder: Record<string, string>) =>
+          Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const said: Array<string> = [];
+            const kills: Array<true> = [];
+            const fiber = yield* Effect.forkChild(
+              running('hymnal-exact', args, { HOME: PROBE }, head, folder, {
+                exited: Deferred.await(done),
+                kill: Effect.sync(() => kills.push(true)),
+              }).pipe(
+                Effect.provideService(Console.Console, {
+                  ...globalThis.console,
+                  error: (...line: ReadonlyArray<unknown>) => said.push(line.join(' ')),
+                }),
+              ),
+            );
+            yield* TestClock.adjust('3 seconds');
+            const code = Effect.map(Fiber.join(fiber), ({ result }) => Result.map(result, Number));
+            return { fiber, said, kills, code, exit: Deferred.done(done, Exit.void) };
+          });
+
+        const hung = { ...files };
+        const ios = yield* start(['verify', 'ios'], hung);
+        hung[`${at}/verify/last.json`] = '{"ios":2500}';
+        hung[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:00:01.000Z","host":"ios","what":"verify","result":"2 problems, 1 failed test"}\n';
+        yield* TestClock.adjust('1 second');
+        yield* TestClock.adjust('119 seconds');
+        expect(ios.fiber.pollUnsafe()).toBeUndefined();
+        yield* TestClock.adjust('1 second');
+        expect(yield* ios.code).toEqual(Result.succeed(124));
+        expect(ios.kills).toEqual([true]);
+        expect(ios.said.join('\n')).toContain('verify ios wrote its report 2m ago');
+        expect(ios.said.join('\n')).toContain('recorded "2 problems, 1 failed test"');
+
+        const stale = { ...files };
+        const web = yield* start(['verify'], stale);
+        stale[`${at}/verify/last.json`] = '{"web":2500}';
+        stale[`${at}/runs.jsonl`] =
+          '{"at":"1969-12-31T23:59:58.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* web.code).toEqual(Result.succeed(124));
+        expect(web.said.join('\n')).toContain('recorded no result');
+
+        const ended = { ...files };
+        const quick = yield* start(['verify', 'ios'], ended);
+        ended[`${at}/verify/last.json`] = '{"ios":2500}';
+        yield* TestClock.adjust('60 seconds');
+        yield* quick.exit;
+        expect(yield* quick.code).toEqual(Result.succeed(0));
+        expect(quick.kills).toEqual([]);
+        expect(quick.said).toEqual([]);
+
+        const silent = yield* start(['verify', 'ios'], { ...files });
+        yield* TestClock.adjust('2 hours');
+        expect(silent.fiber.pollUnsafe()).toBeUndefined();
+        yield* silent.exit;
+        expect(yield* silent.code).toEqual(Result.succeed(0));
+        expect(silent.kills).toEqual([]);
       }),
   );
 
