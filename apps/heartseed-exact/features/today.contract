@@ -5,6 +5,9 @@
 // It is drawn as the current Today: a scroll of the counts line, the verse
 // and its stage over a fixed footer of Show all, the result's card, Listen
 // and the one round button (Say it, Listening, Next), in app.forma's tokens.
+// At the accessibility text sizes alone it departs from the current Today
+// (owner, q160): the footer but its round button follows the verse in the
+// scroll, and the round buttons are capsules the line's width.
 // A tap on Listening shows the marks, the suggestion and the four grades; Next records
 // the try in the garden (`gardenRecall`) and shows the next item, and
 // nothing is recorded before it.
@@ -265,8 +268,49 @@ component TodayFace
 
 // The one large round button, as the current `BigButton`: ink, with its
 // shadow, over the ring that pulses while it works (`busy`) and holds still
-// under reduced motion. The ring is `ring` only while busy.
+// under reduced motion. The ring is `ring` only while busy. At the
+// accessibility text sizes (`roomy`) it is `TodayWide` instead, since a
+// label at those sizes cannot fit a 132-pt circle.
 component TodayBig
+  props
+    label: string
+    press: action
+    busy: bool
+    enabled: bool
+    still: bool
+    roomy: bool
+    id: string
+  view
+    if roomy
+      TodayWide(label=label, press=press, busy=busy, enabled=enabled, still=still, id=id)
+    else
+      TodayRound(label=label, press=press, busy=busy, enabled=enabled, still=still, id=id)
+
+// The round button at the accessibility text sizes: the same ink, shadow,
+// ring and label, drawn as a capsule the line's width whose label wraps
+// inside it, at least 44 pt tall (owner, q160: better than the current app,
+// which cuts the label at the circle).
+component TodayWide
+  props
+    label: string
+    press: action
+    busy: bool
+    enabled: bool
+    still: bool
+    id: string
+  view
+    column align-self="stretch" margin-top="space.s8" position="relative"
+      column position="absolute" inset=0 border-radius="radius.button" background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=((still or not busy) ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId=(busy ? "ring" : `${id}-ring`)
+      if enabled
+        button press=press appearance="none" aria-label=label position="relative" box-sizing="border-box" width="100%" min-height="size.target" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s18" padding-right="space.s18" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" text-align="center" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" -exact-press-scale="scale.pressed" testId=id
+          text label overflow-wrap="break-word" hyphens="auto"
+      else
+        button press=press disabled=true appearance="none" aria-label=label position="relative" box-sizing="border-box" width="100%" min-height="size.target" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s18" padding-right="space.s18" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" text-align="center" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" opacity="opacity.disabled" testId=id
+          text label overflow-wrap="break-word" hyphens="auto"
+
+// The round button below the accessibility text sizes, as the current
+// app's: a 132-pt circle.
+component TodayRound
   props
     label: string
     press: action
@@ -344,10 +388,46 @@ component TodayRecital
         case none
           column
 
+// The foot's pills: Show all, and Say it again beside it once graded (the
+// port's own).
+component TodayPills
+  props
+    today: TodayView
+    showAll: action
+    again: action
+  view
+    row gap="space.s8" flex-wrap="wrap"
+      if today.canShowAll
+        TodayPill(label="Show all", press=showAll, id="show-all")
+      if today.canNext
+        TodayPill(label="Say it again", press=again, id="again")
+
+// The result's card: what was said, the suggestion and the four grades.
+component TodayCard
+  props
+    today: TodayView
+    grade: action
+  view
+    column gap="space.s10" padding="space.s16" border-radius="radius.r20" background-color="hs.card"
+      text today.summary font="type.strong" color="hs.ink" testId="result"
+      text today.suggested font="type.small" color="hs.quiet" testId="suggested"
+      row role="radiogroup" aria-label="Grade" gap="space.s8" margin-top="space.s4"
+        for g in today.grades key=g.grade
+          if g.enabled
+            button role="radio" aria-checked=g.chosen aria-label=g.name press=grade(g.grade) appearance="none" flex=1 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(g.chosen ? "hs.ink" : "hs.ground") color=(g.chosen ? "hs.on-ink" : "hs.ink") font="type.label" -exact-press-opacity="opacity.pressed" testId=`grade-${g.grade}`
+              text g.name
+          else
+            button role="radio" aria-checked=g.chosen aria-label=g.name press=grade(g.grade) disabled=true appearance="none" flex=1 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(g.chosen ? "hs.ink" : "hs.ground") color=(g.chosen ? "hs.on-ink" : "hs.ink") font="type.label" opacity="opacity.disabled" testId=`grade-${g.grade}`
+              text g.name
+
 // Today's footer, fixed under the scroll as the current Today's: Show all,
 // the result's card with its grades, Listen (Stop while the voice reads),
 // and the round button: Say it, Listening while Say it listens, then Next.
-// Say it again beside Show all's place is the port's own.
+// Say it again beside Show all's place is the port's own. Its `part`, which
+// Today chooses (owner, q160), is `all` below the accessibility text
+// sizes, as the current app's; at them the round button alone stays fixed
+// (`main`) and the rest (`rest`) follows the verse in the scroll, so the
+// verse keeps the screen while it is said.
 component TodayFoot
   props
     today: TodayView
@@ -360,40 +440,49 @@ component TodayFoot
     next: action
     again: action
     still: bool
+    part: string
   view
-    column gap="space.s12" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" testId="today-foot"
-      if today.canShowAll or today.canNext
-        row gap="space.s8" flex-wrap="wrap"
-          if today.canShowAll
-            TodayPill(label="Show all", press=showAll, id="show-all")
-          if today.canNext
-            TodayPill(label="Say it again", press=again, id="again")
-      if today.canNext
-        column gap="space.s10" padding="space.s16" border-radius="radius.r20" background-color="hs.card"
-          text today.summary font="type.strong" color="hs.ink" testId="result"
-          text today.suggested font="type.small" color="hs.quiet" testId="suggested"
-          row role="radiogroup" aria-label="Grade" gap="space.s8" margin-top="space.s4"
-            for g in today.grades key=g.grade
-              if g.enabled
-                button role="radio" aria-checked=g.chosen aria-label=g.name press=grade(g.grade) appearance="none" flex=1 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(g.chosen ? "hs.ink" : "hs.ground") color=(g.chosen ? "hs.on-ink" : "hs.ink") font="type.label" -exact-press-opacity="opacity.pressed" testId=`grade-${g.grade}`
-                  text g.name
-              else
-                button role="radio" aria-checked=g.chosen aria-label=g.name press=grade(g.grade) disabled=true appearance="none" flex=1 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(g.chosen ? "hs.ink" : "hs.ground") color=(g.chosen ? "hs.on-ink" : "hs.ink") font="type.label" opacity="opacity.disabled" testId=`grade-${g.grade}`
-                  text g.name
-      if today.canStop
-        TodayBig(label="Stop", press=stop, busy=false, enabled=true, still=still, id="stop")
-      else if today.canHear
-        TodayBig(label="Listen", press=hear, busy=false, enabled=true, still=still, id="hear")
-      if today.canFinish
-        TodayBig(label="Listening", press=finish, busy=true, enabled=true, still=still, id="finish")
-      else if today.canNext
-        TodayBig(label="Next", press=next, busy=false, enabled=true, still=still, id="next")
-      else
-        TodayBig(label="Say it", press=say, busy=false, enabled=today.canSay, still=still, id="say")
+    if part == "rest"
+      column gap="space.s12" testId="today-foot-rest"
+        if today.canShowAll or today.canNext
+          TodayPills(today=today, showAll=showAll, again=again)
+        if today.canNext
+          TodayCard(today=today, grade=grade)
+        if today.canStop
+          TodayBig(label="Stop", press=stop, busy=false, enabled=true, still=still, roomy=true, id="stop")
+        else if today.canHear
+          TodayBig(label="Listen", press=hear, busy=false, enabled=true, still=still, roomy=true, id="hear")
+    else
+      column gap="space.s12" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" testId="today-foot"
+        if part == "all" and (today.canShowAll or today.canNext)
+          TodayPills(today=today, showAll=showAll, again=again)
+        if part == "all" and today.canNext
+          TodayCard(today=today, grade=grade)
+        if part == "all" and today.canStop
+          TodayBig(label="Stop", press=stop, busy=false, enabled=true, still=still, roomy=false, id="stop")
+        else if part == "all" and today.canHear
+          TodayBig(label="Listen", press=hear, busy=false, enabled=true, still=still, roomy=false, id="hear")
+        if today.canFinish
+          TodayBig(label="Listening", press=finish, busy=true, enabled=true, still=still, roomy=(part == "main"), id="finish")
+        else if today.canNext
+          TodayBig(label="Next", press=next, busy=false, enabled=true, still=still, roomy=(part == "main"), id="next")
+        else
+          TodayBig(label="Say it", press=say, busy=false, enabled=today.canSay, still=still, roomy=(part == "main"), id="say")
+
+// What the device says of the text size: whether it is one of the
+// accessibility sizes (UIKit's category, a body of 28 pt or more; never on
+// the web, which has no such class).
+shape TodayTextSize
+  accessibilityTextSize: bool
+
+// Whether the footer shows: while a verse is up, in a run or under a cue.
+fn todayFootShown(t: TodayView): bool = t.session.mode == "cued" or (t.session.item and not t.session.nothing and not t.session.ended)
 
 // Today under the navigation bar, as the current Today under its header:
 // the session's counts line and the verse (or the run's end, or nothing
 // planted) in a scroll, and the footer fixed under it while a verse shows.
+// At the accessibility text sizes the footer's `rest` part joins the scroll
+// under the verse and only its round button stays fixed (`TodayFoot`).
 component Today
   props
     today: TodayView
@@ -413,6 +502,7 @@ component Today
     chapter: string
     read: action
     scheme: string
+  resource todaySize = exactViewport() as shape TodayTextSize
   view
     column flex=1 min-height=0 testId="today"
       // The top of Today's band under the navigation bar, which `pixel shot` reads (docs/pixel-match.md).
@@ -427,7 +517,9 @@ component Today
           else if today.session.mode == "cued" or today.session.item
             for k in [today.reference] key=k
               TodayRecital(today=today, peek=peek, still=still, sheet=sheet, chapter=chapter, read=read, scheme=scheme)
-      if today.session.mode == "cued" or (today.session.item and not today.session.nothing and not today.session.ended)
-        TodayFoot(today=today, hear=hear, stop=stop, say=say, finish=finish, showAll=showAll, grade=grade, next=next, again=again, still=still)
+          if todaySize.accessibilityTextSize and todayFootShown(today) and (today.canShowAll or today.canNext or today.canStop or today.canHear)
+            TodayFoot(today=today, hear=hear, stop=stop, say=say, finish=finish, showAll=showAll, grade=grade, next=next, again=again, still=still, part="rest")
+      if todayFootShown(today)
+        TodayFoot(today=today, hear=hear, stop=stop, say=say, finish=finish, showAll=showAll, grade=grade, next=next, again=again, still=still, part=(todaySize.accessibilityTextSize ? "main" : "all"))
       // The foot of Today's band, over the tab bar, which `pixel shot` reads: the tab bar UIKit draws has no box of its own there.
       column height=0 flex-shrink=0 aria-hidden=true testId="today-bottom"
