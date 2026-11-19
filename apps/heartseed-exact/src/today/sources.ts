@@ -38,8 +38,8 @@ import {
   withHelp,
   type GardenView,
   type ReadGarden,
-  type Stage,
 } from '@manna/heartseed/garden';
+import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import type { Help } from '@manna/heartseed/sayit';
 import { tendedOf } from '@manna/heartseed/home/grown';
 import { countsOf, type Item, type Minutes, type TextPiece } from '@manna/heartseed/session';
@@ -49,6 +49,7 @@ import type { Choice as Voice } from '@manna/heartseed/voice/reading';
 import { Option } from 'effect';
 
 import { slugOf } from '../garden/view';
+import { DRAWN } from '../list/page';
 import { makeLive, type Call, type Ground, type Live } from '../session/live';
 import { minutesOf, voiceOf } from '../settings/choices';
 import { textOf } from '../text/text';
@@ -110,34 +111,27 @@ export interface SessionShown {
   wire: SessionWire;
   stage: string;
   stageLine: string;
+  stageDrawn: string;
 }
 
-/** Each stage as Today's stage line shows it, as the current Heartseed's `STAGE_NAMES` does. */
-const STAGE_LINES: Readonly<Record<Stage, string>> = {
-  seed: 'A seed',
-  blade: 'A blade',
-  ear: 'An ear',
-  'full corn': 'Full corn',
-};
-
-/** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, and the line Today shows of it; none for an unread garden, which claims no stage. */
+/** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, the line Today shows of it and the home picture its plant is drawn with (none unplanted); none for an unread garden, which claims no stage. */
 export const stageShown = (
   garden: Option.Option<ReadGarden>,
   reference: string,
   help: Option.Option<Help>,
-): { readonly stage: string; readonly stageLine: string } =>
+): { readonly stage: string; readonly stageLine: string; readonly stageDrawn: string } =>
   Option.match(garden, {
-    onNone: () => ({ stage: '', stageLine: '' }),
+    onNone: () => ({ stage: '', stageLine: '', stageDrawn: '' }),
     onSome: (read) => {
       const laid = Option.match(
         Option.filter(help, (taken) => taken.reference === reference),
         { onNone: () => read, onSome: (taken) => withHelp(read, taken) },
       );
       return Option.match(Option.fromUndefinedOr(laid.plants.get(reference)), {
-        onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet' }),
+        onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet', stageDrawn: '' }),
         onSome: (plant) => {
           const stage = stageOf(plant);
-          return { stage, stageLine: STAGE_LINES[stage] };
+          return { stage, stageLine: STAGE_NAMES[stage].shown, stageDrawn: DRAWN[stage] };
         },
       });
     },

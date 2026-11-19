@@ -103,7 +103,7 @@ component HeartseedExact
                     button press=settingsOpen aria-label="Settings" testId="gear"
                       image "symbol:settings"
                 if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == readTopOf(t.stack)
-                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday)
+                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday, scheme=homeScheme)
                 if e.name == "list"
                   ListPage(list=listShown, asking=listAsking, scheme=homeScheme, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill, chapter=gotoListPlace.name, read=gotoReadList)
                 if e.name == "verses"

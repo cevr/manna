@@ -120,7 +120,8 @@ interface ExactSide {
    * A banded row's band in the port's picture: from the bottom edge of the
    * node `top` names (the top of the content under the navigation bar) to
    * the foot of the scrollport of the scroller `bottom` names (where
-   * UIKit's tab bar inset begins), read by the agent's `layout <top>` and
+   * UIKit's tab bar inset begins), or the top of `bottom` when it is no
+   * scroller (a node under a fixed footer), read by the agent's `layout <top>` and
    * whole-tree `layout` at capture (`agent-band.ts`). Every banded row's
    * unit writes it with the row's ops.
    */

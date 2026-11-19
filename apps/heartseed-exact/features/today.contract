@@ -24,6 +24,7 @@ use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-ca
 use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, SpeechRecognitionInfo, SpeechRecognitionState, SpeechRecognitionPhrase from "@exact/speech-recognition"
 use SessionShown, SessionCounts, SessionEnd, SessionNothing from "./session.contract"
 use hs-rise, hs-fade, hs-pulse from "./motion.contract"
+use homeIconOf from "./home.contract"
 
 shape TodayTime
   epochAtZero: number
@@ -304,6 +305,7 @@ component TodayRecital
     sheet: bool
     chapter: string
     read: action
+    scheme: string
   view
     column gap="space.s10" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
       row align-items="center"
@@ -325,8 +327,8 @@ component TodayRecital
       if today.session.stageLine != ""
         column gap="space.s4" margin-top="space.s4"
           row gap="space.s8" align-items="center" min-height="size.mark"
-            if today.session.stage != "not planted"
-              column width="size.mark" height="size.mark" aria-hidden=true testId="stage-plant"
+            if today.session.stageDrawn != ""
+              image homeIconOf(today.session.stageDrawn, scheme) width="size.mark" height="size.mark" object-fit="contain" aria-hidden=true testId="stage-plant"
             text today.session.stageLine aria-label=`Stage: ${today.session.stage}` font="type.small" color="hs.quiet" testId="stage"
       if today.helpLine != ""
         text today.helpLine font="type.note" color="hs.quiet" testId="help-line"
@@ -406,6 +408,7 @@ component Today
     sheet: bool
     chapter: string
     read: action
+    scheme: string
   view
     column flex=1 min-height=0 testId="today"
       // The top of Today's band under the navigation bar, which `pixel shot` reads (docs/pixel-match.md).
@@ -419,7 +422,7 @@ component Today
             SessionEnd(session=today.session, home=home, still=still)
           else if today.session.mode == "cued" or today.session.item
             for k in [today.reference] key=k
-              TodayRecital(today=today, peek=peek, still=still, sheet=sheet, chapter=chapter, read=read)
+              TodayRecital(today=today, peek=peek, still=still, sheet=sheet, chapter=chapter, read=read, scheme=scheme)
       if today.session.mode == "cued" or (today.session.item and not today.session.nothing and not today.session.ended)
         TodayFoot(today=today, hear=hear, stop=stop, say=say, finish=finish, showAll=showAll, grade=grade, next=next, again=again, still=still)
       // The foot of Today's band, over the tab bar, which `pixel shot` reads: the tab bar UIKit draws has no box of its own there.

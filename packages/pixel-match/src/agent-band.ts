@@ -7,7 +7,9 @@
  * `layout` reply gives each scroller. UIKit insets a tab's last scroller by
  * the tab bar's height (Exact's `docs/agent-pitfalls.md`, "A scrolled sheet
  * or screen ends 34 points higher"), and the tab bar is drawn by UIKit, so
- * no node of the tree has its frame: the scrollport's foot is its top.
+ * no node of the tree has its frame: the scrollport's foot is its top. A
+ * screen whose scroller sits over a fixed footer (Today) names instead a
+ * zero-high node under the footer, and its top is the foot.
  */
 
 import { Option, Schema } from 'effect';
@@ -25,6 +27,7 @@ const TreeReply = Schema.Struct({
   nodes: Schema.Array(
     Schema.Struct({
       testId: Schema.optional(Schema.String),
+      y: Schema.optional(Schema.Finite),
       port: Schema.optional(
         Schema.Tuple([Schema.Finite, Schema.Finite, Schema.Finite, Schema.Finite]),
       ),
@@ -35,11 +38,23 @@ const TreeReply = Schema.Struct({
 const nodeReply = Schema.decodeUnknownOption(Schema.fromJsonString(NodeReply));
 const treeReply = Schema.decodeUnknownOption(Schema.fromJsonString(TreeReply));
 
-/** The foot, in points, of the scrollport of the scroller `testId` in a whole-tree `layout` reply. */
+/**
+ * The band's foot, in points, at the node `testId` of a whole-tree `layout`
+ * reply: the foot of its scrollport when it is a scroller, else its top (a
+ * zero-high node closing a screen whose last scroller sits over a fixed
+ * footer, as Today's does, so its scrollport ends above the footer).
+ */
 const portFoot = (line: string, testId: string) =>
   Option.flatMap(treeReply(line), (tree) =>
-    Option.fromNullishOr(tree.nodes.find((node) => node.testId === testId)?.port),
-  ).pipe(Option.map(([, y, , h]) => y + h));
+    Option.flatMap(
+      Option.fromNullishOr(tree.nodes.find((node) => node.testId === testId)),
+      (node) =>
+        Option.match(Option.fromNullishOr(node.port), {
+          onNone: () => Option.fromNullishOr(node.y),
+          onSome: ([, y, , h]) => Option.some(y + h),
+        }),
+    ),
+  );
 
 /**
  * The port's band in device pixels at `scale` from the agent's output: the

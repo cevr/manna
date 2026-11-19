@@ -163,7 +163,10 @@ a band, not the whole picture:
   scroller `exact.band.bottom` names (read from the whole-tree `layout`
   reply's `port`): UIKit draws the tab bar, so no node has its frame, and
   insets a tab's last scroller by its height, so the scrollport ends where
-  the tab bar begins (`src/agent-band.ts`). The row's unit writes both with
+  the tab bar begins (`src/agent-band.ts`). Today's scroller sits over a
+  fixed footer, so its scrollport ends above it: Today names instead a
+  zero-high node under the footer, and a node with no scrollport ends the
+  band at its top. The row's unit writes both with
   the row's ops; a banded row without them fails.
 - The two bands are laid edge to edge at their tops, or at their feet for a
   row scrolled to its end (`anchor: 'bottom'`), and cut to the shorter.
