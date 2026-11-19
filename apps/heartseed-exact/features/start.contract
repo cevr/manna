@@ -1,0 +1,23 @@
+// The launch's opening, as the current Heartseed decides it once per launch
+// at the garden's read (src/start/opening.ts, its `openingOf`): Today in an
+// unread garden, the first minute when nothing was said, home once a verse
+// was. The port has no first minute and shows home there. `startRead`
+// answers the opening and the route it moves to; once it is in, `startOpen`
+// pushes that route over home, a launch at the Garden tab's root only, so
+// a location the launch opened at is kept and `Your field` comes back to
+// home. Decided once: nothing the reader does later opens it again.
+
+shape StartShown
+  opening: string
+  route: string
+
+members HeartseedExact
+  resource startShown = startRead() with gardenTime.epochAtZero, gardenTime.seed as shape StartShown else empty()
+  state startDecided = false
+  task startOpened when startShown.opening != "" key=startShown.opening
+    change(startOpen)
+  action startOpen
+    if not startDecided
+      startDecided = true
+      if startShown.route != "" and nav.tab == "garden" and top(nav).name == "garden"
+        nav = push(nav, startShown.route)

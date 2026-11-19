@@ -72,6 +72,7 @@ component HeartseedExact
   members "./features/find.contract"
   members "./features/type.contract"
   members "./features/study.contract"
+  members "./features/start.contract"
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)

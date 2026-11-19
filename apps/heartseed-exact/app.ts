@@ -11,6 +11,7 @@ import { homeSources } from './src/home/sources';
 import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
+import { startSources } from './src/start/sources';
 import { findPackFrom, STUDY_PACKS, studySources } from './src/study/sources';
 import { turnSources } from './src/study/turns';
 import { studyviewSources } from './src/studyview/sources';
@@ -53,6 +54,7 @@ const sources: Sources = {
   ...aboutSources(licences),
   ...garden,
   ...homeSources(),
+  ...startSources(),
   ...addSources(),
   ...chooserSources,
   ...gotoSources,

@@ -1,0 +1,35 @@
+fail fetch "https://egw.cvr.im"
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A fresh store opens on home: the current app's first minute, which the port draws as home"
+  clock data
+  clock settle
+  expect state startShown.opening == "first"
+  expect state startShown.route == ""
+  expect state startDecided == true
+  expect tree has "home"
+  expect tree missing "today"
+  expect no failures
+
+test "A launch at another location stays there once the opening is decided"
+  at "/verses"
+  clock data
+  clock settle
+  expect state startDecided == true
+  expect tree missing "today"
+  expect no failures
+
+test "Decided once: a tab switched away and back after it opens nothing"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect tree has "home"
+  expect tree missing "today"
+  expect no failures
