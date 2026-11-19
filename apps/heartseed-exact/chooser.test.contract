@@ -347,3 +347,36 @@ test "Next and previous walk the chapters, across a book's edge"
   expect tree has "chapter-previous"
   expect tree missing "chapter-next"
   expect no failures
+
+test "Each opening on a verse reads its landing back afresh, at most three times"
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-find"
+  clock data
+  clock settle
+  type "goto-find" "psalm 23:4"
+  clock data
+  clock settle
+  tap "find-place"
+  clock data
+  clock settle
+  expect state readOpenings == 1
+  expect state chooserLandReads == 1
+  expect state chooserLandedRoom >= 0
+  tap "chapter-find"
+  clock data
+  clock settle
+  type "goto-find" "psalm 23:6"
+  clock data
+  clock settle
+  tap "find-place"
+  clock data
+  clock settle
+  expect state readOpenings == 2
+  expect state readVerse == 6
+  expect state chooserLandReads == 1
+  expect state chooserLandedRoom >= 0
+  expect no failures

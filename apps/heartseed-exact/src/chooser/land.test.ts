@@ -76,3 +76,24 @@ it('answers the source with the same room', () => {
     landRoom({ ...IOS, verseHeight: 70, ...NONE }),
   );
 });
+
+it('answers the source from its read-back: the origin a landing showed under the bar, in the last two places', () => {
+  const first = landRoom({ ...IOS, verseHeight: 70, ...NONE });
+  const shown = { ...IOS, verseHeight: 70, landedTop: 116 + first, landedRoom: first };
+  const room = landSources.chapterLand([116, 592, 0, 705, 70, 116 + first, first]).room;
+  expect(room).toBe(landRoom(shown));
+  expect(room).toBeCloseTo((705 - 116) / 3, 6);
+  expect(room).not.toBeCloseTo(first, 6);
+});
+
+it('takes a read-back with room 0 as read: its origin is where the verse came to rest', () => {
+  const shown = { ...IOS, verseHeight: 70, landedTop: 116, landedRoom: 0 };
+  expect(portOf(shown)).toBe(116);
+  expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
+});
+
+it('counts no negative cover where the origin read lies below the seen top', () => {
+  const shown = { ...IOS, verseHeight: 70, landedTop: 200, landedRoom: 50 };
+  expect(portOf(shown)).toBe(150);
+  expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
+});

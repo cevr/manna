@@ -86,6 +86,22 @@ it('clears the range when the chapter changes', async () => {
   );
 });
 
+it('reads a landing back at most three times an opening, and starts each opening unread', async () => {
+  const chooser = await read('features/chooser.contract');
+  expect(chooser).toContain(
+    '  task chooserLandedCheck when readUp and readOpenings > 0 and chooserLandReads < 3 key=`${readOpenings}:${chooserLandRoom}`\n    after(1, chooserLandedRead, wait=frame)\n',
+  );
+  expect(blockUnder(chooser, 'action chooserLandedRead')).toContain(
+    '      chooserLandReads = chooserLandReads + 1\n',
+  );
+  expect(chooser).toContain(
+    '  task chooserLandRead when readUp and readOpenings > 0 key=readOpenings\n    change(chooserLand)\n',
+  );
+  expect(blockUnder(chooser, '  action chooserLand')).toContain(
+    '      chooserLandedTop = 0\n      chooserLandedRoom = -1\n      chooserLandReads = 0',
+  );
+});
+
 it("moves the bar and the opened verse by the brand's rows, each with its reduced arm", async () => {
   const chooser = await read('features/chooser.contract');
   expect(chooser).toContain(
