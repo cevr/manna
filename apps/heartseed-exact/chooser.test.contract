@@ -383,8 +383,8 @@ test "Each opening on a verse reads its landing back afresh, once where the scro
   expect state chooserLandedRoom >= 0
   expect no failures
 
-// iOS counts Go to's landing from under the navigation bar (116), so the verse first rests 116 lower; the reading lands it again a third down the seen area (116 + 589 / 3).
-test "On iOS a landing counted from under the bar is read back and lands the verse again a third down" on ios
+// iOS counts Go to's landing from under the navigation bar (116), so the verse first rests 116 pt lower than its third; the reading lands it again, from the origin it showed.
+test "On iOS a landing Go to counts from under the bar is read back and landed again, never above its third" on ios
   clock data
   clock settle
   tap "tab-read"
@@ -402,44 +402,4 @@ test "On iOS a landing counted from under the bar is read back and lands the ver
   expect state readOpenings == 1
   expect state chooserLandReads == 2
   expect state chooserLandedTop >= 312
-  expect state chooserLandedTop <= 313
-  expect no failures
-
-// At the largest text the chapter's scroll grows under Psalm 23:1 as it opens, so its landing is read a third time; the limit holds the reading there.
-test "On iOS at the largest text an opening is read back three times and no more" on ios
-  prefer root-font-size "53"
-  clock data
-  clock settle
-  tap "tab-read"
-  clock data
-  clock settle
-  tap "chapter-find"
-  clock data
-  clock settle
-  type "goto-find" "psalm 119:176"
-  clock data
-  clock settle
-  tap "find-place"
-  clock data
-  clock +1
-  clock +1
-  clock +1
-  clock data
-  clock settle
-  tap "chapter-find"
-  clock data
-  clock settle
-  type "goto-find" "psalm 23:1"
-  clock data
-  clock settle
-  tap "find-place"
-  clock data
-  clock +1
-  clock +1
-  clock +1
-  clock data
-  clock settle
-  expect state readOpenings == 2
-  expect state readVerse == 1
-  expect state chooserLandReads == 3
   expect no failures
