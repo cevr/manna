@@ -5,11 +5,16 @@ export interface ChapterLand {
 
 /** The frames the landing reads, each in the viewport's points. */
 export interface LandFrames {
+  /** `chapter-seen`: the screen between iOS's navigation bar and tab bar (the whole page on the web). */
   readonly seenTop: number;
   readonly seenHeight: number;
+  /** `chapter-scroll`, whose foot may lie above the seen area's (the packs' line under it). */
   readonly scrollTop: number;
   readonly scrollHeight: number;
   readonly verseHeight: number;
+  /** The verse's top after the last landing, and the room that landing used; a room under 0 when none has been read. */
+  readonly landedTop: number;
+  readonly landedRoom: number;
 }
 
 const MARGIN = 16;
@@ -20,44 +25,67 @@ const measured = (value: number) => {
   return 0;
 };
 
-/** The seen area's height and the bars' cover over the scroll's top; before the seen box has a height (a hidden tab), the scroll's height with no cover. */
+/** What the reader sees of the chapter, top and height: the seen area down to the scroll's foot; before the seen box has a height (a hidden tab), the scroll. */
 const seenOf = (frames: LandFrames) => {
+  const scrollTop = measured(frames.scrollTop);
+  const scrollFoot = scrollTop + Math.max(0, measured(frames.scrollHeight));
   const height = measured(frames.seenHeight);
-  if (height > 0)
-    return {
-      height,
-      cover: Math.max(0, measured(frames.seenTop) - measured(frames.scrollTop)),
-    };
-  return { height: Math.max(0, measured(frames.scrollHeight)), cover: 0 };
+  if (height > 0) {
+    const top = measured(frames.seenTop);
+    return { top, height: Math.max(0, Math.min(top + height, scrollFoot) - top) };
+  }
+  return { top: scrollTop, height: scrollFoot - scrollTop };
 };
 
 /**
- * Where a verse opened on lands, as the room above it from the chapter
- * scroll's top: a third of the way down what the reader sees of the chapter
- * (`chapter-seen`, the screen between iOS's navigation bar and tab bar), or
- * higher where the verse is taller than the two thirds below that line, so
- * all of it shows with a 16 pt margin under it. The host measures the
- * scroll's padding from the scroll's own top, and on iOS the scroll runs
- * under the navigation bar, so the room adds the bar's cover
- * (`seenTop - scrollTop`); on the web the two tops are one.
+ * Where the scroll's padding counts from, in whole points: the scroll's top
+ * until a landing has been read, then where that landing shows it (the
+ * verse's top less the room it used). On iOS the scroll runs under the
+ * navigation bar and the host counts from its top or from under the bar by
+ * how the landing reached it, so a landing's own reading settles it.
+ */
+export const portOf = (frames: LandFrames) => {
+  if (Number.isFinite(frames.landedRoom) && frames.landedRoom >= 0)
+    return Math.round(measured(frames.landedTop) - frames.landedRoom);
+  return measured(frames.scrollTop);
+};
+
+/**
+ * Where a verse opened on lands, as the room above it from where the
+ * scroll's padding counts (`portOf`): a third of the way down what the
+ * reader sees of the chapter, or higher where the verse is taller than the
+ * two thirds below that line, so all of it shows with a 16 pt margin under
+ * it. The room adds whatever of the bar lies below that origin; on the web
+ * the tops are one.
  */
 export const landRoom = (frames: LandFrames): number => {
   const seen = seenOf(frames);
+  const cover = Math.max(0, seen.top - portOf(frames));
   return (
-    seen.cover +
+    cover +
     Math.min(seen.height / 3, Math.max(0, seen.height - measured(frames.verseHeight) - MARGIN))
   );
 };
 
 /** The landing's source, as `app.ts` registers it with the chapter's. */
 export const landSources = {
-  chapterLand: ([seenTop, seenHeight, scrollTop, scrollHeight, verseHeight]: readonly [
-    number,
-    number,
-    number,
-    number,
-    number,
-  ]): ChapterLand => ({
-    room: landRoom({ seenTop, seenHeight, scrollTop, scrollHeight, verseHeight }),
+  chapterLand: ([
+    seenTop,
+    seenHeight,
+    scrollTop,
+    scrollHeight,
+    verseHeight,
+    landedTop,
+    landedRoom,
+  ]: readonly [number, number, number, number, number, number, number]): ChapterLand => ({
+    room: landRoom({
+      seenTop,
+      seenHeight,
+      scrollTop,
+      scrollHeight,
+      verseHeight,
+      landedTop,
+      landedRoom,
+    }),
   }),
 };

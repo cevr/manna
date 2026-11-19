@@ -79,7 +79,11 @@ members HeartseedExact
   state chooserSeenHeight = 0
   state chooserScrollTop = 0
   state chooserVerseHeight = 0
-  resource chooserLanding = chapterLand(chooserSeenTop, chooserSeenHeight, chooserScrollTop, chooserScrollHeight, chooserVerseHeight) as shape ChapterLand else empty()
+  // Where the last landing put the verse, and the room it used (-1: none read yet for this opening); at most three readings an opening.
+  state chooserLandedTop = 0
+  state chooserLandedRoom = -1
+  state chooserLandReads = 0
+  resource chooserLanding = chapterLand(chooserSeenTop, chooserSeenHeight, chooserScrollTop, chooserScrollHeight, chooserVerseHeight, chooserLandedTop, chooserLandedRoom) as shape ChapterLand else empty()
   derive chooserLandRoom = chooserLanding.room
   action chooserScrollSized(w: number, h: number)
     if h > 0
@@ -117,11 +121,22 @@ members HeartseedExact
       chooserSeenHeight = frame("chapter-seen").height
       chooserScrollTop = frame("chapter-scroll").y
       chooserVerseHeight = frame(`verse-${readOpenVerse}`).height
+      chooserLandedTop = 0
+      chooserLandedRoom = -1
+      chooserLandReads = 0
   task chooserLandingScroll when readUp and readOpenings > 0 key=`${readOpenings}:${chooserLandRoom}`
     change(chooserLandScroll)
   action chooserLandScroll
     if readOpenVerse > 0
       scrollIntoView(`verse-${readOpenVerse}`, block="start", behavior="instant")
+  // iOS counts the scroll's padding from the scroll's top or from under the navigation bar by how a landing reached it: a frame after each landing, where the verse came to rest is read back, and `chapterLand` lands it again from there when it is off.
+  task chooserLandedCheck when readUp and readOpenings > 0 and chooserLandReads < 3 key=`${readOpenings}:${chooserLandRoom}`
+    after(50, chooserLandedRead, wait=frame)
+  action chooserLandedRead
+    if readOpenVerse > 0 and frame(`verse-${readOpenVerse}`).height > 0
+      chooserLandReads = chooserLandReads + 1
+      chooserLandedTop = frame(`verse-${readOpenVerse}`).y
+      chooserLandedRoom = chooserLandRoom
   // The bar rising shortens the page: the verse a range ends on is kept in view above it.
   task chooserKept when chapterShown.up key=`${chapterShown.first}-${chapterShown.last}`
     change(chooserKeepInView)
