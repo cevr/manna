@@ -4,8 +4,9 @@
  * Settings' live colour checks (spec B2, B3), which a `.test.contract`
  * cannot hold at Exact's pin: an authored test reads text, state and the
  * tree, never a colour. Here the agent's `layout` names the colour each
- * text is drawn in, and a screenshot's pixel at the screen's trailing edge
- * the ground painted there, on the host named
+ * text is drawn in, and a screenshot's pixel just in from the trailing
+ * edge of the screen, or of the sheet's own frame (`groundPoints`), the
+ * ground painted there, on the host named
  * (`bun tools/drive-settings.ts web|ios`):
  *
  * - at launch, light and dark, the list's ground, a section's header, a
@@ -27,6 +28,7 @@ import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { appFile, brandOf } from '../src/look/design.testing.ts';
+import { boxOf, groundPoints, SCREEN, type Box } from '../src/look/ground-point.ts';
 import { pixelAt } from './pixel.ts';
 import { checkoutPort } from './recordings.ts';
 
@@ -134,22 +136,31 @@ const expectDrawn = (name: string, reply: unknown, scheme: Scheme, role: Role) =
   );
 };
 
-/**
- * Two points at the screen's trailing edge, seven tenths down and a little
- * lower: inside every screen's padding, clear of its words and bars, and
- * below the half-height sheet's Done, so the web's pointer left there after
- * closing the sheet hovers no row they read. A list's row separator, one
- * point high, can lie under one of them, never both.
- */
-const EDGES = [
-  { x: 0.985, y: 0.7 },
-  { x: 0.985, y: 0.71 },
-];
+/** The box a layout reply's node fills, as shares of the screen; none when the reply names no frame. */
+const boxOfReply = (reply: unknown): Box | undefined => {
+  const shown = reply as
+    | { viewport?: { w: number; h: number }; node?: { space?: { viewport?: Box } } }
+    | undefined;
+  const [frame, screen] = [shown?.node?.space?.viewport, shown?.viewport];
+  if (frame === undefined || screen === undefined || screen.w === 0 || screen.h === 0)
+    return undefined;
+  return boxOf(frame, screen.w, screen.h);
+};
 
-/** Checks the colour painted at one of `EDGES` in the shot `name` is the brand's `role`. */
-const expectPainted = async (check: string, name: string, scheme: Scheme, role: Role) => {
+/**
+ * Checks the colour painted at one of the ground points of `box` (the
+ * whole screen, or the sheet's own frame) in the shot `name` is the
+ * brand's `role`.
+ */
+const expectPainted = async (
+  check: string,
+  name: string,
+  scheme: Scheme,
+  role: Role,
+  box: Box | undefined = SCREEN,
+) => {
   const colours = await Promise.all(
-    EDGES.map(async (at) => {
+    (box === undefined ? [] : groundPoints(box)).map(async (at) => {
       const painted = await pixelAt(shotFile(name), at).catch(() => []);
       return painted.length === 3 ? `rgb(${painted.join(', ')})` : '';
     }),
@@ -157,7 +168,7 @@ const expectPainted = async (check: string, name: string, scheme: Scheme, role: 
   drive.check(
     `${check} is painted the brand's ${scheme} ${role}`,
     colours.some((colour) => isRole(colour, scheme, role)),
-    colours,
+    box === SCREEN ? colours : { colours, box: box ?? 'no frame in the layout reply' },
   );
 };
 
@@ -191,6 +202,7 @@ const launched = await drive.run(
     'tap gear',
     'clock settle',
     'clock data',
+    'layout settings',
     shot('sheet-light'),
     'tap appearance-dark',
     'clock settle',
@@ -217,14 +229,15 @@ expectDrawn(`a hymn's topic`, launched[19], 'light', 'muted');
 expectDrawn(`a hymn's title`, launched[20], 'light', 'ink');
 await expectPainted(`a hymn's page ground`, 'hymn-dark', 'dark', 'ground');
 await expectPainted(`a hymn's page ground`, 'hymn-light', 'light', 'ground');
-await expectPainted(`the sheet's ground`, 'sheet-light', 'light', 'ground');
-const under = launched[31];
+const sheet = boxOfReply(launched[27]);
+await expectPainted(`the sheet's ground`, 'sheet-light', 'light', 'ground', sheet);
+const under = launched[32];
 drive.check(
   `Dark at once: the list under the sheet is drawn dark (the web's ground, a native host's scheme)`,
   isRole(colourOf(under, 'background_color'), 'dark', 'ground') || schemeOf(under) === 'dark',
   [colourOf(under, 'background_color'), schemeOf(under)],
 );
-await expectPainted(`Dark at once: the sheet`, 'sheet-dark', 'dark', 'ground');
+await expectPainted(`Dark at once: the sheet`, 'sheet-dark', 'dark', 'ground', sheet);
 await expectPainted(`Dark at once: the list`, 'dark-at-once', 'dark', 'ground');
 
 const again = await drive.run(
