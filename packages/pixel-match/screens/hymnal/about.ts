@@ -50,7 +50,7 @@ export const rows: ReadonlyArray<Row> = [
       band: { targets: [LEAD], edge: 'top' },
     },
     exact: {
-      ops: [...TO_ABOUT, 'tap about drag 0 -400 from 40 16', 'clock settle'],
+      ops: [...TO_ABOUT, 'tap about-list drag 0 -400', 'clock settle'],
       touch: 'platform',
       web: { ops: TO_ABOUT },
       band: { top: 'about-lead', bottom: 'about-list', edge: 'top' },
