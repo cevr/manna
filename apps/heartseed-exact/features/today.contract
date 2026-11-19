@@ -303,10 +303,10 @@ component TodayWide
       column position="absolute" inset=0 border-radius="radius.button" background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=((still or not busy) ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId=(busy ? "ring" : `${id}-ring`)
       if enabled
         button press=press appearance="none" aria-label=label position="relative" box-sizing="border-box" width="100%" min-height="size.target" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s18" padding-right="space.s18" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" text-align="center" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" -exact-press-scale="scale.pressed" testId=id
-          text label overflow-wrap="break-word" hyphens="auto"
+          text label overflow-wrap="break-word" hyphens="auto" testId=`${id}-label`
       else
         button press=press disabled=true appearance="none" aria-label=label position="relative" box-sizing="border-box" width="100%" min-height="size.target" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s18" padding-right="space.s18" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" text-align="center" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" opacity="opacity.disabled" testId=id
-          text label overflow-wrap="break-word" hyphens="auto"
+          text label overflow-wrap="break-word" hyphens="auto" testId=`${id}-label`
 
 // The round button below the accessibility text sizes, as the current
 // app's: a 132-pt circle.
@@ -323,10 +323,10 @@ component TodayRound
       column position="absolute" inset=0 border-radius="radius.button" background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=((still or not busy) ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId=(busy ? "ring" : `${id}-ring`)
       if enabled
         button press=press appearance="none" aria-label=label position="relative" width="size.button" height="size.button" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" -exact-press-scale="scale.pressed" testId=id
-          text label
+          text label testId=`${id}-label`
       else
         button press=press disabled=true appearance="none" aria-label=label position="relative" width="size.button" height="size.button" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" opacity="opacity.disabled" testId=id
-          text label
+          text label testId=`${id}-label`
 
 // A quiet pill of the footer, as the field's `Control`: outlined in ink.
 component TodayPill

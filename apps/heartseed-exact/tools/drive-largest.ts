@@ -1,15 +1,23 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its untyped JSON replies by the fields it checks, and sets the garden's drive controls on its own launch. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters, node/no-process-env, eslint/no-await-in-loop -- a host script that drives the built app through `bun run exact agent`, one launch at a time on the one simulator, reads its untyped JSON replies by the fields it checks, and sets the garden's drive controls on its own launch. */
 
 /**
- * What the web's `exact verify` reads at the largest text size (the root
- * font at iOS's largest body, 53 px, on a 390-wide phone), held where the
- * port draws it otherwise than the current Heartseed: a word's slot under no
- * cue stays the line's width at most and its unseen word takes no touch, so
- * a tap on a word peeks that word; and a single verse's `Remove` wraps under
- * its verse instead of running off the screen. At the default size the same
- * `Remove` sits on its verse's line, as the current app's does. Web only
- * (`bun tools/drive-largest.ts`): iOS sets the simulator's own text size,
- * which `exact verify ios` reads. Exits 1 on any failed check.
+ * What a phone shows at the largest text sizes, held where the port draws
+ * it otherwise than the current Heartseed (`bun tools/drive-largest.ts
+ * [web|ios]`, exit 1 on any failed check).
+ *
+ * On both hosts, at the root font of iOS's largest body (53 px) on a
+ * 390-wide phone: a word's slot under no cue stays the line's width at most
+ * and its unseen word takes no touch, so a tap on a word peeks that word;
+ * and a single verse's `Remove` wraps under its verse instead of running
+ * off the screen, while at the default size it sits on its verse's line.
+ *
+ * On iOS alone, at AX1 (28) and AX5 (53), where Exact's
+ * `accessibilityTextSize` holds (owner, q160; the web has no such class and
+ * keeps the current layout): Today leaves room for the reference and three
+ * lines of the verse above its fixed round button, which stays on screen;
+ * each round button holds its label and is at least 44 pt each way, inside
+ * the screen; and a list's page leaves its scroll room for a verse, with
+ * Practice inside it.
  */
 
 import { join } from 'node:path';
@@ -17,10 +25,8 @@ import { join } from 'node:path';
 import { makeDrive } from '@manna/exact-kit/drive';
 
 const host = process.argv[2] ?? 'web';
-if (host !== 'web') {
-  console.log(
-    `drive-largest: web only; ${host} sets the simulator's own text size (exact verify ${host} reads it)`,
-  );
+if (host !== 'web' && host !== 'ios') {
+  console.log(`drive-largest: web or ios, not ${host}`);
   process.exit(2);
 }
 const app = join(import.meta.dir, '..');
@@ -37,12 +43,24 @@ const drive = makeDrive({ name: 'drive-largest', host, appDir: app });
 /** The phone's width verify reads the largest size at, and that size's root font (Exact's `LARGEST_PX`). */
 const WIDTH = 390;
 const LARGEST = 'prefer root-font-size 53';
+/** The accessibility sizes' bodies the iOS checks run at: AX1, where the class begins, and AX5. */
+const ACCESSIBILITY_SIZES = [28, 53] as const;
 /** The longest word of the verse under no cue (`/cue/none`), the one a slot could run past the line with. */
-const LONGEST = 'word-36';
+const LONGEST = 36;
 /** The single verse the garden's drive control plants (`plant-one`, `features/garden.contract`). */
 const SINGLE = 'Psalms-119-1';
+/** The list `hslist.test.contract` plants, and its first verse. */
+const LIST_ROW = 'row-title-passage-0-43-3-16-18';
+const LIST_VERSE = 'John-3-16';
 /** What a frame may differ by between hosts' rounding, in points. */
 const SLACK = 0.5;
+/** The smallest target iOS allows, in points. */
+const TARGET = 44;
+/** `type.word`'s size in rem and its line height, `passage`'s row gap and the recital's gap under the reference (app.forma). */
+const WORD_REM = 1.4118;
+const WORD_LEADING = 1.5;
+const ROW_GAP = 2;
+const REFERENCE_GAP = 10;
 
 interface Frame {
   readonly x: number;
@@ -55,6 +73,14 @@ const frameOf = (reply: unknown): Frame | undefined =>
   (reply as { node?: { space?: { viewport?: Frame } } } | undefined)?.node?.space?.viewport;
 const size = ['--size', `${WIDTH}x844`];
 const stamp = Date.now().toString(36);
+const middle = (f: Frame) => f.y + f.h / 2;
+const bottom = (f: Frame) => f.y + f.h;
+const inside = (inner: Frame, outer: Frame) =>
+  inner.x >= outer.x - SLACK &&
+  inner.y >= outer.y - SLACK &&
+  inner.x + inner.w <= outer.x + outer.w + SLACK &&
+  bottom(inner) <= bottom(outer) + SLACK;
+const onScreen = (f: Frame) => f.x >= -SLACK && f.x + f.w <= WIDTH + SLACK;
 
 const today = await drive.run(
   ['--storage', `largest-today-${stamp}`, '--reset-storage', '--url', '/cue/none', ...size],
@@ -63,22 +89,28 @@ const today = await drive.run(
     'clock settle',
     LARGEST,
     'clock settle',
-    `layout ${LONGEST}`,
+    `layout word-${LONGEST}`,
+    `layout face-${LONGEST}`,
     'tap word-0',
     'clock settle',
     'state today.peeking',
   ],
 );
-const longest = frameOf(today[4]);
+const [longest, slot] = [4, 5].map((at) => frameOf(today[at]));
 drive.check(
-  "at the largest size a slot is the line's width at most",
+  "at the largest size a word's button is the line's width at most",
   longest !== undefined && longest.x + longest.w <= WIDTH + SLACK,
   longest,
 );
 drive.check(
+  "at the largest size a word's slot is the line's width at most",
+  slot !== undefined && slot.x + slot.w <= WIDTH + SLACK,
+  slot,
+);
+drive.check(
   'at the largest size a tap on a word under no cue peeks that word',
-  today[7] === 0,
-  today[7],
+  today[8] === 0,
+  today[8],
 );
 
 const singles = [
@@ -102,7 +134,6 @@ const home = await drive.run(
   singles,
 );
 const [verse, remove, verseLarge, removeLarge] = [8, 9, 12, 13].map((at) => frameOf(home[at]));
-const middle = (f: Frame) => f.y + f.h / 2;
 drive.check(
   "at the default size a single verse's Remove sits on its verse's line",
   verse !== undefined && remove !== undefined && Math.abs(middle(verse) - middle(remove)) <= 1,
@@ -112,10 +143,134 @@ drive.check(
   "at the largest size a single verse's Remove stays on the screen, under its verse",
   verseLarge !== undefined &&
     removeLarge !== undefined &&
-    removeLarge.x >= -SLACK &&
-    removeLarge.x + removeLarge.w <= WIDTH + SLACK &&
+    onScreen(removeLarge) &&
     removeLarge.y >= verseLarge.y + verseLarge.h - SLACK,
   { verse: verseLarge, remove: removeLarge },
 );
+
+const roundHolds = (
+  name: string,
+  button: Frame | undefined,
+  label: Frame | undefined,
+  px: number,
+) =>
+  drive.check(
+    `at ${px} pt ${name} holds its label, at least ${TARGET} pt each way, on the screen`,
+    button !== undefined &&
+      label !== undefined &&
+      inside(label, button) &&
+      button.w >= TARGET &&
+      button.h >= TARGET &&
+      onScreen(button),
+    { button, label },
+  );
+
+if (host === 'ios') {
+  for (const px of ACCESSIBILITY_SIZES) {
+    const prefer = `prefer root-font-size ${px}`;
+    const recital = await drive.run(
+      [
+        '--storage',
+        `largest-ax-today-${px}-${stamp}`,
+        '--reset-storage',
+        '--url',
+        '/cue/none',
+        ...size,
+      ],
+      [
+        'clock data',
+        prefer,
+        'clock settle',
+        'layout today-top',
+        'layout reference',
+        'layout passage',
+        'layout today-foot',
+        'layout today-bottom',
+        'layout say',
+        'layout say-label',
+        'layout hear',
+        'layout hear-label',
+      ],
+    );
+    const [top, reference, passage, foot, end, say, sayLabel, hear, hearLabel] = [
+      3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ].map((at) => frameOf(recital[at]));
+    const line = px * WORD_REM * WORD_LEADING;
+    const threeLines = 3 * line + 2 * ROW_GAP;
+    const needed =
+      (reference?.h ?? Number.NaN) + REFERENCE_GAP + Math.min(passage?.h ?? Number.NaN, threeLines);
+    const room = (foot?.y ?? Number.NaN) - ((top?.y ?? Number.NaN) + (top?.h ?? Number.NaN));
+    drive.check(
+      `at ${px} pt Today has room above its fixed foot for the reference and three lines of the verse`,
+      room >= needed - SLACK,
+      { room, needed },
+    );
+    drive.check(
+      `at ${px} pt Today's fixed foot and its round button stay on the screen`,
+      foot !== undefined &&
+        end !== undefined &&
+        say !== undefined &&
+        bottom(foot) <= end.y + SLACK &&
+        inside(say, foot),
+      { foot, end, say },
+    );
+    roundHolds('Say it', say, sayLabel, px);
+    roundHolds('Listen', hear, hearLabel, px);
+
+    const listSteps = [
+      'clock data',
+      'tap add-list',
+      'clock data',
+      'clock settle',
+      'tap shelf-any',
+      'clock settle',
+      'tap book-43',
+      'clock data',
+      'clock settle',
+      'tap chapter-3',
+      'clock data',
+      'clock settle',
+      'tap verse-16',
+      'clock data',
+      'tap verse-18',
+      'clock data',
+      'tap plant-list',
+      'clock data',
+      'clock settle',
+      'tap tab-garden',
+      'clock data',
+      'clock settle',
+      'back',
+      'clock data',
+      'clock settle',
+      `tap ${LIST_ROW}`,
+      'clock data',
+      prefer,
+      'clock settle',
+      'layout list-scroll',
+      'layout list-practice',
+      `layout list-row-${LIST_VERSE}`,
+    ];
+    const list = await drive.run(
+      ['--storage', `largest-ax-list-${px}-${stamp}`, '--reset-storage', ...size],
+      listSteps,
+    );
+    const [scroll, practice, row] = [
+      'layout list-scroll',
+      'layout list-practice',
+      `layout list-row-${LIST_VERSE}`,
+    ].map((step) => frameOf(list[listSteps.indexOf(step)]));
+    drive.check(
+      `at ${px} pt a list's page scrolls Practice with its verses, with room for a verse or Practice`,
+      scroll !== undefined &&
+        practice !== undefined &&
+        row !== undefined &&
+        scroll.h >= Math.max(row.h, practice.h) - SLACK &&
+        practice.y >= scroll.y - SLACK &&
+        practice.y < row.y,
+      { scroll, practice, row },
+    );
+  }
+}
 
 process.exit(drive.finish());
