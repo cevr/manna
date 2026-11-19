@@ -277,12 +277,12 @@ const closings = [
 
 /**
  * How far apart a channel may be, of 255, for the settled page under Reduce
- * Motion: once the drums close by a press inside them (the `#`, Escape),
+ * Motion: once the drums close (by the `#`, Escape or a tap outside),
  * Chrome repaints the edges of the bar's glass disks over the list a little
- * after, 1 to 5 levels on a handful of pixels, where a leaving drums
- * differs by thousands of pixels far over it.
+ * after, 1 to 9 levels on a handful of pixels, where a leaving drums
+ * differs by tens of thousands of pixels far over it.
  */
-const EDGE_SETTLE = 8;
+const EDGE_SETTLE = 12;
 
 const closing = (way: string, close: string, still: string) => [
   'tap find-number',
