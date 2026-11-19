@@ -34,10 +34,9 @@ const marked = (picture: Picture, x: number, y: number): Picture => {
 const agent = (...replies: ReadonlyArray<string>) =>
   ['{"ok":true,"op":"tap"}', ...replies, '{"ok":true,"compare":"no box differs"}'].join('\n');
 
-/** `layout band` and the whole-tree `layout`, in points: the screen's band runs from `band`'s foot (2 pt) to the foot of `scroll`'s scrollport (4 pt). */
+/** The whole-tree `layout`, in points: the screen's band runs from `band`'s foot (2 pt) to the foot of `scroll`'s scrollport (4 pt). */
 const BAND_REPLIES = [
-  '{"node":{"absolute":{"x":0,"y":0,"w":1.3,"h":2},"props":{"testId":"band"}}}',
-  '{"nodes":[{"id":5,"testId":"tabs","x":0,"y":0,"w":0,"h":0},{"id":9,"testId":"scroll","x":0,"y":2,"w":1.3,"h":3,"port":[0,2,1.3,2]}]}',
+  '{"nodes":[{"id":5,"testId":"tabs","x":0,"y":0,"w":0,"h":0},{"id":7,"testId":"band","x":0,"y":0,"w":1.3,"h":2},{"id":9,"testId":"scroll","x":0,"y":2,"w":1.3,"h":3,"port":[0,2,1.3,2]}]}',
 ];
 
 const cellOf = (id: string, host: Cell['host'] = 'ios'): Cell => ({

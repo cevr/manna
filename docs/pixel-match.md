@@ -213,9 +213,11 @@ a band, not the whole picture:
   reference's `.json` keeps that top as `band.top`, in device pixels.
 - On the Exact side, the band runs from the bottom of the node `exact.band.top`
   names (a zero-high node at the top of the content under the navigation
-  bar, read with `layout <node>`) to the foot of the scrollport of the
-  scroller `exact.band.bottom` names (read from the whole-tree `layout`
-  reply's `port`): UIKit draws the tab bar, so no node has its frame, and
+  bar) to the foot of the scrollport of the scroller `exact.band.bottom`
+  names (its `port`), both read from the whole-tree `layout` reply, in the
+  screen's points. `layout <node>` is not read: its `absolute` box stands in
+  the content of the scroller holding the node, so a top inside a scroller
+  (an About's first text) answered the same y wherever its sheet sat. UIKit draws the tab bar, so no node has its frame, and
   insets a tab's last scroller by its height, so the scrollport ends where
   the tab bar begins (`src/agent-band.ts`). Today's scroller sits over a
   fixed footer, so its scrollport ends above it: Today names instead a
@@ -247,7 +249,10 @@ The Settings and Add sheets are scored whole (`total` equals `picture`).
   scored from the top of the same first text on both sides (Heartseed's
   `about-name` and first licence text, the hymnal's recordings' lead),
   with the port's band edge read from that node's top (`edge: 'top'`).
-  These bands are under 60 % for the hymnal (its group is the sheet's last),
+  The hymnal's port opens Settings at half height, where iOS 26 floats the
+  sheet and draws it at 0.96, so its drive first lifts it to full height by
+  a real touch (`touch: 'platform'`, a drag on About's list), as One's
+  sheet stands. These bands are under 60 % for the hymnal (its group is the sheet's last),
   so its cells fail `accept.ts` by design: they give the calibration's
   ladder, not a pass.
 

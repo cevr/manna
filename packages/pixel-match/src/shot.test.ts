@@ -123,10 +123,9 @@ describe("the port's iOS cell", () => {
       '--keep-storage',
     ]);
     expect(seeded).toContain('--keep-storage');
-    expect(seeded.slice(-6)).toEqual([
+    expect(seeded.slice(-5)).toEqual([
       'tap gear',
       'clock settle',
-      'layout about-name',
       'layout',
       'state keyboard',
       'screenshot s.png window compare r.png',
