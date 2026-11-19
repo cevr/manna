@@ -24,6 +24,7 @@ import { APPS, type ExactApp } from './apps.ts';
 import { claimPorts, fixturePort, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
 import { routeTypesAside } from './route-types.ts';
+import { CLEAR_BEFORE } from './sim-tmp.ts';
 
 /** How a clone comes to the pin. */
 const TO_PIN = 'bun packages/exact-kit/src/patch.ts';
@@ -89,6 +90,12 @@ const isNative = (args: ReadonlyArray<string>) => {
   const [verb = '', host = ''] = args;
   if (isLaunching(verb)) return true;
   return ['test', 'verify', 'agent'].includes(verb) && NATIVE_HOSTS.includes(host);
+};
+
+/** Whether `args` runs on the app's simulator: `ios`, or `test`, `verify` or `agent` on `ios`. */
+const onSimulator = (args: ReadonlyArray<string>) => {
+  const [verb = '', host = ''] = args;
+  return verb === 'ios' || (['test', 'verify', 'agent'].includes(verb) && host === 'ios');
 };
 
 /** The host whose agent shows what `args` would launch outside it, `ios` or `mac` with `--run`, if it would. */
@@ -369,13 +376,16 @@ const held = <A>(claim: () => Promise<{ readonly held: A; readonly give: () => v
  * another device or simulator, or a port not the app's; else the child's variables, set over whatever the caller's held: the clone,
  * feedback off, the app's simulator and spare range. Each port variable is the caller's when it is the
  * app's, else the app's own port for the verb that listens by it bare (`web`, `serve`), else removed:
- * no child listens outside the app's ports.
+ * no child listens outside the app's ports. A run on the simulator is told when the wrapper `started` (`CLEAR_BEFORE`),
+ * so the child, once it holds the build lock, clears the launch consoles older than that from the app's simulator
+ * (`sim-tmp.ts`); any other run has the variable removed.
  */
 const plan = (
   args: ReadonlyArray<string>,
   app: ExactApp,
   clone: string,
   callerPorts: CallerPorts,
+  started: number,
 ): Result.Result<Plan, ExactRefused> =>
   Option.match(refusalOf(args, app, callerPorts), {
     onSome: (reason) => Result.fail(ExactRefused.make({ reason })),
@@ -392,6 +402,7 @@ const plan = (
             ),
           ] as const,
       );
+      const clear = Option.filter(Option.some(String(started)), () => onSimulator(args));
       return Result.succeed({
         args,
         locked: isNative(args),
@@ -405,8 +416,12 @@ const plan = (
           ...Object.fromEntries(
             ports.flatMap(([name, port]) => Option.toArray(Option.map(port, (p) => [name, p]))),
           ),
+          ...Option.match(clear, { onNone: () => ({}), onSome: (at) => ({ [CLEAR_BEFORE]: at }) }),
         },
-        removed: ports.filter(([, port]) => Option.isNone(port)).map(([name]) => name),
+        removed: [
+          ...ports.filter(([, port]) => Option.isNone(port)).map(([name]) => name),
+          ...Arr.filter([CLEAR_BEFORE], () => Option.isNone(clear)),
+        ],
       });
     },
   });
@@ -529,7 +544,8 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
     PORT: yield* Config.option(Config.String('PORT')),
     EXACT_TOOL_PORT: yield* Config.option(Config.String('EXACT_TOOL_PORT')),
   };
-  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts));
+  const started = yield* Clock.currentTimeMillis;
+  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts, started));
   yield* launcherHeld(appDir);
   const fixture = yield* fixtureOf(app, args, appDir);
   const head = yield* headOf(clone);

@@ -357,7 +357,7 @@ type CallerPorts = Readonly<Record<PortVariable, string>>;
 
 /**
  * Starts drawn more often: the verbs that listen, each of which must keep to the app's ports, the native drives
- * on the Mac, and the launches a quiet app refuses.
+ * on the Mac and the simulator, and the launches a quiet app refuses.
  */
 const STARTS = [
   ['web'],
@@ -372,6 +372,8 @@ const STARTS = [
   ['mac', '--run'],
   ['ios', '--run=1'],
   ['test', 'mac'],
+  ['test', 'ios'],
+  ['agent', 'ios'],
 ] as const;
 
 /** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
@@ -531,6 +533,19 @@ const portsHeld = (
     }),
   );
 
+/**
+ * The rule, written out: a run on the simulator (`ios`, or `test`, `verify` or `agent` on `ios`) tells its child when
+ * the wrapper started, so the child clears the stale launch consoles before then; any other run removes the variable.
+ */
+const clearsOnSimulator = (child: Spawned, args: ReadonlyArray<string>) => {
+  const onSimulator =
+    args[0] === 'ios' || (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
+  const started = Rec.get(child.env, 'EXACT_KIT_CLEAR_BEFORE');
+  const removed = child.removed.includes('EXACT_KIT_CLEAR_BEFORE');
+  if (onSimulator) return Option.exists(started, (at) => /^\d+$/.test(at)) && !removed;
+  return Option.isNone(started) && removed;
+};
+
 /** `files` with `app`'s folder rewritten as `rewrite` says. */
 const rewritten = (
   files: Readonly<Record<string, string>>,
@@ -568,6 +583,7 @@ const ranAsPlanned = (
     child.env['PORT_HI'] === String(hi) &&
     Option.getOrElse(Rec.get(child.env, 'EXACT_PORT_TURNS'), () => '') === turns &&
     portsHeld(child, app, args, callerPorts) &&
+    clearsOnSimulator(child, args) &&
     locked === mustLock(args) &&
     (locked || child.command === 'bun') &&
     child.args.slice(-args.length - 3).join('\u0000') ===
@@ -729,7 +745,11 @@ describe('the exact wrapper', () => {
         const head = Option.fromNullishOr(pins[0]);
         const hymnal = yield* running('hymnal-exact', ['serve'], { HOME: PROBE }, head, files);
         expect(hymnal.spawned[1]?.env['PORT']).toBe('8766');
-        expect(hymnal.spawned[1]?.removed).toEqual(['EXACT_PORT', 'EXACT_TOOL_PORT']);
+        expect(hymnal.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const heartseed = yield* running(
           'heartseed-exact',
           ['serve'],
@@ -912,7 +932,12 @@ describe('the exact wrapper', () => {
           PORT_HI: '8774',
           EXACT_PORT_TURNS: '8772',
         });
-        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT']);
+        expect(tested.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const hymnals = yield* running(
           'hymnal-exact',
           ['test', 'web'],
