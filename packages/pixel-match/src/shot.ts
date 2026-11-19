@@ -16,12 +16,12 @@ import { dirname, join } from 'node:path';
 
 import { bandOps } from './agent-band.ts';
 import { hostZone, portClock } from './clock.ts';
-import { storeOf } from './fixtures.ts';
-import { PORT_STORES, writePortStore } from './port-store.ts';
+import { writePortStore } from './port-store.ts';
 import { overrideStatusBar, run } from './ios.ts';
 import { cellName, cellsOf, IOS, type AppName, type Cell, type Row } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
 import { referenceOf, scoreShot, type Frame } from './score.ts';
+import { seedPlan, storageFlags } from './seed.ts';
 
 /** The Exact simulators the wrapper drives, by app. */
 const EXACT_SIMULATORS: Readonly<Record<AppName, string>> = {
@@ -61,19 +61,25 @@ const dropOneRoutes = (root: string) => {
 };
 
 /**
- * Writes `row`'s fixture into the port's named store on the simulator
- * (`port-store.ts`), made at this instant as the reference's was at its
- * own; whether it did. A row with no fixture, or an app whose port store
- * is not described, starts from an empty store (`--reset-storage`).
+ * Readies the port's store for `row`'s shot on the simulator (`seedPlan`):
+ * the row's fixture written into its named store (`port-store.ts`), made
+ * at this instant as the reference's was at its own, or nothing written
+ * for a store the agent empties; the agent's storage flags.
  */
 const seedPort = (app: AppName, row: Row, udid: string) => {
-  const port = PORT_STORES[app];
-  if (port === undefined || row.fixture === undefined) return false;
-  const store = storeOf(app, row.fixture, new Date());
-  if (store === undefined) throw new Error(`${row.id}: no fixture ${row.fixture}`);
-  const container = run(['xcrun', 'simctl', 'get_app_container', udid, port.bundle, 'data']).trim();
-  writePortStore(container, port, `pm-${row.id}`, store);
-  return true;
+  const plan = seedPlan(app, row, new Date());
+  if (plan._tag === 'Seed') {
+    const container = run([
+      'xcrun',
+      'simctl',
+      'get_app_container',
+      udid,
+      plan.port.bundle,
+      'data',
+    ]).trim();
+    writePortStore(container, plan.port, plan.storage, plan.store);
+  }
+  return storageFlags(plan);
 };
 
 /** Takes and scores the port's iOS cell of `row`. */
@@ -94,7 +100,7 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   mkdirSync(dirname(files.screen), { recursive: true });
   if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
   overrideStatusBar(udid);
-  const seeded = seedPort(cell.app, row, udid);
+  const storage = seedPort(cell.app, row, udid);
   const edges = side.band === undefined ? [] : bandOps(side.band);
   const ops = [
     `prefer prefers-color-scheme ${cell.scheme}`,
@@ -118,9 +124,7 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
       String(clock.epoch),
       '--time-zone',
       clock.timeZone,
-      '--storage',
-      `pm-${row.id}`,
-      seeded ? '--keep-storage' : '--reset-storage',
+      ...storage,
       ...ops,
     ],
     join(frame.root, 'apps', `${cell.app}-exact`),
