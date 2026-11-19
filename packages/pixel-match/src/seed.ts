@@ -14,7 +14,7 @@ import type { AppName, Row } from './model.ts';
 import { PORT_STORES } from './port-store.ts';
 
 /** The port's store for a row's shot: its name, and the fixture written into it first, if any. */
-export type SeedPlan =
+type SeedPlan =
   | { readonly _tag: 'Reset'; readonly storage: string }
   | {
       readonly _tag: 'Seed';
