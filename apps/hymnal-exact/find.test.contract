@@ -51,7 +51,7 @@ test "The box clears while it has words"
   tap "find-number"
   clock settle
   clock data
-  expect focused "drum-hundreds"
+  expect state find.drums == true
   expect state listQuery == "zzqx"
   expect tree missing "find-clear"
 
