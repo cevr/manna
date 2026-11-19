@@ -1,27 +1,42 @@
-// A hymn's page, pushed over the list: its words in the order they are sung,
-// each stanza under its number and the refrain written out each time it is
-// sung (app.ts `hymnPage`, src/hymn/page.ts). Off a hymn's route the page is
-// asked for "" and answers the empty page, so the words a popped hymn showed
-// are not kept, and a relaunch holds what a fresh launch does. With chords
-// on (features/chords.contract), each sung line is drawn under its chords,
-// the keys over the words; a hymn with no chords says so over its words.
-// The header and the page each keep one child per line: other features add
-// one call line each (the star, Play).
-use EmptyState from "exact:content"
+// A hymn's page, pushed over the list, drawn as the current app draws it
+// (apps/hymnal/src/reader/HymnPage.tsx): the header names the hymn; the
+// page opens on a quiet head line (the section and its passages) over the
+// number and title in one row, the star last; then each stanza under its
+// number and the refrain, set in and sloped, each time it is sung. Each
+// printed line is its words, each word its syllables with a muted hyphen
+// between two (app.ts `hymnPage`, src/hymn/page.ts); a line that wraps
+// hangs under its first word. Off a hymn's route the page is asked for ""
+// and answers the empty page, so the words a popped hymn showed are not
+// kept, and a relaunch holds what a fresh launch does. With chords on
+// (features/chords.contract), each sung line is drawn under its chords; a
+// hymn with no chords says so over its words. Measures are the brand's
+// (app.forma), taken from the current app's styles (src/look/tokens.ts).
+// The page keeps one child per line for other features' call lines (Play,
+// the keys, the find bar).
 use PlayerPagePlay, PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
-use ChordsKeys, ChordsLines, ChordsPage from "./chords.contract"
+use ChordsKeys, ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
+
+shape HymnWord
+  syllables: string[]
+
+shape HymnLine
+  text: string
+  words: HymnWord[]
 
 shape HymnPart
   key: string
   label: string
   text: string
+  refrain: bool
+  lines: HymnLine[]
 
 shape HymnText
   number: number
   title: string
   topic: string
+  head: string
   parts: HymnPart[]
 
 members HymnalExact
@@ -37,30 +52,89 @@ component HymnPage
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
       display="flex" flex-direction="column"
-      header display="flex" align-items="center" padding="8px 16px"
-        text (not ready ? "" : page.number == 0 ? "No Such Hymn" : page.title) role="heading" aria-level=2 testId="hymn-title"
-        FavouriteStar(number=(ready ? page.number : 0))
+      header display="flex" align-items="center" padding="space.s8 space.s16"
+        text (ready ? page.title : "") role="heading" aria-level=2 testId="hymn-title"
       FindBar(entry=entry, results=true)
-      if ready and page.number == 0
-        EmptyState(symbol="symbol:alert", title="No Such Hymn", message="The hymnal has 695 hymns.")
-      else
-        scroll id="hymn-words" flex=1 min-height=0 testId="hymn-words"
-          if ready
-            column padding=16 gap=20
-              text `${page.number} · ${page.topic}` color="-exact-secondary-label" testId="hymn-topic"
-              PlayerPagePlay(number=page.number)
-              ChordsKeys(chords=chords, number=page.number)
-              if chords.kind == "chords" and chords.number == page.number
-                for p, k in chords.parts key=p.key
-                  column gap=4
-                    text p.label font="-exact-headline" color="-exact-secondary-label"
+      scroll id="hymn-words" flex=1 min-height=0 testId="hymn-words"
+        if ready
+          column padding="space.s8 space.s20 space.s48" gap="space.s24"
+            column gap="space.s4"
+              text font="type.footnote" color="muted" align-self="flex-start" testId="hymn-topic"
+                text page.head
+                text "  ›" color="accent"
+              row align-items="flex-start" gap="space.s10" testId="hymn-name"
+                row align-items="baseline" gap="space.s10" flex-shrink=1 min-width=0
+                  text `${page.number}` font="type.hymn-number" color="accent" font-variant-numeric="tabular-nums" testId="hymn-number"
+                  text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 role="heading" aria-level=1
+                FavouriteStar(number=page.number)
+            ChordsNotice(chords=chords, number=page.number)
+            PlayerPagePlay(number=page.number)
+            ChordsKeys(chords=chords, number=page.number)
+            if chords.kind == "chords" and chords.number == page.number
+              for p, k in chords.parts key=p.key
+                column gap="space.s4" role="group" aria-label=(p.refrain ? "Refrain" : `Stanza ${p.label}`)
+                  text p.label font="type.part" color="muted" role="heading" aria-level=2
+                  HymnInset(refrain=p.refrain, id=p.key)
                     if p.lines.length > 0
                       ChordsLines(chords=chords, k=k + 1, part=p)
                     else
-                      text p.text white-space="pre-line" testId=p.key
-              else
-                for p in page.parts key=p.key
-                  column gap=4
-                    text p.label font="-exact-headline" color="-exact-secondary-label"
-                    text p.text white-space="pre-line" testId=p.key
+                      match page.parts.at(k)
+                        case some(q)
+                          HymnLines(part=q)
+                        case none
+                          text p.text white-space="pre-line"
+            else
+              for p in page.parts key=p.key
+                column gap="space.s4" role="group" aria-label=(p.refrain ? "Refrain" : `Stanza ${p.label}`)
+                  text p.label font="type.part" color="muted" role="heading" aria-level=2
+                  HymnInset(refrain=p.refrain, id=p.key)
+                    HymnLines(part=p)
       PlayerBarRoom(id="bar-room-hymn")
+
+// A part's body: the refrain set in, as the current app sets it.
+component HymnInset
+  props
+    refrain: bool
+    id: string
+  slot
+  view
+    if refrain
+      column padding-left="space.s16" testId=id
+        children
+    else
+      column testId=id
+        children
+
+// A part's printed lines: each a wrapping row of its words, set in by the
+// hanging indent and its first word drawn back out to the edge, so a line
+// that wraps hangs under its first word (the current app's `HangingLine`
+// and `SyllableLine`). A word is one text of its syllables, a muted hyphen
+// between two. Each word's box is a device pixel taller than its line, as
+// React Native's text measure makes it on iOS (docs: agent-pitfalls).
+component HymnLines
+  props
+    part: HymnPart
+  view
+    for l, li in part.lines key=li
+      row flex-wrap="wrap" padding-left="calc(space.s20 * 1.05)" aria-label=l.text testId=`line-${part.key}-${li + 1}`
+        for w, wi in l.words key=wi
+          if wi == 0
+            row margin-left="calc(0px - space.s20 * 1.05)"
+              HymnWordText(word=w, refrain=part.refrain)
+          else
+            row
+              HymnWordText(word=w, refrain=part.refrain)
+
+// A word: one text of its syllables, a muted hyphen between two, on one
+// line with its no-break space kept (iOS drops a trailing space and
+// breaks a shrunk word at its hyphens otherwise).
+component HymnWordText
+  props
+    word: HymnWord
+    refrain: bool
+  view
+    text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
+      for s, si in word.syllables key=si
+        if si > 0
+          text "-" color="muted"
+        text s

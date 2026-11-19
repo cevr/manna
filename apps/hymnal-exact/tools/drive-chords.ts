@@ -13,8 +13,9 @@
  * - at the largest text size (`prefer root-font-size`, 53 px, iOS's AX5
  *   body), every chord of the first stanza stands over its own syllable in
  *   the same way, and each line breaks where the line rule says
- *   (`breaksOf` over the pairs' measured widths, the line's width and the
- *   measured gap between words), at the line's width give or take half a
+ *   (`breaksOf` over the pairs' measured widths, the line's width less the
+ *   gap its row reaches past it, the measured gap between words and the
+ *   measured hanging indent), at the line's width give or take half a
  *   point, since a host rounds each frame to its pixel grid and a row that
  *   fills the line to within that may break either way: no pair split, no
  *   chord on the wrong row;
@@ -236,6 +237,18 @@ const gapOf = (line: ReadonlyArray<ReadonlyArray<{ id: string }>>) => {
   return LARGEST * 0.35;
 };
 
+/** How far a line's second row is set in from its first: the hanging indent, measured; 0 for a line of one row. */
+const indentOf = (
+  line: ReadonlyArray<ReadonlyArray<{ id: string }>>,
+  rows: ReadonlyArray<ReadonlyArray<Place>> | undefined,
+  box: Frame | undefined,
+) => {
+  const [w, b] = rows?.[1]?.[0] ?? [-1, -1];
+  const pair = line[w]?.[b];
+  const drawn = pair && frame(`pair-${pair.id}`, largeOps, largeAt);
+  return drawn && box ? drawn.x - box.x : 0;
+};
+
 stanza.forEach((line, i) => {
   const box = frame(`line-1-${i + 1}`, largeOps, largeAt);
   const drawn = drawnRows(line);
@@ -243,13 +256,16 @@ stanza.forEach((line, i) => {
     word.map((pair) => frame(`pair-${pair.id}`, largeOps, largeAt)?.w ?? 0),
   );
   const gap = gapOf(line);
+  const indent = indentOf(line, drawn, box);
   const ruledAt = (slack: number) =>
-    box === undefined ? undefined : JSON.stringify(breaksOf(widths, box.w + slack, gap));
+    box === undefined
+      ? undefined
+      : JSON.stringify(breaksOf(widths, box.w - gap + slack, gap, indent));
   const ruled = [ruledAt(-0.5), ruledAt(0.5)];
   drive.check(
     `largest size: line 1-${i + 1} breaks where the line rule says, within half a point of its width (${drawn?.length ?? 0} rows)`,
     drawn !== undefined && ruled.includes(JSON.stringify(drawn)),
-    { drawn, ruled, width: box?.w, gap, widths },
+    { drawn, ruled, width: box?.w, gap, indent, widths },
   );
 });
 

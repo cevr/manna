@@ -23,7 +23,7 @@ export const sourcesAt = (
   chords: ReadonlyArray<readonly [number, string]> = [],
 ) => ({
   ...listSources(book),
-  ...hymnSources(book),
+  ...hymnSources(book, chords),
   ...playerSources(book, timing, originOf(origin)),
   ...homeSources(book),
   ...settingsSources(),

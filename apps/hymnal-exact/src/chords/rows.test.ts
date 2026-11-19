@@ -16,7 +16,7 @@ import { book } from '../hymns/book.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import type { ChordsLine } from './page.ts';
-import { breaksOf, pairWidth, type Place, rowsOf } from './rows.ts';
+import { breaksOf, drawnText, pairWidth, type Place, rowsOf, wordWidths } from './rows.ts';
 import { bundled } from './shipped.testing.ts';
 
 const SYLLABLES = [
@@ -46,10 +46,11 @@ const lineOf = (random: () => number): ChordsLine => {
       const count = 1 + below(random, 5);
       const word = {
         at,
-        boxes: Array.from({ length: count }, (_, b) => {
-          const text = pick(random, SYLLABLES);
-          return { text: b < count - 1 ? `${text}-` : text, chord: pick(random, CHORDS), grip: '' };
-        }),
+        boxes: Array.from({ length: count }, () => ({
+          text: pick(random, SYLLABLES),
+          chord: pick(random, CHORDS),
+          grip: '',
+        })),
       };
       at += count;
       return word;
@@ -73,9 +74,10 @@ const writeOut = (line: ChordsLine, rows: ReadonlyArray<ReadonlyArray<Place>>) =
       }
       const start = syllables.length;
       starts.push(start);
-      const width = pairWidth(box);
+      const more = b < (line.words[w]?.boxes.length ?? 0) - 1;
+      const width = pairWidth(box, more);
       chords = chords.padEnd(start) + box.chord;
-      syllables = syllables.padEnd(start) + box.text;
+      syllables = syllables.padEnd(start) + drawnText(box, more);
       chords = chords.padEnd(start + width);
       syllables = syllables.padEnd(start + width);
     });
@@ -94,7 +96,9 @@ const holds = (line: ChordsLine, width: number) => {
     row.forEach(([w, b], k) => {
       const box = line.words[w]?.boxes[b];
       const start = out.starts[k] ?? -1;
-      expect(out.syllables.slice(start, start + (box?.text.length ?? 0))).toBe(box?.text ?? '');
+      const more = b < (line.words[w]?.boxes.length ?? 0) - 1;
+      const drawn = box === undefined ? '' : drawnText(box, more);
+      expect(out.syllables.slice(start, start + drawn.length)).toBe(drawn);
       expect(out.chords.slice(start, start + (box?.chord.length ?? 0))).toBe(box?.chord ?? '');
     });
     const chordsOut = out.chords.split(/\s+/).filter((name) => name !== '');
@@ -105,7 +109,7 @@ const holds = (line: ChordsLine, width: number) => {
     if (row.length > 1) expect(out.syllables.length).toBeLessThanOrEqual(width);
   });
   line.words.forEach((word, w) => {
-    const wide = word.boxes.reduce((sum, box) => sum + pairWidth(box), 0);
+    const wide = wordWidths(word.boxes).reduce((sum, pair) => sum + pair, 0);
     const rowsHolding = new Set(
       rows.flatMap((row, r) => (row.some(([at]) => at === w) ? [r] : [])),
     );
@@ -140,5 +144,27 @@ describe('the line rule (A3)', () => {
     ]);
     expect(breaksOf([[3], [4, 4, 4]], 6, 1)).toEqual([[[0, 0]], [[1, 0]], [[1, 1]], [[1, 2]]]);
     expect(breaksOf([], 10, 1)).toEqual([]);
+  });
+
+  test('a row but the first is narrower by the hanging indent', () => {
+    expect(breaksOf([[4], [4], [4], [4]], 9, 1, 2)).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      [[2, 0]],
+      [[3, 0]],
+    ]);
+    expect(breaksOf([[4], [4], [4], [4]], 9, 1)).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      [
+        [2, 0],
+        [3, 0],
+      ],
+    ]);
+    expect(breaksOf([[2], [4, 4]], 9, 1, 2)).toEqual([[[0, 0]], [[1, 0]], [[1, 1]]]);
   });
 });

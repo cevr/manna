@@ -23,6 +23,7 @@ import { readChords } from '@manna/hymnal-app/vite/chords';
 
 import { book } from '../hymns/book.ts';
 import type { ChordsPage } from './page.ts';
+import { drawnText } from './rows.ts';
 
 export const bundled = readChords();
 
@@ -68,7 +69,9 @@ export const shownByPort = (page: ChordsPage) => {
     sections: page.parts.map((part) =>
       part.lines.length > 0
         ? part.lines.map((line) =>
-            line.words.map((word) => word.boxes.map((box) => [box.text, box.chord])),
+            line.words.map((word) =>
+              word.boxes.map((box, b) => [drawnText(box, b < word.boxes.length - 1), box.chord]),
+            ),
           )
         : 'words',
     ),

@@ -73,6 +73,11 @@ theme
   type.see-all = 400 0.8824rem/1.3333
   type.row-number = 600 1rem/1.2941
   type.row-title = 400 1rem/1.2941
+  type.part = 600 -exact-footnote/normal
+  type.chord = 600 -exact-subheadline/1.3333
+  type.mark = 400 0.8235rem/1.2857
+  type.first = 400 0.7647rem/1.3846
+  type.finger = 700 0.6471rem/1.2727
   space.s4: length = 4px
   space.s6: length = 6px
   space.s8: length = 8px
@@ -82,6 +87,8 @@ theme
   space.s16: length = 16px
   space.s20: length = 20px
   space.s24: length = 24px
+  space.s40: length = 40px
+  space.s48: length = 48px
   space.s64: length = 64px
   radius.r12: length = 12px
   radius.r16: length = 16px
@@ -89,6 +96,7 @@ theme
   radius.pill: length = 22px
   size.target: length = 44px
   size.button: length = 36px
+  size.mark: length = 28px
   line.hair: length = -exact-hairline
   opacity.pressed: number = 0.6
   nudge.title: length = -0.3333px

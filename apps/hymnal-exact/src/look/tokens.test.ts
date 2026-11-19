@@ -65,12 +65,16 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
   return value;
 };
 
-/** The ramps the texts drawn in `style` name, `none` for a text that names none. */
-const rampsOf = (text: string, style: string) =>
+/** The ramps the texts drawn in `style` (written `styles.<style>`, or `via`) name, `none` for a text that names none. */
+const rampsOf = (text: string, style: string, via?: string) =>
   new Set(
     [...text.matchAll(/<Text\b(?:=>|[^>])*>/gu)]
       .map(([tag]) => tag)
-      .filter((tag) => new RegExp(`styles\\.${style}\\b`, 'u').test(tag))
+      .filter((tag) =>
+        via === undefined
+          ? new RegExp(`styles\\.${style}\\b`, 'u').test(tag)
+          : tag.includes(`style={${via}}`),
+      )
       .map((tag) => /dynamicTypeRamp="(\w+)"/u.exec(tag)?.[1] ?? 'none'),
   );
 
@@ -117,7 +121,10 @@ describe('every measure of the brand is the current hymnal’s', () => {
       expect(brand.measures.get(token.name)).toBe(values[0]);
       if (token.kind === 'type')
         for (const source of token.from)
-          expect({ source, ramps: [...rampsOf(read(source.file), source.style)] }).toEqual({
+          expect({
+            source,
+            ramps: [...rampsOf(read(source.file), source.style, source.via)],
+          }).toEqual({
             source,
             ramps: [source.ramp],
           });

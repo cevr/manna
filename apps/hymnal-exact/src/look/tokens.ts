@@ -4,6 +4,8 @@ export interface Source {
   readonly style: string;
   readonly prop?: string;
   readonly ramp: string;
+  /** The name the file's texts draw it through (`style={<via>}`), when they do not write `styles.<style>`: a style array held in a name. */
+  readonly via?: string;
 }
 
 /** What a token holds, and so how its value is written. */
@@ -26,6 +28,9 @@ const ACCENT = 'src/player/AccentButton.tsx';
 const HOME = 'src/home/Home.native.tsx';
 const TABS = 'src/home/TabRow.tsx';
 const LIST = 'src/reader/HymnList.native.tsx';
+const CHORDS = 'src/reader/Chords.tsx';
+const STAR = 'src/reader/StarMark.ios.tsx';
+const BOX = 'src/reader/ChordBox.tsx';
 
 const type = (
   name: string,
@@ -87,9 +92,23 @@ export const TOKENS: ReadonlyArray<Token> = [
     [PLAYER, 'time', 'footnote'],
   ),
   type('type.note', [CHORD, 'note']),
+  type('type.part', [HYMN, 'label', 'footnote']),
+  {
+    name: 'type.chord',
+    kind: 'type',
+    from: [{ file: CHORDS, style: 'chord', ramp: 'subheadline', via: 'style' }],
+  },
+  type('type.mark', [BOX, 'mark']),
+  type('type.first', [BOX, 'first']),
+  type('type.finger', [BOX, 'finger']),
 
   length('space.s4', [PLAYER, 'position', 'gap']),
-  length('space.s6', [TABS, 'tab', 'paddingVertical']),
+  length(
+    'space.s6',
+    [TABS, 'tab', 'paddingVertical'],
+    [CHORDS, 'chord', 'paddingRight'],
+    [CHORDS, 'noChord', 'width'],
+  ),
   length(
     'space.s8',
     [SETTINGS, 'page', 'gap'],
@@ -117,6 +136,8 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('space.s64', [LIST, 'separator', 'left']),
   length('space.s20', [HYMN, 'page', 'paddingHorizontal']),
   length('space.s24', [SETTINGS, 'page', 'paddingTop'], [HYMN, 'sections', 'gap']),
+  length('space.s40', [CHORD, 'sheet', 'paddingBottom']),
+  length('space.s48', [HYMN, 'page', 'paddingBottom']),
 
   length('radius.r12', [SETTINGS, 'group', 'borderRadius'], [ABOUT, 'group', 'borderRadius']),
   length('radius.r16', [TABS, 'tab', 'borderRadius']),
@@ -125,6 +146,7 @@ export const TOKENS: ReadonlyArray<Token> = [
 
   length('size.target', [SETTINGS, 'row', 'minHeight'], [HOME, 'settings', 'width']),
   length('size.button', [ACCENT, 'button', 'minHeight'], [LIST, 'number', 'minWidth']),
+  length('size.mark', [STAR, 'mark', 'width'], [STAR, 'mark', 'height']),
 
   measure('hairline')(
     'line.hair',
