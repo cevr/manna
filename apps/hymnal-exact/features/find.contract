@@ -156,6 +156,11 @@ fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboa
 // bar, as the current app's results do, and lists the hymns found; with no
 // words yet the screen stays in view (home's Recent still answers a tap).
 // The bar's own box lets taps through to the page beside its disks.
+// While the box holds the focus and has words, the clear button stands at
+// its trailing end where UIKit's (`clearButtonMode="while-editing"`) stands,
+// the caret in the blue UIKit draws One's field's in; a press there keeps
+// the focus in the box (no `tabindex`, so the button takes none) and
+// empties it.
 component FindBar
   props
     entry: Entry
@@ -175,6 +180,13 @@ component FindBar
     motionStill: bool
   resource findBarPort = exactViewport() as shape FindPort
   resource findBarPlaces = findPlaces() as shape FindPlaces
+  state findBoxFocused = false
+  action findBoxIn
+    findBoxFocused = true
+  action findBoxOut
+    findBoxFocused = false
+  action findClearKeep(e: PointerEvent)
+    preventDefault()
   view
     if entry.id == findTop
       if results and findShown.results
@@ -209,10 +221,15 @@ component FindBar
                 align-items="center" justify-content="center" aria-hidden=true testId="find-chosen"
                 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both")
                 image "symbol:search" width="size.glyph" height="size.glyph"
-              input type="search" value=findText input=findTyped placeholder="Number, title or first line"
+              input type="search" value=findText input=findTyped placeholder="Number, title or first line" focus=findBoxIn blur=findBoxOut
                 aria-label="Search hymns" autofocus=true disabled=(not findShown.boxReach) appearance="none" flex=1 min-width=0 height="size.target"
-                padding=0 border="none" background-color="transparent" font="type.body" color="onGlass" testId="search"
+                padding=0 border="none" background-color="transparent" font="type.body" color="onGlass" caret-color="fieldCaret" testId="search"
                 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-fade-out duration.fade ease-out both")
+              if findBoxFocused and findText != ""
+                button press=findTyped("") pointerdown=findClearKeep appearance="none" aria-label="Clear text"
+                  width="size.target" height="size.target" flex-shrink=0 padding-right="space.s6" color="fieldClear"
+                  display="flex" align-items="center" justify-content="flex-end" testId="find-clear"
+                  image "symbol:icon.find-clear" width="size.clear" height="size.clear"
             FindHash(look=(findShown.chosen == "hash" ? "chosen" : "unchosen"))
         if findShown.cancelDrawn
           button press=findSearchOff appearance="none" disabled=(not findShown.cancelReach) min-height="size.target" flex-shrink=0 pointer-events="auto" color="accent" testId="find-cancel"

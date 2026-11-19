@@ -84,7 +84,13 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.name', [CHORD, 'name'], [LIVE, 'hashText']),
   type('type.chevron', [SETTINGS, 'chevron']),
   type('type.strong', [SETTINGS, 'check'], [CHORD, 'done'], [LIVE, 'actText'], [DRUMS, 'digit']),
-  type('type.body', [SETTINGS, 'label', 'body'], [PLAYER, 'switchLabel', 'body'], [LIST, 'empty'], [FIND, 'cancelWords']),
+  type(
+    'type.body',
+    [SETTINGS, 'label', 'body'],
+    [PLAYER, 'switchLabel', 'body'],
+    [LIST, 'empty'],
+    [FIND, 'cancelWords'],
+  ),
   type('type.large-title', [HOME, 'titleWords']),
   type('type.topic', [TABS, 'name'], [LIST, 'topicName']),
   type('type.see-all', [LIST, 'seeAll']),
@@ -280,5 +286,10 @@ export const NUDGES: ReadonlyArray<Nudge> = [
     name: 'nudge.settings-body',
     pixels: -0.6667,
     why: 'a Settings row’s label (settings.tsx label), whose body line box is two thirds of a device pixel taller,',
+  },
+  {
+    name: 'size.clear',
+    pixels: 51,
+    why: 'the find box’s clear disk to UIKit’s (FindBar.tsx clearButtonMode, which One sizes nowhere), measured across in find.none’s reference at',
   },
 ];
