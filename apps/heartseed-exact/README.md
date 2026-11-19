@@ -23,6 +23,7 @@ bun tools/drive-studydata.ts web  # the study packs and the word index fetched f
 bun tools/drive-studydata.ts ios turns  # each step of the packs' checks done 40 times in one turn, its cost read from the data host's refusal (src/study/turns.ts)
 bun tools/drive-type.ts web  # the reading settings on Psalm 119's chapter: each font drawn, the web's font files a launch fetches, kept across a relaunch, the worst case, the live preview's time (also: ios)
 bun tools/drive-study.ts web  # the study sheet against the fixture: John 3:16's buttons and names, Cross-refs followed and Back, G25, the long press (a real one on iOS), the hint across a relaunch, OpenDyslexic, the largest text, Reduce Motion; shots to SHOTS (also: ios)
+bun tools/drive-boxes.ts web  # the boxes verify measures: a Today slot One's 36 pt, Read's box above the verse with its glyph in place, Settings' title breaking at the largest text (also: ios)
 bun tools/drive-reader.ts web  # the reader's batch check: the drives above as its rows, the longest entry, John 1:14's long commentary, offline, colours, the journey (also: ios; `ios live` adds the real packs from egw.cvr.im)
 bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:add-a, -b, -shelves, test:chooser, test:goto, test:packs, test:garden-a, -b, -c, -bytes, test:home-a, -b, -c, -asks, test:session-a, -b, -c, -calls, test:text, test:read, test:type, test:study, test:study-xrefs, -tags-a, -tags-b, -lexicon and test:studyview
 ```

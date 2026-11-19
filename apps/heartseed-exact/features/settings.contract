@@ -102,7 +102,7 @@ component SettingsSheet
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationScroll="settings-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="settings"
       header appearance="none" display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-left="space.page" padding-right="space.page" padding-top="space.s20" padding-bottom="space.s8"
-        text "Settings" role="heading" aria-level=1 font="type.sheet-title"
+        text "Settings" role="heading" aria-level=1 font="type.sheet-title" min-width=0 overflow-wrap="break-word" testId="settings-title"
         SettingsButton(label="Done", name="settings-done", go=done)
       scroll id="settings-scroll" flex=1 min-height=0
         column gap="space.section" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
