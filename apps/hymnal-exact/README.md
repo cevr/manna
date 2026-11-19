@@ -104,6 +104,7 @@ bun run exact test web settings.test.contract
 bun run exact test ios settings.test.contract
 bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once and on the first frame after a relaunch, System following
 bun tools/drive-settings.ts ios
+bun tools/drive-about.ts web       # each credit's licence a link where it has an address, plain text where not (also: ios)
 ```
 
 ## Motion

@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
+import { CREDIT_END, creditHead } from '@manna/hymnal-app/credit';
 import { type CreditLine, RECORDING_CREDITS } from '@manna/hymnal/recordings';
 
 import { sourcesAt } from '../sources.ts';
@@ -43,12 +44,12 @@ describe('Settings’ sources', () => {
     expect(page.credits).toEqual(
       lines.map((line) => ({
         part: line.part,
-        work: line.work,
-        author: line.author,
+        head: creditHead(line),
         licence: line.licence,
         url: line.licenceUrl ?? '',
       })),
     );
+    expect(page.end).toBe(CREDIT_END);
     expect(page.credits.filter((credit) => credit.url.startsWith('https://'))).toHaveLength(
       lines.filter((line) => 'licenceUrl' in line).length,
     );

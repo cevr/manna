@@ -8,14 +8,14 @@
 
 shape AboutCredit
   part: string
-  work: string
-  author: string
+  head: string
   licence: string
   url: string
 
 shape AboutPage
   lead: string
   credits: AboutCredit[]
+  end: string
 
 members HymnalExact
   resource aboutShown = aboutCredits() as shape AboutPage
@@ -35,9 +35,9 @@ component AboutScreen
             text page.lead font="type.small" color="ink" testId="about-lead"
             for c in page.credits key=c.part
               text font="type.small" color="ink" testId=`about-${c.part}`
-                text `${c.part}: ${c.work} by ${c.author}, `
+                text c.head
                 if c.url == ""
                   text c.licence
                 else
                   text c.licence href=c.url color="accent" testId=`about-licence-${c.part}`
-                text "."
+                text page.end
