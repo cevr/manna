@@ -258,7 +258,7 @@ component TodayFace
         text w.letter color="hs.quiet" testId=`${id}-letter`
         text w.tail color="transparent" aria-hidden=true
     else if w.face == "slot"
-      column height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
+      column box-sizing="border-box" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
         text w.text font="type.word" line-height="size.slot" color="transparent" aria-hidden=true
     else
       text w.shown font="type.word" max-width="100%" hyphens="auto" color=todayWordColor(w, phase, whole) background-color=(w.mark == "tentative" ? "hs.hearing" : "transparent") border-radius="radius.r4" transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=id
