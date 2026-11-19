@@ -4,3 +4,5 @@ a9cfb06d2db0 move: passageText and passageQuery, unchanged, from hymns/indexes.t
 4e992f83b0e7 move: the player's caption, the same eight lines for the same states, from FullPlayer.tsx's Player.$match into player/caption.ts's captionOf; an exports line for it
 4412fe6dab04 exports: one exports line in apps/hymnal/package.json (./reader/reading); no source changes
 ea182e8d146d exports: one exports line in apps/heartseed/package.json (./first/flow, its openingOf), a declaration whose types are the port's and its line in exact-declared.test.ts; no source changes
+fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's JSX into about/version.ts's VERSION_PREFIX, the Text keeping its two children; an exports line whose types are the port's declaration
+ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
