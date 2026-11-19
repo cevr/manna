@@ -35,7 +35,7 @@ component AboutPage
         column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page"
           text "Heartseed" font="type.name" testId="about-name"
           text version font="type.credits" testId="about-version"
-          button press=licences aria-label="Licences" display="flex" flex-direction="row" align-items="center" justify-content="space-between" min-height="size.target" border-top-width="line.hair" border-bottom-width="line.hair" border-top-style="solid" border-bottom-style="solid" border-top-color="hs.ink" border-bottom-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="licences-row"
+          button press=licences aria-label="Licences" display="flex" flex-direction="row" align-items="center" justify-content="space-between" min-height="size.target" box-sizing="border-box" border-top-width="line.hair" border-bottom-width="line.hair" border-top-style="solid" border-bottom-style="solid" border-top-color="hs.ink" border-bottom-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="licences-row"
             text "Licences" font="type.body"
             text "›" font="type.body" aria-hidden=true
 
