@@ -36,7 +36,8 @@ const DEPARTURES = [
 const ROUND = [
   { part: 'all', roomy: 'roomy=false' },
   { part: 'main', roomy: 'roomy=(part == "main")' },
-  { part: 'rest', roomy: 'roomy=true' },
+  { part: 'rest', roomy: 'roomy=true, id="stop"' },
+  { part: 'rest', roomy: 'roomy=true, id="hear"' },
 ] as const;
 
 const text = (file: string) => contracts.get(file) ?? '';
