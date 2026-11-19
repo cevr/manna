@@ -10,6 +10,7 @@
  * then it shows the sounding hymn and a compact Play for the page's.
  */
 
+import { captionOf } from '@manna/hymnal-app/player/caption';
 import { clock } from '@manna/hymnal-app/player/time';
 
 import type { Choice } from './score.ts';
@@ -62,7 +63,7 @@ export interface PlayerView {
   readonly title: string;
   readonly phase: Phase;
   readonly said: string;
-  /** The full player's line under its title (`captionOf`); empty while nothing is held. */
+  /** The full player's line under its title (`captionAt`); empty while nothing is held. */
   readonly caption: string;
   readonly toggle: Toggle;
   /** The place the position bar shows (a drag while one is held) and the length, in sung seconds, and as a clock reads them. */
@@ -121,14 +122,25 @@ export const saidOf = (phase: Phase, why: Held['why']): string => {
   return 'The recording could not be played.';
 };
 
+/** The current app's player state each phase but a failure's is drawn as, for its caption. */
+const CAPTIONED = {
+  none: 'Idle',
+  loading: 'Loading',
+  playing: 'Playing',
+  buffering: 'Buffering',
+  paused: 'Paused',
+  ended: 'Ended',
+} as const;
+
 /**
- * The line under the full player's title, as the current app's sheet says
- * it (`FullPlayer.tsx` `caption`): what `saidOf` says, `Playing` while the
- * hymn plays, and `Recording` before it has played.
+ * The line under the full player's title: the current app's `captionOf`
+ * for the state it would be in, and for a hymn with no recording, which
+ * the current app never holds, what `saidOf` says.
  */
-export const captionOf = (phase: Phase, why: Held['why']): string => {
-  if (phase === 'playing') return 'Playing';
-  return saidOf(phase, why) || 'Recording';
+const captionAt = (phase: Phase, why: Held['why']): string => {
+  if (phase !== 'failed') return captionOf({ _tag: CAPTIONED[phase] });
+  if (why === 'missing') return saidOf(phase, why);
+  return captionOf({ _tag: 'Failed', offline: why === 'network' });
 };
 
 /** What the button offers a hymn in `phase`: nothing for a hymn with no recording. */
@@ -263,7 +275,7 @@ export const viewOf = (
     title: held?.track.title ?? '',
     phase: held?.phase ?? 'none',
     said: held === undefined ? '' : saidOf(held.phase, held.why),
-    caption: held === undefined ? '' : captionOf(held.phase, held.why),
+    caption: held === undefined ? '' : captionAt(held.phase, held.why),
     toggle: held === undefined ? '' : toggleOf(held.phase, held.why),
     at: elapsed,
     length: total,

@@ -13,12 +13,13 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { captionOf } from '@manna/hymnal-app/player/caption';
 import { placeAt } from '@manna/hymnal-app/player/scrub-rules';
 import { Option } from 'effect';
 
-import { oneFile } from '../look/design.testing.ts';
 import { seeded } from '../test/random.ts';
 import { current } from './current.testing.ts';
+import type * as Declared from './decl/caption';
 import { inputOf, titleOf } from './fixtures.testing.ts';
 import type { Span } from './score.ts';
 import {
@@ -34,26 +35,6 @@ import {
   timesOf,
 } from './step.ts';
 import { viewOf } from './view.ts';
-
-/**
- * The current app's full-player caption, read from `FullPlayer.tsx`'s
- * `caption`: each state's line by its tag, a failure's as `Failed` and,
- * offline, `Failed:offline`.
- */
-const CAPTIONS: ReadonlyMap<string, string> = (() => {
-  const source = oneFile('src/player/FullPlayer.tsx');
-  const start = source.indexOf('const caption');
-  const block = source.slice(start, source.indexOf('\n});', start));
-  const lines = new Map(
-    [...block.matchAll(/(?<!\w)([A-Z]\w*): \(\) => '([^']+)'/gu)].map(
-      ([, tag = '', line = '']) => [tag, line] as const,
-    ),
-  );
-  const failed = [...block.matchAll(/(onNone|onSome): \(\) => '([^']+)'/gu)];
-  for (const [, side, line = ''] of failed)
-    lines.set(side === 'onSome' ? 'Failed:offline' : 'Failed', line);
-  return lines;
-})();
 
 const HISTORIES = 300;
 const STEPS = 60;
@@ -374,18 +355,9 @@ const MOVES = new Set<Input['_tag']>([
 describe('the player against its reference model', async () => {
   const { bar, player } = await current();
 
-  it('reads a caption for each of the current player’s states, a failure’s two included', () => {
-    expect([...CAPTIONS.keys()].toSorted()).toEqual([
-      'Buffering',
-      'Ended',
-      'Failed',
-      'Failed:offline',
-      'Idle',
-      'Loading',
-      'Paused',
-      'Playing',
-      'Stopped',
-    ]);
+  it('the caption Exact’s type check is told of is the current app’s', () => {
+    const held: typeof Declared.captionOf = captionOf;
+    expect(held({ _tag: 'Stopped' })).toBe('Paused');
   });
 
   it('agrees with the model and keeps every invariant over generated histories', () => {
@@ -608,11 +580,8 @@ describe('the player against its reference model', async () => {
         if (view.onPage !== (page ?? 0)) fail('the view names the hymn page shown');
         if (after.held !== undefined && after.held.why !== 'missing') {
           const theirs = playerOf(player.Player, after);
-          const said =
-            theirs._tag === 'Failed'
-              ? CAPTIONS.get(theirs.offline ? 'Failed:offline' : 'Failed')
-              : CAPTIONS.get(theirs._tag);
-          if (view.caption !== said) fail('the full player’s caption is FullPlayer.tsx’s');
+          if (view.caption !== captionOf(theirs))
+            fail('the full player’s caption is the current app’s for the state it would be in');
         }
       }
     }

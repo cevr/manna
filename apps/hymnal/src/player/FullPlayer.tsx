@@ -47,7 +47,8 @@ import { usePlayer } from './context';
 import { DialPanel } from './DialPanel';
 import { ChordReaderContext, Dials, useThumb } from './Dials';
 import { useShownPage } from './page';
-import { Command, type HymnPlayer, Player, type Track, trackOf } from './player';
+import { captionOf } from './caption';
+import { Command, type HymnPlayer, type Player, type Track, trackOf } from './player';
 import { Scrubber } from './Scrubber';
 import { clock } from './time';
 import { ThumbEvent } from './thumb';
@@ -66,22 +67,6 @@ export function FullPlayer() {
     onSome: (player) => <Sheet player={player} />,
   });
 }
-
-/** What the player is doing, in a line under its hymn. */
-const caption: (player: Player) => string = Player.$match({
-  Idle: () => 'Recording',
-  Loading: () => 'Loading the recording…',
-  Playing: () => 'Playing',
-  Buffering: () => 'Loading the recording…',
-  Paused: () => 'Paused',
-  Ended: () => 'Played to the end',
-  Stopped: () => 'Paused',
-  Failed: ({ offline }) =>
-    Option.match(Option.liftPredicate(offline, Boolean), {
-      onNone: () => 'The recording could not be played.',
-      onSome: () => 'The recording needs a connection.',
-    }),
-});
 
 /** The bar's hymn and, when different, the reader page it opened over. */
 const useRoute = () => {
@@ -146,7 +131,7 @@ function Held({
       <View role="group" aria-label="Recording" style={styles.control}>
         <Title track={track} accent={accent} />
         <Text aria-live="polite" style={styles.caption} dynamicTypeRamp="subheadline">
-          {caption(state)}
+          {captionOf(state)}
         </Text>
         <RecordingNotice number={track.number} />
         <View style={styles.position}>
