@@ -129,9 +129,9 @@ members HeartseedExact
   action chooserLandScroll
     if readOpenVerse > 0
       scrollIntoView(`verse-${readOpenVerse}`, block="start", behavior="instant")
-  // iOS counts the scroll's padding from the scroll's top or from under the navigation bar by how a landing reached it: a frame after each landing, where the verse came to rest is read back, and `chapterLand` lands it again from there when it is off.
+  // iOS counts the scroll's padding from the scroll's top or from under the navigation bar by how a landing reached it: at the frame after each landing, inside the tab's own arrival, where the verse came to rest is read back, and `chapterLand` lands it again from there when it is off.
   task chooserLandedCheck when readUp and readOpenings > 0 and chooserLandReads < 3 key=`${readOpenings}:${chooserLandRoom}`
-    after(50, chooserLandedRead, wait=frame)
+    after(1, chooserLandedRead, wait=frame)
   action chooserLandedRead
     if readOpenVerse > 0 and frame(`verse-${readOpenVerse}`).height > 0
       chooserLandReads = chooserLandReads + 1
