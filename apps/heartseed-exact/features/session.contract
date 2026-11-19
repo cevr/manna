@@ -48,6 +48,7 @@ shape SessionShown
   wire: SessionWire
   stage: string
   stageLine: string
+  stageDrawn: string
 
 // The counts line, as the current Today's `Counts`: in ink, a little apart
 // from the verse under it.

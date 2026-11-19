@@ -3,7 +3,7 @@
  * verse with no plant reads not planted, a planted one its stage by the
  * current Heartseed's `stageOf`, and Show all's step back is laid over it,
  * as the current Today's `Growing` draws it over `pendingIn`, in its own
- * `STAGE_NAMES`.
+ * `STAGE_NAMES`, its plant drawn with the list page's picture of its stage.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -12,6 +12,7 @@ import { stageOf, type Plant, type ReadGarden } from '@manna/heartseed/garden';
 import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import { Option } from 'effect';
 
+import { DRAWN } from '../list/page';
 import { stageShown } from './sources';
 
 const DAY = 86_400_000;
@@ -66,6 +67,7 @@ describe('the stage line', () => {
     expect(stageShown(Option.none(), SEED.reference, Option.none())).toEqual({
       stage: '',
       stageLine: '',
+      stageDrawn: '',
     });
   });
 
@@ -73,6 +75,7 @@ describe('the stage line', () => {
     expect(stageShown(Option.some(garden), 'Psalms 23:3', Option.none())).toEqual({
       stage: 'not planted',
       stageLine: 'Not planted yet',
+      stageDrawn: '',
     });
   });
 
@@ -82,6 +85,7 @@ describe('the stage line', () => {
       expect(stageShown(Option.some(garden), plant.reference, Option.none())).toEqual({
         stage,
         stageLine: STAGE_NAMES[stage].shown,
+        stageDrawn: DRAWN[stage],
       });
     }
     expect(stageOf(GROWN)).not.toBe(stageOf(SEED));
