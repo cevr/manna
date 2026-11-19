@@ -100,16 +100,28 @@ digest and the picture's hash.
   text in it stops every command. A port's refactor under a One app's folder
   lands as a commit there, so the key is pinned rather than read from git,
   or every reference would read as missing.
-- When git's last commit under `apps/heartseed`, `apps/hymnal`,
-  `packages/hymnal` or `packages/core`, less their tests (`*.test.ts`,
-  `*.test.tsx`) and the declarations a One app keeps for its port
-  (`apps/*/exact/**`), none of which a One build runs, is not the pin, every command prints
-  one line on stderr naming both and the files changed under those paths
-  since the pin. Read them: a change to what One draws makes the references
-  stale. `pixel ref` then refuses to capture. `pixel ref … --repin` captures
-  under the new commit and rewrites the pin; take every row of both apps
-  that way, since the references under the old pin are not read once it
-  moves. Commit the pin with them.
+- The One paths are `apps/heartseed`, `apps/hymnal`, `packages/hymnal` and
+  `packages/core`, less their tests (`*.test.ts`, `*.test.tsx`) and the
+  declarations a One app keeps for its port (`apps/*/exact/**`), none of
+  which a One build runs. Each commit under them since the pin (merges left
+  out, each commit a merge brings counted) is either listed in
+  `packages/pixel-match/render-neutral` or a drift. On a drift every
+  command prints one line on stderr naming the pin, the latest One
+  commit, the unlisted commits and the files they change, and `pixel ref`
+  refuses to capture.
+- **Listing a commit render-neutral.** Only a commit that cannot change a
+  pixel One draws: a rule moved unchanged between modules, an `exports`
+  line, a type. Read its diff under the One paths first. Add one line to
+  `render-neutral`, the commit's first 12 hex digits (`git rev-parse
+  --short=12 <commit>`), a space, and the reason (`move: headLine,
+  unchanged, from HymnPage.tsx into reader/head-line.ts`); a line with no
+  commit or no reason stops every command. List a commit once it is on
+  `main`, whose hashes do not change. A commit that changes what One draws
+  is never listed: its rows' references are stale and are taken again.
+- `pixel ref … --repin` captures under the latest One commit, rewrites the
+  pin and empties `render-neutral`; take every row of both apps that way,
+  since the references under the old pin are not read once it moves.
+  Commit the pin and the ledger with them.
 - `PIXEL_REF` defaults to `tmp/pixel-match/ref` in the checkout.
 
 References hold hymn and verse words. Never commit or publish them.

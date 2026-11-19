@@ -22,7 +22,7 @@ import { recordMissed, writeReport } from './report.ts';
 import { rowsAsked } from './rows.ts';
 import { shoot } from './shot.ts';
 import { cellName, cellsOf } from './model.ts';
-import { driftLine, driftOf, readPin, refKey, writePin } from './pin.ts';
+import { driftLine, driftOf, readNeutral, readPin, refKey, writePin } from './pin.ts';
 import { takeWeb } from './web.ts';
 
 const USAGE =
@@ -63,7 +63,7 @@ const main = async () => {
   }
   const root = run(['git', 'rev-parse', '--show-toplevel']).trim();
   const pinned = readPin(root);
-  const drift = driftOf((args) => run(['git', ...args], root), pinned);
+  const drift = driftOf((args) => run(['git', ...args], root), pinned, readNeutral(root));
   if (Option.isSome(drift)) console.error(driftLine(drift.value));
   const frame: Frame = {
     root,

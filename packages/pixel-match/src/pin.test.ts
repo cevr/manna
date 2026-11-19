@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { Option } from 'effect';
 
 import { run } from './ios.ts';
-import { driftLine, driftOf, readPin, refKey, writePin } from './pin.ts';
+import { driftLine, driftOf, readNeutral, readPin, refKey, writePin } from './pin.ts';
 
 const scratch = mkdtempSync(`${tmpdir()}/pixel-pin-`);
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
@@ -37,6 +37,8 @@ const commit = (file: string, text: string) => {
   return commitAll(`edit ${file}`);
 };
 
+const ledger = join(scratch, 'packages', 'pixel-match', 'render-neutral');
+
 git(['init', '-q']);
 const first = commit('apps/hymnal/src/a.ts', 'one');
 mkdirSync(join(scratch, 'packages', 'pixel-match'), { recursive: true });
@@ -44,9 +46,9 @@ writePin(scratch, first);
 commitAll('pin');
 commit('docs/notes.md', 'not a One path');
 
-/** The drift the scratch repository holds now; a test that expects one fails without it. */
+/** The drift the scratch repository holds now, with the ledger as it is on disk; a test that expects one fails without it. */
 const driftNow = () => {
-  const drift = driftOf(git, readPin(scratch));
+  const drift = driftOf(git, readPin(scratch), readNeutral(scratch));
   if (Option.isNone(drift)) throw new Error('no drift from the pin');
   return drift;
 };
@@ -72,7 +74,8 @@ describe('the pinned One commit', () => {
     commit('apps/hymnal/src/a.test.ts', 'tested');
     commit('apps/hymnal/src/b.test.tsx', 'tested');
     expect(readPin(scratch)).toBe(first);
-    expect(Option.isNone(driftOf(git, first))).toBe(true);
+    expect(readNeutral(scratch)).toEqual([]);
+    expect(Option.isNone(driftOf(git, first, []))).toBe(true);
     expect(refKey(first, Option.none(), false)).toEqual({ _tag: 'Key', one: first, repin: false });
   });
 
@@ -82,6 +85,7 @@ describe('the pinned One commit', () => {
     expect(drift.value).toEqual({
       pinned: first,
       latest: later,
+      unlisted: [later],
       changed: ['apps/hymnal/src/b.ts'],
     });
     expect(driftLine(drift.value)).toContain(`pinned ${first}, latest ${later}`);
@@ -97,6 +101,43 @@ describe('the pinned One commit', () => {
     }
     writePin(scratch, first);
     expect(readPin(scratch)).toBe(first);
+  });
+
+  test('a ledger line with no commit or no reason is refused, never read as listing nothing or everything', () => {
+    for (const text of [
+      'abc reason',
+      `${first}`,
+      `${first}   `,
+      `${first}0 reason`,
+      'reason only',
+    ]) {
+      writeFileSync(ledger, text);
+      expect(() => readNeutral(scratch)).toThrow('is no entry');
+    }
+    writeFileSync(ledger, `\n${first} a move\n\n`);
+    expect(readNeutral(scratch)).toEqual([first]);
+  });
+
+  test('a commit listed render-neutral keeps the pin, and an unlisted One change after it still refuses, named alone', () => {
+    const listed = driftNow().value.latest;
+    writeFileSync(ledger, `${listed} move: b, unchanged\n`);
+    expect(Option.isNone(driftOf(git, first, readNeutral(scratch)))).toBe(true);
+    commitAll('list b');
+    expect(Option.isNone(driftOf(git, first, readNeutral(scratch)))).toBe(true);
+
+    const planted = commit('apps/hymnal/src/b.ts', 'drawn otherwise');
+    const drift = driftNow();
+    expect(drift.value).toEqual({
+      pinned: first,
+      latest: planted,
+      unlisted: [planted],
+      changed: ['apps/hymnal/src/b.ts'],
+    });
+    const refused = refKey(first, drift, false);
+    expect(refused).toEqual({
+      _tag: 'Refused',
+      reason: expect.stringContaining(`One moved past the pin ${first} by ${planted};`),
+    });
   });
 
   test('on a drift, report keeps the pin and says the drift, ref refuses without --repin, and an empty flag value refuses', async () => {
@@ -115,7 +156,7 @@ describe('the pinned One commit', () => {
       expect.stringContaining('--size needs a value'),
     ]);
     expect(report.code).toBe(0);
-    expect(report.stderr).toContain('changed since the pin: apps/hymnal/src/b.ts');
+    expect(report.stderr).toContain('changed by them: apps/hymnal/src/b.ts');
     const written = JSON.parse(
       readFileSync(join(scratch, 'tmp', 'pixel-match', 'report.json'), 'utf8'),
     ) as { one: string };
@@ -124,5 +165,17 @@ describe('the pinned One commit', () => {
     expect(refused.code).toBe(1);
     expect(refused.stderr).toContain('refused, One moved past the pin');
     expect(readPin(scratch)).toBe(first);
+  });
+
+  test('with every commit since the pin listed, ref passes its pin check and stops only at the unknown row', async () => {
+    const planted = driftNow().value.latest;
+    writeFileSync(ledger, `${readFileSync(ledger, 'utf8')}${planted} move: for the test\n`);
+    const ref = await cli('ref', 'hymnal', NO_ROW);
+    expect([ref.code, ref.stderr]).toEqual([1, `pixel: no row ${NO_ROW} in hymnal\n`]);
+  });
+
+  test('a new pin empties the ledger, whose commits all lie before it', () => {
+    writePin(scratch, first);
+    expect(readNeutral(scratch)).toEqual([]);
   });
 });
