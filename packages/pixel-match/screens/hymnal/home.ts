@@ -32,6 +32,13 @@ const SLOW_PANS: ReadonlyArray<Step> = Array.from({ length: 3 }, () => ({
   dy: -500,
   ms: 2000,
 }));
+/**
+ * How far the port's list is dragged, in points, to stand where One's three
+ * pans leave it: each of One's pans loses its first points to the pan's
+ * slop, so the list moves less than the 1,500 points dragged, measured from
+ * the rows' places in the two pictures.
+ */
+const SCROLLED = 1447;
 const RECENT: Step = { open: 'recent', expect: 'label=Recent' };
 
 /** Why the rail's numbers are masked: the port has no rail yet (`hymn.rail`'s gap), only its gutter. */
@@ -85,7 +92,7 @@ export const rows: ReadonlyArray<Row> = [
     fixture: 'hy-fresh',
     one: { steps: [HOME, ...SLOW_PANS, { wait: 1500 }], web: [HOME_WEB, TO_100, { wait: 800 }] },
     exact: {
-      ops: ['clock data', 'clock settle', 'tap hymn-list drag 0 -1500', 'clock settle'],
+      ops: ['clock data', 'clock settle', `tap hymn-list drag 0 -${SCROLLED}`, 'clock settle'],
       masks: RAIL_AT_TOP,
     },
   },
