@@ -48,9 +48,6 @@ const testIdsOf = (app: AppName) => {
   };
 };
 
-/** Edges known to be missing, each owed by a follow-up: the hymnal's About scroller has an `id` and no testId (hs-sweepfix's follow-up). */
-const OWED: ReadonlyArray<string> = ['hymnal/about.page: bottom about-list'];
-
 describe('the port band edges', () => {
   test("every band edge a row names is a testId of its app's contracts, so the agent's replies hold it; a foot is one fixed node, named outright", () => {
     const missing = (['heartseed', 'hymnal'] as const).flatMap((app) => {
@@ -65,6 +62,6 @@ describe('the port band edges', () => {
         ];
       });
     });
-    expect(missing).toEqual([...OWED]);
+    expect(missing).toEqual([]);
   });
 });

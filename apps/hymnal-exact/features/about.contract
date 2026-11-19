@@ -26,7 +26,7 @@ component AboutScreen
     column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 background-color="ground" testId="about"
       header display="flex" align-items="center" padding="space.s8 space.s16"
         text "About" role="heading" aria-level=2
-      scroll id="about-list" flex=1 min-height=0
+      scroll id="about-list" flex=1 min-height=0 testId="about-list"
         column gap="space.s8" padding="space.s16"
           text "Recordings" role="heading" aria-level=3 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" margin-top="space.s16"
           column gap="space.s8" padding="space.s11 space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
