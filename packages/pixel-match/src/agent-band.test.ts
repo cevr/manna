@@ -19,6 +19,14 @@ describe("the port's band from the agent's layout replies", () => {
     expect(agentBand(output(TOP, TREE), BAND, 3)).toEqual(Option.some({ top: 504, bottom: 2373 }));
   });
 
+  it('reads the named scroller’s scrollport, not the first scroller’s', () => {
+    const twoScrollers =
+      '{"nodes":[{"id":4,"testId":"list-scroll","x":0,"y":0,"w":402,"h":900,"port":[0,100,402,300]},{"id":23,"testId":"home-scroll","x":0,"y":294,"w":402,"h":580,"port":[0,294,402,497]}]}';
+    expect(agentBand(output(TOP, twoScrollers), BAND, 3)).toEqual(
+      Option.some({ top: 504, bottom: 2373 }),
+    );
+  });
+
   it('is none when the scroller has no scrollport or the top node is not answered', () => {
     expect(Option.isNone(agentBand(output(TOP, '{"nodes":[]}'), BAND, 3))).toBe(true);
     expect(Option.isNone(agentBand(output('{"error":"no node"}', TREE), BAND, 3))).toBe(true);
