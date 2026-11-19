@@ -261,7 +261,7 @@ component TodayFace
         text w.letter color="hs.quiet" testId=`${id}-letter`
         text w.tail color="transparent" aria-hidden=true
     else if w.face == "slot"
-      column box-sizing="border-box" max-width="100%" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
+      column box-sizing="border-box" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
         text w.text font="type.word" line-height="size.slot" opacity=0 pointer-events="none" aria-hidden=true
     else
       text w.shown font="type.word" max-width="100%" hyphens="auto" color=todayWordColor(w, phase, whole) background-color=(w.mark == "tentative" ? "hs.hearing" : "transparent") border-radius="radius.r4" transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=id
@@ -299,7 +299,7 @@ component TodayWide
     still: bool
     id: string
   view
-    column align-self="stretch" margin-top="space.s8" position="relative"
+    column align-self="stretch" position="relative"
       column position="absolute" inset=0 border-radius="radius.button" background-color="hs.pulse" opacity=1 pointer-events="none" aria-hidden=true animation=((still or not busy) ? "none" : "hs-pulse duration.pulse easing.pulse infinite") testId=(busy ? "ring" : `${id}-ring`)
       if enabled
         button press=press appearance="none" aria-label=label position="relative" box-sizing="border-box" width="100%" min-height="size.target" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.s18" padding-right="space.s18" border-radius="radius.button" background-color="hs.ink" color="hs.on-ink" font="type.strong" text-align="center" box-shadow="shadow.button" display="flex" align-items="center" justify-content="center" -exact-press-scale="scale.pressed" testId=id
