@@ -57,7 +57,7 @@ describe('a screen reader and a finger', () => {
     const tile = lineOf(type, 'type-font-');
     expect(tile).toContain('role="radio"');
     expect(tile).toContain('aria-label=f.spoken');
-    expect(tile).toContain('min-width="size.button"');
+    expect(tile).toContain('box-sizing="border-box" min-width="size.button"');
     expect(tile).toContain('border-color=(type.font == f.value ? "hs.ink" : "hs.card")');
   });
 
@@ -68,6 +68,19 @@ describe('a screen reader and a finger', () => {
     expect(lineOf(type, 'type-larger')).toContain('aria-label="Larger text"');
     expect(lineOf(type, 'type-size')).toContain('role="status" aria-label=type.sizeSpoken');
     expect(lineOf(type, 'type-reset')).toContain('disabled=(not type.differs)');
+  });
+
+  it('each spacing and width choice is a target with room above and below, so the medium sheet still draws it 44 tall', () => {
+    const pill = lineOf(type, '${name}-');
+    expect(pill).toContain(
+      'min-height="size.target" padding-top="space.s2" padding-bottom="space.s2"',
+    );
+  });
+
+  it("the header row is painted the sheet's ground, so the scroller stays below it", () => {
+    const lines = type.split('\n');
+    const heading = lines.findIndex((line) => line.includes('text "Text" role="heading"'));
+    expect(lines[heading - 1]).toContain('background-color="hs.ground"');
   });
 });
 

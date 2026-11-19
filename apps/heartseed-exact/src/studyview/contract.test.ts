@@ -119,3 +119,15 @@ it('folds notes at NOTE_LINES and definitions at DEF_LINES, and opens the sheet 
   expect(study).toContain('navigationDetent="medium large" navigationInitialDetent="large"');
   expect(study).toContain('text r.text line-clamp=3');
 });
+
+it("wraps the bar's buttons rather than squeeze one, and keeps the sheet's scroller under its header row", async () => {
+  const study = await read('features/study.contract');
+  const lines = study.split('\n');
+  const bar = lines.find((line) => line.includes('testId="study-bar"')) ?? '';
+  const button = lines.find((line) => line.includes('testId=`study-${b.tab}`')) ?? '';
+  expect(bar).toContain('flex-wrap="wrap"');
+  expect(button).toContain('flex=1');
+  expect(button).not.toContain('min-width=0');
+  const heading = lines.findIndex((line) => line.includes('testId="study-heading"'));
+  expect(lines[heading - 1]).toContain('background-color="hs.ground"');
+});
