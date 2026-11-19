@@ -131,3 +131,21 @@ it("wraps the bar's buttons rather than squeeze one, and keeps the sheet's scrol
   const heading = lines.findIndex((line) => line.includes('testId="study-heading"'));
   expect(lines[heading - 1]).toContain('background-color="hs.ground"');
 });
+
+it("keeps each part of the chapter's bar its own height, so a wrapped study bar never squeezes Plant", async () => {
+  const lines = (await read('features/chooser.contract')).split('\n');
+  const start = lines.findIndex((line) => line.includes('testId="chapter-bar-parts"'));
+  const depth = (lines[start] ?? '').search(/\S/u) + 2;
+  const end = lines.findIndex(
+    (line, i) => i > start && line.trim() !== '' && line.search(/\S/u) < depth,
+  );
+  let parent = '';
+  const parts = lines.slice(start + 1, end).filter((line) => {
+    const at = line.search(/\S/u);
+    if (at === depth) parent = line.trim();
+    const part = at === depth || (at === depth + 2 && parent.startsWith('if '));
+    return part && /^\s*(?:row|column|text|button)\b/u.test(line);
+  });
+  expect(parts.length).toBeGreaterThanOrEqual(10);
+  expect(parts.filter((line) => !line.includes('flex-shrink=0'))).toEqual([]);
+});

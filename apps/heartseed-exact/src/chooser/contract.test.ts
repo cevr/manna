@@ -61,7 +61,7 @@ it('draws a filled button only under its offer, and runs it only while offered',
   expect(blockUnder(chooser, 'if shown.landed')).toContain('text "Planted." role="status"');
   expect(blockUnder(chooser, 'if shown.landed')).toMatch(/button press=practise class=ReadPill /u);
   expect(blockUnder(chooser, 'if shown.already')).toBe(
-    '              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already"',
+    '              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already" flex-shrink=0',
   );
   expect(blockUnder(chooser, 'action chooserPlantIt')).toContain(
     'if chapterShown.plant and not pending(chooserPlanted)',
