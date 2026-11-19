@@ -211,7 +211,7 @@ test "A list planted in Add verses shows as a row on home after Back (J2)"
   back
   clock data
   clock settle
-  expect text "row-title-passage-0-19-1-1-3" == "Psalms 1:1-3"
+  expect text "row-name-passage-0-19-1-1-3" == "Psalms 1:1-3"
   expect state homeShown.rows.length == 1
   expect tree missing "singles"
   expect no failures
