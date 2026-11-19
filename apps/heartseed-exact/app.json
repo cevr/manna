@@ -16,51 +16,6 @@
         "finding": "target",
         "node": "word-*",
         "why": "As One's (owner, q153: match One): a word to peek at is the word's own width and 36 pt tall, with One's 4-pt hit slop (apps/heartseed/src/sayit/draw.tsx, Peek)"
-      },
-      {
-        "finding": "clipped",
-        "node": "word-*",
-        "why": "As One's: under no cue a word's slot keeps One's fixed 30 pt at the largest text while its unseen word, in transparent ink, grows past it; nothing visible spills"
-      },
-      {
-        "finding": "overlap",
-        "node": "word-*",
-        "why": "As One's: the unseen words of the fixed 30-pt slots, in transparent ink, reach into the next line at the largest text; nothing visible overlaps"
-      },
-      {
-        "finding": "overlap",
-        "node": "reference",
-        "why": "As One's: the first line's unseen words, in transparent ink, reach up to the reference at the largest text; nothing visible overlaps"
-      },
-      {
-        "finding": "overflow",
-        "node": "word-*",
-        "why": "As One's: a long word wider than the screen at the largest text runs past it, its slot the word's width as One's"
-      },
-      {
-        "finding": "overflow",
-        "node": "hear",
-        "why": "As One's: the round 132-pt button keeps its size, and its label runs past the circle at the largest text, as One's Say it does (pixel-match reference today.letters, largest)"
-      },
-      {
-        "finding": "overflow",
-        "node": "say",
-        "why": "As One's: the round 132-pt button keeps its size, and its label runs past the circle at the largest text (pixel-match reference today.letters, largest)"
-      },
-      {
-        "finding": "overflow",
-        "node": "single-remove-*",
-        "why": "As One's: a single verse's Remove runs off the screen at the largest text (owner told, vb-95)"
-      },
-      {
-        "finding": "clipped",
-        "node": "list-line",
-        "why": "As One's: at the largest text a list's page shows its heading and line, and the screen's foot cuts the line (owner told, vb-95)"
-      },
-      {
-        "finding": "overflow",
-        "node": "appearance-*",
-        "why": "As One's: Appearance's three choices share one row at any size (apps/heartseed/src/appearance/choice.tsx, flex 1, no wrap), so at the largest text the last runs past the side"
       }
     ]
   },
