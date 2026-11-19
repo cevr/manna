@@ -30,6 +30,15 @@ const UIKIT = new Map([
         'UITextField’s clear button (FindBar.tsx, clearButtonMode="while-editing"): black at 20 % by day, white at 20 % by night, measured over the glass in find.none’s reference',
     },
   ],
+  [
+    'fieldCaret',
+    {
+      light: '#426bf2',
+      dark: '#426bf2',
+      source:
+        'UITextField’s caret with the tint left as UIKit’s (FindBar.tsx sets no cursor colour), measured in find.none’s reference by day and night; the platform’s system blue draws #0088ff there',
+    },
+  ],
 ]);
 
 describe('the brand is the current hymnal’s palette', () => {

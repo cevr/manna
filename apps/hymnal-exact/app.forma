@@ -36,6 +36,7 @@ theme
   glassChosen = light-dark(#2c4542, #e6eedb)
   onGlassChosen = light-dark(#f1f0e6, #142420)
   fieldClear = light-dark(#00000033, #ffffff33)
+  fieldCaret = light-dark(#426bf2, #426bf2)
   -exact-background = ground
   -exact-grouped-background = ground
   -exact-secondary-background = bar

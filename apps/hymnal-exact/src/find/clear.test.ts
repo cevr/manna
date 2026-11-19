@@ -2,7 +2,7 @@
 
 /**
  * The find box draws as One's `TextInput` (src/home/FindBar.tsx): its caret
- * in the platform's blue (One leaves the tint the system's), and UIKit's
+ * in the blue UIKit draws it in (One leaves the tint the system's), and UIKit's
  * clear button (`clearButtonMode="while-editing"`) only while the box holds
  * the focus and has words, a press there keeping the focus, in UIKit's
  * colour and at its measured size (find.none's reference: a 17 pt disk
@@ -61,8 +61,9 @@ describe('the reader', () => {
 });
 
 describe('the find box', () => {
-  test('its caret is the platform’s blue, as One’s field’s tint', () => {
-    expect(nodeOf(contract, 'search')).toContain('caret-color="-exact-system-blue"');
+  test('its caret is the blue UIKit draws One’s in', () => {
+    expect(nodeOf(contract, 'search')).toContain('caret-color="fieldCaret"');
+    expect(forma).toMatch(/^ {2}fieldCaret = light-dark\(#426bf2, #426bf2\)$/mu);
   });
 
   test('the clear button stands only while the box has the focus and words, and keeps the focus', () => {
@@ -71,6 +72,7 @@ describe('the find box', () => {
     expect(nodeOf(contract, 'search')).toContain('focus=findBoxIn blur=findBoxOut');
     expect(clear).toContain('press=findTyped("")');
     expect(clear).toContain('pointerdown=findClearKeep');
+    expect(clear).not.toContain('tabindex');
     expect(contract).toMatch(/action findClearKeep\(e: PointerEvent\)\n\s+preventDefault\(\)/u);
   });
 
