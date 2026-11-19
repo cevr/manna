@@ -42,6 +42,15 @@ describe('the screens', () => {
         ]);
   });
 
+  test("the hymnal's About lifts its half-height Settings sheet to full by a real touch before its band is read, and its web cell does not", () => {
+    const about = ROWS.hymnal.find((row) => row.id === 'about.page');
+    const ops = about?.exact?.ops ?? [];
+    const lift = ops.findIndex((op) => /^tap about drag 0 -\d+/u.test(op));
+    expect(about?.exact?.touch).toBe('platform');
+    expect(lift).toBeGreaterThan(ops.indexOf('tap about-row'));
+    expect(about?.exact?.web?.ops?.some((op) => op.includes(' drag '))).toBe(false);
+  });
+
   test("no row's masks hide more than the cap of an iPhone 17's picture: the keyboard is left out by its band, never masked", () => {
     const picture = 402 * 874;
     for (const app of APPS)
