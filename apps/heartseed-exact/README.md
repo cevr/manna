@@ -21,6 +21,7 @@ bun tools/drive-read.ts web  # the tabs: the bar's names and colours, the Read p
 bun tools/drive-commentary.ts web  # the downloader with the commentary against its fixture: the line, a relaunch, a 304, a new version, each failure and Try again, a plain launch (also: ios)
 bun tools/drive-studydata.ts web  # the study packs and the word index fetched from the fixture, then John 3:16's cross-references, words and G25 read, find from the downloaded index, a relaunch offline (also: ios)
 bun tools/drive-studydata.ts ios turns  # each step of the packs' checks done 40 times in one turn, its cost read from the data host's refusal (src/study/turns.ts)
+bun tools/drive-about.ts web  # About's version line as drawn: the current Heartseed's words over the version its package.json holds (also: ios)
 bun tools/drive-type.ts web  # the reading settings on Psalm 119's chapter: each font drawn, the web's font files a launch fetches, kept across a relaunch, the worst case, the live preview's time (also: ios)
 bun tools/drive-study.ts web  # the study sheet against the fixture: John 3:16's buttons and names, Cross-refs followed and Back, G25, the long press (a real one on iOS), the hint across a relaunch, OpenDyslexic, the largest text, Reduce Motion; shots to SHOTS (also: ios)
 bun tools/drive-boxes.ts web  # the boxes verify measures: a Today slot One's 36 pt, Read's box above the verse with its glyph in place (also: ios)

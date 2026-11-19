@@ -13,6 +13,7 @@
 
 import { expect, it } from 'bun:test';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
+import { VERSION_PREFIX } from '@manna/heartseed/about/version';
 import { readLicence } from '@manna/heartseed/licence';
 
 import { heartseedVersion, LICENCES_FILE, writeLicences } from '../../tools/licences';
@@ -47,15 +48,18 @@ it('names each licence in its own first lines, as the page shows it with no head
   ).toBe(true);
 });
 
-it("writes About's version line as the current Heartseed does", () => {
-  expect(versionLine('0.1.0')).toBe('Version 0.1.0');
+it("writes About's version line in the current Heartseed's words, after its shipped version", async () => {
+  writeLicences();
+  const shipped: { readonly version: string } = await import(LICENCES_FILE);
+  expect(versionLine(shipped.version)).toBe(`${VERSION_PREFIX}${heartseedVersion()}`);
 });
 
 it('answers the version line and every licence, numbered, inside the data host', () => {
   const apache = 'Apache License\nVersion 2.0, January 2004\n…';
   const mit = 'MIT License\n…';
-  expect(withDataHost(() => aboutSources([apache, mit], '0.1.0').aboutOf())).toEqual({
-    version: 'Version 0.1.0',
+  const version = heartseedVersion();
+  expect(withDataHost(() => aboutSources([apache, mit], version).aboutOf())).toEqual({
+    version: versionLine(version),
     licences: [
       { index: 0, text: apache },
       { index: 1, text: mit },

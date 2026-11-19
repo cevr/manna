@@ -1,3 +1,5 @@
+import { VERSION_PREFIX } from '@manna/heartseed/about/version';
+
 /** One licence as the licences' page shows it: numbered from 0, its text whole, which names itself in its first lines. */
 export interface AboutLicence {
   readonly index: number;
@@ -10,8 +12,8 @@ export interface AboutShown {
   readonly licences: AboutLicence[];
 }
 
-/** About's line under the app's name, as the current Heartseed writes it (`src/about/screen.tsx`'s `Version {version}`). */
-export const versionLine = (version: string): string => `Version ${version}`;
+/** About's line under the app's name, in the current Heartseed's words: its `VERSION_PREFIX`, then the version. */
+export const versionLine = (version: string): string => `${VERSION_PREFIX}${version}`;
 
 /** About's data source over the licences' `texts` and the app's `version`, as `app.ts` registers it. */
 export const aboutSources = (texts: readonly string[], version: string) => ({
