@@ -16,6 +16,10 @@
       "types": "./exact/stage-names.d.ts",
       "default": "./src/garden/names.ts"
     },
+    "./about/version": {
+      "types": "./exact/about-version.d.ts",
+      "default": "./src/about/version.ts"
+    },
     "./first/flow": {
       "types": "./exact/first-flow.d.ts",
       "default": "./src/first/flow.ts"
