@@ -258,8 +258,8 @@ component TodayFace
         text w.letter color="hs.quiet" testId=`${id}-letter`
         text w.tail color="transparent" aria-hidden=true
     else if w.face == "slot"
-      column box-sizing="border-box" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
-        text w.text font="type.word" line-height="size.slot" color="transparent" aria-hidden=true
+      column box-sizing="border-box" max-width="100%" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
+        text w.text font="type.word" line-height="size.slot" opacity=0 pointer-events="none" aria-hidden=true
     else
       text w.shown font="type.word" max-width="100%" hyphens="auto" color=todayWordColor(w, phase, whole) background-color=(w.mark == "tentative" ? "hs.hearing" : "transparent") border-radius="radius.r4" transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=id
 
@@ -324,7 +324,7 @@ component TodayRecital
             column width="size.mark" height="size.mark-tall" align-items="center" justify-content="center" aria-label=w.label testId=`word-${w.index}`
               column width="size.dot" height="size.dot" border-radius="radius.r4" background-color="hs.miss" aria-hidden=true
           else if w.peekable
-            button press=peek(w.index) appearance="none" aria-label=w.label -exact-hit-slop="space.s4" -exact-press-opacity="opacity.pressed" testId=`word-${w.index}`
+            button press=peek(w.index) appearance="none" aria-label=w.label max-width="100%" -exact-hit-slop="space.s4" -exact-press-opacity="opacity.pressed" testId=`word-${w.index}`
               TodayFace(w=w, phase=today.phase, whole=todayWhole(today), still=true, id=`face-${w.index}`)
           else
             TodayFace(w=w, phase=today.phase, whole=todayWhole(today), still=(still or sheet or not (today.canStop or today.canFinish)), id=`word-${w.index}`)

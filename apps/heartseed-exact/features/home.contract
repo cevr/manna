@@ -211,7 +211,7 @@ component Home
                 text "Single verses" font="type.caption-strong" color="hs.ink"
                 for s in home.singles key=s.slug
                   column gap="space.s6" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
-                    row align-items="center" gap="space.s8"
+                    row flex-wrap="wrap" align-items="center" gap="space.s8"
                       row role="button" press=start(s.slug) aria-label=s.label flex=1 box-sizing="border-box" min-height="size.target" align-items="center" gap="space.s10" padding-left="space.s4" padding-right="space.s4" border-radius="radius.r12" testId=`single-button-${s.slug}`
                         :active
                           background-color = "hs.hearing"
