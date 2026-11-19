@@ -16,6 +16,16 @@
         "finding": "target",
         "node": "word-*",
         "why": "As One's (owner, q153: match One): a word to peek at is the word's own width and 36 pt tall, with One's 4-pt hit slop (apps/heartseed/src/sayit/draw.tsx, Peek)"
+      },
+      {
+        "finding": "overflow",
+        "node": "hear",
+        "why": "As One's at the largest text: Listen sits in One's fixed round button (apps/heartseed/src/sayit/draw.tsx, BigButton: 132 pt round, its label 17 pt semibold growing with Dynamic Type), whose reference at accessibility-extra-extra-extra-large cuts the word at the circle's edge; the port lets it run 6 px past the edge. Listed for the owner (hs-largest round 1, One has it too)"
+      },
+      {
+        "finding": "clipped",
+        "node": "licence-text-*",
+        "why": "The web's measure, not a spill: the licences keep their spaces as One's text does (white-space pre-wrap), and Chrome's text range counts the space that hangs past a wrapped line's end; with the spaces collapsed (pre-line) the same check finds nothing, and verify ios finds no licence at the largest text (hs-largest round 1)"
       }
     ]
   },
