@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- a reader of the find box's rows in features/find.contract, under Bun. */
-
 /**
  * The find box draws as One's `TextInput` (src/home/FindBar.tsx): its caret
  * in the blue UIKit draws it in (One leaves the tint the system's), and UIKit's
