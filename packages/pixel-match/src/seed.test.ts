@@ -19,7 +19,7 @@ describe("the store a row's port shot starts from", () => {
     expect(plan).toEqual({
       _tag: 'Seed',
       storage: 'pm-home.lists',
-      port: PORT_STORES.heartseed ?? { bundle: '', file: '' },
+      port: PORT_STORES.heartseed ?? { _tag: 'File', bundle: '', file: '' },
       store: storeOf('heartseed', 'hs-lists', NOW) ?? { _tag: 'Broken' },
     });
     expect(storageFlags(plan)).toEqual(['--storage', 'pm-home.lists', '--keep-storage']);
@@ -32,11 +32,17 @@ describe("the store a row's port shot starts from", () => {
     expect(seedPlan('heartseed', bare('home.fresh'), NOW).storage).toBe('pm-home.fresh');
   });
 
-  it('empties the store of a row with no fixture, or of an app whose port store is not described', () => {
+  it('empties the store of a row with no fixture', () => {
     const empty = seedPlan('heartseed', bare('home.fresh'), NOW);
     expect(empty).toEqual({ _tag: 'Reset', storage: 'pm-home.fresh' });
     expect(storageFlags(empty)).toEqual(['--storage', 'pm-home.fresh', '--reset-storage']);
-    expect(seedPlan('hymnal', row('hy.chords', 'hy-chords'), NOW)._tag).toBe('Reset');
+    expect(seedPlan('hymnal', bare('about.page'), NOW)._tag).toBe('Reset');
+  });
+
+  it('seeds the hymnal port as Heartseed’s, into its persisted states', () => {
+    const plan = seedPlan('hymnal', row('recent.page', 'hy-used'), NOW);
+    expect(plan._tag).toBe('Seed');
+    expect(storageFlags(plan)).toEqual(['--storage', 'pm-recent.page', '--keep-storage']);
   });
 
   it('refuses a row naming a fixture that does not exist', () => {

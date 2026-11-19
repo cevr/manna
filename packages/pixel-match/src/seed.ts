@@ -11,7 +11,7 @@
 
 import { storeOf, type Store } from './fixtures.ts';
 import type { AppName, Row } from './model.ts';
-import { PORT_STORES } from './port-store.ts';
+import { PORT_STORES, type PortStore } from './port-store.ts';
 
 /** The port's store for a row's shot: its name, and the fixture written into it first, if any. */
 type SeedPlan =
@@ -19,7 +19,7 @@ type SeedPlan =
   | {
       readonly _tag: 'Seed';
       readonly storage: string;
-      readonly port: { readonly bundle: string; readonly file: string };
+      readonly port: PortStore;
       readonly store: Store;
     };
 
