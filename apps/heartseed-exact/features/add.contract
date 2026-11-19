@@ -95,7 +95,10 @@ members HeartseedExact
 // A shelf's head: One's card (`head`), its title and its note. A title
 // (here and on an offer) is a hairline taller, as React Native rounds a
 // text's height up to the pixel grid, so the line under it sits where
-// One's does.
+// One's does. An offer beside its Plant pill is centred on the pill's
+// height, and React Native rounds that centring's half pixel down the
+// page: there the words take a hairline above them too, so the title
+// stays on One's row and the count under it moves to One's.
 component AddHead
   props
     title: string
@@ -131,7 +134,7 @@ component AddVersesPage
                   AddHead(title=s.title, note=s.note)
               for r in s.rows key=r.id
                 button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
-                  column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
+                  column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start" padding-top=(r.offer == "plant" ? "line.hair" : 0)
                     text r.title font="type.strong" overflow-wrap="break-word" padding-bottom="line.hair"
                     text r.count font="type.small"
                   if r.offer == "plant"
