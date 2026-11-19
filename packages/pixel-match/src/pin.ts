@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport -- a host tool that reads and writes one committed file through node's file system and asks git through the runner it is handed. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noThrowStatement, effect/noNewError -- a host tool that reads and writes one committed file through node's file system and asks git through the runner it is handed; a pin file that holds no commit stops the tool, said by a throw. */
 
 /**
  * The One commit every reference lives under, pinned in
@@ -15,16 +15,33 @@ import { join } from 'node:path';
 
 import { Option } from 'effect';
 
-/** The folders whose commits can change what One draws. */
-const ONE_PATHS = ['apps/heartseed', 'apps/hymnal', 'packages/hymnal', 'packages/core'];
+/**
+ * The files whose commits can change what One draws: the folders, less what
+ * no One build runs (each test, and the declarations a One app keeps for
+ * its port under `exact/`), so a port's declaration is no drift.
+ */
+const ONE_PATHS = [
+  'apps/heartseed',
+  'apps/hymnal',
+  'packages/hymnal',
+  'packages/core',
+  ':(exclude,glob)apps/*/exact/**',
+  ':(exclude,glob)**/*.test.ts',
+  ':(exclude,glob)**/*.test.tsx',
+];
 
 /** Runs `git <args>` in the checkout; its stdout. */
 type Git = (args: ReadonlyArray<string>) => string;
 
 const pinFile = (root: string) => join(root, 'packages', 'pixel-match', 'one-commit');
 
-/** The pinned One commit, 12 hex digits. */
-export const readPin = (root: string) => readFileSync(pinFile(root), 'utf8').trim();
+/** The pinned One commit, 12 hex digits; any other text is no pin, said by a throw (an empty pin would match every commit). */
+export const readPin = (root: string) => {
+  const pin = readFileSync(pinFile(root), 'utf8').trim();
+  if (!/^[0-9a-f]{12}$/.test(pin))
+    throw new Error(`${pinFile(root)}: "${pin}" is no One commit (12 hex digits)`);
+  return pin;
+};
 
 /** Pins `commit` as the One commit. */
 export const writePin = (root: string, commit: string) =>

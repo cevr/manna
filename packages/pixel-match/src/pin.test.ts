@@ -1,5 +1,5 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNewPromise -- the pin is a file in a git checkout: the test makes a scratch repository of its own, commits under the One paths, runs the command line in it (two runs at once, to stay inside the test budget), and removes it once read. */
-import { describe, expect, test } from 'bun:test';
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNewPromise, effect/noTestLifecycleHooks -- the pin is a file in a git checkout: the test makes a scratch repository of its own, commits under the One paths, runs the command line in it (three runs at once, to stay inside the test budget), and removes it after the file's tests whether they pass or fail. */
+import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -10,6 +10,7 @@ import { run } from './ios.ts';
 import { driftLine, driftOf, readPin, refKey, writePin } from './pin.ts';
 
 const scratch = mkdtempSync(`${tmpdir()}/pixel-pin-`);
+afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const git = (args: ReadonlyArray<string>) =>
   run(
@@ -50,6 +51,9 @@ const driftNow = () => {
   return drift;
 };
 
+/** The row `ref` is asked for: no app has it, so a refusal that regressed would still capture nothing, and stop at the unknown row with another reason. */
+const NO_ROW = 'no-such-row';
+
 /** Runs `pixel <args>` in the scratch repository; its exit code and stderr. */
 const cli = async (...args: ReadonlyArray<string>) => {
   const child = Bun.spawn(['bun', join(import.meta.dir, 'cli.ts'), ...args], {
@@ -63,7 +67,10 @@ const cli = async (...args: ReadonlyArray<string>) => {
 };
 
 describe('the pinned One commit', () => {
-  test('the key is the committed pin, and a commit outside the One paths is no drift', () => {
+  test('the key is the committed pin, and a commit outside the One paths, of a test or of a port declaration is no drift', () => {
+    commit('apps/heartseed/exact/field.d.ts', 'declared');
+    commit('apps/hymnal/src/a.test.ts', 'tested');
+    commit('apps/hymnal/src/b.test.tsx', 'tested');
     expect(readPin(scratch)).toBe(first);
     expect(Option.isNone(driftOf(git, first))).toBe(true);
     expect(refKey(first, Option.none(), false)).toEqual({ _tag: 'Key', one: first, repin: false });
@@ -82,8 +89,26 @@ describe('the pinned One commit', () => {
     expect(refKey(first, drift, true)).toEqual({ _tag: 'Key', one: later, repin: true });
   });
 
-  test('on a drift, report keeps the pin and says the drift, and ref refuses without --repin', async () => {
-    const [report, refused] = await Promise.all([cli('report'), cli('ref', 'hymnal', 'home')]);
+  test('a pin that is no 12-digit commit is refused, never read as matching every commit', () => {
+    const file = join(scratch, 'packages', 'pixel-match', 'one-commit');
+    for (const text of ['', '\n', 'e6368c03', 'not a commit!', `${first}0`]) {
+      writeFileSync(file, text);
+      expect(() => readPin(scratch)).toThrow('is no One commit');
+    }
+    writePin(scratch, first);
+    expect(readPin(scratch)).toBe(first);
+  });
+
+  test('on a drift, report keeps the pin and says the drift, ref refuses without --repin, and an empty flag value refuses', async () => {
+    const [report, refused, empty] = await Promise.all([
+      cli('report'),
+      cli('ref', 'hymnal', NO_ROW),
+      cli('shot', 'hymnal', 'about.page', '--size'),
+    ]);
+    expect([empty.code, empty.stderr]).toEqual([
+      1,
+      expect.stringContaining('--size needs a value'),
+    ]);
     expect(report.code).toBe(0);
     expect(report.stderr).toContain('changed since the pin: apps/hymnal/src/b.ts');
     const written = JSON.parse(
@@ -94,6 +119,5 @@ describe('the pinned One commit', () => {
     expect(refused.code).toBe(1);
     expect(refused.stderr).toContain('refused, One moved past the pin');
     expect(readPin(scratch)).toBe(first);
-    rmSync(scratch, { recursive: true, force: true });
   });
 });
