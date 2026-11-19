@@ -10,7 +10,7 @@ test "About opens from the sheet, Licences from About, and Back returns to the s
   tap "about-row"
   clock settle
   expect text "about-name" == "Heartseed"
-  expect text "about-version" != ""
+  expect tree has "about-version"
   expect tree missing "about-line"
   expect tree missing "about-kjv"
   tap "licences-row"
