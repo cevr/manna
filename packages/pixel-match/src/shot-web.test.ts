@@ -26,7 +26,7 @@ if (cell === undefined) throw new Error('no light 390x844@2 web cell of recent.p
 const PICTURE = encodePng({ width: 4, height: 4, rgba: new Uint8Array(4 * 4 * 4).fill(255) });
 const OLD_RESULT = '{"differing":0,"stale":true}\n';
 
-/** A checkout of the test's own, with the cell's reference and an earlier shot's result in it. */
+/** A checkout of the test's own, with the cell's reference and an earlier shot's result and diff picture in it. */
 const checkout = (name: string) => {
   const root = join(scratch, name);
   const frame = { root, refs: join(root, 'ref'), one: 'one' };
@@ -37,6 +37,8 @@ const checkout = (name: string) => {
   const files = shotFiles(root, cell);
   mkdirSync(dirname(files.result), { recursive: true });
   writeFileSync(files.result, OLD_RESULT);
+  mkdirSync(dirname(files.diff), { recursive: true });
+  writeFileSync(files.diff, PICTURE);
   return { frame, files };
 };
 
@@ -144,6 +146,7 @@ describe("the port's web cell, shot", () => {
       'FAILED hymnal/web/recent.page/light/390x844@2: hymnal/web/recent.page/light/390x844@2: no reference',
     ]);
     expect(existsSync(files.result)).toBe(false);
+    expect(existsSync(files.diff)).toBe(false);
     expect(calls).toEqual([]);
   });
 });
