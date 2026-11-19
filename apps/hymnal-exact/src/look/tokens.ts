@@ -236,6 +236,22 @@ export interface Nudge {
   readonly why: string;
 }
 
+/**
+ * A length a One rule says as a multiple of the words' size, not a style:
+ * written in `rem`, the words' size at the reader's text size, so it grows
+ * with the text as the rule's does.
+ */
+export interface Ruled {
+  readonly name: string;
+  readonly file: string;
+  /** The rule's `const`, a multiple of the words' size. */
+  readonly constant: string;
+}
+
+export const RULED: ReadonlyArray<Ruled> = [
+  { name: 'space.hang', file: 'src/reader/reading.ts', constant: 'INDENT' },
+];
+
 export const NUDGES: ReadonlyArray<Nudge> = [
   {
     name: 'nudge.title',

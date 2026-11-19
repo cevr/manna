@@ -171,10 +171,10 @@ component ChordsLines
   view
     for l in part.lines key=l.at
       row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" margin-bottom="space.s8" margin-right="calc(0px - space.s4 * 1.25)"
-        padding-left="calc(space.s20 * 1.05)" testId=`line-${k}-${l.at}`
+        padding-left="space.hang" testId=`line-${k}-${l.at}`
         for w, wi in l.words key=w.at
           if wi == 0
-            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.s20 * 1.05)" margin-right="calc(space.s4 * 1.25)"
+            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.hang)" margin-right="calc(space.s4 * 1.25)"
               ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
           else
             row flex-wrap="wrap" align-items="flex-end" margin-right="calc(space.s4 * 1.25)"

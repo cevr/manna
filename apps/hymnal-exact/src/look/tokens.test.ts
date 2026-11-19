@@ -12,7 +12,7 @@ import { describe, expect, it } from 'bun:test';
 import { styleIn } from '@manna/exact-kit/look/testing';
 
 import { appFile, brandOf, oneFile } from './design.testing.ts';
-import { NUDGES, TOKENS, type Source, type Token } from './tokens.ts';
+import { NUDGES, RULED, TOKENS, type Source, type Token } from './tokens.ts';
 
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
@@ -135,8 +135,17 @@ describe('every measure of the brand is the current hymnal’s', () => {
       expect(brand.measures.get(nudge.name)).toBe(`${short(nudge.pixels / 3)}px`);
     });
 
+  for (const ruled of RULED)
+    it(`${ruled.name} is ${ruled.file} ${ruled.constant} times the words' size`, () => {
+      const multiple = new RegExp(`\\bconst ${ruled.constant} = (\\d+(?:\\.\\d+)?);`, 'u').exec(
+        read(ruled.file),
+      )?.[1];
+      expect(multiple).toBeDefined();
+      expect(brand.measures.get(ruled.name)).toBe(`${short(Number(multiple))}rem`);
+    });
+
   it('the brand writes no measure the list does not trace to One or to a measured nudge', () => {
-    const traced = new Set([...TOKENS, ...NUDGES].map((token) => token.name));
+    const traced = new Set([...TOKENS, ...NUDGES, ...RULED].map((token) => token.name));
     expect([...brand.measures.keys()].filter((name) => !traced.has(name))).toEqual([]);
   });
 
