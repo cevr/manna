@@ -178,7 +178,7 @@ component FindBar
   view
     if entry.id == findTop
       if results and findShown.results
-        column position="absolute" inset=0 z-index=1 background-color="ground" padding-top=`${findBarPort.safeAreaTop}px` testId="find-results"
+        column position="absolute" inset=0 z-index=1 background-color="ground" padding-top="var(--exact-safe-area-inset-top)" testId="find-results"
           if findRows.length == 0
             text `No hymn matches “${findText.trim()}”.` font="type.body" color="muted" padding="space.s16" testId="none-found"
           else
@@ -275,16 +275,20 @@ component FindDrums
       dialog id="find-drums" closedby="closerequest" cancel=findDismiss key=findDrumsKey aria-label="Find a hymn by number"
         background-color="transparent" border="none" padding=0 margin=0 width="100%" height="100%" max-width="100%" max-height="100%" box-sizing="border-box" testId="drums"
         animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-pop duration.panel easing.out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.exit ease-out both")
+        ::backdrop
+          background-color="transparent"
         column width="100%" height="100%" justify-content="flex-end" box-sizing="border-box" position="relative"
           padding-left="space.s16" padding-right="space.s16"
-          padding-bottom=`${findFoot(findDrumsPort, findDrumsPlaces, playerShown.dock) + findDrumsPlaces.hash + findDrumsPlaces.gap}px`
+          padding-bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findDrumsPort, findDrumsPlaces, playerShown.dock) + findDrumsPlaces.hash + findDrumsPlaces.gap}px)`
           column pointerup=findPress("drumsClose", 0) position="absolute" top=0 right=0 bottom=0 left=0 testId="drums-outside"
           FindDrumsPanel()
           FindHashOver()
 
 // The `#` over the open drums, where the bar's stands, as their close
 // button: the dialog lies over the page and its bar, so the `#` is drawn
-// again in it, on the chosen disk, and closes them.
+// again in it, on the chosen disk, and closes them. The dialog lies outside
+// every route, so its feet add the screen's bottom inset, which the route
+// the bar stands in already keeps clear.
 component FindHashOver
   inject
     findShown: FindView
@@ -294,7 +298,7 @@ component FindHashOver
   resource findOverPlaces = findPlaces() as shape FindPlaces
   view
     button press=findPress("drumsOpen", 0) appearance="none" aria-label="Close" aria-pressed=true
-      position="absolute" right="space.s16" bottom=`${findFoot(findOverPort, findOverPlaces, playerShown.dock)}px`
+      position="absolute" right="space.s16" bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findOverPort, findOverPlaces, playerShown.dock)}px)`
       width="size.target" height="size.target" border-radius="radius.pill" background-color="glassChosen" color="onGlassChosen"
       display="flex" align-items="center" justify-content="center" testId="drums-hash"
       :active
@@ -403,7 +407,7 @@ component FoundRow
     star: bool
     open: action
   view
-    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items="center" gap="space.s12"
+    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items="center" gap="space.s12" text-align="start"
       padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
       height="size.target" min-height=0 box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
       :active
