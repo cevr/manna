@@ -85,7 +85,7 @@ component SettingsButton
     name: string
     go: action
   view
-    button press=go appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=name
+    button press=go appearance="none" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=name
       text label font="type.label"
 
 component SettingsSheet
