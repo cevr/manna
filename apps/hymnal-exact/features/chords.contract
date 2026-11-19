@@ -1,5 +1,5 @@
 // Chords: off at first and kept across launches (`chordsOn`, Settings'
-// `ChordsRow`). On, a hymn's page draws each chord over the syllable it
+// `SettingsChordsRow`). On, a hymn's page draws each chord over the syllable it
 // changes on, in the key the hymn's move reaches, and names the key played
 // and the key sounding; the move (a transpose and a capo) is the hymn's own
 // and kept (`chordsMoves`, src/chords/move.ts). A tap on a chord opens its
@@ -109,21 +109,6 @@ members HymnalExact
         chordsMoves = chordsMoves
   action chordsGripClose
     nav = back(nav)
-
-// Settings' row: chords on or off, for every hymn. One call line in the
-// Settings sheet's list, through the root's `chordsSwitchOn` and
-// `chordsSwitch`.
-component ChordsRow
-  inject
-    chordsSwitchOn: bool
-    chordsSwitch: action
-  view
-    section
-      header
-        text "Chords"
-      row
-        text "Chords" flex=1 min-width=0
-        input type="checkbox" switch checked=chordsSwitchOn change=chordsSwitch aria-label="Chords" testId="chords-toggle"
 
 // Over a hymn's chords: the key sounding and its transpose, the capo and
 // the key played under it. The key wraps through the twelve; the capo stops
