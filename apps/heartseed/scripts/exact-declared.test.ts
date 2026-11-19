@@ -51,6 +51,8 @@ import type * as Chooser from '../src/chooser';
 import type * as Day from '../src/day';
 import type * as Fsrs from '../src/fsrs';
 import type * as Garden from '../src/garden';
+import type * as StageNames from '../src/garden/names';
+import type * as DeclaredStageNames from '../exact/stage-names.d.ts';
 import type * as Kjv from '../src/kjv';
 import type * as Lists from '../src/lists';
 import type * as Passages from '../src/passages';
@@ -88,6 +90,7 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Garden.Garden, typeof DeclaredGarden.Garden>,
   true satisfies Mutual<typeof Garden.Backs, typeof DeclaredGarden.Backs>,
   true satisfies Mutual<typeof Garden.layer, typeof DeclaredGarden.layer>,
+  true satisfies Mutual<typeof StageNames.STAGE_NAMES, typeof DeclaredStageNames.STAGE_NAMES>,
   true satisfies Mutual<typeof Passages.PASSAGES_KEY, typeof DeclaredPassages.PASSAGES_KEY>,
   true satisfies Mutual<typeof Passages.LISTS_KEY, typeof DeclaredPassages.LISTS_KEY>,
   true satisfies Mutual<typeof Passages.MOST_PASSAGES, typeof DeclaredPassages.MOST_PASSAGES>,

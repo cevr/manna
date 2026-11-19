@@ -52,11 +52,11 @@ import {
   type GardenView,
   type Plant,
   type ReadGarden,
-  type Stage,
   withHelp,
   withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
+import { STAGE_NAMES } from '../src/garden/names';
 import { furrowsOf, fieldPassagesWith, readyOf, singlesOf } from '../src/home';
 import { singleVersesOf } from '../src/lists';
 import { singlesHeld } from '../src/passages';
@@ -245,14 +245,6 @@ function Grades({
     </View>
   );
 }
-
-/** Each stage as the stage line shows it, and as the growth line names it. */
-const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly grown: string }>> = {
-  seed: { shown: 'A seed', grown: 'a seed' },
-  blade: { shown: 'A blade', grown: 'a blade' },
-  ear: { shown: 'An ear', grown: 'an ear' },
-  'full corn': { shown: 'Full corn', grown: 'full corn' },
-};
 
 /** The garden once a read of it completed; none while the read runs, and none for the session when it failed. */
 const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>

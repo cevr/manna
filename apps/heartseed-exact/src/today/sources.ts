@@ -38,8 +38,8 @@ import {
   withHelp,
   type GardenView,
   type ReadGarden,
-  type Stage,
 } from '@manna/heartseed/garden';
+import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import type { Help } from '@manna/heartseed/sayit';
 import { tendedOf } from '@manna/heartseed/home/grown';
 import { countsOf, type Item, type Minutes, type TextPiece } from '@manna/heartseed/session';
@@ -112,14 +112,6 @@ export interface SessionShown {
   stageLine: string;
 }
 
-/** Each stage as Today's stage line shows it, as the current Heartseed's `STAGE_NAMES` does. */
-const STAGE_LINES: Readonly<Record<Stage, string>> = {
-  seed: 'A seed',
-  blade: 'A blade',
-  ear: 'An ear',
-  'full corn': 'Full corn',
-};
-
 /** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, and the line Today shows of it; none for an unread garden, which claims no stage. */
 export const stageShown = (
   garden: Option.Option<ReadGarden>,
@@ -137,7 +129,7 @@ export const stageShown = (
         onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet' }),
         onSome: (plant) => {
           const stage = stageOf(plant);
-          return { stage, stageLine: STAGE_LINES[stage] };
+          return { stage, stageLine: STAGE_NAMES[stage].shown };
         },
       });
     },

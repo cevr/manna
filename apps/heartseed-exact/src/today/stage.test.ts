@@ -2,12 +2,14 @@
  * Today's stage line (`stageShown`): an unread garden claims no stage, a
  * verse with no plant reads not planted, a planted one its stage by the
  * current Heartseed's `stageOf`, and Show all's step back is laid over it,
- * as the current Today's `Growing` draws it over `pendingIn`.
+ * as the current Today's `Growing` draws it over `pendingIn`, in its own
+ * `STAGE_NAMES`.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { review, type Card } from '@manna/heartseed/fsrs';
 import { stageOf, type Plant, type ReadGarden } from '@manna/heartseed/garden';
+import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import { Option } from 'effect';
 
 import { stageShown } from './sources';
@@ -59,8 +61,6 @@ const garden: ReadGarden = {
   ]),
 };
 
-const LINES = { seed: 'A seed', blade: 'A blade', ear: 'An ear', 'full corn': 'Full corn' };
-
 describe('the stage line', () => {
   it('claims nothing while the garden is unread', () => {
     expect(stageShown(Option.none(), SEED.reference, Option.none())).toEqual({
@@ -81,7 +81,7 @@ describe('the stage line', () => {
       const stage = stageOf(plant);
       expect(stageShown(Option.some(garden), plant.reference, Option.none())).toEqual({
         stage,
-        stageLine: LINES[stage],
+        stageLine: STAGE_NAMES[stage].shown,
       });
     }
     expect(stageOf(GROWN)).not.toBe(stageOf(SEED));

@@ -12,6 +12,10 @@
       "types": "./exact/garden.d.ts",
       "default": "./src/garden.ts"
     },
+    "./garden/names": {
+      "types": "./exact/stage-names.d.ts",
+      "default": "./src/garden/names.ts"
+    },
     "./sayit": {
       "types": "./exact/sayit.d.ts",
       "default": "./src/sayit.ts"
