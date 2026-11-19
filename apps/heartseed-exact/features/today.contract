@@ -297,6 +297,10 @@ component TodayPill
 // The verse Today shows, as the current Today's passage: its reference, its
 // words under the cue, and its stage under them, then what the port adds
 // (the cost of the help taken, the microphone's refusal, the last try).
+// Read, the port's own, hangs beside the reference outside the flow, so the
+// verse stays where the current Today draws it; its 44-pt box sits 6 pt
+// above the glyph's centre (a margin under it, the same padding over the
+// glyph), so the box ends above the verse's first line.
 component TodayRecital
   props
     today: TodayView
@@ -312,8 +316,8 @@ component TodayRecital
         text today.reference role="heading" aria-level=2 font="type.strong" color="hs.quiet" flex=1 min-width=0 overflow-wrap="break-word" testId=(today.session.mode == "run" ? "item-reference" : "reference")
         if chapter != ""
           column height=0 justify-content="center" flex-shrink=0
-            button press=read appearance="none" aria-label=`Read ${chapter}` min-width="size.target" min-height="size.target" display="flex" align-items="center" justify-content="center" color="hs.quiet" -exact-press-opacity="opacity.pressed" testId="today-read"
-              image "symbol:book"
+            button press=read appearance="none" aria-label=`Read ${chapter}` box-sizing="border-box" min-width="size.target" min-height="size.target" margin-bottom="space.s12" padding-top="space.s12" display="flex" align-items="center" justify-content="center" color="hs.quiet" -exact-press-opacity="opacity.pressed" testId="today-read"
+              image "symbol:book" testId="today-read-glyph"
       row testId="passage" flex-wrap="wrap" column-gap="space.s7" row-gap="space.s2"
         for w in today.words key=w.index
           if w.face == "mark"
