@@ -1,0 +1,39 @@
+// Answer is what `manna verse` gives: the verses of a reference, or the
+// hits of a search.
+type Answer = Referenced{Query string, Verses []Verse} | Searched{Query string, Verses []Verse}
+
+// Look answers a query text (the words joined and trimmed by the caller):
+// a reference reads its chapters, a search asks the corpus for up to limit
+// verses.
+func Look(text string, limit int) Answer fails Unavailable needs Corpus {
+	match Parse(text) {
+	case Search as s:
+		Searched{Query: s.Text, Verses: try Corpus.Search(s.Text, limit)}
+	case Single as q:
+		Referenced{Query: text, Verses: within(try Corpus.Chapter(q.Book, q.Chapter), q.Verse, q.Verse)}
+	case VerseRange as q:
+		Referenced{Query: text, Verses: within(try Corpus.Chapter(q.Book, q.Chapter), q.Start, q.End)}
+	case Chapter as q:
+		Referenced{Query: text, Verses: try Corpus.Chapter(q.Book, q.Chapter)}
+	case ChapterRange as q:
+		let mut verses = []Verse{}
+		for c in q.Start..q.End+1 {
+			for v in try Corpus.Chapter(q.Book, c) { verses = verses.Append(v) }
+		}
+		Referenced{Query: text, Verses: verses}
+	case FullBook as q:
+		let mut verses = []Verse{}
+		for c in 1..chaptersOf(q.Book)+1 {
+			for v in try Corpus.Chapter(q.Book, c) { verses = verses.Append(v) }
+		}
+		Referenced{Query: text, Verses: verses}
+	}
+}
+
+func within(verses []Verse, from int, to int) []Verse {
+	let mut kept = []Verse{}
+	for v in verses {
+		if v.Verse >= from && v.Verse <= to { kept = kept.Append(v) }
+	}
+	kept
+}

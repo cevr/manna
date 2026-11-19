@@ -1,0 +1,62 @@
+import strconv
+
+// Name is a book's canon name, or "Book <n>" for a number outside it.
+func Name(book int) string {
+	match BookOf(book) {
+	case Some as b:
+		b.Value.Name
+	case None:
+		"Book " + strconv.Itoa(book)
+	}
+}
+
+// Format is the text of a query in the reference CLI's form: "John 3:16",
+// "John 3:16-18", "John 3", "John 3-5", "John"; a search is its text.
+func Format(q Query) string {
+	match q {
+	case Single as s:
+		Name(s.Book) + " " + strconv.Itoa(s.Chapter) + ":" + strconv.Itoa(s.Verse)
+	case VerseRange as r:
+		Name(r.Book) + " " + strconv.Itoa(r.Chapter) + ":" + strconv.Itoa(r.Start) + "-" + strconv.Itoa(r.End)
+	case Chapter as c:
+		Name(c.Book) + " " + strconv.Itoa(c.Chapter)
+	case ChapterRange as r:
+		Name(r.Book) + " " + strconv.Itoa(r.Start) + "-" + strconv.Itoa(r.End)
+	case FullBook as b:
+		Name(b.Book)
+	case Search as s:
+		s.Text
+	}
+}
+
+// ParseInvertsFormat: a reference inside the canon, written by Format,
+// parses back to itself. The draw picks a shape and folds the numbers into
+// the book's chapters; a whole book whose name holds a digit ("1 Samuel")
+// is left out, as its name reads as a chapter of a shorter book name.
+law ParseInvertsFormat(shape uint8, book uint8, chapter uint16, verse uint8, span uint8) {
+	let b = Books[int(book)%len(Books)]
+	let c = 1 + int(chapter)%b.Chapters
+	let v = 1 + int(verse)
+	let e = v + int(span)%5
+	let k = shape % 5
+	let q Query = if k == 0 {
+		Single{Book: b.Number, Chapter: c, Verse: v}
+	} else if k == 1 {
+		VerseRange{Book: b.Number, Chapter: c, Start: v, End: e}
+	} else if k == 2 {
+		Chapter{Book: b.Number, Chapter: c}
+	} else if k == 3 {
+		ChapterRange{Book: b.Number, Start: c, End: c + (b.Chapters-c)*int(span)/255}
+	} else {
+		FullBook{Book: b.Number}
+	}
+	if k == 4 && hasDigit(b.Name) { return true }
+	Parse(Format(q)) == q
+}
+
+func hasDigit(s string) bool {
+	for r in scan(s).runes {
+		if digit(r) { return true }
+	}
+	false
+}

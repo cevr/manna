@@ -1,0 +1,18 @@
+// Package bible is the Bible domain: the canon, references and the queries
+// a reader types, the corpus contract, and the verse Api with its text forms.
+
+// Testament is the half of the canon a book belongs to.
+type Testament = Old{} | New{}
+
+// Book is one book of the canon.
+type Book { Number int, Name string, Abbreviation string, Chapters int, Testament Testament }
+
+// BookOf is the book with the number n, if the canon has one.
+func BookOf(n int) Option[Book] {
+	if n < 1 || n > len(Books) { return None }
+	Some[Book]{Value: Books[n-1]}
+}
+
+// Query is what a text asks for: a reference of one of five shapes, or a
+// text search. Parse is total: every text is one of them.
+type Query = Single{Book int, Chapter int, Verse int} | Chapter{Book int, Chapter int} | VerseRange{Book int, Chapter int, Start int, End int} | ChapterRange{Book int, Start int, End int} | FullBook{Book int} | Search{Text string}

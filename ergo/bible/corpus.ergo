@@ -1,0 +1,41 @@
+// Verse is one verse of the corpus and its text.
+type Verse { Book int, Chapter int, Verse int, Text string }
+
+// Unavailable is the failure of a corpus that cannot answer (a missing or
+// unreadable store); Reason is the provider's text.
+type Unavailable { Reason string }
+
+// Corpus is the Bible text a provider holds: a store file, or memory.
+type Corpus {
+	// Chapter is the chapter's verses in verse order; empty for a chapter
+	// the provider does not hold.
+	Chapter(book int, chapter int) []Verse fails Unavailable,
+	// Search is up to limit verses matching text, best first, by the
+	// provider's own ranking.
+	Search(text string, limit int) []Verse fails Unavailable,
+
+	// ChapterIsAscending: a chapter's verses belong to it and rise by verse.
+	law ChapterIsAscending(book uint8, chapter uint8) {
+		let b = 1 + int(book)%66
+		let c = 1 + int(chapter)%150
+		let verses = Chapter(b, c) catch {
+		case Unavailable:
+			return true
+		}
+		for i in 0..len(verses) {
+			let v = verses[i]
+			if v.Book != b || v.Chapter != c { return false }
+			if i > 0 && v.Verse <= verses[i-1].Verse { return false }
+		}
+		true
+	},
+
+	// SearchKeepsTheLimit: a search gives at most limit verses.
+	law SearchKeepsTheLimit(text string, limit uint8) {
+		let found = Search(text, int(limit)) catch {
+		case Unavailable:
+			return true
+		}
+		len(found) <= int(limit)
+	},
+}

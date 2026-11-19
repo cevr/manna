@@ -1,0 +1,44 @@
+import embed
+import strconv
+import strings
+
+// The reference parser's answers for generated queries, recorded by
+// parity/parse-record.ts (seed 42): one "<query>\t<answer>" per line.
+let recorded = embedded[embed.FS]("testdata")
+
+// answerText is a query in the recording's form.
+func answerText(q Query) string {
+	match q {
+	case Single as s:
+		"single " + strconv.Itoa(s.Book) + " " + strconv.Itoa(s.Chapter) + " " + strconv.Itoa(s.Verse)
+	case Chapter as c:
+		"chapter " + strconv.Itoa(c.Book) + " " + strconv.Itoa(c.Chapter)
+	case VerseRange as r:
+		"verseRange " + strconv.Itoa(r.Book) + " " + strconv.Itoa(r.Chapter) + " " + strconv.Itoa(r.Start) + " " + strconv.Itoa(r.End)
+	case ChapterRange as r:
+		"chapterRange " + strconv.Itoa(r.Book) + " " + strconv.Itoa(r.Start) + " " + strconv.Itoa(r.End)
+	case FullBook as b:
+		"fullBook " + strconv.Itoa(b.Book)
+	case Search as s:
+		"search " + s.Text
+	}
+}
+
+// ParseIsTheReference: Parse gives the reference parser's answer for each
+// recorded query (every shape, out-of-range numbers, loose spellings).
+test ParseIsTheReference {
+	let tsv = try recorded.ReadFile("testdata/parse-42.tsv")
+	let mut cases = 0
+	let mut wrong = []string{}
+	for line in strings.Split(tsv, "\n") {
+		match strings.Cut(line, "\t") {
+		case Some as h:
+			let got = answerText(Parse(h.Value.Before))
+			if got != h.Value.After && len(wrong) < 5 { wrong = wrong.Append(strconv.Quote(h.Value.Before) + " gave " + strconv.Quote(got) + ", the reference " + strconv.Quote(h.Value.After)) }
+			cases += 1
+		case None:
+		}
+	}
+	assert strings.Join(wrong, "\n") == ""
+	assert cases >= 1000
+}

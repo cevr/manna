@@ -1,0 +1,49 @@
+import strconv
+import strings
+
+// Reference is a verse's reference text, "John 3:16".
+func Reference(v Verse) string { Name(v.Book) + " " + strconv.Itoa(v.Chapter) + ":" + strconv.Itoa(v.Verse) }
+
+func block(verses []Verse) string {
+	let mut parts = []string{}
+	for v in verses { parts = parts.Append(Reference(v) + "\n" + v.Text) }
+	strings.Join(parts, "\n\n")
+}
+
+// AnswerText is an answer as `manna verse` prints it, with its line feed.
+func AnswerText(a Answer) string {
+	match a {
+	case Referenced as r:
+		if len(r.Verses) == 0 { return "No verses found.\n" }
+		block(r.Verses) + "\n"
+	case Searched as s:
+		if len(s.Verses) == 0 { return "No verses found matching \"" + s.Query + "\".\n" }
+		let plural = if len(s.Verses) == 1 { "" } else { "s" }
+		"Found " + strconv.Itoa(len(s.Verses)) + " verse" + plural + " matching \"" + s.Query + "\":\n\n" + block(s.Verses) + "\n"
+	}
+}
+
+// UsageText is what `manna verse` prints with no query.
+let UsageText = "Usage: manna verse <reference or search query> [--json]\n\nExamples:\n  manna verse john 3:16       # Single verse\n  manna verse john 3          # Full chapter\n  manna verse john 3:16-18    # Verse range\n  manna verse john 3-5        # Chapter range\n  manna verse ruth            # Full book\n  manna verse \"faith\"         # Text search\n"
+
+// VerseOut is a verse in the JSON answer.
+type VerseOut { BookName string "book_name", Book int, Chapter int, Verse int, Text string }
+
+// AnswerOut is the JSON answer: its mode, the query and the verses.
+type AnswerOut { Mode string, Query string, Verses []VerseOut }
+
+// Out is the answer's JSON record.
+func Out(a Answer) AnswerOut {
+	match a {
+	case Referenced as r:
+		AnswerOut{Mode: "reference", Query: r.Query, Verses: outs(r.Verses)}
+	case Searched as s:
+		AnswerOut{Mode: "search", Query: s.Query, Verses: outs(s.Verses)}
+	}
+}
+
+func outs(verses []Verse) []VerseOut {
+	let mut out = []VerseOut{}
+	for v in verses { out = out.Append(VerseOut{BookName: Name(v.Book), Book: v.Book, Chapter: v.Chapter, Verse: v.Verse, Text: v.Text}) }
+	out
+}

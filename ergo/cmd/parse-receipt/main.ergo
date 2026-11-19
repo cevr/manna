@@ -1,0 +1,30 @@
+// The receipt driver of Parse (M1): parses each recorded query read from
+// standard input ("<query>\t<answer>" lines, ergo/bible/testdata/parse-42.tsv)
+// and prints how many name a book, the count the Go floor (floor/parse)
+// prints for the same input.
+import io
+import manna/bible
+import strconv
+import strings
+
+func count() int fails io.ReadFailed needs io.Stdin {
+	let mut found = 0
+	for line in strings.Split(try io.Stdin.ReadAll(), "\n") {
+		match strings.Cut(line, "\t") {
+		case Some as h:
+			match bible.Parse(h.Value.Before) {
+			case bible.Search:
+			case _:
+				found += 1
+			}
+		case None:
+		}
+	}
+	found
+}
+
+func main() fails io.ReadFailed needs Ambient {
+	with context { io.Stdin: io.NewStdin(), io.Stdout: io.NewHost() } {
+		io.Stdout.Println(strconv.Itoa(try count()))
+	}
+}

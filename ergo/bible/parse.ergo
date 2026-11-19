@@ -1,0 +1,261 @@
+import strings
+import utf8
+
+// Parse reads a query text as the reference CLI does: the first of five
+// reference shapes that names a real book and chapter wins, tried in the
+// order verse range, chapter range, verse, chapter, book; any other text,
+// the empty one too, is a search for the text as given. Spaces are
+// JavaScript's (its \s), and a book is found by alias, by alias without
+// spaces, by alias with a space after a leading digit, then by the first
+// canon name that starts with it.
+func Parse(query string) Query {
+	let t = trimmed(scan(query))
+	if len(t.runes) == 0 { return Search{Text: query} }
+	match reference(t) {
+	case Some as q:
+		q.Value
+	case None:
+		Search{Text: query}
+	}
+}
+
+func reference(t text) Option[Query] {
+	match split(t, []rune{':', '-'}) {
+	case Some as m:
+		match resolve(m.Value.Book) {
+		case Some as b:
+			let c = m.Value.Numbers[0]
+			let s = m.Value.Numbers[1]
+			let e = m.Value.Numbers[2]
+			if hasChapter(b.Value, c) && s >= 1 && s <= e { return Some[Query]{Value: VerseRange{Book: b.Value, Chapter: c, Start: s, End: e}} }
+		case None:
+		}
+	case None:
+	}
+	match split(t, []rune{'-'}) {
+	case Some as m:
+		match resolve(m.Value.Book) {
+		case Some as b:
+			let s = m.Value.Numbers[0]
+			let e = m.Value.Numbers[1]
+			if s >= 1 && e <= chaptersOf(b.Value) { return Some[Query]{Value: ChapterRange{Book: b.Value, Start: s, End: e}} }
+		case None:
+		}
+	case None:
+	}
+	match split(t, []rune{':'}) {
+	case Some as m:
+		match resolve(m.Value.Book) {
+		case Some as b:
+			let c = m.Value.Numbers[0]
+			let v = m.Value.Numbers[1]
+			if hasChapter(b.Value, c) && v >= 1 { return Some[Query]{Value: Single{Book: b.Value, Chapter: c, Verse: v}} }
+		case None:
+		}
+	case None:
+	}
+	match split(t, []rune{}) {
+	case Some as m:
+		match resolve(m.Value.Book) {
+		case Some as b:
+			let c = m.Value.Numbers[0]
+			if hasChapter(b.Value, c) { return Some[Query]{Value: Chapter{Book: b.Value, Chapter: c}} }
+		case None:
+		}
+	case None:
+	}
+	for r in t.runes {
+		if !asciiLetter(r) && !space(r) { return None }
+	}
+	match resolve(t.whole) {
+	case Some as b:
+		Some[Query]{Value: FullBook{Book: b.Value}}
+	case None:
+		None
+	}
+}
+
+func chaptersOf(book int) int {
+	match BookOf(book) {
+	case Some as b:
+		b.Value.Chapters
+	case None:
+		0
+	}
+}
+
+func hasChapter(book int, chapter int) bool { chapter >= 1 && chapter <= chaptersOf(book) }
+
+// text is a string as runes, with each rune's byte offset (and the end's).
+type text { runes []rune, offs []int, whole string }
+
+func scan(s string) text {
+	let mut runes = []rune{}
+	let mut offs = []int{}
+	let mut i = 0
+	for i < len(s) {
+		let d = utf8.DecodeRuneInString(strings.Slice(s, i, len(s)))
+		runes = runes.Append(d.Rune)
+		offs = offs.Append(i)
+		i += d.Size
+	}
+	offs = offs.Append(len(s))
+	text{runes: runes, offs: offs, whole: s}
+}
+
+// trimmed is t without JavaScript white space at either end.
+func trimmed(t text) text {
+	let mut a = 0
+	let mut b = len(t.runes)
+	for a < b && space(t.runes[a]) { a += 1 }
+	for b > a && space(t.runes[b-1]) { b -= 1 }
+	let mut runes = []rune{}
+	let mut offs = []int{}
+	let base = t.offs[a]
+	for k in a..b {
+		runes = runes.Append(t.runes[k])
+		offs = offs.Append(t.offs[k] - base)
+	}
+	offs = offs.Append(t.offs[b] - base)
+	text{runes: runes, offs: offs, whole: strings.Slice(t.whole, t.offs[a], t.offs[b])}
+}
+
+// Split is a text cut as /^(.+?)\s*(\d+)(\s*SEP\s*(\d+))*$/ cuts it: the
+// shortest book part, then the numbers.
+type Split { Book string, Numbers []int }
+
+// split reads the numbers from the right, one more than the separators,
+// each run of digits whole and each separator with spaces on both sides;
+// the book is what stands before the first number and its spaces, at
+// least one rune, holding no line terminator (JavaScript's "." stops at
+// one).
+func split(t text, seps []rune) Option[Split] {
+	let r = t.runes
+	let mut i = len(r)
+	let mut numbers = []int{}
+	let mut k = len(seps)
+	let mut start = 0
+	for {
+		let end = i
+		for i > 0 && digit(r[i-1]) { i -= 1 }
+		if i == end { return None }
+		start = i
+		numbers = numbers.Append(value(r, i, end))
+		if k == 0 { break }
+		for i > 0 && space(r[i-1]) { i -= 1 }
+		if i == 0 || r[i-1] != seps[k-1] { return None }
+		i -= 1
+		for i > 0 && space(r[i-1]) { i -= 1 }
+		k -= 1
+	}
+	// numbers holds the values right to left; first is the leftmost one.
+	let mut first = numbers[len(numbers)-1]
+	let mut cut = start
+	for cut > 0 && space(r[cut-1]) { cut -= 1 }
+	if cut == 0 {
+		// The first number starts the text: the book is its first digit.
+		let end = firstEnd(r)
+		if end-start < 2 { return None }
+		cut = 1
+		first = value(r, 1, end)
+	}
+	for j in 0..cut {
+		if lineEnd(r[j]) { return None }
+	}
+	let mut leftFirst = []int{first}
+	let mut n = len(numbers) - 2
+	for n >= 0 {
+		leftFirst = leftFirst.Append(numbers[n])
+		n -= 1
+	}
+	Some[Split]{Value: Split{Book: strings.Slice(t.whole, 0, t.offs[cut]), Numbers: leftFirst}}
+}
+
+// firstEnd is the end of the run of digits that starts the text.
+func firstEnd(r []rune) int {
+	let mut i = 0
+	for i < len(r) && digit(r[i]) { i += 1 }
+	i
+}
+
+// numberCap bounds a number's value; the reference's own numbers lose
+// precision past 2^53 (declared-differences.md).
+let numberCap = 1000000000000000000
+
+func value(r []rune, from int, to int) int {
+	let mut n = 0
+	for k in from..to {
+		if n >= numberCap/10 { return numberCap }
+		n = n*10 + int(r[k]-'0')
+	}
+	n
+}
+
+// resolve finds the book a book part names.
+func resolve(part string) Option[int] {
+	let normalized = lower(collapse(strings.TrimSuffix(part, ".")))
+	match aliases.Get(normalized) {
+	case Some as n:
+		return Some[int]{Value: n.Value}
+	case None:
+	}
+	match aliases.Get(strings.ReplaceAll(normalized, " ", "")) {
+	case Some as n:
+		return Some[int]{Value: n.Value}
+	case None:
+	}
+	match aliases.Get(spaceAfterDigit(normalized)) {
+	case Some as n:
+		return Some[int]{Value: n.Value}
+	case None:
+	}
+	for b in Books {
+		if strings.HasPrefix(strings.ToLower(b.Name), normalized) { return Some[int]{Value: b.Number} }
+	}
+	None
+}
+
+// collapse is s with each run of white space one space, then trimmed.
+func collapse(s string) string {
+	let t = scan(s)
+	let mut out = strings.NewBuilder()
+	let mut pending = false
+	let mut wrote = false
+	for r in t.runes {
+		if space(r) {
+			pending = true
+			continue
+		}
+		if pending && wrote { out.WriteByte(' ') }
+		pending = false
+		wrote = true
+		out.WriteString(utf8.RuneText(r))
+	}
+	out.String()
+}
+
+// lower is JavaScript's toLowerCase where it differs from Go's for a rune
+// whose lower case is ASCII: U+0130 lowers to "i" and U+0307.
+func lower(s string) string { strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }
+
+// spaceAfterDigit is s with a space between a leading digit and an ASCII
+// lower-case letter after it, as /^(\d)([a-z])/ gives "$1 $2".
+func spaceAfterDigit(s string) string {
+	let t = scan(s)
+	if len(t.runes) >= 2 && digit(t.runes[0]) && t.runes[1] >= 'a' && t.runes[1] <= 'z' {
+		return strings.Slice(s, 0, 1) + " " + strings.Slice(s, 1, len(s))
+	}
+	s
+}
+
+func digit(r rune) bool { r >= '0' && r <= '9' }
+
+func asciiLetter(r rune) bool { (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') }
+
+// space is JavaScript's \s: its white space and line terminators.
+func space(r rune) bool {
+	r == ' ' || (r >= '\t' && r <= '\r') || r == '\u00a0' || r == '\u1680' || (r >= '\u2000' && r <= '\u200a') || r == '\u2028' || r == '\u2029' || r == '\u202f' || r == '\u205f' || r == '\u3000' || r == '\ufeff'
+}
+
+// lineEnd is a rune JavaScript's "." does not match.
+func lineEnd(r rune) bool { r == '\n' || r == '\r' || r == '\u2028' || r == '\u2029' }

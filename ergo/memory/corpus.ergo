@@ -1,0 +1,50 @@
+// Package memory holds in-memory providers of the domain contracts, for
+// laws and tests.
+import manna/bible
+import strings
+
+// Corpus is a bible.Corpus over a list of verses in canon order; Search
+// keeps the verses whose text holds the query, in order.
+type Corpus { Verses []bible.Verse } implements bible.Corpus
+
+// Chapter is the chapter's verses by verse number, the first of a number
+// kept, as a store's (book, chapter, verse) key keeps one.
+func Chapter(c Corpus, book int, chapter int) []bible.Verse fails bible.Unavailable {
+	let mut out = []bible.Verse{}
+	for v in c.Verses {
+		if v.Book != book || v.Chapter != chapter { continue }
+		let mut at = len(out)
+		let mut taken = false
+		for i in 0..len(out) {
+			if out[i].Verse == v.Verse { taken = true }
+			if out[i].Verse > v.Verse && at == len(out) { at = i }
+		}
+		if taken { continue }
+		let mut next = []bible.Verse{}
+		for i in 0..at { next = next.Append(out[i]) }
+		next = next.Append(v)
+		for i in at..len(out) { next = next.Append(out[i]) }
+		out = next
+	}
+	out
+}
+
+func Search(c Corpus, text string, limit int) []bible.Verse fails bible.Unavailable {
+	let mut out = []bible.Verse{}
+	for v in c.Verses {
+		if len(out) >= limit { break }
+		if strings.Contains(strings.ToLower(v.Text), strings.ToLower(text)) { out = out.Append(v) }
+	}
+	out
+}
+
+// Sample is a small corpus: two chapters of John and one of Ruth.
+func Sample() Corpus {
+	Corpus{Verses: []bible.Verse{
+		bible.Verse{Book: 8, Chapter: 1, Verse: 1, Text: "Now it came to pass in the days when the judges ruled"},
+		bible.Verse{Book: 8, Chapter: 1, Verse: 2, Text: "And the name of the man was Elimelech"},
+		bible.Verse{Book: 43, Chapter: 3, Verse: 16, Text: "For God so loved the world"},
+		bible.Verse{Book: 43, Chapter: 3, Verse: 17, Text: "For God sent not his Son into the world to condemn the world"},
+		bible.Verse{Book: 43, Chapter: 4, Verse: 1, Text: "When therefore the Lord knew"},
+	}}
+}

@@ -1,0 +1,17 @@
+{
+  "about": "Mutants of the Ergo port, each killed by a named test or law (bun scripts/ergo-mutants.ts). A mutant no test kills means a missing guard.",
+  "mutants": [
+    {"name": "format-range-backwards", "file": "bible/format.ergo", "from": "\":\" + strconv.Itoa(r.Start) + \"-\" + strconv.Itoa(r.End)", "to": "\":\" + strconv.Itoa(r.End) + \"-\" + strconv.Itoa(r.Start)", "killers": ["ParseInvertsFormat"]},
+    {"name": "trim-keeps-trailing-space", "file": "bible/parse.ergo", "from": "for b > a && space(t.runes[b-1]) { b -= 1 }", "to": "for b > a && space(t.runes[b-1]) && b < 0 { b -= 1 }", "killers": ["ParseIsTheReference"]},
+    {"name": "chapter-range-before-verse-range", "file": "bible/parse.ergo", "from": "split(t, []rune{':', '-'})", "to": "split(t, []rune{'-', ':'})", "killers": ["ParseIsTheReference"]},
+    {"name": "dotted-capital-i-lowers-plain", "file": "bible/parse.ergo", "from": "\"\\u0130\", \"i\\u0307\"", "to": "\"\\u0130\", \"i\"", "killers": ["ParseIsTheReference"]},
+    {"name": "carriage-return-is-no-line-end", "file": "bible/parse.ergo", "from": "r == '\\n' || r == '\\r' ||", "to": "r == '\\n' ||", "killers": ["ParseIsTheReference"]},
+    {"name": "no-space-after-leading-digit", "file": "bible/parse.ergo", "from": "strings.Slice(s, 0, 1) + \" \" + strings.Slice(s, 1, len(s))", "to": "strings.Slice(s, 0, 1) + strings.Slice(s, 1, len(s))", "killers": ["ParseIsTheReference"]},
+    {"name": "chapter-zero-exists", "file": "bible/parse.ergo", "from": "chapter >= 1 && chapter <= chaptersOf(book)", "to": "chapter >= 0 && chapter <= chaptersOf(book)", "killers": ["ParseIsTheReference"]},
+    {"name": "prefix-match-is-case-sensitive", "file": "bible/parse.ergo", "from": "strings.HasPrefix(strings.ToLower(b.Name), normalized)", "to": "strings.HasPrefix(b.Name, normalized)", "killers": ["ParseIsTheReference"]},
+    {"name": "no-break-space-is-not-space", "file": "bible/parse.ergo", "from": "r == '\\u00a0' || ", "to": "", "killers": ["ParseIsTheReference"]},
+    {"name": "leading-number-needs-three-digits", "file": "bible/parse.ergo", "from": "if end-start < 2 { return None }", "to": "if end-start < 3 { return None }", "killers": ["ParseIsTheReference"]},
+    {"name": "verse-range-allows-backwards", "file": "bible/parse.ergo", "from": "s >= 1 && s <= e", "to": "s >= 1", "killers": ["ParseIsTheReference"]},
+    {"name": "search-text-trimmed", "file": "bible/parse.ergo", "from": "\tif len(t.runes) == 0 { return Search{Text: query} }\n", "to": "\tif len(t.runes) == 0 { return Search{Text: t.whole} }\n", "killers": ["ParseIsTheReference"]}
+  ]
+}
