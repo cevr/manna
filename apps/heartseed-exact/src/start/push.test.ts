@@ -19,6 +19,7 @@ it.each([
   ['a first launch at home pushes Today', false, TODAY, 'garden', 'garden', TODAY],
   ['a first launch at a deep link keeps it', false, TODAY, 'garden', 'list', ''],
   ['a first launch on the Read tab keeps it', false, TODAY, 'read', 'read', ''],
+  ['a first launch on another tab over a garden top keeps it', false, TODAY, 'read', 'garden', ''],
   ['a later navigation back at home pushes nothing', true, TODAY, 'garden', 'garden', ''],
   ['a later navigation at a deep link pushes nothing', true, TODAY, 'garden', 'list', ''],
   ['an opening with no route (home) pushes nothing', false, '', 'garden', 'garden', ''],
