@@ -123,9 +123,9 @@ component HeartseedExact
               if e.name == "settings"
                 SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, done=settingsDone)
               if e.name == "settingsAbout"
-                AboutPage(route=e.id, licences=aboutOpenLicences)
+                AboutPage(route=e.id, version=aboutShown.version, licences=aboutOpenLicences)
               if e.name == "settingsLicences"
-                LicencesPage(route=e.id, licences=aboutLicences.licences)
+                LicencesPage(route=e.id, licences=aboutShown.licences)
             for e in t.stack.filter(x => x.name == "add" or x.name == "addList") key=e.id
               if e.name == "add"
                 AddVersesPage(route=e.id, add=addShown, scheme=homeScheme, bible=addOpenBible, toggle=addToggle, open=addOpenList, done=addDone)

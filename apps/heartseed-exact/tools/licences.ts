@@ -1,7 +1,9 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- Exact's app folder cannot import effect (docs/exact.md): a host script that writes the shipped licences module before Exact or a test reads it. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs -- Exact's app folder cannot import effect (docs/exact.md): a host script that writes the shipped licences module before Exact or a test reads it, and types the current app's package.json as npm writes it. */
 
 /**
- * Writes the licences About shows where `app.ts` imports them,
+ * Writes the licences About shows, and the version it shows under the
+ * app's name (the current Heartseed's `package.json`'s), where `app.ts`
+ * imports them,
  * `src/about/licences.ts` (ignored, never committed; `licences.d.ts` beside
  * it declares it). The text is the current Heartseed's own derivation,
  * `readLicence()` (`@manna/heartseed/licence`, the vendored Apache License
@@ -52,12 +54,20 @@ export const licenceTexts = (): string[] => [
   ...STUDY_CREDITS,
 ];
 
-/** Writes the shipped licences module, when its text changed, and answers the texts. */
+/** The current Heartseed's version, as its bundle reads it from its own `package.json`, which About shows under the app's name. */
+export const heartseedVersion = (): string =>
+  (
+    JSON.parse(
+      readFileSync(join(import.meta.dir, '..', '..', 'heartseed', 'package.json'), 'utf8'),
+    ) as { readonly version: string }
+  ).version;
+
+/** Writes the shipped licences module, with the current Heartseed's version beside the texts, when its text changed, and answers the texts. */
 export const writeLicences = (): string[] => {
   const texts = licenceTexts();
   writeGenerated(
     LICENCES_FILE,
-    `/** The licences' texts, written by tools/licences.ts from the current Heartseed's; ignored. */\nexport default ${JSON.stringify(texts)};\n`,
+    `/** The licences' texts and the app's version, written by tools/licences.ts from the current Heartseed's; ignored. */\nexport default ${JSON.stringify(texts)};\nexport const version = ${JSON.stringify(heartseedVersion())};\n`,
   );
   return texts;
 };

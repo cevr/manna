@@ -4,7 +4,8 @@
  * own back row and heading; the port pushes it inside the Settings sheet
  * under the sheet's navigation bar. So each row is scored over a band, like
  * with like: from the top of the page's first text under its heading (the
- * app's name on About, the first licence text on Licences) on each side,
+ * app's name on About; on Licences One's natural voice's credits and the
+ * port's first licence, since the port has no natural voice to credit) on each side,
  * to the picture's foot in One and the foot of the page's scrollport in the
  * port, laid at their tops. The sheet's frame and the dimmed ground above
  * it lie outside the band.
@@ -55,7 +56,7 @@ export const rows: ReadonlyArray<Row> = [
     },
     exact: {
       ops: [...EXACT_ABOUT, 'tap licences-row', 'clock data', 'clock settle'],
-      band: { top: 'licence-name-0', bottom: 'licences-scroll', edge: 'top' },
+      band: { top: 'licence-text-0', bottom: 'licences-scroll', edge: 'top' },
     },
   },
 ];

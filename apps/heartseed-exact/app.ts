@@ -1,5 +1,5 @@
 import type { Answer, Sources } from './app.contract.d.ts';
-import licences from './src/about/licences';
+import licences, { version } from './src/about/licences';
 import { aboutSources } from './src/about/sources';
 import { addSources } from './src/add/sources';
 import { chooserSources } from './src/chooser/sources';
@@ -51,7 +51,7 @@ const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY, ...STUDY_PA
 
 const sources: Sources = {
   ...settingsSources,
-  ...aboutSources(licences),
+  ...aboutSources(licences, version),
   ...garden,
   ...homeSources(),
   ...startSources(),
