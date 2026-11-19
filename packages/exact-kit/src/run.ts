@@ -23,6 +23,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { APPS, type ExactApp } from './apps.ts';
 import { claimPorts, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
+import { routeTypesAside } from './route-types.ts';
 
 /** How a clone comes to the pin. */
 const TO_PIN = 'bun packages/exact-kit/src/patch.ts';
@@ -466,7 +467,8 @@ const appNamed = (name: string) =>
  * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
  * clone is at the pin, then run with the plan's
  * variables over the caller's, a native build or drive under the build lock, a web page's port held while it runs
- * (`listenerOf`), or a `verify`'s until its report is written (`reportEnd`). The child runs in a process group of its
+ * (`listenerOf`), or a `verify`'s until its report is written (`reportEnd`), and One's route types in the packages the
+ * app links set aside until it ends (`routeTypesAside`). The child runs in a process group of its
  * own, ended with whatever it left there when it exits or the run is stopped. The child's exit code; for a `verify`
  * still running `SEMANTICS_WAIT` after its report, `STOPPED`, its process group ended (its `scripts/verify.mjs` passes
  * the signal on to the `contract verify` group it started).
@@ -535,6 +537,7 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
         Arr.filter([args[0]], (verb) => verb === 'verify'),
         () => reportEnd(appDir, args),
       );
+      yield* routeTypesAside(appDir);
       const handle = yield* spawner.spawn(
         ChildProcess.make(command, rest, {
           cwd: appDir,

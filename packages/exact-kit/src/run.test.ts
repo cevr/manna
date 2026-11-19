@@ -1115,6 +1115,87 @@ describe('the exact wrapper', () => {
       }).pipe(Effect.provide(BunServices.layer)),
   );
 
+  it.scopedLive(
+    "sets aside a linked package's One route types while Exact runs, and puts them back after a pass, a failure or an interruption, unless a dev server wrote newer ones",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'exact-kit-routes-' });
+        const appDir = path.join(dir, 'apps', 'hymnal-exact');
+        const linked = path.join(dir, 'apps', 'hymnal');
+        const routes = path.join(linked, 'app', 'routes.d.ts');
+        const written = "import type { OneRouter } from 'one';\n";
+        yield* fs.makeDirectory(path.join(appDir, 'node_modules', '@manna'), { recursive: true });
+        yield* fs.makeDirectory(path.join(linked, 'app'), { recursive: true });
+        yield* fs.writeFileString(
+          path.join(appDir, 'exact.mjs'),
+          files[`${PROBE}/apps/hymnal-exact/exact.mjs`] ?? '',
+        );
+        yield* fs.writeFileString(
+          path.join(appDir, 'package.json'),
+          '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4" } }',
+        );
+        yield* fs.symlink(linked, path.join(appDir, 'node_modules', '@manna', 'hymnal-app'));
+        const seen: Array<boolean> = [];
+        const runWith = (
+          code: number,
+          during: Effect.Effect<void, unknown> = Effect.void,
+          exited: Effect.Effect<void> = Effect.void,
+        ) =>
+          runExact(appDir, ['contract', 'build'], LAUNCHER).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(PortClaims, claimsStandIn([])),
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: PROBE, EXACT: `${PROBE}/clone` }),
+                ),
+                Layer.succeed(
+                  ChildProcessSpawner.ChildProcessSpawner,
+                  ChildProcessSpawner.make((command) => {
+                    if (command._tag === 'StandardCommand' && command.command === 'git')
+                      return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
+                    return fs.exists(routes).pipe(
+                      Effect.tap((there) => Effect.sync(() => seen.push(there))),
+                      Effect.andThen(during),
+                      Effect.orDie,
+                      Effect.as(handleOf('', code, exited)),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          );
+        const after = Effect.all([
+          fs.readFileString(routes),
+          fs.readDirectory(path.join(linked, 'app')),
+        ]);
+
+        yield* fs.writeFileString(routes, written);
+        expect(Number(yield* runWith(0))).toBe(0);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        expect(Number(yield* runWith(1))).toBe(1);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        const newer = `${written}// newer\n`;
+        expect(Number(yield* runWith(0, fs.writeFileString(routes, newer)))).toBe(0);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        const started = yield* Deferred.make<boolean>();
+        const fiber = yield* Effect.forkChild(
+          runWith(0, Deferred.succeed(started, true), Effect.never),
+        );
+        yield* Deferred.await(started);
+        expect(yield* fs.exists(routes)).toBe(false);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        expect(seen).toEqual([false, false, false, false]);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
   it.effect('docs/exact.md names the pin the wrapper runs at, then the base it is made from', () =>
     Effect.gen(function* () {
       const { pins, files } = yield* fixtures;
