@@ -969,7 +969,7 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    "a verify on any host whose child still runs two minutes after its report is stopped, exit 124, its group ended, saying the device run's result; one whose child ends first, or that never reports, runs to its child's end",
+    "a verify on any host whose child still runs two minutes after its report is stopped, its group ended, saying the device run's result: exit 124 when that host's run recorded clean, 1 when it recorded a failure, or nothing, or only another host's run; one whose child ends first, or that never reports, runs to its child's end",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -1005,10 +1005,30 @@ describe('the exact wrapper', () => {
         yield* TestClock.adjust('119 seconds');
         expect(ios.fiber.pollUnsafe()).toBeUndefined();
         yield* TestClock.adjust('1 second');
-        expect(yield* ios.code).toEqual(Result.succeed(124));
+        expect(yield* ios.code).toEqual(Result.succeed(1));
         expect(ios.kills).toEqual([true]);
         expect(ios.said.join('\n')).toContain('verify ios wrote its report 2m ago');
+        expect(ios.said.join('\n')).toContain('exit 1:');
         expect(ios.said.join('\n')).toContain('recorded "2 problems, 1 failed test"');
+
+        const clean = { ...files };
+        const passed = yield* start(['verify', 'ios'], clean);
+        clean[`${at}/verify/last.json`] = '{"ios":2500}';
+        clean[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:02:10.000Z","host":"ios","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* passed.code).toEqual(Result.succeed(124));
+        expect(passed.said.join('\n')).toContain('exit 124:');
+        expect(passed.said.join('\n')).toContain('recorded "clean"');
+
+        const elsewhere = { ...files };
+        const other = yield* start(['verify', 'ios'], elsewhere);
+        elsewhere[`${at}/verify/last.json`] = '{"ios":2500}';
+        elsewhere[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:04:20.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* other.code).toEqual(Result.succeed(1));
+        expect(other.said.join('\n')).toContain('recorded no result');
 
         const stale = { ...files };
         const web = yield* start(['verify'], stale);
@@ -1016,7 +1036,7 @@ describe('the exact wrapper', () => {
         stale[`${at}/runs.jsonl`] =
           '{"at":"1969-12-31T23:59:58.000Z","host":"web","what":"verify","result":"clean"}\n';
         yield* TestClock.adjust('121 seconds');
-        expect(yield* web.code).toEqual(Result.succeed(124));
+        expect(yield* web.code).toEqual(Result.succeed(1));
         expect(web.said.join('\n')).toContain('recorded no result');
 
         const ended = { ...files };

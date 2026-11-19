@@ -235,8 +235,17 @@ const verifyHost = (args: ReadonlyArray<string>) =>
  */
 const SEMANTICS_WAIT = Duration.minutes(2);
 
-/** The code a `verify` the wrapper stopped after its report exits with, as `timeout` does. */
+/** The code a `verify` the wrapper stopped after its report exits with when its device run recorded `CLEAN`, as `timeout` does. */
 const STOPPED = 124;
+
+/**
+ * The code a stopped `verify` exits with when its device run recorded anything but `CLEAN`, or nothing: a failure.
+ * Exact records a result as text, with no exit code of its own to pass on.
+ */
+const STOPPED_FAILING = 1;
+
+/** The result Exact's `verify` records for a device run with no problem (`scripts/verify.mjs`). */
+const CLEAN = 'clean';
 
 /** One line of the app's `.exact/runs.jsonl`, where Exact's `verify` records its device run's result (`scripts/evidence.mjs`). */
 const RunLine = Schema.fromJsonString(
@@ -470,7 +479,7 @@ const appNamed = (name: string) =>
  * (`listenerOf`), or a `verify`'s until its report is written (`reportEnd`), and One's route types in the packages the
  * app links set aside until it ends (`routeTypesAside`). The child runs in a process group of its
  * own, ended with whatever it left there when it exits or the run is stopped. The child's exit code; for a `verify`
- * still running `SEMANTICS_WAIT` after its report, `STOPPED`, its process group ended (its `scripts/verify.mjs` passes
+ * still running `SEMANTICS_WAIT` after its report, `STOPPED` when its device run of that host recorded `CLEAN`, else `STOPPED_FAILING`, its process group ended (its `scripts/verify.mjs` passes
  * the signal on to the `contract verify` group it started).
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
@@ -568,15 +577,23 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
         ),
       );
       if (Option.isSome(exited)) return exited.value;
-      const result = Option.match(yield* verified.result, {
+      const recorded = yield* verified.result;
+      const result = Option.match(recorded, {
         onNone: () => 'recorded no result',
         onSome: (said) => `recorded "${said}"`,
       });
+      const code = Option.match(
+        Option.filter(recorded, (said) => said === CLEAN),
+        {
+          onNone: () => STOPPED_FAILING,
+          onSome: () => STOPPED,
+        },
+      );
       yield* Console.error(
-        `exact-kit: verify ${verified.host} wrote its report ${Duration.format(SEMANTICS_WAIT)} ago and its contract verify (difftest) has not ended, so the run is stopped, exit ${STOPPED}: the device run ${result} and the report above stands; the semantics check did not finish (docs/exact.md)`,
+        `exact-kit: verify ${verified.host} wrote its report ${Duration.format(SEMANTICS_WAIT)} ago and its contract verify (difftest) has not ended, so the run is stopped, exit ${code}: the device run ${result} and the report above stands; the semantics check did not finish (docs/exact.md)`,
       );
       yield* Effect.ignore(handle.kill({ forceKillAfter: Duration.seconds(5) }));
-      return ChildProcessSpawner.ExitCode(STOPPED);
+      return ChildProcessSpawner.ExitCode(code);
     }),
   );
 });
