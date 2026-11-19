@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noTernary, effect/noUnknownParameters, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its untyped JSON replies by the fields it checks, and sets the garden's drive controls on its own launch. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its untyped JSON replies by the fields it checks, and sets the garden's drive controls on its own launch. */
 
 /**
  * What the web's `exact verify` reads at the largest text size (the root
