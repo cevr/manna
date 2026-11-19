@@ -1,6 +1,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   ConfigProvider,
+  Console,
   Duration,
   Effect,
   FileSystem,
@@ -107,9 +108,24 @@ const seeded = (home: string, udid: string) =>
     return dir;
   });
 
-/** `clearSimulatorConsoles` with `HOME` at `home` and `simctl` answering `list`; the commands it asked for are kept in `asked`. */
-const clearing = (simulator: string, home: string, list: string, asked: Array<string> = []) =>
+/**
+ * `clearSimulatorConsoles` with `HOME` at `home` and `simctl` answering `list`; the commands it asked for are kept in
+ * `asked`, and the lines it printed to the console's error stream in `said`.
+ */
+const clearing = (
+  simulator: string,
+  home: string,
+  list: string,
+  asked: Array<string> = [],
+  said: Array<string> = [],
+) =>
   clearSimulatorConsoles(simulator, START).pipe(
+    Effect.provideService(Console.Console, {
+      ...globalThis.console,
+      error: (...args: ReadonlyArray<unknown>) => {
+        said.push(args.map(String).join(' '));
+      },
+    }),
     Effect.provide(
       Layer.mergeAll(
         simctl(list, asked),
@@ -140,10 +156,18 @@ describe('the stale launch consoles of a simulator', () => {
           expect(simulators.toSorted()).toEqual(EXACTS.map((e) => e.name));
           for (const simulator of simulators) {
             const asked: Array<string> = [];
-            expect(yield* clearing(simulator, home, list, asked)).toBe(STALE.length);
+            const said: Array<string> = [];
+            expect(yield* clearing(simulator, home, list, asked, said)).toBe(STALE.length);
             expect(asked).toEqual(['xcrun simctl list devices --json']);
             const own = EXACTS.find((e) => e.name === simulator)?.udid ?? '';
-            expect(yield* listed(dirs.get(own) ?? '')).toEqual(KEPT);
+            const dir = dirs.get(own) ?? '';
+            expect(said).toEqual([
+              `exact-kit: cleared ${STALE.length} stale launch_console FIFOs from ${dir}`,
+            ]);
+            expect(yield* listed(dir)).toEqual(KEPT);
+            const again: Array<string> = [];
+            expect(yield* clearing(simulator, home, list, [], again)).toBe(0);
+            expect(again).toEqual([]);
           }
           for (const { udid } of OWNERS)
             expect(yield* listed(dirs.get(udid) ?? '')).toEqual([...STALE, ...KEPT].toSorted());
@@ -151,10 +175,16 @@ describe('the stale launch consoles of a simulator', () => {
       ).pipe(Effect.provide(BunServices.layer)),
   );
 
-  it.effect('finds nothing to clear when the simulator has no data/tmp yet', () =>
-    Effect.gen(function* () {
-      expect(yield* clearing(EXACTS[0].name, '/nonexistent/loop-probe-x', listing(EXACTS))).toBe(0);
-    }).pipe(Effect.provide(BunServices.layer)),
+  it.effect(
+    'finds nothing to clear, and says nothing, when the simulator has no data/tmp yet',
+    () =>
+      Effect.gen(function* () {
+        const said: Array<string> = [];
+        expect(
+          yield* clearing(EXACTS[0].name, '/nonexistent/loop-probe-x', listing(EXACTS), [], said),
+        ).toBe(0);
+        expect(said).toEqual([]);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.effect('clears nothing when no simulator, or more than one, carries the name', () =>
