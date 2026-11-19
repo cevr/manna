@@ -184,6 +184,10 @@ threshold's channel (16). It writes, under `tmp/pixel-match/shots/`:
 - a diff picture: the reference, the screen, the differing pixels in red,
   and the masks hatched.
 
+Before each cell is shot, on either host, its earlier result and diff
+picture are removed, so a cell whose shot fails or is refused has no result
+for `pixel report` to read, never an older shot's score.
+
 ### Heartseed's content band
 
 The port keeps UIKit's navigation bar and tab bar on Heartseed's Garden
@@ -267,6 +271,8 @@ Sounds and haptics off with it:
   settles, before the row's ops can change it (opening a hymn adds it to
   Recent). A state that does not read its seeded value refuses the cell
   (`readBackRefusal`), so a store the page did not read is never scored.
+  `src/shot-web.test.ts` holds this through `shoot` itself, with a fake
+  port, store writer and drive.
 - A row with no fixture starts from an emptied store (`--reset-storage`).
 - Heartseed's port keeps its fixture in a file (`app:/data/heartseed.json`),
   which the web host holds in IndexedDB. Heartseed has no web cells, and a

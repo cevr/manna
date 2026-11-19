@@ -17,7 +17,7 @@
  * scored; a row whose fixture the web store cannot hold yet is refused.
  */
 
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { claimAppPort } from '@manna/exact-kit/port';
@@ -144,12 +144,33 @@ const shootIos = (frame: Frame, row: Row, cell: Cell) => {
 };
 
 /**
+ * What a web shot reaches beyond the harness's own files: a port of the
+ * app's spare range, the writer of the drive's Chrome store, and the drive
+ * itself (`bun run exact agent web`, its output logged). A unit test hands
+ * `shoot` its own.
+ */
+interface WebHost {
+  readonly claim: (
+    appDir: string,
+    label: string,
+  ) => Promise<{ readonly port: number; readonly give: () => void }>;
+  readonly writeStore: typeof writeWebStore;
+  readonly drive: typeof runLogged;
+}
+
+const WEB_HOST: WebHost = {
+  claim: (appDir, label) => claimAppPort(appDir, { label }),
+  writeStore: writeWebStore,
+  drive: runLogged,
+};
+
+/**
  * Takes and scores the port's web cell of `row`, on the row's fixture as
  * the reference's page held it (`webSeedOf`): written into the drive's
  * Chrome store on the one port the cell claims and drives on, read back
  * by the drive before the row's ops, or the cell refused.
  */
-const shootWeb = async (frame: Frame, row: Row, cell: Cell) => {
+const shootWeb = async (frame: Frame, row: Row, cell: Cell, host: WebHost) => {
   sideOf(frame, row, cell);
   const seed = webSeedOf(cell.app, row, new Date());
   if (seed._tag === 'Refused') throw new Error(seed.reason);
@@ -157,10 +178,10 @@ const shootWeb = async (frame: Frame, row: Row, cell: Cell) => {
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
   const appDir = join(frame.root, 'apps', `${cell.app}-exact`);
-  const claim = await claimAppPort(appDir, { label: `pixel shot ${cellName(cell)}` });
+  const claim = await host.claim(appDir, `pixel shot ${cellName(cell)}`);
   try {
     const states = seed._tag === 'Seed' ? seed.states : [];
-    if (seed._tag === 'Seed') await writeWebStore(appDir, claim.port, seed);
+    if (seed._tag === 'Seed') await host.writeStore(appDir, claim.port, seed);
     const command = webCommand(
       row,
       cell,
@@ -168,7 +189,7 @@ const shootWeb = async (frame: Frame, row: Row, cell: Cell) => {
       ['--port', String(claim.port), ...storageFlags(seed)],
       states.map(([name]) => name),
     );
-    const out = runLogged(command.argv, files.log, appDir, command.env);
+    const out = host.drive(command.argv, files.log, appDir, command.env);
     const unread = readBackRefusal(out, states);
     if (unread !== undefined) throw new Error(`${row.id}: ${unread}`);
     return scoreShot(frame, row, cell, out);
@@ -177,13 +198,34 @@ const shootWeb = async (frame: Frame, row: Row, cell: Cell) => {
   }
 };
 
-/** Shoots the asked cells of `rows` on one host; one line per cell. */
+/**
+ * Removes a cell's result and diff picture before its shot, so a shot that
+ * fails or is refused leaves no score of an earlier one for `pixel report`
+ * to read as this one's.
+ */
+const dropResult = (root: string, cell: Cell) => {
+  const files = shotFiles(root, cell);
+  rmSync(files.result, { force: true });
+  rmSync(files.diff, { force: true });
+};
+
+/**
+ * Shoots the asked cells of `rows` on one host; one line per cell, printed
+ * and returned. A web cell goes through `web` (the real port, Chrome and
+ * drive unless a test hands its own).
+ */
 export const shoot = async (
   frame: Frame,
   app: AppName,
   rows: ReadonlyArray<Row>,
   only: { readonly web: boolean; readonly scheme?: string; readonly size?: string },
+  web: WebHost = WEB_HOST,
 ) => {
+  const lines: string[] = [];
+  const say = (line: string) => {
+    lines.push(line);
+    console.log(line);
+  };
   const host = only.web ? 'web' : 'ios';
   const asked = rows.flatMap((row) =>
     cellsOf(app, row)
@@ -196,21 +238,22 @@ export const shoot = async (
       .map((cell) => ({ row, cell })),
   );
   if (asked.length === 0)
-    console.log(
+    say(
       `pixel shot: no ${host} cell of ${app} matches; ${app} is drawn on ${hostsOf(app).join(' and ')}`,
     );
   for (const { row, cell } of asked) {
+    dropResult(frame.root, cell);
     try {
-      const result = host === 'web' ? await shootWeb(frame, row, cell) : shootIos(frame, row, cell);
+      const result =
+        host === 'web' ? await shootWeb(frame, row, cell, web) : shootIos(frame, row, cell);
       const share = ((result.differing / result.scored) * 100).toFixed(3);
-      console.log(
+      say(
         `${cellName(cell)}: ${result.differing} of ${result.scored} differ (${share} %), largest ${result.largest}, masked ${result.masked}, scored over ${result.total} of ${result.picture}; at 0/4/8/16: ${result.ladder.map((step) => step.differing).join('/')}; ${result.diff}`,
       );
-      console.log(result.compare.replaceAll(/^/gm, '  '));
+      say(result.compare.replaceAll(/^/gm, '  '));
     } catch (error) {
-      console.log(
-        `FAILED ${cellName(cell)}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      say(`FAILED ${cellName(cell)}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+  return lines;
 };
