@@ -8,9 +8,16 @@ state, and scores the pair with a strict diff.
 
 ```bash
 bun run pixel ref <app> [<id>…] [--web] [--repin]  # One references under the pinned One commit (the reference simulator booted and installed)
-bun run pixel shot <app> <id>… [--scheme light|dark] [--size <size>]  # the port against them
+bun run pixel shot <app> <id>… [--web] [--scheme light|dark] [--size <size>]  # the port against them
 bun run pixel report [--unit <unit>]              # tmp/pixel-match/report.json
 ```
+
+The command line is read before anything runs (`src/args.ts`). A flag that
+takes a value and has none (`--size` at the end, or followed by another
+flag), a scheme other than `light` or `dark`, a size no cell of the host has
+(an iOS text size, or with `--web` a viewport such as `390x844@2`), an
+unknown flag, or an id that names no row of the app refuses with its reason
+and exit 1.
 
 ## Rows and cells
 
@@ -53,21 +60,32 @@ For each cell, the harness:
 1. stops the app;
 2. writes the fixture into One's key-value store (`one_kv` in the app
    container);
-3. sets the scheme, text size and Reduce Motion, then reads them back;
+3. sets the scheme, text size, Reduce Motion and Prefer Non-Blinking
+   Cursor (so a focused field's caret holds steady and drawn, and a
+   capture with the keyboard up holds still), then reads them back; `pixel
+   shot` sets the same caret on the port's simulator;
 4. overrides the status bar to 9:41, full bars and charged;
 5. drives the steps;
 6. keeps the screen once two takes 500 ms apart are the same bytes (three
    tries);
-7. refuses a Heartseed capture whose greeting's face (morning from 04:00,
+7. for a keyboard row (`keyboard: true`), reads the keyboard's top from the
+   tree (UIKit's `inputView`, the keys with the predictions bar), or
+   refuses the capture when no keyboard is up;
+8. refuses a Heartseed capture whose greeting's face (morning from 04:00,
    afternoon from 12:00, evening from 18:00) changed between the cell's
    start and the still capture (`src/clock.ts`);
-8. refuses the capture if the accessibility tree holds a development
+9. refuses the capture if the accessibility tree holds a development
    overlay.
+
+A picture is taken beside the reference (`.taking.png`) and replaces it only
+once kept, so a capture that is refused leaves the cell's earlier
+reference as it was.
 
 `--web` takes the hymnal's web cells from One's production web build
 (`bun run --cwd apps/hymnal build`, its `dist/client`). It serves the build
 from plain files on 8261 and captures it with headless Chromium
-(`--use-mock-keychain`). The fixture goes into `localStorage` before the
+(`--use-mock-keychain --password-store=basic`, so it never asks the login
+keychain). The fixture goes into `localStorage` before the
 page loads. A blank page is refused.
 
 A reference goes to
@@ -78,11 +96,14 @@ beside it. The `.json` records the commit, fixture, the cell's start
 digest and the picture's hash.
 
 - `<one>` is the pinned One commit, the one line of
-  `packages/pixel-match/one-commit` (`src/pin.ts`). A port's refactor under a
-  One app's folder lands as a commit there, so the key is pinned rather than
-  read from git, or every reference would read as missing.
+  `packages/pixel-match/one-commit` (`src/pin.ts`), 12 hex digits; any other
+  text in it stops every command. A port's refactor under a One app's folder
+  lands as a commit there, so the key is pinned rather than read from git,
+  or every reference would read as missing.
 - When git's last commit under `apps/heartseed`, `apps/hymnal`,
-  `packages/hymnal` or `packages/core` is not the pin, every command prints
+  `packages/hymnal` or `packages/core`, less their tests (`*.test.ts`,
+  `*.test.tsx`) and the declarations a One app keeps for its port
+  (`apps/*/exact/**`), none of which a One build runs, is not the pin, every command prints
   one line on stderr naming both and the files changed under those paths
   since the pin. Read them: a change to what One draws makes the references
   stale. `pixel ref` then refuses to capture. `pixel ref … --repin` captures
@@ -122,13 +143,31 @@ It returns the scored, differing and masked counts and the largest
 rules. PNGs are read and written by `src/png.ts` over node's zlib.
 
 `pixel shot` drives the port through `bun run exact agent ios` on its Exact
-simulator, with the row's ops. The row's fixture is first written into the
+simulator, with the row's ops. It sets the simulator's text size to the
+cell's before every iOS cell, reads it back after the drive, records it in
+the result (`contentSize`), and refuses the shot when it is not the cell's:
+the Exact simulators are shared, and a size an earlier run left on one
+would score another screen. After every cell, passed or failed, it puts
+the size back to `large` (`atContentSize`), so no later cell, test or
+drive inherits it. Each drive's whole stdout and stderr is kept beside the
+cell's screen (`<cell>.log` under `tmp/pixel-match/shots/`); a failed cell
+prints the log's path and the last lines of both, since an agent run with
+`--json` says why it stopped in its last reply on stdout. A row whose
+drive must move a system sheet (a drag to the player's full detent) sets
+`exact.touch: 'platform'`, and the drive runs with Exact's
+`--touch platform`, every tap and drag a real touch. The row's fixture is first written into the
 port's own store (`src/port-store.ts`): Heartseed's port keeps One's pairs
 in `app:/data/heartseed.json`, so the pairs are written to that file of
 the drive's named store (`Library/Caches/exact/<app id>/agent/pm-<id>` in
 the app's container, emptied first), and the drive keeps it
-(`--keep-storage`). A row with no fixture, and a port whose store is not
-described yet (the hymnal's), starts from an empty store. It first removes
+(`--keep-storage`). The hymnal's port keeps each setting as a persisted
+state of its own name, which an agent drive's named store holds as one file
+each, `kv/exact.state/<the name in base32>`, beside `data/`; so each of
+One's keys is written as the state the port reads it from (`feel` as
+`settingsFeelKept`, `lists.favourites` as `favouriteList`, `lists.recent` as
+`recentList`, `chords` as `chordsOn`; `sound` has no switch in the port and
+nothing on screen), and a key with no place there is refused. A row with no
+fixture starts from an empty store. It first removes
 `apps/<app>/app/routes.d.ts`, the route types One's dev server writes while
 a reference is taken. Each port imports its One app's package. Exact's bake
 stages every declaration file of that package, and this file pulls in `one`'s
@@ -174,7 +213,39 @@ a band, not the whole picture:
 
 The result's `total` is the band's pixels and `picture` the whole
 picture's. The acceptance check fails a band under 60 % of the picture.
-Sheets and every hymnal row are scored whole (`total` equals `picture`).
+The Settings and Add sheets are scored whole (`total` equals `picture`).
+
+### Bands outside Heartseed's Garden
+
+- **The keyboard.** The system draws the software keyboard in both apps, and
+  its predictions move, so it is left out as Heartseed's bars are, not
+  masked: a row with `keyboard: true` (the hymnal's search rows) ends each
+  side's band at the keyboard's top. One's is read from the tree when the
+  reference is taken (`keyboard` in the `.json`, in device pixels); the
+  port's from the agent's `state keyboard` (its `top`, in points) after the
+  row's ops. The band runs from the picture's top, or from a banded row's
+  top, and a band under 60 % still fails.
+- **The About rows** (calibration). One draws each About inside its own
+  sheet (Heartseed's page sheet, the hymnal's Settings sheet scrolled to
+  its last group) and the port pushes a page of its own under a bar, so the
+  two pictures are different screens around the same content. Each is
+  scored from the top of the same first text on both sides (Heartseed's
+  `about-name` and first licence text, the hymnal's recordings' lead),
+  with the port's band edge read from that node's top (`edge: 'top'`).
+  These bands are under 60 % for the hymnal (its group is the sheet's last),
+  so its cells fail `accept.ts` by design: they give the calibration's
+  ladder, not a pass.
+
+### The web
+
+`pixel shot <app> <id>… --web` takes the port's web cells: the port's web
+build in the agent's own Chromium (`bun run exact agent web`, launched with
+`--use-mock-keychain --password-store=basic`), at the reference's viewport
+(`--size 390x844`) and its device scale (`EXACT_SCALE`, Chrome's own scale
+factor, never CDP's emulated one), with the cell's scheme preferred, on an
+empty store. Its ops are the row's `exact.web.ops`, else its iOS ops. iOS
+masks are never laid on a web picture: a web cell lays only
+`exact.web.masks`, in CSS pixels.
 
 `pixel report` writes every cell's state to `tmp/pixel-match/report.json`,
 in the format the run's acceptance check reads: its references and its

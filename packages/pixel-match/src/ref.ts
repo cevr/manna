@@ -12,7 +12,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { faceAt, faceChanged, hostZone } from './clock.ts';
@@ -23,6 +23,7 @@ import {
   run,
   setLook,
   setReduceMotion,
+  setSteadyCaret,
   sleep,
   stillShot,
   terminate,
@@ -146,6 +147,17 @@ const bandTopOf = (frame: Frame, app: AppName, band: OneBand) => {
   return Math.round(points * IOS.scale);
 };
 
+/** The software keyboard as the driver's tree names it: UIKit's input view, the keys with the predictions bar over them (the tree's `keyboard` node is the keys alone, 44 points lower). */
+const KEYBOARD = 'id=inputView';
+
+/** The keyboard's top in device pixels, read from the screen's tree now; a throw when no keyboard is up. */
+const keyboardTopOf = (frame: Frame, app: AppName) => {
+  const rect = rectOf(frame, app, KEYBOARD);
+  if (rect === undefined || rect.height <= 0)
+    throw new Error('keyboard: a keyboard row with no keyboard up');
+  return Math.round(rect.y * IOS.scale);
+};
+
 /** The app stopped, its store written with `fixture`, the look set and read back, the status bar overridden. */
 const prepare = (frame: Frame, side: Side, cell: Cell, fixture: string, now: Date) => {
   const config = CONFIG[cell.app];
@@ -156,6 +168,7 @@ const prepare = (frame: Frame, side: Side, cell: Cell, fixture: string, now: Dat
   writeStore(udid, config.bundleId, config.store.file, store);
   setLook(udid, cell.scheme, cell.size);
   setReduceMotion(udid, side.reduceMotion === true);
+  setSteadyCaret(udid);
   overrideStatusBar(udid);
   return udid;
 };
@@ -231,32 +244,34 @@ const takeCell = async (frame: Frame, row: Row, side: Side, cell: Cell, started:
   await drive(frame, cell.app, side);
   const oneBand = side.band;
   let band: (OneBand & { readonly top: number }) | undefined;
-  if (oneBand !== undefined)
-    try {
-      band = { ...oneBand, top: bandTopOf(frame, cell.app, oneBand) };
-    } catch (error) {
-      return String(error instanceof Error ? error.message : error);
-    }
-  const file = refFile(frame, cell);
-  mkdirSync(join(file, '..'), { recursive: true });
-  const shot = await capture(frame, cell.app, udid, side.hold, file);
-  if (shot === undefined) {
-    unlinkSync(file);
-    return 'moving: no two takes 500 ms apart were the same bytes';
+  let keyboard: number | undefined;
+  try {
+    if (oneBand !== undefined) band = { ...oneBand, top: bandTopOf(frame, cell.app, oneBand) };
+    if (row.keyboard === true) keyboard = keyboardTopOf(frame, cell.app);
+  } catch (error) {
+    return String(error instanceof Error ? error.message : error);
   }
+  const file = refFile(frame, cell);
+  const taking = file.replace(/\.png$/, '.taking.png');
+  mkdirSync(join(file, '..'), { recursive: true });
+  const shot = await capture(frame, cell.app, udid, side.hold, taking);
+  const refused = (reason: string) => {
+    unlinkSync(taking);
+    return reason;
+  };
+  if (shot === undefined) return refused('moving: no two takes 500 ms apart were the same bytes');
   const taken = new Date();
   const changed = cell.app === 'heartseed' ? faceChanged(started, taken) : undefined;
-  if (changed !== undefined) {
-    unlinkSync(file);
-    return changed;
-  }
+  if (changed !== undefined) return refused(changed);
   const tree = treeOf(frame, cell.app, `pm-${row.id}`);
-  if (tree.overlay) {
-    unlinkSync(file);
-    return 'refused: a development overlay is in the tree';
-  }
+  if (tree.overlay) return refused('refused: a development overlay is in the tree');
+  renameSync(taking, file);
   const at = { started, taken };
-  const metadata = { ...metadataOf(frame, cell, fixture, at, udid, tree.digest, shot), band };
+  const metadata = {
+    ...metadataOf(frame, cell, fixture, at, udid, tree.digest, shot),
+    band,
+    keyboard,
+  };
   writeFileSync(file.replace(/\.png$/, '.json'), `${JSON.stringify(metadata, null, 2)}\n`);
   return undefined;
 };

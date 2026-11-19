@@ -1,23 +1,36 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noNullish, effect/noTernary, effect/noAs, effect/noTryCatch -- a host tool that drives the port through `bun run exact agent` and reads its JSON replies: plain TypeScript as the exact-kit's drives are. */
 
 /**
- * `pixel shot <app> <id>… [--scheme light|dark] [--size <size>]`: the port
- * against the One reference. For each iOS cell asked, the port is launched
- * on its Exact simulator through `bun run exact agent ios` (the wrapper, its
- * lock, its simulator) on the row's fixture written to its store (an empty
- * store for a row with none, `seedPort`) and on the agent's clock at the
- * reference's hour (`portClock`), set to the cell's scheme, driven by the
- * row's ops and its screen taken with Exact's `compare` against the
- * reference; `scoreShot` then scores the pair.
+ * `pixel shot <app> <id>… [--web] [--scheme light|dark] [--size <size>]`:
+ * the port against the One reference. For each iOS cell asked, the port is
+ * launched on its Exact simulator through `bun run exact agent ios` (the
+ * wrapper, its lock, its simulator) on the row's fixture written to its
+ * store (an empty store for a row with none, `seedPort`) and on the
+ * agent's clock at the reference's hour (`portClock`), set to the cell's
+ * scheme, driven by the row's ops and its screen taken with Exact's
+ * `compare` against the reference; `scoreShot` then scores the pair. With
+ * `--web`, each web cell is the port's web build in the agent's own
+ * Chromium (`bun run exact agent web`, which launches it with
+ * `--use-mock-keychain --password-store=basic`) at the reference's
+ * viewport (`--size`) and device scale (`EXACT_SCALE`, Chrome's own), on an
+ * empty store.
  */
 
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { bandOps } from './agent-band.ts';
 import { hostZone, portClock } from './clock.ts';
+import { iosCommand, webCommand } from './command.ts';
 import { writePortStore } from './port-store.ts';
-import { overrideStatusBar, run } from './ios.ts';
+import {
+  atContentSize,
+  contentSizeOf,
+  overrideStatusBar,
+  run,
+  runLogged,
+  setContentSize,
+  setSteadyCaret,
+} from './ios.ts';
 import { cellName, cellsOf, IOS, type AppName, type Cell, type Row } from './model.ts';
 import { refFile, shotFiles } from './paths.ts';
 import { referenceOf, scoreShot, type Frame } from './score.ts';
@@ -82,15 +95,21 @@ const seedPort = (app: AppName, row: Row, udid: string) => {
   return storageFlags(plan);
 };
 
-/** Takes and scores the port's iOS cell of `row`. */
-const shootCell = (frame: Frame, row: Row, cell: Cell) => {
+/** The row's Exact side and the cell's reference, both there, or a throw naming which is not. */
+const sideOf = (frame: Frame, row: Row, cell: Cell) => {
   const side = row.exact;
   if (side === undefined) throw new Error(`${row.id}: no Exact side written yet`);
   if (!existsSync(refFile(frame, cell))) throw new Error(`${cellName(cell)}: no reference`);
+  return side;
+};
+
+/** Takes and scores the port's iOS cell of `row`. */
+const shootIos = (frame: Frame, row: Row, cell: Cell) => {
+  const side = sideOf(frame, row, cell);
   const reference = referenceOf(frame, cell);
   if (row.one?.band !== undefined && reference.band === undefined)
     throw new Error(`${cellName(cell)}: a banded row whose reference keeps no band: take it again`);
-  if (reference.band !== undefined && side.band === undefined)
+  if (row.one?.band !== undefined && side.band === undefined)
     throw new Error(`${row.id}: a banded row whose Exact side names no band`);
   const clock = portClock(reference.taken, new Date(), hostZone());
   if (clock._tag === 'Refused') throw new Error(`${cellName(cell)}: ${clock.reason}`);
@@ -98,65 +117,69 @@ const shootCell = (frame: Frame, row: Row, cell: Cell) => {
   const udid = udidOfName(EXACT_SIMULATORS[cell.app]);
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
-  if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', cell.size]);
-  overrideStatusBar(udid);
-  const storage = seedPort(cell.app, row, udid);
-  const edges = side.band === undefined ? [] : bandOps(side.band);
-  const ops = [
-    `prefer prefers-color-scheme ${cell.scheme}`,
-    'clock settle',
-    ...side.ops,
-    'clock settle',
-    ...edges,
-    `screenshot ${files.screen} window compare ${refFile(frame, cell)}`,
-  ];
-  const out = run(
-    [
-      'bun',
-      'run',
-      'exact',
-      'agent',
-      'ios',
-      '--json',
-      '--scale',
-      String(IOS.scale),
-      '--epoch',
-      String(clock.epoch),
-      '--time-zone',
-      clock.timeZone,
-      ...storage,
-      ...ops,
-    ],
+  const sim = {
+    read: () => contentSizeOf(udid),
+    set: (size: string) => {
+      setContentSize(udid, size);
+    },
+  };
+  return atContentSize(sim, cell.size, IOS.size, (readBack) => {
+    overrideStatusBar(udid);
+    setSteadyCaret(udid);
+    const storage = seedPort(cell.app, row, udid);
+    const argv = iosCommand(
+      { ...row, exact: side },
+      cell,
+      { screen: files.screen, reference: refFile(frame, cell) },
+      clock,
+      storage,
+    );
+    const out = runLogged(argv, files.log, join(frame.root, 'apps', `${cell.app}-exact`));
+    return scoreShot(frame, row, cell, out, readBack());
+  });
+};
+
+/** Takes and scores the port's web cell of `row`. */
+const shootWeb = (frame: Frame, row: Row, cell: Cell) => {
+  sideOf(frame, row, cell);
+  dropOneRoutes(frame.root);
+  const files = shotFiles(frame.root, cell);
+  mkdirSync(dirname(files.screen), { recursive: true });
+  const command = webCommand(row, cell, files.screen, refFile(frame, cell));
+  const out = runLogged(
+    command.argv,
+    files.log,
     join(frame.root, 'apps', `${cell.app}-exact`),
+    command.env,
   );
-  if (cell.size !== IOS.size) run(['xcrun', 'simctl', 'ui', udid, 'content_size', IOS.size]);
   return scoreShot(frame, row, cell, out);
 };
 
-/** Shoots the asked iOS cells of `rows`; one line per cell. */
+/** Shoots the asked cells of `rows` on one host; one line per cell. */
 export const shoot = (
   frame: Frame,
   app: AppName,
   rows: ReadonlyArray<Row>,
-  only: { readonly scheme?: string; readonly size?: string },
+  only: { readonly web: boolean; readonly scheme?: string; readonly size?: string },
 ) => {
+  const host = only.web ? 'web' : 'ios';
   for (const row of rows)
     for (const cell of cellsOf(app, row).filter(
       (each) =>
-        each.host === 'ios' &&
+        each.host === host &&
         (only.scheme === undefined || each.scheme === only.scheme) &&
         (only.size === undefined || each.size === only.size),
     )) {
       try {
-        const result = shootCell(frame, row, cell);
+        const result = host === 'web' ? shootWeb(frame, row, cell) : shootIos(frame, row, cell);
         const share = ((result.differing / result.scored) * 100).toFixed(3);
         console.log(
-          `${cellName(cell)}: ${result.differing} of ${result.scored} differ (${share} %), largest ${result.largest}, masked ${result.masked}; at 0/4/8/16: ${result.ladder.map((step) => step.differing).join('/')}; ${result.diff}`,
+          `${cellName(cell)}: ${result.differing} of ${result.scored} differ (${share} %), largest ${result.largest}, masked ${result.masked}, scored over ${result.total} of ${result.picture}; at 0/4/8/16: ${result.ladder.map((step) => step.differing).join('/')}; ${result.diff}`,
         );
         console.log(result.compare.replaceAll(/^/gm, '  '));
       } catch (error) {
         console.log(
-          `FAILED ${cellName(cell)}: ${error instanceof Error ? error.message.slice(0, 600) : String(error)}`,
+          `FAILED ${cellName(cell)}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

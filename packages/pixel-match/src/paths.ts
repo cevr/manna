@@ -21,7 +21,12 @@ export const refFile = (frame: { readonly refs: string; readonly one: string }, 
 /** A cell's port screen, its diff picture and its result, under the checkout's `tmp/pixel-match/shots`. */
 export const shotFiles = (root: string, cell: Cell) => {
   const base = join(root, 'tmp', 'pixel-match', 'shots', cellPath(cell));
-  return { screen: `${base}.png`, diff: `${base}.diff.png`, result: `${base}.json` };
+  return {
+    screen: `${base}.png`,
+    diff: `${base}.diff.png`,
+    result: `${base}.json`,
+    log: `${base}.log`,
+  };
 };
 
 export const reportFile = (root: string) => join(root, 'tmp', 'pixel-match', 'report.json');

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNullish, effect/noTernary, no-await-in-loop -- a host tool over `xcrun simctl`, Bun's spawn and SQLite: plain TypeScript as the exact-kit's drives are; a simulator call that fails is a broken capture, said by a throw. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noTryCatch, no-await-in-loop -- a host tool (its text size put back in a finally, whether the drive returned or threw) over `xcrun simctl`, Bun's spawn and SQLite: plain TypeScript as the exact-kit's drives are; a simulator call that fails is a broken capture, said by a throw. */
 
 /**
  * The simulator calls a capture makes, each naming its udid (never
@@ -15,14 +15,63 @@ import { Option, Predicate, Schema } from 'effect';
 
 import type { Store } from './fixtures.ts';
 
-/** Runs a command to its end; its stdout, or a throw with its stderr. */
-export const run = (argv: ReadonlyArray<string>, cwd?: string) => {
-  const done = Bun.spawnSync([...argv], { cwd, stdout: 'pipe', stderr: 'pipe' });
+/** Runs a command to its end, with `env` over the process's own; its stdout, or a throw with its stderr. */
+export const run = (
+  argv: ReadonlyArray<string>,
+  cwd?: string,
+  env?: Readonly<Record<string, string>>,
+) => {
+  const done = Bun.spawnSync([...argv], {
+    cwd,
+    env: env === undefined ? undefined : { ...Bun.env, ...env },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   if (done.exitCode !== 0)
     throw new Error(
       `${argv.join(' ')} exited ${done.exitCode}: ${done.stderr.toString().slice(-800)}`,
     );
   return done.stdout.toString();
+};
+
+/** The last `count` non-empty lines of `text`. */
+const tailOf = (text: string, count: number) =>
+  text
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .slice(-count)
+    .join('\n');
+
+/**
+ * Runs a drive to its end and keeps its whole stdout and stderr in `log`;
+ * its stdout, or a throw that names the log and carries the tail of both:
+ * an agent run with `--json` says why it stopped in its last reply on
+ * stdout, and may leave stderr empty.
+ */
+export const runLogged = (
+  argv: ReadonlyArray<string>,
+  log: string,
+  cwd?: string,
+  env?: Readonly<Record<string, string>>,
+) => {
+  const done = Bun.spawnSync([...argv], {
+    cwd,
+    env: env === undefined ? undefined : { ...Bun.env, ...env },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const stdout = done.stdout.toString();
+  const stderr = done.stderr.toString();
+  mkdirSync(dirname(log), { recursive: true });
+  writeFileSync(
+    log,
+    `$ ${argv.join(' ')}\nexit ${done.exitCode}\n--- stdout\n${stdout}\n--- stderr\n${stderr}\n`,
+  );
+  if (done.exitCode !== 0)
+    throw new Error(
+      `the drive exited ${done.exitCode} (whole output: ${log})\n--- stdout, last lines\n${tailOf(stdout, 6)}\n--- stderr, last lines\n${tailOf(stderr, 20)}`,
+    );
+  return stdout;
 };
 
 const simctl = (...args: ReadonlyArray<string>) => run(['xcrun', 'simctl', ...args]);
@@ -60,6 +109,38 @@ export const setLook = (udid: string, scheme: string, size: string) => {
     throw new Error(`${udid}: asked ${scheme} ${size}, reads ${shownScheme} ${shownSize}`);
 };
 
+/** The simulator's text size now, as `simctl ui content_size` reads it. */
+export const contentSizeOf = (udid: string) =>
+  simctl('ui', udid, 'content_size').trim().toLowerCase();
+
+/** Sets the text size and reads it back; a size that does not hold throws. */
+export const setContentSize = (udid: string, size: string) => {
+  simctl('ui', udid, 'content_size', size);
+  const shown = contentSizeOf(udid);
+  if (shown !== size) throw new Error(`${udid}: asked text size ${size}, reads ${shown}`);
+  return shown;
+};
+
+/**
+ * Runs `body` at text size `size` and puts the simulator back to `rest`
+ * after it, whether it returned or threw, so no later cell, test or drive on
+ * the shared simulator inherits the size. `body` gets the size read back
+ * after it ran, to record and check.
+ */
+export const atContentSize = <A>(
+  sim: { readonly read: () => string; readonly set: (size: string) => void },
+  size: string,
+  rest: string,
+  body: (readBack: () => string) => A,
+) => {
+  try {
+    sim.set(size);
+    return body(sim.read);
+  } finally {
+    if (sim.read() !== rest) sim.set(rest);
+  }
+};
+
 /** Turns Reduce Motion on or off in the simulator's accessibility settings, read back; the app reads it at launch. */
 export const setReduceMotion = (udid: string, on: boolean) => {
   simctl(
@@ -81,6 +162,19 @@ export const setReduceMotion = (udid: string, on: boolean) => {
     'ReduceMotionEnabled',
   ).trim();
   if (shown !== (on ? '1' : '0')) throw new Error(`${udid}: Reduce Motion reads ${shown}`);
+};
+
+/**
+ * Turns on Accessibility's Prefer Non-Blinking Cursor, read back: a text
+ * field's caret then holds steady, drawn, so a capture with a field
+ * focused holds still and draws the caret the same in both apps. The app
+ * reads it at launch.
+ */
+export const setSteadyCaret = (udid: string) => {
+  const key = ['com.apple.Accessibility', 'PrefersNonBlinkingCursorIndicator'];
+  simctl('spawn', udid, 'defaults', 'write', ...key, '-bool', 'true');
+  const shown = simctl('spawn', udid, 'defaults', 'read', ...key).trim();
+  if (shown !== '1') throw new Error(`${udid}: Prefer Non-Blinking Cursor reads ${shown}`);
 };
 
 /** Stops the app; an app not running is already stopped. */

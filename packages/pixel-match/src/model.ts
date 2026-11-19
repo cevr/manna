@@ -25,7 +25,7 @@ export const IOS = {
 } as const;
 
 /** The web matrix: the inventory's `matrix.web`. */
-const WEB = {
+export const WEB = {
   viewports: ['390x844@2', '1280x800@1'],
   schemes: ['light', 'dark'],
 } as const;
@@ -104,6 +104,14 @@ export interface Row {
   readonly exact?: ExactSide;
   /** Where a banded row's two bands are laid edge to edge: their tops (the default), or their feet for a row scrolled to its end. */
   readonly anchor?: 'top' | 'bottom';
+  /**
+   * The software keyboard is up in this row's iOS state. The system draws
+   * it, so it lies outside the score as Heartseed's bars do, not under a
+   * mask: each side's band ends at the keyboard's top, read at capture
+   * (One's from the tree's keyboard, the port's from the agent's
+   * `state keyboard`). A capture with no keyboard up fails.
+   */
+  readonly keyboard?: true;
 }
 
 /**
@@ -117,15 +125,31 @@ interface ExactSide {
   readonly ops: ReadonlyArray<string>;
   readonly masks?: ReadonlyArray<MaskSpec>;
   /**
-   * A banded row's band in the port's picture: from the bottom edge of the
-   * node `top` names (the top of the content under the navigation bar) to
-   * the foot of the scrollport of the scroller `bottom` names (where
-   * UIKit's tab bar inset begins), or the top of `bottom` when it is no
-   * scroller (a node under a fixed footer), read by the agent's `layout <top>` and
-   * whole-tree `layout` at capture (`agent-band.ts`). Every banded row's
-   * unit writes it with the row's ops.
+   * A banded row's band in the port's picture: from the bottom edge (or,
+   * with `edge: 'top'`, the top edge) of the node `top` names (the top of
+   * the content under the navigation bar) to the foot of the scrollport of
+   * the scroller `bottom` names (where UIKit's tab bar inset begins), or the
+   * top of `bottom` when it is no scroller (a node under a fixed footer),
+   * read by the agent's `layout <top>` and whole-tree `layout` at capture
+   * (`agent-band.ts`). Every banded row's unit writes it with the row's ops.
    */
-  readonly band?: { readonly top: string; readonly bottom: string };
+  readonly band?: ExactBand;
+  /**
+   * `platform`: the drive's taps and drags are real touches (Exact's
+   * `--touch platform`), for an op UIKit must see as a finger, as a drag that
+   * pulls a sheet to its full detent; by default the agent delivers them to
+   * the page itself, which no system sheet follows.
+   */
+  readonly touch?: 'platform';
+  /** The web cells' ops and masks (in CSS pixels), where they differ from the iOS ones; iOS masks are never laid on a web picture. */
+  readonly web?: { readonly ops?: ReadonlyArray<string>; readonly masks?: ReadonlyArray<MaskSpec> };
+}
+
+/** The port's band edges, by node: see `ExactSide.band`. */
+export interface ExactBand {
+  readonly top: string;
+  readonly bottom: string;
+  readonly edge?: 'top' | 'bottom';
 }
 
 /** One cell of a row's matrix. */
