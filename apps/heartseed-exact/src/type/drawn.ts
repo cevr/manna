@@ -18,37 +18,27 @@ export interface DrawnRun {
 export const DRAWN_VERSE = 100;
 
 /**
- * How each host lays a run out from its face's file. The web (Chrome) gives a run's width to a hundredth of a
- * pixel and its height as its ascent and descent each rounded to a whole pixel; iOS gives a frame in thirds of a
- * point, its height the line's.
+ * How far a run's width may stray from its file's advances: both hosts report an inline run's width to a hundredth
+ * (measured: every bundled face within 0.01 of its file, Chrome at 10.5035 px and iOS at 11.16 pt).
  */
-const HOSTS = {
-  web: { width: 0.03, height: (a: number, d: number) => Math.round(a) + Math.round(d), tall: 0 },
-  ios: { width: 0.34, height: (a: number, d: number) => a + d, tall: 1 },
-} as const;
+const WIDTH_SLACK = 0.03;
 
-/** A host whose runs the drive reads. */
-export type DrawnHost = keyof typeof HOSTS;
-
-/** The run `text` in the face `file` at `size` as `host` lays it out: its width, by its tabular figures, and its height, by its ascent and descent. */
-export const runOf = (file: FaceFile, text: string, size: number, host: DrawnHost): DrawnRun => ({
+/** The run `text` in the face `file` at `size`: its width, by its tabular figures, and its height, its ascent and descent each rounded to a whole pixel or point, as Chrome and iOS both lay an inline run out. */
+export const runOf = (file: FaceFile, text: string, size: number): DrawnRun => ({
   w: [...text].reduce((sum, char) => sum + file.tabular(char), 0) * size,
-  h: HOSTS[host].height(file.ascent * size, file.descent * size),
+  h: Math.round(file.ascent * size) + Math.round(file.descent * size),
   size,
 });
 
-/** Whether `drawn` is the run its file draws on `host`: as wide as its figures and as tall as its ascent and descent, within the host's rounding. */
-export const drawsFile = (file: FaceFile, text: string, drawn: DrawnRun, host: DrawnHost) => {
-  const want = runOf(file, text, drawn.size, host);
-  return (
-    Math.abs(drawn.w - want.w) <= HOSTS[host].width &&
-    Math.abs(drawn.h - want.h) <= HOSTS[host].tall
-  );
+/** Whether `drawn` is the run its file draws: as wide as its figures and as tall as its rounded ascent and descent. */
+export const drawsFile = (file: FaceFile, text: string, drawn: DrawnRun) => {
+  const want = runOf(file, text, drawn.size);
+  return Math.abs(drawn.w - want.w) <= WIDTH_SLACK && Math.abs(drawn.h - want.h) < 0.5;
 };
 
-/** Whether two runs of one text differ on `host`: in width past its rounding, or in height by a whole pixel. */
-export const drawnApart = (one: DrawnRun, other: DrawnRun, host: DrawnHost) =>
-  Math.abs(one.w - other.w) > HOSTS[host].width || Math.abs(one.h - other.h) >= 1;
+/** Whether two runs of one text differ: in width past the hosts' rounding, or in height by a whole pixel. */
+export const drawnApart = (one: DrawnRun, other: DrawnRun) =>
+  Math.abs(one.w - other.w) > WIDTH_SLACK || Math.abs(one.h - other.h) >= 1;
 
 /** The fallback by a font's kind, San Francisco for any kind it does not name. */
 const FALLBACKS: ReadonlyMap<string, string> = new Map([['Serif', 'newyork']]);

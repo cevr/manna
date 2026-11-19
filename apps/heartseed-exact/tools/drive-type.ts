@@ -247,7 +247,6 @@ drive.check(
 const heights = Object.fromEntries(
   FONTS.map((font) => [font, frameOf(first, columns[font] ?? -1)?.h ?? Number.NaN]),
 );
-const drawnHost = web ? 'web' : 'ios';
 /** Each font's verse 100's number as laid out: its frame and the size it was drawn at. */
 const runs = Object.fromEntries(
   FONTS.map((font): [string, DrawnRun] => {
@@ -270,7 +269,7 @@ drive.check(
   FONTS.slice(1).every(
     (font) =>
       drawn(font) &&
-      (drawnApart(runAt(font), runAt(FONTS[0] ?? ''), drawnHost) ||
+      (drawnApart(runAt(font), runAt(FONTS[0] ?? '')) ||
         Math.abs((heights[font] ?? 0) - (heights[FONTS[0] ?? ''] ?? 0)) > 0.5),
   ),
   { runs, heights },
@@ -290,10 +289,10 @@ const fromFile = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => 
     ok:
       file !== undefined &&
       drawn(font.key) &&
-      drawsFile(file, `${DRAWN_VERSE}`, run, drawnHost) &&
-      drawnApart(run, runAt(fallback), drawnHost),
+      drawsFile(file, `${DRAWN_VERSE}`, run) &&
+      drawnApart(run, runAt(fallback)),
     drawn: run,
-    file: file === undefined ? undefined : runOf(file, `${DRAWN_VERSE}`, run.size, drawnHost),
+    file: file === undefined ? undefined : runOf(file, `${DRAWN_VERSE}`, run.size),
     fallback: { [fallback]: runAt(fallback) },
   };
 });
