@@ -18,6 +18,7 @@ import { readContracts } from '../../tools/look';
 import { fontFacts, readFontFile, readFontFolders, readSources, sha256 } from '../../tools/fonts';
 import { sumOf } from '../text/sum';
 import { TYPE_FONTS } from './choices';
+import { fallbackOf } from './drawn';
 
 const BUDGET = 5_000_000;
 
@@ -173,6 +174,13 @@ describe('the family chains', () => {
       expect(firsts).toEqual(FIRST);
       expect(chain.get(DEFAULT_KEY)).toBe('ui-serif, Georgia, serif');
     });
+
+  it("each bundled face falls back to the system face drive-type's proof compares it with (fallbackOf)", () => {
+    const column = chains.get('type.font') ?? new Map<string, string>();
+    expect(bundled.map((font) => [font.key, column.get(font.key)?.split(', ')[1]])).toEqual(
+      bundled.map((font) => [font.key, FIRST[fallbackOf(font) as keyof typeof FIRST]]),
+    );
+  });
 
   it('finds a key missing from a chain', () => {
     const planted = chainsOf(
