@@ -92,7 +92,8 @@ theme
   line.hair: length = -exact-hairline
   opacity.pressed: number = 0.6
   nudge.title: length = -0.3333px
-  nudge.topic: length = -0.8333px
+  nudge.topic: length = -1px
+  nudge.tab: length = -0.6667px
   nudge.row: length = 1.3333px
   nudge.number: length = 1px
   nudge.gear: length = 26px

@@ -119,6 +119,7 @@ component HymnList
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
+      column position="absolute" top=0 left=0 right=0 height="var(--exact-safe-area-inset-top)" background-color="ground" aria-hidden=true testId="status-scrim"
       FindBar(entry=entry, results=true)
       PlayerBarRoom(id="bar-room")
 
@@ -152,7 +153,7 @@ component HomeTabs
         button role="tab" aria-selected=(tab == t) press=choose(t) appearance="none" flex-shrink=0
           padding-left="space.s12" padding-right="space.s12" padding-top="space.s6" padding-bottom="space.s6" border-radius="radius.r16"
           background-color=(tab == t ? "selected" : "transparent") -exact-press-opacity="opacity.pressed" testId=`tab-${t.toLowerCase()}`
-          text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap"
+          text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap" position="relative" top="nudge.tab"
 
 // A group's header, as the current app's topic row: its name, quiet, on
 // the ground over a hairline, as tall as its text's line and its padding

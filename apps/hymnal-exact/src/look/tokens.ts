@@ -167,8 +167,13 @@ export const NUDGES: ReadonlyArray<Nudge> = [
   },
   {
     name: 'nudge.topic',
-    pixels: -2.5,
+    pixels: -3,
     why: 'a topic or shelf name (HymnList.native.tsx topicName) in its 36 pt row',
+  },
+  {
+    name: 'nudge.tab',
+    pixels: -2,
+    why: 'a tab’s name (TabRow.tsx name) in its pill, the row scrolling with the list',
   },
   {
     name: 'nudge.row',
