@@ -5,7 +5,7 @@
   "sideEffects": false,
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test ./src ./screens",
+    "test": "bun test --parallel=2 ./src ./screens",
     "pixel": "bun src/cli.ts",
     "sim:heartseed": "bun src/sim/heartseed.ts",
     "sim:hymnal": "bun src/sim/hymnal.ts"

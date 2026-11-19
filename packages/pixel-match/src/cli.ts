@@ -6,6 +6,9 @@
  *   ref <app> [<id>…] [--web] [--repin]   the One references under the pinned One commit (the reference simulator booted and installed)
  *   shot <app> <id>… [--web] [--scheme light|dark] [--size <size>]   the port against them
  *   report [--unit <unit>]      tmp/pixel-match/report.json, as accept.ts reads it
+ *
+ * The capture modules (Playwright's, the simulator's) load only once a
+ * command captures, so a report or a refusal starts without them.
  */
 
 import { join } from 'node:path';
@@ -17,16 +20,22 @@ import { parseArgs } from './args.ts';
 import type { AppName } from './model.ts';
 import { run } from './ios.ts';
 import type { Frame } from './ref.ts';
-import { takeIos } from './ref.ts';
 import { recordMissed, writeReport } from './report.ts';
 import { rowsAsked } from './rows.ts';
-import { shoot } from './shot.ts';
 import { cellName, cellsOf } from './model.ts';
 import { driftLine, driftOf, readNeutral, readPin, refKey, writePin } from './pin.ts';
-import { takeWeb } from './web.ts';
 
 const USAGE =
   'usage: pixel ref <heartseed|hymnal> [<id>…] [--web] [--repin] · pixel shot <app> <id>… [--web] [--scheme s] [--size z] · pixel report [--unit u]';
+
+/** Playwright's capture of One on the web, loaded when a web `ref` runs. */
+const loadWebCapture = () => import('./web.ts');
+
+/** The simulator's capture of One, loaded when an iOS `ref` runs. */
+const loadIosCapture = () => import('./ref.ts');
+
+/** The port's capture and score, loaded when `shot` runs. */
+const loadShot = () => import('./shot.ts');
 
 /** `pixel ref`: takes the rows' cells of one host under `key`'s commit, records what it missed, and pins the commit on `--repin`. */
 const take = async (
@@ -38,7 +47,9 @@ const take = async (
 ) => {
   const taking: Frame = { ...frame, one: key.one };
   const host = web ? 'web' : 'ios';
-  const missed = web ? await takeWeb(taking, rows) : await takeIos(taking, app, rows);
+  const missed = web
+    ? await (await loadWebCapture()).takeWeb(taking, rows)
+    : await (await loadIosCapture()).takeIos(taking, app, rows);
   const cells = rows
     .flatMap((row) => cellsOf(app, row).filter((cell) => cell.host === host))
     .map(cellName);
@@ -95,6 +106,7 @@ const main = async () => {
     }
     const { rows } = picked;
     if (command === 'shot') {
+      const { shoot } = await loadShot();
       await shoot(frame, app, rows, { web: asked.web, scheme: asked.scheme, size: asked.size });
       return 0;
     }
