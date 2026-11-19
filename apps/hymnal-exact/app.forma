@@ -1,7 +1,9 @@
 // The hymnal's brand: the current hymnal's colour roles (apps/hymnal/src/theme.ts,
 // Heartseed's palette), light and dark, each under the role's own name, and the
 // platform's roles the port's screens draw with, each set to one of them.
-// src/look/brand.test.ts holds every colour here to theme.ts. The tint
+// src/look/brand.test.ts holds every colour here to theme.ts, but the ones
+// UIKit draws in the current app that theme.ts does not name (its list
+// `UIKIT`, each with its source). The tint
 // (AccentColor) is the accent, as in the current app (the owner's choice).
 forma hymnal
 
@@ -33,6 +35,7 @@ theme
   onGlassMuted = light-dark(#415853, #bec9b8)
   glassChosen = light-dark(#2c4542, #e6eedb)
   onGlassChosen = light-dark(#f1f0e6, #142420)
+  fieldClear = light-dark(#00000033, #ffffff33)
   -exact-background = ground
   -exact-grouped-background = ground
   -exact-secondary-background = bar
@@ -100,6 +103,7 @@ theme
   size.button: length = 36px
   size.mark: length = 28px
   size.glyph: length = 22px
+  size.clear: length = 17px
   size.grabber: length = 36px
   size.grabber-line: length = 5px
   size.slider: length = 32px
@@ -116,3 +120,6 @@ theme
   nudge.settings-heading: length = -0.6667px
   nudge.settings-title: length = 0.6667px
   nudge.settings-body: length = -0.2222px
+
+icons
+  icon.find-clear = icon(svg "icons/find-clear.svg")

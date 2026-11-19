@@ -16,6 +16,22 @@ import { appFile, brandOf } from './design.testing.ts';
 const brand = brandOf(appFile('app.forma'));
 const roles = Object.keys(theme.light);
 
+/**
+ * The colours UIKit draws in the current app that its theme does not name,
+ * each measured from One's reference and named with where UIKit draws it.
+ */
+const UIKIT = new Map([
+  [
+    'fieldClear',
+    {
+      light: '#00000033',
+      dark: '#ffffff33',
+      source:
+        'UITextField’s clear button (FindBar.tsx, clearButtonMode="while-editing"): black at 20 % by day, white at 20 % by night, measured over the glass in find.none’s reference',
+    },
+  ],
+]);
+
 describe('the brand is the current hymnal’s palette', () => {
   it('has every role of the current theme, light and dark, with its colour', () => {
     expect(roles.length).toBeGreaterThan(20);
@@ -32,8 +48,13 @@ describe('the brand is the current hymnal’s palette', () => {
     }
   });
 
+  it('has UIKit’s own colours where the current app draws them, as measured', () => {
+    for (const [name, { light, dark }] of UIKIT)
+      expect({ name, pair: brand.colours.get(name) }).toEqual({ name, pair: { light, dark } });
+  });
+
   it('has no colour but those, each other token one of the roles', () => {
-    expect([...brand.colours.keys()].toSorted()).toEqual(roles.toSorted());
+    expect([...brand.colours.keys()].toSorted()).toEqual([...roles, ...UIKIT.keys()].toSorted());
     expect(brand.others).toEqual([]);
     for (const [name, role] of brand.names)
       expect({ name, role, isRole: roles.includes(role) }).toEqual({ name, role, isRole: true });

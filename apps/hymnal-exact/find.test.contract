@@ -24,6 +24,27 @@ test "The bar folds and opens"
   expect tree missing "find-cancel"
   expect tree has "section-adoration-and-praise"
 
+test "The box clears while it has words"
+  tap "find-search"
+  clock settle
+  clock data
+  expect focused "search"
+  expect tree missing "find-clear"
+  type "search" "zzqx"
+  clock settle
+  clock data
+  expect tree has "find-clear"
+  expect tree has "none-found"
+  tap "find-clear"
+  clock settle
+  clock data
+  expect state listQuery == ""
+  expect state find.query == ""
+  expect state find.row == "open"
+  expect focused "search"
+  expect tree missing "find-clear"
+  expect tree has "find-cancel"
+
 test "A hymn by its number"
   tap "find-number"
   clock settle
