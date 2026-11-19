@@ -92,8 +92,42 @@ it('takes a read-back with room 0 as read: its origin is where the verse came to
   expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
 });
 
-it('counts no negative cover where the origin read lies below the seen top', () => {
+it('holds an origin read below the seen top at the seen top: no negative cover', () => {
   const shown = { ...IOS, verseHeight: 70, landedTop: 200, landedRoom: 50 };
-  expect(portOf(shown)).toBe(150);
+  expect(portOf(shown)).toBe(116);
   expect(landRoom(shown)).toBeCloseTo((705 - 116) / 3, 6);
+});
+
+/** The web at a phone's height, Psalm 23 or 119 opened on its first verse, as the web probe read it: the scroll cannot go above its top, so the verse rests at 157 whatever the room. */
+const WEB = {
+  seenTop: 49,
+  seenHeight: 789,
+  scrollTop: 49,
+  scrollHeight: 723,
+  verseHeight: 66.1875,
+};
+
+it("settles at the first reading where the scroll's top stopped an early verse short of the room", () => {
+  const first = landRoom({ ...WEB, ...NONE });
+  const shown = { ...WEB, landedTop: 157, landedRoom: first };
+  expect(portOf(shown)).toBe(49);
+  expect(landRoom(shown)).toBe(first);
+});
+
+it("settles at the first reading where the scroll's foot stopped the chapter's last verse below its third", () => {
+  const first = landRoom({ ...WEB, scrollHeight: 789, ...NONE });
+  const shown = { ...WEB, scrollHeight: 789, landedTop: 661.75, landedRoom: first };
+  expect(landRoom(shown)).toBe(first);
+});
+
+it("lands iOS's stopped verse at most twice: the second reading under the bar is a fixed point", () => {
+  const first = { ...IOS, verseHeight: 70, ...NONE };
+  const stuck = 620;
+  const once = { ...first, landedTop: stuck, landedRoom: landRoom(first) };
+  expect(portOf(once)).toBe(116);
+  const twice = { ...first, landedTop: stuck, landedRoom: landRoom(once) };
+  expect(landRoom(twice)).toBe(landRoom(once));
+  const early = { ...first, landedTop: 150, landedRoom: landRoom(first) };
+  expect(portOf(early)).toBe(0);
+  expect(landRoom(early)).toBe(landRoom(first));
 });

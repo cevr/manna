@@ -42,12 +42,18 @@ const seenOf = (frames: LandFrames) => {
  * until a landing has been read, then where that landing shows it (the
  * verse's top less the room it used). On iOS the scroll runs under the
  * navigation bar and the host counts from its top or from under the bar by
- * how the landing reached it, so a landing's own reading settles it.
+ * how the landing reached it, so a landing's own reading settles it. The
+ * origin lies between the scroll's top and the seen area's: a reading
+ * outside them is a landing the scroll's end stopped short (an early verse,
+ * or a chapter that fits), which moves no origin, so it is held there and
+ * the room stops growing with each reading.
  */
 export const portOf = (frames: LandFrames) => {
-  if (Number.isFinite(frames.landedRoom) && frames.landedRoom >= 0)
-    return Math.round(measured(frames.landedTop) - frames.landedRoom);
-  return measured(frames.scrollTop);
+  const scrollTop = measured(frames.scrollTop);
+  if (!Number.isFinite(frames.landedRoom) || frames.landedRoom < 0) return scrollTop;
+  const seenTop = seenOf(frames).top;
+  const shown = Math.round(measured(frames.landedTop) - frames.landedRoom);
+  return Math.min(Math.max(shown, Math.min(scrollTop, seenTop)), Math.max(scrollTop, seenTop));
 };
 
 /**
