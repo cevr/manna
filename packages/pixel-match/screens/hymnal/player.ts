@@ -229,7 +229,7 @@ export const rows: ReadonlyArray<Row> = [
       notDrawn: { web: NO_DETENTS },
       masks: position(FULL_POSITION),
     },
-    exact: { ops: PORT_FULL },
+    exact: { ops: PORT_FULL, touch: 'platform' },
   },
   {
     id: 'player.chips-chosen',
@@ -252,7 +252,7 @@ export const rows: ReadonlyArray<Row> = [
       ],
       masks: position(FULL_POSITION),
     },
-    exact: { ops: [...PORT_FULL, 'tap stanza-2', 'clock data', 'clock settle'] },
+    exact: { ops: [...PORT_FULL, 'tap stanza-2', 'clock data', 'clock settle'], touch: 'platform' },
   },
   {
     id: 'player.reading',

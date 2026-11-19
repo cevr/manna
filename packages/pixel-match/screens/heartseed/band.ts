@@ -4,8 +4,10 @@
  * bar on every Garden screen (home, a list, Today), and One draws its own
  * header row and neither bar, so a Garden row is scored over a band: on the
  * One side from the edge these targets give, read from One's tree at
- * capture, to the picture's foot. Sheets (Settings, About, Add) are scored
- * whole. A row's unit names the port's edges (`exact.band`).
+ * capture, to the picture's foot. The Settings and Add sheets are scored
+ * whole; About and Licences, pushed inside the Settings sheet in the port,
+ * are banded under their headings (`about.ts`). A row's unit names the
+ * port's edges (`exact.band`).
  */
 import type { OneBand, Row } from '../../src/model.ts';
 

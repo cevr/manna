@@ -31,14 +31,25 @@ describe('the screens', () => {
       }
   });
 
-  test("Heartseed's Garden rows are scored over a band, its sheets and the hymnal's rows whole", () => {
+  test("Heartseed's Garden rows, both Abouts and the Handbook row are scored over a band, the other sheets and the hymnal's rows whole", () => {
     const garden = /^(home|list|today)\./;
+    const about = /^(about\.|add\.handbook$)/;
     for (const app of APPS)
       for (const row of ROWS[app].filter((each) => each.kind !== 'exact-only'))
         expect([row.id, row.one?.band !== undefined]).toEqual([
           row.id,
-          app === 'heartseed' && garden.test(row.id),
+          (app === 'heartseed' && garden.test(row.id)) || about.test(row.id),
         ]);
+  });
+
+  test("no row's masks hide more than the cap of an iPhone 17's picture: the keyboard is left out by its band, never masked", () => {
+    const picture = 402 * 874;
+    for (const app of APPS)
+      for (const row of ROWS[app]) {
+        const masks = [...(row.one?.masks ?? []), ...(row.exact?.masks ?? [])];
+        const area = masks.reduce((sum, mask) => sum + mask.width * mask.height, 0);
+        expect([row.id, area / picture <= 0.06]).toEqual([row.id, true]);
+      }
   });
 
   test('an Exact-only row has no One side and no cell', () => {
