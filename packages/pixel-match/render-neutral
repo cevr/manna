@@ -3,3 +3,4 @@ a9cfb06d2db0 move: passageText and passageQuery, unchanged, from hymns/indexes.t
 7bdc38b7a953 move: STAGE_NAMES, unchanged, from app/index.tsx into src/garden/names.ts; an exports line whose types are the port's declaration
 4e992f83b0e7 move: the player's caption, the same eight lines for the same states, from FullPlayer.tsx's Player.$match into player/caption.ts's captionOf; an exports line for it
 4412fe6dab04 exports: one exports line in apps/hymnal/package.json (./reader/reading); no source changes
+66db37056c5a exports: one exports line in apps/heartseed/package.json (./first/flow, its openingOf), a declaration whose types are the port's and its line in exact-declared.test.ts; no source changes
