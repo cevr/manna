@@ -7,9 +7,11 @@
  * header's Aa button (`bun tools/drive-type.ts web|ios`, plain launches):
  *
  * - each font draws: each sets its own family on the text, each draws the
- *   chapter (its first verse's width or the whole chapter's height)
- *   other than the default, and each bundled
- *   family as no other font does, so none falls back to a system face;
+ *   chapter (verse 100's number or the whole chapter's height) other than
+ *   the default, and each bundled family draws its own file: verse 100's
+ *   number is as wide as its file's tabular figures and as tall as its
+ *   ascent and descent at the size drawn, and unlike the system face its
+ *   chain falls back to;
  * - the web's font files: what a default launch fetches (Exact's web host
  *   preloads every declared face, so this is a note, not a check);
  * - kept: a relaunch on the kept storage reads and draws the font, the size
@@ -37,6 +39,15 @@ import { makeDrive } from '@manna/exact-kit/drive';
 
 import './setup';
 import { TYPE_FONTS } from '../src/type/choices';
+import {
+  DRAWN_VERSE,
+  drawnApart,
+  drawsFile,
+  fallbackOf,
+  runOf,
+  type DrawnRun,
+} from '../src/type/drawn';
+import { fontMeasures, readFontFile, readFontFolders } from './fonts';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
@@ -99,7 +110,6 @@ const script = () => {
 const laid = (replies: readonly unknown[], at: number) => replies[at] as Laid | undefined;
 const frameOf = (replies: readonly unknown[], at: number) =>
   laid(replies, at)?.node?.space?.viewport;
-const widthOf = (replies: readonly unknown[], at: number) => frameOf(replies, at)?.w ?? Number.NaN;
 const fontSizeOf = (replies: readonly unknown[], at: number) => {
   const node = laid(replies, at)?.node;
   return Number.parseFloat(
@@ -156,6 +166,8 @@ const worstChecks = (name: string, replies: readonly unknown[], at: Record<strin
 const a = script();
 a.step('prefer prefers-color-scheme light', 'clock data', 'clock settle');
 const probes: Record<string, number> = {};
+/** Each font's verse 100's number: an inline run of three tabular figures, as wide as its face's advances. */
+const numbers: Record<string, number> = {};
 /** Each font's whole chapter: iOS lays a line out in thirds of a point, so one short line can measure the same in two faces, and 176 verses wrapped in them cannot. */
 const columns: Record<string, number> = {};
 a.step('tap chapter-aa', 'clock data', 'clock settle');
@@ -163,6 +175,7 @@ a.step(shot('sheet-light'));
 for (const font of [...FONTS.slice(1), FONTS[0] ?? 'newyork']) {
   a.step(`tap type-font-${font}`, 'clock data', 'clock settle');
   probes[font] = a.step('layout verse-1');
+  numbers[font] = a.step(`layout verse-number-${DRAWN_VERSE}`);
   columns[font] = a.step('layout type-column');
 }
 a.step(shot('fonts-light'));
@@ -220,7 +233,6 @@ const reachedLargest = a.step('layout verse-176');
 a.step('prefer prefers-color-scheme dark', 'clock settle', shot('largest-end-dark'));
 const first = await drive.run([...size, '--storage', store, '--reset-storage', ...PSALM], a.ops);
 
-const widths = Object.fromEntries(FONTS.map((font) => [font, widthOf(first, probes[font] ?? -1)]));
 const families = Object.fromEntries(
   FONTS.map((font) => {
     const node = laid(first, probes[font] ?? -1)?.node;
@@ -235,26 +247,62 @@ drive.check(
 const heights = Object.fromEntries(
   FONTS.map((font) => [font, frameOf(first, columns[font] ?? -1)?.h ?? Number.NaN]),
 );
-/** Whether two fonts draw the chapter differently: its first verse's width or the whole chapter's height. */
-const differ = (one: string, other: string) =>
-  Math.abs((widths[one] ?? 0) - (widths[other] ?? 0)) > 0.1 ||
-  Math.abs((heights[one] ?? 0) - (heights[other] ?? 0)) > 0.5;
-const drawn = (font: string) => Number.isFinite(widths[font]) && Number.isFinite(heights[font]);
-drive.check(
-  'each of the ten other fonts draws the chapter other than the default does (the first verse’s width or the whole chapter’s height)',
-  FONTS.slice(1).every((font) => drawn(font) && differ(font, FONTS[0] ?? '')),
-  { widths, heights },
+/** Each font's verse 100's number as laid out: its frame and the size it was drawn at. */
+const runs = Object.fromEntries(
+  FONTS.map((font): [string, DrawnRun] => {
+    const frame = frameOf(first, numbers[font] ?? -1);
+    return [
+      font,
+      {
+        w: frame?.w ?? Number.NaN,
+        h: frame?.h ?? Number.NaN,
+        size: fontSizeOf(first, numbers[font] ?? -1),
+      },
+    ];
+  }),
 );
-const BUNDLED = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => font.key);
+const drawn = (font: string) =>
+  [runs[font]?.w, runs[font]?.h, runs[font]?.size, heights[font]].every(Number.isFinite);
+const runAt = (font: string): DrawnRun => runs[font] ?? { w: Number.NaN, h: Number.NaN, size: 0 };
 drive.check(
-  'each of the seven bundled fonts draws the chapter as no other font does (its own file, not a fallback)',
-  BUNDLED.every(
-    (font) => drawn(font) && FONTS.every((other) => other === font || differ(font, other)),
+  `each of the ten other fonts draws the chapter other than the default does (verse ${DRAWN_VERSE}’s number or the whole chapter’s height)`,
+  FONTS.slice(1).every(
+    (font) =>
+      drawn(font) &&
+      (drawnApart(runAt(font), runAt(FONTS[0] ?? '')) ||
+        Math.abs((heights[font] ?? 0) - (heights[FONTS[0] ?? ''] ?? 0)) > 0.5),
   ),
-  { widths, heights },
+  { runs, heights },
+);
+const files = new Map(
+  readFontFolders().map((folder) => {
+    const regular = folder.files.find((name) => name.includes('Regular')) ?? '';
+    return [folder.key, fontMeasures(readFontFile(`${folder.key}/${regular}`))] as const;
+  }),
+);
+const fromFile = TYPE_FONTS.filter((font) => font.bundled !== '').map((font) => {
+  const file = files.get(font.key);
+  const run = runAt(font.key);
+  const fallback = fallbackOf(font);
+  return {
+    font: font.key,
+    ok:
+      file !== undefined &&
+      drawn(font.key) &&
+      drawsFile(file, `${DRAWN_VERSE}`, run) &&
+      drawnApart(run, runAt(fallback)),
+    drawn: run,
+    file: file === undefined ? undefined : runOf(file, `${DRAWN_VERSE}`, run.size),
+    fallback: { [fallback]: runAt(fallback) },
+  };
+});
+drive.check(
+  `each of the seven bundled fonts draws its own file: verse ${DRAWN_VERSE}’s number as wide as its tabular figures and as tall as its ascent and descent, unlike the system face its chain falls back to`,
+  fromFile.every((each) => each.ok),
+  fromFile.filter((each) => !each.ok),
 );
 console.log(
-  `WIDTH ${host} at 18 pt, verse 1 wide and Psalm 119 tall: ${FONTS.map((font) => `${font} ${widths[font]}/${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
+  `RUN ${host} verse ${DRAWN_VERSE}'s number at 18 pt (w/h) and Psalm 119's height: ${FONTS.map((font) => `${font} ${runs[font]?.w}/${runs[font]?.h} ${heights[font]}`).join(', ')} (SF Rounded keeps SF's advances, so the two are told apart by family)`,
 );
 drive.check(
   'live preview: a size step changes the text’s size with the sheet at medium',

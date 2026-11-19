@@ -174,13 +174,16 @@ members HeartseedExact
 
 // The one quiet line at a chapter's foot: while a pack is on its way, and
 // for 3 seconds once packs first land. Nothing while every pack is kept.
+// It takes at most a quarter of the screen and scrolls inside it, so at
+// the largest text it never squeezes the chapter above it out of sight.
 component PacksLine
   props
     shown: PacksState
     still: bool
   view
     if shown.foot != ""
-      text shown.foot role="status" font="type.small" color="hs.quiet" text-align="center" padding="space.s16" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="packs-line"
+      scroll flex-shrink=0 max-height="25%" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="packs-line-room"
+        text shown.foot role="status" font="type.small" color="hs.quiet" text-align="center" padding="space.s16" testId="packs-line"
 
 // A driver's fixture launch only: the Read tab's first showing as a button,
 // Try again when the last try failed, and the line.

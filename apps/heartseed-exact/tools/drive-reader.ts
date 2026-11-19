@@ -23,8 +23,10 @@
  *   named) folds, opens whole, scrolls to its end, clips nothing at the
  *   largest text; John 1:14's commentary from a stand-in pack of 18
  *   made-up notes of 7,281 characters, each folded, the first opened
- *   whole; before any pack, the chapter reads and each tab says its pack
- *   is on its way; the sheet's text at AA on its ground, light and dark,
+ *   whole; before any pack (a closed loopback named as the fixture), the
+ *   chapter reads and each tab says its pack is on its way; once the
+ *   packs land, their line at the largest text leaves the chapter its
+ *   room; the sheet's text at AA on its ground, light and dark,
  *   from pixels; the journey (Today's book button to Practise it now); the
  *   data module's load and the app's size;
  * - `live` (iOS, once): a plain launch downloads the real packs from
@@ -40,6 +42,7 @@ import { join } from 'node:path';
 import { makeDrive } from '@manna/exact-kit/drive';
 
 import { contrast } from '../src/look/brand';
+import { baseOf } from '../src/packs/sources';
 import { fixturePacks } from './commentary-fixture';
 import { readPng, pixelAt } from './png';
 import { clipsOf, FETCH, goTo, SETTLE, script, startPacks, type Laid } from './drive-study';
@@ -195,18 +198,72 @@ const both = (scene: string) => {
   s.step('prefer prefers-color-scheme light', 'clock settle', `screenshot ${shot(scene, 'light')}`);
 };
 const frames = (...ids: string[]) => ids.map((id) => s.step(`layout ${id}`));
+/**
+ * A loopback address no server answers: a port the system hands out, closed again at once. It names a loopback
+ * fixture by the form `baseOf` reads (a port of two to five digits), else the launch would fetch egw.cvr.im.
+ */
+const closedBase = () => {
+  const held = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response(null) });
+  const base = `http://127.0.0.1:${held.port}`;
+  void held.stop(true);
+  return base;
+};
+const refused = closedBase();
 const o = script();
 o.step(...SETTLE, 'tap tab-read', ...SETTLE, ...goTo(43, 3), 'tap verse-16', ...SETTLE);
 const before = { bar: o.step('state studyBarShown'), sheet: 0, retry: 0 };
 o.step('tap study-xrefs', ...SETTLE);
 before.sheet = o.step('state studySheetShown');
 before.retry = o.step('state packsShown.retry');
-packs.named('http://127.0.0.1:9');
+packs.named(refused);
 const offline = await drive.run(
   [...flags, '--storage', `${store}-offline`, '--reset-storage'],
   o.ops,
 );
 packs.named(`http://127.0.0.1:${standIn.port}`);
+drive.check(
+  'offline: the launch names a loopback no server answers, in the form the app reads as a fixture',
+  baseOf(refused) === refused &&
+    !(await fetch(refused).then(
+      () => true,
+      () => false,
+    )),
+  refused,
+);
+
+/** The Read tab's first showing fetches the packs; once they land, the landed line is up for its 3 seconds, here at the largest text. */
+const c = script();
+c.step(
+  ...SETTLE,
+  'prefer root-font-size 53',
+  'tap tab-read',
+  'clock until state packsShown.phase == "ready" within 5000',
+  ...SETTLE,
+);
+const crowded = {
+  foot: c.step('state packsShown.foot'),
+  chapter: c.step('layout chapter-scroll'),
+  line: c.step('layout packs-line'),
+};
+const landed = await drive.run(
+  [...flags, '--storage', `${store}-landed`, '--reset-storage'],
+  c.ops,
+);
+const crowdedFrame = (at: number) => (landed[at] as Laid | undefined)?.node?.space?.viewport;
+const seen =
+  (landed[crowded.chapter] as { viewport?: { h?: number } } | undefined)?.viewport?.h ?? Number.NaN;
+drive.check(
+  'packs just landed, at the largest text: their line shows, and the chapter keeps a quarter of the screen or more',
+  (landed[crowded.foot] ?? '') !== '' &&
+    crowdedFrame(crowded.line) !== undefined &&
+    (crowdedFrame(crowded.chapter)?.h ?? 0) >= seen / 4,
+  {
+    foot: (landed[crowded.foot] ?? '') === '' ? 'none' : 'shown',
+    line: crowdedFrame(crowded.line),
+    chapter: crowdedFrame(crowded.chapter),
+    seen,
+  },
+);
 const reading = offline[before.sheet] as { xrefsLine?: string; xrefs?: unknown[] } | undefined;
 const barBefore = (
   offline[before.bar] as { verses?: Array<{ verse: number; buttons: Array<{ line: string }> }> }
