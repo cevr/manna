@@ -20,17 +20,12 @@
       {
         "finding": "overflow",
         "node": "hear",
-        "why": "As One's at the largest text: Listen sits in One's fixed round button (apps/heartseed/src/sayit/draw.tsx, BigButton: 132 pt round, its label 17 pt semibold growing with Dynamic Type), whose reference at accessibility-extra-extra-extra-large cuts the word at the circle's edge; the port lets it run 6 px past the edge. Listed for the owner (hs-largest round 1, One has it too)"
+        "why": "The web's alone, as One's: the web has no accessibility text sizes (Exact's accessibilityTextSize is false there), so at verify's 53-px root it keeps One's fixed 132-pt round button (apps/heartseed/src/sayit/draw.tsx, BigButton), whose label runs past the circle as One's reference cuts it. On iOS, at AX1 and up, Listen is a capsule the line's width that holds its label (owner, q160; tools/drive-largest.ts ios), and verify ios finds no spill there without this entry (hs-ax-better round 1)"
       },
       {
         "finding": "overflow",
         "node": "appearance-dark",
         "why": "As One's on iOS at the largest text: Appearance's three choices share one row of equal cells that never wraps (apps/heartseed/src/appearance/choice.tsx: group row, radio flex 1), so the words cannot all fit; the port's last choice runs 2 pt past the side (hs-largest round 1)"
-      },
-      {
-        "finding": "clipped",
-        "node": "list-line",
-        "why": "As One's on iOS at the largest text: a list's heading, caption, Practice and its line sit above the scroll (apps/heartseed/src/list/screen.tsx, top over ScrollView), and One's reference list.page at accessibility-extra-extra-extra-large cuts that header at the screen's foot with no verse shown; the port shows Practice (its foot under the tab bar) and cuts the line by 54 pt. Listed for the owner (hs-largest round 1, One has it too)"
       },
       {
         "finding": "clipped",
