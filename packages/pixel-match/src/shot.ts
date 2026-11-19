@@ -17,7 +17,7 @@
  * scored; a row whose fixture the web store cannot hold yet is refused.
  */
 
-import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { claimAppPort } from '@manna/exact-kit/port';
@@ -61,23 +61,6 @@ const udidOfName = (name: string) => {
 };
 
 /**
- * Removes the route types One's dev server writes into each One app
- * (`apps/<app>/app/routes.d.ts`, ignored by git) while a reference is taken
- * in the same checkout. Each port imports its One app's package, and Exact's
- * bake stages every declaration in a package it reaches: that file names
- * `one`, whose 31.7 MiB of declarations take the bake over its 64 MiB cap,
- * so the port does not build. The next dev server start writes it again.
- */
-const dropOneRoutes = (root: string) => {
-  for (const app of ['heartseed', 'hymnal']) {
-    const routes = join(root, 'apps', app, 'app', 'routes.d.ts');
-    if (!existsSync(routes)) continue;
-    unlinkSync(routes);
-    console.log(`removed ${routes}: One's generated route types take the port's bake over its cap`);
-  }
-};
-
-/**
  * Readies the port's store for `row`'s shot on the simulator (`seedPlan`):
  * the row's fixture written into its named store (`port-store.ts`), made
  * at this instant as the reference's was at its own, or nothing written
@@ -117,7 +100,6 @@ const shootIos = (frame: Frame, row: Row, cell: Cell) => {
     throw new Error(`${row.id}: a banded row whose Exact side names no band`);
   const clock = portClock(reference.taken, new Date(), hostZone());
   if (clock._tag === 'Refused') throw new Error(`${cellName(cell)}: ${clock.reason}`);
-  dropOneRoutes(frame.root);
   const udid = udidOfName(EXACT_SIMULATORS[cell.app]);
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
@@ -174,7 +156,6 @@ const shootWeb = async (frame: Frame, row: Row, cell: Cell, host: WebHost) => {
   sideOf(frame, row, cell);
   const seed = webSeedOf(cell.app, row, new Date());
   if (seed._tag === 'Refused') throw new Error(seed.reason);
-  dropOneRoutes(frame.root);
   const files = shotFiles(frame.root, cell);
   mkdirSync(dirname(files.screen), { recursive: true });
   const appDir = join(frame.root, 'apps', `${cell.app}-exact`);

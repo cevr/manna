@@ -119,6 +119,16 @@ describe("the port's web cell, shot", () => {
     expect(calls.at(-1)).toBe('give');
   });
 
+  test("a shot leaves One's route types in place: the exact wrapper sets them aside for the bake and puts them back", async () => {
+    const { frame, files } = checkout('routes');
+    const routes = join(frame.root, 'apps', 'hymnal', 'app', 'routes.d.ts');
+    mkdirSync(dirname(routes), { recursive: true });
+    writeFileSync(routes, 'declare module "one" {}\n');
+    const { host } = fakeHost(files.screen, ['"off"', '[1, 100, 529]', '[12,100,1]']);
+    await shoot(frame, 'hymnal', [row], { web: true, scheme: 'light', size: '390x844@2' }, host);
+    expect(readFileSync(routes, 'utf8')).toBe('declare module "one" {}\n');
+  });
+
   test('a cell that fails before its drive leaves no score of an earlier shot either', async () => {
     const { frame, files } = checkout('no-reference');
     rmSync(refFile(frame, cell));

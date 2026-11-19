@@ -167,12 +167,11 @@ One's keys is written as the state the port reads it from (`feel` as
 `settingsFeelKept`, `lists.favourites` as `favouriteList`, `lists.recent` as
 `recentList`, `chords` as `chordsOn`; `sound` has no switch in the port and
 nothing on screen), and a key with no place there is refused. A row with no
-fixture starts from an empty store. It first removes
+fixture starts from an empty store. It leaves
 `apps/<app>/app/routes.d.ts`, the route types One's dev server writes while
-a reference is taken. Each port imports its One app's package. Exact's bake
-stages every declaration file of that package, and this file pulls in `one`'s
-declarations. That takes the bake over its 64 MiB cap, and the port does not
-build. The port runs on the agent's clock, not the wall clock: it is
+a reference is taken, in place: the `bun run exact` wrapper sets them aside
+for each run and puts them back (`routeTypesAside`,
+`packages/exact-kit/src/route-types.ts`). The port runs on the agent's clock, not the wall clock: it is
 launched with `--epoch` at half past the reference's recorded hour, today,
 and `--time-zone` the host's zone, so it draws the reference's greeting face.
 A reference recorded in another zone is refused. It takes the screen with
