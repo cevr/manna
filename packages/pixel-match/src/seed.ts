@@ -49,7 +49,7 @@ export const storageFlags = (plan: Pick<SeedPlan, '_tag' | 'storage'>) => [
  * refused, never shot on an empty store against a reference that holds the
  * fixture.
  */
-export type WebSeed =
+type WebSeed =
   | { readonly _tag: 'Reset'; readonly storage: string }
   | {
       readonly _tag: 'Seed';

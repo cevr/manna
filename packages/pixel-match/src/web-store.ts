@@ -39,7 +39,7 @@ interface ExactLaunch {
 const exactClone = () => process.env['EXACT'] ?? join(homedir(), 'Developer', 'vendor', 'exact');
 
 /** A persisted state's `localStorage` key in a development build of the app whose directory has `digest`. */
-export const keptKey = (digest: string, name: string) => `exact.state.@${digest}/${name}`;
+const keptKey = (digest: string, name: string) => `exact.state.@${digest}/${name}`;
 
 /**
  * Empties the agent's web store `storage` of the app at `appDir` (id
