@@ -103,8 +103,10 @@ digest and the picture's hash.
 - The One paths are `apps/heartseed`, `apps/hymnal`, `packages/hymnal` and
   `packages/core`, less their tests (`*.test.ts`, `*.test.tsx`) and the
   declarations a One app keeps for its port (`apps/*/exact/**`), none of
-  which a One build runs. Each commit under them since the pin (merges left
-  out, each commit a merge brings counted) is either listed in
+  which a One build runs. Each commit under them since the pin (each commit
+  a merge brings counted on its own, and a merge itself only when its
+  resolution changes a file there, one that differs from every parent) is
+  either listed in
   `packages/pixel-match/render-neutral` or a drift. On a drift every
   command prints one line on stderr naming the pin, the latest One
   commit, the unlisted commits and the files they change, and `pixel ref`

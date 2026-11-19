@@ -87,33 +87,35 @@ const lines = (text: string) => text.split('\n').filter((line) => line.length > 
 
 /**
  * The drift from the pin: none when every commit under the One paths since
- * the pin is listed in `neutral`. Merges are left out (`--no-merges`): each
- * commit a merge brings is listed on its own (`--full-history`).
+ * the pin is listed in `neutral`. Each commit a merge brings is listed on
+ * its own (`--full-history`); a merge counts only when its own resolution
+ * changes a file under the One paths, a file that differs from every parent
+ * (its combined diff, `--cc`), so a clean merge needs no entry.
  */
 export const driftOf = (
   git: Git,
   pinned: string,
   neutral: ReadonlyArray<string>,
 ): Option.Option<Drift> => {
-  const since = lines(
-    git(['rev-list', '--full-history', '--no-merges', `${pinned}..HEAD`, '--', ...ONE_PATHS]),
+  const range = `${pinned}..HEAD`;
+  const merges = new Set(
+    lines(git(['rev-list', '--full-history', '--merges', range, '--', ...ONE_PATHS])),
   );
-  const unlisted = since
-    .filter((full) => !neutral.some((entry) => full.startsWith(entry)))
-    .map((full) => full.slice(0, 12));
+  const filesOf = (full: string) =>
+    lines(
+      git(['diff-tree', '--cc', '--no-commit-id', '--name-only', '-r', full, '--', ...ONE_PATHS]),
+    );
+  const since = lines(git(['rev-list', '--full-history', range, '--', ...ONE_PATHS])).filter(
+    (full) => !merges.has(full) || filesOf(full).length > 0,
+  );
+  const unlisted = since.filter((full) => !neutral.some((entry) => full.startsWith(entry)));
   if (unlisted.length === 0) return Option.none();
-  return Option.map(Arr.head(since), (newest) => {
-    const changed = [
-      ...new Set(
-        unlisted.flatMap((commit) =>
-          lines(
-            git(['diff-tree', '--no-commit-id', '--name-only', '-r', commit, '--', ...ONE_PATHS]),
-          ),
-        ),
-      ),
-    ].toSorted();
-    return { pinned, latest: newest.slice(0, 12), unlisted, changed };
-  });
+  return Option.map(Arr.head(since), (newest) => ({
+    pinned,
+    latest: newest.slice(0, 12),
+    unlisted: unlisted.map((full) => full.slice(0, 12)),
+    changed: [...new Set(unlisted.flatMap(filesOf))].toSorted(),
+  }));
 };
 
 /** The one line every command prints on a drift. */

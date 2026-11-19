@@ -179,3 +179,75 @@ describe('the pinned One commit', () => {
     expect(readNeutral(scratch)).toEqual([]);
   });
 });
+
+/** A history as git answers it: the commits under the One paths since the pin (newest first), which of them are merges, and each one's files (a merge's: its combined diff). */
+interface History {
+  readonly since: ReadonlyArray<string>;
+  readonly merges: ReadonlyArray<string>;
+  readonly files: Readonly<Record<string, ReadonlyArray<string>>>;
+}
+
+/** Answers `rev-list` and `diff-tree` from `history`, as git would, `--merges` and `--no-merges` included. */
+const fakeGit =
+  ({ since, merges, files }: History) =>
+  (args: ReadonlyArray<string>) => {
+    if (args[0] === 'rev-list') {
+      if (args.includes('--merges')) return merges.join('\n');
+      if (args.includes('--no-merges'))
+        return since.filter((commit) => !merges.includes(commit)).join('\n');
+      return since.join('\n');
+    }
+    if (args[0] === 'diff-tree')
+      return (files[args.find((arg) => arg in files) ?? ''] ?? []).join('\n');
+    throw new Error(`no such git call in the fake: ${args.join(' ')}`);
+  };
+
+/** A 40-digit commit: `head` then `tail` repeated. */
+const full = (head: string, tail: string) => `${head}${tail.repeat(40)}`.slice(0, 40);
+
+describe('the drift from the pin, from what git answers', () => {
+  const PIN = full('e6368c037320', '0');
+  const listed = full('abcdef012345', '1');
+  const twin = full('abcdef012340', '2');
+  const evil = full('5e5e5e5e5e5e', '3');
+  const clean = full('c1ea0c1ea0c1', '4');
+
+  test('a ledger entry matches only the commit its 12 digits name, not one that shares its first 11', () => {
+    expect(listed.slice(0, 11)).toBe(twin.slice(0, 11));
+    const git = fakeGit({
+      since: [twin, listed],
+      merges: [],
+      files: { [twin]: ['apps/hymnal/src/twin.ts'], [listed]: ['apps/hymnal/src/listed.ts'] },
+    });
+    const drift = driftOf(git, PIN, [listed.slice(0, 12)]);
+    expect(Option.getOrUndefined(drift)).toEqual({
+      pinned: PIN,
+      latest: twin.slice(0, 12),
+      unlisted: [twin.slice(0, 12)],
+      changed: ['apps/hymnal/src/twin.ts'],
+    });
+  });
+
+  test('a merge whose own resolution changes a One file is a drift until listed; a clean merge needs no entry', () => {
+    const git = fakeGit({
+      since: [evil, clean, listed],
+      merges: [evil, clean],
+      files: { [evil]: ['apps/hymnal/src/a.ts'], [clean]: [], [listed]: ['apps/hymnal/src/b.ts'] },
+    });
+    expect(Option.getOrUndefined(driftOf(git, PIN, [listed.slice(0, 12)]))).toEqual({
+      pinned: PIN,
+      latest: evil.slice(0, 12),
+      unlisted: [evil.slice(0, 12)],
+      changed: ['apps/hymnal/src/a.ts'],
+    });
+    expect(
+      Option.isNone(
+        driftOf(
+          git,
+          PIN,
+          [listed, evil].map((c) => c.slice(0, 12)),
+        ),
+      ),
+    ).toBe(true);
+  });
+});
