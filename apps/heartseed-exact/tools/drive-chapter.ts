@@ -212,7 +212,8 @@ const landed = a.step('state chapterShown');
 both(a, 'planted');
 const axPlanted = a.step('tree --ax');
 a.step('tap chapter-clear', ...settle);
-const field = verseSteps(a, 17);
+/** The range's last verse: the one the bar kept in view, so it is not under iOS's navigation bar once the bar is gone. */
+const field = verseSteps(a, 18);
 both(a, 'field');
 a.step(...Array.from({ length: 4 }, () => 'tap chapter-scroll wheel 0 20000'), 'clock settle');
 a.step('tap verse-36', ...settle);
