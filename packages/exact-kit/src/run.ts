@@ -378,7 +378,8 @@ const held = <A>(claim: () => Promise<{ readonly held: A; readonly give: () => v
  * app's, else the app's own port for the verb that listens by it bare (`web`, `serve`), else removed:
  * no child listens outside the app's ports. A run on the simulator is told when the wrapper `started` (`CLEAR_BEFORE`),
  * so the child, once it holds the build lock, clears the launch consoles older than that from the app's simulator
- * (`sim-tmp.ts`); any other run has the variable removed.
+ * (`sim-tmp.ts`); any other run has the variable removed. Only a locked run is told, so no clear unlinks the live
+ * consoles of a run that holds the lock; every run on the simulator, the bare `ios` with them, is a locked one.
  */
 const plan = (
   args: ReadonlyArray<string>,
@@ -402,10 +403,11 @@ const plan = (
             ),
           ] as const,
       );
-      const clear = Option.filter(Option.some(String(started)), () => onSimulator(args));
+      const locked = isNative(args);
+      const clear = Option.filter(Option.some(String(started)), () => locked && onSimulator(args));
       return Result.succeed({
         args,
-        locked: isNative(args),
+        locked,
         env: {
           EXACT: clone,
           EXACT2: clone,

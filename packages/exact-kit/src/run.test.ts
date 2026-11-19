@@ -535,13 +535,17 @@ const portsHeld = (
 
 /**
  * The rule, written out: a run on the simulator (`ios`, or `test`, `verify` or `agent` on `ios`) tells its child when
- * the wrapper started, so the child clears the stale launch consoles before then; any other run removes the variable.
+ * the wrapper started, so the child clears the stale launch consoles before then, and runs under the build lock, so
+ * the clear never unlinks a locked run's live consoles; any other run removes the variable.
  */
 const clearsOnSimulator = (child: Spawned, args: ReadonlyArray<string>) => {
   const onSimulator =
     args[0] === 'ios' || (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
   const started = Rec.get(child.env, 'EXACT_KIT_CLEAR_BEFORE');
   const removed = child.removed.includes('EXACT_KIT_CLEAR_BEFORE');
+  const locked =
+    child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  if (Option.isSome(started) && !locked) return false;
   if (onSimulator) return Option.exists(started, (at) => /^\d+$/.test(at)) && !removed;
   return Option.isNone(started) && removed;
 };
@@ -798,6 +802,9 @@ describe('the exact wrapper', () => {
             expect(mac.result.failure.message).toContain('agent macos');
           const built = yield* running(app, ['ios'], { HOME: PROBE }, head, files);
           expect(built.result._tag).toBe('Success');
+          expect(built.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
+          expect(built.spawned[1]?.command).toBe('lockf');
+          expect(built.spawned[1]?.env['EXACT_KIT_CLEAR_BEFORE']).toMatch(/^\d+$/);
         }
         const hymnal = yield* running(
           'hymnal-exact',
