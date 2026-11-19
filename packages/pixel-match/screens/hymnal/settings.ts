@@ -5,8 +5,17 @@ const unit = 'pm-hy-settings';
 
 export const SETTINGS: Step = { open: 'settings', expect: 'label=Appearance' };
 
-/** The port's way to its Settings sheet at its half height: the gear, once the list is in. */
-const GEAR = ['clock data', 'tap gear', 'clock settle'];
+/**
+ * The port's way to its Settings sheet at its half height, on the row's
+ * fixture: the gear, once the list is in, then Sounds and haptics turned
+ * off, as every hymnal fixture keeps it. The hymnal's port keeps these
+ * settings as Contract's `persist` state, which `pixel shot` does not seed,
+ * so the sheet's own switches set them.
+ */
+const GEAR = ['clock data', 'tap gear', 'clock settle', 'tap settings-feel', 'clock settle'];
+
+/** `hy-chords`: Chords on too. */
+const CHORDS = [...GEAR, 'tap chords-toggle', 'clock settle'];
 
 export const rows: ReadonlyArray<Row> = [
   {
@@ -24,7 +33,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-chords',
     one: { steps: [SETTINGS, { scroll: 'label=Chords', direction: 'down' }, { wait: 800 }] },
-    exact: { ops: GEAR },
+    exact: { ops: CHORDS },
   },
   {
     id: 'settings.dark-chosen',
