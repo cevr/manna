@@ -56,7 +56,7 @@ const LIST_VERSE = 'John-3-16';
 const SLACK = 0.5;
 /** The smallest target iOS allows, in points. */
 const TARGET = 44;
-/** `type.word`'s size in rem and its line height, `passage`'s row gap and the recital's gap under the reference (app.forma). */
+/** `type.word`'s size in rem and its line height (a full-text line, the tallest any cue draws, so the room asked is the most a verse needs), `passage`'s row gap and the recital's gap under the reference (app.forma). */
 const WORD_REM = 1.4118;
 const WORD_LEADING = 1.5;
 const ROW_GAP = 2;
