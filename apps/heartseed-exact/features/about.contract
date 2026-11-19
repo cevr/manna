@@ -29,7 +29,7 @@ component AboutPage
     column navigationKey=`${route}` navigationScroll="about-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="about"
       header display="flex" align-items="center"
         text "About" role="heading" aria-level=1 font="type.title" flex=1
-      scroll id="about-scroll" flex=1 min-height=0
+      scroll id="about-scroll" flex=1 min-height=0 testId="about-scroll"
         column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page"
           text "Heartseed" font="type.name" testId="about-name"
           text "Heartseed helps you learn verses of Scripture by heart: hear a verse, say it back, and come back to it as it grows." font="type.credits" testId="about-line"
@@ -46,7 +46,7 @@ component LicencesPage
     column navigationKey=`${route}` navigationScroll="licences-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="licences"
       header display="flex" align-items="center"
         text "Licences" role="heading" aria-level=1 font="type.title" flex=1
-      scroll id="licences-scroll" flex=1 min-height=0
+      scroll id="licences-scroll" flex=1 min-height=0 testId="licences-scroll"
         column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page"
           for l in licences key=l.index
             column gap="space.s8"
