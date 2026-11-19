@@ -3,7 +3,7 @@
 /**
  * The chapter screen's Contract held to its rules by its text (spec,
  * acceptance 4): a verse's press is the chooser's tap behind the one tick;
- * the bar's filled buttons appear only under the offers `chapterRead`
+ * the bar's filled buttons (One's Plant, `ReadPlant`) appear only under the offers `chapterRead`
  * makes (`shown.plant`, `shown.singles`) and run only while offered; a
  * chapter change clears the range (`chooserMoved`); the bar's rise and
  * leave and the opened verse's ease each choose on reduced motion (with
@@ -13,6 +13,8 @@
 
 import { expect, it } from 'bun:test';
 import { join } from 'node:path';
+
+import { TYPE_ROOT_POINTS } from '../type/choices';
 
 const APP = join(import.meta.dir, '../..');
 const read = (path: string) => Bun.file(join(APP, path)).text();
@@ -48,7 +50,7 @@ it("taps a verse through the tick and the chooser's tap", async () => {
 
 it('draws a filled button only under its offer, and runs it only while offered', async () => {
   const chooser = await read('features/chooser.contract');
-  const filled = [...chooser.matchAll(/^( *)button [^\n]*buttonStyle="filled"[^\n]*$/gmu)];
+  const filled = [...chooser.matchAll(/^( *)button [^\n]*class=ReadPlant[^\n]*$/gmu)];
   expect(filled.map((each) => /press=(\w+)/u.exec(each[0])?.[1])).toEqual(['plant', 'join']);
   const lines = chooser.split('\n');
   const guards = filled.map((each) => {
@@ -57,11 +59,9 @@ it('draws a filled button only under its offer, and runs it only while offered',
   });
   expect(guards).toEqual(['if shown.plant', 'if shown.singles']);
   expect(blockUnder(chooser, 'if shown.landed')).toContain('text "Planted." role="status"');
-  expect(blockUnder(chooser, 'if shown.landed')).toMatch(
-    /button press=practise buttonStyle="bordered"/u,
-  );
+  expect(blockUnder(chooser, 'if shown.landed')).toMatch(/button press=practise class=ReadPill /u);
   expect(blockUnder(chooser, 'if shown.already')).toBe(
-    '              text "Already in your field." role="status" color="hs.quiet" testId="chapter-already"',
+    '              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already"',
   );
   expect(blockUnder(chooser, 'action chooserPlantIt')).toContain(
     'if chapterShown.plant and not pending(chooserPlanted)',
@@ -69,6 +69,11 @@ it('draws a filled button only under its offer, and runs it only while offered',
   expect(blockUnder(chooser, 'action chooserJoinIt')).toContain(
     'if chapterShown.singles and not pending(chooserPlanted)',
   );
+});
+
+it("draws a verse's number at 0.62 of the reader's size, in rem over the type root", async () => {
+  const chooser = await read('features/chooser.contract');
+  expect(chooser).toContain(`font-size=(\`\${type.size * 0.62 / ${TYPE_ROOT_POINTS}}rem\`)`);
 });
 
 it('clears the range when the chapter changes', async () => {

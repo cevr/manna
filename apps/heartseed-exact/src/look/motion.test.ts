@@ -293,7 +293,7 @@ describe('the Contract names its timings by token', () => {
         return Number(typed.exec(readBrand())?.[1] ?? written);
       }),
     );
-    expect(scales.length).toBeGreaterThanOrEqual(2);
+    expect(scales.length).toBeGreaterThanOrEqual(1);
     expect(scales.filter((scale) => scale !== PRESS_SCALE)).toEqual([]);
   });
 

@@ -7,6 +7,8 @@
 // A driver's launch (HEARTSEED_GARDEN_DRIVE set, app.json's `env`) adds
 // the plant buttons and a test control under each verse; a plain launch
 // has none, and plants only through Add verses (features/add.contract).
+use ReadPill from "./read.contract"
+
 shape GardenTime
   epochAtZero: number
   utcOffset: number
@@ -114,21 +116,21 @@ component GardenRow
     shown: action
     back: action
   view
-    column gap=4 testId=`plant-${verse.slug}`
-      text verse.reference font="-exact-headline"
-      row gap=12
-        text verse.stage color="-exact-secondary-label" testId=`stage-${verse.slug}`
-        text gardenDueText(verse) color="-exact-secondary-label" testId=`due-${verse.slug}`
+    column gap="space.s2" testId=`plant-${verse.slug}`
+      text verse.reference font="type.strong"
+      row column-gap="space.s12" flex-wrap="wrap"
+        text verse.stage font="type.small" color="hs.quiet" testId=`stage-${verse.slug}`
+        text gardenDueText(verse) font="type.small" color="hs.quiet" testId=`due-${verse.slug}`
       if driven
-        row gap=8 flex-wrap="wrap"
-          button press=good(verse.reference) buttonStyle="bordered" testId=`good-${verse.slug}`
-            text "Good"
-          button press=peeked(verse.reference) buttonStyle="bordered" testId=`peeked-${verse.slug}`
-            text "Good after a peek"
-          button press=shown(verse.reference) buttonStyle="bordered" testId=`shown-${verse.slug}`
-            text "Good after Show all"
-          button press=back(verse.reference) buttonStyle="bordered" testId=`back-${verse.slug}`
-            text "Move back"
+        row gap="space.s8" flex-wrap="wrap"
+          button press=good(verse.reference) class=ReadPill testId=`good-${verse.slug}`
+            text "Good" font="type.label"
+          button press=peeked(verse.reference) class=ReadPill testId=`peeked-${verse.slug}`
+            text "Good after a peek" font="type.label"
+          button press=shown(verse.reference) class=ReadPill testId=`shown-${verse.slug}`
+            text "Good after Show all" font="type.label"
+          button press=back(verse.reference) class=ReadPill testId=`back-${verse.slug}`
+            text "Move back" font="type.label"
 
 component YourVerses
   props
@@ -145,40 +147,54 @@ component YourVerses
     add: action
   view
     scroll id="verses-content" navigationScroll="verses-content" flex=1 min-height=0 testId="verses-content"
-      column gap=20 padding=20 max-width="40rem" testId="verses"
-        text "Your verses" role="heading" aria-level=2
+      column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.section" testId="verses"
+        text "Your verses" role="heading" aria-level=2 font="type.title"
         if garden.read and garden.lists.length == 0 and garden.singles.length == 0
-          text "Nothing planted yet. Plant a passage of three verses or more, or a single verse." color="-exact-secondary-label" testId="empty"
-        button press=add buttonStyle="bordered" testId="verses-add"
-          text "Add verses"
+          text "Nothing planted yet. Plant a passage of three verses or more, or a single verse." font="type.note" color="hs.quiet" testId="empty"
+        button press=add class=ReadPill testId="verses-add"
+          text "Add verses" font="type.label"
         if driven
-          row gap=12 flex-wrap="wrap"
-            button press=plant(43, 3, 16 + 3 * garden.lists.length, 18 + 3 * garden.lists.length) disabled=(not garden.read) buttonStyle="bordered" testId="plant-three"
-              text "Plant three verses of John 3"
-            button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) buttonStyle="bordered" testId="plant-one"
-              text "Plant a verse of Psalm 119"
-            button press=plant(19, 23, 1, 2) disabled=(not garden.read) buttonStyle="bordered" testId="plant-two"
-              text "Plant Psalm 23:1-2"
+          row gap="space.s12" flex-wrap="wrap"
+            button press=plant(43, 3, 16 + 3 * garden.lists.length, 18 + 3 * garden.lists.length) disabled=(not garden.read) class=ReadPill testId="plant-three"
+              text "Plant three verses of John 3" font="type.label"
+            button press=plant(19, 119, garden.singles.length + 1, garden.singles.length + 1) disabled=(not garden.read) class=ReadPill testId="plant-one"
+              text "Plant a verse of Psalm 119" font="type.label"
+            button press=plant(19, 23, 1, 2) disabled=(not garden.read) class=ReadPill testId="plant-two"
+              text "Plant Psalm 23:1-2" font="type.label"
         if garden.limitLine != ""
-          text garden.limitLine color="-exact-secondary-label" testId="full"
+          text garden.limitLine font="type.note" testId="full"
         else if answer == "Short"
-          text line color="-exact-secondary-label" testId="short"
+          text line font="type.note-strong" testId="short"
         else if line != ""
-          text line color="-exact-secondary-label" testId="line"
+          text line font="type.note-strong" testId="line"
         for l in garden.lists key=l.id
-          column gap=12 testId=`list-${l.slug}`
-            row gap=12 align-items="center" flex-wrap="wrap"
-              text l.title role="heading" aria-level=3 flex=1
-              button press=remove(l.id) buttonStyle="bordered" testId=`remove-${l.slug}`
-                text "Remove"
+          column gap="space.s12" testId=`list-${l.slug}`
+            row gap="space.s12" align-items="center" flex-wrap="wrap"
+              text l.title role="heading" aria-level=3 font="type.strong" flex=1
+              button press=remove(l.id) class=GardenRemove testId=`remove-${l.slug}`
+                text "Remove" font="type.strong"
             for v in l.verses key=v.slug
               GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
         if garden.singles.length > 0
-          column gap=12 testId="singles"
-            text "Single verses" role="heading" aria-level=3
+          column gap="space.s12" testId="singles"
+            text "Single verses" role="heading" aria-level=3 font="type.caption-strong"
             for v in garden.singles key=v.slug
-              row gap=12 align-items="center" flex-wrap="wrap" testId=`single-${v.slug}`
-                column flex=1 flex-basis="12rem"
+              column gap="space.s4" align-items="flex-start" testId=`single-${v.slug}`
+                column align-self="stretch" min-width=0
                   GardenRow(verse=v, driven=driven, good=good, peeked=peeked, shown=shown, back=back)
-                button press=remove(`single:${v.reference}`) buttonStyle="bordered" testId=`remove-single-${v.slug}`
-                  text "Remove"
+                button press=remove(`single:${v.reference}`) class=GardenRemove testId=`remove-single-${v.slug}`
+                  text "Remove" font="type.strong"
+
+// One's Remove on a list's page (src/list/screen.tsx `removeRow`): the
+// word in the miss colour, a target's height, pressed at One's opacity.
+style GardenRemove
+  appearance = "none"
+  display = "flex"
+  align-items = "center"
+  justify-content = "center"
+  min-height = "size.target"
+  padding-left = "space.s8"
+  padding-right = "space.s8"
+  border-radius = "radius.r12"
+  color = "hs.miss"
+  -exact-press-opacity = "opacity.pressed"

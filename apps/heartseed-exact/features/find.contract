@@ -64,23 +64,35 @@ component FindResults
     found: FindShown
     open: action
   view
-    column gap=4 testId="find-results"
+    column gap="space.s4" testId="find-results"
       for p in found.places key=`${p.book}-${p.chapter}-${p.verse}`
-        row role="button" press=open(p.book, p.chapter, p.verse) aria-label=`Go to ${p.label}` min-height=44 align-items="center" gap=12 padding="0 12px" border-radius=12 -exact-press-scale=0.97 testId="find-place"
-          :active
-            background-color = "hs.hearing"
-          text p.label font="-exact-headline" flex=1 testId="find-place-label"
-          text "Go to" font="-exact-footnote" color="hs.sun" font-weight=600 aria-hidden=true
+        row role="button" press=open(p.book, p.chapter, p.verse) aria-label=`Go to ${p.label}` class=FindRow testId="find-place"
+          text p.label font="type.strong" flex=1 testId="find-place-label"
+          text "Go to" font="type.label" color="hs.sun" aria-hidden=true
       for h in found.hits key=`${h.book}-${h.chapter}-${h.verse}`
-        column role="button" press=open(h.book, h.chapter, h.verse) aria-label=h.reference min-height=44 justify-content="center" gap=2 padding="8px 12px" border-radius=12 -exact-press-scale=0.97 testId=`find-hit-${h.book}-${h.chapter}-${h.verse}`
-          :active
-            background-color = "hs.hearing"
-          text h.reference font="-exact-subheadline" font-weight=600 testId="find-hit-reference"
-          text color="hs.quiet"
+        column role="button" press=open(h.book, h.chapter, h.verse) aria-label=h.reference class=FindRow gap="space.s2" flex-direction="column" align-items="stretch" justify-content="center" testId=`find-hit-${h.book}-${h.chapter}-${h.verse}`
+          text h.reference font="type.strong" testId="find-hit-reference"
+          text font="type.small" color="hs.quiet"
             text h.before
-            text h.match color="hs.sun" font-weight=600
+            text h.match font="type.label" color="hs.sun"
             text h.after
       if found.more > 0
-        text findMoreText(found.more) font="-exact-footnote" color="-exact-secondary-label" padding="8px 12px" testId="find-more"
+        text findMoreText(found.more) font="type.small" color="hs.quiet" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s8" padding-right="space.s8" testId="find-more"
       if found.line != ""
-        text found.line color="-exact-secondary-label" padding="8px 12px" testId="find-line"
+        text found.line font="type.small" color="hs.quiet" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s8" padding-right="space.s8" testId="find-line"
+
+// One's verse row on a list (src/list/screen.tsx `row`): the card's ground
+// while pressed.
+style FindRow
+  display = "flex"
+  flex-direction = "row"
+  align-items = "center"
+  gap = "space.s12"
+  min-height = "size.row-tall"
+  padding-top = "space.s6"
+  padding-bottom = "space.s6"
+  padding-left = "space.s8"
+  padding-right = "space.s8"
+  border-radius = "radius.r16"
+  :active
+    background-color = "hs.card"

@@ -212,7 +212,8 @@ const landed = a.step('state chapterShown');
 both(a, 'planted');
 const axPlanted = a.step('tree --ax');
 a.step('tap chapter-clear', ...settle);
-const field = verseSteps(a, 17);
+/** The range's last verse: the one the bar kept in view, so it is not under iOS's navigation bar once the bar is gone. */
+const field = verseSteps(a, 18);
 both(a, 'field');
 a.step(...Array.from({ length: 4 }, () => 'tap chapter-scroll wheel 0 20000'), 'clock settle');
 a.step('tap verse-36', ...settle);
@@ -306,11 +307,8 @@ for (const which of ['light', 'dark'] as const) {
           : `${contrast(role, number.ground).toFixed(2)} (role ${role}, darkest pixel ${number.mark}, on ${number.ground})`,
       );
     }
-    const line = paintOf(
-      shotPath('field', which),
-      { ...plantedFrame, x: plantedFrame.x + 0.5, w: 2 },
-      viewWidth,
-    ).ground;
+    /** The line is `line.slot`, 2 pt: the whole pixels inside it, at any scale of the shot. */
+    const line = paintOf(shotPath('field', which), { ...plantedFrame, w: 2 }, viewWidth).ground;
     drive.check(
       `${which} colours: the planted line is hs.leaf`,
       distance(line, theme[which].leaf) <= 12,
