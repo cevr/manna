@@ -4,6 +4,14 @@
 // current Heartseed's rule: a kept text names its choice exactly, or the
 // default stands. The session reads `settingsMinutes` and `settingsVoice`;
 // the appearance is the app's scheme, set at once and again at each launch.
+// The sheet is drawn as the current app's (src/settings/sheet.tsx,
+// choices.tsx, src/appearance/choice.tsx): a page sheet with no bar, its own
+// heading and an outlined Done; each choice under its line; the minutes and
+// the voice and the appearance as pills filled in ink when chosen (the
+// voice keeps its three radios where the current app draws one pill that
+// cycles: orchestrator, q1); then Sounds and haptics, the port's own row,
+// in the place of the current app's Show the welcome again; then About.
+// Every measure is a token of app.forma (src/look/tokens.ts).
 
 shape SettingsOption
   value: string
@@ -62,13 +70,23 @@ component SettingsChoice
     chosen: string
     options: SettingsOption[]
     choose: action
+    fill: bool
   view
-    column gap=8
-      text line font="-exact-headline"
-      row role="radiogroup" aria-label=group gap=8 flex-wrap="wrap"
+    column gap="space.s10" align-items="stretch"
+      text line font="type.label"
+      row role="radiogroup" appearance="none" aria-label=group display="flex" flex-direction="row" gap="space.s8" flex-wrap=(fill ? "nowrap" : "wrap")
         for o in options key=o.value
-          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) testId=`${name}-${o.value}`
-            text o.label
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" flex-grow=(fill ? 1 : 0) flex-shrink=(fill ? 1 : 0) flex-basis=(fill ? "0%" : "auto") min-height="size.target" padding-left=(fill ? "0px" : "space.s14") padding-right=(fill ? "0px" : "space.s14") border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
+            text o.label font="type.label"
+
+component SettingsButton
+  props
+    label: string
+    name: string
+    go: action
+  view
+    button press=go appearance="none" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" display="flex" align-items="center" justify-content="center" -exact-press-opacity="opacity.pressed" testId=name
+      text label font="type.label"
 
 component SettingsSheet
   props
@@ -82,18 +100,17 @@ component SettingsSheet
     about: action
     done: action
   view
-    column navigationKey=`${route}` navigationPresentation="modal" navigationScroll="settings-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="settings"
-      header display="flex" align-items="center"
-        text "Settings" role="heading" aria-level=1 flex=1
-        button press=done testId="settings-done"
-          text "Done"
+    column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationScroll="settings-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="settings"
+      header appearance="none" display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-left="space.page" padding-right="space.page" padding-top="space.s20" padding-bottom="space.s8"
+        text "Settings" role="heading" aria-level=1 font="type.sheet-title"
+        SettingsButton(label="Done", name="settings-done", go=done)
       scroll id="settings-scroll" flex=1 min-height=0
-        column gap=24 padding=20
-          SettingsChoice(line="A day's tending", group="Minutes", name="minutes", chosen=`${settings.minutes}`, options=settings.minutesOptions, choose=minutes)
-          SettingsChoice(line="Reads new verses aloud", group="Voice", name="voice", chosen=settings.voice, options=settings.voiceOptions, choose=voice)
-          SettingsChoice(line="Appearance", group="Appearance", name="appearance", chosen=settings.appearance, options=settings.appearanceOptions, choose=appearance)
-          row gap=12 align-items="center" min-height="44px"
-            text "Sounds and haptics" font="-exact-headline" flex=1 min-width=0
-            input type="checkbox" switch checked=feel change=feelSwitch aria-label="Sounds and haptics" testId="settings-feel"
-          button press=about buttonStyle="bordered" testId="about-row"
-            text "About"
+        column gap="space.section" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
+          SettingsChoice(line="A day's tending", group="Minutes", name="minutes", chosen=`${settings.minutes}`, options=settings.minutesOptions, choose=minutes, fill=false)
+          SettingsChoice(line="Reads new verses aloud", group="Voice", name="voice", chosen=settings.voice, options=settings.voiceOptions, choose=voice, fill=false)
+          SettingsChoice(line="Appearance", group="Appearance", name="appearance", chosen=settings.appearance, options=settings.appearanceOptions, choose=appearance, fill=true)
+          column gap="space.s12" align-items="flex-start"
+            row gap="space.s12" align-items="center" min-height="size.target" max-width="100%"
+              text "Sounds and haptics" font="type.label" flex-shrink=1 min-width=0
+              input type="checkbox" switch checked=feel change=feelSwitch aria-label="Sounds and haptics" testId="settings-feel"
+            SettingsButton(label="About", name="about-row", go=about)
