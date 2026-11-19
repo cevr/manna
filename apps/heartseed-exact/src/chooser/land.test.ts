@@ -1,5 +1,6 @@
 import { expect, it } from 'bun:test';
 
+import { seeded } from '../test/random';
 import { landRoom, landSources, portOf, stoppedShort, type LandFrames } from './land';
 
 const NONE = { landedTop: 0, landedRoom: -1 };
@@ -97,6 +98,57 @@ it('takes an origin read anywhere between the scroll top and the seen top (53 at
   expect(stoppedShort(shown)).toBe(false);
   expect(portOf(shown)).toBe(53);
   expect(landRoom(shown)).toBeCloseTo(116 - 53 + (705 - 116) / 3, 6);
+});
+
+/** A reading of a landing that used `room` and showed its origin at `origin`. */
+const readAt = (
+  screen: Omit<LandFrames, 'landedTop' | 'landedRoom'>,
+  origin: number,
+  room: number,
+) => ({
+  ...screen,
+  landedTop: origin + room,
+  landedRoom: room,
+});
+
+it("reads every origin from the scroll's top (0) to under the bar as read, the verse landing at one place from each, and outside them none", () => {
+  const random = seeded(23);
+  const bars = [116, ...Array.from({ length: 299 }, () => 1 + random.below(160))];
+  for (const [run, bar] of bars.entries()) {
+    const seenHeight = 300 + random.below(500);
+    const screen = {
+      seenTop: bar,
+      seenHeight,
+      scrollTop: 0,
+      scrollHeight: bar + seenHeight - random.below(120),
+      verseHeight: 20 + random.below(120),
+    };
+    const target = landedAt({ ...screen, ...NONE }, 0);
+    const room = random.next() * 400;
+    for (const origin of [0, bar, random.below(bar + 1)]) {
+      const shown = readAt(screen, origin, room);
+      expect([run, origin, stoppedShort(shown), portOf(shown)]).toEqual([
+        run,
+        origin,
+        false,
+        origin,
+      ]);
+      expect(landedAt(shown, origin)).toBeCloseTo(target, 6);
+    }
+    for (const origin of [-1 - random.below(50), bar + 1 + random.below(50)]) {
+      const shown = readAt(screen, origin, room);
+      expect([run, origin, stoppedShort(shown), landRoom(shown)]).toEqual([
+        run,
+        origin,
+        true,
+        room,
+      ]);
+    }
+    const underBar = readAt(screen, bar, room);
+    const back = readAt(screen, 0, landRoom(underBar));
+    expect([run, stoppedShort(back), portOf(back)]).toEqual([run, false, 0]);
+    expect(landedAt(back, 0)).toBeCloseTo(target, 6);
+  }
 });
 
 /** The web at a phone's height, as the web probe read it: Psalm 23:1 or 119:1 opened on, the scroll cannot go above its top, so the verse rests at 157 whatever the room; Psalm 119:176, the scroll cannot go past its foot, so it rests at 661.75. */
