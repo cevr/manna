@@ -16,11 +16,14 @@ import { appFile, brandOf } from './design.testing.ts';
 const brand = brandOf(appFile('app.forma'));
 const roles = Object.keys(theme.light);
 
-/**
- * The colours UIKit draws in the current app that its theme does not name,
- * each measured from One's reference and named with where UIKit draws it.
- */
-const UIKIT = new Map([
+/** A colour UIKit draws that One names nowhere: its light and dark values and where they were measured. */
+interface Measured {
+  readonly light: string;
+  readonly dark: string;
+  readonly source: string;
+}
+
+const UIKIT = new Map<string, Measured>([
   [
     'fieldClear',
     {

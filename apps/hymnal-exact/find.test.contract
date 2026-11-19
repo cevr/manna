@@ -44,6 +44,16 @@ test "The box clears while it has words"
   expect focused "search"
   expect tree missing "find-clear"
   expect tree has "find-cancel"
+  type "search" "zzqx"
+  clock settle
+  clock data
+  expect tree has "find-clear"
+  tap "find-number"
+  clock settle
+  clock data
+  expect focused "drum-hundreds"
+  expect state listQuery == "zzqx"
+  expect tree missing "find-clear"
 
 test "A hymn by its number"
   tap "find-number"
