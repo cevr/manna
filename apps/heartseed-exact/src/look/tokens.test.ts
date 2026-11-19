@@ -16,6 +16,9 @@ import { FAMILY, SHADOW_INK, TOKENS, type Source, type Token } from './tokens';
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
 
+/** The device pixels a point holds on the iPhones the port is matched on. */
+const DEVICE = 3;
+
 const MEASURE = /^(?:type|space|radius|size|line|opacity|scale|shadow)\./u;
 
 /** A number to four places, as a token writes it. */
@@ -52,6 +55,7 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
   if (token.kind === 'hairline')
     return value === 'StyleSheet.hairlineWidth' ? '-exact-hairline' : undefined;
   if (token.kind === 'length') return `${value}px`;
+  if (token.kind === 'border') return `${short(Math.round(Number(value) * DEVICE) / DEVICE)}px`;
   return value;
 };
 

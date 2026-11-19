@@ -94,7 +94,7 @@ theme
   glyph.control: length = 22px
   glyph.list: length = 32px
   line.hair: length = -exact-hairline
-  line.edge: length = 1.5px
+  line.edge: length = 1.6667px
   line.slot: length = 2px
   opacity.pressed: number = 0.8
   opacity.disabled: number = 0.6
