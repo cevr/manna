@@ -1200,7 +1200,7 @@ describe('the exact wrapper', () => {
   );
 
   it.scopedLive(
-    "sets aside a linked package's One route types while Exact runs, and puts them back after a pass, a failure or an interruption, unless a dev server wrote newer ones",
+    "sets aside a linked package's One route types while Exact runs, and puts them back after a pass, a failure or an interruption, unless a dev server wrote newer ones; an installed (non-workspace) package's stay put",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -1222,7 +1222,11 @@ describe('the exact wrapper', () => {
           '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4" } }',
         );
         yield* fs.symlink(linked, path.join(appDir, 'node_modules', '@manna', 'hymnal-app'));
+        const installed = path.join(appDir, 'node_modules', 'effect', 'app', 'routes.d.ts');
+        yield* fs.makeDirectory(path.dirname(installed), { recursive: true });
+        yield* fs.writeFileString(installed, written);
         const seen: Array<boolean> = [];
+        const kept: Array<boolean> = [];
         const runWith = (
           code: number,
           during: Effect.Effect<void, unknown> = Effect.void,
@@ -1242,6 +1246,8 @@ describe('the exact wrapper', () => {
                       return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
                     return fs.exists(routes).pipe(
                       Effect.tap((there) => Effect.sync(() => seen.push(there))),
+                      Effect.andThen(fs.exists(installed)),
+                      Effect.tap((there) => Effect.sync(() => kept.push(there))),
                       Effect.andThen(during),
                       Effect.orDie,
                       Effect.as(handleOf('', code, exited)),
@@ -1277,6 +1283,7 @@ describe('the exact wrapper', () => {
         expect(yield* after).toEqual([newer, ['routes.d.ts']]);
 
         expect(seen).toEqual([false, false, false, false]);
+        expect(kept).toEqual([true, true, true, true]);
       }).pipe(Effect.provide(BunServices.layer)),
   );
 
