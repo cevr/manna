@@ -302,4 +302,24 @@ describe('the drift from the pin, from what git answers', () => {
       changed: ['apps/hymnal/src/twin.ts'],
     });
   });
+
+  test('the latest commit is the newest since the pin, listed or not, so --repin pins past a listed commit newer than the drift', () => {
+    const git = fakeGit({
+      since: [listed, twin],
+      merges: [],
+      files: { [listed]: ['apps/hymnal/src/listed.ts'], [twin]: ['apps/hymnal/src/twin.ts'] },
+    });
+    const drift = driftOf(git, PIN, [listed.slice(0, 12)]);
+    expect(Option.getOrUndefined(drift)).toEqual({
+      pinned: PIN,
+      latest: listed.slice(0, 12),
+      unlisted: [twin.slice(0, 12)],
+      changed: ['apps/hymnal/src/twin.ts'],
+    });
+    expect(refKey(PIN, drift, true)).toEqual({
+      _tag: 'Key',
+      one: listed.slice(0, 12),
+      repin: true,
+    });
+  });
 });
