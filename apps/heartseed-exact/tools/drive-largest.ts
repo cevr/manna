@@ -11,6 +11,13 @@
  * and a single verse's `Remove` wraps under its verse instead of running
  * off the screen, while at the default size it sits on its verse's line.
  *
+ * Below the accessibility sizes, as drawn: at the default size on both hosts,
+ * and at 53 px on the web (which keeps the current layout at any size),
+ * Today draws one fixed foot with nothing of it in the scroll, Say it and
+ * Listen as the 132-pt circles inside it, and a list's page draws its head
+ * once, with Practice fixed above the scroll. This is the arm
+ * `src/look/roomy.test.ts` reads only as contract text.
+ *
  * On iOS alone, at AX1 (28) and AX5 (53), where Exact's
  * `accessibilityTextSize` holds (owner, q160; the web has no such class and
  * keeps the current layout): Today leaves room for the reference and three
@@ -23,6 +30,8 @@
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { readBrand } from './look';
 
 const host = process.argv[2] ?? 'web';
 if (host !== 'web' && host !== 'ios') {
@@ -56,6 +65,8 @@ const LIST_VERSE = 'John-3-16';
 const SLACK = 0.5;
 /** The smallest target iOS allows, in points. */
 const TARGET = 44;
+/** The round button's circle below the accessibility sizes (`TodayRound`), `size.button` in app.forma. */
+const CIRCLE = Number(/size\.button: length = (\d+)px/u.exec(readBrand())?.[1] ?? Number.NaN);
 /** `type.word`'s size in rem and its line height (a full-text line, the tallest any cue draws, so the room asked is the most a verse needs), `passage`'s row gap and the recital's gap under the reference (app.forma). */
 const WORD_REM = 1.4118;
 const WORD_LEADING = 1.5;
@@ -165,6 +176,95 @@ const roundHolds = (
     { button, label },
   );
 
+/** The steps that plant `hslist.test.contract`'s list and open its page, then `after`. */
+const listSteps = (after: ReadonlyArray<string>) => [
+  'clock data',
+  'tap add-list',
+  'clock data',
+  'clock settle',
+  'tap shelf-any',
+  'clock settle',
+  'tap book-43',
+  'clock data',
+  'clock settle',
+  'tap chapter-3',
+  'clock data',
+  'clock settle',
+  'tap verse-16',
+  'clock data',
+  'tap verse-18',
+  'clock data',
+  'tap plant-list',
+  'clock data',
+  'clock settle',
+  'tap tab-garden',
+  'clock data',
+  'clock settle',
+  'back',
+  'clock data',
+  'clock settle',
+  `tap ${LIST_ROW}`,
+  'clock data',
+  ...after,
+];
+
+/** How many nodes of a `tree` reply carry `testId`, at any depth. */
+const countOf = (reply: unknown, testId: string): number =>
+  JSON.stringify(reply ?? '').split(`"testId":"${testId}"`).length - 1;
+
+/** The root sizes the current layout must hold at: the default on both hosts, and on the web, which has no accessibility class (q160), the largest too. */
+const BELOW = [
+  { at: 'at the default size', prefer: [], hosts: ['web', 'ios'] },
+  { at: 'at 53 px on the web', prefer: [LARGEST, 'clock settle'], hosts: ['web'] },
+].filter((each) => each.hosts.includes(host));
+
+for (const { at, prefer } of BELOW) {
+  const reads = ['tree', 'layout today-foot', 'layout say', 'layout hear'];
+  const recital = await drive.run(
+    ['--storage', `largest-below-today-${stamp}`, '--reset-storage', '--url', '/cue/none', ...size],
+    ['clock data', 'clock settle', ...prefer, ...reads],
+  );
+  const base = 2 + prefer.length;
+  const tree = recital[base];
+  const [foot, say, hear] = [1, 2, 3].map((k) => frameOf(recital[base + k]));
+  drive.check(
+    `${at} Today draws its foot once, whole and fixed: one foot, no part in the scroll, one Say it and one Listen`,
+    countOf(tree, 'today-foot') === 1 &&
+      countOf(tree, 'today-foot-rest') === 0 &&
+      countOf(tree, 'say') === 1 &&
+      countOf(tree, 'hear') === 1,
+    ['today-foot', 'today-foot-rest', 'say', 'hear'].map((id) => [id, countOf(tree, id)]),
+  );
+  drive.check(
+    `${at} Today's Say it and Listen are the 132-pt circles, inside the fixed foot`,
+    foot !== undefined &&
+      say !== undefined &&
+      hear !== undefined &&
+      [say, hear].every(
+        (b) =>
+          Math.abs(b.w - CIRCLE) <= SLACK && Math.abs(b.h - CIRCLE) <= SLACK && inside(b, foot),
+      ),
+    { foot, say, hear },
+  );
+
+  const page = await drive.run(
+    ['--storage', `largest-below-list-${stamp}`, '--reset-storage', ...size],
+    listSteps([...prefer, 'tree', 'layout list-scroll', 'layout list-practice']),
+  );
+  const listTree = page.at(-3);
+  const [scroll, practice] = [-2, -1].map((k) => frameOf(page.at(k)));
+  drive.check(
+    `${at} a list's page draws its head once`,
+    countOf(listTree, 'list-top') === 1 && countOf(listTree, 'list-practice') === 1,
+    { top: countOf(listTree, 'list-top'), practice: countOf(listTree, 'list-practice') },
+  );
+  drive.check(
+    `${at} a list's Practice stays fixed above its scroll`,
+    scroll !== undefined && practice !== undefined && bottom(practice) <= scroll.y + SLACK,
+    { scroll, practice },
+  );
+}
+
 if (host === 'ios') {
   for (const px of ACCESSIBILITY_SIZES) {
     const prefer = `prefer root-font-size ${px}`;
@@ -217,49 +317,12 @@ if (host === 'ios') {
     roundHolds('Say it', say, sayLabel, px);
     roundHolds('Listen', hear, hearLabel, px);
 
-    const listSteps = [
-      'clock data',
-      'tap add-list',
-      'clock data',
-      'clock settle',
-      'tap shelf-any',
-      'clock settle',
-      'tap book-43',
-      'clock data',
-      'clock settle',
-      'tap chapter-3',
-      'clock data',
-      'clock settle',
-      'tap verse-16',
-      'clock data',
-      'tap verse-18',
-      'clock data',
-      'tap plant-list',
-      'clock data',
-      'clock settle',
-      'tap tab-garden',
-      'clock data',
-      'clock settle',
-      'back',
-      'clock data',
-      'clock settle',
-      `tap ${LIST_ROW}`,
-      'clock data',
-      prefer,
-      'clock settle',
-      'layout list-scroll',
-      'layout list-practice',
-      `layout list-row-${LIST_VERSE}`,
-    ];
+    const reads = ['layout list-scroll', 'layout list-practice', `layout list-row-${LIST_VERSE}`];
     const list = await drive.run(
       ['--storage', `largest-ax-list-${px}-${stamp}`, '--reset-storage', ...size],
-      listSteps,
+      listSteps([prefer, 'clock settle', ...reads]),
     );
-    const [scroll, practice, row] = [
-      'layout list-scroll',
-      'layout list-practice',
-      `layout list-row-${LIST_VERSE}`,
-    ].map((step) => frameOf(list[listSteps.indexOf(step)]));
+    const [scroll, practice, row] = [-3, -2, -1].map((k) => frameOf(list.at(k)));
     drive.check(
       `at ${px} pt a list's page scrolls Practice with its verses, with room for a verse or Practice`,
       scroll !== undefined &&
