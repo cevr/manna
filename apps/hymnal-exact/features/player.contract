@@ -14,6 +14,14 @@ shape PlayerBar
   said: string
   toggle: string
   page: number
+  kind: string
+  label: string
+  mark: string
+  seeker: bool
+  gone: string
+  left: string
+  rise: number
+  told: string
 
 shape PlayerChip
   stanza: number
@@ -60,6 +68,7 @@ shape PlayerView
   pageBar: bool
   onPage: number
   bar: PlayerBar
+  pageLabel: string
   pageToggle: string
   chips: PlayerChip[]
   places: number[]

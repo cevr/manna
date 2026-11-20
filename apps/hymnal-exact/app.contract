@@ -41,6 +41,7 @@ component HymnalExact
   members "./features/chords.contract"
   members "./features/find.contract"
   members "./features/motion.contract"
+  members "./features/bar.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -67,6 +68,8 @@ component HymnalExact
     motionStill = motionStill
     settingsFeel = settingsFeel
     settingsFeelSwitch = settingsFeelSet
+    playerSoundOn = playerSound
+    playerSoundPress = playerSoundSwitch
   action follow(url: string)
     nav = go(nav, url)
   view
