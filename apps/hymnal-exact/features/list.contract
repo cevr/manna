@@ -15,7 +15,7 @@
 // the list is pulled past its top, as One's `railShift`), and a row the
 // rail scrolls to lands under its pinned header (`listPin`).
 use PlayerBarRoom, PlayerView from "./player.contract"
-use FindBar, FindPlaces, FindPort, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
+use FindBar, FindPlaces, FindPort, FindTiles, FindView, findFoot, findSearchingAt, ListRow, RowSection from "./find.contract"
 use HomeRail from "./rail.contract"
 
 shape TabGroup
@@ -225,8 +225,9 @@ component ListHeader
         text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
         column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
 
-// The Sections list's rail (features/rail.contract), its foot over the
-// list's end room (`listEnd`), as the current app's rail ends.
+// The Sections list's rail (features/rail.contract), its foot `end` past
+// the find bar's top (`findFoot`, wherever the bar rides, over the player's
+// bar too), as the current app's rail ends at its list's `ListEnd` room.
 component ListRail
   props
     shift: number
@@ -235,7 +236,7 @@ component ListRail
   resource listRailPort = exactViewport() as shape FindPort
   resource listRailPlaces = findPlaces() as shape FindPlaces
   view
-    HomeRail(shift=shift, end=listEnd(listRailPort, listRailPlaces, playerShown.dock or playerShown.pageBar))
+    HomeRail(shift=shift, end=findFoot(listRailPort, listRailPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0) + listRailPlaces.hash + listRailPlaces.end)
 
 // A hymn's row, as the current app's: its number in the accent, then its
 // title, and a star at the row's end when it is a favourite; a hairline
