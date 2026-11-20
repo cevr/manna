@@ -142,7 +142,7 @@ shape FindPlaces
 // bar stands (`findRoom`): just over the keyboard while it is up (the
 // screen then ends at the keys), over the player's resting bar while it
 // docks, and else docked just over the bottom inset.
-fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboardHeight > 0 ? at.gap : (overBar ? port.safeAreaBottom + at.rest + at.gap : port.safeAreaBottom + at.lift)
+fn findFoot(port: FindPort, at: FindPlaces, overBar: bool, rise: number): number = port.keyboardHeight > 0 ? at.gap : (overBar ? port.safeAreaBottom + at.rest + rise + at.gap : port.safeAreaBottom + at.lift)
 
 // The find bar of the screen `entry` draws, shown while that screen is on
 // top, drawn as the current app's (src/home/FindBar.tsx): a capsule of
@@ -152,8 +152,9 @@ fn findFoot(port: FindPort, at: FindPlaces, overBar: bool): number = port.keyboa
 // magnifier, the `#` keeps its trailing end, and Cancel stands at the
 // bar's right in the accent; while the drums are open the mark lies
 // behind the `#`; on the tiles the `#` stands alone on its own disk. All
-// at once (the port's way to the tiles where a pinch cannot reach) is a
-// disk of glass of its own before the capsule. With `results`, while a
+// at once (the port's way to the tiles where a pinch cannot reach, owner
+// q148 and q164) is a third control in the folded capsule, before Search,
+// sized as Search and the `#` are. With `results`, while a
 // search here has words its ground covers the screen from under the status
 // bar, as the current app's results do, and lists the hymns found; with no
 // words yet the screen stays in view (home's Recent still answers a tap).
@@ -201,17 +202,20 @@ component FindBar
                 for s in findRows key=s.slug
                   for r in s.rows key=r.number
                     FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
-      row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock or playerShown.pageBar)}px` z-index=2
+      row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0)}px` z-index=2
         align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
-        if findShown.tilesControl
-          button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0 pointer-events="auto"
-            border-radius="radius.pill" background-color="glass" color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
-            image "symbol:layers" width="size.glyph" height="size.glyph"
         if findShown.row == "tiles"
           FindHash(look=(findShown.chosen == "hash" ? "aloneChosen" : "alone"))
         else
           row height="size.target" border-radius="radius.pill" background-color="glass" overflow="hidden" align-items="center" pointer-events="auto"
             flex=(findShown.boxDrawn ? "1 1 0px" : "none") min-width=0 testId="find-capsule"
+            if findShown.tilesControl
+              button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0
+                color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
+                animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.fade ease-out both")
+                :active
+                  opacity = "opacity.pressed"
+                image "symbol:layers" width="size.glyph" height="size.glyph"
             if findShown.searchDrawn
               button press=findSearchOn appearance="none" disabled=(not findShown.searchReach) aria-label="Search" aria-pressed=(findShown.chosen == "search")
                 width="size.target" height="size.target" flex-shrink=0 color="onGlass" display="flex" align-items="center" justify-content="center" testId="find-search"
@@ -298,7 +302,7 @@ component FindDrums
           background-color="transparent"
         column width="100%" height="100%" justify-content="flex-end" box-sizing="border-box" position="relative"
           padding-left="space.s16" padding-right="space.s16"
-          padding-bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findDrumsPort, findDrumsPlaces, playerShown.dock or playerShown.pageBar) + findDrumsPlaces.hash + findDrumsPlaces.gap}px)`
+          padding-bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findDrumsPort, findDrumsPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0) + findDrumsPlaces.hash + findDrumsPlaces.gap}px)`
           column pointerup=findPress("drumsClose", 0) position="absolute" top=0 right=0 bottom=0 left=0 testId="drums-outside"
           FindDrumsPanel()
           FindHashOver()
@@ -317,7 +321,7 @@ component FindHashOver
   resource findOverPlaces = findPlaces() as shape FindPlaces
   view
     button press=findPress("drumsOpen", 0) appearance="none" aria-label="Close" aria-pressed=true
-      position="absolute" right="space.s16" bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findOverPort, findOverPlaces, playerShown.dock or playerShown.pageBar)}px)`
+      position="absolute" right="space.s16" bottom=`calc(var(--exact-safe-area-inset-bottom) + ${findFoot(findOverPort, findOverPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0)}px)`
       width="size.target" height="size.target" border-radius="radius.pill" background-color="glassChosen" color="onGlassChosen"
       display="flex" align-items="center" justify-content="center" testId="drums-hash"
       :active

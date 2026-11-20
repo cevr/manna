@@ -21,7 +21,8 @@ import { audioKey } from '@manna/hymnal-app/remote';
 import type { Book } from '../hymns/book.ts';
 import { scoreOf } from './score.ts';
 import { type Input, type State, type Track, type Why, initial, step } from './step.ts';
-import { type PlayerView, barOf, decodeChoices, viewOf } from './view.ts';
+import { barOf } from './bar/view.ts';
+import { type PlayerView, decodeChoices, viewOf } from './view.ts';
 
 /** The bucket the recordings are served from. */
 export const BUCKET = 'https://hymns.cvr.im';

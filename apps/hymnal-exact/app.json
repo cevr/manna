@@ -26,7 +26,7 @@
       {
         "finding": "overlap",
         "node": "tiles-show",
-        "why": "All at once is the port's own control, kept in the current hymnal's look (owner, q148): the current hymnal has no such button (it reaches the tiles by a pinch, or the `Hymns` heading's VoiceOver action, src/home/Home.native.tsx). It floats at the screen's foot beside the find bar's capsule, over the home list, which scrolls under it; the list keeps the current hymnal's end room past its last row (src/reader/ListEnd.tsx, `listEnd` in features/list.contract), so every row scrolls clear of it, and it shares no area with the capsule (tools/drive-largest.ts, hy-end)."
+        "why": "All at once is the port's own control, kept in the current hymnal's look (owner, q148): the current hymnal has no such button (it reaches the tiles by a pinch, or the `Hymns` heading's VoiceOver action, src/home/Home.native.tsx). It is the first control inside the find bar's capsule (owner, q164: inside the search capsule, port only), which floats at the screen's foot over the home list, which scrolls under it; the list keeps the current hymnal's end room past its last row (src/reader/ListEnd.tsx, `listEnd` in features/list.contract), so every row scrolls clear of it, and it shares no area with Search and the # beside it (tools/drive-largest.ts, hy-end)."
       },
       {
         "finding": "overlap",
