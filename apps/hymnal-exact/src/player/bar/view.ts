@@ -21,7 +21,7 @@ const RISE = 32;
 export type Toggle = 'play' | 'pause' | 'retry' | '';
 
 /** The bar's button, as the current `button.ts` names its kinds; none for a hymn with no recording. */
-export type Kind = 'play' | 'pause' | 'again' | 'retry' | 'loading' | '';
+type Kind = 'play' | 'pause' | 'again' | 'retry' | 'loading' | '';
 
 /** A hymn as the bar shows it: its number and title, and the player as that hymn sees it. */
 export interface BarView {
@@ -67,7 +67,7 @@ export const toggleOf = (phase: Phase, why: Held['why']): Toggle => {
 };
 
 /** The bar's button for a hymn in `phase`, as the current `buttonsOf` gives it. */
-export const kindOf = (phase: Phase, why: Held['why']): Kind => {
+const kindOf = (phase: Phase, why: Held['why']): Kind => {
   if (phase === 'loading') return 'loading';
   if (phase === 'playing' || phase === 'buffering') return 'pause';
   if (phase === 'ended') return 'again';
@@ -76,7 +76,7 @@ export const kindOf = (phase: Phase, why: Held['why']): Kind => {
 };
 
 /** The name VoiceOver reads the button for hymn `n` by, the current `buttonsOf`'s label. */
-export const labelOf = (kind: Kind, n: number): string => {
+const labelOf = (kind: Kind, n: number): string => {
   if (kind === 'pause') return `Pause hymn ${n}`;
   if (kind === 'again') return `Play hymn ${n} again`;
   if (kind === 'retry') return `Retry hymn ${n}`;
