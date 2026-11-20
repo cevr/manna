@@ -105,10 +105,10 @@ bun run exact test ios settings.test.contract
 bun tools/drive-settings.ts web    # the brand's roles at launch, Dark at once and on the first frame after a relaunch, System following
 bun tools/drive-settings.ts ios
 bun tools/drive-about.ts web       # each credit's licence a link where it has an address, plain text where not (also: ios)
-bun tools/drive-largest.ts web     # through the agent's `check`: chorded lines inside their part, a hymn's title and home's title at the largest text, the drums' digits uncovered
+bun tools/drive-largest.ts web     # through the agent's `check`: chorded lines inside their part, a hymn's title and home's title at the largest text, the drums' digits uncovered, the home list's last row clear of the find bar at its end and the bar's controls apart, the chord shape's accepts taking only their roles
 ```
 
-`app.json`'s `verify.accept` names each finding the current hymnal draws too, one node and its reason each: the find bar's controls floating over what scrolls under them, the star's target reaching past its row, a chord shape's marks at the largest text. An entry only the largest-text pass uses is printed as "accepts nothing" by Exact's verify at the pin (it counts that pass's takes nowhere): keep it.
+`app.json`'s `verify.accept` names each finding the current hymnal draws too, and the port's own All at once (owner, q148), one node or one role's ids and its reason each: the find bar's controls floating over what scrolls under them (the home list keeps the current hymnal's `ListEnd` room past its last row, so each row scrolls clear), the star's target reaching past its row, a chord shape's marks, dots and barre at the largest text. An entry only the largest-text pass uses is printed as "accepts nothing" by Exact's verify at the pin (it counts that pass's takes nowhere): keep it.
 
 ## Motion
 
