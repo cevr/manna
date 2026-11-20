@@ -61,20 +61,22 @@ describe('the screens', () => {
       }
   });
 
-  test("the cells that depart from One on purpose are q160's four, each an iOS accessibility-size cell of a match row", () => {
+  test("the cells that depart from One on purpose are q160's four and q161's one, each an iOS accessibility-size cell of a match row", () => {
     const departures = APPS.flatMap((app) =>
       ROWS[app].flatMap((row) =>
         departuresOf(app, row).map(([cell, reason]) => ({ cell, kind: row.kind, reason })),
       ),
     );
-    expect(departures.map(({ cell }) => cell).toSorted()).toEqual([
-      'heartseed/ios/list.page/light/accessibility-extra-extra-extra-large',
-      'heartseed/ios/today.letters/light/accessibility-extra-extra-extra-large',
-      'heartseed/ios/today.new/light/accessibility-extra-extra-extra-large',
-      'heartseed/ios/today.result/light/accessibility-extra-extra-extra-large',
+    const owners = new Map([
+      ['heartseed/ios/list.page/light/accessibility-extra-extra-extra-large', 'q160: '],
+      ['heartseed/ios/today.letters/light/accessibility-extra-extra-extra-large', 'q160: '],
+      ['heartseed/ios/today.new/light/accessibility-extra-extra-extra-large', 'q160: '],
+      ['heartseed/ios/today.result/light/accessibility-extra-extra-extra-large', 'q160: '],
+      ['hymnal/ios/settings.sheet/light/accessibility-extra-extra-extra-large', 'q161: '],
     ]);
+    expect(departures.map(({ cell }) => cell).toSorted()).toEqual([...owners.keys()]);
     for (const { cell, kind, reason } of departures)
-      expect({ cell, kind, owner: reason.startsWith('q160: ') }).toEqual({
+      expect({ cell, kind, owner: reason.startsWith(owners.get(cell) ?? '-') }).toEqual({
         cell,
         kind: 'match',
         owner: true,

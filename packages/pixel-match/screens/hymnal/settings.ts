@@ -26,6 +26,10 @@ export const rows: ReadonlyArray<Row> = [
     fixture: 'hy-fresh',
     one: { steps: [SETTINGS, { wait: 1000 }] },
     exact: { ops: GEAR },
+    departs: {
+      'accessibility-extra-extra-extra-large':
+        "q161: the port keeps its Done's room beside the sheet's title at every size, so at the accessibility sizes the title wraps short of Done where the current hymnal, which has no Done, wraps it across the sheet; below AX1 the title fits beside Done, as One's does",
+    },
   },
   {
     id: 'settings.chords-on',

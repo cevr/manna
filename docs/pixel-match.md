@@ -51,9 +51,10 @@ accessibility size with the owner's answer that asks it (`departs`; only
 AX1 to AX5, by its type). The cell keeps its reference and is still shot
 and scored. `pixel report` lists it under `departures` and prints its score
 beside its reason, and the acceptance check does not hold it to the
-threshold. The four are Heartseed's `today.new`, `today.letters`,
-`today.result` and `list.page` at AX5 (owner, q160);
-`screens/screens.test.ts` holds the list to them.
+threshold. They are Heartseed's `today.new`, `today.letters`,
+`today.result` and `list.page` at AX5 (owner, q160) and the hymnal's
+`settings.sheet` at AX5, whose title wraps short of the port's Done
+(owner, q161); `screens/screens.test.ts` holds the list to them.
 
 Heartseed's port cells at an accessibility size are drawn smaller than
 One's, and no row fixes it. The port's `rem` is UIKit's body size: 28, 33, 40, 47
