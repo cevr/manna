@@ -34,6 +34,15 @@ test "A hymn's address opens it."
   expect tree missing "hymn-title"
   expect text "title" == "Hymns"
 
+test "A hymn page's way back is titled Hymns and goes home."
+  at "/hymns/2"
+  clock data
+  expect text "hymn-back" == "Hymns"
+  tap "hymn-back"
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
 test "A hymn's address stays on it through a reload." on web
   at "/hymns/2"
   clock data
