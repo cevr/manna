@@ -83,7 +83,7 @@ const GRANTED = [
   'prefer permission.microphone granted',
   'prefer permission.speech-recognition granted',
 ];
-/** How far a drag on the verse moves Today's scroll up, in points: less than the scroll's range at AX1. */
+/** How far a drag on Today's scroll (iOS's agent drags only a scroll it starts on) moves it up, in points: less than the scroll's range at AX1. */
 const DRAG = -120;
 
 interface Frame {
@@ -375,7 +375,7 @@ if (host === 'ios') {
         'layout next-label',
         'layout again',
         'layout grade-1',
-        `tap reference drag 0 ${DRAG}`,
+        `tap today-scroll drag 0 ${DRAG}`,
         'clock settle',
         'layout next',
         'layout again',
