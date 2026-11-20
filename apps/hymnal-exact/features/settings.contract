@@ -109,8 +109,11 @@ component SettingsChordsRow
 // row, its room kept beside the title by an unseen copy of its word, so at
 // every text size the title wraps short of it and never runs under it: at
 // the accessibility sizes the title wraps narrower than the current
-// hymnal's, which has no Done (owner, q161). A swipe down closes the sheet
-// too.
+// hymnal's, which has no Done (owner, q161). Its button reaches 8 past the
+// row above and below and 4 past its trailing edge, padded back, so it takes
+// a tap over the platform's 44 × 44 at every size (48 wide, as iOS draws the
+// sheet at half height at 0.96) with its word drawn where it was and its
+// leading edge where the room begins. A swipe down closes the sheet too.
 component SettingsSheet
   props
     entry: Entry
@@ -124,7 +127,7 @@ component SettingsSheet
           row position="relative" align-items="center" margin-bottom="space.s8" padding-bottom="nudge.settings-title"
             text "Settings" role="heading" aria-level=1 font="type.sheet-title" color="ink" flex=1 min-width=0 overflow-wrap="break-word" testId="settings-title"
             text "Done" font="type.strong" flex-shrink=0 min-width="size.target" margin-left="space.s8" opacity=0 pointer-events="none" aria-hidden=true testId="settings-done-room"
-            button press=done appearance="none" position="absolute" top=0 bottom=0 right=0 display="flex" align-items="center" justify-content="flex-end" min-width="size.target" -exact-hit-slop="space.s8" testId="settings-done"
+            button press=done appearance="none" position="absolute" top=0 bottom=0 right=0 margin-top="calc(space.s8 * -1)" margin-bottom="calc(space.s8 * -1)" margin-right="calc(space.s4 * -1)" padding-right="space.s4" display="flex" align-items="center" justify-content="flex-end" min-width="size.target" -exact-hit-slop="space.s8" testId="settings-done"
               :active
                 opacity = "opacity.pressed"
               text "Done" font="type.strong" color="accent"
