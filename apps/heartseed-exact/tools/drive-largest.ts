@@ -23,8 +23,11 @@
  * keeps the current layout): Today leaves room for the reference and three
  * lines of the verse above its fixed round button, which stays on screen;
  * each round button holds its label and is at least 44 pt each way, inside
- * the screen; and a list's page leaves its scroll room for a verse, with
- * Practice inside it.
+ * the screen; once said, Listening and then Next are capsules the line's
+ * width holding their labels, at least 44 pt tall, and Say it again and the
+ * result's card are drawn once, in the scroll: a drag moves them together
+ * while Next stays fixed; and a list's page leaves its scroll room for a
+ * verse, with Practice inside it.
  */
 
 import { join } from 'node:path';
@@ -72,6 +75,16 @@ const WORD_REM = 1.4118;
 const WORD_LEADING = 1.5;
 const ROW_GAP = 2;
 const REFERENCE_GAP = 10;
+/** The line's width: the phone less `space.page` on each side (app.forma). */
+const LINE =
+  WIDTH - 2 * Number(/space\.page: length = (\d+)px/u.exec(readBrand())?.[1] ?? Number.NaN);
+/** The microphone and the recognizer granted to the agent's substitute, so Say it listens. */
+const GRANTED = [
+  'prefer permission.microphone granted',
+  'prefer permission.speech-recognition granted',
+];
+/** How far a drag on the verse moves Today's scroll up, in points: less than the scroll's range at AX1. */
+const DRAG = -120;
 
 interface Frame {
   readonly x: number;
@@ -171,6 +184,24 @@ const roundHolds = (
       label !== undefined &&
       inside(label, button) &&
       button.w >= TARGET &&
+      button.h >= TARGET &&
+      onScreen(button),
+    { button, label },
+  );
+
+/** A round button at the accessibility sizes: a capsule the line's width (the screen less the page's margins), holding its label, at least 44 pt tall, on the screen. */
+const capsuleHolds = (
+  name: string,
+  button: Frame | undefined,
+  label: Frame | undefined,
+  px: number,
+) =>
+  drive.check(
+    `at ${px} pt ${name} is a capsule the line's width holding its label, at least ${TARGET} pt tall`,
+    button !== undefined &&
+      label !== undefined &&
+      inside(label, button) &&
+      button.w >= LINE - SLACK &&
       button.h >= TARGET &&
       onScreen(button),
     { button, label },
@@ -316,6 +347,70 @@ if (host === 'ios') {
     );
     roundHolds('Say it', say, sayLabel, px);
     roundHolds('Listen', hear, hearLabel, px);
+
+    const said = await drive.run(
+      [
+        '--storage',
+        `largest-ax-said-${px}-${stamp}`,
+        '--reset-storage',
+        '--url',
+        '/cue/none',
+        ...size,
+      ],
+      [
+        'clock data',
+        prefer,
+        'clock settle',
+        ...GRANTED,
+        'tap say',
+        'clock settle',
+        'layout finish',
+        'layout finish-label',
+        'clock +5000',
+        'tap finish',
+        'clock data',
+        'clock settle',
+        'tree',
+        'layout next',
+        'layout next-label',
+        'layout again',
+        'layout grade-1',
+        `tap reference drag 0 ${DRAG}`,
+        'clock settle',
+        'layout next',
+        'layout again',
+        'layout grade-1',
+      ],
+    );
+    const [finish, finishLabel] = [7, 8].map((at) => frameOf(said[at]));
+    const saidTree = said[13];
+    const [next, nextLabel, pills, card, nextAfter, pillsAfter, cardAfter] = [
+      14, 15, 16, 17, 20, 21, 22,
+    ].map((at) => frameOf(said[at]));
+    capsuleHolds('Listening', finish, finishLabel, px);
+    capsuleHolds('Next', next, nextLabel, px);
+    const moved = (before: Frame | undefined, after: Frame | undefined) =>
+      (after?.y ?? Number.NaN) - (before?.y ?? Number.NaN);
+    const [pillsMoved, cardMoved, nextMoved] = [
+      moved(pills, pillsAfter),
+      moved(card, cardAfter),
+      moved(next, nextAfter),
+    ];
+    drive.check(
+      `at ${px} pt the pills and the result's card are in the scroll, drawn once: a drag moves them together while Next stays fixed`,
+      countOf(saidTree, 'again') === 1 &&
+        countOf(saidTree, 'grade-1') === 1 &&
+        countOf(saidTree, 'next') === 1 &&
+        pillsMoved < -SLACK &&
+        Math.abs(cardMoved - pillsMoved) <= SLACK &&
+        Math.abs(nextMoved) <= SLACK,
+      {
+        counts: ['again', 'grade-1', 'next'].map((id) => [id, countOf(saidTree, id)]),
+        pillsMoved,
+        cardMoved,
+        nextMoved,
+      },
+    );
 
     const reads = ['layout list-scroll', 'layout list-practice', `layout list-row-${LIST_VERSE}`];
     const list = await drive.run(
