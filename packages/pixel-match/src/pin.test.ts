@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 
 import { run } from './ios.ts';
 import { driftLine, driftOf, readNeutral, readPin, refKey, writePin } from './pin.ts';
@@ -180,26 +180,63 @@ describe('the pinned One commit', () => {
   });
 });
 
-/** A history as git answers it: the commits under the One paths since the pin (newest first), which of them are merges, and each one's files (a merge's: its combined diff). */
+/**
+ * A history as git answers it: the commits under the One paths since the pin
+ * (newest first), which of them are merges, which only `--full-history`
+ * lists (a side branch's commit that history simplification drops), and each
+ * one's files (a merge's: its combined diff).
+ */
 interface History {
   readonly since: ReadonlyArray<string>;
   readonly merges: ReadonlyArray<string>;
+  readonly hidden?: ReadonlyArray<string>;
   readonly files: Readonly<Record<string, ReadonlyArray<string>>>;
 }
 
-/** Answers `rev-list` and `diff-tree` from `history`, as git would, `--merges` and `--no-merges` included. */
+/** The flags each git call the fake answers takes; any other is refused, so no flag the code passes goes unread. */
+const FLAGS = {
+  'rev-list': ['--full-history', '--merges', '--no-merges'],
+  'diff-tree': ['--cc', '--no-commit-id', '--name-only', '-r'],
+} as const;
+
+/**
+ * Answers `rev-list` and `diff-tree` from `history` as real git does, each
+ * flag honoured: without `--full-history` the hidden commits go unlisted; a
+ * merge's diff is empty without `--cc`, which also recurses; a commit's
+ * tree is its top folders without `-r`; its lines are raw ones without
+ * `--name-only`, and follow its id without `--no-commit-id`.
+ */
 const fakeGit =
-  ({ since, merges, files }: History) =>
+  ({ since, merges, hidden = [], files }: History) =>
   (args: ReadonlyArray<string>) => {
-    if (args[0] === 'rev-list') {
-      if (args.includes('--merges')) return merges.join('\n');
-      if (args.includes('--no-merges'))
-        return since.filter((commit) => !merges.includes(commit)).join('\n');
-      return since.join('\n');
+    const [command = '', ...rest] = args;
+    const options = Arr.takeWhile(rest, (arg) => arg !== '--').filter((arg) => arg.startsWith('-'));
+    if (!(command in FLAGS)) throw new Error(`no such git call in the fake: ${args.join(' ')}`);
+    const known: ReadonlyArray<string> = FLAGS[command as keyof typeof FLAGS];
+    const unknown = options.filter((option) => !known.includes(option));
+    if (unknown.length > 0) throw new Error(`the fake does not answer ${unknown.join(' ')}`);
+    const has = (flag: string) => options.includes(flag);
+    if (command === 'rev-list') {
+      const listed = since.filter((commit) => has('--full-history') || !hidden.includes(commit));
+      if (has('--merges')) return listed.filter((commit) => merges.includes(commit)).join('\n');
+      if (has('--no-merges')) return listed.filter((commit) => !merges.includes(commit)).join('\n');
+      return listed.join('\n');
     }
-    if (args[0] === 'diff-tree')
-      return (files[args.find((arg) => arg in files) ?? ''] ?? []).join('\n');
-    throw new Error(`no such git call in the fake: ${args.join(' ')}`);
+    const commit = rest.find((arg) => arg in files) ?? '';
+    const merge = merges.includes(commit);
+    if (merge && !has('--cc')) return '';
+    const pathOf = (path: string) => {
+      if (merge || has('-r')) return path;
+      return path.split('/')[0] ?? path;
+    };
+    const lineOf = (path: string) => {
+      if (has('--name-only')) return path;
+      if (merge) return `diff --cc ${path}`;
+      return `:100644 100644 0000000 0000000 M\t${path}`;
+    };
+    const shown = [...new Set((files[commit] ?? []).map(pathOf))].map(lineOf);
+    if (has('--no-commit-id')) return shown.join('\n');
+    return [commit, ...shown].join('\n');
   };
 
 /** A 40-digit commit: `head` then `tail` repeated. */
@@ -249,5 +286,20 @@ describe('the drift from the pin, from what git answers', () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  test('a side commit only the full history lists is still a drift, and a clean merge only it lists still needs no entry', () => {
+    const git = fakeGit({
+      since: [clean, twin, listed],
+      merges: [clean],
+      hidden: [clean, twin],
+      files: { [clean]: [], [twin]: ['apps/hymnal/src/twin.ts'], [listed]: [] },
+    });
+    expect(Option.getOrUndefined(driftOf(git, PIN, [listed.slice(0, 12)]))).toEqual({
+      pinned: PIN,
+      latest: twin.slice(0, 12),
+      unlisted: [twin.slice(0, 12)],
+      changed: ['apps/hymnal/src/twin.ts'],
+    });
   });
 });
