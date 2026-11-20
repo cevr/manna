@@ -104,4 +104,73 @@ drive.check(
   nodesOf(replies[5]).length > 0 && textOf(replies[5], 'rail-number') === undefined,
   textOf(replies[5], 'rail-number'),
 );
-drive.finish();
+
+/** The box a `layout` reply gives its node, in the page's pixels. */
+const boxOf = (reply: unknown) =>
+  (reply as { node?: { space?: { viewport?: { y: number; h?: number; height?: number } } } })?.node
+    ?.space?.viewport;
+const bottomOf = (reply: unknown) => {
+  const box = boxOf(reply);
+  return box === undefined ? Number.NaN : box.y + (box.h ?? box.height ?? 0);
+};
+const topOf = (reply: unknown) => boxOf(reply)?.y ?? Number.NaN;
+
+/** Sounds and haptics off (the owner's rule before any play), hymn 1 played, then home with the bar docked. */
+const QUIET = [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'tap settings-feel',
+  'clock settle',
+  'state settingsFeel',
+  'tap settings-done',
+  'clock settle',
+  'tap hymn-1',
+  'clock settle',
+  'clock data',
+];
+const PLAY = ['tap play', 'clock data', 'clock +3000 real', 'clock data', 'clock settle'];
+const MEASURE = ['layout rail', 'layout find-capsule', 'layout bar', shot('docked')];
+const docked = await drive.run(
+  [
+    ...(process.env.EXACT_PORT ? ['--port', process.env.EXACT_PORT] : []),
+    ...['--backend', backend, '--storage', `rail-bar-${runId}`, '--reset-storage'],
+  ],
+  [
+    ...QUIET,
+    ...PLAY,
+    'back',
+    'clock settle',
+    'clock data',
+    ...MEASURE,
+    'tap hymn-1',
+    'clock settle',
+    'clock data',
+    'tap bar-toggle',
+    'clock data',
+    'clock settle',
+    'back',
+    'clock settle',
+    'clock data',
+    ...MEASURE,
+  ],
+);
+const quietAt = QUIET.indexOf('state settingsFeel');
+if (docked[quietAt] !== false) {
+  drive.check('Sounds and haptics is off before Play', false, docked[quietAt]);
+} else {
+  for (const [label, at] of [
+    ['playing (the seeker’s rise)', QUIET.length + PLAY.length + 3],
+    ['paused (at rest)', QUIET.length + PLAY.length + 3 + MEASURE.length + 9],
+  ] as const) {
+    const railFoot = bottomOf(docked[at]);
+    const capsule = topOf(docked[at + 1]);
+    const bar = topOf(docked[at + 2]);
+    drive.check(
+      `with the bar docked ${label}, the rail ends above the find capsule and the bar`,
+      railFoot <= capsule && railFoot <= bar,
+      { railFoot, capsule, bar },
+    );
+  }
+}
+process.exit(drive.finish());
