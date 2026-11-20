@@ -17,6 +17,31 @@ test "The book opens on its list."
   expect tree has "section-sentences-and-responses"
   expect text "hymn-695" == "695Praise God, From Whom All Blessings"
 
+test "A group's heading opens All at once, on Sections and on another tab."
+  expect tree missing "tiles"
+  tap "section-adoration-and-praise-row"
+  clock settle
+  clock data
+  expect tree has "tiles"
+  tap "tiles-done"
+  clock settle
+  clock data
+  expect tree missing "tiles"
+  tap "tab-topics"
+  clock settle
+  clock data
+  tap "group-adoration-and-praise-row"
+  clock settle
+  clock data
+  expect tree has "tiles"
+  tap "tiles-done"
+  clock settle
+  clock data
+  tap "tab-sections"
+  clock settle
+  clock data
+  expect tree has "section-adoration-and-praise"
+
 test "Search by number, title and first line."
   tap "find-search"
   clock settle

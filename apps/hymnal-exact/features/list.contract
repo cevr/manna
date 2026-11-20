@@ -9,7 +9,11 @@
 // once it is chosen. A found hymn opens as the current app opens one
 // (`listOpening`). All at once, the tiles, lies over the list, which stays
 // built where it stood beneath; a group's header is drawn in the muted
-// role.
+// role, and a tap on it opens All at once. Sections carries the current
+// app's number rail at its right edge (features/rail.contract), its top at
+// the header's bottom (`listShift`: the title and tabs' height, more while
+// the list is pulled past its top, as One's `railShift`), and a row the
+// rail scrolls to lands under its pinned header (`listPin`).
 use PlayerBarRoom, PlayerView from "./player.contract"
 use FindBar, FindPlaces, FindPort, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
 use HomeRail from "./rail.contract"
@@ -86,15 +90,15 @@ component HymnList
     findShown: FindView
     findWheel: action
   state listHead = 0
-  state listShift = 0
+  state listPull = 0
   state listPin = 0
+  derive listShift = listHead + listPull
   action listHeaded(w: number, h: number)
     listHead = h
-    listShift = max(0, h)
   action listScrolled(x: number, y: number)
-    let s = max(0, listHead - y)
-    if s != listShift
-      listShift = s
+    let s = max(0, 0 - y)
+    if s != listPull
+      listPull = s
   action listPinned(w: number, h: number)
     if h > 0 and h != listPin
       listPin = h
@@ -126,7 +130,7 @@ component HymnList
               for r in recent.shelf key=r.number
                 HymnRow(number=r.number, title=r.title, id=`shelf-${r.number}`, star=(favourites.includes(r.number) ? `shelf-star-${r.number}` : ""), gutter=true)
           for s in sections key=s.slug
-            section
+            section display="flex" flex-direction="column"
               ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true, sized=listPinned)
               for r in s.rows key=r.number
                 HymnRow(number=r.number, title=r.title, id=`hymn-${r.number}`, star=(favourites.includes(r.number) ? `star-${r.number}` : ""), gutter=true)
@@ -143,7 +147,7 @@ component HymnList
           HomeTitle(own=true)
           HomeTabs(tab=tab, tabs=tabs, choose=choose)
           for g in groups key=g.slug
-            section
+            section display="flex" flex-direction="column"
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false, sized=listPinned)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
@@ -214,12 +218,13 @@ component ListHeader
     findPress: action
   view
     button press=findPress("tilesShow", 0) appearance="none" role="heading" aria-label=name
-      display="flex" flex-direction="row" align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
+      display="flex" flex-direction="column" align-self="stretch" padding=0
       position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" resize=sized testId=`${id}-row`
       :active
         background-color="soft"
-      text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
-      column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
+      row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" position="relative"
+        text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
+        column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
 
 // The Sections list's rail (features/rail.contract), its foot over the
 // list's end room (`listEnd`), as the current app's rail ends.

@@ -76,7 +76,7 @@ component HomeRail
   view
     column position="absolute" right=0 width=`${railPlaced.gutter}px` top=`calc(var(--exact-safe-area-inset-top) + ${shift}px)` bottom=`${end}px`
       aria-hidden=true touch-action="none" resize=railSized
-      pointerdown=railDown pointermove=railMove pointerup=railUp testId="rail"
+      pointerdown=railDown pointermove=railMove pointerup=railUp user-select="none" testId="rail"
       for l in railPlaced.labels key=l.number
         text `${l.number}` position="absolute" left=0 right=0 top=`${l.top}%` translate="0 -50%" pointer-events="none"
           font-size=`min(${railPlaced.labelMost}px, ${railPlaced.label}rem)` line-height=`min(${railPlaced.lineMost}px, ${railPlaced.line}rem)`
