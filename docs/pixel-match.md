@@ -55,6 +55,17 @@ threshold. The four are Heartseed's `today.new`, `today.letters`,
 `today.result` and `list.page` at AX5 (owner, q160);
 `screens/screens.test.ts` holds the list to them.
 
+Every port cell at an accessibility size is drawn smaller than One's, and
+no row fixes it. The port's `rem` is UIKit's body size: 28, 33, 40, 47
+and 53 pt at AX1 to AX5. React Native scales One's text by its own table
+(`RCTUtils.mm`: 1.786, 2.143, 2.643, 3.143 and 3.571 times the default
+size, so 30.4 to 60.7 pt for a 17-pt body). So the port's text is 0.922,
+0.906, 0.890, 0.880 and 0.873 of One's, and at `extra-small` and
+`extra-extra-extra-large` the two agree. Heartseed's `about.page` at AX5
+shows it alone: 8.703 %, with each glyph 0.873 of One's height. Exact
+gives only `accessibilityTextSize`, which says yes or no, so the port
+cannot follow React Native's table; that is an upstream ask.
+
 ## References
 
 `pixel ref` takes the One side, iOS cells first, on the app's own reference
