@@ -32,6 +32,7 @@ const OWNER = new Map([
   ['features/favourites.contract', 'pm-hy-hymn'],
   ['features/notfound.contract', 'pm-hy-hymn'],
   ['features/player.contract', 'pm-hy-player'],
+  ['features/bar.contract', 'pm-hy-player'],
   ['features/settings.contract', 'pm-hy-settings'],
   ['features/motion.contract', 'no unit'],
   ['features/abouthymn.contract', 'no unit'],

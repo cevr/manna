@@ -65,6 +65,7 @@
     "./home/find-rules": "./src/home/find-rules.ts",
     "./home/tile-times": "./src/home/tile-times.ts",
     "./player/drums": "./src/player/drums.ts",
+    "./player/button": "./src/player/button.ts",
     "./reader/search-mode": "./src/reader/search-mode.ts",
     "./reader/head-line": "./src/reader/head-line.ts",
     "./reader/about-rules": "./src/reader/about-rules.ts",

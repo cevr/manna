@@ -3,16 +3,14 @@
 /**
  * What the player shows, from its state alone: the device's element (its
  * source, load and whether it is paused), the docked bar, the hymn page's
- * own Play, the full player and the system's Now Playing. The bar's rule is
- * the current app's (`bar.ts`'s `dockedBar`), written over this state and
- * held to it by `rules.test.ts`: docked while the player holds a hymn; on a
- * hymn page it acts on the page's hymn unless another hymn is sounding,
- * then it shows the sounding hymn and a compact Play for the page's.
+ * own Play, the full player and the system's Now Playing. The bar's part
+ * is `bar/view.ts`'s.
  */
 
 import { captionOf } from '@manna/hymnal-app/player/caption';
 import { clock } from '@manna/hymnal-app/player/time';
 
+import { type BarView, type Toggle, barsOf, saidOf, toggleOf } from './bar/view.ts';
 import type { Choice } from './score.ts';
 import {
   type Command,
@@ -22,28 +20,10 @@ import {
   type State,
   choiceOf,
   deviceOf,
-  pageOf,
   sessionOf,
-  sheetUp,
   skipAheadOf,
-  sounding,
   timesOf,
 } from './step.ts';
-
-/** What a bar's or page's button does: Play, Pause, Try again, or nothing. */
-export type Toggle = 'play' | 'pause' | 'retry' | '';
-
-/** A hymn as the bar shows it: its number and title, and the player as that hymn sees it. */
-export interface BarView {
-  readonly shown: boolean;
-  readonly number: number;
-  readonly title: string;
-  readonly phase: Phase;
-  readonly said: string;
-  readonly toggle: Toggle;
-  /** The page's hymn, when another hymn sounds over it: the compact Play's; 0 when none. */
-  readonly page: number;
-}
 
 export interface Chip {
   readonly stanza: number;
@@ -93,6 +73,8 @@ export interface PlayerView {
   /** The hymn page shown, under a sheet too; 0 off a hymn page. The bar names its hymn only when it is not this one. */
   readonly onPage: number;
   readonly bar: BarView;
+  /** The page's own bar's Play, by the name VoiceOver reads it. */
+  readonly pageLabel: string;
   /** The hymn page shown's own button: Pause while its hymn sounds, else what the player offers it. */
   readonly pageToggle: Toggle;
   readonly chips: Array<Chip>;
@@ -110,17 +92,6 @@ export interface PlayerView {
   /** The command the step gave the device, for a test to read. */
   readonly command: string;
 }
-
-/** What the player says of a hymn in `phase` (failed for `why`). */
-export const saidOf = (phase: Phase, why: Held['why']): string => {
-  if (phase === 'loading' || phase === 'buffering') return 'Loading the recording…';
-  if (phase === 'paused') return 'Paused';
-  if (phase === 'ended') return 'Played to the end';
-  if (phase !== 'failed') return '';
-  if (why === 'network') return 'The recording needs a connection.';
-  if (why === 'missing') return 'This hymn has no recording.';
-  return 'The recording could not be played.';
-};
 
 /** The current app's player state each phase but a failure's is drawn as, for its caption. */
 const CAPTIONED = {
@@ -141,49 +112,6 @@ const captionAt = (phase: Phase, why: Held['why']): string => {
   if (phase !== 'failed') return captionOf({ _tag: CAPTIONED[phase] });
   if (why === 'missing') return saidOf(phase, why);
   return captionOf({ _tag: 'Failed', offline: why === 'network' });
-};
-
-/** What the button offers a hymn in `phase`: nothing for a hymn with no recording. */
-export const toggleOf = (phase: Phase, why: Held['why']): Toggle => {
-  if (phase === 'loading' || phase === 'playing' || phase === 'buffering') return 'pause';
-  if (phase !== 'failed') return 'play';
-  return why === 'missing' ? '' : 'retry';
-};
-
-const hidden: BarView = {
-  shown: false,
-  number: 0,
-  title: '',
-  phase: 'none',
-  said: '',
-  toggle: '',
-  page: 0,
-};
-
-/** The held hymn as the bar shows it, with the page's hymn beside it (0 for none). */
-const heldBar = (held: Held, page: number): BarView => ({
-  shown: true,
-  number: held.track.number,
-  title: held.track.title,
-  phase: held.phase,
-  said: saidOf(held.phase, held.why),
-  toggle: toggleOf(held.phase, held.why),
-  page,
-});
-
-/**
- * The docked bar: hidden while the player holds no hymn. Over a hymn page
- * it shows the page's hymn (`titleOf` names it), as the player sees it,
- * unless another hymn is sounding: then that hymn, and the page's beside it.
- */
-export const barOf = (state: State, titleOf: (number: number) => string): BarView => {
-  const { held } = state;
-  if (held === undefined) return hidden;
-  const page = pageOf(state);
-  if (page === undefined) return heldBar(held, 0);
-  if (held.track.number !== page && sounding(held)) return heldBar(held, page);
-  if (held.track.number === page) return heldBar(held, 0);
-  return { ...hidden, shown: true, number: page, title: titleOf(page), toggle: 'play' };
 };
 
 /** Stanza choices as kept: `n:1.3` for each hymn with a choice, `,` between them. */
@@ -233,24 +161,6 @@ const seekView = (state: State, chosen: ReadonlyArray<number>) => {
   };
 };
 
-/** The bars' part of the view: the docked bar, the page's own, the page shown and its button. */
-const barsView = (state: State, titleOf: (number: number) => string) => {
-  const { held } = state;
-  const page = pageOf(state);
-  const bar = barOf(state, titleOf);
-  const up = sheetUp(state);
-  return {
-    dock: bar.shown && !up,
-    pageBar: held === undefined && page !== undefined && !up,
-    onPage: page ?? 0,
-    bar,
-    pageToggle:
-      held !== undefined && page === held.track.number
-        ? toggleOf(held.phase, held.why)
-        : ('play' as const),
-  };
-};
-
 /** The view of `state`, after the step that gave `command`. */
 export const viewOf = (
   state: State,
@@ -282,7 +192,7 @@ export const viewOf = (
     elapsed: clock(elapsed),
     total: total > 0 ? clock(total) : '–:––',
     ...seekView(state, chosen),
-    ...barsView(state, titleOf),
+    ...barsOf(state, titleOf),
     chips: Array.from({ length: score?.count ?? 0 }, (_, index) => ({
       stanza: index + 1,
       chosen: chosen.includes(index + 1),
