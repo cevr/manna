@@ -171,6 +171,10 @@ describe('the bar is the current app’s over play histories', async () => {
     );
     expect(sounding.seeker).toBe(true);
     expect(sounding.rise).toBe(length('size.slider'));
+    const find = read('../../../features/find.contract');
+    expect(find).toContain('overBar ? port.safeAreaBottom + at.rest + rise + at.gap');
+    expect(find.split('playerShown.dock ? playerShown.bar.rise : 0)').length - 1).toBe(3);
+    expect(find.split('findFoot(').length - 1).toBe(4);
   });
 
   it('the Sound switch starts on and is kept across launches, as the current settings keep it', () => {
