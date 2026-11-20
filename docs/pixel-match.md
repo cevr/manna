@@ -55,8 +55,8 @@ threshold. The four are Heartseed's `today.new`, `today.letters`,
 `today.result` and `list.page` at AX5 (owner, q160);
 `screens/screens.test.ts` holds the list to them.
 
-Every port cell at an accessibility size is drawn smaller than One's, and
-no row fixes it. The port's `rem` is UIKit's body size: 28, 33, 40, 47
+Heartseed's port cells at an accessibility size are drawn smaller than
+One's, and no row fixes it. The port's `rem` is UIKit's body size: 28, 33, 40, 47
 and 53 pt at AX1 to AX5. React Native scales One's text by its own table
 (`RCTUtils.mm`: 1.786, 2.143, 2.643, 3.143 and 3.571 times the default
 size, so 30.4 to 60.7 pt for a 17-pt body). So the port's text is 0.922,
@@ -64,7 +64,11 @@ size, so 30.4 to 60.7 pt for a 17-pt body). So the port's text is 0.922,
 `extra-extra-extra-large` the two agree. Heartseed's `about.page` at AX5
 shows it alone: 8.703 %, with each glyph 0.873 of One's height. Exact
 gives only `accessibilityTextSize`, which says yes or no, so the port
-cannot follow React Native's table; that is an upstream ask.
+cannot follow React Native's table; that is an upstream ask. The hymnal
+is not measured: One caps some of its text at 1.3 times the default size
+(`MOST_SCALE`, on the find bar, the player and the reading sheet), so
+there One's text may be the smaller. A hymnal find cell shot at AX5,
+glyph heights compared as for `about.page`, would settle it.
 
 ## References
 
