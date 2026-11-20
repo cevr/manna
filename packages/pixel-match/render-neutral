@@ -6,3 +6,4 @@ a9cfb06d2db0 move: passageText and passageQuery, unchanged, from hymns/indexes.t
 ea182e8d146d exports: one exports line in apps/heartseed/package.json (./first/flow, its openingOf), a declaration whose types are the port's and its line in exact-declared.test.ts; no source changes
 fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's JSX into about/version.ts's VERSION_PREFIX, the Text keeping its two children; an exports line whose types are the port's declaration
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
+9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
