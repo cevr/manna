@@ -6,6 +6,16 @@
  * once by each screen that departs, and nothing else gates a departure. The
  * table names, for each screen, the layout each side of the threshold gets;
  * `tools/drive-largest.ts ios` holds what is drawn.
+ *
+ * It reads contract text because a Contract view cannot ask a TypeScript
+ * function synchronously: a source's answer comes from the data module,
+ * which every host asks again after the first pixel (Exact's
+ * `docs/contract-for-agents.md`, "A first-frame value is not the answer"),
+ * so a choice made there would draw the default layout at an accessibility
+ * size and then jump. It catches a departure read from another fact, a gate
+ * flipped or dropped, and a part given the wrong round button. It cannot see
+ * what is drawn: a second draw of a part beside a kept line passes it, which
+ * `tools/drive-largest.ts web` holds below the threshold.
  */
 
 import { describe, expect, it } from 'bun:test';
