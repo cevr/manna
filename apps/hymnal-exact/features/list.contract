@@ -10,8 +10,8 @@
 // (`listOpening`). All at once, the tiles, lies over the list, which stays
 // built where it stood beneath; a group's header is drawn in the muted
 // role.
-use PlayerBarRoom from "./player.contract"
-use FindBar, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
+use PlayerBarRoom, PlayerView from "./player.contract"
+use FindBar, FindPlaces, FindPort, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
 
 shape TabGroup
   slug: string
@@ -33,6 +33,15 @@ fn listTitle(titles: string[], n: number): string = match titles.at(n - 1) { cas
 // A tab row's `testId` (`<kind>-<n>`), or, for a hymn a group above lists
 // too, one that names the group as well (`<kind>-<slug>-<n>`).
 fn listRowId(g: TabGroup, n: number, kind: string): string = g.repeats.includes(n) ? `${kind}-${g.slug}-${n}` : `${kind}-${n}`
+
+// The room the list keeps after its last row, as the current app's
+// `ListEnd` (src/reader/end.ts `listEndSpace` over src/player/bar.ts
+// `findRoom`): from the list's foot up to the `#`'s top, then `END_ROOM`
+// past it, so the last row scrolls clear of the find bar. With no player
+// the `#` docks `lift` over the bottom inset; with the player's bar docked
+// the list ends on the bar's room and the `#` stands `gap` over the bar,
+// itself over the inset.
+fn listEnd(port: FindPort, at: FindPlaces, overBar: bool): number = port.safeAreaBottom + (overBar ? at.gap : at.lift) + at.hash + at.end
 
 members HymnalExact
   state listQuery = ""
@@ -105,6 +114,7 @@ component HymnList
               ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true)
               for r in s.rows key=r.number
                 HymnRow(number=r.number, title=r.title, id=`hymn-${r.number}`, star=(favourites.includes(r.number) ? `star-${r.number}` : ""), gutter=true)
+          ListEnd()
       else if groups.length == 0 and tab == "Lists"
         column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
           HomeTitle(own=true)
@@ -119,9 +129,20 @@ component HymnList
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
+          ListEnd()
       column position="absolute" top=0 left=0 right=0 height="var(--exact-safe-area-inset-top)" background-color="ground" aria-hidden=true testId="status-scrim"
       FindBar(entry=entry, results=true)
       PlayerBarRoom(id="bar-room")
+
+// The list's end room (`listEnd`), past its last row: no row or hairline
+// of its own, unseen, taking no touch.
+component ListEnd
+  inject
+    playerShown: PlayerView
+  resource listEndPort = exactViewport() as shape FindPort
+  resource listEndPlaces = findPlaces() as shape FindPlaces
+  view
+    column flex="none" height=`${listEnd(listEndPort, listEndPlaces, playerShown.dock or playerShown.pageBar)}px` pointer-events="none" aria-hidden=true testId="list-end"
 
 // Home's title row, as the current app's: "Hymns" and the Settings gear.
 // It scrolls away with the list, as the current app's list header does;

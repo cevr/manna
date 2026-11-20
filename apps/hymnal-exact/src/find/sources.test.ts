@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
 import { book } from '../hymns/book.ts';
-import { oneFile } from '../look/design.testing.ts';
+import { appFile, oneFile } from '../look/design.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { findSources } from './sources.ts';
 
@@ -100,7 +100,23 @@ describe('finding’s sources', () => {
       detent: constant('src/player/dial.ts', 'DETENT'),
       pad: constant('src/player/DialPanel.tsx', 'PANEL_PAD'),
       rowGap: constant('src/player/DialPanel.tsx', 'ROW_GAP'),
+      end: constant('src/reader/end.ts', 'END_ROOM'),
     });
+  });
+
+  test('a list’s end is the current app’s ListEnd: the `#`’s top over the list’s foot, then END_ROOM', () => {
+    expect(oneFile('src/reader/end.ts')).toContain(
+      'export const endSpace = (bottom: number) => Math.max(0, bottom) + END_ROOM;',
+    );
+    expect(oneFile('src/reader/end.ts')).toContain('endSpace(Math.max(stackBottom, findRoom));');
+    const bar = oneFile('src/player/bar.ts');
+    expect(bar).toContain('OverBar: () => HASH_GAP + HASH,');
+    expect(bar).toContain('Docked: () => Math.max(0, inset) + DOCKED_LIFT + HASH,');
+    expect(bar).toContain('Hidden: () => Math.max(0, inset),');
+    expect(bar).toContain('Shown: () => 0,');
+    expect(appFile('features/list.contract')).toContain(
+      'fn listEnd(port: FindPort, at: FindPlaces, overBar: bool): number = port.safeAreaBottom + (overBar ? at.gap : at.lift) + at.hash + at.end',
+    );
   });
 
   test('a screen is named by its path, without the query or fragment a launch adds', () => {

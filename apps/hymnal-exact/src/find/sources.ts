@@ -31,14 +31,17 @@ const DETENT = 52;
 const PANEL_PAD = 8;
 /** The room between the panel's rows (`ROW_GAP`, DialPanel.tsx). */
 const ROW_GAP = 10;
+/** The room a list keeps past the `#`'s top after its last row (`END_ROOM`, src/reader/end.ts). */
+const END_ROOM = 32;
 
 /**
  * The current app's measures of the find bar and the drums, in points, as
  * `findPlaces()` answers them for `features/find.contract` to place the bar
  * and size the drums by: the bar's side (`hash`), its room over what it
  * rides (`gap`), its lift when docked (`lift`), the player's bar at rest
- * (`rest`), a drum's stop (`detent`), and the drums' panel's padding and
- * row gap (`pad`, `rowGap`).
+ * (`rest`), a drum's stop (`detent`), the drums' panel's padding and row
+ * gap (`pad`, `rowGap`), and the room a list keeps past the `#` after its
+ * last row (`end`, `features/list.contract`'s `listEnd`).
  */
 export interface Places {
   readonly hash: number;
@@ -48,6 +51,7 @@ export interface Places {
   readonly detent: number;
   readonly pad: number;
   readonly rowGap: number;
+  readonly end: number;
 }
 
 const places: Places = {
@@ -58,6 +62,7 @@ const places: Places = {
   detent: DETENT,
   pad: PANEL_PAD,
   rowGap: ROW_GAP,
+  end: END_ROOM,
 };
 
 const DRUMS = ['hundreds', 'tens', 'ones'] as const;

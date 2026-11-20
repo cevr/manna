@@ -125,8 +125,9 @@ shape FindPort
   safeAreaTop: number
   safeAreaBottom: number
 
-// The current app's measures of the bar and the drums, in points
-// (`findPlaces`, src/find/sources.ts, as One's bar.ts, dial.ts and DialPanel.tsx hold them).
+// The current app's measures of the bar and the drums, and a list's end
+// room, in points (`findPlaces`, src/find/sources.ts, as One's bar.ts,
+// dial.ts, DialPanel.tsx and reader/end.ts hold them).
 shape FindPlaces
   hash: number
   gap: number
@@ -135,6 +136,7 @@ shape FindPlaces
   detent: number
   pad: number
   rowGap: number
+  end: number
 
 // How far the bar's foot stands over the screen's, as the current app's
 // bar stands (`findRoom`): just over the keyboard while it is up (the
