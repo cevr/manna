@@ -3,7 +3,7 @@
 /**
  * A bare run of the app's tests, or of `verify`, which presses only what
  * the tests press (Exact's `scripts/verify.mjs`), never asks the
- * recordings' bucket (vb-67): the player asks a recording's address only
+ * recordings' bucket: the player asks a recording's address only
  * after a press of Play (or a retry), and in every test that presses one,
  * the player's origin is first held to be a loopback fixture's
  * (`player.fixture`, whatever the checkout's port), so a run whose build

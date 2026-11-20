@@ -3,15 +3,14 @@
 /**
  * Each test file of the app is run by exactly one of its unit-test parts
  * (the scripts turbo's `test` depends on, README "The rules' tests"): a file
- * two parts take runs twice in the gate, and `test:budget` refuses the app
- * (vb-124: `test:app` and `test:web` both ran `src/web/cache.test.ts` and
- * `stall.test.ts`); a file no part takes never runs. A part's script is read
- * as `bun test` reads it: each `./` path it names takes the files at or
- * under it, and each `--path-ignore-patterns` path gives back the files at
- * or under it. A script this reader cannot read (a bare filter, a glob) is
- * refused, so it cannot pass by misreading one. The reader is tried first
- * against planted scripts of the shape vb-124 found, so one that finds no
- * doubled file cannot pass.
+ * two parts take runs twice in the gate, and `test:budget` refuses the app;
+ * a file no part takes never runs. A part's script is read as `bun test`
+ * reads it: each `./` path it names takes the files at or under it, and each
+ * `--path-ignore-patterns` path gives back the files at or under it. A
+ * script this reader cannot read (a bare filter, a glob) is refused, so it
+ * cannot pass by misreading one. The reader is tried first against planted
+ * scripts, one of a folder two parts take, so a reader that finds no doubled
+ * file cannot pass.
  */
 
 import { describe, expect, it } from 'bun:test';
