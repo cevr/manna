@@ -3,7 +3,10 @@
     "paths": {
       "virtual:hymnal": ["./src/hymns/words.gen.json"],
       "virtual:hymnal-indexes": ["./src/hymns/indexes.gen.json"],
+      "@manna/hymnal-app/reader/about-rules": ["./src/abouthymn/decl/about-rules"],
       "@manna/hymnal-app/reader/head-line": ["./src/hymn/decl/head-line"],
+      "@manna/hymnal-app/hymns/indexes": ["./src/abouthymn/decl/indexes"],
+      "@manna/hymnal-app/hymns/meaning": ["./src/abouthymn/decl/meaning"],
       "@manna/hymnal-app/hymns/*": ["./src/hymns/decl/*"],
       "@manna/hymnal/recordings": ["./src/settings/decl/recordings"],
       "@manna/hymnal-app/credit": ["./src/settings/decl/credit"],

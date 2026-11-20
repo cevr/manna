@@ -8,6 +8,7 @@
  * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`).
  */
 
+import { abouthymnSources } from './abouthymn/sources.ts';
 import { findSources } from './find/sources.ts';
 import { homeSources } from './home/sources.ts';
 import { chordsSources } from './chords/sources.ts';
@@ -29,4 +30,5 @@ export const sourcesAt = (
   ...settingsSources(),
   ...findSources(book),
   ...chordsSources(book, chords),
+  ...abouthymnSources(book),
 });
