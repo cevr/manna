@@ -1,9 +1,9 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters, effect/noTernary, node/no-process-env, eslint/no-await-in-loop -- a host script that drives the built app through `bun run exact agent`, one run at a time, reads its untyped JSON replies by the fields it checks, branches plainly on them, and loads Exact's own accept matcher from the clone `EXACT` names, as the wrapper does. */
 
 /**
- * The layout findings `exact verify` made on the web that were the port's
- * own (hy-verify), held through the agent's own `check` (the judge verify
- * runs) on a 390 × 844 page: `bun tools/drive-largest.ts web`.
+ * The port's own layout at the largest text, held through the agent's own
+ * `check` (the judge `exact verify` runs) and `layout` boxes on a 390 × 844
+ * page: `bun tools/drive-largest.ts web`.
  *
  * - With chords on, each line of a hymn's part stays inside the part, at the
  *   default text size and at the largest (root 53 px, iOS's body at AX5):
@@ -16,14 +16,15 @@
  *   cover them.
  * - At the largest text Settings' Done keeps its room beside the title, so
  *   the title wraps short of it (owner, q161), and at the default size and
- *   the largest its button's box is at least 44 × 44, the word drawn where
- *   it was (sweep-5 N2).
+ *   the largest its button's box is at least 44 × 44 while its word sits
+ *   where the room is: as far from the sheet's trailing edge, on the room's
+ *   middle, so the larger target moves no pixel of the word.
  * - At the largest text a hymn's key and capo controls, which may rest
  *   under the floating find bar as the current hymnal's chords do, scroll
- *   fully clear of it into view (sweep-5 N1).
+ *   fully clear of it into view.
  * - Scrolled to its end, with no player and with the player's bar docked,
  *   the home list's last row ends above the find bar's controls, as the
- *   current hymnal's `ListEnd` keeps it (hy-end), at the default text size
+ *   current hymnal's `ListEnd` keeps it, at the default text size
  *   and root 28, 40 and 53; All at once, Search and # stand apart there,
  *   and while searching the box and Cancel do. The Topics tab's grouped
  *   list ends in the same end room, starting above the find bar.
@@ -32,7 +33,7 @@
  *   matcher, take each of those roles' verified kinds and no sibling role's
  *   (a mark's or a barre's overlap, the sheet's name, another shape).
  *
- * `web` or `ios`: every op it uses runs on both (sweep-5); on iOS it scales
+ * `web` or `ios`: every op it uses runs on both; on iOS it scales
  * by the root font size, while the simulator's own text size is what
  * `verify ios` reads. Exits 1 on any failed check.
  */
@@ -252,25 +253,49 @@ const meeting = (
 
 /** The platform's least tap target, in points (iOS's 44 × 44): Settings' Done is held to it on both hosts. */
 const TARGET = 44;
+/** Done's button, its drawn word, the unseen room the title wraps short of, and the sheet, read in this order at each size. */
+const DONE_PARTS = [
+  'settings-done',
+  'settings-done-word',
+  'settings-done-room',
+  'settings',
+] as const;
+/** How far, in pixels, Done's word may sit from its room's place: half a pixel of rounding. */
+const HELD = 0.5;
 
 const doneTarget = await drive.run(flags('target-settings'), [
   'clock data',
   'tap gear',
   'clock settle',
   'clock data',
-  'layout settings-done',
+  ...DONE_PARTS.map((id) => `layout ${id}`),
   ...largest,
-  'layout settings-done',
+  ...DONE_PARTS.map((id) => `layout ${id}`),
 ]);
 for (const [at, size] of [
   [4, 'the default text size'],
-  [7, 'the largest text'],
+  [4 + DONE_PARTS.length + largest.length, 'the largest text'],
 ] as const) {
-  const box = boxOf(doneTarget[at]);
+  const [box, word, room, sheet] = DONE_PARTS.map((_, i) => boxOf(doneTarget[at + i]));
   drive.check(
     `Settings’ Done takes a tap over at least ${TARGET} × ${TARGET} at ${size}`,
     box !== undefined && box.w >= TARGET && box.h >= TARGET,
     box,
+  );
+  const fromEdge = (part: Box) =>
+    sheet === undefined ? Number.NaN : sheet.x + sheet.w - (part.x + part.w);
+  const middle = (part: Box) => part.y + part.h / 2;
+  drive.check(
+    `Settings’ Done draws its word where its room is, as far from the sheet’s trailing edge and on the room’s middle, at ${size}`,
+    word !== undefined &&
+      room !== undefined &&
+      Math.abs(fromEdge(word) - fromEdge(room)) <= HELD &&
+      Math.abs(middle(word) - middle(room)) <= HELD,
+    {
+      word,
+      room,
+      fromEdge: word && room && [fromEdge(word), fromEdge(room)],
+    },
   );
 }
 

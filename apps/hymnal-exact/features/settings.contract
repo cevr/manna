@@ -130,7 +130,7 @@ component SettingsSheet
             button press=done appearance="none" position="absolute" top=0 bottom=0 right=0 margin-top="calc(space.s8 * -1)" margin-bottom="calc(space.s8 * -1)" margin-right="calc(space.s4 * -1)" padding-right="space.s4" display="flex" align-items="center" justify-content="flex-end" min-width="size.target" -exact-hit-slop="space.s8" testId="settings-done"
               :active
                 opacity = "opacity.pressed"
-              text "Done" font="type.strong" color="accent"
+              text "Done" font="type.strong" color="accent" testId="settings-done-word"
           SettingsHeading(words="Appearance", apart=false)
           column role="radiogroup" aria-label="Appearance" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
             for l in looks key=l.value
