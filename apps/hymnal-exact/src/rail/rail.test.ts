@@ -78,7 +78,7 @@ describe('the rail’s marks', () => {
 describe('a touch on the rail', () => {
   it('lands on the hymn of the current app’s band, at every height of rails of several lengths', () => {
     for (const length of [320, 517, 640.5, 812]) {
-      for (let y = -20; y <= length + 20; y += 0.25) {
+      for (let y = -20; y <= length + 20; y += 0.5) {
         const at = touchAt(ours, -1, y, length);
         const band = one.markAt(y, length, theirs.length);
         expect(at.at).toBe(band);

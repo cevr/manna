@@ -26,6 +26,7 @@ const OWNER = new Map([
   ['features/about.contract', 'pm-tokens'],
   ['features/list.contract', 'pm-hy-home'],
   ['features/recent.contract', 'pm-hy-home'],
+  ['features/rail.contract', 'pm-hy-home'],
   ['features/find.contract', 'pm-hy-find'],
   ['features/hymn.contract', 'pm-hy-hymn'],
   ['features/chords.contract', 'pm-hy-hymn'],

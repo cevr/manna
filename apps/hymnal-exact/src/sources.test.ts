@@ -93,6 +93,9 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.favouritesAfter([list, Number(route(random))])).not.toThrow();
         expect(() => sources.recentRows([list])).not.toThrow();
         expect(() =>
+          sources.railTo([below(random, 700) - 2, below(random, 900) - 20, below(random, 900)]),
+        ).not.toThrow();
+        expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
         expect(() =>
@@ -105,6 +108,7 @@ describe('the data module runs where Exact runs it', () => {
         ).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
+      expect(sources.railPlaces().labels.length).toBe(6);
       expect(sources.listTabs().length).toBe(5);
       expect(sources.listTitles().length).toBe(695);
     });
@@ -124,6 +128,8 @@ describe('the data module runs where Exact runs it', () => {
       'listTabs',
       'listTitles',
       'playerStep',
+      'railPlaces',
+      'railTo',
       'recentAfter',
       'recentRows',
       'settingsFeelOf',

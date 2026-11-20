@@ -114,8 +114,7 @@ component HymnList
         HomeTabs(tab=tab, tabs=tabs, choose=choose)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel
-          scroll=listScrolled scroll-padding-top=`${listPin}px` testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel scroll=listScrolled scroll-padding-top=`${listPin}px` testId="hymn-list"
           column flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
             HomeTabs(tab=tab, tabs=tabs, choose=choose)
