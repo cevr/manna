@@ -17,5 +17,25 @@ export declare const markAt: (y: number, length: number, count: number) => numbe
 /** The topics a drag passes going from topic place `before` to `now`. */
 export declare const crossings: (before: number, now: number) => number;
 
+/** A row of the current app's list, as `marksOf` reads it: a topic's, a shelf's or a hymn's. */
+export interface RailRow {
+  readonly kind: 'topic' | 'shelf' | 'hymn';
+  readonly hymn?: { readonly number: number };
+}
+
+/** A hymn on the current app's rail: its number, its topic's place and the offset that shows it. */
+export interface RailMark {
+  readonly number: number;
+  readonly section: number;
+  readonly offset: number;
+}
+
+/** Each hymn after the first topic row, in the list's order. */
+export declare const marksOf: (
+  rows: ReadonlyArray<RailRow>,
+  top: number,
+  heightOf: (kind: RailRow['kind']) => number,
+) => ReadonlyArray<RailMark>;
+
 /** `shown` places spread evenly from the first to the last of `count`. */
 export declare const labelsOf: (count: number, shown: number) => ReadonlyArray<number>;

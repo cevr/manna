@@ -120,6 +120,7 @@ const HAPTICS: ReadonlyArray<{
     cues: [cues.plain('favourite-off')],
   },
   { action: 'listChoose', when: 'if name != listTab', cues: [cues.plain('tab')] },
+  { action: 'railTook', when: 'if m.ticks > 0', cues: [cues.plain('rail-tick')] },
   { action: 'chordsSet', when: '', cues: [cues.plain('chords-on'), cues.plain('chords-off')] },
   { action: 'chordsStep', when: '', cues: [detent('key'), detent('capo')] },
   {
