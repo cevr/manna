@@ -15,6 +15,7 @@ import { hymnSources } from './hymn/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
 import { originOf, playerSources } from './player/sources.ts';
+import { railSources } from './rail/sources.ts';
 import { settingsSources } from './settings/sources.ts';
 
 export const sourcesAt = (
@@ -29,4 +30,5 @@ export const sourcesAt = (
   ...settingsSources(),
   ...findSources(book),
   ...chordsSources(book, chords),
+  ...railSources(book),
 });

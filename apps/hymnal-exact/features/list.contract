@@ -12,6 +12,7 @@
 // role.
 use PlayerBarRoom, PlayerView from "./player.contract"
 use FindBar, FindPlaces, FindPort, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
+use HomeRail from "./rail.contract"
 
 shape TabGroup
   slug: string
@@ -84,6 +85,19 @@ component HymnList
   inject
     findShown: FindView
     findWheel: action
+  state listHead = 0
+  state listShift = 0
+  state listPin = 0
+  action listHeaded(w: number, h: number)
+    listHead = h
+    listShift = max(0, h)
+  action listScrolled(x: number, y: number)
+    let s = max(0, listHead - y)
+    if s != listShift
+      listShift = s
+  action listPinned(w: number, h: number)
+    if h > 0 and h != listPin
+      listPin = h
   view
     column navigationKey=`${entry.id}` navigationBar="none" navigationScroll="hymn-list" position="absolute" inset=0
       -exact-safe-area="top" padding-top="var(--exact-safe-area-inset-top)"
@@ -96,9 +110,11 @@ component HymnList
         HomeTabs(tab=tab, tabs=tabs, choose=choose)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel testId="hymn-list"
-          HomeTitle(own=true)
-          HomeTabs(tab=tab, tabs=tabs, choose=choose)
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel
+          scroll=listScrolled scroll-padding-top=`${listPin}px` testId="hymn-list"
+          column flex-shrink=0 resize=listHeaded testId="list-head"
+            HomeTitle(own=true)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose)
           if recent.shelf.length > 0
             section testId="recent-shelf"
               link href=path("recent") aria-label="Recent, see all" display="flex" flex-direction="row" align-items="center" justify-content="space-between"
@@ -111,10 +127,12 @@ component HymnList
                 HymnRow(number=r.number, title=r.title, id=`shelf-${r.number}`, star=(favourites.includes(r.number) ? `shelf-star-${r.number}` : ""), gutter=true)
           for s in sections key=s.slug
             section
-              ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true)
+              ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true, sized=listPinned)
               for r in s.rows key=r.number
                 HymnRow(number=r.number, title=r.title, id=`hymn-${r.number}`, star=(favourites.includes(r.number) ? `star-${r.number}` : ""), gutter=true)
           ListEnd()
+        if not findShown.homeTiles
+          ListRail(shift=listShift)
       else if groups.length == 0 and tab == "Lists"
         column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
           HomeTitle(own=true)
@@ -126,7 +144,7 @@ component HymnList
           HomeTabs(tab=tab, tabs=tabs, choose=choose)
           for g in groups key=g.slug
             section
-              ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
+              ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false, sized=listPinned)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
           ListEnd()
@@ -181,17 +199,39 @@ component HomeTabs
 // at every text size. It stays at the list's top while its group's rows
 // scroll under it, until the next group's header pushes it off, as the
 // current app's pinned topic does. With `gutter` it ends before the
-// Sections list's rail gutter, as every row of that list does.
+// Sections list's rail gutter, as every row of that list does. A tap on
+// it zooms out to All at once, as the current app's group row does
+// (HymnList.native.tsx `GroupHeader`); VoiceOver reads it as a heading it
+// can activate, by its name. Its height, as laid out, goes to `sized`:
+// the room the list keeps over a row the rail scrolls to.
 component ListHeader
   props
     name: string
     id: string
     gutter: bool
+    sized: action
+  inject
+    findPress: action
   view
-    row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
-      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground"
+    button press=findPress("tilesShow", 0) appearance="none" role="heading" aria-label=name
+      display="flex" flex-direction="row" align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
+      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" resize=sized testId=`${id}-row`
+      :active
+        background-color="soft"
       text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
       column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
+
+// The Sections list's rail (features/rail.contract), its foot over the
+// list's end room (`listEnd`), as the current app's rail ends.
+component ListRail
+  props
+    shift: number
+  inject
+    playerShown: PlayerView
+  resource listRailPort = exactViewport() as shape FindPort
+  resource listRailPlaces = findPlaces() as shape FindPlaces
+  view
+    HomeRail(shift=shift, end=listEnd(listRailPort, listRailPlaces, playerShown.dock or playerShown.pageBar))
 
 // A hymn's row, as the current app's: its number in the accent, then its
 // title, and a star at the row's end when it is a favourite; a hairline
@@ -210,7 +250,7 @@ component HymnRow
   view
     link href=path("hymn", `${number}`) display="flex" flex-direction="row" align-items="center" gap="space.s12"
       padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
-      margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" testId=id
+      margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" id=id testId=id
       :active
         background-color="soft"
       text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"

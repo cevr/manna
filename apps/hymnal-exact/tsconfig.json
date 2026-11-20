@@ -4,6 +4,7 @@
       "virtual:hymnal": ["./src/hymns/words.gen.json"],
       "virtual:hymnal-indexes": ["./src/hymns/indexes.gen.json"],
       "@manna/hymnal-app/reader/head-line": ["./src/hymn/decl/head-line"],
+      "@manna/hymnal-app/reader/rail-marks": ["./src/rail/decl/rail-marks"],
       "@manna/hymnal-app/hymns/*": ["./src/hymns/decl/*"],
       "@manna/hymnal/recordings": ["./src/settings/decl/recordings"],
       "@manna/hymnal-app/credit": ["./src/settings/decl/credit"],
