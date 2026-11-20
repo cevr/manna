@@ -25,8 +25,9 @@
  * - Scrolled to its end, with no player and with the player's bar docked,
  *   the home list's last row ends above the find bar's controls, as the
  *   current hymnal's `ListEnd` keeps it, at the default text size
- *   and root 28, 40 and 53; All at once, Search and # stand apart there,
- *   and while searching the box and Cancel do. The Topics tab's grouped
+ *   and root 28, 40 and 53; All at once, Search and # stand in the capsule
+ *   there, sharing no area, each at least 44 × 44, and while searching the
+ *   box and Cancel stand apart. The Topics tab's grouped
  *   list ends in the same end room, starting above the find bar.
  * - At the largest text a chord shape's marks, dots and barre leave no
  *   finding `app.json` does not accept, and its accepts, read by Exact's own
