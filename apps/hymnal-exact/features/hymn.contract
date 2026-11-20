@@ -17,6 +17,7 @@ use PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
 use ChordsKeys, ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
+use AboutHymnLine from "./abouthymn.contract"
 
 shape HymnWord
   syllables: string[]
@@ -42,26 +43,33 @@ shape HymnText
 members HymnalExact
   derive hymnOpen = match stack(nav).filter(e => e.name == "hymn").at(-1) { case some(e) => e.params.n, case none => "" }
   resource hymnShown = hymnPage(hymnOpen) as shape HymnText
+  action hymnBack
+    nav = back(nav)
 
+// The page's header: its way back, titled "Hymns" as the current app's
+// (the root's `navigationBack` names it, so iOS makes its text the bar's
+// back title), and the hymn's title.
 component HymnPage
   props
     entry: Entry
     page: HymnText
     ready: bool
     chords: ChordsPage
+  inject
+    hymnPressBack: action
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
       display="flex" flex-direction="column"
-      header display="flex" align-items="center" padding="space.s8 space.s16"
+      header display="flex" align-items="center" gap="space.s12" padding="space.s8 space.s16"
+        button id="hymn-back" press=hymnPressBack appearance="none" padding=0 min-height="size.target" color="accent" font="type.body" aria-label="Hymns" testId="hymn-back"
+          text "Hymns" font="type.body" color="accent"
         text (ready ? page.title : "") role="heading" aria-level=2 testId="hymn-title"
       FindBar(entry=entry, results=true)
       scroll id="hymn-words" flex=1 min-height=0 testId="hymn-words"
         if ready
           column padding="space.s8 space.s20 space.s48" gap="space.s24"
             column gap="space.s4"
-              text font="type.footnote" color="muted" align-self="flex-start" testId="hymn-topic"
-                text page.head
-                text "  ›" color="accent"
+              AboutHymnLine(number=page.number, line=page.head)
               row align-items="flex-start" gap="space.s10" testId="hymn-name"
                 row align-items="baseline" gap="space.s10" flex-shrink=1 min-width=0
                   text `${page.number}` font="type.hymn-number" color="accent" font-variant-numeric="tabular-nums" testId="hymn-number"

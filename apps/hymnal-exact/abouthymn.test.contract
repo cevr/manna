@@ -1,0 +1,93 @@
+test "The line under a hymn's title opens About this hymn, and Done closes it."
+  at "/hymns/2"
+  clock data
+  expect tree has "hymn-topic"
+  tap "hymn-about"
+  clock settle
+  clock data
+  expect tree has "about-sheet"
+  expect state abouthymnShown.number == 2
+  expect state abouthymnShown.groups.0 .name == "More like this"
+  expect state abouthymnShown.groups.1 .name == "Topics"
+  expect state abouthymnShown.groups.2 .name == "Scripture"
+  expect state abouthymnShown.groups.3 .name == "Sing to another tune"
+  expect tree has "about-like-560"
+  expect tree has "about-topic-1"
+  expect tree has "about-scripture-1"
+  expect tree has "about-tune-228"
+  tap "about-done"
+  clock settle
+  expect tree missing "about-sheet"
+  expect tree has "hymn-about"
+  expect state hymnShown.number == 2
+
+test "About this hymn names its hymn over its sections."
+  at "/hymns/100"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  expect tree has "about-name"
+  expect state abouthymnShown.number == 100
+  expect tree has "about-like-535"
+  expect tree has "about-topic-0"
+  expect tree has "about-done"
+
+test "Back closes About this hymn and keeps the page under it."
+  at "/hymns/100"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  expect tree has "about-scripture-4"
+  back
+  clock settle
+  expect tree missing "about-sheet"
+  expect state hymnShown.number == 100
+
+test "A hymn in About this hymn opens over the page it came from."
+  at "/hymns/2"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  tap "about-tune-91"
+  clock settle
+  clock data
+  expect tree missing "about-sheet"
+  expect state hymnShown.number == 91
+  back
+  clock settle
+  clock data
+  expect state hymnShown.number == 2
+
+test "A passage in About this hymn searches home for where it begins."
+  at "/hymns/2"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  tap "about-scripture-0"
+  clock settle
+  clock data
+  expect tree missing "about-sheet"
+  expect text "title" == "Hymns"
+  expect state listQuery == "Psalms 148:3"
+
+test "A topic in About this hymn opens home's Topics."
+  at "/hymns/2"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  tap "about-topic-0"
+  clock settle
+  clock data
+  expect tree missing "about-sheet"
+  expect text "title" == "Hymns"
+  expect state listTab == "Topics"
+
+test "An address that names no hymn opens no rows."
+  at "/hymns/999/about"
+  clock data
+  expect state abouthymnShown.number == 0

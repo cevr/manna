@@ -83,6 +83,7 @@ describe('the data module runs where Exact runs it', () => {
       for (let run = 0; run < 200; run++) {
         expect(() => sources.hymnRows([query(random, book.hymns)])).not.toThrow();
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
+        expect(() => sources.abouthymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
         expect(() => sources.settingsLooks([route(random)])).not.toThrow();
         expect(() => sources.settingsFeelOf([route(random)])).not.toThrow();
@@ -114,6 +115,7 @@ describe('the data module runs where Exact runs it', () => {
     });
     expect(Object.keys(sources).toSorted()).toEqual([
       'aboutCredits',
+      'abouthymnPage',
       'chordsGrip',
       'chordsMove',
       'chordsPage',

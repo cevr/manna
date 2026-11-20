@@ -31,6 +31,7 @@ import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/
 import { moreLike } from '~/hymns/meaning';
 import type { StackState } from '~/player/title';
 
+import { ABOUT_GROUPS, MORE_LIKE } from './about-rules';
 import { openAtTopic, searchAt, searchOpen, searchQuery } from './place';
 
 /** The home route's file name, as the stack names its screens. */
@@ -48,8 +49,7 @@ const homeSteps = (state: StackState) => ({
   replace: !Arr.head(state.routes).pipe(Option.exists((route) => route.name === homeRoute)),
 });
 
-/** How many hymns `More like this` lists. */
-export const MORE_LIKE = 8;
+export { MORE_LIKE };
 
 /** The sheet's route for hymn `number`. */
 export const aboutHref = (number: number): Href => `/about?hymn=${number}`;
@@ -109,10 +109,10 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
             <Text style={styles.name} dynamicTypeRamp="footnote">
               {`${shown.number} ${shown.title}`}
             </Text>
-            <Group name="More like this">
+            <Group name={ABOUT_GROUPS.like}>
               {hymnRows(moreLike(shown.number, MORE_LIKE), 'about-like', accent, openHymn)}
             </Group>
-            <Group name="Topics">
+            <Group name={ABOUT_GROUPS.topics}>
               {topicsOf(shown.number).map((topic, i) => (
                 <SearchRow
                   key={`${i}`}
@@ -123,7 +123,7 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
                 />
               ))}
             </Group>
-            <Group name="Scripture">
+            <Group name={ABOUT_GROUPS.scripture}>
               {referencesOf(shown.number).map((passage, i) => (
                 <SearchRow
                   key={`${i}`}
@@ -134,7 +134,7 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
                 />
               ))}
             </Group>
-            <Group name="Sing to another tune">
+            <Group name={ABOUT_GROUPS.tune}>
               {hymnRows(sameMetre(shown.number), 'about-tune', accent, openHymn)}
             </Group>
           </ScrollView>
