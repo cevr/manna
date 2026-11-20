@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noDynamicImports -- a Bun test that awaits the current app's modules once and reads its own and the current app's source text; the port's held hymn is undefined when none is held, as `step`'s state has it. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noNodeBuiltinImport, effect/noAsyncFunction -- a Bun test that awaits the current app's modules once and reads its own and the current app's source text; the port's held hymn is undefined when none is held, as `step`'s state has it. */
 
 /**
  * The bar is the current app's (`bar.ts`, `button.ts`, `PlayerBar.tsx`),
@@ -52,8 +52,8 @@ const statesOf = (seed: number, steps: number): ReadonlyArray<State> => {
 
 describe('the bar is the current app’s over play histories', async () => {
   const { bar, player } = await current();
-  const button = await import('@manna/hymnal-app/player/button');
   const { Player } = player;
+  const { buttonsOf } = await import('@manna/hymnal-app/player/button');
 
   /** The current app's player for the port's state: the held hymn's phase, place and length. */
   const theirsOf = (state: State): TheirPlayer => {
@@ -93,7 +93,7 @@ describe('the bar is the current app’s over play histories', async () => {
           expect(ours.kind).toBe('');
           continue;
         }
-        const buttons = button.buttonsOf(theirs.state, theirs.track);
+        const buttons = buttonsOf(theirs.state, theirs.track);
         expect(buttons.length).toBe(1);
         expect(ours.kind).toBe(buttons[0]?.kind ?? '');
         expect(ours.label).toBe(buttons[0]?.label ?? '');
