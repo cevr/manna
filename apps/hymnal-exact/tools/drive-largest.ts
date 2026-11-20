@@ -27,7 +27,9 @@
  *   current hymnal's `ListEnd` keeps it, at the default text size
  *   and root 28, 40 and 53; All at once, Search and # stand in the capsule
  *   there, sharing no area, each at least 44 × 44, and while searching the
- *   box and Cancel stand apart. The Topics tab's grouped
+ *   box and Cancel stand apart. On home, the capsule and its three controls
+ *   clear the player's bar both while a hymn sounds (the bar 88 tall, its
+ *   seeker showing) and at rest (56). The Topics tab's grouped
  *   list ends in the same end room, starting above the find bar.
  * - At the largest text a chord shape's marks, dots and barre leave no
  *   finding `app.json` does not accept, and its accepts, read by Exact's own
@@ -432,6 +434,61 @@ for (const [how, before] of [
     );
   }
 }
+
+/** The capsule and its three controls, then the player's bar, measured on home. */
+const RIDE = ['find-capsule', 'tiles-show', 'find-search', 'find-number', 'bar'] as const;
+const rideOps = RIDE.map((id) => `layout ${id}`);
+const ride = await drive.run(flags('largest-ride'), [
+  'clock data',
+  'clock settle',
+  'type root /hymns/1',
+  'clock data',
+  'clock settle',
+  'tap play',
+  'clock data',
+  'clock +3000 real',
+  'clock data',
+  'clock settle',
+  'type root /',
+  'clock data',
+  'clock settle',
+  ...rideOps,
+  'tap bar-toggle',
+  'clock data',
+  'clock settle',
+  ...rideOps,
+]);
+const rideAt = (from: number) => RIDE.map((_, i) => boxOf(ride[from + i]));
+const sounding = rideAt(13);
+const resting = rideAt(13 + RIDE.length + 3);
+for (const [named, boxes] of [
+  ['while a hymn sounds (the seeker shows)', sounding],
+  ['at rest (paused)', resting],
+] as const) {
+  const [capsule, tiles, search, hash, bar] = boxes;
+  const inside = [tiles, search, hash].every(
+    (box) =>
+      box !== undefined &&
+      capsule !== undefined &&
+      box.x >= capsule.x &&
+      box.x + box.w <= capsule.x + capsule.w &&
+      box.y + box.h <= (bar?.y ?? Number.NEGATIVE_INFINITY),
+  );
+  drive.check(
+    `the capsule and its three controls clear the player's bar ${named}`,
+    capsule !== undefined && bar !== undefined && capsule.y + capsule.h <= bar.y && inside,
+    { capsule, tiles, search, hash, bar },
+  );
+}
+const [, , , , soundingBar] = sounding;
+const [, , , , restingBar] = resting;
+drive.check(
+  'the bar stands 32 points taller while its seeker shows (88 against 56), so both heights were measured',
+  soundingBar !== undefined &&
+    restingBar !== undefined &&
+    Math.abs(soundingBar.h - restingBar.h - 32) <= 1,
+  { soundingBar, restingBar },
+);
 
 const topicsEnd = [
   'tap hymn-list wheel 0 999999',
