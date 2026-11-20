@@ -22,6 +22,46 @@
         "finding": "target",
         "node": "chord-*",
         "why": "A chord is tapped where it is printed, over its syllable at the words' size, as in the current hymnal: a box of 44 pt (24 px on the web) would push every chorded line apart or cover the next chord's tap, and the chord's place over its syllable is the feature (ex-hy-chords findings, the chord's tap)."
+      },
+      {
+        "finding": "overlap",
+        "node": "tiles-show",
+        "why": "All at once floats in the find bar at the screen's foot over the list or the page, which scrolls under it, as the current hymnal's FindBar floats (src/home/FindBar.tsx, the bar absolutely placed over the list; its home reference shows rows 16 and 17 under it at rest). What lies under it at rest scrolls clear: the list's foot room is the bar's (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-search",
+        "why": "The find bar's Search floats at the screen's foot over the list or the page, which scrolls under it, as the current hymnal's FindBar floats (src/home/FindBar.tsx; its home and hymn page references show rows and words under it at rest). What lies under it at rest scrolls clear (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-number",
+        "why": "The find bar's # floats at the screen's foot over the list or the page, which scrolls under it, as the current hymnal's # floats (src/player/LivePlayer.tsx find-number in src/home/FindBar.tsx; its home and hymn page references show rows and words under it at rest). What lies under it at rest scrolls clear (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-cancel",
+        "why": "The find bar's Cancel floats at the screen's foot over the list, which scrolls under it, as the current hymnal's Cancel floats in its FindBar (src/home/FindBar.tsx). What lies under it at rest scrolls clear (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "search",
+        "why": "The find bar's box floats at the screen's foot over the list, which scrolls under it, as the current hymnal's find-box floats in its FindBar (src/home/FindBar.tsx). What lies under it at rest scrolls clear (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "favourite",
+        "why": "The star's round target reaches 8 pt past its title row above and below, as the current hymnal's FavouriteButton does (src/reader/FavouriteButton.tsx: minHeight 44, marginVertical -8, hitSlop 8); at the largest text the head line's last line runs into that reach, where the target has only its ground, as in the current hymnal (hy-verify)."
+      },
+      {
+        "finding": "clipped",
+        "node": "shape-0-*",
+        "why": "A chord shape's marks, finger dots and barre keep the current hymnal's fixed measures while their numbers grow with the text, as its ChordBox draws them (src/reader/ChordBox.tsx: DOT 18, mark 14 pt and finger 11 pt, neither capped), so at the largest text the numbers spill their dots as the current hymnal's do (hy-verify)."
+      },
+      {
+        "finding": "overlap",
+        "node": "shape-0-*",
+        "why": "A chord shape's finger dots keep the current hymnal's fixed places while their numbers grow with the text, as its ChordBox draws them (src/reader/ChordBox.tsx: DOT 18, finger 11 pt, uncapped), so at the largest text two neighbouring dots' numbers meet as the current hymnal's do (hy-verify)."
       }
     ]
   },
