@@ -54,7 +54,7 @@ component AboutHymnLine
   inject
     abouthymnPress: action
   view
-    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" text-align="left" aria-label="About this hymn" -exact-hit-slop="space.s8" testId="hymn-about"
+    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" text-align="left" aria-label="About this hymn" aria-valuetext=line -exact-hit-slop="space.s4" testId="hymn-about"
       :active
         opacity = "opacity.pressed"
       text font="type.footnote" color="muted" testId="hymn-topic"

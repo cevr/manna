@@ -60,9 +60,9 @@ component HymnPage
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
       display="flex" flex-direction="column"
-      header display="flex" align-items="center" padding="space.s8 space.s16"
-        button id="hymn-back" press=hymnPressBack appearance="none" aria-label="Hymns" testId="hymn-back"
-          text "Hymns" color="accent"
+      header display="flex" align-items="center" gap="space.s12" padding="space.s8 space.s16"
+        button id="hymn-back" press=hymnPressBack appearance="none" padding=0 min-height="size.target" color="accent" font="type.body" aria-label="Hymns" testId="hymn-back"
+          text "Hymns" font="type.body" color="accent"
         text (ready ? page.title : "") role="heading" aria-level=2 testId="hymn-title"
       FindBar(entry=entry, results=true)
       scroll id="hymn-words" flex=1 min-height=0 testId="hymn-words"
