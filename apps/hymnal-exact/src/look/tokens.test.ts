@@ -65,10 +65,10 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
   return value;
 };
 
-/** The rem `text` writes `prop` as, from its `<prop>: <points> * fontScale`; undefined when it writes none so. */
+/** The px `text` writes `prop` as at the default text size, from its `<prop>: <points> * fontScale`; undefined when it writes none so. */
 const scaledOf = (text: string, prop: string) => {
   const points = new RegExp(`\\b${prop}: (\\d+(?:\\.\\d+)?) \\* fontScale\\b`, 'u').exec(text)?.[1];
-  return points === undefined ? undefined : `${short(Number(points) / BODY)}rem`;
+  return points === undefined ? undefined : `${short(Number(points))}px`;
 };
 
 /** The ramps the texts drawn in `style` (written `styles.<style>`, or `via`) name, `none` for a text that names none. */
@@ -151,7 +151,7 @@ describe('every measure of the brand is the current hymnal’s', () => {
     });
 
   for (const scaled of SCALED)
-    it(`${scaled.name} is ${scaled.file}'s ${scaled.prop} over the body's size`, () => {
+    it(`${scaled.name} is ${scaled.file}'s ${scaled.prop} at the default text size`, () => {
       expect(brand.measures.get(scaled.name)).toBe(scaledOf(read(scaled.file), scaled.prop));
     });
 

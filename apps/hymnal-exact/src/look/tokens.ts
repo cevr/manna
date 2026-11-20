@@ -254,8 +254,11 @@ export const RULED: ReadonlyArray<Ruled> = [
 
 /**
  * A length One writes inline as points times the text's scale
- * (`<prop>: <points> * fontScale`), not in a style: written in `rem`, its
- * points over the body's 17, so it grows with the text as One's does.
+ * (`<prop>: <points> * fontScale`), not in a style: written as its points in
+ * `px`, its size at the default text size and the size One draws on the web
+ * at every size (React Native's web `fontScale` is always 1). On iOS One's
+ * grows with the text; the port's would be `max(<points>px, <points / 17>rem)`,
+ * which the kernel refuses until it takes `rem` inside `max()`.
  */
 export interface Scaled {
   readonly name: string;

@@ -160,9 +160,9 @@ component ChordsNotice
 // word wider than the row breaks between its pairs (src/chords/rows.ts).
 // A text's box is a device pixel taller than its line, as React Native's
 // text measure makes it on iOS (docs: agent-pitfalls). The words' gap is
-// the row's `column-gap`, between words only and in `rem`, as the current
-// app's `columnGap` of 5 points times the text's scale, so the row stays
-// inside its part at every text size.
+// the row's `column-gap`, between words only, as the current app's
+// `columnGap`, so the row stays inside its part: 5 points, its size at the
+// default text size and on the web at every size.
 component ChordsLines
   props
     chords: ChordsPage
