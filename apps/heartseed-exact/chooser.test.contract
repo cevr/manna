@@ -383,6 +383,51 @@ test "Each opening on a verse reads its landing back afresh, once where the scro
   expect state chooserLandedRoom >= 0
   expect no failures
 
+// Each window height lands Psalm 119:88 again at a third of the shorter chapter, and reads it back while the opening has readings left: the first three; the fourth is landed from the third's reading, unread.
+test "An opening reads its landing back three times at most, and lands it on past them" on web
+  resize 390x844
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-find"
+  clock data
+  clock settle
+  type "goto-find" "psalm 119:88"
+  clock data
+  clock settle
+  tap "find-place"
+  clock data
+  clock settle
+  expect state readOpenings == 1
+  expect state chooserLandReads == 1
+  expect state chooserLandRoom >= 244
+  expect state chooserLandRoom <= 245
+  resize 390x700
+  clock data
+  clock +100
+  clock settle
+  expect state chooserLandReads == 2
+  expect state chooserLandRoom >= 196
+  expect state chooserLandRoom <= 197
+  resize 390x600
+  clock data
+  clock +100
+  clock settle
+  expect state chooserLandReads == 3
+  expect state chooserLandRoom == 163
+  expect state chooserLandedRoom == 163
+  resize 390x500
+  clock data
+  clock +100
+  clock settle
+  expect state chooserLandReads == 3
+  expect state chooserLandRoom >= 129
+  expect state chooserLandRoom <= 130
+  expect state chooserLandedRoom == 163
+  expect no failures
+
 // iOS counts Go to's landing from under the navigation bar (116), so the verse first rests 116 pt lower than its third; the reading lands it again, from the origin it showed.
 test "On iOS a landing Go to counts from under the bar is read back and landed again, never above its third" on ios
   clock data
