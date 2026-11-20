@@ -65,7 +65,7 @@ component HymnPage
               row align-items="flex-start" gap="space.s10" testId="hymn-name"
                 row align-items="baseline" gap="space.s10" flex-shrink=1 min-width=0
                   text `${page.number}` font="type.hymn-number" color="accent" font-variant-numeric="tabular-nums" testId="hymn-number"
-                  text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 role="heading" aria-level=1
+                  text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 overflow-wrap="break-word" role="heading" aria-level=1
                 FavouriteStar(number=page.number)
             ChordsNotice(chords=chords, number=page.number)
             ChordsKeys(chords=chords, number=page.number)

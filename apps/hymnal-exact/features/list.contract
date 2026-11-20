@@ -134,7 +134,7 @@ component HomeTitle
     settingsGear: action
   view
     row align-items="center" padding-left="space.s16" padding-right="space.s8" flex-shrink=0 testId=(own ? "title-row" : "tiles-title-row")
-      text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" line-clamp=1 testId=(own ? "title" : "tiles-title")
+      text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=(own ? "title" : "tiles-title")
       button press=settingsGear aria-label="Settings" appearance="none" width="size.target" height="size.target" display="flex" align-items="center" justify-content="center"
         border-radius="radius.pill" -exact-press-opacity="opacity.pressed" flex-shrink=0 testId=(own ? "gear" : "tiles-gear")
         image "symbol:settings" width="nudge.gear" height="nudge.gear" position="relative" left="nudge.gear-left" object-fit="contain" color="accent"

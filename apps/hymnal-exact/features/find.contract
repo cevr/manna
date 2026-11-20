@@ -372,7 +372,8 @@ component FindDrum
         position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 testId=`drum-${drum}`
 
 // One stop of a drum, `at` stops from its notch: the digit there, which
-// wraps round the drum's ten (or none past its end).
+// wraps round the drum's ten (or none past its end). It takes no touch: the
+// drum's control lies over it and takes every one.
 component FindStop
   props
     digit: number
@@ -381,7 +382,7 @@ component FindStop
     high: number
     detent: number
   view
-    row height=`${detent}px` align-items="center" justify-content="center" aria-hidden=true
+    row height=`${detent}px` align-items="center" justify-content="center" pointer-events="none" aria-hidden=true
       if wraps or (digit + at >= 0 and digit + at < high + 1)
         text `${wraps ? (digit + at + 10) % 10 : digit + at}` font="type.strong" font-variant-numeric="tabular-nums"
           color=(at == 0 ? "chord" : "muted")
