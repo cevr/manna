@@ -92,6 +92,7 @@ theme
   space.s16: length = 16px
   space.s20: length = 20px
   space.hang: length = 1.25rem
+  space.word: length = 0.2941rem
   space.s24: length = 24px
   space.s40: length = 40px
   space.s48: length = 48px

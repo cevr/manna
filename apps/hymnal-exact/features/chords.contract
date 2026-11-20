@@ -160,9 +160,9 @@ component ChordsNotice
 // word wider than the row breaks between its pairs (src/chords/rows.ts).
 // A text's box is a device pixel taller than its line, as React Native's
 // text measure makes it on iOS (docs: agent-pitfalls). The words' gap is
-// each word's right margin, and the row reaches as far past its box, so a
-// row's last word's margin never breaks it: a gap between words only, as
-// the current app's `columnGap` (a `column-gap` takes no `calc`).
+// the row's `column-gap`, between words only and in `rem`, as the current
+// app's `columnGap` of 5 points times the text's scale, so the row stays
+// inside its part at every text size.
 component ChordsLines
   props
     chords: ChordsPage
@@ -170,14 +170,14 @@ component ChordsLines
     part: ChordsPart
   view
     for l in part.lines key=l.at
-      row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" margin-bottom="space.s8" margin-right="calc(0px - space.s4 * 1.25)"
+      row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" column-gap="space.word" margin-bottom="space.s8"
         padding-left="space.hang" testId=`line-${k}-${l.at}`
         for w, wi in l.words key=w.at
           if wi == 0
-            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.hang)" margin-right="calc(space.s4 * 1.25)"
+            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.hang)"
               ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
           else
-            row flex-wrap="wrap" align-items="flex-end" margin-right="calc(space.s4 * 1.25)"
+            row flex-wrap="wrap" align-items="flex-end"
               ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
 
 // A word's pairs: each its chord over its syllable.

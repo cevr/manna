@@ -252,6 +252,22 @@ export const RULED: ReadonlyArray<Ruled> = [
   { name: 'space.hang', file: 'src/reader/reading.ts', constant: 'INDENT' },
 ];
 
+/**
+ * A length One writes inline as points times the text's scale
+ * (`<prop>: <points> * fontScale`), not in a style: written in `rem`, its
+ * points over the body's 17, so it grows with the text as One's does.
+ */
+export interface Scaled {
+  readonly name: string;
+  readonly file: string;
+  /** The style property One writes it to. */
+  readonly prop: string;
+}
+
+export const SCALED: ReadonlyArray<Scaled> = [
+  { name: 'space.word', file: 'src/reader/SyllableWords.tsx', prop: 'columnGap' },
+];
+
 export const NUDGES: ReadonlyArray<Nudge> = [
   {
     name: 'nudge.title',

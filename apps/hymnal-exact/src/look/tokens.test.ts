@@ -12,7 +12,7 @@ import { describe, expect, it } from 'bun:test';
 import { styleIn } from '@manna/exact-kit/look/testing';
 
 import { appFile, brandOf, oneFile } from './design.testing.ts';
-import { NUDGES, RULED, TOKENS, type Source, type Token } from './tokens.ts';
+import { NUDGES, RULED, SCALED, TOKENS, type Source, type Token } from './tokens.ts';
 
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
@@ -63,6 +63,12 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
     return value === 'StyleSheet.hairlineWidth' ? '-exact-hairline' : undefined;
   if (token.kind === 'length') return `${value}px`;
   return value;
+};
+
+/** The rem `text` writes `prop` as, from its `<prop>: <points> * fontScale`; undefined when it writes none so. */
+const scaledOf = (text: string, prop: string) => {
+  const points = new RegExp(`\\b${prop}: (\\d+(?:\\.\\d+)?) \\* fontScale\\b`, 'u').exec(text)?.[1];
+  return points === undefined ? undefined : `${short(Number(points) / BODY)}rem`;
 };
 
 /** The ramps the texts drawn in `style` (written `styles.<style>`, or `via`) name, `none` for a text that names none. */
@@ -144,8 +150,13 @@ describe('every measure of the brand is the current hymnal’s', () => {
       expect(brand.measures.get(ruled.name)).toBe(`${short(Number(multiple))}rem`);
     });
 
+  for (const scaled of SCALED)
+    it(`${scaled.name} is ${scaled.file}'s ${scaled.prop} over the body's size`, () => {
+      expect(brand.measures.get(scaled.name)).toBe(scaledOf(read(scaled.file), scaled.prop));
+    });
+
   it('the brand writes no measure the list does not trace to One or to a measured nudge', () => {
-    const traced = new Set([...TOKENS, ...NUDGES, ...RULED].map((token) => token.name));
+    const traced = new Set([...TOKENS, ...NUDGES, ...RULED, ...SCALED].map((token) => token.name));
     expect([...brand.measures.keys()].filter((name) => !traced.has(name))).toEqual([]);
   });
 
@@ -163,5 +174,10 @@ describe('every measure of the brand is the current hymnal’s', () => {
     expect(rows.map((row) => valuesOf(row, relined)[0] === brand.measures.get(row.name))).toEqual([
       false,
     ]);
+    const words = read('src/reader/SyllableWords.tsx');
+    expect(scaledOf(words.replace('columnGap: 5 *', 'columnGap: 6 *'), 'columnGap')).not.toBe(
+      brand.measures.get('space.word'),
+    );
+    expect(scaledOf(words.replace('* fontScale', '* scale'), 'columnGap')).toBeUndefined();
   });
 });
