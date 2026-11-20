@@ -14,6 +14,8 @@
  *   ellipsis, as the current hymnal's does: neither text spills its box.
  * - A drum's digits take no touch, so the drum's control over them does not
  *   cover them.
+ * - At the largest text Settings' Done keeps its room beside the title, so
+ *   the title wraps short of it (owner, q161).
  *
  * Web only: iOS's largest text is the simulator's own size, which
  * `verify ios` reads. Exits 1 on any failed check.
@@ -162,6 +164,22 @@ drive.check(
   'with the search open, the drums’ digits are not covered by their own control',
   drums[11] !== undefined && covered.length === 0,
   covered,
+);
+
+const settings = await drive.run(flags('largest-settings'), [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'clock data',
+  ...largest,
+  'tree',
+  'check',
+]);
+const done = findingsOn(settings[6], settings[7], 'overlap', (id) => id === 'settings-done');
+drive.check(
+  'at the largest text Settings’ Done keeps its room beside the title (q161)',
+  settings[7] !== undefined && done.length === 0,
+  done,
 );
 
 process.exit(drive.finish());
