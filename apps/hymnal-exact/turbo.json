@@ -6,6 +6,7 @@
       "dependsOn": [
         "$TURBO_EXTENDS$",
         "test:app",
+        "test:player",
         "test:web",
         "test:chords",
         "test:moves",
@@ -26,6 +27,20 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
     },
     "test:app": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+      ]
+    },
+    "test:player": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "passThroughEnv": ["PROTOCOL_DEPTH"],
