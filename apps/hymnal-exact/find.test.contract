@@ -1,4 +1,5 @@
 test "The bar folds and opens"
+  expect tree has "tiles-show"
   expect tree has "find-search"
   expect tree has "find-number"
   expect tree missing "find-cancel"
@@ -10,6 +11,7 @@ test "The bar folds and opens"
   expect tree has "find-cancel"
   expect tree has "find-number"
   expect tree missing "find-search"
+  expect tree missing "tiles-show"
   expect state find.row == "open"
   type "search" "100"
   clock settle
@@ -21,6 +23,7 @@ test "The bar folds and opens"
   expect state find.row == "folded"
   expect state listQuery == ""
   expect tree has "find-search"
+  expect tree has "tiles-show"
   expect tree missing "find-cancel"
   expect tree has "section-adoration-and-praise"
 
@@ -154,6 +157,8 @@ test "On a hymn's page a found hymn takes its place"
   at "/hymns/2"
   clock data
   expect text "hymn-title" == "All Creatures of Our God and King"
+  expect tree has "find-search"
+  expect tree missing "tiles-show"
   tap "find-number"
   clock settle
   clock data

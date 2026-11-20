@@ -404,23 +404,30 @@ for (const [how, before] of [
       row !== undefined && row.y + row.h <= top,
       { row, top },
     );
-    const met = [
-      ...meeting([
+    const met = meeting(
+      [
         ['tiles-show', tiles],
-        ['find-capsule', capsule],
-      ]),
-      ...meeting(
-        [
-          ['find-search', search],
-          ['find-number', hash],
-        ],
-        unshared,
-      ),
-    ];
+        ['find-search', search],
+        ['find-number', hash],
+      ],
+      unshared,
+    );
+    const inCapsule =
+      tiles !== undefined &&
+      capsule !== undefined &&
+      tiles.x >= capsule.x &&
+      tiles.x + tiles.w <= capsule.x + capsule.w;
+    const small = (
+      [
+        ['tiles-show', tiles],
+        ['find-search', search],
+        ['find-number', hash],
+      ] as const
+    ).filter(([, box]) => box === undefined || box.w < TARGET || box.h < TARGET);
     drive.check(
-      `${how}, All at once stands apart from the capsule, and its Search and # share no area, at ${named}`,
-      met.length === 0,
-      met,
+      `${how}, All at once, Search and # stand in the capsule, share no area and are each a ${TARGET}-point target, at ${named}`,
+      met.length === 0 && inCapsule && small.length === 0,
+      { met, inCapsule, small: small.map(([id]) => id), tiles, capsule },
     );
   }
 }
