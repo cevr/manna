@@ -20,7 +20,8 @@
  *   the home list's last row ends above the find bar's controls, as the
  *   current hymnal's `ListEnd` keeps it (hy-end), at the default text size
  *   and root 28, 40 and 53; All at once, Search and # stand apart there,
- *   and while searching the box and Cancel do.
+ *   and while searching the box and Cancel do. The Topics tab's grouped
+ *   list ends in the same end room, starting above the find bar.
  * - At the largest text a chord shape's marks, dots and barre leave no
  *   finding `app.json` does not accept, and its accepts, read by Exact's own
  *   matcher, take each of those roles' verified kinds and no sibling role's
@@ -317,6 +318,35 @@ for (const [how, before] of [
       met,
     );
   }
+}
+
+const topicsEnd = [
+  'tap hymn-list wheel 0 999999',
+  'clock settle',
+  'layout list-end',
+  'layout tiles-show',
+  'layout find-capsule',
+];
+const topics = await drive.run(flags('largest-topics'), [
+  'clock data',
+  'clock settle',
+  'tap tab-topics',
+  'clock settle',
+  'clock data',
+  'clock settle',
+  ...SIZES.flatMap((size) => [...sized(size), ...topicsEnd]),
+]);
+let topicsAt = 6;
+for (const size of SIZES) {
+  topicsAt += sized(size).length + 2;
+  const [end, tiles, capsule] = [0, 1, 2].map((i) => boxOf(topics[topicsAt + i]));
+  topicsAt += 3;
+  const top = Math.min(...[tiles, capsule].map((box) => box?.y ?? Number.NEGATIVE_INFINITY));
+  drive.check(
+    `on the Topics tab, at the list's end its end room starts above the find bar, so the last row clears it, at ${size === undefined ? 'the default text size' : `root ${size}`}`,
+    end !== undefined && end.h > 0 && end.y <= top,
+    { end, top },
+  );
 }
 
 const searching = await drive.run(flags('largest-search'), [

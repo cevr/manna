@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
 import { book } from '../hymns/book.ts';
-import { appFile, oneFile } from '../look/design.testing.ts';
+import { appFile, contractFiles, oneFile } from '../look/design.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { findSources } from './sources.ts';
 
@@ -117,6 +117,29 @@ describe('finding’s sources', () => {
     expect(appFile('features/list.contract')).toContain(
       'fn listEnd(port: FindPort, at: FindPlaces, overBar: bool): number = port.safeAreaBottom + (overBar ? at.gap : at.lift) + at.hash + at.end',
     );
+  });
+
+  test('every `hymn-list` scroller ends in its ListEnd, so no tab’s last row sits under the controls', () => {
+    const ends = contractFiles().flatMap((path) => {
+      const lines = appFile(path).split('\n');
+      const indent = (line: string) => line.length - line.trimStart().length;
+      return lines.flatMap((line, at) => {
+        if (!/^\s*scroll .*testId="hymn-list"/.test(line)) return [];
+        const depth = indent(line);
+        const rest = lines.slice(at + 1);
+        const stop = rest.findIndex((next) => next.trim() !== '' && indent(next) <= depth);
+        const children = rest.filter(
+          (next, i) =>
+            (stop === -1 || i < stop) &&
+            next.trim() !== '' &&
+            !next.trim().startsWith('//') &&
+            indent(next) === depth + 2,
+        );
+        return [`${path}:${at + 1} ${children.at(-1)?.trim() ?? ''}`];
+      });
+    });
+    expect(ends.length).toBeGreaterThanOrEqual(2);
+    for (const end of ends) expect(end).toEndWith(' ListEnd()');
   });
 
   test('a screen is named by its path, without the query or fragment a launch adds', () => {
