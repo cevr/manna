@@ -15,7 +15,12 @@
  * - A drum's digits take no touch, so the drum's control over them does not
  *   cover them.
  * - At the largest text Settings' Done keeps its room beside the title, so
- *   the title wraps short of it (owner, q161).
+ *   the title wraps short of it (owner, q161), and at the default size and
+ *   the largest its button's box is at least 44 × 44, the word drawn where
+ *   it was (sweep-5 N2).
+ * - At the largest text a hymn's key and capo controls, which may rest
+ *   under the floating find bar as the current hymnal's chords do, scroll
+ *   fully clear of it into view (sweep-5 N1).
  * - Scrolled to its end, with no player and with the player's bar docked,
  *   the home list's last row ends above the find bar's controls, as the
  *   current hymnal's `ListEnd` keeps it (hy-end), at the default text size
@@ -27,7 +32,8 @@
  *   matcher, take each of those roles' verified kinds and no sibling role's
  *   (a mark's or a barre's overlap, the sheet's name, another shape).
  *
- * Web only: iOS's largest text is the simulator's own size, which
+ * `web` or `ios`: every op it uses runs on both (sweep-5); on iOS it scales
+ * by the root font size, while the simulator's own text size is what
  * `verify ios` reads. Exits 1 on any failed check.
  */
 
@@ -243,6 +249,80 @@ const meeting = (
       .filter(([, boxB]) => boxA === undefined || boxB === undefined || !held(boxA, boxB))
       .map(([b]) => `${a} meets ${b}`),
   );
+
+/** The platform's least tap target, in points (iOS's 44 × 44): Settings' Done is held to it on both hosts. */
+const TARGET = 44;
+
+const doneTarget = await drive.run(flags('target-settings'), [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'clock data',
+  'layout settings-done',
+  ...largest,
+  'layout settings-done',
+]);
+for (const [at, size] of [
+  [4, 'the default text size'],
+  [7, 'the largest text'],
+] as const) {
+  const box = boxOf(doneTarget[at]);
+  drive.check(
+    `Settings’ Done takes a tap over at least ${TARGET} × ${TARGET} at ${size}`,
+    box !== undefined && box.w >= TARGET && box.h >= TARGET,
+    box,
+  );
+}
+
+/** The chords' key and capo controls on a hymn's page. */
+const KEYS = ['transpose-down', 'transpose-up', 'capo-down', 'capo-up'] as const;
+/** The find bar's controls that float over a hymn's page: its capsule, Search and # (All at once is home's alone). */
+const FLOATING = ['find-capsule'] as const;
+const keysAt = [
+  ...chordsOn,
+  'type root /hymns/2',
+  'clock data',
+  'clock settle',
+  ...largest,
+  ...[...KEYS, ...FLOATING, 'hymn-words'].map((id) => `layout ${id}`),
+];
+const keysFrom = chordsOn.length + 5;
+const restKeys = await drive.run(flags('largest-keys'), keysAt);
+const keyBoxes = KEYS.map((_, i) => boxOf(restKeys[keysFrom + i]));
+const floatTop = Math.min(
+  ...FLOATING.map((_, i) => boxOf(restKeys[keysFrom + KEYS.length + i])?.y ?? Infinity),
+);
+const lowest = Math.max(...keyBoxes.map((box) => (box === undefined ? 0 : box.y + box.h)));
+const lift = Math.max(0, Math.ceil(lowest - floatTop) + 16);
+const lifted = await drive.run(flags('largest-keys'), [
+  ...keysAt,
+  `tap hymn-words wheel 0 ${lift}`,
+  'clock settle',
+  ...[...KEYS, ...FLOATING, 'hymn-words'].map((id) => `layout ${id}`),
+]);
+const liftedFrom = keysAt.length + 2;
+const words = boxOf(lifted[liftedFrom + KEYS.length + FLOATING.length]);
+const floating = FLOATING.flatMap((id, i) => {
+  const box = boxOf(lifted[liftedFrom + KEYS.length + i]);
+  return box === undefined ? [] : [[id, box] as const];
+});
+const liftedMet = KEYS.flatMap((key, i) =>
+  meeting([[key, boxOf(lifted[liftedFrom + i])], ...floating]).filter((pair) =>
+    pair.startsWith(`${key} `),
+  ),
+);
+const shown = KEYS.every((_, i) => {
+  const box = boxOf(lifted[liftedFrom + i]);
+  return box !== undefined && words !== undefined && box.y >= words.y;
+});
+drive.check(
+  `at the largest text a hymn's key and capo controls scroll fully clear of the floating find bar, in view (lifted ${lift})`,
+  keyBoxes.every((box) => box !== undefined) &&
+    floating.length > 0 &&
+    shown &&
+    liftedMet.length === 0,
+  { lift, liftedMet, floating, words },
+);
 
 /** The text sizes the end and the bar are held at: the default, then the root font sizes up to iOS's largest. */
 const SIZES = [undefined, 28, 40, LARGEST] as const;
