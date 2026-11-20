@@ -3,7 +3,9 @@
 /**
  * The launch's opening, live (hs-unread, `features/start.contract`), on the
  * host named (`bun tools/drive-start.ts web|ios`). Each row launches on a
- * store of its own and reads `startShown`, `startDecided` and the tree:
+ * store of its own and reads `startShown`, `startDecided` and the tree, and
+ * holds that no sheet is up (`readSheetUp`) and that the screen it opens is
+ * shown, in view and not inert, so nothing is drawn over it:
  *
  * 1. a fresh store opens home: the current app's first minute, which the
  *    port draws as home, nothing pushed;
@@ -51,39 +53,68 @@ interface Shown {
   readonly route?: string;
 }
 
-const opened = ['clock data', 'clock settle', 'state startShown', 'state startDecided', 'tree'];
+/** A launch's reads: its opening, the tree, whether a sheet is in the stack, and the box of the screen it should show. */
+const opened = (screen: string) => [
+  'clock data',
+  'clock settle',
+  'state startShown',
+  'state startDecided',
+  'tree',
+  'state readSheetUp',
+  `layout ${screen}`,
+];
 const has = (tree: unknown, id: string) => JSON.stringify(tree ?? '').includes(`"${id}"`);
 
-/** What a launch's last `opened` ops read. */
+interface Seen {
+  readonly visible?: {
+    readonly hidden?: boolean;
+    readonly inert?: boolean;
+    readonly inViewport?: boolean;
+  };
+}
+
+/** What a launch's last `opened` ops read; `front` holds when no sheet is up and the screen is shown, in view and takes touch. */
 const readOf = (replies: ReadonlyArray<unknown>) => {
-  const at = replies.length - opened.length;
+  const at = replies.length - opened('').length;
   const tree = replies[at + 4];
+  const seen = (replies[at + 6] as { node?: Seen } | undefined)?.node?.visible;
   return {
     shown: replies[at + 2] as Shown | undefined,
     decided: replies[at + 3],
     home: has(tree, 'home'),
     today: has(tree, 'today'),
     verses: has(tree, 'verses'),
+    sheetUp: replies[at + 5],
+    seen,
+    front:
+      replies[at + 5] === false &&
+      seen?.hidden === false &&
+      seen.inert === false &&
+      seen.inViewport === true,
   };
 };
 
-const fresh = readOf(await drive.launch(storeOf('fresh'), opened));
+const fresh = readOf(await drive.launch(storeOf('fresh'), opened('home')));
 drive.check(
-  'a fresh store opens home, the first minute, nothing pushed',
+  'a fresh store opens home, the first minute, nothing pushed, no sheet over it',
   fresh.shown?.opening === 'first' &&
     fresh.shown.route === '' &&
     fresh.decided === true &&
     fresh.home &&
-    !fresh.today,
+    !fresh.today &&
+    fresh.front,
   fresh,
 );
 
 const deep = readOf(
-  await drive.run(['--storage', storeOf('deep'), '--reset-storage', '--url', '/verses'], opened),
+  await drive.run(
+    ['--storage', storeOf('deep'), '--reset-storage', '--url', '/verses'],
+    opened('verses'),
+  ),
 );
 drive.check(
-  'a launch at /verses stays there once the opening is decided',
-  deep.decided === true && deep.verses && !deep.today,
+  'a launch at /verses stays there once the opening is decided, no sheet over it',
+  deep.decided === true && deep.verses && !deep.today && deep.front,
   deep,
 );
 
@@ -99,14 +130,15 @@ await drive.run(
     'clock data',
   ],
 );
-const said = readOf(await drive.relaunch(saidStore, opened));
+const said = readOf(await drive.relaunch(saidStore, opened('home')));
 drive.check(
-  'a store whose verse was said opens home on its relaunch',
+  'a store whose verse was said opens home on its relaunch, no sheet over it',
   said.shown?.opening === 'home' &&
     said.shown.route === '' &&
     said.decided === true &&
     said.home &&
-    !said.today,
+    !said.today &&
+    said.front,
   said,
 );
 
@@ -131,14 +163,15 @@ if (host === 'ios') {
     'data/heartseed.json',
   );
   if (container !== '') await Bun.write(file, 'not a store');
-  const unread = readOf(await drive.relaunch(unreadStore, opened));
+  const unread = readOf(await drive.relaunch(unreadStore, opened('today')));
   drive.check(
-    'an unreadable garden opens Today, pushed over home',
+    'an unreadable garden opens Today, pushed over home, no sheet over it',
     container !== '' &&
       unread.shown?.opening === 'today' &&
       unread.shown.route === '/today' &&
       unread.decided === true &&
-      unread.today,
+      unread.today &&
+      unread.front,
     { container, unread },
   );
 }
