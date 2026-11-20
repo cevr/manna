@@ -216,7 +216,7 @@ describe('the seek’s rules are the current app’s', () => {
 });
 
 describe('the player’s Contract file keeps the current app’s numbers and the brand’s roles', () => {
-  const contract = appFile('features/player.contract');
+  const contract = appFile('features/player.contract') + appFile('features/bar.contract');
 
   it('holds a sent place as long as settleFor, and the lock screen and VoiceOver skip by NUDGE', () => {
     expect(contract).toContain(`after(${Duration.toMillis(settleFor)}, playerSettled)`);

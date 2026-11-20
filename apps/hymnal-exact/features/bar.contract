@@ -1,0 +1,90 @@
+// The player's bar: the device's element and the bar docked over the
+// stack's foot, as the current PlayerBar.tsx draws it. The player's state,
+// its calls and its sheet are features/player.contract's; this file draws
+// the bar and turns the element's events into the player's calls.
+use PlayerView, playerLabel from "./player.contract"
+use hy-rise, hy-sink, hy-fade-in, hy-fade-out from "./motion.contract"
+
+// The bar's mark for a button, as the current BarMark.ios.tsx draws it.
+fn playerMark(toggle: string): string = toggle == "pause" ? "symbol:sf/pause.fill" : (toggle == "retry" ? "symbol:sf/arrow.clockwise" : "symbol:sf/play.fill")
+
+// The device and the bar, docked over the stack's foot (a route must be a
+// child of the navigation root, so the bar cannot take room of its own;
+// each screen leaves room under its last row): the element is keyed by
+// its load, so a new load is a new element and an old one's events end
+// with it; the bar shows while the player holds a hymn and no sheet is up,
+// and the dock has no box at all otherwise. While the player holds none,
+// a hymn page on top shows the same bar as its own (`pageBar`), as the
+// current hymnal's page draws it, so one bar stays put as Play docks it.
+component PlayerDock
+  props
+    player: PlayerView
+    ask: action
+    heard: action
+    ticked: action
+    broke: action
+    remote: action
+  inject
+    motionStill: bool
+  view
+    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not (player.dock or player.pageBar))
+      for l in (player.src == "" ? [] : [player.load]) key=l
+        audio player.src id="audio" paused=player.paused currentTime=player.from testId="audio"
+          metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
+          seekbackwardOffset=10 seekforwardOffset=10
+          seekto=remote("remoteSeek", 0) seekbackward=remote("remoteSkip", -1) seekforward=remote("remoteSkip", 1)
+          durationchange=heard("loaded", l) timeupdate=ticked(l) seeked=heard("seeked", l, 0)
+          waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
+          pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
+      if player.dock or player.pageBar
+        column position="absolute" left=0 right=0 bottom=0 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both")
+          PlayerBarFrame(player=player, ask=ask)
+
+// The bar, as the current PlayerBar.tsx draws it: over the home indicator,
+// on the bar's ground under a hairline, one row at the thumb. The opener
+// fills the row: it names the bar's hymn, or shows a grabber at the bar's
+// centre while that hymn is the page's own, and opens the full player.
+// Then the page's compact Play while another hymn sounds over it, and the
+// player's button as a mark. A hymn page's own bar, while nothing is held,
+// shows the grabber and the page's Play. A failure's reason shows under
+// the hymn, where a mark cannot say it.
+component PlayerBarFrame
+  props
+    player: PlayerView
+    ask: action
+  view
+    column testId="bar" role="region" aria-label="Player" background-color="bar" border-top-width="line.hair" border-top-style="solid" border-top-color="line" padding-bottom="var(--exact-safe-area-inset-bottom)"
+      row position="relative" align-items="center" gap="space.s8" padding="0px space.s12" height="calc(size.target + space.s12)"
+        if player.pageBar or (player.bar.number == player.onPage and player.bar.phase != "failed")
+          row position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
+            view width="size.grabber" height="size.grabber-line" border-radius="radius.grabber" background-color="line" testId="bar-grabber"
+        if player.pageBar
+          view flex=1 min-width=0
+          PlayerMark(symbol=playerMark("play"), press=ask("page", player.onPage), id="play", name="Play")
+        else
+          button press=ask("open", 0) appearance="none" flex=1 min-width=0 min-height="size.target" display="flex" flex-direction="column" justify-content="center" align-items="stretch" testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
+            if player.bar.number != player.onPage
+              row gap="space.s8" align-items="center" justify-content="center"
+                text `${player.bar.number}` font="type.label" color="accent" font-variant-numeric="tabular-nums" testId="bar-number"
+                text player.bar.title font="type.small" color="ink" flex=1 min-width=0 line-clamp=1 text-align="left" testId="bar-hymn"
+            if player.bar.phase == "failed" and player.bar.said != ""
+              text player.bar.said font="type.small" color="muted" line-clamp=1 text-align="center" testId="bar-said"
+          if player.bar.page != 0
+            button press=ask("play", player.bar.page) appearance="none" min-height="size.target" min-width="size.target" padding="0px space.s4" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
+              text `Play ${player.bar.page}` font="type.label" color="button" font-variant-numeric="tabular-nums"
+          if player.bar.toggle != ""
+            PlayerMark(symbol=playerMark(player.bar.toggle), press=ask("bar", 0), id="bar-toggle", name=playerLabel(player.bar.toggle))
+
+// A bar button's mark: the symbol at 22 points in the button's role, in a
+// round 44-point target that takes the soft fill while held.
+component PlayerMark
+  props
+    symbol: string
+    press: action
+    id: string
+    name: string
+  view
+    button press=press appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId=id aria-label=name
+      :active
+        background-color = "soft"
+      image symbol width="size.glyph" height="size.glyph" object-fit="contain" color="button" aria-hidden=true
