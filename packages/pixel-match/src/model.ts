@@ -93,6 +93,14 @@ export interface OneBand {
   readonly edge: 'top' | 'bottom';
 }
 
+/** UIKit's accessibility text sizes (AX1, a 28-pt body, to AX5), as `simctl ui content_size` names them: the only sizes a departure may name. */
+type AccessibilitySize =
+  | 'accessibility-medium'
+  | 'accessibility-large'
+  | 'accessibility-extra-large'
+  | 'accessibility-extra-extra-large'
+  | 'accessibility-extra-extra-extra-large';
+
 export interface Row {
   readonly id: string;
   readonly unit: string;
@@ -115,6 +123,14 @@ export interface Row {
    * `state keyboard`). A capture with no keyboard up fails.
    */
   readonly keyboard?: true;
+  /**
+   * The iOS cells where the port departs from One on purpose, by text size,
+   * each with the owner's answer that asks it. Such a cell is still taken
+   * and scored, and `pixel report` lists it with its reason and its score;
+   * the acceptance check does not hold it to the threshold. Only an
+   * accessibility size may depart.
+   */
+  readonly departs?: Partial<Record<AccessibilitySize, string>>;
 }
 
 /**
@@ -192,6 +208,16 @@ export const cellsOf = (app: AppName, row: Row): ReadonlyArray<Cell> => {
     );
   return cells;
 };
+
+/** Each of `row`'s cells that departs from One on purpose, by cell name, with its reason. */
+export const departuresOf = (app: AppName, row: Row): ReadonlyArray<readonly [string, string]> =>
+  cellsOf(app, row)
+    .filter((cell) => cell.host === 'ios')
+    .flatMap((cell) =>
+      Object.entries(row.departs ?? {})
+        .filter(([size]) => size === cell.size)
+        .map(([, reason]) => [cellName(cell), `${reason}`] as const),
+    );
 
 /** A viewport's width, height and device pixels a CSS pixel: `390x844@2`. */
 export const viewportOf = (viewport: string) => {

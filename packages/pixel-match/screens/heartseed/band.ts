@@ -23,6 +23,18 @@ export const TODAY_BAND: OneBand = {
   edge: 'bottom',
 };
 
+/**
+ * Where the port draws Today's foot and a list's head otherwise than One at
+ * UIKit's accessibility sizes (owner, q160: the port does better there, on
+ * iOS only; `apps/heartseed-exact/README.md`, "Better than One at the
+ * accessibility text sizes"). The swept AX5 cell of a row whose screen shows
+ * either departs.
+ */
+export const ROOMY: Row['departs'] = {
+  'accessibility-extra-extra-extra-large':
+    "q160: at the accessibility sizes the port's Today keeps only its round button fixed, as a capsule, with the rest of its foot in the scroll under the verse, and a list's head scrolls with its verses; below AX1 it is One's layout",
+};
+
 /** `row` scored over `band` on the One side. */
 export const banded =
   (band: OneBand) =>

@@ -88,8 +88,9 @@ const main = async () => {
   if (command === 'report') {
     const written = writeReport(frame, asked.unit);
     console.log(
-      `pixel report: ${written.references} references, ${written.results} results, ${written.missing} missing; ${written.file}`,
+      `pixel report: ${written.references} references, ${written.results} results, ${written.missing} missing, ${written.departures.length} departures; ${written.file}`,
     );
+    for (const line of written.departures) console.log(line);
     return 0;
   }
   if ((command === 'ref' || command === 'shot') && (app === 'heartseed' || app === 'hymnal')) {

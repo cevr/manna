@@ -46,6 +46,15 @@ When One cannot draw a cell, the row names it with its reason
 (`notDrawn`). Examples: a transient frame, a web page One does not have.
 `pixel ref` lists each such cell and takes no picture.
 
+When the port departs from One on purpose, the row names the cell's
+accessibility size with the owner's answer that asks it (`departs`; only
+AX1 to AX5, by its type). The cell keeps its reference and is still shot
+and scored. `pixel report` lists it under `departures` and prints its score
+beside its reason, and the acceptance check does not hold it to the
+threshold. The four are Heartseed's `today.new`, `today.letters`,
+`today.result` and `list.page` at AX5 (owner, q160);
+`screens/screens.test.ts` holds the list to them.
+
 ## References
 
 `pixel ref` takes the One side, iOS cells first, on the app's own reference

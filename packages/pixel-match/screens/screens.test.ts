@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { storeOf } from '../src/fixtures.ts';
-import { cellsOf, type AppName } from '../src/model.ts';
+import { cellsOf, departuresOf, type AppName, type Row } from '../src/model.ts';
 import { ROWS } from './index.ts';
 
 const APPS: ReadonlyArray<AppName> = ['heartseed', 'hymnal'];
@@ -59,6 +59,34 @@ describe('the screens', () => {
         const area = masks.reduce((sum, mask) => sum + mask.width * mask.height, 0);
         expect([row.id, area / picture <= 0.06]).toEqual([row.id, true]);
       }
+  });
+
+  test("the cells that depart from One on purpose are q160's four, each an iOS accessibility-size cell of a match row", () => {
+    const departures = APPS.flatMap((app) =>
+      ROWS[app].flatMap((row) =>
+        departuresOf(app, row).map(([cell, reason]) => ({ cell, kind: row.kind, reason })),
+      ),
+    );
+    expect(departures.map(({ cell }) => cell).toSorted()).toEqual([
+      'heartseed/ios/list.page/light/accessibility-extra-extra-extra-large',
+      'heartseed/ios/today.letters/light/accessibility-extra-extra-extra-large',
+      'heartseed/ios/today.new/light/accessibility-extra-extra-extra-large',
+      'heartseed/ios/today.result/light/accessibility-extra-extra-extra-large',
+    ]);
+    for (const { cell, kind, reason } of departures)
+      expect({ cell, kind, owner: reason.startsWith('q160: ') }).toEqual({
+        cell,
+        kind: 'match',
+        owner: true,
+      });
+  });
+
+  test('a departure names an accessibility size alone: a size below AX1 is refused by its type', () => {
+    const below: Row['departs'] = {
+      // @ts-expect-error -- extra-extra-extra-large is under UIKit's accessibility category, so no cell there may depart
+      'extra-extra-extra-large': 'q160',
+    };
+    expect(below).toBeDefined();
   });
 
   test('an Exact-only row has no One side and no cell', () => {

@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 
 import { ROWS } from '../screens/index.ts';
 import type { Score } from './diff.ts';
-import { cellName, cellsOf, type AppName } from './model.ts';
+import { cellName, cellsOf, departuresOf, type AppName } from './model.ts';
 import { refFile, reportFile, shotFiles } from './paths.ts';
 
 /** What one capture run could not take: cell name to reason, by app and host, kept beside the references. */
@@ -43,6 +43,24 @@ interface Result extends Score {
   readonly cell: string;
 }
 
+/** A departure as `pixel report` prints it: the cell, its score beside its reason, so the difference stays in sight. */
+const departureLine = (cell: string, reason: string, result: Result | undefined) =>
+  `departs ${cell}: ${
+    result === undefined
+      ? 'not shot yet'
+      : `${result.differing} of ${result.scored} differ at channel ${result.channel}, largest region ${result.largest}`
+  } · ${reason}`;
+
+/** The departing cells of the rows `unit` owns (every row for none or `pm-harness`), each with its reason. */
+const departuresIn = (unit: string | undefined): Record<string, string> =>
+  Object.fromEntries(
+    (Object.keys(ROWS) as AppName[]).flatMap((app) =>
+      ROWS[app]
+        .filter((row) => unit === undefined || unit === 'pm-harness' || row.unit === unit)
+        .flatMap((row) => departuresOf(app, row)),
+    ),
+  );
+
 export const writeReport = (
   frame: {
     readonly root: string;
@@ -56,6 +74,7 @@ export const writeReport = (
   const results: Result[] = [];
   const missed = readMissed(missedFile(frame));
   const missing: Record<string, string> = {};
+  const departures = departuresIn(unit);
   for (const app of Object.keys(ROWS) as AppName[])
     for (const row of ROWS[app]) {
       if (unit !== undefined && unit !== 'pm-harness' && row.unit !== unit) continue;
@@ -75,14 +94,19 @@ export const writeReport = (
     references,
     results,
     missing,
+    departures,
   };
   const file = reportFile(frame.root);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`);
+  const scored = new Map(results.map((result) => [result.cell, result]));
   return {
     file,
     references: references.length,
     results: results.length,
     missing: Object.keys(missing).length,
+    departures: Object.entries(departures).map(([cell, reason]) =>
+      departureLine(cell, reason, scored.get(cell)),
+    ),
   };
 };
