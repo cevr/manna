@@ -76,3 +76,18 @@ test "Search by number, title and first line."
   clock data
   expect tree has "section-adoration-and-praise"
   expect tree missing "none-found"
+
+test "Where a scroll of the list comes to rest is its offset from the top."
+  expect state listTop == 0
+  tap "hymn-list" drag 0 -1600
+  clock settle
+  expect state listTop >= 800
+  tap "hymn-list" drag 0 3200
+  clock settle
+  expect state listTop == 0
+  tap "tab-topics"
+  clock settle
+  clock data
+  tap "hymn-list" drag 0 -1600
+  clock settle
+  expect state listTop >= 800

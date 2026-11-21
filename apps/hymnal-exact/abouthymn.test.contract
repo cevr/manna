@@ -86,6 +86,42 @@ test "A topic in About this hymn opens home's Topics."
   expect tree missing "about-sheet"
   expect text "title" == "Hymns"
   expect state listTab == "Topics"
+  expect state listLand == ""
+  expect state listTop >= 40
+
+test "A topic further down takes the Topics list to it, the topic's header at the top."
+  at "/hymns/2"
+  clock data
+  tap "hymn-about"
+  clock settle
+  clock data
+  tap "about-topic-1"
+  clock settle
+  clock data
+  expect tree missing "about-sheet"
+  expect state listTab == "Topics"
+  expect state listLand == ""
+  expect state listTop >= 200
+
+test "A topic in About this hymn takes the Topics list to it when Topics is already the tab."
+  clock data
+  tap "tab-topics"
+  clock settle
+  clock data
+  expect state listTop == 0
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state hymnShown.number == 2
+  tap "hymn-about"
+  clock settle
+  clock data
+  tap "about-topic-1"
+  clock settle
+  clock data
+  expect state listTab == "Topics"
+  expect state listLand == ""
+  expect state listTop >= 200
 
 test "An address that names no hymn opens no rows."
   at "/hymns/999/about"

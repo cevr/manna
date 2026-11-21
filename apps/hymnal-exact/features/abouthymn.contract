@@ -5,7 +5,8 @@
 // Scripture, Sing to another tune (app.ts `abouthymnPage`,
 // src/abouthymn/about.ts). A hymn row closes the sheet and opens that
 // hymn's page over the one it came from; a topic closes the sheet and the
-// pages under it and shows home's Topics tab; a passage does the same and
+// pages under it and shows home's Topics tab at that topic, its header at
+// the list's top (`listLand`, features/list.contract); a passage does the same and
 // searches the hymns for where it begins. The sheet is a route over the
 // hymn's, presented as a form sheet with a grabber, as the player and
 // Settings are: a swipe down closes it, as does Done.
@@ -40,6 +41,7 @@ members HymnalExact
       nav = push(back(nav), path("hymn", n))
     else if kind == "topic"
       listTab = "Topics"
+      listLand = query
       nav = go(nav, "/")
     else
       nav = go(nav, "/")

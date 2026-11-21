@@ -68,6 +68,9 @@ component HymnalExact
     findDrumsKey = findDrumsKeyed
     findTileList = findTileNumbers
     findWheel = findWheeled
+    listRested = listRested
+    listLand = listLand
+    listLanded = listLanded
     motionStill = motionStill
     settingsFeel = settingsFeel
     settingsFeelSwitch = settingsFeelSet
