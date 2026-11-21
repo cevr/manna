@@ -35,7 +35,7 @@ import { ListEnd } from '~/reader/ListEnd';
 
 import { usePinch } from './pinch';
 import { playingNumber } from './playing';
-import { type Tab, type Tile, tilesOf } from './tabs';
+import { type Tab, type Tile, tilesFor } from './tabs';
 import { tileTimes } from './tile-times';
 
 /** Tiles in a row, and the space between and around them. */
@@ -106,14 +106,7 @@ export function AllAtOnce({
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
   const playing = usePlaying();
-  const tiles = useMemo(
-    () =>
-      tilesOf(
-        tab,
-        Option.liftPredicate(playing, (number) => number > 0),
-      ),
-    [tab, playing],
-  );
+  const tiles = useMemo(() => tilesFor(tab, playing), [tab, playing]);
   const height = tileHeight(fontScale);
   const firstRow = Math.floor(at / columns) * (height + gap);
   const motion = (useReduceMotion() && faded) || zoomed;

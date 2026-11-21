@@ -175,6 +175,13 @@ export const tilesOf = (tab: Tab, playing: Option.Option<number>): ReadonlyArray
     playing: Option.match(playing, { onNone: () => false, onSome: (n) => group.hymns.includes(n) }),
   }));
 
+/** `tab`'s tiles as `All at once` draws them, `playing` the number of the hymn the player has, 0 while idle. */
+export const tilesFor = (tab: Tab, playing: number): ReadonlyArray<Tile> =>
+  tilesOf(
+    tab,
+    Option.liftPredicate(playing, (number) => number > 0),
+  );
+
 /**
  * The group whose row is at or above the list's top at `offset`, given the
  * offset that puts each group's row at the top (`starts`, in order), to
