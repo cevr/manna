@@ -15,10 +15,17 @@ shape ListRow
   number: number
   title: string
 
+// A row of the list's answer (src/list/rows.ts): a search's carries the
+// line it found the hymn by, "" with none, as every other row has.
+shape SectionRow
+  number: number
+  title: string
+  line: string
+
 shape RowSection
   slug: string
   name: string
-  rows: ListRow[]
+  rows: SectionRow[]
 
 shape FindGo
   serial: number
@@ -200,8 +207,10 @@ component FindBar
             scroll id=`find-list-${entry.id}` flex=1 min-height=0 testId="find-list"
               column
                 for s in findRows key=s.slug
+                  if s.name != ""
+                    FoundSection(name=s.name, slug=s.slug)
                   for r in s.rows key=r.number
-                    FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+                    FoundRow(number=r.number, title=r.title, line=r.line, star=favouriteNumbers.includes(r.number), open=findOpen)
       row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0)}px` z-index=2
         align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
         if findShown.row == "tiles"
@@ -420,25 +429,49 @@ component FindTiles
                 opacity = "opacity.pressed"
               text `${n}` font="type.strong" font-variant-numeric="tabular-nums"
 
+// A section of a search's results ("Hymns about this", "More matches"),
+// drawn as a topic's row of the current app's list (HymnList.native.tsx
+// `TopicRow`): its name, quiet, over a hairline; a search pins none, so it
+// scrolls with its rows, and it takes no press.
+component FoundSection
+  props
+    name: string
+    slug: string
+  view
+    row role="heading" aria-level=2 align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
+      position="relative" background-color="ground" testId=`found-section-${slug}`
+      text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic"
+      column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line" aria-hidden=true
+
 // A found hymn's row: drawn as list.contract's `HymnRow` (the current
 // app's row: number in the accent, title, a star when a favourite, a
 // hairline from the title's edge), a button whose press opens the hymn as
-// a found hymn opens (`listOpening`).
+// a found hymn opens (`listOpening`). A hymn found by a line other than
+// its title shows that `line` under the title, quiet and one line long,
+// the number level with the title at the row's top, the row two lines
+// tall at every text size, as the current app's found row
+// (HymnList.native.tsx `HymnRow`, `foundPadding`). VoiceOver reads its
+// number, title, `favourite` when it is one, then the line (`nameOf`).
 component FoundRow
   props
     number: number
     title: string
+    line: string
     star: bool
     open: action
   view
-    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items="center" gap="space.s12" text-align="start"
-      padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
-      height="size.target" min-height=0 box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
+    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items=(line != "" ? "flex-start" : "center") gap="space.s12" text-align="start"
+      padding-left="space.s16" padding-right="space.s16" padding-top=(line != "" ? "space.s8" : "space.s11") padding-bottom=(line != "" ? "space.s8" : "space.s11")
+      box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
+      aria-label=`${number}, ${title}${star ? ", favourite" : ""}${line != "" ? `, ${line}` : ""}`
       :active
         background-color = "soft"
       text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"
-      row flex=1 min-width=0 align-items="center" gap="space.s12" position="relative" top="nudge.row"
-        text title flex=1 min-width=0 font="type.row-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
-        if star
-          text "★" font="type.row-title" color="accent" aria-label="Favourite" testId=`star-${number}`
+      column flex=1 min-width=0
+        row align-items="center" gap="space.s12" position="relative" top="nudge.row"
+          text title flex=1 min-width=0 font="type.row-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+          if star
+            text "★" font="type.row-title" color="accent" aria-label="Favourite" testId=`star-${number}`
+        if line != ""
+          text line font="type.row-line" color="muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`row-line-${number}`
       column position="absolute" left="space.s64" right=0 bottom=0 height="line.hair" background-color="line" aria-hidden=true

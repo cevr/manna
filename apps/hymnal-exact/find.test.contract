@@ -27,6 +27,23 @@ test "The bar folds and opens"
   expect tree missing "find-cancel"
   expect tree has "section-adoration-and-praise"
 
+// "river" finds hymn 74 by its title and hymn 530 by another of its lines
+// (picked by a Bun script over the current app's `find`); only 530's row
+// shows the line, under its title, the row taller than a title's alone.
+test "A hymn found by a line shows that line"
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "river"
+  clock settle
+  clock data
+  expect tree has "hymn-74"
+  expect tree missing "row-line-74"
+  expect tree has "hymn-530"
+  expect tree has "row-line-530"
+  expect state listRows.0 .rows.0 .line == ""
+  expect state listRows.0 .slug == "found"
+
 test "The box clears while it has words"
   tap "find-search"
   clock settle
