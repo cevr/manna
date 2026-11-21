@@ -1,23 +1,26 @@
-/* oxlint-disable effect/noTernary -- a Bun test in an Exact app's folder imports no effect (src/sources.test.ts): a topic's parent, an effect Option, is read by its tag. */
+/* oxlint-disable effect/noTernary, effect/noGlobals -- a Bun test in an Exact app's folder imports no effect (src/sources.test.ts): a topic's parent, an effect Option, is read by its tag, and the written table's JSON text is read back as the bundler reads it. */
 
 /**
  * The About-this-hymn sheet's rows are the current app's: for each hymn of
  * a table spread over the book, `aboutAt` answers what `About.tsx` draws,
  * computed here from the current app's own modules in the order it draws
  * them (its `hymnRows`, `Group` and rows), and nothing for a number the
- * hymnal lacks. The declarations Exact's type check reads are held to the
- * modules they declare.
+ * hymnal lacks. The table of `More like this` the build writes
+ * (`nearest.ts`) is the current app's `moreLike` for every hymn. The
+ * declarations Exact's type check reads are held to the modules they
+ * declare.
  */
 
 import { describe, expect, it } from 'bun:test';
 
-import { hymnAt } from '@manna/hymnal-app/hymns/hymns';
+import { hymnAt, hymns } from '@manna/hymnal-app/hymns/hymns';
 import * as indexes from '@manna/hymnal-app/hymns/indexes';
 import * as meaning from '@manna/hymnal-app/hymns/meaning';
 import * as rules from '@manna/hymnal-app/reader/about-rules';
 
 import { book } from '../hymns/book.ts';
 import { aboutAt, noHymn } from './about.ts';
+import { nearestRows, nearestText } from './nearest.ts';
 import type * as RulesDecl from './decl/about-rules';
 import type * as IndexesDecl from './decl/indexes';
 import type * as MeaningDecl from './decl/meaning';
@@ -113,14 +116,28 @@ const drawn = (number: number) => {
 /** Five hymns across the book: the first, the last, and three between. */
 const TABLE = [1, 100, 229, 462, 695];
 
+/** The table the build writes, as the data module reads it. */
+const rows = nearestRows();
+const nearest = new Map(rows);
+
 describe('About this hymn', () => {
+  it("the written table is the current app's moreLike for every hymn, and its text holds it", () => {
+    expect(rows).toEqual(
+      hymns.map((hymn) => [hymn.number, held.meaning.moreLike(hymn.number, held.rules.MORE_LIKE)]),
+    );
+    const text = nearestText(rows);
+    expect(
+      JSON.parse(text.slice(text.indexOf('export default ') + 15, text.lastIndexOf(' as '))),
+    ).toEqual(rows);
+  });
+
   for (const number of TABLE)
     it(`answers hymn ${number}'s rows as the current sheet draws them`, () => {
-      expect(aboutAt(book, String(number))).toEqual(drawn(number));
+      expect(aboutAt(book, nearest, String(number))).toEqual(drawn(number));
     });
 
   it('the table meets every kind of row and a section left out', () => {
-    const pages = TABLE.map((number) => aboutAt(book, String(number)));
+    const pages = TABLE.map((number) => aboutAt(book, nearest, String(number)));
     const kinds = new Set(
       pages.flatMap((page) => page.groups.flatMap((g) => g.rows.map((r) => r.kind))),
     );
@@ -132,7 +149,7 @@ describe('About this hymn', () => {
   });
 
   it('answers no hymn for a number the hymnal lacks', () => {
-    expect(['0', '696', '999', 'abc', ''].map((n) => aboutAt(book, n))).toEqual(
+    expect(['0', '696', '999', 'abc', ''].map((n) => aboutAt(book, nearest, n))).toEqual(
       Array.from({ length: 5 }, () => noHymn),
     );
   });

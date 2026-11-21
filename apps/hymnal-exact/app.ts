@@ -1,4 +1,5 @@
 import type { Answer, Sources } from './app.contract.d.ts';
+import nearest from './src/abouthymn/nearest.gen';
 import chords from './src/chords/chords.gen';
 import timing from './src/player/timing.gen';
 import { sourcesAt } from './src/sources.ts';
@@ -17,6 +18,6 @@ export const grants = {
   'http://127.0.0.1:4797': 'net.fetch http://127.0.0.1:4797',
 };
 
-const sources: Sources = sourcesAt(origin, timing, chords);
+const sources: Sources = sourcesAt(origin, timing, chords, nearest);
 export const answer: Answer = (source, args, store, storage, native) =>
   sources[source](args, store, storage, native);

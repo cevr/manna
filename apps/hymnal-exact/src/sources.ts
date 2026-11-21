@@ -5,7 +5,9 @@
  * recordings are served from `origin` (held to the bucket or a loopback
  * fixture by `originOf`) and its stanzas timed by `timing` (`app.ts` passes
  * the written `src/player/timing.gen.ts`); the chords are `chords`, one
- * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`).
+ * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
+ * `nearest` is each hymn's More like this (the written
+ * `src/abouthymn/nearest.gen.ts`).
  */
 
 import { abouthymnSources } from './abouthymn/sources.ts';
@@ -23,6 +25,7 @@ export const sourcesAt = (
   origin: string,
   timing: ReadonlyArray<readonly [number, string]>,
   chords: ReadonlyArray<readonly [number, string]> = [],
+  nearest: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [],
 ) => ({
   ...listSources(book),
   ...hymnSources(book, chords),
@@ -32,5 +35,5 @@ export const sourcesAt = (
   ...findSources(book),
   ...chordsSources(book, chords),
   ...railSources(book),
-  ...abouthymnSources(book),
+  ...abouthymnSources(book, nearest),
 });

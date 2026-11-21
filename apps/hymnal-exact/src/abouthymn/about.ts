@@ -3,7 +3,8 @@
 /**
  * The About-this-hymn sheet's rows, as the current app's sheet computes
  * them (`apps/hymnal/src/reader/About.tsx`): `More like this`, the hymns
- * whose meaning lies nearest (`moreLike`, `MORE_LIKE` of them); `Topics`,
+ * whose meaning lies nearest (`moreLike`, `MORE_LIKE` of them, read from
+ * `nearest`, the table `make.ts` writes at build time); `Topics`,
  * the Topical index's topics the hymn is listed under, each with its
  * heading; `Scripture`, the passages the Scriptural index gives it, each
  * with the query that searches for where it begins; and `Sing to another
@@ -18,8 +19,7 @@ import {
   sameMetre,
   topicsOf,
 } from '@manna/hymnal-app/hymns/indexes';
-import { moreLike } from '@manna/hymnal-app/hymns/meaning';
-import { ABOUT_GROUPS, MORE_LIKE } from '@manna/hymnal-app/reader/about-rules';
+import { ABOUT_GROUPS } from '@manna/hymnal-app/reader/about-rules';
 
 import type { Book } from '../hymns/book.ts';
 import { hymnAt } from '../hymn/page.ts';
@@ -71,13 +71,16 @@ const hymnRows = (book: Book, numbers: ReadonlyArray<number>, prefix: string): A
     ];
   });
 
-/** The sheet for the hymn route param `number` names, or `noHymn`. */
-export const aboutAt = (book: Book, number: string): AboutPage => {
+/** Each hymn's nearest hymns, by number: the written table. */
+export type Nearest = ReadonlyMap<number, ReadonlyArray<number>>;
+
+/** The sheet for the hymn route param `number` names, or `noHymn`, its `More like this` from `nearest`. */
+export const aboutAt = (book: Book, nearest: Nearest, number: string): AboutPage => {
   const hymn = hymnAt(book, number);
   if (hymn === undefined) return noHymn;
   const { like, topics, scripture, tune } = ABOUT_GROUPS;
   const groups: Array<AboutGroup> = [
-    { name: like, rows: hymnRows(book, moreLike(hymn.number, MORE_LIKE), 'about-like') },
+    { name: like, rows: hymnRows(book, nearest.get(hymn.number) ?? [], 'about-like') },
     {
       name: topics,
       rows: topicsOf(hymn.number).map((topic, i) => ({
