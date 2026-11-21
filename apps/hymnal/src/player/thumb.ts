@@ -73,6 +73,9 @@ export interface Step {
   readonly cues: ReadonlyArray<Cue>;
 }
 
+/** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
+export const RESET_WAIT = 600;
+
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
 /** The transpose, -5 to 6, that sounds a hymn printed in `printed` in the key on `pitch`. */
