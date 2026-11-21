@@ -35,6 +35,7 @@ const held = {
     RESET_WAIT: thumb.RESET_WAIT,
     ThumbEvent: thumb.ThumbEvent,
     step: thumb.step,
+    isStill: thumb.isStill,
     transposeTo: thumb.transposeTo,
     chipsOf: thumb.chipsOf,
     shownOf: thumb.shownOf,

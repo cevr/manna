@@ -1,54 +1,44 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's data module reads no effect here (docs/exact.md): a hymn with no printed key is `undefined`, and a call branches plainly. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's data module reads no effect of its own (docs/exact.md): a hymn with no printed key is `undefined`, and a call branches plainly. */
 
 /**
  * The key button's sources, as `app.ts` registers them over the shipped
- * chords (`chords.gen.ts`, decoded only for the hymn asked):
+ * chords (`chords.gen.ts`, decoded only for the hymn asked). Every rule is
+ * the current app's own, imported: the key button's model
+ * (`@manna/hymnal-app/player/thumb`) and its press
+ * (`@manna/hymnal-app/player/wheel`); these sources turn a call's
+ * arguments into their events and their answers into plain shapes.
  *
  * - `keysPlaces()`: the current app's measures (`PLACES`);
  * - `keysPage(route, on, moves, open)`: what the key button, its dials and
- *   its wheel show for the route's hymn (`thumb.ts`); the printed key is the
- *   hymn's chords' key in the current app's default Simple style, as its
+ *   its wheel show for the route's hymn; the printed key is the hymn's
+ *   chords' key in the current app's default Simple style, as its
  *   `useThumb` reads it;
- * - `keysStep(kind, value, route, on, moves, open)`: one event of
- *   `thumb.ts`'s `step`, answered as the stores after it (chords on, the
- *   kept moves, the dials open), its cue, and whether the bar waits
- *   `RESET_WAIT` before it closes the dials (a reset that turned the rows
- *   home);
- * - `keysPress(kind, x, y, t, offered)`: one event of the key button's press
- *   (`wheel.ts`), its state kept here, one per launch, as find's is, so a
- *   press's events step in the order they came. `down` lands at `x`, `y` in
- *   the key button's box; `pan` moves the finger by `x`, `y` since the last;
- *   `up` lifts it at a release speed `y` up the screen; `cancel`; `tick`
- *   tells the clock. The answer says what the press did (a tap, a hold, the
- *   item entered or picked), the wheel as it stands now, and whether the
- *   press slid off before its hold (`swipe`, with the finger's pull up and
- *   its speed), which is the bar's swipe up to open the full player.
+ * - `keysStep(kind, value, route, on, moves, open)`: one event of the
+ *   model's `step`, answered as the stores after it (chords on, the kept
+ *   moves, the dials open), its cue, and whether the bar waits `RESET_WAIT`
+ *   before it closes the dials (a reset that turned the rows home). A hymn
+ *   with no printed key takes only a hold, a page tap and a tap with chords
+ *   off, stepped from C major, as the current `Dials.tsx` has it;
+ * - `keysPress(kind, x, y, t, offered)`: one event of the key button's press,
+ *   its state kept here, one per launch, as find's is, so a press's events
+ *   step in the order they came. `down` lands at `x`, `y` in the key
+ *   button's box; `pan` moves the finger by `x`, `y` since the last; `up`
+ *   lifts it at a release speed `y` up the screen; `cancel`; `tick` tells
+ *   the clock. The answer says what the press did (a tap, a hold, the item
+ *   entered or picked), the wheel as it stands now, and whether the press
+ *   slid off before its hold (`swipe`, with the finger's pull up and its
+ *   speed), which is the bar's swipe up to open the full player.
  */
 
 import type { Key } from '@manna/hymnal/chord';
-import { decodeHymn, hasChords, keyName } from '@manna/hymnal-app/hymns/chords';
+import { decodeHymn, hasChords, keyName, soundingKey } from '@manna/hymnal-app/hymns/chords';
 import { simple } from '@manna/hymnal-app/hymns/simple';
+import * as thumb from '@manna/hymnal-app/player/thumb';
+import * as press from '@manna/hymnal-app/player/wheel';
 
+import { moveOf, movesTo } from '../chords/move.ts';
 import { pageAt } from '../hymn/page.ts';
 import type { Book } from '../hymns/book.ts';
-import { moveOf, movesTo } from '../chords/move.ts';
-import {
-  capoSaid,
-  capoStops,
-  faceOf,
-  hintOf,
-  isStill,
-  keyIndexOf,
-  keySaid,
-  keyStops,
-  resetShown,
-  rowsOf,
-  saidOf,
-  stepOn,
-  type Thumb,
-  type ThumbEvent,
-} from './thumb.ts';
-import { idle, ITEM, LIFT, ORIGIN_X, slotOf, step, type Wheel, WORDS } from './wheel.ts';
 
 /** The bar's padding at its left, where the key button stands first in its row, in points. */
 const BAR_PAD = 12;
@@ -57,56 +47,7 @@ const BAR_PAD = 12;
 const KEY_HEIGHT = 44;
 
 /** The wheel's origin in the key button's own box. */
-const ORIGIN = { x: ORIGIN_X - BAR_PAD, y: KEY_HEIGHT / 2 } as const;
-
-interface Shipped {
-  readonly encoded: ReadonlyMap<number, string>;
-  readonly decode: (encoded: string) => ReturnType<typeof decodeHymn>;
-}
-
-/** Hymn `number`'s printed key as the dials read it, or none for a hymn with no chords. */
-const printedOf = (shipped: Shipped, number: number): Key | undefined => {
-  const encoded = shipped.encoded.get(number);
-  if (encoded === undefined) return undefined;
-  const decoded = shipped.decode(encoded);
-  if (decoded._tag === 'None' || !hasChords(decoded.value)) return undefined;
-  return simple(decoded.value).key;
-};
-
-/** The thumb's event a call names, or none for a kind it does not know. */
-export const eventOf = (kind: string, value: number): ThumbEvent | undefined => {
-  switch (kind) {
-    case 'tap':
-    case 'hold':
-    case 'page':
-    case 'reset':
-    case 'shown':
-      return { kind };
-    case 'key':
-      return { kind, pitch: value };
-    case 'step':
-      return { kind, by: value };
-    case 'capo':
-      return { kind, capo: value };
-    default:
-      return undefined;
-  }
-};
-
-/** What the wheel answers: the press's outputs, the wheel drawn, and a slide off before the hold. */
-export interface PressView {
-  readonly tap: boolean;
-  readonly hold: boolean;
-  readonly enter: string;
-  readonly pick: string;
-  readonly pressing: boolean;
-  readonly open: boolean;
-  readonly over: string;
-  readonly items: Array<{ item: string; word: string; x: number; y: number }>;
-  readonly swipe: boolean;
-  readonly pull: number;
-  readonly speed: number;
-}
+const ORIGIN = { x: press.ORIGIN_X - BAR_PAD, y: KEY_HEIGHT / 2 };
 
 /**
  * The current app's measures of the key button, its dials and its wheel,
@@ -118,7 +59,8 @@ export interface PressView {
  * gap, its ring and the ring's gap, the bar at rest, the wheel's origin
  * across the bar, an item's size, padding and grown scale, the key button
  * dimmed with chords off and pressed in, the backdrop's opacity, and the
- * letter spacing over the key and of a dial's name.
+ * letter spacing over the key and of a dial's name. `src/keys/held.test.ts`
+ * reads each from the current app's files.
  */
 export const PLACES = {
   detent: 52,
@@ -139,11 +81,11 @@ export const PLACES = {
   ring: 2,
   ringGap: 3,
   rest: 56,
-  originX: ORIGIN_X,
-  itemWide: ITEM.width,
-  itemHigh: ITEM.height,
+  originX: press.ORIGIN_X,
+  itemWide: press.ITEM.width,
+  itemHigh: press.ITEM.height,
   itemPad: 12,
-  lift: LIFT,
+  lift: press.LIFT,
   dim: 0.5,
   pressed: 0.9,
   backdrop: 0.7,
@@ -151,13 +93,130 @@ export const PLACES = {
   titleSpacing: 1.1,
 };
 
-/** The press as it stands, one per launch: the rule's state, the finger in the key button's box, its pull up so far, and whether it slid off before its hold. */
+/** The seven letters, each at its pitch class above C, a space at each black key. */
+const LETTERS = 'C D EF G A B';
+
+/** The pitch class of a tonic as the hymnal spells it ("Db", "F#"), 0 = C, where the key dial stands. */
+export const pitchOf = (tonic: string): number => {
+  const letter = Math.max(0, LETTERS.indexOf(tonic.charAt(0)));
+  const marks = [...tonic.slice(1)];
+  const by =
+    marks.filter((mark) => mark === '#').length - marks.filter((mark) => mark === 'b').length;
+  return (((letter + by) % 12) + 12) % 12;
+};
+
+/** The key a hymn with no printed key steps from. */
+const NO_KEY: Key = { tonic: 'C', minor: false };
+
+interface Shipped {
+  readonly encoded: ReadonlyMap<number, string>;
+  readonly decode: (encoded: string) => ReturnType<typeof decodeHymn>;
+}
+
+/** Hymn `number`'s printed key as the dials read it, or none for a hymn with no chords. */
+const printedOf = (shipped: Shipped, number: number): Key | undefined => {
+  const encoded = shipped.encoded.get(number);
+  if (encoded === undefined) return undefined;
+  const decoded = shipped.decode(encoded);
+  if (decoded._tag === 'None' || !hasChords(decoded.value)) return undefined;
+  return simple(decoded.value).key;
+};
+
+/** The model's event a call names, or none for a kind it does not know. */
+export const eventOf = (kind: string, value: number): thumb.ThumbEvent | undefined => {
+  switch (kind) {
+    case 'tap':
+      return thumb.ThumbEvent.Tap();
+    case 'hold':
+      return thumb.ThumbEvent.Hold();
+    case 'page':
+      return thumb.ThumbEvent.TapPage();
+    case 'reset':
+      return thumb.ThumbEvent.Reset();
+    case 'shown':
+      return thumb.ThumbEvent.ResetShown();
+    case 'key':
+      return thumb.ThumbEvent.TurnKey({ pitch: value });
+    case 'step':
+      return thumb.ThumbEvent.StepKey({ by: value });
+    case 'capo':
+      return thumb.ThumbEvent.TurnCapo({ capo: value });
+    default:
+      return undefined;
+  }
+};
+
+/** The events a hymn with no printed key takes: a hold, a tap on the page, and a tap with chords off. */
+const keyless = (event: thumb.ThumbEvent, chords: boolean): boolean =>
+  event._tag === 'Hold' || event._tag === 'TapPage' || (event._tag === 'Tap' && !chords);
+
+/** The model's `step` for a hymn whose printed key may be none: none takes only the keyless events, and the rest change nothing. */
+export const stepOn = (
+  printed: Key | undefined,
+  state: thumb.Thumb,
+  event: thumb.ThumbEvent,
+): thumb.Step => {
+  if (printed !== undefined) return thumb.step(printed, state, event);
+  if (keyless(event, state.chords)) return thumb.step(NO_KEY, state, event);
+  return { state, cues: [] };
+};
+
+/** What the wheel answers: the press's outputs, the wheel drawn, and a slide off before the hold. */
+export interface PressView {
+  readonly tap: boolean;
+  readonly hold: boolean;
+  readonly enter: string;
+  readonly pick: string;
+  readonly pressing: boolean;
+  readonly open: boolean;
+  readonly over: string;
+  readonly items: Array<{ item: string; word: string; x: number; y: number }>;
+  readonly swipe: boolean;
+  readonly pull: number;
+  readonly speed: number;
+}
+
+/** The press as it stands, one per launch: the model's wheel, the finger in the key button's box, its pull up so far, and whether it slid off before its hold. */
 interface Press {
-  wheel: Wheel;
+  wheel: press.Wheel;
   at: { x: number; y: number };
   pull: number;
   slid: boolean;
 }
+
+/** The press's event a call names. */
+const pressEventOf = (
+  kind: string,
+  x: number,
+  y: number,
+  t: number,
+  offered: boolean,
+  at: { readonly x: number; readonly y: number },
+): press.WheelEvent => {
+  switch (kind) {
+    case 'down':
+      return press.WheelEvent.Down({
+        x,
+        y,
+        t,
+        setup: { wheel: offered, ear: false, origin: ORIGIN },
+      });
+    case 'pan':
+      return press.WheelEvent.Move({ x: at.x + x, y: at.y + y, t });
+    case 'up':
+      return press.WheelEvent.Up({ t });
+    case 'tick':
+      return press.WheelEvent.Tick({ t });
+    default:
+      return press.WheelEvent.Cancel();
+  }
+};
+
+/** The item an output names, or "" for none of that kind. */
+const itemOf = (outs: ReadonlyArray<press.Out>, tag: 'Enter' | 'Pick'): string => {
+  for (const out of outs) if (out._tag === tag) return out.item;
+  return '';
+};
 
 export const keysSources = (
   book: Book,
@@ -165,22 +224,13 @@ export const keysSources = (
   decode: Shipped['decode'] = (encoded) => decodeHymn(encoded),
 ) => {
   const shipped: Shipped = { encoded: new Map(bundled), decode };
-  const press: Press = {
-    wheel: idle,
-    at: { x: 0, y: 0 },
-    pull: 0,
-    slid: false,
-  };
+  const held: Press = { wheel: press.idle, at: { x: 0, y: 0 }, pull: 0, slid: false };
   const thumbOf = (
     on: boolean,
     moves: ReadonlyArray<string>,
     number: number,
     open: boolean,
-  ): Thumb => ({
-    chords: on,
-    move: moveOf(moves, number),
-    open,
-  });
+  ): thumb.Thumb => ({ chords: on, move: moveOf(moves, number), open });
   return {
     keysPlaces: () => ({ ...PLACES }),
     keysPage: ([route, on, moves, open]: readonly [
@@ -192,30 +242,31 @@ export const keysSources = (
       const number = pageAt(book, route).number;
       const printed = number === 0 ? undefined : printedOf(shipped, number);
       const state = thumbOf(on, moves, number, open);
-      const face =
-        printed === undefined ? { on: false, over: '', key: '' } : faceOf(printed, state);
-      const rows = rowsOf(state);
+      const face = printed === undefined ? undefined : thumb.faceOf(printed, state);
+      const lit = face !== undefined && face._tag === 'Key';
       return {
         number,
         has: printed !== undefined,
         on,
         open,
-        face: face.on,
-        over: face.over,
-        key: face.key,
-        said: saidOf(printed, state),
-        hint: hintOf(printed, state),
+        face: lit,
+        over: lit ? face.over : '',
+        key: lit ? face.key : '',
+        said:
+          printed === undefined ? (on ? 'No chords' : 'Chords off') : thumb.saidOf(printed, state),
         offered: on && printed !== undefined,
-        reset: resetShown(state),
+        reset: thumb.chipsOf(state).includes('reset'),
         printedName: printed === undefined ? '' : keyName(printed),
-        capoRow: rows.includes('capo'),
-        keyStops: printed === undefined ? [] : keyStops(printed).map((stop) => ({ ...stop })),
-        keyAt: printed === undefined ? 0 : keyIndexOf(printed, state.move),
-        keySaid: printed === undefined ? '' : keySaid(printed, state.move),
+        capoRow: thumb.shownOf(state).includes('capo'),
+        keyStops: printed === undefined ? [] : thumb.keyStops(printed).map((stop) => ({ ...stop })),
+        keyAt: printed === undefined ? 0 : pitchOf(soundingKey(printed, state.move).tonic),
+        keySaid: printed === undefined ? '' : thumb.keySaid(printed, state.move),
         capoStops:
-          printed === undefined ? [] : capoStops(printed, state.move).map((stop) => ({ ...stop })),
+          printed === undefined
+            ? []
+            : thumb.capoStops(printed, state.move).map((stop) => ({ ...stop })),
         capo: state.move.capo,
-        capoSaid: printed === undefined ? '' : capoSaid(printed, state.move),
+        capoSaid: printed === undefined ? '' : thumb.capoSaid(printed, state.move),
       };
     },
     keysStep: ([kind, value, route, on, moves, open]: readonly [
@@ -236,8 +287,8 @@ export const keysSources = (
         chords: next.state.chords,
         moves: movesTo(moves, number, next.state.move),
         open: next.state.open,
-        cue: next.cue,
-        wait: event.kind === 'reset' && !isStill(state.move) && next.state.open,
+        cue: next.cues[0]?._tag ?? '',
+        wait: event._tag === 'Reset' && !thumb.isStill(state.move) && next.state.open,
       };
     },
     keysPress: ([kind, x, y, t, offered]: readonly [
@@ -247,47 +298,37 @@ export const keysSources = (
       number,
       boolean,
     ]): PressView => {
-      const was = press.wheel;
-      const event =
-        kind === 'down'
-          ? ({ kind, x, y, t, setup: { wheel: offered, ear: false, origin: ORIGIN } } as const)
-          : kind === 'pan'
-            ? ({ kind: 'move', x: press.at.x + x, y: press.at.y + y, t } as const)
-            : kind === 'up' || kind === 'tick'
-              ? ({ kind, t } as const)
-              : ({ kind: 'cancel' } as const);
-      if (event.kind === 'down') {
-        press.at = { x, y };
-        press.pull = 0;
-        press.slid = false;
+      const was = held.wheel;
+      const event = pressEventOf(kind, x, y, t, offered, held.at);
+      if (event._tag === 'Down') {
+        held.at = { x, y };
+        held.pull = 0;
+        held.slid = false;
       }
-      if (event.kind === 'move') {
-        press.at = { x: event.x, y: event.y };
-        press.pull += y;
+      if (event._tag === 'Move') {
+        held.at = { x: event.x, y: event.y };
+        held.pull += y;
       }
-      const next = step(was, event);
-      press.wheel = next.wheel;
-      if (was.kind === 'pressing' && next.wheel.kind === 'idle' && event.kind === 'move')
-        press.slid = true;
-      const ended = event.kind === 'up';
-      const out = (kind: string) => next.outs.find((each) => each.kind === kind);
-      const enter = out('enter');
-      const pick = out('pick');
+      const next = press.step(was, event);
+      held.wheel = next.wheel;
+      if (was._tag === 'Pressing' && next.wheel._tag === 'Idle' && event._tag === 'Move')
+        held.slid = true;
+      const ended = event._tag === 'Up';
       const wheel = next.wheel;
       return {
-        tap: out('tap') !== undefined,
-        hold: out('hold') !== undefined,
-        enter: enter !== undefined && enter.kind === 'enter' ? enter.item : '',
-        pick: pick !== undefined && pick.kind === 'pick' ? pick.item : '',
-        pressing: wheel.kind === 'pressing',
-        open: wheel.kind === 'open',
-        over: wheel.kind === 'open' ? (wheel.over ?? '') : '',
+        tap: next.outs.some((out) => out._tag === 'Tap'),
+        hold: next.outs.some((out) => out._tag === 'Hold'),
+        enter: itemOf(next.outs, 'Enter'),
+        pick: itemOf(next.outs, 'Pick'),
+        pressing: wheel._tag === 'Pressing',
+        open: wheel._tag === 'Open',
+        over: wheel._tag === 'Open' && wheel.over._tag === 'Some' ? wheel.over.value : '',
         items:
-          wheel.kind === 'open'
-            ? wheel.items.map((item) => ({ item, word: WORDS[item], ...slotOf(item) }))
+          wheel._tag === 'Open'
+            ? wheel.items.map((item) => ({ item, word: press.WORDS[item], ...press.slotOf(item) }))
             : [],
-        swipe: ended && press.slid,
-        pull: press.pull,
+        swipe: ended && held.slid,
+        pull: held.pull,
         speed: ended ? y : 0,
       };
     },

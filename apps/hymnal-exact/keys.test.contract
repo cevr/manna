@@ -92,7 +92,7 @@ test "A tap above the bar, or on the key button, closes the dials."
   clock data
   clock settle
   expect tree has "dials-backdrop"
-  tap "dials-backdrop" at 20 20
+  tap "dials-backdrop"
   clock data
   clock settle
   expect state keysOpen == false

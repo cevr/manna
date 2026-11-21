@@ -35,7 +35,6 @@ shape KeysPage
   over: string
   key: string
   said: string
-  hint: string
   offered: bool
   reset: bool
   printedName: string
