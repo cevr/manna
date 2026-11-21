@@ -9,7 +9,7 @@
  * (`LONG_SECONDS`), so a stanza choice has lines to cut. Both are digital
  * silence (every sample at rest), so nothing a test plays can sound. Hymn
  * `MISSING_HYMN` has no recording: 404, as the bucket answers a key it
- * does not hold. `bun tools/recordings.ts --port` prints this checkout's
+ * does not hold; hymn `SLOW_HYMN`'s is served late. `bun tools/recordings.ts --port` prints this checkout's
  * own port (`checkoutPort`), the one its drives use.
  */
 
@@ -21,6 +21,9 @@ export const SHORT_SECONDS = 6;
 export const LONG_HYMN = 2;
 export const LONG_SECONDS = 240;
 export const MISSING_HYMN = 13;
+/** Hymn `SLOW_HYMN`'s recording is served `SLOW_MS` late, so a test sees the player wait on its load (player.test.contract). */
+export const SLOW_HYMN = 4;
+export const SLOW_MS = 3000;
 
 const RATE = 8000;
 
@@ -106,6 +109,12 @@ export const answer = (request: Request): Response => {
   return served(request, hymn === LONG_HYMN ? long : short);
 };
 
+/** The server's answer to `request`: the fixture's, `SLOW_MS` late for hymn `SLOW_HYMN`. */
+const late = (request: Request): Response | Promise<Response> =>
+  hymnOf(new URL(request.url).pathname) === SLOW_HYMN
+    ? Bun.sleep(SLOW_MS).then(() => answer(request))
+    : answer(request);
+
 /**
  * This checkout's own fixture port, in 4790–5789 as Exact gives a declared
  * fixture's (one per real app directory, `@manna/exact-kit/port`'s
@@ -119,6 +128,6 @@ export const checkoutPort = (): number => portOf(join(import.meta.dir, '..'));
 if (import.meta.main && process.argv.includes('--port')) console.log(checkoutPort());
 else if (import.meta.main) {
   const port = Number(process.env.PORT ?? checkoutPort());
-  Bun.serve({ hostname: '127.0.0.1', port, fetch: answer });
+  Bun.serve({ hostname: '127.0.0.1', port, fetch: late });
   console.log(`[recordings] listening port=${port}`);
 }
