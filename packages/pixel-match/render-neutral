@@ -13,3 +13,7 @@ ad8529417032 move: the credit's head template and its closing '.', unchanged, fr
 7f48f02da8c2 exports: one exports line in apps/hymnal/package.json (./chord-choices); no source changes
 70b7bef84eac exports: one exports line in apps/hymnal/package.json (./gemma-notice); no source changes
 681f9dfdafbc exports: one exports line in apps/hymnal/package.json (./meaning/gemma-terms, the Terms asset); no source changes
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button); One's only change in the commit
+4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
