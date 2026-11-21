@@ -61,7 +61,8 @@ component PlayerDock
 // centre while that hymn is the page's own, and opens the full player.
 // Then the page's compact Play while another hymn sounds over it, the
 // Sound switch, and the player's button as a mark, or a spinner while it
-// loads. A hymn page's own bar, while nothing is held, shows the grabber,
+// loads, with Retry before Pause once a wait on the network runs long. A
+// hymn page's own bar, while nothing is held, shows the grabber,
 // Sound and the page's Play. While the bar's hymn sounds the bar grows to
 // hold the seeker under the row. A swipe up on the bar opens the full
 // player. A failure's reason shows under the hymn, where a mark cannot say
@@ -105,6 +106,8 @@ component PlayerBarFrame
             row align-items="center" justify-content="center" width="size.target" height="size.target" flex-shrink=0 testId="bar-loading"
               progress width="size.glyph" height="size.glyph" aria-label=player.bar.label
           else if player.bar.kind != ""
+            if player.bar.retry != ""
+              PlayerMark(symbol="symbol:sf/arrow.clockwise", press=ask("retry", 0), id="bar-retry", name=player.bar.retry)
             PlayerMark(symbol=player.bar.mark, press=ask("bar", 0), id="bar-toggle", name=player.bar.label)
       if player.bar.seeker and not player.pageBar
         PlayerSeeker(player=player, ask=ask)

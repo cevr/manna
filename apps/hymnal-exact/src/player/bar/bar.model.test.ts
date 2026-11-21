@@ -6,7 +6,9 @@
  * step, the hymn the port's bar shows, the page's hymn beside it, the
  * player's button (its kind and the name VoiceOver reads), whether the
  * seeker shows and what the opener tells VoiceOver are what the current
- * app gives for the same player and page. The marks are the current
+ * app gives for the same player and page, Retry before Pause once a
+ * buffering wait has run long (its `Buffering` `retry`, after its
+ * `giveUpAfter`, the port's `WAIT`). The marks are the current
  * `BarMark.ios.tsx`'s symbols, the swipe up is `swipedDown` turned over,
  * and the Sound switch starts on, as the current `settings.ts` keeps it.
  */
@@ -21,7 +23,7 @@ import { Option } from 'effect';
 import { below, seeded } from '../../test/random.ts';
 import { current } from '../current.testing.ts';
 import { TRACKS, inputOf, titleOf } from '../fixtures.testing.ts';
-import { type State, initial, pageOf, step, timesOf } from '../step.ts';
+import { type State, WAIT, initial, pageOf, step, timesOf } from '../step.ts';
 import { barOf } from './view.ts';
 
 declare module '@manna/hymnal-app/player/bar' {
@@ -38,6 +40,12 @@ declare module '@manna/hymnal-app/player/bar' {
 }
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+
+/** The bar's buttons in the order drawn, each its kind and name: Retry first while offered. */
+const drawnOf = (ours: ReturnType<typeof barOf>) => [
+  ...(ours.retry === '' ? [] : [['retry', ours.retry]]),
+  [ours.kind, ours.label],
+];
 
 const statesOf = (seed: number, steps: number): ReadonlyArray<State> => {
   const random = seeded(seed);
@@ -65,7 +73,7 @@ describe('the bar is the current app’s over play histories', async () => {
     if (h.phase === 'loading') return Player.Loading({ track });
     if (h.phase === 'playing') return Player.Playing({ track, at: elapsed, length });
     if (h.phase === 'buffering')
-      return Player.Buffering({ track, at: elapsed, length, retry: false });
+      return Player.Buffering({ track, at: elapsed, length, retry: h.waited });
     if (h.phase === 'paused') return Player.Paused({ track, at: elapsed, length });
     if (h.phase === 'ended') return Player.Ended({ track, length });
     return Player.Failed({ track, offline: h.why === 'network', at: Option.none() });
@@ -73,6 +81,7 @@ describe('the bar is the current app’s over play histories', async () => {
 
   it('shows the same hymn, button, seeker and told place after every step', () => {
     let shown = 0;
+    let retries = 0;
     const kinds = new Set<string>();
     for (let seed = 1; seed <= 120; seed++)
       for (const state of statesOf(seed, 40)) {
@@ -94,13 +103,14 @@ describe('the bar is the current app’s over play histories', async () => {
           continue;
         }
         const buttons = buttonsOf(theirs.state, theirs.track);
-        expect(buttons.length).toBe(1);
-        expect(ours.kind).toBe(buttons[0]?.kind ?? '');
-        expect(ours.label).toBe(buttons[0]?.label ?? '');
+        const drawn = drawnOf(ours);
+        expect(drawn).toEqual(buttons.map((button) => [button.kind, button.label]));
+        retries += drawn.length - 1;
         kinds.add(ours.kind);
         shown++;
       }
     expect(shown).toBeGreaterThan(1000);
+    expect(retries).toBeGreaterThan(0);
     expect([...kinds].toSorted()).toEqual(['again', 'loading', 'pause', 'play', 'retry']);
   });
 
@@ -126,8 +136,56 @@ describe('the bar is the current app’s over play histories', async () => {
         else expect(ours.mark).toBe(`symbol:sf/${symbolOf(ours.kind)}`);
       }
     const contract = read('../../../features/bar.contract');
+    expect(contract).toContain(
+      `PlayerMark(symbol="symbol:sf/${symbolOf('retry')}", press=ask("retry", 0), id="bar-retry", name=player.bar.retry)`,
+    );
     expect(contract).toContain(`"symbol:sf/${symbolOf('sound-on')}"`);
     expect(contract).toContain(`"symbol:sf/${symbolOf('sound-off')}"`);
+  });
+
+  it('a long wait offers Retry before Pause, as the current buttonsOf, and a press loads again from the place', () => {
+    const track = TRACKS[0]!;
+    const run = (state: State, inputs: ReadonlyArray<Parameters<typeof step>[1]>) =>
+      inputs.reduce((at, input) => step(at, input).state, state);
+    const started = run(initial, [{ _tag: 'play', track }]);
+    const load = started.held?.load ?? 0;
+    const buffering = run(started, [
+      { _tag: 'loaded', id: load, duration: 30 },
+      { _tag: 'played', id: load },
+      { _tag: 'playing', id: load },
+      { _tag: 'time', id: load, serial: 0, seconds: 4 },
+      { _tag: 'waiting', id: load },
+    ]);
+    expect(barOf(buffering, titleOf).retry).toBe('');
+    const waited = run(buffering, [{ _tag: 'waited', id: load }]);
+    const { elapsed, total } = timesOf(waited);
+    const theirs = buttonsOf(
+      Player.Buffering({
+        track: { number: track.number, title: track.title },
+        at: elapsed,
+        length: Option.some(total),
+        retry: true,
+      }),
+      { number: track.number, title: track.title },
+    );
+    const bar = barOf(waited, titleOf);
+    expect([bar.retry, bar.label]).toEqual(theirs.map((button) => button.label));
+    expect(barOf(run(waited, [{ _tag: 'waited', id: load - 1 }]), titleOf).retry).toBe(bar.retry);
+    expect(barOf(run(waited, [{ _tag: 'playing', id: load }]), titleOf).retry).toBe('');
+    expect(barOf(run(waited, [{ _tag: 'pause' }]), titleOf).retry).toBe('');
+    const retried = step(waited, { _tag: 'retry' });
+    expect(retried.command).toEqual({ _tag: 'load', url: track.url, id: load + 1, from: 4 });
+    expect(barOf(retried.state, titleOf).retry).toBe('');
+    expect(barOf(run(started, [{ _tag: 'waited', id: load }]), titleOf).retry).toBe('');
+  });
+
+  it('the wait before Retry is the current player’s, and the contract counts it', () => {
+    expect(read('../../../../hymnal/src/player/player.ts')).toContain(
+      `const giveUpAfter = Duration.seconds(${WAIT / 1000});`,
+    );
+    expect(read('../../../features/player.contract')).toContain(
+      `  task playerWait when player.phase == "buffering" and playerPage.onLine key=player.load\n    after(${WAIT}, playerWaited)\n`,
+    );
   });
 
   it('a swipe up is the current swipedDown turned over', () => {

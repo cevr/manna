@@ -22,6 +22,7 @@ shape PlayerBar
   left: string
   rise: number
   told: string
+  retry: string
 
 shape PlayerChip
   stanza: number
@@ -32,6 +33,11 @@ shape PlayerSession
   artist: string
   duration: number
   playing: bool
+
+// Whether the page is online (`exactPage()`): a long wait offers Retry
+// only online, as the current player's.
+shape PlayerPage
+  onLine: bool
 
 shape PlayerGo
   serial: number
@@ -93,6 +99,7 @@ members HymnalExact
   state playerSkipFrom = -1
   state playerSkipLanded = -1
   derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" ? "/settings" : "/"))).join(" ")
+  resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
   resource playerOnScreen = playerStep("screen", 0, 0, 0, playerPaths) as shape PlayerView
   mutation playerStepped as shape PlayerView queue then playerTook
@@ -142,6 +149,9 @@ members HymnalExact
     send playerStepped = playerStep("failed", id, 0, 0, code)
   action playerRemote(kind: string, way: number, d: MediaSessionActionDetails)
     send playerStepped = playerStep(kind, 0, 0, kind == "remoteSeek" ? d.seekTime : way, "")
+  action playerWaited
+    if playerPage.onLine
+      send playerStepped = playerStep("waited", player.load, 0, 0, "")
   action playerSettled
     send playerStepped = playerStep("settle", player.load, player.seek, 0, "")
   action playerSkipCheck
@@ -152,6 +162,10 @@ members HymnalExact
   // (scrub-rules.ts `settleFor`, held to it by src/player/seek.test.ts).
   task playerSettle when player.holding key=player.seek
     after(2000, playerSettled)
+  // A wait on the network this long, online, offers Retry beside Pause
+  // (src/player/step.ts `WAIT`, the current player's `giveUpAfter`).
+  task playerWait when player.phase == "buffering" and playerPage.onLine key=player.load
+    after(15000, playerWaited)
   // Near a span the stanza choice leaves out, each frame asks whether the
   // runner's clock, from the last tick, has reached its start.
   task playerSkipWatch when player.skipAt >= 0

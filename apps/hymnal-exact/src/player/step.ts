@@ -87,6 +87,8 @@ export interface Held {
   readonly holding: boolean;
   /** The reader's drag on the bar, while one is held. */
   readonly drag: Drag | undefined;
+  /** A buffering wait online has run `WAIT` long: Retry shows beside Pause, as the current app's `Buffering` `retry`. */
+  readonly waited: boolean;
 }
 
 /** A navigation the view asks of the stack, numbered so each is taken once. */
@@ -141,6 +143,7 @@ export type Input =
   | { readonly _tag: 'settle'; readonly id: number; readonly serial: number }
   | { readonly _tag: 'due'; readonly id: number; readonly serial: number; readonly seconds: number }
   | { readonly _tag: 'waiting'; readonly id: number }
+  | { readonly _tag: 'waited'; readonly id: number }
   | { readonly _tag: 'played'; readonly id: number }
   | { readonly _tag: 'playing'; readonly id: number }
   | { readonly _tag: 'paused'; readonly id: number }
@@ -195,6 +198,14 @@ export const sheetUp = (state: State): boolean => {
   const top = state.stack.at(-1);
   return top === SHEET || top === SETTINGS;
 };
+
+/**
+ * How long a buffering wait online runs before Retry shows beside Pause, in
+ * milliseconds: the current app's `giveUpAfter` (`player.ts`, held there by
+ * `bar.model.test.ts`), counted by `features/player.contract`'s `playerWait`
+ * from the element's `waiting`, while the page is online.
+ */
+export const WAIT = 15000;
 
 /** How far ahead of a span's start the runner's clock watches for it, in seconds: one tick and some. */
 export const LEAD = 0.5;
@@ -268,6 +279,7 @@ const loaded = (state: State, track: Track, from: number): State => {
       sought: from,
       holding: false,
       drag: undefined,
+      waited: false,
     },
   };
 };
@@ -497,8 +509,11 @@ const reader = (state: State, input: Input): State => {
       return resume(state);
     case 'stop':
       return { ...state, held: undefined };
-    case 'retry':
-      return state.held?.phase === 'failed' ? resume(state) : state;
+    case 'retry': {
+      const { held } = state;
+      if (held?.phase === 'buffering' && held.waited) return loaded(state, held.track, held.at);
+      return held?.phase === 'failed' ? resume(state) : state;
+    }
     case 'chooseStanza':
       return chosen(state, input.stanza);
     case 'openSheet':
@@ -581,6 +596,10 @@ const device = (state: State, input: Input): State => {
       return onLoad(state, input.id, (held) =>
         held.phase === 'playing' ? { ...held, phase: 'buffering' } : held,
       );
+    case 'waited':
+      return onLoad(state, input.id, (held) =>
+        held.phase === 'buffering' && held.wants === 'play' ? { ...held, waited: true } : held,
+      );
     case 'playing':
       return onLoad(state, input.id, (held) =>
         held.wants === 'play' && (held.phase === 'loading' || held.phase === 'buffering')
@@ -633,8 +652,16 @@ const next = (state: State, input: Input): State => {
     case 'restore':
       return { ...state, choices: { ...input.choices, ...state.choices } };
     default:
-      return device(reader(state, input), input);
+      return unwaited(device(reader(state, input), input));
   }
+};
+
+/** A wait is over once the held hymn no longer buffers, or no longer wants to be heard. */
+const unwaited = (state: State): State => {
+  const { held } = state;
+  if (held === undefined || !held.waited) return state;
+  if (held.phase === 'buffering' && held.wants === 'play') return state;
+  return { ...state, held: { ...held, waited: false } };
 };
 
 /** The inputs that seek only to cross a span the choice leaves out. */

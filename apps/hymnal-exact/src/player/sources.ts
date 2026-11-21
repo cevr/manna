@@ -135,7 +135,13 @@ export const playerSources = (
     if (kind === 'loaded') return { _tag: 'loaded', id, duration: value };
     if (kind === 'time' || kind === 'due') return { _tag: kind, id, serial, seconds: value };
     if (kind === 'seeked' || kind === 'settle') return { _tag: kind, id, serial };
-    if (kind === 'waiting' || kind === 'played' || kind === 'playing' || kind === 'paused')
+    if (
+      kind === 'waiting' ||
+      kind === 'waited' ||
+      kind === 'played' ||
+      kind === 'playing' ||
+      kind === 'paused'
+    )
       return { _tag: kind, id };
     if (kind === 'ended') return { _tag: 'ended', id };
     return undefined;

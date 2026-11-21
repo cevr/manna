@@ -46,6 +46,8 @@ export interface BarView {
   readonly rise: number;
   /** The place and length as the opener tells VoiceOver (`0:30 of 2:00`, the current `toldPlace`); empty while either is unknown. */
   readonly told: string;
+  /** Retry's name, drawn before Pause once a buffering wait has run long (the current `buttonsOf`); empty while it is not offered. */
+  readonly retry: string;
 }
 
 /** What the player says of a hymn in `phase` (failed for `why`). */
@@ -102,6 +104,7 @@ const shownAs = (
   why: Held['why'],
   page: number,
   times: { readonly elapsed: number; readonly total: number },
+  waited = false,
 ): BarView => {
   const kind = kindOf(phase, why);
   const seeker = phase === 'loading' || phase === 'playing' || phase === 'buffering';
@@ -121,6 +124,7 @@ const shownAs = (
     left: times.total > 0 ? `−${clock(Math.max(times.total - times.elapsed, 0))}` : '–:––',
     rise: seeker ? RISE : 0,
     told: toldOf(phase, times),
+    retry: waited && phase === 'buffering' ? labelOf('retry', number) : '',
   };
 };
 
@@ -152,6 +156,7 @@ const hidden: BarView = {
   left: '',
   rise: 0,
   told: '',
+  retry: '',
 };
 
 /**
@@ -165,7 +170,7 @@ export const barOf = (state: State, titleOf: (number: number) => string): BarVie
   const page = pageOf(state);
   const times = timesOf(state);
   const own = (beside: number) =>
-    shownAs(held.track.number, held.track.title, held.phase, held.why, beside, times);
+    shownAs(held.track.number, held.track.title, held.phase, held.why, beside, times, held.waited);
   if (page === undefined) return own(0);
   if (held.track.number !== page && sounding(held)) return own(page);
   if (held.track.number === page) return own(0);

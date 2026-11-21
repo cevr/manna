@@ -238,7 +238,7 @@ describe('the player’s Contract file keeps the current app’s numbers and the
     );
     expect(pill?.[1]).toContain('background-color=(chosen ? "chosen" : "pill")');
     expect(pill?.[2]).toContain('color=(chosen ? "onChosen" : "onPill")');
-    expect(contract.match(/PlayerMark\(/gu)?.length).toBe(2);
+    expect(contract.match(/PlayerMark\(/gu)?.length).toBe(3);
     expect(contract).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|light-dark\(/iu);
     const brand = brandOf(appFile('app.forma'));
     expect(
