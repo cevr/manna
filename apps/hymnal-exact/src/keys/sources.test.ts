@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/preferPredicateIsTagged -- a Bun test drawing generated histories with the app's seeded generator, reading the current app's tagged values plainly. */
+/* oxlint-disable effect/noTernary -- a Bun test drawing generated histories with the app's seeded generator. */
 
 /**
  * The key button's sources answer as the current app's own model and press
