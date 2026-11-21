@@ -14,6 +14,8 @@ import type * as Drums from '../../hymnal-exact/src/find/decl/drums';
 import type * as Rules from '../../hymnal-exact/src/find/decl/find-rules';
 import type * as Mode from '../../hymnal-exact/src/find/decl/search-mode';
 import type * as Rows from '../../hymnal-exact/src/find/decl/rows';
+import type * as MeaningRule from '../../hymnal-exact/src/results/decl/meaning-rule';
+import * as meaningRule from '../src/hymns/meaning-rule';
 import * as rules from '../src/home/find-rules';
 import * as drums from '../src/player/drums';
 import * as rows from '../src/reader/rows';
@@ -35,6 +37,11 @@ export const held = {
     turn: drums.turn,
     foundOffset: drums.foundOffset,
   } satisfies typeof Drums,
+  meaningRule: {
+    tableOf: meaningRule.tableOf,
+    ABOUT: meaningRule.ABOUT,
+    aboutQueryIn: meaningRule.aboutQueryIn,
+  } satisfies typeof MeaningRule,
   rows: {
     plainRowsOf: rows.plainRowsOf,
     STRONG: rows.STRONG,
