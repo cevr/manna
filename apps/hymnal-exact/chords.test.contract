@@ -7,7 +7,7 @@ test "Off by default, the words as before."
   expect tree has "refrain-1"
   expect tree missing "chord-1-1-1"
   expect tree missing "line-1-1"
-  expect tree missing "key-played"
+  expect tree missing "key-over"
 
 test "On, each chord sits over its syllable."
   tap "gear"
@@ -32,10 +32,10 @@ test "On, each chord sits over its syllable."
   expect text "chord-1-1-7" == "Em"
   expect text "chord-1-1-8" == "D"
   expect tree missing "chord-1-1-2"
-  expect text "key-sounding" == "D"
-  expect text "key-played" == "D"
+  expect text "key-over" == "KEY"
+  expect text "key-key" == "D"
 
-test "Transpose and capo rename every chord and both keys."
+test "The dials rename every chord, and the key button names the key played under the capo."
   tap "gear"
   clock settle
   tap "chords-toggle"
@@ -48,34 +48,33 @@ test "Transpose and capo rename every chord and both keys."
   tap "hymn-2"
   clock settle
   clock data
-  tap "transpose-up"
+  tap "key-button"
   clock data
-  tap "transpose-up"
+  clock settle
+  tap "dial-key-stop-4"
   clock data
-  tap "capo-up"
+  tap "dial-capo-stop-1"
   clock data
   clock settle
   expect state chordsMoves.0 == "2:2:1"
   expect state chordsShown.transpose == 2
   expect state chordsShown.capo == 1
-  expect text "key-sounding" == "E"
-  expect text "key-played" == "Eb"
-  expect text "capo" == "Capo 1, played in"
+  expect state keysShown.keySaid == "E"
+  expect text "key-over" == "CAPO 1"
+  expect text "key-key" == "Eb"
   expect text "chord-1-1-1" == "Eb"
   expect text "chord-1-1-6" == "Cm"
   expect text "chord-1-1-7" == "Fm"
   expect text "chord-1-1-8" == "Eb"
-  tap "transpose-down"
+  tap "dial-key-stop-2"
   clock data
-  tap "transpose-down"
-  clock data
-  tap "capo-down"
+  tap "dial-capo-stop-0"
   clock data
   clock settle
   expect state chordsShown.transpose == 0
   expect state chordsShown.capo == 0
-  expect text "key-sounding" == "D"
-  expect text "key-played" == "D"
+  expect text "key-over" == "KEY"
+  expect text "key-key" == "D"
   expect text "chord-1-1-1" == "D"
   expect text "chord-1-1-6" == "Bm"
   expect state chordsShown.capoDown == false
@@ -120,14 +119,17 @@ test "Kept through a reload." on web
   tap "hymn-2"
   clock settle
   clock data
-  tap "capo-up"
+  tap "key-button"
+  clock data
+  clock settle
+  tap "dial-capo-stop-1"
   clock data
   reload
   clock data
   clock settle
   expect state chordsOn == true
   expect state chordsMoves.0 == "2:0:1"
-  expect text "key-played" == "Db"
+  expect text "key-key" == "Db"
   expect text "chord-1-1-1" == "Db"
 
 test "A hymn without chords says so, its words as before."
@@ -151,4 +153,4 @@ test "A hymn without chords says so, its words as before."
   expect text "no-chords" == "No chords for this hymn yet."
   expect tree has "stanza-1"
   expect tree missing "chord-1-1-1"
-  expect tree missing "key-played"
+  expect tree missing "key-over"

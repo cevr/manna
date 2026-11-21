@@ -4,6 +4,7 @@
  * The key button's sources, as `app.ts` registers them over the shipped
  * chords (`chords.gen.ts`, decoded only for the hymn asked):
  *
+ * - `keysPlaces()`: the current app's measures (`PLACES`);
  * - `keysPage(route, on, moves, open)`: what the key button, its dials and
  *   its wheel show for the route's hymn (`thumb.ts`); the printed key is the
  *   hymn's chords' key in the current app's default Simple style, as its
@@ -47,7 +48,7 @@ import {
   type Thumb,
   type ThumbEvent,
 } from './thumb.ts';
-import { idle, ORIGIN_X, slotOf, step, type Wheel, WORDS } from './wheel.ts';
+import { idle, ITEM, LIFT, ORIGIN_X, slotOf, step, type Wheel, WORDS } from './wheel.ts';
 
 /** The bar's padding at its left, where the key button stands first in its row, in points. */
 const BAR_PAD = 12;
@@ -98,6 +99,7 @@ export interface PressView {
   readonly hold: boolean;
   readonly enter: string;
   readonly pick: string;
+  readonly pressing: boolean;
   readonly open: boolean;
   readonly over: string;
   readonly items: Array<{ item: string; word: string; x: number; y: number }>;
@@ -105,6 +107,49 @@ export interface PressView {
   readonly pull: number;
   readonly speed: number;
 }
+
+/**
+ * The current app's measures of the key button, its dials and its wheel,
+ * in points (or a scale or opacity where named), as `keysPlaces()` answers
+ * them for `features/keys.contract`: a dial's stop (`detent`), the panel's
+ * padding and row gap, its room from the screen's sides and over the bar
+ * (`side`, `gap`), a dial's name column and its inset, the notch, the
+ * printed key's dot and its lift, the key button's side, its insets and
+ * gap, its ring and the ring's gap, the bar at rest, the wheel's origin
+ * across the bar, an item's size, padding and grown scale, the key button
+ * dimmed with chords off and pressed in, the backdrop's opacity, and the
+ * letter spacing over the key and of a dial's name.
+ */
+export const PLACES = {
+  detent: 52,
+  pad: 8,
+  rowGap: 10,
+  side: 12,
+  gap: 10,
+  title: 58,
+  titlePad: 16,
+  notch: 9,
+  notchWide: 2,
+  home: 4,
+  homeLow: 5,
+  key: KEY_HEIGHT,
+  keyLeft: 6,
+  keyRight: 12,
+  keyGap: 2,
+  ring: 2,
+  ringGap: 3,
+  rest: 56,
+  originX: ORIGIN_X,
+  itemWide: ITEM.width,
+  itemHigh: ITEM.height,
+  itemPad: 12,
+  lift: LIFT,
+  dim: 0.5,
+  pressed: 0.9,
+  backdrop: 0.7,
+  overSpacing: 0.8,
+  titleSpacing: 1.1,
+};
 
 /** The press as it stands, one per launch: the rule's state, the finger in the key button's box, its pull up so far, and whether it slid off before its hold. */
 interface Press {
@@ -137,6 +182,7 @@ export const keysSources = (
     open,
   });
   return {
+    keysPlaces: () => ({ ...PLACES }),
     keysPage: ([route, on, moves, open]: readonly [
       string,
       boolean,
@@ -233,6 +279,7 @@ export const keysSources = (
         hold: out('hold') !== undefined,
         enter: enter !== undefined && enter.kind === 'enter' ? enter.item : '',
         pick: pick !== undefined && pick.kind === 'pick' ? pick.item : '',
+        pressing: wheel.kind === 'pressing',
         open: wheel.kind === 'open',
         over: wheel.kind === 'open' ? (wheel.over ?? '') : '',
         items:

@@ -29,6 +29,7 @@ import { describe, expect, it } from 'bun:test';
 import * as body from '@manna/hymnal-app/feel/body';
 import * as cues from '@manna/hymnal-app/feel/cues';
 import * as tiles from '@manna/hymnal-app/home/tile-times';
+import * as wheelmotion from '@manna/hymnal-app/player/wheelmotion';
 
 import type * as TilesDecl from '../find/decl/tile-times';
 import type * as BodyDecl from './decl/body';
@@ -64,6 +65,9 @@ const TOKENS = {
   'easing.out': 'cubic-bezier(0.23, 1, 0.32, 1)',
   'duration.panel': '250ms',
   'duration.growth': '250ms',
+  'duration.press': '200ms',
+  'duration.wheel-in': `${wheelmotion.BACKDROP.enter}ms`,
+  'duration.wheel-out': `${wheelmotion.BACKDROP.exit}ms`,
 };
 
 /**
@@ -127,7 +131,17 @@ const HAPTICS: ReadonlyArray<{
     when: '',
     cues: [cues.plain('switch-on'), cues.plain('switch-off')],
   },
-  { action: 'chordsStep', when: '', cues: [detent('key'), detent('capo')] },
+  {
+    action: 'keysTook',
+    when: 'if s.cue == "chords-on" or s.cue == "chords-off"',
+    cues: [cues.plain('chords-on'), cues.plain('chords-off')],
+  },
+  { action: 'keysTook', when: 'else if s.cue == "press"', cues: [cues.plain('press')] },
+  { action: 'keysTook', when: 'else if s.cue == "wall"', cues: [cues.plain('wall')] },
+  { action: 'keysTook', when: 'else if s.cue == "reset"', cues: [cues.plain('reset')] },
+  { action: 'keysPressTook', when: 'if p.enter != ""', cues: [cues.plain('choose')] },
+  { action: 'keysKeyScrolled', when: 'if at != keysKeyAt', cues: [detent('key')] },
+  { action: 'keysCapoScrolled', when: 'if at != keysCapoAt', cues: [detent('capo')] },
   {
     action: 'findTurn',
     when: '',

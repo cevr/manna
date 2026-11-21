@@ -1,0 +1,451 @@
+// The bar's key button, its key and capo dials, and the wheel a hold opens,
+// as the current hymnal draws them (src/player/KeyButton.tsx, Dials.tsx,
+// DialPanel.tsx, DialView.tsx, KeyWheel.tsx). The key button stands first
+// in the bar's row while a hymn's page is on top. With chords on it shows a
+// small "KEY" over the sounding key, or "CAPO n" over the key played; with
+// chords off the guitar's head alone, dim, and a tap or a hold turns chords
+// on and opens nothing. With chords on a tap opens the dials over the bar,
+// and a tap on it or anywhere above the bar closes them. A hold of 350 ms
+// with chords on, on a hymn with a printed key, opens the wheel: the finger
+// slides to Key ♭, Key ♯, Reset or Chords off and lets go to do it, once.
+// Every rule is src/keys/thumb.ts and src/keys/wheel.ts, answered by
+// `keysPage`, `keysStep` and `keysPress` (src/keys/sources.ts); this file
+// draws them and turns touches into calls. The key button holds its own
+// drag, so the bar's swipe up is answered here for a finger that slides off
+// it before its hold (`swipe`, `playerSwipedUp`).
+use PlayerView from "./player.contract"
+use hy-fade-in, hy-fade-out from "./motion.contract"
+
+shape KeysStop
+  pitch: number
+  name: string
+  printed: bool
+
+shape KeysFret
+  capo: number
+  played: string
+  open: bool
+
+shape KeysPage
+  number: number
+  has: bool
+  on: bool
+  open: bool
+  face: bool
+  over: string
+  key: string
+  said: string
+  hint: string
+  offered: bool
+  reset: bool
+  printedName: string
+  capoRow: bool
+  keyStops: KeysStop[]
+  keyAt: number
+  keySaid: string
+  capoStops: KeysFret[]
+  capo: number
+  capoSaid: string
+
+shape KeysStepped
+  chords: bool
+  moves: string[]
+  open: bool
+  cue: string
+  wait: bool
+
+shape KeysItem
+  item: string
+  word: string
+  x: number
+  y: number
+
+shape KeysPressed
+  tap: bool
+  hold: bool
+  enter: string
+  pick: string
+  pressing: bool
+  open: bool
+  over: string
+  items: KeysItem[]
+  swipe: bool
+  pull: number
+  speed: number
+
+// The current app's measures of the key button, its dials and its wheel,
+// in points (`keysPlaces`, src/keys/sources.ts, as One's files hold them).
+shape KeysPlaces
+  detent: number
+  pad: number
+  rowGap: number
+  side: number
+  gap: number
+  title: number
+  titlePad: number
+  notch: number
+  notchWide: number
+  home: number
+  homeLow: number
+  key: number
+  keyLeft: number
+  keyRight: number
+  keyGap: number
+  ring: number
+  ringGap: number
+  rest: number
+  originX: number
+  itemWide: number
+  itemHigh: number
+  itemPad: number
+  lift: number
+  dim: number
+  pressed: number
+  backdrop: number
+  overSpacing: number
+  titleSpacing: number
+
+// A swipe up let go past 24 points or flung up faster than 400 points a
+// second (features/bar.contract's `playerSwipedUp`, the bar's own rule).
+fn keysSwipedUp(pull: number, speed: number): bool = pull <= -24 or speed <= -400
+
+// The dials and the wheel open out of the key button and close back into
+// it; under Reduce Motion they only fade.
+keyframes hy-keys-open
+  from opacity=0 scale=0.55 translate="0px 10px"
+
+keyframes hy-keys-close
+  to opacity=0 scale=0.55 translate="0px 10px"
+
+keyframes hy-wheel-in
+  from opacity=0 scale=0.35
+
+keyframes hy-wheel-out
+  to opacity=0 scale=0.35
+
+members HymnalExact
+  state keysOpen = false
+  state keysWaiting = false
+  state keysResets = 0
+  state keysHolding = false
+  state keysSerial = 0
+  state keysSwallow = false
+  state keysPanning = false
+  state keysWheelOpen = false
+  state keysWheelOver = ""
+  state keysWheelItems: KeysItem[] = []
+  state keysKeyAt = -1
+  state keysKeyX = 0
+  state keysCapoAt = -1
+  state keysCapoX = 0
+  resource keysShown = keysPage(hymnOpen, chordsOn, chordsMoves, keysOpen) as shape KeysPage
+  resource keysPlaced = keysPlaces() as shape KeysPlaces
+  mutation keysStepped as shape KeysStepped queue then keysTook
+  mutation keysPressed as shape KeysPressed queue then keysPressTook
+  action keysAsk(kind: string, value: number)
+    keysWaiting = false
+    send keysStepped = keysStep(kind, value, hymnOpen, chordsOn, chordsMoves, keysOpen)
+  action keysTook
+    match keysStepped
+      case some(s)
+        chordsOn = s.chords
+        chordsMoves = s.moves
+        keysOpen = s.open
+        if s.wait
+          keysWaiting = true
+          keysResets = keysResets + 1
+        if settingsFeel
+          if s.cue == "chords-on" or s.cue == "chords-off"
+            haptic("impact-light")
+          else if s.cue == "press"
+            haptic("selection")
+          else if s.cue == "wall"
+            haptic("impact-rigid")
+          else if s.cue == "reset"
+            haptic("impact-medium")
+      case none
+        keysOpen = keysOpen
+  task keysResetWait when keysWaiting key=keysResets
+    after(600, keysResetShown)
+  action keysResetShown
+    keysWaiting = false
+    send keysStepped = keysStep("shown", 0, hymnOpen, chordsOn, chordsMoves, keysOpen)
+  action keysTap
+    if keysSwallow
+      keysSwallow = false
+    else
+      keysAsk("tap", 0)
+  action keysDown(e: PointerEvent)
+    keysWaiting = false
+    keysSwallow = false
+    keysPanning = false
+    keysHolding = true
+    keysSerial = keysSerial + 1
+    send keysPressed = keysPress("down", e.offsetX, e.offsetY, performanceNow(), keysShown.offered)
+  task keysHold when keysHolding key=keysSerial
+    after(350, keysHeld)
+  action keysHeld
+    keysHolding = false
+    keysSwallow = true
+    send keysPressed = keysPress("tick", 0, 0, performanceNow(), keysShown.offered)
+  action keysPan(dx: number, dy: number)
+    keysPanning = true
+    send keysPressed = keysPress("pan", dx, dy, performanceNow(), keysShown.offered)
+  action keysLetGo(vx: number, vy: number)
+    keysHolding = false
+    send keysPressed = keysPress("up", 0, vy, performanceNow(), keysShown.offered)
+  action keysUp(e: PointerEvent)
+    if not keysPanning
+      keysHolding = false
+      send keysPressed = keysPress("up", 0, 0, performanceNow(), keysShown.offered)
+  action keysPressTook
+    match keysPressed
+      case some(p)
+        keysWheelOpen = p.open
+        keysWheelOver = p.over
+        keysWheelItems = p.items
+        if not p.pressing
+          keysHolding = false
+        if p.hold
+          keysAsk("hold", 0)
+        else if p.pick == "keyDown"
+          keysAsk("step", -1)
+        else if p.pick == "keyUp"
+          keysAsk("step", 1)
+        else if p.pick == "reset"
+          keysAsk("reset", 0)
+        else if p.pick == "chords"
+          keysAsk("hold", 0)
+        else if p.swipe and keysSwipedUp(p.pull, p.speed)
+          playerAsk("open", 0)
+        if p.enter != ""
+          if settingsFeel
+            haptic("selection")
+      case none
+        keysWheelOpen = false
+  action keysKeyScrolled(x: number, y: number)
+    let at = round(x / keysPlaced.detent)
+    keysKeyX = x
+    if at != keysKeyAt
+      keysKeyAt = at
+      if settingsFeel
+        haptic("selection")
+  action keysKeySettled
+    let at = round(keysKeyX / keysPlaced.detent)
+    let pitch = ((at % 12) + 12) % 12
+    if pitch != keysShown.keyAt
+      keysAsk("key", pitch)
+    if at < 12 or at > 23
+      scrollIntoView(`dial-key-stop-${12 + pitch}`, inline="center", behavior="instant")
+  action keysKeyAdjusted(v: number)
+    keysAsk("key", ((v % 12) + 12) % 12)
+  action keysCapoScrolled(x: number, y: number)
+    let at = round(x / keysPlaced.detent)
+    keysCapoX = x
+    if at != keysCapoAt
+      keysCapoAt = at
+      if settingsFeel
+        haptic("selection")
+  action keysCapoSettled
+    let at = min(11, max(0, round(keysCapoX / keysPlaced.detent)))
+    if at != keysShown.capo
+      keysAsk("capo", at == 0 ? -1 : (at == 11 ? 12 : at))
+
+// The key button, first in the bar's row, for the hymn on top: the lit
+// pill with chords on (the guitar's head, and the words over the key on a
+// hymn with chords), or the guitar's head alone, dim, with chords off. It
+// presses in while the finger holds it and lets go at the hold; it is
+// ringed while the wheel stands over it.
+component KeysButton
+  props
+    number: number
+  inject
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysHolding: bool
+    keysWheelOpen: bool
+    keysTap: action
+    keysDown: action
+    keysUp: action
+    keysPan: action
+    keysLetGo: action
+    motionStill: bool
+  view
+    if number != 0 and keysShown.number == number
+      button press=keysTap pointerdown=keysDown pointerup=keysUp pan=keysPan panrelease=keysLetGo
+        appearance="none" padding=0 min-width="size.target" height="size.target" flex-shrink=0 position="relative" touch-action="none"
+        aria-label="Key" aria-valuetext=keysShown.said aria-expanded=keysShown.open testId="key-button"
+        row testId="key-face" position="relative" align-items="center" gap=`${keysPlaced.keyGap}px`
+          min-width="size.target" height="size.target" border-radius="radius.pill" box-sizing="border-box"
+          padding-left=`${keysPlaced.keyLeft}px` padding-right=`${keysShown.on ? keysPlaced.keyRight : keysPlaced.keyLeft}px`
+          background-color=(keysShown.on ? "pill" : "transparent") border-width=(keysShown.on ? "0px" : "line.hair") border-style="solid" border-color="line"
+          scale=(keysHolding and not motionStill ? keysPlaced.pressed : 1)
+          transition=(motionStill ? "none" : "scale duration.press easing.out")
+          if keysWheelOpen
+            view position="absolute" inset=`-${keysPlaced.ring + keysPlaced.ringGap}px` border-radius=`${keysPlaced.key / 2 + keysPlaced.ring + keysPlaced.ringGap}px`
+              border-width=`${keysPlaced.ring}px` border-style="solid" border-color="button" pointer-events="none" aria-hidden=true testId="key-ring"
+          view opacity=(keysShown.on ? 1 : keysPlaced.dim) aria-hidden=true
+            KeysGuitar(on=keysShown.on)
+          if keysShown.face
+            column align-items="flex-start" background-color="pill" aria-hidden=true
+              text keysShown.over font="type.key-over" letter-spacing=`${keysPlaced.overSpacing}px` color="onPill" white-space="nowrap" testId="key-over"
+              text keysShown.key font="type.key-face" color="onPill" white-space="nowrap" testId="key-key"
+
+// The guitar's head: a headstock with three pegs each side over the top of
+// the neck, filled in the pill's ink with chords on, outlined in the accent
+// with them off (src/reader/GuitarHead.tsx).
+component KeysGuitar
+  props
+    on: bool
+  view
+    svg width="size.mark" height="size.mark" viewBox="0 0 28 28" color=(on ? "onPill" : "accent") testId="guitar-head"
+      path d="M5.5 5.5H7.5M5.5 10.5H7.5M5.5 15.5H7.5M20.5 5.5H22.5M20.5 10.5H22.5M20.5 15.5H22.5" stroke="currentColor" stroke-width=3 stroke-linecap="round" fill="none"
+      path d="M10 16V7A4 4 0 0 1 18 7V16A1 1 0 0 1 17 17H11A1 1 0 0 1 10 16Z" stroke="currentColor" stroke-width=2 fill=(on ? "currentColor" : "ground")
+      path d="M12 18H16V27H12Z" fill="currentColor"
+
+// Over the page, above the bar: the open dials on their panel, and the
+// wheel while a hold keeps it open. A tap above the bar closes the dials.
+component KeysOver
+  inject
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysOpen: bool
+    keysWheelOpen: bool
+    keysWheelOver: string
+    keysWheelItems: KeysItem[]
+    keysAsk: action
+    playerShown: PlayerView
+    motionStill: bool
+  view
+    if keysShown.number != 0 and (keysOpen or keysWheelOpen)
+      view position="absolute" left=0 right=0 top=0
+        bottom=(playerShown.bar.seeker and not playerShown.pageBar ? "calc(var(--exact-safe-area-inset-bottom) + size.slider + size.target + space.s12)" : "calc(var(--exact-safe-area-inset-bottom) + size.target + space.s12)")
+        pointer-events=(keysOpen ? "auto" : "none") press=keysAsk("page", 0) aria-hidden=true testId="dials-backdrop"
+        background-color=(keysWheelOpen ? "shadow" : "transparent") opacity=(keysWheelOpen ? keysPlaced.backdrop : 1)
+        animation=(motionStill ? "hy-fade-in duration.wheel-in ease-out both" : "hy-fade-in duration.wheel-in easing.out both")
+    if keysShown.number != 0
+      column position="absolute" left=0 right=0 height=0 pointer-events="none"
+        bottom=(playerShown.bar.seeker and not playerShown.pageBar ? "calc(var(--exact-safe-area-inset-bottom) + size.slider)" : "var(--exact-safe-area-inset-bottom)")
+        if keysOpen and keysShown.has and keysShown.on
+          KeysPanel()
+        if keysWheelOpen
+          for it in keysWheelItems key=it.item
+            KeysPill(it=it, lit=(it.item == keysWheelOver))
+
+// The open dials on one opaque panel over the bar: Reset while the move is
+// not the hymn as printed, the capo dial, and the key dial.
+component KeysPanel
+  inject
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysAsk: action
+    motionStill: bool
+  view
+    column position="absolute" left=`${keysPlaced.side}px` right=`${keysPlaced.side}px` bottom=`${keysPlaced.rest + keysPlaced.gap}px`
+      pointer-events="auto" background-color="panel" border-width="line.panel" border-style="solid" border-color="edge"
+      border-radius=`${keysPlaced.detent / 2 + keysPlaced.pad}px` padding=`${keysPlaced.pad}px` gap=`${keysPlaced.rowGap}px`
+      transform-origin=`${keysPlaced.originX - keysPlaced.side}px 100%`
+      animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-keys-open duration.panel easing.out both")
+      -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-keys-close duration.bar-out ease-out both")
+      testId="dials-panel"
+      if keysShown.reset
+        row justify-content="center"
+          button press=keysAsk("reset", 0) background-color="pill" appearance="none" display="flex" align-items="center" justify-content="center"
+            height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16"
+            -exact-press-opacity="opacity.pressed" aria-label="Reset" testId="dials-reset"
+            text `↺ ${keysShown.printedName}, no capo` font="type.chip" color="onPill" line-clamp=1
+      if keysShown.capoRow
+        KeysCapoDial()
+      KeysKeyDial()
+
+// A dial's name at its left, in a column as wide as the widest row's.
+component KeysDialName
+  props
+    title: string
+  inject
+    keysPlaced: KeysPlaces
+  view
+    text title font="type.dial-name" letter-spacing=`${keysPlaced.titleSpacing}px` color="muted" white-space="nowrap"
+      min-width=`${keysPlaced.title}px` padding-left=`${keysPlaced.titlePad}px` box-sizing="border-box" aria-hidden=true
+
+// The capo dial: frets 0 to 11 on a row that snaps a fret at a time, each
+// fret over the key played there, the open keys marked; a tap on a fret
+// turns to it. A turn that ends on an end is a wall. VoiceOver reads it as
+// "Capo" and moves it a fret a swipe.
+component KeysCapoDial
+  inject
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysAsk: action
+    keysCapoScrolled: action
+    keysCapoSettled: action
+  view
+    row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-capo"
+      KeysDialName(title="CAPO")
+      view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
+        scroll id="dial-capo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
+          scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
+          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled aria-hidden=true testId="dial-capo-row"
+          for f in keysShown.capoStops key=f.capo
+            button press=keysAsk("capo", f.capo) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
+              display="flex" flex-direction="column" align-items="center" justify-content="center" scroll-snap-align="center"
+              aria-hidden=true tabindex=-1 testId=`dial-capo-stop-${f.capo}`
+              text `${f.capo}` font="type.key-face" color=(f.capo == keysShown.capo ? "chord" : "muted")
+              text f.played font="type.dial-played" color=(f.open ? "chord" : "muted")
+        view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
+          background-color="chord" pointer-events="none" aria-hidden=true
+        input type="range" min=0 max=11 step=1 value=keysShown.capo input=keysAsk("capo") aria-label="Capo" aria-valuetext=keysShown.capoSaid
+          position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 pointer-events="none" testId="dial-capo-value"
+
+// The key dial: the twelve sounding keys on a row that snaps a key at a
+// time and wraps, each spelled as the hymn's transpose spells it, the
+// printed key marked with a dot; a tap on a key turns to it. VoiceOver
+// reads it as "Key" and moves it a key a swipe, wrapping.
+component KeysKeyDial
+  inject
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysAsk: action
+    keysKeyScrolled: action
+    keysKeySettled: action
+    keysKeyAdjusted: action
+  view
+    row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-key"
+      KeysDialName(title="KEY")
+      view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
+        scroll id="dial-key-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
+          scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
+          scrollLeft=((12 + keysShown.keyAt) * keysPlaced.detent) scroll=keysKeyScrolled scrollend=keysKeySettled aria-hidden=true testId="dial-key-row"
+          for c in [0, 1, 2] key=c
+            for s in keysShown.keyStops key=s.pitch
+              button press=keysAsk("key", s.pitch) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
+                position="relative" display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
+                aria-hidden=true tabindex=-1 id=`dial-key-stop-${c * 12 + s.pitch}` testId=(c == 1 ? `dial-key-stop-${s.pitch}` : `dial-key-copy-${c}-${s.pitch}`)
+                text s.name font="type.dial-key" color=(s.pitch == keysShown.keyAt ? "chord" : "muted") white-space="nowrap"
+                if s.printed
+                  view position="absolute" bottom=`${keysPlaced.homeLow}px` width=`${keysPlaced.home}px` height=`${keysPlaced.home}px`
+                    border-radius=`${keysPlaced.home / 2}px` background-color="chord" opacity=0.7 aria-hidden=true
+        view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
+          background-color="chord" pointer-events="none" aria-hidden=true
+        input type="range" min=-1 max=12 step=1 value=keysShown.keyAt input=keysKeyAdjusted aria-label="Key" aria-valuetext=keysShown.keySaid
+          position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 pointer-events="none" testId="dial-key-value"
+
+// One of the wheel's items, a pill at its slot over the key button, on the
+// button's fill and grown while the finger is over it, else on the panel.
+// It takes no touch: the key button keeps the finger.
+component KeysPill
+  props
+    it: KeysItem
+    lit: bool
+  inject
+    keysPlaced: KeysPlaces
+    motionStill: bool
+  view
+    row position="absolute" left=`${keysPlaced.originX + it.x - keysPlaced.itemWide / 2}px` bottom=`${keysPlaced.rest / 2 - it.y - keysPlaced.itemHigh / 2}px`
+      width=`${keysPlaced.itemWide}px` height=`${keysPlaced.itemHigh}px` border-radius=`${keysPlaced.itemHigh / 2}px` box-sizing="border-box"
+      padding-left=`${keysPlaced.itemPad}px` padding-right=`${keysPlaced.itemPad}px` align-items="center" justify-content="center" border-width="line.panel" border-style="solid"
+      border-color=(lit ? "button" : "edge") background-color=(lit ? "button" : "panel") scale=(lit ? keysPlaced.lift : 1)
+      pointer-events="none" aria-hidden=true testId=`key-wheel-${it.item}`
+      animation=(motionStill ? "hy-fade-in duration.wheel-in ease-out both" : "hy-wheel-in duration.wheel-in easing.out both")
+      -exact-exit-animation=(motionStill ? "hy-fade-out duration.wheel-out ease-out both" : "hy-wheel-out duration.wheel-out ease-out both")
+      text it.word font="type.label" color=(lit ? "onButton" : "ink") white-space="nowrap" line-clamp=1
