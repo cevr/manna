@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary -- a Bun test drawing generated histories with the app's seeded generator. */
+/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test drawing generated histories with the app's seeded generator; a hymn with no chords has no printed key. */
 
 /**
  * The key button's sources answer as the current app's own model and press
@@ -20,7 +20,8 @@ import { describe, expect, test } from 'bun:test';
 
 import type { Key } from '@manna/hymnal/chord';
 import { hasChords, keyName, type Move } from '@manna/hymnal-app/hymns/chords';
-import { simple } from '@manna/hymnal-app/hymns/simple';
+import { simple, styled } from '@manna/hymnal-app/hymns/simple';
+import { chordStyles } from '@manna/hymnal-app/chord-choices';
 import * as thumb from '@manna/hymnal-app/player/thumb';
 import * as press from '@manna/hymnal-app/player/wheel';
 
@@ -28,6 +29,7 @@ import { bundled, currentBook } from '../chords/shipped.testing.ts';
 import { moveOf } from '../chords/move.ts';
 import { book } from '../hymns/book.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
+import { styleOf } from '../settings/chords.ts';
 import { keysSources, pitchOf } from './sources.ts';
 
 /** One hymn of each printed key, with that key as the dials read it. */
@@ -41,6 +43,12 @@ const keyed = (() => {
   }
   return [...seen.values()];
 })();
+
+/** Hymn `number`'s printed key in the chord style kept as `style`, as the current app's `useThumb` reads it. */
+const printedIn = (number: number, style: string): Key | undefined => {
+  const chords = currentBook.of(number);
+  return chords._tag === 'Some' ? styled(chords.value, styleOf(style)).key : undefined;
+};
 
 /** A hymn the hymnal has with no chords. */
 const unchorded =
@@ -121,14 +129,18 @@ describe('the key button’s sources, against the current app’s model', () => 
 
   test('generated histories through keysStep give the model’s state and cues, and keysPage its drawing', () => {
     const random = seeded(23);
-    for (const { number, printed } of keyed)
+    for (const { number } of keyed)
       for (let run = 0; run < 6; run++) {
         const route = `${number}`;
+        const style = pick(random, ['', ...chordStyles.map((choice) => choice.value)]);
+        const printed = printedIn(number, style);
+        expect(printed).toBeDefined();
+        if (printed === undefined) continue;
         let [on, moves, open] = [random() < 0.5, [] as ReadonlyArray<string>, false];
         let theirs: thumb.Thumb = { chords: on, move: { transpose: 0, capo: 0 }, open };
         for (let k = 0; k < 30; k++) {
           const [kind, value, event] = eventOf(random);
-          const got = sources.keysStep([kind, value, route, on, moves, open]);
+          const got = sources.keysStep([kind, value, route, on, moves, open, style]);
           const want = thumb.step(printed, theirs, event);
           const move: Move = moveOf(got.moves, number);
           expect({ chords: got.chords, move, open: got.open }).toEqual(want.state);
@@ -137,7 +149,7 @@ describe('the key button’s sources, against the current app’s model', () => 
             event._tag === 'Reset' && !thumb.isStill(theirs.move) && want.state.open,
           );
           [on, moves, open, theirs] = [got.chords, got.moves, got.open, want.state];
-          const page = sources.keysPage([route, on, moves, open]);
+          const page = sources.keysPage([route, on, moves, open, style]);
           const face = thumb.faceOf(printed, theirs);
           expect([page.face, page.over, page.key]).toEqual(
             face._tag === 'Key' ? [true, face.over, face.key] : [false, '', ''],
@@ -165,7 +177,7 @@ describe('the key button’s sources, against the current app’s model', () => 
     let [on, moves, open] = [false, [] as ReadonlyArray<string>, false];
     for (let k = 0; k < 300; k++) {
       const [kind, value, event] = eventOf(random);
-      const got = sources.keysStep([kind, value, route, on, moves, open]);
+      const got = sources.keysStep([kind, value, route, on, moves, open, '']);
       const keyless =
         event._tag === 'Hold' || event._tag === 'TapPage' || (event._tag === 'Tap' && !on);
       const state = { chords: on, move: moveOf(moves, unchorded), open };
@@ -175,7 +187,7 @@ describe('the key button’s sources, against the current app’s model', () => 
       );
       expect(got.cue === '' ? [] : [got.cue]).toEqual(tagsOf(want.cues));
       [on, moves, open] = [got.chords, got.moves, got.open];
-      const page = sources.keysPage([route, on, moves, open]);
+      const page = sources.keysPage([route, on, moves, open, '']);
       expect([page.has, page.face, page.offered, page.said]).toEqual([
         false,
         false,

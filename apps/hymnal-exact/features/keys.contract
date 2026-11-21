@@ -138,13 +138,13 @@ members HymnalExact
   state keysKeyX = 0
   state keysCapoAt = -1
   state keysCapoX = 0
-  resource keysShown = keysPage(hymnOpen, chordsOn, chordsMoves, keysOpen) as shape KeysPage
+  resource keysShown = keysPage(hymnOpen, chordsOn, chordsMoves, keysOpen, settingsChordStyle) as shape KeysPage
   resource keysPlaced = keysPlaces() as shape KeysPlaces
   mutation keysStepped as shape KeysStepped queue then keysTook
   mutation keysPressed as shape KeysPressed queue then keysPressTook
   action keysAsk(kind: string, value: number)
     keysWaiting = false
-    send keysStepped = keysStep(kind, value, hymnOpen, chordsOn, chordsMoves, keysOpen)
+    send keysStepped = keysStep(kind, value, hymnOpen, chordsOn, chordsMoves, keysOpen, settingsChordStyle)
   action keysTook
     match keysStepped
       case some(s)
@@ -169,7 +169,7 @@ members HymnalExact
     after(600, keysResetShown)
   action keysResetShown
     keysWaiting = false
-    send keysStepped = keysStep("shown", 0, hymnOpen, chordsOn, chordsMoves, keysOpen)
+    send keysStepped = keysStep("shown", 0, hymnOpen, chordsOn, chordsMoves, keysOpen, settingsChordStyle)
   action keysTap
     if keysSwallow
       keysSwallow = false

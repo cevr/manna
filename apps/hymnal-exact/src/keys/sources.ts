@@ -9,11 +9,11 @@
  * arguments into their events and their answers into plain shapes.
  *
  * - `keysPlaces()`: the current app's measures (`PLACES`);
- * - `keysPage(route, on, moves, open)`: what the key button, its dials and
- *   its wheel show for the route's hymn; the printed key is the hymn's
- *   chords' key in the current app's default Simple style, as its
- *   `useThumb` reads it;
- * - `keysStep(kind, value, route, on, moves, open)`: one event of the
+ * - `keysPage(route, on, moves, open, style)`: what the key button, its
+ *   dials and its wheel show for the route's hymn; the printed key is the
+ *   hymn's chords' key in the reader's chord style (`styleOf`, Simple
+ *   until chosen), as the current app's `useThumb` reads it;
+ * - `keysStep(kind, value, route, on, moves, open, style)`: one event of the
  *   model's `step`, answered as the stores after it (chords on, the kept
  *   moves, the dials open), its cue, and whether the bar waits `RESET_WAIT`
  *   before it closes the dials (a reset that turned the rows home). A hymn
@@ -32,13 +32,14 @@
 
 import type { Key } from '@manna/hymnal/chord';
 import { decodeHymn, hasChords, keyName, soundingKey } from '@manna/hymnal-app/hymns/chords';
-import { simple } from '@manna/hymnal-app/hymns/simple';
+import { styled } from '@manna/hymnal-app/hymns/simple';
 import * as thumb from '@manna/hymnal-app/player/thumb';
 import * as press from '@manna/hymnal-app/player/wheel';
 
 import { moveOf, movesTo } from '../chords/move.ts';
 import { pageAt } from '../hymn/page.ts';
 import type { Book } from '../hymns/book.ts';
+import { styleOf } from '../settings/chords.ts';
 
 /** The bar's padding at its left, where the key button stands first in its row, in points. */
 const BAR_PAD = 12;
@@ -114,13 +115,13 @@ interface Shipped {
   readonly decode: (encoded: string) => ReturnType<typeof decodeHymn>;
 }
 
-/** Hymn `number`'s printed key as the dials read it, or none for a hymn with no chords. */
-const printedOf = (shipped: Shipped, number: number): Key | undefined => {
+/** Hymn `number`'s printed key in the reader's chord style `style`, as the dials read it, or none for a hymn with no chords. */
+const printedOf = (shipped: Shipped, number: number, style: string): Key | undefined => {
   const encoded = shipped.encoded.get(number);
   if (encoded === undefined) return undefined;
   const decoded = shipped.decode(encoded);
   if (decoded._tag === 'None' || !hasChords(decoded.value)) return undefined;
-  return simple(decoded.value).key;
+  return styled(decoded.value, styleOf(style)).key;
 };
 
 /** The model's event a call names, or none for a kind it does not know. */
@@ -234,14 +235,15 @@ export const keysSources = (
   ): thumb.Thumb => ({ chords: on, move: moveOf(moves, number), open });
   return {
     keysPlaces: () => ({ ...PLACES }),
-    keysPage: ([route, on, moves, open]: readonly [
+    keysPage: ([route, on, moves, open, style]: readonly [
       string,
       boolean,
       ReadonlyArray<string>,
       boolean,
+      string,
     ]) => {
       const number = pageAt(book, route).number;
-      const printed = number === 0 ? undefined : printedOf(shipped, number);
+      const printed = number === 0 ? undefined : printedOf(shipped, number, style);
       const state = thumbOf(on, moves, number, open);
       const face = printed === undefined ? undefined : thumb.faceOf(printed, state);
       const lit = face !== undefined && face._tag === 'Key';
@@ -270,20 +272,21 @@ export const keysSources = (
         capoSaid: printed === undefined ? '' : thumb.capoSaid(printed, state.move),
       };
     },
-    keysStep: ([kind, value, route, on, moves, open]: readonly [
+    keysStep: ([kind, value, route, on, moves, open, style]: readonly [
       string,
       number,
       string,
       boolean,
       ReadonlyArray<string>,
       boolean,
+      string,
     ]) => {
       const number = pageAt(book, route).number;
       const event = eventOf(kind, value);
       const state = thumbOf(on, moves, number, open);
       if (number === 0 || event === undefined)
         return { chords: on, moves: [...moves], open, cue: '', wait: false };
-      const next = stepOn(printedOf(shipped, number), state, event);
+      const next = stepOn(printedOf(shipped, number, style), state, event);
       return {
         chords: next.state.chords,
         moves: movesTo(moves, number, next.state.move),

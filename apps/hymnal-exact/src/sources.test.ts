@@ -101,6 +101,7 @@ describe('the data module runs where Exact runs it', () => {
           random() < 0.5,
           [`${route(random)}:1:2`, 'x'],
           random() < 0.5,
+          pick(random, ['', 'simple', 'advanced', 'x']),
         ] as const;
         expect(() => sources.keysPage(keysArgs)).not.toThrow();
         expect(() =>
@@ -161,6 +162,7 @@ describe('the data module runs where Exact runs it', () => {
       'railTo',
       'recentAfter',
       'recentRows',
+      'settingsChords',
       'settingsFeelOf',
       'settingsLooks',
     ]);

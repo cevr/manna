@@ -16,12 +16,20 @@
  *   at once; a relaunch on the kept store paints its first frame dark and
  *   the sheet shows Dark chosen; System then follows the system.
  *
+ * - at the largest text, with chords on, each Chord style and Chord
+ *   placement row is reached by scrolling and taken; the platform says
+ *   Advanced and As the file plays checked (`tree --ax`: the web's
+ *   `checked`, iOS's `selected`) and every other chord row not; Done takes
+ *   a tap over 44 × 44 and its box does not meet the title's text, light
+ *   and dark; a relaunch on the kept store keeps both choices.
+ *
  * A section's header is the brand's muted role on both hosts. The
  * brand's colours are the current hymnal's theme (`app.forma` is held to
  * it by `src/look/brand.test.ts`). The list, a hymn and the sheet are kept
  * in SHOTS, light and dark. Exits 1 on any failed check.
  */
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
@@ -275,5 +283,167 @@ drive.check(
 );
 await expectPainted(`System follows a dark system`, 'system-dark', 'dark', 'ground');
 await expectPainted(`System follows a light system`, 'system-light', 'light', 'ground');
+
+/** iOS's body size at the largest accessibility size, in points: the root font size verify's largest pass takes on the web. */
+const LARGEST = 53;
+/** The platform's least tap target, in points (iOS's 44 × 44). */
+const TARGET = 44;
+/** The chord groups' rows, tapped in this order, so the run ends on Advanced and As the file plays. */
+const CHORD_ROWS = [
+  'chord-style-simple',
+  'chord-style-advanced',
+  'chord-placement-beat',
+  'chord-placement-simpler',
+  'chord-placement-file',
+] as const;
+const CHOSEN = ['chord-style-advanced', 'chord-placement-file'];
+
+interface AxElement {
+  readonly testId?: string;
+  readonly states?: { readonly checked?: boolean; readonly selected?: boolean };
+}
+
+/** The accessibility elements a `tree --ax` reply holds. */
+const elementsOf = (reply: unknown): ReadonlyArray<AxElement> =>
+  (reply as { ax?: { elements?: ReadonlyArray<AxElement> } } | undefined)?.ax?.elements ?? [];
+
+/** Each chord row's checked state as the platform says it (the web's `checked`, iOS's `selected`), by its id. */
+const checkedOf = (reply: unknown) =>
+  Object.fromEntries(
+    CHORD_ROWS.map((id) => {
+      const element = elementsOf(reply).find((each) => each.testId === id);
+      return [id, element?.states?.checked === true || element?.states?.selected === true];
+    }),
+  );
+
+const expectChosen = (when: string, reply: unknown) => {
+  const checked = checkedOf(reply);
+  drive.check(
+    `${when}: Advanced and As the file plays are said checked, every other chord row not`,
+    CHORD_ROWS.every((id) => checked[id] === CHOSEN.includes(id)),
+    checked,
+  );
+};
+
+/** A run's ops, each read back by the index `step` answers. */
+const script = () => {
+  const ops: string[] = [];
+  const step = (...each: ReadonlyArray<string>) => {
+    ops.push(...each);
+    return ops.length - 1;
+  };
+  return { ops, step };
+};
+
+interface Frame {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/** The box a `layout` reply gives its node, in the page's pixels. */
+const frameOf = (reply: unknown): Frame | undefined => {
+  const seen = (
+    reply as
+      | { node?: { space?: { viewport?: Frame & { width?: number; height?: number } } } }
+      | undefined
+  )?.node?.space?.viewport;
+  if (seen === undefined) return undefined;
+  return { x: seen.x, y: seen.y, w: seen.w ?? seen.width ?? 0, h: seen.h ?? seen.height ?? 0 };
+};
+
+/** Whether `a` and `b` share no area. */
+const unshared = (a: Frame, b: Frame) =>
+  a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+
+const choose = script();
+choose.step('clock data', `prefer root-font-size ${LARGEST}`, 'clock settle');
+choose.step('tap gear', 'clock settle', 'clock data');
+choose.step('tap chords-toggle', 'clock settle', 'clock data');
+const taps = CHORD_ROWS.map((id) => {
+  const at = choose.step(`tap ${id}`);
+  choose.step('clock settle', 'clock data');
+  return at;
+});
+const axAt = choose.step('tree --ax');
+const styleAt = choose.step('state settingsChordStyle');
+const placementAt = choose.step('state settingsPlacement');
+const doneAt = (scheme: Scheme) => {
+  choose.step(`prefer prefers-color-scheme ${scheme}`, 'clock settle');
+  const at = choose.step('layout settings-done');
+  choose.step('layout settings-title');
+  choose.step(shot(`chords-largest-${scheme}`));
+  return at;
+};
+const doneFrames = [['light', doneAt('light')] as const, ['dark', doneAt('dark')] as const];
+
+/** Whether the web store `name` holds `text` on disk: Chrome killed at Exact's deadline loses what it had not written (as `drive-player.ts` reads it). */
+const onDisk = async (name: string, text: string) => {
+  const cache =
+    process.platform === 'darwin'
+      ? join(homedir(), 'Library/Caches')
+      : (process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'));
+  const needle = Buffer.from(text);
+  const glob = new Bun.Glob(`*/agent-web-*/${name}/Default/Local Storage/leveldb/*`);
+  for await (const path of glob.scan({ cwd: join(cache, 'exact'), absolute: true }))
+    if (Buffer.from(await Bun.file(path).arrayBuffer()).includes(needle)) return true;
+  return false;
+};
+
+const chordsStore = `settings-chords-${host}`;
+const chordsRun = () =>
+  drive.run(['--backend', backend, '--storage', chordsStore, '--reset-storage'], choose.ops);
+let chosen = await chordsRun();
+if (host === 'web' && chosen[placementAt] === 'file' && !(await onDisk(chordsStore, 'file'))) {
+  console.log(
+    `again ${host}: the browser quit before it wrote its store (Exact killed it at its deadline); the choices once more`,
+  );
+  chosen = await chordsRun();
+}
+
+CHORD_ROWS.forEach((id, k) => {
+  const tapped = chosen[taps[k] ?? -1];
+  drive.check(
+    `at the largest text, with both chord groups showing, ${id} is reached by scrolling and taken`,
+    tapped !== undefined,
+    tapped,
+  );
+});
+expectChosen('chosen at the largest text', chosen[axAt]);
+drive.check(
+  'the choices are kept as tapped',
+  chosen[styleAt] === 'advanced' && chosen[placementAt] === 'file',
+  [chosen[styleAt], chosen[placementAt]],
+);
+for (const [scheme, at] of doneFrames) {
+  const [done, title] = [frameOf(chosen[at]), frameOf(chosen[at + 1])];
+  drive.check(
+    `at the largest text, ${scheme}, with both chord groups showing, Done takes a tap over ${TARGET} × ${TARGET}`,
+    done !== undefined && done.w >= TARGET && done.h >= TARGET,
+    done,
+  );
+  drive.check(
+    `at the largest text, ${scheme}, Done's box does not meet the title's text`,
+    done !== undefined && title !== undefined && unshared(done, title),
+    { done, title },
+  );
+}
+
+const kept = script();
+kept.step('clock data', 'tap gear', 'clock settle', 'clock data');
+const keptStyle = kept.step('state settingsChordStyle');
+const keptPlacement = kept.step('state settingsPlacement');
+const keptAx = kept.step('tree --ax');
+const relaunched = await drive.run(
+  ['--backend', backend, '--storage', chordsStore, '--keep-storage'],
+  kept.ops,
+);
+drive.check(
+  'a relaunch keeps Advanced and As the file plays',
+  relaunched[keptStyle] === 'advanced' && relaunched[keptPlacement] === 'file',
+  [relaunched[keptStyle], relaunched[keptPlacement]],
+);
+expectChosen('after a relaunch', relaunched[keptAx]);
 
 process.exit(drive.finish());

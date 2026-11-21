@@ -106,7 +106,7 @@ component HymnalExact
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
         if e.name == "settings"
-          SettingsSheet(entry=e, looks=settingsLooks, choose=settingsChoose, done=settingsClose)
+          SettingsSheet(entry=e, looks=settingsLooks, choose=settingsChoose, done=settingsClose, chords=settingsChordRows, chooseStyle=settingsStyleChoose, choosePlacement=settingsPlacementChoose)
         if e.name == "about"
           AboutScreen(entry=e, page=aboutShown)
         if e.name == "recent"

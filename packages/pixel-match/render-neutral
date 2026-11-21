@@ -8,13 +8,18 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+285f35cee93c move: the chordStyles list from settings.tsx and placements from settings.ts, unchanged values, into chord-choices.ts; settings.tsx, PlacementDial.tsx and a slow test import it there
+5e8896cbba12 move: About's Gemma notice words, its two addresses and the Terms button's label, unchanged, from about.tsx's JSX into gemma-notice.ts (GEMMA_NOTICE), the notice's Text keeping its five children
+7f48f02da8c2 exports: one exports line in apps/hymnal/package.json (./chord-choices); no source changes
+70b7bef84eac exports: one exports line in apps/hymnal/package.json (./gemma-notice); no source changes
+681f9dfdafbc exports: one exports line in apps/hymnal/package.json (./meaning/gemma-terms, the Terms asset); no source changes
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button); One's only change in the commit
+4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
 45917c380eb2 imports: player/thumb.ts reads Cue, plain, keyName, Move, playedKey, soundingKey and still by relative path (../feel/cues, which ~/feel/cue re-exports, and ../hymns/chords); the same values, no source line else
 54fc3fd84c2b exports: one exports line in apps/hymnal/package.json (./player/thumb); no source changes
 867880c5d09a exports: one exports line in apps/hymnal/package.json (./player/wheel); no source changes
 dd224a16edb2 exports: one exports line in apps/hymnal/package.json (./player/wheelmotion); no source changes
-c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button), on main before par-hy-key; no source changes under the One paths
-4c6b055a91be merge: brings the ./player/button exports line into par-hy-head; no other change under the One paths
-d01c2d92b3cf merge: brings the ./player/button exports line into par-hy-rail; no other change under the One paths
-954355a15d4b merge: brings the About-rules move (7001b407b430, listed) and its exports lines into par-hy-rail; no other change under the One paths
 b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
 1931651bb79f move: the dials' RESET_WAIT, unchanged (600), from Dials.tsx into thumb.ts, Dials reading and re-exporting it
