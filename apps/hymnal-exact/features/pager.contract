@@ -1,0 +1,116 @@
+// The hymn pager, as the current app's (apps/hymnal/src/reader/
+// HymnScreen.native.tsx, pager.ts): a hymn's page lies between the hymn
+// before and the hymn after, and a swipe left or right turns to one. It
+// moves through the list the reader pressed the hymn's row in (home's
+// Sections list in its order, a search's results in the order shown, the
+// Recent screen), else through every hymn in number order (a link, the bar,
+// a dialled number, another home tab, as the current app's `groupRowsOf`);
+// the ends do not wrap. Where the reader came from is `pagerFrom`, taken
+// when a hymn's route comes to the top (`pagerTake`), and not kept across
+// launches. The route follows the page the pager settles on, in place
+// (`replace`), so Back returns to the list in one step; a neighbour sets
+// nothing until it is the page shown. The pages drawn are `pagerNumbers`:
+// the hymn and one each side (app.ts `pagerAround`, src/pager/pager.ts),
+// each page's words asked by itself (`pagerPages`, keyed by its number),
+// so the page swiped to keeps its words, and its chords, as it becomes the
+// route's.
+use HymnText from "./hymn.contract"
+use ChordsPage from "./chords.contract"
+use findSearchingAt from "./find.contract"
+
+shape PagerAround
+  number: number
+  numbers: number[]
+
+shape PagerSettle
+  number: number
+
+members HymnalExact
+  state pagerFrom: number[] = []
+  state pagerHymnId = -1
+  state pagerHymnUrl = ""
+  state pagerPrevTop = -1
+  state pagerFindSeen = 0
+  state pagerPlayerSeen = 0
+  state pagerTurned = ""
+  state pagerX = 0
+  state pagerWidth = 0
+  resource pagerNear = pagerAround(hymnOpen, pagerFrom) when hymnOpen != "" as shape PagerAround else empty()
+  derive pagerWanted = hymnOpen == "" ? [] : (`${pagerNear.number}` == hymnOpen ? pagerNear.numbers : (pagerNumbers.map(n => `${n}`).includes(hymnOpen) ? pagerNumbers : match parseNumber(hymnOpen) { case some(n) => [n], case none => [] }))
+  state pagerNumbers: number[] = []
+  // The pages drawn change only here, in one commit with the scroll that
+  // keeps the route's page in view: the web's scroller does not follow a
+  // page that moves under it, so a page put before it would show for a
+  // frame.
+  task pagerPlace key=`${hymnOpen} ${pagerNear.number} ${pagerNear.numbers.map(n => `${n}`).join(",")}`
+    change(pagerPlaced)
+  action pagerPlaced
+    pagerNumbers = pagerWanted
+    if hymnOpen != ""
+      scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
+  resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
+  resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves) for n in pagerNumbers as shape ChordsPage
+  mutation pagerSettled as shape PagerSettle queue then pagerTurn
+  // A hymn's route at the top: where the reader opened it from. The same
+  // entry back on top (a sheet over it closed) or moved by the pager keeps
+  // what it had; one a search's result put in its place takes the results.
+  task pagerTake key=`${top(nav).id} ${top(nav).url}`
+    change(pagerTook)
+  action pagerTook
+    let t = top(nav)
+    if t.name == "hymn"
+      let byFind = findGone > pagerFindSeen and find.go.path == t.url
+      let byPlayer = playerGone > pagerPlayerSeen and player.go.path == t.url
+      if t.id == pagerHymnId and (t.url == pagerHymnUrl or t.url == pagerTurned)
+        pagerFrom = pagerFrom
+      else if byFind or byPlayer
+        pagerFrom = []
+      else if t.id == pagerHymnId
+        pagerFrom = (find.results and findSearchingAt(find, pagerHymnUrl)) ? listRows.map(s => s.rows.map(r => r.number)).flat() : []
+      else
+        match stack(nav).at(-2)
+          case some(b)
+            if b.id != pagerPrevTop
+              pagerFrom = []
+            else if find.results and findSearchingAt(find, b.url)
+              pagerFrom = listRows.map(s => s.rows.map(r => r.number)).flat()
+            else if b.name == "list" and listTab == "Sections"
+              pagerFrom = listRows.map(s => s.rows.map(r => r.number)).flat()
+            else if b.name == "recent"
+              pagerFrom = recentShown.all.map(r => r.number)
+            else
+              pagerFrom = []
+          case none
+            pagerFrom = []
+      pagerHymnId = t.id
+      pagerHymnUrl = t.url
+    pagerPrevTop = t.id
+    pagerFindSeen = findGone
+    pagerPlayerSeen = playerGone
+  // Once a scroll rests, the pager's offset as laid out then: how far its
+  // first page lies left of its port. A page's own scroll, up and down,
+  // ends here too and settles where the pager already stands.
+  action pagerEnded
+    match pagerNumbers.at(0)
+      case some(first)
+        let port = frame("hymn-pager")
+        let offset = port.x - frame(`hymn-page-${first}`).x
+        pagerX = offset
+        pagerWidth = port.width
+        send pagerSettled = pagerSettle(pagerNumbers, offset, port.width)
+      case none
+        pagerX = 0
+  // The route moves to the page settled on, in place. A `replace` to
+  // another path scrolls each of the route's scrollers to its start (the
+  // web host's `freshPath`, LLP 1116.005 D3), so the pages before the one
+  // settled on go in the same commit: it stands first, where the scroll
+  // goes, and the hymn before comes back with `pagerNear`'s answer.
+  action pagerTurn
+    match pagerSettled
+      case some(s)
+        if s.number > 0 and `${s.number}` != hymnOpen and top(nav).name == "hymn"
+          pagerNumbers = pagerNumbers.slice(max(pagerNumbers.indexOf(s.number), 0))
+          pagerTurned = path("hymn", `${s.number}`)
+          nav = replace(nav, path("hymn", `${s.number}`))
+      case none
+        nav = nav

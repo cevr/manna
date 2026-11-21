@@ -1,0 +1,21 @@
+test "A swipe left on home's hymn 2 turns to hymn 3, in place, and Back is home."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect text "hymn-number" == "2"
+  expect state pagerNumbers.0 == 1
+  expect state pagerNumbers.2 == 3
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock settle
+  clock data
+  expect state hymnOpen == "3"
+  expect state pagerHymnUrl == "/hymns/3"
+  expect text "hymn-number" == "3"
+  expect state pagerNumbers.0 == 2
+  expect state pagerNumbers.2 == 4
+  back
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
