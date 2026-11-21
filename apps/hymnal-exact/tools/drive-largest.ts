@@ -31,9 +31,11 @@
  *   clear the player's bar both while a hymn sounds (the bar 88 tall, its
  *   seeker showing) and at rest (56). The Topics tab's grouped
  *   list ends in the same end room, starting above the find bar.
- * - At the largest text each of the rail's labels but the first lies inside
- *   the rail; the first rises half its line over the rail's top, as the
- *   current hymnal's (`Rail.tsx`, `marginTop: -box / 2`; app.json accepts it).
+ * - At the largest text each of the rail's labels between the first and the
+ *   last lies inside the rail; the first rises half its line over the rail's
+ *   top and the last hangs half its line under its bottom, as the current
+ *   hymnal's (`Rail.tsx`, `marginTop: -box / 2` at `labelAt`'s
+ *   `(index + 0.5) / count`; app.json accepts the first's overlap).
  * - At the largest text a chord shape's marks, dots and barre leave no
  *   finding `app.json` does not accept, and its accepts, read by Exact's own
  *   matcher, take each of those roles' verified kinds and no sibling role's
@@ -563,17 +565,19 @@ const railFrom = 2 + largest.length;
 const railBox = boxOf(railRuns[railFrom]);
 const railOut = railLabels.filter((_, i) => {
   const label = boxOf(railRuns[railFrom + 1 + i]);
+  const last = i === railLabels.length - 1;
+  const bottom = label === undefined ? 0 : last ? label.y + label.h / 2 : label.y + label.h;
   return (
     railBox === undefined ||
     label === undefined ||
     label.y < railBox.y ||
-    label.y + label.h > railBox.y + railBox.h ||
+    bottom > railBox.y + railBox.h ||
     label.x < railBox.x ||
     label.x + label.w > railBox.x + railBox.w
   );
 });
 drive.check(
-  'at the largest text every rail label but the first, which rises half its line over the rail as the current hymnal’s (app.json), lies inside the rail',
+  'at the largest text the rail labels between the first and the last lie inside the rail, and the last hangs no more than half its line under it, as the current hymnal’s (its first rises half its line over the rail, app.json)',
   railLabels.length === 5 && railOut.length === 0,
   { labels: railLabels, out: railOut, rail: railBox },
 );

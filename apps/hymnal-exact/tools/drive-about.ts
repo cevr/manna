@@ -8,7 +8,9 @@
  * current hymnal's `licenceUrl`, held by `src/settings/sources.test.ts`)
  * draws its licence as a link, named the licence, where it has an address,
  * as the current hymnal's `Credit` opens it; and no link where it has none.
- * Exits 1 on any failed check.
+ * A topic row of About this hymn opens home's Topics with that topic's
+ * header at the list's top (a test reads no frame), as the current
+ * hymnal's `openAtTopic`. Exits 1 on any failed check.
  */
 
 import { join } from 'node:path';
@@ -67,6 +69,38 @@ drive.check(
   'About answers a credit with an address',
   credits.some((credit) => credit.url !== ''),
   credits,
+);
+
+/** The viewport box a `layout` reply gives. */
+const boxOf = (reply: unknown): { readonly y: number } | undefined =>
+  (reply as { node?: { space?: { viewport?: { y: number } } } } | undefined)?.node?.space?.viewport;
+
+const landing = [
+  'at /hymns/2',
+  'clock data',
+  'tap hymn-about',
+  'clock settle',
+  'clock data',
+  'tap about-topic-1',
+  'clock settle',
+  'clock data',
+  'layout hymn-list',
+  'layout group-power-in-nature-row',
+  'layout group-adoration-and-praise-row',
+];
+const landed = await drive.launch(`about-landing-${host}-${Date.now().toString(36)}`, landing);
+const list = boxOf(landed[landing.length - 3]);
+const header = boxOf(landed[landing.length - 2]);
+const first = boxOf(landed[landing.length - 1]);
+drive.check(
+  'a topic further down (hymn 2’s Power in Nature) opens Topics with its header at the list’s top, as the current About’s openAtTopic',
+  list !== undefined && header !== undefined && Math.abs(header.y - list.y) <= 1,
+  { list, header },
+);
+drive.check(
+  'the Topics list has left its first topic’s header behind',
+  list !== undefined && (first === undefined || first.y < list.y),
+  { list, first },
 );
 
 process.exit(drive.finish());
