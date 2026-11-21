@@ -93,6 +93,7 @@ shape KeysPlaces
   ring: number
   ringGap: number
   rest: number
+  seeker: number
   originX: number
   itemWide: number
   itemHigh: number
@@ -316,15 +317,14 @@ component KeysOver
     playerShown: PlayerView
     motionStill: bool
   view
-    if keysShown.number != 0 and (keysOpen or keysWheelOpen)
-      view position="absolute" left=0 right=0 top=0
-        bottom=(playerShown.bar.seeker and not playerShown.pageBar ? "calc(var(--exact-safe-area-inset-bottom) + size.slider + size.target + space.s12)" : "calc(var(--exact-safe-area-inset-bottom) + size.target + space.s12)")
-        pointer-events=(keysOpen ? "auto" : "none") press=keysAsk("page", 0) aria-hidden=true testId="dials-backdrop"
-        background-color=(keysWheelOpen ? "shadow" : "transparent") opacity=(keysWheelOpen ? keysPlaced.backdrop : 1)
-        animation=(motionStill ? "hy-fade-in duration.wheel-in ease-out both" : "hy-fade-in duration.wheel-in easing.out both")
     if keysShown.number != 0
       column position="absolute" left=0 right=0 height=0 pointer-events="none"
-        bottom=(playerShown.bar.seeker and not playerShown.pageBar ? "calc(var(--exact-safe-area-inset-bottom) + size.slider)" : "var(--exact-safe-area-inset-bottom)")
+        bottom=(playerShown.bar.seeker and not playerShown.pageBar ? `calc(var(--exact-safe-area-inset-bottom) + ${keysPlaced.seeker}px)` : "var(--exact-safe-area-inset-bottom)")
+        if keysOpen or keysWheelOpen
+          view position="absolute" left=0 right=0 bottom=`${keysPlaced.rest}px` height="100vh"
+            pointer-events=(keysOpen ? "auto" : "none") press=keysAsk("page", 0) aria-hidden=true testId="dials-backdrop"
+            background-color=(keysWheelOpen ? "shadow" : "transparent") opacity=(keysWheelOpen ? keysPlaced.backdrop : 1)
+            animation=(motionStill ? "hy-fade-in duration.wheel-in ease-out both" : "hy-fade-in duration.wheel-in easing.out both")
         if keysOpen and keysShown.has and keysShown.on
           KeysPanel()
         if keysWheelOpen
@@ -394,7 +394,7 @@ component KeysCapoDial
         view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
           background-color="chord" pointer-events="none" aria-hidden=true
         input type="range" min=0 max=11 step=1 value=keysShown.capo input=keysAsk("capo") aria-label="Capo" aria-valuetext=keysShown.capoSaid
-          position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 pointer-events="none" testId="dial-capo-value"
+          position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-capo-value"
 
 // The key dial: the twelve sounding keys on a row that snaps a key at a
 // time and wraps, each spelled as the hymn's transpose spells it, the
@@ -427,7 +427,7 @@ component KeysKeyDial
         view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
           background-color="chord" pointer-events="none" aria-hidden=true
         input type="range" min=-1 max=12 step=1 value=keysShown.keyAt input=keysKeyAdjusted aria-label="Key" aria-valuetext=keysShown.keySaid
-          position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 pointer-events="none" testId="dial-key-value"
+          position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-key-value"
 
 // One of the wheel's items, a pill at its slot over the key button, on the
 // button's fill and grown while the finger is over it, else on the panel.

@@ -149,13 +149,17 @@ test "A hymn with no chords: chords on, the key button holds the guitar's head l
   clock settle
   expect tree missing "dials-panel"
 
-test "A swipe up that starts on the key button opens the full player, as the bar's own swipe does."
+test "While the hymn sounds, a swipe up that starts on the key button opens the full player, as the bar's own swipe does."
   tap "hymn-list" drag 0 -600
   clock settle
   tap "hymn-2"
   clock settle
   clock data
-  tap "key-button" drag 0 -160
+  tap "play"
+  clock data
+  clock settle
+  expect tree has "key-button"
+  tap "key-button" drag 0 -200 over 150
   clock data
   clock settle
   expect tree has "player"

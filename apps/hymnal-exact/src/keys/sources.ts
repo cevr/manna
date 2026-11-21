@@ -81,6 +81,7 @@ export const PLACES = {
   ring: 2,
   ringGap: 3,
   rest: 56,
+  seeker: 32,
   originX: press.ORIGIN_X,
   itemWide: press.ITEM.width,
   itemHigh: press.ITEM.height,

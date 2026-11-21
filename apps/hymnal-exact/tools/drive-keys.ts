@@ -85,15 +85,18 @@ drive.check(
 
 const swiped = await drive.launch(store('swipe'), [
   ...onHymn,
-  'tap key-button drag 0 -160',
+  'tap play',
+  'clock data',
+  'clock settle',
+  'tap key-button drag 0 -200 over 150',
   'clock data',
   'clock settle',
   'tree',
 ]);
 drive.check(
-  'a swipe up from the key button opens the full player',
-  holds(swiped[onHymn.length + 3], 'player'),
-  swiped[onHymn.length + 3],
+  'while the hymn sounds, a swipe up from the key button opens the full player',
+  holds(swiped[onHymn.length + 6], 'player'),
+  swiped[onHymn.length + 6],
 );
 
 if (host === 'ios') {

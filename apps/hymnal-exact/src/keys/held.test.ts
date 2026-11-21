@@ -127,6 +127,7 @@ test('the key button’s, the dials’ and the wheel’s measures are the curren
     ring: constant(key, 'RING'),
     ringGap: constant(key, 'RING_GAP'),
     rest: constant('src/player/bar.ts', 'REST'),
+    seeker: styled('src/player/Scrubber.ios.tsx', 'bar', 'height'),
     originX: wheel.ORIGIN_X,
     itemWide: wheel.ITEM.width,
     itemHigh: wheel.ITEM.height,
