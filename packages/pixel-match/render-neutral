@@ -12,4 +12,8 @@ ad8529417032 move: the credit's head template and its closing '.', unchanged, fr
 54fc3fd84c2b exports: one exports line in apps/hymnal/package.json (./player/thumb); no source changes
 867880c5d09a exports: one exports line in apps/hymnal/package.json (./player/wheel); no source changes
 dd224a16edb2 exports: one exports line in apps/hymnal/package.json (./player/wheelmotion); no source changes
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button), on main before par-hy-key; no source changes under the One paths
+4c6b055a91be merge: brings the ./player/button exports line into par-hy-head; no other change under the One paths
+d01c2d92b3cf merge: brings the ./player/button exports line into par-hy-rail; no other change under the One paths
+954355a15d4b merge: brings the About-rules move (7001b407b430, listed) and its exports lines into par-hy-rail; no other change under the One paths
 b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
