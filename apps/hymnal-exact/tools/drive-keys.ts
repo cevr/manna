@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters -- a host script that drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters, effect/noTernary -- a host script that drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * The key button's live checks a `.test.contract` cannot hold: the names
@@ -6,9 +6,11 @@
  * `@manna/exact-kit/drive` on the host named (`bun tools/drive-keys.ts
  * web|ios`), on hymn 2 with chords turned on at the key button:
  *
- * - the key button is named "Key" with the key sounding as its value, and
- *   the open dials' controls are named "Capo" and "Key" with One's
- *   `capoSaid` and `keySaid` as their values;
+ * - with chords off the key button is the platform's button named "Key"
+ *   (`tree --ax`, read before chords fill the page past its 40 elements;
+ *   on iOS its value "Chords off" too: the web reads no value on a
+ *   button), and the open dials' controls carry the names "Capo" and
+ *   "Key" with One's `capoSaid` and `keySaid` as their values (`tree`);
  * - on iOS (Exact scripts a held finger's legs there alone), a hold of the
  *   key button past `HOLD` opens the wheel with One's words, Key ♭, Key ♯,
  *   Reset and Chords off; a slide onto Key ♯ and a lift moves the hymn up a
@@ -24,7 +26,7 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
-import { HOLD, ORIGIN_X, slotOf } from '../src/keys/wheel.ts';
+import { HOLD, ORIGIN_X, slotOf } from '@manna/hymnal-app/player/wheel';
 
 const host = process.argv[2] ?? 'web';
 const drive = makeDrive({ name: 'drive-keys', host, appDir: join(import.meta.dir, '..') });
@@ -62,25 +64,50 @@ const onHymn = [
   'clock settle',
 ];
 
+/** The authored names a `tree` reply gives its first node: its label and its value. */
+const propsOf = (reply: unknown) => {
+  const node = (
+    reply as
+      | {
+          nodes?: ReadonlyArray<{
+            props?: { accessibilityLabel?: string; accessibilityValueText?: string };
+          }>;
+        }
+      | undefined
+  )?.nodes?.[0]?.props;
+  return { label: node?.accessibilityLabel, value: node?.accessibilityValueText };
+};
+
+const offAt = 6;
 const names = await drive.launch(store('names'), [
-  ...onHymn,
-  'tree --ax bar',
+  ...onHymn.slice(0, offAt),
+  'tree --ax key-button',
+  ...onHymn.slice(offAt),
   'tap key-button',
   'clock data',
   'clock settle',
-  'tree --ax dials-panel',
+  'tree dial-capo-value',
+  'tree dial-key-value',
 ]);
-const face = names[onHymn.length];
-const dials = names[onHymn.length + 4];
+const off = named(names[offAt], 'Key');
 drive.check(
-  'the key button is named Key, its value the key sounding',
-  named(face, 'Key')?.value === 'D',
-  elementsOf(face),
+  host === 'ios'
+    ? 'with chords off the key button is a button named Key, its value Chords off'
+    : 'with chords off the key button is a button named Key (the web reads no value on a button)',
+  off !== undefined &&
+    /button/iu.test(off.role ?? '') &&
+    (host !== 'ios' || off.value === 'Chords off'),
+  elementsOf(names[offAt]),
 );
+const [capo, key] = [names[onHymn.length + 4], names[onHymn.length + 5]].map(propsOf);
 drive.check(
   'the open dials name Capo and Key with the current app’s values',
-  named(dials, 'Capo')?.value === 'No capo' && named(dials, 'Key')?.value === 'D',
-  elementsOf(dials),
+  JSON.stringify([capo, key]) ===
+    JSON.stringify([
+      { label: 'Capo', value: 'No capo' },
+      { label: 'Key', value: 'D' },
+    ]),
+  [capo, key],
 );
 
 const swiped = await drive.launch(store('swipe'), [

@@ -322,7 +322,7 @@ const keysAt = [
   'check',
   ...[...KEY_PARTS, ...FLOATING, 'bar'].map((id) => `layout ${id}`),
 ];
-const keysTree = chordsOn.length + 4 + largest.length + 6;
+const keysTree = chordsOn.length + 3 + largest.length + 6;
 const keysFrom = keysTree + 2;
 const keyed = await drive.run(flags('largest-keys'), keysAt);
 const keyBoxes = KEY_PARTS.map((id, i) => [id, boxOf(keyed[keysFrom + i])] as const);
