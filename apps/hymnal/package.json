@@ -72,6 +72,7 @@
     "./reader/rail-marks": "./src/reader/rail-marks.ts",
     "./credit": "./src/credit.ts",
     "./chord-choices": "./src/chord-choices.ts",
+    "./gemma-notice": "./src/gemma-notice.ts",
     "./hymns/chords": "./src/hymns/chords.ts",
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/indexes": "./src/hymns/indexes.ts",
