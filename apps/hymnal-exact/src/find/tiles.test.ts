@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so the playing hymn's Option is built by its shapes and a group past the end is `undefined`. */
+/* oxlint-disable effect/noTernary -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so the playing hymn's Option is built by its shapes. */
 
 /**
  * All at once's tiles against the current app's `tilesOf`, over every tab,

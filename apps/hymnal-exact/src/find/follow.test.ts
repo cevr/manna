@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so no row is `undefined`. */
-
 /**
  * The home list follows the drums as the current app's does: over
  * generated lists (every tab, generated favourites and recents) and

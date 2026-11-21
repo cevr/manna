@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- Exact's data module imports no effect (docs/exact.md): a hymn the list has no row for is a plain `undefined`, answered as "". */
+/* oxlint-disable effect/noTernary -- Exact's data module imports no effect (docs/exact.md): a hymn the list has no row for is a plain `undefined`, answered as "". */
 
 /**
  * The home list follows the drums, as the current app's does

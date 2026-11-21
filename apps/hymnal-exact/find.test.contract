@@ -183,6 +183,13 @@ test "All at once"
   expect tree has "group-adoration-and-praise"
 
 test "The tiles are the Sections' groups, the playing one marked"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
   tap "hymn-1"
   clock settle
   clock data
