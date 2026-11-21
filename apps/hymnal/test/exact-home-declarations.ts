@@ -32,6 +32,8 @@ export const held = {
     TAB_NAMES: tabs.TAB_NAMES satisfies typeof Tabs.TAB_NAMES,
     tabsOf: tabs.tabsOf satisfies (input: Declared) => ReturnType<typeof Tabs.tabsOf>,
     tilesFor: tabs.tilesFor satisfies typeof Tabs.tilesFor,
+    tileCount: tabs.tileCount satisfies typeof Tabs.tileCount,
+    tileName: tabs.tileName satisfies typeof Tabs.tileName,
   },
   opening: { openingAt: opening.openingAt } satisfies typeof Opening,
   lists: {

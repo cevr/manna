@@ -64,3 +64,9 @@ export interface Tile {
 
 /** A tile for each of `tab`'s groups, in its order; `playing` is the player's hymn, 0 while idle. */
 export declare const tilesFor: (tab: Tab, playing: number) => ReadonlyArray<Tile>;
+
+/** How many hymns a tile's group holds, as its tile says it: `1 hymn`, `12 hymns`. */
+export declare const tileCount: (tile: Tile) => string;
+
+/** A tile's name as VoiceOver reads it: name, count, then `playing`. */
+export declare const tileName: (tile: Tile) => string;

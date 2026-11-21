@@ -12,7 +12,7 @@
  */
 
 import { useAtomValue } from '@effect/atom-react';
-import { Match, Option } from 'effect';
+import { Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import { useMemo } from 'react';
 import {
@@ -35,7 +35,7 @@ import { ListEnd } from '~/reader/ListEnd';
 
 import { usePinch } from './pinch';
 import { playingNumber } from './playing';
-import { type Tab, type Tile, tilesFor } from './tabs';
+import { type Tab, type Tile, tileCount, tileName, tilesFor } from './tabs';
 import { tileTimes } from './tile-times';
 
 /** Tiles in a row, and the space between and around them. */
@@ -173,14 +173,11 @@ function TileView({
   readonly accent: ColorValue;
   readonly onPress: () => void;
 }) {
-  const count = Match.value(tile.count).pipe(
-    Match.when(1, () => '1 hymn'),
-    Match.orElse((n) => `${n} hymns`),
-  );
+  const count = tileCount(tile);
   return (
     <Pressable
       role="button"
-      aria-label={[tile.name, count, tile.playing && 'playing'].filter(Boolean).join(', ')}
+      aria-label={tileName(tile)}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
