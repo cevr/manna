@@ -266,7 +266,7 @@ component FindBar
             if findShown.tilesControl
               button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0
                 color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
-                animation="hy-fade-in duration.fade ease-out both" -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.fade ease-out both")
+                animation=(motionStill ? "none" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.fade ease-out both")
                 :active
                   opacity = "opacity.pressed"
                 image "symbol:layers" width="size.glyph" height="size.glyph"
