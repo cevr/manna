@@ -101,6 +101,14 @@ test('the key button’s hold and the reset’s wait are the current app’s tim
   expect(afterOf('keysResetWait')).toBe(thumb.RESET_WAIT);
 });
 
+test('the key button lets go in 200 ms on the strong ease-out, still under Reduce Motion', () => {
+  const press = /transition=\(motionStill \? "none" : "scale ([\w.-]+) ([\w.-]+)"\)/u.exec(
+    appFile('features/keys.contract'),
+  );
+  expect([press?.[1], press?.[2]]).toEqual(['duration.press', 'easing.out']);
+  expect(appFile('app.forma')).toContain('  duration.press = 200ms\n');
+});
+
 test('the key button’s, the dials’ and the wheel’s measures are the current app’s', () => {
   const [key, dials, view, bar] = [
     'src/player/KeyButton.tsx',
