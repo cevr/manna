@@ -40,6 +40,7 @@ const FIND = 'src/home/FindBar.tsx';
 const DRUMS = 'src/player/FindDrums.tsx';
 const MAGNIFIER = 'src/home/Magnifier.ios.tsx';
 const PANEL = 'src/player/DialPanel.tsx';
+const TILES = 'src/home/AllAtOnce.tsx';
 
 const type = (
   name: string,
@@ -117,6 +118,12 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.first', [BOX, 'first']),
   type('type.finger', [BOX, 'finger']),
   type('type.chip', [CHIP, 'text'], [STANZAS, 'heading']),
+  type('type.row-line', [LIST, 'found']),
+  type('type.tile-name', [TILES, 'name']),
+  type('type.tile-count', [TILES, 'count']),
+  type('type.tiles-head', [TILES, 'heading']),
+  length('size.strip', [TILES, 'strip', 'height']),
+  length('line.tile', [TILES, 'tile', 'borderWidth']),
 
   length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
   length(

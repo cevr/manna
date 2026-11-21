@@ -6,7 +6,10 @@
  * from what the port was told. `tabsOf`'s indexes are declared by the
  * fields it reads, so the port can pass its bundled JSON: the source's
  * indexes are held to fit that declaration, and the rest of its input and
- * its answer to the declaration's. Nothing here runs.
+ * its answer to the declaration's. `tilesOf` names its `Option` by its
+ * shapes, which a function taking an `Option` cannot accept, so it is held
+ * where the port runs it (`apps/hymnal-exact/src/find/tiles.test.ts`).
+ * Nothing here runs.
  */
 
 import type * as Opening from '../exact/home/opening';

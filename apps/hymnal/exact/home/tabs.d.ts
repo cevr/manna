@@ -62,6 +62,17 @@ export interface Tile {
   readonly playing: boolean;
 }
 
+/**
+ * A tile for each of `tab`'s groups, in its order; `playing` the player's
+ * hymn, an `effect` Option named by its shapes, which a function taking an
+ * Option cannot accept, so it is held where the port runs it
+ * (`apps/hymnal-exact/src/find/tiles.test.ts`).
+ */
+export declare const tilesOf: (
+  tab: Tab,
+  playing: { readonly _tag: 'Some'; readonly value: number } | { readonly _tag: 'None' },
+) => ReadonlyArray<Tile>;
+
 /** A tile for each of `tab`'s groups, in its order; `playing` is the player's hymn, 0 while idle. */
 export declare const tilesFor: (tab: Tab, playing: number) => ReadonlyArray<Tile>;
 

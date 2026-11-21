@@ -135,12 +135,14 @@ test "A tap outside closes the drums and opens nothing"
   expect tree missing "hymn-title"
   expect state find.go.serial == 0
 
+// One tile a group of the tab in use, as the current app's All at once:
+// its name, its count, its first row where its tap lands; no number tile.
 test "All at once"
   perf
     tap "tab-topics"
     clock settle
     clock data
-  expect perf query findTileNumbers == 0
+  expect perf query findTileGroups == 0
   expect state findTilesAsked == false
   expect state find.top == "/"
   expect state find.tilesControl == true
@@ -148,19 +150,29 @@ test "All at once"
   clock settle
   clock data
   expect tree has "tiles"
-  expect tree has "tile-1"
-  expect tree has "tile-695"
+  expect text "tiles-heading" == "Topics, all at once"
+  expect tree has "group-tile-0"
+  expect tree has "group-tile-3"
+  expect tree missing "tile-1"
+  expect tree missing "tile-100"
+  expect text "group-tile-count-1" == "5 hymns"
+  expect state findTileGroups.1 .row == "hymn-258"
+  expect state findTileGroups.0 .playing == false
   expect state find.row == "tiles"
   expect tree missing "find-search"
-  tap "tile-100"
+  tap "group-tile-1"
   clock settle
   clock data
-  expect text "hymn-title" == "Great Is Thy Faithfulness"
-  back
+  expect tree missing "tiles"
+  expect state find.row == "folded"
+  expect state findLanding == ""
+  expect state listTab == "Topics"
+  expect tree has "hymn-258"
+  expect tree missing "hymn-title"
+  tap "tiles-show"
   clock settle
   clock data
   expect tree has "tiles"
-  expect tree has "tile-100"
   perf
     tap "tiles-done"
     clock settle
@@ -169,6 +181,62 @@ test "All at once"
   expect tree missing "tiles"
   expect state listTab == "Topics"
   expect tree has "group-adoration-and-praise"
+
+test "The tiles are the Sections' groups, the playing one marked"
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  expect state player.number == 1
+  back
+  clock settle
+  clock data
+  tap "tiles-show"
+  clock settle
+  clock data
+  expect text "tiles-heading" == "Sections, all at once"
+  expect text "group-tile-count-0" == "38 hymns"
+  expect state findTileGroups.0 .row == "hymn-1"
+  expect state findTileGroups.0 .playing == true
+  expect state findTileGroups.1 .playing == false
+  tap "group-tile-3"
+  clock settle
+  clock data
+  expect tree missing "tiles"
+  expect tree has "hymn-59"
+
+// While the drums are open at home on a number, the list follows it to
+// that hymn's first row; the row the list scrolls to is `findFollowing`.
+test "The home list follows the drums"
+  tap "find-number"
+  clock settle
+  clock data
+  type "drum-hundreds" "3"
+  clock data
+  clock settle
+  expect state findFollowed == 300
+  expect state findFollowing.row == "hymn-300"
+  type "drum-tens" "4"
+  clock data
+  clock settle
+  expect state findFollowing.row == "hymn-340"
+  tap "drums-hash"
+  clock settle
+  clock data
+  expect state findFollowed == 0
+  tap "tab-lists"
+  clock settle
+  clock data
+  tap "find-number"
+  clock settle
+  clock data
+  type "drum-hundreds" "2"
+  clock data
+  clock settle
+  expect state findFollowing.row == ""
 
 test "On a hymn's page a found hymn takes its place"
   at "/hymns/2"
