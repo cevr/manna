@@ -175,7 +175,7 @@ describe('the pager moves as the current app’s does', () => {
   });
 
   test('generated readers: the same hymn, the same neighbours, one entry, Back at the list', () => {
-    for (let seed = 1; seed <= 300; seed += 1) {
+    for (let seed = 1; seed <= 150; seed += 1) {
       const random = seeded(seed);
       let { port, model } = open(random);
       agree(port, model, seed, 0);

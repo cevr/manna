@@ -31,6 +31,7 @@ test "On, each chord sits over its syllable."
   expect text "chord-1-1-6" == "Bm"
   expect text "chord-1-1-7" == "Em"
   expect text "chord-1-1-8" == "D"
+  expect tree missing "chord-1-1-2"
   expect text "key-sounding" == "D"
   expect text "key-played" == "D"
 

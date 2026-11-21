@@ -37,6 +37,7 @@ const OWNER = new Map([
   ['features/settings.contract', 'pm-hy-settings'],
   ['features/motion.contract', 'no unit'],
   ['features/abouthymn.contract', 'no unit'],
+  ['features/pager.contract', 'no unit'],
 ]);
 
 const ALLOWED = new Map<string, AllowList>([

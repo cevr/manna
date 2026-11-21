@@ -99,6 +99,10 @@ describe('the data module runs where Exact runs it', () => {
         expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
+        expect(() => sources.pagerAround([route(random), list])).not.toThrow();
+        expect(() =>
+          sources.pagerSettle([list, below(random, 2000) - 400, below(random, 500)]),
+        ).not.toThrow();
         expect(() =>
           sources.findStep([
             pick(random, ['screen', 'searchOn', 'drumsOpen', 'turn', 'open', 'tile', 'pinch', 'x']),
@@ -110,6 +114,7 @@ describe('the data module runs where Exact runs it', () => {
       }
       expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.railPlaces().labels.length).toBe(6);
+      expect(sources.pagerPlaces().edge).toBe(20);
       expect(sources.listTabs().length).toBe(5);
       expect(sources.listTitles().length).toBe(695);
     });
@@ -129,6 +134,9 @@ describe('the data module runs where Exact runs it', () => {
       'listTabRows',
       'listTabs',
       'listTitles',
+      'pagerAround',
+      'pagerPlaces',
+      'pagerSettle',
       'playerStep',
       'railPlaces',
       'railTo',
