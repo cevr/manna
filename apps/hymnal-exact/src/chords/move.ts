@@ -89,14 +89,3 @@ export const movesTo = (
   if (move.transpose === still.transpose && move.capo === still.capo) return others;
   return [...others, `${number}:${move.transpose}:${move.capo}`];
 };
-
-/**
- * `move` turned to sound in the key on pitch class `pitch`, for a hymn whose
- * printed key's tonic is on `printed`: the transpose, -5 to 6, that reaches
- * it (the current dials' `transposeTo`), the capo kept.
- */
-export const keyedTo = (move: Move, printed: number, pitch: number): Move =>
-  transposed({ ...move, transpose: 0 }, pitch - printed);
-
-/** `move` with its capo on fret `capo`, held to 0..11 as the current capo dial stops at its ends. */
-export const frettedTo = (move: Move, capo: number): Move => capoed({ ...move, capo: 0 }, capo);

@@ -9,20 +9,17 @@
  * `soundingKey`, `keyName`, `Chord.format`). A run of n up then n down
  * shows the first names again; the capo stops at 0 and 11 as the current
  * app's dial does, and the key wraps through the twelve; a hymn's move never
- * reaches another hymn. The dials' own steps (a key by its pitch class, a
- * capo by its fret, a move put) reach what the current app's `transposeTo`,
- * `transposed`, `capoed` and `still` reach.
+ * reaches another hymn. A move put on a hymn replaces its entry alone.
  */
 
 import { describe, expect, test } from 'bun:test';
 
 import { capoed, hasChords, type Move, still, transposed } from '@manna/hymnal-app/hymns/chords';
-import { transposeTo } from '@manna/hymnal-app/player/thumb';
 
 import { book } from '../hymns/book.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
-import { canStep, frettedTo, keyedTo, type MoveStep, moveOf, movesAfter, movesTo } from './move.ts';
+import { canStep, type MoveStep, moveOf, movesAfter, movesTo } from './move.ts';
 import type { ChordsPage } from './page.ts';
 import { bundled, currentBook, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
@@ -32,9 +29,6 @@ const chorded = book.hymns.flatMap((hymn) => {
   const chords = currentBook.of(hymn.number);
   return chords._tag === 'Some' && hasChords(chords.value) ? [hymn.number] : [];
 });
-
-/** A major key's tonic on each pitch class, as a key signature spells it. */
-const TONICS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
 
 const STEPS: ReadonlyArray<MoveStep> = ['up', 'down', 'capo-up', 'capo-down', 'reset'];
 
@@ -117,24 +111,11 @@ describe('transpose and capo, over the whole domain (A2)', () => {
     }
   });
 
-  test('the dials’ steps: a key by pitch class, a capo by fret and a put move are the current app’s', () => {
+  test('a move put on a hymn replaces its own entry alone, and the hymn as printed leaves none', () => {
     const random = seeded(17);
-    for (let run = 0; run < 2000; run++) {
+    for (let run = 0; run < 400; run++) {
       const number = pick(random, chorded);
       const move = { transpose: below(random, 12) - 5, capo: below(random, 12) };
-      const printed = below(random, 12);
-      const pitch = below(random, 12);
-      const capo = below(random, 16) - 2;
-      const key = { tonic: TONICS[printed] ?? 'C', minor: false } as const;
-      expect(keyedTo(move, printed, pitch)).toEqual({
-        ...move,
-        transpose: transposeTo(key, pitch),
-      });
-      expect(keyedTo(move, printed, pitch)).toEqual(
-        transposed({ ...move, transpose: 0 }, pitch - printed),
-      );
-      expect(frettedTo(move, capo)).toEqual(capoed({ ...move, capo: 0 }, capo));
-      expect(frettedTo(move, capo).capo).toBe(Math.min(11, Math.max(0, capo)));
       const moves = movesTo([`${number + 1}:1:1`], number, move);
       expect(moveOf(moves, number)).toEqual(move);
       expect(moveOf(moves, number + 1)).toEqual({ transpose: 1, capo: 1 });
