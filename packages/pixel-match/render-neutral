@@ -17,3 +17,4 @@ c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/but
 d01c2d92b3cf merge: brings the ./player/button exports line into par-hy-rail; no other change under the One paths
 954355a15d4b merge: brings the About-rules move (7001b407b430, listed) and its exports lines into par-hy-rail; no other change under the One paths
 b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
+1931651bb79f move: the dials' RESET_WAIT, unchanged (600), from Dials.tsx into thumb.ts, Dials reading and re-exporting it
