@@ -51,9 +51,36 @@ members HymnalExact
   resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
   resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves) for n in pagerNumbers as shape ChordsPage
   mutation pagerSettled as shape PagerSettle queue then pagerTurn
-  // A hymn's route at the top: where the reader opened it from. The same
-  // entry back on top (a sheet over it closed) or moved by the pager keeps
-  // what it had; one a search's result put in its place takes the results.
+  // What the screen on top lists, in the order shown, while it is on top:
+  // a search's results, home's Sections list, the Recent screen; none for
+  // another home tab, which pages every hymn as the current app's does. A
+  // hymn's own page lists only a search's results. Kept as it was when the
+  // reader pressed a row, since a hymn opened changes Recent and closes the
+  // search after.
+  state pagerShowing: number[] = []
+  state pagerShowingAt = ""
+  derive pagerRowsKey = listRows.map(s => s.rows.map(r => `${r.number}`).join(",")).join(";")
+  task pagerShow key=`${top(nav).id} ${top(nav).url} ${listTab} ${find.results} ${find.searchAt} ${pagerRowsKey} ${recentShown.all.map(r => `${r.number}`).join(",")}`
+    change(pagerShown)
+  action pagerShown
+    let t = top(nav)
+    if find.results and findSearchingAt(find, t.url)
+      pagerShowing = listRows.map(s => s.rows.map(r => r.number)).flat()
+      pagerShowingAt = `${t.id} ${t.url}`
+    else if t.name == "list"
+      pagerShowing = listTab == "Sections" ? listRows.map(s => s.rows.map(r => r.number)).flat() : []
+      pagerShowingAt = `${t.id} ${t.url}`
+    else if t.name == "recent"
+      pagerShowing = recentShown.all.map(r => r.number)
+      pagerShowingAt = `${t.id} ${t.url}`
+    else if t.name != "hymn"
+      pagerShowing = []
+      pagerShowingAt = `${t.id} ${t.url}`
+  // A hymn's route at the top: where the reader opened it from, what the
+  // screen it was pressed on listed then (`pagerShowing`), if that screen
+  // was the one on top just before. The same entry back on top (a sheet
+  // over it closed) or moved by the pager keeps what it had; a hymn dialled
+  // or opened from the bar takes none.
   task pagerTake key=`${top(nav).id} ${top(nav).url}`
     change(pagerTook)
   action pagerTook
@@ -66,20 +93,11 @@ members HymnalExact
       else if byFind or byPlayer
         pagerFrom = []
       else if t.id == pagerHymnId
-        pagerFrom = (find.results and findSearchingAt(find, pagerHymnUrl)) ? listRows.map(s => s.rows.map(r => r.number)).flat() : []
+        pagerFrom = pagerShowingAt == `${t.id} ${pagerHymnUrl}` ? pagerShowing : []
       else
         match stack(nav).at(-2)
           case some(b)
-            if b.id != pagerPrevTop
-              pagerFrom = []
-            else if find.results and findSearchingAt(find, b.url)
-              pagerFrom = listRows.map(s => s.rows.map(r => r.number)).flat()
-            else if b.name == "list" and listTab == "Sections"
-              pagerFrom = listRows.map(s => s.rows.map(r => r.number)).flat()
-            else if b.name == "recent"
-              pagerFrom = recentShown.all.map(r => r.number)
-            else
-              pagerFrom = []
+            pagerFrom = (b.id == pagerPrevTop and pagerShowingAt == `${b.id} ${b.url}`) ? pagerShowing : []
           case none
             pagerFrom = []
       pagerHymnId = t.id
