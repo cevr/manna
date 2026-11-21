@@ -15,6 +15,7 @@ test "A swipe left on home's hymn 2 turns to hymn 3, in place, and Back is home.
   expect state pagerNumbers.2 == 3
   expect state recentList.0 == 2
   tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "3" within 3000
   clock settle
   clock data
   expect state hymnOpen == "3"
@@ -34,11 +35,13 @@ test "A swipe right turns back a hymn, and at hymn 1 stays."
   clock settle
   clock data
   tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "1" within 3000
   clock settle
   clock data
   expect state hymnOpen == "1"
   expect text "hymn-number" == "1"
   tap "hymn-pager" drag 300 0 from 100 300
+  clock +800 real
   clock settle
   clock data
   expect state hymnOpen == "1"
@@ -54,6 +57,7 @@ test "A short drag turns no page, and a page scrolls up and down."
   clock settle
   clock data
   tap "hymn-pager" drag -120 0 from 300 300 over 1200 hold 300
+  clock +800 real
   clock settle
   clock data
   expect state hymnOpen == "2"
@@ -76,6 +80,7 @@ test "From a search, the next page is the next result."
   expect state pagerFrom.0 == 12
   expect state pagerFrom.1 == 120
   tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "120" within 3000
   clock settle
   clock data
   expect state hymnOpen == "120"
@@ -105,6 +110,7 @@ test "From Recent, the page before is the newer hymn."
   expect state pagerFrom.0 == 3
   expect state pagerFrom.1 == 5
   tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "3" within 3000
   clock settle
   clock data
   expect state hymnOpen == "3"
@@ -121,6 +127,7 @@ test "A hymn opened by its address pages through every hymn."
   expect state pagerNumbers.0 == 99
   expect state pagerNumbers.2 == 101
   tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "101" within 3000
   clock settle
   clock data
   expect state hymnOpen == "101"
@@ -137,6 +144,7 @@ test "A swipe starts no player, and leaves the bar's hymn while another sounds."
   clock settle
   clock data
   tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "3" within 3000
   clock settle
   clock data
   expect state hymnOpen == "3"
@@ -151,6 +159,7 @@ test "A swipe starts no player, and leaves the bar's hymn while another sounds."
   clock data
   clock until state player.phase == "playing" within 10000
   tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "2" within 3000
   clock settle
   clock data
   expect state hymnOpen == "2"
