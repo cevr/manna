@@ -9,7 +9,8 @@
  * agent: a hymn page's own bar names its buttons as the current
  * `PlayerBar.tsx` does (Sound, Play hymn 1); once the hymn plays, the
  * docked bar's opener is "Open player", its button "Pause hymn 1" and the
- * seeker "Seek". Exits 1 on any failed check.
+ * seeker "Seek"; Sound is a switch, as the current bar's. Exits 1 on any
+ * failed check.
  */
 
 import { join } from 'node:path';
@@ -57,5 +58,11 @@ for (const name of ['Sound', 'Play hymn 1'])
   drive.check(`the page's own bar names "${name}"`, names(resting).includes(name), names(resting));
 for (const name of ['Open player', 'Sound', 'Pause hymn 1', 'Seek'])
   drive.check(`the playing bar names "${name}"`, names(sounding).includes(name), names(sounding));
+const sound = elementsOf(resting).find((element) => element.name === 'Sound');
+drive.check(
+  'Sound is a switch, as the current PlayerBar.tsx gives it (`role="switch"`, `aria-checked`)',
+  /switch/iu.test(sound?.role ?? ''),
+  sound,
+);
 
 process.exit(drive.finish());

@@ -128,13 +128,14 @@ component PlayerSeeker
 
 // The Sound switch, as the current PlayerBar.tsx's `Sound` draws it: a
 // speaker with waves in the button's role while on, with a slash in the
-// muted role while off, left of the player's button.
+// muted role while off, left of the player's button; a switch to VoiceOver,
+// checked while on.
 component PlayerSound
   inject
     playerSoundOn: bool
     playerSoundPress: action
   view
-    button press=playerSoundPress appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId="bar-sound" aria-label="Sound" aria-pressed=playerSoundOn
+    button press=playerSoundPress appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId="bar-sound" role="switch" aria-label="Sound" aria-checked=playerSoundOn
       :active
         background-color = "soft"
       image (playerSoundOn ? "symbol:sf/speaker.wave.2.fill" : "symbol:sf/speaker.slash.fill") width="size.glyph" height="size.glyph" object-fit="contain" color=(playerSoundOn ? "button" : "muted") aria-hidden=true
