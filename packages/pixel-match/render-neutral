@@ -8,3 +8,7 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button) beside port changes; no One source changed
+d01c2d92b3cf merge: its resolution joins two units' exports lines (./player/button, ./reader/rail-marks) in apps/hymnal/package.json; no One source changed
+4c6b055a91be merge: its resolution joins two units' exports lines (./player/button, ./reader/about-rules) in apps/hymnal/package.json; no One source changed
+954355a15d4b merge: its resolution joins two units' exports lines (./reader/about-rules, ./reader/rail-marks) in apps/hymnal/package.json; no One source changed
