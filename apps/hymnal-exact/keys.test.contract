@@ -150,11 +150,19 @@ test "A hymn with no chords: chords on, the key button holds the guitar's head l
   expect tree missing "dials-panel"
 
 test "While the hymn sounds, a swipe up that starts on the key button opens the full player, as the bar's own swipe does."
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
   tap "hymn-list" drag 0 -600
   clock settle
   tap "hymn-2"
   clock settle
   clock data
+  expect state player.fixture == true
   tap "play"
   clock data
   clock settle

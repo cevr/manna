@@ -110,7 +110,17 @@ drive.check(
   [capo, key],
 );
 
+const quiet = [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'tap settings-feel',
+  'clock settle',
+  'tap settings-done',
+  'clock settle',
+];
 const swiped = await drive.launch(store('swipe'), [
+  ...quiet,
   ...onHymn,
   'tap play',
   'clock data',
@@ -122,8 +132,8 @@ const swiped = await drive.launch(store('swipe'), [
 ]);
 drive.check(
   'while the hymn sounds, a swipe up from the key button opens the full player',
-  holds(swiped[onHymn.length + 6], 'player'),
-  swiped[onHymn.length + 6],
+  holds(swiped[quiet.length + onHymn.length + 6], 'player'),
+  swiped[quiet.length + onHymn.length + 6],
 );
 
 if (host === 'ios') {
