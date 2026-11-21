@@ -8,3 +8,12 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button) for the port's bar; no source changes
+4c6b055a91be merge: origin/main into hymnapp/par-hy-head; its only apps/hymnal change is c82f7e9ebeb6's exports line (./player/button)
+d01c2d92b3cf merge: origin/main into hymnapp/par-hy-rail; its only apps/hymnal change is c82f7e9ebeb6's exports line (./player/button)
+954355a15d4b merge: origin/main into hymnapp/par-hy-rail; its apps/hymnal changes are 7001b407b430's move of About's MORE_LIKE and section names, already listed
+4d1d848cefff exports: one exports line in apps/hymnal/package.json (./reader/rows); no source changes
+1aacd1c5995b move: All at once's tilesOf call over the playing number, unchanged, from AllAtOnce.tsx into home/tabs.ts's tilesFor; its declaration and held line in exact-home-declarations.ts
+7502f91cf966 move: a tile's count words and VoiceOver name, unchanged, from AllAtOnce.tsx's TileView into home/tabs.ts (tileCount, tileName); their declarations and held lines
+6fcb95e808aa test: exact-find-declarations.ts holds the port's new rows and foundOffset declarations; no source changes
+b1dde6a90fa5 declaration: tilesOf declared in exact/home/tabs.d.ts for the port's test, and a note in exact-home-declarations.ts; no source changes
