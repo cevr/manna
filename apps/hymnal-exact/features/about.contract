@@ -12,18 +12,37 @@ shape AboutCredit
   licence: string
   url: string
 
+shape AboutGemma
+  lead: string
+  terms: string
+  termsUrl: string
+  between: string
+  policy: string
+  policyUrl: string
+  end: string
+  termsButton: string
+  termsText: string
+
 shape AboutPage
   lead: string
   credits: AboutCredit[]
   end: string
+  gemma: AboutGemma
 
 members HymnalExact
   resource aboutShown = aboutCredits() as shape AboutPage
 
+// Under the credits, as the current hymnal's `GemmaNotice` and
+// `GemmaTerms`: the notice the Gemma Terms of Use ask of the meaning table,
+// its two links in the accent opening their addresses, then a button in the
+// accent that shows the Terms' text in place, and hides it again.
 component AboutScreen
   props
     entry: Entry
     page: AboutPage
+  state termsOpen = false
+  action termsToggle
+    termsOpen = not termsOpen
   view
     column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 background-color="ground" testId="about"
       header display="flex" align-items="center" padding="space.s8 space.s16"
@@ -41,3 +60,15 @@ component AboutScreen
                 else
                   text c.licence href=c.url color="accent" testId=`about-licence-${c.part}`
                 text page.end
+            text font="type.small" color="ink" overflow-wrap="break-word" testId="gemma-notice"
+              text page.gemma.lead
+              text page.gemma.terms href=page.gemma.termsUrl color="accent" testId="gemma-notice-terms"
+              text page.gemma.between
+              text page.gemma.policy href=page.gemma.policyUrl color="accent" testId="gemma-notice-policy"
+              text page.gemma.end
+            button press=termsToggle appearance="none" padding=0 align-self="flex-start" aria-label=page.gemma.termsButton aria-expanded=termsOpen -exact-hit-slop="space.s8" testId="gemma-terms"
+              :active
+                opacity = "opacity.pressed"
+              text page.gemma.termsButton font="type.small" color="accent" text-align="start"
+            if termsOpen
+              text page.gemma.termsText font="type.footnote" color="ink" user-select="text" testId="gemma-terms-text"

@@ -63,5 +63,8 @@ export declare const playedKey: (key: Key, move: Move) => Key;
 /** A key as a chord chart names it: "Db", "Dm". */
 export declare const keyName: (key: Key) => string;
 
-/** A hymn's chords from its shipped string; none for a string that does not decode. */
-export declare const decodeHymn: (encoded: string) => Opt<HymnChords>;
+/** Where chords fall: on the beat (the default), folded simpler, or as the file plays. */
+export type Placement = 'beat' | 'simpler' | 'file';
+
+/** A hymn's chords from its shipped string at a placement; none for a string that does not decode. */
+export declare const decodeHymn: (encoded: string, placement?: Placement) => Opt<HymnChords>;
