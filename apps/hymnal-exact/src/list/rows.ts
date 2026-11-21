@@ -72,7 +72,7 @@ const runsOf = (rows: ReturnType<typeof resultRowsOf<HymnText>>['rows']): Array<
   return runs;
 };
 
-/** The sections the list draws for `query`, with the hymns `about` it; none when a query finds nothing. */
+/** The sections the list draws for `query`, with the hymns `about` it; none when a query finds nothing and nothing is about it. */
 export const rowsOf = (
   book: Book,
   query: string,
@@ -80,7 +80,6 @@ export const rowsOf = (
 ): Array<RowSection> => {
   if (query.trim() === '') return sectionsOf(book.hymns);
   const found = find(book.index(), query);
-  if (found.length === 0) return [];
   const lines = new Map(
     found.flatMap((each) =>
       each.line._tag === 'Some' ? [[each.hymn.number, each.line.value] as const] : [],
