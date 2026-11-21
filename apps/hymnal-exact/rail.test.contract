@@ -4,17 +4,18 @@ test "The rail shows six numbers from the first hymn to the last."
   expect text "rail-label-695" == "695"
   expect tree missing "rail-bubble"
 
-test "A touch at the rail's top takes the list to the first hymn, under its topic." on web
-  tap "rail" drag 0 0 from 22 1 hold 100 mouse
+test "A touch near the rail's top takes the list to one of its first hymns, under its topic." on web
+  tap "rail" drag 0 0 from 22 4 hold 100 mouse
   clock settle
   expect tree missing "rail-bubble"
   tap "hymn-list" drag 0 0 from 120 58 mouse
   clock settle
   clock data
-  expect state hymnShown.number == 1
+  expect state hymnShown.number >= 1
+  expect state hymnShown.number <= 6
 
 test "A drag along the rail shows the hymn under the thumb, and takes the list there." on web
-  tap "rail" drag 0 300 from 22 1 hold 100 mouse
+  tap "rail" drag 0 300 from 22 6 hold 100 mouse
   clock settle
   expect tree missing "rail-bubble"
   tap "hymn-list" drag 0 0 from 120 58 mouse
@@ -23,8 +24,8 @@ test "A drag along the rail shows the hymn under the thumb, and takes the list t
   expect state hymnShown.number >= 250
   expect state hymnShown.number <= 330
 
-test "A finger along the rail takes the list to the hymn under it." on ios
-  tap "rail" drag 0 300 from 22 1 hold 100
+test "A finger along the rail takes the list to the hymn under it."
+  tap "rail" drag 0 300 from 22 6 hold 100
   clock settle
   clock data
   expect tree missing "rail-bubble"

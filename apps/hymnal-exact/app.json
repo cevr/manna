@@ -72,6 +72,11 @@
         "finding": "overlap",
         "node": "shape-0-dot-*",
         "why": "A chord shape's finger dots keep the current hymnal's fixed places (src/reader/ChordBox.tsx: DOT 18 on strings STRING_GAP 22 apart) while their numbers grow with the text size (`finger` fontSize 11, uncapped), so at the largest text two neighbouring dots' numbers meet as the current hymnal's do (hy-verify, measured at root 53: a dot against a dot; hy-end narrowed it to the dots)."
+      },
+      {
+        "finding": "overlap",
+        "node": "rail-label-1",
+        "why": "The rail's first label sits centred on its band's middle, half its line above the rail's top, as the current hymnal places each label (src/reader/Rail.tsx:199, `marginTop: -box / 2` at `labelAt`'s top), so at the largest text it rises a few points into the tab row above the rail as the current hymnal's does (read from its source; no picture of the current hymnal's home at the largest text was taken, so the sweep owes the look)."
       }
     ]
   },
