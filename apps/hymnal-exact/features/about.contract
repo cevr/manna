@@ -60,7 +60,7 @@ component AboutScreen
                 else
                   text c.licence href=c.url color="accent" testId=`about-licence-${c.part}`
                 text page.end
-            text font="type.small" color="ink" testId="gemma-notice"
+            text font="type.small" color="ink" overflow-wrap="break-word" testId="gemma-notice"
               text page.gemma.lead
               text page.gemma.terms href=page.gemma.termsUrl color="accent" testId="gemma-notice-terms"
               text page.gemma.between
