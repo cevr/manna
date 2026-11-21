@@ -8,3 +8,8 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+45917c380eb2 imports: player/thumb.ts reads Cue, plain, keyName, Move, playedKey, soundingKey and still by relative path (../feel/cues, which ~/feel/cue re-exports, and ../hymns/chords); the same values, no source line else
+54fc3fd84c2b exports: one exports line in apps/hymnal/package.json (./player/thumb); no source changes
+867880c5d09a exports: one exports line in apps/hymnal/package.json (./player/wheel); no source changes
+dd224a16edb2 exports: one exports line in apps/hymnal/package.json (./player/wheelmotion); no source changes
+b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
