@@ -65,9 +65,9 @@ describe('every hymn’s chords are the current app’s (A1)', () => {
 describe('the chords are light (A4)', () => {
   test('with chords off, or on a route that names no hymn, the source decodes nothing', () => {
     let decodes = 0;
-    const counted = chordsSources(book, bundled, (encoded) => {
+    const counted = chordsSources(book, bundled, (encoded, placement) => {
       decodes += 1;
-      return decodeHymn(encoded);
+      return decodeHymn(encoded, placement);
     });
     for (const route of ['1', '100', '695', '0', '', 'abc', '696'])
       expect(counted.chordsPage([route, false, []]).kind).toBe('off');

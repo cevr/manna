@@ -2,8 +2,9 @@
 
 /**
  * The hymn page with chords on: each section as the current hymnal shows
- * it (`sectionsOf` over its Simple chords, the current app's default
- * style), each sung line as its words, each word as its syllables, and over
+ * it (`sectionsOf` over its chords decoded at the reader's placement and
+ * `styled` in the reader's chord style, `src/settings/chords.ts`, Simple on
+ * the beat until chosen), each sung line as its words, each word as its syllables, and over
  * each syllable the chords that change on it, spelled in the key the
  * hymn's move reaches (`playedKey`, `Chord.format`). A part the chords do
  * not cover is its words alone. Chords off, the page answers the `off`
@@ -29,12 +30,13 @@ import {
   soundingKey,
   type Word,
 } from '@manna/hymnal-app/hymns/chords';
-import { simple } from '@manna/hymnal-app/hymns/simple';
+import { styled } from '@manna/hymnal-app/hymns/simple';
 import type { Key } from '@manna/hymnal/chord';
 import { format } from '@manna/hymnal/chord';
 
 import type { Book } from '../hymns/book.ts';
 import { pageAt } from '../hymn/page.ts';
+import { type Placement, placementOf, type Style, styleOf } from '../settings/chords.ts';
 import { canStep, moveOf } from './move.ts';
 import { chordsCode, keyCode } from './shape.ts';
 
@@ -93,10 +95,10 @@ export interface ChordsPage {
   readonly parts: Array<ChordsPart>;
 }
 
-/** A hymn's chords as shipped (its number and string) and how they are decoded; a test counts the decodes. */
+/** A hymn's chords as shipped (its number and string) and how they are decoded at a placement; a test counts the decodes. */
 export interface ChordsShipped {
   readonly encoded: ReadonlyMap<number, string>;
-  readonly decode: (encoded: string) => ReturnType<typeof decodeHymn>;
+  readonly decode: (encoded: string, placement: Placement) => ReturnType<typeof decodeHymn>;
 }
 
 const blank = (number: number, kind: string): ChordsPage => ({
@@ -131,12 +133,18 @@ const lineOf = (words: ReadonlyArray<Word>, at: number, key: Key): ChordsLine =>
   };
 };
 
-/** The page of `chords` (decoded, in the current app's default style) over hymn `number`'s words, at `move`. */
-const chordedPage = (book: Book, number: number, chords: HymnChords, move: Move): ChordsPage => {
+/** The page of `chords` (decoded) in `style` over hymn `number`'s words, at `move`. */
+const chordedPage = (
+  book: Book,
+  number: number,
+  chords: HymnChords,
+  move: Move,
+  style: Style,
+): ChordsPage => {
   const page = pageAt(book, `${number}`);
   const [text] = book.hymns.filter((hymn) => hymn.number === number);
   if (text === undefined || !hasChords(chords)) return blank(number, 'none');
-  const shown = simple(chords);
+  const shown = styled(chords, style);
   const played = playedKey(shown.key, move);
   const sections = sectionsOf(text, shown);
   return {
@@ -172,8 +180,10 @@ const chordedPage = (book: Book, number: number, chords: HymnChords, move: Move)
 
 /**
  * The page's chords for the route's hymn (`100`), chords `on` or off, at
- * the hymn's move in `moves`: `off` without decoding anything while chords
- * are off or the route names no hymn.
+ * the hymn's move in `moves`, in the kept chord style and placement (any
+ * text, read by `styleOf` and `placementOf`; absent, Simple on the beat):
+ * `off` without decoding anything while chords are off or the route names
+ * no hymn.
  */
 export const chordsPageAt = (
   book: Book,
@@ -181,12 +191,14 @@ export const chordsPageAt = (
   route: string,
   on: boolean,
   moves: ReadonlyArray<string>,
+  style = '',
+  placement = '',
 ): ChordsPage => {
   const number = pageAt(book, route).number;
   if (!on || number === 0) return blank(number, 'off');
   const encoded = shipped.encoded.get(number);
   if (encoded === undefined) return blank(number, 'none');
-  const decoded = shipped.decode(encoded);
+  const decoded = shipped.decode(encoded, placementOf(placement));
   if (decoded._tag === 'None') return blank(number, 'none');
-  return chordedPage(book, number, decoded.value, moveOf(moves, number));
+  return chordedPage(book, number, decoded.value, moveOf(moves, number), styleOf(style));
 };

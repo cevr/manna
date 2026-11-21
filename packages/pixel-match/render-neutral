@@ -8,10 +8,15 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
-c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button) for the port's bar; no source changes
-4c6b055a91be merge: origin/main into hymnapp/par-hy-head; its only apps/hymnal change is c82f7e9ebeb6's exports line (./player/button)
-d01c2d92b3cf merge: origin/main into hymnapp/par-hy-rail; its only apps/hymnal change is c82f7e9ebeb6's exports line (./player/button)
-954355a15d4b merge: origin/main into hymnapp/par-hy-rail; its apps/hymnal changes are 7001b407b430's move of About's MORE_LIKE and section names, already listed
+285f35cee93c move: the chordStyles list from settings.tsx and placements from settings.ts, unchanged values, into chord-choices.ts; settings.tsx, PlacementDial.tsx and a slow test import it there
+5e8896cbba12 move: About's Gemma notice words, its two addresses and the Terms button's label, unchanged, from about.tsx's JSX into gemma-notice.ts (GEMMA_NOTICE), the notice's Text keeping its five children
+7f48f02da8c2 exports: one exports line in apps/hymnal/package.json (./chord-choices); no source changes
+70b7bef84eac exports: one exports line in apps/hymnal/package.json (./gemma-notice); no source changes
+681f9dfdafbc exports: one exports line in apps/hymnal/package.json (./meaning/gemma-terms, the Terms asset); no source changes
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button); One's only change in the commit
+4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
 4d1d848cefff exports: one exports line in apps/hymnal/package.json (./reader/rows); no source changes
 1aacd1c5995b move: All at once's tilesOf call over the playing number, unchanged, from AllAtOnce.tsx into home/tabs.ts's tilesFor; its declaration and held line in exact-home-declarations.ts
 7502f91cf966 move: a tile's count words and VoiceOver name, unchanged, from AllAtOnce.tsx's TileView into home/tabs.ts (tileCount, tileName); their declarations and held lines
