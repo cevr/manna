@@ -56,6 +56,13 @@ shape FindTile
 shape FindFollow
   row: string
 
+// The hymns about a search's query, nearest first, and the query they were
+// asked for (`findAbout`, src/results/table.ts): the list shows them only
+// under that query's matches.
+shape FindAbout
+  query: string
+  numbers: number[]
+
 shape FindView
   serial: number
   top: string
@@ -111,6 +118,14 @@ members HymnalExact
   state findLanding = ""
   state findFollowed = 0
   mutation findFollowing as shape FindFollow queue then findFollow
+  // The current app's search mode asks for the hymns about its query once
+  // it has stood `PAUSE` (150 ms, src/hymns/meaning.ts) after the last key.
+  state findAsked = ""
+  resource findAboutNow = findAbout(findAsked) as shape FindAbout else empty()
+  task findPause when find.query != findAsked key=find.query
+    after(150, findAskAbout)
+  action findAskAbout
+    findAsked = find.query
   action findAsk(kind: string, n: number)
     send findStepped = findStep(kind, "", n, 0)
   action findSearch

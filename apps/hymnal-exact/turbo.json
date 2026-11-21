@@ -37,7 +37,8 @@
         "$TURBO_ROOT$/packages/hymnal/src/**",
         "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
-        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "$TURBO_ROOT$/apps/hymnal/assets/meaning/**"
       ]
     },
     "test:player": {

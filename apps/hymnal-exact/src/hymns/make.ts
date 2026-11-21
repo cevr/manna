@@ -19,6 +19,7 @@ import { readIndexes } from '@manna/hymnal-app/vite/indexes';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import '../../tools/timing.ts'; // oxlint-disable-line import/no-unassigned-import -- the player's timing is written as this module is imported, before Exact bundles it.
+import '../results/meaning-files.ts'; // oxlint-disable-line import/no-unassigned-import -- the meaning table's files the iOS app ships are written as this module is imported.
 
 const chords = `/** Every hymn's chords, one string per hymn, written by src/hymns/make.ts; ignored. */\nexport default ${JSON.stringify(readChords())} as ReadonlyArray<readonly [number, string]>;\n`;
 

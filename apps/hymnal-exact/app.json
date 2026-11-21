@@ -80,6 +80,7 @@
     "ios": {
       "minimumOS": "17.0",
       "deviceFamily": ["iphone", "ipad"],
+      "resources": [{ "from": "meaning", "to": "Resources/meaning" }],
       "backgroundModes": ["audio"]
     }
   },
