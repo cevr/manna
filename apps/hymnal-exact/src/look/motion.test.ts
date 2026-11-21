@@ -109,6 +109,8 @@ const HAPTICS: ReadonlyArray<{
   },
   { action: 'playerAsk', when: 'else if kind == "stanza"', cues: [cues.plain('choose')] },
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
   {
     action: 'favouriteKeep',
     when: 'if f.numbers.length > favouriteList.length',
