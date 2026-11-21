@@ -12,7 +12,7 @@
 
 import { capoed, type Move, still, transposed } from '@manna/hymnal-app/hymns/chords';
 
-/** A press on the page's key and capo buttons, or the move put back. */
+/** A step of the move by one key or one fret, or the move put back: `chordsMove`'s steps. */
 export type MoveStep = 'up' | 'down' | 'capo-up' | 'capo-down' | 'reset';
 
 const STEPS: ReadonlyArray<MoveStep> = ['up', 'down', 'capo-up', 'capo-down', 'reset'];
@@ -67,12 +67,36 @@ export const movesAfter = (
   step: string,
 ): Array<string> => {
   const known = STEPS.find((each) => each === step);
+  if (known === undefined || !Number.isInteger(number)) return [...moves];
+  return movesTo(moves, number, stepped(moveOf(moves, number), known));
+};
+
+/**
+ * `moves` with hymn `number` at `move`: its entry replaced, or left out at
+ * `still`; every other hymn's entry as it was. A move the current app could
+ * not store, or a number that is not whole, changes nothing.
+ */
+export const movesTo = (
+  moves: ReadonlyArray<string>,
+  number: number,
+  move: Move,
+): Array<string> => {
+  if (!Number.isInteger(number) || !kept(move)) return [...moves];
   const others = moves.filter((entry) => {
     const read = entryOf(entry);
     return read.length === 2 && read[0] !== number;
   });
-  if (known === undefined || !Number.isInteger(number)) return [...moves];
-  const next = stepped(moveOf(moves, number), known);
-  if (next.transpose === still.transpose && next.capo === still.capo) return others;
-  return [...others, `${number}:${next.transpose}:${next.capo}`];
+  if (move.transpose === still.transpose && move.capo === still.capo) return others;
+  return [...others, `${number}:${move.transpose}:${move.capo}`];
 };
+
+/**
+ * `move` turned to sound in the key on pitch class `pitch`, for a hymn whose
+ * printed key's tonic is on `printed`: the transpose, -5 to 6, that reaches
+ * it (the current dials' `transposeTo`), the capo kept.
+ */
+export const keyedTo = (move: Move, printed: number, pitch: number): Move =>
+  transposed({ ...move, transpose: 0 }, pitch - printed);
+
+/** `move` with its capo on fret `capo`, held to 0..11 as the current capo dial stops at its ends. */
+export const frettedTo = (move: Move, capo: number): Move => capoed({ ...move, capo: 0 }, capo);
