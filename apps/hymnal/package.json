@@ -76,6 +76,7 @@
     "./hymns/hymns": "./src/hymns/hymns.ts",
     "./hymns/indexes": "./src/hymns/indexes.ts",
     "./hymns/meaning": "./src/hymns/meaning.ts",
+    "./hymns/meaning-rule": "./src/hymns/meaning-rule.ts",
     "./hymns/search": "./src/hymns/search.ts",
     "./hymns/shapes": "./src/hymns/shapes.ts",
     "./hymns/simple": "./src/hymns/simple.ts",
