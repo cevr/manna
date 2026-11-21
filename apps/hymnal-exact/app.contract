@@ -84,7 +84,7 @@ component HymnalExact
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
         if e.name == "hymn" and not (current(hymnShown) and hymnShown.number == 0)
-          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown), chords=chordsShown, numbers=pagerNumbers, pages=pagerPages, chordsAll=pagerChords, ended=pagerEnded)
+          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown), chords=chordsShown, numbers=pagerNumbers, pages=pagerPages, chordsAll=pagerChords, ended=pagerEnded, armed=pagerArmed)
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
         if e.name == "settings"
