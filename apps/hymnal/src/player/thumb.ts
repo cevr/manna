@@ -34,8 +34,8 @@
 import * as Chord from '@manna/hymnal/chord';
 import { Data, Option } from 'effect';
 
-import { type Cue, plain } from '~/feel/cue';
-import { keyName, type Move, playedKey, soundingKey, still } from '~/hymns/chords';
+import { type Cue, plain } from '../feel/cues';
+import { keyName, type Move, playedKey, soundingKey, still } from '../hymns/chords';
 
 export interface Thumb {
   /** Whether chords show, for every hymn. */
