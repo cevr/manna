@@ -8,3 +8,8 @@ fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's J
 ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
 9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
 7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+285f35cee93c move: the chordStyles list from settings.tsx and placements from settings.ts, unchanged values, into chord-choices.ts; settings.tsx, PlacementDial.tsx and a slow test import it there
+5e8896cbba12 move: About's Gemma notice words, its two addresses and the Terms button's label, unchanged, from about.tsx's JSX into gemma-notice.ts (GEMMA_NOTICE), the notice's Text keeping its five children
+7f48f02da8c2 exports: one exports line in apps/hymnal/package.json (./chord-choices); no source changes
+70b7bef84eac exports: one exports line in apps/hymnal/package.json (./gemma-notice); no source changes
+681f9dfdafbc exports: one exports line in apps/hymnal/package.json (./meaning/gemma-terms, the Terms asset); no source changes
