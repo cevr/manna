@@ -14,6 +14,7 @@
     "test:chords": "bun test --preload ./src/test/setup.ts ./src/chords/page.test.ts ./src/chords/held.test.ts ./src/chords/host.test.ts",
     "test:hymn": "bun test --preload ./src/test/setup.ts ./src/hymn/page.test.ts ./src/hymn/indent.test.ts",
     "test:moves": "bun test --preload ./src/test/setup.ts ./src/chords/move.test.ts ./src/chords/rows.test.ts ./src/chords/shape.test.ts",
+    "test:style": "bun test --preload ./src/test/setup.ts ./src/chords/style.test.ts",
     "test:find": "bun test --preload ./src/test/setup.ts ./src/find ./src/list/headers.test.ts ./src/no-bucket.test.ts"
   },
   "dependencies": {

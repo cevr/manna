@@ -8,3 +8,9 @@ import type { HymnChords } from './chords';
 
 /** A hymn's Simple chords: the same parts, lines, words and boxes, at most one plain chord over each. */
 export declare const simple: (chords: HymnChords) => HymnChords;
+
+/** How chords are shown: Simple, or Advanced, every chord as compiled. */
+export type ChordStyle = 'simple' | 'advanced';
+
+/** A hymn's chords in a style: `simple` for Simple, the chords themselves for Advanced. */
+export declare const styled: (chords: HymnChords, style: ChordStyle) => HymnChords;

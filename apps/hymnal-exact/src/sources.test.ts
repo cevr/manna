@@ -134,6 +134,7 @@ describe('the data module runs where Exact runs it', () => {
       'railTo',
       'recentAfter',
       'recentRows',
+      'settingsChords',
       'settingsFeelOf',
       'settingsLooks',
     ]);
