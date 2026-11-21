@@ -27,12 +27,6 @@ export type Appearance = typeof Appearance.Type;
 
 export const PlacementOverride = Schema.Literals(['inherit', ...Placement.literals]);
 export type PlacementOverride = typeof PlacementOverride.Type;
-/** Long accessible labels and compact marks belong to the app's controls. */
-export const placements = [
-  { value: 'beat', label: 'On the beat', mark: 'Beat' },
-  { value: 'simpler', label: 'Simpler', mark: 'Simpler' },
-  { value: 'file', label: 'As the file plays', mark: 'File' },
-] as const satisfies ReadonlyArray<{ value: Placement; label: string; mark: string }>;
 
 /** A home tab's name as kept. */
 const HomeTab = Schema.Literals(TAB_NAMES);
