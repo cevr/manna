@@ -23,3 +23,4 @@ d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept;
 dd224a16edb2 exports: one exports line in apps/hymnal/package.json (./player/wheelmotion); no source changes
 b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
 1931651bb79f move: the dials' RESET_WAIT, unchanged (600), from Dials.tsx into thumb.ts, Dials reading and re-exporting it
+6ec1b54858d7 merge: apps/hymnal/package.json's exports lines of both sides kept, and par-hy-settings' listed moves as main left them; no source changes of its own
