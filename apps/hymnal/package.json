@@ -70,6 +70,7 @@
     "./reader/head-line": "./src/reader/head-line.ts",
     "./reader/about-rules": "./src/reader/about-rules.ts",
     "./reader/rail-marks": "./src/reader/rail-marks.ts",
+    "./reader/pager": "./src/reader/pager.ts",
     "./credit": "./src/credit.ts",
     "./hymns/chords": "./src/hymns/chords.ts",
     "./hymns/hymns": "./src/hymns/hymns.ts",
