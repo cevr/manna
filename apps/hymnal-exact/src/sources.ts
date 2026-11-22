@@ -23,6 +23,8 @@ import { originOf, playerSources } from './player/sources.ts';
 import { railSources } from './rail/sources.ts';
 import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
+import { readingSources } from './reading/sources.ts';
+import { sheetSources } from './sheet/sources.ts';
 
 export const sourcesAt = (
   origin: string,
@@ -42,4 +44,6 @@ export const sourcesAt = (
   ...abouthymnSources(book, nearest),
   ...pagerSources(book),
   ...resultsSources(),
+  ...sheetSources(chords),
+  ...readingSources(),
 });
