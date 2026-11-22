@@ -7,7 +7,8 @@
  * generated runs of taps (`tap`); the kept tempo as the current
  * `tempo.<n>` setting decodes it (`settings.ts` over an in-memory store);
  * the recording's address for every hymn of a sample, move and chords
- * switch (`heardMove`, `audioUrl`); and a missing key's fall back to the
+ * switch (`heardMove`, `audioUrl`); a key turn's load at the place, at
+ * once while it sounds and at the resume while paused; and a missing key's fall back to the
  * printed key's at the place (`recording.ts`'s `recordingsOver`). The
  * declarations Exact's type check reads for `tempo.ts` and `countin.ts`
  * are each assigned the source's export, and the dial's measures are read
@@ -224,6 +225,38 @@ describe('the recording’s key, as the current heardMove and audioUrl', () => {
       });
       registry.dispose();
     }
+  });
+});
+
+describe('a key turn, as the current playback.live.ts', () => {
+  const track = {
+    ...trackIn(TIMELINE.tempo),
+    url: audioUrl(7),
+    keyed: (by: number) => audioUrl(7, by),
+  };
+  const sounding = () => {
+    const state = run([{ _tag: 'play', track }]);
+    const load = deviceOf(state)?.load ?? 0;
+    return run(
+      [
+        { _tag: 'loaded', id: load, duration: 8 },
+        { _tag: 'playing', id: load },
+        { _tag: 'time', id: load, serial: deviceOf(state)?.seek ?? 0, seconds: 3 },
+      ],
+      state,
+    );
+  };
+
+  it('loads the turned key’s recording at the place while the hymn sounds', () => {
+    const turned = step(sounding(), { _tag: 'keys', offsets: { '7': 2 } });
+    expect(turned.command).toMatchObject({ _tag: 'load', url: audioUrl(7, 2), from: 3 });
+  });
+
+  it('loads nothing while paused, and the turned key’s recording at the resume', () => {
+    const paused = run([{ _tag: 'pause' }, { _tag: 'keys', offsets: { '7': 2 } }], sounding());
+    expect(deviceOf(paused)?.url).toBe(audioUrl(7));
+    const resumed = step(paused, { _tag: 'resume' });
+    expect(resumed.command).toMatchObject({ _tag: 'load', url: audioUrl(7, 2), from: 3 });
   });
 });
 
