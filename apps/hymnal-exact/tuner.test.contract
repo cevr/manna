@@ -220,3 +220,5 @@ test "Opened while a hymn sounds, it pauses the hymn once, then listens."
   clock until state tunerShown.phase == "Listening" within 5000
   expect state player.phase == "paused"
   expect state tunerPaused == 1
+  expect tree missing "bar-title"
+  expect tree missing "bar-toggle"
