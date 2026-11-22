@@ -1,5 +1,5 @@
 /** Where a saved recording lives and what it is kept under: pure rules the cache and its storages share. */
-import { soundingOffset } from '~/remote';
+import { soundingOffset } from '../remote';
 import { setOf } from '@manna/hymnal/recordings';
 
 /**
