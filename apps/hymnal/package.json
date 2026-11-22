@@ -97,7 +97,8 @@
     "./tuner/pitch": "./src/tuner/pitch.ts",
     "./tuner/focus": "./src/tuner/focus.ts",
     "./tuner/tuning": "./src/tuner/tuning.ts",
-    "./tuner/session": "./src/tuner/session.ts"
+    "./tuner/session": "./src/tuner/session.ts",
+    "./tuner/screen": "./src/tuner/screen.ts"
   },
   "scripts": {
     "postinstall": "one patch || true",
