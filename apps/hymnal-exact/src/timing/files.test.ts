@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noAs, effect/noTernary, effect/noNullish, effect/noAsyncFunction, effect/noNewPromise -- the test writes the build's timing files into a scratch folder and reads them back as the apps do, the iOS file's bytes and the web's module by import (a Promise), a timeline that does not decode compared as null; a Bun test in an Exact app's folder imports no effect (docs/exact.md). */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noTernary, effect/noNullish, effect/noAsyncFunction, effect/noNewPromise -- the test writes the build's timing files into a scratch folder and reads them back as the apps do, the iOS file's bytes and the web's module by import (a Promise), a timeline that does not decode compared as null; a Bun test in an Exact app's folder imports no effect (docs/exact.md). */
 
 /**
  * The files the build writes for each hymn's words' times
