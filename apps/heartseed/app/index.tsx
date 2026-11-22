@@ -45,6 +45,7 @@ import { themed, useThemed } from '../src/look';
 import { Grows, Welcome } from '../src/first/intro';
 import { FirstMinute } from '../src/first/screen';
 import { tourStep, type Tour, type TourTap } from '../src/first/tour';
+import { ownPassagesOf } from '../src/first/verse';
 import {
   cueIn,
   growthOf,
@@ -92,9 +93,7 @@ import { Tended } from '../src/run/tended';
 type VoiceView = Parameters<typeof readingAloud>[0];
 
 /** The passages the field shows first: Today's, a passage of one verse. */
-const PASSAGES: readonly FieldPassage[] = [
-  { title: passage.reference, verses: [passage.reference] },
-];
+const PASSAGES: readonly FieldPassage[] = ownPassagesOf(passage.reference);
 
 /**
  * The verse under `cue`: while the voice reads this very text and no
