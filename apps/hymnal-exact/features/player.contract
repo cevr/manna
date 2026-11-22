@@ -109,7 +109,7 @@ members HymnalExact
   state playerSkipLanded = -1
   state playerClockAt = 0
   state playerTicking = false
-  derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" or e.name == "tuner" ? "/settings" : "/"))).join(" ")
+  derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" or e.name == "tuner" or e.name == "chord" or e.name == "abouthymn" ? "/settings" : "/"))).join(" ")
   resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
   resource playerOnScreen = playerStep("screen", 0, 0, 0, playerPaths) as shape PlayerView
