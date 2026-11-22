@@ -10,6 +10,7 @@
       "@manna/hymnal-app/player/recording": ["./src/tempo/decl/recording"],
       "@manna/hymnal-app/player/offline": ["./src/offline/decl/local"],
       "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"],
+      "@manna/hymnal-app/follow/report": ["./src/follow/decl/report"],
       "@exact/media-capture": ["./src/tuner/decl/media-capture"]
     }
   },
