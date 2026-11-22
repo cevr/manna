@@ -15,7 +15,7 @@ import { formatBibleReference, parseBibleQuery } from '@manna/core/bible';
 import { Option, Schema } from 'effect';
 
 import { displayText } from '../src/display';
-import { FIRST_VERSE } from '../src/first/verse';
+import { FIRST_VERSE } from './first-verse';
 import type { Passage } from '../src/passage';
 
 /** The passage Today shows: the brief's first promise. */

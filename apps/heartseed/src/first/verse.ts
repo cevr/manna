@@ -1,5 +1,4 @@
-/** The query that names the first verse. */
-export const FIRST_VERSE = 'Isaiah 41:10';
+export { FIRST_VERSE } from '../../vite/first-verse';
 
 /** One of the field's own rows, a `FieldPassage` of no range: its title and its verses' references. */
 export interface OwnPassage {
