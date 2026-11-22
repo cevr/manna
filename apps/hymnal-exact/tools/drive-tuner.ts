@@ -40,6 +40,7 @@ import {
   labelOf,
   needleOf,
   NEEDLE_CENTS,
+  NOT_LISTENING,
   STRING_NAMES,
   stringLabel,
 } from '@manna/hymnal-app/tuner/session';
@@ -160,12 +161,12 @@ drive.check(
 );
 
 const LARGEST = 53;
-const WIDE = 390;
 const larger = ['prefer root-font-size 53', 'clock settle'];
 /** The ops that read a state at the largest text: the name's box and font, the audit, the accessibility tree. */
 const measure = ['layout tuner-name', 'check', 'tree --ax'];
 
 interface Laid {
+  readonly viewport?: { readonly w: number };
   readonly node?: {
     readonly props?: { readonly text?: string };
     readonly space?: { readonly viewport?: { x: number; y: number; w: number; h: number } };
@@ -176,13 +177,16 @@ interface Audit {
   readonly check?: ReadonlyArray<{ readonly findings?: ReadonlyArray<unknown> }>;
 }
 
-/** What a state's last three replies say: the name's words, its box and font size, and the audit's findings. */
+/** What a state's last three replies say: the name's words, its box against the viewport's width, its font size, and the audit's findings. */
 const fitOf = (replies: ReadonlyArray<unknown>) => {
   const [laid, audit, ax] = replies.slice(-3) as [Laid | undefined, Audit | undefined, unknown];
   const box = laid?.node?.space?.viewport;
+  const wide = laid?.viewport?.w ?? 0;
   return {
     name: laid?.node?.props?.text,
     box,
+    wide,
+    inside: box !== undefined && wide > 0 && box.x >= 0 && box.x + box.w <= wide,
     font: Number.parseFloat(laid?.node?.browser?.font_size ?? 'NaN'),
     audited: audit?.check !== undefined,
     findings: (audit?.check ?? []).flatMap((pass) => pass.findings ?? []),
@@ -193,20 +197,19 @@ const fitOf = (replies: ReadonlyArray<unknown>) => {
 /**
  * At the 53-px root, the name `want` is drawn whole inside the screen: its box
  * within the viewport's width, at no less than the reader's text size, and
- * the audit finds nothing clipped, overflowing or overlapping on the screen.
+ * the audit finds nothing clipped, overflowing or overlapping on the screen
+ * (its clip finding is the name's text measured against its box).
  */
 const fitsAtLargest = (state: string, replies: ReadonlyArray<unknown>, want: string) => {
   const fit = fitOf(replies);
   drive.check(
     `at the largest text, ${state}: the name ${want} fits the screen at no less than the reader's text size`,
     fit.name === want &&
-      fit.box !== undefined &&
-      fit.box.x >= 0 &&
-      fit.box.x + fit.box.w <= WIDE &&
+      fit.inside &&
       fit.font >= LARGEST &&
       fit.audited &&
       fit.findings.length === 0,
-    { name: fit.name, box: fit.box, font: fit.font, findings: fit.findings },
+    { name: fit.name, box: fit.box, wide: fit.wide, font: fit.font, findings: fit.findings },
   );
   return fit;
 };
@@ -239,6 +242,8 @@ const hearAtLargest = async (string: StringId, cents: number) => {
     ...larger,
     `type root /tuner?feed=${string}:${cents}`,
     'clock settle',
+    'clock data',
+    `clock +${LABEL_EVERY + 400}`,
     'clock data',
     `clock until state tunerShown.name == ${JSON.stringify(name)} within 3000`,
     ...measure,
@@ -289,26 +294,15 @@ const ended = await launch('largest-ended', [
   'clock data',
   'clock until state tunerShown.phase == "Ended" within 5000',
   'clock settle',
-  'state tunerShown.phase',
   'layout tuner-again',
-  'check',
+  ...measure,
 ]);
-const [endedPhase, again, endedAudit] = ended.slice(-3) as [
-  unknown,
-  Laid | undefined,
-  Audit | undefined,
-];
-const againBox = again?.node?.space?.viewport;
-const endedFindings = (endedAudit?.check ?? []).flatMap((pass) => pass.findings ?? []);
+const endedFit = fitsAtLargest('ended', ended, NOT_LISTENING);
+const again = (ended.at(-4) as Laid | undefined)?.node?.space?.viewport;
 drive.check(
-  'at the largest text, ended: Tap to listen again fits the screen, and the audit finds nothing',
-  endedPhase === 'Ended' &&
-    againBox !== undefined &&
-    againBox.x >= 0 &&
-    againBox.x + againBox.w <= WIDE &&
-    endedAudit?.check !== undefined &&
-    endedFindings.length === 0,
-  { phase: endedPhase, box: againBox, findings: endedFindings },
+  'at the largest text, ended: Tap to listen again lies within the screen',
+  again !== undefined && again.x >= 0 && again.x + again.w <= endedFit.wide,
+  { box: again, wide: endedFit.wide },
 );
 
 const still = await launch('still', [
