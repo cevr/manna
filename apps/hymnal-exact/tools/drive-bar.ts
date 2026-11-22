@@ -9,8 +9,11 @@
  * agent: a hymn page's own bar names its buttons as the current
  * `PlayerBar.tsx` does (Sound, Play hymn 1); once the hymn plays, the
  * docked bar's opener is "Open player", its button "Pause hymn 1" and the
- * seeker "Seek"; Sound is a switch, as the current bar's. Exits 1 on any
- * failed check.
+ * seeker "Seek"; Sound is a switch, as the current bar's. A second run
+ * turns Sound off before Play on hymn 2 (the fixture's long recording):
+ * nothing loads and the silent clock runs, a seek moves it, and Sound on
+ * loads the recording at its place, which plays on. Exits 1 on any failed
+ * check.
  */
 
 import { join } from 'node:path';
@@ -63,6 +66,78 @@ drive.check(
   'Sound is a switch, as the current PlayerBar.tsx gives it (`role="switch"`, `aria-checked`)',
   /switch/iu.test(sound?.role ?? ''),
   sound,
+);
+
+const silent = [
+  ...quiet.with(quiet.indexOf('tap hymn-1'), 'tap hymn-2'),
+  'tap bar-sound',
+  'clock settle',
+  'clock data',
+  'state playerSound',
+  'tap play',
+  'clock data',
+  'clock settle',
+  'clock +2000',
+  'clock data',
+  'state player.src',
+  'state player.ticking',
+  'state player.at',
+  'tree --ax bar',
+  'type seek "60"',
+  'clock data',
+  'clock settle',
+  'state player.at',
+  'state player.src',
+  'tap bar-sound',
+  'clock settle',
+  'clock data',
+  'state player.src',
+  'state player.from',
+  'clock +3000 real',
+  'clock data',
+  'state player.phase',
+  'state player.at',
+];
+const told = await drive.launch(`bar-silent-${host}-${Date.now().toString(36)}`, silent);
+const at = (op: string, nth = 0) =>
+  told[
+    silent.map((each, index) => [each, index] as const).filter(([each]) => each === op)[nth]?.[1] ??
+      -1
+  ];
+drive.check(
+  'Sound off is kept before Play',
+  at('state playerSound') === false,
+  at('state playerSound'),
+);
+drive.check(
+  'with Sound off, Play loads no recording and the silent clock runs the place',
+  at('state player.src') === '' &&
+    at('state player.ticking') === true &&
+    (at('state player.at') as number) >= 2,
+  [at('state player.src'), at('state player.ticking'), at('state player.at')],
+);
+drive.check(
+  'with Sound off the playing bar still names Pause and the seeker',
+  ['Pause hymn 2', 'Seek'].every((name) => names(at('tree --ax bar')).includes(name)),
+  names(at('tree --ax bar')),
+);
+drive.check(
+  'a seek with Sound off moves the silent clock, still with no recording',
+  Math.abs((at('state player.at', 1) as number) - 60) < 1 && at('state player.src', 1) === '',
+  [at('state player.at', 1), at('state player.src', 1)],
+);
+drive.check(
+  'Sound on mid-play loads the recording at the clock’s place, and it plays on from there',
+  at('state player.src', 2) !== '' &&
+    Math.abs((at('state player.from') as number) - 60) < 1 &&
+    at('state player.phase') === 'playing' &&
+    (at('state player.at', 2) as number) >= 61,
+  [
+    at('state player.src', 2),
+    at('state player.from'),
+    at('state player.phase'),
+    at('state player.at', 2),
+  ],
 );
 
 process.exit(drive.finish());
