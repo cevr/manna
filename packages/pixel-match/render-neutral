@@ -48,3 +48,5 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes
 1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+a9090ceaf658 move: a saved recording's identity, storages, CHUNK and mediaHeader, unchanged, from offline/cache.ts into offline/identity.ts (cache.ts re-exporting them), and Downloads.tsx's every line and name into offline/words.ts, the leaf drawing the same strings
+f39b2ca17b22 exports: five exports lines in apps/hymnal/package.json (./offline/identity, ./offline/words, ./offline/estimate, ./offline/cache, ./player/offline); no source changes
