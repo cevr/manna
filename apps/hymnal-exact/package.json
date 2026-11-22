@@ -18,7 +18,7 @@
     "test:style": "bun test --preload ./src/test/setup.ts ./src/chords/style.test.ts",
     "test:keys": "bun test --preload ./src/test/setup.ts ./src/keys",
     "test:tempo": "bun test --preload ./src/test/setup.ts ./src/tempo",
-    "test:offline": "bun test ./src/offline",
+    "test:offline": "bun test --preload ./src/test/setup.ts ./src/offline",
     "test:find": "bun test --preload ./src/test/setup.ts ./src/find ./src/results ./src/list/headers.test.ts ./src/no-bucket.test.ts"
   },
   "dependencies": {

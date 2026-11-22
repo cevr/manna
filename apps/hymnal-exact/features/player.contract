@@ -216,6 +216,13 @@ members HymnalExact
   // place to the silent clock, on back to the recording.
   task playerSoundTell key=playerSound
     change(playerSoundTold)
+  // The player is told whether the page is online, at launch and at each
+  // change: offline a play sounds a saved recording, and one not saved
+  // fails as the current player's does with no connection.
+  action playerOnlineTold
+    send playerStepped = playerStep("online", 0, 0, playerPage.onLine ? 1 : 0, "")
+  task playerOnlineTell key=playerPage.onLine
+    change(playerOnlineTold)
 
 // The room the bar takes under a screen's last row while it shows, docked
 // or the page's own: one call line at the end of a screen's scrolled

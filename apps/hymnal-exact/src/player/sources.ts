@@ -20,6 +20,7 @@ import type { Section } from '@manna/hymnal-app/player/stanzas';
 import { audioKey, soundingOffset } from '@manna/hymnal-app/remote';
 
 import { moveOf } from '../chords/move.ts';
+import type { AppModule, Offline, RecordingFiles } from '../offline/sources.ts';
 import type { Book } from '../hymns/book.ts';
 import { scoreOf } from './score.ts';
 import { type Input, type State, type Track, type Why, deviceOf, initial, step } from './step.ts';
@@ -65,6 +66,11 @@ export const offsetsOf = (chordsOn: boolean, moves: ReadonlyArray<string>) =>
       return Number.isInteger(number) && offset !== 0 ? [[`${number}`, offset] as const] : [];
     }),
   );
+
+/** Exact's kept values, which the player does not read. */
+interface KeptValues {
+  readonly get: (name: string) => string | null;
+}
 
 /** What a failed load's address answers, as the player says it. */
 const whyOf = async (url: string): Promise<Why> => {
@@ -112,11 +118,25 @@ const wayOf = (value: number): 1 | -1 => (value < 0 ? -1 : 1);
  */
 type Sent = PlayerView & { readonly origin: string; readonly fixture: boolean };
 
-/** The player's sources over `book`, its hymns timed by `timing`, the recordings at `origin`. */
+/**
+ * Whether `input` asks a save of what it plays, as the current
+ * `savingOn` queues one at each play the reader's player makes: a Play of
+ * another hymn or of one ended (Sound on or off), and a key turn that loads
+ * the new key's recording.
+ */
+const savesOn = (before: State, input: Input, command: string): boolean => {
+  if (input._tag === 'keys') return command === 'load';
+  if (input._tag !== 'play') return false;
+  const { held } = before;
+  return held === undefined || held.track.number !== input.track.number || held.phase === 'ended';
+};
+
+/** The player's sources over `book`, its hymns timed by `timing`, the recordings at `origin`, saved by `saved`. */
 export const playerSources = (
   book: Book,
   timing: ReadonlyArray<readonly [number, string]>,
   origin: string,
+  saved?: Offline,
 ) => {
   const byNumber = new Map(book.hymns.map((hymn) => [hymn.number, hymn]));
   const timed = new Map(timing);
@@ -131,6 +151,7 @@ export const playerSources = (
       title: hymn.title,
       url: recordingAt(origin, number),
       keyed: (offset) => recordingAt(origin, number, offset),
+      local: (offset) => saved?.localOf({ number, offset }) ?? '',
       score: scoreOf(hymn.sections as ReadonlyArray<Section>, timeline, hymn),
     };
   };
@@ -138,8 +159,12 @@ export const playerSources = (
   const fixture = origin !== BUCKET;
   const apply = (input: Input | undefined): Sent => {
     if (input === undefined) return { ...viewOf(state, undefined, titleOf), origin, fixture };
+    const before = state;
     const next = step(state, input);
     state = next.state;
+    const { held } = state;
+    if (held !== undefined && savesOn(before, input, next.command?._tag ?? ''))
+      saved?.enqueue({ number: held.track.number, offset: held.offset });
     return { ...viewOf(state, next.command, titleOf), origin, fixture };
   };
   const play = (number: number) => {
@@ -188,13 +213,14 @@ export const playerSources = (
     if (kind === 'sound') return { _tag: 'sound', on: value > 0 };
     return undefined;
   };
-  const playerStep = async ([kind, id, serial, value, text]: readonly [
-    string,
-    number,
-    number,
-    number,
-    string,
-  ]): Promise<Sent> => {
+  const playerStep = async (
+    [kind, id, serial, value, text]: readonly [string, number, number, number, string],
+    _store?: KeptValues,
+    storage?: RecordingFiles,
+    native?: AppModule | null,
+  ): Promise<Sent> => {
+    saved?.start(storage, native);
+    if (kind === 'online') return apply({ _tag: 'online', on: value > 0 });
     if (kind === 'screen') return apply({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
     if (kind === 'restore')
       return apply({ _tag: 'restore', choices: decodeChoices(text), tempos: decodeTempos(text) });
@@ -207,6 +233,11 @@ export const playerSources = (
       const device = deviceOf(state);
       const url = device?.load === id ? device.url : '';
       if (url === '') return apply(undefined);
+      const { held } = state;
+      if (held !== undefined && held.local !== '' && url === held.local) {
+        saved?.verify({ number: held.track.number, offset: held.heard });
+        return apply({ _tag: 'failed', id, why: 'decode' });
+      }
       const why = await whyOf(url);
       return apply({ _tag: 'failed', id, why });
     }

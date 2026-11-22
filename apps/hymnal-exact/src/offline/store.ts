@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noKnownValueWidening, eslint/complexity -- Exact's data module cannot import effect (docs/exact.md), so no Option or Match: what is absent is undefined, and each rule branches plainly. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noKnownValueWidening -- Exact's data module cannot import effect (docs/exact.md), so no Option or Match: what is absent is undefined, and each rule branches plainly. */
 
 /**
  * The saved recordings as one pure step, the current app's cache
@@ -543,4 +543,10 @@ export const localOf = (store: Store, id: Identity): string | undefined => {
   const normalized = normal(id);
   if (normalized === undefined) return undefined;
   return store.saved[keyOf(normalized)] === undefined ? undefined : pathOf(normalized);
+};
+
+/** The size `id`'s saved recording was written at; none when it is not saved. */
+export const bytesOf = (store: Store, id: Identity): number | undefined => {
+  const normalized = normal(id);
+  return normalized === undefined ? undefined : store.saved[keyOf(normalized)]?.bytes;
 };

@@ -34,7 +34,10 @@
       "@manna/hymnal-app/feel/cues": ["./src/look/decl/cues"],
       "@manna/hymnal-app/player/thumb": ["./src/keys/decl/thumb"],
       "@manna/hymnal-app/player/wheel": ["./src/keys/decl/wheel"],
-      "@manna/hymnal-app/player/wheelmotion": ["./src/keys/decl/wheelmotion"]
+      "@manna/hymnal-app/player/wheelmotion": ["./src/keys/decl/wheelmotion"],
+      "@manna/hymnal-app/offline/identity": ["./src/offline/decl/identity"],
+      "@manna/hymnal-app/offline/words": ["./src/offline/decl/words"],
+      "@manna/hymnal-app/offline/estimate": ["./src/offline/decl/estimate"]
     }
   }
 }

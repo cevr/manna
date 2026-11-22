@@ -42,6 +42,7 @@ const OWNER = new Map([
   ['features/pager.contract', 'no unit'],
   ['features/keys.contract', 'no unit'],
   ['features/tempo.contract', 'no unit'],
+  ['features/downloads.contract', 'no unit'],
 ]);
 
 const ALLOWED = new Map<string, AllowList>([
