@@ -5,10 +5,12 @@
 // or the first minute's welcome); once it is in, `startOpen` pushes that
 // route over home, a launch at the Garden tab's root only, so a location
 // the launch opened at is kept and `Your field` comes back to home. A
-// launch at a step of the first minute is moved to the step the launch
-// holds (`firstPlace`, features/first.contract): the welcome, or home once
-// a verse was said. Decided once: nothing the reader does later opens it
-// again.
+// launch at a step of the first minute is moved to the opening's route (the
+// welcome, or Today), or back to home once a verse was said. The first
+// minute is on (`firstOpened`, features/first.contract) only when the launch
+// moved to its welcome: a launch kept at another location shows home there
+// and after it, as no first minute was opened. Decided once: nothing the
+// reader does later opens it again.
 
 shape StartShown
   opening: string
@@ -24,5 +26,9 @@ members HeartseedExact
       startDecided = true
       if startShown.route != "" and nav.tab == "garden" and top(nav).name == "garden"
         nav = push(nav, startShown.route)
+        firstOpened = startShown.opening == "first"
+      else if top(nav).name == "first" and startShown.route != ""
+        nav = replace(nav, startShown.route)
+        firstOpened = startShown.opening == "first"
       else if top(nav).name == "first"
-        firstPlace()
+        nav = back(nav)

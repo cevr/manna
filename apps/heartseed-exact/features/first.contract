@@ -19,7 +19,7 @@
 // src/first/flow.ts's `screenOf`. Every measure is a token of app.forma.
 use TodayRecital, TodayBig, TodayTextSize, TodayView from "./today.contract"
 use GardenRecallIn, GardenHelpIn from "./garden.contract"
-use homeIconOf from "./home.contract"
+use homeIconOf, HomeSoftPill from "./home.contract"
 use hs-rise, hs-fade from "./motion.contract"
 
 shape FirstShown
@@ -67,7 +67,8 @@ members HeartseedExact
   mutation firstStepped as shape FirstShown queue then firstPlace
   derive first = match firstStepped { case some(v) => v, case none => firstBooted }
   derive firstReplaying = first.tour == "welcome" or first.tour == "grows"
-  derive firstWanted = firstReplaying ? path("first", first.tour, "none") : ((startShown.opening == "first" and not first.continued and first.phase != "") ? path("first", first.phase, first.cue) : "")
+  state firstOpened = false
+  derive firstWanted = firstReplaying ? path("first", first.tour, "none") : ((firstOpened and not first.continued and first.phase != "") ? path("first", first.phase, first.cue) : "")
   derive firstTop = top(nav)
   // While the first minute or its replay is shown it is the whole app, as
   // the current root draws it in the app's place: no Back, swipe, link or
@@ -98,7 +99,8 @@ members HeartseedExact
   action firstSeeIt
     send firstStepped = firstSee(todaySpoken.state, firstUtteranceOutcome, firstUtteranceError, firstStart, today.phase == "graded", gardenTime.epochAtZero + performanceNow(), gardenTime.seed)
 
-  // Alone's graded try is the one kept: its recall, as Say it keeps it.
+  // Alone's graded try is the one kept: its recall at the grade the
+  // recital suggests, as the current Say it keeps a kept recital.
   task firstKept when first.phase == "alone" and today.phase == "graded" and firstStart > 0 key=firstStart
     change(firstKeep)
   action firstKeep
@@ -106,9 +108,9 @@ members HeartseedExact
       case some(r)
         match r.help
           case some(h)
-            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.grade, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=h.peeked, shownAt=h.shownAt, cap=h.cap), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.suggested, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=h.peeked, shownAt=h.shownAt, cap=h.cap), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
           case none
-            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.grade, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=[], shownAt=none, cap=4), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.suggested, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=[], shownAt=none, cap=4), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
         firstKeptAt = r.recall.startedAt
       case none
         firstKeptAt = firstKeptAt
@@ -145,19 +147,8 @@ members HeartseedExact
   action firstGotIt
     send firstStepped = firstTour("GotIt")
   action firstWelcomeAgain
-    nav = open(nav, "/")
+    nav = open(back(nav), "/")
     send firstStepped = firstTour("How")
-
-// A small round-cornered button on the card's fill, never filled in ink: the
-// first minute's Next and Continue, and home's Got it (the current `Pill`).
-component FirstPill
-  props
-    label: string
-    press: action
-    id: string
-  view
-    button press=press appearance="none" aria-label=label align-self="center" display="flex" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s22" padding-right="space.s22" border-radius="radius.pill" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
-      text label font="type.strong" color="hs.ink"
 
 // The welcome's filled button and how a verse grows' one button (the
 // current field's `Control`, strong and wide).
@@ -281,7 +272,7 @@ component FirstScreen
                     row gap="space.s8" align-items="center" min-height="size.mark"
                       text "A seed" aria-label="Stage: seed" font="type.small" color="hs.quiet" testId="stage"
                     text "Your first promise is a seed." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"
-                    FirstPill(label="Continue", press=done, id="first-continue")
+                    HomeSoftPill(label="Continue", press=done, id="first-continue")
                 else
                   TodayRecital(today=today, peek=peek, still=still, sheet=false, chapter="", read=read, scheme=scheme)
                   if phase == "hear"
@@ -290,7 +281,7 @@ component FirstScreen
                         TodayBig(label="Listen", press=hear, busy=true, enabled=false, still=still, roomy=firstSize.accessibilityTextSize, id="first-listen")
                       else if today.canHear
                         TodayBig(label="Listen", press=hear, busy=false, enabled=true, still=still, roomy=firstSize.accessibilityTextSize, id="first-listen")
-                      FirstPill(label="Next", press=next, id="first-next")
+                      HomeSoftPill(label="Next", press=next, id="first-next")
                     text "The voice reads it. Words light as they are read." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"
                   else
                     if today.phase == "graded"

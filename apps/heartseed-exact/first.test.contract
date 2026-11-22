@@ -102,3 +102,94 @@ test "The platform's Back does not leave the first minute, which is the whole ap
   expect state first.phase == "hear"
   expect tree has "first-hear"
   expect no failures
+
+test "How Heartseed works replays the welcome and how a verse grows, then home shows its tips until Got it"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  expect tree missing "tip-1"
+  expect text "home-how" == "How Heartseed works›"
+  tap "home-how"
+  clock data
+  clock settle
+  expect state first.tour == "welcome"
+  expect tree has "first-welcome"
+  expect tree missing "reference"
+  back
+  clock settle
+  expect tree has "first-welcome"
+  tap "first-begin"
+  clock settle
+  expect state first.tour == "grows"
+  expect text "first-on" == "See your field"
+  tap "first-on"
+  clock data
+  clock settle
+  expect state first.tour == "tips"
+  expect tree missing "first"
+  expect text "tip-1" == "1Come back each day and tap Start. It brings what is ready."
+  expect tree missing "tip-2"
+  expect text "tip-3" == "3Add a psalm, a passage or a set of promises when you want more."
+  expect text "home-got-it" == "Got it"
+  tap "home-got-it"
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "tip-1"
+  expect tree missing "home-got-it"
+  expect no failures
+
+test "Show the welcome again in Settings replays the welcome over home, and its Skip ends the tour there"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  expect text "settings-welcome" == "Show the welcome again"
+  tap "settings-welcome"
+  clock data
+  clock settle
+  expect tree missing "settings"
+  expect state first.tour == "welcome"
+  expect tree has "first-welcome"
+  tap "first-skip"
+  clock data
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "first"
+  expect tree has "home"
+  expect no failures
+
+test "Leaving home for another screen ends the tips; the Add a list sheet does not"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "home-how"
+  clock data
+  clock settle
+  tap "first-begin"
+  clock settle
+  tap "first-on"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect state first.tour == "tips"
+  tap "add-done"
+  clock settle
+  expect tree has "tip-1"
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "tip-1"
+  expect no failures

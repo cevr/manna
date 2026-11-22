@@ -123,10 +123,10 @@ component HeartseedExact
                     if gardenDriven.on
                       ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
-                  Home(home=homeShown, asking=homeAsking, scheme=homeScheme, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
+                  Home(home=homeShown, asking=homeAsking, scheme=homeScheme, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill, tips=(first.tour == "tips"), how=firstHow, gotIt=firstGotIt)
             for e in t.stack.filter(x => x.name.startsWith("settings")) key=e.id
               if e.name == "settings"
-                SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, done=settingsDone)
+                SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, welcome=firstWelcomeAgain, done=settingsDone)
               if e.name == "settingsAbout"
                 AboutPage(route=e.id, version=aboutShown.version, licences=aboutOpenLicences)
               if e.name == "settingsLicences"

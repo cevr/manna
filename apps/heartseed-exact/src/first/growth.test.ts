@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish, effect/noAsyncFunction, effect/noGlobals -- a Bun test reading a tracked Contract file, as src/read/read.test.ts does; a regex group that did not match is undefined. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals -- a Bun test reading a tracked Contract file, as src/read/read.test.ts does. */
 
 /**
  * The welcome's growing seed in `features/first.contract` draws what the
