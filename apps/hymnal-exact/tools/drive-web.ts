@@ -8,6 +8,9 @@
  * driven over the DevTools protocol (`tools/web/chrome.ts`). Each check
  * prints one `PASS` or `FAIL` line; the drive exits 1 on any failure.
  *
+ * - `rest`: a hymn page left before the rest's delay asks the bucket
+ *   nothing, and one rested on asks only its printed key's recording, as
+ *   the app saves the page the reader rests on;
  * - `addresses`: every hymn's address opened cold shows its number and
  *   title, and addresses the rule reads in its own ways (`007`, a trailing
  *   slash, an escape, a query) open the screen `placeOf` says;
@@ -28,7 +31,8 @@
  *   its profile: all four kept.
  *
  * Every request is recorded by origin: one not the local server's fails,
- * but for the recordings' bucket after a press of Play, which the drive
+ * but for the recordings' bucket after a press of Play, or for the printed
+ * key's recording of a hymn page shown for the rest's delay, which the drive
  * answers itself with silence (`tools/recordings.ts`), so nothing reaches
  * the network. `bun tools/drive-web.ts [web] [check…] [--server plain|exact]
  * [--json <file>]`: `web`, the host other drives name, is the only one;
@@ -48,6 +52,7 @@ import { join } from 'node:path';
 
 import { claimAppPort } from '@manna/exact-kit/port';
 import { readWords } from '@manna/hymnal-app/vite/words';
+import { recordingKey, setOf } from '@manna/hymnal/recordings';
 
 import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
@@ -64,7 +69,7 @@ const flag = (name: string) => {
   return at >= 0 ? args[at + 1] : undefined;
 };
 const server = flag('--server') ?? 'plain';
-const CHECKS = ['addresses', 'notfound', 'noscript', 'measure', 'return'] as const;
+const CHECKS = ['rest', 'addresses', 'notfound', 'noscript', 'measure', 'return'] as const;
 const named = args.filter(
   (arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--') && arg !== 'web',
 );
@@ -209,14 +214,35 @@ const startServer = async () => {
   throw new Error(`the server did not answer at ${origin}`);
 };
 
-/** Every request a page makes, by URL, with whether it was before the first Play. */
-const requests: Array<{ url: string; afterPlay: boolean }> = [];
+/**
+ * Every request a page makes, by URL, with whether it was after the first
+ * Play and whether it is the save of a rested hymn page: the printed key's
+ * recording of the hymn the page has shown for at least `REST_MS`.
+ */
+const requests: Array<{ url: string; afterPlay: boolean; rested: boolean; at: number }> = [];
 let played = false;
+/** The app saves the hymn page the reader rests on 750 ms after it shows (`downloadsRest`, `features/downloads.contract`); the drive allows its own observation of the page's change up to 100 ms late. */
+const REST_MS = 650;
+/** The printed key's recording of hymn `number`, as the bucket names it. */
+const printed = (number: number) => `${BUCKET}/audio/${setOf(number)}/${recordingKey(number)}`;
 
 const watch = async (page: Page) => {
+  const shown: { number: number; since: number } = { number: 0, since: 0 };
+  const showing = (url: string) => {
+    const place = placeOf(book, new URL(url).pathname);
+    const number = place.screen === 'hymn' ? place.number : 0;
+    if (number !== shown.number) Object.assign(shown, { number, since: Date.now() });
+  };
+  page.on('Page.frameNavigated', (params) => {
+    const frame = params.frame as { url: string; parentId?: string };
+    if (frame.parentId === undefined) showing(frame.url);
+  });
+  page.on('Page.navigatedWithinDocument', (params) => showing(String(params.url)));
   page.on('Network.requestWillBeSent', (params) => {
     const url = (params.request as { url: string }).url;
-    requests.push({ url, afterPlay: played });
+    const at = Date.now();
+    const rested = shown.number > 0 && url === printed(shown.number) && at - shown.since >= REST_MS;
+    requests.push({ url, afterPlay: played, rested, at });
   });
   await page.send('Fetch.enable', { patterns: [{ urlPattern: `${BUCKET}/*` }] });
   page.on('Fetch.requestPaused', (params) => {
@@ -671,7 +697,60 @@ const returning = async () => {
   );
 };
 
+/** The bucket's requests made since the `from`th request. */
+const bucketSince = (from: number) =>
+  requests.slice(from).filter(({ url }) => url.startsWith(BUCKET));
+
+/**
+ * The save of the page the reader rests on, on a fresh profile before any
+ * other check has opened a hymn: hymn 1 opened from the list and rested on
+ * asks only its printed key; back on the list, hymn 3 opened and left by
+ * its back button well before the delay asks the bucket nothing, the store
+ * already running.
+ */
+const resting = async (page: Page) => {
+  await open(page, '/');
+  const row = await waitFor(page, `document.querySelector('[data-testid="hymn-1"]')`, 5000);
+  const rest = requests.length;
+  await tap(page, '[data-testid="hymn-1"]');
+  const shownRest = await waitFor(page, `location.pathname === '/hymns/1'`, 3000);
+  mark('rest on hymn 1');
+  await Bun.sleep(2000);
+  const restAsked = bucketSince(rest);
+  check(
+    "a hymn page rested on asks the bucket for its printed key's recording, and nothing else",
+    row &&
+      shownRest &&
+      restAsked.length > 0 &&
+      restAsked.every(({ url, rested }) => rested && url === printed(1)),
+    { row, shownRest, asked: restAsked.slice(0, 5) },
+  );
+  await tap(page, '[data-testid="hymn-back"]');
+  const list = await waitFor(
+    page,
+    `location.pathname === '/' && document.querySelector('[data-testid="hymn-3"]')`,
+    3000,
+  );
+  const left = requests.length;
+  const opened = Date.now();
+  await tap(page, '[data-testid="hymn-3"]');
+  const shown = await waitFor(page, `location.pathname === '/hymns/3'`, 3000);
+  await tap(page, '[data-testid="hymn-back"]');
+  const back = await waitFor(page, `location.pathname === '/'`, 3000);
+  const stayed = Date.now() - opened;
+  mark('wait past the rest');
+  await Bun.sleep(1500);
+  const leftAsked = bucketSince(left);
+  check(
+    `a hymn page left before the rest's 750 ms asks the bucket nothing (left after ${stayed} ms)`,
+    list && shown && back && stayed < REST_MS && leftAsked.length === 0,
+    { list, shown, back, stayed, asked: leftAsked.slice(0, 5) },
+  );
+  report.rest = { stayed, left: leftAsked.length, rested: restAsked.length };
+};
+
 const ON_ONE_PAGE = {
+  rest: resting,
   addresses,
   notfound: notFound,
   noscript: noScript,
@@ -708,16 +787,19 @@ try {
 const foreign = requests.filter(
   ({ url }) => !url.startsWith(origin) && !/^(data|blob):/u.test(url),
 );
-const beforePlay = foreign.filter(({ url, afterPlay }) => !afterPlay || !url.startsWith(BUCKET));
+const unasked = foreign.filter(
+  ({ url, afterPlay, rested }) => !url.startsWith(BUCKET) || !(afterPlay || rested),
+);
 report.requests = {
   total: requests.length,
   foreign: foreign.length,
-  bucketAnsweredByDrive: foreign.length - beforePlay.length,
+  bucketAnsweredByDrive: foreign.length - unasked.length,
+  restedSaves: foreign.filter(({ rested }) => rested).length,
 };
 check(
-  `every request is the local server's, but the bucket after Play, answered by the drive (${requests.length} requests, ${foreign.length - beforePlay.length} to the bucket)`,
-  beforePlay.length === 0,
-  beforePlay.slice(0, 5),
+  `every request is the local server's, but the bucket after Play or a rested hymn page's printed key, answered by the drive (${requests.length} requests, ${foreign.length - unasked.length} to the bucket)`,
+  unasked.length === 0,
+  unasked.slice(0, 5),
 );
 check(
   "dist/ still holds its pages (Exact's serve builds the site again, without them, when a source changed since build:web: run it again)",
