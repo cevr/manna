@@ -28,3 +28,4 @@ b1dde6a90fa5 declaration: tilesOf declared in exact/home/tabs.d.ts for the port'
 dc8efe8b2473 exports: one exports line in apps/hymnal/package.json (./hymns/meaning-rule); no source changes
 a8d2ca532f2e test: exact-find-declarations.ts holds the port's meaning-rule declaration; no source changes
 3f538c9e0248 merge: origin/main into hymnapp/par-hy-results: apps/hymnal/package.json's exports lines of both sides kept, and the listed moves of both sides; no source changes of its own
+7a52f6793e76 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
