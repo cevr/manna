@@ -30,7 +30,12 @@
       "@manna/hymnal-app/feel/cues": ["./src/look/decl/cues"],
       "@manna/hymnal-app/player/thumb": ["./src/keys/decl/thumb"],
       "@manna/hymnal-app/player/wheel": ["./src/keys/decl/wheel"],
-      "@manna/hymnal-app/player/wheelmotion": ["./src/keys/decl/wheelmotion"]
+      "@manna/hymnal-app/player/wheelmotion": ["./src/keys/decl/wheelmotion"],
+      "@manna/hymnal-app/tuner/pitch": ["./src/tuner/decl/pitch"],
+      "@manna/hymnal-app/tuner/focus": ["./src/tuner/decl/focus"],
+      "@manna/hymnal-app/tuner/tuning": ["./src/tuner/decl/tuning"],
+      "@manna/hymnal-app/tuner/session": ["./src/tuner/decl/session"],
+      "@manna/hymnal-app/tuner/screen": ["./src/tuner/decl/screen"]
     }
   }
 }
