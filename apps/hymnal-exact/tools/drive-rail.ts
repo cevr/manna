@@ -4,7 +4,10 @@
  * The home list's rail, driven as a reader drives it: a touch at its top
  * takes the list to hymn 1 under its topic, a drag held mid-rail shows the
  * thumb and the bubble (the hymn's number and topic) and takes the list to
- * that hymn, and a release hides them. A heading's tap opens All at once.
+ * that hymn, and a release hides them. A heading's tap opens All at once;
+ * the heading is its name's text, the row the press, as iOS reads it. The
+ * Lists tab, with a favourite in it, keeps the header's room over a row it
+ * scrolls to, as the other tabs do.
  * Prints one PASS or FAIL line a check; exits non-zero on any FAIL.
  *
  *   bun tools/drive-rail.ts web|ios
@@ -174,4 +177,62 @@ if (docked[quietAt] !== false) {
     );
   }
 }
+
+interface Built {
+  readonly id: number;
+  readonly type?: string;
+  readonly props?: {
+    readonly testId?: string;
+    readonly accessibilityRole?: string;
+    readonly accessibilityHint?: string;
+  };
+  readonly handlers?: ReadonlyArray<string>;
+}
+const headed = await drive.run(
+  ['--storage', `rail-heading-${runId}`, '--reset-storage'],
+  ['clock data', 'tree section-adoration-and-praise-row'],
+);
+const built = ((headed[1] as { nodes?: ReadonlyArray<Built> } | undefined)?.nodes ??
+  []) as ReadonlyArray<Built>;
+const row = built.find((node) => node.props?.testId === 'section-adoration-and-praise-row');
+const name = built.find((node) => node.props?.testId === 'section-adoration-and-praise');
+drive.check(
+  'a group’s header is a heading VoiceOver can activate, as the current GroupHeader: its name a text with the heading role and the current hint, the row taking the press (on iOS only a text is a heading, never a button)',
+  row?.type === 'View' &&
+    (row.handlers ?? []).includes('press') &&
+    row.props?.accessibilityRole === undefined &&
+    name?.type === 'Text' &&
+    name.props?.accessibilityRole === 'heading' &&
+    name.props?.accessibilityHint === 'Shows every group at once',
+  { row, name },
+);
+const lists = await drive.run(
+  ['--storage', `rail-lists-${runId}`, '--reset-storage'],
+  [
+    'clock data',
+    'tap hymn-1',
+    'clock settle',
+    'clock data',
+    'tap favourite',
+    'clock settle',
+    'clock data',
+    'back',
+    'clock settle',
+    'tap tab-lists',
+    'clock settle',
+    'clock data',
+    'layout hymn-list',
+    'layout group-favourites-row',
+  ],
+);
+const padded = (
+  lists[12] as { node?: { style?: Record<string, { computed?: string }> } } | undefined
+)?.node?.style?.['scroll_padding_top']?.computed;
+const pinned = (lists[13] as { node?: { space?: { viewport?: { h?: number } } } } | undefined)?.node
+  ?.space?.viewport?.h;
+drive.check(
+  'the Lists tab keeps a scrolled-to row clear of its pinned header, as Hymns and Topics do (its scroll-padding-top is the header’s height)',
+  pinned !== undefined && pinned > 0 && Math.abs(Number.parseFloat(padded ?? '0') - pinned) <= 1,
+  { padded, pinned },
+);
 process.exit(drive.finish());

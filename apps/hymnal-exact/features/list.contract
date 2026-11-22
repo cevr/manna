@@ -218,8 +218,9 @@ component HomeTabs
 // current app's pinned topic does. With `gutter` it ends before the
 // Sections list's rail gutter, as every row of that list does. A tap on
 // it zooms out to All at once, as the current app's group row does
-// (HymnList.native.tsx `GroupHeader`); VoiceOver reads it as a heading it
-// can activate, by its name. The `measured` one, the list's first, gives
+// (HymnList.native.tsx `GroupHeader`); VoiceOver reads its name as a
+// heading, with the current app's hint, and its activation presses the
+// row: a heading on iOS is a `text`'s role, never a button's. The `measured` one, the list's first, gives
 // its height, as laid out, to `sized`: the room the list keeps over a row
 // it scrolls to. One header measures, not each: each measure that
 // changes `listPin` draws the whole list again. The `landing` one, the
@@ -239,13 +240,13 @@ component ListHeader
     findPress: action
     listLanded: action
   view
-    button press=findPress("tilesShow", 0) appearance="none" role="heading" aria-label=name
+    column press=findPress("tilesShow", 0)
       display="flex" flex-direction="column" align-self="stretch" padding=0
       position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" testId=`${id}-row`
       :active
         background-color="soft"
       row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" position="relative"
-        text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
+        text name role="heading" aria-description="Shows every group at once" font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
         column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
       if measured
         column position="absolute" inset=0 pointer-events="none" aria-hidden=true resize=sized
