@@ -193,7 +193,7 @@ members HymnalExact
   state findPinchSeen = 0
   resource findPinchHeard = findPinchTake(findPinchSeen) as shape FindPinch else empty()
   task findPinches when findPinchHeard.serial > findPinchSeen key=findPinchHeard.serial
-    change(findPinched)
+    after(1, findPinched)
   action findPinched
     if findPinchHeard.serial > findPinchSeen
       findPinchSeen = findPinchHeard.serial

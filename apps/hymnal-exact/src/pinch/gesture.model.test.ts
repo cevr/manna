@@ -124,12 +124,12 @@ const run = async (seed: number) => {
   const find = findSources(book);
   const { findPinchTake } = pinchSources();
   const track = pinchTracker();
-  let seen = (await findPinchTake([0], null, null, native)).serial;
+  let seen = (await findPinchTake([0], 0, 0, native)).serial;
   let shown = find.findStep(['screen', '/', 0, 0]);
   let one = shown.tiles;
   let clock = 1000;
   const take = async () => {
-    const heard = await findPinchTake([seen], null, null, native);
+    const heard = await findPinchTake([seen], 0, 0, native);
     if (heard.serial <= seen) return;
     seen = heard.serial;
     shown = find.findStep(['pinchRun', heard.run, 0, 0]);
@@ -165,6 +165,41 @@ const run = async (seed: number) => {
 describe('the pinch, against the current app’s gesture', () => {
   test('generated histories commit where home/pinch.ts commits, once a gesture', async () => {
     for (let seed = 1; seed <= 300; seed += 1) await run(seed);
+  });
+});
+
+describe('inside the bands, the speed decides', () => {
+  /** The tiles after one gesture to `scale` in `steps` even moves `ms` apart, from the list or the tiles. */
+  const after = async (scale: number, steps: number, ms: number, tiles: boolean) => {
+    connect({ changed: () => {}, agent: false, now: () => 0 });
+    const find = findSources(book);
+    const { findPinchTake } = pinchSources();
+    const track = pinchTracker();
+    const since = (await findPinchTake([0], 0, 0, native)).serial;
+    find.findStep(['screen', '/', 0, 0]);
+    if (tiles) find.findStep(['tilesShow', '', 0, 0]);
+    track('start', fingers(BASE), 0, true);
+    for (let i = 1; i <= steps; i += 1)
+      track('move', fingers(BASE * (1 + ((scale - 1) * i) / steps)), i * ms, true);
+    track('end', [], steps * ms + 8, true);
+    const heard = await findPinchTake([since], 0, 0, native);
+    return find.findStep(['pinchRun', heard.run, 0, 0]).tiles;
+  };
+
+  test('a slow pinch to 0.9 or 1.1 changes nothing; the driver’s quick one commits, as pinchAct says', async () => {
+    expect(pinchAct(0.9, -0.05)).toBe('none');
+    expect(pinchAct(1.1, 0.05)).toBe('none');
+    expect(await after(0.9, 8, 250, false)).toBe(false);
+    expect(await after(1.1, 8, 250, true)).toBe(true);
+    expect(pinchAct(0.9, -0.78)).toBe('zoomOut');
+    expect(pinchAct(1.1, 0.78)).toBe('zoomIn');
+    expect(await after(0.9, 8, 16, false)).toBe(true);
+    expect(await after(1.1, 8, 16, true)).toBe(false);
+  });
+
+  test('inside the dead band no speed commits', async () => {
+    expect(await after(0.97, 8, 1, false)).toBe(false);
+    expect(await after(1.03, 8, 1, true)).toBe(true);
   });
 });
 
