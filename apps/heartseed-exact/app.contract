@@ -73,10 +73,16 @@ component HeartseedExact
   members "./features/type.contract"
   members "./features/study.contract"
   members "./features/start.contract"
+  members "./features/back.contract"
   provide
     todayHoldDown = todayDownIt
     todayHoldMove = todayMoveIt
     todayHoldUp = todayUpIt
+    todayBack
+    todayBackRunning
+    todayBackOpenIt
+    todayBackYes
+    todayBackKeepIt
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
