@@ -1,0 +1,202 @@
+// Downloads against the fixture recordings (tools/recordings.ts), as the
+// current hymnal's Settings leaf saves them: the fixture holds every hymn's
+// printed-key recording but hymn 13's, so Download all ends at 694 of 695
+// with the failure line. A test steers the fixture with `request POST
+// "/control"` (a count of a recording's fetches since a mark, a refused or
+// cut-off hymn). Each test opens on Settings and turns Sounds and haptics
+// off first (src/look/quiet.test.ts).
+
+test "Download all saves every recording the bucket holds, the bar's value and the size line as it goes"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  clock data
+  expect state settingsFeel == false
+  expect tree has "downloads"
+  expect state downloads.printed == 0
+  expect state downloads.progress == "0 of 695 recordings"
+  expect state downloads.sizeText == "0 saved · 0.00 MB"
+  expect tree missing "downloads-cancel"
+  tap "downloads-all"
+  clock data
+  clock +1500 real
+  clock data
+  expect state downloads.printed >= 1
+  expect state downloads.printed <= 690
+  expect state downloads.busy == true
+  expect tree has "downloads-cancel"
+  expect tree has "downloads-active"
+  perf
+    clock +1000
+    clock data
+  expect perf query settingsLooks == 0
+  expect perf query settingsChordRows == 0
+  expect perf query settingsFelt == 0
+  expect perf query pagerNear == 0
+  expect perf built "SettingsChoices" == 0
+  clock +40000 real
+  clock data
+  expect state downloads.printed == 694
+  expect state downloads.progress == "694 of 695 recordings"
+  expect state downloads.sizeText == "694 saved · 35.21 MB"
+  expect state downloads.busy == false
+  expect tree missing "downloads-cancel"
+  expect text "downloads-failed" == "Some recordings could not be saved. Check the connection, then choose Download all recordings to retry."
+
+test "Cancel stops the saves and keeps the whole ones; Delete, once confirmed, empties the store"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  clock data
+  tap "downloads-all"
+  clock data
+  clock +1500 real
+  clock data
+  tap "downloads-cancel"
+  clock data
+  clock +2000 real
+  clock data
+  expect state downloads.busy == false
+  expect state downloads.printed >= 1
+  expect state downloads.printed <= 690
+  tap "downloads-delete"
+  clock settle
+  expect tree has "downloads-confirm"
+  tap "downloads-keep"
+  clock settle
+  expect tree missing "downloads-confirm"
+  expect state downloads.printed >= 1
+  tap "downloads-delete"
+  clock settle
+  tap "downloads-confirm"
+  clock data
+  clock +1000 real
+  clock data
+  expect state downloads.saved == 0
+  expect state downloads.sizeText == "0 saved · 0.00 MB"
+
+test "A cut-off body is not saved, and Download all tries it again"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  clock data
+  request POST "/control" {"action": "cut", "hymn": 5}
+  tap "downloads-all"
+  clock data
+  clock +40000 real
+  clock data
+  expect state downloads.printed == 693
+  expect tree has "downloads-failed"
+  request POST "/control" {"action": "mend", "hymn": 5}
+  request POST "/control" {"action": "mark"}
+  tap "downloads-all"
+  clock data
+  clock +3000 real
+  clock data
+  expect state downloads.printed == 694
+  request POST "/control" {"action": "count", "path": "/audio/warm-1/sdah/5.mp3", "is": 1}
+  request POST "/control" {"action": "count", "path": "/audio/warm-1/sdah/1.mp3", "is": 0}
+
+test "A reload mid-download keeps what was whole"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  clock data
+  tap "downloads-all"
+  clock data
+  clock +1500 real
+  clock data
+  expect state downloads.printed >= 1
+  reload
+  clock data
+  clock settle
+  clock +1000 real
+  clock data
+  expect state downloads.printed >= 1
+  expect state downloads.printed <= 690
+  expect state downloads.busy == false
+  expect state downloads.indexing == false
+
+test "A streamed play leaves a whole file, and the next play of it asks nothing"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect state downloads.printed == 1
+  request POST "/control" {"action": "mark"}
+  back
+  clock settle
+  tap "hymn-3"
+  clock settle
+  clock data
+  tap "bar-page-play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  expect state player.number == 3
+  back
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  tap "bar-page-play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  expect state player.number == 1
+  expect state player.src == "app:/data/recordings/hymnal-recordings-warm-1-v1/1_0.mp3"
+  request POST "/control" {"action": "count", "path": "/audio/warm-1/sdah/1.mp3", "is": 0}
+
+test "Offline, the saved hymn plays and the unsaved one tells it needs a connection"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect state downloads.printed == 1
+  reload
+  clock data
+  clock settle
+  prefer online false
+  clock data
+  expect state player.onPage == 1
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  expect state player.src == "app:/data/recordings/hymnal-recordings-warm-1-v1/1_0.mp3"
+  back
+  clock settle
+  tap "hymn-3"
+  clock settle
+  clock data
+  tap "bar-page-play"
+  clock data
+  clock settle
+  expect state player.number == 3
+  expect state player.phase == "failed"
+  expect state player.said == "The recording needs a connection."
