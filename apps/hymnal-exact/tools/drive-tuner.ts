@@ -169,7 +169,10 @@ interface Laid {
   readonly viewport?: { readonly w: number };
   readonly node?: {
     readonly props?: { readonly text?: string };
-    readonly space?: { readonly viewport?: { x: number; y: number; w: number; h: number } };
+    readonly space?: {
+      readonly viewport?: { x: number; y: number; w: number; h: number };
+      readonly local?: { w: number; h: number };
+    };
     readonly browser?: { readonly font_size?: string };
   };
 }
@@ -177,17 +180,20 @@ interface Audit {
   readonly check?: ReadonlyArray<{ readonly findings?: ReadonlyArray<unknown> }>;
 }
 
-/** What a state's last three replies say: the name's words, its box against the viewport's width, its font size, and the audit's findings. */
+/** What a state's last three replies say: the name's words, its box against the viewport's width, the size its font is drawn at (the computed size times the drawn box over the laid-out one, which a fitted text's zoom shrinks), and the audit's findings. */
 const fitOf = (replies: ReadonlyArray<unknown>) => {
   const [laid, audit, ax] = replies.slice(-3) as [Laid | undefined, Audit | undefined, unknown];
-  const box = laid?.node?.space?.viewport;
+  const node = laid?.node ?? {};
+  const box = node.space?.viewport;
   const wide = laid?.viewport?.w ?? 0;
+  const computed = Number.parseFloat(node.browser?.font_size ?? 'NaN');
+  const scale = (box?.w ?? Number.NaN) / (node.space?.local?.w ?? Number.NaN);
   return {
-    name: laid?.node?.props?.text,
+    name: node.props?.text,
     box,
     wide,
     inside: box !== undefined && wide > 0 && box.x >= 0 && box.x + box.w <= wide,
-    font: Number.parseFloat(laid?.node?.browser?.font_size ?? 'NaN'),
+    font: computed * scale,
     audited: audit?.check !== undefined,
     findings: (audit?.check ?? []).flatMap((pass) => pass.findings ?? []),
     ax,
