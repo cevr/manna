@@ -26,3 +26,6 @@ export declare const barFor: (state: Player, page: Opt<Track>) => Bar;
 
 /** The bar docked under the stack: `barFor`'s while the player holds a hymn, else hidden. */
 export declare const dockedBar: (state: Player, page: Opt<Track>) => Bar;
+
+/** The sheets' paths: a sheet lies over the screen under it, whose bar it leaves drawn. */
+export declare const SHEETS: ReadonlySet<string>;

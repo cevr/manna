@@ -13,6 +13,11 @@
  *   kept step, radio groups "Font" and "Line spacing" whose rows are named
  *   by One's `fontChoices` and `spacingChoices` with the kept one checked,
  *   and a switch "Keep screen on" (`tree --ax`, `tree`);
+ * - the group "Recording" holds the title, what is said, the position with
+ *   its two times and the play buttons, and nothing else; the Tempo dial,
+ *   the group "Stanzas" (its "Go to" row in it), the group "Start", "Chord
+ *   settings" and "Reading" follow it as its siblings, in the current
+ *   FullPlayer.tsx's order (`tree --ax`);
  * - the first stanza line of the shown page and of the pager's next page,
  *   drawn behind the sheet, grow as the current `readingStyle`'s line
  *   height does, from step 2 to step 5 and then from Normal to Roomy
@@ -39,6 +44,9 @@ const store = (name: string) => `sheet-${name}-${host}-${Date.now().toString(36)
 const LARGEST = 53;
 
 interface Ax {
+  readonly i?: number;
+  readonly parent?: number;
+  readonly via?: string;
   readonly testId?: string;
   readonly role?: string;
   readonly name?: string;
@@ -131,6 +139,7 @@ const named = await drive.launch(store('names'), [
   ...opened,
   'tree --ax player-title',
   'tree --ax reading',
+  'tree --ax player',
   'tree dial-size-value',
   ...lines,
   'tap dial-size-stop-5',
@@ -182,6 +191,51 @@ drive.check(
   'Keep screen on is a switch named so',
   awake?.name === 'Keep screen on' && (awake.role === 'switch' || awake.role === 'checkbox'),
   awake,
+);
+
+const whole = named.map(axOf).findLast((elements) => elements?.some((e) => e.testId === 'player'));
+const own = (whole ?? []).filter((element) => element.via === 'self');
+const recording = own.find((element) => element.role === 'group' && element.name === 'Recording');
+const ancestors = (element: Ax): ReadonlyArray<number> => {
+  const up = own.find((each) => each.i === element.parent);
+  return up === undefined ? [] : [up.i ?? -1, ...ancestors(up)];
+};
+const inRecording = new Set(
+  own
+    .filter(
+      (element) => element.testId !== undefined && ancestors(element).includes(recording?.i ?? -1),
+    )
+    .map((element) => element.testId),
+);
+const RECORDING = ['player-title', 'player-said', 'position', 'elapsed', 'total', 'toggle'];
+const RECORDING_MAY = ['sheet-page-play', 'retry', 'recording-key-fallback'];
+drive.check(
+  'the group "Recording" holds the title, what is said, the position, its two times and Play, and nothing else',
+  recording !== undefined &&
+    RECORDING.every((id) => inRecording.has(id)) &&
+    [...inRecording].every(
+      (id) => RECORDING.includes(id ?? '') || RECORDING_MAY.includes(id ?? ''),
+    ),
+  [...inRecording],
+);
+const siblings = ['dial-tempo', 'stanzas', 'start', 'chord-settings', 'reading'].map((id) =>
+  own.find((element) => element.testId === id),
+);
+drive.check(
+  'Tempo, "Stanzas", "Start", "Chord settings" and "Reading" follow "Recording" as its siblings, in the current order',
+  recording !== undefined &&
+    siblings.every((element) => element !== undefined && element.parent === recording.parent) &&
+    [recording, ...siblings].every(
+      (element, at, all) => at === 0 || (all[at - 1]?.i ?? Infinity) < (element?.i ?? -Infinity),
+    ),
+  siblings.map((element) => [element?.testId, element?.parent, element?.i]),
+);
+const stanzas = own.find((element) => element.testId === 'stanzas');
+const goTo = own.find((element) => element.testId === 'stanza-place-1');
+drive.check(
+  'the port-only "Go to" row stays in the group "Stanzas"',
+  stanzas?.name === 'Stanzas' && goTo !== undefined && ancestors(goTo).includes(stanzas.i ?? -1),
+  goTo,
 );
 
 const lineOf = (step: number, spacing: 'normal' | 'roomy') =>
