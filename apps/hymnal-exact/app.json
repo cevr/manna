@@ -72,6 +72,26 @@
         "finding": "overlap",
         "node": "shape-0-dot-*",
         "why": "A chord shape's finger dots keep the current hymnal's fixed places (src/reader/ChordBox.tsx: DOT 18 on strings STRING_GAP 22 apart) while their numbers grow with the text size (`finger` fontSize 11, uncapped), so at the largest text two neighbouring dots' numbers meet as the current hymnal's do (hy-verify, measured at root 53: a dot against a dot; hy-end narrowed it to the dots)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dials-backdrop",
+        "why": "While the key dials are open, a tap anywhere off them closes them, as the current hymnal's does: its dials' backdrop is a Pressable laid over the whole screen (src/player/PlayerBar.tsx:209-215, testID dials-backdrop, `StyleSheet.absoluteFill`), so it lies over the page's chords, syllables and the hymn's head until the dials close (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-key-stop-*",
+        "why": "The key dial's stops are drawn under its one VoiceOver control, the `Key` range laid over the whole dial (dial-key-value), as the current hymnal's dial is one adjustable view over its stops (src/player/DialView.tsx:375-405, `accessibilityRole=\"adjustable\"` holding the row); the open dials float over the page above the bar, over the chords under them (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute), as the find bar does (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-key-copy-*",
+        "why": "The key dial's copies of its twelve stops either side, so it wraps, are drawn under its one VoiceOver control, the `Key` range laid over the whole dial (dial-key-value), as the current hymnal's dial is one adjustable view over its drawn stops (src/player/DialView.tsx:375-405); the open dials float over the page above the bar (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute) (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-capo-stop-*",
+        "why": "The capo dial's frets are drawn under its one VoiceOver control, the `Capo` range laid over the whole dial (dial-capo-value), as the current hymnal's dial is one adjustable view over its stops (src/player/DialView.tsx:375-405); the open dials float over the page above the bar (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute) (par-hy-key)."
       }
     ]
   },

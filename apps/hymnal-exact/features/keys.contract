@@ -318,7 +318,7 @@ component KeysOver
     motionStill: bool
   view
     if keysShown.number != 0
-      column position="absolute" left=0 right=0 height=0 pointer-events="none"
+      column position="absolute" left=0 right=0 height=0 pointer-events="none" aria-hidden=(not keysOpen)
         bottom=(playerShown.bar.seeker and not playerShown.pageBar ? `calc(var(--exact-safe-area-inset-bottom) + ${keysPlaced.seeker}px)` : "var(--exact-safe-area-inset-bottom)")
         if keysOpen or keysWheelOpen
           view position="absolute" left=0 right=0 bottom=`${keysPlaced.rest}px` height="100vh"
@@ -384,7 +384,7 @@ component KeysCapoDial
       view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
         scroll id="dial-capo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
           scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled aria-hidden=true testId="dial-capo-row"
+          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled aria-hidden=true tabindex=-1 testId="dial-capo-row"
           for f in keysShown.capoStops key=f.capo
             button press=keysAsk("capo", f.capo) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
               display="flex" flex-direction="column" align-items="center" justify-content="center" scroll-snap-align="center"
@@ -414,7 +414,7 @@ component KeysKeyDial
       view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
         scroll id="dial-key-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
           scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-          scrollLeft=((12 + keysShown.keyAt) * keysPlaced.detent) scroll=keysKeyScrolled scrollend=keysKeySettled aria-hidden=true testId="dial-key-row"
+          scrollLeft=((12 + keysShown.keyAt) * keysPlaced.detent) scroll=keysKeyScrolled scrollend=keysKeySettled aria-hidden=true tabindex=-1 testId="dial-key-row"
           for c in [0, 1, 2] key=c
             for s in keysShown.keyStops key=s.pitch
               button press=keysAsk("key", s.pitch) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
