@@ -786,7 +786,7 @@ const numberOf = (reply: unknown) => Number(reply ?? Number.NaN);
 const tabsOf = (reply: unknown) => reply as { shown?: boolean; cover?: number } | undefined;
 /** Whether `at` lies within `box` top to bottom, its top counted. */
 const holds = (box: Frame | undefined, at: number) =>
-  box !== undefined && box.y <= at && at < box.y + box.h;
+  box !== undefined && box.y <= at + 0.05 && at < box.y + box.h;
 const near = [0, 1, 2, 3, 4, 5, 6, 7];
 for (const tab of ['Sections', 'Topics']) {
   const toTab =
@@ -845,12 +845,15 @@ for (const tab of ['Sections', 'Topics']) {
     'clock data',
     ...toTab,
     ...cases.flatMap(({ pinned, under }, c) => [
+      'tap hymn-list wheel 0 200',
+      'clock settle',
       'tap tiles-show',
       'clock data',
       'clock settle',
       'tap group-tile-4',
       'clock settle',
       'clock data',
+      [`base-${c}`, 'state listTop'] as const,
       ...(pinned
         ? ['tap hymn-list wheel 0 100', 'clock settle', `tap hymn-list wheel 0 -${100 + under}`]
         : ['tap hymn-list wheel 0 -200', 'clock settle', `tap hymn-list wheel 0 ${200 - under}`]),
@@ -864,6 +867,7 @@ for (const tab of ['Sections', 'Topics']) {
       'tap tiles-show',
       'clock data',
       'clock settle',
+      [`aim-${c}`, 'state findAim'] as const,
       [`tiles-${c}`, 'layout find-tiles'] as const,
       [`tile3-${c}`, 'layout group-tile-3'] as const,
       [`tile4-${c}`, 'layout group-tile-4'] as const,
@@ -888,6 +892,7 @@ for (const tab of ['Sections', 'Topics']) {
       `${tab}: group 5's header ${under} px under the list's top, the tab row ${pinned ? 'pinned' : 'hidden'}: the header under the line is group ${want + 1}'s, and All at once opens with its tile in the first row, as the current app's groupAt`,
       tabs?.shown === pinned &&
         (pinned ? cover > 40 : cover === 0) &&
+        Math.abs(numberOf(at('base')) - (starts[4] ?? 0)) <= 0.5 &&
         Math.abs(offset - ((starts[4] ?? 0) - under)) <= 0.5 &&
         (want === 3 || want === 4) &&
         holds(want === 3 ? heads.three : heads.four, line) &&
@@ -895,7 +900,18 @@ for (const tab of ['Sections', 'Topics']) {
         tile !== undefined &&
         tile.y >= tiles.y - 1 &&
         tile.y < tiles.y + tile.h,
-      { offset, start: starts[4], tabs, line, want, heads, tiles, tile },
+      {
+        base: at('base'),
+        offset,
+        start: starts[4],
+        tabs,
+        line,
+        want,
+        aim: at('aim'),
+        heads,
+        tiles,
+        tile,
+      },
     );
   }
   drive.check(

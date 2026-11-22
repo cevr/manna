@@ -141,9 +141,10 @@ members HymnalExact
     findAsked = find.query
   // The tiles open at the group at the list's top (the current app's
   // AllAtOnce `at`, `groupAt(starts, offset, cover)` in `home/tabs.ts`):
-  // as they are asked for, the box a point under the line, the list's top
-  // edge or the pinned tab row's foot while it covers that edge (its
-  // pinned header, a row, or its head), names the group, the last whose
+  // as they are asked for, the front-most box of the list a point under the
+  // line, the list's top edge or the pinned tab row's foot while it covers
+  // that edge (its pinned header, a row, or its head; read through the
+  // pinned row's layer and its tabs' reach), names the group, the last whose
   // header has come within a point of the line, and once they show they
   // scroll its tile to their first row (tools/drive-find.ts holds it to
   // `groupAt` round each boundary, the row hidden and pinned).
@@ -154,7 +155,7 @@ members HymnalExact
     let x = list.x + list.width / 2
     let line = list.y + listTabs.cover
     if not find.homeTiles and not list.unavailable
-      send findAiming = findTileAt(listTab, [findIdOf(elementFromPoint(x, line + 1)), findIdOf(elementFromPoint(x, line + 60)), findIdOf(elementFromPoint(x, line + 120)), findIdOf(elementFromPoint(x, line + 180))], listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
+      send findAiming = findTileAt(listTab, elementsFromPoint(x, line + 1).concat([findIdOf(elementFromPoint(x, line + 60)), findIdOf(elementFromPoint(x, line + 120)), findIdOf(elementFromPoint(x, line + 180))]), listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
   action findAimed
     match findAiming
       case some(a)
