@@ -5,10 +5,11 @@
  * read it, which a `.test.contract` cannot (it reads no box and no
  * accessibility name): `bun tools/drive-tabs.ts web|ios`.
  *
- * - By `tree --ax`, exactly one tab list "Show hymns by" is reachable at
- *   the list's top, deep in it with the row hidden, deep in it with the row
- *   pinned, and after a tab chosen on the pinned row; the pinned row's tabs
- *   carry the list's own row's names, selected state and hints.
+ * - Exactly one tab list "Show hymns by" is reachable (neither hidden nor
+ *   inert, by `layout`) at the list's top, deep in it with the row hidden,
+ *   deep in it with the row pinned, and after a tab chosen on the pinned
+ *   row; at the top `tree --ax` reads the list's own one and its five tabs;
+ *   each pinned tab carries the props of the list's own tab of its name.
  * - Pinned, its box stands at the safe area's top, and the group header
  *   pinned under it stands at its foot, never behind it.
  * - Under Reduce Motion it fades in place: its box stands at the same place
@@ -62,6 +63,42 @@ const tabsOf = (reply: unknown, prefix: string) =>
     .filter((element) => (element.testId ?? '').startsWith(prefix))
     .map(({ role, name, description, states }) => ({ role, name, description, states }));
 
+/** A node's props as `layout` gives them: plain values by name. */
+type Props = Readonly<Record<string, string | number | boolean | null>>;
+
+interface LayoutNode {
+  readonly props?: Props;
+  readonly visible?: { readonly hidden?: boolean; readonly inert?: boolean };
+}
+
+/** The node a `layout` reply reads. */
+const nodeOf = (reply: unknown): LayoutNode =>
+  (reply as { node?: LayoutNode } | undefined)?.node ?? {};
+
+/** What a `layout` reply says of a node's reach: hidden, inert (its own or an ancestor's), hidden from the screen reader. */
+const reachOf = (reply: unknown) => ({
+  hidden: nodeOf(reply).visible?.hidden,
+  inert: nodeOf(reply).visible?.inert,
+  axHidden: nodeOf(reply).props?.accessibilityElementsHidden,
+});
+
+/**
+ * Whether a node is reachable by touch and the screen reader. Read from
+ * `layout`, not `tree --ax`: Exact's web `tree --ax` lists the first 500
+ * elements in tree order (agent-ax.mjs `axLimit`), and the pinned layer
+ * stands after the list's rows.
+ */
+const reachable = (reply: unknown) => {
+  const reach = reachOf(reply);
+  return reach.hidden === false && reach.inert === false && reach.axHidden !== true;
+};
+
+/** What the screen reader is told of a tab, from its `layout` props: every prop but its ids. */
+const toldBy = (reply: unknown): Props => {
+  const { testId: _test, id: _id, nativeID: _native, ...props } = nodeOf(reply).props ?? {};
+  return props;
+};
+
 interface Box {
   readonly x: number;
   readonly y: number;
@@ -95,14 +132,21 @@ const settle = ['clock settle', 'clock data'];
 const deep = ['tap hymn-list wheel 0 2000', ...settle];
 const pinned = ['tap hymn-list wheel 0 -20', ...settle];
 
-const both = ['tree --ax tabs', 'tree --ax shown-tabs-row'];
+const NAMES = ['sections', 'lists', 'topics', 'metres', 'scripture'];
+const both = ['layout tabs', 'layout shown-tabs-row'];
+const tabLayouts = [
+  ...NAMES.map((name) => `layout tab-${name}`),
+  ...NAMES.map((name) => `layout shown-tab-${name}`),
+];
 const reading = [
   'clock data',
+  'tree --ax tabs',
   ...both,
   ...deep,
   ...both,
   ...pinned,
   ...both,
+  ...tabLayouts,
   'layout shown-tabs',
   'layout status-scrim',
   'tree',
@@ -132,21 +176,27 @@ for (const [nth, where] of [
 ] as const)
   drive.check(
     `exactly one tab list "Show hymns by" is reachable ${where}`,
-    tabLists(at('tree --ax tabs', nth)).length +
-      tabLists(at('tree --ax shown-tabs-row', nth)).length ===
+    Number(reachable(at('layout tabs', nth))) +
+      Number(reachable(at('layout shown-tabs-row', nth))) ===
       1,
     {
-      own: tabLists(at('tree --ax tabs', nth)),
-      pinned: tabLists(at('tree --ax shown-tabs-row', nth)),
+      own: reachOf(at('layout tabs', nth)),
+      pinned: reachOf(at('layout shown-tabs-row', nth)),
     },
   );
 
-const pinnedTabs = tabsOf(at('tree --ax shown-tabs-row', 2), 'shown-tab-');
-const ownTabs = tabsOf(at('tree --ax tabs'), 'tab-');
 drive.check(
-  'the pinned row tells each tab as the list’s own row does: names, selected state, hints',
-  JSON.stringify(pinnedTabs) === JSON.stringify(ownTabs) && pinnedTabs.length === 5,
-  { pinned: pinnedTabs, own: ownTabs },
+  'at the top the screen reader reads the list’s own tab list and its five tabs',
+  tabLists(at('tree --ax tabs')).length === 1 && tabsOf(at('tree --ax tabs'), 'tab-').length === 5,
+  tabsOf(at('tree --ax tabs'), 'tab-'),
+);
+
+const toldOf = (prefix: string) => NAMES.map((name) => toldBy(at(`layout ${prefix}${name}`)));
+drive.check(
+  'each pinned tab carries the props the list’s own tab of that name carries, its ids aside',
+  JSON.stringify(toldOf('shown-tab-')) === JSON.stringify(toldOf('tab-')) &&
+    toldOf('tab-').every((props) => props.accessibilityRole === 'tab'),
+  { pinned: toldOf('shown-tab-'), own: toldOf('tab-') },
 );
 
 const shown = boxOf(at('layout shown-tabs'));
