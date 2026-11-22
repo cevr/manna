@@ -1,7 +1,9 @@
 // The hymnal's brand: the current hymnal's colour roles (apps/hymnal/src/theme.ts,
 // Heartseed's palette), light and dark, each under the role's own name, and the
 // platform's roles the port's screens draw with, each set to one of them.
-// src/look/brand.test.ts holds every colour here to theme.ts. The tint
+// src/look/brand.test.ts holds every colour here to theme.ts, but the ones
+// UIKit draws in the current app that theme.ts does not name (its list
+// `UIKIT`, each with its source). The tint
 // (AccentColor) is the accent, as in the current app (the owner's choice).
 forma hymnal
 
@@ -33,6 +35,8 @@ theme
   onGlassMuted = light-dark(#415853, #bec9b8)
   glassChosen = light-dark(#2c4542, #e6eedb)
   onGlassChosen = light-dark(#f1f0e6, #142420)
+  fieldClear = light-dark(#00000033, #ffffff33)
+  fieldCaret = light-dark(#426bf2, #426bf2)
   -exact-background = ground
   -exact-grouped-background = ground
   -exact-secondary-background = bar
@@ -52,6 +56,9 @@ theme
   duration.tiles-in = 180ms
   duration.tiles-out = 140ms
   duration.growth = 250ms
+  duration.press = 200ms
+  duration.wheel-in = 180ms
+  duration.wheel-out = 160ms
   easing.growth = -exact-spring(632, 50, 1)
   easing.out = cubic-bezier(0.23, 1, 0.32, 1)
   type.sheet-title = 700 1.6471rem/normal
@@ -73,6 +80,31 @@ theme
   type.see-all = 400 0.8824rem/1.3333
   type.row-number = 600 1rem/1.2941
   type.row-title = 400 1rem/1.2941
+  type.part = 600 -exact-footnote/normal
+  type.chord = 600 -exact-subheadline/1.3333
+  type.mark = 400 0.8235rem/1.2857
+  type.first = 400 0.7647rem/1.3846
+  type.finger = 700 0.6471rem/1.2727
+  type.chip = 600 0.7647rem/normal
+  type.row-line = 400 0.8824rem/1.2
+  type.tile-name = 600 0.8824rem/1.3333
+  type.tile-count = 400 0.7647rem/1.3846
+  type.tiles-head = 600 1rem/1.2941
+  size.strip: length = 4px
+  size.note-wide: length = 14px
+  size.note-high: length = 18px
+  line.tile: length = 2px
+  type.key-over = 600 0.5588rem/1.1579
+  type.key-face = 700 0.8824rem/1.1333
+  type.dial-name = 600 0.6471rem/normal
+  type.dial-key = 600 1rem/normal
+  type.dial-played = 400 0.5882rem/1.2
+  space.s2: length = 2px
+  type.tuner-title = 600 1.1765rem/normal
+  type.tuner-side = 400 1.1765rem/normal
+  type.tuner-name = 700 2.3529rem/normal
+  type.tuner-letter = 700 1.0588rem/normal
+  type.tuner-tick = 700 0.6471rem/normal
   space.s4: length = 4px
   space.s6: length = 6px
   space.s8: length = 8px
@@ -81,15 +113,27 @@ theme
   space.s12: length = 12px
   space.s16: length = 16px
   space.s20: length = 20px
+  space.hang: length = 1.25rem
+  space.word: length = 5px
   space.s24: length = 24px
+  space.s40: length = 40px
+  space.s48: length = 48px
   space.s64: length = 64px
   radius.r12: length = 12px
   radius.r16: length = 16px
   radius.r18: length = 18px
   radius.pill: length = 22px
+  radius.grabber: length = 2.5px
   size.target: length = 44px
   size.button: length = 36px
+  size.mark: length = 28px
+  size.glyph: length = 22px
+  size.clear: length = 17px
+  size.grabber: length = 36px
+  size.grabber-line: length = 5px
+  size.slider: length = 32px
   line.hair: length = -exact-hairline
+  line.panel: length = 1px
   opacity.pressed: number = 0.6
   nudge.title: length = -0.3333px
   nudge.topic: length = -1px
@@ -98,3 +142,9 @@ theme
   nudge.number: length = 1px
   nudge.gear: length = 26px
   nudge.gear-left: length = -0.6667px
+  nudge.settings-heading: length = -0.6667px
+  nudge.settings-title: length = 0.6667px
+  nudge.settings-body: length = -0.2222px
+
+icons
+  icon.find-clear = icon(svg "icons/find-clear.svg")

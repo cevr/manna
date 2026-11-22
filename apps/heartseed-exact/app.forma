@@ -35,6 +35,7 @@ theme
   duration.pulse = 1200ms
   easing.out = cubic-bezier(0.23, 1, 0.32, 1)
   easing.pulse = cubic-bezier(0.5, 1, 0.89, 1)
+  duration.grow = 6900ms
   type.title = 700 2rem/normal family.hs
   type.sheet-title = 700 1.6471rem/normal family.hs
   type.word = 400 1.4118rem/1.5 family.hs
@@ -52,6 +53,7 @@ theme
   type.caption-strong = 600 0.7647rem/normal family.hs
   type.badge = 700 0.7647rem/normal family.hs
   type.licence = 400 0.7647rem/1.4615 family.hs
+  type.intro = 400 1.1765rem/1.4 family.hs
   space.page: length = 24px
   space.section: length = 28px
   space.s2: length = 2px
@@ -93,8 +95,19 @@ theme
   glyph.greeting: length = 28px
   glyph.control: length = 22px
   glyph.list: length = 32px
+  glyph.shelf: length = 28px
+  size.growing: length = 120px
+  size.growing-image: length = 112px
+  size.stage: length = 64px
+  size.badge: length = 22px
+  radius.r14: length = 14px
+  radius.r11: length = 11px
+  radius.r2: length = 2px
+  line.segment: length = 4px
+  space.s22: length = 22px
+  opacity.segment: number = 0.5
   line.hair: length = -exact-hairline
-  line.edge: length = 1.5px
+  line.edge: length = 1.6667px
   line.slot: length = 2px
   opacity.pressed: number = 0.8
   opacity.disabled: number = 0.6

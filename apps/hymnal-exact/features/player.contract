@@ -1,11 +1,12 @@
-// The player: a hymn's recording from the bucket, the bar docked under the
-// stack while the player holds a hymn and no sheet is up, the full player as
-// a sheet, and the system's Now Playing. Every rule is `step` in
+// The player: a hymn's recording from the bucket, its full player as
+// a sheet, and the system's Now Playing (the element and the bar are
+// features/bar.contract's). Every rule is `step` in
 // src/player/step.ts, answered by `playerStep` (src/player/sources.ts); this
 // file draws its view and turns the element's events into calls, each
 // naming its load and the seek it follows. A seek the step sends is a
 // `fastSeek` on the element, taken once by its serial.
-use hy-rise, hy-sink, hy-fade-in, hy-fade-out from "./motion.contract"
+
+use PlayerTempo, PlayerCount from "./tempo.contract"
 
 shape PlayerBar
   shown: bool
@@ -15,6 +16,15 @@ shape PlayerBar
   said: string
   toggle: string
   page: number
+  kind: string
+  label: string
+  mark: string
+  seeker: bool
+  gone: string
+  left: string
+  rise: number
+  told: string
+  retry: string
 
 shape PlayerChip
   stanza: number
@@ -26,6 +36,11 @@ shape PlayerSession
   duration: number
   playing: bool
 
+// Whether the page is online (`exactPage()`): a long wait offers Retry
+// only online, as the current player's.
+shape PlayerPage
+  onLine: bool
+
 shape PlayerGo
   serial: number
   kind: string
@@ -34,6 +49,7 @@ shape PlayerGo
 
 shape PlayerView
   origin: string
+  fixture: bool
   serial: number
   src: string
   load: number
@@ -44,6 +60,7 @@ shape PlayerView
   title: string
   phase: string
   said: string
+  caption: string
   toggle: string
   at: number
   length: number
@@ -55,14 +72,24 @@ shape PlayerView
   dragging: bool
   place: number
   skipAt: number
+  ticking: bool
   dock: bool
+  pageBar: bool
+  onPage: number
   bar: PlayerBar
+  pageLabel: string
   pageToggle: string
   chips: PlayerChip[]
   places: number[]
   session: PlayerSession
   go: PlayerGo
   kept: string
+  rate: number
+  some: bool
+  tempo: PlayerTempo
+  count: PlayerCount
+  fellBack: bool
+  offset: number
   command: string
 
 fn playerLabel(toggle: string): string = toggle == "pause" ? "Pause" : (toggle == "retry" ? "Try again" : "Play")
@@ -80,14 +107,26 @@ members HymnalExact
   state playerLastTick = 0
   state playerSkipFrom = -1
   state playerSkipLanded = -1
-  derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" ? "/settings" : "/"))).join(" ")
+  state playerClockAt = 0
+  state playerTicking = false
+  derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" or e.name == "tuner" ? "/settings" : "/"))).join(" ")
+  resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
   resource playerOnScreen = playerStep("screen", 0, 0, 0, playerPaths) as shape PlayerView
+  // The recording's key is the hymn's heard key: its move while chords are
+  // on, the printed key while off (src/player/sources.ts `offsetsOf`), read
+  // again at each switch and move; no answer of it moves the screen.
+  resource playerKeyed = playerStep("keys", 0, 0, chordsOn ? 1 : 0, chordsMoves.join(" ")) as shape PlayerView
   mutation playerStepped as shape PlayerView queue then playerTook
-  derive playerLatest = playerOnScreen.serial >= playerBooted.serial ? playerOnScreen : playerBooted
+  derive playerShownLatest = playerOnScreen.serial >= playerBooted.serial ? playerOnScreen : playerBooted
+  derive playerLatest = playerKeyed.serial >= playerShownLatest.serial ? playerKeyed : playerShownLatest
   derive player = match playerStepped { case some(v) => (v.serial >= playerLatest.serial ? v : playerLatest), case none => playerLatest }
   action playerTook
     playerKept = player.kept
+    if player.ticking and not playerTicking
+      playerClockAt = performanceNow()
+    playerTicking = player.ticking
+    playerCounted()
     if player.seek > playerSought
       playerSought = player.seek
       fastSeek("audio", player.seekTo)
@@ -111,7 +150,24 @@ members HymnalExact
         haptic("impact-light")
       else if kind == "stanza"
         haptic("selection")
+      else if kind == "chooseAll" or kind == "tap"
+        haptic("selection")
+      else if kind == "tempoReset"
+        haptic("impact-medium")
+    if player.ticking
+      playerClockTicked()
     send playerStepped = playerStep(kind, 0, 0, value, "")
+  // The silent clock (Sound off) runs on the time since its last tick,
+  // told before each of the reader's asks and each switch, so a pause or
+  // a hand-over takes the place as it stands.
+  action playerClockTicked
+    let now = performanceNow()
+    send playerStepped = playerStep("tick", player.load, 0, now - playerClockAt, "")
+    playerClockAt = now
+  action playerSoundTold
+    if player.ticking
+      playerClockTicked()
+    send playerStepped = playerStep("sound", 0, 0, playerSound ? 1 : 0, "")
   action playerHeard(kind: string, id: number, value: number)
     send playerStepped = playerStep(kind, id, player.seek, value, "")
   action playerTicked(id: number, value: number)
@@ -130,64 +186,47 @@ members HymnalExact
     send playerStepped = playerStep("failed", id, 0, 0, code)
   action playerRemote(kind: string, way: number, d: MediaSessionActionDetails)
     send playerStepped = playerStep(kind, 0, 0, kind == "remoteSeek" ? d.seekTime : way, "")
+  action playerWaited
+    if playerPage.onLine
+      send playerStepped = playerStep("waited", player.load, 0, 0, "")
   action playerSettled
     send playerStepped = playerStep("settle", player.load, player.seek, 0, "")
   action playerSkipCheck
-    if playerDueAt != player.skipAt and performanceNow() - playerTickAt >= (player.skipAt - player.place) * 1000
+    if playerDueAt != player.skipAt and performanceNow() - playerTickAt >= (player.skipAt - player.place) * 1000 / player.rate
       playerDueAt = player.skipAt
       send playerStepped = playerStep("due", player.load, player.seek, player.skipAt, "")
   // A sent place is held until the device reaches it, or this long
   // (scrub-rules.ts `settleFor`, held to it by src/player/seek.test.ts).
   task playerSettle when player.holding key=player.seek
     after(2000, playerSettled)
+  // A wait on the network this long, online, offers Retry beside Pause
+  // (src/player/step.ts `WAIT`, the current player's `giveUpAfter`).
+  task playerWait when player.phase == "buffering" and playerPage.onLine key=player.load
+    after(15000, playerWaited)
   // Near a span the stanza choice leaves out, each frame asks whether the
   // runner's clock, from the last tick, has reached its start.
   task playerSkipWatch when player.skipAt >= 0
     every(frame, playerSkipCheck)
+  // While Sound is off and the hymn plays, the silent clock ticks
+  // (src/player/step.ts's `tick`, held to the current score clock by
+  // src/player/clock/clock.model.test.ts).
+  task playerClock when player.ticking key=player.load
+    every(250, playerClockTicked)
+  // The player is told Sound at launch and at each switch; off hands the
+  // place to the silent clock, on back to the recording.
+  task playerSoundTell key=playerSound
+    change(playerSoundTold)
+  // The player is told whether the page is online, at launch and at each
+  // change: offline a play sounds a saved recording, and one not saved
+  // fails as the current player's does with no connection.
+  action playerOnlineTold
+    send playerStepped = playerStep("online", 0, 0, playerPage.onLine ? 1 : 0, "")
+  task playerOnlineTell key=playerPage.onLine
+    change(playerOnlineTold)
 
-// The device and the bar, docked over the stack's foot (a route must be a
-// child of the navigation root, so the bar cannot take room of its own;
-// each screen leaves room under its last row): the element is keyed by
-// its load, so a new load is a new element and an old one's events end
-// with it; the bar shows while the player holds a hymn and no sheet is up,
-// and the dock has no box at all otherwise.
-component PlayerDock
-  props
-    player: PlayerView
-    ask: action
-    heard: action
-    ticked: action
-    broke: action
-    remote: action
-  inject
-    motionStill: bool
-  view
-    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not player.dock)
-      for l in (player.src == "" ? [] : [player.load]) key=l
-        audio player.src id="audio" paused=player.paused currentTime=player.from testId="audio"
-          metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
-          seekbackwardOffset=10 seekforwardOffset=10
-          seekto=remote("remoteSeek", 0) seekbackward=remote("remoteSkip", -1) seekforward=remote("remoteSkip", 1)
-          durationchange=heard("loaded", l) timeupdate=ticked(l) seeked=heard("seeked", l, 0)
-          waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
-          pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
-      if player.dock
-        column position="absolute" left=0 right=0 bottom=0 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both")
-          row testId="bar" align-items="center" flex-wrap="wrap" gap=12 padding="8px 16px" background-color="-exact-secondary-background"
-            button press=ask("open", 0) flex="1 1 12rem" min-width=0 min-height=44 testId="bar-title" aria-label=`Open the player: ${player.bar.number} ${player.bar.title}`
-              column gap=2 align-items="flex-start"
-                text `${player.bar.number} · ${player.bar.title}` testId="bar-hymn"
-                if player.bar.said != ""
-                  text player.bar.said color="-exact-secondary-label" testId="bar-said"
-            if player.bar.page != 0
-              button press=ask("play", player.bar.page) buttonStyle="bordered" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
-                text "Play"
-            if player.bar.toggle != ""
-              button press=ask("bar", 0) buttonStyle="bordered" testId="bar-toggle"
-                text playerLabel(player.bar.toggle)
-
-// The room the docked bar takes under a screen's last row while it shows:
-// one call line at the end of a screen's scrolled content.
+// The room the bar takes under a screen's last row while it shows, docked
+// or the page's own: one call line at the end of a screen's scrolled
+// content, as tall as the bar's row and its hairline.
 component PlayerBarRoom
   props
     id: string
@@ -195,87 +234,21 @@ component PlayerBarRoom
     playerShown: PlayerView
     motionStill: bool
   view
-    if playerShown.dock
-      column min-height="5rem" flex-shrink=0 testId=id -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
+    if playerShown.dock or playerShown.pageBar
+      column min-height="calc(size.target + space.s12)" padding-top="line.hair" flex-shrink=0 testId=id -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
 
-// A filled button in the brand's roles: `button` under `onButton`, so it
-// reads in dark whatever the platform's tint is; held, it takes the
-// `pressed` fill under `onPressed`, as the current AccentButton does, and
-// gives a little (0.97) on the host's own press curve.
-component PlayerFilled
+// The player's chip, as the current Chip.tsx draws it: a pill in the
+// pill's roles, or on the chosen mark while chosen, its word in the chip
+// type, never narrower than a target and dimmed while held; `hint` is its
+// accessibilityHint, in the current chip's words.
+component PlayerPill
   props
     label: string
     press: action
     id: string
     name: string
-    pressed: bool
+    hint: string
+    chosen: bool
   view
-    button press=press appearance="none" background-color="button" color="onButton" border-radius=10 padding="10px 18px" min-height=44 min-width=44 aria-label=name aria-pressed=pressed testId=id
-      :active
-        background-color = "pressed"
-        color = "onPressed"
-        -exact-press-scale = 0.97
-      text label font-weight=600
-
-// A hymn page's own Play: Pause while its hymn sounds, Try again after a
-// failure, nothing for a hymn with no recording.
-component PlayerPagePlay
-  props
-    number: number
-  inject
-    playerShown: PlayerView
-    playerPress: action
-  view
-    if not (playerShown.number == number and playerShown.toggle == "")
-      row
-        PlayerFilled(label=(playerShown.number == number ? playerLabel(playerShown.pageToggle) : "Play"), press=playerPress("page", number), id="play", name=(playerShown.number == number ? playerLabel(playerShown.pageToggle) : "Play"), pressed=false)
-
-// The full player, a sheet over the screen it opened from: the hymn's
-// title (a press goes to its page), its place on a bar the reader can move,
-// Play or Pause, and its stanzas, each with a way to its start.
-component PlayerSheet
-  props
-    entry: Entry
-    player: PlayerView
-    ask: action
-  view
-    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
-      header display="flex" align-items="center" justify-content="space-between" padding="8px 16px"
-        button id="close" press=ask("close", 0) aria-label="Close" testId="player-close"
-          image "symbol:close"
-        text "Now Playing" role="heading" aria-level=2
-      scroll id="player-sheet" flex=1 min-height=0
-        column padding=20 gap=16
-          button press=ask("title", 0) min-height=44 testId="player-title" aria-label=`Open hymn ${player.number}`
-            text `${player.number} · ${player.title}` font="-exact-title2"
-          input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
-          row gap=8 align-items="baseline"
-            text player.elapsed font-variant-numeric="tabular-nums" testId="elapsed"
-            text "of" color="-exact-secondary-label"
-            text player.total font-variant-numeric="tabular-nums" testId="total"
-          if player.said != ""
-            text player.said color="-exact-secondary-label" testId="player-said"
-          if player.phase == "failed"
-            column gap=8 testId="player-error"
-              if player.toggle == "retry"
-                button press=ask("retry", 0) buttonStyle="bordered" testId="retry"
-                  text "Try again"
-          else if player.toggle != ""
-            row
-              PlayerFilled(label=playerLabel(player.toggle), press=ask("page", player.number), id="toggle", name=playerLabel(player.toggle), pressed=false)
-          if player.chips.length > 0
-            column gap=8
-              text "Stanzas" font="-exact-headline"
-              row gap=8 flex-wrap="wrap"
-                for c in player.chips key=c.stanza
-                  if c.chosen
-                    PlayerFilled(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, pressed=true)
-                  else
-                    button press=ask("stanza", c.stanza) aria-pressed=false aria-label=`Stanza ${c.stanza}` buttonStyle="bordered" testId=`stanza-${c.stanza}`
-                      text `${c.stanza}`
-              if player.places.length > 0
-                row gap=8 flex-wrap="wrap" align-items="center"
-                  text "Go to" color="-exact-secondary-label"
-                  for n in player.places key=n
-                    button press=ask("place", n) buttonStyle="bordered" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
-                      text `${n}`
+    button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" gap="space.s6" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color=(chosen ? "chosen" : "pill") -exact-press-opacity="opacity.pressed" aria-label=name aria-description=hint aria-pressed=chosen testId=id
+      text label font="type.chip" color=(chosen ? "onChosen" : "onPill") line-clamp=1

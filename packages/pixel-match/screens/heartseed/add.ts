@@ -32,6 +32,21 @@ const EXACT_SHEET: ReadonlyArray<string> = [
  */
 const HANDBOOK_SCROLL = 'tap add-verses drag 0 -1951';
 
+/**
+ * One's way to `Seven Churches`: slow pans of a fixed length from the
+ * sheet's top. Scrolling until the row shows stopped wherever the last
+ * fling left it (the dark and light references differed by 34 points);
+ * these land within a few points (measured: 0, 3.3 and 6.7 points apart
+ * over three takes), and the row is scored over a band from the card's top
+ * on both sides, so what is left of that drift is laid away.
+ */
+const HANDBOOK_PANS: ReadonlyArray<Step> = Array.from({ length: 4 }, () => ({
+  pan: '201,750',
+  dx: 0,
+  dy: -500,
+  ms: 2000,
+}));
+
 /** The scroll indicator the drag leaves showing at the capture; One's had faded. */
 const INDICATOR = {
   x: 394,
@@ -65,12 +80,8 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hs-fresh',
     one: {
-      steps: [
-        ...SHEET,
-        { scroll: 'label=Seven Churches', direction: 'down' },
-        { tap: 'label=Seven Churches' },
-        { wait: 500 },
-      ],
+      steps: [...SHEET, ...HANDBOOK_PANS, { tap: 'label=Seven Churches' }, { wait: 500 }],
+      band: { targets: ['label=Seven Churches'], edge: 'top' },
     },
     exact: {
       ops: [
@@ -82,6 +93,7 @@ export const rows: ReadonlyArray<Row> = [
         'clock settle',
       ],
       masks: [INDICATOR],
+      band: { top: 'shelf-handbook-bhb-1808', bottom: 'add-verses', edge: 'top' },
     },
   },
   {

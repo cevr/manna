@@ -2,14 +2,14 @@
 
 /**
  * Transpose and capo over the whole domain (A2): for generated hymns with
- * chords and generated runs of presses on the key and capo buttons, the
+ * chords and generated runs of steps by one key or one fret, the
  * kept move is the one the current app's own `transposed` and `capoed`
  * reach, and the page names every chord, the key played and the key
  * sounding as the current app does for that move (`playedKey`,
  * `soundingKey`, `keyName`, `Chord.format`). A run of n up then n down
- * shows the first names again; the capo stops at 0 and 11 as the current
- * app's dial does, and the key wraps through the twelve; a hymn's move never
- * reaches another hymn.
+ * shows the first names again; a move past the capo's 0 and 11, or off the
+ * key's twelve, is not kept; a hymn's move never reaches another hymn. A move
+ * put on a hymn replaces its entry alone.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -19,7 +19,7 @@ import { capoed, hasChords, type Move, still, transposed } from '@manna/hymnal-a
 import { book } from '../hymns/book.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
-import { canStep, type MoveStep, moveOf, movesAfter } from './move.ts';
+import { moveOf, movesTo } from './move.ts';
 import type { ChordsPage } from './page.ts';
 import { bundled, currentBook, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
@@ -29,6 +29,9 @@ const chorded = book.hymns.flatMap((hymn) => {
   const chords = currentBook.of(hymn.number);
   return chords._tag === 'Some' && hasChords(chords.value) ? [hymn.number] : [];
 });
+
+/** A press of the key or capo dial by one, or the move put back. */
+type MoveStep = 'up' | 'down' | 'capo-up' | 'capo-down' | 'reset';
 
 const STEPS: ReadonlyArray<MoveStep> = ['up', 'down', 'capo-up', 'capo-down', 'reset'];
 
@@ -57,20 +60,14 @@ describe('transpose and capo, over the whole domain (A2)', () => {
       let model = still;
       for (let press = 0; press < 1 + below(random, 30); press++) {
         const step = pick(random, STEPS);
-        const next = modelStep(model, step);
-        expect(canStep(model, step)).toBe(
-          next.transpose !== model.transpose || next.capo !== model.capo,
-        );
-        model = next;
-        moves = movesAfter(moves, number, step);
+        model = modelStep(model, step);
+        moves = movesTo(moves, number, model);
         expect(moveOf(moves, number)).toEqual(model);
       }
       if (other !== number) expect(moveOf(moves, other)).toEqual({ transpose: 3, capo: 2 });
       const page = sources.chordsPage([`${number}`, true, moves]);
       expect(shownByPort(page)).toEqual(shownByCurrent(number, model));
       expect([page.transpose, page.capo]).toEqual([model.transpose, model.capo]);
-      expect(page.capoDown).toBe(model.capo > capoed(model, -1).capo);
-      expect(page.capoUp).toBe(model.capo < capoed(model, 1).capo);
     }
   });
 
@@ -84,10 +81,13 @@ describe('transpose and capo, over the whole domain (A2)', () => {
           shownByCurrent(number, { transpose: page.transpose, capo }),
         );
         expect(page.transpose).toBe(transposed(still, transpose).transpose);
-        moves = movesAfter(moves, number, 'capo-up');
+        moves = movesTo(moves, number, { transpose: page.transpose, capo: capo + 1 });
       }
-      for (let capo = 0; capo < 12; capo++) moves = movesAfter(moves, number, 'capo-down');
-      moves = movesAfter(moves, number, 'up');
+      moves = movesTo(
+        moves,
+        number,
+        transposed({ transpose: moveOf(moves, number).transpose, capo: 0 }, 1),
+      );
     }
     expect(moves).toEqual([]);
   });
@@ -103,29 +103,36 @@ describe('transpose and capo, over the whole domain (A2)', () => {
         ['capo-up', 'capo-down'],
       ] as const);
       let moves: Array<string> = [];
-      for (let k = 0; k < n; k++) moves = movesAfter(moves, number, up[0]);
+      let model = still;
+      for (let k = 0; k < n; k++) moves = movesTo(moves, number, (model = modelStep(model, up[0])));
       expect(names(sources.chordsPage([`${number}`, true, moves]))).not.toEqual(first);
-      for (let k = 0; k < n; k++) moves = movesAfter(moves, number, up[1]);
+      for (let k = 0; k < n; k++) moves = movesTo(moves, number, (model = modelStep(model, up[1])));
       expect(moves).toEqual([]);
       expect(names(sources.chordsPage([`${number}`, true, moves]))).toEqual(first);
     }
   });
 
-  test('the capo stops at 0 and 11 and refuses past them; the key wraps through the twelve', () => {
+  test('a move put on a hymn replaces its own entry alone, and the hymn as printed leaves none', () => {
+    const random = seeded(17);
+    for (let run = 0; run < 400; run++) {
+      const number = pick(random, chorded);
+      const move = { transpose: below(random, 12) - 5, capo: below(random, 12) };
+      const moves = movesTo([`${number + 1}:1:1`], number, move);
+      expect(moveOf(moves, number)).toEqual(move);
+      expect(moveOf(moves, number + 1)).toEqual({ transpose: 1, capo: 1 });
+      expect(movesTo(moves, number, still)).toEqual([`${number + 1}:1:1`]);
+    }
+    expect(movesTo([], 2, { transpose: 7, capo: 0 })).toEqual([]);
+    expect(movesTo([], 2.5, { transpose: 1, capo: 0 })).toEqual([]);
+  });
+
+  test('a move past the capo’s 0 and 11, or off the key’s range, is refused; an entry that does not read is still', () => {
     const number = chorded[0] ?? 1;
-    expect(movesAfter([], number, 'capo-down')).toEqual([]);
-    expect(sources.chordsPage([`${number}`, true, []]).capoDown).toBe(false);
-    let moves: Array<string> = [];
-    for (let k = 0; k < 15; k++) moves = movesAfter(moves, number, 'capo-up');
-    expect(moveOf(moves, number).capo).toBe(11);
-    expect(sources.chordsPage([`${number}`, true, moves]).capoUp).toBe(false);
-    expect(movesAfter(moves, number, 'capo-up')).toEqual(moves);
-    let keys: Array<string> = [];
-    for (let k = 0; k < 12; k++) keys = movesAfter(keys, number, 'up');
-    expect(keys).toEqual([]);
-    expect(movesAfter(['x', `${number}:9:0`, `${number}:1:12`, '1:2'], number, 'nonsense')).toEqual(
-      ['x', `${number}:9:0`, `${number}:1:12`, '1:2'],
-    );
+    const kept = movesTo([], number, { transpose: 0, capo: 11 });
+    expect(moveOf(kept, number).capo).toBe(11);
+    expect(movesTo(kept, number, { transpose: 0, capo: 12 })).toEqual(kept);
+    expect(movesTo([], number, { transpose: 0, capo: -1 })).toEqual([]);
+    expect(movesTo([], number, transposed(still, 12))).toEqual([]);
     expect(moveOf(['x', `${number}:9:0`, `${number}:1:12`, '1:2'], number)).toEqual(still);
   });
 });

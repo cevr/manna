@@ -4,6 +4,11 @@ time-zone "America/New_York"
 seed 7
 
 test "The title and the magnifier open Go to, and Done closes it"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -37,6 +42,11 @@ test "The title and the magnifier open Go to, and Done closes it"
   expect no failures
 
 test "A chapter chosen in Go to is kept across a relaunch"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -62,6 +72,11 @@ test "A chapter chosen in Go to is kept across a relaunch"
   expect no failures
 
 test "Where your verses grow lists the field's chapters, and a book marks them"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -109,6 +124,11 @@ test "Where your verses grow lists the field's chapters, and a book marks them"
   expect no failures
 
 test "A reference typed in Go to opens its place, and Cancel clears the box"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -142,6 +162,11 @@ test "A reference typed in Go to opens its place, and Cancel clears the box"
   expect no failures
 
 test "Words typed in Go to before the word pack is down say so, and a reference still opens"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -168,6 +193,11 @@ test "Words typed in Go to before the word pack is down say so, and a reference 
   expect no failures
 
 test "Any passage in Add verses opens Go to over Read"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "add-list"
@@ -194,6 +224,11 @@ test "Any passage in Add verses opens Go to over Read"
   expect no failures
 
 test "Read John 3 on a list's page and on Today opens the chapter on the verse"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"

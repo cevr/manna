@@ -19,9 +19,10 @@
  *   the item go (`next`); nothing is written before it. Leaving Today for
  *   a screen that is not the Settings sheet lets the item and the try go,
  *   unless a recital is under way.
- * - `/cue/<cue>` shows Isaiah 41:10, read from the shipped KJV, under the
+ * - `/cue/<cue>` shows the first verse, read from the shipped KJV, under the
  *   cue named, for the recital's own tests: Next there keeps the try in
- *   memory alone.
+ *   memory alone. The first minute's `/first/<phase>/<cue>` is cued the
+ *   same way, and each new cue there starts a fresh recital.
  *
  * Every call that reads or writes runs one at a time behind those before
  * it. Time is never read: a try's start, Show all's instant and each
@@ -38,8 +39,8 @@ import {
   withHelp,
   type GardenView,
   type ReadGarden,
-  type Stage,
 } from '@manna/heartseed/garden';
+import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import type { Help } from '@manna/heartseed/sayit';
 import { tendedOf } from '@manna/heartseed/home/grown';
 import { countsOf, type Item, type Minutes, type TextPiece } from '@manna/heartseed/session';
@@ -48,10 +49,15 @@ import type { SessionView } from '@manna/heartseed/session/service';
 import type { Choice as Voice } from '@manna/heartseed/voice/reading';
 import { Option } from 'effect';
 
+import { backOn } from '../back/shown';
+import { firstPlace } from '../first/verse';
+import type { GardenVerseChange } from '../garden/sources';
 import { slugOf } from '../garden/view';
+import { DRAWN } from '../list/page';
 import { makeLive, type Call, type Ground, type Live } from '../session/live';
 import { minutesOf, voiceOf } from '../settings/choices';
 import { textOf } from '../text/text';
+import type { Frame } from './hold';
 import {
   initial,
   pendingOf,
@@ -110,34 +116,27 @@ export interface SessionShown {
   wire: SessionWire;
   stage: string;
   stageLine: string;
+  stageDrawn: string;
 }
 
-/** Each stage as Today's stage line shows it, as the current Heartseed's `STAGE_NAMES` does. */
-const STAGE_LINES: Readonly<Record<Stage, string>> = {
-  seed: 'A seed',
-  blade: 'A blade',
-  ear: 'An ear',
-  'full corn': 'Full corn',
-};
-
-/** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, and the line Today shows of it; none for an unread garden, which claims no stage. */
+/** The stage of the verse at `reference` in the garden read, Show all's step back of `help` laid over it, the line Today shows of it and the home picture its plant is drawn with (none unplanted); none for an unread garden, which claims no stage. */
 export const stageShown = (
   garden: Option.Option<ReadGarden>,
   reference: string,
   help: Option.Option<Help>,
-): { readonly stage: string; readonly stageLine: string } =>
+): { readonly stage: string; readonly stageLine: string; readonly stageDrawn: string } =>
   Option.match(garden, {
-    onNone: () => ({ stage: '', stageLine: '' }),
+    onNone: () => ({ stage: '', stageLine: '', stageDrawn: '' }),
     onSome: (read) => {
       const laid = Option.match(
         Option.filter(help, (taken) => taken.reference === reference),
         { onNone: () => read, onSome: (taken) => withHelp(read, taken) },
       );
       return Option.match(Option.fromUndefinedOr(laid.plants.get(reference)), {
-        onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet' }),
+        onNone: () => ({ stage: 'not planted', stageLine: 'Not planted yet', stageDrawn: '' }),
         onSome: (plant) => {
           const stage = stageOf(plant);
-          return { stage, stageLine: STAGE_LINES[stage] };
+          return { stage, stageLine: STAGE_NAMES[stage].shown, stageDrawn: DRAWN[stage] };
         },
       });
     },
@@ -146,14 +145,24 @@ export const stageShown = (
 /** Today's screen: the recital's, and the session's around it. */
 export interface TodayScreen extends TodayView {
   session: SessionShown;
+  back: boolean;
 }
 
-/** The verse `/cue/<cue>` shows: Isaiah 41:10. */
-const CUED = { book: 23, chapter: 41, first: 10, last: 10 };
+/** The verse `/cue/<cue>` shows: the first verse, as the current Heartseed names it (`src/first/verse.ts`). */
+const cued = () =>
+  Option.match(firstPlace(), {
+    onNone: () => ({ book: 0, chapter: 0, first: 0, last: 0 }),
+    onSome: (place) => ({
+      book: place.book,
+      chapter: place.chapter,
+      first: place.verse,
+      last: place.verse,
+    }),
+  });
 
 /** The cued verse as the shipped KJV gives it. */
 const cuedPassage = (): Passage => {
-  const read = textOf(CUED);
+  const read = textOf(cued());
   return {
     reference: read.reference,
     text: read.verses.map((verse) => verse.text).join(' '),
@@ -294,6 +303,11 @@ export interface GardenCalls {
     store: ExactStore,
     storage: FileStorage,
   ) => Promise<{ answer: string }>;
+  readonly gardenKeepFirst: (
+    args: readonly [string, unknown, unknown, number, number, number],
+    store: ExactStore,
+    storage: FileStorage,
+  ) => Promise<GardenVerseChange>;
 }
 
 type Source<A extends readonly unknown[]> = (
@@ -383,6 +397,7 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       ...recital,
       canHear: recital.canHear && shows && hearable(showing),
       canSay: recital.canSay && shows,
+      back: backOn(showing, session, read, listening(), recital.shownAll),
       session: {
         mode,
         read: Option.isSome(read),
@@ -441,7 +456,8 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       const call = { now, seed };
       voice = voiceOf(chosenVoice);
       const chose = minutesOf(chosenMinutes);
-      const arrival = `${route}|${slug}`;
+      let arrival = `${route}|${slug}`;
+      if (route === 'first') arrival = `${route}|${cue}`;
       const arriving = arrival !== arrived;
       arrived = arrival;
       const runs = route === 'today' || route === 'start' || route === 'home';
@@ -452,8 +468,9 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       const changed = Option.exists(session, (each) => each.minutes !== chose);
       minutes = chose;
       if (changed) await onSession(storage, call, (each) => each.choose(chose));
-      if (route === 'cued') {
-        if (mode !== 'cued' && !listening()) state = initial(cuedPassage());
+      if (route === 'cued' || route === 'first') {
+        const fresh = mode !== 'cued' || (route === 'first' && arriving);
+        if (fresh && !listening()) state = initial(cuedPassage());
         mode = 'cued';
         state = step(state, { _tag: 'cue', cue: cueOf(cue), cap: SHOWN_ALL_CAP });
         return screen();
@@ -546,6 +563,13 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
         await onSession(storage, { now: args[1], seed: args[3] }, (each) => each.remake);
       return changed;
     });
+  const gardenKeepFirst: GardenCalls['gardenKeepFirst'] = (args, store, storage) =>
+    queued(async () => {
+      const changed = await garden.gardenKeepFirst(args, store, storage);
+      if (changed.answer === 'Kept')
+        await onSession(storage, { now: args[3], seed: args[5] }, (each) => each.remake);
+      return changed;
+    });
   const gardenRemove: GardenCalls['gardenRemove'] = (args, store, storage) =>
     queued(async () => {
       const changed = await garden.gardenRemove(args, store, storage);
@@ -570,6 +594,27 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       readonly [string, string]
     >,
     todayStop: (() => apply({ _tag: 'stop' })) satisfies Source<readonly []>,
+    todayDown: (([pointer, x, y]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'down', pointer, at: { x, y } },
+      })) satisfies Source<readonly [number, number, number]>,
+    todayHoldNow: (([key, frames]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'elapsed', key, frames } })) satisfies Source<
+      readonly [number, readonly Frame[]]
+    >,
+    todayMove: (([pointer, x, y, frames]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'move', pointer, at: { x, y }, frames },
+      })) satisfies Source<readonly [number, number, number, readonly Frame[]]>,
+    todayUp: (([pointer, x, y]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'up', pointer, at: { x, y } } })) satisfies Source<
+      readonly [number, number, number]
+    >,
+    todaySought: (([utterance]) => apply({ _tag: 'sought', utterance })) satisfies Source<
+      readonly [string]
+    >,
     todaySay,
     todayHeard: (([recognition, transcript, final]) =>
       apply({ _tag: 'heard', recognition, transcript, final })) satisfies Source<
@@ -591,5 +636,6 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
     gardenJoin,
     addPlant,
     gardenRemove,
+    gardenKeepFirst,
   };
 };

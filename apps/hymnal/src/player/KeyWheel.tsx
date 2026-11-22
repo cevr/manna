@@ -38,7 +38,7 @@ import { color, useButton, useOnButton, useShadow } from '~/color';
 import { available } from '~/tuner/native';
 
 import { TunerMark } from './TunerMark';
-import { type Item, ITEM, LIFT, type Point, slotOf } from './wheel';
+import { type Item, ITEM, LIFT, type Point, slotOf, WORDS } from './wheel';
 import {
   backdropAt,
   enterEnd,
@@ -51,15 +51,6 @@ import {
 
 /** Whether the device has the tuner's ear, so the wheel offers the Tuner: the platform's, or a test's. */
 export const Ear = createContext<boolean>(available);
-
-/** Each item's word on the wheel. */
-export const WORDS: Readonly<Record<Item, string>> = {
-  tuner: 'Tuner',
-  keyDown: 'Key ♭',
-  keyUp: 'Key ♯',
-  reset: 'Reset',
-  chords: 'Chords off',
-};
 
 /** The wheel open: its origin, its items and the one under the finger. */
 export interface Shown {

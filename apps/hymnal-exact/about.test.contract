@@ -1,0 +1,31 @@
+test "About writes each credit as one paragraph, its licence run on after its author, as the current hymnal does."
+  tap "gear"
+  clock settle
+  clock data
+  tap "about-row"
+  clock settle
+  clock data
+  expect text "about-lead" == "The recordings are played from the hymnal's own scores."
+  expect text "about-Piano" == "Piano: Salamander Grand Piano V3 by Alexander Holm, CC BY 3.0."
+  expect text "about-licence-Piano" == "CC BY 3.0"
+  expect text "about-Strings" == "Strings: VS Chamber Orchestra 2: Community Edition by Versilian Studios, CC0 1.0."
+  expect tree missing "about-licence-Strings"
+
+test "About carries the Gemma notice and a button that shows the Terms, as the current hymnal does."
+  tap "gear"
+  clock settle
+  clock data
+  tap "about-row"
+  clock settle
+  clock data
+  expect tree has "gemma-notice"
+  expect tree has "gemma-notice-terms"
+  expect tree has "gemma-notice-policy"
+  expect text "gemma-terms" == "Gemma Terms of Use"
+  expect tree missing "gemma-terms-text"
+  tap "gemma-terms"
+  clock settle
+  expect tree has "gemma-terms-text"
+  tap "gemma-terms"
+  clock settle
+  expect tree missing "gemma-terms-text"

@@ -10,6 +10,8 @@
   },
   "audio_session": "playback",
   "env": ["HYMNAL_RECORDINGS"],
+  "hatches": { "pinch": ["ios", "web"] },
+  "data": ["pinchable"],
   "commands": {
     "server": ["bun", "tools/recordings.ts"]
   },
@@ -22,6 +24,81 @@
         "finding": "target",
         "node": "chord-*",
         "why": "A chord is tapped where it is printed, over its syllable at the words' size, as in the current hymnal: a box of 44 pt (24 px on the web) would push every chorded line apart or cover the next chord's tap, and the chord's place over its syllable is the feature (ex-hy-chords findings, the chord's tap)."
+      },
+      {
+        "finding": "overlap",
+        "node": "tiles-show",
+        "why": "All at once is the port's own control, kept in the current hymnal's look (owner, q148): the current hymnal has no such button (it reaches the tiles by a pinch, or the `Hymns` heading's VoiceOver action, src/home/Home.native.tsx). It is the first control inside the find bar's capsule (owner, q164: inside the search capsule, port only), which floats at the screen's foot over the home list, which scrolls under it; the list keeps the current hymnal's end room past its last row (src/reader/ListEnd.tsx, `listEnd` in features/list.contract), so every row scrolls clear of it, and it shares no area with Search and the # beside it (tools/drive-largest.ts, hy-end)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-search",
+        "why": "The find bar's Search floats at the screen's foot over the list or the page, which scroll under it, as the current hymnal's does: its find bar is placed `position: 'absolute'` over the screen (src/home/FindBar.tsx, `styles.find`), Search in its capsule. The list keeps the current hymnal's end room (src/reader/ListEnd.tsx) and the page its foot, so what lies under it at rest scrolls clear (tools/drive-largest.ts, hy-end)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-number",
+        "why": "The find bar's # floats at the screen's foot over the list or the page, which scroll under it, as the current hymnal's does: its # (src/player/LivePlayer.tsx, testID find-number) is drawn in the find bar's capsule, placed `position: 'absolute'` over the screen (src/home/FindBar.tsx, `styles.find`). The list keeps the current hymnal's end room (src/reader/ListEnd.tsx) and the page its foot, so what lies under it at rest scrolls clear (tools/drive-largest.ts, hy-end)."
+      },
+      {
+        "finding": "overlap",
+        "node": "find-cancel",
+        "why": "The find bar's Cancel floats at the screen's foot over the list, which scrolls under it, as the current hymnal's Cancel does in its absolutely placed find bar (src/home/FindBar.tsx, testID find-cancel in `styles.find`). The list keeps the current hymnal's end room (src/reader/ListEnd.tsx), so what lies under it at rest scrolls clear (hy-end)."
+      },
+      {
+        "finding": "overlap",
+        "node": "search",
+        "why": "The find bar's box floats at the screen's foot over the list, which scrolls under it, as the current hymnal's box (src/home/FindBar.tsx, testID find-box) does in its absolutely placed find bar. The list keeps the current hymnal's end room (src/reader/ListEnd.tsx), so what lies under it at rest scrolls clear (hy-end)."
+      },
+      {
+        "finding": "overlap",
+        "node": "favourite",
+        "why": "The star's round target reaches 8 pt past its title row above and below, as the current hymnal's FavouriteButton does (src/reader/FavouriteButton.tsx: minHeight 44, marginVertical -8, hitSlop 8); at the largest text the head line's last line runs into that reach, where the target has only its ground, as in the current hymnal (hy-verify)."
+      },
+      {
+        "finding": "clipped",
+        "node": "shape-0-mark-*",
+        "why": "A chord shape's open and muted marks keep the current hymnal's fixed width while their text grows with the text size, as its ChordBox draws them (src/reader/ChordBox.tsx: `mark` width DOT 18, fontSize 14, uncapped), so at the largest text a mark spills its box as the current hymnal's does (hy-verify, measured at root 53; hy-end narrowed it to the marks)."
+      },
+      {
+        "finding": "clipped",
+        "node": "shape-0-dot-*",
+        "why": "A chord shape's finger dots keep the current hymnal's fixed size while their numbers grow with the text size, as its ChordBox draws them (src/reader/ChordBox.tsx: DOT 18, `finger` fontSize 11, uncapped), so at the largest text a finger's number spills its dot as the current hymnal's does (hy-verify, measured at root 53; hy-end narrowed it to the dots)."
+      },
+      {
+        "finding": "clipped",
+        "node": "shape-0-barre-*",
+        "why": "A chord shape's barre keeps the current hymnal's fixed height (DOT 18) while its finger's number grows with the text size, as its ChordBox draws it (src/reader/ChordBox.tsx: `finger` fontSize 11, uncapped), so at the largest text the number spills the barre as the current hymnal's does (hy-verify, measured at root 53; hy-end narrowed it to the barres)."
+      },
+      {
+        "finding": "overlap",
+        "node": "shape-0-dot-*",
+        "why": "A chord shape's finger dots keep the current hymnal's fixed places (src/reader/ChordBox.tsx: DOT 18 on strings STRING_GAP 22 apart) while their numbers grow with the text size (`finger` fontSize 11, uncapped), so at the largest text two neighbouring dots' numbers meet as the current hymnal's do (hy-verify, measured at root 53: a dot against a dot; hy-end narrowed it to the dots)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dials-backdrop",
+        "why": "While the key dials are open, a tap anywhere off them closes them, as the current hymnal's does: its dials' backdrop is a Pressable laid over the whole screen (src/player/PlayerBar.tsx:209-215, testID dials-backdrop, `StyleSheet.absoluteFill`), so it lies over the page's chords, syllables and the hymn's head until the dials close (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-key-stop-*",
+        "why": "The key dial's stops are drawn under its one VoiceOver control, the `Key` range laid over the whole dial (dial-key-value), as the current hymnal's dial is one adjustable view over its stops (src/player/DialView.tsx:375-405, `accessibilityRole=\"adjustable\"` holding the row); the open dials float over the page above the bar, over the chords under them (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute), as the find bar does (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-key-copy-*",
+        "why": "The key dial's copies of its twelve stops either side, so it wraps, are drawn under its one VoiceOver control, the `Key` range laid over the whole dial (dial-key-value), as the current hymnal's dial is one adjustable view over its drawn stops (src/player/DialView.tsx:375-405); the open dials float over the page above the bar (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute) (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-capo-stop-*",
+        "why": "The capo dial's frets are drawn under its one VoiceOver control, the `Capo` range laid over the whole dial (dial-capo-value), as the current hymnal's dial is one adjustable view over its stops (src/player/DialView.tsx:375-405); the open dials float over the page above the bar (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute) (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-tempo-stop-*",
+        "why": "The tempo dial's stops are drawn under its one VoiceOver control, the `Tempo` range laid over the whole dial (dial-tempo-value), as the current hymnal's tempo dial is the same adjustable view over its stops (src/player/TempoDial.tsx:73, src/player/DialView.tsx:375-405, `accessibilityRole=\"adjustable\"` holding the row) (par-hy-tempo)."
       }
     ]
   },
@@ -30,6 +107,7 @@
     "ios": {
       "minimumOS": "17.0",
       "deviceFamily": ["iphone", "ipad"],
+      "resources": [{ "from": "meaning", "to": "Resources/meaning" }],
       "backgroundModes": ["audio"]
     }
   },

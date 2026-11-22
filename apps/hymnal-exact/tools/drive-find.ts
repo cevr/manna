@@ -7,10 +7,9 @@
  * - the drums are the platform's adjustable controls: `tree --ax` reads
  *   each as a slider whose value is its digit, and an increment (VoiceOver's
  *   swipe up, a desktop reader's arrow) turns one;
- * - a pinch in on the home list shows the tiles and a pinch out closes
- *   them, where the driver can pinch: the web's is a trackpad's, a wheel
- *   with Control held; iOS's is `tap … pinch`, and what each driver gave is
- *   printed beside the check;
+ * - on the web a trackpad's pinch in on the home list (a wheel with Control
+ *   held) shows the tiles and one out closes them, what the driver gave
+ *   printed beside the check; two fingers are tools/drive-pinch.ts's;
  * - a tap outside the drums closes them and opens nothing: a tap at the
  *   top left of `drums-outside`, the window-wide press beneath the panel;
  * - each way the drums close (the `#`, a tap outside, and on the web
@@ -22,8 +21,8 @@
  * - on the web, a section header's glyphs are painted in the brand's muted
  *   role, light and dark, from a screenshot's pixels;
  * - the motion (spec B of ex-delight-hy-find): the drums pop in (100 ms
- *   after `#`, scaled between 0.96 and 1 and fading, by Open's fill drawn
- *   lighter than once settled) and are gone once the clock settles after a
+ *   after `#`, scaled between 0.96 and 1, and 40 ms after it fading, by
+ *   Open's light fill drawn nearer the page than once settled) and are gone once the clock settles after a
  *   close; Open held down paints the brand's `pressed`, light and dark; the
  *   tiles grow in from a little larger (60 ms after All at once, scaled
  *   above 1) and Done leaves the list at the row it showed; the search's
@@ -32,6 +31,12 @@
  *   over its syllable (60 ms after the page shows); under Reduce Motion the
  *   drums and the tiles are at scale 1 throughout. A closed exit and a
  *   reopen leave one drums, open.
+ * - All at once is the current app's group tiles: `tree --ax` reads each a
+ *   button named by its group and count, two stand to a row, and a tile's
+ *   tap lands its group's header at the list's top with its first row under
+ *   it; dialling a number at home brings its row into view; a hymn found by
+ *   a line shows it under its title in a taller row, VoiceOver reading it
+ *   last, and at the largest text the row grows with both lines, unclipped.
  *
  * A transform in flight reads at its end on iOS, so iOS reads the end
  * values and films the drums, the tiles, the bar and the chords under
@@ -210,6 +215,22 @@ const launched = await launch('find', [
   ...looks('dark'),
 ]);
 
+const searchButton = (
+  (await launch('find-hint', ['clock data', 'clock settle', 'tree find-search'])).at(-1) as
+    | {
+        nodes?: ReadonlyArray<{
+          props?: { accessibilityLabel?: string; accessibilityHint?: string };
+        }>;
+      }
+    | undefined
+)?.nodes?.[0]?.props;
+drive.check(
+  'the search button is named Search with the current app’s hint, Opens search (FindBar.tsx)',
+  searchButton?.accessibilityLabel === 'Search' &&
+    searchButton.accessibilityHint === 'Opens search',
+  searchButton,
+);
+
 const before = slidersOf(launched[3]);
 drive.check(
   'the drums are three adjustable controls (the web: slider; iOS: adjustable), each its digit as value (1: 0, 0, 1)',
@@ -247,7 +268,7 @@ if (host === 'web') {
   });
 } else
   console.log(
-    `NOTE ${host} no pinch: the driver refuses \`${pinchIn}\` off a transformDragFor pair ("no photo binding"), so tiles-show and Done stand in`,
+    `NOTE ${host}: the two-finger pinch is tools/drive-pinch.ts's (\`--touch platform\`); here tiles-show and Done stand in`,
   );
 
 const outside = await launch('find-outside', [
@@ -275,7 +296,15 @@ const closings = [
   ...(host === 'web' ? [['escape', 'type drums-hash key Escape'] as const] : []),
 ] as const;
 
-/** Opens the drums, closes them one way, and shoots them as they close, 50 ms in, and settled. */
+/**
+ * How far apart a channel may be, of 255, for the settled page under Reduce
+ * Motion: once the drums close (by the `#`, Escape or a tap outside),
+ * Chrome repaints the edges of the bar's glass disks over the list a little
+ * after, 1 to 9 levels on a handful of pixels, where a leaving drums
+ * differs by tens of thousands of pixels far over it.
+ */
+const EDGE_SETTLE = 12;
+
 const closing = (way: string, close: string, still: string) => [
   'tap find-number',
   'clock settle',
@@ -311,6 +340,7 @@ for (const still of [false, true]) {
       await changedPixels(
         shotFile(`close-${way}${tag}-50`),
         shotFile(`close-${way}${tag}-end`),
+        still ? EDGE_SETTLE : undefined,
       ).catch(() => -1),
     ];
     const gone = countIn(closed[at + 8], 'drums') === 0 && closed[at + 9] === false;
@@ -401,10 +431,11 @@ const moving = named([
   'prefer prefers-color-scheme light',
   'clock settle',
   'tap find-number',
-  'clock +100',
+  'clock +40',
+  ['fill-40', 'layout drums-open'],
+  shot('drums-40'),
+  'clock +60',
   ['drums-100', 'layout drums'],
-  ['fill-100', 'layout drums-open'],
-  shot('drums-100'),
   'clock settle',
   ['drums-end', 'layout drums'],
   ['fill-end', 'layout drums-open'],
@@ -463,12 +494,12 @@ if (host === 'web') {
     { drumsScale, at: frameOf(at('drums-100')).frame, end: frameOf(at('drums-end')).frame },
   );
   const [fading, whole] = [
-    await fillPixel('drums-100', at('fill-100')),
+    await fillPixel('drums-40', at('fill-40')),
     await fillPixel('drums-end', at('fill-end')),
   ];
   const ground = channels(theme.light.ground);
   drive.check(
-    '100 ms after #, the drums are fading in: Open’s fill drawn lighter than once settled, and not gone',
+    '40 ms after #, the drums are fading in: Open’s fill drawn lighter than once settled, and not gone',
     fading.length === 3 &&
       whole.length === 3 &&
       distance(fading, ground) < distance(whole, ground) - 2 &&
@@ -631,6 +662,179 @@ if (host === 'web') {
       end: frameOf(chordAt('chord-end')).frame,
     },
   );
+
+/** A frame from a layout reply, or none. */
+const frame = (reply: unknown) => frameOf(reply).frame;
+
+/** Each node of a `tree --ax` reply whose testId starts with `prefix`: its role and name. */
+const axOf = (reply: unknown, prefix: string) =>
+  (
+    (
+      reply as
+        | { ax?: { elements?: Array<{ testId?: string; role?: string; name?: string }> } }
+        | undefined
+    )?.ax?.elements ?? []
+  ).filter((each) => each.testId?.startsWith(prefix) && !each.testId.includes('-count-'));
+
+const grouped = named([
+  'clock data',
+  'tap tiles-show',
+  'clock data',
+  'clock settle',
+  ['tiles-ax', 'tree --ax'],
+  ['tile-0', 'layout group-tile-0'],
+  ['tile-1', 'layout group-tile-1'],
+  ['list-before', 'layout hymn-1'],
+  'tap group-tile-3',
+  'clock settle',
+  ['tiles-after', 'tree'],
+  ['list', 'layout hymn-list'],
+  ['header', 'layout section-opening-of-worship-row'],
+  ['landed', 'layout hymn-59'],
+  'tap find-number',
+  'clock settle',
+  'type drum-hundreds "4"',
+  'clock data',
+  'clock settle',
+  ['followed', 'layout hymn-400'],
+  ['followed-list', 'layout hymn-list'],
+  'tap drums-hash',
+  'clock settle',
+  'tap tiles-show',
+  'clock data',
+  'clock settle',
+  ['aim-tiles', 'layout find-tiles'],
+  ['aim-tile', 'layout group-tile-35'],
+  'tap tiles-done',
+  'clock settle',
+  'tap find-search',
+  'clock settle',
+  'clock data',
+  'type search "river"',
+  'clock settle',
+  'clock data',
+  ['found-title', 'layout hymn-74'],
+  ['found-line', 'layout hymn-530'],
+  ['found-line-text', 'layout row-line-530'],
+  ['found-ax', 'tree --ax'],
+  'prefer root-font-size 53',
+  'clock settle',
+  ['large-title', 'layout hymn-74'],
+  ['large-line', 'layout hymn-530'],
+  ['large-line-text', 'layout row-line-530'],
+  shot('found-largest'),
+]);
+const groupedRun = await launch('find-groups', grouped.ops);
+const g = (name: string) => grouped.reply(groupedRun, name);
+const tileAx = axOf(g('tiles-ax'), 'group-tile-');
+drive.check(
+  'All at once reads each tile as a button named by its group, its count and no number tile',
+  tileAx.length > 10 &&
+    tileAx.every(
+      (each) => /hymns?$/u.test(each.name ?? '') && (each.role ?? '').includes('button'),
+    ) &&
+    countIn(g('tiles-ax'), 'tile-1') === 0,
+  tileAx.slice(0, 3).map((each) => ({ role: each.role, name: each.name })),
+);
+const [tile0, tile1] = [frame(g('tile-0')), frame(g('tile-1'))];
+drive.check(
+  'the tiles stand two to a row, side by side, of one width',
+  tile0 !== undefined &&
+    tile1 !== undefined &&
+    Math.abs(tile0.y - tile1.y) < 1 &&
+    tile1.x > tile0.x + tile0.w &&
+    Math.abs(tile0.w - tile1.w) < 1,
+  { tile0, tile1 },
+);
+const [list, header, landed] = [frame(g('list')), frame(g('header')), frame(g('landed'))];
+drive.check(
+  'a tile’s tap closes the tiles and lands its group’s header at the list’s top, its first row under it',
+  countIn(g('tiles-after'), 'tiles') === 0 &&
+    list !== undefined &&
+    header !== undefined &&
+    landed !== undefined &&
+    Math.abs(header.y - list.y) <= 1 &&
+    Math.abs(landed.y - (header.y + header.h)) <= 1,
+  { list, header, landed },
+);
+const [followed, followedList] = [frame(g('followed')), frame(g('followed-list'))];
+drive.check(
+  'dialling 400 at home brings hymn 400’s row into the list’s view',
+  followed !== undefined &&
+    followedList !== undefined &&
+    followed.y >= followedList.y - 1 &&
+    followed.y + followed.h <= followedList.y + followedList.h,
+  { followed, followedList },
+);
+const [aimTiles, aimTile] = [frame(g('aim-tiles')), frame(g('aim-tile'))];
+drive.check(
+  'with hymn 400’s group (Communion, tile 35) at the list’s top, All at once opens with its tile in the first row',
+  aimTiles !== undefined &&
+    aimTile !== undefined &&
+    aimTile.y >= aimTiles.y - 1 &&
+    aimTile.y < aimTiles.y + aimTile.h,
+  { aimTiles, aimTile },
+);
+for (const tab of ['Sections', 'Topics']) {
+  const boundary = named([
+    'clock data',
+    ...(tab === 'Sections' ? [] : [`tap tab-${tab.toLowerCase()}`, 'clock settle', 'clock data']),
+    'tap tiles-show',
+    'clock data',
+    'clock settle',
+    'tap group-tile-4',
+    'clock settle',
+    'tap hymn-list wheel 0 -40',
+    'clock settle',
+    'tap tiles-show',
+    'clock data',
+    'clock settle',
+    ['tiles', 'layout find-tiles'],
+    ['tile', 'layout group-tile-3'],
+  ]);
+  const run = await launch(`find-boundary-${tab.toLowerCase()}`, boundary.ops);
+  const [tiles, tile] = [frame(boundary.reply(run, 'tiles')), frame(boundary.reply(run, 'tile'))];
+  drive.check(
+    `${tab}: with group 5’s header 40 px under the list’s top, group 4’s pinned over it, All at once opens with group 4’s tile in the first row`,
+    tiles !== undefined && tile !== undefined && tile.y >= tiles.y - 1 && tile.y < tiles.y + tile.h,
+    { tiles, tile },
+  );
+}
+const [plain, lined, lineText] = [
+  frame(g('found-title')),
+  frame(g('found-line')),
+  frame(g('found-line-text')),
+];
+const foundAx = axOf(g('found-ax'), 'hymn-530');
+drive.check(
+  'a hymn found by a line shows that line under its title, the row taller than one found by its title, and VoiceOver reads the line last',
+  plain !== undefined &&
+    lined !== undefined &&
+    lineText !== undefined &&
+    lined.h > plain.h + 10 &&
+    lineText.y + lineText.h <= lined.y + lined.h &&
+    (foundAx[0]?.name ?? '').startsWith('530, ') &&
+    (foundAx[0]?.name ?? '').split(', ').length >= 3,
+  { plain, lined, lineText, name: foundAx[0]?.name },
+);
+const [largePlain, largeLined, largeLine] = [
+  frame(g('large-title')),
+  frame(g('large-line')),
+  frame(g('large-line-text')),
+];
+drive.check(
+  'at the largest text the found row grows with its two lines, the line inside it, nothing clipped',
+  largePlain !== undefined &&
+    largeLined !== undefined &&
+    largeLine !== undefined &&
+    plain !== undefined &&
+    lined !== undefined &&
+    largeLined.h > lined.h * 2 &&
+    largeLined.h > largePlain.h &&
+    largeLine.y >= largeLined.y &&
+    largeLine.y + largeLine.h <= largeLined.y + largeLined.h + 0.5,
+  { largePlain, largeLined, largeLine },
+);
 
 if (host === 'ios') {
   const film = (name: string) => `screenshot ${join(shots, `ios-${name}.png`)} over 600 every 50`;

@@ -32,6 +32,7 @@ use readTopOf, readSheetOf, ReadDriven from "./features/read.contract"
 use TypeSheet from "./features/type.contract"
 use PacksProbe from "./features/packs.contract"
 use StudySheet from "./features/study.contract"
+use FirstScreen from "./features/first.contract"
 
 routes nav
   tab garden "/"
@@ -46,6 +47,7 @@ routes nav
     add "/add"
       addList "/add/lists/:list"
     typeSheet "/type"
+    first "/first/:phase/:cue"
   tab read "/read"
     readAt "/read/at/:book/:chapter/:verse"
     gotoSheet "/read/goto"
@@ -72,17 +74,31 @@ component HeartseedExact
   members "./features/find.contract"
   members "./features/type.contract"
   members "./features/study.contract"
+  members "./features/start.contract"
+  members "./features/first.contract"
+  members "./features/back.contract"
+  provide
+    todayHoldDown = todayDownIt
+    todayHoldMove = todayMoveIt
+    todayHoldUp = todayUpIt
+    todayBack
+    todayBackRunning
+    todayBackOpenIt
+    todayBackYes
+    todayBackKeepIt
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
-    if url.startsWith("/read") and nav.tab != "read"
+    if firstHeld
+      firstPlace()
+    else if url.startsWith("/read") and nav.tab != "read"
       nav = go(select(nav, "read"), url)
     else if not url.startsWith("/read") and not url.startsWith("/settings") and not url.startsWith("/type") and nav.tab != "garden"
       nav = go(select(nav, "garden"), url)
     else
       nav = go(nav, url)
   view
-    main testId="root" navigationKey=`${top(nav).id}` navigate=follow width="100%" height="100%" display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs"
+    main testId="root" navigationKey=`${top(nav).id}` navigationBack="first-hold" navigate=follow width="100%" height="100%" display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs"
       column flex=1 min-height=0 position="relative"
         for t in nav.tabs key=t.name
           column role="tabpanel" id=`panel-${t.name}` testId=`panel-${t.name}` position="absolute" inset=0
@@ -103,7 +119,7 @@ component HeartseedExact
                     button press=settingsOpen aria-label="Settings" testId="gear"
                       image "symbol:settings"
                 if (e.name == "today" or e.name == "start" or e.name == "cued") and e.id == readTopOf(t.stack)
-                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday)
+                  Today(today=today, hear=todayHearIt, stop=todayStopIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, showAll=todayShowAllIt, grade=todayGradeIt, next=todayNextIt, again=todayAgainIt, add=todayAddIt, home=todayHomeIt, still=motionStill, sheet=motionSheetUp, chapter=gotoTodayPlace.name, read=gotoReadToday, scheme=homeScheme)
                 if e.name == "list"
                   ListPage(list=listShown, asking=listAsking, scheme=homeScheme, practice=listPractice, ask=listAsk, yes=listYes, no=listNo, still=motionStill, chapter=gotoListPlace.name, read=gotoReadList)
                 if e.name == "verses"
@@ -117,17 +133,17 @@ component HeartseedExact
                     if gardenDriven.on
                       ReadDriven(open=readOpenAt, follow=readFollow)
                 if e.name == "garden"
-                  Home(home=homeShown, asking=homeAsking, scheme=homeScheme, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill)
+                  Home(home=homeShown, asking=homeAsking, scheme=homeScheme, begin=homeBegin, start=homeStart, open=homeOpen, add=homeAdd, ask=homeAsk, yes=homeYes, no=homeNo, still=motionStill, tips=(first.tour == "tips"), how=firstHow, gotIt=firstGotIt)
             for e in t.stack.filter(x => x.name.startsWith("settings")) key=e.id
               if e.name == "settings"
-                SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, done=settingsDone)
+                SettingsSheet(route=e.id, settings=settings, minutes=feelChooseMinutes, voice=feelChooseVoice, appearance=feelChooseAppearance, feel=settingsFeel, feelSwitch=settingsFeelSet, about=aboutOpen, welcome=firstWelcomeAgain, done=settingsDone)
               if e.name == "settingsAbout"
-                AboutPage(route=e.id, licences=aboutOpenLicences)
+                AboutPage(route=e.id, version=aboutShown.version, licences=aboutOpenLicences)
               if e.name == "settingsLicences"
-                LicencesPage(route=e.id, licences=aboutLicences.licences)
+                LicencesPage(route=e.id, licences=aboutShown.licences)
             for e in t.stack.filter(x => x.name == "add" or x.name == "addList") key=e.id
               if e.name == "add"
-                AddVersesPage(route=e.id, add=addShown, bible=addOpenBible, toggle=addToggle, open=addOpenList, done=addDone)
+                AddVersesPage(route=e.id, add=addShown, scheme=homeScheme, bible=addOpenBible, toggle=addToggle, open=addOpenList, done=addDone)
               if e.name == "addList"
                 AddListPage(route=e.id, list=addListShown, pending=pending(addPlanted), plant=addPlantIt)
             for e in t.stack.filter(x => x.name == "gotoSheet" or x.name == "gotoBook") key=e.id
@@ -137,6 +153,8 @@ component HeartseedExact
                 GotoBookPage(route=e.id, book=gotoBookShown, open=gotoOpenAt, done=gotoDone)
             for e in t.stack.filter(x => x.name == "studySheet") key=e.id
               StudySheet(route=e.id, tab=e.params.tab, sheet=studySheetShown, word=studyWordShown, unfolded=studyUnfolded, type=typeShown, retry=commentaryShown.retry, still=motionStill, choose=studyTab, tapWord=studyWordTap, fold=studyFold, follow=studyFollow, move=studyMove, again=packsRetry, done=studyDone)
+            for e in t.stack.filter(x => x.name == "first") key=e.id
+              FirstScreen(route=e.id, phase=e.params.phase, replay=firstReplaying, today=today, scheme=homeScheme, still=motionStill, begin=firstBegin, skip=firstSkip, on=firstOn, next=firstNext, hear=todayHearIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, read=gotoReadToday, done=firstContinue)
             for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
               TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
       row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"

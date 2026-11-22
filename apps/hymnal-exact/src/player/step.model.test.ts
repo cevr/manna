@@ -13,11 +13,13 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { captionOf } from '@manna/hymnal-app/player/caption';
 import { placeAt } from '@manna/hymnal-app/player/scrub-rules';
 import { Option } from 'effect';
 
 import { seeded } from '../test/random.ts';
 import { current } from './current.testing.ts';
+import type * as Declared from './decl/caption';
 import { inputOf, titleOf } from './fixtures.testing.ts';
 import type { Span } from './score.ts';
 import {
@@ -353,6 +355,11 @@ const MOVES = new Set<Input['_tag']>([
 describe('the player against its reference model', async () => {
   const { bar, player } = await current();
 
+  it('the caption Exact’s type check is told of is the current app’s', () => {
+    const held: typeof Declared.captionOf = captionOf;
+    expect(held({ _tag: 'Stopped' })).toBe('Paused');
+  });
+
   it('agrees with the model and keeps every invariant over generated histories', () => {
     let seeks = 0;
     let skips = 0;
@@ -558,6 +565,23 @@ describe('the player against its reference model', async () => {
             fail('the bar shows the hymn bar.ts shows');
           if (bar.sounding(theirs.state) !== (ours.toggle === 'pause'))
             fail('the bar offers Pause exactly while bar.ts’s hymn sounds');
+        }
+        const top = after.stack.at(-1);
+        const theirPageBar = Option.match(pageTrack, {
+          onNone: () => false,
+          onSome: (track) =>
+            bar.pageBar(playerOf(player.Player, after), track)._tag === 'Shown' &&
+            top !== '/player' &&
+            top !== '/settings',
+        });
+        if (view.pageBar !== theirPageBar)
+          fail('a hymn page draws its own bar exactly where bar.ts’s pageBar does, under no sheet');
+        if (view.pageBar && view.dock) fail('the page’s bar and the docked bar never show at once');
+        if (view.onPage !== (page ?? 0)) fail('the view names the hymn page shown');
+        if (after.held !== undefined && after.held.why !== 'missing') {
+          const theirs = playerOf(player.Player, after);
+          if (view.caption !== captionOf(theirs))
+            fail('the full player’s caption is the current app’s for the state it would be in');
         }
       }
     }

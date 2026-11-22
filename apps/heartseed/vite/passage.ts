@@ -15,10 +15,11 @@ import { formatBibleReference, parseBibleQuery } from '@manna/core/bible';
 import { Option, Schema } from 'effect';
 
 import { displayText } from '../src/display';
+import { FIRST_VERSE } from './first-verse';
 import type { Passage } from '../src/passage';
 
 /** The passage Today shows: the brief's first promise. */
-const TODAY = 'Isaiah 41:10';
+const TODAY = FIRST_VERSE;
 
 /** One verse of the corpus file, as this reads it. */
 const KjvVerse = Schema.Struct({

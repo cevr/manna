@@ -14,6 +14,24 @@ export const hymn = (number: number): Step => ({
   expect: 'label=Stanza 1',
 });
 
+/** The port's ops to its hymn `number`'s page, by route, its data in and still. */
+const exactHymn = (number: number): ReadonlyArray<string> => [
+  'clock data',
+  `type root /hymns/${number}`,
+  'clock settle',
+  'clock data',
+  'clock settle',
+];
+
+/** The port's page scrolled down three screens, as One's row pans. */
+const EXACT_END = [
+  ...exactHymn(1),
+  'tap hymn-words drag 0 -600',
+  'tap hymn-words drag 0 -600',
+  'tap hymn-words drag 0 -600',
+  'clock settle',
+];
+
 export const rows: ReadonlyArray<Row> = [
   {
     id: 'hymn.page',
@@ -22,6 +40,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-fresh',
     one: { steps: [hymn(1), { wait: 600 }] },
+    exact: { ops: exactHymn(1) },
   },
   {
     id: 'hymn.refrain',
@@ -29,6 +48,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-fresh',
     one: { steps: [hymn(100), { wait: 600 }] },
+    exact: { ops: exactHymn(100) },
   },
   {
     id: 'hymn.end',
@@ -44,6 +64,7 @@ export const rows: ReadonlyArray<Row> = [
         { wait: 800 },
       ],
     },
+    exact: { ops: EXACT_END },
   },
   {
     id: 'hymn.favourite',
@@ -51,6 +72,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-used',
     one: { steps: [hymn(1), { wait: 600 }] },
+    exact: { ops: exactHymn(1) },
   },
   {
     id: 'hymn.chords',
@@ -59,6 +81,7 @@ export const rows: ReadonlyArray<Row> = [
     sweep: true,
     fixture: 'hy-chords',
     one: { steps: [{ open: 'hymns/1', expect: 'id=key-button' }, { wait: 600 }] },
+    exact: { ops: exactHymn(1) },
   },
   {
     id: 'hymn.chords-none',
@@ -66,6 +89,7 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     fixture: 'hy-chords',
     one: { steps: [hymn(NO_CHORDS), { wait: 600 }] },
+    exact: { ops: exactHymn(NO_CHORDS) },
   },
   {
     id: 'hymn.chord-sheet',
@@ -79,6 +103,9 @@ export const rows: ReadonlyArray<Row> = [
         { wait: 1000 },
       ],
     },
+    exact: {
+      ops: [...exactHymn(1), 'tap chord-1-1-1', 'clock settle', 'clock data', 'clock settle'],
+    },
   },
   {
     id: 'hymn.none',
@@ -88,6 +115,19 @@ export const rows: ReadonlyArray<Row> = [
     one: {
       steps: [{ open: 'hymns/999', expect: 'label=No hymn 999' }, { wait: 600 }],
       web: [{ open: 'hymns/999', expect: 'label=No hymn 999.' }, { wait: 600 }],
+    },
+    exact: {
+      ops: exactHymn(999),
+      masks: [
+        {
+          x: 20,
+          y: 190,
+          width: 101,
+          height: 44,
+          reason:
+            "the port's Home link (notfound-home), Exact-only: the port's drives and tests leave not-found by it, and One's page has none (measured by layout on iOS)",
+        },
+      ],
     },
   },
   {

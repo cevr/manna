@@ -4,6 +4,11 @@ time-zone "America/New_York"
 seed 7
 
 test "Three verses planted and due: home's card offers Start"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -35,6 +40,11 @@ test "Three verses planted and due: home's card offers Start"
   expect no failures
 
 test "Start opens Today on the plan's first item"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -69,6 +79,11 @@ test "Start opens Today on the plan's first item"
   expect no failures
 
 test "A tap on a plant opens Today on that verse"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -101,6 +116,11 @@ test "A tap on a plant opens Today on that verse"
   expect no failures
 
 test "Back from Today returns home at the scroll it left"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -178,6 +198,11 @@ test "Back from Today returns home at the scroll it left"
   expect no failures
 
 test "Add a list opens Add verses (J2)"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "add-list"
@@ -194,6 +219,11 @@ test "Add a list opens Add verses (J2)"
   expect no failures
 
 test "A list planted in Add verses shows as a row on home after Back (J2)"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -211,12 +241,17 @@ test "A list planted in Add verses shows as a row on home after Back (J2)"
   back
   clock data
   clock settle
-  expect text "row-title-passage-0-19-1-1-3" == "Psalms 1:1-3"
+  expect text "row-name-passage-0-19-1-1-3" == "Psalms 1:1-3"
   expect state homeShown.rows.length == 1
   expect tree missing "singles"
   expect no failures
 
 test "A single verse planted in Add verses shows under Single verses (J2)"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data

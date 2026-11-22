@@ -9,6 +9,7 @@ import { createContext, use } from 'react';
 import { Platform, type TextStyle } from 'react-native';
 
 import { defaultReading, type Font, readingStyle, type ReadingStyle } from './reading';
+import { serifFamilies } from './reading-choices';
 
 export interface PageText {
   readonly words: TextStyle;
@@ -17,12 +18,8 @@ export interface PageText {
   readonly indent: number;
 }
 
-/** A serif each platform has: Georgia on iOS, the system's serif on Android, the browser's on the web. */
-const serif = Platform.select({
-  ios: 'Georgia',
-  android: 'serif',
-  default: 'ui-serif, Georgia, serif',
-});
+/** A serif each platform has (`serifFamilies`). */
+const serif = Platform.select(serifFamilies);
 
 /** The family each font is drawn in: the system's own face takes no family. */
 const families: Record<Font, TextStyle> = { system: {}, serif: { fontFamily: serif } };

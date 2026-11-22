@@ -12,6 +12,13 @@
 // in One's look with every measure a token of app.forma: One's Settings
 // page sheet with its own header, the choices as the Minutes pills, the
 // size steps and Reset as the outlined pill.
+// On iOS the sheet at its medium height is drawn at about 96 % of its
+// laid-out size, so a pill 44 tall would show 42: each choice is 48 tall
+// (a target with 2 above and below), and each font's tile counts its
+// padding and border in its width, so the tile cut by the sheet's edge at
+// rest has its middle on the sheet. The header row is painted the sheet's
+// ground, as Add's is, so the scroller stays below it rather than running
+// under it as under a control bar.
 // The seven bundled families are their upstream files, unmodified, under
 // assets/fonts/<key>/ beside each one's OFL.txt (assets/fonts/SOURCES.md).
 
@@ -132,7 +139,7 @@ component TypeSegments
       text line font="type.label"
       row role="radiogroup" aria-label=group appearance="none" align-self="stretch" flex-wrap="wrap" gap="space.s8"
         for o in options key=o.value
-          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" min-height="size.target" padding-left="space.s14" padding-right="space.s14" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" min-height="size.target" padding-top="space.s2" padding-bottom="space.s2" padding-left="space.s14" padding-right="space.s14" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
             text o.label font="type.label"
 
 component TypeSheet
@@ -148,7 +155,7 @@ component TypeSheet
     done: action
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationDetent="medium large" navigationScroll="type-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="type-sheet"
-      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" flex-shrink=0 min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page"
+      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" flex-shrink=0 min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page" background-color="hs.ground"
         text "Text" role="heading" aria-level=2 font="type.sheet-title" flex-shrink=1
         button press=done appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="type-done"
           text "Done" font="type.label"
@@ -168,7 +175,7 @@ component TypeSheet
             text "Font" font="type.label"
             row role="radiogroup" aria-label="Font" id="type-fonts" appearance="none" overflow-x="auto" overflow-y="hidden" gap="space.s8" padding-bottom="space.s4" testId="type-fonts"
               for f in type.fonts key=f.value
-                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 min-width="size.button" padding="space.s12" border-radius="radius.r16" border-width="line.slot" border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap="space.s2" -exact-press-opacity="opacity.pressed" id=`type-font-${f.value}` testId=`type-font-${f.value}`
+                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 box-sizing="border-box" min-width="size.button" padding="space.s12" border-radius="radius.r16" border-width="line.slot" border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap="space.s2" -exact-press-opacity="opacity.pressed" id=`type-font-${f.value}` testId=`type-font-${f.value}`
                   text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font="type.word"
                   text f.label font="type.caption-strong" text-align="center"
                   text f.kind font="type.caption" color="hs.quiet"

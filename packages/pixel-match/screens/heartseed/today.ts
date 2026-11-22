@@ -9,7 +9,7 @@
  * over the tab bar: UIKit's tab bar answers `layout tabs` with no box).
  */
 import type { Row, Step } from '../../src/model.ts';
-import { banded, TODAY_BAND } from './band.ts';
+import { banded, ROOMY, TODAY_BAND } from './band.ts';
 import { HOME } from './home.ts';
 
 const unit = 'pm-hs-today';
@@ -74,6 +74,7 @@ const todayRows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     sweep: true,
+    departs: ROOMY,
     fixture: 'hs-due',
     one: { steps: NEW },
     exact: exact(portPlant('Psalms-23-3')),
@@ -91,6 +92,7 @@ const todayRows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     sweep: true,
+    departs: ROOMY,
     fixture: 'hs-due',
     one: { steps: SEED },
     exact: exact(portPlant('Psalms-23-1')),
@@ -128,6 +130,7 @@ const todayRows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     sweep: true,
+    departs: ROOMY,
     fixture: 'hs-due',
     one: { steps: SAID },
     exact: exact(PORT_SAID),

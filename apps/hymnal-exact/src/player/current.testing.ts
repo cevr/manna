@@ -7,6 +7,8 @@
  * empty, as the bar's rule reads neither. Loaded once, after the stand-ins.
  */
 
+import type { Player, Track } from '@manna/hymnal-app/player/player';
+
 Bun.plugin({
   name: 'hymnal-exact-player-boundaries',
   setup(build) {
@@ -14,6 +16,11 @@ Bun.plugin({
     build.module('virtual:hymnal-chords', () => ({ exports: { default: [] }, loader: 'object' }));
   },
 });
+
+declare module '@manna/hymnal-app/player/bar' {
+  /** `src/player/bar.ts`'s bar a hymn page draws itself: `barFor`'s on `track` while the player holds no hymn, else hidden. */
+  export const pageBar: (state: Player, track: Track) => Bar;
+}
 
 export const current = async () => ({
   bar: await import('@manna/hymnal-app/player/bar'),

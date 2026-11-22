@@ -306,8 +306,8 @@ const tap = (page: Page, selector: string) => {
 
 /** The screen the page shows: its document title names it, the hymn's by its number. */
 const screenOf = async (page: Page) =>
-  page.evaluate<{ title: string; topic: string | null; notfound: boolean; path: string }>(
-    `({ title: document.title, topic: document.querySelector('[data-testid="hymn-topic"]')?.textContent ?? null, notfound: Boolean(document.querySelector('[data-testid="notfound"]')), path: location.pathname })`,
+  page.evaluate<{ title: string; number: string | null; notfound: boolean; path: string }>(
+    `({ title: document.title, number: document.querySelector('[data-testid="hymn-number"]')?.textContent ?? null, notfound: Boolean(document.querySelector('[data-testid="notfound"]')), path: location.pathname })`,
   );
 
 const titleOf = (n: number) => hymns.find((hymn) => hymn.number === n)?.title ?? '';
@@ -319,7 +319,7 @@ const addresses = async (page: Page) => {
     const { status, ready } = await open(page, `/hymns/${hymn.number}`);
     const shown = await waitFor(
       page,
-      `document.querySelector('[data-testid="hymn-topic"]')?.textContent?.startsWith(${JSON.stringify(`${hymn.number} · `)}) && document.querySelector('[data-testid="hymn-title"]')?.textContent === ${JSON.stringify(hymn.title)}`,
+      `document.querySelector('[data-testid="hymn-number"]')?.textContent === ${JSON.stringify(`${hymn.number}`)} && document.querySelector('[data-testid="hymn-title"]')?.textContent === ${JSON.stringify(hymn.title)}`,
       5000,
     );
     if (status !== 200 || !ready || !shown) wrong.push({ n: hymn.number, status, ready, shown });
@@ -357,7 +357,7 @@ const addresses = async (page: Page) => {
     await Bun.sleep(300);
     const want =
       place.screen === 'hymn'
-        ? `document.querySelector('[data-testid="hymn-topic"]')?.textContent?.startsWith('${place.number} · ')`
+        ? `document.querySelector('[data-testid="hymn-number"]')?.textContent === '${place.number}'`
         : place.screen === 'notfound'
           ? `document.querySelector('[data-testid="notfound"]')`
           : place.screen === 'recent'

@@ -9,9 +9,17 @@
 // once it is chosen. A found hymn opens as the current app opens one
 // (`listOpening`). All at once, the tiles, lies over the list, which stays
 // built where it stood beneath; a group's header is drawn in the muted
-// role.
-use PlayerBarRoom from "./player.contract"
-use FindBar, FindTiles, FindView, findSearchingAt, ListRow, RowSection from "./find.contract"
+// role, and a tap on it opens All at once. Sections carries the current
+// app's number rail at its right edge (features/rail.contract), its top at
+// the header's bottom (`listShift`: the title and tabs' height, more while
+// the list is pulled past its top, as One's `railShift`), and a row the
+// rail scrolls to lands under its pinned header (`listPin`), as a row
+// scrolled to on another tab does. Where a scroll of the list comes to
+// rest, its offset from the list's top in points, is `listTop`, so All at
+// once can open at the group the reader was at.
+use PlayerBarRoom, PlayerView from "./player.contract"
+use FindBar, FindPlaces, FindPort, FindTiles, FindView, findFoot, findSearchingAt, ListRow, RowSection from "./find.contract"
+use HomeRail from "./rail.contract"
 
 shape TabGroup
   slug: string
@@ -34,10 +42,21 @@ fn listTitle(titles: string[], n: number): string = match titles.at(n - 1) { cas
 // too, one that names the group as well (`<kind>-<slug>-<n>`).
 fn listRowId(g: TabGroup, n: number, kind: string): string = g.repeats.includes(n) ? `${kind}-${g.slug}-${n}` : `${kind}-${n}`
 
+// The room the list keeps after its last row, as the current app's
+// `ListEnd` (src/reader/end.ts `listEndSpace` over src/player/bar.ts
+// `findRoom`): from the list's foot up to the `#`'s top, then `END_ROOM`
+// past it, so the last row scrolls clear of the find bar. With no player
+// the `#` docks `lift` over the bottom inset; with the player's bar docked
+// the list ends on the bar's room and the `#` stands `gap` over the bar,
+// itself over the inset.
+fn listEnd(port: FindPort, at: FindPlaces, overBar: bool): number = port.safeAreaBottom + (overBar ? at.gap : at.lift) + at.hash + at.end
+
 members HymnalExact
   state listQuery = ""
   state listTab = "Sections" persist
-  resource listRows = hymnRows(find.query) as shape RowSection[] else empty()
+  state listTop = 0
+  state listLand = ""
+  resource listRows = hymnRows(find.query, findAboutNow) as shape RowSection[] else empty()
   resource listTabNames = listTabs() as shape string[] else empty()
   resource listTitleOf = listTitles() when listTab != "Sections" as shape string[] else empty()
   resource listGroups = listTabRows(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : []) when listTab != "Sections" as shape TabGroup[] else empty()
@@ -47,6 +66,12 @@ members HymnalExact
       if name != listTab
         haptic("selection")
     listTab = name
+  action listLanded(id: string, w: number, h: number)
+    if h > 0
+      listLand = ""
+      scrollIntoView(id, block="start", behavior="instant")
+  action listRested
+    listTop = max(0, frame("hymn-list").y - frame("list-top").y)
   action listOpen(n: number)
     send listOpening = listOpening(top(nav).url, n)
   action listOpened
@@ -75,10 +100,26 @@ component HymnList
   inject
     findShown: FindView
     findWheel: action
+    listRested: action
+    listLand: string
+  state listHead = 0
+  state listPull = 0
+  state listPin = 0
+  derive listShift = listHead + listPull
+  action listHeaded(w: number, h: number)
+    listHead = h
+  action listScrolled(x: number, y: number)
+    let s = max(0, 0 - y)
+    if s != listPull
+      listPull = s
+  action listPinned(w: number, h: number)
+    if h > 0 and h != listPin
+      listPin = h
   view
     column navigationKey=`${entry.id}` navigationBar="none" navigationScroll="hymn-list" position="absolute" inset=0
       -exact-safe-area="top" padding-top="var(--exact-safe-area-inset-top)"
       display="flex" flex-direction="column" background-color="ground"
+      hatch="pinch" data-pinchable=(findShown.pinchable ? "on" : "off")
       if findShown.homeTiles
         HomeTitle(own=false)
         FindTiles()
@@ -87,9 +128,10 @@ component HymnList
         HomeTabs(tab=tab, tabs=tabs, choose=choose)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel testId="hymn-list"
-          HomeTitle(own=true)
-          HomeTabs(tab=tab, tabs=tabs, choose=choose)
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin}px` testId="hymn-list"
+          column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
+            HomeTitle(own=true)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose)
           if recent.shelf.length > 0
             section testId="recent-shelf"
               link href=path("recent") aria-label="Recent, see all" display="flex" flex-direction="row" align-items="center" justify-content="space-between"
@@ -100,28 +142,43 @@ component HymnList
                 column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
               for r in recent.shelf key=r.number
                 HymnRow(number=r.number, title=r.title, id=`shelf-${r.number}`, star=(favourites.includes(r.number) ? `shelf-star-${r.number}` : ""), gutter=true)
-          for s in sections key=s.slug
-            section
-              ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true)
+          for s, si in sections key=s.slug
+            section display="flex" flex-direction="column"
+              ListHeader(name=s.name, id=`section-${s.slug}`, gutter=true, measured=(si == 0), landing=false, sized=listPinned)
               for r in s.rows key=r.number
                 HymnRow(number=r.number, title=r.title, id=`hymn-${r.number}`, star=(favourites.includes(r.number) ? `star-${r.number}` : ""), gutter=true)
+          ListEnd()
+        if not findShown.homeTiles
+          ListRail(shift=listShift)
       else if groups.length == 0 and tab == "Lists"
         column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
           HomeTitle(own=true)
           HomeTabs(tab=tab, tabs=tabs, choose=choose)
           text "No hymns here yet." font="type.body" color="muted" padding="space.s16" testId="lists-empty"
       else
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel testId="hymn-list"
-          HomeTitle(own=true)
-          HomeTabs(tab=tab, tabs=tabs, choose=choose)
-          for g in groups key=g.slug
-            section
-              ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false)
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel scrollend=listRested scroll-padding-top=`${listPin}px` testId="hymn-list"
+          column id="list-top" flex-shrink=0 testId="list-head"
+            HomeTitle(own=true)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose)
+          for g, gi in groups key=g.slug
+            section display="flex" flex-direction="column"
+              ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false, measured=(gi == 0), landing=(g.name == listLand), sized=listPinned)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
+          ListEnd()
       column position="absolute" top=0 left=0 right=0 height="var(--exact-safe-area-inset-top)" background-color="ground" aria-hidden=true testId="status-scrim"
       FindBar(entry=entry, results=true)
       PlayerBarRoom(id="bar-room")
+
+// The list's end room (`listEnd`), past its last row: no row or hairline
+// of its own, unseen, taking no touch.
+component ListEnd
+  inject
+    playerShown: PlayerView
+  resource listEndPort = exactViewport() as shape FindPort
+  resource listEndPlaces = findPlaces() as shape FindPlaces
+  view
+    column flex="none" height=`${listEnd(listEndPort, listEndPlaces, playerShown.dock or playerShown.pageBar)}px` pointer-events="none" aria-hidden=true testId="list-end"
 
 // Home's title row, as the current app's: "Hymns" and the Settings gear.
 // It scrolls away with the list, as the current app's list header does;
@@ -134,7 +191,7 @@ component HomeTitle
     settingsGear: action
   view
     row align-items="center" padding-left="space.s16" padding-right="space.s8" flex-shrink=0 testId=(own ? "title-row" : "tiles-title-row")
-      text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" line-clamp=1 testId=(own ? "title" : "tiles-title")
+      text "Hymns" role="heading" aria-level=1 flex=1 min-width=0 padding-top="space.s4" padding-bottom="space.s4" position="relative" top="nudge.title" font="type.large-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=(own ? "title" : "tiles-title")
       button press=settingsGear aria-label="Settings" appearance="none" width="size.target" height="size.target" display="flex" align-items="center" justify-content="center"
         border-radius="radius.pill" -exact-press-opacity="opacity.pressed" flex-shrink=0 testId=(own ? "gear" : "tiles-gear")
         image "symbol:settings" width="nudge.gear" height="nudge.gear" position="relative" left="nudge.gear-left" object-fit="contain" color="accent"
@@ -160,17 +217,60 @@ component HomeTabs
 // at every text size. It stays at the list's top while its group's rows
 // scroll under it, until the next group's header pushes it off, as the
 // current app's pinned topic does. With `gutter` it ends before the
-// Sections list's rail gutter, as every row of that list does.
+// Sections list's rail gutter, as every row of that list does. A tap on
+// it zooms out to All at once, as the current app's group row does
+// (HymnList.native.tsx `GroupHeader`); VoiceOver reads its name as a
+// heading, with the current app's hint, and its activation presses the
+// row: a heading on iOS is a `text`'s role, never a button's. Its `id`
+// names its group to the point under the list's top that All at once
+// opens at (`findAimAtTop`), pinned there or not. The `measured` one, the list's first, gives
+// its height, as laid out, to `sized`: the room the list keeps over a row
+// it scrolls to. One header measures, not each: each measure that
+// changes `listPin` draws the whole list again. The `landing` one, the
+// group About this hymn asked for (`listLand`), takes the list to itself
+// once it is laid out, its header at the list's top (`listLanded`): what
+// it scrolls into view is a mark at its foot, which the list's room over
+// a row (`listPin`, the header's height) lands just under the top. The
+// mark is a point wide and tall (`line.panel`, the brand's one point):
+// iOS never lays out a node of no size, so a scroll to one goes nowhere.
 component ListHeader
   props
     name: string
     id: string
     gutter: bool
+    measured: bool
+    landing: bool
+    sized: action
+  inject
+    findPress: action
+    listLanded: action
   view
-    row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
-      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground"
-      text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
-      column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
+    column id=id press=findPress("tilesShow", 0)
+      display="flex" flex-direction="column" align-self="stretch" padding=0
+      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" testId=`${id}-row`
+      :active
+        background-color="soft"
+      row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" position="relative"
+        text name role="heading" aria-description="Shows every group at once" font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic" testId=id
+        column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
+      if measured
+        column position="absolute" inset=0 pointer-events="none" aria-hidden=true resize=sized
+      column id=`${id}-land` position="absolute" top="100%" left=0 width="line.panel" height="line.panel" pointer-events="none" aria-hidden=true
+      if landing
+        column position="absolute" inset=0 pointer-events="none" aria-hidden=true resize=listLanded(`${id}-land`)
+
+// The Sections list's rail (features/rail.contract), its foot `end` past
+// the find bar's top (`findFoot`, wherever the bar rides, over the player's
+// bar too), as the current app's rail ends at its list's `ListEnd` room.
+component ListRail
+  props
+    shift: number
+  inject
+    playerShown: PlayerView
+  resource listRailPort = exactViewport() as shape FindPort
+  resource listRailPlaces = findPlaces() as shape FindPlaces
+  view
+    HomeRail(shift=shift, end=findFoot(listRailPort, listRailPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0) + listRailPlaces.hash + listRailPlaces.end)
 
 // A hymn's row, as the current app's: its number in the accent, then its
 // title, and a star at the row's end when it is a favourite; a hairline
@@ -189,7 +289,7 @@ component HymnRow
   view
     link href=path("hymn", `${number}`) display="flex" flex-direction="row" align-items="center" gap="space.s12"
       padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
-      margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" testId=id
+      margin-right=(gutter ? "size.target" : "0px") border-bottom="none" position="relative" background-color="ground" id=id testId=id
       :active
         background-color="soft"
       text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"

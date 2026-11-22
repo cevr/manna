@@ -16,6 +16,34 @@ import { appFile, brandOf } from './design.testing.ts';
 const brand = brandOf(appFile('app.forma'));
 const roles = Object.keys(theme.light);
 
+/** A colour UIKit draws that One names nowhere: its light and dark values and where they were measured. */
+interface Measured {
+  readonly light: string;
+  readonly dark: string;
+  readonly source: string;
+}
+
+const UIKIT = new Map<string, Measured>([
+  [
+    'fieldClear',
+    {
+      light: '#00000033',
+      dark: '#ffffff33',
+      source:
+        'UITextField’s clear button (FindBar.tsx, clearButtonMode="while-editing"): black at 20 % by day, white at 20 % by night, measured over the glass in find.none’s reference',
+    },
+  ],
+  [
+    'fieldCaret',
+    {
+      light: '#426bf2',
+      dark: '#426bf2',
+      source:
+        'UITextField’s caret with the tint left as UIKit’s (FindBar.tsx sets no cursor colour), measured in find.none’s reference by day and night; the platform’s system blue draws #0088ff there',
+    },
+  ],
+]);
+
 describe('the brand is the current hymnal’s palette', () => {
   it('has every role of the current theme, light and dark, with its colour', () => {
     expect(roles.length).toBeGreaterThan(20);
@@ -32,8 +60,13 @@ describe('the brand is the current hymnal’s palette', () => {
     }
   });
 
+  it('has UIKit’s own colours where the current app draws them, as measured', () => {
+    for (const [name, { light, dark }] of UIKIT)
+      expect({ name, pair: brand.colours.get(name) }).toEqual({ name, pair: { light, dark } });
+  });
+
   it('has no colour but those, each other token one of the roles', () => {
-    expect([...brand.colours.keys()].toSorted()).toEqual(roles.toSorted());
+    expect([...brand.colours.keys()].toSorted()).toEqual([...roles, ...UIKIT.keys()].toSorted());
     expect(brand.others).toEqual([]);
     for (const [name, role] of brand.names)
       expect({ name, role, isRole: roles.includes(role) }).toEqual({ name, role, isRole: true });

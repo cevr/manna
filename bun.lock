@@ -284,8 +284,8 @@
         "@mediabunny/aac-encoder": "1.64.0",
         "@mediabunny/flac-encoder": "1.66.0",
         "@mediabunny/server": "1.66.0",
-        "@rive-app/canvas-advanced": "2.44.0",
-        "@rive-app/webgl2-advanced": "2.44.0",
+        "@rive-app/canvas-advanced": "2.49.4",
+        "@rive-app/webgl2-advanced": "2.49.4",
         "@solidjs/compiler": "catalog:",
         "@solidjs/web": "catalog:",
         "effect": "catalog:",
@@ -321,6 +321,7 @@
       "name": "@manna/pixel-match",
       "dependencies": {
         "@manna/core": "workspace:*",
+        "@manna/exact-kit": "workspace:*",
         "@manna/heartseed": "workspace:*",
         "@manna/sim": "workspace:*",
         "effect": "catalog:",
@@ -1218,9 +1219,9 @@
 
     "@redis/time-series": ["@redis/time-series@6.2.1", "", { "peerDependencies": { "@redis/client": "^6.2.1" } }, "sha512-kiYniph04dJOole+L359B6C9E+jYS2uDP7hca6Onj0xF38ZIpyxARO0Iq0W4ZRn1e8Q6vqW00QFZVSMRA/2Ijw=="],
 
-    "@rive-app/canvas-advanced": ["@rive-app/canvas-advanced@2.44.0", "", {}, "sha512-1fVyM25yryj4ryjkU9Wpen6c5RlVBeEqLwwUZkvNC+sMoYuZ7vH7cjvHh49dZOW9ODay6feRs0q3X5TGpKw7qA=="],
+    "@rive-app/canvas-advanced": ["@rive-app/canvas-advanced@2.49.4", "", {}, "sha512-Ygv3DkuLFqm+zyUDhces7LPkenKQwbMa43XT7DPwZPbc+9qBOZzOu4uwYiC5eFyTPI3/pBdP+eTxuXw2Xwgm1A=="],
 
-    "@rive-app/webgl2-advanced": ["@rive-app/webgl2-advanced@2.44.0", "", {}, "sha512-zCnASSuy+by/J52kfUJhFASYZTPmJmBwswjumKODdhZ1K0+N6+FTbxeNV9QxOOQW5ou4egsj/s8zo80regyvfA=="],
+    "@rive-app/webgl2-advanced": ["@rive-app/webgl2-advanced@2.49.4", "", {}, "sha512-WxyK98kaAksmBftLdRD5ioWiF3SzvR1X2hgP1X5xBpHr2xfE4aOVmvfSZ5eQ9jEuqYnbL7onre95COofIUBswg=="],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.19", "", { "os": "android", "cpu": "arm" }, "sha512-e+Ebe0WT+9tbXmNKPIiC8YrWAHYwug3m6i4p3rZGGulfZri1jtI4HslT+OZnFf/OIHowWF71DTlHwXBP2SiA7A=="],
 

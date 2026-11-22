@@ -4,6 +4,11 @@ time-zone "America/New_York"
 seed 7
 
 test "The app opens on Garden, with home"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   expect state nav.tab == "garden"
@@ -14,6 +19,11 @@ test "The app opens on Garden, with home"
   expect no failures
 
 test "Read shows John 1 on a fresh store"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -30,6 +40,11 @@ test "Read shows John 1 on a fresh store"
   expect no failures
 
 test "Read's first showing asks for the packs, and Garden asks for none"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   type "root" "/verses"
@@ -45,6 +60,11 @@ test "Read's first showing asks for the packs, and Garden asks for none"
   expect state packsPlace.fixture == false
 
 test "After a plant of John 3:16-18 on its chapter, Read stays on John 3 across a relaunch"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "add-list"
@@ -90,6 +110,11 @@ test "After a plant of John 3:16-18 on its chapter, Read stays on John 3 across 
   expect no failures
 
 test "Garden again shows home with no row built"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "add-list"
@@ -131,6 +156,11 @@ test "Garden again shows home with no row built"
   expect no failures
 
 test "A Garden route pushed is still there after a visit to Read"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   type "root" "/verses"
@@ -155,6 +185,11 @@ test "A Garden route pushed is still there after a visit to Read"
   expect no failures
 
 test "The gear opens Settings over Read, and Done returns to Read"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -174,6 +209,11 @@ test "The gear opens Settings over Read, and Done returns to Read"
   expect no failures
 
 test "A verse tapped in Read is chosen, and Plant is offered at three"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -190,6 +230,11 @@ test "A verse tapped in Read is chosen, and Plant is offered at three"
   expect no failures
 
 test "A followed reference opens on Read, and Back finds the chapter left"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
@@ -212,6 +257,11 @@ test "A followed reference opens on Read, and Back finds the chapter left"
   expect no failures
 
 test "A Garden address typed while Read is up selects Garden"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"

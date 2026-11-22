@@ -1,0 +1,114 @@
+// About this hymn: the sheet the line under a hymn's title opens, drawn as
+// the current app's (apps/hymnal/src/reader/About.tsx): Done at its top, the
+// hymn's number and title in a quiet footnote, then each section the
+// indexes give it rows for, under its heading: More like this, Topics,
+// Scripture, Sing to another tune (app.ts `abouthymnPage`,
+// src/abouthymn/about.ts). A hymn row closes the sheet and opens that
+// hymn's page over the one it came from; a topic closes the sheet and the
+// pages under it and shows home's Topics tab at that topic, its header at
+// the list's top (`listLand`, features/list.contract); a passage does the same and
+// searches the hymns for where it begins. The sheet is a route over the
+// hymn's, presented as a form sheet with a grabber, as the player and
+// Settings are: a swipe down closes it, as does Done.
+
+shape AboutHymnRow
+  id: string
+  kind: string
+  number: number
+  label: string
+  detail: string
+  name: string
+  query: string
+
+shape AboutHymnGroup
+  name: string
+  rows: AboutHymnRow[]
+
+shape AboutHymnPage
+  number: number
+  name: string
+  groups: AboutHymnGroup[]
+
+members HymnalExact
+  derive abouthymnOpen = match stack(nav).filter(e => e.name == "abouthymn").at(-1) { case some(e) => e.params.n, case none => "" }
+  resource abouthymnShown = abouthymnPage(abouthymnOpen) when abouthymnOpen != "" as shape AboutHymnPage else empty()
+  action abouthymnAsk(n: number)
+    nav = push(nav, path("abouthymn", n))
+  action abouthymnClose
+    nav = back(nav)
+  action abouthymnChoose(kind: string, n: number, query: string)
+    if kind == "hymn"
+      nav = push(back(nav), path("hymn", n))
+    else if kind == "topic"
+      listTab = "Topics"
+      listLand = query
+      nav = go(nav, "/")
+    else
+      nav = go(nav, "/")
+      findType(query)
+
+// The line under a hymn's title: its section and first passage, a button
+// that opens this sheet, as the current app's `AboutLine`; VoiceOver hears
+// "About this hymn" and then the line, in its name, since iOS gives a
+// button no value text. It wraps short
+// of the star's column (`size.target`), since the star rises out of the
+// title's row into the gap above it (`FavouriteStar`'s negative margin, as
+// the current app's), so a line long enough to wrap, at the largest text,
+// never lies under the star.
+component AboutHymnLine
+  props
+    number: number
+    line: string
+    tag: string
+  inject
+    abouthymnPress: action
+  view
+    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" margin-right="size.target" text-align="left" aria-label=(line == "" ? "About this hymn" : `About this hymn, ${line}`) -exact-hit-slop="space.s8" testId=`hymn-about${tag}`
+      :active
+        opacity = "opacity.pressed"
+      text font="type.footnote" color="muted" testId=`hymn-topic${tag}`
+        text line
+        text "  ›" color="accent"
+
+component AboutHymnSheet
+  props
+    entry: Entry
+    page: AboutHymnPage
+    ready: bool
+    done: action
+    choose: action
+  view
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="50% large" navigationGrabber="visible" navigationScroll="about-scroll" position="absolute" inset=0 background-color="ground" testId="about-sheet"
+      scroll id="about-scroll" flex=1 min-height=0
+        column padding-top="space.s16"
+          row justify-content="flex-end" align-items="center" padding="0 space.s20"
+            button press=done appearance="none" padding=0 min-height="size.target" min-width="size.target" display="flex" align-items="center" justify-content="flex-end" aria-label="Done" -exact-hit-slop="space.s12" testId="about-done"
+              :active
+                opacity = "opacity.pressed"
+              text "Done" font="type.strong" color="accent"
+          if ready and page.number == 0
+            text "No hymn" font="type.footnote" color="muted" padding="0 space.s20"
+          else if ready
+            column padding="space.s8 space.s20 space.s40" gap="space.s8"
+              text page.name font="type.footnote" color="muted" testId="about-name"
+              for g in page.groups key=g.name
+                text g.name role="heading" aria-level=2 aria-label=g.name font="type.footnote" color="muted" text-transform="uppercase" margin-top="space.s8"
+                column border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+                  for r in g.rows key=r.id
+                    AboutHymnRowView(r=r, choose=choose)
+
+// A row: a hymn's number in the accent and its title, or a topic or passage
+// and its quiet detail; a press away from its page or its place on home.
+component AboutHymnRowView
+  props
+    r: AboutHymnRow
+    choose: action
+  view
+    button press=choose(r.kind, r.number, r.query) role="link" appearance="none" padding="0 space.s16" min-height="size.target" display="flex" flex-direction="row" align-items="center" gap="space.s12" border-bottom-width="line.hair" border-bottom-style="solid" border-bottom-color="line" text-align="left" aria-label=r.name testId=r.id
+      :active
+        background-color = "soft"
+      if r.kind == "hymn"
+        text `${r.number}` font="type.small" color="accent" font-variant-numeric="tabular-nums" text-align="right" min-width="size.mark" white-space="nowrap"
+      text r.label font="type.body" color="ink" flex=1 min-width=0 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+      if r.detail != ""
+        text r.detail font="type.footnote" color="muted" flex-shrink=1 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"

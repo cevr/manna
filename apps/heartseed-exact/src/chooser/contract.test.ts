@@ -61,7 +61,7 @@ it('draws a filled button only under its offer, and runs it only while offered',
   expect(blockUnder(chooser, 'if shown.landed')).toContain('text "Planted." role="status"');
   expect(blockUnder(chooser, 'if shown.landed')).toMatch(/button press=practise class=ReadPill /u);
   expect(blockUnder(chooser, 'if shown.already')).toBe(
-    '              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already"',
+    '              text "Already in your field." role="status" font="type.small" color="hs.quiet" testId="chapter-already" flex-shrink=0',
   );
   expect(blockUnder(chooser, 'action chooserPlantIt')).toContain(
     'if chapterShown.plant and not pending(chooserPlanted)',
@@ -83,6 +83,22 @@ it('clears the range when the chapter changes', async () => {
   );
   expect(blockUnder(chooser, 'action chooserClear')).toBe(
     '    chooserFirst = 0\n    chooserLast = 0\n    chooserAnswer = ""',
+  );
+});
+
+it('reads a landing back at most three times an opening, and starts each opening unread', async () => {
+  const chooser = await read('features/chooser.contract');
+  expect(chooser).toContain(
+    '  task chooserLandedCheck when readUp and readOpenings > 0 and chooserLandReads < 3 key=`${readOpenings}:${chooserLandRoom}`\n    after(1, chooserLandedRead, wait=frame)\n',
+  );
+  expect(blockUnder(chooser, 'action chooserLandedRead')).toContain(
+    '      chooserLandReads = chooserLandReads + 1\n',
+  );
+  expect(chooser).toContain(
+    '  task chooserLandRead when readUp and readOpenings > 0 key=readOpenings\n    change(chooserLand)\n',
+  );
+  expect(blockUnder(chooser, '  action chooserLand')).toContain(
+    '      chooserLandedTop = 0\n      chooserLandedRoom = -1\n      chooserLandReads = 0',
   );
 });
 

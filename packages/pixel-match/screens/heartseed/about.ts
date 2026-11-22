@@ -1,4 +1,15 @@
-/** Heartseed's About and licences (`pm-tokens`' calibration rows), from the Settings sheet's `About`. */
+/**
+ * Heartseed's About and licences (`pm-tokens`' calibration rows), from the
+ * Settings sheet's `About`. One draws each page in its page sheet under its
+ * own back row and heading; the port pushes it inside the Settings sheet
+ * under the sheet's navigation bar. So each row is scored over a band, like
+ * with like: from the top of the page's first text under its heading (the
+ * app's name on About; on Licences One's natural voice's credits and the
+ * port's first licence, since the port has no natural voice to credit) on each side,
+ * to the picture's foot in One and the foot of the page's scrollport in the
+ * port, laid at their tops. The sheet's frame and the dimmed ground above
+ * it lie outside the band.
+ */
 import type { Row, Step } from '../../src/model.ts';
 import { SHEET } from './settings.ts';
 
@@ -28,15 +39,24 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     sweep: true,
     fixture: 'hs-fresh',
-    one: { steps: ABOUT },
-    exact: { ops: EXACT_ABOUT },
+    one: { steps: ABOUT, band: { targets: ['id=about-name'], edge: 'top' } },
+    exact: {
+      ops: EXACT_ABOUT,
+      band: { top: 'about-name', bottom: 'about-scroll', edge: 'top' },
+    },
   },
   {
     id: 'about.licences',
     unit,
     kind: 'match',
     fixture: 'hs-fresh',
-    one: { steps: [...ABOUT, { tap: 'label=Licences' }, { wait: 600 }] },
-    exact: { ops: [...EXACT_ABOUT, 'tap licences-row', 'clock data', 'clock settle'] },
+    one: {
+      steps: [...ABOUT, { tap: 'label=Licences' }, { wait: 600 }],
+      band: { targets: ['id=about-credits'], edge: 'top' },
+    },
+    exact: {
+      ops: [...EXACT_ABOUT, 'tap licences-row', 'clock data', 'clock settle'],
+      band: { top: 'licence-text-0', bottom: 'licences-scroll', edge: 'top' },
+    },
   },
 ];

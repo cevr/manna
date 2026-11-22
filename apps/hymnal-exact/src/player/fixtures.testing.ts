@@ -11,19 +11,21 @@
  */
 
 import type { Section, Timeline } from '@manna/hymnal-app/player/stanzas';
+import { keySet } from '@manna/hymnal/recordings';
 
 import { type Random, below, pick } from '../test/random.ts';
 import { scoreOf } from './score.ts';
 import type { Input, State, Track, Why } from './step.ts';
 
-const SECTIONS: ReadonlyArray<Section> = [1, 2, 3].map((n) => ({
+/** Each test hymn's words: three stanzas of two sung lines. */
+export const SECTIONS: ReadonlyArray<Section> = [1, 2, 3].map((n) => ({
   kind: 'stanza',
   n,
   lines: ['la la la', 'la la'],
 }));
 
 /** Six sung lines of a second each from half a second in: stanza `n` sings from `2n - 1.5` s to `2n + 0.5` s. */
-const TIMELINE: Timeline = {
+export const TIMELINE: Timeline = {
   tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   lines: Array.from({ length: 6 }, (_, index) => ({
     start: 500 + index * 1000,
@@ -50,12 +52,14 @@ export const TRACKS: ReadonlyArray<Track> = [
     number: 1,
     title: 'One',
     url: 'http://127.0.0.1:4797/audio/warm-1/sdah/1.mp3',
+    keyed: (offset) => `http://127.0.0.1:4797/audio/${keySet('warm-1', offset)}/sdah/1.mp3`,
     score: scoreOf(SECTIONS, TIMELINE, hymnOf(1)),
   },
   {
     number: 2,
     title: 'Two',
     url: 'http://127.0.0.1:4797/audio/warm-1/sdah/2.mp3',
+    keyed: (offset) => `http://127.0.0.1:4797/audio/${keySet('warm-1', offset)}/sdah/2.mp3`,
     score: scoreOf(SECTIONS, TIMELINE, hymnOf(2)),
   },
   {
@@ -193,6 +197,9 @@ export const inputOf = (random: Random, state: State): Input => {
     () => ({ _tag: 'settle', id, serial }),
     () => ({ _tag: 'due', id, serial, seconds }),
     () => ({ _tag: 'waiting', id }),
+    () => ({ _tag: 'waiting', id: load }),
+    () => ({ _tag: 'waited', id: load }),
+    () => ({ _tag: 'waited', id }),
     () => ({ _tag: 'played', id }),
     () => ({ _tag: 'playing', id }),
     () => ({ _tag: 'playing', id }),

@@ -16,7 +16,23 @@ import { FAMILY, SHADOW_INK, TOKENS, type Source, type Token } from './tokens';
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
 
-const MEASURE = /^(?:type|space|radius|size|line|opacity|scale|shadow)\./u;
+/** The device pixels a point holds on the iPhones the port is matched on. */
+const DEVICE = 3;
+
+const MEASURE = /^(?:type|space|radius|size|glyph|line|opacity|scale|shadow)\./u;
+
+const escaped = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+/** The props of the `<Icon>` given the name `name` in `text`, as a style's would read; undefined when there is no such one, or more than one. */
+const iconIn = (text: string, name: string) => {
+  const found = [
+    ...text.matchAll(
+      new RegExp(`<Icon name=\\{${escaped(name)}\\} size=\\{(\\d+(?:\\.\\d+)?)\\}`, 'gu'),
+    ),
+  ];
+  const [only] = found;
+  return found.length === 1 && only?.[1] !== undefined ? new Map([['size', only[1]]]) : undefined;
+};
 
 /** A number to four places, as a token writes it. */
 const short = (value: number) => String(Number(value.toFixed(4)));
@@ -51,7 +67,8 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
   if (value === undefined) return undefined;
   if (token.kind === 'hairline')
     return value === 'StyleSheet.hairlineWidth' ? '-exact-hairline' : undefined;
-  if (token.kind === 'length') return `${value}px`;
+  if (token.kind === 'length' || token.kind === 'glyph') return `${value}px`;
+  if (token.kind === 'border') return `${short(Math.round(Number(value) * DEVICE) / DEVICE)}px`;
   return value;
 };
 
@@ -68,7 +85,8 @@ const brandValues = (forma: string) =>
 /** The value each source of `token` gives, in `app.forma`'s terms. */
 const valuesOf = (token: Token, read: (file: string) => string) =>
   token.from.map((source) => {
-    const props = styleIn(read(source.file), source.style);
+    const text = read(source.file);
+    const props = token.kind === 'glyph' ? iconIn(text, source.style) : styleIn(text, source.style);
     return props === undefined ? undefined : formaOf(token, props, source);
   });
 
@@ -102,5 +120,16 @@ describe('every measure of the brand is the current Heartseed’s', () => {
     expect(titles.map((title) => valuesOf(title, moved)[0] === brand.get(title.name))).toEqual([
       false,
     ]);
+  });
+
+  it('a shelf icon that changes size fails its glyph', () => {
+    const shelves = TOKENS.filter((token) => token.name === 'glyph.shelf');
+    const moved = (file: string) =>
+      readCached(file).replace(
+        '<Icon name={shelf.icon} size={28}',
+        '<Icon name={shelf.icon} size={30}',
+      );
+    expect(shelves.map((each) => valuesOf(each, moved)[0])).toEqual(['30px']);
+    expect(brand.get('glyph.shelf')).toBe('28px');
   });
 });

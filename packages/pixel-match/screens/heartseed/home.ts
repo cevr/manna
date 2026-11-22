@@ -6,7 +6,7 @@
  * the navigation bar (`EXACT_BAND.top`) to the top of the tab bar.
  */
 import type { Row, Step } from '../../src/model.ts';
-import { banded, HOME_BAND, LIST_BAND } from './band.ts';
+import { banded, HOME_BAND, LIST_BAND, ROOMY } from './band.ts';
 
 const unit = 'pm-hs-home';
 
@@ -145,6 +145,7 @@ const listRows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     sweep: true,
+    departs: ROOMY,
     fixture: 'hs-lists',
     one: { steps: [HOME, OPEN_PSALM, { tap: 'label=Open Psalms 23:1-5' }] },
     exact: exact(exactList(PSALM_LIST), LIST_EXACT_BAND),

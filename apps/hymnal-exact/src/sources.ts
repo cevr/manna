@@ -5,28 +5,54 @@
  * recordings are served from `origin` (held to the bucket or a loopback
  * fixture by `originOf`) and its stanzas timed by `timing` (`app.ts` passes
  * the written `src/player/timing.gen.ts`); the chords are `chords`, one
- * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`).
+ * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
+ * `nearest` is each hymn's More like this (the written
+ * `src/abouthymn/nearest.gen.ts`). The player and Downloads share one store
+ * of saved recordings (`src/offline/sources.ts`).
  */
 
+import { abouthymnSources } from './abouthymn/sources.ts';
 import { findSources } from './find/sources.ts';
 import { homeSources } from './home/sources.ts';
 import { chordsSources } from './chords/sources.ts';
 import { hymnSources } from './hymn/sources.ts';
+import { keysSources } from './keys/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
-import { originOf, playerSources } from './player/sources.ts';
+import { offlineSources } from './offline/sources.ts';
+import { pagerSources } from './pager/sources.ts';
+import { pinchSources } from './pinch/sources.ts';
+import { BUCKET, originOf, playerSources } from './player/sources.ts';
+import { railSources } from './rail/sources.ts';
+import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
+import { readingSources } from './reading/sources.ts';
+import { sheetSources } from './sheet/sources.ts';
 
 export const sourcesAt = (
   origin: string,
   timing: ReadonlyArray<readonly [number, string]>,
   chords: ReadonlyArray<readonly [number, string]> = [],
-) => ({
-  ...listSources(book),
-  ...hymnSources(book),
-  ...playerSources(book, timing, originOf(origin)),
-  ...homeSources(book),
-  ...settingsSources(),
-  ...findSources(book),
-  ...chordsSources(book, chords),
-});
+  nearest: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [],
+) => {
+  const recordings = originOf(origin);
+  const saved = offlineSources(recordings, recordings !== BUCKET, timing);
+  return {
+    ...listSources(book),
+    ...hymnSources(book, chords),
+    ...playerSources(book, timing, recordings, saved.offline),
+    ...saved.sources,
+    ...homeSources(book),
+    ...settingsSources(),
+    ...findSources(book),
+    ...chordsSources(book, chords),
+    ...keysSources(book, chords),
+    ...railSources(book),
+    ...abouthymnSources(book, nearest),
+    ...pagerSources(book),
+    ...resultsSources(),
+    ...sheetSources(chords),
+    ...readingSources(),
+    ...pinchSources(),
+  };
+};

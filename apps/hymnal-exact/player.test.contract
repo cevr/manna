@@ -1,7 +1,8 @@
 // The player against the fixture recordings (tools/recordings.ts, digital
-// silence): run with HYMNAL_RECORDINGS=http://127.0.0.1:4797 (README, "The
-// player"). The first line of each test refuses any other origin, so no
-// test ever asks the bucket. A playing element runs on real time, so its
+// silence), which `bun run exact test` serves on the checkout's own port
+// and names in HYMNAL_RECORDINGS (README, "The player"). Each test holds
+// the player to a loopback fixture before it plays, so no test ever asks
+// the bucket. A playing element runs on real time, so its
 // place is checked as a lower bound after `clock +N real`. Each test opens on
 // Settings and turns Sounds and haptics off before it plays (the owner's
 // rule; src/look/quiet.test.ts holds every test that plays to it).
@@ -17,17 +18,23 @@ test "Play starts the hymn and the bar shows it"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
-  expect tree missing "bar"
+  expect state player.fixture == true
+  expect tree has "bar"
+  expect tree has "bar-grabber"
+  expect tree missing "bar-title"
   tap "play"
   clock data
   clock settle
-  expect text "bar-hymn" == "1 · Praise to the Lord"
+  expect tree has "bar-title"
+  expect tree has "bar-grabber"
+  expect tree missing "bar-hymn"
+  expect state player.bar.number == 1
   clock until state player.phase == "playing" within 10000
   clock +3500 real
   clock data
   expect state player.at >= 3
-  expect text "bar-toggle" == "Pause"
+  expect state player.bar.toggle == "pause"
+  expect tree has "bar-toggle"
   expect mediasession title == "Praise to the Lord"
   expect mediasession has "pause"
 
@@ -42,7 +49,7 @@ test "Pause holds the place; resume goes on."
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -52,7 +59,7 @@ test "Pause holds the place; resume goes on."
   clock data
   clock settle
   expect state player.phase == "paused"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.toggle == "play"
   expect state player.at >= 1
   expect state player.at <= 3
   clock +1500 real
@@ -65,7 +72,7 @@ test "Pause holds the place; resume goes on."
   clock +1500 real
   clock data
   expect state player.at >= 2
-  expect text "bar-toggle" == "Pause"
+  expect state player.bar.toggle == "pause"
 
 test "The bar follows across screens"
   at "/settings"
@@ -78,7 +85,7 @@ test "The bar follows across screens"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -86,8 +93,10 @@ test "The bar follows across screens"
   clock settle
   clock data
   expect text "title" == "Hymns"
-  expect text "bar-hymn" == "1 · Praise to the Lord"
-  expect text "bar-toggle" == "Pause"
+  expect text "bar-number" == "1"
+  expect text "bar-hymn" == "Praise to the Lord"
+  expect tree missing "bar-grabber"
+  expect state player.bar.toggle == "pause"
   tap "find-search"
   clock settle
   clock data
@@ -96,9 +105,10 @@ test "The bar follows across screens"
   tap "hymn-3"
   clock settle
   clock data
-  expect text "bar-hymn" == "1 · Praise to the Lord"
-  expect text "bar-toggle" == "Pause"
-  expect tree has "bar-page-play"
+  expect text "bar-number" == "1"
+  expect text "bar-hymn" == "Praise to the Lord"
+  expect state player.bar.toggle == "pause"
+  expect text "bar-page-play" == "Play 3"
   tap "bar-page-play"
   clock data
   clock settle
@@ -116,7 +126,7 @@ test "The full player"
   tap "hymn-2"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -141,7 +151,8 @@ test "The full player"
   clock settle
   expect tree missing "player"
   expect text "hymn-title" == "All Creatures of Our God and King"
-  expect text "bar-hymn" == "2 · All Creatures of Our God and King"
+  expect state player.bar.number == 2
+  expect tree has "bar-grabber"
 
 test "The lock screen's pause pauses"
   at "/settings"
@@ -154,7 +165,7 @@ test "The lock screen's pause pauses"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
@@ -162,8 +173,8 @@ test "The lock screen's pause pauses"
   clock data
   clock settle
   expect state player.phase == "paused"
-  expect text "bar-said" == "Paused"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.said == "Paused"
+  expect state player.bar.toggle == "play"
 
 test "It ends"
   at "/settings"
@@ -176,13 +187,203 @@ test "It ends"
   tap "hymn-1"
   clock settle
   clock data
-  expect state player.origin == "http://127.0.0.1:4797"
+  expect state player.fixture == true
   tap "play"
   clock data
   clock until state player.phase == "playing" within 10000
   clock until state player.phase == "ended" within 15000
   clock data
   clock settle
-  expect text "bar-said" == "Played to the end"
-  expect text "bar-toggle" == "Play"
+  expect state player.bar.said == "Played to the end"
+  expect state player.bar.toggle == "play"
+  expect tree missing "bar-said"
   expect state player.at >= 5
+
+// The fixture's recording loads before a step can read the bar, so the
+// spinner's state is held by src/player/bar/bar.model.test.ts, not here.
+test "The bar's button: Pause and the seeker while it plays, Play once paused"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  expect state player.pageLabel == "Play hymn 1"
+  expect tree has "bar-sound"
+  expect tree missing "seeker"
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock data
+  clock settle
+  expect tree missing "bar-loading"
+  expect state player.bar.kind == "pause"
+  expect state player.bar.label == "Pause hymn 1"
+  expect state player.bar.mark == "symbol:sf/pause.fill"
+  expect tree has "seeker"
+  expect tree has "seek"
+  tap "bar-toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect state player.bar.kind == "play"
+  expect state player.bar.label == "Play hymn 1"
+  expect state player.bar.mark == "symbol:sf/play.fill"
+  expect tree missing "seeker"
+
+test "The Sound switch is kept through a reload"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state playerSound == true
+  tap "bar-sound"
+  clock settle
+  expect state playerSound == false
+  reload
+  clock data
+  clock settle
+  expect state playerSound == false
+
+test "A swipe up on the bar opens the full player"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock settle
+  expect tree missing "player"
+  tap "bar" drag 0 -120 from 120 20
+  clock data
+  clock settle
+  expect tree has "player"
+
+test "The bar shows the spinner while a load waits, then Pause once the hymn sounds"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-4"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  expect state player.phase == "loading"
+  expect state player.bar.kind == "loading"
+  expect tree has "bar-loading"
+  expect tree missing "bar-toggle"
+  clock until state player.phase == "playing" within 10000
+  clock data
+  clock settle
+  expect tree missing "bar-loading"
+  expect state player.bar.kind == "pause"
+  expect tree has "bar-toggle"
+
+// Sound off is the current app's silent score clock (src/player/step.ts,
+// held to sound.ts by src/player/clock/clock.model.test.ts): nothing loads,
+// the place runs on the clock's ticks, a pause holds it, and a Resume with
+// Sound on again loads the recording at the place.
+test "With Sound off, Play runs the place with no recording loaded; with Sound on again, Resume loads it there"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == false
+  tap "play"
+  clock data
+  clock settle
+  expect state player.phase == "playing"
+  expect state player.ticking == true
+  expect state player.src == ""
+  expect tree missing "audio"
+  expect state player.bar.kind == "pause"
+  clock +2000
+  clock data
+  expect state player.at >= 2
+  tap "bar-toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect state player.ticking == false
+  expect state player.at >= 2
+  clock +2000
+  clock data
+  expect state player.phase == "paused"
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == true
+  expect state player.src == ""
+  expect state player.phase == "paused"
+  tap "bar-toggle"
+  clock data
+  expect tree has "audio"
+  expect state player.paused == false
+  expect state player.from >= 2
+  clock until state player.phase == "playing" within 10000
+  expect tree has "audio"
+  expect state player.ticking == false
+
+test "Sound turned off mid-play unloads the recording and the place runs on"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect tree has "audio"
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == false
+  expect state player.src == ""
+  expect tree missing "audio"
+  expect state player.phase == "playing"
+  expect state player.ticking == true
+  expect state player.at >= 1
+  clock +3000
+  clock data
+  expect state player.at >= 4

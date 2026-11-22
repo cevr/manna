@@ -1,0 +1,108 @@
+// Move back a stage on Today (features/back.contract), as far as a plain
+// launch reaches it: a verse with no recall is no plant, so here Today
+// offers the control nowhere: not on a verse a tap started before its first
+// recall, not on the day's run, not on the cued verse before or after Show
+// all. The control on a planted verse past a seed, the ask, Move back, the
+// moved line, the stage line and the garden after it, a seed, the recital
+// and focus run in tools/drive-back.ts, whose launch has Your verses' test
+// controls; a refused write and the answers' disabled state while the step
+// back runs are held by src/back/back.model.test.ts.
+fail fetch "https://egw.cvr.im"
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A verse a tap started before its first recall offers no Move back"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  clock data
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  back
+  clock data
+  clock settle
+  tap "row-title-passage-0-43-3-16-18"
+  clock data
+  clock settle
+  tap "list-practice"
+  clock data
+  clock settle
+  expect text "item-reference" == "John 3:16"
+  expect state today.back == false
+  expect tree missing "today-back"
+  expect tree missing "back-control"
+  expect no failures
+
+test "The day's run offers no Move back"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  clock data
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-any"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
+  clock data
+  clock settle
+  tap "verse-16"
+  clock data
+  tap "verse-18"
+  clock data
+  tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  back
+  clock data
+  clock settle
+  tap "today-action"
+  clock data
+  clock settle
+  expect tree has "item-reference"
+  expect state today.session.wire.visit.length == 0
+  expect state today.back == false
+  expect tree missing "back-control"
+  expect no failures
+
+test "The cued verse offers no Move back, before or after Show all"
+  at "/cue/initials"
+  clock settle
+  expect state today.back == false
+  expect tree missing "back-control"
+  tap "show-all"
+  clock settle
+  expect state today.moveBack == true
+  expect state today.back == false
+  expect tree missing "today-back"
+  expect no failures

@@ -1,5 +1,6 @@
 // Settings: the sheet the header's gear opens, with the session's minutes,
-// the voice and the appearance, Sounds and haptics, then About. Each choice is kept as plain
+// the voice and the appearance, Sounds and haptics, then Show the welcome
+// again and About. Each choice is kept as plain
 // text by `persist` and read by src/settings/choices.ts (`settingsOf`), the
 // current Heartseed's rule: a kept text names its choice exactly, or the
 // default stands. The session reads `settingsMinutes` and `settingsVoice`;
@@ -9,8 +10,9 @@
 // heading and an outlined Done; each choice under its line; the minutes and
 // the voice and the appearance as pills filled in ink when chosen (the
 // voice keeps its three radios where the current app draws one pill that
-// cycles: orchestrator, q1); then Sounds and haptics, the port's own row,
-// in the place of the current app's Show the welcome again; then About.
+// cycles: orchestrator, q1); then Sounds and haptics, the port's own row;
+// then the current app's Show the welcome again, which closes the sheet and
+// replays the welcome over home (features/first.contract), and About.
 // Every measure is a token of app.forma (src/look/tokens.ts).
 
 shape SettingsOption
@@ -98,11 +100,12 @@ component SettingsSheet
     feel: bool
     feelSwitch: action
     about: action
+    welcome: action
     done: action
   view
     column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationScroll="settings-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="settings"
       header appearance="none" display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" min-height="size.target" padding-left="space.page" padding-right="space.page" padding-top="space.s20" padding-bottom="space.s8"
-        text "Settings" role="heading" aria-level=1 font="type.sheet-title"
+        text "Settings" role="heading" aria-level=1 font="type.sheet-title" testId="settings-title"
         SettingsButton(label="Done", name="settings-done", go=done)
       scroll id="settings-scroll" flex=1 min-height=0
         column gap="space.section" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
@@ -113,4 +116,5 @@ component SettingsSheet
             row gap="space.s12" align-items="center" min-height="size.target" max-width="100%"
               text "Sounds and haptics" font="type.label" flex-shrink=1 min-width=0
               input type="checkbox" switch checked=feel change=feelSwitch aria-label="Sounds and haptics" testId="settings-feel"
+            SettingsButton(label="Show the welcome again", name="settings-welcome", go=welcome)
             SettingsButton(label="About", name="about-row", go=about)

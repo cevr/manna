@@ -28,7 +28,7 @@
 
 import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
-import { Array as Arr, Option } from 'effect';
+import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
 import {
@@ -65,7 +65,7 @@ import {
   sectionsOf,
 } from '~/hymns/chords';
 import type { HymnText, Section } from '~/hymns/hymns';
-import { type Passage, passageText, referencesOf } from '~/hymns/indexes';
+import { referencesOf } from '~/hymns/indexes';
 import { type ChordStyle, styled } from '~/hymns/simple';
 import type { PlacementOverride, ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
@@ -80,6 +80,7 @@ import { aboutHref } from './About';
 import { chordHref, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
+import { headLine } from './head-line';
 import { KeepAwake } from './KeepAwake';
 import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
@@ -313,16 +314,6 @@ const numbersOf = (said: Described, ms: number) =>
     Option.map(said.word, (word) => word.ordinal),
     () => 0,
   )} targetMs=${Math.round(ms)}`;
-
-/** The head line's words: the section, and the first passage with how many more follow it. */
-const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
-  Option.match(Arr.head(passages), {
-    onNone: () => section,
-    onSome: (first) => {
-      if (passages.length === 1) return `${section} · ${passageText(first)}`;
-      return `${section} · ${passageText(first)} +${passages.length - 1}`;
-    },
-  });
 
 /**
  * The page's quiet head line: the hymn's section, then the first passage the

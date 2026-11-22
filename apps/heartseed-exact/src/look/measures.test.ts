@@ -28,6 +28,7 @@ const OWNER = new Map([
   ['features/list.contract', 'pm-hs-home'],
   ['features/today.contract', 'pm-hs-today'],
   ['features/session.contract', 'pm-hs-today'],
+  ['features/back.contract', 'pm-hs-today'],
   ['features/settings.contract', 'pm-hs-settings'],
   ['features/feel.contract', 'pm-hs-settings'],
   ['features/add.contract', 'pm-hs-add'],
@@ -43,6 +44,8 @@ const OWNER = new Map([
   ['features/packs.contract', 'pm-hs-study'],
   ['features/type.contract', 'pm-hs-study'],
   ['features/motion.contract', 'no unit'],
+  ['features/start.contract', 'no unit'],
+  ['features/first.contract', 'no unit'],
 ]);
 
 const ALLOWED = new Map<string, AllowList>([

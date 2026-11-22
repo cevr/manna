@@ -4,7 +4,8 @@
  * `pixel ref hymnal --web`: the hymnal's web references. The One web build
  * (`apps/hymnal`'s `one build`, its `dist`) is served from plain files on a
  * loopback port of the hymnal's reference range, and each web cell is taken
- * by one headless Chromium (`--use-mock-keychain`) at the cell's viewport,
+ * by one headless Chromium (`--use-mock-keychain --password-store=basic`,
+ * so it never asks the login keychain) at the cell's viewport,
  * scale and `prefers-color-scheme`, the row's fixture in `localStorage` as
  * One's web store keeps it (`One.Database.kv|hymnal|<key>`) before the page
  * loads, and its picture kept once two takes 500 ms apart are the same bytes.
@@ -94,7 +95,10 @@ export const takeWeb = async (frame: Frame, rows: ReadonlyArray<Row>) => {
   if (!existsSync(dist))
     throw new Error(`no One web build at ${dist}: run \`bun run --cwd apps/hymnal build\``);
   const server = serve(dist);
-  const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain'] });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--use-mock-keychain', '--password-store=basic'],
+  });
   const missed: Array<readonly [string, string]> = [];
   const base = `http://127.0.0.1:${PORT}`;
   try {

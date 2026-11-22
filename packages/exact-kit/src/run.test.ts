@@ -2,6 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   ConfigProvider,
+  Console,
   Deferred,
   Duration,
   Effect,
@@ -9,6 +10,7 @@ import {
   Fiber,
   Option,
   Record as Rec,
+  Result,
   FileSystem,
   Layer,
   Path,
@@ -22,6 +24,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
 
+import { fixturePort } from './drive/port.ts';
 import { EXACT_BASE } from './pin.ts';
 import { PortClaims, runExact } from './run.ts';
 
@@ -138,12 +141,17 @@ interface Spawned {
   readonly extendEnv: boolean;
 }
 
-const handleOf = (stdout: string, exitCode: number, exited: Effect.Effect<void> = Effect.void) =>
+const handleOf = (
+  stdout: string,
+  exitCode: number,
+  exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
+) =>
   ChildProcessSpawner.makeHandle({
     pid: ChildProcessSpawner.ProcessId(0),
     exitCode: Effect.as(exited, ChildProcessSpawner.ExitCode(exitCode)),
     isRunning: Effect.succeed(false),
-    kill: () => Effect.void,
+    kill: () => kill,
     stdin: Sink.drain,
     stdout: Stream.make(new TextEncoder().encode(stdout)),
     stderr: Stream.empty,
@@ -161,6 +169,7 @@ const standIn = (
   head: Option.Option<string>,
   spawned: Array<Spawned>,
   exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
 ) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf('', 0));
@@ -179,7 +188,7 @@ const standIn = (
     if (command.command === 'git' && Option.isNone(head)) return Effect.succeed(handleOf('', 128));
     if (command.command === 'git')
       return Effect.succeed(handleOf(`${Option.getOrElse(head, () => '')}\n`, 0));
-    return Effect.succeed(handleOf('', 0, exited));
+    return Effect.succeed(handleOf('', 0, exited, kill));
   });
 
 /** The caller's environment: what the wrapper may read (`HOME`, `EXACT`, `EXACT_PORT`) and what it must override. */
@@ -197,10 +206,12 @@ const running = (
   files: Readonly<Record<string, string>>,
   {
     exited = Effect.void,
+    kill = Effect.void,
     claims = [],
     spawned = [],
   }: {
     readonly exited?: Effect.Effect<void>;
+    readonly kill?: Effect.Effect<void>;
     readonly claims?: Array<Claimed>;
     readonly spawned?: Array<Spawned>;
   } = {},
@@ -211,7 +222,10 @@ const running = (
       Layer.mergeAll(
         BunServices.layer,
         memoryFs(files),
-        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned, exited)),
+        Layer.succeed(
+          ChildProcessSpawner.ChildProcessSpawner,
+          standIn(head, spawned, exited, kill),
+        ),
         Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
@@ -343,7 +357,7 @@ type CallerPorts = Readonly<Record<PortVariable, string>>;
 
 /**
  * Starts drawn more often: the verbs that listen, each of which must keep to the app's ports, the native drives
- * on the Mac, and the launches a quiet app refuses.
+ * on the Mac and the simulator, and the launches a quiet app refuses.
  */
 const STARTS = [
   ['web'],
@@ -358,6 +372,8 @@ const STARTS = [
   ['mac', '--run'],
   ['ios', '--run=1'],
   ['test', 'mac'],
+  ['test', 'ios'],
+  ['agent', 'ios'],
 ] as const;
 
 /** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
@@ -517,6 +533,23 @@ const portsHeld = (
     }),
   );
 
+/**
+ * The rule, written out: a run on the simulator (`ios`, or `test`, `verify` or `agent` on `ios`) tells its child when
+ * the wrapper started, so the child clears the stale launch consoles before then, and runs under the build lock, so
+ * the clear never unlinks a locked run's live consoles; any other run removes the variable.
+ */
+const clearsOnSimulator = (child: Spawned, args: ReadonlyArray<string>) => {
+  const onSimulator =
+    args[0] === 'ios' || (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
+  const started = Rec.get(child.env, 'EXACT_KIT_CLEAR_BEFORE');
+  const removed = child.removed.includes('EXACT_KIT_CLEAR_BEFORE');
+  const locked =
+    child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  if (Option.isSome(started) && !locked) return false;
+  if (onSimulator) return Option.exists(started, (at) => /^\d+$/.test(at)) && !removed;
+  return Option.isNone(started) && removed;
+};
+
 /** `files` with `app`'s folder rewritten as `rewrite` says. */
 const rewritten = (
   files: Readonly<Record<string, string>>,
@@ -554,6 +587,7 @@ const ranAsPlanned = (
     child.env['PORT_HI'] === String(hi) &&
     Option.getOrElse(Rec.get(child.env, 'EXACT_PORT_TURNS'), () => '') === turns &&
     portsHeld(child, app, args, callerPorts) &&
+    clearsOnSimulator(child, args) &&
     locked === mustLock(args) &&
     (locked || child.command === 'bun') &&
     child.args.slice(-args.length - 3).join('\u0000') ===
@@ -715,7 +749,11 @@ describe('the exact wrapper', () => {
         const head = Option.fromNullishOr(pins[0]);
         const hymnal = yield* running('hymnal-exact', ['serve'], { HOME: PROBE }, head, files);
         expect(hymnal.spawned[1]?.env['PORT']).toBe('8766');
-        expect(hymnal.spawned[1]?.removed).toEqual(['EXACT_PORT', 'EXACT_TOOL_PORT']);
+        expect(hymnal.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const heartseed = yield* running(
           'heartseed-exact',
           ['serve'],
@@ -764,6 +802,9 @@ describe('the exact wrapper', () => {
             expect(mac.result.failure.message).toContain('agent macos');
           const built = yield* running(app, ['ios'], { HOME: PROBE }, head, files);
           expect(built.result._tag).toBe('Success');
+          expect(built.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
+          expect(built.spawned[1]?.command).toBe('lockf');
+          expect(built.spawned[1]?.env['EXACT_KIT_CLEAR_BEFORE']).toMatch(/^\d+$/);
         }
         const hymnal = yield* running(
           'hymnal-exact',
@@ -800,6 +841,37 @@ describe('the exact wrapper', () => {
       const macos = yield* running('lab', ['test', 'macos'], { HOME: PROBE }, head, files);
       expect(macos.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
     }),
+  );
+
+  it.effect(
+    "gives test and agent the checkout's own fixture origin unless the caller names one, and no build, dev loop or serve any",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const origin = `http://127.0.0.1:${fixturePort(`${PROBE}/apps/hymnal-exact`)}`;
+        const given = (app: App, args: ReadonlyArray<string>, caller: Caller = {}) =>
+          Effect.map(
+            running(app, args, { HOME: PROBE, ...caller }, head, files),
+            ({ spawned }) => spawned[1]?.env['HYMNAL_RECORDINGS'],
+          );
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeGreaterThanOrEqual(4790);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeLessThanOrEqual(5789);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).not.toBe(
+          fixturePort(`${PROBE}/other/hymnal-exact`),
+        );
+        expect(yield* given('hymnal-exact', ['test', 'web'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['test', 'ios', 'player.test.contract'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['agent', 'web', '--json'])).toBe(origin);
+        expect(
+          yield* given('hymnal-exact', ['test', 'web'], {
+            HYMNAL_RECORDINGS: 'http://127.0.0.1:4797',
+          }),
+        ).toBeUndefined();
+        for (const args of [['web-build', '--out', 'dist'], ['web'], ['serve', 'dist'], ['ios']])
+          expect(yield* given('hymnal-exact', args)).toBeUndefined();
+        expect(yield* given('heartseed-exact', ['test', 'web'])).toBeUndefined();
+      }),
   );
 
   it.effect('refuses an app it does not know', () =>
@@ -867,7 +939,12 @@ describe('the exact wrapper', () => {
           PORT_HI: '8774',
           EXACT_PORT_TURNS: '8772',
         });
-        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT']);
+        expect(tested.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const hymnals = yield* running(
           'hymnal-exact',
           ['test', 'web'],
@@ -955,6 +1032,95 @@ describe('the exact wrapper', () => {
       }),
   );
 
+  it.effect(
+    "a verify on any host whose child still runs two minutes after its report is stopped, its group ended, saying the device run's result: exit 124 when that host's run recorded clean, 1 when it recorded a failure, or nothing, or only another host's run; one whose child ends first, or that never reports, runs to its child's end",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const at = `${PROBE}/apps/hymnal-exact/.exact`;
+        const start = (args: ReadonlyArray<string>, folder: Record<string, string>) =>
+          Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const said: Array<string> = [];
+            const kills: Array<true> = [];
+            const fiber = yield* Effect.forkChild(
+              running('hymnal-exact', args, { HOME: PROBE }, head, folder, {
+                exited: Deferred.await(done),
+                kill: Effect.sync(() => kills.push(true)),
+              }).pipe(
+                Effect.provideService(Console.Console, {
+                  ...globalThis.console,
+                  error: (...line: ReadonlyArray<unknown>) => said.push(line.join(' ')),
+                }),
+              ),
+            );
+            yield* TestClock.adjust('3 seconds');
+            const code = Effect.map(Fiber.join(fiber), ({ result }) => Result.map(result, Number));
+            return { fiber, said, kills, code, exit: Deferred.done(done, Exit.void) };
+          });
+
+        const hung = { ...files };
+        const ios = yield* start(['verify', 'ios'], hung);
+        hung[`${at}/verify/last.json`] = '{"ios":2500}';
+        hung[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:00:01.000Z","host":"ios","what":"verify","result":"2 problems, 1 failed test"}\n';
+        yield* TestClock.adjust('1 second');
+        yield* TestClock.adjust('119 seconds');
+        expect(ios.fiber.pollUnsafe()).toBeUndefined();
+        yield* TestClock.adjust('1 second');
+        expect(yield* ios.code).toEqual(Result.succeed(1));
+        expect(ios.kills).toEqual([true]);
+        expect(ios.said.join('\n')).toContain('verify ios wrote its report 2m ago');
+        expect(ios.said.join('\n')).toContain('exit 1:');
+        expect(ios.said.join('\n')).toContain('recorded "2 problems, 1 failed test"');
+
+        const clean = { ...files };
+        const passed = yield* start(['verify', 'ios'], clean);
+        clean[`${at}/verify/last.json`] = '{"ios":2500}';
+        clean[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:02:10.000Z","host":"ios","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* passed.code).toEqual(Result.succeed(124));
+        expect(passed.said.join('\n')).toContain('exit 124:');
+        expect(passed.said.join('\n')).toContain('recorded "clean"');
+
+        const elsewhere = { ...files };
+        const other = yield* start(['verify', 'ios'], elsewhere);
+        elsewhere[`${at}/verify/last.json`] = '{"ios":2500}';
+        elsewhere[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:04:20.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* other.code).toEqual(Result.succeed(1));
+        expect(other.said.join('\n')).toContain('recorded no result');
+
+        const stale = { ...files };
+        const web = yield* start(['verify'], stale);
+        stale[`${at}/verify/last.json`] = '{"web":2500}';
+        stale[`${at}/runs.jsonl`] =
+          '{"at":"1969-12-31T23:59:58.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* web.code).toEqual(Result.succeed(1));
+        expect(web.said.join('\n')).toContain('recorded no result');
+
+        const ended = { ...files };
+        const quick = yield* start(['verify', 'ios'], ended);
+        ended[`${at}/verify/last.json`] = '{"ios":2500}';
+        yield* TestClock.adjust('60 seconds');
+        yield* quick.exit;
+        expect(yield* quick.code).toEqual(Result.succeed(0));
+        expect(quick.kills).toEqual([]);
+        expect(quick.said).toEqual([]);
+
+        const silent = yield* start(['verify', 'ios'], { ...files });
+        yield* TestClock.adjust('2 hours');
+        expect(silent.fiber.pollUnsafe()).toBeUndefined();
+        yield* silent.exit;
+        expect(yield* silent.code).toEqual(Result.succeed(0));
+        expect(silent.kills).toEqual([]);
+      }),
+  );
+
   it.scopedLive(
     'ends what its child left in its process group when the child exits or the run is interrupted',
     () =>
@@ -1030,6 +1196,103 @@ describe('the exact wrapper', () => {
         expect(yield* alive(waited)).toBe(true);
         yield* Fiber.interrupt(fiber);
         expect(yield* alive(waited)).toBe(false);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scopedLive(
+    "sets aside a linked package's One route types while Exact runs, and puts them back after a pass, a failure or an interruption, unless a dev server wrote newer ones; an installed (non-workspace) package's stay put",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'exact-kit-routes-' });
+        const appDir = path.join(dir, 'apps', 'hymnal-exact');
+        const linked = path.join(dir, 'apps', 'hymnal');
+        const routes = path.join(linked, 'app', 'routes.d.ts');
+        const written = "import type { OneRouter } from 'one';\n";
+        yield* fs.makeDirectory(path.join(appDir, 'node_modules', '@manna'), { recursive: true });
+        yield* fs.makeDirectory(path.join(linked, 'app'), { recursive: true });
+        yield* fs.writeFileString(
+          path.join(appDir, 'exact.mjs'),
+          files[`${PROBE}/apps/hymnal-exact/exact.mjs`] ?? '',
+        );
+        yield* fs.writeFileString(
+          path.join(appDir, 'package.json'),
+          '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4", "one": "catalog:" } }',
+        );
+        yield* fs.symlink(linked, path.join(appDir, 'node_modules', '@manna', 'hymnal-app'));
+        const installedFiles = ['effect', 'one'].map((name) =>
+          path.join(appDir, 'node_modules', name, 'app', 'routes.d.ts'),
+        );
+        yield* Effect.forEach(installedFiles, (installed) =>
+          fs
+            .makeDirectory(path.dirname(installed), { recursive: true })
+            .pipe(Effect.andThen(fs.writeFileString(installed, written))),
+        );
+        const installed = Effect.map(
+          Effect.forEach(installedFiles, (file) => fs.exists(file)),
+          (there) => there.every(Boolean),
+        );
+        const seen: Array<boolean> = [];
+        const kept: Array<boolean> = [];
+        const runWith = (
+          code: number,
+          during: Effect.Effect<void, unknown> = Effect.void,
+          exited: Effect.Effect<void> = Effect.void,
+        ) =>
+          runExact(appDir, ['contract', 'build'], LAUNCHER).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(PortClaims, claimsStandIn([])),
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: PROBE, EXACT: `${PROBE}/clone` }),
+                ),
+                Layer.succeed(
+                  ChildProcessSpawner.ChildProcessSpawner,
+                  ChildProcessSpawner.make((command) => {
+                    if (command._tag === 'StandardCommand' && command.command === 'git')
+                      return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
+                    return fs.exists(routes).pipe(
+                      Effect.tap((there) => Effect.sync(() => seen.push(there))),
+                      Effect.andThen(installed),
+                      Effect.tap((there) => Effect.sync(() => kept.push(there))),
+                      Effect.andThen(during),
+                      Effect.orDie,
+                      Effect.as(handleOf('', code, exited)),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          );
+        const after = Effect.all([
+          fs.readFileString(routes),
+          fs.readDirectory(path.join(linked, 'app')),
+        ]);
+
+        yield* fs.writeFileString(routes, written);
+        expect(Number(yield* runWith(0))).toBe(0);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        expect(Number(yield* runWith(1))).toBe(1);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        const newer = `${written}// newer\n`;
+        expect(Number(yield* runWith(0, fs.writeFileString(routes, newer)))).toBe(0);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        const started = yield* Deferred.make<boolean>();
+        const fiber = yield* Effect.forkChild(
+          runWith(0, Deferred.succeed(started, true), Effect.never),
+        );
+        yield* Deferred.await(started);
+        expect(yield* fs.exists(routes)).toBe(false);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        expect(seen).toEqual([false, false, false, false]);
+        expect(kept).toEqual([true, true, true, true]);
       }).pipe(Effect.provide(BunServices.layer)),
   );
 

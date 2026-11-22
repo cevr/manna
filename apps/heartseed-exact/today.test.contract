@@ -6,7 +6,7 @@ seed 7
 test "Today shows the passage under no cue, every word a hidden slot"
   at "/cue/none"
   clock settle
-  expect text "reference" == "Isaiah 41:10"
+  expect tree has "reference"
   expect state today.cue == "none"
   expect state today.words.length == 37
   expect state today.words.0.shown == "____"
@@ -139,4 +139,137 @@ test "Hear it lights every word, then rests"
   expect tree missing "stop"
   expect enabled "hear"
   expect enabled "say"
+  expect no failures
+
+test "A hold on the fifth word while the second is read, lifted there, reads on from the fifth"
+  at "/cue/none"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  expect state today.lit >= 1
+  expect state today.lit <= 2
+  expect state todayUtterance == "utterance-1"
+  tap "word-4" drag 1 0 press 400 over 16 hold 16
+  clock data
+  expect state today.askKey == 2
+  expect state today.ask == "seek"
+  expect state today.heldWord == -1
+  expect state today.holding == false
+  expect state todayUtterance == "utterance-2"
+  expect state todayVoiceState.utterance == "utterance-2"
+  expect state todayVoiceState.paused == false
+  expect state today.phase == "reading"
+  expect state today.lit == 5
+  expect state today.words.3.face == "text"
+  expect state today.words.4.face == "text"
+  expect state today.words.5.face == "slot"
+  clock +500
+  clock data
+  expect state today.lit == 6
+  expect state today.words.5.face == "text"
+  clock +1000
+  clock data
+  expect state today.lit == 9
+  expect no failures
+
+test "A hold dragged from the fifth word to the eighth reads on from the eighth" on web
+  at "/cue/full"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag to "word-7" mouse press 400 over 160 hold 16
+  clock data
+  expect state today.ask == "seek"
+  expect state todayUtterance == "utterance-2"
+  expect state today.lit == 8
+  expect state today.words.6.lit == true
+  expect state today.words.8.lit == false
+  clock +500
+  clock data
+  expect state today.lit == 9
+  expect no failures
+
+test "A finger held on the fifth word and dragged to the eighth reads on from the eighth" on ios
+  at "/cue/full"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag to "word-7" press 400 over 160 hold 16
+  clock data
+  clock +1
+  clock data
+  expect state today.ask == "seek"
+  expect state todayUtterance == "utterance-2"
+  expect state today.lit >= 7
+  expect state today.lit <= 9
+  expect no failures
+
+test "Under no cue a hold dragged from the fifth word to the eighth, lighting the words between as it goes, still lifts there and reads on from the eighth" on web
+  at "/cue/none"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag to "word-7" mouse press 400 over 160 hold 16
+  clock data
+  clock +1
+  clock data
+  expect state today.ask == "seek"
+  expect state todayUtterance == "utterance-2"
+  expect state today.heldWord == -1
+  expect state today.lit >= 7
+  expect state today.lit <= 9
+  expect state today.words.6.face == "text"
+  expect no failures
+
+test "On the web a finger dragged after its hold is taken by the browser: the hold ends as a cancel and the reading resumes where it paused" on web
+  at "/cue/full"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag 0 80 press 400 over 200 hold 16
+  clock data
+  expect state today.askKey == 2
+  expect state today.ask == "resume"
+  expect state todayUtterance == "utterance-1"
+  expect state todayVoiceState.paused == false
+  expect state today.heldWord == -1
+  expect state today.phase == "reading"
+  expect state today.lit >= 1
+  expect state today.lit <= 3
+  clock +2000
+  clock data
+  expect state today.lit >= 6
+  expect no failures
+
+test "A quick swipe on the words while the voice reads holds nothing"
+  at "/cue/full"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag 0 80 over 100
+  clock +500
+  clock data
+  expect state today.askKey == 0
+  expect state today.heldWord == -1
+  expect state todayUtterance == "utterance-1"
+  expect state todayVoiceState.paused == false
+  expect state today.lit >= 2
+  expect no failures
+
+test "A hold on the words with no reading under way does nothing"
+  at "/cue/full"
+  clock settle
+  tap "word-4" drag 1 0 press 400 over 16 hold 16
+  clock data
+  expect state today.askKey == 0
+  expect state today.heldWord == -1
+  expect state today.phase == "resting"
+  expect state todayUtterance == ""
+  expect enabled "hear"
   expect no failures

@@ -26,6 +26,7 @@
         "test:session-calls",
         "test:text",
         "test:read",
+        "test:first",
         "test:find",
         "test:find-a",
         "test:find-b",
@@ -40,7 +41,8 @@
         "test:study-tags-b",
         "test:study-lexicon",
         "test:studyview",
-        "test:type"
+        "test:type",
+        "test:back"
       ],
       "env": [
         "HEARTSEED_GARDEN_DRIVE",
@@ -475,6 +477,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },
+    "test:first": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
     "test:packs": {
       "dependsOn": ["^transit"],
       "env": ["EXACT"],
@@ -586,6 +602,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
         "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:back": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },
     "test:session-c": {

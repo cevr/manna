@@ -1,0 +1,220 @@
+// The hymn pager (features/pager.contract): a swipe left or right on a
+// hymn's page turns to the next or the hymn before in the list the reader
+// opened it from, else in number order, the route following in place. A
+// finger's drag starts well inside the page: the left strip is the way
+// back, and a contact at the window's edge is the browser's.
+
+test "A swipe left on home's hymn 2 turns to hymn 3, in place, and Back is home."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect text "hymn-number" == "2"
+  expect state pagerNumbers.0 == 1
+  expect state pagerNumbers.2 == 3
+  expect state recentList.0 == 2
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "3" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "3"
+  expect state pagerHymnUrl == "/hymns/3"
+  expect text "hymn-number" == "3"
+  expect state pagerNumbers.0 == 2
+  expect state pagerNumbers.2 == 4
+  expect state recentList.0 == 3
+  expect state recentList.1 == 2
+  back
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
+test "A swipe right turns back a hymn, and at hymn 1 stays."
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "1" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "1"
+  expect text "hymn-number" == "1"
+  tap "hymn-pager" drag 300 0 from 100 300
+  clock +800 real
+  clock settle
+  clock data
+  expect state hymnOpen == "1"
+  expect text "hymn-number" == "1"
+  expect state pagerNumbers.0 == 1
+  expect state pagerNumbers.1 == 2
+  back
+  clock settle
+  expect text "title" == "Hymns"
+
+test "A short drag turns no page, and a page scrolls up and down."
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "hymn-pager" drag -120 0 from 300 300 over 1200 hold 300
+  clock +800 real
+  clock settle
+  clock data
+  expect state hymnOpen == "2"
+  tap "hymn-words" drag 0 -400 from 200 300
+  clock settle
+  clock data
+  expect state hymnOpen == "2"
+  expect text "hymn-number" == "2"
+
+test "From a search, the next page is the next result."
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "12"
+  clock settle
+  clock data
+  tap "hymn-12"
+  clock settle
+  clock data
+  expect state pagerFrom.0 == 12
+  expect state pagerFrom.1 == 120
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "120" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "120"
+  expect text "hymn-number" == "120"
+  back
+  clock settle
+  clock data
+  expect tree has "find-list"
+
+test "From Recent, the page before is the newer hymn."
+  tap "hymn-5"
+  clock settle
+  clock data
+  back
+  clock settle
+  tap "hymn-3"
+  clock settle
+  clock data
+  back
+  clock settle
+  tap "recent-all"
+  clock settle
+  clock data
+  tap "recent-5"
+  clock settle
+  clock data
+  expect state pagerFrom.0 == 3
+  expect state pagerFrom.1 == 5
+  tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "3" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "3"
+  back
+  clock settle
+  expect text "recent-title" == "Recent"
+
+// A launch at a hymn's address pages through every hymn, as a link does
+// in the current app.
+test "A hymn the app is launched at pages through every hymn."
+  at "/hymns/100"
+  clock data
+  clock settle
+  clock data
+  expect state pagerFrom == []
+  expect state pagerNumbers.0 == 99
+  expect state pagerNumbers.2 == 101
+  expect text "hymn-number" == "100"
+  expect text "hymn-number-99" == "99"
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "101" within 3000
+  clock settle
+  clock data
+  expect text "hymn-number" == "101"
+
+test "A hymn dialled by its number pages through every hymn."
+  tap "find-number"
+  clock settle
+  clock data
+  type "drum-hundreds" "1"
+  clock data
+  type "drum-tens" "0"
+  clock data
+  type "drum-ones" "0"
+  clock data
+  tap "drums-open"
+  clock settle
+  clock data
+  expect state hymnOpen == "100"
+  expect state pagerFrom == []
+  expect state pagerNumbers.0 == 99
+  expect state pagerNumbers.2 == 101
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "101" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "101"
+
+test "A swipe starts no player, and leaves the bar's hymn while another sounds."
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "3" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "3"
+  expect tree missing "bar-title"
+  back
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "2" within 3000
+  clock settle
+  clock data
+  expect state hymnOpen == "2"
+  expect state player.bar.number == 1
+  expect state player.phase == "playing"
+
+// The page beside the shown one draws its chords by the reader's chord
+// style, from the answer it had there: hymn 1 swiped back to from hymn 2
+// shows Advanced's chords (settings.test.contract's hymn 1 check).
+test "A neighbour draws its chords by the reader's chord style."
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "chord-style-advanced"
+  clock settle
+  clock data
+  expect state settingsChordStyle == "advanced"
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state pagerChords.0 .number == 1
+  tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "1" within 3000
+  clock settle
+  clock data
+  expect text "chord-1-1-13" == "Gm7 C C7"

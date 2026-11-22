@@ -17,6 +17,40 @@ test "The book opens on its list."
   expect tree has "section-sentences-and-responses"
   expect text "hymn-695" == "695Praise God, From Whom All Blessings"
 
+test "A group's heading opens All at once, on Sections and on another tab."
+  expect tree missing "tiles"
+  tap "section-adoration-and-praise-row"
+  clock settle
+  clock data
+  expect tree has "tiles"
+  tap "tiles-done"
+  clock settle
+  clock data
+  expect tree missing "tiles"
+  tap "tab-topics"
+  clock settle
+  clock data
+  tap "group-adoration-and-praise-row"
+  clock settle
+  clock data
+  expect tree has "tiles"
+  tap "tiles-done"
+  clock settle
+  clock data
+  tap "tab-sections"
+  clock settle
+  clock data
+  expect tree has "section-adoration-and-praise"
+
+test "A group's heading is a keyboard stop after the tabs, and Enter on it opens All at once."
+  expect tree missing "tiles"
+  type "tab-sections" key "Tab"
+  expect focused "section-adoration-and-praise-row"
+  type "section-adoration-and-praise-row" key "Enter"
+  clock settle
+  clock data
+  expect tree has "tiles"
+
 test "Search by number, title and first line."
   tap "find-search"
   clock settle
@@ -51,3 +85,18 @@ test "Search by number, title and first line."
   clock data
   expect tree has "section-adoration-and-praise"
   expect tree missing "none-found"
+
+test "Where a scroll of the list comes to rest is its offset from the top."
+  expect state listTop == 0
+  tap "hymn-list" drag 0 -1600
+  clock settle
+  expect state listTop >= 800
+  tap "hymn-list" drag 0 3200
+  clock settle
+  expect state listTop == 0
+  tap "tab-topics"
+  clock settle
+  clock data
+  tap "hymn-list" drag 0 -1600
+  clock settle
+  expect state listTop >= 800

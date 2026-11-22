@@ -12,7 +12,7 @@ import { describe, expect, it } from 'bun:test';
 import { styleIn } from '@manna/exact-kit/look/testing';
 
 import { appFile, brandOf, oneFile } from './design.testing.ts';
-import { NUDGES, TOKENS, type Source, type Token } from './tokens.ts';
+import { NUDGES, RULED, SCALED, TOKENS, type Source, type Token } from './tokens.ts';
 
 /** The body size a `rem` is on iOS at the default text size, in points. */
 const BODY = 17;
@@ -65,12 +65,22 @@ const formaOf = (token: Token, props: ReadonlyMap<string, string>, source: Sourc
   return value;
 };
 
-/** The ramps the texts drawn in `style` name, `none` for a text that names none. */
-const rampsOf = (text: string, style: string) =>
+/** The px `text` writes `prop` as at the default text size, from its `<prop>: <points> * fontScale`; undefined when it writes none so. */
+const scaledOf = (text: string, prop: string) => {
+  const points = new RegExp(`\\b${prop}: (\\d+(?:\\.\\d+)?) \\* fontScale\\b`, 'u').exec(text)?.[1];
+  return points === undefined ? undefined : `${short(Number(points))}px`;
+};
+
+/** The ramps the texts drawn in `style` (written `styles.<style>`, or `via`) name, `none` for a text that names none. */
+const rampsOf = (text: string, style: string, via?: string) =>
   new Set(
     [...text.matchAll(/<Text\b(?:=>|[^>])*>/gu)]
       .map(([tag]) => tag)
-      .filter((tag) => new RegExp(`styles\\.${style}\\b`, 'u').test(tag))
+      .filter((tag) =>
+        via === undefined
+          ? new RegExp(`styles\\.${style}\\b`, 'u').test(tag)
+          : tag.includes(`style={${via}}`),
+      )
       .map((tag) => /dynamicTypeRamp="(\w+)"/u.exec(tag)?.[1] ?? 'none'),
   );
 
@@ -117,7 +127,10 @@ describe('every measure of the brand is the current hymnal’s', () => {
       expect(brand.measures.get(token.name)).toBe(values[0]);
       if (token.kind === 'type')
         for (const source of token.from)
-          expect({ source, ramps: [...rampsOf(read(source.file), source.style)] }).toEqual({
+          expect({
+            source,
+            ramps: [...rampsOf(read(source.file), source.style, source.via)],
+          }).toEqual({
             source,
             ramps: [source.ramp],
           });
@@ -128,8 +141,22 @@ describe('every measure of the brand is the current hymnal’s', () => {
       expect(brand.measures.get(nudge.name)).toBe(`${short(nudge.pixels / 3)}px`);
     });
 
+  for (const ruled of RULED)
+    it(`${ruled.name} is ${ruled.file} ${ruled.constant} times the words' size`, () => {
+      const multiple = new RegExp(`\\bconst ${ruled.constant} = (\\d+(?:\\.\\d+)?);`, 'u').exec(
+        read(ruled.file),
+      )?.[1];
+      expect(multiple).toBeDefined();
+      expect(brand.measures.get(ruled.name)).toBe(`${short(Number(multiple))}rem`);
+    });
+
+  for (const scaled of SCALED)
+    it(`${scaled.name} is ${scaled.file}'s ${scaled.prop} at the default text size`, () => {
+      expect(brand.measures.get(scaled.name)).toBe(scaledOf(read(scaled.file), scaled.prop));
+    });
+
   it('the brand writes no measure the list does not trace to One or to a measured nudge', () => {
-    const traced = new Set([...TOKENS, ...NUDGES].map((token) => token.name));
+    const traced = new Set([...TOKENS, ...NUDGES, ...RULED, ...SCALED].map((token) => token.name));
     expect([...brand.measures.keys()].filter((name) => !traced.has(name))).toEqual([]);
   });
 
@@ -147,5 +174,10 @@ describe('every measure of the brand is the current hymnal’s', () => {
     expect(rows.map((row) => valuesOf(row, relined)[0] === brand.measures.get(row.name))).toEqual([
       false,
     ]);
+    const words = read('src/reader/SyllableWords.tsx');
+    expect(scaledOf(words.replace('columnGap: 5 *', 'columnGap: 6 *'), 'columnGap')).not.toBe(
+      brand.measures.get('space.word'),
+    );
+    expect(scaledOf(words.replace('* fontScale', '* scale'), 'columnGap')).toBeUndefined();
   });
 });

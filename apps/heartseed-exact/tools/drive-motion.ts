@@ -9,9 +9,9 @@
  *    Done; under reduce it holds at opacity 1;
  * 2. after Next the next verse's column fades and rises in; under reduce
  *    it does not move;
- * 3. a word lit by Hear it is drawn mid-way between the quiet and the ink
- *    90 ms on, light and dark (a pixel of a screenshot); under reduce it is
- *    the ink at once;
+ * 3. at the full cue, a word Say it's answer matches is drawn mid-way
+ *    between the quiet and the ink 90 ms on, light and dark (a pixel of a
+ *    screenshot); under reduce it is the ink at once;
  * 4. a scheme chosen in Settings leaves no word mid-way once the sheet
  *    closes;
  * 5. the run's end brings its rows in one after another; under reduce all
@@ -19,7 +19,8 @@
  * 6. home's ask fades in, and is gone after Keep: on the web its frame
  *    still draws it 60 ms on, and matches the settled screen once its exit
  *    and the slide under it are done (pixels of screenshots);
- * 7. a plant pressed scales to 0.97.
+ * 7. a plant pressed is filled `hearing` and moves nothing, as the current
+ *    home's plant does (a pixel of a screenshot, and its scale).
  *
  * Opacity is read from `layout` (the animated nodes author `opacity=1` so
  * the driver reports it). iOS reads a native animation at its end value, so
@@ -32,6 +33,8 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
 import { themeLines } from '../src/look/brand';
@@ -50,7 +53,7 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   });
   process.exit(await self.exited);
 }
-const drive = makeDrive({ name: 'drive-motion', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-motion', host, appDir: app }));
 const ios = host === 'ios';
 const SHOTS = join('.exact', 'shots');
 const SAMPLES = join('.exact', 'drive-motion');
@@ -73,7 +76,6 @@ const GRANTED = [
   'clock data',
   'clock settle',
 ];
-const PRESS = 0.97;
 const stamp = `${host}-${Date.now().toString(36)}`;
 
 /** A verse's text as a recognizer writes it: lowercase words, archaic ones as heard. */
@@ -263,47 +265,77 @@ const pulse = async () => {
   }
 };
 
-/** B3: a word lit by Hear it, 90 ms on, light, dark and under reduce. */
+/** How far into a recital B3 looks for the recognizer's whole answer, in 100 ms steps: it lands about 12 s after Say it (measured on the web). */
+const HEARD_STEPS = 200;
+
+/** The ops that read word 0's mark `count` times, `step` ms apart, and the index of each read. */
+const markReads = (s: ReturnType<typeof script>, count: number, step: number) =>
+  Array.from({ length: count }, () => s.step(`clock +${step}`, 'state today.words.0.mark'));
+
+/**
+ * B3: the full cue draws every word in ink at rest and under Hear it (as the current Today does); while Say it
+ * listens the words wait in the quiet until the recognizer's answer matches them, and a matched word eases to the
+ * ink. Word 0 is read 90 ms after it turns matched, light, dark and under reduce.
+ */
 const words = async () => {
+  const flags = ['--storage', `motion-3-${stamp}`, '--reset-storage', '--url', '/cue/full'];
+  const read = script(...GRANTED);
+  const passageAt = read.step('state today.passage');
+  const passage = String((await drive.run(flags, read.ops))[passageAt] ?? '');
+  const lead = (scheme: Scheme, reduce: boolean) => [
+    ...(reduce ? [REDUCE] : []),
+    `prefer prefers-color-scheme ${scheme}`,
+    ...GRANTED,
+    `prefer extension speech-recognition.heard=${JSON.stringify(spokenOf(passage))}`,
+    'tap say',
+    'clock data',
+  ];
+  const coarse = script(...lead('light', false));
+  const coarseReads = markReads(coarse, HEARD_STEPS, 100);
+  const coarseGot = await drive.run(flags, coarse.ops);
+  const coarseTurn = coarseReads.findIndex((at) => coarseGot[at] === 'matched');
+  if (coarseTurn < 1) {
+    drive.check('B3 the words turn matched while Say it listens', false, {
+      turn: coarseTurn,
+      last: coarseGot[coarseReads.at(-1) ?? 0],
+    });
+    return;
+  }
+  /** Where the fine reads start: the last coarse read before the turn. */
+  const from = [`clock +${coarseTurn * 100}`];
   for (const [scheme, reduce] of [
     ['light', false],
     ['dark', false],
     ['light', true],
   ] as const) {
     const name = `${scheme}${reduce ? '-reduced' : ''}`;
-    const lead = [
-      ...(reduce ? [REDUCE] : []),
-      `prefer prefers-color-scheme ${scheme}`,
-      'clock data',
-      'clock settle',
-      'tap hear',
-      'clock +700',
-    ];
-    const flags = ['--storage', `motion-3-${stamp}`, '--reset-storage', '--url', '/cue/full'];
     if (ios) {
-      const filmed = script(...lead, ...film(`3-word-${name}`));
-      const laid = filmed.step('layout word-0');
+      const filmed = script(...lead(scheme, reduce), ...from, ...film(`3-word-${name}`));
+      const laid = filmed.step('clock +200', 'layout word-0');
       const got = await drive.run([...flags, ...timing], filmed.ops);
       drive.check(
-        `B3 (${name}) the lit word is drawn`,
+        `B3 (${name}) the matched word is drawn`,
         frameOf(got[laid]) !== undefined,
         got[laid],
       );
     }
-    const probe = script(...lead);
-    const reads = Array.from({ length: 60 }, () => probe.step('clock +10', 'state today.lit'));
+    const probe = script(...lead(scheme, reduce), ...from);
+    const reads = markReads(probe, 20, 10);
     const probed = await drive.run(flags, probe.ops);
-    const counts = reads.map((at) => Number(probed[at]));
-    const turn = counts.findIndex((count, at) => at > 0 && count > (counts[at - 1] ?? 0));
-    const lit = counts[turn] ?? 0;
-    if (turn < 0 || lit < 1) {
-      drive.check(`B3 (${name}) a word lights while the voice reads`, false, counts);
+    const turn = reads.findIndex((at) => probed[at] === 'matched');
+    if (turn < 0) {
+      drive.check(
+        `B3 (${name}) word 0 turns matched while Say it listens`,
+        false,
+        reads.map((at) => probed[at]),
+      );
       continue;
     }
     const shot = join(SAMPLES, `${host}-3-${name}.png`);
-    const s = script(...lead, ...Array.from({ length: turn + 1 }, () => 'clock +10'));
+    const s = script(...lead(scheme, reduce), ...from);
+    s.step(...Array.from({ length: turn + 1 }, () => 'clock +10'));
     const wait = reduce ? [] : Array.from({ length: 9 }, () => 'clock +10');
-    const laid = s.step(...wait, `layout word-${lit - 1}`);
+    const laid = s.step(...wait, 'layout word-0');
     s.step(`screenshot ${shot}`);
     const got = await drive.run(flags, s.ops);
     const ink = wordInk(got[laid], shot, scheme) ?? [];
@@ -315,9 +347,9 @@ const words = async () => {
       });
     else
       drive.check(
-        `B3 (${name}) the word just lit is drawn mid-way from the quiet to the ink`,
+        `B3 (${name}) the word just matched is drawn mid-way from the quiet to the ink`,
         at > MARGIN && at < 1 - MARGIN,
-        { ink, at, word: lit - 1 },
+        { ink, at },
       );
   }
 };
@@ -389,7 +421,15 @@ const home = async () => {
       `screenshot ${shot('settled')}`,
     );
   const kept = s.step('clock settle', 'tree');
-  const pressed = s.step('tap plant-John-3-16 down', 'clock settle', 'layout plant-John-3-16');
+  const pressedShot = join(SAMPLES, `${stamp}-7-pressed.png`);
+  const pressed = s.step(
+    'prefer prefers-color-scheme light',
+    'clock settle',
+    'tap plant-John-3-16 down',
+    'clock settle',
+    'layout plant-John-3-16',
+  );
+  s.step(`screenshot ${pressedShot}`);
   s.step('tap up');
   const got = await drive.run(
     [
@@ -430,10 +470,23 @@ const home = async () => {
       { frame, changed: changed(gone) },
     );
   }
+  const plant = frameOf(got[pressed]);
+  const fill =
+    plant === undefined || !existsSync(join(app, pressedShot))
+      ? []
+      : (() => {
+          const image = readPng(join(app, pressedShot));
+          const scale = image.width / ((got[pressed] as Laid).viewport?.w ?? image.width);
+          const x = Math.round((plant.x + 4) * scale);
+          const y = Math.round((plant.y + plant.h / 2) * scale);
+          const at = (y * image.width + x) * image.channels;
+          return [image.rows[at] ?? 0, image.rows[at + 1] ?? 0, image.rows[at + 2] ?? 0];
+        })();
+  const hearing = channelsOf(theme.light.hearing);
   drive.check(
-    'B7 a plant pressed scales to 0.97',
-    Math.abs(scaleOf(got[pressed]) - PRESS) < 0.005,
-    scaleOf(got[pressed]),
+    'B7 a plant pressed is filled hearing and moves nothing (scale 1)',
+    Math.abs(scaleOf(got[pressed]) - 1) < 0.005 && fill.length === 3 && distance(fill, hearing) < 8,
+    { scale: scaleOf(got[pressed]), fill, hearing },
   );
 };
 

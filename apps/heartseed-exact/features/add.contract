@@ -16,10 +16,11 @@
 // the garden's `addPlant`, through its queue, and once it lands the reader
 // is back at Add verses. Each screen's node names start with its own,
 // since the screens under it stay drawn. Every measure is a token of
-// app.forma; the space a shelf's icon takes in One is the head's leading
-// padding (`space.s54`), as the drawings are not yet assets of the port.
+// app.forma; a head draws its shelf's icon as One's does, the current
+// app's own picture in the scheme shown (`homeIconOf`), `glyph.shelf`
+// square, before its words.
 use GardenShown, GardenChange from "./garden.contract"
-use homeMarkOf from "./home.contract"
+use homeMarkOf, homeIconOf from "./home.contract"
 
 shape AddRow
   id: string
@@ -35,6 +36,7 @@ shape AddShelf
   slug: string
   title: string
   note: string
+  icon: string
   kind: string
   open: bool
   rows: AddRow[]
@@ -92,20 +94,27 @@ members HeartseedExact
       addAnswer = ""
       nav = go(nav, "/add")
 
-// A shelf's head: One's card (`head`), its title and its note.
+// A shelf's head: One's card (`head`), its title and its note. A title
+// (here and on an offer) is a hairline taller, as React Native rounds a
+// text's height up to the pixel grid, so the line under it sits where
+// One's does. An offer beside its Plant pill is centred on the pill's
+// height, and React Native rounds that centring's half pixel down the
+// page: there the words take a hairline above them too, so the title
+// stays on One's row and the count under it moves to One's.
 component AddHead
   props
     title: string
     note: string
   view
     column flex=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
-      text title font="type.strong" overflow-wrap="break-word"
-      text note font="type.small" overflow-wrap="break-word" padding-bottom="line.hair"
+      text title font="type.strong" overflow-wrap="break-word" padding-bottom="line.hair"
+      text note font="type.small" overflow-wrap="break-word"
 
 component AddVersesPage
   props
     route: number
     add: AddShown
+    scheme: string
     bible: action
     toggle: action
     open: action
@@ -121,15 +130,17 @@ component AddVersesPage
           for s in add.shelves key=s.id
             column gap="space.s4"
               if s.kind == "bible"
-                button press=bible aria-label=s.title display="flex" flex-direction="row" align-items="center" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                button press=bible aria-label=s.title display="flex" flex-direction="row" align-items="center" gap="space.s14" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s12" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                  image homeIconOf(s.icon, scheme) width="glyph.shelf" height="glyph.shelf" aria-hidden=true
                   AddHead(title=s.title, note=s.note)
               if s.kind != "bible"
-                button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open display="flex" flex-direction="row" align-items="center" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s54" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                button press=toggle(s.slug) aria-label=s.title aria-expanded=s.open display="flex" flex-direction="row" align-items="center" gap="space.s14" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s12" padding-right="space.s12" border-radius="radius.r16" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`shelf-${s.slug}`
+                  image homeIconOf(s.icon, scheme) width="glyph.shelf" height="glyph.shelf" aria-hidden=true
                   AddHead(title=s.title, note=s.note)
               for r in s.rows key=r.id
                 button press=open(r.slug) aria-label=r.title display="flex" flex-direction="row" flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" min-height="size.target" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s54" padding-right="space.s12" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=`offer-${r.slug}`
-                  column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start"
-                    text r.title font="type.strong" overflow-wrap="break-word"
+                  column flex-shrink=1 min-width=0 gap="space.s2" align-items="flex-start" text-align="start" padding-top=(r.offer == "plant" ? "line.hair" : 0)
+                    text r.title font="type.strong" overflow-wrap="break-word" padding-bottom="line.hair"
                     text r.count font="type.small"
                   if r.offer == "plant"
                     row align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" background-color="hs.ink"

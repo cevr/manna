@@ -1,16 +1,20 @@
 import type { Answer, Sources } from './app.contract.d.ts';
-import licences from './src/about/licences';
+import licences, { version } from './src/about/licences';
 import { aboutSources } from './src/about/sources';
 import { addSources } from './src/add/sources';
+import { backSources } from './src/back/sources';
 import { chooserSources } from './src/chooser/sources';
 import { COMMENTARY, commentarySources } from './src/commentary/sources';
 import { findSources } from './src/find/sources';
+import { firstSources } from './src/first/flow';
+import { firstReference } from './src/first/verse';
 import { gardenSources } from './src/garden/sources';
 import { gotoSources } from './src/goto/sources';
 import { homeSources } from './src/home/sources';
 import { readSources } from './src/read/place';
 import { packSources } from './src/packs/sources';
 import { settingsSources } from './src/settings/choices';
+import { startSources } from './src/start/sources';
 import { findPackFrom, STUDY_PACKS, studySources } from './src/study/sources';
 import { turnSources } from './src/study/turns';
 import { studyviewSources } from './src/studyview/sources';
@@ -49,14 +53,17 @@ const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
 const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY, ...STUDY_PACKS] });
 
 const sources: Sources = {
+  ...firstSources(firstReference()),
   ...settingsSources,
-  ...aboutSources(licences),
+  ...aboutSources(licences, version),
   ...garden,
   ...homeSources(),
+  ...startSources(),
   ...addSources(),
   ...chooserSources,
   ...gotoSources,
   ...todaySources(garden),
+  ...backSources(garden),
   ...readerSources,
   ...textSources,
   ...readSources,

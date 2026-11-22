@@ -11,22 +11,28 @@
 // number the hymnal has not, draws the not-found screen.
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
-use PlayerDock, PlayerSheet from "./features/player.contract"
+use PlayerSheet from "./features/sheet.contract"
+use PlayerDock from "./features/bar.contract"
 use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
 use RecentScreen from "./features/recent.contract"
 use NotFound from "./features/notfound.contract"
 use ChordsGripScreen from "./features/chords.contract"
 use FindDrums from "./features/find.contract"
+use AboutHymnSheet from "./features/abouthymn.contract"
+use KeysOver from "./features/keys.contract"
+use TunerScreen from "./features/tuner.contract"
 
 routes nav
   list "/"
     hymn "/hymns/:n"
       chord "/hymns/:n/chord/:grip"
+      abouthymn "/hymns/:n/about"
     player "/player"
     settings "/settings"
       about "/settings/about"
     recent "/recent"
+  tuner "/tuner"
   notfound
 
 component HymnalExact
@@ -40,6 +46,15 @@ component HymnalExact
   members "./features/chords.contract"
   members "./features/find.contract"
   members "./features/motion.contract"
+  members "./features/abouthymn.contract"
+  members "./features/bar.contract"
+  members "./features/pager.contract"
+  members "./features/keys.contract"
+  members "./features/tuner.contract"
+  members "./features/tempo.contract"
+  members "./features/sheet.contract"
+  members "./features/reading.contract"
+  members "./features/downloads.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -48,7 +63,6 @@ component HymnalExact
     favouritePress = favouriteToggle
     chordsSwitchOn = chordsOn
     chordsSwitch = chordsSet
-    chordsPress = chordsStep
     findShown = find
     findPress = findAsk
     findSearchOn = findSearch
@@ -61,24 +75,81 @@ component HymnalExact
     findDial = findTurn
     findDismiss = findDismissed
     findDrumsKey = findDrumsKeyed
-    findTileList = findTileNumbers
+    findGroups = findTileGroups
+    findPick = findTilePick
+    findTabName = listTab
     findWheel = findWheeled
+    listRested = listRested
+    listLand = listLand
+    listLanded = listLanded
     motionStill = motionStill
     settingsFeel = settingsFeel
     settingsFeelSwitch = settingsFeelSet
+    abouthymnPress = abouthymnAsk
+    hymnPressBack = hymnBack
+    playerSoundOn = playerSound
+    playerSoundPress = playerSoundSwitch
+    playerIntroOn = playerIntro
+    playerClickOn = playerClick
+    playerIntroPress = playerIntroSwitch
+    playerClickPress = playerClickSwitch
+    keysShown
+    keysPlaced
+    keysOpen
+    keysHolding
+    keysWheelOpen
+    keysWheelOver
+    keysWheelItems
+    keysAsk
+    keysTap
+    keysDown
+    keysUp
+    keysPan
+    keysLetGo
+    keysKeyScrolled
+    keysKeySettled
+    keysKeyAdjusted
+    keysCapoScrolled
+    keysCapoSettled
+    tunerEar
+    tunerShown
+    tunerPlaced
+    tunerLabel
+    tunerOpenFrom
+    tunerDone
+    tunerAuto
+    tunerAgain
+    tunerSettings
+    tunerPick
+    sheetDial
+    sheetPlaceTurn
+    sheetPlaceScrolled
+    sheetPlaceSettled
+    sheetInherit
+    readingShown
+    readingPort
+    readingAwake
+    readingFontChoose
+    readingSpacingChoose
+    readingAwakeSet
+    readingSizeTurn
+    readingSizeScrolled
+    readingSizeSettled
+    downloads
+    downloadsPress = downloadsAsk
   action follow(url: string)
     nav = go(nav, url)
   view
-    main testId="root" navigationKey=`${top(nav).id}` navigate=follow color-scheme=settingsScheme width="100%" height="100%"
+    main testId="root" navigationKey=`${top(nav).id}` navigationBack="hymn-back" navigate=follow color-scheme=settingsScheme width="100%" height="100%"
       for e in stack(nav) key=e.id
         if e.name == "list"
           HymnList(entry=e, query=listQuery, sections=listRows, tab=listTab, tabs=listTabNames, choose=listChoose, groups=listGroups, titles=listTitleOf, recent=recentShown, favourites=favouriteList, open=listOpen)
         if e.name == "hymn" and not (current(hymnShown) and hymnShown.number == 0)
-          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown), chords=chordsShown)
+          HymnPage(entry=e, page=hymnShown, ready=current(hymnShown), chords=chordsShown, numbers=pagerNumbers, pages=pagerPages, chordsAll=pagerChords, ended=pagerEnded, armed=pagerArmed, wheeled=pagerWheeled)
         if e.name == "player"
           PlayerSheet(entry=e, player=player, ask=playerAsk)
         if e.name == "settings"
-          SettingsSheet(entry=e, looks=settingsLooks, choose=settingsChoose, done=settingsClose)
+          SettingsSheet(entry=e, looks=settingsLooks, choose=settingsChoose, done=settingsClose, chords=settingsChordRows, chooseStyle=settingsStyleChoose, choosePlacement=settingsPlacementChoose)
         if e.name == "about"
           AboutScreen(entry=e, page=aboutShown)
         if e.name == "recent"
@@ -87,5 +158,10 @@ component HymnalExact
           NotFound(entry=e)
         if e.name == "chord"
           ChordsGripScreen(entry=e, page=chordsGripShown, ready=current(chordsGripShown), done=chordsGripClose)
+        if e.name == "abouthymn"
+          AboutHymnSheet(entry=e, page=abouthymnShown, ready=current(abouthymnShown), done=abouthymnClose, choose=abouthymnChoose)
+        if e.name == "tuner"
+          TunerScreen(entry=e)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)
+      KeysOver()
       FindDrums()

@@ -19,13 +19,15 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
 import { pixelAt, readPng } from './png';
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-const drive = makeDrive({ name: 'drive-look', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-look', host, appDir: app }));
 const store = `look-${host}-${Date.now().toString(36)}`;
 const SAMPLES = join('.exact', 'drive-look');
 mkdirSync(join(app, SAMPLES), { recursive: true });

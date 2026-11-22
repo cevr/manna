@@ -84,6 +84,10 @@ const RUN_BY_NAME: ReadonlyMap<string, string> = new Map([
     'the process packages/film/src/tools/cast-build/chain.ts spawns for each fit job',
   ],
   ['packages/scripts/src/precommit-typecheck.ts', 'the pre-commit typecheck lefthook.yml runs'],
+  [
+    'packages/exact-kit/src/exact-cli.ts',
+    'the child packages/exact-kit/src/run.ts starts for every bun run exact',
+  ],
 ]);
 
 /** The `package.json` of directory `dir`, read: none for a directory that is no package. */

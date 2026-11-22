@@ -4,6 +4,11 @@ time-zone "America/New_York"
 seed 7
 
 test "An empty home greets and offers Add a list"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   expect text "greeting" == "Good morning"
@@ -16,6 +21,11 @@ test "An empty home greets and offers Add a list"
   expect no failures
 
 test "A list is a row of plants, with no icon and no glyph"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -54,6 +64,11 @@ test "A list is a row of plants, with no icon and no glyph"
   expect no failures
 
 test "Single verses sit under the lists"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -104,6 +119,11 @@ test "Single verses sit under the lists"
   expect no failures
 
 test "The card offers the day's one action"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -149,6 +169,11 @@ test "The card offers the day's one action"
   expect no failures
 
 test "A plant starts its verse"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -181,6 +206,11 @@ test "A plant starts its verse"
   expect no failures
 
 test "Removing a single verse asks first"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -214,6 +244,11 @@ test "Removing a single verse asks first"
   expect no failures
 
 test "Back keeps the place"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -426,6 +461,11 @@ test "Back keeps the place"
   expect no failures
 
 test "The limits speak"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -492,6 +532,11 @@ test "The limits speak"
   expect no failures
 
 test "Twenty single verses speak their limit"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -642,4 +687,72 @@ test "Twenty single verses speak their limit"
   clock settle
   expect text "limit-line" == "20 single verses, the most for now. Remove one to add another."
   expect tree has "add-list"
+  expect no failures
+
+test "How Heartseed works replays the welcome and how a verse grows, then home shows its tips until Got it"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  expect tree missing "tip-1"
+  expect text "home-how" == "How Heartseed works›"
+  tap "home-how"
+  clock data
+  clock settle
+  expect state first.tour == "welcome"
+  expect tree has "first-welcome"
+  expect tree missing "reference"
+  back
+  clock settle
+  expect tree has "first-welcome"
+  tap "first-begin"
+  clock settle
+  expect state first.tour == "grows"
+  expect text "first-on" == "See your field"
+  tap "first-on"
+  clock data
+  clock settle
+  expect state first.tour == "tips"
+  expect tree missing "first"
+  expect text "tip-1" == "1Come back each day and tap Start. It brings what is ready."
+  expect tree missing "tip-2"
+  expect text "tip-3" == "3Add a psalm, a passage or a set of promises when you want more."
+  expect text "home-got-it" == "Got it"
+  tap "home-got-it"
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "tip-1"
+  expect tree missing "home-got-it"
+  expect no failures
+
+test "Leaving home for another screen ends the tips; the Add a list sheet does not"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "home-how"
+  clock data
+  clock settle
+  tap "first-begin"
+  clock settle
+  tap "first-on"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect state first.tour == "tips"
+  tap "add-done"
+  clock settle
+  expect tree has "tip-1"
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "tip-1"
   expect no failures

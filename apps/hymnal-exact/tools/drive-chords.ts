@@ -13,12 +13,13 @@
  * - at the largest text size (`prefer root-font-size`, 53 px, iOS's AX5
  *   body), every chord of the first stanza stands over its own syllable in
  *   the same way, and each line breaks where the line rule says
- *   (`breaksOf` over the pairs' measured widths, the line's width and the
- *   measured gap between words), at the line's width give or take half a
+ *   (`breaksOf` over the pairs' measured widths, the line's width less the
+ *   gap its row reaches past it, the measured gap between words and the
+ *   measured hanging indent), at the line's width give or take half a
  *   point, since a host rounds each frame to its pixel grid and a row that
  *   fills the line to within that may break either way: no pair split, no
  *   chord on the wrong row;
- * - a capo set, a relaunch on the kept store shows chords still on and the
+ * - a capo set on the bar's capo dial, a relaunch on the kept store shows chords still on and the
  *   capo kept.
  *
  * Screens at the largest size are kept in SHOTS. Exits 1 on any failed check.
@@ -136,7 +137,15 @@ const largeOps = [
   'clock settle',
   shot('largest-scrolled'),
 ];
-const keepOps = ['tap capo-up', 'clock data', 'clock settle', 'state chordsMoves'];
+const keepOps = [
+  'tap key-button',
+  'clock data',
+  'clock settle',
+  'tap dial-capo-stop-1',
+  'clock data',
+  'clock settle',
+  'state chordsMoves',
+];
 
 /**
  * Whether the web store named holds `text` on disk. A browser Exact ends at
@@ -236,6 +245,18 @@ const gapOf = (line: ReadonlyArray<ReadonlyArray<{ id: string }>>) => {
   return LARGEST * 0.35;
 };
 
+/** How far a line's second row is set in from its first: the hanging indent, measured; 0 for a line of one row. */
+const indentOf = (
+  line: ReadonlyArray<ReadonlyArray<{ id: string }>>,
+  rows: ReadonlyArray<ReadonlyArray<Place>> | undefined,
+  box: Frame | undefined,
+) => {
+  const [w, b] = rows?.[1]?.[0] ?? [-1, -1];
+  const pair = line[w]?.[b];
+  const drawn = pair && frame(`pair-${pair.id}`, largeOps, largeAt);
+  return drawn && box ? drawn.x - box.x : 0;
+};
+
 stanza.forEach((line, i) => {
   const box = frame(`line-1-${i + 1}`, largeOps, largeAt);
   const drawn = drawnRows(line);
@@ -243,13 +264,16 @@ stanza.forEach((line, i) => {
     word.map((pair) => frame(`pair-${pair.id}`, largeOps, largeAt)?.w ?? 0),
   );
   const gap = gapOf(line);
+  const indent = indentOf(line, drawn, box);
   const ruledAt = (slack: number) =>
-    box === undefined ? undefined : JSON.stringify(breaksOf(widths, box.w + slack, gap));
+    box === undefined
+      ? undefined
+      : JSON.stringify(breaksOf(widths, box.w - gap + slack, gap, indent));
   const ruled = [ruledAt(-0.5), ruledAt(0.5)];
   drive.check(
     `largest size: line 1-${i + 1} breaks where the line rule says, within half a point of its width (${drawn?.length ?? 0} rows)`,
     drawn !== undefined && ruled.includes(JSON.stringify(drawn)),
-    { drawn, ruled, width: box?.w, gap, widths },
+    { drawn, ruled, width: box?.w, gap, indent, widths },
   );
 });
 
@@ -270,7 +294,21 @@ const again = await drive.run(
     'state chordsShown.capo',
     'layout chord-1-1-1',
     shot('relaunched'),
+    'tree --ax',
   ],
+);
+const firstChord = (
+  (
+    again[11] as
+      | { ax?: { elements?: Array<{ testId?: string; name?: string; description?: string }> } }
+      | undefined
+  )?.ax?.elements ?? []
+).find((each) => each.testId === 'chord-1-1-1');
+drive.check(
+  'a chord is named by its chord alone (the capo’s shape), with the current app’s hint, Shows how to play it (Chords.tsx)',
+  /^[A-G][#b♯♭]?[^\s,]*$/u.test(firstChord?.name ?? '') &&
+    firstChord?.description === 'Shows how to play it',
+  firstChord,
 );
 drive.check('relaunch: chords still on', again[1] === true, again[1]);
 drive.check(

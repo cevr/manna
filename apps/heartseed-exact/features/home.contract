@@ -81,11 +81,18 @@ fn homeMarkOf(g: GardenShown): string = `${g.read}|${g.lists.map(l => `${l.id}:$
 // The current app's picture `name` in the scheme shown, as its `Icon` picks it.
 fn homeIconOf(name: string, scheme: string): string = `assets/home/${name}-${scheme == "dark" ? "dark" : "light"}.png`
 
+// The first furrow's row, under which the second tip stands: none without a list.
+fn homeFirstRow(h: HomeShown): string = match h.rows.at(0) { case some(r) => r.id, case none => "" }
+
 members HeartseedExact
   state homeAsking = ""
   resource homeMedia = exactViewport() as shape HomeMedia
   derive homeScheme = homeMedia.prefersColorScheme
-  resource homeShown = homeRead(gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape HomeShown else empty()
+  // The garden's last recall marks home too: a verse said outside any held
+  // passage is in no list or single of `garden` (the first minute's, when
+  // twenty single verses held already leave no room to join it).
+  derive homeRecalled = match gardenRecalled { case some(c) => homeVerseMark(c.verse), case none => "" }
+  resource homeShown = homeRead(gardenTime.utcOffset, today.session.wire, `${homeMarkOf(garden)}|${homeRecalled}`) with gardenAt, gardenTime.seed as shape HomeShown else empty()
   action homeBegin
     homeAsking = ""
     nav = push(nav, "/today")
@@ -152,6 +159,44 @@ component HomePill
         image icon width="glyph.control" height="glyph.control" aria-hidden=true
       text label font="type.label" color="hs.ink"
 
+// Tip `n` of home's tips (the current `Tip`): its words on an ink fill
+// after a small numbered badge hidden from the screen reader; text in the
+// page's flow, no control.
+component HomeTip
+  props
+    n: number
+    words: string
+  view
+    row align-items="flex-start" gap="space.s10" padding-left="space.s14" padding-right="space.s14" padding-top="space.s10" padding-bottom="space.s10" border-radius="radius.r14" background-color="hs.ink" testId=`tip-${n}`
+      column width="size.badge" height="size.badge" border-radius="radius.r11" align-items="center" justify-content="center" background-color="hs.on-ink" aria-hidden=true
+        text `${n}` font="type.badge" color="hs.ink"
+      text words flex=1 font="type.note" color="hs.on-ink"
+
+// A small round-cornered button on the card's fill, never filled in ink:
+// home's Got it, and the first minute's Next and Continue (the current
+// `Pill`).
+component HomeSoftPill
+  props
+    label: string
+    press: action
+    id: string
+  view
+    button press=press appearance="none" aria-label=label align-self="center" display="flex" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.target" padding-left="space.s22" padding-right="space.s22" border-radius="radius.pill" background-color="hs.card" color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
+      text label font="type.strong" color="hs.ink"
+
+// A row at home's foot (the current `EndRow`): a button the width of the
+// field, its name and a chevron hidden from the screen reader.
+component HomeEndRow
+  props
+    label: string
+    press: action
+    held: bool
+    id: string
+  view
+    button press=press disabled=held aria-label=label appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="space-between" box-sizing="border-box" min-height="size.row" padding-left="space.s16" padding-right="space.s16" border-radius="radius.r16" background-color="hs.card" -exact-press-opacity="opacity.pressed" testId=id
+      text label font="type.strong" color="hs.ink"
+      text "›" font="type.strong" color="hs.ink" aria-hidden=true
+
 component Home
   props
     home: HomeShown
@@ -165,6 +210,9 @@ component Home
     yes: action
     no: action
     still: bool
+    tips: bool
+    how: action
+    gotIt: action
   view
     column flex=1 min-height=0 testId="home"
       column height=0 aria-hidden=true testId="home-band"
@@ -184,6 +232,8 @@ component Home
             else if home.card.action == "practice"
               button press=start(home.card.slug) aria-label=home.card.label display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="today-action"
                 text home.card.label font="type.label" color="hs.on-ink"
+        if tips
+          HomeTip(n=1, words="Come back each day and tap Start. It brings what is ready.")
       scroll id="home-scroll" navigationScroll="home-scroll" flex=1 min-height=0 testId="home-scroll"
         column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
           if home.read
@@ -206,12 +256,14 @@ component Home
                   for p in r.plants key=p.id
                     HomePlantButton(plant=p, start=start)
                 column height="line.furrow" border-radius="radius.r1" background-color="hs.furrow" aria-hidden=true
+                if tips and r.id == homeFirstRow(home)
+                  HomeTip(n=2, words="A list is a set of verses. Tap its name to open it.")
             if home.singlesShown
               column gap="space.s4" testId="singles"
                 text "Single verses" font="type.caption-strong" color="hs.ink"
                 for s in home.singles key=s.slug
                   column gap="space.s6" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
-                    row align-items="center" gap="space.s8"
+                    row flex-wrap="wrap" align-items="center" gap="space.s8"
                       row role="button" press=start(s.slug) aria-label=s.label flex=1 box-sizing="border-box" min-height="size.target" align-items="center" gap="space.s10" padding-left="space.s4" padding-right="space.s4" border-radius="radius.r12" testId=`single-button-${s.slug}`
                         :active
                           background-color = "hs.hearing"
@@ -231,5 +283,12 @@ component Home
             column gap="space.s8" -exact-layout-transition=(still ? "none" : "duration.ask easing.out")
               if home.addsList
                 HomePill(name="Add a list", label="Add a list", press=add, icon=homeIconOf("add", scheme), id="add-list")
+                if tips
+                  HomeTip(n=3, words="Add a psalm, a passage or a set of promises when you want more.")
               if home.limitLine != ""
                 text home.limitLine font="type.note" color="hs.ink" testId="limit-line"
+          column gap="space.s8" margin-top="space.s8"
+            HomeEndRow(label="How Heartseed works", press=how, held=(asking != ""), id="home-how")
+      if tips
+        column padding-left="space.page" padding-right="space.page" padding-top="space.s12" padding-bottom="space.s12" testId="home-foot"
+          HomeSoftPill(label="Got it", press=gotIt, id="home-got-it")

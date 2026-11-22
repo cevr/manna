@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { basename } from 'node:path';
 import { createConnection, createServer, type Server } from 'node:net';
 
@@ -211,6 +213,18 @@ const appRange = (appDir: string): readonly [number, number] => {
   // oxlint-disable-next-line effect/noThrowStatement, effect/noNewError -- a drive of an app the wrapper does not run is a mistake in the drive, said at once
   throw new Error(`${name} is not an app the wrapper runs (${Object.keys(APPS).join(', ')})`);
 };
+
+/**
+ * The fixture port of the app whose real directory is `realDir`, in 4790–5789, as Exact gives a declared fixture's
+ * (`js/bake/src/typescript.mjs`): one per checkout, so two checkouts' fixtures never share a port. Runs on one port
+ * take it in turn (Exact's server turn).
+ */
+export const fixturePort = (realDir: string): number =>
+  4790 +
+  (Number.parseInt(createHash('sha256').update(realDir).digest('hex').slice(0, 8), 16) % 1000);
+
+/** The fixture port of the app in `appDir`, a folder that exists: `fixturePort` of its real path. */
+export const checkoutPort = (appDir: string): number => fixturePort(realpathSync(appDir));
 
 /** A port of the app's spare range in `appDir` for this process's run: `claimPort` over `appRange(appDir)`. */
 export const claimAppPort = async (appDir: string, options: ClaimOptions = {}) =>

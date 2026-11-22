@@ -3,10 +3,11 @@
 /**
  * A bare run of the app's tests, or of `verify`, which presses only what
  * the tests press (Exact's `scripts/verify.mjs`), never asks the
- * recordings' bucket (vb-67): the player asks a recording's address only
+ * recordings' bucket: the player asks a recording's address only
  * after a press of Play (or a retry), and in every test that presses one,
- * the player's origin is first held to the loopback fixture's, so a run
- * whose build names the bucket fails at that line before any request.
+ * the player's origin is first held to be a loopback fixture's
+ * (`player.fixture`, whatever the checkout's port), so a run whose build
+ * names the bucket fails at that line before any request.
  * The reader is tried against a planted test first, so one that finds no
  * press cannot pass.
  */
@@ -18,7 +19,7 @@ const app = new URL('../', import.meta.url);
 
 /** The controls whose press asks for a recording (features/player.contract). */
 const SOUNDING = /^\s*tap "(play|bar-page-play|bar-toggle|player-toggle|retry)"/u;
-const HELD = 'expect state player.origin == "http://127.0.0.1:4797"';
+const HELD = 'expect state player.fixture == true';
 
 /** Each test of `text` that presses a sounding control before holding the origin, by its name. */
 const unheld = (text: string): Array<string> => {

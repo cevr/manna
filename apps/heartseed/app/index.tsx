@@ -45,6 +45,7 @@ import { themed, useThemed } from '../src/look';
 import { Grows, Welcome } from '../src/first/intro';
 import { FirstMinute } from '../src/first/screen';
 import { tourStep, type Tour, type TourTap } from '../src/first/tour';
+import { ownPassagesOf } from '../src/first/verse';
 import {
   cueIn,
   growthOf,
@@ -52,11 +53,12 @@ import {
   type GardenView,
   type Plant,
   type ReadGarden,
-  type Stage,
   withHelp,
   withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
+import { offersBack } from '../src/garden/bar';
+import { STAGE_NAMES } from '../src/garden/names';
 import { furrowsOf, fieldPassagesWith, readyOf, singlesOf } from '../src/home';
 import { singleVersesOf } from '../src/lists';
 import { singlesHeld } from '../src/passages';
@@ -92,9 +94,7 @@ import { Tended } from '../src/run/tended';
 type VoiceView = Parameters<typeof readingAloud>[0];
 
 /** The passages the field shows first: Today's, a passage of one verse. */
-const PASSAGES: readonly FieldPassage[] = [
-  { title: passage.reference, verses: [passage.reference] },
-];
+const PASSAGES: readonly FieldPassage[] = ownPassagesOf(passage.reference);
 
 /**
  * The verse under `cue`: while the voice reads this very text and no
@@ -245,14 +245,6 @@ function Grades({
     </View>
   );
 }
-
-/** Each stage as the stage line shows it, and as the growth line names it. */
-const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly grown: string }>> = {
-  seed: { shown: 'A seed', grown: 'a seed' },
-  blade: { shown: 'A blade', grown: 'a blade' },
-  ear: { shown: 'An ear', grown: 'an ear' },
-  'full corn': { shown: 'Full corn', grown: 'full corn' },
-};
 
 /** The garden once a read of it completed; none while the read runs, and none for the session when it failed. */
 const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
@@ -605,13 +597,15 @@ function Today({ onField }: { readonly onField: () => void }) {
               Option.filter(
                 Option.flatMap(garden, (read) => plantIn(read, each.piece.reference)),
                 () =>
-                  !screen.listening &&
-                  !each.recital &&
-                  !each.done &&
-                  !shownAllOn(sayIt, each.piece.reference) &&
-                  Option.exists(session, (view) =>
-                    view.visit.some((verse) => verse.piece.reference === each.piece.reference),
-                  ),
+                  offersBack({
+                    listening: screen.listening,
+                    recital: each.recital,
+                    done: each.done,
+                    shownAll: shownAllOn(sayIt, each.piece.reference),
+                    visited: Option.exists(session, (view) =>
+                      view.visit.some((verse) => verse.piece.reference === each.piece.reference),
+                    ),
+                  }),
               ),
               {
                 onNone: () => false,

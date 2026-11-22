@@ -1,33 +1,57 @@
 /**
  * The hymnal's finding (`pm-hy-find`): the find bar grown into the search
- * box, its results, the number drums and All at once. The keyboard is
- * masked: its keys are the system's, the same in both apps, and its
- * suggestions move. On the web One draws a plain search field over the list
- * (`Home.tsx`: `Browse` and `Results`), with no find bar, drums or tiles.
+ * box, its results, the number drums and All at once. The keyboard is the
+ * system's, the same in both apps, and its suggestions move: a row with it
+ * up is scored over the band above it (`keyboard`), read from each side at
+ * capture, not masked. On the web One draws a plain search field over the
+ * list (`Home.tsx`: `Browse` and `Results`), with no find bar, drums or
+ * tiles.
+ *
+ * The port reaches each row from home through the bar's own controls
+ * (`features/find.contract`): Search, the box, the `#`, and All at once's
+ * own control, which stands for the pinch the agent cannot make.
  */
 import type { MaskSpec, Row, Step } from '../../src/model.ts';
 import { HOME, HOME_WEB } from './home.ts';
 
 const unit = 'pm-hy-find';
 
-/** The software keyboard of an iPhone 17 in points: the bottom 336 of 874. */
-const KEYBOARD: MaskSpec = {
-  x: 0,
-  y: 538,
-  width: 402,
-  height: 336,
-  reason: 'the software keyboard: the system draws it in both apps',
+/**
+ * The port's All at once control on home's folded bar, a disk of glass
+ * before the capsule (the docked bar's foot 40 points over the window's,
+ * the capsule two controls wide, 12 points apart): One has no such control,
+ * a pinch opens its tiles.
+ */
+const TILES_CONTROL: MaskSpec = {
+  x: 242,
+  y: 790,
+  width: 44,
+  height: 44,
+  reason: "the port's All at once control: One opens its tiles by a pinch alone",
 };
 
 const FIELD = 'label=Number, title or first line';
 const NO_BAR = "One's web pages draw a plain search field, with no find bar, drums or tiles";
 
 const OPEN: ReadonlyArray<Step> = [HOME, { tap: 'id=find-search' }, { wait: 800 }];
-const query = (text: string): Pick<NonNullable<Row['one']>, 'steps' | 'web' | 'masks'> => ({
-  steps: [...OPEN, { fill: 'id=find-box', value: text }, { wait: 1000 }],
-  web: [HOME_WEB, { fill: FIELD, value: text }, { wait: 1000 }],
-  masks: [KEYBOARD],
+const OPEN_OPS: ReadonlyArray<string> = ['clock data', 'tap find-search', 'clock settle'];
+
+const query = (text: string): Pick<Row, 'one' | 'exact' | 'keyboard'> => ({
+  keyboard: true,
+  one: {
+    steps: [...OPEN, { fill: 'id=find-box', value: text }, { wait: 1000 }],
+    web: [HOME_WEB, { fill: FIELD, value: text }, { wait: 1000 }],
+  },
+  exact: { ops: [...OPEN_OPS, `type search ${text}`, 'clock data', 'clock settle'] },
 });
+
+/**
+ * All at once from the Sections list at its top: a tap on its first group's
+ * row opens the tiles at that group, as a pinch in on the list does
+ * (`Home.native.tsx`). The driver's pinch reaches no gesture handler, so the
+ * tap stands for it.
+ */
+const TILES: ReadonlyArray<Step> = [HOME, { tap: 'label=Adoration and Praise' }, { wait: 800 }];
 
 export const rows: ReadonlyArray<Row> = [
   {
@@ -35,7 +59,9 @@ export const rows: ReadonlyArray<Row> = [
     unit,
     kind: 'match',
     fixture: 'hy-fresh',
-    one: { steps: OPEN, web: [HOME_WEB, { tap: FIELD }, { wait: 600 }], masks: [KEYBOARD] },
+    keyboard: true,
+    one: { steps: OPEN, web: [HOME_WEB, { tap: FIELD }, { wait: 600 }] },
+    exact: { ops: OPEN_OPS },
   },
   {
     id: 'find.results-title',
@@ -43,10 +69,10 @@ export const rows: ReadonlyArray<Row> = [
     kind: 'match',
     sweep: true,
     fixture: 'hy-fresh',
-    one: query('faith'),
+    ...query('faith'),
   },
-  { id: 'find.results-line', unit, kind: 'match', fixture: 'hy-fresh', one: query('morning') },
-  { id: 'find.none', unit, kind: 'match', fixture: 'hy-fresh', one: query('zzqx') },
+  { id: 'find.results-line', unit, kind: 'match', fixture: 'hy-fresh', ...query('morning') },
+  { id: 'find.none', unit, kind: 'match', fixture: 'hy-fresh', ...query('zzqx') },
   {
     id: 'find.drums',
     unit,
@@ -56,16 +82,18 @@ export const rows: ReadonlyArray<Row> = [
       steps: [HOME, { tap: 'label=Find a hymn by number' }, { wait: 800 }],
       notDrawn: { web: NO_BAR },
     },
+    exact: {
+      ops: ['clock data', 'tap find-number', 'clock data', 'clock settle'],
+      masks: [TILES_CONTROL],
+    },
   },
   {
     id: 'find.tiles',
     unit,
     kind: 'match',
     fixture: 'hy-fresh',
-    one: {
-      steps: [HOME, { pinch: 'label=Sections', scale: 0.5 }, { wait: 800 }],
-      notDrawn: { web: NO_BAR },
-    },
+    one: { steps: TILES, notDrawn: { web: NO_BAR } },
+    exact: { ops: ['clock data', 'tap tiles-show', 'clock data', 'clock settle'] },
   },
   {
     id: 'find.on-hymn',
@@ -76,5 +104,6 @@ export const rows: ReadonlyArray<Row> = [
       steps: [{ open: 'hymns/1', expect: 'label=Stanza 1' }, { wait: 600 }],
       notDrawn: { web: NO_BAR },
     },
+    exact: { ops: ['clock data', 'tap hymn-1', 'clock data', 'clock settle'] },
   },
 ];

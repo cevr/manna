@@ -1,4 +1,4 @@
-/** A style of a One file: the style's name in its `StyleSheet.create`, and the property read (none for a type token). */
+/** A style of a One file: the style's name in its `StyleSheet.create` (for a glyph, the `name` its `<Icon>` is given), and the property read (none for a type token). */
 export interface Source {
   readonly file: string;
   readonly style: string;
@@ -6,7 +6,7 @@ export interface Source {
 }
 
 /** What a token holds, and so how its value is written. */
-export type Kind = 'type' | 'length' | 'hairline' | 'number' | 'shadow';
+export type Kind = 'type' | 'length' | 'glyph' | 'border' | 'hairline' | 'number' | 'shadow';
 
 export interface Token {
   readonly name: string;
@@ -34,6 +34,9 @@ const TIPS = 'src/field/tips.tsx';
 const LIST = 'src/list/screen.tsx';
 const TENDED = 'src/run/tended.tsx';
 const BACK = 'src/garden/back.tsx';
+const INTRO = 'src/first/intro.tsx';
+const FIRST = 'src/first/screen.tsx';
+const GROWING = 'src/first/growing.tsx';
 
 const type = (name: string, ...from: ReadonlyArray<readonly [string, string]>): Token => ({
   name,
@@ -51,6 +54,7 @@ const measure =
 
 const length = measure('length');
 const number = measure('number');
+const glyph = measure('glyph');
 
 /**
  * The measures of `app.forma` taken from the current Heartseed (One): each
@@ -64,6 +68,10 @@ const number = measure('number');
  * Native's `fontSize` does, so a size is written in `rem` (the body size,
  * 17 pt at the default size on iOS) and a line height as its share of the
  * size. A space, radius or size does not scale, so it is written in px.
+ * A border width is written as React Native draws it on a 3× iPhone, on
+ * the device pixel grid (1.5 pt is drawn 5 px wide, 1.6667 pt). A glyph is
+ * the `size` of one of the home's pictures (`<Icon name={…} size={…} />`),
+ * in px.
  */
 export const TOKENS: ReadonlyArray<Token> = [
   type('type.title', [DRAW, 'title']),
@@ -105,6 +113,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.caption-strong', [FIELD, 'label'], [SINGLES, 'label']),
   type('type.badge', [TIPS, 'badgeText']),
   type('type.licence', [ABOUT, 'licence']),
+  type('type.intro', [INTRO, 'words']),
 
   length('space.page', [DRAW, 'content', 'paddingHorizontal'], [ABOUT, 'bar', 'paddingHorizontal']),
   length('space.section', [DRAW, 'content', 'gap']),
@@ -114,7 +123,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   length('space.s7', [DRAW, 'verse', 'columnGap']),
   length('space.s8', [ABOUT, 'content', 'paddingTop'], [ABOUT, 'bar', 'paddingBottom']),
   length('space.s10', [INDEX, 'passage', 'gap']),
-  length('space.s12', [FIELD, 'top', 'gap']),
+  length('space.s12', [FIELD, 'top', 'gap'], [SHELVES, 'head', 'paddingHorizontal']),
   length('space.s14', [SHELVES, 'head', 'gap']),
   length('space.s16', [ABOUT, 'content', 'gap']),
   length('space.s18', [PLOT, 'pill', 'paddingHorizontal']),
@@ -165,8 +174,27 @@ export const TOKENS: ReadonlyArray<Token> = [
   ),
   length('line.furrow', [PLOT, 'soil', 'height']),
 
+  glyph('glyph.greeting', [FIELD, 'greeting.icon', 'size']),
+  glyph('glyph.control', [PLOT, 'name', 'size']),
+  glyph('glyph.list', [LIST, 'furrow.icon', 'size']),
+  glyph('glyph.shelf', [SHELVES, 'shelf.icon', 'size']),
+  length('size.growing', [GROWING, 'place', 'width'], [FIRST, 'bigPlant', 'width']),
+  length('size.growing-image', [GROWING, 'image', 'width']),
+  length('size.stage', [INTRO, 'stage', 'minWidth']),
+  length('size.badge', [TIPS, 'badge', 'width']),
+  length('radius.r14', [TIPS, 'tip', 'borderRadius']),
+  length('radius.r11', [TIPS, 'badge', 'borderRadius']),
+  length('radius.r2', [FIRST, 'segment', 'borderRadius']),
+  length('line.segment', [FIRST, 'segment', 'height']),
+  length('space.s22', [INTRO, 'pill', 'paddingHorizontal']),
+  number('opacity.segment', [FIRST, 'segment', 'opacity']),
+
   measure('hairline')('line.hair', [ABOUT, 'row', 'borderTopWidth']),
-  length('line.edge', [PLOT, 'pill', 'borderWidth'], [SETTINGS, 'button', 'borderWidth']),
+  measure('border')(
+    'line.edge',
+    [PLOT, 'pill', 'borderWidth'],
+    [SETTINGS, 'button', 'borderWidth'],
+  ),
   length('line.slot', [DRAW, 'slot', 'borderBottomWidth']),
 
   number('opacity.pressed', [DRAW, 'pressed', 'opacity']),
