@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch -- Exact's data module cannot import effect (docs/exact.md): it answers a Promise, asks a failed recording's address with the host's `fetch` (its `exactTimeout` outside the DOM's RequestInit), and a rejected fetch is the network's answer, not a defect. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch, effect/noNewPromise -- Exact's data module cannot import effect (docs/exact.md): it answers a Promise, asks a failed recording's address with the host's `fetch` (its `exactTimeout` outside the DOM's RequestInit), and a rejected fetch is the network's answer, not a defect. */
 
 /**
  * The player's one data source, as `app.ts` registers it: `playerStep(kind,
@@ -167,6 +167,32 @@ export const playerSources = (
       saved?.enqueue({ number: held.track.number, offset: held.offset });
     return { ...viewOf(state, next.command, titleOf), origin, fixture };
   };
+  /**
+   * A load asked before the saved recordings are listed: the recording it
+   * would sound is looked up on the disk first, so a saved one plays from
+   * its file even offline, before the list is read.
+   */
+  const lookupFor = (input: Input | undefined): Promise<void> | undefined => {
+    if (input === undefined || saved === undefined) return undefined;
+    const trial = step(state, input).state;
+    const { held } = trial;
+    if (held === undefined || trial.loads === state.loads || held.local !== '') return undefined;
+    return saved.lookup({ number: held.track.number, offset: held.offset });
+  };
+  /** Steps still waiting on a lookup, and the last of them: a step asked meanwhile waits its turn, so the player steps in the order it is asked. */
+  let waiting = 0;
+  let last: Promise<unknown> = Promise.resolve();
+  const inTurn = (input: Input | undefined): Sent | Promise<Sent> => {
+    const now = waiting === 0 ? lookupFor(input) : undefined;
+    if (waiting === 0 && now === undefined) return apply(input);
+    waiting += 1;
+    const turn = (now ?? last.then(() => lookupFor(input))).then(() => apply(input));
+    const done = turn.finally(() => {
+      waiting -= 1;
+    });
+    last = done.catch(() => undefined);
+    return done;
+  };
   const play = (number: number) => {
     const track = trackOf(number);
     return track === undefined ? undefined : ({ _tag: 'play', track } as const);
@@ -220,28 +246,32 @@ export const playerSources = (
     native?: AppModule | null,
   ): Promise<Sent> => {
     saved?.start(storage, native);
-    if (kind === 'online') return apply({ _tag: 'online', on: value > 0 });
-    if (kind === 'screen') return apply({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
+    if (kind === 'online') return inTurn({ _tag: 'online', on: value > 0 });
+    if (kind === 'screen')
+      return inTurn({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
     if (kind === 'restore')
-      return apply({ _tag: 'restore', choices: decodeChoices(text), tempos: decodeTempos(text) });
-    if (kind === 'keys')
-      return apply({
+      return inTurn({ _tag: 'restore', choices: decodeChoices(text), tempos: decodeTempos(text) });
+    if (kind === 'keys') {
+      const keyed: Input = {
         _tag: 'keys',
         offsets: offsetsOf(value > 0, text.split(' ').filter(Boolean)),
-      });
+      };
+      return inTurn(keyed);
+    }
     if (kind === 'failed') {
       const device = deviceOf(state);
       const url = device?.load === id ? device.url : '';
-      if (url === '') return apply(undefined);
+      if (url === '') return inTurn(undefined);
       const { held } = state;
       if (held !== undefined && held.local !== '' && url === held.local) {
         saved?.verify({ number: held.track.number, offset: held.heard });
-        return apply({ _tag: 'failed', id, why: 'decode' });
+        return inTurn({ _tag: 'failed', id, why: 'decode' });
       }
       const why = await whyOf(url);
-      return apply({ _tag: 'failed', id, why });
+      return inTurn({ _tag: 'failed', id, why });
     }
-    return apply(reader(kind, value) ?? device(kind, id, serial, value));
+    const input = reader(kind, value) ?? device(kind, id, serial, value);
+    return inTurn(input);
   };
   return { playerStep };
 };

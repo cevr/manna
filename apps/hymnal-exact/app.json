@@ -99,11 +99,6 @@
         "finding": "overlap",
         "node": "dial-tempo-stop-*",
         "why": "The tempo dial's stops are drawn under its one VoiceOver control, the `Tempo` range laid over the whole dial (dial-tempo-value), as the current hymnal's tempo dial is the same adjustable view over its stops (src/player/TempoDial.tsx:73, src/player/DialView.tsx:375-405, `accessibilityRole=\"adjustable\"` holding the row) (par-hy-tempo)."
-      },
-      {
-        "finding": "overlap",
-        "node": "shown-tab-*",
-        "why": "The pinned tab row is a layer on the ground over the list's top, which scrolls under it, as the current hymnal's PinnedTabs is a layer placed `position: 'absolute'` over the list (src/home/PinnedTabs.tsx:177, src/home/Home.native.tsx:270), so the list's content and offset never move for it; a group's header and a row scrolled to stand under it (par-hy-tabs)."
       }
     ]
   },

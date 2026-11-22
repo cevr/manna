@@ -52,6 +52,8 @@ const lineTiming = (encoded: string): string => {
 const linesOnly = new Map([...full].map(([number, encoded]) => [number, lineTiming(encoded)]));
 const hymns = book.hymns.filter((hymn) => full.has(hymn.number));
 const CASES = 300;
+/** How many second contacts' changes came while the owner held the words, over all the cases. */
+let crossedHolds = 0;
 
 interface Gesture {
   readonly hymn: number;
@@ -62,25 +64,55 @@ interface Gesture {
   readonly moves: ReadonlyArray<readonly [number, number]>;
   readonly away: boolean;
   readonly lines: boolean;
+  /** A second contact's changes, by the owner's step they follow: `armed`, `candidate`, `held`, `move-<k>` or `lifting`. */
+  readonly second: ReadonlyArray<Second>;
 }
+
+/** A second pointer's change, `dx` and `dy` from the owner's last place: on the slop's edge, just past it, or far. */
+interface Second {
+  readonly slot: string;
+  readonly kind: 'Down' | 'Move' | 'Up';
+  readonly dx: number;
+  readonly dy: number;
+}
+
+const EDGES = [0, SLOP, SLOP + 1, SLOP + 20, 140];
+
+const secondOf = (random: Random, moves: number): Second => ({
+  slot: pick(random, [
+    'armed',
+    'candidate',
+    'held',
+    'lifting',
+    ...Array.from({ length: moves }, (_, k) => `move-${k}`),
+  ]),
+  kind: pick(random, ['Down', 'Move', 'Move', 'Up'] as const),
+  dx: pick(random, EDGES) * (random() < 0.5 ? -1 : 1),
+  dy: pick(random, EDGES) * (random() < 0.5 ? -1 : 1),
+});
 
 const gestureOf = (random: Random): Gesture => {
   const hymn = pick(random, hymns);
   const decoded = timelineOf(full.get(hymn.number) ?? '');
   const end = decoded._tag === 'Some' ? decoded.value.end : 1000;
   const stanzas = hymn.sections.filter((section) => section.kind === 'stanza').length;
+  const moves = Array.from(
+    { length: below(random, 6) },
+    () => [below(random, 240) - 120, below(random, 400) - 200] as const,
+  );
   return {
     hymn: hymn.number,
     at: below(random, end),
     choice: random() < 0.6 ? [] : [1 + below(random, Math.max(1, stanzas))],
     phase: random() < 0.85 ? 'playing' : pick(random, ['paused', 'buffering']),
-    early: random() < 0.15 ? SLOP + 1 + below(random, 30) : below(random, SLOP),
-    moves: Array.from({ length: below(random, 6) }, () => [
-      below(random, 240) - 120,
-      below(random, 400) - 200,
-    ]),
+    early: pick(random, [0, SLOP, SLOP + 1, below(random, SLOP), SLOP + 1 + below(random, 30)]),
+    moves,
     away: random() < 0.15,
     lines: random() < 0.35,
+    second:
+      random() < 0.5
+        ? []
+        : Array.from({ length: 1 + below(random, 4) }, () => secondOf(random, moves.length)),
   };
 };
 
@@ -106,11 +138,48 @@ const run = (seed: number): string => {
   };
   const asked = view.askKey;
   const [x0, y0] = [200, 300];
+  let here: readonly [number, number] = [x0, y0];
+  /** The second contact's changes after the owner's step `slot`, while the owner's contact stands (armed or held): the current rules ignore every one, so none moves the hold, its choice or an ask. */
+  const second = (slot: string, at: number) => {
+    for (const each of gesture.second.filter((change) => change.slot === slot)) {
+      if (view.armed === 0 && !view.holding) return;
+      if (view.holding) crossedHolds += 1;
+      const before = JSON.stringify([
+        view.armed,
+        view.holding,
+        view.holdLine,
+        view.holdWord,
+        view.askKey,
+      ]);
+      const [x, y] = [here[0] + each.dx, here[1] + each.dy];
+      view = desk.pointer(
+        at,
+        each.kind === 'Down'
+          ? { _tag: 'Down', id: 2, primary: true, button: 0, x, y }
+          : each.kind === 'Move'
+            ? { _tag: 'Move', id: 2, x, y }
+            : { _tag: 'Up', id: 2, button: 0, x, y },
+        true,
+      );
+      const after = JSON.stringify([
+        view.armed,
+        view.holding,
+        view.holdLine,
+        view.holdWord,
+        view.askKey,
+      ]);
+      if (after !== before)
+        fail(`a second contact's ${each.kind} after ${slot} moved the hold`, after);
+    }
+  };
   view = desk.pointer(10, { _tag: 'Down', id: 1, primary: true, button: 0, x: x0, y: y0 }, true);
   if (view.armed === 0) fail('a press on the words arms no hold');
+  second('armed', 11);
   const nx = x0;
   const ny = y0 + gesture.early;
   view = desk.pointer(20, { _tag: 'Move', id: 1, x: nx, y: ny }, true);
+  here = [nx, ny];
+  second('candidate', 21);
   view = desk.deadline(10 + HOLD_MS, view.armed);
 
   const targets = targetsOf(hymn, timeline, gesture.choice);
@@ -123,6 +192,7 @@ const run = (seed: number): string => {
     return 'untaken';
   }
   if (view.ask !== 'pause') fail('the hold took and asks no pause');
+  second('held', 11 + HOLD_MS);
   const anchor = anchorOf(targets.value, first.value);
   if (Option.isNone(anchor)) return 'unanchored';
   let target = first.value;
@@ -130,9 +200,11 @@ const run = (seed: number): string => {
   let ticks = 0;
   let tick = view.tick;
   let last: readonly [number, number] = [nx, ny];
-  for (const [dx, dy] of gesture.moves) {
+  for (const [k, [dx, dy]] of gesture.moves.entries()) {
     last = [nx + dx, ny + dy];
     view = desk.pointer(30, { _tag: 'Move', id: 1, x: last[0], y: last[1] }, true);
+    here = last;
+    second(`move-${k}`, 31);
     const choice = choiceAt(targets.value, anchor.value, dx, dy);
     if (Option.isSome(choice)) {
       const next = targetAt(targets.value, choice.value.line, choice.value.word);
@@ -158,6 +230,7 @@ const run = (seed: number): string => {
   }
   if (ticks !== 0)
     fail('a tick where the choice did not change, or none where it did', JSON.stringify({ ticks }));
+  second('lifting', 39);
   const up = gesture.away ? [last[0] + SLOP + 20, last[1]] : last;
   view = desk.pointer(40, { _tag: 'Up', id: 1, button: 0, x: up[0] ?? 0, y: up[1] ?? 0 }, true);
   const want = gesture.away
@@ -181,5 +254,6 @@ describe('the port’s held seek beside the current app’s seek rules', () => {
     }
     for (const end of ['untaken', 'seek', 'lift', 'resume'])
       expect(ends.get(end) ?? 0).toBeGreaterThan(10);
+    expect(crossedHolds).toBeGreaterThan(80);
   });
 });

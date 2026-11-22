@@ -92,51 +92,81 @@ const oneRow = (rest: number, height: number) => {
  * unless the last answer's quiet band keeps it back (`listTabsReport`: the
  * edge moved its `way` and the report within `travel` of it, past the same
  * resting place, the row as tall), the kept edge handed with every input,
- * the app's moves and the touch at the offset last seen; `sent` counts the
- * reports sent.
+ * the app's moves and the touch at the offset last seen. The data host
+ * answers each send in order, but the view takes an answer only when it
+ * lands (`land`), so reports may arrive while answers are pending: then
+ * every report is sent, each with the offset sent before it as its edge,
+ * and the band is the last send's answer's alone (`listTabsSent`,
+ * `listTabsTaken`). `sent` counts the reports sent, `pending` the answers
+ * not landed.
  */
 const portRow = (rest: number, height: number) => {
   const { listTabsStep } = revealSources();
-  let last: TabsAt = listTabsStep(['open', 0, rest, height, 0]);
-  let edge = last.edge;
+  let band: TabsAt = listTabsStep(['open', 0, rest, height, 0]);
+  let drawn = band;
+  let edge = band.edge;
   let seenAt = 0;
   let sent = 0;
-  const took = (answer: TabsAt) => {
-    last = answer;
-    edge = answer.edge;
-    seenAt = answer.at;
+  const queue: Array<TabsAt> = [];
+  const send = (kind: string, at: number) => {
+    queue.push(listTabsStep([kind, at, rest, height, edge]));
+    edge = at;
+  };
+  const land = (count: number) => {
+    const landed = queue.splice(0, Math.min(count, queue.length));
+    for (const answer of landed) drawn = answer;
+    if (landed.length > 0 && queue.length === 0) {
+      band = drawn;
+      edge = drawn.edge;
+      seenAt = drawn.at;
+    }
   };
   const report = (at: number) => {
     seenAt = at;
-    const moved = last.way > 0 ? Math.max(edge, at) : Math.min(edge, at);
+    const moved = band.way > 0 ? Math.max(edge, at) : Math.min(edge, at);
     const kept =
-      last.way !== 0 &&
-      at > last.rest &&
-      rest === last.rest &&
-      height === last.height &&
-      (moved - at) * last.way < last.travel;
+      queue.length === 0 &&
+      band.way !== 0 &&
+      at > band.rest &&
+      rest === band.rest &&
+      height === band.height &&
+      (moved - at) * band.way < band.travel;
     if (kept) edge = moved;
     else {
       sent += 1;
-      took(listTabsStep(['scroll', at, rest, height, edge]));
+      send('scroll', at);
     }
   };
   return {
     step: (step: Step) => {
       if (step.kind === 'scroll') report(step.at);
       if (step.kind === 'move') {
-        took(listTabsStep(['here', seenAt, rest, height, edge]));
+        send('here', seenAt);
         if (step.moved && step.at !== seenAt) report(step.at);
       }
       if (step.kind === 'choose') {
         const stood = seenAt;
-        took(listTabsStep(['jump', 0, rest, height, edge]));
+        send('jump', 0);
         if (stood !== 0) report(0);
       }
-      if (step.kind === 'touch') took(listTabsStep(['touch', seenAt, rest, height, edge]));
+      if (step.kind === 'touch') send('touch', seenAt);
     },
-    seen: () => ({ shown: last.shown, reach: last.reach, cover: last.cover, at: seenAt }),
+    land,
+    pending: () => queue.length,
+    seen: () => ({ shown: drawn.shown, reach: drawn.reach, cover: drawn.cover, at: seenAt }),
     sent: () => sent,
+  };
+};
+
+/** The port's row with every answer landing before the next input. */
+const prompt = (rest: number, height: number) => {
+  const row = portRow(rest, height);
+  return {
+    ...row,
+    step: (step: Step) => {
+      row.step(step);
+      row.land(Infinity);
+    },
   };
 };
 
@@ -206,7 +236,7 @@ describe('the pinned tab row against the current app’s', () => {
       const next = seeded(seed);
       const rest = [49, 57, 96][next(3)] ?? 49;
       const height = [48, 56, 80][next(3)] ?? 48;
-      const ours = portRow(rest, height);
+      const ours = prompt(rest, height);
       const theirs = oneRow(rest, height);
       for (const [index, step] of history(next, rest).entries()) {
         ours.step(step);
@@ -217,8 +247,59 @@ describe('the pinned tab row against the current app’s', () => {
     }
   });
 
+  it('says the same whenever no answer is pending, with answers landing late among the reports', () => {
+    let checked = 0;
+    let late = 0;
+    for (let seed = 1; seed <= 400; seed += 1) {
+      const next = seeded(seed * 7919);
+      const rest = [49, 57, 96][next(3)] ?? 49;
+      const height = [48, 56, 80][next(3)] ?? 48;
+      const ours = portRow(rest, height);
+      const theirs = oneRow(rest, height);
+      for (const [index, step] of history(next, rest).entries()) {
+        ours.step(step);
+        theirs.step(step);
+        const landing = next(6);
+        if (landing === 0) ours.land(1);
+        if (landing === 1) ours.land(Infinity);
+        if (ours.pending() > 1) late += 1;
+        if (ours.pending() === 0) {
+          checked += 1;
+          expect({ seed, index, step, ...ours.seen() }).toEqual({
+            seed,
+            index,
+            step,
+            ...theirs.seen(),
+          });
+        }
+      }
+      ours.land(Infinity);
+      expect({ seed, end: true, ...ours.seen() }).toEqual({ seed, end: true, ...theirs.seen() });
+    }
+    expect({ checked: checked > 300, late: late > 1000 }).toEqual({ checked: true, late: true });
+  });
+
+  it('folds a reversal that arrives before the pending answer, as One does (settled hidden at 1000, then 992, then 1000)', () => {
+    const rest = 49;
+    const ours = portRow(rest, 48);
+    const theirs = oneRow(rest, 48);
+    for (const at of [500, 1000]) {
+      ours.step({ kind: 'scroll', at });
+      ours.land(Infinity);
+      theirs.step({ kind: 'scroll', at });
+    }
+    ours.step({ kind: 'scroll', at: 1000 - one.travel });
+    ours.step({ kind: 'scroll', at: 1000 });
+    expect(ours.pending()).toBe(2);
+    ours.land(Infinity);
+    theirs.step({ kind: 'scroll', at: 1000 - one.travel });
+    theirs.step({ kind: 'scroll', at: 1000 });
+    expect(ours.seen()).toEqual(theirs.seen());
+    expect(ours.seen()).toEqual({ shown: false, reach: false, cover: 0, at: 1000 });
+  });
+
   it('sends a fling’s reports only where they turn the row or cross the resting place', () => {
-    const ours = portRow(49, 48);
+    const ours = prompt(49, 48);
     for (let at = 10; at <= 6000; at += 37) ours.step({ kind: 'scroll', at });
     expect(ours.sent()).toBe(3);
     for (let at = 6000; at >= 3000; at -= 3) ours.step({ kind: 'scroll', at });
@@ -228,7 +309,7 @@ describe('the pinned tab row against the current app’s', () => {
 
   it('turns on an upward scroll of the travel deep in the list, and the app’s move turns nothing until a touch', () => {
     const rest = 49;
-    const ours = portRow(rest, 48);
+    const ours = prompt(rest, 48);
     for (const at of [500, 1500, 3000]) ours.step({ kind: 'scroll', at });
     expect(ours.seen().shown).toBe(false);
     ours.step({ kind: 'scroll', at: 3000 - one.travel });

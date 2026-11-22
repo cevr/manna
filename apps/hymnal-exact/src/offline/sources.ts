@@ -58,6 +58,7 @@ import {
   empty,
   bytesOf,
   localOf,
+  normal,
   partOf,
   pathOf,
   stepStore,
@@ -265,10 +266,13 @@ export const offlineSources = (
         return;
       case 'publish':
         if (fs !== undefined)
-          inTurn(() => fs.rename(partOf(command.id), pathOf(command.id))).catch(() => {
-            note('publish.failed', `path=${pathOf(command.id)}`);
-            feed({ _tag: 'invalidate', id: command.id });
-          });
+          inTurn(() => fs.rename(partOf(command.id), pathOf(command.id))).then(
+            () => feed({ _tag: 'published', serial: command.serial, id: command.id, ok: true }),
+            () => {
+              note('publish.failed', `path=${pathOf(command.id)}`);
+              feed({ _tag: 'published', serial: command.serial, id: command.id, ok: false });
+            },
+          );
         return;
       case 'drop':
         if (fs !== undefined)
@@ -316,7 +320,8 @@ export const offlineSources = (
         busyOf(counts) ||
         counts.indexing ||
         store.protecting !== undefined ||
-        store.waiting.length > 0,
+        store.waiting.length > 0 ||
+        store.publishing.length > 0,
       activeLabel: activeLabel(counts),
       activeText: activeText(counts),
       indexing: counts.indexing,
@@ -340,6 +345,25 @@ export const offlineSources = (
     offline: {
       start,
       localOf: (id: Identity) => localOf(store, id) ?? '',
+      /**
+       * Before the launch's list is read, a play asks the disk for its own
+       * recording, as the current `local` reads its entry without waiting
+       * on the whole index: a whole file there is saved now.
+       */
+      lookup: (id: Identity): Promise<void> | undefined => {
+        const fs = files?.fs;
+        const normalized = normal(id);
+        if (fs === undefined || normalized === undefined || !store.indexing) return undefined;
+        if (localOf(store, normalized) !== undefined) return undefined;
+        const path = pathOf(normalized);
+        return fs.stat(path).then(
+          (told) => {
+            if (!told.isDirectory && told.size > 0)
+              feed({ _tag: 'found', saved: { ...normalized, bytes: told.size } });
+          },
+          () => note('lookup.none', `path=${path}`),
+        );
+      },
       enqueue: (id: Identity) => feed({ _tag: 'enqueue', id }),
       verify: (id: Identity) => {
         const path = localOf(store, id);

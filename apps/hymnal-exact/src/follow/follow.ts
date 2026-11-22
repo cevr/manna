@@ -4,9 +4,10 @@
  * The follow on the hymn page shown, in the data module: the current
  * hymnal's own follower (`followerOf`) runs here, over the timeline Play
  * sings (`marks.ts`), told the player's view as the current `useFollow`
- * tells it (`reportOf`: Away unless the player holds the page's hymn
- * playing, waiting or paused; a count-in reported paused at its place; a
- * seek of any size told first). Its host is the call's time and three asks
+ * tells it (`reportFrom`, the current `reportOf`'s mapping over the
+ * player view's phases, held to it by `report.test.ts`: Away unless the
+ * player holds the page's hymn playing, waiting or paused; a count-in
+ * reported paused at its place; a seek of any size told first). Its host is the call's time and three asks
  * the view answers: the next wake (a key and its ms, run by the Contract's
  * `after`), the last scroll (a key, the line and whether it moves), and the
  * hand pause (`held`, which shows Resume follow).
@@ -143,6 +144,24 @@ const EMPTY: Timeline = {
   end: 0,
 };
 
+/**
+ * The follower's report of the player's view `told` on page `page`, as the
+ * current `reportOf` makes it from the player's state: the port's view
+ * names the state by its phase, which the data module reads without
+ * `effect`, so the mapping is restated here and held to the current one
+ * over every state by `report.test.ts`.
+ */
+export const reportFrom = (page: number, told: Told): Report => {
+  if (page <= 0 || told.number !== page) return { _tag: 'Away' };
+  if (told.phase === 'buffering')
+    return { _tag: 'Here', at: told.at, state: 'waiting', rate: told.rate };
+  if (told.phase === 'paused' || (told.phase === 'playing' && told.counting))
+    return { _tag: 'Here', at: told.at, state: 'paused', rate: told.rate };
+  if (told.phase === 'playing')
+    return { _tag: 'Here', at: told.at, state: 'playing', rate: told.rate };
+  return { _tag: 'Away' };
+};
+
 /** The follow's state for one launch of the data module, and its inputs. */
 export const followDesk = (hymnOf: (number: number) => Followed | undefined) => {
   let serial = 0;
@@ -169,15 +188,6 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
     told.number === page &&
     page > 0 &&
     (told.phase === 'playing' || told.phase === 'buffering' || told.phase === 'paused');
-
-  const reportOf = (): Report => {
-    if (!here()) return { _tag: 'Away' };
-    if (told.phase === 'buffering')
-      return { _tag: 'Here', at: told.at, state: 'waiting', rate: told.rate };
-    if (told.phase === 'paused' || told.counting)
-      return { _tag: 'Here', at: told.at, state: 'paused', rate: told.rate };
-    return { _tag: 'Here', at: told.at, state: 'playing', rate: told.rate };
-  };
 
   /**
    * The timeline the follower reads: the one Play sings now, read through at
@@ -261,7 +271,7 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
       heard = told.seek;
       follower.seek();
     }
-    const report = reportOf();
+    const report = reportFrom(page, told);
     const starts = told.counting && report._tag === 'Here' && !counted;
     counted = told.counting && report._tag === 'Here';
     follower.report(report);
@@ -440,14 +450,20 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
       follower?.relayout();
       return view();
     },
-    /** A pointer's change on the words; `moves` is false under Reduce Motion. */
+    /**
+     * A pointer's change on the words; `moves` is false under Reduce Motion.
+     * The last place is the owning contact's alone: a second contact's down
+     * or move never stands for where the held finger lifts.
+     */
     pointer: (at: number, input: Pointer, moves: boolean) => {
       now = at;
+      const owned = contact._tag !== 'Idle' && contact.id === input.id;
       if (input._tag === 'Down') {
-        last = { x: input.x, y: input.y };
         pointer({ ...input, startable: hold === undefined && here() });
+        if (!owned && contact._tag !== 'Idle' && contact.id === input.id)
+          last = { x: input.x, y: input.y };
       } else if (input._tag === 'Move') {
-        last = { x: input.x, y: input.y };
+        if (owned) last = { x: input.x, y: input.y };
         pointer(input);
       } else pointer({ _tag: 'Up', id: input.id, button: input.button }, input, moves);
       return view();
