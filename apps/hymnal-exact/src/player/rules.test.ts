@@ -188,7 +188,8 @@ describe('the recordings’ origin', () => {
       "const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';",
     );
     const grants = /export const grants = \{([^}]*)\};/u.exec(app)?.[1] ?? '';
-    const files = "'fs.read bundle:/Resources/meaning', 'fs.read app:/data', 'fs.write app:/data',";
+    const files =
+      "'fs.read bundle:/Resources/meaning', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
     expect(grants.replaceAll(/\s+/gu, ' ').trim()).toBe(
       [
         `'https://hymns.cvr.im': [ 'net.fetch https://hymns.cvr.im', ${files} ],`,

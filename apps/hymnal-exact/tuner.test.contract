@@ -1,0 +1,224 @@
+// The guitar tuner on the web, under the agent, where the app's module
+// feeds a tone (`?feed=<string>:<cents>`, the current app's `feedOf`) in
+// place of the microphone. The phases, the reading and the picked string
+// are the current app's session and rules (src/tuner/*.test.ts hold them
+// there); these tests hold the screen to them.
+
+test "Granted, it listens and reads a fed low E twelve cents flat."
+  prefer permission.microphone granted
+  at "/tuner?feed=E2:-12"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  clock +400
+  clock settle
+  clock data
+  expect tree has "tuner-screen"
+  expect tree has "tuner-gauge"
+  expect tree has "tuner-headstock"
+  expect text "tuner-name" == "Low E"
+  expect text "tuner-note" == "E2"
+  expect text "tuner-hint" == "Tighten"
+  expect state tunerShown.inTune == false
+  expect state tunerShown.swing >= -14
+  expect state tunerShown.swing <= -10
+  expect state tunerShown.left.2 .lit == true
+  expect state tunerShown.left.1 .lit == false
+  expect state tunerShown.auto == true
+  clock +1200
+  clock settle
+  expect state tunerLabel == "Low E string, 12 cents flat"
+
+test "In tune, the needle stands at the centre and the string keeps its tick."
+  prefer permission.microphone granted
+  at "/tuner?feed=A2:1"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  clock +800
+  clock settle
+  clock data
+  expect text "tuner-name" == "A"
+  expect text "tuner-note" == "A2 · in tune"
+  expect text "tuner-hint" == "In tune"
+  expect state tunerShown.inTune == true
+  expect state tunerShown.left.1 .tuned == true
+  expect state tunerShown.left.1 .label == "A string, tuned"
+  expect tree has "tuner-tick-A2"
+  expect tree missing "tuner-tick-E2"
+
+test "A tap on a string picks it and reads against it; a second tap goes back to Auto."
+  prefer permission.microphone granted
+  at "/tuner?feed=E2:-12"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  tap "tuner-string-A2"
+  clock +400
+  clock settle
+  clock data
+  expect state tunerAim == "A2"
+  expect state tunerShown.auto == false
+  expect state tunerShown.left.1 .picked == true
+  expect state tunerShown.left.1 .hint == "Goes back to Auto"
+  expect state tunerShown.left.1 .lit == true
+  expect text "tuner-name" == "A"
+  expect text "tuner-hint" == "Tighten"
+  tap "tuner-string-A2"
+  clock +400
+  clock settle
+  clock data
+  expect state tunerAim == ""
+  expect state tunerShown.auto == true
+  expect text "tuner-name" == "Low E"
+
+test "Auto turned off picks the string last heard; turned on, it reads the nearest again."
+  prefer permission.microphone granted
+  at "/tuner?feed=G3:20"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  clock +400
+  clock settle
+  clock data
+  expect text "tuner-name" == "G"
+  tap "tuner-auto"
+  clock settle
+  clock data
+  expect state tunerAim == "G3"
+  expect state tunerShown.auto == false
+  tap "tuner-auto"
+  clock settle
+  clock data
+  expect state tunerAim == ""
+  expect state tunerShown.auto == true
+
+test "Denied, it says the microphone is off and offers Settings, with no reading."
+  prefer permission.microphone denied
+  at "/tuner?feed=E2:-12"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Denied" within 3000
+  expect text "tuner-off" == "Microphone is off for Hymnal"
+  expect tree has "tuner-settings"
+  expect tree missing "tuner-reading"
+  expect tree missing "tuner-gauge"
+  expect tree has "tuner-headstock"
+
+test "Done closes the tuner and the session with it."
+  prefer permission.microphone granted
+  at "/tuner?feed=E2:-12"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  tap "tuner-done"
+  clock settle
+  clock data
+  expect tree missing "tuner-screen"
+  expect state tunerOpen == false
+  expect state tunerStepped.phase == "Closed"
+
+test "Opened again, it starts in Auto with no ticks."
+  prefer permission.microphone granted
+  at "/tuner?feed=A2:1"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  clock +800
+  clock settle
+  clock data
+  expect state tunerShown.left.1 .tuned == true
+  tap "tuner-done"
+  clock settle
+  clock data
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-tuner"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 3000
+  expect state tunerAim == ""
+  expect state tunerShown.left.1 .tuned == false
+  expect tree missing "tuner-tick-A2"
+
+test "Settings offers the tuner with chords on, and only then."
+  prefer permission.microphone granted
+  tap "gear"
+  clock settle
+  clock data
+  expect state tunerEar.ear == true
+  expect tree missing "settings-tuner"
+  tap "chords-toggle"
+  clock settle
+  clock data
+  expect text "settings-tuner" == "Tuner›"
+  tap "settings-tuner"
+  clock settle
+  clock data
+  expect tree has "tuner-screen"
+  clock until state tunerShown.phase == "Listening" within 3000
+  expect text "tuner-name" == "Listening"
+  expect text "tuner-hint" == "Pluck any string"
+
+test "A chord's shape has the Tuner beside Done."
+  prefer permission.microphone granted
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "chord-1-1-6"
+  clock settle
+  clock data
+  expect text "shape-tuner" == "Tuner"
+  tap "shape-tuner"
+  clock settle
+  clock data
+  expect tree has "tuner-screen"
+  tap "tuner-done"
+  clock settle
+  clock data
+  expect tree missing "tuner-screen"
+  expect text "shape-name" == "Bm"
+
+test "Opened while a hymn sounds, it pauses the hymn once, then listens."
+  prefer permission.microphone granted
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-tuner"
+  clock settle
+  clock data
+  clock until state tunerShown.phase == "Listening" within 5000
+  expect state player.phase == "paused"
+  expect state tunerPaused == 1
+  expect tree missing "bar-title"
+  expect tree missing "bar-toggle"

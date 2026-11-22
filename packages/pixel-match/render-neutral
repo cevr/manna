@@ -61,3 +61,12 @@ e7a80f5c0ef9 move: offline/identity.ts imports soundingOffset from '../remote' r
 e57c009af511 move: offline/estimate.ts imports timelineOf from '../follow/timeline' rather than '~/follow/timeline', the same module; no value changes
 0ff6c2aac1fd merge: origin/main into par-hs-first; One's exports lines and declarations of both sides kept (par-hs-back's and par-hs-seek's beside this unit's ./first/*), the duplicate imports of exact-declared.test.ts dropped; no source changes
 bf790776af54 move: Heartseed's first verse's query (FIRST_VERSE), unchanged, from src/first/verse.ts into vite/first-verse.ts, re-exported by first/verse.ts and read by vite/passage.ts; no value or render changes
+4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
+16357b5e84a9 exports: one exports line in apps/hymnal/package.json (./vite/app, the native manifest, for the port's microphone purpose test); no source changes
+4ebb14f58776 exports: one exports line in apps/hymnal/package.json (./tuner/pitch, for the port's reading test); no source changes
+3b7453b3736f exports: one exports line in apps/hymnal/package.json (./tuner/focus, for the port's tuner); no source changes
+d7f5ca3ea367 exports: one exports line in apps/hymnal/package.json (./tuner/tuning, for the port's tuner); no source changes
+ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/session, for the port's tuner); no source changes
+1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
+cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-sheet's and this unit's); no source changes of its own
+ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own

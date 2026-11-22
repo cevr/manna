@@ -9,6 +9,7 @@
 // its chord over its syllable, so a break falls between pairs, never
 // inside one) and the shapes (shape.ts).
 use hy-fade-in from "./motion.contract"
+use TunerButton from "./tuner.contract"
 use ReadingView from "./reading.contract"
 
 shape ChordsBox
@@ -190,6 +191,7 @@ component ChordsGripScreen
         column padding="space.s16 space.s20 space.s40" gap="space.s16"
           row justify-content="flex-end" align-items="center" gap="space.s24"
             text (not ready ? "" : page.has ? page.name : "No chord") role="heading" aria-level=2 flex=1 min-width=0 opacity=0 testId="shape-name"
+            TunerButton()
             view role="button" press=done aria-label="Done" testId="shape-done"
               text "Done" font="type.strong" color="accent"
           row flex-wrap="wrap" justify-content="center" gap="space.s24"

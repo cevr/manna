@@ -100,6 +100,11 @@ theme
   type.dial-key = 600 1rem/normal
   type.dial-played = 400 0.5882rem/1.2
   space.s2: length = 2px
+  type.tuner-title = 600 1.1765rem/normal
+  type.tuner-side = 400 1.1765rem/normal
+  type.tuner-name = 700 2.3529rem/normal
+  type.tuner-letter = 700 1.0588rem/normal
+  type.tuner-tick = 700 0.6471rem/normal
   space.s4: length = 4px
   space.s6: length = 6px
   space.s8: length = 8px

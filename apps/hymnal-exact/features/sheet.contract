@@ -9,7 +9,7 @@
 // text is exactly a placement, else the global one, Settings'. The page's
 // chords follow the effective placement (`chordsPage`'s last argument).
 use PlayerView, PlayerPill, playerLabel from "./player.contract"
-use KeysPage, KeysCapoDial, KeysKeyDial, KeysPlaces, KeysDialName from "./keys.contract"
+use KeysPage, KeysCapoDial, KeysKeyDial, KeysPlaces, KeysDialName, KeysResetChip from "./keys.contract"
 use ReadingGroup from "./reading.contract"
 use TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
 
@@ -167,7 +167,7 @@ component SheetChords
         SheetPanel(id="sheet-dials")
           if keysShown.reset
             row justify-content="center"
-              PlayerPill(label=`↺ ${keysShown.printedName}, no capo`, press=keysAsk("reset", 0), id="sheet-dials-reset", name="Reset", hint=`Back to ${keysShown.printedName}, with no capo`, chosen=false)
+              KeysResetChip()
           if keysShown.capoRow
             KeysCapoDial()
           KeysKeyDial()

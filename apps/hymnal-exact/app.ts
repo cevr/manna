@@ -3,6 +3,8 @@ import nearest from './src/abouthymn/nearest.gen';
 import chords from './src/chords/chords.gen';
 import timing from './src/player/timing.gen';
 import { sourcesAt } from './src/sources.ts';
+import { mic } from './src/tuner/mic.ts';
+import { tunerSources } from './src/tuner/sources.ts';
 
 /**
  * Where the recordings are served: the bucket, unless a development build
@@ -17,7 +19,8 @@ const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';
  * and the saved recordings fetch whole recordings: the bucket's, or the
  * fixture's in a development build. Search reads the meaning table the iOS
  * app ships (src/results/table.ts). The saved recordings live in the app's
- * own files (src/offline/sources.ts).
+ * own files (src/offline/sources.ts). The tuner hears the microphone, its
+ * prompt in the current app's words (`tunerPurpose`, strings/en.json).
  */
 export const grants = {
   'https://hymns.cvr.im': [
@@ -25,15 +28,20 @@ export const grants = {
     'fs.read bundle:/Resources/meaning',
     'fs.read app:/data',
     'fs.write app:/data',
+    'device.microphone tunerPurpose',
   ],
   'http://127.0.0.1:4797': [
     'net.fetch http://127.0.0.1:4797',
     'fs.read bundle:/Resources/meaning',
     'fs.read app:/data',
     'fs.write app:/data',
+    'device.microphone tunerPurpose',
   ],
 };
 
-const sources: Sources = sourcesAt(origin, timing, chords, nearest);
+const sources: Sources = {
+  ...sourcesAt(origin, timing, chords, nearest),
+  ...tunerSources(mic),
+};
 export const answer: Answer = (source, args, store, storage, native) =>
   sources[source](args, store, storage, native);
