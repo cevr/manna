@@ -28,6 +28,7 @@ const KEPT = { get: () => null };
 const savedOf = (saved: ReadonlySet<string>): Offline => ({
   start: () => undefined,
   localOf: (id) => (saved.has(`${id.number}_${id.offset}`) ? pathOf(id) : ''),
+  lookup: async () => undefined,
   enqueue: () => undefined,
   verify: () => undefined,
 });

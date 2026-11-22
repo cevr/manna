@@ -11,7 +11,8 @@
  * plays from (`storageFor`), under `app:/data/recordings/`, never the cache.
  * It is published only whole: its body is fetched into a part file
  * (`fetch(url, {exactBodyTo})`, which writes the file only once the body is
- * complete), and one rename makes it the recording. One queue owns the
+ * complete), and one rename makes it the recording, saved and offered to the
+ * player only once the host answers that rename. One queue owns the
  * saves, two at a time, in the order they were asked, as the current
  * cache's two workers take its queue; an identity saved or queued is not
  * queued again, and a fetch of an identity let go (a cancel, a delete) is
@@ -56,6 +57,11 @@ interface Running extends Job {
   readonly started: boolean;
 }
 
+/** A body written whole to its part, its rename asked of the host. */
+export interface Publishing extends Job {
+  readonly bytes: number;
+}
+
 /** An ask that waits on the list or the folders. */
 type Waiting =
   | { readonly _tag: 'add'; readonly id: Identity; readonly epoch: number }
@@ -72,6 +78,12 @@ export interface Store {
   readonly running: ReadonlyArray<Running>;
   /** Fetches let go that have not settled, by serial, with their identity's key. */
   readonly dying: ReadonlyArray<{ readonly serial: number; readonly key: string }>;
+  /** Bodies whose rename the host has not answered: not saved until it says the rename is done. */
+  readonly publishing: ReadonlyArray<Publishing>;
+  /** The epoch Delete began: a rename asked before it that lands after it is removed. */
+  readonly wiped: number;
+  /** Delete came while the launch's list was out: what the list finds is removed, not saved. */
+  readonly wiping: boolean;
   readonly failed: Readonly<Record<string, Identity>>;
   readonly resume: Readonly<Record<string, Identity>>;
   /** Identities asked or changed since the launch: the list leaves them as they are. */
@@ -111,6 +123,13 @@ export type Input =
       readonly id: Identity;
       readonly code: Code;
     }
+  | {
+      readonly _tag: 'published';
+      readonly serial: number;
+      readonly id: Identity;
+      readonly ok: boolean;
+    }
+  | { readonly _tag: 'found'; readonly saved: Saved }
   | { readonly _tag: 'invalidate'; readonly id: Identity };
 
 /** A file the launch found: its storage, its name and its size. */
@@ -124,7 +143,7 @@ export type Command =
   | { readonly _tag: 'list' }
   | { readonly _tag: 'fetch'; readonly serial: number; readonly id: Identity }
   | { readonly _tag: 'abort'; readonly serial: number }
-  | { readonly _tag: 'publish'; readonly id: Identity }
+  | { readonly _tag: 'publish'; readonly serial: number; readonly id: Identity }
   | { readonly _tag: 'drop'; readonly id: Identity }
   | { readonly _tag: 'remove'; readonly id: Identity }
   | { readonly _tag: 'removeFile'; readonly storage: string; readonly name: string }
@@ -163,6 +182,9 @@ export const empty: Store = {
   queue: [],
   running: [],
   dying: [],
+  publishing: [],
+  wiped: 0,
+  wiping: false,
   failed: {},
   resume: {},
   touched: [],
@@ -197,6 +219,9 @@ export const classify = (
 };
 
 type Step = { readonly store: Store; readonly commands: ReadonlyArray<Command> };
+
+/** A file the list found that is a recording or its part. */
+type Found = Exclude<ReturnType<typeof classify>, { readonly _tag: 'stray' | 'junk' }>;
 
 const without = <A>(record: Readonly<Record<string, A>>, key: string): Record<string, A> => {
   const { [key]: _gone, ...rest } = record;
@@ -262,7 +287,8 @@ const pump = (store: Store, commands: Array<Command>): Store => {
   const running = [...store.running];
   let jobs = store.jobs;
   let at = 0;
-  while (running.length < WORKERS && at < store.queue.length) {
+  const renaming = store.publishing.filter((each) => owns(store, each)).length;
+  while (running.length + renaming < WORKERS && at < store.queue.length) {
     const job = store.queue[at];
     at += 1;
     if (job === undefined || !owns({ ...store, jobs }, job)) continue;
@@ -271,7 +297,7 @@ const pump = (store: Store, commands: Array<Command>): Store => {
       jobs = without(jobs, key);
       continue;
     }
-    const started = !store.dying.some((each) => each.key === key);
+    const started = !held(store, key);
     running.push({ ...job, started });
     if (started) commands.push({ _tag: 'fetch', serial: job.serial, id: job.id });
   }
@@ -279,18 +305,37 @@ const pump = (store: Store, commands: Array<Command>): Store => {
   return { ...store, jobs, running, queue: store.queue.slice(at) };
 };
 
+/** Whether `key`'s part is still the host's: a fetch of it let go and unsettled, or its rename unanswered. */
+const held = (store: Store, key: string): boolean =>
+  store.dying.some((each) => each.key === key) ||
+  store.publishing.some((each) => keyOf(each.id) === key);
+
+/** A save of `key` that waited on its part starts, once nothing holds the part. */
+const freed = (store: Store, key: string, commands: Array<Command>): Store => {
+  if (held(store, key)) return store;
+  if (store.saved[key] !== undefined) {
+    const waited = store.running.filter((run) => !run.started && keyOf(run.id) === key);
+    if (waited.length === 0) return store;
+    return {
+      ...store,
+      running: store.running.filter((run) => !waited.includes(run)),
+      jobs: without(store.jobs, key),
+    };
+  }
+  const running = store.running.map((run) => {
+    if (run.started || keyOf(run.id) !== key) return run;
+    commands.push({ _tag: 'fetch', serial: run.serial, id: run.id });
+    return { ...run, started: true };
+  });
+  return { ...store, running };
+};
+
 /** A fetch let go has settled: its part is dropped, and a save of its identity that waited on it starts. */
 const settled = (store: Store, serial: number, commands: Array<Command>): Store => {
   const gone = store.dying.find((each) => each.serial === serial);
   if (gone === undefined) return store;
   const dying = store.dying.filter((each) => each.serial !== serial);
-  const running = store.running.map((run) => {
-    if (run.started || keyOf(run.id) !== gone.key || dying.some((each) => each.key === gone.key))
-      return run;
-    commands.push({ _tag: 'fetch', serial: run.serial, id: run.id });
-    return { ...run, started: true };
-  });
-  return { ...store, dying, running };
+  return freed({ ...store, dying }, gone.key, commands);
 };
 
 /**
@@ -320,7 +365,37 @@ const downloadAll = (store: Store): Store =>
     ...Array.from({ length: HYMNS }, (_, at) => ({ number: at + 1, offset: 0 })),
   ]);
 
-/** The launch's list read: whole recordings saved, parts removed and left to resume, the host's leftovers removed. */
+/** One file the launch's list found, under a Delete that came while the list was out: removed, unless a save holds it now. */
+const wipedFile = (store: Store, kind: Found, commands: Array<Command>): Store => {
+  const id = kind._tag === 'whole' ? kind.saved : kind.id;
+  const key = keyOf(id);
+  if (held(store, key) || store.saved[key] !== undefined) return store;
+  commands.push(kind._tag === 'whole' ? { _tag: 'remove', id } : { _tag: 'drop', id });
+  return store;
+};
+
+/** One file the launch's list found: a whole recording saved, a part removed and left to resume, an empty one removed and failed. */
+const indexedFile = (store: Store, kind: Found, commands: Array<Command>): Store => {
+  const id = kind._tag === 'whole' ? kind.saved : kind.id;
+  const key = keyOf(id);
+  if (store.touched.includes(key)) return store;
+  if (kind._tag === 'part') {
+    commands.push({ _tag: 'drop', id });
+    if (store.saved[key] !== undefined) return store;
+    return { ...store, resume: { ...store.resume, [key]: id }, paused: true };
+  }
+  if (kind.saved.bytes <= 0) {
+    commands.push({ _tag: 'remove', id });
+    return { ...store, failed: { ...store.failed, [key]: id } };
+  }
+  return {
+    ...store,
+    saved: { ...store.saved, [key]: kind.saved },
+    resume: without(store.resume, key),
+  };
+};
+
+/** The launch's list read: whole recordings saved, parts removed and left to resume, the host's leftovers removed; all of them removed under a Delete asked meanwhile. */
 const indexed = (store: Store, files: ReadonlyArray<File>, commands: Array<Command>): Store => {
   let next: Store = store;
   for (const file of files) {
@@ -330,27 +405,9 @@ const indexed = (store: Store, files: ReadonlyArray<File>, commands: Array<Comma
       commands.push({ _tag: 'removeFile', storage: file.storage, name: file.name });
       continue;
     }
-    const id = kind._tag === 'whole' ? kind.saved : kind.id;
-    const key = keyOf(id);
-    if (next.touched.includes(key)) continue;
-    if (kind._tag === 'part') {
-      commands.push({ _tag: 'drop', id });
-      if (next.saved[key] === undefined)
-        next = { ...next, resume: { ...next.resume, [key]: id }, paused: true };
-      continue;
-    }
-    if (kind.saved.bytes <= 0) {
-      commands.push({ _tag: 'remove', id });
-      next = { ...next, failed: { ...next.failed, [key]: id } };
-      continue;
-    }
-    next = {
-      ...next,
-      saved: { ...next.saved, [key]: kind.saved },
-      resume: without(next.resume, key),
-    };
+    next = store.wiping ? wipedFile(next, kind, commands) : indexedFile(next, kind, commands);
   }
-  return { ...next, indexing: false };
+  return { ...next, indexing: false, wiping: false };
 };
 
 /** A running save's answer: its job, when one owned it. */
@@ -370,13 +427,21 @@ const finished = (store: Store, serial: number) => {
   };
 };
 
-/** Every save and saved file removed, as the current cache's Delete: a cancel first, then each file and every storage no hymn reads. */
+/**
+ * Every save and saved file removed, as the current cache's Delete: a
+ * cancel first, then each file and every storage no hymn reads. As the
+ * current Delete reads the disk beside its entries, a Delete while the
+ * launch's list is out removes what the list then finds, and a rename
+ * asked before it is removed when it lands.
+ */
 const deleteAll = (store: Store, commands: Array<Command>): Store => {
   const cancelled = cancelOwned(store, commands);
   for (const saved of Object.values(cancelled.saved)) commands.push({ _tag: 'remove', id: saved });
   commands.push({ _tag: 'removeOld' });
   return {
     ...cancelled,
+    wiped: cancelled.epoch,
+    wiping: cancelled.indexing,
     touched: [...new Set([...cancelled.touched, ...Object.keys(cancelled.saved)])],
     saved: {},
     failed: {},
@@ -411,14 +476,64 @@ const fetched = (
     commands.push({ _tag: 'drop', id: done.run.id });
     return { ...done.store, failed: { ...done.store.failed, [done.key]: done.run.id } };
   }
-  commands.push({ _tag: 'publish', id: done.run.id });
+  commands.push({ _tag: 'publish', serial: done.run.serial, id: done.run.id });
+  const { started: _started, ...job } = done.run;
   return {
     ...done.store,
-    storage: false,
-    saved: { ...done.store.saved, [done.key]: { ...done.run.id, bytes: input.bytes } },
-    failed: without(done.store.failed, done.key),
-    resume: without(done.store.resume, done.key),
+    jobs: { ...done.store.jobs, [done.key]: job },
+    publishing: [...done.store.publishing, { ...job, bytes: input.bytes }],
   };
+};
+
+/**
+ * The host's answer to a rename: the recording saved only now, when its
+ * save still owns it (a rename that failed leaves it failed, its part
+ * dropped). A rename a cancel let go still made a whole recording, kept as
+ * a cancel keeps the whole ones; one asked before a Delete is removed.
+ */
+const published = (
+  store: Store,
+  input: Extract<Input, { readonly _tag: 'published' }>,
+  commands: Array<Command>,
+): Store => {
+  const entry = store.publishing.find((each) => each.serial === input.serial);
+  if (entry === undefined) return store;
+  const key = keyOf(entry.id);
+  const owned = owns(store, entry);
+  const rest: Store = {
+    ...store,
+    publishing: store.publishing.filter((each) => each.serial !== input.serial),
+    jobs: owned ? without(store.jobs, key) : store.jobs,
+  };
+  if (!input.ok) {
+    commands.push({ _tag: 'drop', id: entry.id });
+    const failed = owned ? { ...rest.failed, [key]: entry.id } : rest.failed;
+    return freed({ ...rest, failed }, key, commands);
+  }
+  if (entry.epoch < store.wiped) {
+    commands.push({ _tag: 'remove', id: entry.id });
+    return freed(rest, key, commands);
+  }
+  return freed(
+    {
+      ...touch(rest, key),
+      storage: owned ? false : rest.storage,
+      saved: { ...rest.saved, [key]: { ...entry.id, bytes: entry.bytes } },
+      failed: without(rest.failed, key),
+      resume: without(rest.resume, key),
+    },
+    key,
+    commands,
+  );
+};
+
+/** A whole recording the player found on the disk before the launch's list was read: saved, unless the list is read or a Delete came. */
+const found = (store: Store, saved: Saved): Store => {
+  const id = normal(saved);
+  if (id === undefined || !store.indexing || store.wiping || saved.bytes <= 0) return store;
+  const key = keyOf(id);
+  if (store.touched.includes(key) || store.saved[key] !== undefined) return store;
+  return { ...store, saved: { ...store.saved, [key]: { ...id, bytes: saved.bytes } } };
 };
 
 /** A fetch failed or was cut off: nothing published, its save failed (storage stops them all). */
@@ -493,6 +608,10 @@ const next = (store: Store, input: Input, commands: Array<Command>): Store => {
       return fetched(store, input, commands);
     case 'fetchFailed':
       return fetchFailed(store, input, commands);
+    case 'published':
+      return published(store, input, commands);
+    case 'found':
+      return found(store, input.saved);
     case 'invalidate':
       return invalidated(store, input.id, commands);
     default:
@@ -523,7 +642,9 @@ const WHOLE = 0;
 export const countsOf = (store: Store): Counts => {
   const saved = Object.values(store.saved);
   const owned = Object.keys(store.jobs).length;
-  const active = store.running.filter((run) => owns(store, run)).length;
+  const active =
+    store.running.filter((run) => owns(store, run)).length +
+    store.publishing.filter((each) => owns(store, each)).length;
   return {
     saved: saved.length,
     printed: saved.filter((each) => each.offset === 0).length,

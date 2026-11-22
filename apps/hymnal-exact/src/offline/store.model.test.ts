@@ -134,6 +134,7 @@ const portOf = (lateAborts: boolean) => {
         if (size === undefined) throw new Error(`no part to publish for ${keyOf(command.id)}`);
         disk.delete(partOf(command.id));
         disk.set(pathOf(command.id), size);
+        pending.push({ _tag: 'published', serial: command.serial, id: command.id, ok: true });
         return;
       }
       case 'drop':

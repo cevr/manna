@@ -167,6 +167,18 @@ export const playerSources = (
       saved?.enqueue({ number: held.track.number, offset: held.offset });
     return { ...viewOf(state, next.command, titleOf), origin, fixture };
   };
+  /**
+   * A load asked before the saved recordings are listed: the recording it
+   * would sound is looked up on the disk first, so a saved one plays from
+   * its file even offline, before the list is read.
+   */
+  const prepared = async (input: Input | undefined) => {
+    if (input === undefined || saved === undefined) return;
+    const trial = step(state, input).state;
+    const { held } = trial;
+    if (held === undefined || trial.loads === state.loads || held.local !== '') return;
+    await saved.lookup({ number: held.track.number, offset: held.offset });
+  };
   const play = (number: number) => {
     const track = trackOf(number);
     return track === undefined ? undefined : ({ _tag: 'play', track } as const);
@@ -224,11 +236,14 @@ export const playerSources = (
     if (kind === 'screen') return apply({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
     if (kind === 'restore')
       return apply({ _tag: 'restore', choices: decodeChoices(text), tempos: decodeTempos(text) });
-    if (kind === 'keys')
-      return apply({
+    if (kind === 'keys') {
+      const keyed: Input = {
         _tag: 'keys',
         offsets: offsetsOf(value > 0, text.split(' ').filter(Boolean)),
-      });
+      };
+      await prepared(keyed);
+      return apply(keyed);
+    }
     if (kind === 'failed') {
       const device = deviceOf(state);
       const url = device?.load === id ? device.url : '';
@@ -241,7 +256,9 @@ export const playerSources = (
       const why = await whyOf(url);
       return apply({ _tag: 'failed', id, why });
     }
-    return apply(reader(kind, value) ?? device(kind, id, serial, value));
+    const input = reader(kind, value) ?? device(kind, id, serial, value);
+    await prepared(input);
+    return apply(input);
   };
   return { playerStep };
 };
