@@ -32,12 +32,13 @@ members HymnalExact
 component FavouriteStar
   props
     number: number
+    tag: string
   inject
     favouriteNumbers: number[]
     favouritePress: action
   view
     if number > 0
-      view role="button" press=favouritePress(number) aria-label="Favourite" aria-pressed=favouriteNumbers.includes(number) testId="favourite"
+      view role="button" press=favouritePress(number) aria-label="Favourite" aria-pressed=favouriteNumbers.includes(number) testId=`favourite${tag}`
         display="flex" align-items="center" justify-content="center" align-self="flex-start" margin-left="auto"
         margin-top="calc(space.s8 * -1)" margin-bottom="calc(space.s8 * -1)" min-width="size.target" min-height="size.target" border-radius="radius.pill"
         :active

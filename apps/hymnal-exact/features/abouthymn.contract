@@ -59,13 +59,14 @@ component AboutHymnLine
   props
     number: number
     line: string
+    tag: string
   inject
     abouthymnPress: action
   view
-    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" margin-right="size.target" text-align="left" aria-label=(line == "" ? "About this hymn" : `About this hymn, ${line}`) -exact-hit-slop="space.s8" testId="hymn-about"
+    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" margin-right="size.target" text-align="left" aria-label=(line == "" ? "About this hymn" : `About this hymn, ${line}`) -exact-hit-slop="space.s8" testId=`hymn-about${tag}`
       :active
         opacity = "opacity.pressed"
-      text font="type.footnote" color="muted" testId="hymn-topic"
+      text font="type.footnote" color="muted" testId=`hymn-topic${tag}`
         text line
         text "  ›" color="accent"
 
