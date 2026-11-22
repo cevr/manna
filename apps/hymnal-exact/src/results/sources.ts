@@ -7,13 +7,22 @@
  * from the table the app ships (`table.ts`).
  */
 
-import type { Storage, Store } from '../../app.contract.d.ts';
 import { type AboutAnswer, aboutOver } from './table.ts';
+
+/** The one call of Exact's `storage` the search makes: a read of a file the app ships. */
+interface ShippedFiles {
+  readonly fs: { readonly readFile: (path: string) => Promise<ArrayBuffer> };
+}
+
+/** Exact's kept values, which the search does not read. */
+interface KeptValues {
+  readonly get: (name: string) => string | null;
+}
 
 export const resultsSources = () => {
   let about: ((query: string) => Promise<AboutAnswer>) | undefined;
   return {
-    findAbout: ([query]: readonly [string], _store: Store, storage: Storage) => {
+    findAbout: ([query]: readonly [string], _store: KeptValues, storage: ShippedFiles) => {
       about ??= aboutOver((path) => storage.fs.readFile(path));
       return about(query);
     },
