@@ -156,6 +156,13 @@ drive.check(
 );
 
 const tree = JSON.stringify(ax[toHymn2.length + 1] ?? null);
+const testIds = [...tree.matchAll(/"testId":"([^"]+)"/gu)].map((match) => match[1] ?? '');
+const repeated = [...new Set(testIds.filter((id, at) => testIds.indexOf(id) !== at))];
+drive.check(
+  'with hymn 2 and its neighbours drawn, no testId repeats (each neighbour’s ids end in its hymn)',
+  testIds.length > 0 && repeated.length === 0,
+  repeated,
+);
 const backAt = tree.indexOf('"testId":"hymn-back"');
 drive.check(
   'the back control draws a chevron beside "Hymns"',
