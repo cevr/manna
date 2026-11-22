@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a fingering, a key or a chord the current app's decoders leave out is undefined, and its rules branch plainly. */
-
 /**
  * Each hymn's move, kept as the current hymnal keeps it: a transpose and a
  * capo of its own, by its number, reaching no other hymn (its `move.<n>`

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noAs -- a Bun test drawing generated histories with the app's seeded generator; a hymn with no chords has no printed key; a Bun test in an Exact app's folder imports no effect, so the option the current app's `hintOf` takes is named by the shape it takes at run time. */
+/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test drawing generated histories with the app's seeded generator; a hymn with no chords has no printed key. */
 
 /**
  * The key button's sources answer as the current app's own model and press
