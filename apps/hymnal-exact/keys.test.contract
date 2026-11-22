@@ -1,0 +1,195 @@
+test "On a hymn's page the bar's key button is first, the guitar's head alone with chords off; a tap turns chords on and opens nothing."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect tree has "key-button"
+  expect tree has "guitar-head"
+  expect tree missing "key-over"
+  expect state keysShown.said == "Chords off"
+  tap "key-button"
+  clock data
+  clock settle
+  expect state chordsOn == true
+  expect tree missing "dials-panel"
+  expect text "key-over" == "KEY"
+  expect text "key-key" == "D"
+  expect state keysShown.said == "D"
+  expect text "chord-1-1-1" == "D"
+
+test "With chords on a tap opens the dials; a tap on a key and on a fret move the hymn, and the face follows."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  expect state keysOpen == true
+  expect tree has "dials-panel"
+  expect tree has "dial-key"
+  expect tree has "dial-capo"
+  expect tree missing "dials-reset"
+  expect state keysShown.keyAt == 2
+  expect state keysShown.keySaid == "D"
+  expect state keysShown.capoSaid == "No capo"
+  tap "dial-key-stop-4"
+  clock data
+  clock settle
+  expect state chordsMoves.0 == "2:2:0"
+  expect text "key-key" == "E"
+  expect text "chord-1-1-1" == "E"
+  expect text "dials-reset" == "↺ D, no capo"
+  tap "dial-capo-stop-1"
+  clock data
+  clock settle
+  expect state chordsMoves.0 == "2:2:1"
+  expect text "key-over" == "CAPO 1"
+  expect text "key-key" == "Eb"
+  expect text "chord-1-1-1" == "Eb"
+  expect state keysShown.said == "E, capo 1, Eb shapes"
+  expect state keysShown.capoSaid == "Capo 1, Eb shapes"
+  expect state keysOpen == true
+
+test "Reset turns the dials home, and they close after the reset's wait."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  tap "dial-capo-stop-3"
+  clock data
+  clock settle
+  tap "dials-reset"
+  clock data
+  expect state chordsMoves.length == 0
+  expect text "key-key" == "D"
+  expect state keysOpen == true
+  clock +700
+  clock data
+  clock settle
+  expect state keysOpen == false
+  expect tree missing "dials-panel"
+
+test "A tap above the bar, or on the key button, closes the dials."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  expect tree has "dials-backdrop"
+  tap "dials-backdrop"
+  clock data
+  clock settle
+  expect state keysOpen == false
+  expect tree missing "dials-panel"
+  tap "key-button"
+  clock data
+  clock settle
+  expect state keysOpen == true
+  tap "key-button"
+  clock data
+  clock settle
+  expect state keysOpen == false
+
+test "The dials' VoiceOver controls read Capo and Key and move a stop a swipe."
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  type "dial-capo-value" "2"
+  clock data
+  clock settle
+  expect state chordsMoves.0 == "2:0:2"
+  expect state keysShown.capoSaid == "Capo 2, C shapes"
+  type "dial-key-value" "3"
+  clock data
+  clock settle
+  expect state keysShown.keySaid == "Eb"
+  expect text "key-over" == "CAPO 2"
+
+test "A hymn with no chords: chords on, the key button holds the guitar's head lit, and a tap opens nothing."
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "181"
+  clock settle
+  clock data
+  tap "hymn-181"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  expect state chordsOn == true
+  expect state keysShown.said == "No chords"
+  expect tree missing "key-over"
+  tap "key-button"
+  clock data
+  clock settle
+  expect tree missing "dials-panel"
+
+test "While the hymn sounds, a swipe up that starts on the key button opens the full player, as the bar's own swipe does."
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  expect tree has "key-button"
+  tap "key-button" drag 0 -200 over 150
+  clock data
+  clock settle
+  expect tree has "player"
+  expect state keysOpen == false
+
+test "Kept through a reload: chords on, and the hymn's move." on web
+  tap "hymn-list" drag 0 -600
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  tap "dial-capo-stop-1"
+  clock data
+  reload
+  clock data
+  clock settle
+  expect state chordsOn == true
+  expect state chordsMoves.0 == "2:0:1"
+  expect text "key-key" == "Db"
+  expect text "chord-1-1-1" == "Db"

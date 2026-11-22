@@ -56,6 +56,7 @@ import {
   keySaid,
   type KeyStop,
   keyStops,
+  RESET_WAIT,
   shownOf,
   step,
   type Thumb,
@@ -65,8 +66,7 @@ import {
 /** What the dials read and set: the app's own stores, or a test's. */
 export const ChordReaderContext = createContext<ChordReader>(reader);
 
-/** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
-export const RESET_WAIT = 600;
+export { RESET_WAIT };
 
 /**
  * The clock a reset's wait for its close runs on: the live clock, or a

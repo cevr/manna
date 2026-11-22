@@ -96,6 +96,30 @@ describe('the data module runs where Exact runs it', () => {
         expect(() =>
           sources.railTo([below(random, 700) - 2, below(random, 900) - 20, below(random, 900)]),
         ).not.toThrow();
+        const keysArgs = [
+          route(random),
+          random() < 0.5,
+          [`${route(random)}:1:2`, 'x'],
+          random() < 0.5,
+          pick(random, ['', 'simple', 'advanced', 'x']),
+        ] as const;
+        expect(() => sources.keysPage(keysArgs)).not.toThrow();
+        expect(() =>
+          sources.keysStep([
+            pick(random, ['tap', 'hold', 'key', 'step', 'capo', 'reset', 'shown', 'page', 'x']),
+            below(random, 16) - 2,
+            ...keysArgs,
+          ]),
+        ).not.toThrow();
+        expect(() =>
+          sources.keysPress([
+            pick(random, ['down', 'pan', 'up', 'tick', 'cancel', 'x']),
+            below(random, 200) - 100,
+            below(random, 200) - 100,
+            run * 40,
+            random() < 0.5,
+          ]),
+        ).not.toThrow();
         expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
@@ -127,6 +151,10 @@ describe('the data module runs where Exact runs it', () => {
       'findStep',
       'hymnPage',
       'hymnRows',
+      'keysPage',
+      'keysPlaces',
+      'keysPress',
+      'keysStep',
       'listOpening',
       'listTabRows',
       'listTabs',

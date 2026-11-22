@@ -6,6 +6,7 @@
 // seeker's times) is src/player/bar/view.ts's.
 use PlayerView from "./player.contract"
 use hy-rise, hy-sink, hy-fade-in, hy-fade-out from "./motion.contract"
+use KeysButton from "./keys.contract"
 
 // A drag let go on the bar is a swipe up past 24 points, or flung up faster
 // than 400 points a second: the current bar.ts's `swipedDown`, turned over
@@ -83,6 +84,7 @@ component PlayerBarFrame
   view
     column testId="bar" role="region" aria-label="Player" background-color="bar" border-top-width="line.hair" border-top-style="solid" border-top-color="line" padding-bottom="var(--exact-safe-area-inset-bottom)" touch-action="none" pan=pulled panrelease=let -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
       row position="relative" align-items="center" gap="space.s8" padding="0px space.s12" height="calc(size.target + space.s12)"
+        KeysButton(number=player.onPage)
         if player.pageBar or (player.bar.number == player.onPage and player.bar.phase != "failed")
           row position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
             view width="size.grabber" height="size.grabber-line" border-radius="radius.grabber" background-color="line" testId="bar-grabber"

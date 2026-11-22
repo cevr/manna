@@ -2,14 +2,14 @@
 
 /**
  * Transpose and capo over the whole domain (A2): for generated hymns with
- * chords and generated runs of presses on the key and capo buttons, the
+ * chords and generated runs of steps by one key or one fret, the
  * kept move is the one the current app's own `transposed` and `capoed`
  * reach, and the page names every chord, the key played and the key
  * sounding as the current app does for that move (`playedKey`,
  * `soundingKey`, `keyName`, `Chord.format`). A run of n up then n down
  * shows the first names again; the capo stops at 0 and 11 as the current
  * app's dial does, and the key wraps through the twelve; a hymn's move never
- * reaches another hymn.
+ * reaches another hymn. A move put on a hymn replaces its entry alone.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -19,7 +19,7 @@ import { capoed, hasChords, type Move, still, transposed } from '@manna/hymnal-a
 import { book } from '../hymns/book.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
-import { canStep, type MoveStep, moveOf, movesAfter } from './move.ts';
+import { canStep, type MoveStep, moveOf, movesAfter, movesTo } from './move.ts';
 import type { ChordsPage } from './page.ts';
 import { bundled, currentBook, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
@@ -109,6 +109,20 @@ describe('transpose and capo, over the whole domain (A2)', () => {
       expect(moves).toEqual([]);
       expect(names(sources.chordsPage([`${number}`, true, moves]))).toEqual(first);
     }
+  });
+
+  test('a move put on a hymn replaces its own entry alone, and the hymn as printed leaves none', () => {
+    const random = seeded(17);
+    for (let run = 0; run < 400; run++) {
+      const number = pick(random, chorded);
+      const move = { transpose: below(random, 12) - 5, capo: below(random, 12) };
+      const moves = movesTo([`${number + 1}:1:1`], number, move);
+      expect(moveOf(moves, number)).toEqual(move);
+      expect(moveOf(moves, number + 1)).toEqual({ transpose: 1, capo: 1 });
+      expect(movesTo(moves, number, still)).toEqual([`${number + 1}:1:1`]);
+    }
+    expect(movesTo([], 2, { transpose: 7, capo: 0 })).toEqual([]);
+    expect(movesTo([], 2.5, { transpose: 1, capo: 0 })).toEqual([]);
   });
 
   test('the capo stops at 0 and 11 and refuses past them; the key wraps through the twelve', () => {

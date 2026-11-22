@@ -56,6 +56,9 @@ theme
   duration.tiles-in = 180ms
   duration.tiles-out = 140ms
   duration.growth = 250ms
+  duration.press = 200ms
+  duration.wheel-in = 180ms
+  duration.wheel-out = 160ms
   easing.growth = -exact-spring(632, 50, 1)
   easing.out = cubic-bezier(0.23, 1, 0.32, 1)
   type.sheet-title = 700 1.6471rem/normal
@@ -89,6 +92,11 @@ theme
   type.tiles-head = 600 1rem/1.2941
   size.strip: length = 4px
   line.tile: length = 2px
+  type.key-over = 600 0.5588rem/1.1579
+  type.key-face = 700 0.8824rem/1.1333
+  type.dial-name = 600 0.6471rem/normal
+  type.dial-key = 600 1rem/normal
+  type.dial-played = 400 0.5882rem/1.2
   space.s4: length = 4px
   space.s6: length = 6px
   space.s8: length = 8px

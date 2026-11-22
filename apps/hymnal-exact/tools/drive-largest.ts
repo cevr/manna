@@ -19,9 +19,9 @@
  *   the largest its button's box is at least 44 × 44 while its word sits
  *   where the room is: as far from the sheet's trailing edge, on the room's
  *   middle, so the larger target moves no pixel of the word.
- * - At the largest text a hymn's key and capo controls, which may rest
- *   under the floating find bar as the current hymnal's chords do, scroll
- *   fully clear of it into view.
+ * - At the largest text the bar's key button is a 44-point target in the
+ *   bar, and it and its open dials (a capo set, so Reset shows) are not
+ *   clipped and share no area with the floating find bar.
  * - Scrolled to its end, with no player and with the player's bar docked,
  *   the home list's last row ends above the find bar's controls, as the
  *   current hymnal's `ListEnd` keeps it, at the default text size
@@ -308,9 +308,9 @@ for (const [at, size] of [
   );
 }
 
-/** The chords' key and capo controls on a hymn's page. */
-const KEYS = ['transpose-down', 'transpose-up', 'capo-down', 'capo-up'] as const;
-/** The find bar's controls that float over a hymn's page: its capsule, Search and # (All at once is home's alone). */
+/** The bar's key button and its open dials, on a hymn's page with chords on and a capo set. */
+const KEY_PARTS = ['key-button', 'dials-reset', 'dial-capo', 'dial-key'] as const;
+/** The find bar's controls that float over a hymn's page: its capsule. */
 const FLOATING = ['find-capsule'] as const;
 const keysAt = [
   ...chordsOn,
@@ -318,44 +318,50 @@ const keysAt = [
   'clock data',
   'clock settle',
   ...largest,
-  ...[...KEYS, ...FLOATING, 'hymn-words'].map((id) => `layout ${id}`),
-];
-const keysFrom = chordsOn.length + 5;
-const restKeys = await drive.run(flags('largest-keys'), keysAt);
-const keyBoxes = KEYS.map((_, i) => boxOf(restKeys[keysFrom + i]));
-const floatTop = Math.min(
-  ...FLOATING.map((_, i) => boxOf(restKeys[keysFrom + KEYS.length + i])?.y ?? Infinity),
-);
-const lowest = Math.max(...keyBoxes.map((box) => (box === undefined ? 0 : box.y + box.h)));
-const lift = Math.max(0, Math.ceil(lowest - floatTop) + 16);
-const lifted = await drive.run(flags('largest-keys'), [
-  ...keysAt,
-  `tap hymn-words wheel 0 ${lift}`,
+  'tap key-button',
+  'clock data',
   'clock settle',
-  ...[...KEYS, ...FLOATING, 'hymn-words'].map((id) => `layout ${id}`),
-]);
-const liftedFrom = keysAt.length + 2;
-const words = boxOf(lifted[liftedFrom + KEYS.length + FLOATING.length]);
-const floating = FLOATING.flatMap((id, i) => {
-  const box = boxOf(lifted[liftedFrom + KEYS.length + i]);
-  return box === undefined ? [] : [[id, box] as const];
-});
-const liftedMet = KEYS.flatMap((key, i) =>
-  meeting([[key, boxOf(lifted[liftedFrom + i])], ...floating]).filter((pair) =>
-    pair.startsWith(`${key} `),
+  'tap dial-capo-stop-1',
+  'clock data',
+  'clock settle',
+  'tree',
+  'check',
+  ...[...KEY_PARTS, ...FLOATING, 'bar'].map((id) => `layout ${id}`),
+];
+const keysTree = chordsOn.length + 3 + largest.length + 6;
+const keysFrom = keysTree + 2;
+const keyed = await drive.run(flags('largest-keys'), keysAt);
+const keyBoxes = KEY_PARTS.map((id, i) => [id, boxOf(keyed[keysFrom + i])] as const);
+const keyFloating = FLOATING.map(
+  (id, i) => [id, boxOf(keyed[keysFrom + KEY_PARTS.length + i])] as const,
+);
+const barBox = boxOf(keyed[keysFrom + KEY_PARTS.length + FLOATING.length]);
+const keyButton = keyBoxes[0]?.[1];
+const keyClipped = findingsOn(
+  keyed[keysTree],
+  keyed[keysTree + 1],
+  'clipped',
+  (id) => id === 'key-button' || id === 'dials-reset',
+);
+const keyMet = keyBoxes.flatMap(([id, box]) =>
+  keyFloating.flatMap(([other, floatBox]) =>
+    box !== undefined && floatBox !== undefined && !unshared(box, floatBox)
+      ? [`${id} meets ${other}`]
+      : [],
   ),
 );
-const shown = KEYS.every((_, i) => {
-  const box = boxOf(lifted[liftedFrom + i]);
-  return box !== undefined && words !== undefined && box.y >= words.y;
-});
 drive.check(
-  `at the largest text a hymn's key and capo controls scroll fully clear of the floating find bar, in view (lifted ${lift})`,
-  keyBoxes.every((box) => box !== undefined) &&
-    floating.length > 0 &&
-    shown &&
-    liftedMet.length === 0,
-  { lift, liftedMet, floating, words },
+  `at the largest text the bar's key button is a ${TARGET}-point target in the bar, and it and its open dials are not clipped and stand clear of the floating find bar`,
+  keyBoxes.every(([, box]) => box !== undefined) &&
+    keyButton !== undefined &&
+    keyButton.w >= TARGET &&
+    keyButton.h >= TARGET &&
+    barBox !== undefined &&
+    keyButton.y >= barBox.y &&
+    keyButton.y + keyButton.h <= barBox.y + barBox.h &&
+    keyClipped.length === 0 &&
+    keyMet.length === 0,
+  { keyBoxes, keyFloating, barBox, keyClipped, keyMet },
 );
 
 /** The text sizes the end and the bar are held at: the default, then the root font sizes up to iOS's largest. */

@@ -19,7 +19,7 @@
  *   point, since a host rounds each frame to its pixel grid and a row that
  *   fills the line to within that may break either way: no pair split, no
  *   chord on the wrong row;
- * - a capo set, a relaunch on the kept store shows chords still on and the
+ * - a capo set on the bar's capo dial, a relaunch on the kept store shows chords still on and the
  *   capo kept.
  *
  * Screens at the largest size are kept in SHOTS. Exits 1 on any failed check.
@@ -137,7 +137,15 @@ const largeOps = [
   'clock settle',
   shot('largest-scrolled'),
 ];
-const keepOps = ['tap capo-up', 'clock data', 'clock settle', 'state chordsMoves'];
+const keepOps = [
+  'tap key-button',
+  'clock data',
+  'clock settle',
+  'tap dial-capo-stop-1',
+  'clock data',
+  'clock settle',
+  'state chordsMoves',
+];
 
 /**
  * Whether the web store named holds `text` on disk. A browser Exact ends at

@@ -20,6 +20,7 @@ use NotFound from "./features/notfound.contract"
 use ChordsGripScreen from "./features/chords.contract"
 use FindDrums from "./features/find.contract"
 use AboutHymnSheet from "./features/abouthymn.contract"
+use KeysOver from "./features/keys.contract"
 
 routes nav
   list "/"
@@ -45,6 +46,7 @@ component HymnalExact
   members "./features/motion.contract"
   members "./features/abouthymn.contract"
   members "./features/bar.contract"
+  members "./features/keys.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -53,7 +55,6 @@ component HymnalExact
     favouritePress = favouriteToggle
     chordsSwitchOn = chordsOn
     chordsSwitch = chordsSet
-    chordsPress = chordsStep
     findShown = find
     findPress = findAsk
     findSearchOn = findSearch
@@ -80,6 +81,24 @@ component HymnalExact
     hymnPressBack = hymnBack
     playerSoundOn = playerSound
     playerSoundPress = playerSoundSwitch
+    keysShown
+    keysPlaced
+    keysOpen
+    keysHolding
+    keysWheelOpen
+    keysWheelOver
+    keysWheelItems
+    keysAsk
+    keysTap
+    keysDown
+    keysUp
+    keysPan
+    keysLetGo
+    keysKeyScrolled
+    keysKeySettled
+    keysKeyAdjusted
+    keysCapoScrolled
+    keysCapoSettled
   action follow(url: string)
     nav = go(nav, url)
   view
@@ -104,4 +123,5 @@ component HymnalExact
         if e.name == "abouthymn"
           AboutHymnSheet(entry=e, page=abouthymnShown, ready=current(abouthymnShown), done=abouthymnClose, choose=abouthymnChoose)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)
+      KeysOver()
       FindDrums()

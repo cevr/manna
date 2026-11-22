@@ -41,6 +41,9 @@ const DRUMS = 'src/player/FindDrums.tsx';
 const MAGNIFIER = 'src/home/Magnifier.ios.tsx';
 const PANEL = 'src/player/DialPanel.tsx';
 const TILES = 'src/home/AllAtOnce.tsx';
+const KEY = 'src/player/KeyButton.tsx';
+const DIALS = 'src/player/Dials.tsx';
+const DIAL = 'src/player/DialView.tsx';
 
 const type = (
   name: string,
@@ -124,6 +127,11 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.tiles-head', [TILES, 'heading']),
   length('size.strip', [TILES, 'strip', 'height']),
   length('line.tile', [TILES, 'tile', 'borderWidth']),
+  type('type.key-over', [KEY, 'over']),
+  type('type.key-face', [KEY, 'key'], [DIALS, 'fret']),
+  type('type.dial-name', [DIAL, 'title']),
+  type('type.dial-key', [DIALS, 'key']),
+  type('type.dial-played', [DIALS, 'played']),
 
   length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
   length(
