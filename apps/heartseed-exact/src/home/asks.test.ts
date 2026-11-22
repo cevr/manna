@@ -14,6 +14,7 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { versesOf } from '@manna/heartseed/kjv';
 import { placeOf } from '@manna/heartseed/lists';
 
+import { firstReference } from '../first/verse';
 import { GARDEN_FILE } from '../garden/program';
 import { gardenSources } from '../garden/sources';
 import { storageOf } from '../test/garden-model';
@@ -141,6 +142,37 @@ it('draws no Single verses section with no single verse (hsminlist T1)', async (
     shown: false,
   });
   expect((await launch(storageOf()).home()).singlesShown).toBe(false);
+  const planted = storageOf();
+  const reference = firstReference();
+  await withDataHost(() =>
+    gardenSources({ host: HOST, quiet: true }).gardenKeepFirst(
+      [
+        reference,
+        {
+          startedAt: NOW,
+          offset: 0,
+          grade: 3,
+          suggested: 3,
+          words: 37,
+          missed: 0,
+          peeked: 0,
+          extra: 0,
+        },
+        // oxlint-disable-next-line effect/noNullish -- Contract's option gives no Show all as null.
+        { peeked: [], shownAt: null, cap: 4 },
+        NOW,
+        0,
+        1,
+      ],
+      { forget: () => {} },
+      planted.storage,
+    ),
+  );
+  const first = await launch(planted).home();
+  expect({
+    singles: first.singles.map((single) => [single.reference, single.removeId]),
+    shown: first.singlesShown,
+  }).toEqual({ singles: [[reference, `single:${reference}`]], shown: true });
 });
 
 it('weighs under 20 KB with 3 lists of 20 and 20 single verses, and holds no verse words', () => {
