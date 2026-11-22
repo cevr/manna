@@ -24,6 +24,26 @@
       "types": "./exact/first-flow.d.ts",
       "default": "./src/first/flow.ts"
     },
+    "./first/tour": {
+      "types": "./exact/first-tour.d.ts",
+      "default": "./src/first/tour.ts"
+    },
+    "./first/growth": {
+      "types": "./exact/first-growth.d.ts",
+      "default": "./src/first/growth.ts"
+    },
+    "./first/words": {
+      "types": "./exact/first-words.d.ts",
+      "default": "./src/first/words.ts"
+    },
+    "./first/verse": {
+      "types": "./exact/first-verse.d.ts",
+      "default": "./src/first/verse.ts"
+    },
+    "./field/tips": {
+      "types": "./exact/tips.d.ts",
+      "default": "./src/field/tip-words.ts"
+    },
     "./sayit": {
       "types": "./exact/sayit.d.ts",
       "default": "./src/sayit.ts"
