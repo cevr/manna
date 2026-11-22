@@ -214,19 +214,21 @@ const launched = await launch('find', [
   'clock data',
   ...looks('light'),
   ...looks('dark'),
-  'tree --ax',
 ]);
 
 const searchButton = (
-  (
-    launched.at(-1) as
-      | { ax?: { elements?: Array<{ testId?: string; name?: string; description?: string }> } }
-      | undefined
-  )?.ax?.elements ?? []
-).find((each) => each.testId === 'find-search');
+  (await launch('find-hint', ['clock data', 'clock settle', 'tree find-search'])).at(-1) as
+    | {
+        nodes?: ReadonlyArray<{
+          props?: { accessibilityLabel?: string; accessibilityHint?: string };
+        }>;
+      }
+    | undefined
+)?.nodes?.[0]?.props;
 drive.check(
   'the search button is named Search with the current app’s hint, Opens search (FindBar.tsx)',
-  searchButton?.name === 'Search' && searchButton.description === 'Opens search',
+  searchButton?.accessibilityLabel === 'Search' &&
+    searchButton.accessibilityHint === 'Opens search',
   searchButton,
 );
 
