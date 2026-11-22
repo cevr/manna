@@ -816,12 +816,16 @@ for (const tab of ['Sections', 'Topics']) {
     ]),
   ]);
   const measured = await launch(`find-aim-starts-${tab.toLowerCase()}`, measure.ops);
-  const starts = near.map((k) => numberOf(measure.reply(measured, `start-${k}`)));
   const landedHead = near.map((k) =>
     slugs.findIndex((_, j) => {
       const box = frame(measure.reply(measured, `head-${k}-${j}`));
       return box !== undefined && Math.abs(box.y) <= 2;
     }),
+  );
+  const starts = near.map(
+    (k) =>
+      numberOf(measure.reply(measured, `start-${k}`)) +
+      (frame(measure.reply(measured, `head-${k}-${landedHead[k] ?? -1}`))?.y ?? 0),
   );
   drive.check(
     `${tab}: a tile's tap lands its group's header at the list's top, at the offset the aim is held to`,
