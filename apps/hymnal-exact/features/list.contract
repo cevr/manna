@@ -17,6 +17,17 @@
 // scrolled to on another tab does. Where a scroll of the list comes to
 // rest, its offset from the list's top in points, is `listTop`, so All at
 // once can open at the group the reader was at.
+// Deep in the list, an upward scroll pins a second tab row over the list's
+// top under the status bar, and a downward one sends it away, as the
+// current app's PinnedTabs (`ListTabsPinned`): a layer over the list, so the
+// list's content and offset never move for it. The rule is the current
+// app's `home/reveal.ts`, stepped in the data module (`listTabsStep`,
+// src/list/reveal.ts) by each scroll report that can turn it (the rest kept
+// back by the band each answer names, `listTabsReport`), by the app's own moves of the
+// list (a tab chosen, a tile picked, the rail, a landing: `listTabsJump`,
+// which turns nothing and holds the row until the reader touches the list)
+// and by the reader's touch (`listTabsTouch`). A group's pinned header and
+// a row scrolled to stand under it (`listTabs.cover`).
 use PlayerBarRoom, PlayerView from "./player.contract"
 use FindBar, FindPlaces, FindPort, FindTiles, FindView, findFoot, findSearchingAt, ListRow, RowSection from "./find.contract"
 use HomeRail from "./rail.contract"
@@ -34,6 +45,32 @@ shape RecentView
 shape ListOpening
   how: string
   path: string
+
+// The pinned tab row after an input (src/list/reveal.ts `TabsAt`): shown
+// (its slide's end), in reach, the list past the resting place, the points
+// of the list's top it covers, the offset it was stepped at, and its quiet
+// band: the reports that can turn nothing are kept back while the view
+// moves `edge` its `way` (1 deeper, -1 higher, 0 none kept back) and each
+// stands within `travel` of it, past the same `rest`, the row `height` tall.
+shape ListTabsAt
+  shown: bool
+  reach: bool
+  past: bool
+  cover: number
+  at: number
+  way: number
+  edge: number
+  travel: number
+  rest: number
+  height: number
+
+// What the view draws of the pinned row: `ListTabsAt` but the offset, so a
+// scroll report that turns nothing draws nothing again.
+shape ListTabsShown
+  shown: bool
+  reach: bool
+  past: bool
+  cover: number
 
 // Hymn n's title, from the book's titles at their numbers less one.
 fn listTitle(titles: string[], n: number): string = match titles.at(n - 1) { case some(t) => t, case none => "" }
@@ -61,14 +98,49 @@ members HymnalExact
   resource listTitleOf = listTitles() when listTab != "Sections" as shape string[] else empty()
   resource listGroups = listTabRows(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : []) when listTab != "Sections" as shape TabGroup[] else empty()
   mutation listOpening as shape ListOpening queue then listOpened
+  state listTabs = ListTabsShown(shown=false, reach=false, past=false, cover=0)
+  state listTabsAt = 0
+  state listTabsBand = ListTabsAt(shown=false, reach=false, past=false, cover=0, at=0, way=0, edge=0, travel=0, rest=0, height=0)
+  state listTabsEdge = 0
+  mutation listTabsMoved as shape ListTabsAt queue then listTabsTook
+  action listTabsReport(y: number, rest: number, height: number)
+    listTabsAt = y
+    let b = listTabsBand
+    let moved = b.way > 0 ? max(listTabsEdge, y) : min(listTabsEdge, y)
+    if b.way != 0 and y > b.rest and rest == b.rest and height == b.height and (moved - y) * b.way < b.travel
+      listTabsEdge = moved
+    else
+      send listTabsMoved = listTabsStep("scroll", y, rest, height, listTabsEdge)
+  action listTabsJump
+    send listTabsMoved = listTabsStep("here", listTabsAt, 0, 0, listTabsEdge)
+  action listTabsTouch
+    send listTabsMoved = listTabsStep("touch", listTabsAt, 0, 0, listTabsEdge)
+  action listTabsTook
+    match listTabsMoved
+      case some(t)
+        listTabsAt = t.at
+        listTabsBand = t
+        listTabsEdge = t.edge
+        let drawn = ListTabsShown(shown=t.shown, reach=t.reach, past=t.past, cover=t.cover)
+        if drawn != listTabs
+          listTabs = drawn
+      case none
+        listTabsAt = listTabsAt
   action listChoose(name: string)
     if settingsFeel
       if name != listTab
         haptic("selection")
+    if name != listTab
+      send listTabsMoved = listTabsStep("jump", 0, 0, 0, listTabsEdge)
+      if name != "Lists" or favouriteList.length > 0 or recentList.length > 0
+        scrollIntoView("list-top", block="start", behavior="instant")
+        scrollIntoView(`shown-tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
+      scrollIntoView(`tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
     listTab = name
   action listLanded(id: string, w: number, h: number)
     if h > 0
       listLand = ""
+      listTabsJump()
       scrollIntoView(id, block="start", behavior="instant")
   action listRested
     listTop = max(0, frame("hymn-list").y - frame("list-top").y)
@@ -102,16 +174,27 @@ component HymnList
     findWheel: action
     listRested: action
     listLand: string
+    listTabs: ListTabsShown
+    listTabsReport: action
+    listTabsTouch: action
   state listHead = 0
   state listPull = 0
   state listPin = 0
+  state listTabsHigh = 0
   derive listShift = listHead + listPull
   action listHeaded(w: number, h: number)
     listHead = h
+  action listTabsSized(w: number, h: number)
+    if h > 0 and h != listTabsHigh
+      listTabsHigh = h
   action listScrolled(x: number, y: number)
     let s = max(0, 0 - y)
     if s != listPull
       listPull = s
+    listTabsReport(y, listHead - listTabsHigh, listTabsHigh)
+  action listWheeled(e: WheelEvent)
+    listTabsTouch()
+    findWheel(e)
   action listPinned(w: number, h: number)
     if h > 0 and h != listPin
       listPin = h
@@ -125,13 +208,13 @@ component HymnList
         FindTiles()
       if findShown.results and findSearchingAt(findShown, entry.url)
         HomeTitle(own=true)
-        HomeTabs(tab=tab, tabs=tabs, choose=choose)
+        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin}px` testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
           column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
-            HomeTabs(tab=tab, tabs=tabs, choose=choose)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)
           if recent.shelf.length > 0
             section testId="recent-shelf"
               link href=path("recent") aria-label="Recent, see all" display="flex" flex-direction="row" align-items="center" justify-content="space-between"
@@ -153,19 +236,21 @@ component HymnList
       else if groups.length == 0 and tab == "Lists"
         column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
           HomeTitle(own=true)
-          HomeTabs(tab=tab, tabs=tabs, choose=choose)
+          HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
           text "No hymns here yet." font="type.body" color="muted" padding="space.s16" testId="lists-empty"
       else
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=findWheel scrollend=listRested scroll-padding-top=`${listPin}px` testId="hymn-list"
-          column id="list-top" flex-shrink=0 testId="list-head"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
+          column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
-            HomeTabs(tab=tab, tabs=tabs, choose=choose)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)
           for g, gi in groups key=g.slug
             section display="flex" flex-direction="column"
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false, measured=(gi == 0), landing=(g.name == listLand), sized=listPinned)
               for n in g.numbers key=n
                 HymnRow(number=n, title=listTitle(titles, n), id=listRowId(g, n, "hymn"), star=(favourites.includes(n) ? listRowId(g, n, "star") : ""), gutter=false)
           ListEnd()
+      if not findShown.homeTiles and not (findShown.results and findSearchingAt(findShown, entry.url)) and (tab == "Sections" or groups.length > 0 or tab != "Lists")
+        ListTabsPinned(tab=tab, tabs=tabs, choose=choose, sized=listTabsSized)
       column position="absolute" top=0 left=0 right=0 height="var(--exact-safe-area-inset-top)" background-color="ground" aria-hidden=true testId="status-scrim"
       FindBar(entry=entry, results=true)
       PlayerBarRoom(id="bar-room")
@@ -197,25 +282,59 @@ component HomeTitle
         image "symbol:settings" width="nudge.gear" height="nudge.gear" position="relative" left="nudge.gear-left" object-fit="contain" color="accent"
 
 // Home's tab row, as the current app's: a pill for each way to show the
-// hymns, the chosen one filled; it scrolls away with the list.
+// hymns, the chosen one filled; it scrolls away with the list. The
+// `pinned` copy (`ListTabsPinned`) names its row and tabs `shown-…`, so
+// each copy's ids stay its own. The list's own row is `away` (inert and
+// hidden from the screen reader) while the pinned copy is in reach, so
+// one tab row, never two, is reachable at any offset.
 component HomeTabs
   props
     tab: string
     tabs: string[]
     choose: action
+    pinned: bool
+    away: bool
   view
-    row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8"
-      padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" testId="tabs"
+    row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8" inert=away aria-hidden=away
+      padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" testId=(pinned ? "shown-tabs-row" : "tabs")
       for t in tabs key=t
         button role="tab" aria-selected=(tab == t) press=choose(t) appearance="none" flex-shrink=0
           padding-left="space.s12" padding-right="space.s12" padding-top="space.s6" padding-bottom="space.s6" border-radius="radius.r16"
-          background-color=(tab == t ? "selected" : "transparent") -exact-press-opacity="opacity.pressed" testId=`tab-${t.toLowerCase()}`
+          background-color=(tab == t ? "selected" : "transparent") -exact-press-opacity="opacity.pressed"
+          id=(pinned ? `shown-tab-${t.toLowerCase()}` : `tab-${t.toLowerCase()}`) testId=(pinned ? `shown-tab-${t.toLowerCase()}` : `tab-${t.toLowerCase()}`)
           text t font="type.topic" color=(tab == t ? "ink" : "accent") line-clamp=1 white-space="nowrap" position="relative" top="nudge.tab"
+
+// The tab row pinned over the list's top, under the status bar, as the
+// current app's PinnedTabs: a layer over the list, clipped to the row's
+// height, whose row slides down into it as the row turns shown and back up
+// out of it as it turns hidden (`listTabs.shown`), and with Reduce Motion
+// fades in place instead, its box never moving. At or above the resting
+// place it is out of sight at once (`listTabs.past`), as the list's own row
+// stands there. Touches and the screen reader reach it exactly while the
+// current `inReach` says (`listTabs.reach`); else it is inert and hidden. A
+// tap on a tab chooses it as the list's own row does. Its height, as laid
+// out, goes to `sized`: the room it covers.
+component ListTabsPinned
+  props
+    tab: string
+    tabs: string[]
+    choose: action
+    sized: action
+  inject
+    listTabs: ListTabsShown
+    motionStill: bool
+  view
+    column position="absolute" top="var(--exact-safe-area-inset-top)" left=0 right=0 z-index=2 overflow="hidden"
+      opacity=(listTabs.past ? 1 : 0) inert=(not listTabs.reach) aria-hidden=(not listTabs.reach) pointer-events=(listTabs.reach ? "auto" : "none")
+      resize=sized testId="shown-tabs"
+      column background-color="ground" translate=(motionStill or listTabs.shown ? "0px 0px" : "0px -100%") opacity=(motionStill and not listTabs.shown ? 0 : 1)
+        transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide") testId="shown-tabs-slide"
+        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true, away=false)
 
 // A group's header, as the current app's topic row: its name, quiet, on
 // the ground over a hairline, as tall as its text's line and its padding
-// at every text size. It stays at the list's top while its group's rows
-// scroll under it, until the next group's header pushes it off, as the
+// at every text size. It stays at the list's top, under the pinned tab row
+// while that shows (`listTabs.cover`), while its group's rows scroll under it, until the next group's header pushes it off, as the
 // current app's pinned topic does. With `gutter` it ends before the
 // Sections list's rail gutter, as every row of that list does. A tap on
 // it zooms out to All at once, as the current app's group row does
@@ -244,10 +363,11 @@ component ListHeader
   inject
     findPress: action
     listLanded: action
+    listTabs: ListTabsShown
   view
     column id=id press=findPress("tilesShow", 0)
       display="flex" flex-direction="column" align-self="stretch" padding=0
-      position="sticky" top=0 z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" testId=`${id}-row`
+      position="sticky" top=`${listTabs.cover}px` z-index=1 margin-right=(gutter ? "size.target" : "0px") background-color="ground" testId=`${id}-row`
       :active
         background-color="soft"
       row align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" position="relative"

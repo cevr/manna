@@ -26,6 +26,7 @@
       "@manna/hymnal-app/player/button": ["./src/player/bar/decl/button"],
       "@manna/hymnal-app/home/find-rules": ["./src/find/decl/find-rules"],
       "@manna/hymnal-app/home/tile-times": ["./src/find/decl/tile-times"],
+      "@manna/hymnal-app/home/reveal": ["./src/list/decl/reveal"],
       "@manna/hymnal-app/player/drums": ["./src/find/decl/drums"],
       "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"],
       "@manna/hymnal-app/reader/rows": ["./src/find/decl/rows"],

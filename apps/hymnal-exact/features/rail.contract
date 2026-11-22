@@ -47,6 +47,7 @@ component HomeRail
     end: number
   inject
     settingsFeel: bool
+    listTabsJump: action
   state railHeld = false
   state railLength = 0
   state railShown = -1
@@ -73,6 +74,7 @@ component HomeRail
           railY = m.y
           if m.at != railShown
             railShown = m.at
+            listTabsJump()
             scrollIntoView(`hymn-${m.number}`, block="start", behavior="instant")
             if m.ticks > 0
               if settingsFeel
