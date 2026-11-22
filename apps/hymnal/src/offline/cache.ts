@@ -12,7 +12,7 @@ import {
   SubscriptionRef,
 } from 'effect';
 import * as Semaphore from 'effect/Semaphore';
-import { soundingOffset } from '~/remote';
+import { soundingOffset } from '../remote';
 import { CHUNK, identityKey, mediaHeader } from './identity';
 
 export {
