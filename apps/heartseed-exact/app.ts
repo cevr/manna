@@ -2,6 +2,7 @@ import type { Answer, Sources } from './app.contract.d.ts';
 import licences, { version } from './src/about/licences';
 import { aboutSources } from './src/about/sources';
 import { addSources } from './src/add/sources';
+import { backSources } from './src/back/sources';
 import { chooserSources } from './src/chooser/sources';
 import { COMMENTARY, commentarySources } from './src/commentary/sources';
 import { findSources } from './src/find/sources';
@@ -59,6 +60,7 @@ const sources: Sources = {
   ...chooserSources,
   ...gotoSources,
   ...todaySources(garden),
+  ...backSources(garden),
   ...readerSources,
   ...textSources,
   ...readSources,

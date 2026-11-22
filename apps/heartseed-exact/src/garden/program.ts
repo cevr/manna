@@ -325,15 +325,19 @@ export const recallVerse = (
     return { answer: failed, held: yield* readGarden(storage) };
   });
 
-/** Moves `reference` back a stage from the stage it stands at, at the call's instant. */
-export const moveBack = (storage: FileStorage, reference: string) =>
+/** Moves `reference` back a stage at the call's instant: from `from`, the stage the reader asked from, only while it still stands there (the current app's `Backs.back`); with none asked, from the stage it stands at. */
+export const moveBack = (
+  storage: FileStorage,
+  reference: string,
+  from: Option.Option<Stage> = Option.none(),
+) =>
   withGrounds(
     storage,
     Effect.gen(function* () {
       const plant = plantIn(yield* gardenView, reference);
       if (Option.isNone(plant)) return 'Failed' satisfies BackAnswer;
       return yield* Effect.flatMap(Backs, (backs) =>
-        backs.back({ reference, from: stageOf(plant.value) }),
+        backs.back({ reference, from: Option.getOrElse(from, () => stageOf(plant.value)) }),
       );
     }),
   );

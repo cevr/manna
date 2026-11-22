@@ -11,7 +11,8 @@
  * change, a relaunch. After every step the two sides' session view (the
  * minutes, the plan, the hold, the visit), the item shown with its words,
  * its cue at rest, the counts, the end and its grown list, and the
- * garden, are equal. On every step A2's invariants hold.
+ * garden, are equal. On every step A2's invariants hold, and Today never
+ * offers Move back a stage (`back`) beside Show all's step back (`moveBack`).
  */
 
 import { runCall } from '@manna/exact-kit/effect';
@@ -514,6 +515,7 @@ export const runSessionHistory = async (seed: number) => {
     const seen = portSeen(screen, resting);
     expect({ ...where, wire: seen.wire }).toEqual({ ...where, wire: expected.wire });
     if (ranOn) expect({ ...where, shown: seen.shown }).toEqual({ ...where, shown: expected.shown });
+    expect({ ...where, both: screen.back && screen.moveBack }).toEqual({ ...where, both: false });
 
     const planKey = JSON.stringify(screen.session.wire.items);
     if (planKey !== planWas) doneInPlan = new Set();

@@ -28,6 +28,7 @@ use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, Speec
 use SessionShown, SessionCounts, SessionEnd, SessionNothing from "./session.contract"
 use hs-rise, hs-fade, hs-pulse from "./motion.contract"
 use homeIconOf from "./home.contract"
+use TodayBack from "./back.contract"
 
 shape TodayTime
   epochAtZero: number
@@ -113,6 +114,7 @@ shape TodayView
   seeking: bool
   seekText: string
   session: SessionShown
+  back: bool
 
 shape TodayReader
   on: bool
@@ -513,6 +515,8 @@ component TodayFoot
       column gap="space.s12" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" testId="today-foot"
         if part == "all" and (today.canShowAll or today.canNext)
           TodayPills(today=today, showAll=showAll, again=again)
+        if today.back
+          TodayBack(reference=today.reference)
         if part == "all" and today.canNext
           TodayCard(today=today, grade=grade)
         if part == "all" and today.canStop
