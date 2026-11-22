@@ -13,9 +13,13 @@ use KeysButton from "./keys.contract"
 // (src/player/bar/bar.model.test.ts holds it there).
 fn playerSwipedUp(pull: number, speed: number): bool = pull <= -24 or speed <= -400
 
-// Whether Play sounds the recording: on, the element plays aloud; off, it
-// plays muted, its place running on. Kept across launches, on until the
-// reader turns it off, as the current settings.ts's `sound`.
+// Whether Play sounds the recording: on, the element plays aloud; off,
+// nothing sounds and no element is loaded, and the player's silent clock
+// runs the place over the score (features/player.contract's `playerClock`,
+// as the current sound.ts's score clock). The player is told each switch
+// (`playerSoundTell`); until its answer lands the element is muted. Kept
+// across launches, on until the reader turns it off, as the current
+// settings.ts's `sound`.
 members HymnalExact
   state playerSound = true persist
   action playerSoundSwitch

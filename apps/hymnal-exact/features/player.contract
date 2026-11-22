@@ -70,6 +70,7 @@ shape PlayerView
   dragging: bool
   place: number
   skipAt: number
+  ticking: bool
   dock: bool
   pageBar: bool
   onPage: number
@@ -98,6 +99,8 @@ members HymnalExact
   state playerLastTick = 0
   state playerSkipFrom = -1
   state playerSkipLanded = -1
+  state playerClockAt = 0
+  state playerTicking = false
   derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" ? "/settings" : "/"))).join(" ")
   resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
@@ -107,6 +110,9 @@ members HymnalExact
   derive player = match playerStepped { case some(v) => (v.serial >= playerLatest.serial ? v : playerLatest), case none => playerLatest }
   action playerTook
     playerKept = player.kept
+    if player.ticking and not playerTicking
+      playerClockAt = performanceNow()
+    playerTicking = player.ticking
     if player.seek > playerSought
       playerSought = player.seek
       fastSeek("audio", player.seekTo)
@@ -130,7 +136,20 @@ members HymnalExact
         haptic("impact-light")
       else if kind == "stanza"
         haptic("selection")
+    if player.ticking
+      playerClockTicked()
     send playerStepped = playerStep(kind, 0, 0, value, "")
+  // The silent clock (Sound off) runs on the time since its last tick,
+  // told before each of the reader's asks and each switch, so a pause or
+  // a hand-over takes the place as it stands.
+  action playerClockTicked
+    let now = performanceNow()
+    send playerStepped = playerStep("tick", player.load, 0, now - playerClockAt, "")
+    playerClockAt = now
+  action playerSoundTold
+    if player.ticking
+      playerClockTicked()
+    send playerStepped = playerStep("sound", 0, 0, playerSound ? 1 : 0, "")
   action playerHeard(kind: string, id: number, value: number)
     send playerStepped = playerStep(kind, id, player.seek, value, "")
   action playerTicked(id: number, value: number)
@@ -170,6 +189,15 @@ members HymnalExact
   // runner's clock, from the last tick, has reached its start.
   task playerSkipWatch when player.skipAt >= 0
     every(frame, playerSkipCheck)
+  // While Sound is off and the hymn plays, the silent clock ticks
+  // (src/player/step.ts's `tick`, held to the current score clock by
+  // src/player/clock/clock.model.test.ts).
+  task playerClock when player.ticking key=player.load
+    every(250, playerClockTicked)
+  // The player is told Sound at launch and at each switch; off hands the
+  // place to the silent clock, on back to the recording.
+  task playerSoundTell key=playerSound
+    change(playerSoundTold)
 
 // The room the bar takes under a screen's last row while it shows, docked
 // or the page's own: one call line at the end of a screen's scrolled
