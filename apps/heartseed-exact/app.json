@@ -31,6 +31,11 @@
         "finding": "clipped",
         "node": "licence-text-*",
         "why": "The web's measure, not a spill: the licences keep their spaces as One's text does (white-space pre-wrap), and Chrome's text range counts the space that hangs past a wrapped line's end; with the spaces collapsed (pre-line) the same check finds nothing, and verify ios finds no licence at the largest text (hs-largest round 1)"
+      },
+      {
+        "finding": "clipped",
+        "node": "first-heading",
+        "why": "The welcome's one-word title at the web's largest root: One's title is 34 pt scaled by the reader's text size (apps/heartseed/src/sayit/draw.tsx, title; src/first/intro.tsx, Intro's heading), and the word Heartseed at verify's 53-px root (106 px) is wider than any line of a 390-wide phone; the port keeps One's size and wraps between words only, as verify's fixed-type check asks, so the one word runs past its line there. The first minute's other headings wrap between their words (par-hs-first round 1)"
       }
     ]
   },
