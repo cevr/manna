@@ -11,6 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { aboutQuery } from '@manna/hymnal-app/hymns/meaning';
 
 import { book } from '../hymns/book.ts';
+import { reachedFrom } from '../test/graph.testing.ts';
 import { query, seeded } from '../test/random.ts';
 import { MEANING_FIELDS, MEANING_ROOT } from './fields.ts';
 import { aboutOver } from './table.ts';
@@ -19,6 +20,9 @@ const { meaning } = (await import(
   new URL('../../../hymnal/assets/meaning/meaning.js', import.meta.url).href
 )) as { readonly meaning: () => Readonly<Record<string, string | number>> };
 const shipped = meaning();
+
+const PREPARE = 'apps/hymnal-exact/src/results/meaning-files.ts';
+const TABLE = 'apps/hymnal/src/hymns/meaning.ts';
 
 /** A host's read of the shipped files, counting each path it is asked for. */
 const host = () => {
@@ -38,7 +42,7 @@ const sourceFiles = Array.from(
 ).filter((path) => !/\.(test|testing|d)\.ts$|\.gen\.ts$/u.test(path));
 
 describe('the data module never bundles the table', () => {
-  test('only the build’s prepare step reads the table’s module, and no source imports that step', async () => {
+  test('only the build’s prepare step names the table’s files, and app.ts reaches neither that step nor the table’s module', async () => {
     const texts = await Promise.all(
       sourceFiles.map(async (path) => ({
         path,
@@ -49,14 +53,10 @@ describe('the data module never bundles the table', () => {
       .filter(({ text }) => /['"][^'"\n]*assets\/meaning\//u.test(text))
       .map(({ path }) => path);
     expect(readers).toEqual(['results/meaning-files.ts']);
-    const importers = texts
-      .filter(({ text }) => /^import [^\n]*meaning-files\.ts'/mu.test(text))
-      .map(({ path }) => path);
-    expect(importers).toEqual(['hymns/make.ts']);
-    const searchers = texts
-      .filter(({ path, text }) => /^(results|list)\//u.test(path) && /hymns\/meaning'/u.test(text))
-      .map(({ path }) => path);
-    expect(searchers).toEqual([]);
+    expect(reachedFrom('apps/hymnal-exact/src/hymns/make.ts').reached.has(PREPARE)).toBe(true);
+    const { reached } = reachedFrom('apps/hymnal-exact/app.ts');
+    expect(reached.has('apps/hymnal-exact/src/results/table.ts')).toBe(true);
+    expect([PREPARE, TABLE].filter((path) => reached.has(path))).toEqual([]);
   });
 });
 
