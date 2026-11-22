@@ -64,6 +64,7 @@
     "./follow/clock": "./src/follow/clock.ts",
     "./follow/intro-rules": "./src/follow/intro-rules.ts",
     "./follow/report": "./src/follow/report.ts",
+    "./reader/sung-lines": "./src/reader/sung-lines.ts",
     "./reader/seek-rules": "./src/reader/seek-rules.ts",
     "./player/scrub-rules": "./src/player/scrub-rules.ts",
     "./player/sound": "./src/player/sound.ts",
