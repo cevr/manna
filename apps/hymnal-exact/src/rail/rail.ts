@@ -58,10 +58,17 @@ export const marksOf = (sections: ReadonlyArray<RowSection>): ReadonlyArray<Mark
     section.rows.map((row) => ({ number: row.number, section: place, name: section.name })),
   );
 
-/** A label: its hymn's number and its top as a percent of the rail. */
+/**
+ * A label: its hymn's number, its middle as a percent of the rail, and how
+ * far it rises over that middle as a percent of its own line: half for
+ * each, as `Rail.tsx`'s `marginTop: -box / 2`, but none for the first,
+ * whose top stays at the rail's top, as the current hymnal draws its "1"
+ * below the tab row at the largest text (sweep-7's picture of it at AX5).
+ */
 export interface Label {
   readonly number: number;
   readonly top: number;
+  readonly lift: number;
 }
 
 /** The rail's measures and labels, as the Contract draws them. */
@@ -94,7 +101,9 @@ export const placesOf = (marks: ReadonlyArray<Mark>): Places => ({
   labels: labelsOf(marks.length, LABELS).flatMap((index) => {
     const mark = marks[index];
     if (mark === undefined) return [];
-    return [{ number: mark.number, top: labelAt(index, marks.length) }];
+    return [
+      { number: mark.number, top: labelAt(index, marks.length), lift: index === 0 ? 0 : -50 },
+    ];
   }),
 });
 

@@ -14,6 +14,11 @@
 shape RailLabel
   number: number
   top: number
+  lift: number
+
+// Whether the text is at one of iOS's accessibility sizes (`exactViewport()`).
+shape RailPort
+  accessibilityTextSize: bool
 
 shape RailPlaces
   gutter: number
@@ -47,6 +52,7 @@ component HomeRail
   state railShown = -1
   state railY = 0
   resource railPlaced = railPlaces() as shape RailPlaces
+  resource railPort = exactViewport() as shape RailPort
   mutation railMoved as shape RailAt then railTook
   action railSized(w: number, h: number)
     railLength = h
@@ -78,8 +84,9 @@ component HomeRail
       aria-hidden=true touch-action="none" resize=railSized
       pointerdown=railDown pointermove=railMove pointerup=railUp user-select="none" testId="rail"
       for l in railPlaced.labels key=l.number
-        text `${l.number}` position="absolute" left=0 right=0 top=`${l.top}%` translate="0 -50%" pointer-events="none"
-          font-size=`min(${railPlaced.labelMost}px, ${railPlaced.label}rem)` line-height=`min(${railPlaced.lineMost}px, ${railPlaced.line}rem)`
+        text `${l.number}` position="absolute" left=0 right=0 top=`${l.top}%` translate=`0 ${l.lift}%` pointer-events="none"
+          font-size=(railPort.accessibilityTextSize ? `${railPlaced.labelMost}px` : `min(${railPlaced.labelMost}px, ${railPlaced.label}rem)`)
+          line-height=(railPort.accessibilityTextSize ? `${railPlaced.lineMost}px` : `min(${railPlaced.lineMost}px, ${railPlaced.line}rem)`)
           text-align="center" font-variant-numeric="tabular-nums" color="muted" line-clamp=1 testId=`rail-label-${l.number}`
       column position="absolute" top=0 left=`${(railPlaced.gutter - railPlaced.thumb) / 2}px` width=`${railPlaced.thumb}px` height=`${railPlaced.thumb}px`
         border-radius=`${railPlaced.thumb / 2}px` background-color="accent" pointer-events="none"

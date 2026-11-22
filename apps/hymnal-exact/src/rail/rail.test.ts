@@ -147,15 +147,16 @@ describe('a drag’s ticks', () => {
 });
 
 describe('the rail’s labels and measures', () => {
-  it('are the current app’s six labels at their bands’ middles', () => {
+  it('are the current app’s six labels at their bands’ middles, the first held inside the rail', () => {
     const places = placesOf(ours);
     const indices = one.labelsOf(theirs.length, LABELS);
-    expect(places.labels).toEqual(
+    expect(places.labels.map(({ number, top }) => ({ number, top }))).toEqual(
       indices.map((index) => ({
         number: theirs[index]?.number ?? -1,
         top: one.labelAt(index, theirs.length),
       })),
     );
+    expect(places.labels.map((label) => label.lift)).toEqual([0, -50, -50, -50, -50, -50]);
     expect(places.gutter).toBe(one.GUTTER);
     expect(places.labelMost).toBe(one.LABEL_SIZE * one.LABEL_SCALE);
     expect(places.lineMost).toBe(one.LABEL_LINE * one.LABEL_SCALE);

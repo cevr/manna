@@ -31,11 +31,11 @@
  *   clear the player's bar both while a hymn sounds (the bar 88 tall, its
  *   seeker showing) and at rest (56). The Topics tab's grouped
  *   list ends in the same end room, starting above the find bar.
- * - At the largest text each of the rail's labels between the first and the
- *   last lies inside the rail; the first rises half its line over the rail's
- *   top and the last hangs half its line under its bottom, as the current
- *   hymnal's (`Rail.tsx`, `marginTop: -box / 2` at `labelAt`'s
- *   `(index + 0.5) / count`; app.json accepts the first's overlap).
+ * - At the largest text each of the rail's labels but the last lies inside
+ *   the rail, the first at its top (the current hymnal's "1" sits below the
+ *   tab row at AX5); the last hangs half its line under the rail's bottom, as
+ *   the current hymnal's (`Rail.tsx`, `marginTop: -box / 2` at `labelAt`'s
+ *   `(index + 0.5) / count`); none is taller than its capped line.
  * - At the largest text a chord shape's marks, dots and barre leave no
  *   finding `app.json` does not accept, and its accepts, read by Exact's own
  *   matcher, take each of those roles' verified kinds and no sibling role's
@@ -50,6 +50,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+import { LABEL_LINE, LABEL_SCALE } from '@manna/hymnal-app/reader/rail-marks';
 
 const host = process.argv[2] ?? 'web';
 const drive = makeDrive({ name: 'drive-largest', host, appDir: join(import.meta.dir, '..') });
@@ -553,7 +554,7 @@ const railTree = await drive.run(flags('largest-rail-tree'), [
 ]);
 const railLabels = nodesOf(railTree[2])
   .map((node) => node.props?.testId ?? '')
-  .filter((id) => id.startsWith('rail-label-') && id !== 'rail-label-1');
+  .filter((id) => id.startsWith('rail-label-'));
 const railOps = ['rail', ...railLabels].map((id) => `layout ${id}`);
 const railRuns = await drive.run(flags('largest-rail'), [
   'clock data',
@@ -573,12 +574,13 @@ const railOut = railLabels.filter((_, i) => {
     label.y < railBox.y ||
     bottom > railBox.y + railBox.h ||
     label.x < railBox.x ||
-    label.x + label.w > railBox.x + railBox.w
+    label.x + label.w > railBox.x + railBox.w ||
+    label.h > LABEL_LINE * LABEL_SCALE + 1
   );
 });
 drive.check(
-  'at the largest text the rail labels between the first and the last lie inside the rail, and the last hangs no more than half its line under it, as the current hymnal’s (its first rises half its line over the rail, app.json)',
-  railLabels.length === 5 && railOut.length === 0,
+  'at the largest text every rail label but the last lies inside the rail, the first at its top, the last hangs no more than half its line under it, and none is taller than the current hymnal’s capped line (`LABEL_LINE * LABEL_SCALE`)',
+  railLabels.length === 6 && railOut.length === 0,
   { labels: railLabels, out: railOut, rail: railBox },
 );
 

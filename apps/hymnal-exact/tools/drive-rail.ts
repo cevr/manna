@@ -55,6 +55,7 @@ const replies = await drive.run(
   [
     ...(process.env.EXACT_PORT ? ['--port', process.env.EXACT_PORT] : []),
     ...['--backend', backend, '--storage', `rail-${runId}`, '--reset-storage'],
+    ...(host === 'ios' ? ['--touch', 'platform'] : []),
   ],
   [
     'clock data',
