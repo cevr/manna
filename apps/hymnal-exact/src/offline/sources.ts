@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch, effect/noKnownValueWidening, eslint/no-await-in-loop -- Exact's data module cannot import effect (docs/exact.md): the store's commands are carried out on the host's `storage.fs` and `fetch` (its `exactBodyTo` outside the DOM's RequestInit), each started and not awaited, as the module's background work, and a rejected call is the store's answer, not a defect. */
+/* oxlint-disable effect/noNullish, effect/noNewPromise, effect/noTernary, effect/noAsyncFunction, effect/noGlobals, effect/noTryCatch, effect/noKnownValueWidening, eslint/no-await-in-loop -- Exact's data module cannot import effect (docs/exact.md): the store's commands are carried out on the host's `storage.fs` and `fetch` (its `exactBodyTo` outside the DOM's RequestInit), each started and not awaited, as the module's background work, and a rejected call is the store's answer, not a defect. */
 
 /**
  * The saved recordings as the data module runs them: one store (`store.ts`)
@@ -175,8 +175,15 @@ export const offlineSources = (
     serial += 1;
     for (const command of next.commands) carry(command);
   };
-  const quietly = (work: Promise<unknown>, event: string, path: string) => {
-    work.catch(() => note(event, `path=${path}`));
+  /** The disk's changes, one at a time and in the store's order: a Delete of every saved file never fills the host's storage queue (256 waiting, `full`). */
+  let turn: Promise<unknown> = Promise.resolve();
+  const inTurn = <A>(work: () => Promise<A>): Promise<A> => {
+    const done = turn.then(work, work);
+    turn = done.catch(() => undefined);
+    return done;
+  };
+  const quietly = (work: () => Promise<unknown>, event: string, path: string) => {
+    inTurn(work).catch(() => note(event, `path=${path}`));
   };
   const list = async (): Promise<ReadonlyArray<File>> => {
     const fs = files?.fs;
@@ -257,25 +264,27 @@ export const offlineSources = (
         fetches.get(command.serial)?.abort();
         return;
       case 'publish':
-        fs?.rename(partOf(command.id), pathOf(command.id)).catch(() => {
-          note('publish.failed', `path=${pathOf(command.id)}`);
-          feed({ _tag: 'invalidate', id: command.id });
-        });
+        if (fs !== undefined)
+          inTurn(() => fs.rename(partOf(command.id), pathOf(command.id))).catch(() => {
+            note('publish.failed', `path=${pathOf(command.id)}`);
+            feed({ _tag: 'invalidate', id: command.id });
+          });
         return;
       case 'drop':
-        if (fs !== undefined) quietly(fs.rm(partOf(command.id)), 'drop.failed', partOf(command.id));
+        if (fs !== undefined)
+          quietly(() => fs.rm(partOf(command.id)), 'drop.failed', partOf(command.id));
         return;
       case 'remove':
         if (fs !== undefined)
-          quietly(fs.rm(pathOf(command.id)), 'remove.failed', pathOf(command.id));
+          quietly(() => fs.rm(pathOf(command.id)), 'remove.failed', pathOf(command.id));
         return;
       case 'removeFile': {
         const path = `${ROOT}/${command.storage}/${command.name}`;
-        if (fs !== undefined) quietly(fs.rm(path), 'remove.failed', path);
+        if (fs !== undefined) quietly(() => fs.rm(path), 'remove.failed', path);
         return;
       }
       case 'removeOld':
-        quietly(removeOld(), 'removeOld.failed', ROOT);
+        quietly(removeOld, 'removeOld.failed', ROOT);
         return;
       case 'protect':
         protect().then(

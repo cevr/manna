@@ -59,7 +59,8 @@ export const declared = {
   } satisfies typeof WordsDecl,
 };
 
-/** An app's files in memory: each file's size by path, and the folders made. */
+const QUEUE = 256;
+
 const diskOf = () => {
   const files = new Map<string, number>();
   const folders = new Set<string>();
@@ -68,6 +69,15 @@ const diskOf = () => {
     [...new Set([...files.keys(), ...folders])]
       .filter((each) => parent(each) === path)
       .map((each) => each.slice(path.length + 1));
+  /** A change waits its turn in the host's storage queue, which refuses one more past `QUEUE` waiting (Exact's `full`, LLP 1097). */
+  let waiting = 0;
+  const queued = async (work: () => void) => {
+    if (waiting >= QUEUE) throw Object.assign(new Error('storage refused: full'), { code: 'full' });
+    waiting += 1;
+    await Promise.resolve();
+    waiting -= 1;
+    work();
+  };
   const storage: RecordingFiles = {
     fs: {
       mkdir: async (path) => {
@@ -82,23 +92,32 @@ const diskOf = () => {
         if (size === undefined && !folders.has(path)) throw new Error(`no file ${path}`);
         return { size: size ?? 0, isDirectory: size === undefined };
       },
-      rename: async (from, to) => {
-        const size = files.get(from);
-        if (size === undefined) throw new Error(`no file ${from}`);
-        files.delete(from);
-        files.set(to, size);
-      },
-      rm: async (path) => {
-        files.delete(path);
-        folders.delete(path);
-      },
+      rename: (from, to) =>
+        queued(() => {
+          const size = files.get(from);
+          if (size === undefined) throw new Error(`no file ${from}`);
+          files.delete(from);
+          files.set(to, size);
+        }),
+      rm: (path) =>
+        queued(() => {
+          files.delete(path);
+          folders.delete(path);
+        }),
     },
   };
   const put = (path: string, size: number) => {
     void storage.fs.mkdir(parent(path));
     files.set(path, size);
   };
-  return { files, storage, put };
+  /** Once no change has waited in the queue for 50 turns: the disk as the module left it. */
+  const idle = async () => {
+    for (let turn = 0, still = 0; turn < 20000 && still < 50; turn += 1) {
+      still = waiting === 0 ? still + 1 : 0;
+      await Promise.resolve();
+    }
+  };
+  return { files, storage, put, idle };
 };
 
 /** How the stand-in answers one recording's address. */
@@ -188,6 +207,7 @@ describe('the saved recordings, as the data module keeps them', () => {
     expect(backups).toEqual([{ op: 'backup.exclude', path: ROOT }]);
     expect(asked.length).toBe(words.RECORDINGS);
     expect(new Set(asked).size).toBe(words.RECORDINGS);
+    await disk.idle();
     expect([...disk.files.keys()].filter((path) => path.endsWith('.part'))).toEqual([]);
     expect(disk.files.get(pathOf({ number: 1, offset: 0 }))).toBe(SIZE);
     expect(view.estimate).toBe(words.estimateText(estimate.estimateMegabytes(timing)));
@@ -221,6 +241,7 @@ describe('the saved recordings, as the data module keeps them', () => {
     const failed = await settled(run.view);
     expect(failed.printed).toBe(words.RECORDINGS - 4);
     expect(failed.failure).toBe(words.failureOf({ storage: false }));
+    await disk.idle();
     for (const number of [2, 3, 4, 5]) {
       expect(disk.files.has(pathOf({ number, offset: 0 }))).toBe(false);
       expect(disk.files.has(partOf({ number, offset: 0 }))).toBe(false);
@@ -242,6 +263,7 @@ describe('the saved recordings, as the data module keeps them', () => {
     const view = await settled(run.view);
     expect(view.printed).toBe(1);
     expect(view.paused).toBe(true);
+    await disk.idle();
     expect(disk.files.has(partOf({ number: 8, offset: 0 }))).toBe(false);
     expect(disk.files.has(`${pathOf({ number: 9, offset: 0 })}.exact-staging`)).toBe(false);
     expect(asked).toEqual([]);
@@ -262,7 +284,21 @@ describe('the saved recordings, as the data module keeps them', () => {
     run.ask('delete');
     const deleted = await settled(run.view);
     expect(deleted.saved).toBe(0);
-    await settled(run.view);
+    await disk.idle();
+    expect([...disk.files.keys()]).toEqual([]);
+  });
+
+  it('Delete after every recording is saved removes every file, the host’s storage queue never full', async () => {
+    const disk = diskOf();
+    serve(disk);
+    const run = launch(disk);
+    run.ask('all');
+    expect((await settled(run.view)).printed).toBe(words.RECORDINGS);
+    await disk.idle();
+    expect(disk.files.size).toBeGreaterThan(QUEUE);
+    run.ask('delete');
+    expect((await settled(run.view)).saved).toBe(0);
+    await disk.idle();
     expect([...disk.files.keys()]).toEqual([]);
   });
 });
@@ -292,6 +328,7 @@ describe('the player over the saved recordings, as the current localOver and sav
     expect(failed.from).toBe(30);
     const view = await settled(run.view);
     expect(view.printed).toBe(1);
+    await disk.idle();
     expect(disk.files.get(pathOf({ number: 1, offset: 0 }))).toBe(SIZE);
   });
 
