@@ -22,7 +22,8 @@
 // current app's PinnedTabs (`ListTabsPinned`): a layer over the list, so the
 // list's content and offset never move for it. The rule is the current
 // app's `home/reveal.ts`, stepped in the data module (`listTabsStep`,
-// src/list/reveal.ts) by each scroll report, by the app's own moves of the
+// src/list/reveal.ts) by each scroll report that can turn it (the rest kept
+// back by the band each answer names, `listTabsReport`), by the app's own moves of the
 // list (a tab chosen, a tile picked, the rail, a landing: `listTabsJump`,
 // which turns nothing and holds the row until the reader touches the list)
 // and by the reader's touch (`listTabsTouch`). A group's pinned header and
@@ -47,13 +48,21 @@ shape ListOpening
 
 // The pinned tab row after an input (src/list/reveal.ts `TabsAt`): shown
 // (its slide's end), in reach, the list past the resting place, the points
-// of the list's top it covers, and the offset it was stepped at.
+// of the list's top it covers, the offset it was stepped at, and its quiet
+// band: the reports that can turn nothing are kept back while the view
+// moves `edge` its `way` (1 deeper, -1 higher, 0 none kept back) and each
+// stands within `travel` of it, past the same `rest`, the row `height` tall.
 shape ListTabsAt
   shown: bool
   reach: bool
   past: bool
   cover: number
   at: number
+  way: number
+  edge: number
+  travel: number
+  rest: number
+  height: number
 
 // What the view draws of the pinned row: `ListTabsAt` but the offset, so a
 // scroll report that turns nothing draws nothing again.
@@ -91,17 +100,27 @@ members HymnalExact
   mutation listOpening as shape ListOpening queue then listOpened
   state listTabs = ListTabsShown(shown=false, reach=false, past=false, cover=0)
   state listTabsAt = 0
+  state listTabsBand = ListTabsAt(shown=false, reach=false, past=false, cover=0, at=0, way=0, edge=0, travel=0, rest=0, height=0)
+  state listTabsEdge = 0
   mutation listTabsMoved as shape ListTabsAt queue then listTabsTook
   action listTabsReport(y: number, rest: number, height: number)
-    send listTabsMoved = listTabsStep("scroll", y, rest, height)
+    listTabsAt = y
+    let b = listTabsBand
+    let moved = b.way > 0 ? max(listTabsEdge, y) : min(listTabsEdge, y)
+    if b.way != 0 and y > b.rest and rest == b.rest and height == b.height and (moved - y) * b.way < b.travel
+      listTabsEdge = moved
+    else
+      send listTabsMoved = listTabsStep("scroll", y, rest, height, listTabsEdge)
   action listTabsJump
-    send listTabsMoved = listTabsStep("here", 0, 0, 0)
+    send listTabsMoved = listTabsStep("here", listTabsAt, 0, 0, listTabsEdge)
   action listTabsTouch
-    send listTabsMoved = listTabsStep("touch", 0, 0, 0)
+    send listTabsMoved = listTabsStep("touch", listTabsAt, 0, 0, listTabsEdge)
   action listTabsTook
     match listTabsMoved
       case some(t)
         listTabsAt = t.at
+        listTabsBand = t
+        listTabsEdge = t.edge
         let drawn = ListTabsShown(shown=t.shown, reach=t.reach, past=t.past, cover=t.cover)
         if drawn != listTabs
           listTabs = drawn
@@ -112,7 +131,7 @@ members HymnalExact
       if name != listTab
         haptic("selection")
     if name != listTab
-      send listTabsMoved = listTabsStep("jump", 0, 0, 0)
+      send listTabsMoved = listTabsStep("jump", 0, 0, 0, listTabsEdge)
       scrollIntoView("list-top", block="start", behavior="instant")
       scrollIntoView(`tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
       scrollIntoView(`shown-tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")

@@ -87,26 +87,56 @@ const oneRow = (rest: number, height: number) => {
   };
 };
 
-/** The port's row: what the view sends for each step, and the last answer. */
+/**
+ * The port's row as `features/list.contract` drives it: each report sent
+ * unless the last answer's quiet band keeps it back (`listTabsReport`: the
+ * edge moved its `way` and the report within `travel` of it, past the same
+ * resting place, the row as tall), the kept edge handed with every input,
+ * the app's moves and the touch at the offset last seen; `sent` counts the
+ * reports sent.
+ */
 const portRow = (rest: number, height: number) => {
   const { listTabsStep } = revealSources();
-  let last: TabsAt = listTabsStep(['open', 0, rest, height]);
+  let last: TabsAt = listTabsStep(['open', 0, rest, height, 0]);
+  let edge = last.edge;
+  let seenAt = 0;
+  let sent = 0;
+  const took = (answer: TabsAt) => {
+    last = answer;
+    edge = answer.edge;
+    seenAt = answer.at;
+  };
+  const report = (at: number) => {
+    seenAt = at;
+    const moved = last.way > 0 ? Math.max(edge, at) : Math.min(edge, at);
+    const kept =
+      last.way !== 0 &&
+      at > last.rest &&
+      rest === last.rest &&
+      height === last.height &&
+      (moved - at) * last.way < last.travel;
+    if (kept) edge = moved;
+    else {
+      sent += 1;
+      took(listTabsStep(['scroll', at, rest, height, edge]));
+    }
+  };
   return {
     step: (step: Step) => {
-      if (step.kind === 'scroll') last = listTabsStep(['scroll', step.at, rest, height]);
+      if (step.kind === 'scroll') report(step.at);
       if (step.kind === 'move') {
-        last = listTabsStep(['here', 0, 0, 0]);
-        if (step.moved && step.at !== last.at)
-          last = listTabsStep(['scroll', step.at, rest, height]);
+        took(listTabsStep(['here', seenAt, rest, height, edge]));
+        if (step.moved && step.at !== seenAt) report(step.at);
       }
       if (step.kind === 'choose') {
-        const stood = last.at;
-        last = listTabsStep(['jump', 0, 0, 0]);
-        if (stood !== 0) last = listTabsStep(['scroll', 0, rest, height]);
+        const stood = seenAt;
+        took(listTabsStep(['jump', 0, rest, height, edge]));
+        if (stood !== 0) report(0);
       }
-      if (step.kind === 'touch') last = listTabsStep(['touch', 0, 0, 0]);
+      if (step.kind === 'touch') took(listTabsStep(['touch', seenAt, rest, height, edge]));
     },
-    seen: () => ({ shown: last.shown, reach: last.reach, cover: last.cover, at: last.at }),
+    seen: () => ({ shown: last.shown, reach: last.reach, cover: last.cover, at: seenAt }),
+    sent: () => sent,
   };
 };
 
@@ -185,6 +215,15 @@ describe('the pinned tab row against the current app’s', () => {
         expect(said).toEqual({ seed, index, step, ...theirs.seen() });
       }
     }
+  });
+
+  it('sends a fling’s reports only where they turn the row or cross the resting place', () => {
+    const ours = portRow(49, 48);
+    for (let at = 10; at <= 6000; at += 37) ours.step({ kind: 'scroll', at });
+    expect(ours.sent()).toBe(3);
+    for (let at = 6000; at >= 3000; at -= 3) ours.step({ kind: 'scroll', at });
+    expect(ours.seen().shown).toBe(true);
+    expect(ours.sent()).toBe(4);
   });
 
   it('turns on an upward scroll of the travel deep in the list, and the app’s move turns nothing until a touch', () => {

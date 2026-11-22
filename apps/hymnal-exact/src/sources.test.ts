@@ -131,6 +131,7 @@ describe('the data module runs where Exact runs it', () => {
             below(random, 6000) - 60,
             below(random, 300),
             below(random, 200),
+            below(random, 6000) - 60,
           ]),
         ).not.toThrow();
         expect(() => sources.pagerAround([route(random), list])).not.toThrow();
