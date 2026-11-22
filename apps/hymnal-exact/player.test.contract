@@ -301,3 +301,89 @@ test "The bar shows the spinner while a load waits, then Pause once the hymn sou
   expect tree missing "bar-loading"
   expect state player.bar.kind == "pause"
   expect tree has "bar-toggle"
+
+// Sound off is the current app's silent score clock (src/player/step.ts,
+// held to sound.ts by src/player/clock/clock.model.test.ts): nothing loads,
+// the place runs on the clock's ticks, a pause holds it, and a Resume with
+// Sound on again loads the recording at the place.
+test "With Sound off, Play runs the place with no recording loaded; with Sound on again, Resume loads it there"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == false
+  tap "play"
+  clock data
+  clock settle
+  expect state player.phase == "playing"
+  expect state player.ticking == true
+  expect state player.src == ""
+  expect tree missing "audio"
+  expect state player.bar.kind == "pause"
+  clock +2000
+  clock data
+  expect state player.at >= 2
+  tap "bar-toggle"
+  clock data
+  clock settle
+  expect state player.phase == "paused"
+  expect state player.ticking == false
+  expect state player.at >= 2
+  clock +2000
+  clock data
+  expect state player.phase == "paused"
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == true
+  expect state player.src == ""
+  expect state player.phase == "paused"
+  tap "bar-toggle"
+  clock data
+  expect tree has "audio"
+  expect state player.paused == false
+  expect state player.from >= 2
+  clock until state player.phase == "playing" within 10000
+  expect tree has "audio"
+  expect state player.ticking == false
+
+test "Sound turned off mid-play unloads the recording and the place runs on"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect tree has "audio"
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state playerSound == false
+  expect state player.src == ""
+  expect tree missing "audio"
+  expect state player.phase == "playing"
+  expect state player.ticking == true
+  expect state player.at >= 1
+  clock +3000
+  clock data
+  expect state player.at >= 4

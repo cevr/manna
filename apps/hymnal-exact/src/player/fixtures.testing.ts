@@ -23,7 +23,7 @@ const SECTIONS: ReadonlyArray<Section> = [1, 2, 3].map((n) => ({
 }));
 
 /** Six sung lines of a second each from half a second in: stanza `n` sings from `2n - 1.5` s to `2n + 0.5` s. */
-const TIMELINE: Timeline = {
+export const TIMELINE: Timeline = {
   tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   lines: Array.from({ length: 6 }, (_, index) => ({
     start: 500 + index * 1000,

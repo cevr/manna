@@ -60,6 +60,7 @@
     "./feel/cues": "./src/feel/cues.ts",
     "./follow/seek-targets": "./src/follow/seek-targets.ts",
     "./player/scrub-rules": "./src/player/scrub-rules.ts",
+    "./player/sound": "./src/player/sound.ts",
     "./player/caption": "./src/player/caption.ts",
     "./reader/reading": "./src/reader/reading.ts",
     "./home/find-rules": "./src/home/find-rules.ts",

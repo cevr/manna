@@ -5,9 +5,10 @@
  * id, serial, value, text)` runs one input of `step` and answers the view.
  * The state lives here, one per launch of the data module; what outlives a
  * launch is the stanza choice, which the view hands back as text for a
- * `persist` state and a `restore` reads in again. Nothing reads the clock:
- * every input is the call's arguments, and a device event names its load
- * and the seek it follows.
+ * `persist` state and a `restore` reads in again, and Sound, which the
+ * contract tells as `sound` at launch and at each switch. Nothing reads the
+ * clock: every input is the call's arguments, a device event names its load
+ * and the seek it follows, and the silent clock's `tick` the ms it ran.
  *
  * A failed load is told why by asking the recording's address once: no
  * answer is no connection, a 404 or 403 no recording, anything else a
@@ -144,6 +145,8 @@ export const playerSources = (
     )
       return { _tag: kind, id };
     if (kind === 'ended') return { _tag: 'ended', id };
+    if (kind === 'tick') return { _tag: 'tick', id, ms: value };
+    if (kind === 'sound') return { _tag: 'sound', on: value > 0 };
     return undefined;
   };
   const playerStep = async ([kind, id, serial, value, text]: readonly [
