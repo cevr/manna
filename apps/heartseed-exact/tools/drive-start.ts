@@ -7,8 +7,9 @@
  * holds that no sheet is up (`readSheetUp`) and that the screen it opens is
  * shown, in view and not inert, so nothing is drawn over it:
  *
- * 1. a fresh store opens home: the current app's first minute, which the
- *    port draws as home, nothing pushed;
+ * 1. a fresh store opens the current app's first minute: its welcome
+ *    pushed over home, full screen, so `readSheetUp` holds and the welcome
+ *    itself is the screen checked;
  * 2. a launch at `/verses` stays there once the opening is decided;
  * 3. a store whose verse was said (planted and marked Good through Your
  *    verses' drive controls, so every launch sets `HEARTSEED_GARDEN_DRIVE`)
@@ -84,6 +85,7 @@ const readOf = (replies: ReadonlyArray<unknown>) => {
     home: has(tree, 'home'),
     today: has(tree, 'today'),
     verses: has(tree, 'verses'),
+    first: has(tree, 'first-welcome'),
     sheetUp: replies[at + 5],
     seen,
     front:
@@ -94,15 +96,17 @@ const readOf = (replies: ReadonlyArray<unknown>) => {
   };
 };
 
-const fresh = readOf(await drive.launch(storeOf('fresh'), opened('home')));
+const fresh = readOf(await drive.launch(storeOf('fresh'), opened('first')));
 drive.check(
-  'a fresh store opens home, the first minute, nothing pushed, no sheet over it',
+  "a fresh store opens the first minute's welcome over home, shown, in view and taking touch",
   fresh.shown?.opening === 'first' &&
-    fresh.shown.route === '' &&
+    fresh.shown.route === '/first/welcome/none' &&
     fresh.decided === true &&
-    fresh.home &&
+    fresh.first &&
     !fresh.today &&
-    fresh.front,
+    fresh.seen?.hidden === false &&
+    fresh.seen.inert === false &&
+    fresh.seen.inViewport === true,
   fresh,
 );
 

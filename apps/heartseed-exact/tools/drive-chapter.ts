@@ -37,6 +37,8 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
 import { contrast } from '../src/look/brand';
@@ -46,12 +48,14 @@ const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
 const shots = process.env.SHOTS ?? join(app, '.exact/shots');
 mkdirSync(shots, { recursive: true });
-const drive = makeDrive({
-  name: 'drive-chapter',
-  host,
-  appDir: app,
-  timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
-});
+const drive = fromHome(
+  makeDrive({
+    name: 'drive-chapter',
+    host,
+    appDir: app,
+    timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
+  }),
+);
 const store = `chapter-${host}-${Date.now().toString(36)}`;
 /** Every web launch here is a phone's width. */
 const size = host === 'web' ? ['--size', '390x844'] : [];
