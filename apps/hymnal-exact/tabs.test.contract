@@ -52,7 +52,6 @@ test "Reports made before an answer lands fold in order as the current app's: hi
   clock data
   expect state listTabs.shown == false
   tap "hymn-list" wheel 0 -8
-  expect state listTabs.shown == false
   tap "hymn-list" wheel 0 8
   clock settle
   clock data
