@@ -5,7 +5,8 @@
  * takes the list to hymn 1 under its topic, a drag held mid-rail shows the
  * thumb and the bubble (the hymn's number and topic) and takes the list to
  * that hymn, and a release hides them. A heading's tap opens All at once;
- * the heading is its name's text, the row the press, as iOS reads it. The
+ * the heading is its name's text, the row the press, as iOS reads it, and
+ * the platform's tree reads it as a heading by its name with its hint. The
  * Lists tab, with a favourite in it, keeps the header's room over a row it
  * scrolls to, as the other tabs do.
  * Prints one PASS or FAIL line a check; exits non-zero on any FAIL.
@@ -190,7 +191,7 @@ interface Built {
 }
 const headed = await drive.run(
   ['--storage', `rail-heading-${runId}`, '--reset-storage'],
-  ['clock data', 'tree section-adoration-and-praise-row'],
+  ['clock data', 'tree section-adoration-and-praise-row', 'tree --ax section-adoration-and-praise'],
 );
 const built = ((headed[1] as { nodes?: ReadonlyArray<Built> } | undefined)?.nodes ??
   []) as ReadonlyArray<Built>;
@@ -205,6 +206,22 @@ drive.check(
     name.props?.accessibilityRole === 'heading' &&
     name.props?.accessibilityHint === 'Shows every group at once',
   { row, name },
+);
+interface AxElement {
+  readonly role?: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly testId?: string;
+}
+const read = (
+  (headed[2] as { ax?: { elements?: ReadonlyArray<AxElement> } } | undefined)?.ax?.elements ?? []
+).find((element) => element.testId === 'section-adoration-and-praise');
+drive.check(
+  'the platform reads a group’s header as a heading by its name, with the current hint',
+  /heading/iu.test(read?.role ?? '') &&
+    read?.name === 'Adoration and Praise' &&
+    read?.description === 'Shows every group at once',
+  read,
 );
 const lists = await drive.run(
   ['--storage', `rail-lists-${runId}`, '--reset-storage'],

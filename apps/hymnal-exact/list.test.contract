@@ -42,6 +42,15 @@ test "A group's heading opens All at once, on Sections and on another tab."
   clock data
   expect tree has "section-adoration-and-praise"
 
+test "A group's heading is a keyboard stop after the tabs, and Enter on it opens All at once."
+  expect tree missing "tiles"
+  type "tab-sections" key "Tab"
+  expect focused "section-adoration-and-praise-row"
+  type "section-adoration-and-praise-row" key "Enter"
+  clock settle
+  clock data
+  expect tree has "tiles"
+
 test "Search by number, title and first line."
   tap "find-search"
   clock settle
