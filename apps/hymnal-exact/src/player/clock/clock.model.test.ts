@@ -23,7 +23,7 @@
 
 import { describe, expect, it } from 'bun:test';
 import { sends } from '@manna/hymnal-app/player/scrub-rules';
-import type { PlaybackApi, scoreClock as ScoreClock, Status } from '@manna/hymnal-app/player/sound';
+import type { PlaybackApi, scoreClock as ScoreClock, Told } from '@manna/hymnal-app/player/sound';
 import { Clock, Effect, Option, Stream, SubscriptionRef } from 'effect';
 import { TestClock } from 'effect/testing';
 
@@ -69,10 +69,10 @@ const actOf = (random: Random): Act =>
 
 /** A device holding a recording `length` ms long that moves with the clock while it plays, as the current app's `sound.test.ts` holds one. */
 const recording = (length: number): PlaybackApi => {
-  let state: Status['state'] = 'idle';
+  let state: Told['state'] = 'idle';
   let at = 0;
   let since = 0;
-  const read = Effect.map(Clock.currentTimeMillis, (now): Status => {
+  const read = Effect.map(Clock.currentTimeMillis, (now): Told => {
     if (state === 'playing') at = Math.min(length, at + (now - since));
     since = now;
     if (state === 'playing' && at >= length) state = 'ended';
@@ -266,7 +266,7 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
             break;
         }
         const view = viewOf(port.state(), undefined, titleOf);
-        const fail = (rule: string, told: Status | boolean | undefined) => {
+        const fail = (rule: string, told: Told | boolean | undefined) => {
           throw new Error(
             JSON.stringify({ rule, seed, acts, port: view, held: port.state().held, told }),
           );
