@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish, effect/noAs, effect/noGlobals, effect/noAsyncFunction -- a Bun test, which awaits the current app's bar once, that reads `app.contract`'s routes and `features/player.contract`'s `playerPaths` line as text and evaluates that line's rule, as the contract runs it, for each route. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noAsyncFunction -- a Bun test, which awaits the current app's bar once, that reads `app.contract`'s routes and `features/player.contract`'s `playerPaths` line as text and evaluates that line's rule, as the contract runs it, for each route. */
 
 /**
  * The bar treats a screen as One does (`apps/hymnal/src/player/bar.ts`
