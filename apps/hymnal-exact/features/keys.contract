@@ -35,6 +35,7 @@ shape KeysPage
   over: string
   key: string
   said: string
+  hint: string
   offered: bool
   reset: bool
   printedName: string
@@ -274,7 +275,7 @@ component KeysButton
     if number != 0 and keysShown.number == number
       button press=keysTap pointerdown=keysDown pointerup=keysUp pan=keysPan panrelease=keysLetGo
         appearance="none" padding=0 min-width="size.target" height="size.target" flex-shrink=0 position="relative" touch-action="none"
-        aria-label="Key" aria-valuetext=keysShown.said aria-expanded=keysShown.open testId="key-button"
+        aria-label="Key" aria-valuetext=keysShown.said aria-description=keysShown.hint aria-expanded=keysShown.open testId="key-button"
         row testId="key-face" position="relative" align-items="center" gap=`${keysPlaced.keyGap}px`
           min-width="size.target" height="size.target" border-radius="radius.pill" box-sizing="border-box"
           padding-left=`${keysPlaced.keyLeft}px` padding-right=`${keysShown.on ? keysPlaced.keyRight : keysPlaced.keyLeft}px`

@@ -8,6 +8,7 @@ test "On a hymn's page the bar's key button is first, the guitar's head alone wi
   expect tree has "guitar-head"
   expect tree missing "key-over"
   expect state keysShown.said == "Chords off"
+  expect state keysShown.hint == "Turns chords on"
   tap "key-button"
   clock data
   clock settle
@@ -16,6 +17,7 @@ test "On a hymn's page the bar's key button is first, the guitar's head alone wi
   expect text "key-over" == "KEY"
   expect text "key-key" == "D"
   expect state keysShown.said == "D"
+  expect state keysShown.hint == "Opens the key and capo dials"
   expect text "chord-1-1-1" == "D"
 
 test "With chords on a tap opens the dials; a tap on a key and on a fret move the hymn, and the face follows."
@@ -30,6 +32,7 @@ test "With chords on a tap opens the dials; a tap on a key and on a fret move th
   clock data
   clock settle
   expect state keysOpen == true
+  expect state keysShown.hint == "Closes the key and capo dials"
   expect tree has "dials-panel"
   expect tree has "dial-key"
   expect tree has "dial-capo"

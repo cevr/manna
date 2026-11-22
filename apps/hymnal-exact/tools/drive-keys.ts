@@ -9,7 +9,10 @@
  * - with chords off the key button is the platform's button named "Key"
  *   (`tree --ax`, read before chords fill the page past its 40 elements;
  *   on iOS its value "Chords off" too: the web reads no value on a
- *   button), and the open dials' controls carry the names "Capo" and
+ *   button), its hint One's `hintOf` (the ax tree's description with
+ *   chords off, the authored hint with them on and with the dials open:
+ *   iOS's VoiceOver hint, the web's `aria-description`), and the open
+ *   dials' controls carry the names "Capo" and
  *   "Key" with One's `capoSaid` and `keySaid` as their values (`tree`);
  * - on iOS (Exact scripts a held finger's legs there alone), a hold of the
  *   key button past `HOLD` opens the wheel with One's words, Key ♭, Key ♯,
@@ -35,6 +38,7 @@ interface AxElement {
   readonly role?: string;
   readonly name?: string;
   readonly value?: string;
+  readonly description?: string;
   readonly testId?: string;
 }
 
@@ -70,12 +74,20 @@ const propsOf = (reply: unknown) => {
     reply as
       | {
           nodes?: ReadonlyArray<{
-            props?: { accessibilityLabel?: string; accessibilityValueText?: string };
+            props?: {
+              accessibilityLabel?: string;
+              accessibilityValueText?: string;
+              accessibilityHint?: string;
+            };
           }>;
         }
       | undefined
   )?.nodes?.[0]?.props;
-  return { label: node?.accessibilityLabel, value: node?.accessibilityValueText };
+  return {
+    label: node?.accessibilityLabel,
+    value: node?.accessibilityValueText,
+    hint: node?.accessibilityHint,
+  };
 };
 
 const offAt = 6;
@@ -83,11 +95,13 @@ const names = await drive.launch(store('names'), [
   ...onHymn.slice(0, offAt),
   'tree --ax key-button',
   ...onHymn.slice(offAt),
+  'tree key-button',
   'tap key-button',
   'clock data',
   'clock settle',
   'tree dial-capo-value',
   'tree dial-key-value',
+  'tree key-button',
 ]);
 const off = named(names[offAt], 'Key');
 drive.check(
@@ -99,7 +113,24 @@ drive.check(
     (host !== 'ios' || off.value === 'Chords off'),
   elementsOf(names[offAt]),
 );
-const [capo, key] = [names[onHymn.length + 4], names[onHymn.length + 5]].map(propsOf);
+const hints = [
+  off?.description,
+  propsOf(names[onHymn.length + 1]).hint,
+  propsOf(names[onHymn.length + 7]).hint,
+];
+drive.check(
+  'the key button’s hint is the current app’s: chords off, on, and the dials open',
+  JSON.stringify(hints) ===
+    JSON.stringify([
+      'Turns chords on',
+      'Opens the key and capo dials',
+      'Closes the key and capo dials',
+    ]),
+  hints,
+);
+const [capo, key] = [names[onHymn.length + 5], names[onHymn.length + 6]]
+  .map(propsOf)
+  .map(({ label, value }) => ({ label, value }));
 drive.check(
   'the open dials name Capo and Key with the current app’s values',
   JSON.stringify([capo, key]) ===

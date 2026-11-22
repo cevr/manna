@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test drawing generated histories with the app's seeded generator; a hymn with no chords has no printed key. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noAs -- a Bun test drawing generated histories with the app's seeded generator; a hymn with no chords has no printed key; a Bun test in an Exact app's folder imports no effect, so the option the current app's `hintOf` takes is named by the shape it takes at run time. */
 
 /**
  * The key button's sources answer as the current app's own model and press
@@ -7,7 +7,7 @@
  * and the reset's close) over hymns of every printed key, sent through
  * `keysStep` as the bar sends them (its kept moves in and out), give the
  * state and cue of `@manna/hymnal-app/player/thumb`'s `step`; after each,
- * `keysPage` shows that model's face, said value, chips, rows and stops,
+ * `keysPage` shows that model's face, said value, hint, chips, rows and stops,
  * and the key dial stands on the sounding key's stop. A hymn with no chords
  * takes only the keyless events, from C major. Generated presses sent
  * through `keysPress` (a finger landing, panning by deltas, the clock
@@ -48,6 +48,17 @@ const keyed = (() => {
 const printedIn = (number: number, style: string): Key | undefined => {
   const chords = currentBook.of(number);
   return chords._tag === 'Some' ? styled(chords.value, styleOf(style)).key : undefined;
+};
+
+/** The current app's hint for the key button over `printed`, `""` for none, as the view draws it. */
+const hintFor = (printed: Key | undefined, state: thumb.Thumb): string => {
+  const hint = thumb.hintOf(
+    (printed === undefined ? { _tag: 'None' } : { _tag: 'Some', value: printed }) as Parameters<
+      typeof thumb.hintOf
+    >[0],
+    state,
+  );
+  return hint._tag === 'Some' ? hint.value : '';
 };
 
 /** A hymn the hymnal has with no chords. */
@@ -155,6 +166,8 @@ describe('the key button’s sources, against the current app’s model', () => 
             face._tag === 'Key' ? [true, face.over, face.key] : [false, '', ''],
           );
           expect(page.said).toBe(thumb.saidOf(printed, theirs));
+          expect(page.hint).toBe(hintFor(printed, theirs));
+          expect(page.hint).not.toBe('');
           expect(page.reset).toBe(thumb.chipsOf(theirs).includes('reset'));
           expect(page.capoRow).toBe(thumb.shownOf(theirs).includes('capo'));
           expect(page.keyStops).toEqual([...thumb.keyStops(printed)]);
@@ -194,6 +207,10 @@ describe('the key button’s sources, against the current app’s model', () => 
         false,
         on ? 'No chords' : 'Chords off',
       ]);
+      expect(page.hint).toBe(
+        hintFor(undefined, { chords: on, move: moveOf(moves, unchorded), open }),
+      );
+      expect(page.hint).toBe(on ? '' : 'Turns chords on');
     }
   });
 });

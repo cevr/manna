@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- Exact's data module reads no effect of its own (docs/exact.md): a hymn with no printed key is `undefined`, and a call branches plainly. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs -- Exact's data module reads no effect of its own (docs/exact.md): a hymn with no printed key is `undefined`, a call branches plainly, and the option the current app's `hintOf` takes is named by the shape it takes at run time. */
 
 /**
  * The key button's sources, as `app.ts` registers them over the shipped
@@ -10,7 +10,8 @@
  *
  * - `keysPlaces()`: the current app's measures (`PLACES`);
  * - `keysPage(route, on, moves, open, style)`: what the key button, its
- *   dials and its wheel show for the route's hymn; the printed key is the
+ *   dials and its wheel show for the route's hymn (the button's hint the current app's
+ *   `hintOf`, `""` for none); the printed key is the
  *   hymn's chords' key in the reader's chord style (`styleOf`, Simple
  *   until chosen), as the current app's `useThumb` reads it;
  * - `keysStep(kind, value, route, on, moves, open, style)`: one event of the
@@ -109,6 +110,16 @@ export const pitchOf = (tonic: string): number => {
 
 /** The key a hymn with no printed key steps from. */
 const NO_KEY: Key = { tonic: 'C', minor: false };
+
+/** The printed key as the current app's `hintOf` takes it: an option, named by the shape it takes at run time. */
+const printedOption = (printed: Key | undefined) =>
+  (printed === undefined ? { _tag: 'None' } : { _tag: 'Some', value: printed }) as Parameters<
+    typeof thumb.hintOf
+  >[0];
+
+/** An optional text as the view reads it: its value, or `""` for none (no hint is drawn). */
+const textOf = (text: ReturnType<typeof thumb.hintOf>): string =>
+  text._tag === 'Some' ? text.value : '';
 
 interface Shipped {
   readonly encoded: ReadonlyMap<number, string>;
@@ -257,6 +268,7 @@ export const keysSources = (
         key: lit ? face.key : '',
         said:
           printed === undefined ? (on ? 'No chords' : 'Chords off') : thumb.saidOf(printed, state),
+        hint: textOf(thumb.hintOf(printedOption(printed), state)),
         offered: on && printed !== undefined,
         reset: thumb.chipsOf(state).includes('reset'),
         printedName: printed === undefined ? '' : keyName(printed),
