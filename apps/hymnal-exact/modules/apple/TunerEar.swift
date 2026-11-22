@@ -1,6 +1,7 @@
 import AVFAudio
 import Foundation
 #if canImport(ExactPkg_media_capture)
+import ExactPackage
 import ExactPkg_media_capture
 #endif
 
