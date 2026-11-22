@@ -294,7 +294,21 @@ const again = await drive.run(
     'state chordsShown.capo',
     'layout chord-1-1-1',
     shot('relaunched'),
+    'tree --ax',
   ],
+);
+const firstChord = (
+  (
+    again[11] as
+      | { ax?: { elements?: Array<{ testId?: string; name?: string; description?: string }> } }
+      | undefined
+  )?.ax?.elements ?? []
+).find((each) => each.testId === 'chord-1-1-1');
+drive.check(
+  'a chord is named by its chord alone (the capo’s shape), with the current app’s hint, Shows how to play it (Chords.tsx)',
+  /^[A-G][#b♯♭]?[^\s,]*$/u.test(firstChord?.name ?? '') &&
+    firstChord?.description === 'Shows how to play it',
+  firstChord,
 );
 drive.check('relaunch: chords still on', again[1] === true, again[1]);
 drive.check(

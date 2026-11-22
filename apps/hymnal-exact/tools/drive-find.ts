@@ -216,6 +216,22 @@ const launched = await launch('find', [
   ...looks('dark'),
 ]);
 
+const searchButton = (
+  (await launch('find-hint', ['clock data', 'clock settle', 'tree find-search'])).at(-1) as
+    | {
+        nodes?: ReadonlyArray<{
+          props?: { accessibilityLabel?: string; accessibilityHint?: string };
+        }>;
+      }
+    | undefined
+)?.nodes?.[0]?.props;
+drive.check(
+  'the search button is named Search with the current app’s hint, Opens search (FindBar.tsx)',
+  searchButton?.accessibilityLabel === 'Search' &&
+    searchButton.accessibilityHint === 'Opens search',
+  searchButton,
+);
+
 const before = slidersOf(launched[3]);
 drive.check(
   'the drums are three adjustable controls (the web: slider; iOS: adjustable), each its digit as value (1: 0, 0, 1)',
@@ -760,6 +776,31 @@ drive.check(
     aimTile.y < aimTiles.y + aimTile.h,
   { aimTiles, aimTile },
 );
+for (const tab of ['Sections', 'Topics']) {
+  const boundary = named([
+    'clock data',
+    ...(tab === 'Sections' ? [] : [`tap tab-${tab.toLowerCase()}`, 'clock settle', 'clock data']),
+    'tap tiles-show',
+    'clock data',
+    'clock settle',
+    'tap group-tile-4',
+    'clock settle',
+    'tap hymn-list wheel 0 -40',
+    'clock settle',
+    'tap tiles-show',
+    'clock data',
+    'clock settle',
+    ['tiles', 'layout find-tiles'],
+    ['tile', 'layout group-tile-3'],
+  ]);
+  const run = await launch(`find-boundary-${tab.toLowerCase()}`, boundary.ops);
+  const [tiles, tile] = [frame(boundary.reply(run, 'tiles')), frame(boundary.reply(run, 'tile'))];
+  drive.check(
+    `${tab}: with group 5’s header 40 px under the list’s top, group 4’s pinned over it, All at once opens with group 4’s tile in the first row`,
+    tiles !== undefined && tile !== undefined && tile.y >= tiles.y - 1 && tile.y < tiles.y + tile.h,
+    { tiles, tile },
+  );
+}
 const [plain, lined, lineText] = [
   frame(g('found-title')),
   frame(g('found-line')),

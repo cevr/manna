@@ -319,7 +319,7 @@ component FindBar
                   opacity = "opacity.pressed"
                 image "symbol:layers" width="size.glyph" height="size.glyph"
             if findShown.searchDrawn
-              button press=findSearchOn appearance="none" disabled=(not findShown.searchReach) aria-label="Search" aria-pressed=(findShown.chosen == "search")
+              button press=findSearchOn appearance="none" disabled=(not findShown.searchReach) aria-label="Search" aria-description="Opens search" aria-pressed=(findShown.chosen == "search")
                 width="size.target" height="size.target" flex-shrink=0 color="onGlass" display="flex" align-items="center" justify-content="center" testId="find-search"
                 :active
                   opacity = "opacity.pressed"
