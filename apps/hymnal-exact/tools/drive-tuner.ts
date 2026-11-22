@@ -21,7 +21,10 @@
  *   its words;
  * - at the largest text (the web's root font at 53 px) the six strings,
  *   Done and the reading are still there, and Done's box is still a
- *   target;
+ *   target; listening, a heard Low E and High E, a picked string and the
+ *   ended screen each read, the name's box lies within the screen at no
+ *   less than the reader's text size, and the audit (`check`) finds
+ *   nothing clipped, overflowing or overlapping;
  * - under Reduce Motion the needle still stands where the reading puts it.
  *
  * Exits 1 on any failed check.
@@ -37,6 +40,7 @@ import {
   labelOf,
   needleOf,
   NEEDLE_CENTS,
+  STRING_NAMES,
   stringLabel,
 } from '@manna/hymnal-app/tuner/session';
 import { readingOn, STRINGS, type StringId } from '@manna/hymnal-app/tuner/tuning';
@@ -155,13 +159,69 @@ drive.check(
   { labels, changes },
 );
 
-const largest = await launch('largest', [
-  'prefer root-font-size 53',
+const LARGEST = 53;
+const WIDE = 390;
+const larger = ['prefer root-font-size 53', 'clock settle'];
+/** The ops that read a state at the largest text: the name's box and font, the audit, the accessibility tree. */
+const measure = ['layout tuner-name', 'check', 'tree --ax'];
+
+interface Laid {
+  readonly node?: {
+    readonly props?: { readonly text?: string };
+    readonly space?: { readonly viewport?: { x: number; y: number; w: number; h: number } };
+    readonly browser?: { readonly font_size?: string };
+  };
+}
+interface Audit {
+  readonly check?: ReadonlyArray<{ readonly findings?: ReadonlyArray<unknown> }>;
+}
+
+/** What a state's last three replies say: the name's words, its box and font size, and the audit's findings. */
+const fitOf = (replies: ReadonlyArray<unknown>) => {
+  const [laid, audit, ax] = replies.slice(-3) as [Laid | undefined, Audit | undefined, unknown];
+  const box = laid?.node?.space?.viewport;
+  return {
+    name: laid?.node?.props?.text,
+    box,
+    font: Number.parseFloat(laid?.node?.browser?.font_size ?? 'NaN'),
+    audited: audit?.check !== undefined,
+    findings: (audit?.check ?? []).flatMap((pass) => pass.findings ?? []),
+    ax,
+  };
+};
+
+/**
+ * At the 53-px root, the name `want` is drawn whole inside the screen: its box
+ * within the viewport's width, at no less than the reader's text size, and
+ * the audit finds nothing clipped, overflowing or overlapping on the screen.
+ */
+const fitsAtLargest = (state: string, replies: ReadonlyArray<unknown>, want: string) => {
+  const fit = fitOf(replies);
+  drive.check(
+    `at the largest text, ${state}: the name ${want} fits the screen at no less than the reader's text size`,
+    fit.name === want &&
+      fit.box !== undefined &&
+      fit.box.x >= 0 &&
+      fit.box.x + fit.box.w <= WIDE &&
+      fit.font >= LARGEST &&
+      fit.audited &&
+      fit.findings.length === 0,
+    { name: fit.name, box: fit.box, font: fit.font, findings: fit.findings },
+  );
+  return fit;
+};
+
+const idle = await launch('largest-idle', [
+  ...larger,
+  'type root /tuner',
   'clock settle',
-  ...open,
-  'tree --ax',
+  'clock data',
+  `clock +${LABEL_EVERY + 400}`,
+  'clock data',
+  ...measure,
 ]);
-const big = largest[open.length + 2];
+const idleFit = fitsAtLargest('listening', idle, 'Listening');
+const big = idleFit.ax;
 const bigDone = byId(big, 'tuner-done');
 drive.check(
   'at the largest text the six strings, Done and the reading are there, Done still a target',
@@ -170,6 +230,85 @@ drive.check(
     (bigDone?.frame?.w ?? 0) >= 24 &&
     (bigDone?.frame?.h ?? 0) >= 24,
   { done: bigDone, strings: STRINGS.map(({ id }) => byId(big, `tuner-string-${id}`)?.frame) },
+);
+
+/** The largest text with `string` fed `cents` off, once its name is heard. */
+const hearAtLargest = async (string: StringId, cents: number) => {
+  const name = STRING_NAMES[string];
+  const replies = await launch(`largest-${string}`, [
+    ...larger,
+    `type root /tuner?feed=${string}:${cents}`,
+    'clock settle',
+    'clock data',
+    `clock until state tunerShown.name == ${JSON.stringify(name)} within 3000`,
+    ...measure,
+  ]);
+  fitsAtLargest(`a heard ${name}`, replies, name);
+};
+await hearAtLargest('E2', -12);
+await hearAtLargest('E4', 3);
+
+const pickedHere = await launch('largest-picked', [
+  ...larger,
+  'type root /tuner',
+  'clock settle',
+  'clock data',
+  'tap tuner-string-E4',
+  'clock settle',
+  'clock data',
+  ...measure,
+]);
+fitsAtLargest('a string picked', pickedHere, STRING_NAMES.E4);
+
+const ended = await launch('largest-ended', [
+  ...larger,
+  'type root /settings',
+  'clock settle',
+  'tap settings-feel',
+  'clock settle',
+  'tap settings-done',
+  'clock settle',
+  'tap hymn-1',
+  'clock settle',
+  'clock data',
+  'tap play',
+  'clock data',
+  'clock until state player.phase == "playing" within 10000',
+  'back',
+  'clock settle',
+  'tap gear',
+  'clock settle',
+  'tap chords-toggle',
+  'clock settle',
+  'clock data',
+  'tap settings-tuner',
+  'clock settle',
+  'clock data',
+  'clock until state tunerShown.phase == "Listening" within 5000',
+  'tap audio mediasession play',
+  'clock data',
+  'clock until state tunerShown.phase == "Ended" within 5000',
+  'clock settle',
+  'state tunerShown.phase',
+  'layout tuner-again',
+  'check',
+]);
+const [endedPhase, again, endedAudit] = ended.slice(-3) as [
+  unknown,
+  Laid | undefined,
+  Audit | undefined,
+];
+const againBox = again?.node?.space?.viewport;
+const endedFindings = (endedAudit?.check ?? []).flatMap((pass) => pass.findings ?? []);
+drive.check(
+  'at the largest text, ended: Tap to listen again fits the screen, and the audit finds nothing',
+  endedPhase === 'Ended' &&
+    againBox !== undefined &&
+    againBox.x >= 0 &&
+    againBox.x + againBox.w <= WIDE &&
+    endedAudit?.check !== undefined &&
+    endedFindings.length === 0,
+  { phase: endedPhase, box: againBox, findings: endedFindings },
 );
 
 const still = await launch('still', [
