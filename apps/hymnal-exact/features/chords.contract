@@ -97,14 +97,17 @@ members HymnalExact
     nav = back(nav)
 
 // While chords are on and the hymn has none, a quiet notice says so over
-// its words (the current app's `ChordNotice`).
+// its words (the current app's `ChordNotice`). Its `tag` ends its id: empty
+// on the shown page, the hymn's own (`-<n>`) on a neighbour the pager
+// draws, so no id repeats on a screen.
 component ChordsNotice
   props
     chords: ChordsPage
     number: number
+    tag: string
   view
     if chords.kind == "none" and chords.number == number
-      text "No chords for this hymn yet." font="type.footnote" color="muted" testId="no-chords"
+      text "No chords for this hymn yet." font="type.footnote" color="muted" testId=`no-chords${tag}`
 
 // A section's lines under their chords, as the current app's boxed
 // `SyllableLine` draws them: each line a wrapping row of words, set in by
@@ -125,17 +128,18 @@ component ChordsLines
     chords: ChordsPage
     k: number
     part: ChordsPart
+    tag: string
   view
     for l in part.lines key=l.at
       row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" column-gap="space.word" margin-bottom="space.s8"
-        padding-left="space.hang" testId=`line-${k}-${l.at}`
+        padding-left="space.hang" testId=`line-${k}-${l.at}${tag}`
         for w, wi in l.words key=w.at
           if wi == 0
             row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.hang)"
-              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
+              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain, tag=tag)
           else
             row flex-wrap="wrap" align-items="flex-end"
-              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain)
+              ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain, tag=tag)
 
 // A word's pairs: each its chord over its syllable.
 component ChordsPairs
@@ -145,23 +149,24 @@ component ChordsPairs
     line: ChordsLine
     word: ChordsWord
     refrain: bool
+    tag: string
   inject
     motionStill: bool
   view
     for b, bi in word.boxes key=bi
-      column testId=`pair-${k}-${line.at}-${word.at + bi}`
+      column testId=`pair-${k}-${line.at}-${word.at + bi}${tag}`
         if b.chord == ""
           text "​" font="type.chord" padding-right="space.s6" aria-hidden=true
         else
           if b.grip == ""
-            text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}`
+            text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
           else
-            link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}`
+            link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
               text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline"
         row
-          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}`
+          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}${tag}`
             text b.text
             if bi < word.boxes.length - 1 and b.chord == "" and not (word.at == 1 and bi == 0)
               text "-" color="muted"

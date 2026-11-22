@@ -8,7 +8,8 @@
  * current hymnal's `licenceUrl`, held by `src/settings/sources.test.ts`)
  * draws its licence as a link, named the licence, where it has an address,
  * as the current hymnal's `Credit` opens it; and no link where it has none.
- * A topic row of About this hymn opens home's Topics with that topic's
+ * The line under a hymn's title is heard in its name, after "About this
+ * hymn". A topic row of About this hymn opens home's Topics with that topic's
  * header at the list's top (a test reads no frame), as the current
  * hymnal's `openAtTopic`. Exits 1 on any failed check.
  */
@@ -69,6 +70,20 @@ drive.check(
   'About answers a credit with an address',
   credits.some((credit) => credit.url !== ''),
   credits,
+);
+
+const heard = await drive.launch(`about-name-${host}-${Date.now().toString(36)}`, [
+  'clock data',
+  'tap hymn-2',
+  'clock settle',
+  'clock data',
+  'tree --ax hymn-about',
+]);
+const named = elementsOf(heard[4]).find((element) => element.testId === 'hymn-about')?.name ?? '';
+drive.check(
+  'the line under a hymn’s title is in its VoiceOver name after "About this hymn", as the current HymnPage’s label and value are heard',
+  /^About this hymn, \S/u.test(named),
+  elementsOf(heard[4]),
 );
 
 /** The viewport box a `layout` reply gives. */

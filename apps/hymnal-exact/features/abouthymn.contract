@@ -48,7 +48,9 @@ members HymnalExact
       findType(query)
 
 // The line under a hymn's title: its section and first passage, a button
-// that opens this sheet, as the current app's `AboutLine`. It wraps short
+// that opens this sheet, as the current app's `AboutLine`; VoiceOver hears
+// "About this hymn" and then the line, in its name, since iOS gives a
+// button no value text. It wraps short
 // of the star's column (`size.target`), since the star rises out of the
 // title's row into the gap above it (`FavouriteStar`'s negative margin, as
 // the current app's), so a line long enough to wrap, at the largest text,
@@ -60,7 +62,7 @@ component AboutHymnLine
   inject
     abouthymnPress: action
   view
-    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" margin-right="size.target" text-align="left" aria-label="About this hymn" aria-valuetext=line -exact-hit-slop="space.s8" testId="hymn-about"
+    button press=abouthymnPress(number) appearance="none" padding=0 align-self="flex-start" margin-right="size.target" text-align="left" aria-label=(line == "" ? "About this hymn" : `About this hymn, ${line}`) -exact-hit-slop="space.s8" testId="hymn-about"
       :active
         opacity = "opacity.pressed"
       text font="type.footnote" color="muted" testId="hymn-topic"
