@@ -189,6 +189,13 @@ export const spoken = (described: Described): string => {
   });
 };
 
+/** A choice's numbers as an accessible value: its eligible row, sung line, word and onset. */
+export const numbersOf = (said: Described, ms: number) =>
+  `row=${said.row} line=${said.line} word=${Option.getOrElse(
+    Option.map(said.word, (word) => word.ordinal),
+    () => 0,
+  )} targetMs=${Math.round(ms)}`;
+
 /** Which pointer, if any, holds the lyric area, and where it landed. */
 export type Contact = Data.TaggedEnum<{
   Idle: {};

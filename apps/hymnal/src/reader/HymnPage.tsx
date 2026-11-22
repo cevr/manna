@@ -89,8 +89,8 @@ import { SeekArea, SeekScroll } from './WordSeek';
 import {
   ChordTouchProvider,
   chordTouchOf,
-  type Described,
   describe,
+  numbersOf,
   type SeekAreaProps,
   PreviewProvider,
   SeekActionsProvider,
@@ -307,13 +307,6 @@ function SeekStatus({ seek }: { readonly seek: WordSeek }) {
     </Text>
   );
 }
-
-/** A choice's numbers as an accessible value: its eligible row, sung line, word and onset. */
-const numbersOf = (said: Described, ms: number) =>
-  `row=${said.row} line=${said.line} word=${Option.getOrElse(
-    Option.map(said.word, (word) => word.ordinal),
-    () => 0,
-  )} targetMs=${Math.round(ms)}`;
 
 /**
  * The page's quiet head line: the hymn's section, then the first passage the

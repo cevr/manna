@@ -70,6 +70,7 @@ export {
   type Described,
   describe,
   spoken,
+  numbersOf,
   Contact,
   PointerInput,
   PointerEffect,
