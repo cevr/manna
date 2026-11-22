@@ -1,0 +1,128 @@
+// Downloads: the saved recordings, so a hymn plays with no network, and
+// Settings' leaf that saves them all, as the current hymnal's
+// src/offline/Downloads.tsx draws it. Every rule is the store's in
+// src/offline/store.ts, held to the current cache by its model test, and
+// run by src/offline/sources.ts's `offlineStep`; the player plays a saved
+// recording first and queues the save of what it streams
+// (src/player/sources.ts). Every line the leaf draws is the current
+// words.ts's, answered with the view.
+
+shape DownloadsWords
+  label: string
+  of: number
+  indexing: string
+  paused: string
+  all: string
+  cancel: string
+  remove: string
+  question: string
+  confirm: string
+  keep: string
+
+shape DownloadsView
+  serial: number
+  printed: number
+  progress: string
+  sizeLabel: string
+  sizeText: string
+  busy: bool
+  working: bool
+  activeLabel: string
+  activeText: string
+  indexing: bool
+  paused: bool
+  failure: string
+  estimate: string
+  saved: number
+  bytes: number
+  words: DownloadsWords
+
+// The store runs in the data module whatever is on screen, so Download all
+// goes on with the sheet closed. While it saves, reads the folders or starts Download all the
+// view is asked again each half second (`downloadsPoll`), and only the
+// leaf reads it. The page the reader rests on is told as it shows and,
+// 750 ms later, saved in its printed key, as the current `SaveShown` and
+// cache's `shown`: a page left sooner, or a cancel, saves nothing.
+members HymnalExact
+  state downloadsTick = 0
+  resource downloadsShown = offlineStep("view", downloadsTick, 0) as shape DownloadsView
+  mutation downloadsStepped as shape DownloadsView queue
+  derive downloads = match downloadsStepped { case some(v) => (v.serial >= downloadsShown.serial ? v : downloadsShown), case none => downloadsShown }
+  action downloadsAsk(kind: string)
+    if settingsFeel
+      haptic("selection")
+    send downloadsStepped = offlineStep(kind, 0, 0)
+  action downloadsPolled
+    downloadsTick = downloadsTick + 1
+  action downloadsPageTold
+    send downloadsStepped = offlineStep("shown", player.onPage, 0)
+  action downloadsPageRested
+    send downloadsStepped = offlineStep("open", player.onPage, 0)
+  task downloadsPoll when downloads.working
+    every(500, downloadsPolled)
+  task downloadsPage key=player.onPage
+    change(downloadsPageTold)
+  task downloadsRest when player.onPage > 0 key=player.onPage
+    after(750, downloadsPageRested)
+
+// The leaf, as the current Downloads.tsx: its heading, then one hairline
+// group: the printed-key recordings saved as a progress bar to VoiceOver
+// (its words shown), the size saved, what downloads and waits while it
+// does, the check of the folders at launch, a pause, why saves failed, and
+// the estimate; then Download all, Cancel while it saves, and Delete,
+// which asks first. The current leaf's platform line (the browser may
+// remove them; iOS keeps them out of the backup) is not drawn: no host
+// fact reaches a view at the pin.
+component Downloads
+  inject
+    downloads: DownloadsView
+    downloadsPress: action
+  state confirming = false
+  action deleteAsked
+    confirming = true
+  action deleteKept
+    confirming = false
+  action deleteConfirmed
+    confirming = false
+    downloadsPress("delete")
+  view
+    column gap="space.s8" margin-top="space.s16" testId="downloads"
+      text "Downloads" role="heading" aria-level=2 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" padding-top="line.hair"
+      column border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+        column padding="space.s12 space.s16" gap="space.s4"
+          column role="progressbar" aria-label=downloads.words.label aria-valuemin=0 aria-valuemax=downloads.words.of aria-valuenow=downloads.printed aria-valuetext=downloads.progress testId="downloads-progress"
+            text downloads.progress font="type.body" color="ink" aria-hidden=true
+          text downloads.sizeText font="type.footnote" color="muted" aria-label=downloads.sizeLabel testId="downloads-size"
+          if downloads.busy
+            text downloads.activeText font="type.footnote" color="muted" aria-label=downloads.activeLabel testId="downloads-active"
+          if downloads.indexing
+            text downloads.words.indexing font="type.footnote" color="muted" testId="downloads-indexing"
+          if downloads.paused
+            text downloads.words.paused font="type.footnote" color="muted" testId="downloads-paused"
+          if downloads.failure != ""
+            text downloads.failure role="alert" font="type.footnote" color="muted" testId="downloads-failed"
+          text downloads.estimate font="type.footnote" color="muted" testId="downloads-estimate"
+        DownloadsRow(words=downloads.words.all, press=downloadsPress("all"), id="downloads-all", alert=false)
+        if downloads.busy
+          DownloadsRow(words=downloads.words.cancel, press=downloadsPress("cancel"), id="downloads-cancel", alert=false)
+        DownloadsRow(words=downloads.words.remove, press=deleteAsked, id="downloads-delete", alert=true)
+        if confirming
+          column padding="space.s12 space.s16" gap="space.s4"
+            text downloads.words.question font="type.footnote" color="muted"
+            DownloadsRow(words=downloads.words.confirm, press=deleteConfirmed, id="downloads-confirm", alert=true)
+            DownloadsRow(words=downloads.words.keep, press=deleteKept, id="downloads-keep", alert=false)
+
+// A row of the leaf, as the current leaf's Pressable rows: its words in the
+// accent, or the alert's for Delete, a target tall, under a hairline, the
+// soft fill while held.
+component DownloadsRow
+  props
+    words: string
+    press: action
+    id: string
+    alert: bool
+  view
+    button press=press appearance="none" display="flex" align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16" border-top-width="line.hair" border-top-style="solid" border-top-color="line" aria-label=words testId=id
+      :active
+        background-color = "soft"
+      text words font="type.body" color=(alert ? "alert" : "accent") flex=1 min-width=0 text-align="start" aria-hidden=true

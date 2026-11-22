@@ -54,6 +54,11 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 e1c8b607319f declare: home/tabs's groupAt declared in exact/home/tabs.d.ts for the port's aim property test, held by exact-home-declarations.ts; no source changes
 1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+a9090ceaf658 move: a saved recording's identity, storages, CHUNK and mediaHeader, unchanged, from offline/cache.ts into offline/identity.ts (cache.ts re-exporting them), and Downloads.tsx's every line and name into offline/words.ts, the leaf drawing the same strings
+f39b2ca17b22 exports: five exports lines in apps/hymnal/package.json (./offline/identity, ./offline/words, ./offline/estimate, ./offline/cache, ./player/offline); no source changes
+e7a80f5c0ef9 move: offline/identity.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+48ae1f83f5fd move: offline/cache.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+e57c009af511 move: offline/estimate.ts imports timelineOf from '../follow/timeline' rather than '~/follow/timeline', the same module; no value changes
 0ff6c2aac1fd merge: origin/main into par-hs-first; One's exports lines and declarations of both sides kept (par-hs-back's and par-hs-seek's beside this unit's ./first/*), the duplicate imports of exact-declared.test.ts dropped; no source changes
 bf790776af54 move: Heartseed's first verse's query (FIRST_VERSE), unchanged, from src/first/verse.ts into vite/first-verse.ts, re-exported by first/verse.ts and read by vite/passage.ts; no value or render changes
 4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
@@ -65,5 +70,6 @@ ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/sess
 1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
 cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-sheet's and this unit's); no source changes of its own
 ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own
+38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
 fecfdfeab64b exports: one exports line in apps/hymnal/package.json (./home/reveal, for the port's pinned tab row); no source changes
 b6d288c624d9 move: PinnedTabs.tsx's slide and fade times, the same 200 and 150 ms, into reveal.ts's revealTimes, which PinnedTabs imports
