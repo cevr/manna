@@ -25,7 +25,12 @@
     "test:find": {
       "dependsOn": ["^transit"],
       "outputs": [],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/assets/meaning/**"
+      ]
     },
     "test:app": {
       "dependsOn": ["^transit"],
