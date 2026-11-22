@@ -52,10 +52,6 @@ members HymnalExact
     playerClick = on
   action playerIntroTold
     send playerStepped = playerStep("intro", 0, 0, playerIntro ? 1 : 0, "")
-  action playerKeysTold
-    if player.ticking
-      playerClockTicked()
-    send playerStepped = playerStep("keys", 0, 0, chordsOn ? 1 : 0, chordsMoves.join(" "))
   // Each beat of the count-in, as the player answers it: a click under
   // Sounds and haptics while Click is on (the sound is par-hy-feel's).
   action playerCounted
@@ -75,10 +71,6 @@ members HymnalExact
   // Intro is told at launch and at each switch; it waits for the next Play.
   task playerIntroTell key=playerIntro
     change(playerIntroTold)
-  // The recording's key is the hymn's heard key: its move while chords are
-  // on, the printed key while off (src/player/sources.ts `offsetsOf`).
-  task playerKeysTell key=`${chordsOn} ${chordsMoves.join(" ")}`
-    change(playerKeysTold)
   // While the silent clock counts in, each frame asks whether the next beat
   // is due, so a beat lands on its time and not the next tick's.
   task playerCountWatch when player.count.on and player.ticking key=player.load

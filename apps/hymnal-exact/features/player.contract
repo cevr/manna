@@ -6,7 +6,7 @@
 // naming its load and the seek it follows. A seek the step sends is a
 // `fastSeek` on the element, taken once by its serial.
 
-use PlayerTempo, PlayerCount, TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
+use PlayerTempo, PlayerCount from "./tempo.contract"
 
 shape PlayerBar
   shown: bool
@@ -113,8 +113,13 @@ members HymnalExact
   resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
   resource playerOnScreen = playerStep("screen", 0, 0, 0, playerPaths) as shape PlayerView
+  // The recording's key is the hymn's heard key: its move while chords are
+  // on, the printed key while off (src/player/sources.ts `offsetsOf`), read
+  // again at each switch and move; no answer of it moves the screen.
+  resource playerKeyed = playerStep("keys", 0, 0, chordsOn ? 1 : 0, chordsMoves.join(" ")) as shape PlayerView
   mutation playerStepped as shape PlayerView queue then playerTook
-  derive playerLatest = playerOnScreen.serial >= playerBooted.serial ? playerOnScreen : playerBooted
+  derive playerShownLatest = playerOnScreen.serial >= playerBooted.serial ? playerOnScreen : playerBooted
+  derive playerLatest = playerKeyed.serial >= playerShownLatest.serial ? playerKeyed : playerShownLatest
   derive player = match playerStepped { case some(v) => (v.serial >= playerLatest.serial ? v : playerLatest), case none => playerLatest }
   action playerTook
     playerKept = player.kept
@@ -238,51 +243,3 @@ component PlayerPill
   view
     button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" gap="space.s6" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color=(chosen ? "chosen" : "pill") -exact-press-opacity="opacity.pressed" aria-label=name aria-pressed=chosen testId=id
       text label font="type.chip" color=(chosen ? "onChosen" : "onPill") line-clamp=1
-
-// The full player, a sheet over the screen it opened from at half the
-// screen, which the grabber pulls to full, as the current FullPlayer.tsx
-// draws it: the hymn's number and title (a press goes to its page), what
-// the player is doing, its place on a bar the reader can move with the
-// time gone and the whole length, Play or Pause in the button's role, and
-// its stanzas as chips, each sung one with a way to its start.
-component PlayerSheet
-  props
-    entry: Entry
-    player: PlayerView
-    ask: action
-  view
-    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="50% large" navigationGrabber="visible" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
-      scroll id="player-sheet" flex=1 min-height=0
-        column padding="space.s24" gap="space.s16"
-          column role="group" aria-label="Recording" gap="space.s16"
-            button press=ask("title", 0) appearance="none" text-align="left" -exact-press-opacity="opacity.pressed" testId="player-title" aria-label=`Open hymn ${player.number}`
-              text `${player.number} ${player.title}` font="type.head" color="ink" font-variant-numeric="tabular-nums" role="heading" aria-level=1
-            text player.caption font="type.caption" color="muted" testId="player-said"
-            RecordingNotice(on=player.fellBack)
-            column gap="space.s4"
-              input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") height="size.slider" aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
-              row justify-content="space-between"
-                text player.elapsed font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="elapsed"
-                text player.total font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="total"
-            row justify-content="center" align-items="center" min-height="size.target" gap="space.s8"
-              if player.phase == "failed" and player.toggle == "retry"
-                button press=ask("retry", 0) appearance="none" min-height="size.target" testId="retry"
-                  text "Try again" font="type.body" color="button"
-              else if player.phase != "failed" and player.toggle != ""
-                button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
-                  text playerLabel(player.toggle) font="type.body" color="button"
-          TempoDial(tempo=player.tempo, ask=ask)
-          if player.chips.length > 0
-            column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
-              text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
-              row gap="space.s8" flex-wrap="wrap" align-items="center"
-                for c in player.chips key=c.stanza
-                  PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
-                StanzasAll(on=player.some, ask=ask)
-              if player.places.length > 0
-                row gap="space.s8" flex-wrap="wrap" align-items="center"
-                  text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
-                  for n in player.places key=n
-                    button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
-                      text `${n}` font="type.chip" color="onPill" line-clamp=1
-          StartRow()

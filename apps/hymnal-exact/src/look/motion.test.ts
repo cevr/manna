@@ -128,6 +128,14 @@ const HAPTICS: ReadonlyArray<{
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'readingFontChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'readingSpacingChoose', when: '', cues: [cues.plain('choose')] },
+  {
+    action: 'readingAwakeSet',
+    when: '',
+    cues: [cues.plain('switch-on'), cues.plain('switch-off')],
+  },
+  { action: 'sheetInherit', when: '', cues: [cues.plain('reset')] },
   {
     action: 'favouriteKeep',
     when: 'if f.numbers.length > favouriteList.length',

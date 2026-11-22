@@ -41,3 +41,6 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
 e217201fabee exports: two exports lines in apps/hymnal/package.json (./player/tempo and ./player/countin, the tempo dial's and the count-in's rules, for the port's player); no source changes
 0c9b563efeb2 exports: one exports line in apps/hymnal/package.json (./player/recording, the key fallback, for the port's source test); no source changes
+df3ebef96abb move: the reading section's font and spacing labels, its size share and the serif's families, unchanged, from ReadingSheet.tsx and pageText.ts into reader/reading-choices.ts, both reading them; an exports line for it
+5ec9ac9706ca move: the reading view's LONG_PRESS (350) and its hold's activate, move, end and drop rule, unchanged, from reading/view.tsx into reading/hold.ts, the view calling it in the same order
+6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes

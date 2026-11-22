@@ -36,7 +36,8 @@ import { format } from '@manna/hymnal/chord';
 
 import type { Book } from '../hymns/book.ts';
 import { pageAt } from '../hymn/page.ts';
-import { type Placement, placementOf, type Style, styleOf } from '../settings/chords.ts';
+import { type Placement, type Style, styleOf } from '../settings/chords.ts';
+import { effectiveOf } from '../sheet/placement.ts';
 import { moveOf } from './move.ts';
 import { chordsCode, keyCode } from './shape.ts';
 
@@ -174,10 +175,11 @@ const chordedPage = (
 
 /**
  * The page's chords for the route's hymn (`100`), chords `on` or off, at
- * the hymn's move in `moves`, in the kept chord style and placement (any
- * text, read by `styleOf` and `placementOf`; absent, Simple on the beat):
- * `off` without decoding anything while chords are off or the route names
- * no hymn.
+ * the hymn's move in `moves`, in the kept chord style and the hymn's
+ * effective placement: its own in `own` (the player sheet's, `src/sheet/
+ * placement.ts`), else the global `placement` (any text, read by `styleOf`
+ * and `placementOf`; absent, Simple on the beat): `off` without decoding
+ * anything while chords are off or the route names no hymn.
  */
 export const chordsPageAt = (
   book: Book,
@@ -187,12 +189,13 @@ export const chordsPageAt = (
   moves: ReadonlyArray<string>,
   style = '',
   placement = '',
+  own: ReadonlyArray<string> = [],
 ): ChordsPage => {
   const number = pageAt(book, route).number;
   if (!on || number === 0) return blank(number, 'off');
   const encoded = shipped.encoded.get(number);
   if (encoded === undefined) return blank(number, 'none');
-  const decoded = shipped.decode(encoded, placementOf(placement));
+  const decoded = shipped.decode(encoded, effectiveOf(own, number, placement));
   if (decoded._tag === 'None') return blank(number, 'none');
   return chordedPage(book, number, decoded.value, moveOf(moves, number), styleOf(style));
 };

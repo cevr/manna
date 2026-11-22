@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, effect/preferMatchTagsExhaustive, effect/preferPredicateIsTagged -- the model is one plain switch over every input, as a reader checks it against the spec, it reads the view's nulls, and a broken rule throws naming its seed and history as JSON. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, effect/preferPredicateIsTagged -- the model is one plain switch over every input, as a reader checks it against the spec, it reads the view's nulls, and a broken rule throws naming its seed and history as JSON. */
 
 /**
  * `step` against a reference model of Today written here, over seeded
@@ -282,6 +282,9 @@ const modelStep = (model: Model, input: TodayInput): Model => {
       return model.phase === 'resting' || model.phase === 'graded'
         ? { ...unsaid(model), help: null, peeking: null }
         : model;
+    case 'contact':
+    case 'sought':
+      throw new Error(`${input._tag} is hold.model.test.ts's, never generated here`);
   }
 };
 

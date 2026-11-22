@@ -62,6 +62,24 @@ describe('every hymn’s chords are the current app’s (A1)', () => {
   });
 });
 
+describe('a hymn’s own placement is the current app’s', () => {
+  test('under a hymn’s own placement its page is the current page at it, and every other hymn keeps the global one', () => {
+    const own = ['beat', 'simpler', 'file'] as const;
+    const sampled = book.hymns.filter((_, k) => k % 41 === 0);
+    sampled.forEach((hymn, k) => {
+      const mine = own[k % own.length] ?? 'beat';
+      const global = own[(k + 1) % own.length] ?? 'beat';
+      const kept = [`${hymn.number}:${mine}`, `${hymn.number + 1}:x`];
+      const page = sources.chordsPage([`${hymn.number}`, true, [], 'simple', global, kept]);
+      expect(shownByPort(page)).toEqual(shownByCurrent(hymn.number, still, 'simple', mine));
+      const next = hymn.number + 1;
+      if (next > 695) return;
+      const other = sources.chordsPage([`${next}`, true, [], 'simple', global, kept]);
+      expect(shownByPort(other)).toEqual(shownByCurrent(next, still, 'simple', global));
+    });
+  });
+});
+
 describe('the chords are light (A4)', () => {
   test('with chords off, or on a route that names no hymn, the source decodes nothing', () => {
     let decodes = 0;

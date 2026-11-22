@@ -9,6 +9,7 @@
 // its chord over its syllable, so a break falls between pairs, never
 // inside one) and the shapes (shape.ts).
 use hy-fade-in from "./motion.contract"
+use ReadingView from "./reading.contract"
 
 shape ChordsBox
   text: string
@@ -84,7 +85,7 @@ shape ChordsGripPage
 members HymnalExact
   state chordsOn = false persist
   state chordsMoves: string[] = [] persist
-  resource chordsShown = chordsPage(hymnOpen, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) as shape ChordsPage
+  resource chordsShown = chordsPage(hymnOpen, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement, sheetPlacements) as shape ChordsPage
   derive chordsGripOpen = match stack(nav).filter(e => e.name == "chord").at(-1) { case some(e) => e.params.grip, case none => "" }
   resource chordsGripShown = chordsGrip(chordsGripOpen) as shape ChordsGripPage
   action chordsSet(on: bool)
@@ -127,13 +128,15 @@ component ChordsLines
     k: number
     part: ChordsPart
     tag: string
+  inject
+    readingShown: ReadingView
   view
     for l in part.lines key=l.at
       row flex-wrap="wrap" align-items="flex-end" row-gap="space.s6" column-gap="space.word" margin-bottom="space.s8"
-        padding-left="space.hang" testId=`line-${k}-${l.at}${tag}`
+        padding-left=readingShown.indent testId=`line-${k}-${l.at}${tag}`
         for w, wi in l.words key=w.at
           if wi == 0
-            row flex-wrap="wrap" align-items="flex-end" margin-left="calc(0px - space.hang)"
+            row flex-wrap="wrap" align-items="flex-end" margin-left=`calc(0px - ${readingShown.indent})`
               ChordsPairs(chords=chords, k=k, line=l, word=w, refrain=part.refrain, tag=tag)
           else
             row flex-wrap="wrap" align-items="flex-end"
@@ -150,26 +153,27 @@ component ChordsPairs
     tag: string
   inject
     motionStill: bool
+    readingShown: ReadingView
   view
     for b, bi in word.boxes key=bi
       column testId=`pair-${k}-${line.at}-${word.at + bi}${tag}`
         if b.chord == ""
-          text "​" font="type.chord" padding-right="space.s6" aria-hidden=true
+          text "​" font="type.chord" font-size=readingShown.chords line-height=readingShown.chordLine font-family=readingShown.family padding-right="space.s6" aria-hidden=true
         else
           if b.grip == ""
-            text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
+            text b.chord font="type.chord" font-size=readingShown.chords line-height=readingShown.chordLine font-family=readingShown.family color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
           else
             link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
-              text b.chord font="type.chord" color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline"
+              text b.chord font="type.chord" font-size=readingShown.chords line-height=readingShown.chordLine font-family=readingShown.family color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline"
         row
-          text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}${tag}`
+          text font="type.line" font-size=readingShown.words line-height=readingShown.line font-family=readingShown.family color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" testId=`syllable-${k}-${line.at}-${word.at + bi}${tag}`
             text b.text
             if bi < word.boxes.length - 1 and b.chord == "" and not (word.at == 1 and bi == 0)
               text "-" color="muted"
           if bi < word.boxes.length - 1 and (b.chord != "" or (word.at == 1 and bi == 0))
-            text "-" font="type.line" color="muted" font-style=(refrain ? "italic" : "normal") flex-grow=1 text-align="center" padding-bottom="-exact-hairline" aria-hidden=true
+            text "-" font="type.line" font-size=readingShown.words line-height=readingShown.line font-family=readingShown.family color="muted" font-style=(refrain ? "italic" : "normal") flex-grow=1 text-align="center" padding-bottom="-exact-hairline" aria-hidden=true
 
 // A chord's shape over the page: each chord a box, its strings down from
 // the low E, the frets across (an SVG), the marks over the nut, and each

@@ -1,0 +1,224 @@
+// The player's sheet, as the current FullPlayer.tsx draws it. The player's
+// rules and its view are features/player.contract's; this file draws the
+// sheet over them, in the current sheet's order: the group "Recording",
+// then the stanza chips, "Chord settings" and "Reading"
+// (features/reading.contract). Each hymn's own chord placement, which the
+// sheet's placement dial turns, is kept here (`sheetPlacements`, a list of
+// `<n>:<placement>` texts as `chordsMoves` keeps moves) and read by the
+// current hymnal's rule (src/sheet/placement.ts): the hymn's own when its
+// text is exactly a placement, else the global one, Settings'. The page's
+// chords follow the effective placement (`chordsPage`'s last argument).
+use PlayerView, PlayerPill, playerLabel from "./player.contract"
+use KeysPage, KeysCapoDial, KeysKeyDial, KeysPlaces, KeysDialName from "./keys.contract"
+use ReadingGroup from "./reading.contract"
+use TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
+
+shape SheetStop
+  value: string
+  mark: string
+
+shape SheetPlacement
+  number: number
+  has: bool
+  stops: SheetStop[]
+  index: number
+  said: string
+  inherit: bool
+  global: string
+
+shape SheetKept
+  kept: string[]
+
+members HymnalExact
+  state sheetPlacements: string[] = [] persist
+  state sheetPlaceX = 0
+  resource sheetDial = sheetPlacement(player.number, sheetPlacements, settingsPlacement) as shape SheetPlacement
+  mutation sheetPlaced as shape SheetKept queue then sheetTook
+  action sheetPlace(own: string)
+    send sheetPlaced = sheetPlace(sheetPlacements, player.number, own)
+  action sheetTook
+    match sheetPlaced
+      case some(s)
+        sheetPlacements = s.kept
+      case none
+        sheetPlacements = sheetPlacements
+  action sheetPlaceTurn(at: number)
+    let to = min(sheetDial.stops.length - 1, max(0, round(at)))
+    match sheetDial.stops.at(to)
+      case some(s)
+        if to != sheetDial.index
+          sheetPlace(s.value)
+      case none
+        sheetPlaceX = sheetPlaceX
+  action sheetPlaceScrolled(x: number, y: number)
+    sheetPlaceX = x
+  action sheetPlaceSettled
+    let at = min(sheetDial.stops.length - 1, max(0, round(sheetPlaceX / keysPlaced.detent)))
+    if at != sheetDial.index
+      sheetPlaceTurn(at)
+    else
+      scrollIntoView(`sheet-place-stop-${at}`, inline="center", behavior="instant")
+  action sheetInherit
+    sheetPlace("inherit")
+    if settingsFeel
+      haptic("impact-medium")
+  action sheetKeysClose
+    if keysOpen
+      keysAsk("page", 0)
+  // The bar's dials close as the sheet opens over them: the sheet draws the
+  // same dials, and one screen draws one of each.
+  task sheetKeys when top(nav).name == "player" key=top(nav).id
+    change(sheetKeysClose)
+
+// The full player, a sheet over the screen it opened from at half the
+// screen, which the grabber pulls to full, as the current FullPlayer.tsx
+// draws it: the group "Recording" (the hymn's number and title, a button
+// to its page; what the player is doing; its place on a bar the reader can
+// move with the time gone and the whole length; the page's own Play while
+// another hymn is held, then Play or Pause), its stanzas as chips, each
+// sung one with a way to its start, "Chord settings", then "Reading". A
+// hymn with no recording shows its head, what is said of it and Reading;
+// a sheet that holds no hymn says so over Reading.
+component PlayerSheet
+  props
+    entry: Entry
+    player: PlayerView
+    ask: action
+  view
+    column navigationKey=`${entry.id}` navigationPresentation="modal" navigationDetent="50% large" navigationGrabber="visible" navigationScroll="player-sheet" position="absolute" inset=0 testId="player"
+      scroll id="player-sheet" flex=1 min-height=0
+        column padding="space.s24" gap="space.s16"
+          if player.number == 0
+            text "Player" font="type.head" color="ink" role="heading" aria-level=1 testId="player-nothing"
+            text "No hymn is playing." font="type.caption" color="muted" testId="player-said"
+          else if player.phase == "failed" and player.toggle == ""
+            column role="group" aria-label="Recording" gap="space.s16"
+              SheetTitle(player=player, ask=ask)
+              text player.caption font="type.caption" color="muted" aria-live="polite" testId="player-said"
+          else
+            column role="group" aria-label="Recording" gap="space.s16"
+              SheetTitle(player=player, ask=ask)
+              text player.caption font="type.caption" color="muted" aria-live="polite" testId="player-said"
+              RecordingNotice(on=player.fellBack)
+              column gap="space.s4"
+                input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") height="size.slider" aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
+                row justify-content="space-between"
+                  text player.elapsed font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="elapsed"
+                  text player.total font="type.footnote" color="muted" font-variant-numeric="tabular-nums" testId="total"
+              row justify-content="center" align-items="center" min-height="size.target" gap="space.s8"
+                if player.bar.page != 0
+                  button press=ask("play", player.bar.page) appearance="none" min-height="size.target" min-width="size.target" padding="0px space.s4" -exact-press-opacity="opacity.pressed" aria-label=`Play hymn ${player.bar.page}` testId="sheet-page-play"
+                    text `Play ${player.bar.page}` font="type.label" color="button" font-variant-numeric="tabular-nums"
+                if player.phase == "failed" and player.toggle == "retry"
+                  button press=ask("retry", 0) appearance="none" min-height="size.target" testId="retry"
+                    text "Try again" font="type.body" color="button"
+                else if player.phase != "failed" and player.toggle != ""
+                  button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
+                    text playerLabel(player.toggle) font="type.body" color="button"
+              TempoDial(tempo=player.tempo, ask=ask)
+              if player.chips.length > 0
+                column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
+                  text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+                  row gap="space.s8" flex-wrap="wrap" align-items="center"
+                    for c in player.chips key=c.stanza
+                      PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
+                    StanzasAll(on=player.some, ask=ask)
+                  if player.places.length > 0
+                    row gap="space.s8" flex-wrap="wrap" align-items="center"
+                      text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+                      for n in player.places key=n
+                        button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
+                          text `${n}` font="type.chip" color="onPill" line-clamp=1
+              StartRow()
+              SheetChords(number=player.number)
+          ReadingGroup()
+
+// The hymn's number and title, a heading: a button that goes to its page,
+// named as VoiceOver reads the current one, with its hint.
+component SheetTitle
+  props
+    player: PlayerView
+    ask: action
+  view
+    button press=ask("title", 0) appearance="none" text-align="left" -exact-press-opacity="opacity.pressed" testId="player-title" aria-label=`${player.number}, ${player.title}` aria-description="Opens the hymn's page."
+      text `${player.number} ${player.title}` font="type.head" color="ink" font-variant-numeric="tabular-nums" role="heading" aria-level=1
+
+// `Chord settings` for the sheet's hymn, as the current `ChordSection`: the
+// Chords switch (the same setting as Settings' and the key button's), then,
+// while chords are on, the key and capo dials with Reset on a panel (only
+// over the hymn's own page, if it has a printed key: the same dials as over
+// the bar, `KeysCapoDial` and `KeysKeyDial`), and the placement dial for
+// this hymn with `Use global` (none for a hymn with no chords).
+component SheetChords
+  props
+    number: number
+  inject
+    chordsSwitchOn: bool
+    chordsSwitch: action
+    keysShown: KeysPage
+    keysPlaced: KeysPlaces
+    keysAsk: action
+  view
+    column role="group" aria-label="Chord settings" gap="space.s16" padding-top="space.s8" testId="chord-settings"
+      row align-items="center" justify-content="space-between" min-height="size.target"
+        text "Chords" font="type.body" color="ink" flex=1 min-width=0 aria-hidden=true
+        input type="checkbox" switch checked=chordsSwitchOn change=chordsSwitch aria-label="Chords" testId="sheet-chords"
+      if chordsSwitchOn and keysShown.number == number and keysShown.has
+        SheetPanel(id="sheet-dials")
+          if keysShown.reset
+            row justify-content="center"
+              PlayerPill(label=`↺ ${keysShown.printedName}, no capo`, press=keysAsk("reset", 0), id="sheet-dials-reset", name="Reset", chosen=false)
+          if keysShown.capoRow
+            KeysCapoDial()
+          KeysKeyDial()
+      if chordsSwitchOn
+        SheetPlacementDial()
+
+// The panel a dial stands on, as the current `DialPanel`: one raised
+// surface with an edge, round to its rows.
+component SheetPanel
+  props
+    id: string
+  inject
+    keysPlaced: KeysPlaces
+  slot
+  view
+    column background-color="panel" border-width="line.panel" border-style="solid" border-color="edge" border-radius=`${keysPlaced.detent / 2 + keysPlaced.pad}px` padding=`${keysPlaced.pad}px` gap=`${keysPlaced.rowGap}px` testId=id
+      children
+
+// The placement dial, as the current `PlacementDial`: the heading, the three
+// placements on a row that snaps a stop at a time, each its mark, the
+// effective one lit; VoiceOver reads it as "Chord placement", says the
+// placement and moves it a stop a swipe. Under it `Use global`, pressed
+// while the hymn inherits, with the global placement beside it.
+component SheetPlacementDial
+  inject
+    sheetDial: SheetPlacement
+    keysPlaced: KeysPlaces
+    sheetPlaceTurn: action
+    sheetPlaceScrolled: action
+    sheetPlaceSettled: action
+    sheetInherit: action
+  view
+    if sheetDial.has
+      column gap="space.s8" testId="sheet-placement"
+        text "Chord placement" font="type.footnote" color="muted" role="heading" aria-level=2
+        SheetPanel(id="sheet-placement-panel")
+          row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-placement"
+            KeysDialName(title="PLACE")
+            view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
+              scroll id="dial-placement-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
+                scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
+                scrollLeft=(sheetDial.index * keysPlaced.detent) scroll=sheetPlaceScrolled scrollend=sheetPlaceSettled aria-hidden=true tabindex=-1 testId="dial-placement-row"
+                for s, si in sheetDial.stops key=s.value
+                  button press=sheetPlaceTurn(si) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
+                    display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
+                    aria-hidden=true tabindex=-1 retainFocus=true id=`sheet-place-stop-${si}` testId=`dial-placement-stop-${s.value}`
+                    text s.mark font="type.note" color=(si == sheetDial.index ? "chord" : "muted") white-space="nowrap" line-clamp=1
+              view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
+                background-color="chord" pointer-events="none" aria-hidden=true
+              input type="range" min=0 max=(sheetDial.stops.length - 1) step=1 value=sheetDial.index input=sheetPlaceTurn aria-label="Chord placement" aria-valuetext=sheetDial.said
+                position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-placement-value"
+        button press=sheetInherit appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="space-between" gap="space.s8" min-height="size.target" -exact-press-opacity="opacity.pressed" aria-label="Use global chord placement" aria-pressed=sheetDial.inherit testId="sheet-inherit"
+          text "Use global" font="type.body" color="ink"
+          text `${sheetDial.inherit ? "✓ " : ""}${sheetDial.global}` font="type.footnote" color="muted" flex-shrink=1 testId="sheet-inherit-global"

@@ -50,7 +50,7 @@ members HymnalExact
     if pagerWanted.length > 1 and pagerWanted.map(n => `${n}`).includes(hymnOpen)
       scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
   resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
-  resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) for n in pagerNumbers as shape ChordsPage
+  resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement, sheetPlacements) for n in pagerNumbers as shape ChordsPage
   mutation pagerSettled as shape PagerSettle queue then pagerTurn
   // What the screen on top lists, in the order shown, while it is on top:
   // a search's results, home's Sections list, the Recent screen; none for
