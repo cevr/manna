@@ -14,13 +14,12 @@ import { join } from 'node:path';
 
 import { linkExactModules } from '@manna/exact-kit/prepare';
 
-/** Exact's standard modules the app's data module imports. */
-const MODULES: ReadonlyArray<string> = ['media-capture'];
+import { EXACT_MODULES } from './exact-modules.ts';
 
 const app = join(import.meta.dir, '..');
 const clone = process.env['EXACT'] ?? join(homedir(), 'Developer', 'vendor', 'exact');
 
-const problems = linkExactModules(app, MODULES, clone);
+const problems = linkExactModules(app, EXACT_MODULES, clone);
 if (problems.length > 0) {
   process.stderr.write(`hymnal-exact: ${problems.join('\n')}\n`);
   process.exit(1);
