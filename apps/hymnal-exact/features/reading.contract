@@ -146,7 +146,7 @@ component ReadingSizeDial
               button press=readingSizeTurn(s.step) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                 display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
                 aria-hidden=true tabindex=-1 retainFocus=true id=`reading-size-stop-${s.step}` testId=`dial-size-stop-${s.step}`
-                text "A" font="type.strong" font-size=(readingPort.accessibilityTextSize ? s.most : s.mark) line-height="normal" color=(s.step == readingShown.step ? "chord" : "ink")
+                text "A" font="type.strong" font-size=(readingPort.accessibilityTextSize ? s.most : `min(${s.most}, ${s.mark})`) line-height="normal" color=(s.step == readingShown.step ? "chord" : "ink")
           view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
             background-color="chord" pointer-events="none" aria-hidden=true
           input type="range" min=0 max=(readingShown.stops.length - 1) step=1 value=readingShown.step input=readingSizeTurn aria-label="Text size" aria-valuetext=readingShown.said
