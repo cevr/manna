@@ -13,6 +13,7 @@ import { findSources } from './find/sources.ts';
 import { homeSources } from './home/sources.ts';
 import { chordsSources } from './chords/sources.ts';
 import { hymnSources } from './hymn/sources.ts';
+import { keysSources } from './keys/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
 import { pagerSources } from './pager/sources.ts';
@@ -33,6 +34,7 @@ export const sourcesAt = (
   ...settingsSources(),
   ...findSources(book),
   ...chordsSources(book, chords),
+  ...keysSources(book, chords),
   ...railSources(book),
   ...abouthymnSources(book),
   ...pagerSources(book),

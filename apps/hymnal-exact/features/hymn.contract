@@ -15,7 +15,7 @@
 // the keys, the find bar).
 use PlayerBarRoom from "./player.contract"
 use FavouriteStar from "./favourites.contract"
-use ChordsKeys, ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
+use ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
 use AboutHymnLine from "./abouthymn.contract"
 
@@ -132,7 +132,6 @@ component HymnSheet
                 text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 overflow-wrap="break-word" role="heading" aria-level=1
               FavouriteStar(number=page.number)
           ChordsNotice(chords=chords, number=page.number)
-          ChordsKeys(chords=chords, number=page.number)
           if chords.kind == "chords" and chords.number == page.number
             for p, k in chords.parts key=p.key
               column gap="space.s4" role="group" aria-label=(p.refrain ? "Refrain" : `Stanza ${p.label}`)

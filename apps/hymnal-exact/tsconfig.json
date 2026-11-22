@@ -27,7 +27,10 @@
       "@manna/hymnal-app/reader/rows": ["./src/find/decl/rows"],
       "@manna/hymnal/chord": ["./src/chords/decl/chord"],
       "@manna/hymnal-app/feel/body": ["./src/look/decl/body"],
-      "@manna/hymnal-app/feel/cues": ["./src/look/decl/cues"]
+      "@manna/hymnal-app/feel/cues": ["./src/look/decl/cues"],
+      "@manna/hymnal-app/player/thumb": ["./src/keys/decl/thumb"],
+      "@manna/hymnal-app/player/wheel": ["./src/keys/decl/wheel"],
+      "@manna/hymnal-app/player/wheelmotion": ["./src/keys/decl/wheelmotion"]
     }
   }
 }
