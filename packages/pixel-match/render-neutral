@@ -40,3 +40,4 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
 2d96b08723a4 move: Move back's reducer (NAMED, Bar, Happened, IDLE, barAfter), unchanged, from garden/back.tsx into garden/bar.ts, back.tsx importing it, and its exports line; no behaviour change
+eb9a4dd3b581 move: Move back's three lines (askLine, movedLine, alertLine) and Today's footer offer of it (offersBack), unchanged, from garden/back.tsx and app/index.tsx into garden/bar.ts; no behaviour change
