@@ -81,6 +81,10 @@ component HymnalExact
     listRested = listRested
     listLand = listLand
     listLanded = listLanded
+    listTabs
+    listTabsReport
+    listTabsTouch
+    listTabsJump
     motionStill = motionStill
     settingsFeel = settingsFeel
     settingsFeelSwitch = settingsFeelSet

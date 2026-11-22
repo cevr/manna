@@ -28,6 +28,7 @@ import { describe, expect, it } from 'bun:test';
 
 import * as body from '@manna/hymnal-app/feel/body';
 import * as cues from '@manna/hymnal-app/feel/cues';
+import * as reveal from '@manna/hymnal-app/home/reveal';
 import * as tiles from '@manna/hymnal-app/home/tile-times';
 import * as wheelmotion from '@manna/hymnal-app/player/wheelmotion';
 
@@ -79,6 +80,18 @@ const TILE_TOKENS = {
   'duration.tiles-out': tiles.tileTimes.out,
   'duration.fade': tiles.tileTimes.fade,
 };
+
+/**
+ * The pinned tab row's tokens, each the current `PinnedTabs`'s time
+ * (`revealTimes`): its slide, and the fade alone under Reduce Motion.
+ */
+const REVEAL_TOKENS = {
+  'duration.slide': reveal.revealTimes.slide,
+  'duration.fade': reveal.revealTimes.fade,
+};
+
+/** The current PinnedTabs' slide curve, Reanimated's `Easing.out(Easing.cubic)` (1 − (1 − t)³), as CSS's cubic Bézier of it. */
+const OUT_CUBIC = 'cubic-bezier(0.33, 1, 0.68, 1)';
 
 /**
  * The find bar's growth spring: critically damped (a ratio of 1, no
@@ -500,6 +513,16 @@ describe('the hymnal’s motion is calm', () => {
           ms: true,
         });
     for (const { file, text } of files) expect(literalsOf(file, text)).toEqual([]);
+  });
+
+  it('times the pinned tab row as the current PinnedTabs does: its slide out-cubic, its still arm a linear fade', () => {
+    for (const [name, ms] of Object.entries(REVEAL_TOKENS))
+      expect({ name, value: brand.motion.get(name) }).toEqual({ name, value: `${ms}ms` });
+    expect(brand.motion.get('easing.slide')).toBe(OUT_CUBIC);
+    const pinned = componentOf(appFile('features/list.contract'), 'ListTabsPinned').join('\n');
+    expect(pinned).toContain(
+      'transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide")',
+    );
   });
 
   it('times the tiles as the current All at once does', () => {

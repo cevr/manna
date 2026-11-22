@@ -185,6 +185,7 @@ members HymnalExact
       findTilesAsked = true
     else if findLanding != ""
       findLanding = ""
+      listTabsJump()
       scrollIntoView(findLanding, block="start", behavior="instant")
     if find.drums and find.top == "/" and find.query == "" and not find.homeTiles and find.number != findFollowed
       findFollowed = find.number
@@ -206,6 +207,7 @@ members HymnalExact
     match findFollowing
       case some(f)
         if f.row != "" and find.drums
+          listTabsJump()
           scrollIntoView(f.row, block="start", behavior="instant")
       case none
         findFollowed = findFollowed
