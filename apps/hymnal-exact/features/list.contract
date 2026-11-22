@@ -229,7 +229,9 @@ component HomeTabs
 // group About this hymn asked for (`listLand`), takes the list to itself
 // once it is laid out, its header at the list's top (`listLanded`): what
 // it scrolls into view is a mark at its foot, which the list's room over
-// a row (`listPin`, the header's height) lands just under the top.
+// a row (`listPin`, the header's height) lands just under the top. The
+// mark is a point wide and tall: iOS never lays out a node of no size, so
+// a scroll to one goes nowhere.
 component ListHeader
   props
     name: string
@@ -252,7 +254,7 @@ component ListHeader
         column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line"
       if measured
         column position="absolute" inset=0 pointer-events="none" aria-hidden=true resize=sized
-      column id=`${id}-land` position="absolute" top="100%" left=0 width=0 height=0 pointer-events="none" aria-hidden=true
+      column id=`${id}-land` position="absolute" top="100%" left=0 width="1px" height="1px" pointer-events="none" aria-hidden=true
       if landing
         column position="absolute" inset=0 pointer-events="none" aria-hidden=true resize=listLanded(`${id}-land`)
 
