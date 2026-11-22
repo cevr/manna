@@ -33,6 +33,8 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
 import { themeLines } from '../src/look/brand';
@@ -51,7 +53,7 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   });
   process.exit(await self.exited);
 }
-const drive = makeDrive({ name: 'drive-motion', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-motion', host, appDir: app }));
 const ios = host === 'ios';
 const SHOTS = join('.exact', 'shots');
 const SAMPLES = join('.exact', 'drive-motion');
