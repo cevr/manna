@@ -46,5 +46,8 @@ export const held = {
     audioKey: remote.audioKey,
     audioUrl: remote.audioUrl,
   } satisfies typeof Remote,
-  timeline: { timelineOf: timeline.timelineOf } satisfies typeof Timeline,
+  timeline: {
+    timelineOf: timeline.timelineOf,
+    placeAt: timeline.placeAt,
+  } satisfies typeof Timeline,
 };

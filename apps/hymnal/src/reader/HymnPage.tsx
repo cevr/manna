@@ -82,6 +82,7 @@ import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
 import { headLine } from './head-line';
 import { KeepAwake } from './KeepAwake';
+import { firstLines } from './sung-lines';
 import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
 import { readingStyle } from './reading';
@@ -89,8 +90,8 @@ import { SeekArea, SeekScroll } from './WordSeek';
 import {
   ChordTouchProvider,
   chordTouchOf,
-  type Described,
   describe,
+  numbersOf,
   type SeekAreaProps,
   PreviewProvider,
   SeekActionsProvider,
@@ -308,13 +309,6 @@ function SeekStatus({ seek }: { readonly seek: WordSeek }) {
   );
 }
 
-/** A choice's numbers as an accessible value: its eligible row, sung line, word and onset. */
-const numbersOf = (said: Described, ms: number) =>
-  `row=${said.row} line=${said.line} word=${Option.getOrElse(
-    Option.map(said.word, (word) => word.ordinal),
-    () => 0,
-  )} targetMs=${Math.round(ms)}`;
-
 /**
  * The page's quiet head line: the hymn's section, then the first passage the
  * Scriptural index gives it (`+N` for the rest), a button `About this hymn`
@@ -422,13 +416,6 @@ const Sections = memo(function Sections({
     />
   ));
 });
-
-/** Each section's first line's place in the hymn as sung, from 0: the sections are its runs. */
-const firstLines = (sections: ReadonlyArray<Section>): ReadonlyArray<number> =>
-  sections.reduce<Array<number>>((firsts, _, k) => {
-    firsts.push((firsts[k - 1] ?? 0) + (sections[k - 1]?.lines.length ?? 0));
-    return firsts;
-  }, []);
 
 interface BodyProps {
   readonly section: Section;

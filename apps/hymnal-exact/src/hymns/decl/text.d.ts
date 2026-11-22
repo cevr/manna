@@ -10,7 +10,7 @@
  */
 export type Section =
   | { kind: 'stanza'; n: number; lines: Array<string> }
-  | { kind: 'refrain'; lines: Array<string> };
+  | { kind: 'refrain'; stanza: number; lines: Array<string> };
 
 /** A hymn's words in the order they are sung, and the topic it is printed under. */
 export interface HymnText {

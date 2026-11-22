@@ -59,6 +59,7 @@ import { useLineFollow } from '~/follow/follow';
 import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
+import { wordStarts } from './sung-lines';
 import { useSeekActions, useSeekTreatment } from './word-seek';
 
 /** A syllable of a line: its box, and its place in the line from 0. */
@@ -214,13 +215,6 @@ const readAs = (boxed: boolean, label: string) => {
   if (boxed) return { accessible: false };
   return { accessible: true, 'aria-label': label };
 };
-
-/** Each word's first syllable's place in its line, from 0. */
-const wordStarts = (words: ReadonlyArray<Word>): ReadonlyArray<number> =>
-  words.reduce<Array<number>>((starts, _, w) => {
-    starts.push((starts[w - 1] ?? 0) + (words[w - 1]?.length ?? 0));
-    return starts;
-  }, []);
 
 const styles = StyleSheet.create({
   line: { flexDirection: 'row', flexWrap: 'wrap' },

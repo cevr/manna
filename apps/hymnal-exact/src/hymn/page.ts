@@ -12,15 +12,24 @@
 
 import type { Book, HymnText, Section } from '../hymns/book.ts';
 
-/** A word: its syllables in order, drawn with a hyphen between two. */
+/** A word: its syllables in order, drawn with a hyphen between two, and its first syllable's place in its line from 0 (the follow's mark). */
 export interface PageWord {
   readonly syllables: Array<string>;
+  readonly start: number;
 }
 
-/** A printed line: its words as printed (what a screen reader reads), and as syllables. */
+/**
+ * A printed line: its words as printed (what a screen reader reads), and as
+ * syllables; its place among the hymn's sung lines from 0 (the follow's
+ * line, as the current `SyllableLine`'s `index`); and whether it is drawn
+ * by its syllables (`timed`), which alone light one by one: a line drawn
+ * as words lights only whole, as the current `HangingLine`.
+ */
 export interface PageLine {
   readonly text: string;
   readonly words: Array<PageWord>;
+  readonly at: number;
+  readonly timed: boolean;
 }
 
 export interface Part {
@@ -29,6 +38,8 @@ export interface Part {
   readonly text: string;
   /** Whether the part is the refrain, drawn set in and sloped. */
   readonly refrain: boolean;
+  /** Its first line's place among the hymn's sung lines, from 0. */
+  readonly first: number;
   /** Its lines, on the page shown; none on the page `pageAt` answers. */
   readonly lines: Array<PageLine>;
 }
@@ -49,12 +60,22 @@ export const missing: Page = { number: 0, title: '', topic: '', head: '', parts:
 
 const partsOf = (sections: ReadonlyArray<Section>): Array<Part> => {
   let refrains = 0;
+  let sung = 0;
   return sections.map((section) => {
     const text = section.lines.join('\n');
+    const first = sung;
+    sung += section.lines.length;
     if (section.kind === 'stanza')
-      return { key: `stanza-${section.n}`, label: `${section.n}`, text, refrain: false, lines: [] };
+      return {
+        key: `stanza-${section.n}`,
+        label: `${section.n}`,
+        text,
+        refrain: false,
+        first,
+        lines: [],
+      };
     refrains += 1;
-    return { key: `refrain-${refrains}`, label: 'Refrain', text, refrain: true, lines: [] };
+    return { key: `refrain-${refrains}`, label: 'Refrain', text, refrain: true, first, lines: [] };
   });
 };
 

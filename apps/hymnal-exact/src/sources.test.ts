@@ -86,6 +86,28 @@ describe('the data module runs where Exact runs it', () => {
         expect(() => sources.hymnPage([route(random)])).not.toThrow();
         expect(() => sources.abouthymnPage([route(random)])).not.toThrow();
         expect(() => sources.playerStep(playerCall(random))).not.toThrow();
+        expect(() =>
+          sources.followStep([
+            pick(random, [
+              'report',
+              'wake',
+              'drag',
+              'resume',
+              'relayout',
+              'deadline',
+              'down',
+              'move',
+              'up',
+              'x',
+            ]),
+            Number(route(random)),
+            run * 40,
+            below(random, 400) - 20,
+            below(random, 900),
+            below(random, 8),
+            pick(random, ['playing 0 0 ', '0 1 1', '', 'x y z w']),
+          ]),
+        ).not.toThrow();
         expect(() => sources.settingsLooks([route(random)])).not.toThrow();
         expect(() => sources.settingsFeelOf([route(random)])).not.toThrow();
         const list = numbers(random);
@@ -173,6 +195,7 @@ describe('the data module runs where Exact runs it', () => {
       'findPlaces',
       'findStep',
       'findTileAt',
+      'followStep',
       'hymnPage',
       'hymnRows',
       'keysPage',

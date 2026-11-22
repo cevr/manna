@@ -28,6 +28,7 @@ import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
 import { readingSources } from './reading/sources.ts';
 import { sheetSources } from './sheet/sources.ts';
+import { followSources } from './follow/sources.ts';
 
 export const sourcesAt = (
   origin: string,
@@ -54,5 +55,6 @@ export const sourcesAt = (
     ...sheetSources(chords),
     ...readingSources(),
     ...pinchSources(),
+    ...followSources(book, timing),
   };
 };

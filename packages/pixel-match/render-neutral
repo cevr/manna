@@ -54,6 +54,12 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 e1c8b607319f declare: home/tabs's groupAt declared in exact/home/tabs.d.ts for the port's aim property test, held by exact-home-declarations.ts; no source changes
 1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+14f9d2c332ce move: the held seek's pure rules (HOLD_MS to LINE_CHOSEN, contactAfter) from reader/word-seek.ts into reader/seek-rules.ts, re-exported by word-seek.ts, and the intro's share and readingOf from follow/intro.ts into follow/intro-rules.ts, introOf calling it; values unchanged
+d25b9ed183c8 exports: five exports lines in apps/hymnal/package.json (./follow/follower, ./follow/marks, ./follow/clock, ./follow/intro-rules, ./reader/seek-rules); no source changes
+5934df34a375 declare: seek-rules re-exports initialTarget, targetAt, targetsOf and their types from follow/seek-targets, introAt takes the place as a number (introOf flat-maps its option into it), and exact/follow/timeline.d.ts declares placeAt, held by test/exact-declarations.ts; values unchanged
+be1866670bea move: numbersOf (the held seek's accessible value) from reader/HymnPage.tsx into reader/seek-rules.ts, re-exported by word-seek.ts; text unchanged
+a7aa0d5ea783 move: reportOf from follow/follow.tsx into follow/report.ts, and the ./follow/report exports line; text unchanged
+ee3eaa99bd9c move: firstLines from reader/HymnPage.tsx and wordStarts from reader/SyllableWords.tsx into reader/sung-lines.ts, and the ./reader/sung-lines exports line; text unchanged
 a9090ceaf658 move: a saved recording's identity, storages, CHUNK and mediaHeader, unchanged, from offline/cache.ts into offline/identity.ts (cache.ts re-exporting them), and Downloads.tsx's every line and name into offline/words.ts, the leaf drawing the same strings
 f39b2ca17b22 exports: five exports lines in apps/hymnal/package.json (./offline/identity, ./offline/words, ./offline/estimate, ./offline/cache, ./player/offline); no source changes
 e7a80f5c0ef9 move: offline/identity.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
@@ -70,8 +76,10 @@ ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/sess
 1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
 cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-sheet's and this unit's); no source changes of its own
 ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own
+9d7aa2563928 merge: origin/main into par-hy-follow; apps/hymnal/package.json's exports lines of both sides kept, no source changes
 38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
 8d53539e3f70 exports: Heartseed's ./first/verse exports line points at vite/first-verse.ts (the query alone); src/first/verse.ts drops its re-export of the query, ownPassagesOf and its row unchanged; no value or render changes
 69444068fb50 refactor: Move back's Exit-to-answer rule moved unchanged from back.tsx into bar.ts (answerOf), for the port's model test; same values, no picture change
 dcf2f0a97bb4 types: answerOf declared in exact/garden-bar.d.ts and held to its source by scripts/exact-declared.test.ts; no source changes
+7c3f55655e29 merge: origin/main into par-hy-follow; apps/hymnal/package.json's exports lines of both sides kept, no source changes
 51c9a51059cb exports: src/player/bar.ts's SHEETS gains `export` (and its declaration in exact/player/bar.d.ts), for the port's player-paths check; same value, no behaviour change

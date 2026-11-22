@@ -215,4 +215,15 @@ bun tools/drive-sheet.ts web    # the sheet's and Reading's names, its groups' o
 bun tools/drive-sheet.ts ios
 ```
 
+## The follow
+
+While the player holds the hymn shown, its page follows the singing (`features/follow.contract`), as the current `follow/` does: the sung line is selected and current, a line lit whole in the accent on the soft tint, a line drawn by syllables with its sung syllable in the accent and the rest muted; the page scrolls the line to a third of the way down (`scroll-padding-top`, smooth, at once under Reduce Motion); the reader's own drag or wheel holds the follow and shows Resume follow; the count-in's marks stand over the first sung line and the Introduction line over line 0. A still hold of 350 ms on the words (the current `HOLD_MS`) while it plays pauses the player at the sounding line, a drag moves the choice a line on for each 48 points up (back for each 48 down, as the content would move) and a word each 24 across, and the lift seeks there and plays on; the pager turns no page while it holds. Every rule is the current app's own, run in the data module (`src/follow/follow.ts`, `followStep`): its `followerOf`, `reportOf`, `contactAfter` and seek targets, imported. The follow reads a hymn's timeline through one seam (`followSources`' `timelineIn`); the bundled one keeps lines only, so every line lights whole today. `src/follow/follow.model.test.ts`, `marks.model.test.ts` and `seek.test.ts` (the part `test:follow`) hold the port beside the current follower, page and held seek over generated histories and gestures on the current app's full timing.
+
+```sh
+bun run exact test web follow.test.contract
+bun run exact test ios follow.test.contract
+bun tools/drive-follow.ts web   # the names, Reduce Motion, the largest text, ten seconds of frames
+bun tools/drive-follow.ts ios
+```
+
 `app.contract.d.ts` (the types `app.ts` imports), `.exact/` (builds, screenshots, scratch) and `dist/` are generated and ignored. `app.ts` stays out of the typecheck, which covers `src/` alone.
