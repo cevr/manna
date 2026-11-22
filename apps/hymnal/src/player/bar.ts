@@ -275,7 +275,13 @@ export const findAt = (
   );
 
 /** The sheets' paths: a sheet lies over the screen under it, whose bar it leaves drawn. */
-const SHEETS: ReadonlySet<string> = new Set(['/settings', '/player', '/chord', '/about', '/tuner']);
+export const SHEETS: ReadonlySet<string> = new Set([
+  '/settings',
+  '/player',
+  '/chord',
+  '/about',
+  '/tuner',
+]);
 
 /** `path` read as a route: its path alone, past a query, a hash and a trailing slash. */
 const routeOf = (path: string): string => path.replace(/[?#][\s\S]*$/, '').replace(/(.)\/+$/, '$1');
