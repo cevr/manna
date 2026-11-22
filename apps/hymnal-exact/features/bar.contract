@@ -49,7 +49,7 @@ component PlayerDock
   view
     column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not (player.dock or player.pageBar))
       for l in (player.src == "" ? [] : [player.load]) key=l
-        audio player.src id="audio" paused=player.paused currentTime=player.from muted=(not playerSoundOn) testId="audio"
+        audio player.src id="audio" paused=player.paused currentTime=player.from playbackRate=player.rate muted=(not playerSoundOn) testId="audio"
           metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
           seekbackwardOffset=10 seekforwardOffset=10
           seekto=remote("remoteSeek", 0) seekbackward=remote("remoteSkip", -1) seekforward=remote("remoteSkip", 1)

@@ -9,27 +9,25 @@
 import type { Effect, Option, Scope, Stream, SubscriptionRef } from 'effect';
 import type { Timeline } from '@manna/hymnal-app/player/stanzas';
 
-/** What the device, or the score clock over it, tells of its state and place, in ms. */
-export type Told = {
-  readonly state: 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'failed';
-  readonly positionMs: number;
-  readonly durationMs?: number;
-  /** The rate the place moves at; 1 when not told. */
-  readonly rate?: number;
-  /** While a count-in counts, the host's ms left of it. */
-  readonly countInMs?: number;
-};
+/** A device's phase. */
+type Phase = 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'failed';
 
-/** What a play asks: its tempo's rate, its stanzas, and how a start begins (the `Start` group's Intro). */
-export type PlayOptions = {
-  readonly continuous: boolean;
-  readonly ready: boolean;
-  readonly intent?: 'play' | 'pause';
-  readonly rate?: number;
-  readonly stanzas?: ReadonlyArray<number>;
+/** The rate the place moves at (1 when not told), and while a count-in counts, the host's ms left. */
+type Paced = { readonly durationMs?: number; readonly rate?: number; readonly countInMs?: number };
+
+/** What the device, or the score clock over it, tells of its state and place, in ms. */
+export type Told = { readonly state: Phase; readonly positionMs: number } & Paced;
+
+/** How a play begins: its tempo's rate, its stanzas, and the `Start` group's Intro and count. */
+type Starts = { readonly rate?: number; readonly stanzas?: ReadonlyArray<number> } & {
   readonly intro?: boolean;
   readonly countIn?: boolean;
 };
+
+/** What a play asks. */
+export type PlayOptions = { readonly continuous: boolean; readonly ready: boolean } & {
+  readonly intent?: 'play' | 'pause';
+} & Starts;
 
 /** One of the session's calls: its answer, its failure the device's own. */
 type Call<A> = Effect.Effect<A, unknown>;

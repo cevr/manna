@@ -144,7 +144,7 @@ export interface Held {
   /** The key's offset its play asked for, in semitones from the printed key. */
   readonly offset: number;
   /** The offset of the recording the device holds: the printed key's, 0, once the one asked failed. */
-  readonly effective: number;
+  readonly heard: number;
   /** The silent clock's count-in, while one is counted or a pause keeps it for the resume. */
   readonly count: Count | undefined;
   /** Its play's Intro: a start again from the end plays or counts the introduction by it. */
@@ -342,7 +342,7 @@ export const deviceOf = (state: State): Device | undefined => {
     return undefined;
   return {
     load: held.load,
-    url: urlOf(held.track, held.effective),
+    url: urlOf(held.track, held.heard),
     from: held.from,
     paused: held.wants === 'pause',
     seek: held.seek,
@@ -449,7 +449,7 @@ const loaded = (
     silent: false,
     recorded: 0,
     offset,
-    effective: offset,
+    heard: offset,
     count: undefined,
     intro,
   };
@@ -601,7 +601,7 @@ const keyed = (state: State, offsets: Readonly<Record<string, number>>): State =
   if (held === undefined || held.phase === 'failed' || deviceOf(next) === undefined) return next;
   const offset = offsetOf(next, held.track.number);
   if (offset === held.offset) return next;
-  if (offset === held.effective) return { ...next, held: { ...held, offset } };
+  if (offset === held.heard) return { ...next, held: { ...held, offset } };
   if (held.wants !== 'play' || !sounding(held)) return next;
   return loaded(next, held.track, held.at, held.intro);
 };
@@ -616,7 +616,7 @@ const fellBack = (state: State, held: Held): State => {
     held: {
       ...held,
       load,
-      effective: 0,
+      heard: 0,
       from: held.at,
       sought: held.at,
       seek: 0,
@@ -1011,7 +1011,7 @@ const device = (state: State, input: Input): State => {
       );
     case 'failed': {
       const { held } = state;
-      if (held?.load === input.id && held.phase !== 'failed' && held.effective !== 0)
+      if (held?.load === input.id && held.phase !== 'failed' && held.heard !== 0)
         return fellBack(state, held);
       return onLoad(state, input.id, (each) => ({ ...each, phase: 'failed', why: input.why }));
     }

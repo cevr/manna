@@ -6,6 +6,8 @@
 // naming its load and the seek it follows. A seek the step sends is a
 // `fastSeek` on the element, taken once by its serial.
 
+use PlayerTempo, PlayerCount, TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
+
 shape PlayerBar
   shown: bool
   number: number
@@ -82,6 +84,12 @@ shape PlayerView
   session: PlayerSession
   go: PlayerGo
   kept: string
+  rate: number
+  some: bool
+  tempo: PlayerTempo
+  count: PlayerCount
+  fellBack: bool
+  offset: number
   command: string
 
 fn playerLabel(toggle: string): string = toggle == "pause" ? "Pause" : (toggle == "retry" ? "Try again" : "Play")
@@ -113,6 +121,7 @@ members HymnalExact
     if player.ticking and not playerTicking
       playerClockAt = performanceNow()
     playerTicking = player.ticking
+    playerCounted()
     if player.seek > playerSought
       playerSought = player.seek
       fastSeek("audio", player.seekTo)
@@ -136,6 +145,10 @@ members HymnalExact
         haptic("impact-light")
       else if kind == "stanza"
         haptic("selection")
+      else if kind == "chooseAll" or kind == "tap"
+        haptic("selection")
+      else if kind == "tempoReset"
+        haptic("impact-medium")
     if player.ticking
       playerClockTicked()
     send playerStepped = playerStep(kind, 0, 0, value, "")
@@ -174,7 +187,7 @@ members HymnalExact
   action playerSettled
     send playerStepped = playerStep("settle", player.load, player.seek, 0, "")
   action playerSkipCheck
-    if playerDueAt != player.skipAt and performanceNow() - playerTickAt >= (player.skipAt - player.place) * 1000
+    if playerDueAt != player.skipAt and performanceNow() - playerTickAt >= (player.skipAt - player.place) * 1000 / player.rate
       playerDueAt = player.skipAt
       send playerStepped = playerStep("due", player.load, player.seek, player.skipAt, "")
   // A sent place is held until the device reaches it, or this long
@@ -245,6 +258,7 @@ component PlayerSheet
             button press=ask("title", 0) appearance="none" text-align="left" -exact-press-opacity="opacity.pressed" testId="player-title" aria-label=`Open hymn ${player.number}`
               text `${player.number} ${player.title}` font="type.head" color="ink" font-variant-numeric="tabular-nums" role="heading" aria-level=1
             text player.caption font="type.caption" color="muted" testId="player-said"
+            RecordingNotice(on=player.fellBack)
             column gap="space.s4"
               input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") height="size.slider" aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
               row justify-content="space-between"
@@ -257,15 +271,18 @@ component PlayerSheet
               else if player.phase != "failed" and player.toggle != ""
                 button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
                   text playerLabel(player.toggle) font="type.body" color="button"
+          TempoDial(tempo=player.tempo, ask=ask)
           if player.chips.length > 0
             column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
               text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
               row gap="space.s8" flex-wrap="wrap" align-items="center"
                 for c in player.chips key=c.stanza
                   PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
+                StanzasAll(on=player.some, ask=ask)
               if player.places.length > 0
                 row gap="space.s8" flex-wrap="wrap" align-items="center"
                   text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
                   for n in player.places key=n
                     button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
                       text `${n}` font="type.chip" color="onPill" line-clamp=1
+          StartRow()

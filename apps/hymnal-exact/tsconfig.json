@@ -19,6 +19,8 @@
       "@manna/hymnal-app/follow/seek-targets": ["./src/player/decl/seek-targets"],
       "@manna/hymnal-app/player/scrub-rules": ["./src/player/decl/scrub-rules"],
       "@manna/hymnal-app/player/caption": ["./src/player/decl/caption"],
+      "@manna/hymnal-app/player/tempo": ["./src/player/decl/tempo"],
+      "@manna/hymnal-app/player/countin": ["./src/player/decl/countin"],
       "@manna/hymnal-app/player/button": ["./src/player/bar/decl/button"],
       "@manna/hymnal-app/home/find-rules": ["./src/find/decl/find-rules"],
       "@manna/hymnal-app/home/tile-times": ["./src/find/decl/tile-times"],

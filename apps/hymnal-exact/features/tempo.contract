@@ -1,0 +1,219 @@
+// The player sheet's tempo and start, as the current hymnal draws them
+// (src/player/TempoDial.tsx, StanzaChips.tsx's All, StartSwitches.tsx,
+// RecordingNotice.tsx). Every rule is `step`'s (src/player/step.ts): the
+// tempo kept per hymn with the stanza choice (`playerKept`), the rate the
+// element plays at and the silent clock runs at, the count-in, the key's
+// recording and its fallback. This file draws them, keeps Intro and Click,
+// and tells the player Intro and the chords' key at launch and each change.
+
+shape PlayerStop
+  at: number
+  percent: number
+
+shape PlayerTempoPlaces
+  detent: number
+  pad: number
+  title: number
+  titlePad: number
+  titleSpacing: number
+  notch: number
+  notchWide: number
+
+shape PlayerTempo
+  at: number
+  percent: number
+  said: string
+  away: bool
+  stops: PlayerStop[]
+  places: PlayerTempoPlaces
+  timed: bool
+  bpmSaid: string
+  bpm: number
+  note: number
+  dotted: bool
+  open: bool
+  stem: bool
+  flags: number[]
+
+shape PlayerCount
+  on: bool
+  beats: number
+  beat: number
+  left: number
+  next: number
+
+members HymnalExact
+  state playerIntro = true persist
+  state playerClick = false persist
+  state playerBeat = -1
+  action playerIntroSwitch(on: bool)
+    playerIntro = on
+  action playerClickSwitch(on: bool)
+    playerClick = on
+  action playerIntroTold
+    send playerStepped = playerStep("intro", 0, 0, playerIntro ? 1 : 0, "")
+  action playerKeysTold
+    if player.ticking
+      playerClockTicked()
+    send playerStepped = playerStep("keys", 0, 0, chordsOn ? 1 : 0, chordsMoves.join(" "))
+  // Each beat of the count-in, as the player answers it: a click under
+  // Sounds and haptics while Click is on (the sound is par-hy-feel's).
+  action playerCounted
+    if not player.count.on
+      playerBeat = -1
+    else if player.count.beat != playerBeat
+      playerBeat = player.count.beat
+      if playerClick
+        if settingsFeel
+          if player.count.beat == 0
+            haptic("impact-medium")
+          else
+            haptic("impact-light")
+  action playerCountCheck
+    if performanceNow() - playerClockAt >= player.count.next
+      playerClockTicked()
+  // Intro is told at launch and at each switch; it waits for the next Play.
+  task playerIntroTell key=playerIntro
+    change(playerIntroTold)
+  // The recording's key is the hymn's heard key: its move while chords are
+  // on, the printed key while off (src/player/sources.ts `offsetsOf`).
+  task playerKeysTell key=`${chordsOn} ${chordsMoves.join(" ")}`
+    change(playerKeysTold)
+  // While the silent clock counts in, each frame asks whether the next beat
+  // is due, so a beat lands on its time and not the next tick's.
+  task playerCountWatch when player.count.on and player.ticking key=player.load
+    every(frame, playerCountCheck)
+
+// A chip of the sheet's, as the current Chip.tsx draws it: a pill 32
+// high, never narrower than a target, named `name` with One's hint.
+component TempoChip
+  props
+    label: string
+    press: action
+    id: string
+    name: string
+    hint: string
+  view
+    button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=name aria-description=hint testId=id
+      text label font="type.chip" color="onPill" line-clamp=1
+
+// The hymn's tempo: a dial of the stops 50 % to 150 % on a row that snaps
+// a stop at a time and stops at its ends, each its number, the one at the
+// notch in the chord colour; a tap on a stop turns to it. VoiceOver reads
+// it as "Tempo", its value the percent, a stop a swipe. Under it, the
+// hymn's beat and its bpm at the dial's tempo, `Reset tempo` while it is
+// not 100 %, and `Tap`, which sets the dial from the fourth tap of a run.
+component TempoDial
+  props
+    tempo: PlayerTempo
+    ask: action
+  inject
+    settingsFeel: bool
+  state x = 0
+  state at = -1
+  state pressedAt = -1000
+  action scrolled(sx: number, sy: number)
+    let i = round(sx / tempo.places.detent)
+    x = sx
+    if i != at
+      at = i
+      if settingsFeel
+        haptic("selection")
+  action picked(i: number)
+    pressedAt = performanceNow()
+    ask("tempo", i)
+  action settled
+    let i = min(tempo.stops.length - 1, max(0, round(x / tempo.places.detent)))
+    if i != tempo.at and performanceNow() - pressedAt >= 600
+      ask("tempo", i)
+  action tapped
+    ask("tap", performanceNow())
+  view
+    column gap="space.s8" testId="tempo"
+      column background-color="panel" border-width="line.panel" border-style="solid" border-color="edge" border-radius=`${tempo.places.detent / 2 + tempo.places.pad}px` padding=`${tempo.places.pad}px`
+        row height=`${tempo.places.detent}px` align-items="center" border-radius=`${tempo.places.detent / 2}px` overflow="hidden" testId="dial-tempo"
+          text "TEMPO" font="type.dial-name" letter-spacing=`${tempo.places.titleSpacing}px` color="muted" white-space="nowrap" min-width=`${tempo.places.title}px` padding-left=`${tempo.places.titlePad}px` box-sizing="border-box" aria-hidden=true
+          view position="relative" flex=1 min-width=0 height=`${tempo.places.detent}px`
+            scroll id="dial-tempo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
+              scroll-snap-type="x mandatory" height=`${tempo.places.detent}px` padding-left=`calc(50% - ${tempo.places.detent / 2}px)` padding-right=`calc(50% - ${tempo.places.detent / 2}px)` box-sizing="border-box"
+              scrollLeft=(tempo.at * tempo.places.detent) scroll=scrolled scrollend=settled aria-hidden=true tabindex=-1 testId="dial-tempo-row"
+              for s in tempo.stops key=s.at
+                button press=picked(s.at) appearance="none" padding=0 flex-shrink=0 width=`${tempo.places.detent}px` height=`${tempo.places.detent}px`
+                  display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
+                  aria-hidden=true tabindex=-1 retainFocus=true testId=`dial-tempo-stop-${s.percent}`
+                  text `${s.percent}` font="type.key-face" color=(s.at == tempo.at ? "chord" : "muted") white-space="nowrap"
+            view position="absolute" top=0 left="50%" width=`${tempo.places.notchWide}px` height=`${tempo.places.notch}px` translate="-50% 0px"
+              background-color="chord" pointer-events="none" aria-hidden=true
+            input type="range" min=0 max=(tempo.stops.length - 1) step=1 value=tempo.at input=ask("tempo") aria-label="Tempo" aria-valuetext=tempo.said
+              position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-tempo-value"
+      if tempo.timed or tempo.away
+        row align-items="center" justify-content="space-between" padding="0px space.s16"
+          if tempo.timed
+            row align-items="center" role="img" aria-label=tempo.bpmSaid testId="tempo-bpm"
+              TempoNote(tempo=tempo)
+              text ` = ${tempo.bpm}` font="type.label" color="ink" font-variant-numeric="tabular-nums" line-clamp=1 aria-hidden=true
+          row align-items="center" gap="space.s8" margin-left="auto"
+            if tempo.away
+              TempoChip(label="↺ 100%", press=ask("tempoReset", 0), id="tempo-reset", name="Reset tempo", hint="Back to 100%")
+            if tempo.timed
+              TempoChip(label="Tap", press=tapped, id="tempo-tap", name="Tap", hint="Tap four times at the beat to set the tempo")
+
+// The beat's note, 14 wide and 18 high in the ink, as the current
+// TempoDial.tsx's NoteMark draws it: an oval head, open for a half or
+// whole note; a stem for all but the whole; a flag for each eighth's
+// halving; a dot for a dotted note. Hidden: the read-out names the note.
+component TempoNote
+  props
+    tempo: PlayerTempo
+  view
+    svg width="size.note-wide" height="size.note-high" viewBox="0 0 14 18" color="ink" aria-hidden=true testId="mark-note"
+      ellipse cx=4 cy=15 rx=3.25 ry=2.25 transform="rotate(-20 4 15)" stroke="currentColor" stroke-width=1.5 fill=(tempo.open ? "none" : "currentColor")
+      if tempo.stem
+        path d="M7.25 1V15" stroke="currentColor" stroke-width=1.5 fill="none"
+      for k in tempo.flags key=k
+        path d=`M7.25 ${1.75 + 4 * k}H8A3.25 3.25 0 0 1 11.25 ${5 + 4 * k}V${7 + 4 * k}` stroke="currentColor" stroke-width=1.5 fill="none"
+      if tempo.dotted
+        circle cx=11.5 cy=15.5 r=1.5 fill="currentColor"
+
+// The stanzas' All chip, once a choice is made: it sings every stanza
+// again (the current StanzaChips.tsx).
+component StanzasAll
+  props
+    on: bool
+    ask: action
+  view
+    if on
+      TempoChip(label="All", press=ask("chooseAll", 0), id="stanzas-all", name="All", hint="Sings every stanza again")
+
+// The recording plays in the printed key: the key its play asked for has
+// none (the current RecordingNotice.tsx), a status.
+component RecordingNotice
+  props
+    on: bool
+  view
+    if on
+      text "Recording in printed key. Chosen key unavailable. Play retries it." font="type.footnote" color="muted" text-align="center" padding="space.s4 space.s12" role="status" aria-live="polite" testId="recording-key-fallback"
+
+// The group Start: how Play begins a hymn from its start, the same for
+// every hymn (the current StartSwitches.tsx). Intro, on by default: with
+// Sound on the recording's introduction plays first, with Sound off one bar
+// of the meter is counted in. Click, off by default: a click on each beat
+// of the count-in; it does nothing with Intro off, so it is disabled then.
+component StartRow
+  inject
+    playerIntroOn: bool
+    playerClickOn: bool
+    playerIntroPress: action
+    playerClickPress: action
+  view
+    column role="group" aria-label="Start" gap="space.s8" padding-top="space.s8" testId="start"
+      row align-items="center" justify-content="space-between" min-height="size.target" gap="space.s16"
+        column flex=1 min-width=0 gap="space.s2" aria-hidden=true
+          text "Intro" font="type.body" color="ink"
+          text "The recording’s introduction, or a count-in with Sound off." font="type.footnote" color="muted"
+        input type="checkbox" switch checked=playerIntroOn change=playerIntroPress aria-label="Intro" testId="start-intro"
+      row align-items="center" justify-content="space-between" min-height="size.target" gap="space.s16"
+        column flex=1 min-width=0 gap="space.s2" aria-hidden=true
+          text "Click" font="type.body" color=(playerIntroOn ? "ink" : "muted")
+          text "A click on each beat of the count-in." font="type.footnote" color="muted"
+        input type="checkbox" switch checked=playerClickOn disabled=(not playerIntroOn) change=playerClickPress aria-label="Click" testId="start-click"

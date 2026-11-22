@@ -14,11 +14,13 @@ import {
   bpmAt,
   bpmOf,
   saidOf as percentOf,
+  STOPS,
   stopAt,
   stopIndexOf,
 } from '@manna/hymnal-app/player/tempo';
 import { clock } from '@manna/hymnal-app/player/time';
 
+import { TEMPO_PLACES } from '../tempo/places.ts';
 import { type BarView, type Toggle, barsOf, saidOf, toggleOf } from './bar/view.ts';
 import type { Choice } from './score.ts';
 import {
@@ -44,18 +46,27 @@ const tempoView = (state: State): PlayerView['tempo'] => {
   const first = held?.track.score.tempo;
   const beat = first === undefined ? undefined : beatOf(first);
   const bpm = first === undefined ? 0 : bpmAt(bpmOf(first), percent);
+  const note = beat?.note ?? 4;
   return {
     at: stopIndexOf(percent),
     percent,
     said: percentOf(percent),
     away: percent !== DEFAULT_TEMPO,
+    stops: STOPS.map((stop, at) => ({ at, percent: stop })),
+    places: TEMPO_PLACES,
     timed: beat !== undefined,
     bpmSaid: beat === undefined ? '' : `${beat.name} = ${bpm}`,
     bpm,
-    note: beat?.note ?? 4,
+    note,
     dotted: beat?.dotted ?? false,
+    open: note <= 2,
+    stem: note >= 2,
+    flags: Array.from({ length: FLAGS[note] ?? 0 }, (_, flag) => flag),
   };
 };
+
+/** Flags on a note's stem, by the denominator that writes it, as the current `TempoDial.tsx`'s `FLAGS`. */
+const FLAGS: Readonly<Record<number, number>> = { 8: 1, 16: 2 };
 
 /** The count-in as the current `scoreClock`'s `beatAt` and `toNextBeat` read it, in the host's ms. */
 const countView = (state: State): PlayerView['count'] => {
@@ -153,13 +164,21 @@ export interface PlayerView {
     readonly percent: number;
     readonly said: string;
     readonly away: boolean;
+    /** The dial's stops, each its place on the row and its percent. */
+    readonly stops: Array<{ readonly at: number; readonly percent: number }>;
+    /** The dial's measures (`TEMPO_PLACES`). */
+    readonly places: typeof TEMPO_PLACES;
     /** The hymn is timed: its bpm read-out and `Tap` show. */
     readonly timed: boolean;
     /** The read-out as VoiceOver reads it, `<beat> = <bpm>`, and its parts as drawn. */
     readonly bpmSaid: string;
     readonly bpm: number;
+    /** The beat's note: its denominator, dotted or not, an open head (a half or whole), a stem (all but the whole), a flag per eighth's halving. */
     readonly note: number;
     readonly dotted: boolean;
+    readonly open: boolean;
+    readonly stem: boolean;
+    readonly flags: Array<number>;
   };
   /** The silent clock's count-in while it counts: its beats, the beat reached from 0, the host's ms left and to the next beat. */
   readonly count: {
@@ -171,6 +190,8 @@ export interface PlayerView {
   };
   /** The recording plays in the printed key: the key its play asked for has none (`recording-key-fallback`). */
   readonly fellBack: boolean;
+  /** The key the recording plays in, in semitones from the printed key's: the heard key, or 0 once it fell back. */
+  readonly offset: number;
   /** The command the step gave the device, for a test to read. */
   readonly command: string;
 }
@@ -266,6 +287,19 @@ const seekView = (state: State, chosen: ReadonlyArray<number>) => {
   };
 };
 
+/** The tempo's part of the view: the rate, the dial, the count-in, the key the recording plays in, and whether a choice is made. */
+const pace = (state: State, choice: Choice) => {
+  const { held } = state;
+  return {
+    rate: held === undefined ? 1 : rateFor(state, held.track.number),
+    some: choice.length > 0,
+    tempo: tempoView(state),
+    count: countView(state),
+    fellBack: held !== undefined && held.offset !== held.heard,
+    offset: held?.heard ?? 0,
+  };
+};
+
 /** The view of `state`, after the step that gave `command`. */
 export const viewOf = (
   state: State,
@@ -311,10 +345,6 @@ export const viewOf = (
     go: state.go,
     kept: encodeKept(state),
     command: commandText(command),
-    rate: held === undefined ? 1 : rateFor(state, held.track.number),
-    some: choice.length > 0,
-    tempo: tempoView(state),
-    count: countView(state),
-    fellBack: held !== undefined && held.offset !== held.effective,
+    ...pace(state, choice),
   };
 };

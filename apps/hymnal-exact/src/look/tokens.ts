@@ -126,6 +126,8 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.tile-count', [TILES, 'count']),
   type('type.tiles-head', [TILES, 'heading']),
   length('size.strip', [TILES, 'strip', 'height']),
+  length('size.note-wide', ['src/player/TempoDial.tsx', 'note', 'width']),
+  length('size.note-high', ['src/player/TempoDial.tsx', 'note', 'height']),
   length('line.tile', [TILES, 'tile', 'borderWidth']),
   type('type.key-over', [KEY, 'over']),
   type('type.key-face', [KEY, 'key'], [DIALS, 'fret']),
@@ -133,6 +135,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.dial-key', [DIALS, 'key']),
   type('type.dial-played', [DIALS, 'played']),
 
+  length('space.s2', ['src/player/StartSwitches.tsx', 'text', 'gap']),
   length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
   length(
     'space.s6',
