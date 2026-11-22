@@ -98,7 +98,7 @@ component HeartseedExact
     else
       nav = go(nav, url)
   view
-    main testId="root" navigationKey=`${top(nav).id}` navigate=follow width="100%" height="100%" display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs"
+    main testId="root" navigationKey=`${top(nav).id}` navigationBack="first-hold" navigate=follow width="100%" height="100%" display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs"
       column flex=1 min-height=0 position="relative"
         for t in nav.tabs key=t.name
           column role="tabpanel" id=`panel-${t.name}` testId=`panel-${t.name}` position="absolute" inset=0

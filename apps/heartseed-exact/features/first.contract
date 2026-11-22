@@ -213,6 +213,7 @@ component FirstScreen
   resource firstSize = exactViewport() as shape TodayTextSize
   view
     column navigationKey=`${route}` navigationPresentation="fullscreen" navigationBar="none" navigationScroll="first-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="first"
+      button id="first-hold" press=done disabled=true appearance="none" aria-hidden=true position="absolute" width=0 height=0 overflow="hidden" opacity=0 testId="first-hold"
       if phase == "welcome" or phase == "grows"
         scroll id="first-scroll" flex=1 min-height=0 testId="first-scroll"
           for k in [phase] key=k
