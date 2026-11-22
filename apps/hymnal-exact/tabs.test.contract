@@ -46,6 +46,36 @@ test "Deep in the list nothing pins; 8 points up pins the row, 8 down sends it a
   expect state listTabsAt == 2000
   expect state listTop == 2000
 
+test "Reports made before an answer lands fold in order as the current app's: hidden at 1000, up 8 then down 8 before it lands, the row ends hidden at 1000."
+  tap "hymn-list" wheel 0 1000
+  clock settle
+  clock data
+  expect state listTabs.shown == false
+  tap "hymn-list" wheel 0 -8
+  expect state listTabs.shown == false
+  tap "hymn-list" wheel 0 8
+  clock settle
+  clock data
+  expect state listTabsAt == 1000
+  expect state listTabs.shown == false
+  expect state listTabs.reach == false
+
+test "Reports made before an answer lands are each folded: up 8 and 2 more before it lands, then down 8 from the highest hides the row, as the current app's."
+  tap "hymn-list" wheel 0 1000
+  clock settle
+  clock data
+  tap "hymn-list" wheel 0 -8
+  tap "hymn-list" wheel 0 -2
+  clock settle
+  clock data
+  expect state listTabsAt == 990
+  expect state listTabs.shown == true
+  tap "hymn-list" wheel 0 8
+  clock settle
+  clock data
+  expect state listTabsAt == 998
+  expect state listTabs.shown == false
+
 test "Scrolled back to the top the pinned row is gone at once and the list's own row stands where it was."
   tap "hymn-list" wheel 0 2000
   clock settle

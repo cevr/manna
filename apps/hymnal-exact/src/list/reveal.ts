@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a state not opened yet is a plain `undefined`. */
+/* oxlint-disable effect/noNullish, effect/noNewPromise, effect/noGlobals -- Exact's data module cannot import effect (docs/exact.md): a state not opened yet is a plain `undefined`, and the source answers a Promise on the answer's own timer. */
 
 /**
  * The home list's pinned tab row, as the current app's `useTabReveal`
@@ -142,26 +142,41 @@ const inputOf = (
   return undefined;
 };
 
+/** A call's arguments: the input's kind, the offset, the resting place, the row's height and the kept-back edge. */
+export type StepCall = readonly [string, number, number, number, number];
+
 /**
- * The pinned row's source, as `app.ts` registers it: `listTabsStep(kind,
- * at, rest, height, edge)` steps the launch's one state by an input and
- * answers what the view draws. A kind it does not know changes nothing.
+ * The launch's one state: `step(kind, at, rest, height, edge)` steps it by
+ * an input and says what the view draws. A kind it does not know changes
+ * nothing.
+ */
+export const revealStepper = () => {
+  let kept: Kept | undefined;
+  return ([kind, at, rest, height, edge]: StepCall): TabsAt => {
+    const now = kept ?? opened(rest, height);
+    const input = inputOf(kind, at, rest, height, edge);
+    kept = now;
+    if (input !== undefined) kept = stepped(now, input);
+    return drawn(kept);
+  };
+};
+
+/**
+ * The pinned row's source, as `app.ts` registers it: `listTabsStep` steps
+ * the launch's state as the call is made and answers on a timer of its
+ * own, so the answer lands at the host's next clock advance, as a host
+ * that answers from another thread would. Reports the list makes before it
+ * lands find the answer pending, and the view sends each of them
+ * (`listTabsReport`): every host and every test runs that path.
  */
 export const revealSources = () => {
-  let kept: Kept | undefined;
+  const step = revealStepper();
   return {
-    listTabsStep: ([kind, at, rest, height, edge]: readonly [
-      string,
-      number,
-      number,
-      number,
-      number,
-    ]): TabsAt => {
-      const now = kept ?? opened(rest, height);
-      const input = inputOf(kind, at, rest, height, edge);
-      kept = now;
-      if (input !== undefined) kept = stepped(now, input);
-      return drawn(kept);
+    listTabsStep: (call: StepCall): Promise<TabsAt> => {
+      const answer = step(call);
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(answer), 0);
+      });
     },
   };
 };
