@@ -54,3 +54,4 @@ d25b9ed183c8 exports: five exports lines in apps/hymnal/package.json (./follow/f
 5934df34a375 declare: seek-rules re-exports initialTarget, targetAt, targetsOf and their types from follow/seek-targets, introAt takes the place as a number (introOf flat-maps its option into it), and exact/follow/timeline.d.ts declares placeAt, held by test/exact-declarations.ts; values unchanged
 be1866670bea move: numbersOf (the held seek's accessible value) from reader/HymnPage.tsx into reader/seek-rules.ts, re-exported by word-seek.ts; text unchanged
 a7aa0d5ea783 move: reportOf from follow/follow.tsx into follow/report.ts, and the ./follow/report exports line; text unchanged
+ee3eaa99bd9c move: firstLines from reader/HymnPage.tsx and wordStarts from reader/SyllableWords.tsx into reader/sung-lines.ts, and the ./reader/sung-lines exports line; text unchanged
