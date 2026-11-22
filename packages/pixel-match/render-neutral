@@ -39,6 +39,8 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+5ec9ac9706ca move: the reading view's LONG_PRESS (350) and its hold's activate, move, end and drop rule, unchanged, from reading/view.tsx into reading/hold.ts, the view calling it in the same order
+6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes
 4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
 16357b5e84a9 exports: one exports line in apps/hymnal/package.json (./vite/app, the native manifest, for the port's microphone purpose test); no source changes
 4ebb14f58776 exports: one exports line in apps/hymnal/package.json (./tuner/pitch, for the port's reading test); no source changes
