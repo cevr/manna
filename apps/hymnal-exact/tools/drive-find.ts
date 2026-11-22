@@ -34,7 +34,11 @@
  * - All at once is the current app's group tiles: `tree --ax` reads each a
  *   button named by its group and count, two stand to a row, and a tile's
  *   tap lands its group's header at the list's top with its first row under
- *   it; dialling a number at home brings its row into view; a hymn found by
+ *   it; All at once opens at the group the current app's \`groupAt\`
+ *   (imported) names from the tiles' landing offsets, the list's offset and
+ *   the pinned tab row's cover, round group 5's header with the row hidden
+ *   and pinned, the header under the line read beside it; dialling a
+ *   number at home brings its row into view; a hymn found by
  *   a line shows it under its title in a taller row, VoiceOver reading it
  *   last, and at the largest text the row grows with both lines, unclipped.
  *
@@ -50,6 +54,7 @@
 import { join } from 'node:path';
 
 import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
+import { groupAt } from '@manna/hymnal-app/home/tabs';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { changedPixels, pixelAt } from './pixel.ts';
@@ -775,29 +780,128 @@ drive.check(
     aimTile.y < aimTiles.y + aimTile.h,
   { aimTiles, aimTile },
 );
+/** A state reply as a number; NaN when it is none. */
+const numberOf = (reply: unknown) => Number(reply ?? Number.NaN);
+/** The pinned tab row's state from a state reply. */
+const tabsOf = (reply: unknown) => reply as { shown?: boolean; cover?: number } | undefined;
+/** Whether `at` lies within `box` top to bottom, its top counted. */
+const holds = (box: Frame | undefined, at: number) =>
+  box !== undefined && box.y <= at && at < box.y + box.h;
+const near = [0, 1, 2, 3, 4, 5, 6, 7];
 for (const tab of ['Sections', 'Topics']) {
-  const boundary = named([
+  const toTab =
+    tab === 'Sections' ? [] : [`tap tab-${tab.toLowerCase()}`, 'clock settle', 'clock data'];
+  const groups = tab === 'Sections' ? 'listRows' : 'listGroups';
+  const heads = tab === 'Sections' ? 'section' : 'group';
+  const slugsOf = named([
     'clock data',
-    ...(tab === 'Sections' ? [] : [`tap tab-${tab.toLowerCase()}`, 'clock settle', 'clock data']),
-    'tap tiles-show',
-    'clock data',
-    'clock settle',
-    'tap group-tile-4',
-    'clock settle',
-    'tap hymn-list wheel 0 -40',
-    'clock settle',
-    'tap tiles-show',
-    'clock data',
-    'clock settle',
-    ['tiles', 'layout find-tiles'],
-    ['tile', 'layout group-tile-3'],
+    ...toTab,
+    ...near.map((k) => [`slug-${k}`, `state ${groups}.${k}.slug`] as const),
   ]);
-  const run = await launch(`find-boundary-${tab.toLowerCase()}`, boundary.ops);
-  const [tiles, tile] = [frame(boundary.reply(run, 'tiles')), frame(boundary.reply(run, 'tile'))];
+  const slugsRun = await launch(`find-aim-slugs-${tab.toLowerCase()}`, slugsOf.ops);
+  const slugs = near.map((k) => slugsOf.reply(slugsRun, `slug-${k}`));
+  const headOf = (slug: unknown) => `${heads}-${String(slug)}-row`;
+  const measure = named([
+    'clock data',
+    ...toTab,
+    ...near.flatMap((k) => [
+      'tap tiles-show',
+      'clock data',
+      'clock settle',
+      `tap group-tile-${k}`,
+      'clock settle',
+      'clock data',
+      [`start-${k}`, 'state listTop'] as const,
+      ...slugs.map((slug, j) => [`head-${k}-${j}`, `layout ${headOf(slug)}`] as const),
+    ]),
+  ]);
+  const measured = await launch(`find-aim-starts-${tab.toLowerCase()}`, measure.ops);
+  const starts = near.map((k) => numberOf(measure.reply(measured, `start-${k}`)));
+  const landedHead = near.map((k) =>
+    slugs.findIndex((_, j) => {
+      const box = frame(measure.reply(measured, `head-${k}-${j}`));
+      return box !== undefined && Math.abs(box.y) <= 2;
+    }),
+  );
   drive.check(
-    `${tab}: with group 5’s header 40 px under the list’s top, group 4’s pinned over it, All at once opens with group 4’s tile in the first row`,
-    tiles !== undefined && tile !== undefined && tile.y >= tiles.y - 1 && tile.y < tiles.y + tile.h,
-    { tiles, tile },
+    `${tab}: a tile's tap lands its group's header at the list's top, at the offset the aim is held to`,
+    starts.every(
+      (start, k) => Number.isFinite(start) && (k === 0 || start > (starts[k - 1] ?? 0)),
+    ) && landedHead.slice(1).every((j) => j >= 0),
+    { starts, landedHead },
+  );
+  const headFor = (k: number) => headOf(slugs[landedHead[k] ?? -1]);
+  const cases = [
+    { pinned: true, under: 40 },
+    { pinned: true, under: 47 },
+    { pinned: true, under: 48 },
+    { pinned: true, under: 100 },
+    { pinned: false, under: 0 },
+    { pinned: false, under: 1 },
+    { pinned: false, under: 2 },
+    { pinned: false, under: 40 },
+  ];
+  const aimed = named([
+    'clock data',
+    ...toTab,
+    ...cases.flatMap(({ pinned, under }, c) => [
+      'tap tiles-show',
+      'clock data',
+      'clock settle',
+      'tap group-tile-4',
+      'clock settle',
+      'clock data',
+      ...(pinned
+        ? ['tap hymn-list wheel 0 100', 'clock settle', `tap hymn-list wheel 0 -${100 + under}`]
+        : ['tap hymn-list wheel 0 -200', 'clock settle', `tap hymn-list wheel 0 ${200 - under}`]),
+      'clock settle',
+      'clock data',
+      [`top-${c}`, 'state listTop'] as const,
+      [`tabs-${c}`, 'state listTabs'] as const,
+      [`list-${c}`, 'layout hymn-list'] as const,
+      [`head3-${c}`, `layout ${headFor(3)}`] as const,
+      [`head4-${c}`, `layout ${headFor(4)}`] as const,
+      'tap tiles-show',
+      'clock data',
+      'clock settle',
+      [`tiles-${c}`, 'layout find-tiles'] as const,
+      [`tile3-${c}`, 'layout group-tile-3'] as const,
+      [`tile4-${c}`, 'layout group-tile-4'] as const,
+      'tap tiles-done',
+      'clock settle',
+    ]),
+  ]);
+  const run = await launch(`find-aim-${tab.toLowerCase()}`, aimed.ops);
+  const seen = new Set<number>();
+  for (const [c, { pinned, under }] of cases.entries()) {
+    const at = (name: string) => aimed.reply(run, `${name}-${c}`);
+    const offset = numberOf(at('top'));
+    const tabs = tabsOf(at('tabs'));
+    const cover = tabs?.cover ?? Number.NaN;
+    const list = frame(at('list'));
+    const line = (list?.y ?? 0) + cover + 1;
+    const want = groupAt(starts, offset, cover);
+    seen.add(want);
+    const heads = { three: frame(at('head3')), four: frame(at('head4')) };
+    const [tiles, tile] = [frame(at('tiles')), frame(at(`tile${want}`))];
+    drive.check(
+      `${tab}: group 5's header ${under} px under the list's top, the tab row ${pinned ? 'pinned' : 'hidden'}: the header under the line is group ${want + 1}'s, and All at once opens with its tile in the first row, as the current app's groupAt`,
+      tabs?.shown === pinned &&
+        (pinned ? cover > 40 : cover === 0) &&
+        Math.abs(offset - ((starts[4] ?? 0) - under)) <= 0.5 &&
+        (want === 3 || want === 4) &&
+        holds(want === 3 ? heads.three : heads.four, line) &&
+        tiles !== undefined &&
+        tile !== undefined &&
+        tile.y >= tiles.y - 1 &&
+        tile.y < tiles.y + tile.h,
+      { offset, start: starts[4], tabs, line, want, heads, tiles, tile },
+    );
+  }
+  drive.check(
+    `${tab}: the cases straddle the line, some opening at group 4 and some at group 5`,
+    seen.has(3) && seen.has(4),
+    [...seen],
   );
 }
 const [plain, lined, lineText] = [
