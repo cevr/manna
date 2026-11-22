@@ -69,6 +69,7 @@
     "./reader/reading-choices": "./src/reader/reading-choices.ts",
     "./home/find-rules": "./src/home/find-rules.ts",
     "./home/tile-times": "./src/home/tile-times.ts",
+    "./home/reveal": "./src/home/reveal.ts",
     "./player/drums": "./src/player/drums.ts",
     "./player/button": "./src/player/button.ts",
     "./player/thumb": "./src/player/thumb.ts",
