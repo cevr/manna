@@ -73,3 +73,4 @@ ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept 
 38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
 fecfdfeab64b exports: one exports line in apps/hymnal/package.json (./home/reveal, for the port's pinned tab row); no source changes
 b6d288c624d9 move: PinnedTabs.tsx's slide and fade times, the same 200 and 150 ms, into reveal.ts's revealTimes, which PinnedTabs imports
+d067ca3735dd merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-offline's and this unit's); no source changes of its own
