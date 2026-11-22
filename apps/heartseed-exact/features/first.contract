@@ -1,0 +1,300 @@
+// The first minute and the tour, drawn as the current Heartseed draws them
+// (src/first/intro.tsx, growing.tsx, screen.tsx; the root's tour in
+// app/index.tsx): the welcome with its growing seed, how a verse grows, then
+// the first verse heard, said with its first letters, said alone, and
+// Planted. Its state is the current app's own reducers in the data module
+// for the launch (src/first/flow.ts): nothing of it is stored, so a launch
+// before Planted begins at the welcome, and one after it opens home, as the
+// garden's plant makes the opening (features/start.contract). Each screen is
+// the full-screen route `first` (`/first/<phase>/<cue>`) over home, with no
+// bar and no tab bar; Today recites the verse on it under the cue the phase
+// names (src/today/sources.ts, `first`), and hear, letters and alone draw
+// Today's own recital, round buttons and voice. Alone's graded try is kept
+// in the garden (`gardenRecall`), and the garden's plant moves the flow on
+// to Planted. Planted's Continue shows home with its tips; home's How
+// Heartseed works and Settings' Show the welcome again replay the welcome
+// and how a verse grows on the same route, whose See your field shows home
+// with its tips; Got it, or leaving home for any screen but its sheets,
+// ends them. `firstWanted` is the location the launch shows over home, by
+// src/first/flow.ts's `screenOf`. Every measure is a token of app.forma.
+use TodayRecital, TodayBig, TodayTextSize, TodayView from "./today.contract"
+use GardenRecallIn, GardenHelpIn from "./garden.contract"
+use homeIconOf, HomeSoftPill from "./home.contract"
+use hs-rise, hs-fade from "./motion.contract"
+
+shape FirstShown
+  phase: string
+  cue: string
+  tour: string
+  continued: bool
+
+// The growing seed's four stages, each one cycle of the current app's
+// `GROWTH` (src/first/growth.ts) from `GROWTH_START`, full corn's rest:
+// each keyframe its opacity at that share of the cycle, so the drawing at
+// any instant is `growthAt`'s (held by src/first/growth.test.ts).
+keyframes hs-grow-seed
+  0% opacity=0
+  7.246% opacity=1
+  23.188% opacity=1
+  30.435% opacity=0
+  100% opacity=0
+
+keyframes hs-grow-blade
+  0% opacity=0
+  23.188% opacity=0
+  30.435% opacity=1
+  46.377% opacity=1
+  53.623% opacity=0
+  100% opacity=0
+
+keyframes hs-grow-ear
+  0% opacity=0
+  46.377% opacity=0
+  53.623% opacity=1
+  69.565% opacity=1
+  76.812% opacity=0
+  100% opacity=0
+
+keyframes hs-grow-corn
+  0% opacity=1
+  7.246% opacity=0
+  69.565% opacity=0
+  76.812% opacity=1
+  100% opacity=1
+
+members HeartseedExact
+  resource firstBooted = firstBoot() as shape FirstShown else empty()
+  mutation firstStepped as shape FirstShown queue then firstPlace
+  derive first = match firstStepped { case some(v) => v, case none => firstBooted }
+  derive firstReplaying = first.tour == "welcome" or first.tour == "grows"
+  state firstOpened = false
+  derive firstWanted = firstReplaying ? path("first", first.tour, "none") : ((firstOpened and not first.continued and first.phase != "") ? path("first", first.phase, first.cue) : "")
+  derive firstTop = top(nav)
+  // While the first minute or its replay is shown it is the whole app, as
+  // the current root draws it in the app's place: no Back, swipe, link or
+  // location leaves it (the root's `follow` keeps it).
+  derive firstHeld = firstWanted != "" and firstTop.name == "first"
+  derive firstAtHome = nav.tab == "garden" and (match readGardenTab.filter(x => not x.name.startsWith("settings") and x.name != "add" and x.name != "addList").at(-1) { case some(t) => t.name == "garden" or t.name == "first", case none => false })
+  derive firstStart = match today.pending { case some(r) => r.recall.startedAt, case none => 0 }
+  derive firstRecalls = match gardenRecalled { case some(c) => `${c.answer}:${c.verse.recalls}`, case none => "" }
+  derive firstUtteranceOutcome = match todaySpoken.outcome { case some(o) => o, case none => "" }
+  derive firstUtteranceError = match todaySpoken.error { case some(e) => e, case none => "" }
+  derive firstSaying = first.phase == "hear" or first.phase == "letters" or first.phase == "alone"
+
+  // The route the launch shows over home follows each step of the flow and
+  // the tour (the launch's own is start.contract's `startOpen`).
+  action firstPlace
+    if firstWanted != "" and nav.tab == "garden" and firstTop.name == "first" and path("first", firstTop.params.phase, firstTop.params.cue) != firstWanted
+      nav = replace(nav, firstWanted)
+    else if firstWanted != "" and nav.tab == "garden" and firstTop.name == "garden"
+      nav = push(nav, firstWanted)
+    else if firstWanted == "" and firstTop.name == "first"
+      nav = back(nav)
+
+  // What the screen sees of the voice, the recital and the garden, read on
+  // the next tick after each change: the flow's step moves the route, which
+  // Today's own task reads, so a change task here would close that loop.
+  task firstSaw when firstSaying key=`${todaySpoken.id}:${todaySpoken.state}|${today.phase}|${firstStart}|${firstRecalls}`
+    after(1, firstSeeIt)
+  action firstSeeIt
+    send firstStepped = firstSee(todaySpoken.state, firstUtteranceOutcome, firstUtteranceError, firstStart, today.phase == "graded", gardenTime.epochAtZero + performanceNow(), gardenTime.seed)
+
+  // Alone's graded try is the one kept: its recall at the grade the
+  // recital suggests, as the current Say it keeps a kept recital.
+  task firstKept when first.phase == "alone" and today.phase == "graded" and firstStart > 0 key=firstStart
+    change(firstKeep)
+  action firstKeep
+    match today.pending
+      case some(r)
+        match r.help
+          case some(h)
+            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.suggested, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=h.peeked, shownAt=h.shownAt, cap=h.cap), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+          case none
+            send gardenRecalled = gardenRecall(r.reference, GardenRecallIn(startedAt=r.recall.startedAt, offset=r.recall.offset, grade=r.recall.suggested, suggested=r.recall.suggested, words=r.recall.words, missed=r.recall.missed, peeked=r.recall.peeked, extra=r.recall.extra), GardenHelpIn(peeked=[], shownAt=none, cap=4), gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+        firstKeptAt = r.recall.startedAt
+      case none
+        firstKeptAt = firstKeptAt
+  state firstKeptAt = 0
+
+  // Leaving home for any screen but its sheets ends the tour, on the next
+  // tick, as the step it sends moves the route.
+  task firstLeft when first.tour != "off" and not firstAtHome key=`${firstTop.id}|${nav.tab}`
+    after(1, firstLeave)
+  action firstLeave
+    send firstStepped = firstTour("Leave")
+  action firstBegin
+    if first.tour == "welcome"
+      send firstStepped = firstTour("Begin")
+    else
+      send firstStepped = firstTap("Begin")
+  action firstSkip
+    if first.tour == "welcome"
+      send firstStepped = firstTour("Skip")
+    else
+      send firstStepped = firstTap("Skip")
+  action firstOn
+    if first.tour == "grows"
+      send firstStepped = firstTour("See")
+    else
+      send firstStepped = firstTap("Plant")
+  action firstNext
+    todayStopIt()
+    send firstStepped = firstTap("Next")
+  action firstContinue
+    send firstStepped = firstTour("Continue")
+  action firstHow
+    send firstStepped = firstTour("How")
+  action firstGotIt
+    send firstStepped = firstTour("GotIt")
+  action firstWelcomeAgain
+    nav = open(back(nav), "/")
+    send firstStepped = firstTour("How")
+
+// The welcome's filled button and how a verse grows' one button (the
+// current field's `Control`, strong and wide).
+component FirstControl
+  props
+    label: string
+    press: action
+    id: string
+  view
+    button press=press appearance="none" aria-label=label align-self="stretch" display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId=id
+      text label font="type.label" color="hs.on-ink"
+
+// The welcome's growing seed: the four stage drawings of home's set in the
+// scheme shown, each 112 pt, stacked in one 120 pt place hidden from the
+// screen reader, each cross-fading on the current app's cycle; under
+// reduced motion full corn alone, still.
+component FirstGrowing
+  props
+    scheme: string
+    still: bool
+  view
+    column position="relative" width="size.growing" height="size.growing" aria-hidden=true testId="growing"
+      image homeIconOf("seed", scheme) position="absolute" top="space.s4" left="space.s4" width="size.growing-image" height="size.growing-image" object-fit="contain" opacity=(still ? 0 : 1) animation=(still ? "none" : "hs-grow-seed duration.grow linear infinite") aria-hidden=true testId="growing-seed"
+      image homeIconOf("blade", scheme) position="absolute" top="space.s4" left="space.s4" width="size.growing-image" height="size.growing-image" object-fit="contain" opacity=(still ? 0 : 1) animation=(still ? "none" : "hs-grow-blade duration.grow linear infinite") aria-hidden=true testId="growing-blade"
+      image homeIconOf("ear", scheme) position="absolute" top="space.s4" left="space.s4" width="size.growing-image" height="size.growing-image" object-fit="contain" opacity=(still ? 0 : 1) animation=(still ? "none" : "hs-grow-ear duration.grow linear infinite") aria-hidden=true testId="growing-ear"
+      image homeIconOf("corn", scheme) position="absolute" top="space.s4" left="space.s4" width="size.growing-image" height="size.growing-image" object-fit="contain" opacity=1 animation=(still ? "none" : "hs-grow-corn duration.grow linear infinite") aria-hidden=true testId="growing-corn"
+
+// The four segments of the phase bar, those reached in ink; hidden from the
+// screen reader, which reads the heading.
+component FirstPhaseBar
+  props
+    at: number
+  view
+    row gap="space.s6" aria-hidden=true testId="phase-bar"
+      column flex=1 height="line.segment" border-radius="radius.r2" background-color=(at >= 0 ? "hs.ink" : "hs.soft") opacity=(at >= 0 ? 1 : "opacity.segment")
+      column flex=1 height="line.segment" border-radius="radius.r2" background-color=(at >= 1 ? "hs.ink" : "hs.soft") opacity=(at >= 1 ? 1 : "opacity.segment")
+      column flex=1 height="line.segment" border-radius="radius.r2" background-color=(at >= 2 ? "hs.ink" : "hs.soft") opacity=(at >= 2 ? 1 : "opacity.segment")
+      column flex=1 height="line.segment" border-radius="radius.r2" background-color=(at >= 3 ? "hs.ink" : "hs.soft") opacity=(at >= 3 ? 1 : "opacity.segment")
+
+// The first minute's screens and the replay, the route `first`'s: the
+// welcome and how a verse grows with their words in a scroll and their
+// controls fixed under it, then the verse's phases in a scroll under the
+// phase bar, the heading and the reference.
+component FirstScreen
+  props
+    route: number
+    phase: string
+    replay: bool
+    today: TodayView
+    scheme: string
+    still: bool
+    begin: action
+    skip: action
+    on: action
+    next: action
+    hear: action
+    say: action
+    finish: action
+    peek: action
+    read: action
+    done: action
+  resource firstSize = exactViewport() as shape TodayTextSize
+  view
+    column navigationKey=`${route}` navigationPresentation="fullscreen" navigationBar="none" navigationScroll="first-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="first"
+      button id="first-hold" press=done disabled=true appearance="none" aria-hidden=true position="absolute" width=0 height=0 overflow="hidden" opacity=0 testId="first-hold"
+      if phase == "welcome" or phase == "grows"
+        scroll id="first-scroll" flex=1 min-height=0 testId="first-scroll"
+          for k in [phase] key=k
+            column gap="space.section" padding-top="space.s24" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId=`first-${phase}`
+              if phase == "welcome"
+                if firstSize.accessibilityTextSize
+                  text "Heartseed" role="heading" aria-level=1 font="type.name" color="hs.ink" testId="first-heading"
+                else
+                  text "Heartseed" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                column align-items="center"
+                  FirstGrowing(scheme=scheme, still=still)
+                text "Plant a verse. Say it from memory. Watch it grow." font="type.intro" color="hs.ink" testId="first-line"
+                if not replay
+                  column gap="space.s4"
+                    text "Your first verse" font="type.small" color="hs.quiet"
+                    text today.reference font="type.strong" color="hs.quiet" testId="reference"
+              else
+                text "Every verse is a plant" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                row flex-wrap="wrap" justify-content="space-between" gap="space.s8" testId="stages"
+                  column align-items="center" gap="space.s6" min-width="size.stage"
+                    image homeIconOf("seed", scheme) width="size.drawing-list" height="size.drawing-list" aria-hidden=true
+                    text "seed" font="type.small" color="hs.ink"
+                  column align-items="center" gap="space.s6" min-width="size.stage"
+                    image homeIconOf("blade", scheme) width="size.drawing-list" height="size.drawing-list" aria-hidden=true
+                    text "blade" font="type.small" color="hs.ink"
+                  column align-items="center" gap="space.s6" min-width="size.stage"
+                    image homeIconOf("ear", scheme) width="size.drawing-list" height="size.drawing-list" aria-hidden=true
+                    text "ear" font="type.small" color="hs.ink"
+                  column align-items="center" gap="space.s6" min-width="size.stage"
+                    image homeIconOf("corn", scheme) width="size.drawing-list" height="size.drawing-list" aria-hidden=true
+                    text "full corn" font="type.small" color="hs.ink"
+                text "Say it from memory and it grows. Each day the app brings back the ones that are ready." font="type.intro" color="hs.ink" testId="first-line"
+                text "Mark 4:28" font="type.small" font-style="italic" color="hs.ink" testId="first-caption"
+        column gap="space.s8" align-items="stretch" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" testId="first-foot"
+          if phase == "welcome"
+            FirstControl(label="Begin", press=begin, id="first-begin")
+            button press=skip appearance="none" aria-label="Skip" display="flex" align-items="center" justify-content="center" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="first-skip"
+              text "Skip" font="type.strong" color="hs.quiet"
+          else
+            FirstControl(label=(replay ? "See your field" : "Plant your first verse"), press=on, id="first-on")
+      else
+        scroll id="first-scroll" flex=1 min-height=0 testId="first-scroll"
+          column gap="space.section" padding-top="space.s16" padding-bottom="space.s24" padding-left="space.page" padding-right="space.page"
+            FirstPhaseBar(at=(phase == "hear" ? 0 : (phase == "letters" ? 1 : (phase == "alone" ? 2 : 3))))
+            for k in [phase] key=k
+              column gap="space.section" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId=`first-${phase}`
+                if phase == "hear"
+                  text "Hear it" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                else if phase == "letters"
+                  text "Say it with help" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                else if phase == "alone"
+                  text "Say it alone" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                else
+                  text "Planted" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                if phase == "planted"
+                  text today.reference font="type.strong" color="hs.quiet" testId="reference"
+                  column align-items="center" gap="space.s16" padding-top="space.s24"
+                    column width="size.growing" height="size.growing" align-items="center" justify-content="center"
+                      image homeIconOf("seed", scheme) width="size.growing-image" height="size.growing-image" object-fit="contain" aria-hidden=true testId="planted-seed"
+                    row gap="space.s8" align-items="center" min-height="size.mark"
+                      text "A seed" aria-label="Stage: seed" font="type.small" color="hs.quiet" testId="stage"
+                    text "Your first promise is a seed." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"
+                    HomeSoftPill(label="Continue", press=done, id="first-continue")
+                else
+                  TodayRecital(today=today, peek=peek, still=still, sheet=false, chapter="", read=read, scheme=scheme)
+                  if phase == "hear"
+                    column align-items="center" gap="space.s16"
+                      if today.canStop
+                        TodayBig(label="Listen", press=hear, busy=true, enabled=false, still=still, roomy=firstSize.accessibilityTextSize, id="first-listen")
+                      else if today.canHear
+                        TodayBig(label="Listen", press=hear, busy=false, enabled=true, still=still, roomy=firstSize.accessibilityTextSize, id="first-listen")
+                      HomeSoftPill(label="Next", press=next, id="first-next")
+                    text "The voice reads it. Words light as they are read." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"
+                  else
+                    if today.phase == "graded"
+                      text today.summary font="type.strong" color="hs.ink" testId="summary"
+                    if today.canFinish
+                      TodayBig(label="Listening", press=finish, busy=true, enabled=true, still=still, roomy=firstSize.accessibilityTextSize, id="first-say")
+                    else
+                      TodayBig(label="Say it", press=say, busy=false, enabled=today.canSay, still=still, roomy=firstSize.accessibilityTextSize, id="first-say")
+                    if phase == "letters"
+                      text "First letters stay. Tap the button and say it." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"
+                    else
+                      text "Only the line is left. Say it from memory." font="type.caption" color="hs.quiet" text-align="center" testId="first-line"

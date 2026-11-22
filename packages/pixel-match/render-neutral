@@ -39,6 +39,11 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+455902e59d7a move: Heartseed's first minute's words (the welcome's, how a verse grows', each phase's COPY, ONWARD, the pills', the replay's two labels), unchanged, from intro.tsx, screen.tsx, field/screen.tsx and settings/sheet.tsx into first/words.ts
+eb9b55b88936 move: Heartseed's TIPS, unchanged, from field/tips.tsx into field/tip-words.ts, re-exported from tips.tsx
+23a45d9b24ef move: Heartseed's first verse's query and the field's own row (PASSAGES), unchanged, from vite/passage.ts and app/index.tsx into first/verse.ts
+0529e37d91dd exports: Heartseed's exports lines ./first/tour, ./first/growth, ./first/words, ./first/verse, ./field/tips and the declarations for them and for flow's reducer; no source changes
+d39aa185b3fd refactor: Heartseed's first/verse.ts imports nothing and types its own row by its own OwnPassage (the declaration with it); no value or render changes
 e217201fabee exports: two exports lines in apps/hymnal/package.json (./player/tempo and ./player/countin, the tempo dial's and the count-in's rules, for the port's player); no source changes
 0c9b563efeb2 exports: one exports line in apps/hymnal/package.json (./player/recording, the key fallback, for the port's source test); no source changes
 2d96b08723a4 move: Move back's reducer (NAMED, Bar, Happened, IDLE, barAfter), unchanged, from garden/back.tsx into garden/bar.ts, back.tsx importing it, and its exports line; no behaviour change
@@ -49,6 +54,8 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 e1c8b607319f declare: home/tabs's groupAt declared in exact/home/tabs.d.ts for the port's aim property test, held by exact-home-declarations.ts; no source changes
 1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+0ff6c2aac1fd merge: origin/main into par-hs-first; One's exports lines and declarations of both sides kept (par-hs-back's and par-hs-seek's beside this unit's ./first/*), the duplicate imports of exact-declared.test.ts dropped; no source changes
+bf790776af54 move: Heartseed's first verse's query (FIRST_VERSE), unchanged, from src/first/verse.ts into vite/first-verse.ts, re-exported by first/verse.ts and read by vite/passage.ts; no value or render changes
 4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
 16357b5e84a9 exports: one exports line in apps/hymnal/package.json (./vite/app, the native manifest, for the port's microphone purpose test); no source changes
 4ebb14f58776 exports: one exports line in apps/hymnal/package.json (./tuner/pitch, for the port's reading test); no source changes

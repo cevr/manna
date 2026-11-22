@@ -23,9 +23,11 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-const drive = makeDrive({ name: 'drive-add', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-add', host, appDir: app }));
 const store = `add-${host}-${Date.now().toString(36)}`;
 const shot = (name: string) => `screenshot .exact/shots/add-${host}-${name}.png`;
 const SINGLES_LIMIT = '20 single verses, the most for now. Remove one to add another.';

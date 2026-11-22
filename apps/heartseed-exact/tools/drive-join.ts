@@ -15,13 +15,15 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 import './setup';
 
 const { versesOf } = await import('@manna/heartseed/kjv');
 
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-const drive = makeDrive({ name: 'drive-join', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-join', host, appDir: app }));
 const store = `join-${host}-${Date.now().toString(36)}`;
 const HEARD = new Map([
   ['thee', 'the'],

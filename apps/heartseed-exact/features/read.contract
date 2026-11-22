@@ -25,7 +25,7 @@ shape ReadPlace
 // Whether a route is a sheet over a tab (Settings and its pages, the Aa
 // sheet, Go to and its book, Add verses and its lists), drawn by a loop of
 // its own over the screen under it.
-fn readSheetOf(name: string): bool = name.startsWith("settings") or name == "typeSheet" or name.startsWith("goto") or name == "studySheet" or name == "add" or name == "addList"
+fn readSheetOf(name: string): bool = name.startsWith("settings") or name == "typeSheet" or name.startsWith("goto") or name == "studySheet" or name == "add" or name == "addList" or name == "first"
 
 // The id of a tab's top entry under any sheet: the one entry of that tab
 // whose screen body is drawn.

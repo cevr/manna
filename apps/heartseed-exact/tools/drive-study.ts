@@ -36,6 +36,8 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 import { checkoutPort } from './commentary-fixture';
 
 const app = join(import.meta.dir, '..');
@@ -203,13 +205,15 @@ if (import.meta.main) {
   const shots = process.env.SHOTS ?? join(app, '.exact/shots');
   mkdirSync(shots, { recursive: true });
   const packs = await startPacks(40);
-  const drive = makeDrive({
-    name: 'drive-study',
-    host,
-    appDir: app,
-    processes: packs.processes,
-    timeoutMs: native ? 45 * 60 * 1000 : undefined,
-  });
+  const drive = fromHome(
+    makeDrive({
+      name: 'drive-study',
+      host,
+      appDir: app,
+      processes: packs.processes,
+      timeoutMs: native ? 45 * 60 * 1000 : undefined,
+    }),
+  );
   const flags = native ? ['--touch', 'platform'] : ['--port', '8774', '--size', '390x844'];
   const store = `study-${host}-${Date.now().toString(36)}`;
   const shot = (scene: string, scheme: string) =>

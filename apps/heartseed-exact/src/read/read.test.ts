@@ -24,7 +24,9 @@ it("holds the bar's, the host's and Settings' actions to navStep", async () => {
   expect(app).toContain(
     [
       '  action follow(url: string)',
-      '    if url.startsWith("/read") and nav.tab != "read"',
+      '    if firstHeld',
+      '      firstPlace()',
+      '    else if url.startsWith("/read") and nav.tab != "read"',
       '      nav = go(select(nav, "read"), url)',
       '    else if not url.startsWith("/read") and not url.startsWith("/settings") and not url.startsWith("/type") and nav.tab != "garden"',
       '      nav = go(select(nav, "garden"), url)',
@@ -107,5 +109,6 @@ it('nests every route under Garden at its address, Garden first, then Read and r
     'add',
     'addList',
     'typeSheet',
+    'first',
   ]);
 });
