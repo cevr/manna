@@ -39,3 +39,10 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
+16357b5e84a9 exports: one exports line in apps/hymnal/package.json (./vite/app, the native manifest, for the port's microphone purpose test); no source changes
+4ebb14f58776 exports: one exports line in apps/hymnal/package.json (./tuner/pitch, for the port's reading test); no source changes
+3b7453b3736f exports: one exports line in apps/hymnal/package.json (./tuner/focus, for the port's tuner); no source changes
+d7f5ca3ea367 exports: one exports line in apps/hymnal/package.json (./tuner/tuning, for the port's tuner); no source changes
+ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/session, for the port's tuner); no source changes
+1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
