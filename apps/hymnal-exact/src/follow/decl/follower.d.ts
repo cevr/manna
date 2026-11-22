@@ -9,22 +9,19 @@
 
 import type { Timeline } from '@manna/hymnal-app/player/stanzas';
 
-/** What the player tells the page. */
+type Sounding = 'playing' | 'waiting' | 'paused';
+
+/** What the player tells the page: away from it, or here at sung ms `at`, sounding or not, at `rate`. */
 export type Report =
-  | { readonly _tag: 'Away' }
-  | {
-      readonly _tag: 'Here';
-      readonly at: number;
-      readonly state: 'playing' | 'waiting' | 'paused';
-      readonly rate?: number;
-    };
+  | Readonly<{ _tag: 'Away' }>
+  | Readonly<{ _tag: 'Here'; at: number; state: Sounding; rate?: number }>;
 
 /** The follow's host: the time, its timers, the scroll and the dev log. */
 export interface Host {
-  readonly now: () => number;
-  readonly wake: (ms: number, run: () => void) => () => void;
-  readonly scrollTo: (line: number, animated: boolean) => void;
-  readonly log: (event: string) => void;
+  now(): number;
+  wake(after: number, then: () => void): () => void;
+  scrollTo(at: number, moves: boolean): void;
+  log(said: string): void;
 }
 
 /** A page's follow. */

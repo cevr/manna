@@ -3,98 +3,78 @@
  * Exact's type check reads them (the app's `tsconfig.json` maps
  * `@manna/hymnal-app/reader/seek-rules` here): the source answers
  * `effect`'s `Option` and tagged enums, named here by the shapes they take
- * at run time. It names only what the port reads.
- * `src/follow/seek.test.ts` holds it to the source.
+ * at run time, each a tag and its fields. It names only what the port
+ * reads, in its own terms. `src/follow/seek.test.ts` runs the source itself
+ * and holds the port to it.
  */
 
-type Maybe<A> = { readonly _tag: 'None' } | { readonly _tag: 'Some'; readonly value: A };
+import type { Timeline } from '@manna/hymnal-app/player/stanzas';
+
+/** A tagged shape: its `_tag` and its fields, all read only. */
+type Tagged<T extends string, F = {}> = Readonly<F> & { readonly _tag: T };
+type Maybe<A> = Tagged<'None'> | Tagged<'Some', { value: A }>;
+/** A pointer's place on the page, in points. */
+type Place = { x: number; y: number };
 
 export type SeekTarget =
-  | { readonly _tag: 'Line'; readonly line: number; readonly ms: number }
-  | { readonly _tag: 'Word'; readonly line: number; readonly word: number; readonly ms: number };
+  | Tagged<'Line', { line: number; ms: number }>
+  | Tagged<'Word', { line: number; word: number; ms: number }>;
 
-export interface SeekTargets {
-  readonly number: number;
-  readonly choice: ReadonlyArray<number>;
-  readonly lines: ReadonlyArray<{ readonly _tag: string; readonly line: number }>;
-}
+export type SeekTargets = Readonly<{
+  number: number;
+  choice: ReadonlyArray<number>;
+  lines: ReadonlyArray<Tagged<string, { line: number }>>;
+}>;
 
-export interface Anchor {
-  readonly row: number;
-  readonly column: number;
-}
+export type Anchor = Readonly<{ row: number; column: number }>;
+export type Choice = Readonly<{ line: number; word: Maybe<number> }>;
 
-export interface Choice {
-  readonly line: number;
-  readonly word: Maybe<number>;
-}
+type Hymn = Readonly<{
+  number: number;
+  sections: ReadonlyArray<Readonly<{ kind: string; lines: ReadonlyArray<string> }>>;
+}>;
 
 /** A hymn's seek targets under a choice (`seek-targets.ts`, re-exported); none when its words and timing disagree. */
 export declare const targetsOf: (
-  hymn: {
-    readonly number: number;
-    readonly sections: ReadonlyArray<{
-      readonly kind: string;
-      readonly lines: ReadonlyArray<string>;
-    }>;
-  },
-  timeline: import('@manna/hymnal-app/player/stanzas').Timeline,
+  hymn: Hymn,
+  timeline: Timeline,
   choice: ReadonlyArray<number>,
 ) => Maybe<SeekTargets>;
 
 /** Where a hold anchors at sung ms `sungMs`: the eligible line and word sounding then. */
-export declare const initialTarget: (targets: SeekTargets, sungMs: number) => Maybe<SeekTarget>;
+export declare const initialTarget: (all: SeekTargets, sungMs: number) => Maybe<SeekTarget>;
 
 /** Line `line`'s target, at `word` when it is some and the line is timed by word. */
 export declare const targetAt: (
-  targets: SeekTargets,
+  all: SeekTargets,
   line: number,
   word: Maybe<number>,
 ) => Maybe<SeekTarget>;
 
 /** A pointer's change on the words, as the current hymnal's web adapter reads it. */
 export type PointerInput =
-  | {
-      readonly _tag: 'Down';
-      readonly id: number;
-      readonly primary: boolean;
-      readonly button: number;
-      readonly x: number;
-      readonly y: number;
-      readonly startable: boolean;
-    }
-  | { readonly _tag: 'Move'; readonly id: number; readonly x: number; readonly y: number }
-  | { readonly _tag: 'Up'; readonly id: number; readonly button: number }
-  | { readonly _tag: 'Lost'; readonly id: number }
-  | { readonly _tag: 'Escape' }
-  | { readonly _tag: 'Deadline'; readonly id: number; readonly acquired: boolean };
+  | Tagged<'Down', Place & { id: number; primary: boolean; button: number; startable: boolean }>
+  | Tagged<'Move', Place & { id: number }>
+  | Tagged<'Up', { id: number; button: number }>
+  | Tagged<'Lost', { id: number }>
+  | Tagged<'Escape'>
+  | Tagged<'Deadline', { id: number; acquired: boolean }>;
 
-/** Which pointer holds the words. */
+/** Which pointer holds the words: where it landed, and (a candidate's) where it is now. */
 export type Contact =
-  | { readonly _tag: 'Idle' }
-  | {
-      readonly _tag: 'Candidate';
-      readonly id: number;
-      readonly x: number;
-      readonly y: number;
-      readonly nx: number;
-      readonly ny: number;
-    }
-  | { readonly _tag: 'Held'; readonly id: number; readonly x: number; readonly y: number };
+  | Tagged<'Idle'>
+  | Tagged<'Candidate', Place & { id: number; nx: number; ny: number }>
+  | Tagged<'Held', Place & { id: number }>;
 
 /** What the words do after a pointer's change. */
 export type PointerEffect =
-  | { readonly _tag: 'None' }
-  | { readonly _tag: 'Arm' }
-  | { readonly _tag: 'Disarm' }
-  | { readonly _tag: 'Capture'; readonly id: number }
-  | { readonly _tag: 'Drag'; readonly dx: number; readonly dy: number }
-  | { readonly _tag: 'Release'; readonly id: number }
-  | { readonly _tag: 'Cancel'; readonly id: number };
+  | Tagged<'None' | 'Arm' | 'Disarm'>
+  | Tagged<'Capture' | 'Release' | 'Cancel', { id: number }>
+  | Tagged<'Drag', { dx: number; dy: number }>;
 
 export declare const contactAfter: (
-  contact: Contact,
-  input: PointerInput,
+  now: Contact,
+  change: PointerInput,
 ) => readonly [Contact, PointerEffect];
 
 export declare const HOLD_MS: number;
@@ -103,26 +83,23 @@ export declare const LINE_STEP: number;
 export declare const WORD_STEP: number;
 export declare const BACK_STRIP: number;
 
-export declare const anchorOf: (targets: SeekTargets, target: SeekTarget) => Maybe<Anchor>;
+export declare const anchorOf: (all: SeekTargets, at: SeekTarget) => Maybe<Anchor>;
 export declare const choiceAt: (
-  targets: SeekTargets,
-  anchor: Anchor,
+  all: SeekTargets,
+  from: Anchor,
   dx: number,
   dy: number,
 ) => Maybe<Choice>;
-export declare const isChoice: (target: SeekTarget, choice: Choice) => boolean;
+export declare const isChoice: (at: SeekTarget, chosen: Choice) => boolean;
 
-export interface Described {
-  readonly row: number;
-  readonly rows: number;
-  readonly line: number;
-  readonly word: Maybe<{
-    readonly ordinal: number;
-    readonly of: number;
-    readonly shared: ReadonlyArray<number>;
-  }>;
-}
+/** A choice as it is said: its eligible row of all, its sung line, and its word's place among the line's. */
+export type Described = Readonly<{
+  row: number;
+  rows: number;
+  line: number;
+  word: Maybe<Readonly<{ ordinal: number; of: number; shared: ReadonlyArray<number> }>>;
+}>;
 
-export declare const describe: (targets: SeekTargets, target: SeekTarget) => Maybe<Described>;
-export declare const spoken: (described: Described) => string;
+export declare const describe: (all: SeekTargets, at: SeekTarget) => Maybe<Described>;
+export declare const spoken: (said: Described) => string;
 export declare const numbersOf: (said: Described, ms: number) => string;

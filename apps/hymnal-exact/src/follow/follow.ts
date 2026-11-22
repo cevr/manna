@@ -26,12 +26,14 @@
 import { followerOf, type Follower, type Report } from '@manna/hymnal-app/follow/follower';
 import { OFF } from '@manna/hymnal-app/follow/marks';
 import { introAt, readingOf } from '@manna/hymnal-app/follow/intro-rules';
+import type {
+  Anchor,
+  Contact,
+  PointerInput,
+  SeekTarget,
+  SeekTargets,
+} from '@manna/hymnal-app/reader/seek-rules';
 import {
-  type Anchor,
-  type Contact,
-  type PointerInput,
-  type SeekTarget,
-  type SeekTargets,
   SLOP,
   anchorOf,
   choiceAt,
@@ -116,23 +118,13 @@ export interface FollowView {
 }
 
 /** A pointer's change on the page's words, by the Contract's event. */
-export type Pointer =
-  | {
-      readonly _tag: 'Down';
-      readonly id: number;
-      readonly primary: boolean;
-      readonly button: number;
-      readonly x: number;
-      readonly y: number;
-    }
-  | { readonly _tag: 'Move'; readonly id: number; readonly x: number; readonly y: number }
-  | {
-      readonly _tag: 'Up';
-      readonly id: number;
-      readonly button: number;
-      readonly x: number;
-      readonly y: number;
-    };
+export type Pointer = Readonly<
+  { id: number; x: number; y: number } & (
+    | { _tag: 'Down'; primary: boolean; button: number }
+    | { _tag: 'Move' }
+    | { _tag: 'Up'; button: number }
+  )
+>;
 
 interface Hold {
   readonly targets: SeekTargets;
