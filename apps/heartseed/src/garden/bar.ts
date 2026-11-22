@@ -33,6 +33,29 @@ export type Happened =
 
 export const IDLE: Bar = { status: 'Idle' };
 
+/** The ask's words, for the verse of `reference` whose step back lands at `landing`. */
+export const askLine = (reference: string, landing: Stage) =>
+  `Move ${reference} back to ${NAMED[landing]}? It comes due again soon.`;
+
+/** The line a step back that moved the verse to `stage` leaves. */
+export const movedLine = (stage: Stage) => `Moved back to ${NAMED[stage]}.`;
+
+/** The alert a refused step back of the verse of `reference` leaves. */
+export const alertLine = (reference: string) => `${reference} was not moved back. Try again.`;
+
+/** What Today's footer knows of the verse it shows when it offers Move back: whether a recital listens, is held or shown (`recital`), is done, whether Show all was taken on it, and whether a tap started it (the session's visit holds it). */
+export interface BackOffer {
+  readonly listening: boolean;
+  readonly recital: boolean;
+  readonly done: boolean;
+  readonly shownAll: boolean;
+  readonly visited: boolean;
+}
+
+/** Whether Today's footer offers Move back on a planted verse: at rest (no recital listening, held or done, no Show all on it) on a verse a tap started. */
+export const offersBack = (at: BackOffer) =>
+  !at.listening && !at.recital && !at.done && !at.shownAll && at.visited;
+
 /** The state after `happened`: a tap opens a new ask, `Keep` drops the ask shown, and an answer lands whenever it answers the latest ask (kept or not), so the line or alert shown always says what the garden kept for it. */
 export const barAfter = (bar: Bar, happened: Happened): Bar => {
   switch (happened.type) {

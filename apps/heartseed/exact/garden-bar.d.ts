@@ -22,3 +22,24 @@ export declare const IDLE: Bar;
 
 /** Move back's state after one happening. */
 export declare const barAfter: (bar: Bar, happened: Happened) => Bar;
+
+/** The ask's words for a verse and the stage its step back lands at. */
+export declare const askLine: (reference: string, landing: Stage) => string;
+
+/** The line a step back to a stage leaves. */
+export declare const movedLine: (stage: Stage) => string;
+
+/** The alert a refused step back of a verse leaves. */
+export declare const alertLine: (reference: string) => string;
+
+/** What decides whether Today offers Move back on a planted verse. */
+export interface BackOffer {
+  readonly listening: boolean;
+  readonly recital: boolean;
+  readonly done: boolean;
+  readonly shownAll: boolean;
+  readonly visited: boolean;
+}
+
+/** Whether Today offers Move back on a planted verse. */
+export declare const offersBack: (at: BackOffer) => boolean;

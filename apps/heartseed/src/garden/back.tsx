@@ -31,7 +31,7 @@ import { Control } from '../field/plot';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import { backOf, type BackAnswer, type BackAsk, type Stage } from '../garden';
-import { barAfter, IDLE, NAMED } from './bar';
+import { alertLine, askLine, barAfter, IDLE, movedLine } from './bar';
 
 /** Move back a stage for the verse of `reference`, standing at `stage` now. */
 export function MoveBack({
@@ -62,12 +62,12 @@ export function MoveBack({
     <View style={styles.back}>
       {bar.status === 'Moved' && (
         <Text testID="moved" style={styles.line}>
-          {`Moved back to ${NAMED[bar.stage]}.`}
+          {movedLine(bar.stage)}
         </Text>
       )}
       {bar.status === 'Refused' && (
         <Text role="alert" testID="back-alert" style={styles.line}>
-          {`${reference} was not moved back. Try again.`}
+          {alertLine(reference)}
         </Text>
       )}
       {Option.match(backOf(stage), {
@@ -78,7 +78,7 @@ export function MoveBack({
             return (
               <View style={styles.ask}>
                 <Text testID="back-ask" style={styles.line}>
-                  {`Move ${reference} back to ${NAMED[landing]}? It comes due again soon.`}
+                  {askLine(reference, landing)}
                 </Text>
                 <View style={styles.answers}>
                   <Control
