@@ -132,7 +132,7 @@ members HymnalExact
         haptic("selection")
     if name != listTab
       send listTabsMoved = listTabsStep("jump", 0, 0, 0, listTabsEdge)
-      if listTab != "Lists" or listGroups.length > 0
+      if name != "Lists" or favouriteList.length > 0 or recentList.length > 0
         scrollIntoView("list-top", block="start", behavior="instant")
         scrollIntoView(`shown-tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
       scrollIntoView(`tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
