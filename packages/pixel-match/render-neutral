@@ -86,3 +86,5 @@ d067ca3735dd merge: apps/hymnal/package.json's exports lines of both sides kept 
 dcf2f0a97bb4 types: answerOf declared in exact/garden-bar.d.ts and held to its source by scripts/exact-declared.test.ts; no source changes
 7c3f55655e29 merge: origin/main into par-hy-follow; apps/hymnal/package.json's exports lines of both sides kept, no source changes
 ea3952b5378f merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-follow's and this unit's); no source changes of its own
+51c9a51059cb exports: src/player/bar.ts's SHEETS gains `export` (and its declaration in exact/player/bar.d.ts), for the port's player-paths check; same value, no behaviour change
+>>>>>>> origin/main

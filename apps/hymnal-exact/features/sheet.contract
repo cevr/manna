@@ -1,7 +1,7 @@
 // The player's sheet, as the current FullPlayer.tsx draws it. The player's
 // rules and its view are features/player.contract's; this file draws the
 // sheet over them, in the current sheet's order: the group "Recording",
-// then the stanza chips, "Chord settings" and "Reading"
+// then Tempo, the stanza chips, "Start", "Chord settings" and "Reading"
 // (features/reading.contract). Each hymn's own chord placement, which the
 // sheet's placement dial turns, is kept here (`sheetPlacements`, a list of
 // `<n>:<placement>` texts as `chordsMoves` keeps moves) and read by the
@@ -75,8 +75,9 @@ members HymnalExact
 // draws it: the group "Recording" (the hymn's number and title, a button
 // to its page; what the player is doing; its place on a bar the reader can
 // move with the time gone and the whole length; the page's own Play while
-// another hymn is held, then Play or Pause), its stanzas as chips, each
-// sung one with a way to its start, "Chord settings", then "Reading". A
+// another hymn is held, then Play or Pause), and after it, as its siblings
+// and not inside it, the Tempo dial, its stanzas as chips (each sung one
+// with a way to its start), "Start", "Chord settings", then "Reading". A
 // hymn with no recording shows its head, what is said of it and Reading;
 // a sheet that holds no hymn says so over Reading.
 component PlayerSheet
@@ -115,22 +116,22 @@ component PlayerSheet
                 else if player.phase != "failed" and player.toggle != ""
                   button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
                     text playerLabel(player.toggle) font="type.body" color="button"
-              TempoDial(tempo=player.tempo, ask=ask)
-              if player.chips.length > 0
-                column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
-                  text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+            TempoDial(tempo=player.tempo, ask=ask)
+            if player.chips.length > 0
+              column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
+                text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+                row gap="space.s8" flex-wrap="wrap" align-items="center"
+                  for c in player.chips key=c.stanza
+                    PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, hint="Chooses whether Play sings this stanza", chosen=c.chosen)
+                  StanzasAll(on=player.some, ask=ask)
+                if player.places.length > 0
                   row gap="space.s8" flex-wrap="wrap" align-items="center"
-                    for c in player.chips key=c.stanza
-                      PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, hint="Chooses whether Play sings this stanza", chosen=c.chosen)
-                    StanzasAll(on=player.some, ask=ask)
-                  if player.places.length > 0
-                    row gap="space.s8" flex-wrap="wrap" align-items="center"
-                      text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
-                      for n in player.places key=n
-                        button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
-                          text `${n}` font="type.chip" color="onPill" line-clamp=1
-              StartRow()
-              SheetChords(number=player.number)
+                    text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
+                    for n in player.places key=n
+                      button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
+                        text `${n}` font="type.chip" color="onPill" line-clamp=1
+            StartRow()
+            SheetChords(number=player.number)
           ReadingGroup()
 
 // The hymn's number and title, a heading: a button that goes to its page,
