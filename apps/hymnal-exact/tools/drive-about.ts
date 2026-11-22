@@ -76,7 +76,9 @@ const boxOf = (reply: unknown): { readonly y: number } | undefined =>
   (reply as { node?: { space?: { viewport?: { y: number } } } } | undefined)?.node?.space?.viewport;
 
 const landing = [
-  'at /hymns/2',
+  'clock data',
+  'tap hymn-2',
+  'clock settle',
   'clock data',
   'tap hymn-about',
   'clock settle',
