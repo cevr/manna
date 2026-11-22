@@ -26,28 +26,42 @@ const referencesOf = (number: number) =>
     .filter((reference) => reference.hymn === number)
     .map((reference) => reference.passage);
 
-/** A word but the line's last ends in a no-break space. */
-const spaced = (syllables: Array<string>, last: boolean): PageWord => ({
+/** A word but the line's last ends in a no-break space; `start` is its first syllable's place in the line. */
+const spaced = (syllables: Array<string>, last: boolean, start: number): PageWord => ({
   syllables: last ? syllables : [...syllables.slice(0, -1), `${syllables.at(-1) ?? ''}\u00A0`],
+  start,
 });
 
-/** A printed line's words, each one syllable. */
-const plainLine = (line: string): PageLine => {
-  const words = line.split(/ +/).filter((word) => word.length > 0);
-  return { text: line, words: words.map((word, w) => spaced([word], w === words.length - 1)) };
+/** Each word's first syllable's place in its line, from 0. */
+const startsOf = (words: ReadonlyArray<ReadonlyArray<string>>): Array<number> => {
+  let at = 0;
+  return words.map((word) => {
+    const start = at;
+    at += word.length;
+    return start;
+  });
 };
 
-/** A line's words as the chords split them into syllables. */
-const syllableLine = (line: string, words: ReadonlyArray<Word>): PageLine => {
-  const kept = words.filter((word) => word.length > 0);
+/** Printed line `at` of the hymn's sung lines, its words each one syllable. */
+const plainLine = (line: string, at: number): PageLine => {
+  const words = line.split(/ +/).filter((word) => word.length > 0);
   return {
     text: line,
-    words: kept.map((word, w) =>
-      spaced(
-        word.map((box) => box.text),
-        w === kept.length - 1,
-      ),
-    ),
+    words: words.map((word, w) => spaced([word], w === words.length - 1, w)),
+    at,
+    timed: false,
+  };
+};
+
+/** Line `at` of the hymn's sung lines, its words as the chords split them into syllables. */
+const syllableLine = (line: string, words: ReadonlyArray<Word>, at: number): PageLine => {
+  const kept = words.filter((word) => word.length > 0).map((word) => word.map((box) => box.text));
+  const starts = startsOf(kept);
+  return {
+    text: line,
+    words: kept.map((word, w) => spaced(word, w === kept.length - 1, starts[w] ?? 0)),
+    at,
+    timed: true,
   };
 };
 
@@ -76,7 +90,9 @@ export const shownAt = (
         ...part,
         lines: printed.map((line, l) => {
           const words = split?._tag === 'Syllables' ? split.lines[l] : undefined;
-          return words === undefined ? plainLine(line) : syllableLine(line, words);
+          return words === undefined
+            ? plainLine(line, part.first + l)
+            : syllableLine(line, words, part.first + l);
         }),
       };
     }),
