@@ -21,7 +21,14 @@
  *    Begin, then See your field, shows home with its tips; the Settings
  *    sheet's Show the welcome again replays the welcome, and its Skip ends
  *    the tour on home;
- * 5. a relaunch on the store opens home, the first verse in it, no tips.
+ * 5. a relaunch on the store opens home, the first verse in it, no tips;
+ * 6. on a store of its own at a phone's width: `tree --ax` reads the
+ *    welcome, the second screen, hear and letters in their order, each
+ *    control a button by its name and the growing seed hidden; dark follows
+ *    the scheme; at the largest text (53 px on the web) each control is
+ *    whole on screen; under reduced motion the screens stand still. The
+ *    welcome's two schemes and hear at the largest text are kept in
+ *    `.exact/shots`.
  *
  * Exits 1 on a failed check.
  */
@@ -54,10 +61,14 @@ const has = (tree: unknown, id: string) => JSON.stringify(tree ?? '').includes(`
 type Step = string | readonly [key: string, op: string];
 
 /** Runs `steps` in one launch; each named read's reply by its key. */
-const runOf = async (flags: 'launch' | 'relaunch', steps: readonly Step[]) => {
+const runOf = async (
+  flags: 'launch' | 'relaunch',
+  steps: readonly Step[],
+  on: { readonly store: string; readonly size: readonly string[] } = { store, size: [] },
+) => {
   const ops = steps.map((step) => (typeof step === 'string' ? step : step[1]));
-  const replies =
-    flags === 'launch' ? await drive.launch(store, ops) : await drive.relaunch(store, ops);
+  const kept = flags === 'launch' ? '--reset-storage' : '--keep-storage';
+  const replies = await drive.run([...on.size, '--storage', on.store, kept], ops);
   const read = new Map<string, any>();
   steps.forEach((step, at) => {
     if (typeof step !== 'string') read.set(step[0], replies[at]);
@@ -245,6 +256,152 @@ drive.check(
     !has(again('tree'), 'first-welcome') &&
     !has(again('tree'), 'tip-1'),
   { opening: again('opening'), home: again('home') },
+);
+
+/** An element of `tree --ax`: its role, its name and its test id. */
+interface Element {
+  readonly role: string;
+  readonly name: string;
+  readonly testId?: string;
+}
+
+/** The elements `tree --ax` read, in reading order. */
+const axOf = (tree: any): readonly Element[] => tree?.ax?.elements ?? [];
+
+/** The names of the elements whose name is one of `names`, in reading order, each once. */
+const orderOf = (tree: any, names: readonly string[]) => [
+  ...new Set(axOf(tree).flatMap((each) => (names.includes(each.name) ? [each.name] : []))),
+];
+
+/** Whether a control named `name` reads as a button. */
+const button = (tree: any, name: string) =>
+  axOf(tree).some((each) => each.role === 'button' && each.name === name);
+
+/** A box the layout read is on screen at its full width: none of it cut at the sides. */
+const whole = (layout: any, width: number) => {
+  const frame = layout?.node?.space?.viewport;
+  return frame !== undefined && frame.w > 0 && frame.x >= 0 && frame.x + frame.w <= width + 0.5;
+};
+
+const WIDTH = 390;
+const shots = join(app, '.exact/shots');
+const looks = await runOf(
+  'launch',
+  [
+    'clock data',
+    'clock settle',
+    ['welcomeAx', 'tree --ax'],
+    'prefer prefers-color-scheme dark',
+    'clock settle',
+    ['dark', 'state homeScheme'],
+    `screenshot ${join(shots, `${host}-first-welcome-dark.png`)}`,
+    'prefer prefers-color-scheme light',
+    'clock settle',
+    `screenshot ${join(shots, `${host}-first-welcome-light.png`)}`,
+    'prefer root-font-size 53',
+    'clock settle',
+    ['bigBegin', 'layout first-begin'],
+    ['bigSkip', 'layout first-skip'],
+    ['bigHeading', 'layout first-heading'],
+    'tap first-begin',
+    'clock settle',
+    ['growsAx', 'tree --ax'],
+    ['bigOn', 'layout first-on'],
+    'tap first-on',
+    'clock data',
+    'clock settle',
+    ['hearAx', 'tree --ax'],
+    ['bigNext', 'layout first-next'],
+    ['bigListen', 'layout first-listen'],
+    `screenshot ${join(shots, `${host}-first-hear-largest.png`)}`,
+    'prefer root-font-size 17',
+    'prefer prefers-reduced-motion reduce',
+    'clock settle',
+    ['still', 'state motionStill'],
+    'tap first-next',
+    'clock data',
+    'clock settle',
+    ['lettersAx', 'tree --ax'],
+  ],
+  { store: `${store}-looks`, size: host === 'web' ? ['--size', `${WIDTH}x844`] : [] },
+);
+
+drive.check(
+  'the welcome reads its heading, its line, its first verse, then Begin and Skip as buttons',
+  JSON.stringify(
+    orderOf(looks('welcomeAx'), [
+      'Heartseed',
+      'Plant a verse. Say it from memory. Watch it grow.',
+      'Your first verse',
+      passage.reference,
+      'Begin',
+      'Skip',
+    ]),
+  ) ===
+    JSON.stringify([
+      'Heartseed',
+      'Plant a verse. Say it from memory. Watch it grow.',
+      'Your first verse',
+      passage.reference,
+      'Begin',
+      'Skip',
+    ]) &&
+    button(looks('welcomeAx'), 'Begin') &&
+    button(looks('welcomeAx'), 'Skip') &&
+    !axOf(looks('welcomeAx')).some((each) => each.testId === 'growing'),
+  orderOf(looks('welcomeAx'), ['Heartseed', 'Begin', 'Skip', passage.reference]),
+);
+drive.check(
+  'how a verse grows reads its heading, its stages, its line, Mark 4:28, then its one button',
+  button(looks('growsAx'), 'Plant your first verse') &&
+    JSON.stringify(
+      orderOf(looks('growsAx'), [
+        'Every verse is a plant',
+        'seed',
+        'full corn',
+        'Mark 4:28',
+        'Plant your first verse',
+      ]),
+    ) ===
+      JSON.stringify([
+        'Every verse is a plant',
+        'seed',
+        'full corn',
+        'Mark 4:28',
+        'Plant your first verse',
+      ]),
+  orderOf(looks('growsAx'), ['Every verse is a plant', 'Plant your first verse']),
+);
+drive.check(
+  'hear reads its heading, the reference, then Listen and Next as buttons',
+  button(looks('hearAx'), 'Listen') &&
+    button(looks('hearAx'), 'Next') &&
+    JSON.stringify(orderOf(looks('hearAx'), ['Hear it', passage.reference, 'Listen', 'Next'])) ===
+      JSON.stringify(['Hear it', passage.reference, 'Listen', 'Next']),
+  orderOf(looks('hearAx'), ['Hear it', passage.reference, 'Listen', 'Next']),
+);
+drive.check(
+  'letters reads its heading and Say it as a button',
+  button(looks('lettersAx'), 'Say it') &&
+    orderOf(looks('lettersAx'), ['Say it with help', 'Say it'])[0] === 'Say it with help',
+  orderOf(looks('lettersAx'), ['Say it with help', 'Say it']),
+);
+drive.check('dark: the screens follow the scheme', looks('dark') === 'dark', looks('dark'));
+drive.check(
+  'at the largest text, every control of the welcome, the second screen and hear is whole on screen',
+  host !== 'web' ||
+    ['bigBegin', 'bigSkip', 'bigHeading', 'bigOn', 'bigNext', 'bigListen'].every((key) =>
+      whole(looks(key), WIDTH),
+    ),
+  ['bigBegin', 'bigSkip', 'bigHeading', 'bigOn', 'bigNext', 'bigListen'].map((key) => [
+    key,
+    looks(key)?.node?.space?.viewport,
+  ]),
+);
+drive.check(
+  'under reduced motion the screens stand still',
+  looks('still') === true,
+  looks('still'),
 );
 
 process.exit(drive.finish());
