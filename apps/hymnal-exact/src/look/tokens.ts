@@ -44,6 +44,7 @@ const TILES = 'src/home/AllAtOnce.tsx';
 const KEY = 'src/player/KeyButton.tsx';
 const DIALS = 'src/player/Dials.tsx';
 const DIAL = 'src/player/DialView.tsx';
+const TUNER = 'src/tuner/Tuner.tsx';
 
 const type = (
   name: string,
@@ -132,6 +133,11 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.dial-name', [DIAL, 'title']),
   type('type.dial-key', [DIALS, 'key']),
   type('type.dial-played', [DIALS, 'played']),
+  type('type.tuner-title', [TUNER, 'title']),
+  type('type.tuner-side', [TUNER, 'side']),
+  type('type.tuner-name', [TUNER, 'name']),
+  type('type.tuner-letter', [TUNER, 'letter']),
+  type('type.tuner-tick', [TUNER, 'tickMark']),
 
   length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
   length(

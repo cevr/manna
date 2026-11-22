@@ -1,0 +1,379 @@
+// The guitar tuner, full screen, as the current hymnal draws it
+// (src/tuner/Tuner.tsx): a gauge from flat to sharp with its needle and a
+// hint under it, the string's name and the note heard, and a headstock with
+// three pegs a side and the six strings' names in circles beside them. A
+// tap on a circle picks that string, and the reading then measures from it;
+// a second tap on the picked string goes back to Auto, which reads against
+// the nearest string. The Auto switch turns either way. Each open starts in
+// Auto. A string that held in tune keeps its tick.
+// When it listens, asks, pauses the player and stops is the current app's
+// session (src/tuner/sources.ts runs its `step`): this file hands it the
+// world's events (the screen opened, covered or closed, the app active, the
+// player sounding, the ear's end) and pauses the player when it asks. The
+// reading's words change at most once a second (One's `LABEL_EVERY`), on
+// the one node VoiceOver reads them from. The tuner plays nothing. It opens
+// from the key button's wheel, the chord sheet's head and Settings, each
+// only where the device has the ear (`tunerEar`).
+
+shape TunerEar
+  ear: bool
+
+shape TunerPage
+  visibilityState: string
+
+shape TunerStepped
+  serial: number
+  phase: string
+  reason: string
+  pauses: number
+  run: number
+
+shape TunerString
+  id: string
+  letter: string
+  label: string
+  hint: string
+  picked: bool
+  lit: bool
+  tuned: bool
+  pickTo: string
+
+shape TunerLine
+  id: string
+  lit: bool
+
+shape TunerView
+  phase: string
+  has: bool
+  name: string
+  note: string
+  words: string
+  hint: string
+  inTune: bool
+  swing: number
+  auto: bool
+  autoTo: string
+  left: TunerString[]
+  right: TunerString[]
+  lines: TunerLine[]
+
+shape TunerTick
+  cents: number
+  angle: number
+  window: bool
+  major: bool
+  centre: bool
+
+// The current app's measures of the screen, in points (`tunerPlaces`,
+// src/tuner/places.ts, as One's Tuner.tsx styles them).
+shape TunerPlaces
+  side: number
+  gap: number
+  top: number
+  foot: number
+  headHigh: number
+  autoGap: number
+  areaHigh: number
+  areaGap: number
+  gaugeWide: number
+  gaugeHigh: number
+  spoke: number
+  spokeFoot: number
+  tickWide: number
+  tickHigh: number
+  majorHigh: number
+  centreWide: number
+  centreHigh: number
+  windowHigh: number
+  needleHigh: number
+  thin: number
+  wide: number
+  hub: number
+  hubFoot: number
+  hubLine: number
+  sideIn: number
+  hintX: number
+  hintY: number
+  hintRound: number
+  hintHigh: number
+  readingGap: number
+  noteHigh: number
+  stockTop: number
+  columnY: number
+  columnGap: number
+  postWide: number
+  postHigh: number
+  pegWide: number
+  pegHigh: number
+  pegRound: number
+  pegLine: number
+  faceWide: number
+  faceTop: number
+  faceFoot: number
+  faceLine: number
+  stringsTop: number
+  line: number
+  litLine: number
+  nut: number
+  neckWide: number
+  neckHigh: number
+  circle: number
+  circleLine: number
+  badge: number
+  badgeOut: number
+  badgeLine: number
+  actionX: number
+  actionY: number
+  actionRound: number
+  messageGap: number
+  markWide: number
+  markHigh: number
+  ticks: TunerTick[]
+
+// The session is the data module's (`tunerStep`); the screen draws what
+// `tunerHear` answers, its phase the session's, asked again after each step.
+// Each world event is a keyed task that hands the session one event; the
+// player's pause it asks waits for its own timer, so no task's action can
+// reach back into its own key through the player.
+members HymnalExact
+  state tunerOpen = false
+  state tunerAim = ""
+  state tunerPaused = 0
+  state tunerLabel = "Listening"
+  state tunerHushed = false
+  resource tunerEar = tunerEarOf() as shape TunerEar else empty(ear=false)
+  resource tunerPage = exactPage() as shape TunerPage
+  resource tunerPlaced = tunerPlaces() as shape TunerPlaces
+  mutation tunerStepped as shape TunerStepped queue
+  derive tunerIn = stack(nav).filter(e => e.name == "tuner").length > 0
+  derive tunerOnTop = top(nav).name == "tuner"
+  derive tunerActive = tunerPage.visibilityState != "hidden"
+  derive tunerSounding = player.phase == "loading" or player.phase == "playing" or player.phase == "buffering"
+  derive tunerSerial = match tunerStepped { case some(s) => s.serial, case none => 0 }
+  derive tunerPauses = match tunerStepped { case some(s) => s.pauses, case none => 0 }
+  resource tunerShown = tunerHear(tunerSerial, tunerAim) when tunerOpen as shape TunerView else empty(phase="Checking", has=true, name="Listening", words="Listening", hint="Pluck any string", auto=true)
+  action tunerAsk(kind: string, word: string)
+    send tunerStepped = tunerStep(kind, word, tunerActive, tunerSounding, "")
+  task tunerTurns key=tunerIn
+    change(tunerTurned)
+  action tunerTurned
+    if tunerIn
+      tunerOpen = true
+      tunerAim = ""
+      tunerLabel = "Listening"
+      tunerHushed = false
+      send tunerStepped = tunerStep("open", "", tunerActive, tunerSounding, searchParam(top(nav), "feed"))
+    else if tunerOpen
+      tunerOpen = false
+      tunerAsk("close", "")
+  task tunerCovers when tunerOpen key=tunerOnTop
+    change(tunerCovered)
+  action tunerCovered
+    tunerAsk("covered", tunerOnTop ? "shown" : "covered")
+  task tunerActs when tunerOpen key=tunerActive
+    change(tunerActed)
+  action tunerActed
+    tunerAsk("active", "")
+  task tunerSounds when tunerOpen key=tunerSounding
+    change(tunerSounded)
+  action tunerSounded
+    tunerAsk("sounding", "")
+  task tunerPauses when tunerPauses > tunerPaused key=tunerPauses
+    after(1, tunerPause)
+  action tunerPause
+    tunerPaused = tunerPauses
+    playerAsk("pause", 0)
+  // The reading's words, said at once after a quiet second, then at most
+  // once a second, the latest (One's `LABEL_EVERY`).
+  task tunerSays key=tunerShown.words
+    change(tunerSaid)
+  action tunerSaid
+    if not tunerHushed and tunerShown.words != "" and tunerShown.words != tunerLabel
+      tunerLabel = tunerShown.words
+      tunerHushed = true
+  task tunerHush when tunerHushed key=tunerLabel
+    after(1000, tunerUnhushed)
+  action tunerUnhushed
+    if tunerShown.words != "" and tunerShown.words != tunerLabel
+      tunerLabel = tunerShown.words
+    else
+      tunerHushed = false
+  action tunerPick(to: string)
+    tunerAim = to
+  action tunerAuto(on: bool)
+    tunerAim = on == tunerShown.auto ? tunerAim : tunerShown.autoTo
+  action tunerAgain
+    tunerAsk("tapped", "")
+  action tunerSettings
+    openURL("app-settings:")
+  action tunerOpenFrom
+    nav = push(nav, "/tuner")
+  action tunerDone
+    nav = back(nav)
+
+// The way in from the chord sheet's head: `Tuner`, where the device has the
+// ear (src/reader/ChordSheet.tsx, its head's first button).
+component TunerButton
+  inject
+    tunerEar: TunerEar
+    tunerOpenFrom: action
+  view
+    if tunerEar.ear
+      view role="button" press=tunerOpenFrom aria-label="Tuner" testId="shape-tuner"
+        text "Tuner" font="type.strong" color="accent"
+
+// The way in from Settings: a row `Tuner` with its chevron, with chords on
+// and where the device has the ear (app/(hymnal)/settings.tsx, `TunerRow`).
+component TunerRow
+  inject
+    tunerEar: TunerEar
+    tunerOpenFrom: action
+    chordsSwitchOn: bool
+  view
+    if chordsSwitchOn and tunerEar.ear
+      button press=tunerOpenFrom aria-label="Tuner" appearance="none" display="flex" flex-direction="row" align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16" margin-top="space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden" testId="settings-tuner"
+        :active
+          background-color = "soft"
+        text "Tuner" font="type.body" color="ink" flex=1 min-width=0 margin-top="nudge.settings-body" text-align="start"
+        text "›" font="type.chevron" color="muted" aria-hidden=true
+
+// The tuning fork the wheel's Tuner item carries (src/player/TunerMark.tsx):
+// two thin prongs joined in a U over a short stem, in `tint`.
+component TunerMark
+  props
+    tint: string
+  inject
+    tunerPlaced: TunerPlaces
+  view
+    svg width=`${tunerPlaced.markWide}px` height=`${tunerPlaced.markHigh}px` viewBox="0 0 10 14" color=tint aria-hidden=true testId="mark-tuner"
+      path d="M1.75 0V5A3.25 3.25 0 0 0 8.25 5V0" stroke="currentColor" stroke-width=1.5 fill="none"
+      path d="M5 8.5V14" stroke="currentColor" stroke-width=1.5 stroke-linecap="round" fill="none"
+
+// The screen.
+component TunerScreen
+  props
+    entry: Entry
+  inject
+    tunerShown: TunerView
+    tunerPlaced: TunerPlaces
+    tunerLabel: string
+    tunerDone: action
+    tunerAuto: action
+    tunerAgain: action
+    tunerSettings: action
+  view
+    column navigationKey=`${entry.id}` navigationPresentation="fullscreen" position="absolute" inset=0 background-color="ground" box-sizing="border-box"
+      padding-left=`${tunerPlaced.side}px` padding-right=`${tunerPlaced.side}px` gap=`${tunerPlaced.gap}px`
+      padding-top=`calc(var(--exact-safe-area-inset-top) + ${tunerPlaced.top}px)` padding-bottom=`calc(var(--exact-safe-area-inset-bottom) + ${tunerPlaced.foot}px)`
+      testId="tuner-screen"
+      row justify-content="space-between" align-items="center"
+        button press=tunerDone aria-label="Done" appearance="none" padding=0 min-height="size.target" min-width="size.target" display="flex" align-items="center" testId="tuner-done"
+          text "Done" font="type.strong" color="accent"
+        row align-items="center" gap=`${tunerPlaced.autoGap}px` min-height="size.target"
+          text "Auto" font="type.label" color="ink" aria-hidden=true
+          input type="checkbox" switch checked=tunerShown.auto change=tunerAuto aria-label="Auto" testId="tuner-auto"
+      column align-items="center" justify-content="flex-end" gap=`${tunerPlaced.areaGap}px` min-height=`${tunerPlaced.areaHigh}px`
+        if tunerShown.phase == "Denied"
+          column flex=1 align-items="center" justify-content="center" gap=`${tunerPlaced.messageGap}px`
+            text "Microphone is off for Hymnal" font="type.tuner-title" color="ink" text-align="center" testId="tuner-off"
+            TunerAction(words="Open Settings", act=tunerSettings, id="tuner-settings")
+        if tunerShown.phase == "Ended"
+          column flex=1 align-items="center" justify-content="center" gap=`${tunerPlaced.messageGap}px`
+            TunerAction(words="Tap to listen again", act=tunerAgain, id="tuner-again")
+        if tunerShown.phase != "Denied" and tunerShown.phase != "Ended"
+          TunerGauge()
+          view padding=`${tunerPlaced.hintY}px ${tunerPlaced.hintX}px` border-radius=`${tunerPlaced.hintRound}px` min-height=`${tunerPlaced.hintHigh}px` box-sizing="border-box" display="flex" justify-content="center"
+            background-color=(tunerShown.inTune ? "accent" : "soft")
+            text tunerShown.hint font="type.label" color=(tunerShown.inTune ? "ground" : "ink") testId="tuner-hint"
+      if tunerShown.has
+        column align-items="center" gap=`${tunerPlaced.readingGap}px` role="status" aria-label=(tunerShown.phase == "Listening" ? tunerLabel : tunerShown.words) testId="tuner-reading"
+          text tunerShown.name font="type.tuner-name" color="ink" aria-hidden=true testId="tuner-name"
+          text tunerShown.note font="type.small" color="muted" min-height=`${tunerPlaced.noteHigh}px` aria-hidden=true testId="tuner-note"
+      TunerHeadstock()
+
+// The Denied and Ended screens' one action, in the accent, pressed to the soft fill.
+component TunerAction
+  props
+    words: string
+    act: action
+    id: string
+  inject
+    tunerPlaced: TunerPlaces
+  view
+    button press=act aria-label=words appearance="none" padding=`${tunerPlaced.actionY}px ${tunerPlaced.actionX}px` border-radius=`${tunerPlaced.actionRound}px` min-height="size.target" testId=id
+      :active
+        background-color = "soft"
+      text words font="type.strong" color="accent"
+
+// The gauge: an arc of ticks from flat to sharp, the in-tune window marked
+// in the accent, the needle over them. The needle turns by a transform,
+// over `duration.fade`; under Reduce Motion it stands at once.
+component TunerGauge
+  inject
+    tunerShown: TunerView
+    tunerPlaced: TunerPlaces
+    motionStill: bool
+  view
+    view position="relative" width=`${tunerPlaced.gaugeWide}px` height=`${tunerPlaced.gaugeHigh}px` display="flex" justify-content="center" aria-hidden=true testId="tuner-gauge"
+      for t in tunerPlaced.ticks key=t.cents
+        column position="absolute" bottom=`${tunerPlaced.spokeFoot}px` width=`${tunerPlaced.tickWide}px` height=`${tunerPlaced.spoke}px` align-items="center" transform-origin="50% 100%" rotate=`${t.angle}deg`
+          view width=`${t.centre ? tunerPlaced.centreWide : tunerPlaced.tickWide}px` flex-shrink=0 border-radius=`${tunerPlaced.tickWide / 2}px`
+            height=`${t.window ? tunerPlaced.windowHigh : (t.centre ? tunerPlaced.centreHigh : (t.major ? tunerPlaced.majorHigh : tunerPlaced.tickHigh))}px`
+            background-color=(t.window ? "accent" : (t.centre ? "ink" : (t.major ? "muted" : "line")))
+      text "♭" font="type.tuner-side" color="muted" position="absolute" bottom=0 left=`${tunerPlaced.sideIn}px`
+      text "♯" font="type.tuner-side" color="muted" position="absolute" bottom=0 right=`${tunerPlaced.sideIn}px`
+      view position="absolute" bottom=`${tunerPlaced.spokeFoot}px` width=`${tunerShown.inTune ? tunerPlaced.wide : tunerPlaced.thin}px` height=`${tunerPlaced.needleHigh}px` border-radius=`${tunerPlaced.wide / 2}px`
+        background-color=(tunerShown.inTune ? "accent" : "ink") transform-origin="50% 100%" rotate=`${tunerShown.swing}deg`
+        transition=(motionStill ? "none" : "rotate duration.fade easing.out") testId="tuner-needle"
+      view position="absolute" bottom=`${tunerPlaced.hubFoot}px` width=`${tunerPlaced.hub}px` height=`${tunerPlaced.hub}px` box-sizing="border-box" border-radius=`${tunerPlaced.hub / 2}px`
+        border-width=`${tunerPlaced.hubLine}px` border-style="solid" border-color="accent" background-color="ground"
+
+// The headstock: three pegs down each side, each string's circle beside its
+// peg, and the six strings running from the pegs down past the nut. The lit
+// string's circle is filled and its string drawn in the accent.
+component TunerHeadstock
+  inject
+    tunerShown: TunerView
+    tunerPlaced: TunerPlaces
+  view
+    column flex=1 align-items="center" justify-content="flex-start" padding-top=`${tunerPlaced.stockTop}px` testId="tuner-headstock"
+      row align-items="stretch"
+        TunerColumn(strings=tunerShown.left, flip=false)
+        column width=`${tunerPlaced.faceWide}px` justify-content="flex-end" overflow="hidden" background-color="soft" box-sizing="border-box"
+          border-width=`${tunerPlaced.faceLine}px` border-style="solid" border-color="line"
+          border-radius=`${tunerPlaced.faceTop}px ${tunerPlaced.faceTop}px ${tunerPlaced.faceFoot}px ${tunerPlaced.faceFoot}px` aria-hidden=true
+          row flex=1 justify-content="space-evenly" align-items="stretch" padding-top=`${tunerPlaced.stringsTop}px`
+            for l in tunerShown.lines key=l.id
+              view width=`${l.lit ? tunerPlaced.litLine : tunerPlaced.line}px` background-color=(l.lit ? "accent" : "muted")
+          view height=`${tunerPlaced.nut}px` background-color="line"
+        TunerColumn(strings=tunerShown.right, flip=true)
+      row width=`${tunerPlaced.neckWide}px` height=`${tunerPlaced.neckHigh}px` justify-content="space-evenly" background-color="soft" aria-hidden=true
+        for l in tunerShown.lines key=l.id
+          view width=`${l.lit ? tunerPlaced.litLine : tunerPlaced.line}px` background-color=(l.lit ? "accent" : "muted")
+
+// One side's three strings, each its circle, post and peg; the right side
+// runs from the face out.
+component TunerColumn
+  props
+    strings: TunerString[]
+    flip: bool
+  inject
+    tunerPlaced: TunerPlaces
+    tunerPick: action
+  view
+    column justify-content="space-around" padding=`${tunerPlaced.columnY}px 0px` gap=`${tunerPlaced.columnGap}px`
+      for s in strings key=s.id
+        row align-items="center" flex-direction=(flip ? "row-reverse" : "row")
+          button press=tunerPick(s.pickTo) aria-label=s.label aria-selected=s.picked aria-description=s.hint appearance="none" padding=0 position="relative"
+            width=`${tunerPlaced.circle}px` height=`${tunerPlaced.circle}px` border-radius=`${tunerPlaced.circle / 2}px` box-sizing="border-box"
+            border-width=`${tunerPlaced.circleLine}px` border-style="solid" border-color=(s.lit ? "accent" : "line") background-color=(s.lit ? "accent" : "ground")
+            display="flex" align-items="center" justify-content="center" testId=`tuner-string-${s.id}`
+            text s.letter font="type.tuner-letter" color=(s.lit ? "ground" : "ink") aria-hidden=true
+            if s.tuned
+              view background-color="ink" position="absolute" right=`-${tunerPlaced.badgeOut}px` top=`-${tunerPlaced.badgeOut}px` width=`${tunerPlaced.badge}px` height=`${tunerPlaced.badge}px` box-sizing="border-box"
+                border-radius=`${tunerPlaced.badge / 2}px` border-width=`${tunerPlaced.badgeLine}px` border-style="solid" border-color="ground"
+                display="flex" align-items="center" justify-content="center" aria-hidden=true testId=`tuner-tick-${s.id}`
+                text "✓" font="type.tuner-tick" color="ground"
+          view width=`${tunerPlaced.postWide}px` height=`${tunerPlaced.postHigh}px` background-color="line" aria-hidden=true
+          view width=`${tunerPlaced.pegWide}px` height=`${tunerPlaced.pegHigh}px` box-sizing="border-box" border-radius=`${tunerPlaced.pegRound}px`
+            border-width=`${tunerPlaced.pegLine}px` border-style="solid" border-color="line" background-color="soft" aria-hidden=true

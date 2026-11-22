@@ -3,6 +3,8 @@
 // has a setting, then About, pushed in the sheet. The choice is kept across
 // launches and applied to the whole app at once through the host's scheme
 // (src/look/look.ts holds its rules to the current hymnal's).
+use TunerRow from "./tuner.contract"
+
 shape SettingsLook
   value: string
   label: string
@@ -188,6 +190,7 @@ component SettingsSheet
           // (README.md, "Settings").
           SettingsChordsRow(chords=chords, chooseStyle=chooseStyle, choosePlacement=choosePlacement)
           SettingsFeelRow()
+          TunerRow()
           link href=path("about") display="flex" flex-direction="row" align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16" margin-top="space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden" testId="about-row"
             :active
               background-color = "soft"
