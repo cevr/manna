@@ -291,6 +291,7 @@ const looks = await runOf(
     'clock data',
     'clock settle',
     ['welcomeAx', 'tree --ax'],
+    ['heading', 'layout first-heading'],
     'prefer prefers-color-scheme dark',
     'clock settle',
     ['dark', 'state homeScheme'],
@@ -397,6 +398,25 @@ drive.check(
     key,
     looks(key)?.node?.space?.viewport,
   ]),
+);
+/** The height of a box the layout read, in px. */
+const heightOf = (layout: any): number => layout?.node?.space?.viewport?.h ?? 0;
+/** One's title size at the default root, and verify's largest root: the welcome's title in px. */
+const [TITLE, TITLE_LARGEST] = [34, 106];
+drive.check(
+  "the welcome's title is one line at One's 34 pt, and at the largest text it takes a second line (Heart-, seed) rather than spill",
+  host !== 'web' ||
+    (heightOf(looks('heading')) > 0 &&
+      heightOf(looks('heading')) < TITLE * 1.5 &&
+      heightOf(looks('bigHeading')) > TITLE_LARGEST * 1.5),
+  [heightOf(looks('heading')), heightOf(looks('bigHeading'))],
+);
+drive.check(
+  "the welcome's title is named Heartseed, its soft hyphen read by no one",
+  axOf(looks('welcomeAx')).some(
+    (each) => each.testId === 'first-heading' && each.name === 'Heartseed',
+  ) && !JSON.stringify(looks('welcomeAx')).includes('\u00ad'),
+  axOf(looks('welcomeAx')).filter((each) => each.testId === 'first-heading'),
 );
 drive.check(
   'under reduced motion the screens stand still',
