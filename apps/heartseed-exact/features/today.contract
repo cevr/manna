@@ -22,12 +22,13 @@
 // `/today` and home run the session, `/start/:slug` starts that verse ahead
 // of the plan, and `/cue/:cue` shows Isaiah 41:10 under the cue named, for
 // the recital's own tests.
-use speak, cancelSpeech, speechSynthesisState, speechUtterance, speechSynthesisVoices, SpeechUtteranceInfo, SpeechSynthesisState, SpeechUtterance, SpeechSynthesisVoices from "@exact/speech-synthesis"
+use speak, cancelSpeech, pauseSpeech, resumeSpeech, speechSynthesisState, speechUtterance, speechSynthesisVoices, SpeechUtteranceInfo, SpeechSynthesisState, SpeechUtterance, SpeechSynthesisVoices from "@exact/speech-synthesis"
 use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-capture"
 use startSpeechRecognition, stopSpeechRecognition, speechRecognitionState, SpeechRecognitionInfo, SpeechRecognitionState, SpeechRecognitionPhrase from "@exact/speech-recognition"
 use SessionShown, SessionCounts, SessionEnd, SessionNothing from "./session.contract"
 use hs-rise, hs-fade, hs-pulse from "./motion.contract"
 use homeIconOf from "./home.contract"
+use TodayBack from "./back.contract"
 
 shape TodayTime
   epochAtZero: number
@@ -76,6 +77,7 @@ shape TodayWord
   mark: string
   peekable: bool
   peeked: bool
+  held: bool
 
 shape TodayView
   reference: string
@@ -104,7 +106,15 @@ shape TodayView
   pending: option<TodayResult>
   last: option<TodayResult>
   refused: bool
+  holdKey: number
+  holding: bool
+  heldWord: number
+  ask: string
+  askKey: number
+  seeking: bool
+  seekText: string
   session: SessionShown
+  back: bool
 
 shape TodayReader
   on: bool
@@ -113,10 +123,11 @@ shape TodayReader
 fn todayLastText(r: TodayResult): string = `Last time: ${r.recall.words - r.recall.missed} of ${r.recall.words} words`
 
 // A word's ink, as the current Today's `Word` and `Unsaid` give it: a word
-// being heard in the quiet ink on the hearing fill, a peeked one in `miss`,
+// being heard, or one a finger holds while the voice reads (the reading
+// view's held word), in the quiet ink on the hearing fill, a peeked one in `miss`,
 // one said, lit, graded or shown whole at rest in ink, and one under its
 // cue in the quiet ink.
-fn todayWordColor(w: TodayWord, phase: string, whole: bool): string = w.mark == "tentative" ? "hs.quiet" : w.peeked ? "hs.miss" : (w.mark == "matched" or w.lit or phase == "graded" or (whole and phase != "listening")) ? "hs.ink" : "hs.quiet"
+fn todayWordColor(w: TodayWord, phase: string, whole: bool): string = (w.mark == "tentative" or w.held) ? "hs.quiet" : w.peeked ? "hs.miss" : (w.mark == "matched" or w.lit or phase == "graded" or (whole and phase != "listening")) ? "hs.ink" : "hs.quiet"
 
 // Whether the verse shows whole at rest: under the full text, or after Show all.
 fn todayWhole(t: TodayView): bool = t.cue == "full" or t.shownAll
@@ -185,6 +196,50 @@ members HeartseedExact
   action todayStopIt
     send todayHushed = cancelSpeech()
     send todayStepped = todayStop()
+
+  // The hold on the words while the voice reads (src/today/hold.ts, the
+  // current app's reading hold): each pointer change is a step; a still press
+  // asks for the hold at its time (`after(350, …)`, the current app's
+  // LONG_PRESS, held by src/today/hold.model.test.ts), with the words' boxes
+  // read then and at each move; each ask of the hold is acted on once, by its
+  // key: a pause with one tick, a resume, or the reading stopped and spoken
+  // again from the held word once the stop has landed.
+  mutation todayPaused as shape SpeechSynthesisState
+  mutation todayResumed as shape SpeechSynthesisState
+  mutation todaySeekHushed as shape SpeechSynthesisState then todaySeekSpeak
+  mutation todaySeeking as shape SpeechUtteranceInfo then todaySoughtIt
+  action todayDownIt(e: PointerEvent)
+    send todayStepped = todayDown(e.pointerId, e.clientX, e.clientY)
+  task todayHoldTimer when today.holdKey > 0 key=today.holdKey
+    after(350, todayHoldNowIt)
+  action todayHoldNowIt
+    send todayStepped = todayHoldNow(today.holdKey, today.words.map(w => frame(`word-${w.index}`)))
+  action todayMoveIt(e: PointerEvent)
+    if today.holdKey > 0 or today.holding
+      send todayStepped = todayMove(e.pointerId, e.clientX, e.clientY, today.words.map(w => frame(`word-${w.index}`)))
+  action todayUpIt(e: PointerEvent)
+    send todayStepped = todayUp(e.pointerId, e.clientX, e.clientY)
+  task todayAsked when today.askKey > 0 key=today.askKey
+    after(1, todayAskIt)
+  action todayAskIt
+    if today.ask == "pause"
+      feelTick()
+      send todayPaused = pauseSpeech()
+    else if today.ask == "resume"
+      send todayResumed = resumeSpeech()
+    else if today.ask == "seek"
+      send todaySeekHushed = cancelSpeech()
+  action todaySeekSpeak
+    if today.seeking
+      if todayReader.voice != ""
+        send todaySeeking = speak(text=today.seekText, lang="en-US", voice=todayReader.voice)
+      else
+        send todaySeeking = speak(text=today.seekText, lang="en-US")
+  derive todaySeekingId = match todaySeeking { case some(u) => u.id, case none => "" }
+  action todaySoughtIt
+    if todaySeekingId != "" and today.seeking
+      todayUtterance = todaySeekingId
+      send todayStepped = todaySought(todaySeekingId)
 
   action todaySayIt
     send todayOpened = getUserMedia(audio=true)
@@ -256,15 +311,15 @@ component TodayFace
     id: string
   view
     if w.face == "letters"
-      text font="type.word" aria-label=w.label testId=id
+      text font="type.word" aria-label=w.label id=id testId=id
         text w.head color="transparent" aria-hidden=true
         text w.letter color="hs.quiet" testId=`${id}-letter`
         text w.tail color="transparent" aria-hidden=true
     else if w.face == "slot"
-      column box-sizing="border-box" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent testId=id
+      column box-sizing="border-box" height="size.slot" margin-bottom="space.s6" border-bottom-width="line.slot" border-bottom-style="solid" border-bottom-color="hs.soft" aria-label=w.label aria-hidden=w.silent id=id testId=id
         text w.text font="type.word" line-height="size.slot" opacity=0 pointer-events="none" aria-hidden=true
     else
-      text w.shown font="type.word" max-width="100%" hyphens="auto" color=todayWordColor(w, phase, whole) background-color=(w.mark == "tentative" ? "hs.hearing" : "transparent") border-radius="radius.r4" transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent testId=id
+      text w.shown font="type.word" max-width="100%" hyphens="auto" color=todayWordColor(w, phase, whole) background-color=((w.mark == "tentative" or w.held) ? "hs.hearing" : "transparent") border-radius="radius.r4" transition=(still ? "none" : "color duration.light ease") aria-label=w.label aria-hidden=w.silent id=id testId=id
 
 // The one large round button, as the current `BigButton`: ink, with its
 // shadow, over the ring that pulses while it works (`busy`) and holds still
@@ -354,6 +409,10 @@ component TodayRecital
     chapter: string
     read: action
     scheme: string
+  inject
+    todayHoldDown: action
+    todayHoldMove: action
+    todayHoldUp: action
   view
     column gap="space.s10" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId="recital"
       row align-items="center"
@@ -362,7 +421,7 @@ component TodayRecital
           column height=0 justify-content="center" flex-shrink=0
             button press=read appearance="none" aria-label=`Read ${chapter}` box-sizing="border-box" min-width="size.target" min-height="size.target" margin-bottom="space.s12" padding-top="space.s12" display="flex" align-items="center" justify-content="center" color="hs.quiet" -exact-press-opacity="opacity.pressed" testId="today-read"
               image "symbol:book" testId="today-read-glyph"
-      row testId="passage" flex-wrap="wrap" column-gap="space.s7" row-gap="space.s2"
+      row testId="passage" pointerdown=todayHoldDown pointermove=todayHoldMove pointerup=todayHoldUp touch-action=(today.holding ? "none" : "auto") flex-wrap="wrap" column-gap="space.s7" row-gap="space.s2"
         for w in today.words key=w.index
           if w.face == "mark"
             column width="size.mark" height="size.mark-tall" align-items="center" justify-content="center" aria-label=w.label testId=`word-${w.index}`
@@ -456,6 +515,8 @@ component TodayFoot
       column gap="space.s12" padding-top="space.s12" padding-bottom="space.s12" padding-left="space.page" padding-right="space.page" testId="today-foot"
         if part == "all" and (today.canShowAll or today.canNext)
           TodayPills(today=today, showAll=showAll, again=again)
+        if today.back
+          TodayBack(reference=today.reference)
         if part == "all" and today.canNext
           TodayCard(today=today, grade=grade)
         if part == "all" and today.canStop

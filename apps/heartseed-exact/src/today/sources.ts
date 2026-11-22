@@ -49,11 +49,13 @@ import type { SessionView } from '@manna/heartseed/session/service';
 import type { Choice as Voice } from '@manna/heartseed/voice/reading';
 import { Option } from 'effect';
 
+import { backOn } from '../back/shown';
 import { slugOf } from '../garden/view';
 import { DRAWN } from '../list/page';
 import { makeLive, type Call, type Ground, type Live } from '../session/live';
 import { minutesOf, voiceOf } from '../settings/choices';
 import { textOf } from '../text/text';
+import type { Frame } from './hold';
 import {
   initial,
   pendingOf,
@@ -141,6 +143,7 @@ export const stageShown = (
 /** Today's screen: the recital's, and the session's around it. */
 export interface TodayScreen extends TodayView {
   session: SessionShown;
+  back: boolean;
 }
 
 /** The verse `/cue/<cue>` shows: Isaiah 41:10. */
@@ -378,6 +381,7 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       ...recital,
       canHear: recital.canHear && shows && hearable(showing),
       canSay: recital.canSay && shows,
+      back: backOn(showing, session, read, listening(), recital.shownAll),
       session: {
         mode,
         read: Option.isSome(read),
@@ -567,6 +571,27 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       readonly [string, string]
     >,
     todayStop: (() => apply({ _tag: 'stop' })) satisfies Source<readonly []>,
+    todayDown: (([pointer, x, y]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'down', pointer, at: { x, y } },
+      })) satisfies Source<readonly [number, number, number]>,
+    todayHoldNow: (([key, frames]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'elapsed', key, frames } })) satisfies Source<
+      readonly [number, readonly Frame[]]
+    >,
+    todayMove: (([pointer, x, y, frames]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'move', pointer, at: { x, y }, frames },
+      })) satisfies Source<readonly [number, number, number, readonly Frame[]]>,
+    todayUp: (([pointer, x, y]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'up', pointer, at: { x, y } } })) satisfies Source<
+      readonly [number, number, number]
+    >,
+    todaySought: (([utterance]) => apply({ _tag: 'sought', utterance })) satisfies Source<
+      readonly [string]
+    >,
     todaySay,
     todayHeard: (([recognition, transcript, final]) =>
       apply({ _tag: 'heard', recognition, transcript, final })) satisfies Source<

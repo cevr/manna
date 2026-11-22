@@ -16,6 +16,10 @@
       "types": "./exact/stage-names.d.ts",
       "default": "./src/garden/names.ts"
     },
+    "./garden/bar": {
+      "types": "./exact/garden-bar.d.ts",
+      "default": "./src/garden/bar.ts"
+    },
     "./about/version": {
       "types": "./exact/about-version.d.ts",
       "default": "./src/about/version.ts"
@@ -95,6 +99,14 @@
     "./voice/reading": {
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
+    },
+    "./reading/hold": {
+      "types": "./exact/reading-hold.d.ts",
+      "default": "./src/reading/hold.ts"
+    },
+    "./reading/words": {
+      "types": "./exact/reading-words.d.ts",
+      "default": "./src/reading/words.ts"
     },
     "./voice": {
       "types": "./exact/voice.d.ts",

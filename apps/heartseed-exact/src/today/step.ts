@@ -29,6 +29,8 @@ import {
 import { PEEK_SHOWN_MS } from '@manna/heartseed/sayit/letters';
 import { Match, Option } from 'effect';
 
+import { holdStep, idleHold, type Ask, type ContactInput, type Hold } from './hold';
+
 export type { Cue } from '@manna/heartseed/matcher';
 export type { Grade, Help, Recall } from '@manna/heartseed/sayit';
 
@@ -47,6 +49,9 @@ export interface TodayResult {
 
 export type Phase = 'resting' | 'reading' | 'listening' | 'graded';
 
+/** What the hold last asked of the voice: pause at its start, read on from a word at a lift, resume at a cancel; none before any. */
+export type VoiceAsk = 'none' | 'pause' | 'seek' | 'resume';
+
 /** How long a word peeked at rest shows, in milliseconds: the current Heartseed's own `PEEK_SHOWN_MS`. */
 export const TODAY_PEEK_MS = PEEK_SHOWN_MS;
 
@@ -64,6 +69,12 @@ export interface TodayState {
   readonly spans: readonly WordSpan[];
   readonly phase: Phase;
   readonly utterance: string;
+  /** Where the utterance's text starts in the passage: 0 for Listen, the held word's start for a read on from it. */
+  readonly from: number;
+  readonly hold: Hold;
+  readonly ask: VoiceAsk;
+  /** How many asks the hold made, so each is acted on once. */
+  readonly asks: number;
   readonly recognition: string;
   readonly reached: number;
   readonly finals: string;
@@ -94,6 +105,8 @@ export type TodayInput =
     }
   | { readonly _tag: 'voiceEnded'; readonly utterance: string; readonly outcome: Outcome }
   | { readonly _tag: 'stop' }
+  | { readonly _tag: 'contact'; readonly contact: ContactInput }
+  | { readonly _tag: 'sought'; readonly utterance: string }
   | {
       readonly _tag: 'say';
       readonly recognition: string;
@@ -132,6 +145,10 @@ export const initial = (passage: Passage): TodayState => ({
   spans: spansOf(passage.text),
   phase: 'resting',
   utterance: '',
+  from: 0,
+  hold: idleHold,
+  ask: 'none',
+  asks: 0,
   recognition: '',
   reached: 0,
   finals: '',
@@ -171,18 +188,24 @@ const spoken = (text: string, from: number): readonly SpokenWord[] =>
     .filter((word) => word !== '')
     .map((word, index) => ({ text: word, start: from + index, end: from + index + 1 }));
 
-/** The words the voice's range `[charIndex, charIndex + charLength)` overlaps lit, with every word before them. */
+/**
+ * The words the voice's range `[charIndex, charIndex + charLength)` overlaps
+ * lit, with every word before them. The range is in the text the utterance
+ * speaks, the passage from `from` on, so it fits within that text and lights
+ * the passage's words over `[from + charIndex, from + charIndex + charLength)`.
+ */
 const onVoice = (state: TodayState, charIndex: number, charLength: number): TodayState => {
   const fits =
     Number.isInteger(charIndex) &&
     Number.isInteger(charLength) &&
     charIndex >= 0 &&
     charLength >= 1 &&
-    charIndex + charLength <= state.passage.text.length;
+    charIndex + charLength <= state.passage.text.length - state.from;
   if (!fits) return state;
-  const end = charIndex + charLength;
+  const start = state.from + charIndex;
+  const end = start + charLength;
   const touched = state.spans
-    .map((span, index) => ({ overlaps: span.from < end && charIndex < span.to, count: index + 1 }))
+    .map((span, index) => ({ overlaps: span.from < end && start < span.to, count: index + 1 }))
     .filter((word) => word.overlaps)
     .map((word) => word.count);
   return { ...state, reached: Math.max(state.reached, ...touched) };
@@ -398,15 +421,56 @@ const onHear = (state: TodayState, utterance: string): TodayState => {
     ...state,
     phase: 'reading',
     utterance,
+    from: 0,
     reached: 0,
     refused: false,
     peeking: Option.none(),
   };
 };
 
-/** Today after one input. */
-export const step = (state: TodayState, input: TodayInput): TodayState =>
+/** What the hold's `ask` makes of the reading: a pause or a resume only asks; a seek to word `k` ends the utterance and lights the words before `k`, its read on from `k`'s start waiting for its id (`sought`). */
+const onAsk = (state: TodayState, ask: Ask): TodayState => {
+  const asked = { ...state, asks: state.asks + 1 };
+  if (ask._tag === 'Hold') return { ...asked, ask: 'pause' };
+  if (ask._tag === 'LetGo') return { ...asked, ask: 'resume' };
+  return Option.match(Option.fromUndefinedOr(state.spans[ask.word]), {
+    onNone: () => ({ ...asked, ask: 'resume' as const }),
+    onSome: (span) => ({
+      ...asked,
+      ask: 'seek' as const,
+      utterance: '',
+      from: span.from,
+      reached: ask.word,
+    }),
+  });
+};
+
+/** A contact on the words: the hold's step, while a reading is under way or not, and its ask made of the reading. */
+const onContact = (state: TodayState, contact: ContactInput): TodayState => {
+  const next = holdStep(state.hold, contact, state.phase === 'reading');
+  const held = { ...state, hold: next.hold };
+  return Option.match(next.ask, { onNone: () => held, onSome: (ask) => onAsk(held, ask) });
+};
+
+/** The read on from a held word took its id: the reading follows it. */
+const onSought = (state: TodayState, utterance: string): TodayState => {
+  if (state.phase !== 'reading' || state.utterance !== '' || utterance === '') return state;
+  return { ...state, utterance };
+};
+
+/** Once no reading is under way, a hold or a press on the words is dropped, asking nothing. */
+const settled = (state: TodayState): TodayState => {
+  const { contact, held } = state.hold;
+  const live = contact._tag === 'pressing' || contact._tag === 'held' || Option.isSome(held);
+  if (state.phase === 'reading' || !live) return state;
+  return { ...state, hold: holdStep(state.hold, { _tag: 'gone' }, false).hold };
+};
+
+/** Today after one input, before a hold is dropped with its reading. */
+const stepped = (state: TodayState, input: TodayInput): TodayState =>
   Match.valueTags(input, {
+    contact: ({ contact }) => onContact(state, contact),
+    sought: ({ utterance }) => onSought(state, utterance),
     hear: ({ utterance }) => onHear(state, utterance),
     voice: ({ utterance, charIndex, charLength }) => {
       if (!reading(state, utterance)) return state;
@@ -440,6 +504,10 @@ export const step = (state: TodayState, input: TodayInput): TodayState =>
     again: () => onAgain(state),
     leave: () => onLeave(state),
   });
+
+/** Today after one input. */
+export const step = (state: TodayState, input: TodayInput): TodayState =>
+  settled(stepped(state, input));
 
 /** The result `input` handed on in going from `before` to `after`: the try's, for a `next` that took; none for every other step. */
 export const handedBy = (

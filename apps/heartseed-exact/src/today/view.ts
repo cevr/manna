@@ -48,6 +48,7 @@ interface WordView {
   readonly mark: string;
   readonly peekable: boolean;
   readonly peeked: boolean;
+  readonly held: boolean;
 }
 
 /** A phrase the recognizer is told to expect, as `@exact/speech-recognition` takes it. */
@@ -113,6 +114,19 @@ export interface TodayView {
   // oxlint-disable-next-line effect/noNullish -- Exact's option<TodayResult> is null on the wire.
   readonly last: ResultView | null;
   readonly refused: boolean;
+  /** The still press's timer key while a press waits for the hold's time; 0 else. */
+  readonly holdKey: number;
+  /** Whether a finger holds a word: the words keep it from the scroll (`touch-action`). */
+  readonly holding: boolean;
+  /** The held word, -1 with none. */
+  readonly heldWord: number;
+  /** What the hold last asked of the voice, and how many asks it made, so each is acted on once. */
+  readonly ask: string;
+  readonly askKey: number;
+  /** Whether a read on from a held word waits for its utterance. */
+  readonly seeking: boolean;
+  /** The text a read on from the held word speaks: the passage from its start. */
+  readonly seekText: string;
 }
 
 // oxlint-disable-next-line effect/noNullish -- Exact's option is null on the wire.
@@ -168,13 +182,18 @@ const markOf = (state: TodayState, marks: readonly Mark[], index: number): strin
     .join('');
 };
 
-/** Whether a word shows its text: the cue shows it, it is peeked now, Show all was used, the matcher marked it, or the voice lights it while reading. */
+/** How far the words read: up to the held word while one is held, as the current app's reading view reads to it, else as far as the voice reached. */
+const readTo = (state: TodayState): number =>
+  Option.getOrElse(state.hold.held, () => state.reached);
+
+/** Whether a word shows its text: the cue shows it, it is peeked now, Show all was used, the matcher marked it, the voice lights it while reading, or a finger holds it. */
 const showsText = (state: TodayState, index: number, mark: string): boolean =>
   state.cue === 'full' ||
   shownAll(state) ||
   Option.contains(state.peeking, index) ||
   (mark !== '' && mark !== 'pending') ||
-  (state.phase === 'reading' && index < state.reached);
+  (state.phase === 'reading' && index < readTo(state)) ||
+  Option.contains(state.hold.held, index);
 
 /** What the screen reader reads of a hidden word: its letter in first letters, else its place. */
 const hiddenLabel = (word: string, index: number, cue: string): string => {
@@ -215,10 +234,11 @@ const wordOf = (
     letter: letters.cue,
     tail: letters.after,
     silent: !shows && !peekable && state.cue === 'none',
-    lit: index < state.reached,
+    lit: index < readTo(state),
     mark,
     peekable,
     peeked: Option.contains(state.peeking, index),
+    held: Option.contains(state.hold.held, index),
   };
 };
 
@@ -261,6 +281,13 @@ const suggestedOf = (pending: Option.Option<TodayResult>, help: Option.Option<He
     onSome: ({ recall }) => `Suggested: ${GRADE_NAMES[cappedBy(recall.suggested, help)]}`,
   });
 
+/** The timer key of a press waiting for the hold's time; 0 else. */
+const holdKeyOf = (state: TodayState): number => {
+  const { contact } = state.hold;
+  if (contact._tag !== 'pressing') return 0;
+  return contact.key;
+};
+
 /** The screen of `state`. */
 export const view = (state: TodayState): TodayView => {
   const marks = matcherView(state.matcher).marks;
@@ -295,5 +322,12 @@ export const view = (state: TodayState): TodayView => {
     pending: Option.getOrNull(Option.map(pending, resultWire)),
     last: Option.getOrNull(Option.map(state.last, resultWire)),
     refused: state.refused,
+    holdKey: holdKeyOf(state),
+    holding: state.hold.contact._tag === 'held',
+    heldWord: Option.getOrElse(state.hold.held, () => -1),
+    ask: state.ask,
+    askKey: state.asks,
+    seeking: state.phase === 'reading' && state.utterance === '',
+    seekText: state.passage.text.slice(state.from),
   };
 };
