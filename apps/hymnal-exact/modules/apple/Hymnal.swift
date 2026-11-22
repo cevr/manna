@@ -7,8 +7,18 @@ import Foundation
 final class Hymnal: ExactModule {
     private lazy var parts: [String: (_ request: [String: Any], _ reply: ExactReply) -> Void] = [
         "tuner.": { [unowned self] request, reply in self.ear.later(request, reply: reply) },
+        "pinch.": { [unowned self] request, reply in self.pinch.later(request, reply: reply) },
     ]
     private lazy var ear = TunerEar(context: context)
+    private lazy var pinch = Pinch(context: context)
+
+    override func element(_ element: ExactElement) {
+        if element.hatch == .pinch { pinch.element(element) }
+    }
+
+    override func elementEnded(_ element: ExactElement) {
+        if element.hatch == .pinch { pinch.elementEnded(element) }
+    }
 
     override func later(_ request: [String: Any], reply: ExactReply) {
         let op = request["op"] as? String ?? ""
