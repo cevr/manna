@@ -13,6 +13,7 @@ bun tools/drive-say.ts web   # Say it on /cue/<cue>: a try, its help and a refus
 bun tools/drive-session.ts web  # the daily session: Next into the garden, a try left, a run to its end, Minutes (also: ios)
 bun tools/drive-look.ts web  # the brand in light and dark, the sheet's choices checked and kept (also: ios)
 bun tools/drive-garden.ts web   # the garden: a recall's day, peek, Show all, a relaunch, twenty singles (also: ios)
+bun tools/drive-back.ts web  # Move back a stage on Today: the control past a seed, the ask, Moved and the stage line, Keep, none in a recital or on a seed, a relaunch (also: ios)
 bun tools/drive-home.ts web  # home: a pressed plant, the buttons' names, Move back, a relaunch (also: ios)
 bun tools/drive-join.ts web  # home and the session: a verse said through, then its plant and the card on home (also: ios)
 bun tools/drive-add.ts web   # Add verses on a plain launch: a list planted on the chapter kept across a relaunch, Psalm 119, one verse through the chapter and twenty single verses, no test control (also: ios)
@@ -27,7 +28,7 @@ bun tools/drive-study.ts web  # the study sheet against the fixture: John 3:16's
 bun tools/drive-boxes.ts web  # the boxes verify measures: a Today slot One's 36 pt, Read's box above the verse with its glyph in place (also: ios)
 bun tools/drive-largest.ts   # the largest text (root 53 px): a slot no wider than the line whose unseen word takes no touch, a single verse's Remove wrapped under it on the screen and on its line at the default size; below the accessibility sizes Today's one fixed foot with its circles and a list's head drawn once above its scroll; on iOS (ios) also at AX1 and AX5 Today's room for the verse over its fixed round button, the round buttons holding their labels, Listening and Next as capsules the line's width, Say it again and the result's card moving with the scroll while Next stays fixed, a list's head scrolling with its verses
 bun tools/drive-reader.ts web  # the reader's batch check: the drives above as its rows, the longest entry, John 1:14's long commentary, offline, colours, the journey (also: ios; `ios live` adds the real packs from egw.cvr.im)
-bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:add-a, -b, -shelves, test:chooser, test:goto, test:packs, test:garden-a, -b, -c, -bytes, test:home-a, -b, -c, -asks, test:session-a, -b, -c, -calls, test:text, test:read, test:type, test:study, test:study-xrefs, -tags-a, -tags-b, -lexicon and test:studyview
+bun run test                 # the Bun tests the gate runs (no Exact needed), with test:app, test:add-a, -b, -shelves, test:chooser, test:goto, test:packs, test:garden-a, -b, -c, -bytes, test:home-a, -b, -c, -asks, test:session-a, -b, -c, -calls, test:text, test:read, test:type, test:study, test:study-xrefs, -tags-a, -tags-b, -lexicon, test:studyview and test:back
 ```
 
 ## Tabs and the Read tab
@@ -65,6 +66,7 @@ The daily session, one verse at a time (`/today`, and `/start/<slug>` for one ve
 - **Listen** shows on a new piece at rest with the Voice on, as the current app's Listen does; Voice Off hides it and refuses `todayHear`. Her and Him read with the system voice the current app's `bestVoice` picks among `speechSynthesisVoices()` (`src/today/reader.ts`, `todayReaderOf`).
 
 - Every rule is `step(state, input)` in `src/today/step.ts`, and the screen is `view(state)` in `src/today/view.ts`. `src/today/sources.ts` holds the state for one launch and answers one data source per input; `features/today.contract` only makes the calls (`speak`, `startSpeechRecognition`, …), forwards each native change as an input naming its utterance or recognition, and draws the view. An input for any other id changes nothing.
+- **Move back a stage** (`features/back.contract`, `src/back/`), in the footer as the current Today's `MoveBack`: offered (`today.back`, `backOn` over the current app's `offersBack`) on a planted verse a tap started, at rest; never beside Show all's own step back (`today.moveBack`). A verse past a seed shows the control, a tap the ask with Move back and Keep, an answer the moved line or the alert. The state is the current app's reducer (`barAfter`, `@manna/heartseed/garden/bar`) kept by the data module for the launch, dropped when Today stops offering it; each ask is settled once (`todayBackMove`, through the garden's `gardenBackFrom`, from the stage it was opened at). `bun run test:back` runs `back.model.test.ts` beside the current app's own reducer and garden; `back.test.contract` and `tools/drive-back.ts` run live.
 - The matcher is the current Heartseed's, imported as `@manna/heartseed/matcher`, whose types are `apps/heartseed/exact/matcher.d.ts`: Exact's type check stages a package's declarations, never its source, and this file imports nothing, so it never reaches `effect`.
 
 ### Better than One at the accessibility text sizes
