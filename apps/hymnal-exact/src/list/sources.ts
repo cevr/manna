@@ -10,6 +10,7 @@
 
 import type { Book, HymnText } from '../hymns/book.ts';
 import type { AboutAnswer } from '../results/table.ts';
+import { revealSources } from './reveal.ts';
 import { rowsOf } from './rows.ts';
 
 /** The hymns of `about` shown under `query`'s matches: none unless it was asked for `query`. */
@@ -25,4 +26,5 @@ export const aboutShownOf = (
 export const listSources = (book: Book) => ({
   hymnRows: ([query, about]: readonly [string, AboutAnswer?]) =>
     rowsOf(book, query, aboutShownOf(book, query, about)),
+  ...revealSources(),
 });

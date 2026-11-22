@@ -17,9 +17,15 @@
         "test:keys",
         "test:tuner",
         "test:about",
-        "test:tempo"
+        "test:tempo",
+        "test:tabs"
       ],
       "outputs": []
+    },
+    "test:tabs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
     },
     "test:about": {
       "dependsOn": ["^transit"],
