@@ -703,17 +703,38 @@ const bucketSince = (from: number) =>
 
 /**
  * The save of the page the reader rests on, on a fresh profile before any
- * other check has opened a hymn: hymn 1 opened from the list and left by
- * its back button well before the delay asks the bucket nothing; opened
- * again and rested on, it asks only hymn 1's printed key.
+ * other check has opened a hymn: hymn 1 opened from the list and rested on
+ * asks only its printed key; back on the list, hymn 3 opened and left by
+ * its back button well before the delay asks the bucket nothing, the store
+ * already running.
  */
 const resting = async (page: Page) => {
   await open(page, '/');
   const row = await waitFor(page, `document.querySelector('[data-testid="hymn-1"]')`, 5000);
+  const rest = requests.length;
+  await tap(page, '[data-testid="hymn-1"]');
+  const shownRest = await waitFor(page, `location.pathname === '/hymns/1'`, 3000);
+  mark('rest on hymn 1');
+  await Bun.sleep(2000);
+  const restAsked = bucketSince(rest);
+  check(
+    "a hymn page rested on asks the bucket for its printed key's recording, and nothing else",
+    row &&
+      shownRest &&
+      restAsked.length > 0 &&
+      restAsked.every(({ url, rested }) => rested && url === printed(1)),
+    { row, shownRest, asked: restAsked.slice(0, 5) },
+  );
+  await tap(page, '[data-testid="hymn-back"]');
+  const list = await waitFor(
+    page,
+    `location.pathname === '/' && document.querySelector('[data-testid="hymn-3"]')`,
+    3000,
+  );
   const left = requests.length;
   const opened = Date.now();
-  await tap(page, '[data-testid="hymn-1"]');
-  const shown = await waitFor(page, `location.pathname === '/hymns/1'`, 3000);
+  await tap(page, '[data-testid="hymn-3"]');
+  const shown = await waitFor(page, `location.pathname === '/hymns/3'`, 3000);
   await tap(page, '[data-testid="hymn-back"]');
   const back = await waitFor(page, `location.pathname === '/'`, 3000);
   const stayed = Date.now() - opened;
@@ -722,21 +743,8 @@ const resting = async (page: Page) => {
   const leftAsked = bucketSince(left);
   check(
     `a hymn page left before the rest's 750 ms asks the bucket nothing (left after ${stayed} ms)`,
-    row && shown && back && stayed < REST_MS && leftAsked.length === 0,
-    { row, shown, back, stayed, asked: leftAsked.slice(0, 5) },
-  );
-  const rest = requests.length;
-  await tap(page, '[data-testid="hymn-1"]');
-  const again = await waitFor(page, `location.pathname === '/hymns/1'`, 3000);
-  mark('rest on hymn 1');
-  await Bun.sleep(2000);
-  const restAsked = bucketSince(rest);
-  check(
-    "a hymn page rested on asks the bucket for its printed key's recording, and nothing else",
-    again &&
-      restAsked.length > 0 &&
-      restAsked.every(({ url, rested }) => rested && url === printed(1)),
-    { again, asked: restAsked.slice(0, 5) },
+    list && shown && back && stayed < REST_MS && leftAsked.length === 0,
+    { list, shown, back, stayed, asked: leftAsked.slice(0, 5) },
   );
   report.rest = { stayed, left: leftAsked.length, rested: restAsked.length };
 };
