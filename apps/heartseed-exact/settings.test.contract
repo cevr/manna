@@ -1,6 +1,11 @@
 fail fetch "https://egw.cvr.im"
 
 test "the sheet opens and closes"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   expect tree has "settings"
@@ -18,6 +23,11 @@ test "the sheet opens and closes"
   expect text "title" == "Heartseed"
 
 test "a fresh install reads the defaults"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   expect state settingsMinutes == 5
@@ -28,6 +38,11 @@ test "a fresh install reads the defaults"
   expect state settings.appearanceOptions.0.value == "system"
 
 test "a choice shows and is kept"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   tap "minutes-10"
@@ -39,8 +54,13 @@ test "a choice shows and is kept"
   expect state settingsAppearance == "dark"
   tap "settings-done"
   clock settle
+  tap "gear"
+  clock settle
   reload
   clock data
+  clock settle
+  tap "settings-done"
+  clock settle
   tap "gear"
   clock settle
   expect state settingsMinutes == 10
@@ -48,6 +68,11 @@ test "a choice shows and is kept"
   expect state settingsAppearance == "dark"
 
 test "Sounds and haptics is on until turned off, and stays off"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   clock data
@@ -59,8 +84,13 @@ test "Sounds and haptics is on until turned off, and stays off"
   expect state settingsFeelKept == "off"
   tap "settings-done"
   clock settle
+  tap "gear"
+  clock settle
   reload
   clock data
+  clock settle
+  tap "settings-done"
+  clock settle
   tap "gear"
   clock settle
   clock data

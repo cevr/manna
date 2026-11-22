@@ -1,6 +1,11 @@
 fail fetch "https://egw.cvr.im"
 
 test "About opens from the sheet, Licences from About, and Back returns to the sheet as it was"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   tap "minutes-20"

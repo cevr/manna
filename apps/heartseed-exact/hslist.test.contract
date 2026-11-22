@@ -4,6 +4,11 @@ time-zone "America/New_York"
 seed 7
 
 test "A list's page shows its verses with stage and due"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -43,6 +48,11 @@ test "A list's page shows its verses with stage and due"
   expect no failures
 
 test "Practice this list reads its line and starts its verse"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -80,6 +90,11 @@ test "Practice this list reads its line and starts its verse"
   expect no failures
 
 test "Remove this list asks, then returns home without the row"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
