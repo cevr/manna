@@ -7,8 +7,12 @@
  * Today: a verse shown by a tap or met in the day's run (and one never
  * planted), a recital started, finished and let go, Show all, taps of the
  * control, `Move back` pressed one to five times before its answers land,
- * Keep, the save failing then succeeding, and answers landing late (after
- * the control left, came back and opened a second ask).
+ * Keep, the save failing then succeeding, a call of the step back crashing
+ * (the port's garden source rejects; the current app's run dies and its
+ * control takes the run's exit by `answerOf`), answers landing late (after
+ * Today left the verse, after it came back and opened a newer ask), and the
+ * app relaunched with presses in flight (each kept or lost, its answer
+ * going nowhere). Each late kind is reached at least three times.
  *
  * The port: its own sources (`backSources` over `gardenSources`, and
  * Today's rule `backOn`) over a stand-in for Exact's storage, with the
@@ -45,6 +49,7 @@ import {
 } from '@manna/heartseed/garden';
 import {
   alertLine,
+  answerOf,
   askLine,
   barAfter,
   IDLE,
@@ -62,7 +67,7 @@ import { GARDEN_FILE, readGarden } from '../garden/program';
 import { gardenSources } from '../garden/sources';
 import { seeded, type Random } from '../test/random';
 import { backOn } from './shown';
-import { backSources, type BackView } from './sources';
+import { backSources, type BackGarden, type BackView } from './sources';
 
 const HOST = { turn: withDataHost, wait: () => Promise.resolve() };
 const START = Date.UTC(2026, 10, 15, 13, 0, 0);
@@ -104,10 +109,15 @@ interface Place {
   shownAll: boolean;
 }
 
+/** The faults a history turns on and off: the store refusing its writes, and a call of the step back crashing (the port's source rejects, the current app's run dies). */
+interface Faults {
+  failing: boolean;
+  crashing: boolean;
+}
+
 /** A storage stand-in whose writes `state.failing` refuses. */
-const storageOf = () => {
+const storageOf = (state: Faults) => {
   const files = new Map<string, ArrayBuffer>();
-  const state = { failing: false };
   const storage: FileStorage = {
     fs: {
       readFile: async (path) => {
@@ -121,17 +131,15 @@ const storageOf = () => {
       },
     },
   };
-  return { files, state, storage };
+  return { files, storage };
 };
 
-/** The current app's store over `entries`, its writes refused while `state.failing`. */
-const oracleStore = (
-  entries: ReadonlyArray<readonly [string, string]>,
-  state: { readonly failing: boolean },
-) => {
-  const map = new Map<string, string>(entries);
+/** The current app's store over `map`, kept across launches: its writes refused while `state.failing`, and dying while `state.crashing`. */
+const oracleStore = (map: Map<string, string>, state: Faults) => {
   const refused = (method: string, key: string) =>
-    Effect.fail(new KeyValueStore.KeyValueStoreError({ method, key, message: 'refused' }));
+    state.crashing
+      ? Effect.die(new Error('the step back crashed'))
+      : Effect.fail(new KeyValueStore.KeyValueStoreError({ method, key, message: 'refused' }));
   return KeyValueStore.make({
     get: (key) => Effect.sync(() => map.get(key)),
     getUint8Array: (key) =>
@@ -140,13 +148,13 @@ const oracleStore = (
         return value === undefined ? undefined : new TextEncoder().encode(value);
       }),
     set: (key, value) =>
-      state.failing
+      state.failing || state.crashing
         ? refused('set', key)
         : Effect.sync(() => {
             map.set(key, value instanceof Uint8Array ? new TextDecoder().decode(value) : value);
           }),
     remove: (key) =>
-      state.failing
+      state.failing || state.crashing
         ? refused('remove', key)
         : Effect.sync(() => {
             map.delete(key);
@@ -222,41 +230,65 @@ const grow = async (
 };
 
 /** One history of `seed`: both sides walked step by step and compared after each; `seen` gathers the states reached. */
-const runHistory = async (seed: number, seen: Set<string>) => {
+const runHistory = async (seed: number, seen: Set<string>, tally: Map<string, number>) => {
   const random = seeded(seed);
-  const stand = storageOf();
-  const garden = gardenSources({ host: HOST, quiet: true });
+  const faults: Faults = { failing: false, crashing: false };
+  const stand = storageOf(faults);
+  let garden = gardenSources({ host: HOST, quiet: true });
   let now = await grow(random, stand.storage, garden);
   const portRead = async () =>
     (await runCall(readGarden(stand.storage), { now, seed }, HOST)).garden;
 
   const file = stand.files.get(GARDEN_FILE);
-  const entries: ReadonlyArray<readonly [string, string]> =
-    file === undefined ? [] : JSON.parse(new TextDecoder().decode(file));
-  const failing = { failing: false };
-  const scope = await Effect.runPromise(Scope.make());
-  const context = await Effect.runPromise(
-    Layer.buildWithScope(
-      gardenLayer.pipe(
-        Layer.provide(
-          Layer.mergeAll(
-            Layer.succeed(KeyValueStore.KeyValueStore, oracleStore(entries, failing)),
-            Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
-          ),
-        ),
-        Layer.provideMerge(Layer.mergeAll(TestClock.layer(), Logger.layer([]))),
-      ),
-      scope,
-    ),
+  const kept = new Map<string, string>(
+    file === undefined ? [] : JSON.parse(new TextDecoder().decode(file)),
   );
-  const app = <A>(effect: Effect.Effect<A, never, Garden | Backs>) =>
-    Effect.runPromise(
-      Effect.andThen(TestClock.setTime(now), effect).pipe(Effect.provideContext(context)),
+  /** The current app's launch: its own `Garden` and `Backs` built over the store kept across launches. */
+  const launchApp = async () => {
+    const scope = await Effect.runPromise(Scope.make());
+    const context = await Effect.runPromise(
+      Layer.buildWithScope(
+        gardenLayer.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              Layer.succeed(KeyValueStore.KeyValueStore, oracleStore(kept, faults)),
+              Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
+            ),
+          ),
+          Layer.provideMerge(Layer.mergeAll(TestClock.layer(), Logger.layer([]))),
+        ),
+        scope,
+      ),
     );
+    return { scope, context };
+  };
+  let launched = await launchApp();
+  const appExit = <A>(effect: Effect.Effect<A, never, Garden | Backs>) =>
+    Effect.runPromiseExit(
+      Effect.andThen(TestClock.setTime(now), effect).pipe(Effect.provideContext(launched.context)),
+    );
+  const app = async <A>(effect: Effect.Effect<A, never, Garden | Backs>) =>
+    Exit.match(await appExit(effect), {
+      onSuccess: (value) => value,
+      onFailure: (cause) => {
+        throw new Error(`the current app's garden failed: ${String(cause)}`);
+      },
+    });
   const appView = () => app(Effect.flatMap(Garden, (each) => each.view));
+  /** The current app's answer to `ask`, as its control takes a run of the step back (`answerOf`). */
+  const appBack = async (ask: BackAsk) =>
+    answerOf(await appExit(Effect.flatMap(Backs, (backs) => backs.back(ask))));
 
-  const back = backSources(garden);
+  /** The port's garden as the step back reaches it: its source rejects while a call crashes. */
+  const backGarden = (sources: ReturnType<typeof gardenSources>): BackGarden => ({
+    gardenBackFrom: (args, store, storage) =>
+      faults.crashing
+        ? Promise.reject(new Error('the step back crashed'))
+        : sources.gardenBackFrom(args, store, storage),
+  });
+  let back = backSources(backGarden(garden));
   const call = <A>(run: () => A) => withDataHost(run);
+  let launch = 1;
 
   const place: Place = {
     reference: random.pick(PLANTABLE),
@@ -271,7 +303,8 @@ const runHistory = async (seed: number, seen: Set<string>) => {
   let pressed = 0;
   let presses = 0;
   const inflight: Array<{ readonly ask: number; readonly mount: number }> = [];
-  const askedPressed = new Set<number>();
+  const askedPressed = new Set<string>();
+  const count = (what: string) => tally.set(what, (tally.get(what) ?? 0) + 1);
 
   let bar: Bar = IDLE;
   let mount = 0;
@@ -359,6 +392,9 @@ const runHistory = async (seed: number, seen: Set<string>) => {
   const land = async (index: number) => {
     const [press] = inflight.splice(index, 1);
     if (press === undefined) return;
+    if (portView.status === 'Asking' && portView.ask > press.ask) count('late over a newer ask');
+    if (press.mount !== mount || !mounted) count('late after the control left');
+    if (faults.crashing) count('crashed');
     const moved = await call(() =>
       back.todayBackMove([press.ask, now, 0, seed], STORE, stand.storage),
     );
@@ -366,7 +402,7 @@ const runHistory = async (seed: number, seen: Set<string>) => {
     portView = call(() => back.todayBackAnswered([moved.ask, moved.answer]));
     const ask = opened.get(press.ask);
     if (ask !== undefined) {
-      const answer: BackAnswer = await app(Effect.flatMap(Backs, (backs) => backs.back(ask)));
+      const answer: BackAnswer = await appBack(ask);
       if (press.mount === mount && mounted) bar = barAfter(bar, { type: 'answered', ask, answer });
     }
     await settle();
@@ -405,16 +441,16 @@ const runHistory = async (seed: number, seen: Set<string>) => {
     opened.set(portView.ask, ask);
     bar = barAfter(bar, { type: 'opened', ask });
   };
-  /** `Move back` pressed one to five times before an answer lands; most often every answer then lands. */
+  /** `Move back` pressed one to five times before an answer lands; often every answer then lands, else they land later, by `land`, a press or the end. */
   const press = async () => {
     if (portDrawn().answers !== 'enabled') return;
     const times = 1 + random.below(5);
     if (pressed !== portView.ask) presses = 0;
     pressed = portView.ask;
     presses += times;
-    askedPressed.add(portView.ask);
+    askedPressed.add(`${launch}:${portView.ask}`);
     for (let each = 0; each < times; each++) inflight.push({ ask: portView.ask, mount });
-    if (random.chance(0.6)) while (inflight.length > 0) await land(0);
+    if (random.chance(0.4)) while (inflight.length > 0) await land(0);
   };
   const keep = async () => {
     if (portDrawn().answers !== 'enabled') return;
@@ -422,25 +458,75 @@ const runHistory = async (seed: number, seen: Set<string>) => {
     bar = barAfter(bar, { type: 'kept' });
   };
   const fail = async () => {
-    stand.state.failing = !stand.state.failing;
-    failing.failing = stand.state.failing;
+    faults.failing = !faults.failing;
+  };
+  /**
+   * A call of the step back crashing, or no longer: turned only while no
+   * press is in flight. The current app's `Backs` keeps no answer for a run
+   * that died, so a later press of the same ask runs again, where the port
+   * gives every press its ask's first answer (`Failed`): a crash that
+   * clears between two presses of one ask is a named difference, not drawn.
+   */
+  const crash = async () => {
+    if (inflight.length === 0) faults.crashing = !faults.crashing;
   };
   const late = async () => {
     if (inflight.length > 0) await land(random.below(inflight.length));
   };
+  /** Today left for another verse and back to this one by a tap, while presses may be in flight, and most often a new ask opened there at once. */
+  const away = async () => {
+    const from = place.reference;
+    await show();
+    if (place.reference === from) place.reference = UNPLANTED;
+    await settle();
+    place.reference = from;
+    place.visited = true;
+    await settle();
+    if (random.chance(0.7)) await tap();
+  };
+  /**
+   * The app relaunched: each press in flight either kept its step back
+   * before the end (its answer goes nowhere, the launch that would take it
+   * gone) or never ran; both sides start again over what the store keeps,
+   * the port's sources and the current app's garden new.
+   */
+  const relaunch = async () => {
+    if (inflight.length > 0) count('relaunched with presses in flight');
+    for (const each of inflight.splice(0)) {
+      if (!random.chance(0.5)) continue;
+      count('kept by a launch that ended');
+      await call(() => back.todayBackMove([each.ask, now, 0, seed], STORE, stand.storage));
+      const ask = opened.get(each.ask);
+      if (ask !== undefined) await appBack(ask);
+    }
+    await Effect.runPromise(Scope.close(launched.scope, Exit.void));
+    launched = await launchApp();
+    garden = gardenSources({ host: HOST, quiet: true });
+    back = backSources(backGarden(garden));
+    launch += 1;
+    portView = call(() => back.todayBackBoot());
+    opened.clear();
+    pressed = 0;
+    presses = 0;
+    bar = IDLE;
+    mounted = false;
+  };
 
   /** The steps, each with its share of a hundred. */
   const steps: ReadonlyArray<readonly [number, string, () => Promise<void>]> = [
-    [12, 'show', show],
-    [6, 'say', say],
-    [4, 'finish', finish],
-    [4, 'next', next],
+    [8, 'show', show],
+    [4, 'say', say],
+    [3, 'finish', finish],
+    [3, 'next', next],
     [3, 'show all', showAll],
-    [21, 'tap', tap],
-    [20, 'press', press],
-    [6, 'keep', keep],
-    [8, 'fail', fail],
-    [16, 'land', late],
+    [18, 'tap', tap],
+    [18, 'press', press],
+    [4, 'keep', keep],
+    [5, 'fail', fail],
+    [4, 'crash', crash],
+    [10, 'away', away],
+    [5, 'relaunch', relaunch],
+    [15, 'land', late],
   ];
   const pick = (): readonly [number, string, () => Promise<void>] => {
     let roll = random.below(100);
@@ -489,12 +575,21 @@ const runHistory = async (seed: number, seen: Set<string>) => {
   }
   while (inflight.length > 0) await land(0);
   await check(`seed ${seed} end`, await portRead());
-  await Effect.runPromise(Scope.close(scope, Exit.void));
+  await Effect.runPromise(Scope.close(launched.scope, Exit.void));
 };
 
 it(`draws what the current Today draws, and moves a verse at most one stage per ask, over ${HISTORIES} generated histories`, async () => {
   const seen = new Set<string>();
-  for (let seed = 1; seed <= HISTORIES; seed++) await runHistory(seed, seen);
+  const tally = new Map<string, number>();
+  for (let seed = 1; seed <= HISTORIES; seed++) await runHistory(seed, seen, tally);
+  for (const late of [
+    'late over a newer ask',
+    'late after the control left',
+    'crashed',
+    'relaunched with presses in flight',
+    'kept by a launch that ended',
+  ])
+    expect({ late, often: (tally.get(late) ?? 0) >= 3 }).toEqual({ late, often: true });
   for (const state of ['Asking', 'Kept', 'Moved', 'Refused'])
     expect({ state, reached: [...seen].some((each) => each.endsWith(`:${state}`)) }).toEqual({
       state,
