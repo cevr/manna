@@ -31,49 +31,7 @@ import { Control } from '../field/plot';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import { backOf, type BackAnswer, type BackAsk, type Stage } from '../garden';
-
-/** Each stage as the ask and the moved line name it. */
-const NAMED: Readonly<Record<Stage, string>> = {
-  seed: 'a seed',
-  blade: 'a blade',
-  ear: 'an ear',
-  'full corn': 'full corn',
-};
-
-/** The control's state: at rest with no ask yet, asking `ask`, `ask` kept (at rest), `ask` moved the verse to `stage`, or `ask` was refused. */
-type Bar =
-  | { readonly status: 'Idle' }
-  | { readonly status: 'Asking'; readonly ask: BackAsk }
-  | { readonly status: 'Kept'; readonly ask: BackAsk }
-  | { readonly status: 'Moved'; readonly ask: BackAsk; readonly stage: Stage }
-  | { readonly status: 'Refused'; readonly ask: BackAsk };
-
-/** What happened to the control: its tap opening `ask`, the ask's `Keep`, or the garden's answer to `ask`. */
-type Happened =
-  | { readonly type: 'opened'; readonly ask: BackAsk }
-  | { readonly type: 'kept' }
-  | { readonly type: 'answered'; readonly ask: BackAsk; readonly answer: BackAnswer };
-
-const IDLE: Bar = { status: 'Idle' };
-
-/** The state after `happened`: a tap opens a new ask, `Keep` drops the ask shown, and an answer lands whenever it answers the latest ask (kept or not), so the line or alert shown always says what the garden kept for it. */
-const barAfter = (bar: Bar, happened: Happened): Bar => {
-  switch (happened.type) {
-    case 'opened':
-      return { status: 'Asking', ask: happened.ask };
-    case 'kept':
-      if (bar.status !== 'Asking') return bar;
-      return { status: 'Kept', ask: bar.ask };
-    case 'answered': {
-      if (bar.status === 'Idle' || bar.ask !== happened.ask) return bar;
-      const { ask } = happened;
-      if (happened.answer === 'Failed') return { status: 'Refused', ask };
-      return { status: 'Moved', ask, stage: Option.getOrElse(backOf(ask.from), () => ask.from) };
-    }
-  }
-  happened satisfies never;
-  return bar;
-};
+import { barAfter, IDLE, NAMED } from './bar';
 
 /** Move back a stage for the verse of `reference`, standing at `stage` now. */
 export function MoveBack({

@@ -53,6 +53,8 @@ import type * as Fsrs from '../src/fsrs';
 import type * as Garden from '../src/garden';
 import type * as StageNames from '../src/garden/names';
 import type * as DeclaredStageNames from '../exact/stage-names.d.ts';
+import type * as GardenBar from '../src/garden/bar';
+import type * as DeclaredGardenBar from '../exact/garden-bar.d.ts';
 import type * as AboutVersion from '../src/about/version';
 import type * as DeclaredAboutVersion from '../exact/about-version.d.ts';
 import type * as FirstFlow from '../src/first/flow';
@@ -95,6 +97,11 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Garden.Backs, typeof DeclaredGarden.Backs>,
   true satisfies Mutual<typeof Garden.layer, typeof DeclaredGarden.layer>,
   true satisfies Mutual<typeof StageNames.STAGE_NAMES, typeof DeclaredStageNames.STAGE_NAMES>,
+  true satisfies Mutual<typeof GardenBar.NAMED, typeof DeclaredGardenBar.NAMED>,
+  true satisfies Mutual<typeof GardenBar.IDLE, typeof DeclaredGardenBar.IDLE>,
+  true satisfies Mutual<typeof GardenBar.barAfter, typeof DeclaredGardenBar.barAfter>,
+  true satisfies Mutual<GardenBar.Bar, DeclaredGardenBar.Bar>,
+  true satisfies Mutual<GardenBar.Happened, DeclaredGardenBar.Happened>,
   true satisfies Mutual<
     typeof AboutVersion.VERSION_PREFIX,
     typeof DeclaredAboutVersion.VERSION_PREFIX
