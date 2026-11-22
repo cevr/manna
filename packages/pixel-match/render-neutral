@@ -43,3 +43,4 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 eb9b55b88936 move: Heartseed's TIPS, unchanged, from field/tips.tsx into field/tip-words.ts, re-exported from tips.tsx
 23a45d9b24ef move: Heartseed's first verse's query and the field's own row (PASSAGES), unchanged, from vite/passage.ts and app/index.tsx into first/verse.ts
 0529e37d91dd exports: Heartseed's exports lines ./first/tour, ./first/growth, ./first/words, ./first/verse, ./field/tips and the declarations for them and for flow's reducer; no source changes
+d39aa185b3fd refactor: Heartseed's first/verse.ts imports nothing and types its own row by its own OwnPassage (the declaration with it); no value or render changes
