@@ -6,8 +6,19 @@
  * words while a reading is under way or not, still for less or more than
  * the hold's time, moves within and past the slop, across words, into gaps,
  * between lines and off the words, a lift where it last moved, a cancel (as
- * the web ends one, at 0, 0), a second finger, the reading ending or a new
- * one starting at any step, and the timer of an older press firing late.
+ * the web ends one, at 0, 0), a cancel at the touch point (as iOS ends a
+ * system cancel, within a few points of the last move), a second finger,
+ * the reading ending or a new one starting at any step, and the timer of an
+ * older press firing late.
+ *
+ * Exact gives a cancel as an up (`pointerup`, no cancel of its own), so the
+ * port reads a cancel at the touch point as a lift. Before the hold's time
+ * (pressing, or a press failed past the slop) that asks nothing, as in the
+ * current app. Once a word is held, still or dragged, the port reads on
+ * from the held word (`finalize` of a release) where the current app
+ * resumes where the reading paused (`finalize` of a cancel): that named
+ * difference is the expected row, both drawn from the current app's own
+ * `finalize`; every other step must ask the same.
  *
  * The current app's side is its own rule (`activate`, `update`,
  * `finalize`, `drop` and `wordAt`, imported) driven by a model of its pan
@@ -119,6 +130,8 @@ interface One {
   readonly at: Point;
   readonly began: number;
   readonly held: Option.Option<number>;
+  /** Whether the finger moved since the pan activated. */
+  readonly dragged: boolean;
 }
 
 const named = (ask: Ask): string => (ask._tag === 'Seek' ? `seek ${ask.word}` : ask._tag);
@@ -145,6 +158,7 @@ const oneStep = (one: One, event: Event, layout: Layout, now: number, asks: stri
       return {
         ...one,
         pan: 'active',
+        dragged: false,
         held: held(activate(one.held, wordAt(one.at.x, one.at.y, mapOf(layout)))),
       };
     case 'move': {
@@ -159,15 +173,17 @@ const oneStep = (one: One, event: Event, layout: Layout, now: number, asks: stri
       return {
         ...one,
         at: event.at,
+        dragged: true,
         held: held(update(one.held, wordAt(event.at.x, event.at.y, mapOf(layout)))),
       };
     }
     case 'lift':
-    case 'cancel': {
+    case 'cancel':
+    case 'cancelHere': {
       if (one.pan === 'none' || event.pointer !== one.pointer) return one;
       const ended = { ...one, pan: 'none' as const };
       if (one.pan !== 'active') return ended;
-      return { ...ended, held: held(finalize(one.held, event._tag === 'cancel')) };
+      return { ...ended, held: held(finalize(one.held, event._tag !== 'lift')) };
     }
     case 'ends':
       if (!one.shown) return one;
@@ -190,6 +206,7 @@ type Event =
   | { readonly _tag: 'move'; readonly pointer: number; readonly at: Point }
   | { readonly _tag: 'lift'; readonly pointer: number }
   | { readonly _tag: 'cancel'; readonly pointer: number }
+  | { readonly _tag: 'cancelHere'; readonly pointer: number; readonly at: Point }
   | { readonly _tag: 'ends' }
   | { readonly _tag: 'starts' }
   | { readonly _tag: 'late' };
@@ -252,6 +269,8 @@ const portStep = (port: Port, event: Event, layout: Layout, now: number, asks: s
       });
     case 'cancel':
       return run(port, { _tag: 'up', pointer: event.pointer, at: { x: 0, y: 0 } });
+    case 'cancelHere':
+      return run(port, { _tag: 'up', pointer: event.pointer, at: event.at });
     case 'ends':
       return run({ ...port, reading: false }, { _tag: 'gone' });
     case 'starts':
@@ -261,8 +280,16 @@ const portStep = (port: Port, event: Event, layout: Layout, now: number, asks: s
   }
 };
 
-const anEvent = (random: Random, layout: Layout, one: One): Event => {
-  const roll = random.below(20);
+/** How far from the last move a cancel at the touch point may end: the finger's moves go out once a frame, so it may have moved a little since. */
+const CANCEL_DRIFT = 6;
+
+const anEvent = (
+  random: Random,
+  layout: Layout,
+  one: One,
+  last: ReadonlyMap<number, Point>,
+): Event => {
+  const roll = random.below(23);
   const pointer = random.chance(0.9) ? 1 : 2;
   if (one.pan === 'none' && roll < 8) return { _tag: 'down', pointer, at: pointOf(random, layout) };
   if (roll < 5) return { _tag: 'wait', ms: random.pick([50, 200, 340, 400, 1000]) };
@@ -277,13 +304,19 @@ const anEvent = (random: Random, layout: Layout, one: One): Event => {
   if (roll < 16) return { _tag: 'ends' };
   if (roll < 18) return { _tag: 'starts' };
   if (roll < 19) return { _tag: 'late' };
-  return { _tag: 'wait', ms: 400 };
+  if (roll < 20) return { _tag: 'wait', ms: 400 };
+  return {
+    _tag: 'cancelHere',
+    pointer,
+    at: near(random, last.get(pointer) ?? pointOf(random, layout), CANCEL_DRIFT),
+  };
 };
 
 describe('the hold, against the current app', () => {
   it(`holds the same word and asks the same of the voice over ${HISTORIES} touch histories`, () => {
     const verses = readVerses();
     const tally = { holds: 0, seeks: 0, resumes: 0, fails: 0, gone: 0 };
+    const cancelsHere = { pressing: 0, failed: 0, still: 0, dragged: 0 };
     for (let seed = 1; seed <= HISTORIES; seed++) {
       const random = seeded(seed);
       const verse = random.pick(verses).text;
@@ -297,25 +330,41 @@ describe('the hold, against the current app', () => {
         at: origin,
         began: 0,
         held: Option.none(),
+        dragged: false,
       };
       let port: Port = { hold: idleHold, reading: true, last: new Map(), armed: Option.none() };
       let now = 0;
       const oneAsks: string[] = [];
+      const expected: string[] = [];
       const portAsks: string[] = [];
       const history: Event[] = [];
       for (let n = 0; n < STEPS; n++) {
-        const event = anEvent(random, layout, one);
+        const event = anEvent(random, layout, one, port.last);
         history.push(event);
         if (event._tag === 'wait') now += event.ms;
-        const was = one.pan;
-        one = oneStep(one, event, layout, now, oneAsks);
+        const was = one;
+        const asked: string[] = [];
+        one = oneStep(one, event, layout, now, asked);
+        oneAsks.push(...asked);
         port = portStep(port, event, layout, now, portAsks);
-        if (was === 'possible' && one.pan === 'failed') tally.fails++;
-        if (event._tag === 'ends' && Option.isSome(port.hold.held)) tally.gone++;
         const at = `seed ${seed} step ${n} after ${JSON.stringify(history)}`;
-        if (oneAsks.join('|') !== portAsks.join('|'))
+        const ours = event._tag === 'cancelHere' && event.pointer === was.pointer;
+        if (ours && was.pan === 'possible') cancelsHere.pressing++;
+        if (ours && was.pan === 'failed') cancelsHere.failed++;
+        if (ours && was.pan === 'active' && Option.isSome(was.held)) {
+          if (was.dragged) cancelsHere.dragged++;
+          else cancelsHere.still++;
+          if (asked.join('|') !== 'LetGo')
+            throw new Error(
+              `${at}: the current app asked ${asked.join('|')} at a cancel, not a resume`,
+            );
+          expected.push(...Option.toArray(finalize(was.held, false).ask).map(named));
+        } else expected.push(...asked);
+        if (was.pan === 'possible' && one.pan === 'failed') tally.fails++;
+        if (event._tag === 'ends' && Option.isSome(port.hold.held)) tally.gone++;
+        if (expected.join('|') !== portAsks.join('|'))
           throw new Error(
-            `${at}: asked ${portAsks.join('|')}, the current app ${oneAsks.join('|')}`,
+            `${at}: asked ${portAsks.join('|')}, expected ${expected.join('|')} (the current app ${oneAsks.join('|')})`,
           );
         if (Option.getOrNull(one.held) !== Option.getOrNull(port.hold.held))
           throw new Error(
@@ -330,6 +379,10 @@ describe('the hold, against the current app', () => {
     expect(tally.seeks).toBeGreaterThan(30);
     expect(tally.resumes).toBeGreaterThan(10);
     expect(tally.fails).toBeGreaterThan(20);
+    expect(cancelsHere.pressing).toBeGreaterThan(50);
+    expect(cancelsHere.failed).toBeGreaterThan(50);
+    expect(cancelsHere.still).toBeGreaterThan(20);
+    expect(cancelsHere.dragged).toBeGreaterThan(20);
   });
 
   it("holds the slop to the current app's pan and the contract's timer to HOLD_MS", async () => {

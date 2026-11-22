@@ -89,7 +89,8 @@ members HeartseedExact
   resource homeMedia = exactViewport() as shape HomeMedia
   derive homeScheme = homeMedia.prefersColorScheme
   // The garden's last recall marks home too: a verse said outside any held
-  // passage (the first minute's) is in no list or single of `garden`.
+  // passage is in no list or single of `garden` (the first minute's, when
+  // twenty single verses held already leave no room to join it).
   derive homeRecalled = match gardenRecalled { case some(c) => homeVerseMark(c.verse), case none => "" }
   resource homeShown = homeRead(gardenTime.utcOffset, today.session.wire, `${homeMarkOf(garden)}|${homeRecalled}`) with gardenAt, gardenTime.seed as shape HomeShown else empty()
   action homeBegin

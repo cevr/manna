@@ -20,7 +20,7 @@
 // draws the view. The recognizer listens on the microphone's track, since
 // Apple's implementation at the pin traps on `microphone=true`.
 // `/today` and home run the session, `/start/:slug` starts that verse ahead
-// of the plan, and `/cue/:cue` shows Isaiah 41:10 under the cue named, for
+// of the plan, and `/cue/:cue` shows the first verse under the cue named, for
 // the recital's own tests.
 use speak, cancelSpeech, pauseSpeech, resumeSpeech, speechSynthesisState, speechUtterance, speechSynthesisVoices, SpeechUtteranceInfo, SpeechSynthesisState, SpeechUtterance, SpeechSynthesisVoices from "@exact/speech-synthesis"
 use getUserMedia, stopTrack, MediaStream, MediaStreamTrack from "@exact/media-capture"

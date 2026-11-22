@@ -65,7 +65,7 @@ import type * as FirstGrowth from '../src/first/growth';
 import type * as DeclaredFirstGrowth from '../exact/first-growth.d.ts';
 import type * as FirstWords from '../src/first/words';
 import type * as DeclaredFirstWords from '../exact/first-words.d.ts';
-import type * as FirstVerse from '../src/first/verse';
+import type * as FirstVerse from '../vite/first-verse';
 import type * as DeclaredFirstVerse from '../exact/first-verse.d.ts';
 import type * as TipWords from '../src/field/tip-words';
 import type * as DeclaredTips from '../exact/tips.d.ts';
@@ -116,6 +116,7 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof GardenBar.NAMED, typeof DeclaredGardenBar.NAMED>,
   true satisfies Mutual<typeof GardenBar.IDLE, typeof DeclaredGardenBar.IDLE>,
   true satisfies Mutual<typeof GardenBar.barAfter, typeof DeclaredGardenBar.barAfter>,
+  true satisfies Mutual<typeof GardenBar.answerOf, typeof DeclaredGardenBar.answerOf>,
   true satisfies Mutual<GardenBar.Bar, DeclaredGardenBar.Bar>,
   true satisfies Mutual<GardenBar.Happened, DeclaredGardenBar.Happened>,
   true satisfies Mutual<typeof GardenBar.askLine, typeof DeclaredGardenBar.askLine>,
@@ -157,7 +158,6 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof FirstWords.REPLAY, typeof DeclaredFirstWords.REPLAY>,
   true satisfies Mutual<typeof FirstWords.PILLS, typeof DeclaredFirstWords.PILLS>,
   true satisfies Mutual<typeof FirstVerse.FIRST_VERSE, typeof DeclaredFirstVerse.FIRST_VERSE>,
-  true satisfies Mutual<typeof FirstVerse.ownPassagesOf, typeof DeclaredFirstVerse.ownPassagesOf>,
   true satisfies Mutual<typeof TipWords.TIPS, typeof DeclaredTips.TIPS>,
   true satisfies Mutual<typeof Passages.PASSAGES_KEY, typeof DeclaredPassages.PASSAGES_KEY>,
   true satisfies Mutual<typeof Passages.LISTS_KEY, typeof DeclaredPassages.LISTS_KEY>,
