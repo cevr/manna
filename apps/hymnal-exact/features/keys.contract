@@ -367,7 +367,7 @@ component KeysResetChip
   view
     button press=keysAsk("reset", 0) background-color="pill" appearance="none" display="flex" align-items="center" justify-content="center"
       height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16"
-      -exact-press-opacity="opacity.pressed" aria-label="Reset" testId="dials-reset"
+      -exact-press-opacity="opacity.pressed" aria-label="Reset" aria-description=`Back to ${keysShown.printedName}, with no capo` testId="dials-reset"
       text `↺ ${keysShown.printedName}, no capo` font="type.chip" color="onPill" line-clamp=1
 
 // A dial's name at its left, in a column as wide as the widest row's.
