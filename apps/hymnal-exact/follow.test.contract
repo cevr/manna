@@ -1,0 +1,48 @@
+// The hymn page's follow (features/follow.contract) against the fixture
+// recordings (tools/recordings.ts, digital silence), with Sound off so the
+// silent clock runs on the test's clock. Hymn 2's timing sings its first
+// line from 22.278 s and each line of stanza 1 about 6.2 s after the last
+// (its bundled timing gives lines only, so each line is lit whole, as the
+// current hymnal lights a line with no syllable times). The rules are the
+// current follower's and held seek's, run in the data module and held to
+// them by src/follow/*.test.ts; here the page is. Each test opens on
+// Settings and turns Sounds and haptics off before it plays
+// (src/look/quiet.test.ts).
+
+test "With Sound off and Intro on, the count-in stands over the first sung line, then each line is marked as it is sung"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  expect state followNow.line == -1
+  tap "play"
+  clock data
+  clock settle
+  expect state player.count.on == true
+  expect state followNow.counting == true
+  expect state followNow.line == 0
+  expect state followNow.countLine == 0
+  expect tree has "count-in"
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect tree missing "count-in"
+  expect state followNow.counting == false
+  expect state followNow.line == 0
+  expect state followNow.mark == -3
+  clock +6300
+  clock data
+  expect state followNow.line == 1
+  clock +6300
+  clock data
+  expect state followNow.line == 2

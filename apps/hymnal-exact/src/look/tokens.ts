@@ -44,6 +44,9 @@ const TILES = 'src/home/AllAtOnce.tsx';
 const KEY = 'src/player/KeyButton.tsx';
 const DIALS = 'src/player/Dials.tsx';
 const DIAL = 'src/player/DialView.tsx';
+const COUNT = 'src/follow/CountIn.tsx';
+const INTRO = 'src/follow/IntroLine.tsx';
+const RESUME = 'src/follow/ResumeFollow.tsx';
 
 const type = (
   name: string,
@@ -127,6 +130,17 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.tiles-head', [TILES, 'heading']),
   length('size.strip', [TILES, 'strip', 'height']),
   length('size.note-wide', ['src/player/TempoDial.tsx', 'note', 'width']),
+  length('size.beat', [COUNT, 'mark', 'width'], [COUNT, 'mark', 'height']),
+  length('radius.r4', [COUNT, 'mark', 'borderRadius']),
+  length('space.beat-rise', [COUNT, 'row', 'top']),
+  length('space.intro-rise', [INTRO, 'track', 'top']),
+  length('line.intro', [INTRO, 'track', 'height'], [INTRO, 'fill', 'height']),
+  length('size.marker-wide', [HYMN, 'marker', 'width']),
+  length('space.marker-rise', [HYMN, 'marker', 'marginTop']),
+  length('radius.r2', [HYMN, 'marker', 'borderRadius']),
+  length('space.note-drop', [HYMN, 'timingNote', 'marginTop']),
+  type('type.seek-note', [HYMN, 'timingNote']),
+  length('size.unseen', [HYMN, 'unseen', 'width'], [HYMN, 'unseen', 'height']),
   length('size.note-high', ['src/player/TempoDial.tsx', 'note', 'height']),
   length('line.tile', [TILES, 'tile', 'borderWidth']),
   type('type.key-over', [KEY, 'over']),
@@ -136,13 +150,19 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.dial-played', [DIALS, 'played']),
 
   length('space.s2', ['src/player/StartSwitches.tsx', 'text', 'gap']),
-  length('space.s4', [PLAYER, 'position', 'gap'], [PLAY_PAGE, 'compact', 'paddingHorizontal']),
+  length(
+    'space.s4',
+    [PLAYER, 'position', 'gap'],
+    [PLAY_PAGE, 'compact', 'paddingHorizontal'],
+    [HYMN, 'marker', 'left'],
+  ),
   length(
     'space.s6',
     [TABS, 'tab', 'paddingVertical'],
     [CHORDS, 'chord', 'paddingRight'],
     [CHORDS, 'noChord', 'width'],
     [CHIP, 'chip', 'gap'],
+    [COUNT, 'row', 'gap'],
   ),
   length(
     'space.s8',
@@ -179,9 +199,10 @@ export const TOKENS: ReadonlyArray<Token> = [
     [PLAYER, 'page', 'gap'],
     [PLAYER, 'control', 'gap'],
     [STANZAS, 'section', 'paddingHorizontal'],
+    [RESUME, 'dock', 'bottom'],
   ),
   length('space.s64', [LIST, 'separator', 'left']),
-  length('space.s20', [HYMN, 'page', 'paddingHorizontal']),
+  length('space.s20', [HYMN, 'page', 'paddingHorizontal'], [HYMN, 'timingNote', 'right']),
   length(
     'space.s24',
     [SETTINGS, 'page', 'paddingTop'],
@@ -193,7 +214,7 @@ export const TOKENS: ReadonlyArray<Token> = [
 
   length('radius.r12', [SETTINGS, 'group', 'borderRadius'], [ABOUT, 'group', 'borderRadius']),
   length('radius.r16', [TABS, 'tab', 'borderRadius'], [CHIP, 'chip', 'borderRadius']),
-  length('radius.r18', [ACCENT, 'button', 'borderRadius']),
+  length('radius.r18', [ACCENT, 'button', 'borderRadius'], [RESUME, 'pill', 'borderRadius']),
   length('radius.pill', [HOME, 'settings', 'borderRadius'], [BAR, 'mark', 'borderRadius']),
   length('radius.grabber', [BAR, 'grabber', 'borderRadius']),
 
@@ -208,7 +229,12 @@ export const TOKENS: ReadonlyArray<Token> = [
     [PLAY_PAGE, 'compact', 'minHeight'],
   ),
   length('size.button', [ACCENT, 'button', 'minHeight'], [LIST, 'number', 'minWidth']),
-  length('size.mark', [STAR, 'mark', 'width'], [STAR, 'mark', 'height']),
+  length(
+    'size.mark',
+    [STAR, 'mark', 'width'],
+    [STAR, 'mark', 'height'],
+    [HYMN, 'marker', 'height'],
+  ),
   length(
     'size.glyph',
     [MARK, 'mark', 'width'],
@@ -222,6 +248,7 @@ export const TOKENS: ReadonlyArray<Token> = [
 
   measure('hairline')(
     'line.hair',
+    [RESUME, 'pill', 'borderWidth'],
     [SETTINGS, 'group', 'borderWidth'],
     [ABOUT, 'group', 'borderWidth'],
     [LIST, 'topic', 'borderBottomWidth'],

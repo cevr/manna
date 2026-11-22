@@ -19,19 +19,24 @@ use ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
 use AboutHymnLine from "./abouthymn.contract"
 use ReadingView from "./reading.contract"
+use FollowView, SungLine, FollowSeekMarks, FollowResume, markOf, chosenOf, syllableColour from "./follow.contract"
 
 shape HymnWord
   syllables: string[]
+  start: number
 
 shape HymnLine
   text: string
   words: HymnWord[]
+  at: number
+  timed: bool
 
 shape HymnPart
   key: string
   label: string
   text: string
   refrain: bool
+  first: number
   lines: HymnLine[]
 
 shape HymnText
@@ -78,6 +83,7 @@ component HymnPage
   inject
     hymnPressBack: action
     readingAwake: bool
+    followShown: FollowView
   resource pagerPlacesShown = pagerPlaces() as shape PagerPlaces
   view
     column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0 wakelock=(readingAwake ? "screen" : "none")
@@ -89,7 +95,7 @@ component HymnPage
         text hymnTitleOf(pages, entry.params.n) role="heading" aria-level=2 testId="hymn-title"
       FindBar(entry=entry, results=true)
       row flex=1 min-height=0 position="relative"
-        scroll id="hymn-pager" flex=1 min-height=0 display="flex" flex-direction="row" overflow-x="auto" overflow-y="hidden" scroll-snap-type="x mandatory" scrollend=ended scrolldragstart=armed wheel=wheeled testId="hymn-pager"
+        scroll id="hymn-pager" flex=1 min-height=0 display="flex" flex-direction="row" overflow-x="auto" overflow-y="hidden" scroll-snap-type="x mandatory" scrollend=ended scrolldragstart=armed wheel=wheeled touch-action=(followShown.holding ? "none" : "auto") testId="hymn-pager"
           for n in numbers key=n
             column id=`hymn-page-${n}` inert=(`${n}` != entry.params.n) aria-hidden=(`${n}` != entry.params.n) flex="none" width="100%" height="100%" scroll-snap-align="start" scroll-snap-stop="always" display="flex" flex-direction="column" testId=(`${n}` == entry.params.n ? "hymn-page" : `hymn-page-${n}`)
               match pages.at(numbers.indexOf(n))
@@ -102,6 +108,8 @@ component HymnPage
                 case none
                   column flex=1
         column position="absolute" left=0 top=0 bottom=0 width=`${pagerPlacesShown.edge}px` touch-action="none" testId="back-edge"
+        FollowSeekMarks()
+        FollowResume()
       PlayerBarRoom(id="bar-room-hymn")
 
 // The title of the route's hymn, from the pages the pager draws ("" until
@@ -117,10 +125,19 @@ component HymnSheet
     page: HymnText
     chords: ChordsPage
     shown: bool
+  inject
+    followShown: FollowView
+    followPad: number
+    followDown: action
+    followMove: action
+    followUp: action
+    followDragged: action
+    followWheeled: action
+    followRested: action
   view
-    scroll id=(shown ? "hymn-words" : `hymn-words-${page.number}`) flex=1 min-height=0 testId=(shown ? "hymn-words" : `hymn-words-${page.number}`)
+    scroll id=(shown ? "hymn-words" : `hymn-words-${page.number}`) flex=1 min-height=0 scroll-padding-top="33.333%" overflow-y=(shown and followShown.holding ? "hidden" : "auto") touch-action=(shown and followShown.holding ? "none" : "auto") scrolldragstart=followDragged wheel=followWheeled scrollend=followRested pointerdown=followDown pointermove=followMove pointerup=followUp testId=(shown ? "hymn-words" : `hymn-words-${page.number}`)
       if page.number > 0
-        column padding="space.s8 space.s20 space.s48" gap="space.s24"
+        column padding-top=(shown ? `calc(space.s8 + ${followPad}px)` : "space.s8") padding-bottom=(shown ? `calc(space.s48 + ${followPad}px)` : "space.s48") padding-left="space.s20" padding-right="space.s20" gap="space.s24"
           column gap="space.s4"
             AboutHymnLine(number=page.number, line=page.head, tag=(shown ? "" : `-${page.number}`))
             row align-items="flex-start" gap="space.s10" testId=(shown ? "hymn-name" : `hymn-name-${page.number}`)
@@ -135,11 +152,11 @@ component HymnSheet
                 text p.label font="type.part" color="muted" role="heading" aria-level=2
                 HymnInset(refrain=p.refrain, id=(shown ? p.key : `${p.key}-${page.number}`))
                   if p.lines.length > 0
-                    ChordsLines(chords=chords, k=k + 1, part=p, tag=(shown ? "" : `-${page.number}`))
+                    ChordsLines(chords=chords, k=k + 1, part=p, tag=(shown ? "" : `-${page.number}`), first=(shown ? match page.parts.at(k) { case some(q) => q.first, case none => -1 } : -1))
                   else
                     match page.parts.at(k)
                       case some(q)
-                        HymnLines(part=q, tag=(shown ? "" : `-${page.number}`))
+                        HymnLines(part=q, tag=(shown ? "" : `-${page.number}`), shown=shown)
                       case none
                         text p.text white-space="pre-line"
           else
@@ -147,7 +164,7 @@ component HymnSheet
               column gap="space.s4" role="group" aria-label=(p.refrain ? "Refrain" : `Stanza ${p.label}`)
                 text p.label font="type.part" color="muted" role="heading" aria-level=2
                 HymnInset(refrain=p.refrain, id=(shown ? p.key : `${p.key}-${page.number}`))
-                  HymnLines(part=p, tag=(shown ? "" : `-${page.number}`))
+                  HymnLines(part=p, tag=(shown ? "" : `-${page.number}`), shown=shown)
 
 // A part's body: the refrain set in, as the current app sets it.
 component HymnInset
@@ -175,31 +192,40 @@ component HymnLines
   props
     part: HymnPart
     tag: string
+    shown: bool
   inject
     readingShown: ReadingView
+    followShown: FollowView
   view
     for l, li in part.lines key=li
-      row flex-wrap="wrap" padding-left=readingShown.indent aria-label=l.text testId=`line-${part.key}-${li + 1}${tag}`
-        for w, wi in l.words key=wi
-          if wi == 0
-            row margin-left=`calc(0px - ${readingShown.indent})`
-              HymnWordText(word=w, refrain=part.refrain)
-          else
-            row
-              HymnWordText(word=w, refrain=part.refrain)
+      SungLine(at=l.at, label=l.text, tag=tag, shown=shown)
+        row flex-wrap="wrap" padding-left=readingShown.indent aria-label=l.text testId=`line-${part.key}-${li + 1}${tag}`
+          for w, wi in l.words key=wi
+            if wi == 0
+              row margin-left=`calc(0px - ${readingShown.indent})`
+                HymnWordText(word=w, refrain=part.refrain, mark=markOf(followShown, shown, l.at), timed=l.timed, counting=followShown.counting, chosen=chosenOf(followShown, shown, l.at, wi))
+            else
+              row
+                HymnWordText(word=w, refrain=part.refrain, mark=markOf(followShown, shown, l.at), timed=l.timed, counting=followShown.counting, chosen=chosenOf(followShown, shown, l.at, wi))
 
 // A word: one text of its syllables, a muted hyphen between two, on one
 // line with its no-break space kept (iOS drops a trailing space and
-// breaks a shrunk word at its hyphens otherwise).
+// breaks a shrunk word at its hyphens otherwise). Under the follow each
+// syllable takes `syllableColour`; a line lit whole takes the soft tint,
+// and the held choice the accent's underline.
 component HymnWordText
   props
     word: HymnWord
     refrain: bool
+    mark: number
+    timed: bool
+    counting: bool
+    chosen: bool
   inject
     readingShown: ReadingView
   view
-    text font="type.line" font-size=readingShown.words line-height=readingShown.line font-family=readingShown.family color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
+    text font="type.line" font-size=readingShown.words line-height=readingShown.line font-family=readingShown.family color=syllableColour(mark, timed, counting, chosen, word.start) background-color=(mark == -3 ? "soft" : "transparent") text-decoration-line=(chosen ? "underline" : "none") font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
       for s, si in word.syllables key=si
         if si > 0
           text "-" color="muted"
-        text s
+        text s color=syllableColour(mark, timed, counting, chosen, word.start + si)

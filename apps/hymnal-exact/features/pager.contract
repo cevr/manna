@@ -121,11 +121,15 @@ members HymnalExact
   // toward a page drawn beside the shown one: a page's own scroll, a
   // diagonal one mostly down among them, and a wheel past the pager's end
   // leave no arm for a later scroll that no gesture made.
+  // A held seek has the words (features/follow.contract): no drag or
+  // wheel arms a turn while it holds, as the current pager's scroll is
+  // off while `holding`.
   action pagerArmed
-    pagerDragging = true
+    if not followNow.holding
+      pagerDragging = true
   action pagerWheeled(e: WheelEvent)
     let at = pagerNumbers.map(n => `${n}`).indexOf(hymnOpen)
-    if max(e.deltaX, 0 - e.deltaX) > max(e.deltaY, 0 - e.deltaY) and ((e.deltaX > 0 and at >= 0 and at < pagerNumbers.length - 1) or (e.deltaX < 0 and at > 0))
+    if not followNow.holding and max(e.deltaX, 0 - e.deltaX) > max(e.deltaY, 0 - e.deltaY) and ((e.deltaX > 0 and at >= 0 and at < pagerNumbers.length - 1) or (e.deltaX < 0 and at > 0))
       pagerDragging = true
   action pagerEnded
     match (pagerDragging ? pagerNumbers.at(0) : none)

@@ -61,6 +61,7 @@ theme
   duration.wheel-out = 160ms
   easing.growth = -exact-spring(632, 50, 1)
   easing.out = cubic-bezier(0.23, 1, 0.32, 1)
+  easing.quad-out = cubic-bezier(0.5, 1, 0.89, 1)
   type.sheet-title = 700 1.6471rem/normal
   type.hymn-title = 700 -exact-title2/normal
   type.hymn-number = 600 -exact-title2/normal
@@ -94,6 +95,17 @@ theme
   size.note-wide: length = 14px
   size.note-high: length = 18px
   line.tile: length = 2px
+  size.beat: length = 8px
+  radius.r4: length = 4px
+  space.beat-rise: length = -18px
+  space.intro-rise: length = -5px
+  line.intro: length = 2px
+  size.marker-wide: length = 3px
+  space.marker-rise: length = -14px
+  radius.r2: length = 2px
+  space.note-drop: length = 18px
+  type.seek-note = 400 0.7647rem/normal
+  size.unseen: length = 1px
   type.key-over = 600 0.5588rem/1.1579
   type.key-face = 700 0.8824rem/1.1333
   type.dial-name = 600 0.6471rem/normal
