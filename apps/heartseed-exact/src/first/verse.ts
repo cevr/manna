@@ -7,7 +7,7 @@
  */
 
 import { parseBibleQuery } from '@manna/core/bible';
-import { FIRST_VERSE, ownPassagesOf } from '@manna/heartseed/first/verse';
+import { FIRST_VERSE } from '@manna/heartseed/first/verse';
 import { verseReference } from '@manna/heartseed/passages';
 import { Option } from 'effect';
 
@@ -24,6 +24,3 @@ export const firstReference = (): string =>
     onNone: () => '',
     onSome: (place) => verseReference(place.book, place.chapter, place.verse),
   });
-
-/** The field's own rows, as the current app's (`ownPassagesOf` over the first verse). */
-export const ownRows = () => ownPassagesOf(firstReference());
