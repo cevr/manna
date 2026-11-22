@@ -39,3 +39,7 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+455902e59d7a move: Heartseed's first minute's words (the welcome's, how a verse grows', each phase's COPY, ONWARD, the pills', the replay's two labels), unchanged, from intro.tsx, screen.tsx, field/screen.tsx and settings/sheet.tsx into first/words.ts
+eb9b55b88936 move: Heartseed's TIPS, unchanged, from field/tips.tsx into field/tip-words.ts, re-exported from tips.tsx
+23a45d9b24ef move: Heartseed's first verse's query and the field's own row (PASSAGES), unchanged, from vite/passage.ts and app/index.tsx into first/verse.ts
+0529e37d91dd exports: Heartseed's exports lines ./first/tour, ./first/growth, ./first/words, ./first/verse, ./field/tips and the declarations for them and for flow's reducer; no source changes
