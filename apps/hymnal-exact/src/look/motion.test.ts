@@ -126,6 +126,7 @@ const HAPTICS: ReadonlyArray<{
   { action: 'playerCounted', when: 'if playerClick', cues: [{ _tag: 'beat', accent: false }] },
   { action: 'scrolled', when: 'if i != at', cues: [detent('tempo')] },
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'downloadsAsk', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'readingFontChoose', when: '', cues: [cues.plain('choose')] },

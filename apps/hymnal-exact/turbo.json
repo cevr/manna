@@ -17,7 +17,8 @@
         "test:keys",
         "test:tuner",
         "test:about",
-        "test:tempo"
+        "test:tempo",
+        "test:offline"
       ],
       "outputs": []
     },
@@ -185,6 +186,16 @@
         "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
         "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+      ]
+    },
+    "test:offline": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**"
       ]
     }
   }
