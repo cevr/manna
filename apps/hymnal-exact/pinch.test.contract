@@ -1,0 +1,19 @@
+// Two fingers between the home list and All at once, as the current app's
+// home/pinch.ts: a pinch in on the list zooms out to the tiles, a pinch out
+// on them zooms back to the list where it stood. The driver's pinch is two
+// touches spread about the node's middle (`tap … pinch <scale>`), heard by
+// the `pinch` hatch on the list's column (modules/web/index.js).
+test "A pinch in shows the tiles, a pinch out the list"
+  clock settle
+  clock data
+  expect tree has "hymn-list"
+  tap "hymn-list" pinch 0.7
+  clock settle
+  clock data
+  expect state find.tiles == true
+  expect tree has "tiles"
+  tap "tiles" pinch 1.4
+  clock settle
+  clock data
+  expect state find.tiles == false
+  expect tree missing "tiles"
