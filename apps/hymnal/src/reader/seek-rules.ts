@@ -15,6 +15,14 @@ import { Array as Arr, Data, Option } from 'effect';
 
 import type { SeekTarget, SeekTargets } from '../follow/seek-targets';
 
+export {
+  initialTarget,
+  type SeekTarget,
+  type SeekTargets,
+  targetAt,
+  targetsOf,
+} from '../follow/seek-targets';
+
 /** How long a still hold takes before it pauses and chooses, in milliseconds. */
 export const HOLD_MS = 350;
 /** How far a finger may move, in points, before the hold takes; past it, the touch is a scroll or a page turn. */

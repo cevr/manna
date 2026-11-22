@@ -13,11 +13,11 @@ export interface Intro {
   readonly left: number;
 }
 
-/** The intro at place `at` (ms) of a hymn whose first line is sung at `first` ms: some only before it, when the hymn has an intro (`first` > 0). */
-export const introAt = (first: number, at: Option.Option<number>): Option.Option<Intro> =>
-  at.pipe(
-    Option.filter((ms) => first > 0 && ms < first),
-    Option.map((ms) => ({ share: Math.max(0, ms) / first, left: first - Math.max(0, ms) })),
+/** The intro at place `ms` of a hymn whose first line is sung at `first` ms: some only before it, when the hymn has an intro (`first` > 0). */
+export const introAt = (first: number, ms: number): Option.Option<Intro> =>
+  Option.some(ms).pipe(
+    Option.filter((at) => first > 0 && at < first),
+    Option.map((at) => ({ share: Math.max(0, at) / first, left: first - Math.max(0, at) })),
   );
 
 /** The intro's value as a screen reader reads it: whole percent played, whole seconds left. */

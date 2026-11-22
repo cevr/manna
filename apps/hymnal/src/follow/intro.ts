@@ -27,7 +27,7 @@ export const introOf = (number: number, first: number, state: Player): Option.Op
     Stopped: () => Option.none<number>(),
     Failed: () => Option.none<number>(),
   });
-  return introAt(first, at);
+  return Option.flatMap(at, (ms) => introAt(first, ms));
 };
 
 /** The place in ms of a held track, when it is hymn `number`. */
