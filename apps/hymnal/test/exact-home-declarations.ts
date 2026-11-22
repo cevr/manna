@@ -37,6 +37,7 @@ export const held = {
     tilesFor: tabs.tilesFor satisfies typeof Tabs.tilesFor,
     tileCount: tabs.tileCount satisfies typeof Tabs.tileCount,
     tileName: tabs.tileName satisfies typeof Tabs.tileName,
+    groupAt: tabs.groupAt satisfies typeof Tabs.groupAt,
   },
   opening: { openingAt: opening.openingAt } satisfies typeof Opening,
   lists: {
