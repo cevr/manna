@@ -72,3 +72,4 @@ cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept 
 ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own
 38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
 69444068fb50 refactor: Move back's Exit-to-answer rule moved unchanged from back.tsx into bar.ts (answerOf), for the port's model test; same values, no picture change
+dcf2f0a97bb4 types: answerOf declared in exact/garden-bar.d.ts and held to its source by scripts/exact-declared.test.ts; no source changes
