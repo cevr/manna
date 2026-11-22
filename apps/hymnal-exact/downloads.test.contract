@@ -76,6 +76,14 @@ test "Cancel stops the saves and keeps the whole ones; Delete, once confirmed, e
   clock data
   expect state downloads.saved == 0
   expect state downloads.sizeText == "0 saved · 0.00 MB"
+  clock +1000 real
+  expect no failures
+  reload
+  clock data
+  clock settle
+  clock +1000 real
+  clock data
+  expect state downloads.saved == 0
 
 test "A cut-off body is not saved, and Download all tries it again"
   at "/settings"
