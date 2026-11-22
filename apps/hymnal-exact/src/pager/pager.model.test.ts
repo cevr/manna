@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noThrowStatement, effect/noNewError -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so the model branches plainly; a step past the generated readers is the test's own defect. */
+/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so the model branches plainly. */
 
 /**
  * The pager, model-based. Generated readers open a hymn from a home list,

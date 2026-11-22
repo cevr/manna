@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noTernary, effect/noUnknownParameters, node/no-process-env, eslint/no-await-in-loop -- a host script that drives the built app through `bun run exact agent`, one run at a time, reads its untyped JSON replies by the fields it checks, and compares its screenshots frame by frame. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters, node/no-process-env, eslint/no-await-in-loop -- a host script that drives the built app through `bun run exact agent`, one run at a time, reads its untyped JSON replies by the fields it checks, and compares its screenshots frame by frame. */
 
 /**
  * The hymn pager in the built app (`features/pager.contract`), as a reader
@@ -16,6 +16,8 @@
  *   chord a neighbour draws under a shared id is not on the shown page.
  * - On the web the back control is a chevron and the word "Hymns", as the
  *   current hymnal's web header (`WebStackHeader`).
+ * - Launched at `/hymns/100`, the app draws hymn 100's page alone, lays it
+ *   out in the port and paints it as hymn 100 pressed in a search paints.
  * - At the largest text (root 53 px) hymn 100's title wraps between its
  *   words and breaks only a word longer than its line, as UIKit breaks the
  *   current hymnal's: the shot is kept for a look.
@@ -196,7 +198,59 @@ drive.check(
 
 const largest = await drive.run(
   [...flags('pager-largest'), '--url', '/hymns/100'],
-  ['prefer root-font-size 53', 'clock data', 'clock settle', 'clock data', shot('largest-100')],
+  [
+    'clock data',
+    'clock settle',
+    'clock data',
+    'clock +300 real',
+    'layout hymn-pager',
+    'layout hymn-page',
+    shot('opened-100'),
+    'prefer root-font-size 53',
+    'clock settle',
+    'clock +300 real',
+    'layout hymn-page',
+    shot('largest-100'),
+    'state pagerNumbers',
+  ],
+);
+drive.check(
+  'a hymn the app is launched at draws its page alone (the host paints the page before it otherwise)',
+  JSON.stringify((largest[12] as { value?: unknown } | undefined)?.value ?? largest[12]).includes(
+    '[100]',
+  ),
+  largest[12],
+);
+const xOf = (reply: unknown) =>
+  (reply as { node?: { space?: { viewport?: { x?: number } } } } | undefined)?.node?.space?.viewport
+    ?.x ?? Number.NaN;
+const port = xOf(largest[4]);
+const opened = [xOf(largest[5]), xOf(largest[10])];
+drive.check(
+  'a hymn opened by its address lays out its own page in the port, at the default and the largest text',
+  opened.every((x) => Math.abs(x - port) < 1),
+  { port, opened },
+);
+await drive.run(flags('pager-pressed'), [
+  'clock data',
+  'clock settle',
+  'tap find-search',
+  'clock settle',
+  'clock data',
+  'type search 100',
+  'clock settle',
+  'clock data',
+  'tap hymn-100',
+  'clock settle',
+  'clock data',
+  'clock +300 real',
+  shot('pressed-100'),
+]);
+const paintedApart = await changedPixels(shotFile('opened-100'), shotFile('pressed-100'));
+drive.check(
+  'a hymn opened by its address paints its own page, as the same hymn pressed in a search does',
+  paintedApart <= SAME,
+  { paintedApart },
 );
 drive.check(
   'hymn 100 at the largest text drawn for a look',
