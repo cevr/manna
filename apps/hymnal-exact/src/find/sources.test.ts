@@ -3,9 +3,10 @@
 /**
  * Finding's sources as the data module runs them: every call of
  * `findStep`, of any kind and any arguments, answers inside the data host;
- * the tiles' answer is every hymn's number and nothing else, under 4 KB,
- * and nothing asks it until the tiles show (the view asks it on a state
- * the tiles' first show sets, `findTilesAsked` in `features/find.contract`).
+ * the tiles' answer is a tile a group of the tab asked, small for every
+ * tab, and nothing asks it until the tiles show (the view asks it on a
+ * state the tiles' first show sets, `findTilesAsked` in
+ * `features/find.contract`); the drums' row answers for every tab.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -68,18 +69,30 @@ describe('finding’s sources', () => {
     });
   });
 
-  test('the tiles’ answer is every hymn’s number alone, under 4 KB, asked by no other call', () => {
+  test('the tiles’ answer is one tile a group, under 64 KB for every tab (Metres, 223 groups, the most), asked by no other call', () => {
     const counts = { tiles: 0 };
     const sources = findSources(book, counts);
     sources.findStep(['screen', '/', 0, 0]);
     sources.findStep(['tilesShow', '', 0, 0]);
     sources.findStep(['tilesDone', '', 0, 0]);
+    sources.findFollowRow(['Sections', 100, [], []]);
     expect(counts.tiles).toBe(0);
-    const tiles = withDataHost(() => sources.findTiles());
-    expect(counts.tiles).toBe(1);
-    expect(tiles).toEqual(book.hymns.map((hymn) => hymn.number));
-    expect(JSON.stringify(tiles)).toMatch(/^\[\d+(,\d+)*\]$/u);
-    expect(new TextEncoder().encode(JSON.stringify(tiles)).length).toBeLessThan(4096);
+    for (const tab of ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture']) {
+      const tiles = withDataHost(() => sources.findGroupTiles([tab, [3, 100], [5, 100, 2], 100]));
+      expect(tiles.length).toBeGreaterThan(0);
+      expect(new TextEncoder().encode(JSON.stringify(tiles)).length).toBeLessThan(65536);
+    }
+    expect(counts.tiles).toBe(5);
+    expect(withDataHost(() => sources.findGroupTiles(['Nonsense', [], [], 0]))).toEqual([]);
+  });
+
+  test('inside the data host, the drums’ row answers for every tab and number', () => {
+    const sources = findSources(book);
+    withDataHost(() => {
+      expect(sources.findFollowRow(['Sections', 100, [], []])).toEqual({ row: 'hymn-100' });
+      expect(sources.findFollowRow(['Lists', 100, [], []])).toEqual({ row: '' });
+      expect(sources.findFollowRow(['Lists', 100, [100], [100]])).toEqual({ row: 'hymn-100' });
+    });
   });
 
   test('the bar’s and the drums’ places are the current app’s measures', () => {

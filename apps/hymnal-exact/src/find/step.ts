@@ -83,7 +83,6 @@ export type Input =
   | { readonly kind: 'open' }
   | { readonly kind: 'tilesShow' }
   | { readonly kind: 'tilesDone' }
-  | { readonly kind: 'tile'; readonly n: number }
   | { readonly kind: 'pinchBegin' }
   | { readonly kind: 'pinch'; readonly scale: number; readonly velocity: number }
   | { readonly kind: 'wheel'; readonly deltaY: number };
@@ -194,9 +193,6 @@ const dialled = (state: State, input: Input): State => {
     case 'tilesDone':
       if (!tilesShown(state) || state.drums) return state;
       return { ...state, tiles: Tiles.Hidden() };
-    case 'tile':
-      if (!tilesShown(state) || state.drums || held(input.n) !== input.n) return state;
-      return chose(state, input.n);
     default:
       return state;
   }

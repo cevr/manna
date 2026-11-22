@@ -19,3 +19,12 @@ d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept;
 954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
 9aa9fb892a0a exports: one exports line in apps/hymnal/package.json (./reader/pager); no source changes
 6a46e22a8ffb merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+4d1d848cefff exports: one exports line in apps/hymnal/package.json (./reader/rows); no source changes
+1aacd1c5995b move: All at once's tilesOf call over the playing number, unchanged, from AllAtOnce.tsx into home/tabs.ts's tilesFor; its declaration and held line in exact-home-declarations.ts
+7502f91cf966 move: a tile's count words and VoiceOver name, unchanged, from AllAtOnce.tsx's TileView into home/tabs.ts (tileCount, tileName); their declarations and held lines
+6fcb95e808aa test: exact-find-declarations.ts holds the port's new rows and foundOffset declarations; no source changes
+b1dde6a90fa5 declaration: tilesOf declared in exact/home/tabs.d.ts for the port's test, and a note in exact-home-declarations.ts; no source changes
+221c69843541 move: meaning search's rule, unchanged, from hymns/meaning.ts into hymns/meaning-rule.ts over a table it is handed; meaning.ts keeps every export over the shipped table
+dc8efe8b2473 exports: one exports line in apps/hymnal/package.json (./hymns/meaning-rule); no source changes
+a8d2ca532f2e test: exact-find-declarations.ts holds the port's meaning-rule declaration; no source changes
+3f538c9e0248 merge: origin/main into hymnapp/par-hy-results: apps/hymnal/package.json's exports lines of both sides kept, and the listed moves of both sides; no source changes of its own

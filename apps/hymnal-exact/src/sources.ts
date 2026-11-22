@@ -18,6 +18,7 @@ import { listSources } from './list/sources.ts';
 import { pagerSources } from './pager/sources.ts';
 import { originOf, playerSources } from './player/sources.ts';
 import { railSources } from './rail/sources.ts';
+import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
 
 export const sourcesAt = (
@@ -35,4 +36,5 @@ export const sourcesAt = (
   ...railSources(book),
   ...abouthymnSources(book),
   ...pagerSources(book),
+  ...resultsSources(),
 });

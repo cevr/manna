@@ -28,6 +28,7 @@ describe('the shipped book is the current app’s', () => {
       compiled.map((hymn) => ({
         number: hymn.number,
         title: hymn.title,
+        line: '',
         section: topicName(hymn.number),
       })),
     );

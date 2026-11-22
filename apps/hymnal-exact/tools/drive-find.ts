@@ -32,6 +32,12 @@
  *   over its syllable (60 ms after the page shows); under Reduce Motion the
  *   drums and the tiles are at scale 1 throughout. A closed exit and a
  *   reopen leave one drums, open.
+ * - All at once is the current app's group tiles: `tree --ax` reads each a
+ *   button named by its group and count, two stand to a row, and a tile's
+ *   tap lands its group's header at the list's top with its first row under
+ *   it; dialling a number at home brings its row into view; a hymn found by
+ *   a line shows it under its title in a taller row, VoiceOver reading it
+ *   last, and at the largest text the row grows with both lines, unclipped.
  *
  * A transform in flight reads at its end on iOS, so iOS reads the end
  * values and films the drums, the tiles, the bar and the chords under
@@ -641,6 +647,138 @@ if (host === 'web') {
       end: frameOf(chordAt('chord-end')).frame,
     },
   );
+
+/** A frame from a layout reply, or none. */
+const frame = (reply: unknown) => frameOf(reply).frame;
+
+/** Each node of a `tree --ax` reply whose testId starts with `prefix`: its role and name. */
+const axOf = (reply: unknown, prefix: string) =>
+  (
+    (
+      reply as
+        | { ax?: { elements?: Array<{ testId?: string; role?: string; name?: string }> } }
+        | undefined
+    )?.ax?.elements ?? []
+  ).filter((each) => each.testId?.startsWith(prefix) && !each.testId.includes('-count-'));
+
+const grouped = named([
+  'clock data',
+  'tap tiles-show',
+  'clock data',
+  'clock settle',
+  ['tiles-ax', 'tree --ax'],
+  ['tile-0', 'layout group-tile-0'],
+  ['tile-1', 'layout group-tile-1'],
+  ['list-before', 'layout hymn-1'],
+  'tap group-tile-3',
+  'clock settle',
+  ['tiles-after', 'tree'],
+  ['list', 'layout hymn-list'],
+  ['header', 'layout section-opening-of-worship-row'],
+  ['landed', 'layout hymn-59'],
+  'tap find-number',
+  'clock settle',
+  'type drum-hundreds "4"',
+  'clock data',
+  'clock settle',
+  ['followed', 'layout hymn-400'],
+  ['followed-list', 'layout hymn-list'],
+  'tap drums-hash',
+  'clock settle',
+  'tap find-search',
+  'clock settle',
+  'clock data',
+  'type search "river"',
+  'clock settle',
+  'clock data',
+  ['found-title', 'layout hymn-74'],
+  ['found-line', 'layout hymn-530'],
+  ['found-line-text', 'layout row-line-530'],
+  ['found-ax', 'tree --ax'],
+  'prefer root-font-size 53',
+  'clock settle',
+  ['large-title', 'layout hymn-74'],
+  ['large-line', 'layout hymn-530'],
+  ['large-line-text', 'layout row-line-530'],
+  shot('found-largest'),
+]);
+const groupedRun = await launch('find-groups', grouped.ops);
+const g = (name: string) => grouped.reply(groupedRun, name);
+const tileAx = axOf(g('tiles-ax'), 'group-tile-');
+drive.check(
+  'All at once reads each tile as a button named by its group, its count and no number tile',
+  tileAx.length > 10 &&
+    tileAx.every(
+      (each) => /hymns?$/u.test(each.name ?? '') && (each.role ?? '').includes('button'),
+    ) &&
+    countIn(g('tiles-ax'), 'tile-1') === 0,
+  tileAx.slice(0, 3).map((each) => ({ role: each.role, name: each.name })),
+);
+const [tile0, tile1] = [frame(g('tile-0')), frame(g('tile-1'))];
+drive.check(
+  'the tiles stand two to a row, side by side, of one width',
+  tile0 !== undefined &&
+    tile1 !== undefined &&
+    Math.abs(tile0.y - tile1.y) < 1 &&
+    tile1.x > tile0.x + tile0.w &&
+    Math.abs(tile0.w - tile1.w) < 1,
+  { tile0, tile1 },
+);
+const [list, header, landed] = [frame(g('list')), frame(g('header')), frame(g('landed'))];
+drive.check(
+  'a tile’s tap closes the tiles and lands its group’s header at the list’s top, its first row under it',
+  countIn(g('tiles-after'), 'tiles') === 0 &&
+    list !== undefined &&
+    header !== undefined &&
+    landed !== undefined &&
+    Math.abs(header.y - list.y) <= 1 &&
+    Math.abs(landed.y - (header.y + header.h)) <= 1,
+  { list, header, landed },
+);
+const [followed, followedList] = [frame(g('followed')), frame(g('followed-list'))];
+drive.check(
+  'dialling 400 at home brings hymn 400’s row into the list’s view',
+  followed !== undefined &&
+    followedList !== undefined &&
+    followed.y >= followedList.y - 1 &&
+    followed.y + followed.h <= followedList.y + followedList.h,
+  { followed, followedList },
+);
+const [plain, lined, lineText] = [
+  frame(g('found-title')),
+  frame(g('found-line')),
+  frame(g('found-line-text')),
+];
+const foundAx = axOf(g('found-ax'), 'hymn-530');
+drive.check(
+  'a hymn found by a line shows that line under its title, the row taller than one found by its title, and VoiceOver reads the line last',
+  plain !== undefined &&
+    lined !== undefined &&
+    lineText !== undefined &&
+    lined.h > plain.h + 10 &&
+    lineText.y + lineText.h <= lined.y + lined.h &&
+    (foundAx[0]?.name ?? '').startsWith('530, ') &&
+    (foundAx[0]?.name ?? '').split(', ').length >= 3,
+  { plain, lined, lineText, name: foundAx[0]?.name },
+);
+const [largePlain, largeLined, largeLine] = [
+  frame(g('large-title')),
+  frame(g('large-line')),
+  frame(g('large-line-text')),
+];
+drive.check(
+  'at the largest text the found row grows with its two lines, the line inside it, nothing clipped',
+  largePlain !== undefined &&
+    largeLined !== undefined &&
+    largeLine !== undefined &&
+    plain !== undefined &&
+    lined !== undefined &&
+    largeLined.h > lined.h * 2 &&
+    largeLined.h > largePlain.h &&
+    largeLine.y >= largeLined.y &&
+    largeLine.y + largeLine.h <= largeLined.y + largeLined.h + 0.5,
+  { largePlain, largeLined, largeLine },
+);
 
 if (host === 'ios') {
   const film = (name: string) => `screenshot ${join(shots, `ios-${name}.png`)} over 600 every 50`;
