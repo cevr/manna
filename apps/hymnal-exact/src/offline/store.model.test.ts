@@ -304,15 +304,43 @@ type Detail =
 /** The fetches out, by identity, in the order they were asked. */
 const outOf = (ids: Iterable<Identity>) => [...ids].map(keyOf);
 
-const history = (cache: Cache, seed: number) =>
+/** A seeded history of `STEPS` acts. */
+const randomActs = (seed: number): ReadonlyArray<Act> => {
+  const random = seeded(seed);
+  return Array.from({ length: STEPS }, () => actOf(random));
+};
+
+const OUTCOMES = ['finish', 'fail', 'cut', 'empty'] as const;
+const RELAUNCHES = ['none', 'mid-fetch', 'after-landing'] as const;
+
+/**
+ * One witness for each key offset × how its fetch lands × where a relaunch
+ * falls: a save asked, the module dying while it is out or once it landed
+ * (or not at all), its fetch landing, then the same save asked again and
+ * landing whole, so each cross-product is walked once whatever the seeds
+ * draw.
+ */
+const witnesses = [...new Set(OFFSETS)].flatMap((offset) =>
+  OUTCOMES.flatMap((outcome) =>
+    RELAUNCHES.map((relaunch) => {
+      const id = { number: offset === 14 ? 663 : 3, offset };
+      const acts: Array<Act> = [{ _tag: 'enqueue', id }];
+      if (relaunch === 'mid-fetch') acts.push({ _tag: 'relaunch' });
+      acts.push({ _tag: outcome, at: 0 });
+      if (relaunch === 'after-landing') acts.push({ _tag: 'relaunch' });
+      acts.push({ _tag: 'enqueue', id }, { _tag: 'finish', at: 0 });
+      return { name: `${offset}×${outcome}×${relaunch}`, acts };
+    }),
+  ),
+);
+
+const history = (cache: Cache, seed: number | string, script: ReadonlyArray<Act>) =>
   Effect.gen(function* () {
-    const random = seeded(seed);
     const current = yield* currentOf(cache);
     const port = portOf(false);
     port.ask({ _tag: 'launch' });
     const acts: Array<Act> = [];
-    for (let index = 0; index < STEPS; index += 1) {
-      const act = actOf(random);
+    for (const act of script) {
       acts.push(act);
       const fail = (rule: string, detail: Detail) => {
         throw new Error(JSON.stringify({ rule, seed, acts, detail }));
@@ -409,7 +437,7 @@ describe('the saved recordings, as the current app’s cache', () => {
       Effect.forEach(
         seeds,
         (seed) =>
-          Effect.map(history(cache, seed), (acts) => {
+          Effect.map(history(cache, seed, randomActs(seed)), (acts) => {
             for (const act of acts) seen.add(act._tag);
           }),
         { discard: true },
@@ -426,6 +454,16 @@ describe('the saved recordings, as the current app’s cache', () => {
       'finish',
       'relaunch',
     ]);
+  });
+
+  it('holds each key offset × fetch landing × relaunch witness to the cache', async () => {
+    const cache: Cache = await import('@manna/hymnal-app/offline/cache');
+    await Effect.runPromise(
+      Effect.forEach(witnesses, ({ name, acts }) => history(cache, name, acts), {
+        discard: true,
+      }).pipe(Effect.provideService(References.MinimumLogLevel, 'None')),
+    );
+    expect(witnesses.length).toBe(new Set(OFFSETS).size * OUTCOMES.length * RELAUNCHES.length);
   });
 
   it('never fetches one identity twice at once nor publishes a part, as a cancelled fetch settles late and a launch dies after a body', () => {
