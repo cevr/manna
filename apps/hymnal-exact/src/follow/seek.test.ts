@@ -5,7 +5,9 @@
  * `features/follow.contract` sends them) against the current app's held
  * seek rules (`reader/seek-rules.ts`, `follow/seek-targets.ts`, imported):
  * over generated gestures on hymns and places read from the current app's
- * bundled timing at run time, under generated stanza choices, while the
+ * bundled timing at run time (words and syllables kept), or from the port's
+ * own bundled timing (lines only, as the phone has it today), under
+ * generated stanza choices, while the
  * player plays the page's hymn. A press that moves past `SLOP` before
  * `HOLD_MS` takes nothing; a still one takes the hold at the sounding place
  * (`initialTarget`) and asks the player to pause; each move holds the
@@ -38,8 +40,17 @@ import { book } from '../hymns/book.ts';
 import { type Random, below, pick, seeded } from '../test/random.ts';
 import { type FollowView, followDesk } from './follow.ts';
 
-const timing = new Map(readTiming());
-const hymns = book.hymns.filter((hymn) => timing.has(hymn.number));
+const full = new Map(readTiming());
+/** Each line kept to its flags, start and length, as `tools/timing.ts` bundles it for the phone (its `linesOnly`, which writes the bundle when imported). */
+const lineTiming = (encoded: string): string => {
+  const [head = '', body = ''] = encoded.split('|');
+  return `${head}|${body
+    .split(';')
+    .map((line) => line.split(',').slice(0, 3).join(','))
+    .join(';')}`;
+};
+const linesOnly = new Map([...full].map(([number, encoded]) => [number, lineTiming(encoded)]));
+const hymns = book.hymns.filter((hymn) => full.has(hymn.number));
 const CASES = 300;
 
 interface Gesture {
@@ -50,11 +61,12 @@ interface Gesture {
   readonly early: number;
   readonly moves: ReadonlyArray<readonly [number, number]>;
   readonly away: boolean;
+  readonly lines: boolean;
 }
 
 const gestureOf = (random: Random): Gesture => {
   const hymn = pick(random, hymns);
-  const decoded = timelineOf(timing.get(hymn.number) ?? '');
+  const decoded = timelineOf(full.get(hymn.number) ?? '');
   const end = decoded._tag === 'Some' ? decoded.value.end : 1000;
   const stanzas = hymn.sections.filter((section) => section.kind === 'stanza').length;
   return {
@@ -68,6 +80,7 @@ const gestureOf = (random: Random): Gesture => {
       below(random, 400) - 200,
     ]),
     away: random() < 0.15,
+    lines: random() < 0.35,
   };
 };
 
@@ -75,7 +88,7 @@ const run = (seed: number): string => {
   const random = seeded(seed);
   const gesture = gestureOf(random);
   const hymn = book.hymns.find((each) => each.number === gesture.hymn);
-  const decoded = timelineOf(timing.get(gesture.hymn) ?? '');
+  const decoded = timelineOf((gesture.lines ? linesOnly : full).get(gesture.hymn) ?? '');
   if (hymn === undefined || decoded._tag === 'None') return 'none';
   const timeline = decoded.value;
   const desk = followDesk((number) => (number === hymn.number ? { hymn, timeline } : undefined));
