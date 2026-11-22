@@ -9,7 +9,10 @@
  * (`LONG_SECONDS`), so a stanza choice has lines to cut. Both are digital
  * silence (every sample at rest), so nothing a test plays can sound. Hymn
  * `MISSING_HYMN` has no recording: 404, as the bucket answers a key it
- * does not hold; hymn `SLOW_HYMN`'s is served late. `bun tools/recordings.ts --port` prints this checkout's
+ * does not hold; so has every hymn's recording a semitone down
+ * (`REFUSED_SET`), for the player's fall back to the printed key; every
+ * other key's set is served as the printed one. Hymn `SLOW_HYMN`'s is
+ * served late. `bun tools/recordings.ts --port` prints this checkout's
  * own port (`checkoutPort`), the one its drives use.
  */
 
@@ -21,6 +24,8 @@ export const SHORT_SECONDS = 6;
 export const LONG_HYMN = 2;
 export const LONG_SECONDS = 240;
 export const MISSING_HYMN = 13;
+/** The key set the fixture holds none of: a semitone down from the first set (`keySet('warm-1', -1)`). */
+export const REFUSED_SET = 'warm-1-down1';
 /** Hymn `SLOW_HYMN`'s recording is served `SLOW_MS` late, so a test sees the player wait on its load (player.test.contract). */
 export const SLOW_HYMN = 4;
 export const SLOW_MS = 3000;
@@ -61,10 +66,10 @@ export const silence = (seconds: number): Uint8Array => {
 const short = silence(SHORT_SECONDS);
 const long = silence(LONG_SECONDS);
 
-/** The hymn a key names, when it is a recording's key. */
+/** The hymn a key names, when it is a recording's key of a set the fixture holds. */
 const hymnOf = (path: string): number | undefined => {
-  const found = /^\/audio\/[a-z0-9-]+\/sdah\/([1-9]\d*)\.mp3$/u.exec(path);
-  return found === null ? undefined : Number(found[1]);
+  const found = /^\/audio\/([a-z0-9-]+)\/sdah\/([1-9]\d*)\.mp3$/u.exec(path);
+  return found === null || found[1] === REFUSED_SET ? undefined : Number(found[2]);
 };
 
 const CORS = {

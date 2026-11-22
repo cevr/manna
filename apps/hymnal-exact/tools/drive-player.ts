@@ -14,7 +14,8 @@
  * - the fixture down: Play fails, the bar says the recording needs a
  *   connection and offers Try again; the fixture up: Try again plays;
  * - a hymn with no recording (the fixture's 404) says so and offers no Play;
- * - a stanza choice is kept as it is made, and survives a relaunch with
+ * - a stanza choice, a tempo, Intro off and Click on are kept as they are
+ *   made, and survive a relaunch with
  *   kept storage. On the web, a first run whose browser was killed before
  *   it wrote its store (`onDisk`) is run once more, and says so;
  * - a drag held in two moves shows the drag and sends no seek until it is
@@ -23,7 +24,9 @@
  *   delay to the first tick, and the skip's, printed as `measure`);
  * - in dark, the page's Play, the player's toggle and a chosen chip read
  *   their label at 4.5:1 on their fill, from a screenshot's pixels;
- * - with Settings open, the dock is not in the accessibility tree.
+ * - with Settings open, the dock is not in the accessibility tree;
+ * - under Reduce Motion the sheet names the tempo dial and its value, Reset,
+ *   Tap, All, Intro and Click, each with the current app's hint.
  *
  * The fixture listens on this checkout's own port (`checkoutPort`), so
  * drives in two checkouts never share one. The build reads the fixture's
@@ -293,7 +296,7 @@ check(
   { missingPhase, missingSaid, missingToggle },
 );
 
-const CHOICE = `${LONG_HYMN}:1.3`;
+const CHOICE = `${LONG_HYMN}:1.3,${LONG_HYMN}@80`;
 const chooseOps = [
   'clock data',
   'clock settle',
@@ -308,8 +311,16 @@ const chooseOps = [
   'clock data',
   'tap stanza-4',
   'clock data',
+  'type dial-tempo-value 6',
+  'clock data',
+  'tap start-click',
+  'clock settle',
+  'tap start-intro',
+  'clock data',
   'clock settle',
   'state playerKept',
+  'state playerIntro',
+  'state playerClick',
   shot('stanzas'),
 ];
 
@@ -351,6 +362,7 @@ if (
 const chosen = replyTo(chooseOps, chose, 'state playerKept');
 check('a stanza choice is kept as it is made', chosen === CHOICE, chosen);
 const keptOps = [
+  'prefer prefers-reduced-motion reduce',
   'clock data',
   'state playerKept',
   'clock settle',
@@ -363,12 +375,53 @@ const keptOps = [
   'clock settle',
   'state player.chips',
   'state player.total',
+  'state playerIntro',
+  'state playerClick',
+  'state player.tempo.said',
+  'state player.rate',
+  'tree --ax',
+  'tree dial-tempo-value',
   shot('relaunched'),
 ];
 const kept = await quietRun(['--storage', store, '--keep-storage'], `/hymns/${LONG_HYMN}`, keptOps);
 const keptChoice = replyTo(keptOps, kept, 'state playerKept');
 const chips = replyTo(keptOps, kept, 'state player.chips');
 const total = replyTo(keptOps, kept, 'state player.total');
+const start = [
+  replyTo(chooseOps, chose, 'state playerIntro'),
+  replyTo(chooseOps, chose, 'state playerClick'),
+  replyTo(keptOps, kept, 'state playerIntro'),
+  replyTo(keptOps, kept, 'state playerClick'),
+];
+const pace = [
+  replyTo(keptOps, kept, 'state player.tempo.said'),
+  replyTo(keptOps, kept, 'state player.rate'),
+];
+check(
+  'a relaunch keeps the tempo (80 %, the element at 0.8), Intro off and Click on',
+  JSON.stringify(start) === JSON.stringify([false, true, false, true]) &&
+    JSON.stringify(pace) === JSON.stringify(['80%', 0.8]),
+  { start, pace },
+);
+const sheetAx =
+  JSON.stringify(replyTo(keptOps, kept, 'tree --ax')) +
+  JSON.stringify(replyTo(keptOps, kept, 'tree dial-tempo-value'));
+const SAID = [
+  'Tempo',
+  '80%',
+  'Reset tempo',
+  'Back to 100%',
+  'Tap four times at the beat to set the tempo',
+  'quarter note = ',
+  'Sings every stanza again',
+  'Intro',
+  'Click',
+];
+check(
+  'under Reduce Motion the sheet names the dial, its value, Reset, Tap, All, Intro and Click with their hints',
+  SAID.every((words) => sheetAx.includes(words)),
+  SAID.filter((words) => !sheetAx.includes(words)),
+);
 check(
   'a stanza choice survives a relaunch with kept storage',
   keptChoice === CHOICE &&
