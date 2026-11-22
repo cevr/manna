@@ -165,7 +165,7 @@ component ChordsPairs
             text b.chord font="type.chord" font-size=readingShown.chords line-height=readingShown.chordLine font-family=readingShown.family color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline" testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
           else
-            link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=`${b.chord}, shows how to play it` testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
+            link href=path("chord", `${chords.number}`, `${chords.code}_${b.grip}`) aria-label=b.chord aria-description="Shows how to play it" testId=`chord-${k}-${line.at}-${word.at + bi}${tag}`
               animation=(motionStill ? "hy-fade-in duration.fade easing.out both" : "hy-fade-in duration.fade easing.out both")
               text b.chord font="type.chord" font-size=readingShown.chords line-height=readingShown.chordLine font-family=readingShown.family color="chord" white-space="pre" padding-right="space.s6" padding-bottom="-exact-hairline"
         row
