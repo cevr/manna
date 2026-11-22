@@ -3,8 +3,11 @@
 /**
  * Today's hold while the voice reads, driven through `@manna/exact-kit/drive`
  * on the host named (`bun tools/drive-today.ts web|ios`), under the full
- * text: a hold on the fifth word dragged to the eighth reads on from the
- * eighth, every word keeping its name for the screen reader; at the largest
+ * text: first the proof the iOS sweep runs first (a hold then a 40 pt drag,
+ * a still hold, a drag begun before the hold); then a hold on the fifth word
+ * dragged to the eighth marks the eighth while held (read under the finger,
+ * `during`) and reads on from it, every word keeping its name for the screen
+ * reader; at the largest
  * text (root 53 px) a hold on the verse's last word, brought into view,
  * reads on from it and nothing of Today is clipped; under Reduce Motion a
  * hold on the fifth word reads on from it. On the web a held drag is driven
@@ -137,16 +140,32 @@ drive.check(
   swiped,
 );
 
+const DRAG = `tap word-4 drag to word-7${pointer} press 400 over 160 hold 16 during "layout word-7" "layout word-4"`;
 const dragged = await run(flagsOf('drag'), [
   ...SETTLE,
   'state today.words.length',
   'tree --ax',
   ...HEAR,
-  `tap word-4 drag to word-7${pointer} press 400 over 160 hold 16`,
+  DRAG,
   ...LANDED,
   ...READ,
   'tree --ax',
 ]);
+const fillsHeld = (
+  (
+    dragged(DRAG) as
+      | { during?: ReadonlyArray<{ node?: { style?: Record<string, { value?: string }> } }> }
+      | undefined
+  )?.during ?? []
+).map((read) => read.node?.style?.background_color?.value ?? '');
+drive.check(
+  'while held after the drag, the eighth word wears the hearing fill and the fifth none',
+  fillsHeld.length === 2 &&
+    fillsHeld[0] !== 'rgba(0, 0, 0, 0)' &&
+    fillsHeld[0] !== '' &&
+    fillsHeld[1] === 'rgba(0, 0, 0, 0)',
+  fillsHeld,
+);
 const words = Number(dragged('state today.words.length') ?? 0);
 const last = Math.max(0, words - 1);
 drive.check(`the passage has more than eight words (${words})`, words > 8, words);

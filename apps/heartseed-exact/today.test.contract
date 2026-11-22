@@ -150,7 +150,7 @@ test "A hold on the fifth word while the second is read, lifted there, reads on 
   expect state today.lit >= 1
   expect state today.lit <= 2
   expect state todayUtterance == "utterance-1"
-  tap "word-4" drag 1 0 mouse press 400 over 16 hold 16
+  tap "word-4" drag 1 0 press 400 over 16 hold 16
   clock data
   expect state today.askKey == 2
   expect state today.ask == "seek"
@@ -173,7 +173,7 @@ test "A hold on the fifth word while the second is read, lifted there, reads on 
   expect state today.lit == 9
   expect no failures
 
-test "A hold dragged from the fifth word to the eighth reads on from the eighth"
+test "A hold dragged from the fifth word to the eighth reads on from the eighth" on web
   at "/cue/full"
   clock settle
   tap "hear"
@@ -191,7 +191,41 @@ test "A hold dragged from the fifth word to the eighth reads on from the eighth"
   expect state today.lit == 9
   expect no failures
 
-test "On the web a finger dragged after its hold is taken by the browser: the hold ends as a cancel and the reading resumes where it paused"
+test "A finger held on the fifth word and dragged to the eighth reads on from the eighth" on ios
+  at "/cue/full"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag to "word-7" press 400 over 160 hold 16
+  clock data
+  clock +1
+  clock data
+  expect state today.ask == "seek"
+  expect state todayUtterance == "utterance-2"
+  expect state today.lit >= 7
+  expect state today.lit <= 9
+  expect no failures
+
+test "Under no cue a hold dragged from the fifth word to the eighth, lighting the words between as it goes, still lifts there and reads on from the eighth" on web
+  at "/cue/none"
+  clock settle
+  tap "hear"
+  clock +600
+  clock data
+  tap "word-4" drag to "word-7" mouse press 400 over 160 hold 16
+  clock data
+  clock +1
+  clock data
+  expect state today.ask == "seek"
+  expect state todayUtterance == "utterance-2"
+  expect state today.heldWord == -1
+  expect state today.lit >= 7
+  expect state today.lit <= 9
+  expect state today.words.6.face == "text"
+  expect no failures
+
+test "On the web a finger dragged after its hold is taken by the browser: the hold ends as a cancel and the reading resumes where it paused" on web
   at "/cue/full"
   clock settle
   tap "hear"
@@ -231,7 +265,7 @@ test "A quick swipe on the words while the voice reads holds nothing"
 test "A hold on the words with no reading under way does nothing"
   at "/cue/full"
   clock settle
-  tap "word-4" drag 1 0 mouse press 400 over 16 hold 16
+  tap "word-4" drag 1 0 press 400 over 16 hold 16
   clock data
   expect state today.askKey == 0
   expect state today.heldWord == -1
