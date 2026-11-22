@@ -63,6 +63,8 @@ shape TunerTick
   window: bool
   major: bool
   centre: bool
+  wide: number
+  high: number
 
 // The current app's measures of the screen, in points (`tunerPlaces`,
 // src/tuner/places.ts, as One's Tuner.tsx styles them).
@@ -266,8 +268,8 @@ component TunerScreen
       padding-left=`${tunerPlaced.side}px` padding-right=`${tunerPlaced.side}px` gap=`${tunerPlaced.gap}px`
       padding-top=`calc(var(--exact-safe-area-inset-top) + ${tunerPlaced.top}px)` padding-bottom=`calc(var(--exact-safe-area-inset-bottom) + ${tunerPlaced.foot}px)`
       testId="tuner-screen"
-      row justify-content="space-between" align-items="center"
-        button press=tunerDone aria-label="Done" appearance="none" padding=0 min-height="size.target" min-width="size.target" display="flex" align-items="center" testId="tuner-done"
+      row flex-wrap="wrap" justify-content="space-between" align-items="center"
+        button press=tunerDone aria-label="Done" appearance="none" padding=0 flex-shrink=0 min-height="size.target" min-width="size.target" display="flex" align-items="center" testId="tuner-done"
           text "Done" font="type.strong" color="accent"
         row align-items="center" gap=`${tunerPlaced.autoGap}px` min-height="size.target"
           text "Auto" font="type.label" color="ink" aria-hidden=true
@@ -282,12 +284,12 @@ component TunerScreen
             TunerAction(words="Tap to listen again", act=tunerAgain, id="tuner-again")
         if tunerShown.phase != "Denied" and tunerShown.phase != "Ended"
           TunerGauge()
-          view padding=`${tunerPlaced.hintY}px ${tunerPlaced.hintX}px` border-radius=`${tunerPlaced.hintRound}px` min-height=`${tunerPlaced.hintHigh}px` box-sizing="border-box" display="flex" justify-content="center"
+          view padding=`${tunerPlaced.hintY}px ${tunerPlaced.hintX}px` border-radius=`${tunerPlaced.hintRound}px` min-height=`${tunerPlaced.hintHigh}px` flex-shrink=0 box-sizing="border-box" display="flex" justify-content="center"
             background-color=(tunerShown.inTune ? "accent" : "soft")
             text tunerShown.hint font="type.label" color=(tunerShown.inTune ? "ground" : "ink") testId="tuner-hint"
       if tunerShown.has
         column align-items="center" gap=`${tunerPlaced.readingGap}px` role="status" aria-label=(tunerShown.phase == "Listening" ? tunerLabel : tunerShown.words) testId="tuner-reading"
-          text tunerShown.name font="type.tuner-name" color="ink" aria-hidden=true testId="tuner-name"
+          text tunerShown.name font="type.tuner-name" color="ink" text-align="center" max-width="100%" aria-hidden=true testId="tuner-name"
           text tunerShown.note font="type.small" color="muted" min-height=`${tunerPlaced.noteHigh}px` aria-hidden=true testId="tuner-note"
       TunerHeadstock()
 
@@ -316,10 +318,9 @@ component TunerGauge
   view
     view position="relative" width=`${tunerPlaced.gaugeWide}px` height=`${tunerPlaced.gaugeHigh}px` display="flex" justify-content="center" aria-hidden=true testId="tuner-gauge"
       for t in tunerPlaced.ticks key=t.cents
-        column position="absolute" bottom=`${tunerPlaced.spokeFoot}px` width=`${tunerPlaced.tickWide}px` height=`${tunerPlaced.spoke}px` align-items="center" transform-origin="50% 100%" rotate=`${t.angle}deg`
-          view width=`${t.centre ? tunerPlaced.centreWide : tunerPlaced.tickWide}px` flex-shrink=0 border-radius=`${tunerPlaced.tickWide / 2}px`
-            height=`${t.window ? tunerPlaced.windowHigh : (t.centre ? tunerPlaced.centreHigh : (t.major ? tunerPlaced.majorHigh : tunerPlaced.tickHigh))}px`
-            background-color=(t.window ? "accent" : (t.centre ? "ink" : (t.major ? "muted" : "line")))
+        view position="absolute" bottom=`${tunerPlaced.spokeFoot + tunerPlaced.spoke - t.high}px` width=`${t.wide}px` height=`${t.high}px` border-radius=`${tunerPlaced.tickWide / 2}px`
+          transform-origin=`50% ${tunerPlaced.spoke}px` rotate=`${t.angle}deg`
+          background-color=(t.window ? "accent" : (t.centre ? "ink" : (t.major ? "muted" : "line")))
       text "♭" font="type.tuner-side" color="muted" position="absolute" bottom=0 left=`${tunerPlaced.sideIn}px`
       text "♯" font="type.tuner-side" color="muted" position="absolute" bottom=0 right=`${tunerPlaced.sideIn}px`
       view position="absolute" bottom=`${tunerPlaced.spokeFoot}px` width=`${tunerShown.inTune ? tunerPlaced.wide : tunerPlaced.thin}px` height=`${tunerPlaced.needleHigh}px` border-radius=`${tunerPlaced.wide / 2}px`

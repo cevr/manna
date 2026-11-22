@@ -81,11 +81,27 @@ export const PLACES = {
   markHigh: 14,
 };
 
-/** The gauge's ticks: each one's angle, and whether it edges the in-tune window, is a major tick or the centre. */
-export const TICK_MARKS = TICKS.map((cents) => ({
-  cents,
-  angle: (cents / NEEDLE_CENTS) * SWING,
-  window: Math.abs(cents) === 5,
-  major: cents % 50 === 0,
-  centre: cents === 0,
-}));
+/**
+ * The gauge's ticks: each one's angle, whether it edges the in-tune window,
+ * is a major tick or the centre, and its width and height (the centre's
+ * wider, the window's, the centre's and a major's taller).
+ */
+export const TICK_MARKS = TICKS.map((cents) => {
+  const window = Math.abs(cents) === 5;
+  const major = cents % 50 === 0;
+  const centre = cents === 0;
+  const heights: ReadonlyArray<readonly [boolean, number]> = [
+    [window, PLACES.windowHigh],
+    [centre, PLACES.centreHigh],
+    [major, PLACES.majorHigh],
+  ];
+  return {
+    cents,
+    angle: (cents / NEEDLE_CENTS) * SWING,
+    window,
+    major,
+    centre,
+    wide: [PLACES.tickWide, PLACES.centreWide][Number(centre)] ?? PLACES.tickWide,
+    high: heights.find(([is]) => is)?.[1] ?? PLACES.tickHigh,
+  };
+});
