@@ -65,6 +65,7 @@ type Act =
   | { readonly _tag: 'finish'; readonly at: number }
   | { readonly _tag: 'fail'; readonly at: number }
   | { readonly _tag: 'cut'; readonly at: number }
+  | { readonly _tag: 'empty'; readonly at: number }
   | { readonly _tag: 'cancel' }
   | { readonly _tag: 'delete' }
   | { readonly _tag: 'relaunch' };
@@ -85,6 +86,7 @@ const actOf = (random: Random): Act =>
     () => ({ _tag: 'finish', at: below(random, 2) }),
     () => ({ _tag: 'fail', at: below(random, 2) }),
     () => ({ _tag: 'cut', at: below(random, 2) }),
+    () => ({ _tag: 'empty', at: below(random, 2) }),
     () => ({ _tag: 'cancel' }),
     () => ({ _tag: 'delete' }),
     () => ({ _tag: 'relaunch' }),
@@ -154,14 +156,15 @@ const portOf = (lateAborts: boolean) => {
   const drain = () => {
     for (let input = pending.shift(); input !== undefined; input = pending.shift()) feed(input);
   };
-  /** A fetch out lands: its body written whole to its part (as `exactBodyTo` does), or nothing. */
-  const land = (serial: number, how: 'finish' | 'fail' | 'cut') => {
+  /** A fetch out lands: its body written whole to its part (as `exactBodyTo` does), an empty part, or nothing. */
+  const land = (serial: number, how: 'finish' | 'fail' | 'cut' | 'empty') => {
     const id = out.get(serial);
     if (id === undefined) return;
     out.delete(serial);
-    if (how === 'finish') {
-      disk.set(partOf(id), sizeOf(id));
-      feed({ _tag: 'fetched', serial, id, bytes: sizeOf(id) });
+    if (how === 'finish' || how === 'empty') {
+      const bytes = how === 'finish' ? sizeOf(id) : 0;
+      disk.set(partOf(id), bytes);
+      feed({ _tag: 'fetched', serial, id, bytes });
     } else feed({ _tag: 'fetchFailed', serial, id, code: how === 'fail' ? 'network' : 'invalid' });
     drain();
   };
@@ -262,17 +265,17 @@ const currentOf = (cache: Cache) =>
       sizes,
       out,
       offline: () => offline,
-      land: (at: number, how: 'finish' | 'fail' | 'cut') =>
+      land: (at: number, how: 'finish' | 'fail' | 'cut' | 'empty') =>
         Effect.gen(function* () {
           const job = out[at];
           if (job === undefined) return;
           out.splice(at, 1);
-          if (how === 'finish')
+          if (how === 'finish' || how === 'empty')
             yield* Deferred.succeed(job.answer, {
               at: 0,
               total: sizeOf(job.id),
               etag: '"e"',
-              bytes: bodyOf(job.id),
+              bytes: how === 'finish' ? bodyOf(job.id) : new Uint8Array(0),
             });
           else
             yield* Deferred.fail(
@@ -325,7 +328,8 @@ const history = (cache: Cache, seed: number) =>
           break;
         case 'finish':
         case 'fail':
-        case 'cut': {
+        case 'cut':
+        case 'empty': {
           const job = current.out[act.at];
           if (job === undefined) break;
           const serial = [...port.out.entries()].find(([, id]) => keyOf(id) === keyOf(job.id))?.[0];
@@ -415,6 +419,7 @@ describe('the saved recordings, as the current app’s cache', () => {
       'cancel',
       'cut',
       'delete',
+      'empty',
       'enqueue',
       'fail',
       'finish',
