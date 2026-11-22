@@ -16,8 +16,14 @@
  *   chord a neighbour draws under a shared id is not on the shown page.
  * - On the web the back control is a chevron and the word "Hymns", as the
  *   current hymnal's web header (`WebStackHeader`).
- * - Launched at `/hymns/100`, the app draws hymn 100's page alone, lays it
- *   out in the port and paints it as hymn 100 pressed in a search paints.
+ * - Hymn 2 opened from home and shot twice: after each shot its page is
+ *   still the one in the port, and each shot paints hymn 2's page, not hymn
+ *   1's under hymn 2's title (the agent's capture lays the page out beyond
+ *   the viewport, which puts the pager at its start; the pager puts the
+ *   shown page back).
+ * - Launched at `/hymns/100`, the app draws 99, 100 and 101, lays hymn
+ *   100's page out in the port, paints it as hymn 100 pressed in a search
+ *   paints, and a swipe left turns to 101.
  * - At the largest text (root 53 px) hymn 100's title wraps between its
  *   words and breaks only a word longer than its line, as UIKit breaks the
  *   current hymnal's: the shot is kept for a look.
@@ -50,6 +56,8 @@ const flags = (store: string) => [
 const FRAMES = 32;
 /** The pixels a frame may paint apart from the rest it settles into: a caret's or a shadow's antialiasing, not a page. */
 const SAME = 400;
+/** The pixels two hymns' screens paint apart at least when their pages differ, not only their header's title. */
+const PAGES_APART = 20000;
 
 /** A colour's red, green and blue from `#rrggbb`. */
 const channels = (colour: string): ReadonlyArray<number> =>
@@ -148,6 +156,13 @@ drive.check(
 );
 
 const tree = JSON.stringify(ax[toHymn2.length + 1] ?? null);
+const testIds = [...tree.matchAll(/"testId":"([^"]+)"/gu)].map((match) => match[1] ?? '');
+const repeated = [...new Set(testIds.filter((id, at) => testIds.indexOf(id) !== at))];
+drive.check(
+  'with hymn 2 and its neighbours drawn, no testId repeats (each neighbour’s ids end in its hymn)',
+  testIds.length > 0 && repeated.length === 0,
+  repeated,
+);
 const backAt = tree.indexOf('"testId":"hymn-back"');
 drive.check(
   'the back control draws a chevron beside "Hymns"',
@@ -196,6 +211,42 @@ drive.check(
   onPage.filter((id) => id.startsWith('chord-1-1-')),
 );
 
+const xOf = (reply: unknown) =>
+  (reply as { node?: { space?: { viewport?: { x?: number } } } } | undefined)?.node?.space?.viewport
+    ?.x ?? Number.NaN;
+
+/** Hymn `n` opened from home, shot twice with a rest between, its page's and the port's boxes read after each shot. */
+const fromHome = (n: number) => [
+  'clock data',
+  'clock settle',
+  `tap hymn-${n}`,
+  'clock settle',
+  'clock data',
+  'clock +500 real',
+  shot(`home-${n}-a`),
+  'clock +500 real',
+  shot(`home-${n}-b`),
+  'layout hymn-pager',
+  'layout hymn-page',
+];
+const home2 = await drive.run(flags('pager-home-2'), fromHome(2));
+await drive.run(flags('pager-home-1'), fromHome(1));
+const home2At = [xOf(home2.at(-2)), xOf(home2.at(-1))];
+drive.check(
+  'hymn 2 opened from home: after two screenshots its page is still the one in the port',
+  Math.abs((home2At[1] ?? Number.NaN) - (home2At[0] ?? Number.NaN)) < 1,
+  { port: home2At[0], page: home2At[1] },
+);
+const pageApart = [
+  await changedPixels(shotFile('home-2-a'), shotFile('home-1-a')),
+  await changedPixels(shotFile('home-2-b'), shotFile('home-1-b')),
+];
+drive.check(
+  'hymn 2 opened from home: each screenshot paints hymn 2’s page, not hymn 1’s under hymn 2’s title',
+  pageApart.every((apart) => apart > PAGES_APART),
+  { pageApart },
+);
+
 const largest = await drive.run(
   [...flags('pager-largest'), '--url', '/hymns/100'],
   [
@@ -214,16 +265,30 @@ const largest = await drive.run(
     'state pagerNumbers',
   ],
 );
+const launchedSwipe = await drive.run(
+  [...flags('pager-launched-swipe'), '--url', '/hymns/100'],
+  [
+    'clock data',
+    'clock settle',
+    'clock data',
+    'clock +500 real',
+    'tap hymn-pager drag -300 0 from 300 500',
+    'clock +1200 real',
+    'clock settle',
+    'clock data',
+    'state',
+  ],
+);
+const launchedPages = JSON.stringify(largest[12] ?? null);
 drive.check(
-  'a hymn the app is launched at draws its page alone (the host paints the page before it otherwise)',
-  JSON.stringify((largest[12] as { value?: unknown } | undefined)?.value ?? largest[12]).includes(
-    '[100]',
-  ),
+  'a hymn the app is launched at pages through every hymn: 99, 100 and 101 drawn',
+  launchedPages.includes('99') && launchedPages.includes('101'),
   largest[12],
 );
-const xOf = (reply: unknown) =>
-  (reply as { node?: { space?: { viewport?: { x?: number } } } } | undefined)?.node?.space?.viewport
-    ?.x ?? Number.NaN;
+const launchedTop = openOf(launchedSwipe.at(-1));
+drive.check('a swipe left on the hymn launched at turns to hymn 101', launchedTop === '101', {
+  launchedTop,
+});
 const port = xOf(largest[4]);
 const opened = [xOf(largest[5]), xOf(largest[10])];
 drive.check(
