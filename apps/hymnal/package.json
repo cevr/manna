@@ -74,6 +74,7 @@
     "./reader/about-rules": "./src/reader/about-rules.ts",
     "./reader/rail-marks": "./src/reader/rail-marks.ts",
     "./reader/rows": "./src/reader/rows.ts",
+    "./reader/pager": "./src/reader/pager.ts",
     "./credit": "./src/credit.ts",
     "./chord-choices": "./src/chord-choices.ts",
     "./gemma-notice": "./src/gemma-notice.ts",

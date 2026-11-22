@@ -17,6 +17,8 @@ c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/but
 4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
+9aa9fb892a0a exports: one exports line in apps/hymnal/package.json (./reader/pager); no source changes
+6a46e22a8ffb merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 4d1d848cefff exports: one exports line in apps/hymnal/package.json (./reader/rows); no source changes
 1aacd1c5995b move: All at once's tilesOf call over the playing number, unchanged, from AllAtOnce.tsx into home/tabs.ts's tilesFor; its declaration and held line in exact-home-declarations.ts
 7502f91cf966 move: a tile's count words and VoiceOver name, unchanged, from AllAtOnce.tsx's TileView into home/tabs.ts (tileCount, tileName); their declarations and held lines
@@ -26,6 +28,7 @@ b1dde6a90fa5 declaration: tilesOf declared in exact/home/tabs.d.ts for the port'
 dc8efe8b2473 exports: one exports line in apps/hymnal/package.json (./hymns/meaning-rule); no source changes
 a8d2ca532f2e test: exact-find-declarations.ts holds the port's meaning-rule declaration; no source changes
 3f538c9e0248 merge: origin/main into hymnapp/par-hy-results: apps/hymnal/package.json's exports lines of both sides kept, and the listed moves of both sides; no source changes of its own
+7a52f6793e76 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 45917c380eb2 imports: player/thumb.ts reads Cue, plain, keyName, Move, playedKey, soundingKey and still by relative path (../feel/cues, which ~/feel/cue re-exports, and ../hymns/chords); the same values, no source line else
 54fc3fd84c2b exports: one exports line in apps/hymnal/package.json (./player/thumb); no source changes
 867880c5d09a exports: one exports line in apps/hymnal/package.json (./player/wheel); no source changes
@@ -34,3 +37,4 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 1931651bb79f move: the dials' RESET_WAIT, unchanged (600), from Dials.tsx into thumb.ts, Dials reading and re-exporting it
 6ec1b54858d7 merge: apps/hymnal/package.json's exports lines of both sides kept, and par-hy-settings' listed moves as main left them; no source changes of its own
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
+1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes

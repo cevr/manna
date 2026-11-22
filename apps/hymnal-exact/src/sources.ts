@@ -18,6 +18,7 @@ import { hymnSources } from './hymn/sources.ts';
 import { keysSources } from './keys/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
+import { pagerSources } from './pager/sources.ts';
 import { originOf, playerSources } from './player/sources.ts';
 import { railSources } from './rail/sources.ts';
 import { resultsSources } from './results/sources.ts';
@@ -39,5 +40,6 @@ export const sourcesAt = (
   ...keysSources(book, chords),
   ...railSources(book),
   ...abouthymnSources(book, nearest),
+  ...pagerSources(book),
   ...resultsSources(),
 });
