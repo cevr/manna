@@ -218,7 +218,7 @@ component FirstScreen
           for k in [phase] key=k
             column gap="space.section" padding-top="space.s24" padding-bottom="space.s16" padding-left="space.page" padding-right="space.page" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId=`first-${phase}`
               if phase == "welcome"
-                text "Heartseed" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                text "Heartseed" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 column align-items="center"
                   FirstGrowing(scheme=scheme, still=still)
                 text "Plant a verse. Say it from memory. Watch it grow." font="type.intro" color="hs.ink" testId="first-line"
@@ -227,7 +227,7 @@ component FirstScreen
                     text "Your first verse" font="type.small" color="hs.quiet"
                     text today.reference font="type.strong" color="hs.quiet" testId="reference"
               else
-                text "Every verse is a plant" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                text "Every verse is a plant" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 row flex-wrap="wrap" justify-content="space-between" gap="space.s8" testId="stages"
                   column align-items="center" gap="space.s6" min-width="size.stage"
                     image homeIconOf("seed", scheme) width="size.drawing-list" height="size.drawing-list" aria-hidden=true
@@ -257,13 +257,13 @@ component FirstScreen
             for k in [phase] key=k
               column gap="space.section" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.rise easing.out both") testId=`first-${phase}`
                 if phase == "hear"
-                  text "Hear it" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                  text "Hear it" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 else if phase == "letters"
-                  text "Say it with help" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                  text "Say it with help" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 else if phase == "alone"
-                  text "Say it alone" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                  text "Say it alone" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 else
-                  text "Planted" role="heading" aria-level=1 font="type.title" color="hs.ink" testId="first-heading"
+                  text "Planted" role="heading" aria-level=1 font="type.title" color="hs.ink" overflow-wrap="anywhere" testId="first-heading"
                 if phase == "planted"
                   text today.reference font="type.strong" color="hs.quiet" testId="reference"
                   column align-items="center" gap="space.s16" padding-top="space.s24"
