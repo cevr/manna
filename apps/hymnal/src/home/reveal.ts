@@ -11,6 +11,13 @@ export interface Reveal {
 /** The distance one way, in points, that turns the row. */
 export const travel = 8;
 
+/**
+ * How long the row takes to turn, in milliseconds (`PinnedTabs.tsx`): its
+ * slide in or out over the list's top, and with Reduce Motion on its fade
+ * alone. A pure value, so the Exact port holds its motion tokens to these.
+ */
+export const revealTimes = { slide: 200, fade: 150 } as const;
+
 /** The pinned row at the list's opening: hidden, counting from the resting place. */
 export const hidden = (rest: number): Reveal => ({ shown: false, from: rest });
 
