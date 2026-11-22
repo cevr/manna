@@ -29,7 +29,7 @@ const numbersOf = (random: Random): Array<number> =>
   );
 
 describe('All at once opens at the group at the list’s top', () => {
-  test('every box the list draws names its own group’s tile, the head and the shelf the first', () => {
+  test('the first box from the list’s top that is a group’s header or row names its tile, the head and the shelf the first', () => {
     const random = seeded(20261123);
     let named = 0;
     for (let run = 0; run < 3; run++) {
@@ -50,16 +50,26 @@ describe('All at once opens at the group at the list’s top', () => {
             ),
           ];
           for (const id of ids) {
-            expect({ name, id, at: tileAt(source, name, id, favourites, recent) }).toEqual({
+            const above = pick(random, [[], ['hymn-list'], ['', 'hymn-list']]);
+            expect({
               name,
               id,
-              at,
-            });
+              at: tileAt(source, name, [...above, id, 'hymn-1'], favourites, recent),
+            }).toEqual({ name, id, at });
             named += 1;
           }
         });
-        for (const id of ['list-top', 'list-head', 'shelf-12', 'recent-all', ''])
-          expect(tileAt(source, name, id, favourites, recent)).toBe(0);
+        for (const id of ['list-top', 'shelf-12'])
+          expect(
+            tileAt(
+              source,
+              name,
+              ['hymn-list', id, `hymn-${groups.at(-1)?.numbers[0]}`],
+              favourites,
+              recent,
+            ),
+          ).toBe(0);
+        expect(tileAt(source, name, ['hymn-list', 'recent-all', ''], favourites, recent)).toBe(0);
       }
     }
     expect(named).toBeGreaterThan(200);

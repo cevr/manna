@@ -50,31 +50,37 @@ const groupOfRow = (groups: ReadonlyArray<TabGroup>, rest: string): number => {
   return groupBySlug(groups, rest);
 };
 
+/** The group of the list's box `id` (a group's header, `section-<slug>` or `group-<slug>`, or one of its rows, `hymn-<n>`, `hymn-<slug>-<n>`); -1 for any other box. */
+const groupOfBox = (groups: ReadonlyArray<TabGroup>, id: string): number => {
+  const [kind = '', ...parts] = id.split('-');
+  const rest = parts.join('-');
+  if (kind === 'section' || kind === 'group') return groupBySlug(groups, rest);
+  if (kind === 'hymn' || kind === 'star') return groupOfRow(groups, rest);
+  return -1;
+};
+
 /**
  * The tile of the group the home list of tab `name` shows at its top, as
- * the current app's All at once opens at (`AllAtOnce.tsx` `at`): `id` names
- * the list's box just under its pinned header (a group's header,
- * `section-<slug>` or `group-<slug>`, or one of its rows, `hymn-<n>`,
- * `hymn-<slug>-<n>`); the list's head, the Recent shelf or no box at all
- * is the first tile.
+ * the current app's All at once opens at (`AllAtOnce.tsx` `at`): `ids` name
+ * the list's boxes from its top edge down, and the first that is a group's
+ * header or row names it (the pinned header has no id of its own, so the
+ * first row under it does); the list's head, the Recent shelf or no such
+ * box at all is the first tile.
  */
 export const tileAt = (
   source: TabSource,
   name: string,
-  id: string,
+  ids: ReadonlyArray<string>,
   favourites: ReadonlyArray<number>,
   recent: ReadonlyArray<number>,
 ): number => {
   const groups = tabGroups(source, name, favourites, recent);
-  const [kind = '', ...parts] = id.split('-');
-  const rest = parts.join('-');
-  const at =
-    kind === 'section' || kind === 'group'
-      ? groupBySlug(groups, rest)
-      : kind === 'hymn' || kind === 'star'
-        ? groupOfRow(groups, rest)
-        : -1;
-  return Math.max(0, at);
+  for (const id of ids) {
+    if (id === 'list-top' || id.startsWith('shelf-')) return 0;
+    const at = groupOfBox(groups, id);
+    if (at >= 0) return at;
+  }
+  return 0;
 };
 
 /** The tiles of tab `name` over the reader's lists, `playing` the player's hymn (0 while idle); none for a name that is no tab. */

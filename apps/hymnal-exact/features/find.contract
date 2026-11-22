@@ -63,6 +63,9 @@ shape FindAbout
   query: string
   numbers: number[]
 
+// The id of the box at a point, "" with none.
+fn findIdOf(at: option<string>): string = match at { case some(id) => id, case none => "" }
+
 // The tile of the group at the home list's top (`findTileAt`, src/find/tiles.ts).
 shape FindAim
   index: number
@@ -138,8 +141,9 @@ members HymnalExact
   mutation findAiming as shape FindAim queue then findAimed
   action findAimAtTop
     let list = frame("hymn-list")
+    let x = list.x + list.width / 2
     if not find.homeTiles and not list.unavailable
-      send findAiming = findTileAt(listTab, match elementFromPoint(list.x + list.width / 2, list.y + 2) { case some(id) => id, case none => "" }, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
+      send findAiming = findTileAt(listTab, [findIdOf(elementFromPoint(x, list.y + 2)), findIdOf(elementFromPoint(x, list.y + 60)), findIdOf(elementFromPoint(x, list.y + 120)), findIdOf(elementFromPoint(x, list.y + 180))], listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
   action findAimed
     match findAiming
       case some(a)

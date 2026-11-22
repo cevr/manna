@@ -141,12 +141,12 @@ export const findSources = (
       counts.tiles += 1;
       return groupTiles(source, tab, favourites, recent, playing);
     },
-    findTileAt: ([tab, id, favourites, recent]: readonly [
+    findTileAt: ([tab, ids, favourites, recent]: readonly [
       string,
-      string,
+      ReadonlyArray<string>,
       ReadonlyArray<number>,
       ReadonlyArray<number>,
-    ]) => ({ index: tileAt(source, tab, id, favourites, recent) }),
+    ]) => ({ index: tileAt(source, tab, ids, favourites, recent) }),
     findFollowRow: ([tab, n, favourites, recent]: readonly [
       string,
       number,
