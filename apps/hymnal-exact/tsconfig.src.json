@@ -6,6 +6,7 @@
       "@manna/hymnal-app/home/find-rules": ["./src/find/decl/find-rules"],
       "@manna/hymnal-app/player/drums": ["./src/find/decl/drums"],
       "@manna/hymnal-app/player/button": ["./src/player/bar/decl/button"],
+      "@manna/hymnal-app/player/sound": ["./src/player/clock/decl/sound"],
       "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"]
     }
   },

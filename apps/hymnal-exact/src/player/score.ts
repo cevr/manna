@@ -28,6 +28,10 @@ export interface Span {
 export interface Score {
   /** How many stanza chips the hymn has. */
   readonly count: number;
+  /** The first sung line's start in the recording's seconds; 0 with no timeline. */
+  readonly first: number;
+  /** The timeline's end (its last line's `until`) in the recording's seconds; 0 with no timeline. */
+  readonly end: number;
   /** The sung seconds of `recording` seconds of the recording under `choice`. */
   readonly sung: (choice: Choice, recording: number) => number;
   /** The recording's seconds of `sung` seconds under `choice`: inside a kept line. */
@@ -69,6 +73,8 @@ export const scoreOf = (
       : cutOf(timeline, keptOf(sections, choice));
   return {
     count,
+    first: (timeline?.first ?? 0) / 1000,
+    end: (timeline?.end ?? 0) / 1000,
     sung: (choice, recording) => {
       const made = cut(choice);
       return made === undefined ? recording : made.sungAt(recording * 1000) / 1000;

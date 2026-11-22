@@ -35,6 +35,7 @@ export interface PlayerView {
   readonly serial: number;
   /** The element's source; empty while the device holds nothing. */
   readonly src: string;
+  /** The device's load, or the silent clock's while it holds the place; 0 for none. */
   readonly load: number;
   readonly from: number;
   readonly paused: boolean;
@@ -62,6 +63,8 @@ export interface PlayerView {
   readonly place: number;
   /** The start of a span the choice leaves out within a tick or so of the place, in the recording's seconds; -1 for none. */
   readonly skipAt: number;
+  /** The silent clock plays: the contract's `playerClock` ticks it, under `load`. */
+  readonly ticking: boolean;
   /** The bar is docked: it shows, and no sheet is up over the stack. */
   readonly dock: boolean;
   /**
@@ -154,6 +157,7 @@ const seekView = (state: State, chosen: ReadonlyArray<number>) => {
     dragging: held?.drag !== undefined,
     place: held?.at ?? 0,
     skipAt: skipAheadOf(state) ?? -1,
+    ticking: held?.silent === true && held.phase === 'playing',
     places:
       score === undefined || held === undefined || held.length <= 0
         ? []
@@ -177,7 +181,7 @@ export const viewOf = (
   return {
     serial: state.steps,
     src: device?.url ?? '',
-    load: device?.load ?? 0,
+    load: device?.load ?? (held?.silent === true ? held.load : 0),
     from: device?.from ?? 0,
     paused: device?.paused ?? true,
     held: held !== undefined,

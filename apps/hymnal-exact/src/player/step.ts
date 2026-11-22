@@ -33,6 +33,17 @@
  * While a hymn sounds, a place in a span its stanza choice leaves out is
  * sought across at once, at the tick that finds it there or at the
  * runner's clock's `due` that sees it coming.
+ *
+ * Sound is the current app's score clock (`sound.ts`'s `scoreClock`, which
+ * `clock.model.test.ts` holds this to): with Sound off nothing sounds and
+ * the device holds nothing (`silent`); the place runs on the contract's
+ * `tick`s, 1000 ms a second of sung time, from the first sung line to the
+ * timeline's end, where the hymn ends. A pause holds it and a seek moves it.
+ * A switch mid-play hands the place over: off, the clock runs on from the
+ * device's place under a new load; on, a clock that plays where the
+ * recording sounds loads the recording there. A clock held, or past the
+ * recording, stays the clock until a resume or a seek that the recording
+ * can sound.
  */
 
 import { nudged, placeAt, reached, sends } from '@manna/hymnal-app/player/scrub-rules';
@@ -89,6 +100,10 @@ export interface Held {
   readonly drag: Drag | undefined;
   /** A buffering wait online has run `WAIT` long: Retry shows beside Pause, as the current app's `Buffering` `retry`. */
   readonly waited: boolean;
+  /** The score clock holds the place: nothing sounds, the device holds nothing, and `tick`s move it while it plays. */
+  readonly silent: boolean;
+  /** The recording's length in seconds as the device last said it; 0 until it does. */
+  readonly recorded: number;
 }
 
 /** A navigation the view asks of the stack, numbered so each is taken once. */
@@ -114,6 +129,8 @@ export interface State {
   readonly go: Go;
   /** How many inputs have been stepped. */
   readonly steps: number;
+  /** Whether Play sounds the recording: the Sound switch, on until the reader turns it off. */
+  readonly sound: boolean;
 }
 
 export type Input =
@@ -153,6 +170,8 @@ export type Input =
   | { readonly _tag: 'remote'; readonly action: 'play' | 'pause' }
   | { readonly _tag: 'remoteSeek'; readonly seconds: number }
   | { readonly _tag: 'remoteSkip'; readonly way: 1 | -1 }
+  | { readonly _tag: 'sound'; readonly on: boolean }
+  | { readonly _tag: 'tick'; readonly id: number; readonly ms: number }
   | { readonly _tag: 'screen'; readonly stack: ReadonlyArray<string> }
   | { readonly _tag: 'restore'; readonly choices: Readonly<Record<string, Choice>> };
 
@@ -218,6 +237,7 @@ export const initial: State = {
   choices: {},
   go: { serial: 0, kind: '', path: '', close: false },
   steps: 0,
+  sound: true,
 };
 
 /** Whether the held hymn is making, or about to make, sound. */
@@ -225,10 +245,11 @@ export const sounding = (held: Held | undefined): boolean =>
   held !== undefined &&
   (held.phase === 'loading' || held.phase === 'playing' || held.phase === 'buffering');
 
-/** The device for `state`: a failed or let-go hymn holds nothing. */
+/** The device for `state`: a failed or let-go hymn holds nothing, nor does the silent clock. */
 export const deviceOf = (state: State): Device | undefined => {
   const { held } = state;
-  if (held === undefined || held.phase === 'failed' || held.track.url === '') return undefined;
+  if (held === undefined || held.phase === 'failed' || held.track.url === '' || held.silent)
+    return undefined;
   return {
     load: held.load,
     url: held.track.url,
@@ -257,30 +278,133 @@ export const commandOf = (
 /** The choice the hymn numbered `number` sings. */
 export const choiceOf = (state: State, number: number): Choice => state.choices[`${number}`] ?? [];
 
-/** A new load of `track` from `from` seconds, wanting to hear it. */
+/**
+ * `held` on the silent clock at `at`, playing or held, as the current
+ * `scoreClock`'s `run`: held to the timeline's end, where it ends.
+ */
+const clocked = (held: Held, at: number, playing: boolean): Held => {
+  const { end } = held.track.score;
+  const place = Math.min(Math.max(at, 0), end);
+  return {
+    ...held,
+    silent: true,
+    at: place,
+    length: end,
+    wants: playing ? 'play' : 'pause',
+    phase: place >= end ? 'ended' : playing ? 'playing' : 'paused',
+    owed: [],
+    holding: false,
+    waited: false,
+  };
+};
+
+/**
+ * A new load of `track` from `from` seconds, wanting to hear it. With Sound
+ * off it is the silent clock's, from the first sung line when `from` is the
+ * start, as the current `scoreClock`'s `silentFrom`; a hymn with no timing
+ * cannot play then, as its `play` refuses one.
+ */
 const loaded = (state: State, track: Track, from: number): State => {
   const load = state.loads + 1;
-  const phase = track.url === '' ? 'failed' : 'loading';
-  const why = track.url === '' ? 'missing' : '';
+  const held: Held = {
+    track,
+    load,
+    phase: 'loading',
+    wants: 'play',
+    owed: [],
+    at: from,
+    length: 0,
+    from,
+    why: '',
+    seek: 0,
+    sought: from,
+    holding: false,
+    drag: undefined,
+    waited: false,
+    silent: false,
+    recorded: 0,
+  };
+  if (track.url === '')
+    return { ...state, loads: load, held: { ...held, phase: 'failed', why: 'missing' } };
+  if (state.sound) return { ...state, loads: load, held };
+  if (track.score.end <= 0)
+    return { ...state, loads: load, held: { ...held, phase: 'failed', why: 'decode' } };
+  return { ...state, loads: load, held: clocked(held, from > 0 ? from : track.score.first, true) };
+};
+
+/** Whether the recording holds `at`, as far as the device has said: the current `scoreClock`'s `recordedAt`. */
+const recordedAt = (held: Held, at: number): boolean =>
+  at < held.track.score.end && (held.recorded <= 0 || at < held.recorded);
+
+/**
+ * The silent clock sent to `seconds`, as the current `scoreClock`'s
+ * `seekClock`: with Sound on, a clock that plays where the recording sounds
+ * hands the place to the device there; otherwise the clock runs or holds
+ * from it.
+ */
+const seekClock = (state: State, held: Held, seconds: number): State => {
+  const place = Math.min(Math.max(seconds, 0), held.track.score.end);
+  if (state.sound && held.wants === 'play' && recordedAt(held, place))
+    return loaded(state, held.track, place);
+  return { ...state, held: clocked(held, place, held.wants === 'play') };
+};
+
+/**
+ * A Resume of the silent clock, as the current `scoreClock`'s `resumeClock`:
+ * from its end it starts again (the recording from its start with Sound on,
+ * else the clock from the first sung line); with Sound on, where the
+ * recording sounds, the device takes the place; otherwise the clock plays on.
+ */
+const resumeClock = (state: State, held: Held): State => {
+  if (held.at >= held.track.score.end) {
+    if (state.sound) return loaded(state, held.track, 0);
+    return { ...state, held: clocked(held, held.track.score.first, true) };
+  }
+  if (state.sound && recordedAt(held, held.at)) return loaded(state, held.track, held.at);
+  return { ...state, held: clocked(held, held.at, true) };
+};
+
+/** The silent clock moved on `ms` of the host's clock while it plays: that much sung time, to the timeline's end. */
+const ticked = (state: State, id: number, ms: number): State => {
+  const { held } = state;
+  if (
+    held === undefined ||
+    !held.silent ||
+    held.load !== id ||
+    held.phase !== 'playing' ||
+    !Number.isFinite(ms) ||
+    ms <= 0
+  )
+    return state;
+  const choice = choiceOf(state, held.track.number);
+  const { score } = held.track;
+  const sung = score.sung(choice, held.at) + ms / 1000;
+  const at = sung >= score.sung(choice, score.end) ? score.end : score.recording(choice, sung);
+  return { ...state, held: clocked(held, at, true) };
+};
+
+/**
+ * A switch of Sound, as the current `scoreClock`'s `switchTo`. Off: a hymn
+ * the device holds hands its place to the silent clock, under a new load so
+ * the element's late events are inert, playing while it played or loaded.
+ * On: a clock that plays where the recording sounds hands the place to the
+ * device; a clock held, or past the recording, stays the clock.
+ */
+const switched = (state: State, on: boolean): State => {
+  if (state.sound === on) return state;
+  const next = { ...state, sound: on };
+  const { held } = next;
+  if (held === undefined || held.phase === 'failed') return next;
+  if (on) {
+    if (!held.silent || held.phase !== 'playing' || !recordedAt(held, held.at)) return next;
+    return loaded(next, held.track, held.at);
+  }
+  if (held.silent) return next;
+  const load = next.loads + 1;
   return {
-    ...state,
+    ...next,
     loads: load,
-    held: {
-      track,
-      load,
-      phase,
-      wants: 'play',
-      owed: [],
-      at: from,
-      length: 0,
-      from,
-      why,
-      seek: 0,
-      sought: from,
-      holding: false,
-      drag: undefined,
-      waited: false,
-    },
+    held: clocked({ ...held, load, from: held.at }, held.at, sounding(held)),
   };
 };
 
@@ -296,6 +420,7 @@ const paused = (held: Held): Held => ({ ...held, phase: 'paused', wants: 'pause'
 /** A pause: only a hymn the reader wants to hear pauses. */
 const pause = (state: State): State => {
   const { held } = state;
+  if (held?.silent === true) return { ...state, held: clocked(held, held.at, false) };
   if (held === undefined || held.wants === 'pause' || !sounding(held)) return state;
   return { ...state, held: paused(held) };
 };
@@ -316,6 +441,7 @@ const echoed = (held: Held, event: Echo): { readonly echo: boolean; readonly hel
 const resume = (state: State): State => {
   const { held } = state;
   if (held === undefined) return state;
+  if (held.silent) return resumeClock(state, held);
   if (held.phase === 'paused')
     return { ...state, held: { ...held, phase: 'loading', wants: 'play' } };
   if (held.phase === 'ended') return loaded(state, held.track, 0);
@@ -344,10 +470,11 @@ export const shownOf = (state: State, held: Held): number => {
   return total > 0 ? Math.min(sung, total) : sung;
 };
 
-/** Whether the held hymn's place can move: a recording the device holds, of a length it has said. */
+/** Whether the held hymn's place can move: a recording the device holds, of a length it has said, or the silent clock's. */
 const seekable = (state: State): Held | undefined => {
   const { held } = state;
-  if (held === undefined || deviceOf(state) === undefined || held.length <= 0) return undefined;
+  if (held === undefined || held.length <= 0) return undefined;
+  if (!held.silent && deviceOf(state) === undefined) return undefined;
   return held;
 };
 
@@ -364,6 +491,7 @@ const skipsOf = (state: State, held: Held) => held.track.score.skips(choiceHeld(
  * neither plays nor pauses; an ended hymn is paused where it was sent.
  */
 const seekRecording = (state: State, held: Held, seconds: number): State => {
+  if (held.silent) return seekClock(state, held, seconds);
   const place = Math.min(Math.max(seconds, 0), held.length);
   const serial = state.seeks + 1;
   return {
@@ -387,7 +515,9 @@ const seekSung = (state: State, held: Held, sung: number): State =>
 /** Past a span the choice leaves out, when the held hymn stands in one: to its end. */
 const across = (state: State, held: Held, at: number): State => {
   const span = spanAt(skipsOf(state, held), at);
-  return span === undefined ? state : seekRecording(state, held, span.to);
+  if (span === undefined) return state;
+  if (held.silent) return { ...state, held: clocked(held, span.to, held.wants === 'play') };
+  return seekRecording(state, held, span.to);
 };
 
 /** The drag `held` holds, its thumb at `to`. */
@@ -553,11 +683,12 @@ const skipping = (state: State, at: number): State => {
 };
 
 const device = (state: State, input: Input): State => {
+  if (state.held?.silent === true) return state;
   switch (input._tag) {
     case 'loaded':
       return onLoad(state, input.id, (held) => {
         if (!Number.isFinite(input.duration) || input.duration <= 0) return held;
-        return { ...held, length: Math.max(input.duration, held.at) };
+        return { ...held, length: Math.max(input.duration, held.at), recorded: input.duration };
       });
     case 'time': {
       const { held } = state;
@@ -651,6 +782,10 @@ const next = (state: State, input: Input): State => {
       return { ...state, stack: input.stack.length === 0 ? ['/'] : input.stack };
     case 'restore':
       return { ...state, choices: { ...input.choices, ...state.choices } };
+    case 'sound':
+      return switched(state, input.on);
+    case 'tick':
+      return ticked(state, input.id, input.ms);
     default:
       return unwaited(device(reader(state, input), input));
   }
@@ -733,7 +868,13 @@ export const timesOf = (state: State): { readonly elapsed: number; readonly tota
 /** The next span the held hymn's choice leaves out that starts within `LEAD` of its place while it plays: its start, in the recording's seconds. */
 export const skipAheadOf = (state: State): number | undefined => {
   const { held } = state;
-  if (held === undefined || held.phase !== 'playing' || held.holding || held.wants !== 'play')
+  if (
+    held === undefined ||
+    held.silent ||
+    held.phase !== 'playing' ||
+    held.holding ||
+    held.wants !== 'play'
+  )
     return undefined;
   const span = skipsOf(state, held).find(
     (each) => each.from >= held.at && each.from - held.at <= LEAD,
