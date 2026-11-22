@@ -96,7 +96,8 @@
     "./vite/app": "./vite/app.ts",
     "./tuner/pitch": "./src/tuner/pitch.ts",
     "./tuner/focus": "./src/tuner/focus.ts",
-    "./tuner/tuning": "./src/tuner/tuning.ts"
+    "./tuner/tuning": "./src/tuner/tuning.ts",
+    "./tuner/session": "./src/tuner/session.ts"
   },
   "scripts": {
     "postinstall": "one patch || true",
