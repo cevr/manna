@@ -102,8 +102,8 @@ component HymnPage
       PlayerBarRoom(id="bar-room-hymn")
 
 // The pages in the order they are built: the route's first, so a control
-// another feature draws on every page under one id (a chord, the key, the
-// star, the head line) is the shown page's wherever a reader or a test
+// another feature draws on every page under one id (the star, the head
+// line; a chord's and a line's ids end in a neighbour's own hymn) is the shown page's wherever a reader or a test
 // looks for that id first; each stands in its place by `order`.
 fn hymnShownFirst(numbers: number[], n: string): number[] = numbers.filter(m => `${m}` == n).concat(numbers.filter(m => `${m}` != n))
 
@@ -131,14 +131,14 @@ component HymnSheet
                 text `${page.number}` font="type.hymn-number" color="accent" font-variant-numeric="tabular-nums" testId=(shown ? "hymn-number" : `hymn-number-${page.number}`)
                 text page.title font="type.hymn-title" color="ink" flex-shrink=1 min-width=0 overflow-wrap="break-word" role="heading" aria-level=1
               FavouriteStar(number=page.number)
-          ChordsNotice(chords=chords, number=page.number)
+          ChordsNotice(chords=chords, number=page.number, tag=(shown ? "" : `-${page.number}`))
           if chords.kind == "chords" and chords.number == page.number
             for p, k in chords.parts key=p.key
               column gap="space.s4" role="group" aria-label=(p.refrain ? "Refrain" : `Stanza ${p.label}`)
                 text p.label font="type.part" color="muted" role="heading" aria-level=2
                 HymnInset(refrain=p.refrain, id=(shown ? p.key : `${p.key}-${page.number}`))
                   if p.lines.length > 0
-                    ChordsLines(chords=chords, k=k + 1, part=p)
+                    ChordsLines(chords=chords, k=k + 1, part=p, tag=(shown ? "" : `-${page.number}`))
                   else
                     match page.parts.at(k)
                       case some(q)
