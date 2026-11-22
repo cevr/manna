@@ -26,6 +26,7 @@
         "test:session-calls",
         "test:text",
         "test:read",
+        "test:first",
         "test:find",
         "test:find-a",
         "test:find-b",
@@ -462,6 +463,20 @@
       ]
     },
     "test:read": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:first": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
