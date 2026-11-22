@@ -112,6 +112,10 @@ test "Opened while a hymn sounds, the shape is a sheet: the bar is not under it,
   tap "settings-feel"
   clock settle
   expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "gear"
+  clock settle
   tap "chords-toggle"
   clock settle
   clock data
