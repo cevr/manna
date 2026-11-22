@@ -115,11 +115,18 @@ const served = (request: Request, body: Uint8Array<ArrayBuffer>): Response => {
  */
 export interface Control {
   readonly asked: Map<string, number>;
+  /** The counts at the last `mark`: a count is of the `GET`s since. */
+  readonly marked: Map<string, number>;
   readonly refused: Set<number>;
   readonly cut: Set<number>;
 }
 
-export const controlOf = (): Control => ({ asked: new Map(), refused: new Set(), cut: new Set() });
+export const controlOf = (): Control => ({
+  asked: new Map(),
+  marked: new Map(),
+  refused: new Set(),
+  cut: new Set(),
+});
 
 /** A body that sends its first half, then breaks off, as a dropped connection does. */
 const cutOff = (body: Uint8Array<ArrayBuffer>): Response =>
@@ -143,8 +150,8 @@ export interface Ask {
 
 /**
  * `POST /control`: `{"action": "count", "path": "/audio/…", "is": n}`
- * answers 200 when that path's `GET`s number `n` and 409 naming the count
- * when not; `refuse` and `cut` make `hymn`'s next answers a 503 or a body
+ * answers 200 when that path's `GET`s since the last `mark` number `n` and
+ * 409 naming the count when not; `refuse` and `cut` make `hymn`'s next answers a 503 or a body
  * broken off halfway, and `mend` serves it whole again.
  */
 const controlled = (request: Request, control: Control): Promise<Response> =>
@@ -154,8 +161,14 @@ const controlled = (request: Request, control: Control): Promise<Response> =>
 const obeyed = (ask: Ask, control: Control): Response => {
   const hymn = ask.hymn ?? 0;
   if (ask.action === 'count') {
-    const count = control.asked.get(ask.path ?? '') ?? 0;
+    const path = ask.path ?? '';
+    const count = (control.asked.get(path) ?? 0) - (control.marked.get(path) ?? 0);
     return new Response(`${count}`, { status: count === ask.is ? 200 : 409, headers: CORS });
+  }
+  if (ask.action === 'mark') {
+    control.marked.clear();
+    for (const [path, count] of control.asked) control.marked.set(path, count);
+    return new Response('ok', { headers: CORS });
   }
   if (ask.action === 'refuse') control.refused.add(hymn);
   else if (ask.action === 'cut') control.cut.add(hymn);

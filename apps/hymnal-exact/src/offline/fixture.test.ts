@@ -26,6 +26,8 @@ describe('the recordings fixture under a test’s control', () => {
     expect((await control(handler, { action: 'count', path: PATH, is: 1 })).status).toBe(200);
     const other = await control(handler, { action: 'count', path: PATH, is: 2 });
     expect([other.status, await other.text()]).toEqual([409, '1']);
+    await control(handler, { action: 'mark' });
+    expect((await control(handler, { action: 'count', path: PATH, is: 0 })).status).toBe(200);
   });
 
   it('refuses a hymn’s recording, cuts its body off halfway, and serves it whole once mended', async () => {
