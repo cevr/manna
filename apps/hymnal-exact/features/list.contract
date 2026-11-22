@@ -52,6 +52,10 @@ shape ListOpening
 // band: the reports that can turn nothing are kept back while the view
 // moves `edge` its `way` (1 deeper, -1 higher, 0 none kept back) and each
 // stands within `travel` of it, past the same `rest`, the row `height` tall.
+// Only while no answer is pending (`listTabsSent`, `listTabsTaken`): until
+// the last send's answer lands every report is sent, in order, each with
+// the offset sent before it as its edge (a repeat that changes nothing), so
+// the data module folds the same reports in the same order as One.
 shape ListTabsAt
   shown: bool
   reach: bool
@@ -102,25 +106,36 @@ members HymnalExact
   state listTabsAt = 0
   state listTabsBand = ListTabsAt(shown=false, reach=false, past=false, cover=0, at=0, way=0, edge=0, travel=0, rest=0, height=0)
   state listTabsEdge = 0
+  state listTabsSent = 0
+  state listTabsTaken = 0
   mutation listTabsMoved as shape ListTabsAt queue then listTabsTook
   action listTabsReport(y: number, rest: number, height: number)
     listTabsAt = y
     let b = listTabsBand
     let moved = b.way > 0 ? max(listTabsEdge, y) : min(listTabsEdge, y)
-    if b.way != 0 and y > b.rest and rest == b.rest and height == b.height and (moved - y) * b.way < b.travel
+    if listTabsSent == listTabsTaken and b.way != 0 and y > b.rest and rest == b.rest and height == b.height and (moved - y) * b.way < b.travel
       listTabsEdge = moved
     else
       send listTabsMoved = listTabsStep("scroll", y, rest, height, listTabsEdge)
+      listTabsSent = listTabsSent + 1
+      listTabsEdge = y
   action listTabsJump
     send listTabsMoved = listTabsStep("here", listTabsAt, 0, 0, listTabsEdge)
+    listTabsSent = listTabsSent + 1
+    listTabsEdge = listTabsAt
   action listTabsTouch
     send listTabsMoved = listTabsStep("touch", listTabsAt, 0, 0, listTabsEdge)
+    listTabsSent = listTabsSent + 1
+    listTabsEdge = listTabsAt
   action listTabsTook
+    let taken = listTabsTaken + 1
+    listTabsTaken = taken
     match listTabsMoved
       case some(t)
-        listTabsAt = t.at
-        listTabsBand = t
-        listTabsEdge = t.edge
+        if taken == listTabsSent
+          listTabsAt = t.at
+          listTabsBand = t
+          listTabsEdge = t.edge
         let drawn = ListTabsShown(shown=t.shown, reach=t.reach, past=t.past, cover=t.cover)
         if drawn != listTabs
           listTabs = drawn
@@ -132,6 +147,8 @@ members HymnalExact
         haptic("selection")
     if name != listTab
       send listTabsMoved = listTabsStep("jump", 0, 0, 0, listTabsEdge)
+      listTabsSent = listTabsSent + 1
+      listTabsEdge = 0
       if name != "Lists" or favouriteList.length > 0 or recentList.length > 0
         scrollIntoView("list-top", block="start", behavior="instant")
         scrollIntoView(`shown-tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
