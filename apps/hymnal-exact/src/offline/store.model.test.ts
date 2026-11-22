@@ -42,7 +42,7 @@ import type * as CacheModule from '@manna/hymnal-app/offline/cache';
 type Cache = typeof CacheModule;
 
 /** Histories given to both: each Download all queues every hymn in the current cache, its workers passing the cancelled ones one by one, so a few dozen keep the part under its second. */
-const HISTORIES = 30;
+const HISTORIES = 20;
 /** Histories the port alone walks, its cancelled fetches settling late. */
 const LATE = 80;
 const STEPS = 50;

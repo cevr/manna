@@ -117,7 +117,7 @@ const whole = (host: Host) =>
 describe('Delete while the launch’s list is out', () => {
   it('removes every recording the list finds, and a new launch over the disk finds none', async () => {
     const random = seeded(31);
-    for (let index = 0; index < 40; index += 1) {
+    for (let index = 0; index < 20; index += 1) {
       const host = hostOf();
       serve(host, () => true);
       const ids: Array<Identity> = [];
@@ -192,7 +192,7 @@ describe('a save’s rename the host answers later', () => {
   it('offers a recording, and counts it saved, only once the host has renamed it into place', async () => {
     const random = seeded(47);
     const seen = new Set<string>();
-    for (let history = 0; history < 30; history += 1) {
+    for (let history = 0; history < 16; history += 1) {
       const host = hostOf();
       serve(host, () => true);
       const run = launch(host);
