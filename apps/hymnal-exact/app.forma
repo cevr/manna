@@ -91,12 +91,15 @@ theme
   type.tile-count = 400 0.7647rem/1.3846
   type.tiles-head = 600 1rem/1.2941
   size.strip: length = 4px
+  size.note-wide: length = 14px
+  size.note-high: length = 18px
   line.tile: length = 2px
   type.key-over = 600 0.5588rem/1.1579
   type.key-face = 700 0.8824rem/1.1333
   type.dial-name = 600 0.6471rem/normal
   type.dial-key = 600 1rem/normal
   type.dial-played = 400 0.5882rem/1.2
+  space.s2: length = 2px
   type.tuner-title = 600 1.1765rem/normal
   type.tuner-side = 400 1.1765rem/normal
   type.tuner-name = 700 2.3529rem/normal

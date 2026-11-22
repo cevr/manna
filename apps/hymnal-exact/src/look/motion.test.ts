@@ -95,7 +95,7 @@ const PRESS_SCALE = '0.97';
 type Cue = Parameters<typeof body.bodyOf>[0];
 
 /** A dial's detent cue, as the current app tells a turn of `dial`. */
-const detent = (dial: 'key' | 'capo' | 'hundreds' | 'tens' | 'ones') => {
+const detent = (dial: 'key' | 'capo' | 'tempo' | 'hundreds' | 'tens' | 'ones') => {
   const cue = { _tag: 'detent', dial, at: 0 } as const;
   return cue;
 };
@@ -112,6 +112,19 @@ const HAPTICS: ReadonlyArray<{
     cues: [cues.plain('play'), cues.plain('pause')],
   },
   { action: 'playerAsk', when: 'else if kind == "stanza"', cues: [cues.plain('choose')] },
+  {
+    action: 'playerAsk',
+    when: 'else if kind == "chooseAll" or kind == "tap"',
+    cues: [cues.plain('press')],
+  },
+  { action: 'playerAsk', when: 'else if kind == "tempoReset"', cues: [cues.plain('reset')] },
+  {
+    action: 'playerCounted',
+    when: 'if player.count.beat == 0',
+    cues: [{ _tag: 'beat', accent: true }],
+  },
+  { action: 'playerCounted', when: 'if playerClick', cues: [{ _tag: 'beat', accent: false }] },
+  { action: 'scrolled', when: 'if i != at', cues: [detent('tempo')] },
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },

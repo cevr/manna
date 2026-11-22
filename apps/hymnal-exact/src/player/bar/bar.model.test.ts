@@ -174,7 +174,13 @@ describe('the bar is the current app’s over play histories', async () => {
     expect(barOf(run(waited, [{ _tag: 'playing', id: load }]), titleOf).retry).toBe('');
     expect(barOf(run(waited, [{ _tag: 'pause' }]), titleOf).retry).toBe('');
     const retried = step(waited, { _tag: 'retry' });
-    expect(retried.command).toEqual({ _tag: 'load', url: track.url, id: load + 1, from: 4 });
+    expect(retried.command).toEqual({
+      _tag: 'load',
+      url: track.url,
+      id: load + 1,
+      from: 4,
+      rate: 1,
+    });
     expect(barOf(retried.state, titleOf).retry).toBe('');
     expect(barOf(run(started, [{ _tag: 'waited', id: load }]), titleOf).retry).toBe('');
   });

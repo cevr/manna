@@ -92,6 +92,11 @@
         "finding": "overlap",
         "node": "dial-capo-stop-*",
         "why": "The capo dial's frets are drawn under its one VoiceOver control, the `Capo` range laid over the whole dial (dial-capo-value), as the current hymnal's dial is one adjustable view over its stops (src/player/DialView.tsx:375-405); the open dials float over the page above the bar (src/player/PlayerBar.tsx:218-221, `styles.dock` absolute) (par-hy-key)."
+      },
+      {
+        "finding": "overlap",
+        "node": "dial-tempo-stop-*",
+        "why": "The tempo dial's stops are drawn under its one VoiceOver control, the `Tempo` range laid over the whole dial (dial-tempo-value), as the current hymnal's tempo dial is the same adjustable view over its stops (src/player/TempoDial.tsx:73, src/player/DialView.tsx:375-405, `accessibilityRole=\"adjustable\"` holding the row) (par-hy-tempo)."
       }
     ]
   },

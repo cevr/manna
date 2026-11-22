@@ -11,6 +11,7 @@
 use PlayerView, PlayerPill, playerLabel from "./player.contract"
 use KeysPage, KeysCapoDial, KeysKeyDial, KeysPlaces, KeysDialName, KeysResetChip from "./keys.contract"
 use ReadingGroup from "./reading.contract"
+use TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
 
 shape SheetStop
   value: string
@@ -98,6 +99,7 @@ component PlayerSheet
             column role="group" aria-label="Recording" gap="space.s16"
               SheetTitle(player=player, ask=ask)
               text player.caption font="type.caption" color="muted" aria-live="polite" testId="player-said"
+              RecordingNotice(on=player.fellBack)
               column gap="space.s4"
                 input type="range" id="position" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") height="size.slider" aria-label="Position" aria-valuetext=`${player.elapsed} of ${player.total}` testId="position"
                 row justify-content="space-between"
@@ -113,18 +115,21 @@ component PlayerSheet
                 else if player.phase != "failed" and player.toggle != ""
                   button press=ask("page", player.number) appearance="none" min-height="size.target" -exact-press-opacity="opacity.pressed" testId="toggle" aria-label=playerLabel(player.toggle)
                     text playerLabel(player.toggle) font="type.body" color="button"
+              TempoDial(tempo=player.tempo, ask=ask)
               if player.chips.length > 0
                 column role="group" aria-label="Stanzas" gap="space.s8" padding="0px space.s16" testId="stanzas"
                   text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
                   row gap="space.s8" flex-wrap="wrap" align-items="center"
                     for c in player.chips key=c.stanza
                       PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
+                    StanzasAll(on=player.some, ask=ask)
                   if player.places.length > 0
                     row gap="space.s8" flex-wrap="wrap" align-items="center"
                       text "Go to" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
                       for n in player.places key=n
                         button press=ask("place", n) appearance="none" display="flex" align-items="center" justify-content="center" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color="pill" -exact-press-opacity="opacity.pressed" aria-label=`Go to the start of stanza ${n}` testId=`stanza-place-${n}`
                           text `${n}` font="type.chip" color="onPill" line-clamp=1
+              StartRow()
               SheetChords(number=player.number)
           ReadingGroup()
 
