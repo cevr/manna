@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, effect/noNewPromise, node/no-process-env -- a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads its replies and prints what it found. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noAs, effect/noUnknownParameters, effect/noNewPromise, effect/noRuntimeTypeof, node/no-process-env -- a host script that drives the built app through `bun run exact agent` (the kit's drive, one process group per run), reads its replies and prints what it found. */
 
 /**
  * The pinch's live checks, which a `.test.contract` cannot hold, on the host
@@ -9,7 +9,8 @@
  *   list again where it stood (a row's place read before and after);
  * - a pinch begun on a row opens no row, whether it commits or not;
  * - after a pinch the list's one-finger drag still scrolls it, and a tap on
- *   a row still opens its hymn;
+ *   a row still opens its hymn (on the web this fails if the browser zooms
+ *   its page with the pinch: the tap then lands two rows off);
  * - the `pinch` hatch is on the list's column: `state hatches` names it.
  *
  * Exits 1 on any failed check.
@@ -65,90 +66,103 @@ type Frame = { readonly x: number; readonly y: number; readonly w: number; reado
 const frameOf = (reply: unknown): Frame | undefined =>
   (reply as { node?: { space?: { viewport?: Frame } } } | undefined)?.node?.space?.viewport;
 
-const stood = await launch('pinch-stood', [
+/** A launch's ops, some named `[name, op]`, run on a fresh store; answers each named op's reply by its name. */
+const named = async (store: string, steps: ReadonlyArray<string | readonly [string, string]>) => {
+  const ops = steps.map((step) => (typeof step === 'string' ? step : step[1]));
+  const replies = await launch(store, ops);
+  return (name: string): unknown =>
+    replies[steps.findIndex((step) => typeof step !== 'string' && step[0] === name)];
+};
+
+const PINCH_IN_OUT = [
+  ['in', 'tap hymn-list pinch 0.7'],
+  'clock settle',
+  'clock data',
+  ['tilesIn', 'state find.tiles'],
+  ['out', 'tap tiles pinch 1.4'],
+  'clock settle',
+  'clock data',
+  ['tilesOut', 'state find.tiles'],
+] as const;
+
+const stood = await named('pinch-stood', [
   'clock data',
   'tap hymn-list drag 0 -240',
   'clock settle',
-  'layout hymn-12',
-  'tap hymn-list pinch 0.7',
-  'clock settle',
-  'clock data',
-  'state find.tiles',
-  'tap tiles pinch 1.4',
-  'clock settle',
-  'clock data',
-  'state find.tiles',
-  'layout hymn-12',
-  'state find.top',
+  ['before', 'layout hymn-12'],
+  ...PINCH_IN_OUT,
+  ['after', 'layout hymn-12'],
+  ['top', 'state find.top'],
 ]);
-drive.check('a pinch in on the list shows the tiles', stood[6] === true, {
-  reply: stood[4],
-  tiles: stood[6],
+drive.check('a pinch in on the list shows the tiles', stood('tilesIn') === true, {
+  reply: stood('in'),
+  tiles: stood('tilesIn'),
 });
-drive.check('a pinch out on the tiles shows the list', stood[10] === false, {
-  reply: stood[7],
-  tiles: stood[10],
+drive.check('a pinch out on the tiles shows the list', stood('tilesOut') === false, {
+  reply: stood('out'),
+  tiles: stood('tilesOut'),
 });
-const [before, after] = [frameOf(stood[3]), frameOf(stood[11])];
+const [before, after] = [frameOf(stood('before')), frameOf(stood('after'))];
 drive.check(
   'the list shows again where it stood',
   before !== undefined && after !== undefined && Math.abs(before.y - after.y) <= 0.5,
   { before, after },
 );
-drive.check('no row opened', stood[12] === '/', stood[12]);
+drive.check('no row opened', stood('top') === '/', stood('top'));
 
-const onRow = await launch('pinch-row', [
+const onRow = await named('pinch-row', [
   'clock data',
-  'tap hymn-3 pinch 0.97',
+  ['band', 'tap hymn-3 pinch 0.97'],
   'clock settle',
   'clock data',
-  'state find.top',
-  'state find.tiles',
-  'tap hymn-3 pinch 0.6',
+  ['bandTop', 'state find.top'],
+  ['bandTiles', 'state find.tiles'],
+  ['commit', 'tap hymn-3 pinch 0.6'],
   'clock settle',
   'clock data',
-  'state find.top',
-  'state find.tiles',
+  ['commitTop', 'state find.top'],
+  ['commitTiles', 'state find.tiles'],
 ]);
 drive.check(
   'a pinch begun on a row that commits nothing opens no row',
-  onRow[4] === '/' && onRow[5] === false,
-  { reply: onRow[1], url: onRow[4], tiles: onRow[5] },
+  onRow('bandTop') === '/' && onRow('bandTiles') === false,
+  { reply: onRow('band'), url: onRow('bandTop'), tiles: onRow('bandTiles') },
 );
 drive.check(
   'a pinch begun on a row that shows the tiles opens no row',
-  onRow[9] === '/' && onRow[10] === true,
-  { reply: onRow[6], url: onRow[9], tiles: onRow[10] },
+  onRow('commitTop') === '/' && onRow('commitTiles') === true,
+  { reply: onRow('commit'), url: onRow('commitTop'), tiles: onRow('commitTiles') },
 );
 
-const still = await launch('pinch-still', [
+const scrolls = await named('pinch-scrolls', [
   'clock data',
-  'tap hymn-list pinch 0.7',
-  'clock settle',
-  'clock data',
-  'tap tiles pinch 1.4',
-  'clock settle',
-  'clock data',
-  'layout hymn-12',
+  ...PINCH_IN_OUT,
+  ['rested', 'layout hymn-12'],
   'tap hymn-list drag 0 -240',
   'clock settle',
-  'layout hymn-12',
-  'state hatches',
-  'tap hymn-12',
-  'clock settle',
-  'clock data',
-  'state find.top',
+  ['dragged', 'layout hymn-12'],
+  ['hatches', 'state hatches'],
 ]);
-const [rested, dragged] = [frameOf(still[7]), frameOf(still[10])];
+const [rested, dragged] = [frameOf(scrolls('rested')), frameOf(scrolls('dragged'))];
 drive.check(
   'after a pinch, a one-finger drag still scrolls the list',
   rested !== undefined && dragged !== undefined && rested.y - dragged.y > 100,
   { rested, dragged },
 );
-drive.check('after a pinch, a tap on a row still opens its hymn', still[15] === '/hymns/12', {
-  url: still[15],
-});
-const hatches = JSON.stringify(still[11] ?? null);
+const hatches = JSON.stringify(scrolls('hatches') ?? null);
 drive.check('the pinch hatch is live on the list’s column', hatches.includes('pinch'), hatches);
+
+const opens = await named('pinch-opens', [
+  'clock data',
+  ...PINCH_IN_OUT,
+  'clock settle',
+  'tap hymn-3',
+  'clock settle',
+  'clock data',
+  ['top', 'state find.top'],
+]);
+drive.check('after a pinch, a tap on a row still opens its hymn', opens('top') === '/hymns/3', {
+  url: opens('top'),
+});
 
 process.exit(drive.finish());

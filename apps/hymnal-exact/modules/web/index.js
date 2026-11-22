@@ -152,6 +152,9 @@ const pointsOf = (event) => Array.from(event.touches, (t) => ({ x: t.clientX, y:
  * two fingers on it are tracked as `pinchTracker` says, while its
  * `data-pinchable` is `on` (the step's `pinchable`, `features/find.contract`).
  * Its listeners are passive: a one-finger scroll and a tap are the page's.
+ * It sets the node's `touch-action` to `pan-x pan-y` while it lives, so a
+ * pinch there zooms the list to its tiles and never the browser's page, as
+ * no pinch zooms the current app's screen; its end puts back what was there.
  */
 const pinchHatch = {
   element(e) {
@@ -172,6 +175,8 @@ const pinchHatch = {
       e.element.addEventListener(type, listener, { passive: true });
       mine.listeners.push([type, listener]);
     }
+    mine.touchAction = e.element.style.touchAction;
+    e.element.style.touchAction = 'pan-x pan-y';
     pinchHeld.set(e.element, mine);
     e.diagnostics.log(`built on <${e.element.localName}>, ${mine.enabled ? 'on' : 'off'}`);
   },
@@ -180,6 +185,7 @@ const pinchHatch = {
     if (held === undefined) return;
     held.track('cancel', [], 0, false);
     for (const [type, listener] of held.listeners) e.element.removeEventListener(type, listener);
+    e.element.style.touchAction = held.touchAction;
     pinchHeld.delete(e.element);
   },
 };
