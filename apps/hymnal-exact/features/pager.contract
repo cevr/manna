@@ -54,7 +54,7 @@ members HymnalExact
     change(pagerPlaced)
   action pagerPlaced
     pagerNumbers = pagerWanted
-    if hymnOpen != ""
+    if pagerWanted.map(n => `${n}`).includes(hymnOpen)
       scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
   resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
   resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) for n in pagerNumbers as shape ChordsPage
