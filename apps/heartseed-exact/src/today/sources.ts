@@ -19,7 +19,7 @@
  *   the item go (`next`); nothing is written before it. Leaving Today for
  *   a screen that is not the Settings sheet lets the item and the try go,
  *   unless a recital is under way.
- * - `/cue/<cue>` shows Isaiah 41:10, read from the shipped KJV, under the
+ * - `/cue/<cue>` shows the first verse, read from the shipped KJV, under the
  *   cue named, for the recital's own tests: Next there keeps the try in
  *   memory alone. The first minute's `/first/<phase>/<cue>` is cued the
  *   same way, and each new cue there starts a fresh recital.
@@ -50,6 +50,8 @@ import type { Choice as Voice } from '@manna/heartseed/voice/reading';
 import { Option } from 'effect';
 
 import { backOn } from '../back/shown';
+import { firstPlace } from '../first/verse';
+import type { GardenVerseChange } from '../garden/sources';
 import { slugOf } from '../garden/view';
 import { DRAWN } from '../list/page';
 import { makeLive, type Call, type Ground, type Live } from '../session/live';
@@ -146,12 +148,21 @@ export interface TodayScreen extends TodayView {
   back: boolean;
 }
 
-/** The verse `/cue/<cue>` shows: Isaiah 41:10. */
-const CUED = { book: 23, chapter: 41, first: 10, last: 10 };
+/** The verse `/cue/<cue>` shows: the first verse, as the current Heartseed names it (`src/first/verse.ts`). */
+const cued = () =>
+  Option.match(firstPlace(), {
+    onNone: () => ({ book: 0, chapter: 0, first: 0, last: 0 }),
+    onSome: (place) => ({
+      book: place.book,
+      chapter: place.chapter,
+      first: place.verse,
+      last: place.verse,
+    }),
+  });
 
 /** The cued verse as the shipped KJV gives it. */
 const cuedPassage = (): Passage => {
-  const read = textOf(CUED);
+  const read = textOf(cued());
   return {
     reference: read.reference,
     text: read.verses.map((verse) => verse.text).join(' '),
@@ -292,6 +303,11 @@ export interface GardenCalls {
     store: ExactStore,
     storage: FileStorage,
   ) => Promise<{ answer: string }>;
+  readonly gardenKeepFirst: (
+    args: readonly [string, unknown, unknown, number, number, number],
+    store: ExactStore,
+    storage: FileStorage,
+  ) => Promise<GardenVerseChange>;
 }
 
 type Source<A extends readonly unknown[]> = (
@@ -547,6 +563,13 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
         await onSession(storage, { now: args[1], seed: args[3] }, (each) => each.remake);
       return changed;
     });
+  const gardenKeepFirst: GardenCalls['gardenKeepFirst'] = (args, store, storage) =>
+    queued(async () => {
+      const changed = await garden.gardenKeepFirst(args, store, storage);
+      if (changed.answer === 'Kept')
+        await onSession(storage, { now: args[3], seed: args[5] }, (each) => each.remake);
+      return changed;
+    });
   const gardenRemove: GardenCalls['gardenRemove'] = (args, store, storage) =>
     queued(async () => {
       const changed = await garden.gardenRemove(args, store, storage);
@@ -613,5 +636,6 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
     gardenJoin,
     addPlant,
     gardenRemove,
+    gardenKeepFirst,
   };
 };
