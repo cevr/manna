@@ -93,7 +93,8 @@
     "./vite/indexes": "./vite/indexes.ts",
     "./vite/timing": "./vite/timing.ts",
     "./vite/words": "./vite/words.ts",
-    "./vite/app": "./vite/app.ts"
+    "./vite/app": "./vite/app.ts",
+    "./tuner/pitch": "./src/tuner/pitch.ts"
   },
   "scripts": {
     "postinstall": "one patch || true",
