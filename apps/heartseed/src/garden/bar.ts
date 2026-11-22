@@ -5,7 +5,7 @@
  * own object, and an answer lands only for the latest one.
  */
 
-import { Option } from 'effect';
+import { Exit, Option } from 'effect';
 
 import { backOf, type BackAnswer, type BackAsk, type Stage } from '../garden';
 
@@ -55,6 +55,13 @@ export interface BackOffer {
 /** Whether Today's footer offers Move back on a planted verse: at rest (no recital listening, held or done, no Show all on it) on a verse a tap started. */
 export const offersBack = (at: BackOffer) =>
   !at.listening && !at.recital && !at.done && !at.shownAll && at.visited;
+
+/** The answer a run of the step back gives: its own when it succeeded, `Failed` for any failure. */
+export const answerOf = (exit: Exit.Exit<BackAnswer, unknown>): BackAnswer =>
+  Exit.match(exit, {
+    onSuccess: (value): BackAnswer => value,
+    onFailure: (): BackAnswer => 'Failed',
+  });
 
 /** The state after `happened`: a tap opens a new ask, `Keep` drops the ask shown, and an answer lands whenever it answers the latest ask (kept or not), so the line or alert shown always says what the garden kept for it. */
 export const barAfter = (bar: Bar, happened: Happened): Bar => {

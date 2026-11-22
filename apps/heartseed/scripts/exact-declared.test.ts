@@ -116,6 +116,7 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof GardenBar.NAMED, typeof DeclaredGardenBar.NAMED>,
   true satisfies Mutual<typeof GardenBar.IDLE, typeof DeclaredGardenBar.IDLE>,
   true satisfies Mutual<typeof GardenBar.barAfter, typeof DeclaredGardenBar.barAfter>,
+  true satisfies Mutual<typeof GardenBar.answerOf, typeof DeclaredGardenBar.answerOf>,
   true satisfies Mutual<GardenBar.Bar, DeclaredGardenBar.Bar>,
   true satisfies Mutual<GardenBar.Happened, DeclaredGardenBar.Happened>,
   true satisfies Mutual<typeof GardenBar.askLine, typeof DeclaredGardenBar.askLine>,

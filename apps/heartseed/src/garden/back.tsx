@@ -22,7 +22,7 @@
  */
 
 import { useAtomSet } from '@effect/atom-react';
-import { Exit, Option } from 'effect';
+import { Option } from 'effect';
 import { useReducer, useTransition } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -30,8 +30,8 @@ import { moveBack } from '../app';
 import { Control } from '../field/plot';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
-import { backOf, type BackAnswer, type BackAsk, type Stage } from '../garden';
-import { alertLine, askLine, barAfter, IDLE, movedLine } from './bar';
+import { backOf, type BackAsk, type Stage } from '../garden';
+import { alertLine, answerOf, askLine, barAfter, IDLE, movedLine } from './bar';
 
 /** Move back a stage for the verse of `reference`, standing at `stage` now. */
 export function MoveBack({
@@ -52,10 +52,7 @@ export function MoveBack({
     startTransition(async () => {
       const exit = await back(ask);
       /* oxlint-enable effect/noAsyncFunction */
-      const answer = Exit.match(exit, {
-        onSuccess: (value): BackAnswer => value,
-        onFailure: (): BackAnswer => 'Failed',
-      });
+      const answer = answerOf(exit);
       dispatch({ type: 'answered', ask, answer });
     });
   return (

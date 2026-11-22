@@ -1,3 +1,5 @@
+import type { Exit } from 'effect';
+
 import type { BackAnswer, BackAsk, Stage } from './garden.d.ts';
 
 /** The names the ask and the moved line give each stage. */
@@ -19,6 +21,9 @@ export type Happened =
 
 /** Move back before its first tap. */
 export declare const IDLE: Bar;
+
+/** The answer a run of the step back gives: its own when it succeeded, `Failed` for any failure. */
+export declare const answerOf: (exit: Exit.Exit<BackAnswer, unknown>) => BackAnswer;
 
 /** Move back's state after one happening. */
 export declare const barAfter: (bar: Bar, happened: Happened) => Bar;
