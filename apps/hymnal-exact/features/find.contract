@@ -1,6 +1,7 @@
 // Finding a hymn: the find bar on every screen where the `#` stands (home,
-// Recent, a hymn's page), the drums that dial a hymn by its number, and the
-// home list's tiles, every hymn's number at once. Every rule is `step` in
+// Recent, a hymn's page), the drums that dial a hymn by its number (the
+// home list follows them), and All at once, the home list's groups as
+// tiles. Every rule is `step` in
 // src/find/step.ts, answered by `findStep` (src/find/sources.ts); this file
 // draws its view and turns presses into calls. A found hymn goes where the
 // step says (`go`, taken once by its serial); the drums are a dialog the
@@ -15,15 +16,52 @@ shape ListRow
   number: number
   title: string
 
+// A row of the list's answer (src/list/rows.ts): a search's carries the
+// line it found the hymn by, "" with none, as every other row has.
+shape SectionRow
+  number: number
+  title: string
+  line: string
+
 shape RowSection
   slug: string
   name: string
-  rows: ListRow[]
+  rows: SectionRow[]
 
 shape FindGo
   serial: number
   how: string
   path: string
+
+// A stretch of a tile's strip, as fractions of its width from hymn 1.
+shape FindSpan
+  start: number
+  end: number
+
+// A group's tile in All at once (`findGroupTiles`, src/find/tiles.ts):
+// its name, its count as said, its VoiceOver name, its strip, whether it
+// holds the player's hymn, and the id of the group's first row in the
+// home list, where its tap lands.
+shape FindTile
+  index: number
+  name: string
+  count: string
+  label: string
+  spans: FindSpan[]
+  playing: bool
+  row: string
+
+// The home list's row the drums' number scrolls to, "" with none
+// (`findFollowRow`, src/find/follow.ts).
+shape FindFollow
+  row: string
+
+// The hymns about a search's query, nearest first, and the query they were
+// asked for (`findAbout`, src/results/table.ts): the list shows them only
+// under that query's matches.
+shape FindAbout
+  query: string
+  numbers: number[]
 
 shape FindView
   serial: number
@@ -76,7 +114,18 @@ members HymnalExact
   resource findOnScreen = findStep("screen", findPaths, 0, 0) as shape FindView
   mutation findStepped as shape FindView queue then findTook
   derive find = match findStepped { case some(v) => (v.serial >= findOnScreen.serial ? v : findOnScreen), case none => findOnScreen }
-  resource findTileNumbers = findTiles() when findTilesAsked as shape number[] else empty()
+  resource findTileGroups = findGroupTiles(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [], player.number) when findTilesAsked as shape FindTile[] else empty()
+  state findLanding = ""
+  state findFollowed = 0
+  mutation findFollowing as shape FindFollow queue then findFollow
+  // The current app's search mode asks for the hymns about its query once
+  // it has stood `PAUSE` (150 ms, src/hymns/meaning.ts) after the last key.
+  state findAsked = ""
+  resource findAboutNow = findAbout(findAsked) as shape FindAbout else empty()
+  task findPause when find.query != findAsked key=find.query
+    after(150, findAskAbout)
+  action findAskAbout
+    findAsked = find.query
   action findAsk(kind: string, n: number)
     send findStepped = findStep(kind, "", n, 0)
   action findSearch
@@ -96,9 +145,20 @@ members HymnalExact
     if e.ctrlKey
       preventDefault()
       send findStepped = findStep("wheel", "", e.deltaY, 0)
+  action findTilePick(row: string)
+    findLanding = row
+    send findStepped = findStep("tilesDone", "", 0, 0)
   action findTook
     if find.homeTiles
       findTilesAsked = true
+    else if findLanding != ""
+      findLanding = ""
+      scrollIntoView(findLanding, block="start", behavior="instant")
+    if find.drums and find.top == "/" and find.query == "" and not find.homeTiles and find.number != findFollowed
+      findFollowed = find.number
+      send findFollowing = findFollowRow(listTab, find.number, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
+    else if not find.drums
+      findFollowed = 0
     if find.drums and not findDrumsUp
       findDrumsUp = true
       showModal("find-drums")
@@ -110,6 +170,13 @@ members HymnalExact
         nav = push(nav, find.go.path)
       else if find.go.how == "replace"
         nav = replace(nav, find.go.path)
+  action findFollow
+    match findFollowing
+      case some(f)
+        if f.row != "" and find.drums
+          scrollIntoView(f.row, block="start", behavior="instant")
+      case none
+        findFollowed = findFollowed
   action findDismissed
     findDrumsUp = false
     send findStepped = findStep("drumsClose", "", 0, 0)
@@ -200,8 +267,10 @@ component FindBar
             scroll id=`find-list-${entry.id}` flex=1 min-height=0 testId="find-list"
               column
                 for s in findRows key=s.slug
+                  if s.name != ""
+                    FoundSection(name=s.name, slug=s.slug)
                   for r in s.rows key=r.number
-                    FoundRow(number=r.number, title=r.title, star=favouriteNumbers.includes(r.number), open=findOpen)
+                    FoundRow(number=r.number, title=r.title, line=r.line, star=favouriteNumbers.includes(r.number), open=findOpen)
       row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0)}px` z-index=2
         align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
         if findShown.row == "tiles"
@@ -212,7 +281,7 @@ component FindBar
             if findShown.tilesControl
               button press=findPress("tilesShow", 0) appearance="none" aria-label="All at once" width="size.target" height="size.target" flex-shrink=0
                 color="onGlass" display="flex" align-items="center" justify-content="center" testId="tiles-show"
-                animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.fade ease-out both")
+                animation=(motionStill ? "none" : "hy-fade-in duration.fade ease-out both") -exact-exit-animation=(motionStill ? "none" : "hy-fade-out duration.fade ease-out both")
                 :active
                   opacity = "opacity.pressed"
                 image "symbol:layers" width="size.glyph" height="size.glyph"
@@ -393,52 +462,91 @@ component FindStop
         text `${wraps ? (digit + at + 10) % 10 : digit + at}` font="type.strong" font-variant-numeric="tabular-nums"
           color=(at == 0 ? "chord" : "muted")
 
-// All at once: every hymn's number in one grid over the home list, which
-// stays where it stood beneath. A tile opens its hymn; Done returns to the
-// list.
+// All at once, as the current app's (src/home/AllAtOnce.tsx): the home
+// list zoomed out to one tile a group of the tab in use, over the list,
+// which stays where it stood beneath. Two columns of tiles, each its
+// group's name on up to two lines, how many hymns it holds, and a strip of
+// where they lie from hymn 1 to 695; the group holding the player's hymn
+// is outlined in the accent. The bar over them is headed "<Tab>, all at
+// once", with Done. A tile's tap zooms back in with its group's row at the
+// list's top (`findTilePick`: the list shows again, then its group's first
+// row is scrolled to the top, under its pinned header); Done zooms back in
+// where the list was. VoiceOver reads a tile as a button by its name,
+// count, then `playing`.
 component FindTiles
   inject
     findPress: action
-    findTileList: number[]
+    findGroups: FindTile[]
+    findPick: action
+    findTabName: string
     findWheel: action
     motionStill: bool
   view
     column flex=1 min-height=0 background-color="ground" testId="tiles"
       animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-zoom-in duration.tiles-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-zoom-out duration.tiles-out ease-out both")
       row align-items="center" padding="space.s11 space.s8 space.s11 space.s16"
-        text "All at once" role="heading" aria-level=2 flex=1 font="type.strong" color="ink"
+        text `${findTabName}, all at once` role="heading" aria-level=2 flex=1 min-width=0 font="type.tiles-head" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId="tiles-heading"
         button press=findPress("tilesDone", 0) appearance="none" min-height="size.target" min-width="size.target" padding="0 space.s8" color="accent" testId="tiles-done"
           :active
             opacity = "opacity.pressed"
           text "Done" font="type.strong"
       scroll id="find-tiles" flex=1 min-height=0 wheel=findWheel testId="find-tiles"
-        row flex-wrap="wrap" gap="space.s10" padding="0 space.s16 space.s16"
-          for n in findTileList key=n
-            button press=findPress("tile", n) appearance="none" aria-label=`Hymn ${n}` min-width="size.target" min-height="size.target"
-              border-radius="radius.r12" background-color="soft" color="ink" testId=`tile-${n}`
+        column display="grid" grid-template-columns="repeat(2, minmax(0, 1fr))" gap="space.s10" padding="0 space.s16 space.s16"
+          for t in findGroups key=t.index
+            button press=findPick(t.row) appearance="none" aria-label=t.label display="flex" flex-direction="column" justify-content="space-between" gap="space.s4"
+              padding="space.s12" border-radius="radius.r12" border-width="line.tile" border-style="solid" border-color=(t.playing ? "accent" : "transparent")
+              background-color="soft" text-align="start" min-width=0 box-sizing="border-box" testId=`group-tile-${t.index}`
               :active
                 opacity = "opacity.pressed"
-              text `${n}` font="type.strong" font-variant-numeric="tabular-nums"
+              text t.name font="type.tile-name" color="ink" line-clamp=2 overflow-wrap="anywhere"
+              text t.count font="type.tile-count" color="muted" line-clamp=1 testId=`group-tile-count-${t.index}`
+              column position="relative" height="size.strip" border-radius="radius.pill" overflow="hidden" background-color="line" aria-hidden=true
+                for s in t.spans key=s.start
+                  column position="absolute" top=0 bottom=0 left=`${s.start * 100}%` width=`${(s.end - s.start) * 100}%` background-color="accent"
+
+// A section of a search's results ("Hymns about this", "More matches"),
+// drawn as a topic's row of the current app's list (HymnList.native.tsx
+// `TopicRow`): its name, quiet, over a hairline; a search pins none, so it
+// scrolls with its rows, and it takes no press.
+component FoundSection
+  props
+    name: string
+    slug: string
+  view
+    row role="heading" aria-level=2 align-items="center" padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
+      position="relative" background-color="ground" testId=`found-section-${slug}`
+      text name font="type.topic" color="muted" line-clamp=1 position="relative" top="nudge.topic"
+      column position="absolute" left=0 right=0 bottom=0 height="line.hair" background-color="line" aria-hidden=true
 
 // A found hymn's row: drawn as list.contract's `HymnRow` (the current
 // app's row: number in the accent, title, a star when a favourite, a
 // hairline from the title's edge), a button whose press opens the hymn as
-// a found hymn opens (`listOpening`).
+// a found hymn opens (`listOpening`). A hymn found by a line other than
+// its title shows that `line` under the title, quiet and one line long,
+// the number level with the title at the row's top, the row two lines
+// tall at every text size, as the current app's found row
+// (HymnList.native.tsx `HymnRow`, `foundPadding`). VoiceOver reads its
+// number, title, `favourite` when it is one, then the line (`nameOf`).
 component FoundRow
   props
     number: number
     title: string
+    line: string
     star: bool
     open: action
   view
-    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items="center" gap="space.s12" text-align="start"
-      padding-left="space.s16" padding-right="space.s16" padding-top="space.s11" padding-bottom="space.s11"
-      height="size.target" min-height=0 box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
+    button press=open(number) appearance="none" display="flex" flex-direction="row" align-items=(line != "" ? "flex-start" : "center") gap="space.s12" text-align="start"
+      padding-left="space.s16" padding-right="space.s16" padding-top=(line != "" ? "space.s8" : "space.s11") padding-bottom=(line != "" ? "space.s8" : "space.s11")
+      box-sizing="border-box" position="relative" background-color="ground" testId=`hymn-${number}`
+      aria-label=`${number}, ${title}${star ? ", favourite" : ""}${line != "" ? `, ${line}` : ""}`
       :active
         background-color = "soft"
       text `${number}` font="type.row-number" font-variant-numeric="tabular-nums" text-align="right" min-width="size.button" flex="none" color="accent" line-clamp=1 position="relative" top="nudge.number"
-      row flex=1 min-width=0 align-items="center" gap="space.s12" position="relative" top="nudge.row"
-        text title flex=1 min-width=0 font="type.row-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
-        if star
-          text "★" font="type.row-title" color="accent" aria-label="Favourite" testId=`star-${number}`
+      column flex=1 min-width=0
+        row align-items="center" gap="space.s12" position="relative" top="nudge.row"
+          text title flex=1 min-width=0 font="type.row-title" color="ink" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+          if star
+            text "★" font="type.row-title" color="accent" aria-label="Favourite" testId=`star-${number}`
+        if line != ""
+          text line font="type.row-line" color="muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`row-line-${number}`
       column position="absolute" left="space.s64" right=0 bottom=0 height="line.hair" background-color="line" aria-hidden=true

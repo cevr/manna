@@ -16,8 +16,14 @@ export interface SearchIndex {
 /** The index of `all`, over the bundled back-matter indexes. */
 export declare const indexOf: (all: ReadonlyArray<HymnText>) => SearchIndex;
 
-/** The hymns `query` finds, in rank order. */
-export declare const find: (index: SearchIndex, query: string) => Array<{ hymn: HymnText }>;
+/** The hymns `query` finds, in rank order, each with the line it was found by when that is not its title (an `effect` Option, by its shapes). */
+export declare const find: (
+  index: SearchIndex,
+  query: string,
+) => Array<{
+  hymn: HymnText;
+  line: { readonly _tag: 'Some'; readonly value: string } | { readonly _tag: 'None' };
+}>;
 
 /** The index of every hymn, built on its first call and kept. */
 export declare const hymnIndex: () => SearchIndex;

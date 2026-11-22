@@ -194,8 +194,8 @@ describe('the recordings’ origin', () => {
         .map((line) => line.trim())
         .filter(Boolean),
     ).toEqual([
-      "'https://hymns.cvr.im': 'net.fetch https://hymns.cvr.im',",
-      "'http://127.0.0.1:4797': 'net.fetch http://127.0.0.1:4797',",
+      "'https://hymns.cvr.im': ['net.fetch https://hymns.cvr.im', 'fs.read bundle:/Resources/meaning'],",
+      "'http://127.0.0.1:4797': ['net.fetch http://127.0.0.1:4797', 'fs.read bundle:/Resources/meaning'],",
     ]);
   });
 });

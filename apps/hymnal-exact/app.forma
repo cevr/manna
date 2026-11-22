@@ -86,6 +86,12 @@ theme
   type.first = 400 0.7647rem/1.3846
   type.finger = 700 0.6471rem/1.2727
   type.chip = 600 0.7647rem/normal
+  type.row-line = 400 0.8824rem/1.2
+  type.tile-name = 600 0.8824rem/1.3333
+  type.tile-count = 400 0.7647rem/1.3846
+  type.tiles-head = 600 1rem/1.2941
+  size.strip: length = 4px
+  line.tile: length = 2px
   type.key-over = 600 0.5588rem/1.1579
   type.key-face = 700 0.8824rem/1.1333
   type.dial-name = 600 0.6471rem/normal

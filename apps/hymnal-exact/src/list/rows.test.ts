@@ -3,9 +3,10 @@
 import { describe, expect, test } from 'bun:test';
 
 import { find, hymnIndex, indexOf } from '@manna/hymnal-app/hymns/search';
+import { plainRowsOf, resultRowsOf } from '@manna/hymnal-app/reader/rows';
 
-import { type Book, book } from '../hymns/book.ts';
-import { below, query, seeded } from '../test/random.ts';
+import { type Book, book, type HymnText } from '../hymns/book.ts';
+import { below, pick, query, type Random, seeded } from '../test/random.ts';
 import { type RowSection, rowsOf, slugOf } from './rows.ts';
 
 const numbers = (sections: ReadonlyArray<RowSection>) =>
@@ -33,6 +34,48 @@ const expectFound = (sub: Book, text: string, sections: ReadonlyArray<RowSection
     expect({ slug: section.slug, name: section.name }).toEqual({ slug: 'found', name: '' });
 };
 
+/** Words from a line of a hymn's words, as a reader recalls one: a few of them, from a place in it, now and then mistyped. */
+const lineQuery = (random: Random): string => {
+  const hymn = pick(random, book.hymns);
+  const lines = hymn.sections.flatMap((section) => section.lines);
+  if (lines.length === 0) return hymn.title;
+  const words = pick(random, lines).split(/\s+/).filter(Boolean);
+  const from = below(random, Math.max(1, words.length));
+  const taken = words.slice(from, from + 2 + below(random, 4));
+  return taken
+    .map((word) =>
+      below(random, 5) === 0
+        ? `${word.slice(0, -1)}${word.at(-1) ?? ''}${word.at(-1) ?? ''}`
+        : word,
+    )
+    .join(' ');
+};
+
+/** The rows as the current app's results draw them: `find`, then `plainRowsOf` over the found lines. */
+const currentRows = (text: string) => {
+  const found = find(hymnIndex(), text);
+  const lines = new Map(
+    found.flatMap((each) =>
+      each.line._tag === 'Some' ? [[each.hymn.number, each.line.value] as const] : [],
+    ),
+  );
+  return plainRowsOf(
+    found.map((each) => each.hymn),
+    undefined,
+    lines,
+  ).rows.flatMap((row) =>
+    row.kind === 'hymn'
+      ? [
+          {
+            number: row.hymn.number,
+            title: row.hymn.title,
+            line: row.line._tag === 'Some' ? row.line.value : '',
+          },
+        ]
+      : [],
+  );
+};
+
 describe('search is the current app’s, over its whole domain', () => {
   test('for generated queries, the list’s numbers are `find(hymnIndex(), query)`’s, in order', () => {
     const random = seeded(20261114);
@@ -41,6 +84,74 @@ describe('search is the current app’s, over its whole domain', () => {
       const expected = find(hymnIndex(), text).map((found) => found.hymn.number);
       expect({ text, numbers: numbers(rowsOf(book, text)) }).toEqual({ text, numbers: expected });
     }
+  });
+
+  test('for generated queries, each row and its found line are the current app’s `plainRowsOf`’s', () => {
+    const random = seeded(20261121);
+    let lined = 0;
+    for (let run = 0; run < 300; run++) {
+      const text = below(random, 2) === 0 ? lineQuery(random) : query(random, book.hymns);
+      const rows = rowsOf(book, text).flatMap((section) => section.rows);
+      const expected = text.trim() === '' ? rows : currentRows(text);
+      lined += expected.filter((row) => row.line !== '').length;
+      expect({ text, rows }).toEqual({ text, rows: expected });
+    }
+    expect(lined).toBeGreaterThan(50);
+  });
+});
+
+/** The current app's result rows for `text` with `about`, as runs: hymn rows under the topic row above them, the first run unnamed. */
+const currentSections = (text: string, about: ReadonlyArray<HymnText>) => {
+  const found = find(hymnIndex(), text);
+  const lines = new Map(
+    found.flatMap((each) =>
+      each.line._tag === 'Some' ? [[each.hymn.number, each.line.value] as const] : [],
+    ),
+  );
+  const runs: Array<{ name: string; rows: Array<{ number: number; line: string }> }> = [];
+  for (const row of resultRowsOf(
+    found.map((each) => each.hymn),
+    about,
+    undefined,
+    lines,
+  ).rows) {
+    if (row.kind === 'topic') runs.push({ name: row.name, rows: [] });
+    else if (row.kind === 'hymn') {
+      if (runs.length === 0) runs.push({ name: '', rows: [] });
+      runs.at(-1)?.rows.push({
+        number: row.hymn.number,
+        line: row.line._tag === 'Some' ? row.line.value : '',
+      });
+    }
+  }
+  return runs;
+};
+
+describe('a search’s sections are the current app’s `resultRowsOf`', () => {
+  test('over generated queries and generated hymns about them', () => {
+    const random = seeded(20261123);
+    let sectioned = 0;
+    for (let run = 0; run < 200; run++) {
+      const text = below(random, 2) === 0 ? lineQuery(random) : query(random, book.hymns);
+      if (text.trim() === '') continue;
+      const found = find(hymnIndex(), text);
+      const about = Array.from({ length: below(random, 11) }, () =>
+        below(random, 3) === 0 && found.length > 0
+          ? pick(random, found).hymn
+          : pick(random, book.hymns),
+      ).filter((hymn, at, all) => all.findIndex((each) => each.number === hymn.number) === at);
+      const expected = currentSections(text, about);
+      const shown = rowsOf(book, text, about).map((section) => ({
+        name: section.name,
+        rows: section.rows.map((row) => ({ number: row.number, line: row.line })),
+      }));
+      if (shown.length > 1) sectioned += 1;
+      expect({ text, shown }).toEqual({ text, shown: expected });
+      const numbers = shown.flatMap((section) => section.rows.map((row) => row.number));
+      expect(new Set(numbers).size).toBe(numbers.length);
+      for (const section of shown) expect(section.rows.length).toBeGreaterThan(0);
+    }
+    expect(sectioned).toBeGreaterThan(50);
   });
 });
 

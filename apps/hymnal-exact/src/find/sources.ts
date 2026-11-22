@@ -5,17 +5,24 @@
  * b)` runs one input of `step` and answers its view; the state lives here,
  * one per launch of the data module, as the player's does, and nothing of
  * it outlives a launch (the current app's find atoms do not either).
- * `findTiles()` answers the tiles' numbers, every hymn's, once the tiles
- * first show, numbers alone.
+ * `findGroupTiles(tab, favourites, recent, playing)` answers All at
+ * once's tiles for the tab in use (`tiles.ts`), asked once the tiles first
+ * show; `findFollowRow(tab, n, favourites, recent)` the id of the home
+ * list's row the drums' number `n` scrolls to, "" with none (`follow.ts`).
  *
  * An input's arguments: `screen` the stack's paths, space-joined, the top
  * last; `query` its text; `drumsOpen` the bar's hymn (0 with none); `turn`
- * the drum's name and the digit; `tile` the hymn; `pinch` the scale and
- * velocity; `wheel` the delta. A kind it does not know changes nothing.
+ * the drum's name and the digit; `pinch` the scale and velocity; `wheel`
+ * the delta. A kind it does not know changes nothing.
  */
 
+import bundled from 'virtual:hymnal-indexes';
+
+import type { TabSource } from '../home/tabs.ts';
 import type { Book } from '../hymns/book.ts';
+import { followRow, listedRows } from './follow.ts';
 import { initial, type Input, type State, step, type View, view } from './step.ts';
+import { type GroupTile, groupTiles } from './tiles.ts';
 
 /** The player's bar at rest, over the home indicator (the current app's `REST`, src/player/bar.ts). */
 const REST = 56;
@@ -90,8 +97,6 @@ export const inputOf = (kind: string, text: string, a: number, b: number): Input
       if (drum === undefined) return undefined;
       return { kind, drum, n: a };
     }
-    case 'tile':
-      return { kind, n: a };
     case 'pinch':
       return { kind, scale: a, velocity: b };
     case 'wheel':
@@ -109,9 +114,17 @@ export const inputOf = (kind: string, text: string, a: number, b: number): Input
   }
 };
 
-/** The sources over `book`; `counts` counts the tiles' answers, given so a test can read it. */
-export const findSources = (book: Book, counts: { tiles: number } = { tiles: 0 }) => {
+/**
+ * The sources over `book` and the back-matter indexes the build bundles;
+ * `counts` counts the tiles' answers, given so a test can read it.
+ */
+export const findSources = (
+  book: Book,
+  counts: { tiles: number } = { tiles: 0 },
+  indexes: TabSource['indexes'] = bundled,
+) => {
   let state: State = initial;
+  const source: TabSource = { book, indexes };
   return {
     findStep: ([kind, text, a, b]: readonly [string, string, number, number]): View => {
       const input = inputOf(kind, text, a, b);
@@ -119,9 +132,22 @@ export const findSources = (book: Book, counts: { tiles: number } = { tiles: 0 }
       return view(state);
     },
     findPlaces: (): Places => places,
-    findTiles: (): Array<number> => {
+    findGroupTiles: ([tab, favourites, recent, playing]: readonly [
+      string,
+      ReadonlyArray<number>,
+      ReadonlyArray<number>,
+      number,
+    ]): Array<GroupTile> => {
       counts.tiles += 1;
-      return book.hymns.map((hymn) => hymn.number);
+      return groupTiles(source, tab, favourites, recent, playing);
     },
+    findFollowRow: ([tab, n, favourites, recent]: readonly [
+      string,
+      number,
+      ReadonlyArray<number>,
+      ReadonlyArray<number>,
+    ]) => ({
+      row: followRow(listedRows(source, tab, favourites, recent), n),
+    }),
   };
 };

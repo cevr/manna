@@ -6,7 +6,10 @@
  * from what the port was told. `tabsOf`'s indexes are declared by the
  * fields it reads, so the port can pass its bundled JSON: the source's
  * indexes are held to fit that declaration, and the rest of its input and
- * its answer to the declaration's. Nothing here runs.
+ * its answer to the declaration's. `tilesOf` names its `Option` by its
+ * shapes, which a function taking an `Option` cannot accept, so it is held
+ * where the port runs it (`apps/hymnal-exact/src/find/tiles.test.ts`).
+ * Nothing here runs.
  */
 
 import type * as Opening from '../exact/home/opening';
@@ -31,6 +34,9 @@ export const held = {
   tabs: {
     TAB_NAMES: tabs.TAB_NAMES satisfies typeof Tabs.TAB_NAMES,
     tabsOf: tabs.tabsOf satisfies (input: Declared) => ReturnType<typeof Tabs.tabsOf>,
+    tilesFor: tabs.tilesFor satisfies typeof Tabs.tilesFor,
+    tileCount: tabs.tileCount satisfies typeof Tabs.tileCount,
+    tileName: tabs.tileName satisfies typeof Tabs.tileName,
   },
   opening: { openingAt: opening.openingAt } satisfies typeof Opening,
   lists: {
