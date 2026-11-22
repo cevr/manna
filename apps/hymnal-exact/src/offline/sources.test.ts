@@ -20,6 +20,7 @@ import * as words from '@manna/hymnal-app/offline/words';
 import type * as EstimateDecl from './decl/estimate';
 import type * as IdentityDecl from './decl/identity';
 import type * as WordsDecl from './decl/words';
+import { later } from '../../modules/web/index.js';
 import { book } from '../hymns/book.ts';
 import { BUCKET, playerSources, recordingAt } from '../player/sources.ts';
 import { type AppModule, type RecordingFiles, offlineSources } from './sources.ts';
@@ -199,6 +200,10 @@ describe('the saved recordings, as the data module keeps them', () => {
     run.ask('all');
     const view = await settled(run.view);
     expect(view.printed).toBe(words.RECORDINGS);
+  });
+
+  it('on the web the app’s module marks nothing, as the current app’s backup marks nothing off iOS', async () => {
+    expect(await later({ op: 'backup.exclude', path: ROOT })).toEqual({ excluded: false });
   });
 
   it('saves nothing of a refused, cut-off, short or non-audio reply, says so, and Download all retries', async () => {
