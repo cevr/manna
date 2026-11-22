@@ -13,8 +13,9 @@
  *   them; the reading is one status node, named the current app's
  *   `labelOf` of the tone once its first label has passed; the hint is the
  *   current app's `hintOf`;
- * - a string picked is selected, Auto unchecked, and its hint the current
- *   app's `BACK_TO_AUTO` (the web's `aria-description`);
+ * - a string picked is selected (on iOS: the web exposes no selected state
+ *   on a button), Auto unchecked, and its hint the current app's
+ *   `BACK_TO_AUTO` (the web's `aria-description`);
  * - the reading's name changes at most once a `LABEL_EVERY`, read every
  *   250 ms of the agent's clock over three seconds after a pick changes
  *   its words;
@@ -83,7 +84,7 @@ const launch = (name: string, ops: ReadonlyArray<string>) =>
 const named = await launch('names', [
   ...open,
   `clock +${LABEL_EVERY + 400}`,
-  'clock data',
+  `clock until state tunerLabel == ${JSON.stringify(labelOf(heard))} within 3000`,
   'tree --ax',
   'tap tuner-string-A2',
   'clock settle',
@@ -122,8 +123,11 @@ drive.check('the hint is the current app’s', wordsOf(first, 'tuner-hint') === 
 });
 const a = byId(picked, 'tuner-string-A2');
 drive.check(
-  'a picked string is selected, its hint Goes back to Auto, and Auto unchecked',
-  a?.states?.selected === true &&
+  host === 'ios'
+    ? 'a picked string is selected, its hint Goes back to Auto, and Auto unchecked'
+    : 'a picked string’s hint is Goes back to Auto, and Auto unchecked (the web exposes no selected state on a button, as the current app’s aria-selected there)',
+  (host !== 'ios' || a?.states?.selected === true) &&
+    a !== undefined &&
     a.description === BACK_TO_AUTO &&
     byId(picked, 'tuner-auto')?.states?.checked === false,
   { a, auto: byId(picked, 'tuner-auto') },
