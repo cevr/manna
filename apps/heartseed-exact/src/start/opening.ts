@@ -2,9 +2,9 @@
  * The screen a launch opens on, by the current Heartseed's own rule
  * (`openingOf`, `@manna/heartseed/first/flow`): Today in an unread garden,
  * the first minute when the read holds no plant, home when it holds one.
- * The port has no first minute, so it shows home there; the one opening it
- * moves to is Today's, pushed over home as the current app's Today comes
- * back to home at `Your field`.
+ * Today and the first minute's welcome are pushed over home, as the current
+ * app's Today comes back to home at `Your field` and its first minute's
+ * Continue shows home.
  */
 
 import { openingOf, type Opening } from '@manna/heartseed/first/flow';
@@ -17,9 +17,10 @@ export interface StartShown {
   route: string;
 }
 
-/** The route the port pushes over home for `opening`: Today's for `today`, none for the rest. */
+/** The route the port pushes over home for `opening`: Today's for `today`, the welcome's for `first`, none for home. */
 export const routeOf = (opening: Opening): string => {
   if (opening === 'today') return '/today';
+  if (opening === 'first') return '/first/welcome/none';
   return '';
 };
 

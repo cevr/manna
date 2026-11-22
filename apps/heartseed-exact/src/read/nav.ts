@@ -74,6 +74,7 @@ const ROUTES: readonly NavRoute[] = [
   garden('add', /^\/add$/u),
   garden('addList', /^\/add\/lists\/[^/]+$/u, 'add'),
   garden('typeSheet', /^\/type$/u),
+  garden('first', /^\/first\/[^/]+\/[^/]+$/u),
   { name: 'read', pattern: /^\/read$/u, parent: '', tab: 'read' },
   { name: 'readAt', pattern: /^\/read\/at\/[^/]+\/[^/]+\/[^/]+$/u, parent: 'read', tab: 'read' },
   { name: 'gotoSheet', pattern: /^\/read\/goto$/u, parent: 'read', tab: 'read' },

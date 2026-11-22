@@ -32,6 +32,7 @@ use readTopOf, readSheetOf, ReadDriven from "./features/read.contract"
 use TypeSheet from "./features/type.contract"
 use PacksProbe from "./features/packs.contract"
 use StudySheet from "./features/study.contract"
+use FirstScreen from "./features/first.contract"
 
 routes nav
   tab garden "/"
@@ -46,6 +47,7 @@ routes nav
     add "/add"
       addList "/add/lists/:list"
     typeSheet "/type"
+    first "/first/:phase/:cue"
   tab read "/read"
     readAt "/read/at/:book/:chapter/:verse"
     gotoSheet "/read/goto"
@@ -73,10 +75,13 @@ component HeartseedExact
   members "./features/type.contract"
   members "./features/study.contract"
   members "./features/start.contract"
+  members "./features/first.contract"
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
-    if url.startsWith("/read") and nav.tab != "read"
+    if firstHeld
+      firstPlace()
+    else if url.startsWith("/read") and nav.tab != "read"
       nav = go(select(nav, "read"), url)
     else if not url.startsWith("/read") and not url.startsWith("/settings") and not url.startsWith("/type") and nav.tab != "garden"
       nav = go(select(nav, "garden"), url)
@@ -138,6 +143,8 @@ component HeartseedExact
                 GotoBookPage(route=e.id, book=gotoBookShown, open=gotoOpenAt, done=gotoDone)
             for e in t.stack.filter(x => x.name == "studySheet") key=e.id
               StudySheet(route=e.id, tab=e.params.tab, sheet=studySheetShown, word=studyWordShown, unfolded=studyUnfolded, type=typeShown, retry=commentaryShown.retry, still=motionStill, choose=studyTab, tapWord=studyWordTap, fold=studyFold, follow=studyFollow, move=studyMove, again=packsRetry, done=studyDone)
+            for e in t.stack.filter(x => x.name == "first") key=e.id
+              FirstScreen(route=e.id, phase=e.params.phase, replay=firstReplaying, today=today, scheme=homeScheme, still=motionStill, begin=firstBegin, skip=firstSkip, on=firstOn, next=firstNext, hear=todayHearIt, say=todaySayIt, finish=todayFinishIt, peek=todayPeekIt, read=gotoReadToday, done=firstContinue)
             for e in t.stack.filter(x => x.name == "typeSheet") key=e.id
               TypeSheet(route=e.id, type=typeShown, font=typeChooseFont, size=typeChooseSize, line=typeChooseLine, letter=typeChooseLetter, width=typeChooseWidth, reset=typeReset, done=typeDone)
       row role="tablist" testId="tabs" display=(readSheetUp ? "none" : "flex") flex-shrink=0 background-color="hs.ground" color="hs.quiet" accent-color="AccentColor"

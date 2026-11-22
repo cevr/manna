@@ -3,13 +3,13 @@ epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
-test "A fresh store opens on home: the current app's first minute, which the port draws as home"
+test "A fresh store opens the first minute's welcome over home"
   clock data
   clock settle
   expect state startShown.opening == "first"
-  expect state startShown.route == ""
+  expect state startShown.route == "/first/welcome/none"
   expect state startDecided == true
-  expect tree has "home"
+  expect tree has "first-welcome"
   expect tree missing "today"
   expect no failures
 
@@ -19,10 +19,14 @@ test "A launch at another location stays there once the opening is decided"
   clock settle
   expect state startDecided == true
   expect tree missing "today"
+  expect tree missing "first"
   expect no failures
 
 test "Decided once: a tab switched away and back after it opens nothing"
+  at "/verses"
   clock data
+  clock settle
+  back
   clock settle
   tap "tab-read"
   clock data
@@ -32,4 +36,40 @@ test "Decided once: a tab switched away and back after it opens nothing"
   clock settle
   expect tree has "home"
   expect tree missing "today"
+  expect tree missing "first"
+  expect no failures
+
+test "A link launch on a fresh store, Back to home: an empty home whose Add a list plants, and the next launch at the root opens the welcome"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  expect tree has "home"
+  expect tree missing "first"
+  expect tree has "add-list"
+  tap "add-list"
+  clock data
+  clock settle
+  tap "shelf-psalms"
+  clock data
+  clock settle
+  tap "offer-pick-psalms-19-1-1-3"
+  clock data
+  clock settle
+  tap "shelf-plant"
+  clock data
+  clock settle
+  tap "add-done"
+  clock data
+  clock settle
+  expect tree has "plant-Psalms-1-1"
+  expect state firstTop.name == "garden"
+  reload
+  clock data
+  clock settle
+  expect state startShown.opening == "first"
+  expect state nav.tab == "garden"
+  expect state firstTop.name == "first"
+  expect tree has "first-welcome"
   expect no failures
