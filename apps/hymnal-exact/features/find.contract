@@ -63,6 +63,10 @@ shape FindAbout
   query: string
   numbers: number[]
 
+// The tile of the group at the home list's top (`findTileAt`, src/find/tiles.ts).
+shape FindAim
+  index: number
+
 shape FindView
   serial: number
   top: string
@@ -126,7 +130,30 @@ members HymnalExact
     after(150, findAskAbout)
   action findAskAbout
     findAsked = find.query
+  // The tiles open at the group at the list's top (the current app's
+  // AllAtOnce `at`): as they are asked for, the box at the list's top
+  // edge (its pinned header, a row, or its head) names the group, and once
+  // they show they scroll its tile to their first row.
+  state findAim = -1
+  mutation findAiming as shape FindAim queue then findAimed
+  action findAimAtTop
+    let list = frame("hymn-list")
+    if not find.homeTiles and not list.unavailable
+      send findAiming = findTileAt(listTab, match elementFromPoint(list.x + list.width / 2, list.y + 2) { case some(id) => id, case none => "" }, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [])
+  action findAimed
+    match findAiming
+      case some(a)
+        findAim = a.index
+      case none
+        findAim = findAim
+  task findTilesAim when find.homeTiles and findAim >= 0 and findTileGroups.length > findAim key=findAim
+    after(1, findTilesAimed)
+  action findTilesAimed
+    scrollIntoView(`group-tile-${findAim}`, block="start", behavior="instant")
+    findAim = -1
   action findAsk(kind: string, n: number)
+    if kind == "tilesShow"
+      findAimAtTop()
     send findStepped = findStep(kind, "", n, 0)
   action findSearch
     listQuery = ""
@@ -144,6 +171,7 @@ members HymnalExact
   action findWheeled(e: WheelEvent)
     if e.ctrlKey
       preventDefault()
+      findAimAtTop()
       send findStepped = findStep("wheel", "", e.deltaY, 0)
   action findTilePick(row: string)
     findLanding = row
@@ -248,6 +276,7 @@ component FindBar
     favouriteNumbers: number[]
     playerShown: PlayerView
     motionStill: bool
+    keysOpen: bool
   resource findBarPort = exactViewport() as shape FindPort
   resource findBarPlaces = findPlaces() as shape FindPlaces
   state findBoxFocused = false
@@ -272,7 +301,7 @@ component FindBar
                   for r in s.rows key=r.number
                     FoundRow(number=r.number, title=r.title, line=r.line, star=favouriteNumbers.includes(r.number), open=findOpen)
       row position="absolute" left="space.s16" right="space.s16" pointer-events="none" bottom=`${findFoot(findBarPort, findBarPlaces, playerShown.dock or playerShown.pageBar, playerShown.dock ? playerShown.bar.rise : 0)}px` z-index=2
-        align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
+        display=(keysOpen ? "none" : "flex") align-items="center" justify-content="flex-end" gap="space.s12" testId="find-bar" -exact-layout-transition=(motionStill ? "none" : "easing.growth")
         if findShown.row == "tiles"
           FindHash(look=(findShown.chosen == "hash" ? "aloneChosen" : "alone"))
         else
@@ -493,7 +522,7 @@ component FindTiles
       scroll id="find-tiles" flex=1 min-height=0 wheel=findWheel testId="find-tiles"
         column display="grid" grid-template-columns="repeat(2, minmax(0, 1fr))" gap="space.s10" padding="0 space.s16 space.s16"
           for t in findGroups key=t.index
-            button press=findPick(t.row) appearance="none" aria-label=t.label display="flex" flex-direction="column" justify-content="space-between" gap="space.s4"
+            button id=`group-tile-${t.index}` press=findPick(t.row) appearance="none" aria-label=t.label display="flex" flex-direction="column" justify-content="space-between" gap="space.s4"
               padding="space.s12" border-radius="radius.r12" border-width="line.tile" border-style="solid" border-color=(t.playing ? "accent" : "transparent")
               background-color="soft" text-align="start" min-width=0 box-sizing="border-box" testId=`group-tile-${t.index}`
               :active

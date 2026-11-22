@@ -685,6 +685,13 @@ const grouped = named([
   ['followed-list', 'layout hymn-list'],
   'tap drums-hash',
   'clock settle',
+  'tap tiles-show',
+  'clock data',
+  'clock settle',
+  ['aim-tiles', 'layout find-tiles'],
+  ['aim-tile', 'layout group-tile-35'],
+  'tap tiles-done',
+  'clock settle',
   'tap find-search',
   'clock settle',
   'clock data',
@@ -743,6 +750,15 @@ drive.check(
     followed.y >= followedList.y - 1 &&
     followed.y + followed.h <= followedList.y + followedList.h,
   { followed, followedList },
+);
+const [aimTiles, aimTile] = [frame(g('aim-tiles')), frame(g('aim-tile'))];
+drive.check(
+  'with hymn 400’s group (Communion, tile 35) at the list’s top, All at once opens with its tile in the first row',
+  aimTiles !== undefined &&
+    aimTile !== undefined &&
+    aimTile.y >= aimTiles.y - 1 &&
+    aimTile.y < aimTiles.y + aimTile.h,
+  { aimTiles, aimTile },
 );
 const [plain, lined, lineText] = [
   frame(g('found-title')),

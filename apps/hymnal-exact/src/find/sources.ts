@@ -22,7 +22,7 @@ import type { TabSource } from '../home/tabs.ts';
 import type { Book } from '../hymns/book.ts';
 import { followRow, listedRows } from './follow.ts';
 import { initial, type Input, type State, step, type View, view } from './step.ts';
-import { type GroupTile, groupTiles } from './tiles.ts';
+import { type GroupTile, groupTiles, tileAt } from './tiles.ts';
 
 /** The player's bar at rest, over the home indicator (the current app's `REST`, src/player/bar.ts). */
 const REST = 56;
@@ -141,6 +141,12 @@ export const findSources = (
       counts.tiles += 1;
       return groupTiles(source, tab, favourites, recent, playing);
     },
+    findTileAt: ([tab, id, favourites, recent]: readonly [
+      string,
+      string,
+      ReadonlyArray<number>,
+      ReadonlyArray<number>,
+    ]) => ({ index: tileAt(source, tab, id, favourites, recent) }),
     findFollowRow: ([tab, n, favourites, recent]: readonly [
       string,
       number,

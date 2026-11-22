@@ -154,6 +154,7 @@ describe('the data module runs where Exact runs it', () => {
       'findGroupTiles',
       'findPlaces',
       'findStep',
+      'findTileAt',
       'hymnPage',
       'hymnRows',
       'keysPage',

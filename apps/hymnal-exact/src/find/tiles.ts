@@ -13,7 +13,7 @@
 
 import { type Tab, tileCount, tileName, tilesFor } from '@manna/hymnal-app/home/tabs';
 
-import { isTab, type TabSource, tabGroups } from '../home/tabs.ts';
+import { isTab, type TabGroup, type TabSource, tabGroups } from '../home/tabs.ts';
 
 export interface TileSpan {
   readonly start: number;
@@ -30,6 +30,52 @@ export interface GroupTile {
   /** The id of the group's first row in the home list. */
   readonly row: string;
 }
+
+/** The group of `groups` whose slug `rest` opens with, the longest such (a slug and its `-2` both may). */
+const groupBySlug = (groups: ReadonlyArray<TabGroup>, rest: string): number => {
+  let found = -1;
+  groups.forEach((group, at) => {
+    const fits = rest === group.slug || rest.startsWith(`${group.slug}-`);
+    if (fits && (found < 0 || group.slug.length > (groups[found]?.slug.length ?? 0))) found = at;
+  });
+  return found;
+};
+
+/** The group a row of the list's own (`hymn-`, `star-`) belongs to: by its slug for a repeat, else the first group that lists the hymn. */
+const groupOfRow = (groups: ReadonlyArray<TabGroup>, rest: string): number => {
+  if (/^\d+$/u.test(rest)) {
+    const n = Number(rest);
+    return groups.findIndex((group) => group.numbers.includes(n) && !group.repeats.includes(n));
+  }
+  return groupBySlug(groups, rest);
+};
+
+/**
+ * The tile of the group the home list of tab `name` shows at its top, as
+ * the current app's All at once opens at (`AllAtOnce.tsx` `at`): `id` names
+ * the list's box just under its pinned header (a group's header,
+ * `section-<slug>` or `group-<slug>`, or one of its rows, `hymn-<n>`,
+ * `hymn-<slug>-<n>`); the list's head, the Recent shelf or no box at all
+ * is the first tile.
+ */
+export const tileAt = (
+  source: TabSource,
+  name: string,
+  id: string,
+  favourites: ReadonlyArray<number>,
+  recent: ReadonlyArray<number>,
+): number => {
+  const groups = tabGroups(source, name, favourites, recent);
+  const [kind = '', ...parts] = id.split('-');
+  const rest = parts.join('-');
+  const at =
+    kind === 'section' || kind === 'group'
+      ? groupBySlug(groups, rest)
+      : kind === 'hymn' || kind === 'star'
+        ? groupOfRow(groups, rest)
+        : -1;
+  return Math.max(0, at);
+};
 
 /** The tiles of tab `name` over the reader's lists, `playing` the player's hymn (0 while idle); none for a name that is no tab. */
 export const groupTiles = (

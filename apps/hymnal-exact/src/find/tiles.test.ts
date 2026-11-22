@@ -18,7 +18,8 @@ import { book } from '../hymns/book.ts';
 import { rowsOf } from '../list/rows.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { listedRows } from './follow.ts';
-import { groupTiles } from './tiles.ts';
+import { tabGroups } from '../home/tabs.ts';
+import { groupTiles, tileAt } from './tiles.ts';
 
 const source = { book, indexes };
 
@@ -26,6 +27,50 @@ const numbersOf = (random: Random): Array<number> =>
   Array.from({ length: below(random, 12) }, () =>
     below(random, 10) === 0 ? pick(random, [0, -1, 696, 1.5]) : 1 + below(random, 695),
   );
+
+describe('All at once opens at the group at the list’s top', () => {
+  test('every box the list draws names its own group’s tile, the head and the shelf the first', () => {
+    const random = seeded(20261123);
+    let named = 0;
+    for (let run = 0; run < 3; run++) {
+      const favourites = numbersOf(random);
+      const recent = numbersOf(random);
+      for (const name of TAB_NAMES) {
+        const groups = tabGroups(source, name, favourites, recent);
+        const header = name === 'Sections' ? 'section' : 'group';
+        groups.forEach((group, at) => {
+          if (at > 2 && below(random, 8) !== 0) return;
+          const ids = [
+            `${header}-${group.slug}`,
+            `${header}-${group.slug}-row`,
+            ...[group.numbers[0] ?? 0, pick(random, group.numbers)].flatMap((n) =>
+              group.repeats.includes(n)
+                ? [`hymn-${group.slug}-${n}`, `star-${group.slug}-${n}`]
+                : [`hymn-${n}`, `star-${n}`],
+            ),
+          ];
+          for (const id of ids) {
+            expect({ name, id, at: tileAt(source, name, id, favourites, recent) }).toEqual({
+              name,
+              id,
+              at,
+            });
+            named += 1;
+          }
+        });
+        for (const id of ['list-top', 'list-head', 'shelf-12', 'recent-all', ''])
+          expect(tileAt(source, name, id, favourites, recent)).toBe(0);
+      }
+    }
+    expect(named).toBeGreaterThan(200);
+  });
+
+  test('the Sections list’s headers are the tab’s groups, slug for slug', () => {
+    expect(rowsOf(book, '').map((section) => section.slug)).toEqual(
+      tabGroups(source, 'Sections', [], []).map((group) => group.slug),
+    );
+  });
+});
 
 describe('All at once’s tiles are the current app’s', () => {
   test('over every tab, generated lists and a generated playing hymn', () => {
