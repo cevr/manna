@@ -37,8 +37,8 @@ import { followedOf } from '../follow/sources.ts';
 import { linesOnly } from './files.ts';
 import { timingLoader } from './load.ts';
 
-const LOADER_HISTORIES = 120;
-const FOLLOW_HISTORIES = 200;
+const LOADER_HISTORIES = 60;
+const FOLLOW_HISTORIES = 120;
 const STEPS = 36;
 
 const full = new Map(readTiming());

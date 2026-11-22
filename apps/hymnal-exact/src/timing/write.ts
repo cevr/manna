@@ -15,10 +15,13 @@ export const writeTimingFiles = (
   rows: ReadonlyArray<readonly [number, string]>,
 ): number => {
   let wrote = 0;
+  const made = new Set<string>();
   for (const [name, text] of timingFiles(rows)) {
     const path = join(root, name);
     if (existsSync(path) && readFileSync(path, 'utf8') === text) continue;
-    mkdirSync(dirname(path), { recursive: true });
+    const folder = dirname(path);
+    if (!made.has(folder)) mkdirSync(folder, { recursive: true });
+    made.add(folder);
     writeFileSync(path, text);
     wrote += 1;
   }
