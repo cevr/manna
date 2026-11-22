@@ -88,7 +88,7 @@ Create a missing simulator with `xcrun simctl create verify-heartseed-exact com.
 - Exact's type check (`contract build`, every build) stages the declarations of every package any `.ts` or `.js` file in the app's folder imports, and follows the import lines inside their doc comments, and refuses two copies of one package (`package declarations: two copies of …`). `effect`'s doc comments reach `rolldown`, so the root `package.json` overrides it to one version. A package imported by `app.ts` must ship declarations (`types` before `default` in its `exports`).
 - The data layer is Effect through `@manna/exact-kit/effect`'s runner: `docs/exact-data-layer.md` (the rule, the evidence, a worked example).
 - Each app's `tsconfig.src.json` (extending the root's) is the typecheck's; the app has no `tsconfig.json`, since Exact's type check reads that file and refuses a config that extends one outside the app.
-- Exact's tests are run by hand per unit, as the film e2e is. `bun run gate` runs only each workspace's Bun tests and needs no clone: `app.ts` imports the generated `app.contract.d.ts`, so it stays out of the typecheck, which covers `src/` alone.
+- Exact's tests are run by hand per unit, as the film e2e is. `bun run gate` runs only each workspace's Bun tests and needs no clone: `app.ts` imports the generated `app.contract.d.ts`, so it stays out of the typecheck, which covers `src/` alone; no file under an app's `src/` imports it (a lint rule in `.oxlintrc.json`, and the hymnal's `src/no-generated-types.test.ts`), so the typecheck passes in a tree where Exact has not run.
 
 ## Where a feature's files go
 
