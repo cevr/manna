@@ -5,6 +5,8 @@ import { addSources } from './src/add/sources';
 import { chooserSources } from './src/chooser/sources';
 import { COMMENTARY, commentarySources } from './src/commentary/sources';
 import { findSources } from './src/find/sources';
+import { firstSources } from './src/first/flow';
+import { firstReference } from './src/first/verse';
 import { gardenSources } from './src/garden/sources';
 import { gotoSources } from './src/goto/sources';
 import { homeSources } from './src/home/sources';
@@ -50,6 +52,7 @@ const garden = gardenSources({ driven: GARDEN_DRIVE !== '' });
 const packs = packSources({ setting: PACKS_BASE, packs: [COMMENTARY, ...STUDY_PACKS] });
 
 const sources: Sources = {
+  ...firstSources(firstReference()),
   ...settingsSources,
   ...aboutSources(licences, version),
   ...garden,
