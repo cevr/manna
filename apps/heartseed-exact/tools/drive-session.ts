@@ -28,6 +28,8 @@
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { STAGES } from '@manna/heartseed/garden';
 
 const host = process.argv[2] ?? 'web';
@@ -40,7 +42,7 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   });
   process.exit(await self.exited);
 }
-const drive = makeDrive({ name: 'drive-session', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-session', host, appDir: app }));
 const store = `session-${host}-${Date.now().toString(36)}`;
 const SOWN = Date.parse('2026-11-14T12:00:00Z');
 const DAY = 86_400_000;

@@ -47,6 +47,7 @@ const DIAL = 'src/player/DialView.tsx';
 const COUNT = 'src/follow/CountIn.tsx';
 const INTRO = 'src/follow/IntroLine.tsx';
 const RESUME = 'src/follow/ResumeFollow.tsx';
+const TUNER = 'src/tuner/Tuner.tsx';
 
 const type = (
   name: string,
@@ -148,6 +149,11 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.dial-name', [DIAL, 'title']),
   type('type.dial-key', [DIALS, 'key']),
   type('type.dial-played', [DIALS, 'played']),
+  type('type.tuner-title', [TUNER, 'title']),
+  type('type.tuner-side', [TUNER, 'side']),
+  type('type.tuner-name', [TUNER, 'name']),
+  type('type.tuner-letter', [TUNER, 'letter']),
+  type('type.tuner-tick', [TUNER, 'tickMark']),
 
   length('space.s2', ['src/player/StartSwitches.tsx', 'text', 'gap']),
   length(

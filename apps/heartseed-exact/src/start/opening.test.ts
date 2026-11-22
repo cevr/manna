@@ -31,6 +31,7 @@ const GOOD = {
   extra: 0,
 };
 const NO_HELP = { peeked: [], shownAt: null, cap: 4 };
+const FIRST = '/first/welcome/none';
 
 /** The launch's opening as the port's source answers it on `storage`. */
 const openedOn = (storage: FileStorage) =>
@@ -69,13 +70,8 @@ const rows: ReadonlyArray<
   readonly [string, () => FileStorage | Promise<FileStorage>, Opening, string]
 > = [
   ['an unreadable store opens Today', unreadable, 'today', '/today'],
-  [
-    'a fresh store opens the first minute, home in the port',
-    () => storageOf().storage,
-    'first',
-    '',
-  ],
-  ['lists with no plant open the first minute, home in the port', listed, 'first', ''],
+  ['a fresh store opens the first minute', () => storageOf().storage, 'first', FIRST],
+  ['lists with no plant open the first minute', listed, 'first', FIRST],
   ['a verse said opens home', said, 'home', ''],
 ];
 

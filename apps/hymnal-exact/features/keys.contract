@@ -15,6 +15,7 @@
 // it before its hold (`swipe`, `playerSwipedUp`).
 use PlayerView from "./player.contract"
 use hy-fade-in, hy-fade-out from "./motion.contract"
+use TunerMark from "./tuner.contract"
 
 shape KeysStop
   pitch: number
@@ -182,23 +183,23 @@ members HymnalExact
     keysPanning = false
     keysHolding = true
     keysSerial = keysSerial + 1
-    send keysPressed = keysPress("down", e.offsetX, e.offsetY, performanceNow(), keysShown.offered)
+    send keysPressed = keysPress("down", e.offsetX, e.offsetY, performanceNow(), keysShown.offered, tunerEar.ear)
   task keysHold when keysHolding key=keysSerial
     after(350, keysHeld)
   action keysHeld
     keysHolding = false
     keysSwallow = true
-    send keysPressed = keysPress("tick", 0, 0, performanceNow(), keysShown.offered)
+    send keysPressed = keysPress("tick", 0, 0, performanceNow(), keysShown.offered, tunerEar.ear)
   action keysPan(dx: number, dy: number)
     keysPanning = true
-    send keysPressed = keysPress("pan", dx, dy, performanceNow(), keysShown.offered)
+    send keysPressed = keysPress("pan", dx, dy, performanceNow(), keysShown.offered, tunerEar.ear)
   action keysLetGo(vx: number, vy: number)
     keysHolding = false
-    send keysPressed = keysPress("up", 0, vy, performanceNow(), keysShown.offered)
+    send keysPressed = keysPress("up", 0, vy, performanceNow(), keysShown.offered, tunerEar.ear)
   action keysUp(e: PointerEvent)
     if not keysPanning
       keysHolding = false
-      send keysPressed = keysPress("up", 0, 0, performanceNow(), keysShown.offered)
+      send keysPressed = keysPress("up", 0, 0, performanceNow(), keysShown.offered, tunerEar.ear)
   action keysPressTook
     match keysPressed
       case some(p)
@@ -217,6 +218,9 @@ members HymnalExact
           keysAsk("reset", 0)
         else if p.pick == "chords"
           keysAsk("hold", 0)
+        else if p.pick == "tuner"
+          keysAsk("tune", 0)
+          tunerOpenFrom()
         else if p.swipe and keysSwipedUp(p.pull, p.speed)
           playerAsk("open", 0)
         if p.enter != ""
@@ -350,13 +354,21 @@ component KeysPanel
       testId="dials-panel"
       if keysShown.reset
         row justify-content="center"
-          button press=keysAsk("reset", 0) background-color="pill" appearance="none" display="flex" align-items="center" justify-content="center"
-            height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16"
-            -exact-press-opacity="opacity.pressed" aria-label="Reset" testId="dials-reset"
-            text `↺ ${keysShown.printedName}, no capo` font="type.chip" color="onPill" line-clamp=1
+          KeysResetChip()
       if keysShown.capoRow
         KeysCapoDial()
       KeysKeyDial()
+
+// The panel's Reset chip: the hymn back to its printed key with no capo.
+component KeysResetChip
+  inject
+    keysShown: KeysPage
+    keysAsk: action
+  view
+    button press=keysAsk("reset", 0) background-color="pill" appearance="none" display="flex" align-items="center" justify-content="center"
+      height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16"
+      -exact-press-opacity="opacity.pressed" aria-label="Reset" aria-description=`Back to ${keysShown.printedName}, with no capo` testId="dials-reset"
+      text `↺ ${keysShown.printedName}, no capo` font="type.chip" color="onPill" line-clamp=1
 
 // A dial's name at its left, in a column as wide as the widest row's.
 component KeysDialName
@@ -443,9 +455,11 @@ component KeysPill
   view
     row position="absolute" left=`${keysPlaced.originX + it.x - keysPlaced.itemWide / 2}px` bottom=`${keysPlaced.rest / 2 - it.y - keysPlaced.itemHigh / 2}px`
       width=`${keysPlaced.itemWide}px` height=`${keysPlaced.itemHigh}px` border-radius=`${keysPlaced.itemHigh / 2}px` box-sizing="border-box"
-      padding-left=`${keysPlaced.itemPad}px` padding-right=`${keysPlaced.itemPad}px` align-items="center" justify-content="center" border-width="line.panel" border-style="solid"
+      padding-left=`${keysPlaced.itemPad}px` padding-right=`${keysPlaced.itemPad}px` align-items="center" justify-content="center" gap="space.s6" border-width="line.panel" border-style="solid"
       border-color=(lit ? "button" : "edge") background-color=(lit ? "button" : "panel") scale=(lit ? keysPlaced.lift : 1)
       pointer-events="none" aria-hidden=true testId=`key-wheel-${it.item}`
       animation=(motionStill ? "hy-fade-in duration.wheel-in ease-out both" : "hy-wheel-in duration.wheel-in easing.out both")
       -exact-exit-animation=(motionStill ? "hy-fade-out duration.wheel-out ease-out both" : "hy-wheel-out duration.wheel-out ease-out both")
+      if it.item == "tuner"
+        TunerMark(tint=(lit ? "onButton" : "ink"))
       text it.word font="type.label" color=(lit ? "onButton" : "ink") white-space="nowrap" line-clamp=1

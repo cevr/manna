@@ -21,6 +21,7 @@ use ChordsGripScreen from "./features/chords.contract"
 use FindDrums from "./features/find.contract"
 use AboutHymnSheet from "./features/abouthymn.contract"
 use KeysOver from "./features/keys.contract"
+use TunerScreen from "./features/tuner.contract"
 
 routes nav
   list "/"
@@ -31,6 +32,7 @@ routes nav
     settings "/settings"
       about "/settings/about"
     recent "/recent"
+  tuner "/tuner"
   notfound
 
 component HymnalExact
@@ -48,6 +50,7 @@ component HymnalExact
   members "./features/bar.contract"
   members "./features/pager.contract"
   members "./features/keys.contract"
+  members "./features/tuner.contract"
   members "./features/tempo.contract"
   members "./features/sheet.contract"
   members "./features/reading.contract"
@@ -108,6 +111,16 @@ component HymnalExact
     keysKeyAdjusted
     keysCapoScrolled
     keysCapoSettled
+    tunerEar
+    tunerShown
+    tunerPlaced
+    tunerLabel
+    tunerOpenFrom
+    tunerDone
+    tunerAuto
+    tunerAgain
+    tunerSettings
+    tunerPick
     sheetDial
     sheetPlaceTurn
     sheetPlaceScrolled
@@ -154,6 +167,8 @@ component HymnalExact
           ChordsGripScreen(entry=e, page=chordsGripShown, ready=current(chordsGripShown), done=chordsGripClose)
         if e.name == "abouthymn"
           AboutHymnSheet(entry=e, page=abouthymnShown, ready=current(abouthymnShown), done=abouthymnClose, choose=abouthymnChoose)
+        if e.name == "tuner"
+          TunerScreen(entry=e)
       PlayerDock(player=player, ask=playerAsk, heard=playerHeard, ticked=playerTicked, broke=playerFailed, remote=playerRemote)
       KeysOver()
       FindDrums()

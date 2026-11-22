@@ -41,6 +41,7 @@ const OWNER = new Map([
   ['features/abouthymn.contract', 'no unit'],
   ['features/pager.contract', 'no unit'],
   ['features/keys.contract', 'no unit'],
+  ['features/tuner.contract', 'no unit'],
   ['features/tempo.contract', 'no unit'],
   ['features/follow.contract', 'no unit'],
 ]);

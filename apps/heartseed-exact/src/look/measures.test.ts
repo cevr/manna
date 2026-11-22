@@ -45,6 +45,7 @@ const OWNER = new Map([
   ['features/type.contract', 'pm-hs-study'],
   ['features/motion.contract', 'no unit'],
   ['features/start.contract', 'no unit'],
+  ['features/first.contract', 'no unit'],
 ]);
 
 const ALLOWED = new Map<string, AllowList>([

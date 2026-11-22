@@ -9,7 +9,8 @@
       "@manna/hymnal-app/player/sound": ["./src/player/clock/decl/sound"],
       "@manna/hymnal-app/player/recording": ["./src/tempo/decl/recording"],
       "@manna/hymnal-app/reader/search-mode": ["./src/find/decl/search-mode"],
-      "@manna/hymnal-app/follow/report": ["./src/follow/decl/report"]
+      "@manna/hymnal-app/follow/report": ["./src/follow/decl/report"],
+      "@exact/media-capture": ["./src/tuner/decl/media-capture"]
     }
   },
   "include": ["src/**/*.ts", "../hymnal/src/virtual.d.ts"]

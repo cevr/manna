@@ -13,12 +13,16 @@
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { VERSION_PREFIX } from '@manna/heartseed/about/version';
 
 import { heartseedVersion } from './licences';
 
 const host = process.argv[2] ?? 'web';
-const drive = makeDrive({ name: 'drive-about', host, appDir: join(import.meta.dir, '..') });
+const drive = fromHome(
+  makeDrive({ name: 'drive-about', host, appDir: join(import.meta.dir, '..') }),
+);
 
 interface Node {
   readonly props?: { readonly testId?: string; readonly text?: string };

@@ -34,6 +34,9 @@ const TIPS = 'src/field/tips.tsx';
 const LIST = 'src/list/screen.tsx';
 const TENDED = 'src/run/tended.tsx';
 const BACK = 'src/garden/back.tsx';
+const INTRO = 'src/first/intro.tsx';
+const FIRST = 'src/first/screen.tsx';
+const GROWING = 'src/first/growing.tsx';
 
 const type = (name: string, ...from: ReadonlyArray<readonly [string, string]>): Token => ({
   name,
@@ -110,6 +113,7 @@ export const TOKENS: ReadonlyArray<Token> = [
   type('type.caption-strong', [FIELD, 'label'], [SINGLES, 'label']),
   type('type.badge', [TIPS, 'badgeText']),
   type('type.licence', [ABOUT, 'licence']),
+  type('type.intro', [INTRO, 'words']),
 
   length('space.page', [DRAW, 'content', 'paddingHorizontal'], [ABOUT, 'bar', 'paddingHorizontal']),
   length('space.section', [DRAW, 'content', 'gap']),
@@ -174,6 +178,16 @@ export const TOKENS: ReadonlyArray<Token> = [
   glyph('glyph.control', [PLOT, 'name', 'size']),
   glyph('glyph.list', [LIST, 'furrow.icon', 'size']),
   glyph('glyph.shelf', [SHELVES, 'shelf.icon', 'size']),
+  length('size.growing', [GROWING, 'place', 'width'], [FIRST, 'bigPlant', 'width']),
+  length('size.growing-image', [GROWING, 'image', 'width']),
+  length('size.stage', [INTRO, 'stage', 'minWidth']),
+  length('size.badge', [TIPS, 'badge', 'width']),
+  length('radius.r14', [TIPS, 'tip', 'borderRadius']),
+  length('radius.r11', [TIPS, 'badge', 'borderRadius']),
+  length('radius.r2', [FIRST, 'segment', 'borderRadius']),
+  length('line.segment', [FIRST, 'segment', 'height']),
+  length('space.s22', [INTRO, 'pill', 'paddingHorizontal']),
+  number('opacity.segment', [FIRST, 'segment', 'opacity']),
 
   measure('hairline')('line.hair', [ABOUT, 'row', 'borderTopWidth']),
   measure('border')(

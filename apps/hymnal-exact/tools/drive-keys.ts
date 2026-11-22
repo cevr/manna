@@ -15,8 +15,8 @@
  *   dials' controls carry the names "Capo" and
  *   "Key" with One's `capoSaid` and `keySaid` as their values (`tree`);
  * - on iOS (Exact scripts a held finger's legs there alone), a hold of the
- *   key button past `HOLD` opens the wheel with One's words, Key ♭, Key ♯,
- *   Reset and Chords off; a slide onto Key ♯ and a lift moves the hymn up a
+ *   key button past `HOLD` opens the wheel with One's words, Tuner (the
+ *   agent's ear is a fed tone), Key ♭, Key ♯, Reset and Chords off; a slide onto Key ♯ and a lift moves the hymn up a
  *   semitone, once, and closes the wheel;
  * - a swipe up that starts on the key button opens the full player, as the
  *   bar's own swipe does;
@@ -183,7 +183,7 @@ if (host === 'ios') {
   const words = JSON.stringify(reply ?? '');
   drive.check(
     'a hold opens the wheel with the current app’s words, and a slide onto Key ♯ lifts the hymn a semitone, once',
-    ['Key ♭', 'Key ♯', 'Reset', 'Chords off'].every((word) => words.includes(word)) &&
+    ['Tuner', 'Key ♭', 'Key ♯', 'Reset', 'Chords off'].every((word) => words.includes(word)) &&
       open === false &&
       said === 'Eb' &&
       JSON.stringify(moves) === JSON.stringify(['2:1:0']),

@@ -23,6 +23,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'one';
 
 import { appearanceView } from '../app';
+import { REPLAY } from '../first/words';
 import { AppearanceChoice } from '../appearance/choice';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
@@ -92,7 +93,7 @@ export function SettingsSheet({
             </View>
           )}
           <View style={styles.about}>
-            <SheetButton label="Show the welcome again" onPress={onWelcome} />
+            <SheetButton label={REPLAY.again} onPress={onWelcome} />
             <SheetButton label="About" onPress={onAbout} />
           </View>
         </ScrollView>

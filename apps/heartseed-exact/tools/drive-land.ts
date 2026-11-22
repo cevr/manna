@@ -17,12 +17,16 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 const host = process.argv[2] ?? 'web';
 if (host !== 'web') {
   console.error(`drive-land: the web only (iOS has no window to resize), not ${host}`);
   process.exit(2);
 }
-const drive = makeDrive({ name: 'drive-land', host, appDir: join(import.meta.dir, '..') });
+const drive = fromHome(
+  makeDrive({ name: 'drive-land', host, appDir: join(import.meta.dir, '..') }),
+);
 
 interface Frame {
   readonly y: number;

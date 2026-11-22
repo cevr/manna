@@ -37,6 +37,11 @@ test "The shelves, in order"
   expect no failures
 
 test "Add a list is a sheet over home, and Done closes it"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "add-list"
@@ -158,6 +163,11 @@ test "At three lists the rows say the limit"
   expect no failures
 
 test "At twenty single verses a short pick says its limit"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   clock settle
   tap "tab-read"
