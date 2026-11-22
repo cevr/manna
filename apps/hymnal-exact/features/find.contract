@@ -531,7 +531,7 @@ component FindTiles
               background-color="soft" text-align="start" min-width=0 box-sizing="border-box" testId=`group-tile-${t.index}`
               :active
                 opacity = "opacity.pressed"
-              text t.name font="type.tile-name" color="ink" line-clamp=2 overflow-wrap="anywhere"
+              text t.name font="type.tile-name" color="ink" line-clamp=2 overflow-wrap="break-word"
               text t.count font="type.tile-count" color="muted" line-clamp=1 testId=`group-tile-count-${t.index}`
               column position="relative" height="size.strip" border-radius="radius.pill" overflow="hidden" background-color="line" aria-hidden=true
                 for s in t.spans key=s.start
