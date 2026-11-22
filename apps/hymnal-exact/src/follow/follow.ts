@@ -135,6 +135,14 @@ interface Hold {
   readonly choice: ReturnType<typeof choiceAt> | undefined;
 }
 
+/** A timeline of no lines: what the follower would read with no hymn placed, which never happens, as it is made only for a placed timeline. */
+const EMPTY: Timeline = {
+  tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
+  lines: [],
+  first: 0,
+  end: 0,
+};
+
 /** The follow's state for one launch of the data module, and its inputs. */
 export const followDesk = (hymnOf: (number: number) => Followed | undefined) => {
   let serial = 0;
@@ -171,8 +179,28 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
     return { _tag: 'Here', at: told.at, state: 'playing', rate: told.rate };
   };
 
-  const make = (timeline: Timeline) =>
-    followerOf(timeline, {
+  /**
+   * The timeline the follower reads: the one Play sings now, read through at
+   * each use, so a hymn's words arriving after its lines (`src/timing/load.ts`)
+   * mark syllables in the same follower, its line, scroll, hold and clock kept.
+   */
+  const live: Timeline = {
+    get tempo() {
+      return (sung ?? EMPTY).tempo;
+    },
+    get lines() {
+      return (sung ?? EMPTY).lines;
+    },
+    get first() {
+      return (sung ?? EMPTY).first;
+    },
+    get end() {
+      return (sung ?? EMPTY).end;
+    },
+  };
+
+  const make = () =>
+    followerOf(live, {
       now: () => now,
       wake: (ms, run) => {
         keys += 1;
@@ -192,7 +220,10 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
   /** The follower for page `number` under the player's stanza choice for it, made again when either changes. */
   const place = (number: number, choice: ReadonlyArray<number>) => {
     const key = `${number}|${choice.join('.')}`;
-    if (key === choiceKey) return;
+    if (key === choiceKey) {
+      retime(choice);
+      return;
+    }
     follower?.stop();
     choiceKey = key;
     page = number;
@@ -205,9 +236,23 @@ export const followDesk = (hymnOf: (number: number) => Followed | undefined) => 
       timeline === undefined || followed === undefined
         ? undefined
         : sungOf(timeline, followed.hymn.sections, choice);
-    follower = sung === undefined ? undefined : make(sung);
+    follower = sung === undefined ? undefined : make();
     heard = told.seek;
     counted = false;
+  };
+
+  /**
+   * The page's hymn answers a new timeline (its words arrived): Play's cut of
+   * it is read by the same follower from now on, which the report after
+   * this ticks, so the sung line keeps its mark and its syllable is marked.
+   */
+  const retime = (choice: ReadonlyArray<number>) => {
+    if (followed === undefined) return;
+    const next = hymnOf(page);
+    if (next?.timeline === undefined || next.timeline === followed.timeline) return;
+    followed = next;
+    sung = sungOf(next.timeline, next.hymn.sections, choice);
+    follower ??= make();
   };
 
   const tell = () => {

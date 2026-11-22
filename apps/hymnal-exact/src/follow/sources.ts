@@ -17,19 +17,45 @@
  *   plays (1, or 0 under Reduce Motion). `deadline`: the hold's timer `n`.
  */
 
+import type { Timeline } from '@manna/hymnal-app/player/stanzas';
+
 import type { Book } from '../hymns/book.ts';
 import { decodeChoices } from '../player/view.ts';
-import { type FollowView, followDesk } from './follow.ts';
+import { type Followed, type FollowView, followDesk } from './follow.ts';
 import { timelineIn } from './marks.ts';
 
-export const followSources = (book: Book, timing: ReadonlyArray<readonly [number, string]>) => {
+/**
+ * The seam's feed: hymn `number`'s text and timeline, the whole one once
+ * `words` has it (`src/timing/load.ts`), else the bundled lines-only one
+ * `timing`. Each string is decoded once and its timeline kept, so the
+ * follow sees a new timeline only when the words arrive.
+ */
+export const followedOf = (
+  book: Book,
+  timing: ReadonlyArray<readonly [number, string]>,
+  words: (number: number) => string | undefined,
+) => {
   const timed = new Map(timing);
   const byNumber = new Map(book.hymns.map((hymn) => [hymn.number, hymn]));
-  const desk = followDesk((number) => {
+  const decoded = new Map<number, { text: string; timeline: Timeline | undefined }>();
+  return (number: number): Followed | undefined => {
     const hymn = byNumber.get(number);
     if (hymn === undefined) return undefined;
-    return { hymn, timeline: timelineIn(timed, number) };
-  });
+    const text = words(number) ?? timed.get(number) ?? '';
+    const kept = decoded.get(number);
+    if (kept?.text === text) return { hymn, timeline: kept.timeline };
+    const timeline = timelineIn(new Map([[number, text]]), number);
+    decoded.set(number, { text, timeline });
+    return { hymn, timeline };
+  };
+};
+
+export const followSources = (
+  book: Book,
+  timing: ReadonlyArray<readonly [number, string]>,
+  words: (number: number) => string | undefined = () => undefined,
+) => {
+  const desk = followDesk(followedOf(book, timing, words));
   const followStep = async ([kind, page, now, x, y, n, text]: readonly [
     string,
     number,
