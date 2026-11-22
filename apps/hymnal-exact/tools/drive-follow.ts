@@ -12,9 +12,11 @@
  *   after a wheel on the page the button "Resume follow" shows, the current
  *   `ResumeFollow.tsx`'s name; with the held seek taken (a mouse held still
  *   350 ms on the words, then moved a line step up) the status line says
- *   the choice as the current `SeekStatus` says it (`spoken`), "Line timing
- *   only" shows on a line timed whole, and after the lift the pager's page
- *   has not changed and the player sings a line on (`tree --ax`, `state`);
+ *   the choice as the current `SeekStatus` says it (`spoken`), a word is
+ *   chosen on hymn 2's word-timed line with no "Line timing only", and
+ *   after the lift the pager's page has not changed and the player sings a
+ *   line on (`tree --ax`, `state`); on hymn 663, which the current app
+ *   times by lines alone, the held seek shows "Line timing only";
  * - with Reduce Motion on, the newly lit count-in mark has no animation, and
  *   the page is placed at a sung line far down the hymn at once: the line
  *   stands a third of the way down the page (`layout`);
@@ -158,7 +160,7 @@ const named = await drive.launch(store('names'), [
   'tap resume-follow',
   'clock data',
   'clock settle',
-  'tap hymn-words drag 0 -48 press 400 from 200 300 mouse during "tree --ax reader-seek-status" "tree reader-seek-line-only" "state"',
+  'tap hymn-words drag 0 -48 press 400 from 200 300 mouse during "tree --ax reader-seek-status" "tree reader-seek" "state"',
   'clock data',
   'clock settle',
   'state',
@@ -192,15 +194,55 @@ drive.check(
   { status, said },
 );
 drive.check(
-  '"Line timing only" shows on a line timed whole',
-  JSON.stringify(onlyTree ?? '').includes('Line timing only'),
-  JSON.stringify(onlyTree ?? '').slice(0, 300),
+  'on hymn 2, whose words’ times are read at its first use, the hold chooses a word and "Line timing only" does not show',
+  Number(slotOf(held, 'followNow.holdWord')) >= 0 &&
+    JSON.stringify(onlyTree ?? '').includes('reader-seek-marker') &&
+    !JSON.stringify(onlyTree ?? '').includes('Line timing only'),
+  { word: slotOf(held, 'followNow.holdWord'), tree: JSON.stringify(onlyTree ?? '').slice(0, 300) },
 );
 const after = named.at(-1);
 drive.check(
   'after the lift the page is still hymn 2, and the player sings a line on',
   slotOf(after, 'hymnOpen') === '2' && Number(slotOf(after, 'player.at')) > 28.4,
   { open: slotOf(after, 'hymnOpen'), at: slotOf(after, 'player.at') },
+);
+
+const whole = await drive.launch(store('whole'), [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'tap settings-feel',
+  'clock settle',
+  'tap settings-done',
+  'clock settle',
+  'tap find-search',
+  'clock settle',
+  'clock data',
+  'type search 663',
+  'clock settle',
+  'clock data',
+  'tap hymn-663',
+  'clock settle',
+  'clock data',
+  'tap bar-sound',
+  'clock settle',
+  'clock data',
+  'tap play',
+  'clock data',
+  'clock settle',
+  'clock +2500',
+  'clock data',
+  'tap hymn-words drag 0 -48 press 400 from 200 300 mouse during "tree reader-seek-line-only" "state"',
+]);
+const [wholeTree, wholeHeld] = duringOf(whole.at(-1));
+drive.check(
+  '"Line timing only" shows on a line timed whole (hymn 663, which the current hymnal times by lines alone)',
+  slotOf(wholeHeld, 'followNow.holding') === true &&
+    JSON.stringify(wholeTree ?? '').includes('Line timing only'),
+  {
+    holding: slotOf(wholeHeld, 'followNow.holding'),
+    tree: JSON.stringify(wholeTree ?? '').slice(0, 300),
+  },
 );
 
 const FAR = 7;
