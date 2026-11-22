@@ -11,12 +11,14 @@
  */
 
 import type { Section, Timeline } from '@manna/hymnal-app/player/stanzas';
+import { keySet } from '@manna/hymnal/recordings';
 
 import { type Random, below, pick } from '../test/random.ts';
 import { scoreOf } from './score.ts';
 import type { Input, State, Track, Why } from './step.ts';
 
-const SECTIONS: ReadonlyArray<Section> = [1, 2, 3].map((n) => ({
+/** Each test hymn's words: three stanzas of two sung lines. */
+export const SECTIONS: ReadonlyArray<Section> = [1, 2, 3].map((n) => ({
   kind: 'stanza',
   n,
   lines: ['la la la', 'la la'],
@@ -50,12 +52,14 @@ export const TRACKS: ReadonlyArray<Track> = [
     number: 1,
     title: 'One',
     url: 'http://127.0.0.1:4797/audio/warm-1/sdah/1.mp3',
+    keyed: (offset) => `http://127.0.0.1:4797/audio/${keySet('warm-1', offset)}/sdah/1.mp3`,
     score: scoreOf(SECTIONS, TIMELINE, hymnOf(1)),
   },
   {
     number: 2,
     title: 'Two',
     url: 'http://127.0.0.1:4797/audio/warm-1/sdah/2.mp3',
+    keyed: (offset) => `http://127.0.0.1:4797/audio/${keySet('warm-1', offset)}/sdah/2.mp3`,
     score: scoreOf(SECTIONS, TIMELINE, hymnOf(2)),
   },
   {

@@ -48,6 +48,7 @@ component HymnalExact
   members "./features/bar.contract"
   members "./features/pager.contract"
   members "./features/keys.contract"
+  members "./features/tempo.contract"
   members "./features/sheet.contract"
   members "./features/reading.contract"
   provide
@@ -84,6 +85,10 @@ component HymnalExact
     hymnPressBack = hymnBack
     playerSoundOn = playerSound
     playerSoundPress = playerSoundSwitch
+    playerIntroOn = playerIntro
+    playerClickOn = playerClick
+    playerIntroPress = playerIntroSwitch
+    playerClickPress = playerClickSwitch
     keysShown
     keysPlaced
     keysOpen
