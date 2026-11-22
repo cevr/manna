@@ -388,7 +388,7 @@ component KeysCapoDial
           for f in keysShown.capoStops key=f.capo
             button press=keysAsk("capo", f.capo) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
               display="flex" flex-direction="column" align-items="center" justify-content="center" scroll-snap-align="center"
-              aria-hidden=true tabindex=-1 testId=`dial-capo-stop-${f.capo}`
+              aria-hidden=true tabindex=-1 retainFocus=true testId=`dial-capo-stop-${f.capo}`
               text `${f.capo}` font="type.key-face" color=(f.capo == keysShown.capo ? "chord" : "muted")
               text f.played font="type.dial-played" color=(f.open ? "chord" : "muted")
         view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
@@ -419,7 +419,7 @@ component KeysKeyDial
             for s in keysShown.keyStops key=s.pitch
               button press=keysAsk("key", s.pitch) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                 position="relative" display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
-                aria-hidden=true tabindex=-1 id=`dial-key-stop-${c * 12 + s.pitch}` testId=(c == 1 ? `dial-key-stop-${s.pitch}` : `dial-key-copy-${c}-${s.pitch}`)
+                aria-hidden=true tabindex=-1 retainFocus=true id=`dial-key-stop-${c * 12 + s.pitch}` testId=(c == 1 ? `dial-key-stop-${s.pitch}` : `dial-key-copy-${c}-${s.pitch}`)
                 text s.name font="type.dial-key" color=(s.pitch == keysShown.keyAt ? "chord" : "muted") white-space="nowrap"
                 if s.printed
                   view position="absolute" bottom=`${keysPlaced.homeLow}px` width=`${keysPlaced.home}px` height=`${keysPlaced.home}px`
