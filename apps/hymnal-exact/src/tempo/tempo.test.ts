@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noDynamicImports, effect/noNullish, effect/noTernary, effect/noGlobals, effect/noAs, import/no-unassigned-import -- the current app's recording.ts and settings.ts are imported after `current.testing.ts` (imported for its loader stand-ins alone) registers what their graph reaches, settings.ts through a cast, as its exact/ declaration names only what Exact stages; an in-memory store holds JSON as the app's does, and the current app's optional fields are read as they are. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noTernary, effect/noGlobals, import/no-unassigned-import -- the current app's recording.ts and settings.ts are imported after `current.testing.ts` (imported for its loader stand-ins alone) registers what their graph reaches, settings.ts through a cast, as its exact/ declaration names only what Exact stages; an in-memory store holds JSON as the app's does, and the current app's optional fields are read as they are. */
 
 /**
  * The player's tempo, its kept text, its heard key and the key's fallback,
