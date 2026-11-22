@@ -86,3 +86,123 @@ test "About opens from the sheet and Back returns to it."
   expect tree missing "about"
   expect tree has "settings"
   expect text "appearance-dark" == "Dark"
+
+test "Chord style and Chord placement show only while chords are on, as the current hymnal lists them."
+  tap "gear"
+  clock settle
+  clock data
+  expect tree missing "chord-style"
+  expect tree missing "chord-placement"
+  tap "chords-toggle"
+  clock settle
+  clock data
+  expect tree has "chord-style"
+  expect tree has "chord-placement"
+  expect state settingsChordRows.style.0 .value == "simple"
+  expect state settingsChordRows.style.1 .value == "advanced"
+  expect state settingsChordRows.placement.0 .value == "beat"
+  expect state settingsChordRows.placement.1 .value == "simpler"
+  expect state settingsChordRows.placement.2 .value == "file"
+  expect text "chord-style-simple" == "Simple✓"
+  expect text "chord-style-advanced" == "Advanced"
+  expect text "chord-placement-beat" == "On the beat✓"
+  expect text "chord-placement-simpler" == "Simpler"
+  expect text "chord-placement-file" == "As the file plays"
+  tap "chords-toggle"
+  clock settle
+  clock data
+  expect tree missing "chord-style"
+  expect tree missing "chord-placement"
+
+// Hymn 1's thirteenth syllable of its first line is the first place
+// Advanced spells a chord other than Simple's (a Bun script over the
+// current hymnal's chords: Gm against Gm7 C C7).
+test "Advanced changes hymn 1's chords, and is kept."
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect text "chord-1-1-13" == "Gm"
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  clock data
+  tap "chord-style-advanced"
+  clock settle
+  clock data
+  expect state settingsChordStyle == "advanced"
+  expect text "chord-style-advanced" == "Advanced✓"
+  expect text "chord-style-simple" == "Simple"
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  expect text "chord-1-1-13" == "Gm7 C C7"
+  reload
+  clock data
+  clock settle
+  expect state settingsChordStyle == "advanced"
+  expect text "chord-1-1-13" == "Gm7 C C7"
+
+// As the file plays leaves hymn 1's chords where they are; hymn 31 is the
+// first whose drawn chord changes under it (a Bun script over the current
+// hymnal's chords: its first line's fifth syllable, G against Em).
+test "As the file plays changes hymn 31's chords, and is kept."
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "chord-placement-file"
+  clock settle
+  clock data
+  expect state settingsPlacement == "file"
+  expect text "chord-placement-file" == "As the file plays✓"
+  expect text "chord-placement-beat" == "On the beat"
+  tap "settings-done"
+  clock settle
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "31"
+  clock settle
+  clock data
+  tap "hymn-31"
+  clock settle
+  clock data
+  expect text "chord-1-1-5" == "Em"
+  reload
+  clock data
+  clock settle
+  expect state settingsPlacement == "file"
+  expect text "chord-1-1-5" == "Em"
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  clock data
+  tap "chord-placement-beat"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "31"
+  clock settle
+  clock data
+  tap "hymn-31"
+  clock settle
+  clock data
+  expect text "chord-1-1-5" == "G"

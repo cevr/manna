@@ -46,3 +46,38 @@ export interface TabsInput {
 
 /** The tabs in their order; a tab read from an index with no group is left out. */
 export declare const tabsOf: (input: TabsInput) => ReadonlyArray<Tab>;
+
+/** A stretch of a tile's strip, as fractions of its width from its start (hymn 1). */
+export interface Span {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** A group's tile in `All at once`: its place, name, count, strip, and whether it holds the playing hymn. */
+export interface Tile {
+  readonly index: number;
+  readonly name: string;
+  readonly count: number;
+  readonly spans: ReadonlyArray<Span>;
+  readonly playing: boolean;
+}
+
+/**
+ * A tile for each of `tab`'s groups, in its order; `playing` the player's
+ * hymn, an `effect` Option named by its shapes, which a function taking an
+ * Option cannot accept, so it is held where the port runs it
+ * (`apps/hymnal-exact/src/find/tiles.test.ts`).
+ */
+export declare const tilesOf: (
+  tab: Tab,
+  playing: { readonly _tag: 'Some'; readonly value: number } | { readonly _tag: 'None' },
+) => ReadonlyArray<Tile>;
+
+/** A tile for each of `tab`'s groups, in its order; `playing` is the player's hymn, 0 while idle. */
+export declare const tilesFor: (tab: Tab, playing: number) => ReadonlyArray<Tile>;
+
+/** How many hymns a tile's group holds, as its tile says it: `1 hymn`, `12 hymns`. */
+export declare const tileCount: (tile: Tile) => string;
+
+/** A tile's name as VoiceOver reads it: name, count, then `playing`. */
+export declare const tileName: (tile: Tile) => string;

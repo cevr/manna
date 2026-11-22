@@ -89,7 +89,7 @@ shape ChordsGripPage
 members HymnalExact
   state chordsOn = false persist
   state chordsMoves: string[] = [] persist
-  resource chordsShown = chordsPage(hymnOpen, chordsOn, chordsMoves) as shape ChordsPage
+  resource chordsShown = chordsPage(hymnOpen, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) as shape ChordsPage
   mutation chordsMoved as shape ChordsMoves queue then chordsKeep
   derive chordsGripOpen = match stack(nav).filter(e => e.name == "chord").at(-1) { case some(e) => e.params.grip, case none => "" }
   resource chordsGripShown = chordsGrip(chordsGripOpen) as shape ChordsGripPage

@@ -12,12 +12,11 @@ import {
 import { useRouter } from 'one';
 
 import { About } from '~/about';
+import { chordStyles, placements } from '~/chord-choices';
 import { plain, useCue } from '~/feel/cue';
-import type { ChordStyle } from '~/hymns/simple';
 import type { Appearance } from '~/settings';
 import { settings } from '~/store';
 import { color, useAccent } from '~/color';
-import { placements } from '~/settings';
 import { Downloads } from '~/offline/Downloads';
 import { chordsCue } from '~/player/thumb';
 import { available } from '~/tuner/native';
@@ -31,11 +30,6 @@ const appearances: ReadonlyArray<Choice<Appearance>> = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
-];
-
-const chordStyles: ReadonlyArray<Choice<ChordStyle>> = [
-  { value: 'simple', label: 'Simple' },
-  { value: 'advanced', label: 'Advanced' },
 ];
 
 /** Settings, a sheet over the home screen on a phone: it draws its own heading, the sheet no header. */

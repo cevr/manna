@@ -7,7 +7,7 @@
     "build:web": "bun run exact web-build --out dist && bun tools/web/pages.ts dist",
     "serve:web": "bun run exact serve dist",
     "typecheck": "tsc -p tsconfig.src.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test:app": "bun test --preload ./src/test/setup.ts --path-ignore-patterns=src/web --path-ignore-patterns=src/chords --path-ignore-patterns=src/hymn/page.test.ts --path-ignore-patterns=src/hymn/indent.test.ts --path-ignore-patterns=src/find --path-ignore-patterns=src/list/headers.test.ts --path-ignore-patterns=src/no-bucket.test.ts --path-ignore-patterns=src/look/motion.test.ts --path-ignore-patterns=src/look/quiet.test.ts --path-ignore-patterns=src/settings/feel.test.ts --path-ignore-patterns=src/player --path-ignore-patterns=src/abouthymn ./src",
+    "test:app": "bun test --preload ./src/test/setup.ts --path-ignore-patterns=src/web --path-ignore-patterns=src/chords --path-ignore-patterns=src/hymn/page.test.ts --path-ignore-patterns=src/hymn/indent.test.ts --path-ignore-patterns=src/find --path-ignore-patterns=src/results --path-ignore-patterns=src/list/headers.test.ts --path-ignore-patterns=src/no-bucket.test.ts --path-ignore-patterns=src/look/motion.test.ts --path-ignore-patterns=src/look/quiet.test.ts --path-ignore-patterns=src/settings/feel.test.ts --path-ignore-patterns=src/player --path-ignore-patterns=src/abouthymn ./src",
     "test:about": "bun test --preload ./src/test/setup.ts ./src/abouthymn",
     "test:player": "bun test --preload ./src/test/setup.ts ./src/player",
     "test:motion": "bun test --preload ./src/test/setup.ts ./src/look/motion.test.ts ./src/look/quiet.test.ts ./src/settings/feel.test.ts",
@@ -15,7 +15,8 @@
     "test:chords": "bun test --preload ./src/test/setup.ts ./src/chords/page.test.ts ./src/chords/held.test.ts ./src/chords/host.test.ts",
     "test:hymn": "bun test --preload ./src/test/setup.ts ./src/hymn/page.test.ts ./src/hymn/indent.test.ts",
     "test:moves": "bun test --preload ./src/test/setup.ts ./src/chords/move.test.ts ./src/chords/rows.test.ts ./src/chords/shape.test.ts",
-    "test:find": "bun test --preload ./src/test/setup.ts ./src/find ./src/list/headers.test.ts ./src/no-bucket.test.ts"
+    "test:style": "bun test --preload ./src/test/setup.ts ./src/chords/style.test.ts",
+    "test:find": "bun test --preload ./src/test/setup.ts ./src/find ./src/results ./src/list/headers.test.ts ./src/no-bucket.test.ts"
   },
   "dependencies": {
     "@manna/exact-kit": "workspace:*",

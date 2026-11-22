@@ -12,10 +12,14 @@ import { sourcesAt } from './src/sources.ts';
  */
 const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';
 
-/** The player asks a failed recording's address once, to say why it failed: the bucket's, or the fixture's in a development build. */
+/**
+ * The player asks a failed recording's address once, to say why it failed:
+ * the bucket's, or the fixture's in a development build. Search reads the
+ * meaning table the iOS app ships (src/results/table.ts).
+ */
 export const grants = {
-  'https://hymns.cvr.im': 'net.fetch https://hymns.cvr.im',
-  'http://127.0.0.1:4797': 'net.fetch http://127.0.0.1:4797',
+  'https://hymns.cvr.im': ['net.fetch https://hymns.cvr.im', 'fs.read bundle:/Resources/meaning'],
+  'http://127.0.0.1:4797': ['net.fetch http://127.0.0.1:4797', 'fs.read bundle:/Resources/meaning'],
 };
 
 const sources: Sources = sourcesAt(origin, timing, chords, nearest);

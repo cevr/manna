@@ -55,7 +55,9 @@ const held = {
     FRETS_DRAWN: fingerings.FRETS_DRAWN,
     fingeringOf: fingerings.fingeringOf,
   } satisfies Held<typeof FingeringsDecl>,
-  simple: { simple: simpleStyle.simple } satisfies Held<typeof SimpleDecl>,
+  simple: { simple: simpleStyle.simple, styled: simpleStyle.styled } satisfies Held<
+    typeof SimpleDecl
+  >,
 };
 
 test('every declared name the port reads is the current source’s, there at run time', () => {

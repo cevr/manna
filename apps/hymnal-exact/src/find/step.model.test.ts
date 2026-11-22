@@ -13,7 +13,7 @@
  *   closing them moves no route;
  * - the number shown is a hymn's, 1…695, and is `turn` and `held` applied
  *   to the same turns;
- * - `open` and `tile(n)` go where `openingAt(path, n)` says;
+ * - `open` goes where `openingAt(path, n)` says;
  * - Done returns the list as it stood, and the tiles never show off home;
  * - a pinch acts at most once a gesture, as `pinchAct` asks.
  */
@@ -67,8 +67,7 @@ const inputOf = (random: Random, stack: ReadonlyArray<string>): Input => {
   if (roll === 9) return { kind: 'open' };
   if (roll === 10) return { kind: 'tilesShow' };
   if (roll === 11) return { kind: 'tilesDone' };
-  if (roll === 12) return { kind: 'tile', n: pick(random, [1, 100, 2, 695, 0, 696, 1.5]) };
-  if (roll === 13) return { kind: 'pinchBegin' };
+  if (roll === 12 || roll === 13) return { kind: 'pinchBegin' };
   if (roll === 14)
     return {
       kind: 'pinch',
@@ -181,17 +180,6 @@ const modelStep = (m: Model, input: Input): void => {
       return;
     case 'tilesDone':
       if (top(m) === HOME && m.tiles && !m.drums) m.tiles = false;
-      return;
-    case 'tile':
-      if (
-        top(m) === HOME &&
-        m.tiles &&
-        !m.drums &&
-        Number.isInteger(input.n) &&
-        input.n >= 1 &&
-        input.n <= 695
-      )
-        modelChose(m, input.n);
       return;
     case 'pinchBegin':
       m.spent = false;
@@ -311,14 +299,7 @@ describe('finding, against the model and the current app’s rules', () => {
           if (input.drum !== 'hundreds' && (input.n < 0 || input.n > 9)) wraps += 1;
         }
 
-        const chosen =
-          (input.kind === 'open' && before.drums && before.number) ||
-          (input.kind === 'tile' &&
-            beforeView.tiles &&
-            !before.drums &&
-            held(input.n) === input.n &&
-            input.n) ||
-          0;
+        const chosen = (input.kind === 'open' && before.drums && before.number) || 0;
         if (chosen > 0) {
           const how = openingAt(beforeView.top, chosen);
           if (how === 'stay') expect(shown.go).toEqual(before.go);

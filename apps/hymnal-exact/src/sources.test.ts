@@ -120,9 +120,11 @@ describe('the data module runs where Exact runs it', () => {
       'chordsMove',
       'chordsPage',
       'favouritesAfter',
+      'findAbout',
+      'findFollowRow',
+      'findGroupTiles',
       'findPlaces',
       'findStep',
-      'findTiles',
       'hymnPage',
       'hymnRows',
       'listOpening',
@@ -134,6 +136,7 @@ describe('the data module runs where Exact runs it', () => {
       'railTo',
       'recentAfter',
       'recentRows',
+      'settingsChords',
       'settingsFeelOf',
       'settingsLooks',
     ]);
@@ -185,13 +188,15 @@ describe('size', () => {
     expect(bytes).toBeLessThan(1_000_000);
   });
 
-  test('the list’s answer holds numbers, titles and sections, never a stanza’s words', () => {
+  test('the list’s answer holds numbers, titles and sections, and a found row only the line it was found by', () => {
     const answer = sources.hymnRows(['']);
     for (const section of answer) {
       expect(Object.keys(section).toSorted()).toEqual(['name', 'rows', 'slug']);
-      for (const row of section.rows)
-        expect(Object.keys(row).toSorted()).toEqual(['number', 'title']);
+      for (const row of section.rows) {
+        expect(Object.keys(row).toSorted()).toEqual(['line', 'number', 'title']);
+        expect(row.line).toBe('');
+      }
     }
-    expect(new TextEncoder().encode(JSON.stringify(answer)).length).toBeLessThan(40_000);
+    expect(new TextEncoder().encode(JSON.stringify(answer)).length).toBeLessThan(50_000);
   });
 });
