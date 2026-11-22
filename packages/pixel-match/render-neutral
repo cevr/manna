@@ -43,3 +43,4 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 eb9a4dd3b581 move: Move back's three lines (askLine, movedLine, alertLine) and Today's footer offer of it (offersBack), unchanged, from garden/back.tsx and app/index.tsx into garden/bar.ts; no behaviour change
 5ec9ac9706ca move: the reading view's LONG_PRESS (350) and its hold's activate, move, end and drop rule, unchanged, from reading/view.tsx into reading/hold.ts, the view calling it in the same order
 6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes
+77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
