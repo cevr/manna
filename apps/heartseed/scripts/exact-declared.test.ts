@@ -58,6 +58,12 @@ import type * as DeclaredAboutVersion from '../exact/about-version.d.ts';
 import type * as FirstFlow from '../src/first/flow';
 import type * as DeclaredFirstFlow from '../exact/first-flow.d.ts';
 import type * as Kjv from '../src/kjv';
+import type * as DeclaredHold from '../exact/reading-hold.d.ts';
+import type * as DeclaredReading from '../exact/reading.d.ts';
+import type * as DeclaredWords from '../exact/reading-words.d.ts';
+import type * as Hold from '../src/reading/hold';
+import type * as Reading from '../src/voice/reading';
+import type * as Words from '../src/reading/words';
 import type * as Lists from '../src/lists';
 import type * as Passages from '../src/passages';
 import type * as SayIt from '../src/sayit';
@@ -196,6 +202,25 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof List.listStartOf, typeof DeclaredList.listStartOf>,
   true satisfies Mutual<typeof List.listLineOf, typeof DeclaredList.listLineOf>,
   true satisfies Mutual<typeof List.listCaptionOf, typeof DeclaredList.listCaptionOf>,
+  true satisfies Mutual<typeof Hold.LONG_PRESS, typeof DeclaredHold.LONG_PRESS>,
+  true satisfies Mutual<Hold.Ask, DeclaredHold.Ask>,
+  true satisfies Mutual<Hold.Moment, DeclaredHold.Moment>,
+  true satisfies Mutual<typeof Hold.activate, typeof DeclaredHold.activate>,
+  true satisfies Mutual<typeof Hold.update, typeof DeclaredHold.update>,
+  true satisfies Mutual<typeof Hold.finalize, typeof DeclaredHold.finalize>,
+  true satisfies Mutual<typeof Hold.drop, typeof DeclaredHold.drop>,
+  true satisfies Mutual<Words.Box, DeclaredWords.Box>,
+  true satisfies Mutual<typeof Words.shownWordsOf, typeof DeclaredWords.shownWordsOf>,
+  true satisfies Mutual<typeof Words.wordAt, typeof DeclaredWords.wordAt>,
+  true satisfies Mutual<typeof Reading.CHOICES, typeof DeclaredReading.CHOICES>,
+  true satisfies Mutual<Reading.VoiceView, DeclaredReading.VoiceView>,
+  true satisfies Mutual<Reading.Reading, DeclaredReading.Reading>,
+  true satisfies Mutual<Reading.Input, DeclaredReading.Input>,
+  true satisfies Mutual<Reading.Step, DeclaredReading.Step>,
+  true satisfies Mutual<typeof Reading.wordSpans, typeof DeclaredReading.wordSpans>,
+  true satisfies Mutual<typeof Reading.initial, typeof DeclaredReading.initial>,
+  true satisfies Mutual<typeof Reading.isActive, typeof DeclaredReading.isActive>,
+  true satisfies Mutual<typeof Reading.step, typeof DeclaredReading.step>,
 ];
 
 it('declares for Exact what each module the port imports exports', () => {
