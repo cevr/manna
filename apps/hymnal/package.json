@@ -92,7 +92,8 @@
     "./vite/chords": "./vite/chords.ts",
     "./vite/indexes": "./vite/indexes.ts",
     "./vite/timing": "./vite/timing.ts",
-    "./vite/words": "./vite/words.ts"
+    "./vite/words": "./vite/words.ts",
+    "./vite/app": "./vite/app.ts"
   },
   "scripts": {
     "postinstall": "one patch || true",
