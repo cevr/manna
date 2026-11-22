@@ -19,6 +19,7 @@
         "test:about",
         "test:tempo",
         "test:offline",
+        "test:pinch",
         "test:tabs"
       ],
       "outputs": []
@@ -178,6 +179,18 @@
         "$TURBO_ROOT$/apps/hymnal/src/**",
         "$TURBO_ROOT$/apps/hymnal/vite/**",
         "$TURBO_ROOT$/apps/hymnal/package.json"
+      ]
+    },
+    "test:pinch": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**"
       ]
     },
     "test:tempo": {

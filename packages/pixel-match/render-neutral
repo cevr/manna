@@ -74,3 +74,6 @@ ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept 
 fecfdfeab64b exports: one exports line in apps/hymnal/package.json (./home/reveal, for the port's pinned tab row); no source changes
 b6d288c624d9 move: PinnedTabs.tsx's slide and fade times, the same 200 and 150 ms, into reveal.ts's revealTimes, which PinnedTabs imports
 d067ca3735dd merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-offline's and this unit's); no source changes of its own
+8d53539e3f70 exports: Heartseed's ./first/verse exports line points at vite/first-verse.ts (the query alone); src/first/verse.ts drops its re-export of the query, ownPassagesOf and its row unchanged; no value or render changes
+69444068fb50 refactor: Move back's Exit-to-answer rule moved unchanged from back.tsx into bar.ts (answerOf), for the port's model test; same values, no picture change
+dcf2f0a97bb4 types: answerOf declared in exact/garden-bar.d.ts and held to its source by scripts/exact-declared.test.ts; no source changes

@@ -21,6 +21,7 @@ import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
 import { offlineSources } from './offline/sources.ts';
 import { pagerSources } from './pager/sources.ts';
+import { pinchSources } from './pinch/sources.ts';
 import { BUCKET, originOf, playerSources } from './player/sources.ts';
 import { railSources } from './rail/sources.ts';
 import { resultsSources } from './results/sources.ts';
@@ -52,5 +53,6 @@ export const sourcesAt = (
     ...resultsSources(),
     ...sheetSources(chords),
     ...readingSources(),
+    ...pinchSources(),
   };
 };

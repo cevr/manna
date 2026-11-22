@@ -201,6 +201,7 @@ component HymnList
     column navigationKey=`${entry.id}` navigationBar="none" navigationScroll="hymn-list" position="absolute" inset=0
       -exact-safe-area="top" padding-top="var(--exact-safe-area-inset-top)"
       display="flex" flex-direction="column" background-color="ground"
+      hatch="pinch" data-pinchable=(findShown.pinchable ? "on" : "off")
       if findShown.homeTiles
         HomeTitle(own=false)
         FindTiles()
