@@ -35,7 +35,7 @@
       {
         "finding": "clipped",
         "node": "first-heading",
-        "why": "The web's alone, as One's: the web has no accessibility text sizes (Exact's accessibilityTextSize is false there), so at verify's 53-px root it keeps One's 34-pt title scaled by the text size (apps/heartseed/src/sayit/draw.tsx, title; src/first/intro.tsx, Intro's heading), and the one word Heartseed (106 px) is wider than any line of a 390-wide phone; the port wraps between words only, as verify's fixed-type check asks, so that word runs past its line there. The first minute's other headings wrap between their words; verify ios's leg at AX5 is owed to the sweep (par-hs-first round 1)"
+        "why": "The web's alone, as One's: the web has no accessibility text sizes (Exact's accessibilityTextSize is false there), so at verify's 53-px root it keeps One's 34-pt title scaled by the text size (apps/heartseed/src/sayit/draw.tsx, title; src/first/intro.tsx, Intro's heading), and the one word Heartseed (106 px) is wider than any line of a 390-wide phone; the port wraps between words only, as verify's fixed-type check asks, so that word runs past its line there. On iOS at AX1 and up the title is the list name's size (q160, features/first.contract) and holds its line; the first minute's other headings wrap between their words (par-hs-first round 1)"
       }
     ]
   },

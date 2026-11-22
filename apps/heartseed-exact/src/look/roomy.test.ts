@@ -93,6 +93,16 @@ describe('the accessibility-size departures', () => {
     expect(component('features/today.contract', 'TodayFoot').join('\n')).toContain(roomy);
   });
 
+  it("the welcome's one-word title is One's below the threshold and the name's size at it", () => {
+    const first = text('features/first.contract');
+    expect(first.match(/resource \w+ = exactViewport\(\) as shape \w+/gu)).toEqual([
+      'resource firstSize = exactViewport() as shape TodayTextSize',
+    ]);
+    expect(first).toMatch(
+      /if firstSize\.accessibilityTextSize\n\s+text "Heartseed" [^\n]*font="type\.name"[^\n]*\n\s+else\n\s+text "Heartseed" [^\n]*font="type\.title"/u,
+    );
+  });
+
   it('a round button is the circle below the threshold and the capsule at it', () => {
     const big = component('features/today.contract', 'TodayBig').join('\n');
     expect(big).toMatch(/if roomy\n\s+TodayWide\([^\n]*\n\s+else\n\s+TodayRound\(/u);
