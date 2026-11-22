@@ -17,13 +17,14 @@
 
 import { timelineOf } from '@manna/hymnal-app/follow/timeline';
 import type { Section } from '@manna/hymnal-app/player/stanzas';
-import { audioKey } from '@manna/hymnal-app/remote';
+import { audioKey, soundingOffset } from '@manna/hymnal-app/remote';
 
+import { moveOf } from '../chords/move.ts';
 import type { Book } from '../hymns/book.ts';
 import { scoreOf } from './score.ts';
-import { type Input, type State, type Track, type Why, initial, step } from './step.ts';
+import { type Input, type State, type Track, type Why, deviceOf, initial, step } from './step.ts';
 import { barOf } from './bar/view.ts';
-import { type PlayerView, decodeChoices, viewOf } from './view.ts';
+import { type PlayerView, decodeChoices, decodeTempos, viewOf } from './view.ts';
 
 /** The bucket the recordings are served from. */
 export const BUCKET = 'https://hymns.cvr.im';
@@ -47,8 +48,23 @@ export const recorded = (number: number): boolean =>
   Number.isInteger(number) && number >= 1 && number <= 695;
 
 /** Hymn `number`'s recording's address from `origin`, as the current app's `audioUrl`; empty with none. */
-export const recordingAt = (origin: string, number: number): string =>
-  recorded(number) ? `${origin}/${audioKey(number)}` : '';
+export const recordingAt = (origin: string, number: number, offset = 0): string =>
+  recorded(number) ? `${origin}/${audioKey(number, offset)}` : '';
+
+/**
+ * Each hymn's heard key from the chords' state, as the current `heardMove`
+ * hears it: with chords on, the sounding offset of the hymn's own move's
+ * transpose (`moves`, `src/chords/move.ts`); with chords off, every hymn as
+ * printed. The capo never reaches the recording.
+ */
+export const offsetsOf = (chordsOn: boolean, moves: ReadonlyArray<string>) =>
+  Object.fromEntries(
+    (chordsOn ? moves : []).flatMap((entry) => {
+      const number = Number(entry.split(':')[0]);
+      const offset = soundingOffset(moveOf(moves, number).transpose);
+      return Number.isInteger(number) && offset !== 0 ? [[`${number}`, offset] as const] : [];
+    }),
+  );
 
 /** What a failed load's address answers, as the player says it. */
 const whyOf = async (url: string): Promise<Why> => {
@@ -61,7 +77,30 @@ const whyOf = async (url: string): Promise<Why> => {
   }
 };
 
-const KINDS = new Set(['pause', 'resume', 'stop', 'retry', 'dragStart', 'dragEnd']);
+const KINDS = new Set([
+  'pause',
+  'resume',
+  'stop',
+  'retry',
+  'dragStart',
+  'dragEnd',
+  'chooseAll',
+  'tempoReset',
+]);
+
+/** The sheet's own asks, by kind. */
+const SHEET = ['stanza', 'place', 'tempo', 'tap', 'intro'] as const;
+type SheetKind = (typeof SHEET)[number];
+const isSheet = (kind: string): kind is SheetKind => SHEET.some((each) => each === kind);
+
+/** The sheet's stanza chip and place, tempo and `Start` asks: a stanza, a dial's stop, a tap's time in ms, the Intro on (1) or off. */
+const sheet = (kind: SheetKind, value: number): Input => {
+  if (kind === 'stanza') return { _tag: 'chooseStanza', stanza: value };
+  if (kind === 'place') return { _tag: 'stanzaPlace', stanza: value };
+  if (kind === 'tempo') return { _tag: 'tempo', at: value };
+  if (kind === 'tap') return { _tag: 'tap', at: value };
+  return { _tag: 'start', intro: value > 0 };
+};
 
 /** A way on the bar or the lock screen: back for a negative value, else on. */
 const wayOf = (value: number): 1 | -1 => (value < 0 ? -1 : 1);
@@ -91,6 +130,7 @@ export const playerSources = (
       number,
       title: hymn.title,
       url: recordingAt(origin, number),
+      keyed: (offset) => recordingAt(origin, number, offset),
       score: scoreOf(hymn.sections as ReadonlyArray<Section>, timeline, hymn),
     };
   };
@@ -109,8 +149,7 @@ export const playerSources = (
   const reader = (kind: string, value: number): Input | undefined => {
     if (KINDS.has(kind)) return { _tag: kind } as Input;
     if (kind === 'play') return play(value);
-    if (kind === 'stanza') return { _tag: 'chooseStanza', stanza: value };
-    if (kind === 'place') return { _tag: 'stanzaPlace', stanza: value };
+    if (isSheet(kind)) return sheet(kind, value);
     if (kind === 'dragTo' || kind === 'seekTo' || kind === 'remoteSeek')
       return { _tag: kind, seconds: value };
     if (kind === 'nudge' || kind === 'remoteSkip') return { _tag: kind, way: wayOf(value) };
@@ -157,9 +196,16 @@ export const playerSources = (
     string,
   ]): Promise<Sent> => {
     if (kind === 'screen') return apply({ _tag: 'screen', stack: text.split(' ').filter(Boolean) });
-    if (kind === 'restore') return apply({ _tag: 'restore', choices: decodeChoices(text) });
+    if (kind === 'restore')
+      return apply({ _tag: 'restore', choices: decodeChoices(text), tempos: decodeTempos(text) });
+    if (kind === 'keys')
+      return apply({
+        _tag: 'keys',
+        offsets: offsetsOf(value > 0, text.split(' ').filter(Boolean)),
+      });
     if (kind === 'failed') {
-      const url = state.held?.load === id ? state.held.track.url : '';
+      const device = deviceOf(state);
+      const url = device?.load === id ? device.url : '';
       if (url === '') return apply(undefined);
       const why = await whyOf(url);
       return apply({ _tag: 'failed', id, why });

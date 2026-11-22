@@ -176,10 +176,17 @@ const READER: ReadonlyArray<Input> = [
   { _tag: 'retry' },
   { _tag: 'stop' },
   { _tag: 'seekTo', seconds: READER_SEEK },
+  { _tag: 'tempo', at: 0 },
+  { _tag: 'keys', offsets: { '1': 2, '2': 2 } },
+  { _tag: 'keys', offsets: {} },
 ];
 
-const nameOf = (input: Input) =>
-  input._tag === 'play' ? `reader play ${input.track.number}` : `reader ${input._tag}`;
+const nameOf = (input: Input) => {
+  if (input._tag === 'play') return `reader play ${input.track.number}`;
+  if (input._tag === 'keys')
+    return `reader keys ${Object.keys(input.offsets).length > 0 ? 'moved' : 'printed'}`;
+  return `reader ${input._tag}`;
+};
 
 /** `world` after the reader's `input`, its `held` and `hearing` kept, if the inbox has room. */
 const byReader = (world: World, input: Input): World | undefined => {
@@ -403,6 +410,8 @@ describe('the protocol (protocol.qnt) holds in every interleaving', () => {
       'element plays on to n.n',
       'deliver time n told n',
       'deliver echo seeked n told n',
+      'reader tempo',
+      'reader keys moved',
     ])
       expect(named).toContain(action);
   });
