@@ -51,6 +51,9 @@ import { type Command, type Input, type State, deviceOf, initial, step } from '.
 import { viewOf } from '../view.ts';
 
 const HISTORIES = 100;
+/** The histories whose loads and seeks land late, and how late, in ms: two of the element's ticks. */
+const DELAYED = 60;
+const LANDS = 500;
 /**
  * How long the test clock waits on a fiber it woke before going on, in real
  * ms: a woken skipper whose race is still unwinding is settled by the next
@@ -107,8 +110,33 @@ const actOf = (random: Random): Act =>
     () => ({ _tag: 'wait', ms: TICK * (1 + below(random, 4)) }),
   ])();
 
-/** A device holding a recording `length` ms long that moves with the clock at its rate while it plays. */
-const recording = (length: number) => {
+/** What the delayed histories ask more often: a switch while something is in flight, a short wait for it to land. */
+const delayedActOf = (random: Random): Act => {
+  const roll = random();
+  if (roll < 0.3) return { _tag: 'switch' };
+  if (roll < 0.45) return { _tag: 'wait', ms: TICK };
+  return actOf(random);
+};
+
+/**
+ * What is asked while a load or a seek is in flight: the Sound switch, time,
+ * and a Play of another hymn; anything else waits a tick for it to land.
+ * The current clock does not hold a Pause, a Resume, a Stop, a turn or a
+ * choice made mid-load to the device's later landing, which the property
+ * does not ask of it.
+ */
+const inFlightAct = (act: Act, flying: boolean, held: number | undefined): Act => {
+  if (!flying || act._tag === 'switch' || act._tag === 'wait') return act;
+  if (act._tag === 'play' && act.number !== held) return act;
+  return { _tag: 'wait', ms: TICK };
+};
+
+/**
+ * A device holding a recording `length` ms long that moves with the clock at
+ * its rate while it plays; a load and a seek land `delay` ms after they are
+ * asked, as a real element's do.
+ */
+const recording = (length: number, delay = 0) => {
   let state: Told['state'] = 'idle';
   let at = 0;
   let since = 0;
@@ -125,9 +153,11 @@ const recording = (length: number) => {
       change();
       return read;
     });
+  const landing = (change: () => void) =>
+    delay === 0 ? then(change) : Effect.andThen(Effect.sleep(delay), then(change));
   const api: PlaybackApi = {
     play: (source, fromMs, options) =>
-      then(() => {
+      landing(() => {
         uri = source;
         at = fromMs;
         rate = options?.rate ?? 1;
@@ -141,7 +171,7 @@ const recording = (length: number) => {
       state = 'playing';
     }),
     seek: (ms) =>
-      then(() => {
+      landing(() => {
         at = ms;
       }),
     setRate: (to) =>
@@ -163,45 +193,80 @@ const recording = (length: number) => {
   return { api, rate: () => rate, uri: () => uri };
 };
 
-/** The port as its contract runs it: the step, its one element, the runner's clock's `due` and the silent clock's ticks. */
-const portOf = () => {
+/**
+ * The port as its contract runs it: the step, its one element, the runner's
+ * clock's `due` and the silent clock's ticks. A load and a seek land
+ * `delay` ms after the step asks them (at once when 0): the element plays
+ * only once its recording has loaded.
+ */
+const portOf = (delay = 0) => {
   let state: State = initial;
   let element:
-    | { load: number; at: number; playing: boolean; rate: number; url: string }
+    | { load: number; at: number; playing: boolean; ready: boolean; rate: number; url: string }
     | undefined;
   let now = 0;
+  /** The host's time within a tick: where the element's play reached a span's start or a landing. */
+  let moment = 0;
   let base = 0;
   let ticking = false;
   let skips = 0;
   const inbox: Array<Input> = [];
+  const landing: Array<{
+    readonly due: number;
+    readonly kind: 'load' | 'seek';
+    readonly land: () => void;
+  }> = [];
+  const later = (kind: 'load' | 'seek', land: () => void) => {
+    if (delay === 0) land();
+    else landing.push({ due: moment + delay, kind, land });
+  };
   const seekOf = () => state.held?.seek ?? 0;
+  const sought = (load: number, seconds: number, serial: number) => {
+    if (element?.load !== load) return;
+    element.at = seconds;
+    inbox.push({ _tag: 'seeked', id: load, serial });
+    inbox.push({ _tag: 'time', id: load, serial, seconds });
+    if (element.playing && element.at >= RECORDING) {
+      element.playing = false;
+      inbox.push({ _tag: 'ended', id: load });
+    }
+  };
   const obey = (command: Command | undefined) => {
     if (command?._tag === 'load') {
+      const load = command.id;
       element = {
-        load: command.id,
+        load,
         at: command.from,
         playing: false,
+        ready: false,
         rate: command.rate,
         url: command.url,
       };
-      inbox.push({ _tag: 'loaded', id: command.id, duration: RECORDING });
+      later('load', () => {
+        if (element?.load !== load) return;
+        element.ready = true;
+        inbox.push({ _tag: 'loaded', id: load, duration: RECORDING });
+      });
     } else if (command?._tag === 'unload') element = undefined;
     else if (command?._tag === 'rate' && element !== undefined) element.rate = command.rate;
     else if (command?._tag === 'seek' && element !== undefined) {
       if (command.skip) skips += 1;
-      element.at = command.seconds;
-      inbox.push({ _tag: 'seeked', id: element.load, serial: command.serial });
-      inbox.push({ _tag: 'time', id: element.load, serial: command.serial, seconds: element.at });
-      if (element.playing && element.at >= RECORDING) {
-        element.playing = false;
-        inbox.push({ _tag: 'ended', id: element.load });
-      }
+      const { load } = element;
+      const { seconds, serial } = command;
+      later('seek', () => sought(load, seconds, serial));
+    }
+  };
+  const land = () => {
+    for (let at = landing.findIndex((each) => each.due <= moment); at >= 0;) {
+      const [due] = landing.splice(at, 1);
+      due?.land();
+      at = landing.findIndex((each) => each.due <= moment);
     }
   };
   const render = () => {
     const device = deviceOf(state);
     if (element === undefined || device === undefined || device.load !== element.load) return;
-    if (!device.paused && !element.playing && element.at < RECORDING) {
+    if (!device.paused && !element.playing && element.ready && element.at < RECORDING) {
       element.playing = true;
       inbox.push({ _tag: 'played', id: element.load }, { _tag: 'playing', id: element.load });
     } else if (device.paused && element.playing) {
@@ -233,17 +298,26 @@ const portOf = () => {
   /** The element plays on `ms` of the host's clock, `due` sent as it reaches a span's start. */
   const play = (ms: number) => {
     let left = ms;
-    for (let guard = 0; guard < 8; guard += 1) {
-      if (element?.playing !== true) break;
-      const skipAt = viewOf(state, undefined, titleOf).skipAt;
-      if (skipAt < 0) break;
-      const dt = ((skipAt - element.at) * 1000) / element.rate;
+    for (let guard = 0; guard < 16; guard += 1) {
+      const lands = Math.min(Infinity, ...landing.map((each) => each.due)) - moment;
+      const playing = element?.playing === true;
+      const skipAt = playing ? viewOf(state, undefined, titleOf).skipAt : -1;
+      const toSkip =
+        element !== undefined && skipAt >= 0
+          ? ((skipAt - element.at) * 1000) / element.rate
+          : Infinity;
+      const dt = Math.min(lands, toSkip);
       if (dt > left) break;
-      element.at = skipAt;
+      if (element !== undefined && playing) element.at += (dt * element.rate) / 1000;
       left -= dt;
-      feed({ _tag: 'due', id: element.load, serial: seekOf(), seconds: skipAt });
+      moment += dt;
+      if (dt === toSkip && element !== undefined) {
+        element.at = skipAt;
+        feed({ _tag: 'due', id: element.load, serial: seekOf(), seconds: skipAt });
+      } else land();
       drain();
     }
+    moment = now;
     if (element?.playing !== true) return;
     element.at = Math.min(element.at + (left * element.rate) / 1000, RECORDING);
     inbox.push({ _tag: 'time', id: element.load, serial: seekOf(), seconds: element.at });
@@ -257,6 +331,8 @@ const portOf = () => {
     sounds: () => element?.playing ?? false,
     element: () => element,
     skips: () => skips,
+    /** Whether a load or a seek the step asked has yet to land. */
+    flying: () => landing.map((each) => each.kind),
     ask: (input: Input) => {
       tick();
       feed(input);
@@ -266,6 +342,7 @@ const portOf = () => {
       for (let gone = 0; gone < ms; gone += TICK) {
         now += TICK;
         play(TICK);
+        land();
         drain();
         tick();
       }
@@ -311,12 +388,44 @@ const urlOf = (number: number) => TIMED.find((track) => track.number === number)
 /** What the histories walked: each hand-over and each move of the clock, which the test needs every one of. */
 const seen = new Set<string>();
 
-/** One history of `seed`, given to both; it throws at the first step where they part, with the history so far. */
-const history = (scoreClock: typeof ScoreClock, seed: number) =>
+/** What the delayed histories walked: each switch and hymn change with a load or seek in flight. */
+const seenDelayed = new Set<string>();
+
+/**
+ * One history of `seed`, given to both; it throws at the first step where
+ * they part, with the history so far. With `delay`, each load and seek lands
+ * that many ms after it is asked, on both sides, and each call of the
+ * current clock is forked, so the next act comes while it is in flight: the
+ * two are held to each other whenever nothing is in flight, and nothing
+ * sounds with Sound off at every step. A switch off while a load or a seek
+ * is in flight ends the history there: the port is silent at once and its
+ * clock goes on from the place, where the current clock reads the device
+ * before its call has landed (it pauses at the device's old place, and an
+ * in-flight seek sounds on until it lands), which the property does not
+ * hold the port to.
+ */
+const history = (scoreClock: typeof ScoreClock, seed: number, delay = 0) =>
   Effect.scoped(
     Effect.gen(function* () {
       const random = seeded(seed);
-      const device = recording(RECORDING * 1000);
+      const device = recording(RECORDING * 1000, delay);
+      let inflight = 0;
+      const call = <A, E>(effect: Effect.Effect<A, E>) =>
+        delay === 0
+          ? Effect.asVoid(effect)
+          : Effect.gen(function* () {
+              inflight += 1;
+              yield* Effect.forkScoped(
+                effect.pipe(
+                  Effect.ensuring(
+                    Effect.sync(() => {
+                      inflight -= 1;
+                    }),
+                  ),
+                ),
+              );
+              yield* settle;
+            });
       const sound = yield* SubscriptionRef.make(true);
       const api = yield* scoreClock(
         device.api,
@@ -333,7 +442,7 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
         ),
       );
       yield* settle;
-      const port = portOf();
+      const port = portOf(delay);
       let on = true;
       let intro = true;
       let held: number | undefined;
@@ -350,10 +459,20 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
       });
       const acts: Array<Act> = [];
       for (let index = 0; index < STEPS; index += 1) {
-        const act = actOf(random);
+        const flying = port.flying();
+        const drawn = delay === 0 ? actOf(random) : delayedActOf(random);
+        const act = inFlightAct(drawn, flying.length > 0 || inflight > 0, held);
         acts.push(act);
         const shown = viewOf(port.state(), undefined, titleOf);
         const skipped = port.skips();
+        if (act._tag === 'switch' && flying.includes('load'))
+          seenDelayed.add('a switch while a load is in flight');
+        if (act._tag === 'switch' && flying.includes('seek'))
+          seenDelayed.add('a switch while a seek is in flight');
+        if (act._tag === 'play' && !on && held !== undefined && held !== act.number)
+          seenDelayed.add('a hymn change with Sound off');
+        if (act._tag === 'play' && flying.includes('load') && held !== act.number)
+          seenDelayed.add('a hymn change while a load is in flight');
         const again = (number: number) =>
           shown.phase === 'ended' && !intro
             ? api.play(urlOf(number), 0, optionsOf(number))
@@ -363,21 +482,23 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
             const track = TIMED.find((each) => each.number === act.number);
             if (track === undefined) break;
             port.ask({ _tag: 'play', track });
-            yield* held === act.number
-              ? again(act.number)
-              : api.play(track.url, 0, optionsOf(act.number));
+            yield* call(
+              held === act.number
+                ? again(act.number)
+                : api.play(track.url, 0, optionsOf(act.number)),
+            );
             held = act.number;
             break;
           }
           case 'pause':
             if (held === undefined || shown.toggle !== 'pause') break;
             port.ask({ _tag: 'pause' });
-            yield* api.pause;
+            yield* call(api.pause);
             break;
           case 'resume':
             if (held === undefined) break;
             port.ask({ _tag: 'resume' });
-            yield* again(held);
+            yield* call(again(held));
             break;
           case 'seek': {
             const silent = port.state().held?.silent === true;
@@ -388,27 +509,36 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
             const choice = choices.get(held) ?? [];
             if (!silent && (track?.score.recording(choice, to) ?? 0) >= RECORDING) break;
             port.ask({ _tag: 'seekTo', seconds: act.seconds });
-            yield* api.seek(to * 1000);
+            yield* call(api.seek(to * 1000));
             break;
           }
           case 'stop':
             if (held === undefined) break;
             port.ask({ _tag: 'stop' });
-            yield* api.stop;
+            yield* call(api.stop);
             held = undefined;
             break;
-          case 'switch':
+          case 'switch': {
             on = !on;
             port.ask({ _tag: 'sound', on });
             yield* SubscriptionRef.set(sound, on);
             yield* settle;
-            break;
+            if (on || flying.length === 0) break;
+            const after = viewOf(port.state(), undefined, titleOf);
+            if (Math.abs(after.at - Math.min(shown.at, after.length)) > PLACE || port.sounds())
+              throw new Error(
+                JSON.stringify({ rule: 'off in flight keeps the place', seed, acts, shown, after }),
+              );
+            for (const kind of new Set(flying))
+              seenDelayed.add(`a switch off mid-${kind} is silent at once and keeps the place`);
+            return;
+          }
           case 'tempo': {
             if (held === undefined) break;
             const tempo = STOPS[act.at] ?? 100;
             tempos.set(held, tempo);
             port.ask({ _tag: 'tempo', at: act.at });
-            yield* api.setRate?.(rateOf(tempo)) ?? Effect.void;
+            yield* call(api.setRate?.(rateOf(tempo)) ?? Effect.void);
             yield* settle;
             if (shown.phase === 'playing') seen.add('a turn mid-play');
             break;
@@ -424,7 +554,7 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
                 ? { _tag: 'chooseAll' }
                 : { _tag: 'chooseStanza', stanza: act.stanza },
             );
-            yield* api.setStanzas?.(choice) ?? Effect.void;
+            yield* call(api.setStanzas?.(choice) ?? Effect.void);
             yield* settle;
             break;
           }
@@ -447,6 +577,8 @@ const history = (scoreClock: typeof ScoreClock, seed: number) =>
             JSON.stringify({ rule, seed, acts, port: view, held: port.state().held, told }),
           );
         };
+        if (!on && port.sounds()) fail('nothing sounds with Sound off', undefined);
+        if (delay > 0 && (port.flying().length > 0 || inflight > 0)) continue;
         if (held === undefined) {
           if (view.held) fail('nothing held', undefined);
         } else {
@@ -528,6 +660,23 @@ describe('the player’s clock, as the current app’s score clock', () => {
       'on, a resume sounds',
       'the clock runs',
       'the clock runs at a tempo',
+    ]);
+  });
+
+  it('holds histories that switch Sound while a load or a seek is in flight, and change hymn with it off', async () => {
+    await current();
+    const { scoreClock } = await import('@manna/hymnal-app/player/sound');
+    const seeds = Array.from({ length: DELAYED }, (_, index) => 1000 + index);
+    await Effect.runPromise(
+      Effect.forEach(seeds, (seed) => history(scoreClock, seed, LANDS), { discard: true }),
+    );
+    expect([...seenDelayed].toSorted()).toEqual([
+      'a hymn change while a load is in flight',
+      'a hymn change with Sound off',
+      'a switch off mid-load is silent at once and keeps the place',
+      'a switch off mid-seek is silent at once and keeps the place',
+      'a switch while a load is in flight',
+      'a switch while a seek is in flight',
     ]);
   });
 });
