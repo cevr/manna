@@ -39,3 +39,4 @@ b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into whee
 905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
 1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+e217201fabee exports: two exports lines in apps/hymnal/package.json (./player/tempo and ./player/countin, the tempo dial's and the count-in's rules, for the port's player); no source changes
