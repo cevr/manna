@@ -210,7 +210,7 @@ const currentOf = (cache: Cache) =>
       readonly id: CacheModule.Identity;
       readonly answer: Deferred.Deferred<CacheModule.Range, CacheModule.OfflineError>;
     }> = [];
-    const media: CacheModule.MediaApi = {
+    const media: (typeof CacheModule.Media)['Service'] = {
       list: Effect.sync(() => [...entries.values()]),
       size: (id) => Effect.sync(() => sizes.get(cache.identityKey(id)) ?? 0),
       append: (id, at, bytes) =>
@@ -230,7 +230,7 @@ const currentOf = (cache: Cache) =>
       protect: Effect.void,
       local: (entry) => Effect.succeed(`local:${cache.identityKey(entry)}`),
     };
-    const http: CacheModule.HttpApi = {
+    const http: (typeof CacheModule.Http)['Service'] = {
       range: (id) =>
         Effect.gen(function* () {
           const answer = yield* Deferred.make<CacheModule.Range, CacheModule.OfflineError>();

@@ -29,13 +29,8 @@
  * (`protect`), each dropped when a cancel came first.
  */
 
-import {
-  identityKey,
-  readStorages,
-  recordingStorage,
-  storageFor,
-  stray,
-} from '@manna/hymnal-app/offline/identity';
+import * as identity from '@manna/hymnal-app/offline/identity';
+import type { Counts as Lines } from '@manna/hymnal-app/offline/words';
 import { soundingOffset } from '@manna/hymnal-app/remote';
 
 /** A saved recording's identity: the hymn and its key, in semitones from the printed one. */
@@ -143,15 +138,17 @@ export const HYMNS = 695;
 /** Where the saved recordings live. */
 export const ROOT = 'app:/data/recordings';
 
-export const keyOf = (id: Identity): string => identityKey(id);
+export const keyOf = (id: Identity): string => identity.identityKey(id);
 /** The folder a hymn's saves live in. */
-export const folderOf = (id: Identity): string => `${ROOT}/${storageFor(id.number)}`;
+export const folderOf = (id: Identity): string => `${ROOT}/${identity.storageFor(id.number)}`;
 /** Where `id`'s whole recording is. */
 export const pathOf = (id: Identity): string => `${folderOf(id)}/${keyOf(id)}.mp3`;
 /** Where `id`'s body is fetched to before its rename. */
 export const partOf = (id: Identity): string => `${folderOf(id)}/${keyOf(id)}.part`;
 /** The folders the saves are kept in. */
-export const FOLDERS: ReadonlyArray<string> = readStorages.map((storage) => `${ROOT}/${storage}`);
+export const FOLDERS: ReadonlyArray<string> = identity.readStorages.map(
+  (storage) => `${ROOT}/${storage}`,
+);
 
 /** `id` as the current cache keeps it: the key's sounding offset; none when out of range. */
 export const normal = (id: Identity): Identity | undefined => {
@@ -188,9 +185,9 @@ export const classify = (
   | { readonly _tag: 'part'; readonly id: Identity }
   | { readonly _tag: 'stray' }
   | { readonly _tag: 'junk' } => {
-  if (!recordingStorage(file.storage) || !readStorages.includes(file.storage))
+  if (!identity.recordingStorage(file.storage) || !identity.readStorages.includes(file.storage))
     return { _tag: 'stray' };
-  if (stray(file.storage, file.name)) return { _tag: 'stray' };
+  if (identity.stray(file.storage, file.name)) return { _tag: 'stray' };
   const found = /^(\d+)_(0|-?[1-6])\.(mp3|part)$/u.exec(file.name);
   if (found === null) return { _tag: 'junk' };
   const id = normal({ number: Number(found[1]), offset: Number(found[2]) });
@@ -222,8 +219,8 @@ const addAll = (store: Store, inputs: Iterable<Identity>): Store => {
   for (const input of inputs) {
     const id = normal(input);
     if (id === undefined) continue;
+    touched.add(keyOf(id));
     const key = keyOf(id);
-    touched.add(key);
     if (store.saved[key] !== undefined || jobs[key] !== undefined) continue;
     serials += 1;
     const job: Job = { serial: serials, id, epoch: store.epoch };
@@ -516,19 +513,12 @@ export const stepStore = (store: Store, input: Input): Step => {
   return { store: moved, commands };
 };
 
-/** What Downloads reads of the store, as the current cache's snapshot. */
-export interface Counts {
-  readonly saved: number;
-  readonly printed: number;
-  readonly bytes: number;
-  readonly active: number;
-  readonly queued: number;
-  readonly partialBytes: number;
-  readonly failed: number;
-  readonly paused: boolean;
-  readonly storage: boolean;
-  readonly indexing: boolean;
-}
+/** What Downloads reads of the store, as the current cache's snapshot: the counts its lines read, and what it shows beside them. */
+export type Counts = Lines &
+  Readonly<Record<'failed', number> & Record<'paused' | 'indexing', boolean>>;
+
+/** The bytes the parts hold: none counted, as a save fetches its body whole and the host writes it only once complete. */
+const WHOLE = 0;
 
 export const countsOf = (store: Store): Counts => {
   const saved = Object.values(store.saved);
@@ -540,7 +530,7 @@ export const countsOf = (store: Store): Counts => {
     bytes: saved.reduce((sum, each) => sum + each.bytes, 0),
     active,
     queued: owned - active,
-    partialBytes: 0,
+    partialBytes: WHOLE,
     failed: Object.keys(store.failed).length,
     paused: store.paused,
     storage: store.storage,

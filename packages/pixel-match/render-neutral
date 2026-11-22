@@ -51,3 +51,5 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 a9090ceaf658 move: a saved recording's identity, storages, CHUNK and mediaHeader, unchanged, from offline/cache.ts into offline/identity.ts (cache.ts re-exporting them), and Downloads.tsx's every line and name into offline/words.ts, the leaf drawing the same strings
 f39b2ca17b22 exports: five exports lines in apps/hymnal/package.json (./offline/identity, ./offline/words, ./offline/estimate, ./offline/cache, ./player/offline); no source changes
 e7a80f5c0ef9 move: offline/identity.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+48ae1f83f5fd move: offline/cache.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+e57c009af511 move: offline/estimate.ts imports timelineOf from '../follow/timeline' rather than '~/follow/timeline', the same module; no value changes
