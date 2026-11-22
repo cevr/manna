@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noTernary, effect/noUnknownParameters, node/no-process-env -- a host script that sets the driver's launch flag, drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noAs, effect/noUnknownParameters, node/no-process-env -- a host script that sets the driver's launch flag, drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
 
 /**
  * Move back a stage on Today, live (spec par-hs-back), on the host named

@@ -28,6 +28,7 @@ const OWNER = new Map([
   ['features/list.contract', 'pm-hs-home'],
   ['features/today.contract', 'pm-hs-today'],
   ['features/session.contract', 'pm-hs-today'],
+  ['features/back.contract', 'pm-hs-today'],
   ['features/settings.contract', 'pm-hs-settings'],
   ['features/feel.contract', 'pm-hs-settings'],
   ['features/add.contract', 'pm-hs-add'],
