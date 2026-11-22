@@ -63,6 +63,7 @@
     "./player/sound": "./src/player/sound.ts",
     "./player/caption": "./src/player/caption.ts",
     "./reader/reading": "./src/reader/reading.ts",
+    "./reader/reading-choices": "./src/reader/reading-choices.ts",
     "./home/find-rules": "./src/home/find-rules.ts",
     "./home/tile-times": "./src/home/tile-times.ts",
     "./player/drums": "./src/player/drums.ts",

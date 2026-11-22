@@ -16,15 +16,8 @@ import { DialPanel } from '~/player/DialPanel';
 import { DialView, MOST_SCALE } from '~/player/DialView';
 
 import { pageTextOf } from './pageText';
-import {
-  DEFAULT_SIZE,
-  defaultReading,
-  type Font,
-  pointsAt,
-  readingStyle,
-  SIZES,
-  type Spacing,
-} from './reading';
+import { defaultReading, type Font, readingStyle, SIZES, type Spacing } from './reading';
+import { fontChoices, shareOf, spacingChoices } from './reading-choices';
 
 export function ReadingControls({ reading }: { readonly reading: ReadingSettings }) {
   return (
@@ -40,24 +33,20 @@ export function ReadingControls({ reading }: { readonly reading: ReadingSettings
 }
 
 /** Each font, its name drawn in its own face. */
-const fonts: ReadonlyArray<Choice<Font>> = [
-  { value: 'system', label: 'System', style: {} },
-  {
-    value: 'serif',
-    label: 'Serif',
-    style: pageTextOf(readingStyle({ ...defaultReading, font: 'serif' }, 1)).words,
-  },
-];
+const faces: Record<Font, TextStyle> = {
+  system: {},
+  serif: pageTextOf(readingStyle({ ...defaultReading, font: 'serif' }, 1)).words,
+};
 
-const spacings: ReadonlyArray<Choice<Spacing>> = [
-  { value: 'compact', label: 'Compact', style: {} },
-  { value: 'normal', label: 'Normal', style: {} },
-  { value: 'roomy', label: 'Roomy', style: {} },
-];
+const fonts: ReadonlyArray<Choice<Font>> = fontChoices.map((choice) => ({
+  ...choice,
+  style: faces[choice.value],
+}));
 
-/** The size as a share of the page's first size: 100% as it has always been. */
-const shareOf = (size: number) =>
-  `${Math.round((pointsAt(size) / (SIZES[DEFAULT_SIZE] ?? 17)) * 100)}%`;
+const spacings: ReadonlyArray<Choice<Spacing>> = spacingChoices.map((choice) => ({
+  ...choice,
+  style: {},
+}));
 
 /**
  * The words' size, a stopping dial over the steps, each drawn as an "A" of
