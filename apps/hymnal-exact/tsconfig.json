@@ -7,6 +7,8 @@
       "@manna/hymnal-app/reader/head-line": ["./src/hymn/decl/head-line"],
       "@manna/hymnal-app/reader/rail-marks": ["./src/rail/decl/rail-marks"],
       "@manna/hymnal-app/reader/pager": ["./src/pager/decl/pager"],
+      "@manna/hymnal-app/reader/reading": ["./src/reading/decl/reading"],
+      "@manna/hymnal-app/reader/reading-choices": ["./src/reading/decl/reading-choices"],
       "@manna/hymnal-app/hymns/indexes": ["./src/abouthymn/decl/indexes"],
       "@manna/hymnal-app/hymns/meaning": ["./src/abouthymn/decl/meaning"],
       "@manna/hymnal-app/hymns/meaning-rule": ["./src/results/decl/meaning-rule"],

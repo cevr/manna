@@ -56,6 +56,7 @@ import {
   withRecall,
 } from '../src/garden';
 import { MoveBack } from '../src/garden/back';
+import { offersBack } from '../src/garden/bar';
 import { STAGE_NAMES } from '../src/garden/names';
 import { furrowsOf, fieldPassagesWith, readyOf, singlesOf } from '../src/home';
 import { singleVersesOf } from '../src/lists';
@@ -597,13 +598,15 @@ function Today({ onField }: { readonly onField: () => void }) {
               Option.filter(
                 Option.flatMap(garden, (read) => plantIn(read, each.piece.reference)),
                 () =>
-                  !screen.listening &&
-                  !each.recital &&
-                  !each.done &&
-                  !shownAllOn(sayIt, each.piece.reference) &&
-                  Option.exists(session, (view) =>
-                    view.visit.some((verse) => verse.piece.reference === each.piece.reference),
-                  ),
+                  offersBack({
+                    listening: screen.listening,
+                    recital: each.recital,
+                    done: each.done,
+                    shownAll: shownAllOn(sayIt, each.piece.reference),
+                    visited: Option.exists(session, (view) =>
+                      view.visit.some((verse) => verse.piece.reference === each.piece.reference),
+                    ),
+                  }),
               ),
               {
                 onNone: () => false,

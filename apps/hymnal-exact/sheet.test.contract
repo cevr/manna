@@ -1,0 +1,192 @@
+// The player sheet as the current FullPlayer.tsx: Chord settings for the
+// sheet's hymn (the Chords switch, the key and capo dials, its own chord
+// placement and Use global) and Reading (text size, font, line spacing,
+// Keep screen on), each followed by the page behind it and kept across
+// launches. Each test that plays opens on Settings and turns Sounds and
+// haptics off first (src/look/quiet.test.ts). Hymn 7's chords differ by
+// placement: on the beat its fourth line's fourth syllable has a chord,
+// as the file plays it has none; hymn 8's has one on its twelfth on the
+// beat.
+
+test "The sheet holds Recording, Chord settings and Reading; its Chords switch is Settings' and the key button's"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-7"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  tap "bar-title"
+  clock settle
+  clock data
+  expect tree has "player-title"
+  expect tree has "player-said"
+  expect tree has "position"
+  expect tree has "chord-settings"
+  expect tree has "reading"
+  expect tree has "dial-size"
+  expect tree has "reading-font"
+  expect tree has "reading-spacing"
+  expect tree has "reading-awake"
+  expect text "sheet-chords" == "false"
+  expect tree missing "sheet-dials"
+  expect tree missing "sheet-placement"
+  tap "sheet-chords"
+  clock data
+  clock settle
+  expect state chordsOn == true
+  expect text "sheet-chords" == "true"
+  expect tree has "sheet-dials"
+  expect tree has "dial-key"
+  expect tree has "sheet-placement"
+  expect tree has "dial-placement"
+  back
+  clock settle
+  clock data
+  expect text "key-over" == "KEY"
+  tap "hymn-back"
+  clock settle
+  tap "gear"
+  clock settle
+  clock data
+  expect text "chords-toggle" == "true"
+  tap "chords-toggle"
+  clock data
+  clock settle
+  expect state chordsOn == false
+
+test "A placement chosen in the sheet changes this hymn's chords and no other hymn's; Use global returns it"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-7"
+  clock settle
+  clock data
+  expect tree has "chord-1-4-4"
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  tap "bar-title"
+  clock settle
+  clock data
+  expect state sheetDial.number == 7
+  expect state sheetDial.inherit == true
+  expect text "dial-placement-value" == "0"
+  tap "dial-placement-stop-file"
+  clock data
+  clock settle
+  expect state sheetPlacements.0 == "7:file"
+  expect state sheetDial.said == "As the file plays"
+  expect state sheetDial.inherit == false
+  expect state settingsPlacement == ""
+  back
+  clock settle
+  clock data
+  expect tree missing "chord-1-4-4"
+  tap "hymn-back"
+  clock settle
+  tap "hymn-8"
+  clock settle
+  clock data
+  expect tree has "chord-1-4-12"
+  tap "bar-title"
+  clock settle
+  clock data
+  expect state sheetDial.number == 7
+  tap "sheet-inherit"
+  clock data
+  clock settle
+  expect state sheetDial.inherit == true
+  expect state sheetPlacements == []
+  back
+  clock settle
+  tap "hymn-back"
+  clock settle
+  tap "hymn-7"
+  clock settle
+  clock data
+  expect tree has "chord-1-4-4"
+
+test "Each Reading choice sets the page behind and is kept across launches"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-7"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  tap "bar-title"
+  clock settle
+  clock data
+  expect state readingShown.step == 2
+  expect state readingShown.said == "100%"
+  expect text "dial-size-value" == "2"
+  expect text "reading-font-system-label" == "System"
+  tap "dial-size-stop-5"
+  clock data
+  clock settle
+  expect state readingSize == "5"
+  expect state readingShown.said == "141%"
+  expect state readingShown.words == "1.4118rem"
+  tap "reading-font-serif"
+  clock data
+  expect state readingFont == "serif"
+  tap "reading-spacing-roomy"
+  clock data
+  expect state readingSpacing == "roomy"
+  expect state readingShown.line == "2.4118rem"
+  expect wakelock released
+  tap "reading-awake"
+  clock data
+  expect state readingAwake == true
+  expect wakelock held
+  back
+  clock settle
+  expect wakelock held
+  tap "hymn-back"
+  clock settle
+  expect wakelock released
+  reload
+  clock settle
+  clock data
+  expect state readingSize == "5"
+  expect state readingFont == "serif"
+  expect state readingSpacing == "roomy"
+  expect state readingAwake == true
+  expect state readingShown.chords == "1.2353rem"
+
+test "A sheet that holds no hymn says so over Reading alone"
+  at "/player"
+  clock settle
+  clock data
+  expect tree has "player-nothing"
+  expect text "player-said" == "No hymn is playing."
+  expect tree has "reading"
+  expect tree missing "chord-settings"
+  expect tree missing "position"

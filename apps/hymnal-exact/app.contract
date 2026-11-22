@@ -11,7 +11,7 @@
 // number the hymnal has not, draws the not-found screen.
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
-use PlayerSheet from "./features/player.contract"
+use PlayerSheet from "./features/sheet.contract"
 use PlayerDock from "./features/bar.contract"
 use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
@@ -51,6 +51,8 @@ component HymnalExact
   members "./features/pager.contract"
   members "./features/keys.contract"
   members "./features/tuner.contract"
+  members "./features/sheet.contract"
+  members "./features/reading.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -113,6 +115,20 @@ component HymnalExact
     tunerAgain
     tunerSettings
     tunerPick
+    sheetDial
+    sheetPlaceTurn
+    sheetPlaceScrolled
+    sheetPlaceSettled
+    sheetInherit
+    readingShown
+    readingPort
+    readingAwake
+    readingFontChoose
+    readingSpacingChoose
+    readingAwakeSet
+    readingSizeTurn
+    readingSizeScrolled
+    readingSizeSettled
   action follow(url: string)
     nav = go(nav, url)
   view
