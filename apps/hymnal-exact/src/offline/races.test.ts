@@ -15,7 +15,8 @@
  *   rename lands removes it, and once every call is answered the store's
  *   saved recordings are the disk's whole files.
  * - A Play before the list is read, offline, plays a saved hymn from its
- *   file and tells an unsaved one it needs a connection.
+ *   file and tells an unsaved one it needs a connection; the device's event
+ *   asked while its file is looked up steps after it, as asked.
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';
@@ -100,7 +101,9 @@ const launch = (host: Host) => {
   const ask = (kind: string) => saved.sources.offlineStep([kind, 0, 0], KEPT, host.storage);
   const playerStep = (kind: string, value: number) =>
     player.playerStep([kind, 0, 0, value, ''], KEPT, host.storage);
-  return { saved, ask, view: () => ask('view'), playerStep };
+  const event = (kind: string, load: number) =>
+    player.playerStep([kind, load, 0, 0, ''], KEPT, host.storage);
+  return { saved, ask, view: () => ask('view'), playerStep, event };
 };
 
 /** A few turns of the event loop: the module's answered calls run on. */
@@ -241,12 +244,16 @@ describe('a Play before the launch’s list is read', () => {
       const run = launch(host);
       expect(run.view().indexing).toBe(true);
       await run.playerStep('online', 0);
-      const played = await run.playerStep('play', number);
+      const [played, playing] = await Promise.all([
+        run.playerStep('play', number),
+        run.event('playing', 1),
+      ]);
       expect({ number, phase: played.phase, src: played.src }).toEqual({
         number,
         phase: 'loading',
         src: pathOf({ number, offset: 0 }),
       });
+      expect({ number, after: playing.phase }).toEqual({ number, after: 'playing' });
       const other = NUMBERS.find((each) => each !== number) ?? 1;
       const missing = await run.playerStep('play', other);
       expect({ other, phase: missing.phase }).toEqual({ other, phase: 'failed' });

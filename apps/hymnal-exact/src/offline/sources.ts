@@ -350,18 +350,19 @@ export const offlineSources = (
        * recording, as the current `local` reads its entry without waiting
        * on the whole index: a whole file there is saved now.
        */
-      lookup: async (id: Identity): Promise<void> => {
+      lookup: (id: Identity): Promise<void> | undefined => {
         const fs = files?.fs;
         const normalized = normal(id);
-        if (fs === undefined || normalized === undefined || !store.indexing) return;
-        if (localOf(store, normalized) !== undefined) return;
-        try {
-          const told = await fs.stat(pathOf(normalized));
-          if (!told.isDirectory && told.size > 0)
-            feed({ _tag: 'found', saved: { ...normalized, bytes: told.size } });
-        } catch {
-          note('lookup.none', `path=${pathOf(normalized)}`);
-        }
+        if (fs === undefined || normalized === undefined || !store.indexing) return undefined;
+        if (localOf(store, normalized) !== undefined) return undefined;
+        const path = pathOf(normalized);
+        return fs.stat(path).then(
+          (told) => {
+            if (!told.isDirectory && told.size > 0)
+              feed({ _tag: 'found', saved: { ...normalized, bytes: told.size } });
+          },
+          () => note('lookup.none', `path=${path}`),
+        );
       },
       enqueue: (id: Identity) => feed({ _tag: 'enqueue', id }),
       verify: (id: Identity) => {
