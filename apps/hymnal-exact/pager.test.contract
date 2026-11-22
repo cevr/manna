@@ -165,3 +165,29 @@ test "A swipe starts no player, and leaves the bar's hymn while another sounds."
   expect state hymnOpen == "2"
   expect state player.bar.number == 1
   expect state player.phase == "playing"
+
+// The page beside the shown one draws its chords by the reader's chord
+// style, from the answer it had there: hymn 1 swiped back to from hymn 2
+// shows Advanced's chords (settings.test.contract's hymn 1 check).
+test "A neighbour draws its chords by the reader's chord style."
+  tap "gear"
+  clock settle
+  clock data
+  tap "chords-toggle"
+  clock settle
+  clock data
+  tap "chord-style-advanced"
+  clock settle
+  clock data
+  expect state settingsChordStyle == "advanced"
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state pagerChords.0 .number == 1
+  tap "hymn-pager" drag 300 0 from 100 300
+  clock until state hymnOpen == "1" within 3000
+  clock settle
+  clock data
+  expect text "chord-1-1-13" == "Gm7 C C7"

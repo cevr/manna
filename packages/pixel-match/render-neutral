@@ -17,3 +17,5 @@ c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/but
 4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
+9aa9fb892a0a exports: one exports line in apps/hymnal/package.json (./reader/pager); no source changes
+6a46e22a8ffb merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes

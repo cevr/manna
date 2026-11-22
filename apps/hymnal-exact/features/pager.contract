@@ -49,8 +49,14 @@ members HymnalExact
     pagerNumbers = pagerWanted
     if hymnOpen != ""
       scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
+  // The pager laid out at a new size (its first layout on a cold open, a
+  // window resized or turned): the route's page back in view, where a
+  // scroll asked before it had its size may not have landed.
+  action pagerSized(w: number, h: number)
+    if hymnOpen != ""
+      scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
   resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
-  resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves) for n in pagerNumbers as shape ChordsPage
+  resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) for n in pagerNumbers as shape ChordsPage
   mutation pagerSettled as shape PagerSettle queue then pagerTurn
   // What the screen on top lists, in the order shown, while it is on top:
   // a search's results, home's Sections list, the Recent screen; none for
