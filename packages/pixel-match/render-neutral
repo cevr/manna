@@ -70,3 +70,4 @@ ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/sess
 1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
 cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-sheet's and this unit's); no source changes of its own
 ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own
+38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
