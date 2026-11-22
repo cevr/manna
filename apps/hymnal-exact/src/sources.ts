@@ -7,7 +7,8 @@
  * the written `src/player/timing.gen.ts`); the chords are `chords`, one
  * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
  * `nearest` is each hymn's More like this (the written
- * `src/abouthymn/nearest.gen.ts`).
+ * `src/abouthymn/nearest.gen.ts`). The player and Downloads share one store
+ * of saved recordings (`src/offline/sources.ts`).
  */
 
 import { abouthymnSources } from './abouthymn/sources.ts';
@@ -18,9 +19,10 @@ import { hymnSources } from './hymn/sources.ts';
 import { keysSources } from './keys/sources.ts';
 import { book } from './hymns/book.ts';
 import { listSources } from './list/sources.ts';
+import { offlineSources } from './offline/sources.ts';
 import { pagerSources } from './pager/sources.ts';
 import { pinchSources } from './pinch/sources.ts';
-import { originOf, playerSources } from './player/sources.ts';
+import { BUCKET, originOf, playerSources } from './player/sources.ts';
 import { railSources } from './rail/sources.ts';
 import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
@@ -32,20 +34,25 @@ export const sourcesAt = (
   timing: ReadonlyArray<readonly [number, string]>,
   chords: ReadonlyArray<readonly [number, string]> = [],
   nearest: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [],
-) => ({
-  ...listSources(book),
-  ...hymnSources(book, chords),
-  ...playerSources(book, timing, originOf(origin)),
-  ...homeSources(book),
-  ...settingsSources(),
-  ...findSources(book),
-  ...chordsSources(book, chords),
-  ...keysSources(book, chords),
-  ...railSources(book),
-  ...abouthymnSources(book, nearest),
-  ...pagerSources(book),
-  ...resultsSources(),
-  ...sheetSources(chords),
-  ...readingSources(),
-  ...pinchSources(),
-});
+) => {
+  const recordings = originOf(origin);
+  const saved = offlineSources(recordings, recordings !== BUCKET, timing);
+  return {
+    ...listSources(book),
+    ...hymnSources(book, chords),
+    ...playerSources(book, timing, recordings, saved.offline),
+    ...saved.sources,
+    ...homeSources(book),
+    ...settingsSources(),
+    ...findSources(book),
+    ...chordsSources(book, chords),
+    ...keysSources(book, chords),
+    ...railSources(book),
+    ...abouthymnSources(book, nearest),
+    ...pagerSources(book),
+    ...resultsSources(),
+    ...sheetSources(chords),
+    ...readingSources(),
+    ...pinchSources(),
+  };
+};

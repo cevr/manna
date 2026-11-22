@@ -211,10 +211,15 @@ const pinch = {
   },
 };
 
+/** The saved recordings' backup mark: the web has no device backup, so nothing is marked, as the current hymnal's `offline/backup.ts` marks nothing off iOS. */
+const backup = {
+  'backup.exclude': () => ({ excluded: false }),
+};
+
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? pinch[op];
+  const part = tuner[op] ?? backup[op] ?? pinch[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

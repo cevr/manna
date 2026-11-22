@@ -9,6 +9,28 @@ import { Option } from 'effect';
 import { empty } from './cache';
 import { estimateMegabytes } from './estimate';
 import { Action, progress, send } from './live';
+import {
+  activeLabel,
+  activeText,
+  busyOf,
+  CANCEL,
+  CONFIRM,
+  CONFIRM_QUESTION,
+  DELETE,
+  DOWNLOAD_ALL,
+  estimateText,
+  failureOf,
+  INDEXING,
+  IOS_NOTE,
+  KEEP,
+  PAUSED,
+  PROGRESS_LABEL,
+  progressText,
+  RECORDINGS,
+  sizeLabel,
+  sizeText,
+  WEB_NOTE,
+} from './words';
 
 let estimated = Option.none<number>();
 const estimateTotal = () =>
@@ -25,15 +47,10 @@ export function Downloads() {
   const ask = useAtomSet(send);
   const accent = useAccent();
   const cue = useCue();
-  const busy = state.active + state.queued > 0;
+  const busy = busyOf(state);
   const [confirming, confirm] = useState(false);
   const estimate = estimateTotal();
-  const megabytes = (bytes: number) => (bytes / 1_000_000).toFixed(2);
-  let failure =
-    'Some recordings could not be saved. Check the connection, then choose Download all recordings to retry.';
-  if (state.storage)
-    failure =
-      'Downloads stopped because storage is unavailable. Free space, then choose Download all recordings to retry.';
+  const failure = failureOf(state);
   const action = (event: Action) => {
     cue(plain('choose'));
     ask(event);
@@ -49,108 +66,88 @@ export function Downloads() {
             testID="downloads-progress"
             accessible
             role="progressbar"
-            aria-label="Downloaded printed-key recordings"
+            aria-label={PROGRESS_LABEL}
             aria-valuemin={0}
-            aria-valuemax={695}
+            aria-valuemax={RECORDINGS}
             aria-valuenow={state.printed}
-            aria-valuetext={`${state.printed} of 695 recordings`}
+            aria-valuetext={progressText(state)}
           >
-            <Text aria-hidden style={styles.label}>{`${state.printed} of 695 recordings`}</Text>
+            <Text aria-hidden style={styles.label}>
+              {progressText(state)}
+            </Text>
           </View>
-          <Text
-            testID="downloads-size"
-            aria-label={`${state.saved} saved · ${state.bytes.toLocaleString()} bytes · ${megabytes(state.bytes)} MB`}
-            style={styles.detail}
-          >{`${state.saved} saved · ${megabytes(state.bytes)} MB`}</Text>
+          <Text testID="downloads-size" aria-label={sizeLabel(state)} style={styles.detail}>
+            {sizeText(state)}
+          </Text>
           {busy && (
-            <Text
-              testID="downloads-active"
-              aria-label={`${state.active} downloading · ${state.queued} queued · ${state.partialBytes.toLocaleString()} partial bytes · ${megabytes(state.partialBytes)} MB`}
-              style={styles.detail}
-            >{`${state.active} downloading · ${state.queued} queued · ${megabytes(state.partialBytes)} MB partial`}</Text>
+            <Text testID="downloads-active" aria-label={activeLabel(state)} style={styles.detail}>
+              {activeText(state)}
+            </Text>
           )}
           {state.indexing && (
             <Text testID="downloads-indexing" style={styles.detail}>
-              Checking saved recordings. Download all recordings starts when the check ends.
+              {INDEXING}
             </Text>
           )}
-          {state.paused && (
-            <Text style={styles.detail}>
-              Download paused. Download all recordings resumes unfinished saves and keeps completed
-              recordings.
-            </Text>
-          )}
+          {state.paused && <Text style={styles.detail}>{PAUSED}</Text>}
           {(state.failed > 0 || state.storage || AsyncResult.isFailure(result)) && (
             <Text role="alert" style={styles.detail}>
               {failure}
             </Text>
           )}
-          <Text
-            style={styles.detail}
-          >{`Estimated total: ${estimate.toLocaleString()} MB for 695 recordings. Actual size varies. Downloads use mobile data on mobile networks.`}</Text>
-          {Platform.OS === 'web' && (
-            <Text style={styles.detail}>
-              Your browser may remove downloaded recordings. Storage protection is requested when
-              you choose Download all recordings. You can download them again if needed.
-            </Text>
-          )}
-          {Platform.OS === 'ios' && (
-            <Text style={styles.detail}>
-              Downloaded recordings stay on this device and are excluded from iCloud backup.
-            </Text>
-          )}
+          <Text style={styles.detail}>{estimateText(estimate)}</Text>
+          {Platform.OS === 'web' && <Text style={styles.detail}>{WEB_NOTE}</Text>}
+          {Platform.OS === 'ios' && <Text style={styles.detail}>{IOS_NOTE}</Text>}
         </View>
         <Pressable
           role="button"
-          aria-label="Download all recordings"
+          aria-label={DOWNLOAD_ALL}
           onPress={() => action(Action.All())}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
-          <Text style={[styles.label, { color: accent }]}>Download all recordings</Text>
+          <Text style={[styles.label, { color: accent }]}>{DOWNLOAD_ALL}</Text>
         </Pressable>
         {busy && (
           <Pressable
             role="button"
-            aria-label="Cancel download"
+            aria-label={CANCEL}
             onPress={() => action(Action.Cancel())}
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}
           >
-            <Text style={[styles.label, { color: accent }]}>Cancel download</Text>
+            <Text style={[styles.label, { color: accent }]}>{CANCEL}</Text>
           </Pressable>
         )}
         <Pressable
           role="button"
-          aria-label="Delete downloads"
+          aria-label={DELETE}
           onPress={() => confirm(true)}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
           <Text testID="downloads-delete" style={[styles.label, styles.alert]}>
-            Delete downloads
+            {DELETE}
           </Text>
         </Pressable>
         {confirming && (
           <View style={styles.summary}>
-            <Text style={styles.detail}>
-              Delete all downloaded recordings and partial saves from this app?
-            </Text>
+            <Text style={styles.detail}>{CONFIRM_QUESTION}</Text>
             <Pressable
               role="button"
-              aria-label="Confirm delete downloads"
+              aria-label={CONFIRM}
               onPress={() => {
                 confirm(false);
                 action(Action.Delete());
               }}
               style={styles.row}
             >
-              <Text style={[styles.label, styles.alert]}>Confirm delete downloads</Text>
+              <Text style={[styles.label, styles.alert]}>{CONFIRM}</Text>
             </Pressable>
             <Pressable
               role="button"
-              aria-label="Keep downloads"
+              aria-label={KEEP}
               onPress={() => confirm(false)}
               style={styles.row}
             >
-              <Text style={[styles.label, { color: accent }]}>Keep downloads</Text>
+              <Text style={[styles.label, { color: accent }]}>{KEEP}</Text>
             </Pressable>
           </View>
         )}

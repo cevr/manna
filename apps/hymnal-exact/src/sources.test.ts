@@ -59,6 +59,7 @@ const KINDS = [
   'seeked',
   'settle',
   'due',
+  'online',
   'nonsense',
 ] as const;
 
@@ -182,6 +183,7 @@ describe('the data module runs where Exact runs it', () => {
       'listTabRows',
       'listTabs',
       'listTitles',
+      'offlineStep',
       'pagerAround',
       'pagerPlaces',
       'pagerSettle',
