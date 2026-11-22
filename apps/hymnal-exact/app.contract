@@ -11,7 +11,7 @@
 // number the hymnal has not, draws the not-found screen.
 use HymnList from "./features/list.contract"
 use HymnPage from "./features/hymn.contract"
-use PlayerSheet from "./features/player.contract"
+use PlayerSheet from "./features/sheet.contract"
 use PlayerDock from "./features/bar.contract"
 use SettingsSheet from "./features/settings.contract"
 use AboutScreen from "./features/about.contract"
