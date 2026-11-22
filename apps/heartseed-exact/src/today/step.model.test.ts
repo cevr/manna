@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, effect/preferMatchTagsExhaustive, effect/preferPredicateIsTagged -- the model is one plain switch over every input, as a reader checks it against the spec, it reads the view's nulls, and a broken rule throws naming its seed and history as JSON. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noGlobals, effect/noNewError, effect/noThrowStatement, effect/maxCognitiveComplexity, eslint/complexity, effect/preferPredicateIsTagged -- the model is one plain switch over every input, as a reader checks it against the spec, it reads the view's nulls, and a broken rule throws naming its seed and history as JSON. */
 
 /**
  * `step` against a reference model of Today written here, over seeded

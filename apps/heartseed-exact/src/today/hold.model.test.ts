@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary, effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals, effect/noNewError, effect/noThrowStatement, eslint/complexity, effect/maxCognitiveComplexity, effect/preferMatchTagsExhaustive -- a model test: the recognizer's model is one plain switch as a reader checks it against react-native-gesture-handler's pan, it reads two tracked files beside it as the gate's other source checks do, and a broken rule throws naming its seed and history as JSON. */
+/* oxlint-disable effect/noTernary, effect/noNodeBuiltinImport, effect/noAsyncFunction, effect/noGlobals, effect/noNewError, effect/noThrowStatement, eslint/complexity, effect/maxCognitiveComplexity, effect/preferMatchTagsExhaustive -- a model test: the recognizer's model is one plain switch as a reader checks it against react-native-gesture-handler's pan, it reads two tracked files beside it as the gate's other source checks do, and a broken rule throws naming its seed and history as JSON. */
 
 /**
  * The port's hold (`holdStep`) against the current Heartseed's, over seeded
