@@ -282,6 +282,9 @@ const modelStep = (model: Model, input: TodayInput): Model => {
       return model.phase === 'resting' || model.phase === 'graded'
         ? { ...unsaid(model), help: null, peeking: null }
         : model;
+    case 'contact':
+    case 'sought':
+      throw new Error(`${input._tag} is hold.model.test.ts's, never generated here`);
   }
 };
 
