@@ -75,6 +75,9 @@ component HeartseedExact
   members "./features/start.contract"
   members "./features/back.contract"
   provide
+    todayHoldDown = todayDownIt
+    todayHoldMove = todayMoveIt
+    todayHoldUp = todayUpIt
     todayBack
     todayBackRunning
     todayBackOpenIt

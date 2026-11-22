@@ -54,6 +54,7 @@ import { DRAWN } from '../list/page';
 import { makeLive, type Call, type Ground, type Live } from '../session/live';
 import { minutesOf, voiceOf } from '../settings/choices';
 import { textOf } from '../text/text';
+import type { Frame } from './hold';
 import {
   initial,
   pendingOf,
@@ -567,6 +568,27 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       readonly [string, string]
     >,
     todayStop: (() => apply({ _tag: 'stop' })) satisfies Source<readonly []>,
+    todayDown: (([pointer, x, y]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'down', pointer, at: { x, y } },
+      })) satisfies Source<readonly [number, number, number]>,
+    todayHoldNow: (([key, frames]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'elapsed', key, frames } })) satisfies Source<
+      readonly [number, readonly Frame[]]
+    >,
+    todayMove: (([pointer, x, y, frames]) =>
+      apply({
+        _tag: 'contact',
+        contact: { _tag: 'move', pointer, at: { x, y }, frames },
+      })) satisfies Source<readonly [number, number, number, readonly Frame[]]>,
+    todayUp: (([pointer, x, y]) =>
+      apply({ _tag: 'contact', contact: { _tag: 'up', pointer, at: { x, y } } })) satisfies Source<
+      readonly [number, number, number]
+    >,
+    todaySought: (([utterance]) => apply({ _tag: 'sought', utterance })) satisfies Source<
+      readonly [string]
+    >,
     todaySay,
     todayHeard: (([recognition, transcript, final]) =>
       apply({ _tag: 'heard', recognition, transcript, final })) satisfies Source<

@@ -80,6 +80,14 @@
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
     },
+    "./reading/hold": {
+      "types": "./exact/reading-hold.d.ts",
+      "default": "./src/reading/hold.ts"
+    },
+    "./reading/words": {
+      "types": "./exact/reading-words.d.ts",
+      "default": "./src/reading/words.ts"
+    },
     "./voice": {
       "types": "./exact/voice.d.ts",
       "default": "./src/voice.ts"

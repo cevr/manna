@@ -15,7 +15,7 @@
  * its layout gave it) is held and the reading pauses (`onHold`); each move
  * holds the word under the finger; its end acts once, in `onFinalize`: a
  * release reads on from the held word (`onSeek`), a cancel resumes
- * (`onLetGo`). The held word lives in a ref beside the screen's state, so
+ * (`onLetGo`), each moment by `./hold`'s rule. The held word lives in a ref beside the screen's state, so
  * no callback reads a stale one, and when the view goes (the reading
  * ended) the hold is dropped and a later end calls nothing.
  *
@@ -32,11 +32,9 @@ import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import type { VoiceView } from '../voice';
+import { activate, drop, finalize, LONG_PRESS, update, type Moment } from './hold';
 import { breaksOf, type Line } from './lines';
 import { shownWordsOf, wordAt, type Box } from './words';
-
-/** How long a finger rests still on the words before the hold takes it, in milliseconds. */
-const LONG_PRESS = 350;
 
 /** The VoiceOver action each word offers: the reading reads on from that word. */
 const READ_FROM_HERE = { name: 'readFromHere', label: 'Read from here' } as const;
@@ -115,41 +113,25 @@ export function ReadingView({
   const held = useRef<Option.Option<number>>(Option.none());
   const live = useRef(hold);
   live.current = hold;
-  const holdAt = (word: Option.Option<number>) => {
-    held.current = word;
-    live.current.onHeld(word);
+  const holdTo = (moment: Moment) => {
+    held.current = moment.held;
+    if (moment.told) live.current.onHeld(moment.held);
+    if (Option.isNone(moment.ask)) return;
+    const ask = moment.ask.value;
+    if (ask._tag === 'Hold') live.current.onHold();
+    if (ask._tag === 'LetGo') live.current.onLetGo();
+    if (ask._tag === 'Seek') live.current.onSeek(ask.word);
   };
-  useEffect(
-    () => () => {
-      if (Option.isNone(held.current)) return;
-      held.current = Option.none();
-      live.current.onHeld(Option.none());
-    },
-    [],
-  );
+  const holdToRef = useRef(holdTo);
+  useEffect(() => () => holdToRef.current(drop(held.current)), []);
   const pan = usePanGesture({
     testID: 'reading-hold',
     runOnJS: true,
     disableReanimated: true,
     activateAfterLongPress: LONG_PRESS,
-    onActivate: ({ x, y }) => {
-      const word = wordAt(x, y, boxes.current);
-      if (Option.isNone(word)) return;
-      holdAt(word);
-      live.current.onHold();
-    },
-    onUpdate: ({ x, y }) => {
-      if (Option.isNone(held.current)) return;
-      const word = wordAt(x, y, boxes.current);
-      if (Option.isSome(word)) holdAt(word);
-    },
-    onFinalize: ({ canceled }) => {
-      const word = held.current;
-      if (Option.isNone(word)) return;
-      holdAt(Option.none());
-      if (canceled) live.current.onLetGo();
-      else live.current.onSeek(word.value);
-    },
+    onActivate: ({ x, y }) => holdTo(activate(held.current, wordAt(x, y, boxes.current))),
+    onUpdate: ({ x, y }) => holdTo(update(held.current, wordAt(x, y, boxes.current))),
+    onFinalize: ({ canceled }) => holdTo(finalize(held.current, canceled)),
   });
   const selected = selectedOf(view, hold.held);
   const readTo = Option.getOrElse(hold.held, () => view.lit);
