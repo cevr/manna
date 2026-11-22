@@ -18,6 +18,7 @@ use FavouriteStar from "./favourites.contract"
 use ChordsLines, ChordsNotice, ChordsPage from "./chords.contract"
 use FindBar from "./find.contract"
 use AboutHymnLine from "./abouthymn.contract"
+use ReadingView from "./reading.contract"
 
 shape HymnWord
   syllables: string[]
@@ -75,9 +76,10 @@ component HymnPage
     armed: action
   inject
     hymnPressBack: action
+    readingAwake: bool
   resource pagerPlacesShown = pagerPlaces() as shape PagerPlaces
   view
-    column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0
+    column navigationKey=`${entry.id}` navigationScroll="hymn-words" position="absolute" inset=0 wakelock=(readingAwake ? "screen" : "none")
       display="flex" flex-direction="column"
       header display="flex" align-items="center" gap="space.s12" padding="space.s8 space.s16"
         button id="hymn-back" press=hymnPressBack appearance="none" padding=0 min-height="size.target" color="accent" font="type.body" aria-label="Hymns" display="flex" flex-direction="row" align-items="center" gap="space.s4" testId="hymn-back"
@@ -171,12 +173,14 @@ component HymnLines
   props
     part: HymnPart
     tag: string
+  inject
+    readingShown: ReadingView
   view
     for l, li in part.lines key=li
-      row flex-wrap="wrap" padding-left="space.hang" aria-label=l.text testId=`line-${part.key}-${li + 1}${tag}`
+      row flex-wrap="wrap" padding-left=readingShown.indent aria-label=l.text testId=`line-${part.key}-${li + 1}${tag}`
         for w, wi in l.words key=wi
           if wi == 0
-            row margin-left="calc(0px - space.hang)"
+            row margin-left=`calc(0px - ${readingShown.indent})`
               HymnWordText(word=w, refrain=part.refrain)
           else
             row
@@ -189,8 +193,10 @@ component HymnWordText
   props
     word: HymnWord
     refrain: bool
+  inject
+    readingShown: ReadingView
   view
-    text font="type.line" color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
+    text font="type.line" font-size=readingShown.words line-height=readingShown.line font-family=readingShown.family color="ink" font-style=(refrain ? "italic" : "normal") white-space="pre" padding-bottom="-exact-hairline" aria-hidden=true
       for s, si in word.syllables key=si
         if si > 0
           text "-" color="muted"

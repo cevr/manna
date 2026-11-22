@@ -135,6 +135,13 @@ describe('the data module runs where Exact runs it', () => {
             0,
           ]),
         ).not.toThrow();
+        const kept = [`${route(random)}:simpler`, `${route(random)}:x`, 'x', ':file'];
+        const placement = pick(random, ['', 'beat', 'simpler', 'file', 'inherit', 'x']);
+        expect(() =>
+          sources.sheetPlacement([Number(route(random)), kept, placement]),
+        ).not.toThrow();
+        expect(() => sources.sheetPlace([kept, Number(route(random)), placement])).not.toThrow();
+        expect(() => sources.readingAt([route(random), route(random), placement])).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.railPlaces().labels.length).toBe(6);
@@ -170,11 +177,14 @@ describe('the data module runs where Exact runs it', () => {
       'playerStep',
       'railPlaces',
       'railTo',
+      'readingAt',
       'recentAfter',
       'recentRows',
       'settingsChords',
       'settingsFeelOf',
       'settingsLooks',
+      'sheetPlace',
+      'sheetPlacement',
     ]);
   });
 

@@ -1,0 +1,153 @@
+// Reading, the player sheet's last group, as the current ReadingSheet.tsx
+// draws it: the words' size on a dial of steps, each an "A" of its size,
+// the share said; the Font and Line spacing radio groups; and Keep screen
+// on. Each is kept across launches as the text tapped, read by the current
+// hymnal's rule (src/reading/reading.ts: the text when it is exactly a
+// choice, else the default); the hymn page behind the sheet, and the
+// pager's pages beside it, follow at once (`readingShown`: the words, their
+// line, the chords over them and the hanging indent, in `rem`, so they
+// grow with the system's text size as the current page's do).
+use KeysPlaces, KeysDialName from "./keys.contract"
+
+shape ReadingRow
+  value: string
+  label: string
+  chosen: bool
+  divided: bool
+  family: string
+
+shape ReadingStop
+  step: number
+  mark: string
+  most: string
+
+shape ReadingView
+  step: number
+  said: string
+  font: string
+  spacing: string
+  words: string
+  line: string
+  chords: string
+  chordLine: string
+  indent: string
+  family: string
+  stops: ReadingStop[]
+  fonts: ReadingRow[]
+  spacings: ReadingRow[]
+
+// Whether the text is at one of iOS's accessibility sizes, where a dial's
+// "A" stops growing (`exactViewport()`).
+shape ReadingPort
+  accessibilityTextSize: bool
+
+members HymnalExact
+  state readingSize = "" persist
+  state readingFont = "" persist
+  state readingSpacing = "" persist
+  state readingAwake = false persist
+  state readingSizeX = 0
+  resource readingShown = readingAt(readingSize, readingFont, readingSpacing) as shape ReadingView else readingAt("", "", "")
+  resource readingPort = exactViewport() as shape ReadingPort
+  action readingSizeTurn(step: number)
+    let to = min(readingShown.stops.length - 1, max(0, round(step)))
+    if to != readingShown.step
+      readingSize = `${to}`
+  action readingSizeScrolled(x: number, y: number)
+    readingSizeX = x
+  action readingSizeSettled
+    let at = min(readingShown.stops.length - 1, max(0, round(readingSizeX / keysPlaced.detent)))
+    if at != readingShown.step
+      readingSize = `${at}`
+    else
+      scrollIntoView(`reading-size-stop-${at}`, inline="center", behavior="instant")
+  action readingFontChoose(font: string)
+    readingFont = font
+    if settingsFeel
+      haptic("selection")
+  action readingSpacingChoose(spacing: string)
+    readingSpacing = spacing
+    if settingsFeel
+      haptic("selection")
+  action readingAwakeSet(on: bool)
+    readingAwake = on
+    if settingsFeel
+      haptic("impact-light")
+
+// The Reading group: the text-size dial on its panel, Font, Line spacing,
+// and Keep screen on.
+component ReadingGroup
+  inject
+    readingShown: ReadingView
+    readingAwake: bool
+    readingFontChoose: action
+    readingSpacingChoose: action
+    readingAwakeSet: action
+  view
+    column role="group" aria-label="Reading" gap="space.s8" padding-top="space.s8" testId="reading"
+      ReadingSizeDial()
+      ReadingHeading(words="Font")
+      ReadingChoices(label="Font", rows=readingShown.fonts, choose=readingFontChoose, id="reading-font")
+      ReadingHeading(words="Line spacing")
+      ReadingChoices(label="Line spacing", rows=readingShown.spacings, choose=readingSpacingChoose, id="reading-spacing")
+      row align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s6 space.s16" margin-top="space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+        text "Keep screen on" font="type.body" color="ink" flex=1 min-width=0 aria-hidden=true
+        input type="checkbox" switch checked=readingAwake change=readingAwakeSet aria-label="Keep screen on" testId="reading-awake"
+
+// A Reading heading, as the current `Heading`: footnote type in the muted
+// role, upper case, set in from the group's edge.
+component ReadingHeading
+  props
+    words: string
+  view
+    text words role="heading" aria-level=2 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" margin-top="space.s8"
+
+// A radio group, as the current `Choices`: one hairline group named by
+// `label`, a row per choice named by its words, drawn in its own face, the
+// chosen one checked and ticked in the accent.
+component ReadingChoices
+  props
+    label: string
+    rows: ReadingRow[]
+    choose: action
+    id: string
+  view
+    column role="radiogroup" aria-label=label border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden" testId=id
+      for l in rows key=l.value
+        button role="radio" aria-label=l.label aria-checked=l.chosen press=choose(l.value) appearance="none" padding=0 border-top-width=(l.divided ? "line.hair" : 0) border-top-style="solid" border-top-color="line" testId=`${id}-${l.value}`
+          :active
+            background-color = "soft"
+          row flex=1 min-width=0 align-items="center" min-height="size.target" box-sizing="border-box" padding="space.s11 space.s16"
+            text l.label font="type.body" font-family=l.family color="ink" flex=1 min-width=0 text-align="start" testId=`${id}-${l.value}-label`
+            text (l.chosen ? "✓" : "") font="type.strong" color="accent" aria-hidden=true
+
+// The text-size dial on its panel: the eight steps on a row that snaps a
+// step at a time and stops at its ends, each an "A" of its size (no larger
+// than the current app's 26 points, and at the accessibility sizes no more
+// than 1.3 times it); a tap on a step turns to it. VoiceOver reads it as
+// "Text size", says the share, and moves it a step a swipe.
+component ReadingSizeDial
+  inject
+    readingShown: ReadingView
+    readingPort: ReadingPort
+    keysPlaced: KeysPlaces
+    readingSizeTurn: action
+    readingSizeScrolled: action
+    readingSizeSettled: action
+  view
+    column background-color="panel" border-width="line.panel" border-style="solid" border-color="edge" border-radius=`${keysPlaced.detent / 2 + keysPlaced.pad}px` padding=`${keysPlaced.pad}px` testId="reading-size-panel"
+      row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-size"
+        KeysDialName(title="SIZE")
+        view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
+          scroll id="dial-size-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
+            scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
+            scrollLeft=(readingShown.step * keysPlaced.detent) scroll=readingSizeScrolled scrollend=readingSizeSettled aria-hidden=true tabindex=-1 testId="dial-size-row"
+            for s in readingShown.stops key=s.step
+              button press=readingSizeTurn(s.step) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
+                display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
+                aria-hidden=true tabindex=-1 retainFocus=true id=`reading-size-stop-${s.step}` testId=`dial-size-stop-${s.step}`
+                text "A" font="type.strong" font-size=(readingPort.accessibilityTextSize ? s.most : s.mark) line-height="normal" color=(s.step == readingShown.step ? "chord" : "ink")
+          view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
+            background-color="chord" pointer-events="none" aria-hidden=true
+          input type="range" min=0 max=(readingShown.stops.length - 1) step=1 value=readingShown.step input=readingSizeTurn aria-label="Text size" aria-valuetext=readingShown.said
+            position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-size-value"
