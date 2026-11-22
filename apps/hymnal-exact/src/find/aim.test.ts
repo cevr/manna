@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noNodeBuiltinImport -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so a box missed is a plain `undefined` and a header's id a plain branch; it reads the app's own list contract by path under Bun. */
+/* oxlint-disable effect/noTernary, effect/noNodeBuiltinImport -- a Bun test in an Exact app's folder imports no effect (docs/exact.md), so a header's id is a plain branch; it reads the app's own list contract by path under Bun. */
 
 /**
  * All at once opens at the tile of the group at the list's top, as the
