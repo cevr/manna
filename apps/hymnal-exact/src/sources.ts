@@ -8,7 +8,8 @@
  * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
  * `nearest` is each hymn's More like this (the written
  * `src/abouthymn/nearest.gen.ts`). The player and Downloads share one store
- * of saved recordings (`src/offline/sources.ts`).
+ * of saved recordings (`src/offline/sources.ts`), and the follow and the
+ * timing's source one loader of the hymns' words' times (`src/timing/`).
  */
 
 import { abouthymnSources } from './abouthymn/sources.ts';
@@ -29,6 +30,8 @@ import { settingsSources } from './settings/sources.ts';
 import { readingSources } from './reading/sources.ts';
 import { sheetSources } from './sheet/sources.ts';
 import { followSources } from './follow/sources.ts';
+import { timingLoader } from './timing/load.ts';
+import { timingSources } from './timing/sources.ts';
 
 export const sourcesAt = (
   origin: string,
@@ -38,6 +41,7 @@ export const sourcesAt = (
 ) => {
   const recordings = originOf(origin);
   const saved = offlineSources(recordings, recordings !== BUCKET, timing);
+  const words = timingLoader(new Map(timing));
   return {
     ...listSources(book),
     ...hymnSources(book, chords),
@@ -55,6 +59,7 @@ export const sourcesAt = (
     ...sheetSources(chords),
     ...readingSources(),
     ...pinchSources(),
-    ...followSources(book, timing),
+    ...followSources(book, timing, words.words),
+    ...timingSources(words),
   };
 };

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNewPromise -- the player's source answers a Promise, awaited as the host awaits it; a Bun test in an Exact app's folder imports no effect (docs/exact.md: Exact's type check would stage its declarations, and so its Schema JSON codecs), and the sizes it holds are the JSON bytes the build ships. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNewPromise, effect/noNewError -- the player's source answers a Promise, awaited as the host awaits it, and a host that ships no files refuses a read with an Error; a Bun test in an Exact app's folder imports no effect (docs/exact.md: Exact's type check would stage its declarations, and so its Schema JSON codecs), and the sizes it holds are the JSON bytes the build ships. */
 
 import { describe, expect, test } from 'bun:test';
 
@@ -71,6 +71,11 @@ const playerCall = (random: () => number): readonly [string, number, number, num
   pick(random, [0, 1, 2, 3, 13, 695, 696, -1, 2.5, Number.NaN, Infinity, below(random, 400)]),
   pick(random, ['', '/', '/ /hymns/1', '/ /hymns/2 /player', '1:1.3,2:2', 'x', '/ /hymns/0']),
 ];
+
+/** The app's shipped files as a host that ships none answers them: every read refused. */
+const refusedFiles = {
+  fs: { readFile: () => Promise.reject(new Error('refused')) },
+};
 
 /** A reader's kept list: hymn numbers, now and then one no hymn has. */
 const numbers = (random: () => number): Array<number> =>
@@ -175,6 +180,9 @@ describe('the data module runs where Exact runs it', () => {
         ).not.toThrow();
         expect(() => sources.sheetPlace([kept, Number(route(random)), placement])).not.toThrow();
         expect(() => sources.readingAt([route(random), route(random), placement])).not.toThrow();
+        expect(() =>
+          sources.timingLoad([Number(route(random))], { get: () => '' }, refusedFiles),
+        ).not.toThrow();
       }
       expect(() => sources.aboutCredits()).not.toThrow();
       expect(sources.railPlaces().labels.length).toBe(6);
@@ -221,6 +229,7 @@ describe('the data module runs where Exact runs it', () => {
       'settingsLooks',
       'sheetPlace',
       'sheetPlacement',
+      'timingLoad',
     ]);
   });
 

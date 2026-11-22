@@ -222,10 +222,37 @@ const backup = {
   'backup.exclude': () => ({ excluded: false }),
 };
 
+/** How often each hymn's timing file was asked for: a read after a refused one imports it afresh. */
+const timingTries = new Map();
+
+/**
+ * The timing's op: `timing.read { n }` answers hymn `n`'s whole timing
+ * string, `text`, its words' syllable times kept, from the module the web
+ * build ships beside this one (`timing/<n>.js`, written by
+ * `tools/timing.ts`; the development host serves only `.js` files here, the
+ * built site the whole folder), imported the first time the data module
+ * asks (`src/timing/sources.ts`), as the iOS app reads its file. A hymn with
+ * no such file is refused. The browser keeps a failed import by its
+ * address, so each later try asks a new one.
+ */
+const timing = {
+  'timing.read': async (request) => {
+    const n = Number(request.n);
+    if (!Number.isInteger(n) || n <= 0) throw new Error(`no hymn ${request.n}`);
+    const tries = timingTries.get(n) ?? 0;
+    timingTries.set(n, tries + 1);
+    const url = new URL(`./timing/${n}.js`, import.meta.url);
+    if (tries > 0) url.searchParams.set('try', String(tries));
+    const file = await import(url.href);
+    if (file.default === undefined) throw new Error(`hymn ${n} ships no timing`);
+    return { text: String(file.default) };
+  },
+};
+
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? backup[op] ?? pinch[op];
+  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

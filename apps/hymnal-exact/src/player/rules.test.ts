@@ -189,7 +189,7 @@ describe('the recordings’ origin', () => {
     );
     const grants = /export const grants = \{([^}]*)\};/u.exec(app)?.[1] ?? '';
     const files =
-      "'fs.read bundle:/Resources/meaning', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
+      "'fs.read bundle:/Resources/meaning', 'fs.read bundle:/Resources/timing', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
     expect(grants.replaceAll(/\s+/gu, ' ').trim()).toBe(
       [
         `'https://hymns.cvr.im': [ 'net.fetch https://hymns.cvr.im', ${files} ],`,

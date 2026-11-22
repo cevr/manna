@@ -1,9 +1,12 @@
 // The hymn page's follow (features/follow.contract) against the fixture
 // recordings (tools/recordings.ts, digital silence), with Sound off so the
 // silent clock runs on the test's clock. Hymn 2's timing sings its first
-// line from 22.278 s and each line of stanza 1 about 6.2 s after the last
-// (its bundled timing gives lines only, so each line is lit whole, as the
-// current hymnal lights a line with no syllable times). The rules are the
+// line from 22.278 s and each line of stanza 1 about 6.2 s after the last,
+// its first line's second word two syllables of 517 ms each from 23.313 s
+// (syllables 1 and 2), sung as the count-in ends; its
+// words' times are read at the page's first use (features/timing.contract),
+// so its sung syllable is marked. Hymn 663, which the current hymnal times
+// by lines alone, sings its first line from 0 s, lit whole. The rules are the
 // current follower's and held seek's, run in the data module and held to
 // them by src/follow/*.test.ts; here the page is. Each test opens on
 // Settings and turns Sounds and haptics off before it plays
@@ -39,7 +42,7 @@ test "With Sound off and Intro on, the count-in stands over the first sung line,
   expect tree missing "count-in"
   expect state followNow.counting == false
   expect state followNow.line == 0
-  expect state followNow.mark == -3
+  expect state followNow.mark >= 0
   clock +6300
   clock data
   expect state followNow.line == 1
@@ -132,6 +135,9 @@ test "A wheel on the followed page holds the follow, and Resume follow gives it 
   expect tree missing "resume-follow"
   expect state followNow.scrollLine == 1
 
+// The hold takes on the word sounding (line 0's second word); two line
+// steps up choose the same word two lines on, which line 2's words' times
+// start at 37.795 s.
 test "A still hold on the words, dragged up two line steps, seeks two lines on at the lift, and the pager stays on the page"
   at "/settings"
   clock settle
@@ -159,8 +165,8 @@ test "A still hold on the words, dragged up two line steps, seeks two lines on a
   clock settle
   expect state hymnOpen == "2"
   expect state followNow.holding == false
-  expect state player.at >= 34.6
-  expect state player.at <= 35.2
+  expect state player.at >= 37.7
+  expect state player.at <= 38.4
   expect state player.phase == "playing"
   expect state followNow.line == 2
 
@@ -215,3 +221,70 @@ test "Introduction shows while the recording's introduction plays"
   expect state followNow.intro == true
   expect tree has "intro"
   expect state followNow.line == -1
+
+test "Once the hymn's words' times are here, the mark moves syllable to syllable inside a word"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state timingShown.number == 2
+  expect state timingShown.loaded == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state followNow.line == 0
+  expect state followNow.mark == 1
+  clock +517
+  clock data
+  expect state followNow.line == 0
+  expect state followNow.mark == 2
+
+test "A hymn the current hymnal times by lines alone is lit a line at a time"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "663"
+  clock settle
+  clock data
+  tap "hymn-663"
+  clock settle
+  clock data
+  expect state hymnOpen == "663"
+  expect state timingShown.number == 663
+  expect state timingShown.loaded == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state followNow.line == 0
+  expect state followNow.mark == -3
+  clock +1500
+  clock data
+  expect state followNow.line == 0
+  expect state followNow.mark == -3

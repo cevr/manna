@@ -28,9 +28,7 @@ interface ShippedFiles {
 /** The app's module (`native`): the page module's `timing.read` on the web. */
 interface AppModule {
   readonly available: boolean;
-  readonly later: (
-    request: Readonly<Record<string, string | number | boolean>>,
-  ) => Promise<Readonly<Record<string, string | number | boolean>>>;
+  readonly later: (request: Readonly<Record<string, string | number>>) => Promise<unknown>;
 }
 
 /** Exact's kept values, which the timing does not read. */
@@ -46,9 +44,10 @@ const readerOf =
       return new TextDecoder().decode(await storage.fs.readFile(`${TIMING_ROOT}/${number}`));
     } catch (refused) {
       if (native?.available !== true) throw refused;
-      const { text } = await native.later({ op: 'timing.read', n: number });
-      if (typeof text !== 'string') throw refused;
-      return text;
+      const answer = await native.later({ op: 'timing.read', n: number });
+      if (typeof answer !== 'object' || answer === null || !('text' in answer)) throw refused;
+      if (typeof answer.text !== 'string') throw refused;
+      return answer.text;
     }
   };
 

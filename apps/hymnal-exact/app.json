@@ -107,7 +107,10 @@
     "ios": {
       "minimumOS": "17.0",
       "deviceFamily": ["iphone", "ipad"],
-      "resources": [{ "from": "meaning", "to": "Resources/meaning" }],
+      "resources": [
+        { "from": "meaning", "to": "Resources/meaning" },
+        { "from": "timing", "to": "Resources/timing" }
+      ],
       "backgroundModes": ["audio"]
     }
   },

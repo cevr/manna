@@ -1,0 +1,17 @@
+// Each hymn's words' times, read on the hymn's first use (src/timing/): the
+// page shown and the hymn the player holds each ask for their hymn's (the
+// pager's neighbours are not read until shown), and once the shown hymn's
+// are here the follow is told the player's view again, so the same
+// follower marks the sung syllable inside the line it already marks
+// (src/follow/follow.ts). A read that fails leaves the lines marked whole
+// and is tried again when the hymn is opened again.
+
+shape TimingLoaded
+  number: number
+  loaded: bool
+
+members HymnalExact
+  resource timingShown = timingLoad(followNumber) as shape TimingLoaded
+  resource timingPlayed = timingLoad(player.number) as shape TimingLoaded
+  task timingTell when hymnOpen != "" and timingShown.loaded and timingShown.number == followNumber key=`${timingShown.number}`
+    change(followTold)
