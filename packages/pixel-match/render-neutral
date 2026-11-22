@@ -50,3 +50,5 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 5ec9ac9706ca move: the reading view's LONG_PRESS (350) and its hold's activate, move, end and drop rule, unchanged, from reading/view.tsx into reading/hold.ts, the view calling it in the same order
 6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+0ff6c2aac1fd merge: origin/main into par-hs-first; One's exports lines and declarations of both sides kept (par-hs-back's and par-hs-seek's beside this unit's ./first/*), the duplicate imports of exact-declared.test.ts dropped; no source changes
+bf790776af54 move: Heartseed's first verse's query (FIRST_VERSE), unchanged, from src/first/verse.ts into vite/first-verse.ts, re-exported by first/verse.ts and read by vite/passage.ts; no value or render changes
