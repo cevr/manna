@@ -49,3 +49,5 @@ df3ebef96abb move: the reading section's font and spacing labels, its size share
 e1c8b607319f declare: home/tabs's groupAt declared in exact/home/tabs.d.ts for the port's aim property test, held by exact-home-declarations.ts; no source changes
 1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
 77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+14f9d2c332ce move: the held seek's pure rules (HOLD_MS to LINE_CHOSEN, contactAfter) from reader/word-seek.ts into reader/seek-rules.ts, re-exported by word-seek.ts, and the intro's share and readingOf from follow/intro.ts into follow/intro-rules.ts, introOf calling it; values unchanged
+d25b9ed183c8 exports: five exports lines in apps/hymnal/package.json (./follow/follower, ./follow/marks, ./follow/clock, ./follow/intro-rules, ./reader/seek-rules); no source changes
