@@ -81,3 +81,10 @@ export declare const tileCount: (tile: Tile) => string;
 
 /** A tile's name as VoiceOver reads it: name, count, then `playing`. */
 export declare const tileName: (tile: Tile) => string;
+
+/** The group whose row is at or above the list's top at `offset`, given each group's start, to within a point; under a layer `cover` tall, the layer's bottom is the line. */
+export declare const groupAt: (
+  starts: ReadonlyArray<number>,
+  offset: number,
+  cover?: number,
+) => number;

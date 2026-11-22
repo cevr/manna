@@ -24,6 +24,8 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
+
+import { fromHome } from './from-home';
 import { theme, type Scheme } from '@manna/heartseed/theme';
 
 import { contrast } from '../src/look/brand';
@@ -48,12 +50,14 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   process.exit(again.exitCode ?? 1);
 }
 /** An iOS run waits its turn on the shared simulator's lock before it starts (wave3's lesson 18), and its timeout counts that wait. */
-const drive = makeDrive({
-  name: 'drive-read',
-  host,
-  appDir: app,
-  timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
-});
+const drive = fromHome(
+  makeDrive({
+    name: 'drive-read',
+    host,
+    appDir: app,
+    timeoutMs: host === 'ios' ? 45 * 60 * 1000 : undefined,
+  }),
+);
 const store = `read-${host}-${Date.now().toString(36)}`;
 /** The tint, as `app.forma`'s `AccentColor`: the ink by day, the soil by night. */
 const TINT: Readonly<Record<Scheme, string>> = { light: theme.light.ink, dark: theme.dark.soil };

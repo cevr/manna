@@ -27,9 +27,9 @@ import { STAGES } from '../garden';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import { GrowingSeed } from './growing';
+import { GROWS, ONWARD, WELCOME, type IntroRun } from './words';
 
-/** Whether the screens show for the first run, before the first verse, or as the replay from home. */
-export type IntroRun = 'first' | 'replay';
+export type { IntroRun } from './words';
 
 /** A small round-cornered button on the card's fill, never filled in ink: the first minute's Next and Continue, and home's Got it. */
 export function Pill({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
@@ -90,17 +90,24 @@ export function Welcome({
   const styles = useThemed(sheets);
   return (
     <IntroScreen
-      heading="Heartseed"
+      heading={WELCOME.heading}
       controls={
         <>
-          <Control label="Begin" shown="Begin" strong wide pending={false} onPress={onBegin} />
+          <Control
+            label={WELCOME.begin}
+            shown={WELCOME.begin}
+            strong
+            wide
+            pending={false}
+            onPress={onBegin}
+          />
           <Pressable
             role="button"
-            aria-label="Skip"
+            aria-label={WELCOME.skip}
             onPress={onSkip}
             style={({ pressed }) => [styles.skip, pressed && look.pressed]}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{WELCOME.skip}</Text>
           </Pressable>
         </>
       }
@@ -108,10 +115,10 @@ export function Welcome({
       <View style={styles.seed}>
         <GrowingSeed />
       </View>
-      <Text style={styles.words}>Plant a verse. Say it from memory. Watch it grow.</Text>
+      <Text style={styles.words}>{WELCOME.line}</Text>
       {run === 'first' && (
         <View style={styles.first}>
-          <Text style={styles.quiet}>Your first verse</Text>
+          <Text style={styles.quiet}>{WELCOME.first}</Text>
           <Text testID="reference" style={look.reference}>
             {passage.reference}
           </Text>
@@ -121,19 +128,13 @@ export function Welcome({
   );
 }
 
-/** The second screen's one button, by run. */
-const ONWARD: Readonly<Record<IntroRun, string>> = {
-  first: 'Plant your first verse',
-  replay: 'See your field',
-};
-
 /** How a verse grows: `onOn` is its one button's tap, which plants the first verse on the first run and shows the field in the replay. */
 export function Grows({ run, onOn }: { readonly run: IntroRun; readonly onOn: () => void }) {
   const styles = useThemed(sheets);
   const label = ONWARD[run];
   return (
     <IntroScreen
-      heading="Every verse is a plant"
+      heading={GROWS.heading}
       controls={<Control label={label} shown={label} strong wide pending={false} onPress={onOn} />}
     >
       <View style={styles.stages}>
@@ -144,10 +145,8 @@ export function Grows({ run, onOn }: { readonly run: IntroRun; readonly onOn: ()
           </View>
         ))}
       </View>
-      <Text style={styles.words}>
-        Say it from memory and it grows. Each day the app brings back the ones that are ready.
-      </Text>
-      <Text style={styles.caption}>Mark 4:28</Text>
+      <Text style={styles.words}>{GROWS.line}</Text>
+      <Text style={styles.caption}>{GROWS.caption}</Text>
     </IntroScreen>
   );
 }

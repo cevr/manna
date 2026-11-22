@@ -41,6 +41,8 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 import { contrast } from '../src/look/brand';
 import { baseOf } from '../src/packs/sources';
 import { fixturePacks } from './commentary-fixture';
@@ -152,13 +154,15 @@ const standIn = Bun.serve({
 });
 packs.named(`http://127.0.0.1:${standIn.port}`);
 
-const drive = makeDrive({
-  name: 'drive-reader',
-  host,
-  appDir: app,
-  processes: packs.processes,
-  timeoutMs: native ? 45 * 60 * 1000 : undefined,
-});
+const drive = fromHome(
+  makeDrive({
+    name: 'drive-reader',
+    host,
+    appDir: app,
+    processes: packs.processes,
+    timeoutMs: native ? 45 * 60 * 1000 : undefined,
+  }),
+);
 const flags = native ? ['--touch', 'platform'] : ['--port', '8772', '--size', '390x844'];
 const store = `reader-${host}-${Date.now().toString(36)}`;
 

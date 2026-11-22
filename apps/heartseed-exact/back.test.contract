@@ -13,6 +13,11 @@ time-zone "America/New_York"
 seed 7
 
 test "A verse a tap started before its first recall offers no Move back"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -51,6 +56,11 @@ test "A verse a tap started before its first recall offers no Move back"
   expect no failures
 
 test "The day's run offers no Move back"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data

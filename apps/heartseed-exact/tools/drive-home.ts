@@ -18,6 +18,8 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 import { readPng } from './png';
 
 const host = process.argv[2] ?? 'web';
@@ -30,7 +32,7 @@ if (process.env.HEARTSEED_GARDEN_DRIVE !== '1') {
   });
   process.exit(await self.exited);
 }
-const drive = makeDrive({ name: 'drive-home', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-home', host, appDir: app }));
 const store = `home-${host}-${Date.now().toString(36)}`;
 const DAY = 86_400_000;
 const ROW = 'row-passage-0-43-3-16-18';

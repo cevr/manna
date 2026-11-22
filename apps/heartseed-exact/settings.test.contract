@@ -1,6 +1,11 @@
 fail fetch "https://egw.cvr.im"
 
 test "the sheet opens and closes"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   expect tree has "settings"
@@ -18,6 +23,11 @@ test "the sheet opens and closes"
   expect text "title" == "Heartseed"
 
 test "a fresh install reads the defaults"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   expect state settingsMinutes == 5
@@ -28,6 +38,11 @@ test "a fresh install reads the defaults"
   expect state settings.appearanceOptions.0.value == "system"
 
 test "a choice shows and is kept"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   tap "minutes-10"
@@ -39,8 +54,13 @@ test "a choice shows and is kept"
   expect state settingsAppearance == "dark"
   tap "settings-done"
   clock settle
+  tap "gear"
+  clock settle
   reload
   clock data
+  clock settle
+  tap "settings-done"
+  clock settle
   tap "gear"
   clock settle
   expect state settingsMinutes == 10
@@ -48,6 +68,11 @@ test "a choice shows and is kept"
   expect state settingsAppearance == "dark"
 
 test "Sounds and haptics is on until turned off, and stays off"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   clock data
@@ -59,8 +84,13 @@ test "Sounds and haptics is on until turned off, and stays off"
   expect state settingsFeelKept == "off"
   tap "settings-done"
   clock settle
+  tap "gear"
+  clock settle
   reload
   clock data
+  clock settle
+  tap "settings-done"
+  clock settle
   tap "gear"
   clock settle
   clock data
@@ -69,3 +99,76 @@ test "Sounds and haptics is on until turned off, and stays off"
   clock data
   expect state settingsFeel == true
   expect state settingsFeelKept == "on"
+
+test "Show the welcome again in Settings replays the welcome over home, and its Skip ends the tour there"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  expect text "settings-welcome" == "Show the welcome again"
+  tap "settings-welcome"
+  clock data
+  clock settle
+  expect tree missing "settings"
+  expect state first.tour == "welcome"
+  expect tree has "first-welcome"
+  tap "first-skip"
+  clock data
+  clock settle
+  expect state first.tour == "off"
+  expect tree missing "first"
+  expect tree has "home"
+  expect no failures
+
+test "Show the welcome again sits under Sounds and haptics, before About; its replay's See your field shows home with its tips"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "gear"
+  clock settle
+  expect tree has "settings-feel"
+  expect enabled "settings-welcome"
+  expect tree has "about-row"
+  tap "settings-feel"
+  clock data
+  expect state settingsFeel == false
+  tap "settings-welcome"
+  clock data
+  clock settle
+  tap "first-begin"
+  clock settle
+  expect state first.tour == "grows"
+  tap "first-on"
+  clock data
+  clock settle
+  expect state first.tour == "tips"
+  expect tree has "tip-1"
+  expect tree has "home-got-it"
+  tap "gear"
+  clock settle
+  expect state settingsFeel == false
+  expect no failures
+
+test "Show the welcome again from Read's gear replays the welcome over home"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "gear"
+  clock settle
+  tap "settings-welcome"
+  clock data
+  clock settle
+  expect state nav.tab == "garden"
+  expect state first.tour == "welcome"
+  expect tree has "first-welcome"
+  expect no failures

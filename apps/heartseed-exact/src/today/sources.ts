@@ -21,7 +21,8 @@
  *   unless a recital is under way.
  * - `/cue/<cue>` shows Isaiah 41:10, read from the shipped KJV, under the
  *   cue named, for the recital's own tests: Next there keeps the try in
- *   memory alone.
+ *   memory alone. The first minute's `/first/<phase>/<cue>` is cued the
+ *   same way, and each new cue there starts a fresh recital.
  *
  * Every call that reads or writes runs one at a time behind those before
  * it. Time is never read: a try's start, Show all's instant and each
@@ -439,7 +440,8 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       const call = { now, seed };
       voice = voiceOf(chosenVoice);
       const chose = minutesOf(chosenMinutes);
-      const arrival = `${route}|${slug}`;
+      let arrival = `${route}|${slug}`;
+      if (route === 'first') arrival = `${route}|${cue}`;
       const arriving = arrival !== arrived;
       arrived = arrival;
       const runs = route === 'today' || route === 'start' || route === 'home';
@@ -450,8 +452,9 @@ export const todaySources = (garden: GardenCalls, live: Live = makeLive()) => {
       const changed = Option.exists(session, (each) => each.minutes !== chose);
       minutes = chose;
       if (changed) await onSession(storage, call, (each) => each.choose(chose));
-      if (route === 'cued') {
-        if (mode !== 'cued' && !listening()) state = initial(cuedPassage());
+      if (route === 'cued' || route === 'first') {
+        const fresh = mode !== 'cued' || (route === 'first' && arriving);
+        if (fresh && !listening()) state = initial(cuedPassage());
         mode = 'cued';
         state = step(state, { _tag: 'cue', cue: cueOf(cue), cap: SHOWN_ALL_CAP });
         return screen();

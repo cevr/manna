@@ -59,6 +59,16 @@ import type * as AboutVersion from '../src/about/version';
 import type * as DeclaredAboutVersion from '../exact/about-version.d.ts';
 import type * as FirstFlow from '../src/first/flow';
 import type * as DeclaredFirstFlow from '../exact/first-flow.d.ts';
+import type * as FirstTour from '../src/first/tour';
+import type * as DeclaredFirstTour from '../exact/first-tour.d.ts';
+import type * as FirstGrowth from '../src/first/growth';
+import type * as DeclaredFirstGrowth from '../exact/first-growth.d.ts';
+import type * as FirstWords from '../src/first/words';
+import type * as DeclaredFirstWords from '../exact/first-words.d.ts';
+import type * as FirstVerse from '../src/first/verse';
+import type * as DeclaredFirstVerse from '../exact/first-verse.d.ts';
+import type * as TipWords from '../src/field/tip-words';
+import type * as DeclaredTips from '../exact/tips.d.ts';
 import type * as Kjv from '../src/kjv';
 import type * as DeclaredHold from '../exact/reading-hold.d.ts';
 import type * as DeclaredReading from '../exact/reading.d.ts';
@@ -119,6 +129,36 @@ const DECLARED: readonly true[] = [
   >,
   true satisfies Mutual<typeof FirstFlow.openingOf, typeof DeclaredFirstFlow.openingOf>,
   true satisfies Mutual<FirstFlow.Opening, DeclaredFirstFlow.Opening>,
+  true satisfies Mutual<typeof FirstFlow.shownOpening, typeof DeclaredFirstFlow.shownOpening>,
+  true satisfies Mutual<FirstFlow.Phase, DeclaredFirstFlow.Phase>,
+  true satisfies Mutual<FirstFlow.Flow, DeclaredFirstFlow.Flow>,
+  true satisfies Mutual<FirstFlow.Input, DeclaredFirstFlow.Input>,
+  true satisfies Mutual<typeof FirstFlow.begin, typeof DeclaredFirstFlow.begin>,
+  true satisfies Mutual<typeof FirstFlow.isOwn, typeof DeclaredFirstFlow.isOwn>,
+  true satisfies Mutual<typeof FirstFlow.step, typeof DeclaredFirstFlow.step>,
+  true satisfies Mutual<typeof FirstFlow.observe, typeof DeclaredFirstFlow.observe>,
+  true satisfies Mutual<Reading.Ending, DeclaredReading.Ending>,
+  true satisfies Mutual<FirstTour.Tour, DeclaredFirstTour.Tour>,
+  true satisfies Mutual<FirstTour.TourTap, DeclaredFirstTour.TourTap>,
+  true satisfies Mutual<typeof FirstTour.tourStep, typeof DeclaredFirstTour.tourStep>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH, typeof DeclaredFirstGrowth.GROWTH>,
+  true satisfies Mutual<FirstGrowth.GrowthFrame, DeclaredFirstGrowth.GrowthFrame>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_STILL, typeof DeclaredFirstGrowth.GROWTH_STILL>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_STEPS, typeof DeclaredFirstGrowth.GROWTH_STEPS>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_START, typeof DeclaredFirstGrowth.GROWTH_START>,
+  true satisfies Mutual<typeof FirstGrowth.growthAt, typeof DeclaredFirstGrowth.growthAt>,
+  true satisfies Mutual<FirstWords.IntroRun, DeclaredFirstWords.IntroRun>,
+  true satisfies Mutual<typeof FirstWords.WELCOME, typeof DeclaredFirstWords.WELCOME>,
+  true satisfies Mutual<typeof FirstWords.GROWS, typeof DeclaredFirstWords.GROWS>,
+  true satisfies Mutual<typeof FirstWords.ONWARD, typeof DeclaredFirstWords.ONWARD>,
+  true satisfies Mutual<FirstWords.ShownPhase, DeclaredFirstWords.ShownPhase>,
+  true satisfies Mutual<typeof FirstWords.COPY, typeof DeclaredFirstWords.COPY>,
+  true satisfies Mutual<typeof FirstWords.PHASES, typeof DeclaredFirstWords.PHASES>,
+  true satisfies Mutual<typeof FirstWords.REPLAY, typeof DeclaredFirstWords.REPLAY>,
+  true satisfies Mutual<typeof FirstWords.PILLS, typeof DeclaredFirstWords.PILLS>,
+  true satisfies Mutual<typeof FirstVerse.FIRST_VERSE, typeof DeclaredFirstVerse.FIRST_VERSE>,
+  true satisfies Mutual<typeof FirstVerse.ownPassagesOf, typeof DeclaredFirstVerse.ownPassagesOf>,
+  true satisfies Mutual<typeof TipWords.TIPS, typeof DeclaredTips.TIPS>,
   true satisfies Mutual<typeof Passages.PASSAGES_KEY, typeof DeclaredPassages.PASSAGES_KEY>,
   true satisfies Mutual<typeof Passages.LISTS_KEY, typeof DeclaredPassages.LISTS_KEY>,
   true satisfies Mutual<typeof Passages.MOST_PASSAGES, typeof DeclaredPassages.MOST_PASSAGES>,

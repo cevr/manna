@@ -53,6 +53,7 @@ import { themed, useThemed } from '../look';
 import { heldCount, MOST_PASSAGES, type PassagesView, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
 import { Pill } from '../first/intro';
+import { PILLS, REPLAY } from '../first/words';
 import { SettingsSheet } from '../settings/sheet';
 import { TodayCardView, type StartKind } from './card';
 import { Control, Furrows, Icon } from './plot';
@@ -250,12 +251,12 @@ export function FieldScreen({
         )}
         <View style={styles.ends}>
           <EndRow label="Settings" held={removing} onPress={() => setSettings(true)} />
-          <EndRow label="How Heartseed works" held={removing} onPress={onHow} />
+          <EndRow label={REPLAY.how} held={removing} onPress={onHow} />
         </View>
       </ScrollView>
       {tips && (
         <View style={[styles.foot, { paddingBottom: insets.bottom + 12 }]}>
-          <Pill label="Got it" onPress={onGotIt} />
+          <Pill label={PILLS.gotIt} onPress={onGotIt} />
         </View>
       )}
       {settings && (

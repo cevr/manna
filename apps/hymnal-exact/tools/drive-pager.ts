@@ -247,6 +247,40 @@ drive.check(
   { pageApart },
 );
 
+/** Hymn 2 opened from home, a wheel of `dx`, `dy` over its words, then a shot, then where the route rests. */
+const wheeledThenShot = (dx: number, dy: number) => [
+  ...toHymn2,
+  `tap hymn-words wheel ${dx} ${dy}`,
+  'clock +1000 real',
+  'clock settle',
+  shot(`wheel-${dx}-${dy}`),
+  'clock +1200 real',
+  'clock settle',
+  'clock data',
+  'state',
+];
+for (const [dx, dy, why] of [
+  [0, 200, 'a vertical wheel'],
+  [60, 200, 'a diagonal wheel mostly down'],
+  [-60, 200, 'a diagonal wheel mostly down and back'],
+] as const) {
+  const reply = await drive.run(flags('pager-wheel'), wheeledThenShot(dx, dy));
+  const restsOn = openOf(reply.at(-1));
+  drive.check(`${why} over hymn 2, then a screenshot: hymn 2 still shown`, restsOn === '2', {
+    restsOn,
+  });
+}
+const sideways = await drive.run(flags('pager-wheel-side'), [
+  ...toHymn2,
+  'tap hymn-pager wheel 420 0',
+  'clock +1200 real',
+  'clock settle',
+  'clock data',
+  'state',
+]);
+const sidewaysOn = openOf(sideways.at(-1));
+drive.check('a sideways wheel over hymn 2 turns to hymn 3', sidewaysOn === '3', { sidewaysOn });
+
 const largest = await drive.run(
   [...flags('pager-largest'), '--url', '/hymns/100'],
   [
