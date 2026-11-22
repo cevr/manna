@@ -52,6 +52,7 @@ import type { VoiceView } from '../voice';
 import { isActive } from '../voice/reading';
 import { begin, isOwn, observe, step, type Flow, type Input, type Phase } from './flow';
 import { Grows, Pill, Welcome } from './intro';
+import { COPY, PHASES, PILLS, type ShownPhase } from './words';
 
 const WORDS = sourceWords(passage.text);
 
@@ -59,18 +60,8 @@ const WORDS = sourceWords(passage.text);
 const LINES = linesOf(passage.text);
 const BREAKS = breaksOf(LINES);
 
-/** Each phase's heading and the line under it. */
-const COPY: Readonly<Record<Shown, { readonly heading: string; readonly line: string }>> = {
-  hear: { heading: 'Hear it', line: 'The voice reads it. Words light as they are read.' },
-  letters: { heading: 'Say it with help', line: 'First letters stay. Tap the button and say it.' },
-  alone: { heading: 'Say it alone', line: 'Only the line is left. Say it from memory.' },
-  planted: { heading: 'Planted', line: 'Your first promise is a seed.' },
-};
-
 /** The phases of the verse itself, the ones the phase bar counts. */
-type Shown = Exclude<Phase, 'welcome' | 'grows'>;
-
-const PHASES: readonly Shown[] = ['hear', 'letters', 'alone', 'planted'];
+type Shown = Exclude<Phase, 'welcome' | 'grows'> & ShownPhase;
 
 const ABSENT: OrNull<never> = Option.getOrNull(Option.none());
 
@@ -305,14 +296,14 @@ function Hear({
       <Heard voice={voice} hold={hold} />
       <View style={styles.hearActions}>
         {voiceOn && !reading && (
-          <BigButton label="Listen" busy={false} pressable onPress={onListen} />
+          <BigButton label={PILLS.listen} busy={false} pressable onPress={onListen} />
         )}
         {voiceOn && reading && (
           <View style={look.buttonPlace}>
             <Pulse busy />
           </View>
         )}
-        <Pill label="Next" onPress={onNext} />
+        <Pill label={PILLS.next} onPress={onNext} />
       </View>
       <Text style={styles.line}>{COPY.hear.line}</Text>
     </>
@@ -377,12 +368,12 @@ function Planted({ onContinue }: { readonly onContinue: () => void }) {
         <PlantImage stage="seed" size={112} />
       </View>
       <View style={look.stageRow}>
-        <Text testID="stage" aria-label="Stage: seed" style={look.stage}>
-          A seed
+        <Text testID="stage" aria-label={PILLS.stageSaid} style={look.stage}>
+          {PILLS.stage}
         </Text>
       </View>
       <Text style={styles.line}>{COPY.planted.line}</Text>
-      <Pill label="Continue" onPress={onContinue} />
+      <Pill label={PILLS.continue} onPress={onContinue} />
     </View>
   );
 }
