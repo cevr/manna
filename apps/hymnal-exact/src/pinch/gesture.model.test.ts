@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noUnsafeDictionaryType, effect/noAsyncFunction, eslint/no-await-in-loop, eslint/complexity, effect/maxCognitiveComplexity -- a Bun test in an Exact app's folder imports no effect (docs/exact.md): the app's module answers a Promise of untyped JSON as the host awaits it, a source is handed no store as the host hands it none, a history is run one take after another in order, and the reference is the current app's gesture as one plain loop. */
+/* oxlint-disable effect/noTernary, effect/noNullish, effect/noUnsafeDictionaryType, effect/noAsyncFunction, eslint/no-await-in-loop, effect/maxCognitiveComplexity -- a Bun test in an Exact app's folder imports no effect (docs/exact.md): the app's module answers a Promise of untyped JSON as the host awaits it, a source is handed no store as the host hands it none, a history is run one take after another in order, and the reference is the current app's gesture as one plain loop. */
 
 /**
  * The pinch, model-based. Generated two-finger histories (a begin, a run of
