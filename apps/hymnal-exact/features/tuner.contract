@@ -13,7 +13,9 @@
 // reading's words change at most once a second (One's `LABEL_EVERY`), on
 // the one node VoiceOver reads them from. The tuner plays nothing. It opens
 // from the key button's wheel, the chord sheet's head and Settings, each
-// only where the device has the ear (`tunerEar`).
+// only where the device has the ear (`tunerEar`). The name draws a word
+// too wide for the screen smaller (`-exact-fit="shrink"`), never below the
+// reader's text size, so "Listening" and "Not listening" fit at the largest.
 
 shape TunerEar
   ear: bool
@@ -289,7 +291,7 @@ component TunerScreen
             text tunerShown.hint font="type.label" color=(tunerShown.inTune ? "ground" : "ink") testId="tuner-hint"
       if tunerShown.has
         column align-items="center" gap=`${tunerPlaced.readingGap}px` role="status" aria-label=(tunerShown.phase == "Listening" ? tunerLabel : tunerShown.words) testId="tuner-reading"
-          text tunerShown.name font="type.tuner-name" color="ink" text-align="center" max-width="100%" aria-hidden=true testId="tuner-name"
+          text tunerShown.name font="type.tuner-name" -exact-fit="shrink" color="ink" text-align="center" aria-hidden=true testId="tuner-name"
           text tunerShown.note font="type.small" color="muted" min-height=`${tunerPlaced.noteHigh}px` aria-hidden=true testId="tuner-note"
       TunerHeadstock()
 
