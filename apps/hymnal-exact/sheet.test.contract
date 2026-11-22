@@ -68,6 +68,11 @@ test "A placement chosen in the sheet changes this hymn's chords and no other hy
   tap "settings-feel"
   clock settle
   expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "gear"
+  clock settle
+  clock data
   tap "chords-toggle"
   clock data
   tap "settings-done"

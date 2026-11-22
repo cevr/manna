@@ -165,8 +165,9 @@ component HymnInset
 // A part's printed lines: each a wrapping row of its words, set in by the
 // hanging indent and its first word drawn back out to the edge, so a line
 // that wraps hangs under its first word (the current app's `HangingLine`
-// and `SyllableLine`). The indent, `space.hang`, is in `rem`, so it grows
-// with the text size as the current app's `indent` does. A word is one text of its syllables, a muted hyphen
+// and `SyllableLine`). The indent is Reading's (`readingShown.indent`, in
+// `rem`), so it grows with Reading's size and the system's text size as
+// the current app's `readingStyle` indent does. A word is one text of its syllables, a muted hyphen
 // between two. Each word's box is a device pixel taller than its line, as
 // React Native's text measure makes it on iOS (docs: agent-pitfalls).
 component HymnLines
