@@ -37,24 +37,17 @@ members HymnalExact
   state pagerWidth = 0
   state pagerDragging = false
   resource pagerNear = pagerAround(hymnOpen, pagerFrom) when hymnOpen != "" as shape PagerAround else empty()
-  // The hymn the app was launched at (a link, a reload) draws its page
-  // alone: the web host's scroll of a visit to its start once its data
-  // settles (LLP 1153 D5, fragment.js) leaves the page before it painted
-  // while every layout reads the route's, and no scroll of the app's was
-  // seen to move the paint. Opened from a list, a hymn pages as before.
-  state pagerColdAt = ""
-  derive pagerCold = pagerColdAt == `${top(nav).id} ${top(nav).url}`
-  derive pagerWanted = hymnOpen == "" ? [] : pagerCold ? match parseNumber(hymnOpen) { case some(n) => [n], case none => [] } : (`${pagerNear.number}` == hymnOpen ? pagerNear.numbers : (pagerNumbers.map(n => `${n}`).includes(hymnOpen) ? pagerNumbers : match parseNumber(hymnOpen) { case some(n) => [n], case none => [] }))
+  derive pagerWanted = hymnOpen == "" ? [] : (`${pagerNear.number}` == hymnOpen ? pagerNear.numbers : (pagerNumbers.map(n => `${n}`).includes(hymnOpen) ? pagerNumbers : match parseNumber(hymnOpen) { case some(n) => [n], case none => [] }))
   state pagerNumbers: number[] = []
   // The pages drawn change only here, in one commit with the scroll that
   // keeps the route's page in view: the web's scroller does not follow a
   // page that moves under it, so a page put before it would show for a
   // frame.
-  task pagerPlace key=`${hymnOpen} ${pagerCold} ${pagerNear.number} ${pagerNear.numbers.map(n => `${n}`).join(",")}`
+  task pagerPlace key=`${hymnOpen} ${pagerNear.number} ${pagerNear.numbers.map(n => `${n}`).join(",")}`
     change(pagerPlaced)
   action pagerPlaced
     pagerNumbers = pagerWanted
-    if pagerWanted.map(n => `${n}`).includes(hymnOpen)
+    if pagerWanted.length > 1 and pagerWanted.map(n => `${n}`).includes(hymnOpen)
       scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
   resource pagerPages = hymnPage(`${n}`) for n in pagerNumbers as shape HymnText
   resource pagerChords = chordsPage(`${n}`, chordsOn, chordsMoves, settingsChordStyle, settingsPlacement) for n in pagerNumbers as shape ChordsPage
@@ -108,8 +101,6 @@ members HymnalExact
             pagerFrom = (b.id == pagerPrevTop and pagerShowingAt == `${b.id} ${b.url}`) ? pagerShowing : []
           case none
             pagerFrom = []
-      if pagerPrevTop == -1
-        pagerColdAt = `${t.id} ${t.url}`
       pagerHymnId = t.id
       pagerHymnUrl = t.url
     pagerPrevTop = t.id
@@ -121,7 +112,11 @@ members HymnalExact
   // Only the reader turns a page: a scroll armed by a drag of the pager (a
   // finger, UIKit's pan) or a wheel's (a trackpad), never one the host or
   // the app makes, as the scroll back to a path's start after a `replace`
-  // or the scroll that keeps the shown page in view.
+  // or the scroll that keeps the shown page in view. A scroll that rests
+  // with no gesture armed and the shown page away from the port (a
+  // screenshot that lays the page out beyond the viewport, a find in the
+  // page) puts the shown page back: the route in state is the pager's
+  // truth, never the scroller's offset.
   action pagerArmed
     pagerDragging = true
   action pagerEnded
@@ -134,7 +129,8 @@ members HymnalExact
         pagerWidth = port.width
         send pagerSettled = pagerSettle(pagerNumbers, offset, port.width)
       case none
-        pagerX = 0
+        if pagerNumbers.length > 1 and pagerNumbers.map(n => `${n}`).includes(hymnOpen) and max(frame(`hymn-page-${hymnOpen}`).x - frame("hymn-pager").x, frame("hymn-pager").x - frame(`hymn-page-${hymnOpen}`).x) >= 1
+          scrollIntoView(`hymn-page-${hymnOpen}`, block="nearest", inline="start", behavior="instant")
   // The route moves to the page settled on, in place. A `replace` to
   // another path scrolls each of the route's scrollers to its start (the
   // web host's `freshPath`, LLP 1116.005 D3), so the pages before the one

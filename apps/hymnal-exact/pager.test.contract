@@ -118,30 +118,23 @@ test "From Recent, the page before is the newer hymn."
   clock settle
   expect text "recent-title" == "Recent"
 
-// A launch at a hymn's address draws its page alone (pager.contract,
-// `pagerCold`): the web host leaves the page before it painted there.
-test "A hymn the app is launched at shows its page alone; opened from home it pages again."
+// A launch at a hymn's address pages through every hymn, as a link does
+// in the current app.
+test "A hymn the app is launched at pages through every hymn."
   at "/hymns/100"
   clock data
   clock settle
   clock data
-  expect state pagerCold == true
-  expect state pagerNumbers.0 == 100
-  expect state pagerNumbers.length == 1
+  expect state pagerFrom == []
+  expect state pagerNumbers.0 == 99
+  expect state pagerNumbers.2 == 101
   expect text "hymn-number" == "100"
-  expect tree missing "hymn-page-99"
+  expect text "hymn-number-99" == "99"
   tap "hymn-pager" drag -300 0 from 300 300
-  clock +800 real
-  clock settle
-  expect state hymnOpen == "100"
-  back
-  clock settle
-  tap "hymn-2"
+  clock until state hymnOpen == "101" within 3000
   clock settle
   clock data
-  expect state pagerCold == false
-  expect state pagerNumbers.0 == 1
-  expect state pagerNumbers.2 == 3
+  expect text "hymn-number" == "101"
 
 test "A hymn dialled by its number pages through every hymn."
   tap "find-number"
