@@ -121,7 +121,7 @@ component PlayerSheet
                   text "Stanzas" font="type.chip" color="muted" text-transform="uppercase" aria-hidden=true
                   row gap="space.s8" flex-wrap="wrap" align-items="center"
                     for c in player.chips key=c.stanza
-                      PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, chosen=c.chosen)
+                      PlayerPill(label=`${c.stanza}`, press=ask("stanza", c.stanza), id=`stanza-${c.stanza}`, name=`Stanza ${c.stanza}`, hint="Chooses whether Play sings this stanza", chosen=c.chosen)
                     StanzasAll(on=player.some, ask=ask)
                   if player.places.length > 0
                     row gap="space.s8" flex-wrap="wrap" align-items="center"
@@ -167,7 +167,7 @@ component SheetChords
         SheetPanel(id="sheet-dials")
           if keysShown.reset
             row justify-content="center"
-              PlayerPill(label=`↺ ${keysShown.printedName}, no capo`, press=keysAsk("reset", 0), id="sheet-dials-reset", name="Reset", chosen=false)
+              PlayerPill(label=`↺ ${keysShown.printedName}, no capo`, press=keysAsk("reset", 0), id="sheet-dials-reset", name="Reset", hint=`Back to ${keysShown.printedName}, with no capo`, chosen=false)
           if keysShown.capoRow
             KeysCapoDial()
           KeysKeyDial()

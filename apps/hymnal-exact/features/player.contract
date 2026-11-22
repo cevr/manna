@@ -239,14 +239,16 @@ component PlayerBarRoom
 
 // The player's chip, as the current Chip.tsx draws it: a pill in the
 // pill's roles, or on the chosen mark while chosen, its word in the chip
-// type, never narrower than a target and dimmed while held.
+// type, never narrower than a target and dimmed while held; `hint` is its
+// accessibilityHint, in the current chip's words.
 component PlayerPill
   props
     label: string
     press: action
     id: string
     name: string
+    hint: string
     chosen: bool
   view
-    button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" gap="space.s6" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color=(chosen ? "chosen" : "pill") -exact-press-opacity="opacity.pressed" aria-label=name aria-pressed=chosen testId=id
+    button press=press appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="center" gap="space.s6" height="size.slider" min-width="size.target" padding="0px space.s12" border-radius="radius.r16" box-sizing="border-box" background-color=(chosen ? "chosen" : "pill") -exact-press-opacity="opacity.pressed" aria-label=name aria-description=hint aria-pressed=chosen testId=id
       text label font="type.chip" color=(chosen ? "onChosen" : "onPill") line-clamp=1
