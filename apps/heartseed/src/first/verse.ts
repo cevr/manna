@@ -1,16 +1,13 @@
-/**
- * The app's own verse: the brief's first promise, which the first minute
- * plants, and the field's own row of it. The bundler derives its words from
- * the KJV by this query (`vite/passage.ts`), and the field shows it first,
- * a passage of one verse (`ownPassagesOf`).
- */
-
-import type { FieldPassage } from '../field';
-
 /** The query that names the first verse. */
 export const FIRST_VERSE = 'Isaiah 41:10';
 
+/** One of the field's own rows, a `FieldPassage` of no range: its title and its verses' references. */
+export interface OwnPassage {
+  readonly title: string;
+  readonly verses: ReadonlyArray<string>;
+}
+
 /** The passages the field shows first: the verse at `reference`, a passage of one verse. */
-export const ownPassagesOf = (reference: string): readonly FieldPassage[] => [
+export const ownPassagesOf = (reference: string): readonly OwnPassage[] => [
   { title: reference, verses: [reference] },
 ];
