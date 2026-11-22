@@ -37,7 +37,7 @@ import { format } from '@manna/hymnal/chord';
 import type { Book } from '../hymns/book.ts';
 import { pageAt } from '../hymn/page.ts';
 import { type Placement, placementOf, type Style, styleOf } from '../settings/chords.ts';
-import { canStep, moveOf } from './move.ts';
+import { moveOf } from './move.ts';
 import { chordsCode, keyCode } from './shape.ts';
 
 /**
@@ -90,8 +90,6 @@ export interface ChordsPage {
   readonly code: string;
   readonly transpose: number;
   readonly capo: number;
-  readonly capoDown: boolean;
-  readonly capoUp: boolean;
   readonly parts: Array<ChordsPart>;
 }
 
@@ -109,8 +107,6 @@ const blank = (number: number, kind: string): ChordsPage => ({
   code: '',
   transpose: 0,
   capo: 0,
-  capoDown: false,
-  capoUp: false,
   parts: [],
 });
 
@@ -155,8 +151,6 @@ const chordedPage = (
     code: keyCode(played),
     transpose: move.transpose,
     capo: move.capo,
-    capoDown: canStep(move, 'capo-down'),
-    capoUp: canStep(move, 'capo-up'),
     parts: page.parts.map((part, k) => {
       const section = sections[k];
       if (section === undefined || section._tag === 'Words')

@@ -38,8 +38,6 @@ shape ChordsPage
   code: string
   transpose: number
   capo: number
-  capoDown: bool
-  capoUp: bool
   parts: ChordsPart[]
 
 shape ChordsMark

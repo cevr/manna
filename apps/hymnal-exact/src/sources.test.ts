@@ -146,7 +146,6 @@ describe('the data module runs where Exact runs it', () => {
       'aboutCredits',
       'abouthymnPage',
       'chordsGrip',
-      'chordsMove',
       'chordsPage',
       'favouritesAfter',
       'findAbout',

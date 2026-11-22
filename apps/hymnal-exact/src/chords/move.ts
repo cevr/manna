@@ -5,17 +5,12 @@
  * capo of its own, by its number, reaching no other hymn (its `move.<n>`
  * setting), and the hymn as printed (`still`) until moved. The port keeps
  * the moves in one persisted list of strings, `"<number>:<transpose>:<capo>"`,
- * a hymn at `still` left out; the steps are the current app's own
- * `transposed` (the key wraps through the twelve) and `capoed` (the capo
- * stops at each end).
+ * a hymn at `still` left out, and an entry only for a move the current
+ * app's own `transposed` and `capoed` keep (the key dial's and the capo
+ * dial's moves, `src/keys`).
  */
 
 import { capoed, type Move, still, transposed } from '@manna/hymnal-app/hymns/chords';
-
-/** A step of the move by one key or one fret, or the move put back: `chordsMove`'s steps. */
-export type MoveStep = 'up' | 'down' | 'capo-up' | 'capo-down' | 'reset';
-
-const STEPS: ReadonlyArray<MoveStep> = ['up', 'down', 'capo-up', 'capo-down', 'reset'];
 
 /** Whether `move` is one the current app could store: each part inside the range its steps keep. */
 const kept = (move: Move): boolean =>
@@ -40,35 +35,6 @@ export const moveOf = (moves: ReadonlyArray<string>, number: number): Move => {
     if (read.length === 2 && read[0] === number) return read[1];
   }
   return still;
-};
-
-const stepped = (move: Move, step: MoveStep): Move => {
-  if (step === 'up') return transposed(move, 1);
-  if (step === 'down') return transposed(move, -1);
-  if (step === 'capo-up') return capoed(move, 1);
-  if (step === 'capo-down') return capoed(move, -1);
-  return still;
-};
-
-/** Whether `step` changes `move`: false at the capo's ends, as the current app's dial stops there. */
-export const canStep = (move: Move, step: MoveStep): boolean => {
-  const next = stepped(move, step);
-  return next.transpose !== move.transpose || next.capo !== move.capo;
-};
-
-/**
- * `moves` after `step` on hymn `number`: its entry replaced, or left out at
- * `still`; every other hymn's entry as it was. An unknown step changes
- * nothing.
- */
-export const movesAfter = (
-  moves: ReadonlyArray<string>,
-  number: number,
-  step: string,
-): Array<string> => {
-  const known = STEPS.find((each) => each === step);
-  if (known === undefined || !Number.isInteger(number)) return [...moves];
-  return movesTo(moves, number, stepped(moveOf(moves, number), known));
 };
 
 /**

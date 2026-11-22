@@ -78,7 +78,6 @@ test "The dials rename every chord, and the key button names the key played unde
   expect text "key-key" == "D"
   expect text "chord-1-1-1" == "D"
   expect text "chord-1-1-6" == "Bm"
-  expect state chordsShown.capoDown == false
 
 test "A chord opens its shape, and Back returns with chords on."
   tap "gear"
