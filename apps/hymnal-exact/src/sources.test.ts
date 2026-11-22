@@ -59,6 +59,7 @@ const KINDS = [
   'seeked',
   'settle',
   'due',
+  'online',
   'nonsense',
 ] as const;
 
@@ -158,6 +159,15 @@ describe('the data module runs where Exact runs it', () => {
             0,
           ]),
         ).not.toThrow();
+        expect(() =>
+          sources.findStep([
+            'pinchRun',
+            pick(random, ['', 'b;m 0.7;e 0.6 -2', 'b;m x;e;c', 'm 1.3', ';;', 'q 1 2']),
+            0,
+            0,
+          ]),
+        ).not.toThrow();
+        expect(() => sources.findPinchTake([below(random, 9)], 0, 0)).not.toThrow();
         const kept = [`${route(random)}:simpler`, `${route(random)}:x`, 'x', ':file'];
         const placement = pick(random, ['', 'beat', 'simpler', 'file', 'inherit', 'x']);
         expect(() =>
@@ -181,6 +191,7 @@ describe('the data module runs where Exact runs it', () => {
       'findAbout',
       'findFollowRow',
       'findGroupTiles',
+      'findPinchTake',
       'findPlaces',
       'findStep',
       'findTileAt',
@@ -195,6 +206,7 @@ describe('the data module runs where Exact runs it', () => {
       'listTabRows',
       'listTabs',
       'listTitles',
+      'offlineStep',
       'pagerAround',
       'pagerPlaces',
       'pagerSettle',

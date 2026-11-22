@@ -93,13 +93,18 @@ describe('the accessibility-size departures', () => {
     expect(component('features/today.contract', 'TodayFoot').join('\n')).toContain(roomy);
   });
 
-  it("the welcome's one-word title is One's below the threshold and the name's size at it", () => {
+  it("the welcome's one-word title is One's below the threshold and the name's size at it, each with its soft hyphen and its name", () => {
     const first = text('features/first.contract');
     expect(first.match(/resource \w+ = exactViewport\(\) as shape \w+/gu)).toEqual([
       'resource firstSize = exactViewport() as shape TodayTextSize',
     ]);
+    const title = (font: string) =>
+      String.raw`column role="heading" aria-level=1 aria-label="Heartseed" testId="first-heading"\n\s+text "Heart\\u\{AD\}seed" aria-hidden=true font="${font}"`;
     expect(first).toMatch(
-      /if firstSize\.accessibilityTextSize\n\s+text "Heartseed" [^\n]*font="type\.name"[^\n]*\n\s+else\n\s+text "Heartseed" [^\n]*font="type\.title"/u,
+      new RegExp(
+        String.raw`if firstSize\.accessibilityTextSize\n\s+${title('type\\.name')}[^\n]*\n\s+else\n\s+${title('type\\.title')}`,
+        'u',
+      ),
     );
   });
 

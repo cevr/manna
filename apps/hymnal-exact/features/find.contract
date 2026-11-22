@@ -66,6 +66,12 @@ shape FindAbout
 // The id of the box at a point, "" with none.
 fn findIdOf(at: option<string>): string = match at { case some(id) => id, case none => "" }
 
+// The pinch's reports after a serial, `;`-joined, and the serial so far
+// (`findPinchTake`, src/pinch/sources.ts).
+shape FindPinch
+  serial: number
+  run: string
+
 // The tile of the group at the home list's top (`findTileAt`, src/find/tiles.ts).
 shape FindAim
   index: number
@@ -177,6 +183,22 @@ members HymnalExact
       preventDefault()
       findAimAtTop()
       send findStepped = findStep("wheel", "", e.deltaY, 0)
+  // Two fingers on the home list or its tiles, as the current app's
+  // home/pinch.ts: the `pinch` hatch on the list's column
+  // (features/list.contract, on while `pinchable`) reports each gesture
+  // through the app's module (modules/apple/Pinch.swift,
+  // modules/web/index.js), and each run of reports goes to the step, which
+  // shows or closes the tiles at most once a gesture (`pinched`,
+  // src/find/step.ts).
+  state findPinchSeen = 0
+  resource findPinchHeard = findPinchTake(findPinchSeen) as shape FindPinch else empty()
+  task findPinches when findPinchHeard.serial > findPinchSeen key=findPinchHeard.serial
+    after(1, findPinched)
+  action findPinched
+    if findPinchHeard.serial > findPinchSeen
+      findPinchSeen = findPinchHeard.serial
+      findAimAtTop()
+      send findStepped = findStep("pinchRun", findPinchHeard.run, 0, 0)
   action findTilePick(row: string)
     findLanding = row
     send findStepped = findStep("tilesDone", "", 0, 0)

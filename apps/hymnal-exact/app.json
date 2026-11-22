@@ -10,6 +10,8 @@
   },
   "audio_session": "playback",
   "env": ["HYMNAL_RECORDINGS"],
+  "hatches": { "pinch": ["ios", "web"] },
+  "data": ["pinchable"],
   "commands": {
     "server": ["bun", "tools/recordings.ts"]
   },

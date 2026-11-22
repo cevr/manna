@@ -17,6 +17,7 @@ import { Effect, Logger, Option, Schema } from 'effect';
 import { rowNamed } from '../add/shelves';
 import {
   joinRange,
+  keepFirst,
   moveBack,
   plantList,
   plantRange,
@@ -162,28 +163,35 @@ export const gardenSources = (options: GardenOptions = {}) => {
       seed,
     );
 
-  const gardenRecall: Source<
-    readonly [string, unknown, unknown, number, number, number],
-    GardenVerseChange
-  > = ([reference, recall, help, now, offset, seed], _store, storage) =>
-    Option.match(
-      Option.all([
-        Schema.decodeUnknownOption(RecallArg)(recall),
-        Schema.decodeUnknownOption(HelpArg)(help),
-      ]),
-      {
-        onNone: () => invalid(now, offset),
-        onSome: ([kept, taken]) =>
-          run(
-            Effect.map(recallVerse(storage, reference, kept, Option.some(taken)), (result) => ({
-              answer: result.answer,
-              verse: verseIn(result.held.garden, reference, at(now, offset)),
-            })),
-            now,
-            seed,
-          ),
-      },
-    );
+  /** A source that keeps a recall by `keep`: `recallVerse` for any recital, `keepFirst` for the first minute's. */
+  const recalling =
+    (
+      keep: typeof recallVerse,
+    ): Source<readonly [string, unknown, unknown, number, number, number], GardenVerseChange> =>
+    ([reference, recall, help, now, offset, seed], _store, storage) =>
+      Option.match(
+        Option.all([
+          Schema.decodeUnknownOption(RecallArg)(recall),
+          Schema.decodeUnknownOption(HelpArg)(help),
+        ]),
+        {
+          onNone: () => invalid(now, offset),
+          onSome: ([kept, taken]) =>
+            run(
+              Effect.map(keep(storage, reference, kept, Option.some(taken)), (result) => ({
+                answer: result.answer,
+                verse: verseIn(result.held.garden, reference, at(now, offset)),
+              })),
+              now,
+              seed,
+            ),
+        },
+      );
+
+  const gardenRecall = recalling(recallVerse);
+
+  /** The first minute's kept recital: the recall and the verse joined to the single verses, in one write (`keepFirst`). */
+  const gardenKeepFirst = recalling(keepFirst);
 
   const gardenBack: Source<readonly [string, number, number, number], GardenVerseChange> = (
     [reference, now, offset, seed],
@@ -240,6 +248,7 @@ export const gardenSources = (options: GardenOptions = {}) => {
     gardenJoin,
     gardenRemove,
     gardenRecall,
+    gardenKeepFirst,
     gardenBack,
     gardenBackFrom,
     gardenDrive,

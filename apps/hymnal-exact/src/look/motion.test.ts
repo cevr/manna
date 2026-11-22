@@ -143,6 +143,7 @@ const HAPTICS: ReadonlyArray<{
     cues: [cues.plain('seek-tick')],
   },
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'downloadsAsk', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
   { action: 'readingFontChoose', when: '', cues: [cues.plain('choose')] },

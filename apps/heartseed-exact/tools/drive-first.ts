@@ -22,6 +22,11 @@
  *    sheet's Show the welcome again replays the welcome, and its Skip ends
  *    the tour on home;
  * 5. a relaunch on the store opens home, the first verse in it, no tips;
+ *    at Planted the verse is held as a single verse, and home shows it as
+ *    its one row with a Remove, the reference Planted showed (q175); its
+ *    Remove and the ask's Remove take it away, saying its plant stays; the
+ *    replay through See your field and a further relaunch never hold it
+ *    again;
  * 6. on a store of its own at a phone's width: `tree --ax` reads the
  *    welcome, the second screen, hear and letters in their order, each
  *    control a button by its name and the growing seed hidden; dark follows
@@ -125,11 +130,14 @@ const got = await runOf('launch', [
   ['kept', 'state gardenRecalled'],
   ['planted', 'state first.phase'],
   ['plantedTree', 'tree'],
+  ['plantedReference', 'state today.reference'],
+  ['plantedSingles', 'state garden.singles'],
   'tap first-continue',
   'clock data',
   'clock settle',
   ['tips', 'state first.tour'],
   ['home', 'state homeShown.singles'],
+  ['homeShown', 'state homeShown.singlesShown'],
   ['tipsTree', 'tree'],
   'tap home-got-it',
   'clock settle',
@@ -201,6 +209,22 @@ drive.check(
   { kept, suggested, planted: got('planted') },
 );
 const home = got('home');
+const reference = got('plantedReference');
+drive.check(
+  'at Planted the first verse is held as a single verse, once; Continue shows it on home as its one row under Single verses, with a Remove, its reference the one Planted showed',
+  typeof reference === 'string' &&
+    reference !== '' &&
+    Array.isArray(got('plantedSingles')) &&
+    got('plantedSingles').length === 1 &&
+    got('plantedSingles')[0]?.reference === reference &&
+    Array.isArray(home) &&
+    home.length === 1 &&
+    home[0]?.reference === reference &&
+    home[0]?.removeId === `single:${reference}` &&
+    got('homeShown') === true &&
+    has(got('tipsTree'), 'singles'),
+  { reference, planted: got('plantedSingles'), home },
+);
 drive.check(
   'Continue shows home holding the first verse, with the card and Add a list tips and Got it',
   got('tips') === 'tips' &&
@@ -258,6 +282,67 @@ drive.check(
   { opening: again('opening'), home: again('home') },
 );
 
+const slug =
+  (again('home') ?? []).find((single: any) => single?.reference === reference)?.slug ?? '';
+const removed = await runOf('relaunch', [
+  'clock data',
+  'clock settle',
+  `tap single-remove-${slug}`,
+  'clock settle',
+  ['asked', 'state homeShown.singles'],
+  'tap ask-yes',
+  'clock data',
+  'clock settle',
+  ['removed', 'state garden.singles'],
+  ['removedHome', 'state homeShown.singles'],
+  'tap home-how',
+  'clock settle',
+  'tap first-begin',
+  'clock settle',
+  'tap first-on',
+  'clock data',
+  'clock settle',
+  ['replayed', 'state first.tour'],
+  ['replayedSingles', 'state garden.singles'],
+  ['replayedHome', 'state homeShown.singles'],
+]);
+const removable = (singles: any) =>
+  (singles ?? []).filter(
+    (single: any) => single?.reference === reference && single.removeId !== '',
+  );
+drive.check(
+  "Remove, then its ask's Remove, takes the row's Remove away and says its plant stays, as any single's does",
+  slug !== '' &&
+    removed('asked')?.[0]?.ask === `Remove ${reference}? Its plant stays in your field.` &&
+    Array.isArray(removed('removed')) &&
+    removed('removed').length === 0 &&
+    removable(removed('removedHome')).length === 0,
+  { slug, asked: removed('asked'), removed: removed('removed'), home: removed('removedHome') },
+);
+drive.check(
+  'the replay through See your field holds it no more',
+  removed('replayed') === 'tips' &&
+    removed('replayedSingles')?.length === 0 &&
+    removable(removed('replayedHome')).length === 0,
+  { tour: removed('replayed'), singles: removed('replayedSingles') },
+);
+const reloaded = await runOf('relaunch', [
+  'clock data',
+  'clock settle',
+  ['opening', 'state startShown.opening'],
+  ['singles', 'state garden.singles'],
+  ['home', 'state homeShown.singles'],
+  ['tree', 'tree'],
+]);
+drive.check(
+  'a relaunch after the Remove opens home, with no first minute and the verse held no more',
+  reloaded('opening') === 'home' &&
+    reloaded('singles')?.length === 0 &&
+    removable(reloaded('home')).length === 0 &&
+    !has(reloaded('tree'), 'first-welcome'),
+  { opening: reloaded('opening'), singles: reloaded('singles') },
+);
+
 /** An element of `tree --ax`: its role, its name and its test id. */
 interface Element {
   readonly role: string;
@@ -291,6 +376,7 @@ const looks = await runOf(
     'clock data',
     'clock settle',
     ['welcomeAx', 'tree --ax'],
+    ['heading', 'layout first-heading'],
     'prefer prefers-color-scheme dark',
     'clock settle',
     ['dark', 'state homeScheme'],
@@ -397,6 +483,25 @@ drive.check(
     key,
     looks(key)?.node?.space?.viewport,
   ]),
+);
+/** The height of a box the layout read, in px. */
+const heightOf = (layout: any): number => layout?.node?.space?.viewport?.h ?? 0;
+/** One's title size at the default root, and verify's largest root: the welcome's title in px. */
+const [TITLE, TITLE_LARGEST] = [34, 106];
+drive.check(
+  "the welcome's title is one line at One's 34 pt, and at the largest text it takes a second line (Heart-, seed) rather than spill",
+  host !== 'web' ||
+    (heightOf(looks('heading')) > 0 &&
+      heightOf(looks('heading')) < TITLE * 1.5 &&
+      heightOf(looks('bigHeading')) > TITLE_LARGEST * 1.5),
+  [heightOf(looks('heading')), heightOf(looks('bigHeading'))],
+);
+drive.check(
+  "the welcome's title is named Heartseed, its soft hyphen read by no one",
+  axOf(looks('welcomeAx')).some(
+    (each) => each.testId === 'first-heading' && each.name === 'Heartseed',
+  ) && !JSON.stringify(looks('welcomeAx')).includes('\u00ad'),
+  axOf(looks('welcomeAx')).filter((each) => each.testId === 'first-heading'),
 );
 drive.check(
   'under reduced motion the screens stand still',

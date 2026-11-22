@@ -13,13 +13,16 @@
  * An input's arguments: `screen` the stack's paths, space-joined, the top
  * last; `query` its text; `drumsOpen` the bar's hymn (0 with none); `turn`
  * the drum's name and the digit; `pinch` the scale and velocity; `wheel`
- * the delta. A kind it does not know changes nothing.
+ * the delta. A kind it does not know changes nothing. `pinchRun` takes a
+ * run of the pinch's reports as its text and runs each input it asks for in
+ * order (`src/pinch/run.ts`).
  */
 
 import bundled from 'virtual:hymnal-indexes';
 
 import type { TabSource } from '../home/tabs.ts';
 import type { Book } from '../hymns/book.ts';
+import { runOf } from '../pinch/run.ts';
 import { followRow, listedRows } from './follow.ts';
 import { initial, type Input, type State, step, type View, view } from './step.ts';
 import { type GroupTile, groupTiles, tileAt } from './tiles.ts';
@@ -127,6 +130,11 @@ export const findSources = (
   const source: TabSource = { book, indexes };
   return {
     findStep: ([kind, text, a, b]: readonly [string, string, number, number]): View => {
+      if (kind === 'pinchRun') {
+        state = runOf(text).reduce(step, state);
+        state = { ...state, serial: state.serial + 1 };
+        return view(state);
+      }
       const input = inputOf(kind, text, a, b);
       state = input === undefined ? { ...state, serial: state.serial + 1 } : step(state, input);
       return view(state);

@@ -7,10 +7,9 @@
  * - the drums are the platform's adjustable controls: `tree --ax` reads
  *   each as a slider whose value is its digit, and an increment (VoiceOver's
  *   swipe up, a desktop reader's arrow) turns one;
- * - a pinch in on the home list shows the tiles and a pinch out closes
- *   them, where the driver can pinch: the web's is a trackpad's, a wheel
- *   with Control held; iOS's is `tap … pinch`, and what each driver gave is
- *   printed beside the check;
+ * - on the web a trackpad's pinch in on the home list (a wheel with Control
+ *   held) shows the tiles and one out closes them, what the driver gave
+ *   printed beside the check; two fingers are tools/drive-pinch.ts's;
  * - a tap outside the drums closes them and opens nothing: a tap at the
  *   top left of `drums-outside`, the window-wide press beneath the panel;
  * - each way the drums close (the `#`, a tap outside, and on the web
@@ -269,7 +268,7 @@ if (host === 'web') {
   });
 } else
   console.log(
-    `NOTE ${host} no pinch: the driver refuses \`${pinchIn}\` off a transformDragFor pair ("no photo binding"), so tiles-show and Done stand in`,
+    `NOTE ${host}: the two-finger pinch is tools/drive-pinch.ts's (\`--touch platform\`); here tiles-show and Done stand in`,
   );
 
 const outside = await launch('find-outside', [

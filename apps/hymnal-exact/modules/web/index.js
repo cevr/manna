@@ -68,10 +68,164 @@ const tuner = {
   },
 };
 
+/** The most reports the pinch keeps for a take: far more than one gesture sends between two takes. */
+const PINCH_KEPT = 256;
+
+/**
+ * The pinch's reports as the home list's step reads them (`src/pinch/run.ts`),
+ * each with its serial: `b` a gesture began, `m <scale>` its fingers moved,
+ * `e <scale> <velocity>` they lifted (velocity in scale per second), `c` it
+ * was cancelled. Each report says the topic `pinch` changed.
+ */
+const pinchLog = { serial: 0, reports: [] };
+
+/** Records one report and tells the page. */
+const pinchReport = (word) => {
+  pinchLog.serial += 1;
+  pinchLog.reports = [...pinchLog.reports.slice(1 - PINCH_KEPT), { serial: pinchLog.serial, word }];
+  host.changed('pinch');
+};
+
+/** The distance between a touch's two points. */
+const spread = ([a, b]) => Math.hypot(b.x - a.x, b.y - a.y);
+
+/** A number as a report carries it: short, and never `-0`. */
+const said = (n) => String(Math.round(n * 10000) / 10000 || 0);
+
+/**
+ * A two-finger gesture's tracker, fed each touch as `(kind, points, time,
+ * enabled)`: `kind` the touch's phase (`start`, `move`, `end`, `cancel`),
+ * `points` the fingers down after it, `time` its time in milliseconds. Two
+ * fingers down begin a gesture whose scale is their spread over the spread
+ * they began at; each move reports its scale; a finger lifted ends it with
+ * the speed between its last two samples, the begin counted as one at scale
+ * 1 (UIKit's pinch's `velocity`, scale per second; 0 with no move); the touch cancelled, a third finger or
+ * the node turned off cancels it. One finger reports nothing, so a scroll
+ * is left alone. It answers the report it makes, or "" with none.
+ */
+export function pinchTracker(report = pinchReport) {
+  let from = 0;
+  let last = { scale: 1, time: 0 };
+  let before = last;
+  let moves = 0;
+  return (kind, points, time, enabled) => {
+    const say = (word) => {
+      report(word);
+      return word;
+    };
+    if (from > 0) {
+      if (!enabled || kind === 'cancel' || points.length > 2) {
+        from = 0;
+        return say('c');
+      }
+      if (points.length < 2) {
+        from = 0;
+        const span = (last.time - before.time) / 1000;
+        const velocity = moves > 0 && span > 0 ? (last.scale - before.scale) / span : 0;
+        return say(`e ${said(last.scale)} ${said(velocity)}`);
+      }
+      if (kind !== 'move') return '';
+      before = last;
+      last = { scale: spread(points) / from, time };
+      moves += 1;
+      return say(`m ${said(last.scale)}`);
+    }
+    if (!enabled || points.length !== 2 || kind === 'end' || kind === 'cancel') return '';
+    const at = spread(points);
+    if (!(at > 0)) return '';
+    from = at;
+    last = { scale: 1, time };
+    before = last;
+    moves = 0;
+    return say('b');
+  };
+}
+
+/** The pinch hatch's touch listeners and its tracker, by the node's element. */
+const pinchHeld = new WeakMap();
+
+/** The fingers down, as points. */
+const pointsOf = (event) => Array.from(event.touches, (t) => ({ x: t.clientX, y: t.clientY }));
+
+/**
+ * The `pinch` hatch on the home list's column (`features/list.contract`):
+ * two fingers on it are tracked as `pinchTracker` says, while its
+ * `data-pinchable` is `on` (the step's `pinchable`, `features/find.contract`).
+ * Its listeners are passive: a one-finger scroll and a tap are the page's.
+ * It sets the node's `touch-action` to `pan-x pan-y` while it lives, so a
+ * pinch there zooms the list to its tiles and never the browser's page, as
+ * no pinch zooms the current app's screen; its end puts back what was there.
+ */
+const pinchHatch = {
+  element(e) {
+    const held = pinchHeld.get(e.element);
+    if (held !== undefined) {
+      held.enabled = e.data.pinchable === 'on';
+      if (!held.enabled) held.track('cancel', [], 0, false);
+      return;
+    }
+    const mine = { enabled: e.data.pinchable === 'on', track: pinchTracker(), listeners: [] };
+    for (const [type, kind] of [
+      ['touchstart', 'start'],
+      ['touchmove', 'move'],
+      ['touchend', 'end'],
+      ['touchcancel', 'cancel'],
+    ]) {
+      const listener = (event) => mine.track(kind, pointsOf(event), event.timeStamp, mine.enabled);
+      e.element.addEventListener(type, listener, { passive: true });
+      mine.listeners.push([type, listener]);
+    }
+    mine.touchAction = e.element.style.touchAction;
+    e.element.style.touchAction = 'pan-x pan-y';
+    pinchHeld.set(e.element, mine);
+    e.diagnostics.log(`built on <${e.element.localName}>, ${mine.enabled ? 'on' : 'off'}`);
+  },
+  elementEnded(e) {
+    const held = pinchHeld.get(e.element);
+    if (held === undefined) return;
+    held.track('cancel', [], 0, false);
+    for (const [type, listener] of held.listeners) e.element.removeEventListener(type, listener);
+    e.element.style.touchAction = held.touchAction;
+    pinchHeld.delete(e.element);
+  },
+};
+
+/** The page module's hatches, by word. */
+const hatches = { pinch: pinchHatch };
+
+/** A hatched node mounted, or its `data-*` words changed. */
+export function element(e) {
+  hatches[e.hatch]?.element(e);
+}
+
+/** A hatched node is leaving: its hatch takes back what it added. */
+export function elementEnded(e) {
+  hatches[e.hatch]?.elementEnded(e);
+}
+
+/** The pinch's ops: `pinch.take { since }` answers the serial so far and the reports after `since`, `;`-joined. */
+const pinch = {
+  'pinch.take': (request) => {
+    const since = Number(request.since) || 0;
+    return {
+      serial: pinchLog.serial,
+      run: pinchLog.reports
+        .filter((r) => r.serial > since)
+        .map((r) => r.word)
+        .join(';'),
+    };
+  },
+};
+
+/** The saved recordings' backup mark: the web has no device backup, so nothing is marked, as the current hymnal's `offline/backup.ts` marks nothing off iOS. */
+const backup = {
+  'backup.exclude': () => ({ excluded: false }),
+};
+
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op];
+  const part = tuner[op] ?? backup[op] ?? pinch[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

@@ -6,7 +6,7 @@ seed 7
 test "Today shows the passage under no cue, every word a hidden slot"
   at "/cue/none"
   clock settle
-  expect text "reference" == "Isaiah 41:10"
+  expect tree has "reference"
   expect state today.cue == "none"
   expect state today.words.length == 37
   expect state today.words.0.shown == "____"

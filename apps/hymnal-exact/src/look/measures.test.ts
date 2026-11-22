@@ -44,6 +44,7 @@ const OWNER = new Map([
   ['features/tuner.contract', 'no unit'],
   ['features/tempo.contract', 'no unit'],
   ['features/follow.contract', 'no unit'],
+  ['features/downloads.contract', 'no unit'],
 ]);
 
 const ALLOWED = new Map<string, AllowList>([

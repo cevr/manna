@@ -55,6 +55,7 @@ component HymnalExact
   members "./features/sheet.contract"
   members "./features/reading.contract"
   members "./features/follow.contract"
+  members "./features/downloads.contract"
   provide
     playerShown = player
     playerPress = playerAsk
@@ -144,6 +145,8 @@ component HymnalExact
     followDragged
     followWheeled
     followRested
+    downloads
+    downloadsPress = downloadsAsk
   action follow(url: string)
     nav = go(nav, url)
   view

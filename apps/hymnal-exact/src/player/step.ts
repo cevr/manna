@@ -88,6 +88,8 @@ export interface Track {
   readonly score: Score;
   /** Where its recording moved `offset` semitones is, as the current `audioUrl` names it; `url` for every offset when not given. */
   readonly keyed?: (offset: number) => string;
+  /** Where its recording moved `offset` semitones is saved whole on the device, as the current `localOver` finds it; empty to stream it. */
+  readonly local?: (offset: number) => string;
 }
 
 /** A count-in under way: one bar of `beats` beats of `beatMs` ms of the hymn, `left` ms of the hymn still to count. */
@@ -149,6 +151,8 @@ export interface Held {
   readonly count: Count | undefined;
   /** Its play's Intro: a start again from the end plays or counts the introduction by it. */
   readonly intro: boolean;
+  /** The saved recording the load plays, chosen as it was loaded; empty while it streams. */
+  readonly local: string;
 }
 
 /** A navigation the view asks of the stack, numbered so each is taken once. */
@@ -184,6 +188,8 @@ export interface State {
   readonly offsets: Readonly<Record<string, number>>;
   /** The taps on `Tap` since the sheet opened, in ms, as `tap` keeps its run. */
   readonly taps: ReadonlyArray<number>;
+  /** Whether the page is online (`exactPage()`'s flag, as the contract tells it): offline a recording not saved cannot load. */
+  readonly online: boolean;
 }
 
 export type Input =
@@ -231,6 +237,7 @@ export type Input =
   | { readonly _tag: 'tap'; readonly at: number }
   | { readonly _tag: 'start'; readonly intro: boolean }
   | { readonly _tag: 'keys'; readonly offsets: Readonly<Record<string, number>> }
+  | { readonly _tag: 'online'; readonly on: boolean }
   | { readonly _tag: 'screen'; readonly stack: ReadonlyArray<string> }
   | {
       readonly _tag: 'restore';
@@ -314,6 +321,7 @@ export const initial: State = {
   intro: true,
   offsets: {},
   taps: [],
+  online: true,
 };
 
 /** Hymn `number`'s tempo in percent: 100 until turned. */
@@ -342,7 +350,7 @@ export const deviceOf = (state: State): Device | undefined => {
     return undefined;
   return {
     load: held.load,
-    url: urlOf(held.track, held.heard),
+    url: held.local === '' ? urlOf(held.track, held.heard) : held.local,
     from: held.from,
     paused: held.wants === 'pause',
     seek: held.seek,
@@ -452,9 +460,12 @@ const loaded = (
     heard: offset,
     count: undefined,
     intro,
+    local: track.url === '' ? '' : (track.local?.(offset) ?? ''),
   };
   if (track.url === '')
     return { ...state, loads: load, held: { ...held, phase: 'failed', why: 'missing' } };
+  if (state.sound && held.local === '' && !state.online)
+    return { ...state, loads: load, held: { ...held, phase: 'failed', why: 'network' } };
   if (state.sound) return { ...state, loads: load, held };
   if (track.score.end <= 0)
     return { ...state, loads: load, held: { ...held, phase: 'failed', why: 'decode' } };
@@ -606,17 +617,35 @@ const keyed = (state: State, offsets: Readonly<Record<string, number>>): State =
   return loaded(next, held.track, held.at, held.intro);
 };
 
-/** A recording in a moved key failed: the printed key's in its place, from where it was, as it was asked. */
-const fellBack = (state: State, held: Held): State => {
+/**
+ * A recording in a moved key failed: the printed key's in its place, from
+ * where it was, as it was asked (its saved file when there is one, as the
+ * current `localOver` under `recordingsOn` finds it). A saved file that
+ * would not play is the same recording streamed, as `localOver`'s
+ * `local-read` fallback plays the address from the place.
+ */
+const fellBack = (
+  state: State,
+  held: Held,
+  heard = 0,
+  local = held.track.local?.(0) ?? '',
+): State => {
   const load = state.loads + 1;
   const playing = held.wants === 'play';
+  if (local === '' && !state.online)
+    return {
+      ...state,
+      loads: load,
+      held: { ...held, load, heard, local, phase: 'failed', why: 'network' },
+    };
   return {
     ...state,
     loads: load,
     held: {
       ...held,
       load,
-      heard: 0,
+      heard,
+      local,
       from: held.at,
       sought: held.at,
       seek: 0,
@@ -1011,6 +1040,8 @@ const device = (state: State, input: Input): State => {
       );
     case 'failed': {
       const { held } = state;
+      if (held?.load === input.id && held.phase !== 'failed' && held.local !== '')
+        return fellBack(state, held, held.heard, '');
       if (held?.load === input.id && held.phase !== 'failed' && held.heard !== 0)
         return fellBack(state, held);
       return onLoad(state, input.id, (each) => ({ ...each, phase: 'failed', why: input.why }));
@@ -1040,6 +1071,8 @@ const next = (state: State, input: Input): State => {
       return { ...state, intro: input.intro };
     case 'keys':
       return keyed(state, input.offsets);
+    case 'online':
+      return { ...state, online: input.on };
     case 'tick':
       return ticked(state, input.id, input.ms);
     default:
