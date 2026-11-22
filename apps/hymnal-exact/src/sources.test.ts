@@ -125,6 +125,14 @@ describe('the data module runs where Exact runs it', () => {
         expect(() =>
           sources.listOpening([`/hymns/${route(random)}`, below(random, 700)]),
         ).not.toThrow();
+        expect(() =>
+          sources.listTabsStep([
+            pick(random, ['scroll', 'jump', 'here', 'touch', 'x']),
+            below(random, 6000) - 60,
+            below(random, 300),
+            below(random, 200),
+          ]),
+        ).not.toThrow();
         expect(() => sources.pagerAround([route(random), list])).not.toThrow();
         expect(() =>
           sources.pagerSettle([list, below(random, 2000) - 400, below(random, 500)]),
@@ -172,6 +180,7 @@ describe('the data module runs where Exact runs it', () => {
       'listOpening',
       'listTabRows',
       'listTabs',
+      'listTabsStep',
       'listTitles',
       'offlineStep',
       'pagerAround',
