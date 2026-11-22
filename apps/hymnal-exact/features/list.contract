@@ -112,7 +112,10 @@ members HymnalExact
       if name != listTab
         haptic("selection")
     if name != listTab
-      listTabsJump()
+      send listTabsMoved = listTabsStep("jump", 0, 0, 0)
+      scrollIntoView("list-top", block="start", behavior="instant")
+      scrollIntoView(`tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
+      scrollIntoView(`shown-tab-${name.toLowerCase()}`, block="nearest", inline="nearest", behavior="instant")
     listTab = name
   action listLanded(id: string, w: number, h: number)
     if h > 0
@@ -184,13 +187,13 @@ component HymnList
         FindTiles()
       if findShown.results and findSearchingAt(findShown, entry.url)
         HomeTitle(own=true)
-        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false)
+        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
         scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
           column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
-            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)
           if recent.shelf.length > 0
             section testId="recent-shelf"
               link href=path("recent") aria-label="Recent, see all" display="flex" flex-direction="row" align-items="center" justify-content="space-between"
@@ -212,13 +215,13 @@ component HymnList
       else if groups.length == 0 and tab == "Lists"
         column flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" testId="hymn-list"
           HomeTitle(own=true)
-          HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false)
+          HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
           text "No hymns here yet." font="type.body" color="muted" padding="space.s16" testId="lists-empty"
       else
         scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
           column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
-            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false)
+            HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)
           for g, gi in groups key=g.slug
             section display="flex" flex-direction="column"
               ListHeader(name=g.name, id=`group-${g.slug}`, gutter=false, measured=(gi == 0), landing=(g.name == listLand), sized=listPinned)
@@ -260,15 +263,18 @@ component HomeTitle
 // Home's tab row, as the current app's: a pill for each way to show the
 // hymns, the chosen one filled; it scrolls away with the list. The
 // `pinned` copy (`ListTabsPinned`) names its row and tabs `shown-…`, so
-// each copy's ids stay its own.
+// each copy's ids stay its own. The list's own row is `away` (inert and
+// hidden from the screen reader) while the pinned copy is in reach, so
+// one tab row, never two, is reachable at any offset.
 component HomeTabs
   props
     tab: string
     tabs: string[]
     choose: action
     pinned: bool
+    away: bool
   view
-    row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8"
+    row role="tablist" aria-label="Show hymns by" appearance="none" overflow-x="auto" flex-shrink=0 gap="space.s8" inert=away aria-hidden=away
       padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8" testId=(pinned ? "shown-tabs-row" : "tabs")
       for t in tabs key=t
         button role="tab" aria-selected=(tab == t) press=choose(t) appearance="none" flex-shrink=0
@@ -302,12 +308,12 @@ component ListTabsPinned
       resize=sized testId="shown-tabs"
       column background-color="ground" translate=(motionStill or listTabs.shown ? "0px 0px" : "0px -100%") opacity=(motionStill and not listTabs.shown ? 0 : 1)
         transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide") testId="shown-tabs-slide"
-        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true)
+        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true, away=false)
 
 // A group's header, as the current app's topic row: its name, quiet, on
 // the ground over a hairline, as tall as its text's line and its padding
-// at every text size. It stays at the list's top while its group's rows
-// scroll under it, until the next group's header pushes it off, as the
+// at every text size. It stays at the list's top, under the pinned tab row
+// while that shows (`listTabs.cover`), while its group's rows scroll under it, until the next group's header pushes it off, as the
 // current app's pinned topic does. With `gutter` it ends before the
 // Sections list's rail gutter, as every row of that list does. A tap on
 // it zooms out to All at once, as the current app's group row does

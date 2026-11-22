@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test in an Exact app's folder imports no effect (docs/exact.md): a generated history picks plainly. */
+/* oxlint-disable effect/noTernary -- a Bun test in an Exact app's folder imports no effect (docs/exact.md): a generated history picks plainly. */
 
 /**
  * The port's pinned tab row (`listTabsStep`, src/list/reveal.ts) against the
@@ -40,6 +40,7 @@ const held = {
 type Step =
   | { readonly kind: 'scroll'; readonly at: number }
   | { readonly kind: 'move'; readonly at: number; readonly moved: boolean }
+  | { readonly kind: 'choose' }
   | { readonly kind: 'touch' };
 
 /**
@@ -67,6 +68,10 @@ const oneRow = (rest: number, height: number) => {
         state = one.jumped(state, at);
         if (at !== scroll) report(at);
       }
+      if (step.kind === 'choose') {
+        state = one.jumped(state, 0);
+        if (scroll !== 0) report(0);
+      }
       if (step.kind === 'touch') {
         const next = one.touched(state, scroll, rest);
         if (state.shown && !next.shown) progress = 0;
@@ -93,6 +98,11 @@ const portRow = (rest: number, height: number) => {
         last = listTabsStep(['here', 0, 0, 0]);
         if (step.moved && step.at !== last.at)
           last = listTabsStep(['scroll', step.at, rest, height]);
+      }
+      if (step.kind === 'choose') {
+        const stood = last.at;
+        last = listTabsStep(['jump', 0, 0, 0]);
+        if (stood !== 0) last = listTabsStep(['scroll', 0, rest, height]);
       }
       if (step.kind === 'touch') last = listTabsStep(['touch', 0, 0, 0]);
     },
@@ -123,19 +133,35 @@ const history = (next: (below: number) => number, rest: number): ReadonlyArray<S
     } else if (pick === 2) {
       at = near[next(near.length)] ?? rest;
       out.push({ kind: 'scroll', at });
+    } else if (pick === 4) {
+      at = 0;
+      out.push({ kind: 'choose' });
     } else if (pick === 3) {
       at = -1 - next(60);
       out.push({ kind: 'scroll', at });
     } else {
-      const way = next(2) === 0 ? 1 : -1;
-      const fling = next(8) === 0;
-      const steps = 1 + next(8);
-      for (let step = 0; step < steps; step += 1) {
-        const by = fling ? 300 + next(1700) : 1 + next(one.travel + 3);
-        at = Math.min(6000, Math.max(-60, at + way * by));
-        out.push({ kind: 'scroll', at });
-      }
+      const run = drag(next, at);
+      out.push(...run);
+      at = run.at(-1)?.at ?? at;
     }
+  }
+  return out;
+};
+
+/** A drag or a fling one way from `from`, frame by frame: steps of a few points either side of the travel, or of hundreds. */
+const drag = (
+  next: (below: number) => number,
+  from: number,
+): ReadonlyArray<{ readonly kind: 'scroll'; readonly at: number }> => {
+  const out: Array<{ readonly kind: 'scroll'; readonly at: number }> = [];
+  const way = next(2) === 0 ? 1 : -1;
+  const fling = next(8) === 0;
+  const steps = 1 + next(8);
+  let at = from;
+  for (let step = 0; step < steps; step += 1) {
+    const by = fling ? 300 + next(1700) : 1 + next(one.travel + 3);
+    at = Math.min(6000, Math.max(-60, at + way * by));
+    out.push({ kind: 'scroll', at });
   }
   return out;
 };
