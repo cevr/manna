@@ -7,7 +7,8 @@
  * web|ios`), in Settings against the recordings' fixture:
  *
  * - the progress is the platform's progress bar named "Downloaded
- *   printed-key recordings", its value One's words ("0 of 695 recordings"),
+ *   printed-key recordings", its value the count (the web's ax tree says
+ *   `aria-valuenow`) and its value text One's words ("0 of 695 recordings"),
  *   and the leaf's rows are buttons named in One's words (`tree --ax`);
  * - at the largest text, Download all recordings is reached and taken, and
  *   the saves start: Cancel download and the active line show, and the bar
@@ -88,6 +89,7 @@ const step = (...each: ReadonlyArray<string>) => {
 
 step('clock data', 'tap gear', 'clock settle', 'clock data', 'tap settings-feel', 'clock settle');
 const axAt = step('tree --ax downloads');
+const propsAt = step('tree downloads-progress');
 step(`prefer root-font-size ${LARGEST}`, 'clock settle');
 const allAt = step('tap downloads-all');
 step('clock data', 'clock +1500 real', 'clock data');
@@ -116,13 +118,24 @@ const replies = await drive.run(
 );
 
 const progress = byId(replies[axAt], 'downloads-progress');
+/** The value text the view gives the bar (`aria-valuetext`), as the `tree` reply's first node carries it. */
+const valueText = (
+  replies[propsAt] as
+    | { nodes?: ReadonlyArray<{ props?: { accessibilityValueText?: string } }> }
+    | undefined
+)?.nodes?.[0]?.props?.accessibilityValueText;
 drive.check(
-  'the progress is a progress bar named in One’s words, its value One’s count',
+  'the progress is a progress bar named in One’s words, at none saved',
   progress !== undefined &&
     /progress/iu.test(progress.role ?? '') &&
     progress.name === words.PROGRESS_LABEL &&
-    progress.value === words.progressText({ printed: 0 }),
+    (progress.value === '0' || progress.value === words.progressText({ printed: 0 })),
   progress,
+);
+drive.check(
+  'its value text is One’s count',
+  valueText === words.progressText({ printed: 0 }),
+  valueText,
 );
 for (const [id, name] of [
   ['downloads-all', words.DOWNLOAD_ALL],
