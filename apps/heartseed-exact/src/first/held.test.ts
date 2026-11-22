@@ -3,9 +3,11 @@
 /**
  * The first verse has one holder, the current Heartseed's
  * `vite/first-verse.ts` (handed on by `@manna/heartseed/first/verse`): no
- * source of the port (tests aside), no feature, `app.contract` nor `app.ts`
- * names its book beside its chapter and verse, or holds any three-word run
- * of its words, comments included.
+ * source of the port (Bun tests aside), no feature, `app.contract`,
+ * `app.ts` nor test contract names its book beside its chapter and verse,
+ * or holds any three-word run of its words, comments included. A test
+ * contract cannot compare two reads, so it asserts the reference is drawn;
+ * `tools/drive-first.ts` reads it from the app's own data and compares.
  *
  * And the model test's mirror of features/first.contract holds to the file:
  * the first minute's keep (`gardenKeepFirst`) is sent only by the action
@@ -39,6 +41,9 @@ const HOLDERS = [
   ...filesUnder(join(APP, 'features')),
   join(APP, 'app.contract'),
   join(APP, 'app.ts'),
+  ...readdirSync(APP)
+    .filter((name) => name.endsWith('.test.contract'))
+    .map((name) => join(APP, name)),
 ];
 
 const PLACE = firstPlace();
