@@ -226,13 +226,14 @@ describe('the key button’s press, against the current app’s', () => {
     let t = 0;
     for (let run = 0; run < 300; run++) {
       const offered = random() < 0.7;
-      const setup = { wheel: offered, ear: false, origin };
+      const ear = random() < 0.5;
+      const setup = { wheel: offered, ear, origin };
       t += below(random, 1000);
       for (let k = 0; k < 30; k++) {
         t += pick(random, [0, 16, 50, 120, 200, 360, 600]);
         const [call, event, next] = pressOf(random, t, setup, at);
         at = next;
-        const got = press0.keysPress([call[0], call[1], call[2], t, offered]);
+        const got = press0.keysPress([call[0], call[1], call[2], t, offered, ear]);
         const want = press.step(theirs, event);
         theirs = want.wheel;
         const item = (tag: string) =>
@@ -265,24 +266,40 @@ describe('the key button’s press, against the current app’s', () => {
 
   test('a hold opens the wheel with the current app’s words; a slide picks; a slide before the hold is a swipe', () => {
     const { keysPress } = keysSources(book, []);
-    keysPress(['down', 35, 22, 0, true]);
-    const open = keysPress(['tick', 0, 0, press.HOLD, true]);
+    keysPress(['down', 35, 22, 0, true, false]);
+    const open = keysPress(['tick', 0, 0, press.HOLD, true, false]);
     expect(open.open).toBe(true);
     expect(open.items.map((each) => each.word)).toEqual(['Key ♭', 'Key ♯', 'Reset', 'Chords off']);
     const slot = press.slotOf('keyUp');
-    const entered = keysPress(['pan', slot.x, slot.y, press.HOLD + 50, true]);
+    const entered = keysPress(['pan', slot.x, slot.y, press.HOLD + 50, true, false]);
     expect(entered.enter).toBe('keyUp');
-    const picked = keysPress(['up', 0, 0, press.HOLD + 80, true]);
+    const picked = keysPress(['up', 0, 0, press.HOLD + 80, true, false]);
     expect([picked.pick, picked.open, picked.swipe]).toEqual(['keyUp', false, false]);
-    keysPress(['down', 35, 22, 1000, true]);
-    const tapped = keysPress(['up', 0, 0, 1100, true]);
+    keysPress(['down', 35, 22, 1000, true, false]);
+    const tapped = keysPress(['up', 0, 0, 1100, true, false]);
     expect([tapped.tap, tapped.swipe]).toEqual([true, false]);
-    keysPress(['down', 35, 22, 2000, true]);
-    keysPress(['pan', 0, -40, 2050, true]);
-    keysPress(['pan', 0, -30, 2080, true]);
-    const swiped = keysPress(['up', 0, -900, 2100, true]);
+    keysPress(['down', 35, 22, 2000, true, false]);
+    keysPress(['pan', 0, -40, 2050, true, false]);
+    keysPress(['pan', 0, -30, 2080, true, false]);
+    const swiped = keysPress(['up', 0, -900, 2100, true, false]);
     expect([swiped.tap, swiped.swipe, swiped.pull, swiped.speed]).toEqual([false, true, -70, -900]);
-    keysPress(['down', 35, 22, 3000, false]);
-    expect(keysPress(['tick', 0, 0, 3000 + press.HOLD, false]).hold).toBe(true);
+    keysPress(['down', 35, 22, 3000, false, false]);
+    expect(keysPress(['tick', 0, 0, 3000 + press.HOLD, false, false]).hold).toBe(true);
+  });
+
+  test('with the ear the wheel offers the Tuner first, and a slide onto it picks it', () => {
+    const { keysPress } = keysSources(book, []);
+    keysPress(['down', 35, 22, 0, true, true]);
+    const open = keysPress(['tick', 0, 0, press.HOLD, true, true]);
+    expect(open.items.map((each) => each.word)).toEqual([
+      'Tuner',
+      'Key ♭',
+      'Key ♯',
+      'Reset',
+      'Chords off',
+    ]);
+    const slot = press.slotOf('tuner');
+    expect(keysPress(['pan', slot.x, slot.y, press.HOLD + 50, true, true]).enter).toBe('tuner');
+    expect(keysPress(['up', 0, 0, press.HOLD + 80, true, true]).pick).toBe('tuner');
   });
 });

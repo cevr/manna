@@ -148,6 +148,8 @@ export const eventOf = (kind: string, value: number): thumb.ThumbEvent | undefin
       return thumb.ThumbEvent.Reset();
     case 'shown':
       return thumb.ThumbEvent.ResetShown();
+    case 'tune':
+      return thumb.ThumbEvent.Tune();
     case 'key':
       return thumb.ThumbEvent.TurnKey({ pitch: value });
     case 'step':
@@ -204,6 +206,7 @@ const pressEventOf = (
   y: number,
   t: number,
   offered: boolean,
+  ear: boolean,
   at: { readonly x: number; readonly y: number },
 ): press.WheelEvent => {
   switch (kind) {
@@ -212,7 +215,7 @@ const pressEventOf = (
         x,
         y,
         t,
-        setup: { wheel: offered, ear: false, origin: ORIGIN },
+        setup: { wheel: offered, ear, origin: ORIGIN },
       });
     case 'pan':
       return press.WheelEvent.Move({ x: at.x + x, y: at.y + y, t });
@@ -307,15 +310,16 @@ export const keysSources = (
         wait: event._tag === 'Reset' && !thumb.isStill(state.move) && next.state.open,
       };
     },
-    keysPress: ([kind, x, y, t, offered]: readonly [
+    keysPress: ([kind, x, y, t, offered, ear]: readonly [
       string,
       number,
       number,
       number,
       boolean,
+      boolean,
     ]): PressView => {
       const was = held.wheel;
-      const event = pressEventOf(kind, x, y, t, offered, held.at);
+      const event = pressEventOf(kind, x, y, t, offered, ear, held.at);
       if (event._tag === 'Down') {
         held.at = { x, y };
         held.pull = 0;

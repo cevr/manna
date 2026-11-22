@@ -118,6 +118,7 @@ describe('the data module runs where Exact runs it', () => {
             below(random, 200) - 100,
             run * 40,
             random() < 0.5,
+            random() < 0.5,
           ]),
         ).not.toThrow();
         expect(() =>
