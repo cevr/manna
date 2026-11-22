@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, effect/noTernary, effect/noNewError, effect/noThrowStatement, no-await-in-loop -- a model test over the port's sources: each step's call is awaited in turn as Exact asks them, the storage stand-in answers and refuses with promises as Exact's does, the generated events are plain data picked by plain branches, and One's absent start is `null` as its reducer takes it. */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noNewPromise, effect/noTernary, effect/noNewError, no-await-in-loop -- a model test over the port's sources: each step's call is awaited in turn as Exact asks them, the storage stand-in answers and refuses with promises as Exact's does, the generated events are plain data picked by plain branches, and One's absent start is `null` as its reducer takes it. */
 
 /**
  * The first verse held from Planted as an ordinary single verse (q175),
