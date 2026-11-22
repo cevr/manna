@@ -63,6 +63,7 @@
     "./player/sound": "./src/player/sound.ts",
     "./player/tempo": "./src/player/tempo.ts",
     "./player/countin": "./src/player/countin.ts",
+    "./player/recording": "./src/player/recording.ts",
     "./player/caption": "./src/player/caption.ts",
     "./reader/reading": "./src/reader/reading.ts",
     "./home/find-rules": "./src/home/find-rules.ts",
