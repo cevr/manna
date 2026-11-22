@@ -135,8 +135,10 @@ export type FirstScreen = Phase | 'replay-welcome' | 'replay-grows' | 'home' | '
  * What the launch shows, as the current root decides it (`app/index.tsx`,
  * `Root`): the first minute's phase while the opening is `first` and its
  * Continue has not been tapped, else home in the tour's state. The Contract
- * composes the same rule as `firstWanted` (features/first.contract), held
- * to it by `flow.model.test.ts`.
+ * composes the same rule as `firstWanted` (features/first.contract) for a
+ * launch at the Garden tab's root, the one the current app has, its
+ * `first` opening being `firstOpened` there; `flow.model.test.ts` holds
+ * this rule to the current root.
  */
 export const screenOf = (shown: FirstShown, opening: Opening): FirstScreen => {
   if (opening === 'first' && !shown.continued) return shown.phase;
