@@ -1,8 +1,9 @@
-/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a hymn the bundle has no chords for is undefined. */
+/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a hymn whose chords are not here is undefined. */
 
 /**
- * The player sheet's sources, as `app.ts` registers them over the shipped
- * chords (`chords.gen.ts`, decoded only for the hymn asked):
+ * The player sheet's sources, as `app.ts` registers them over the hymns'
+ * chords in `encoded` (one string per hymn, read on first use,
+ * `src/chords/load.ts`, decoded only for the hymn asked):
  *
  * - `sheetPlacement(n, kept, global)`: the placement dial for hymn `n`
  *   (`placementDialOf`), shown only for a hymn with chords, as the current
@@ -15,8 +16,7 @@ import { decodeHymn, hasChords } from '@manna/hymnal-app/hymns/chords';
 
 import { keptWith, placementDialOf } from './placement.ts';
 
-export const sheetSources = (bundled: ReadonlyArray<readonly [number, string]>) => {
-  const encoded = new Map(bundled);
+export const sheetSources = (encoded: ReadonlyMap<number, string>) => {
   const chorded = (number: number): boolean => {
     const text = encoded.get(number);
     if (text === undefined) return false;

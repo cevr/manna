@@ -21,9 +21,9 @@ import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { moveOf, movesTo } from './move.ts';
 import type { ChordsPage } from './page.ts';
-import { bundled, currentBook, shownByCurrent, shownByPort } from './shipped.testing.ts';
+import { currentBook, encoded, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
-const sources = sourcesAt('https://hymns.cvr.im', [], bundled);
+const sources = sourcesAt('https://hymns.cvr.im', [], encoded);
 
 const chorded = book.hymns.flatMap((hymn) => {
   const chords = currentBook.of(hymn.number);

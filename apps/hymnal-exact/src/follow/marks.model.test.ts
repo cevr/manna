@@ -21,14 +21,14 @@ import { sectionsOf } from '@manna/hymnal-app/hymns/chords';
 import { firstLines, wordStarts } from '@manna/hymnal-app/reader/sung-lines';
 import { readTiming } from '@manna/hymnal-app/vite/timing';
 
-import { bundled, currentBook } from '../chords/shipped.testing.ts';
+import { currentBook, encoded } from '../chords/shipped.testing.ts';
 import { book } from '../hymns/book.ts';
 import type { PageLine } from '../hymn/page.ts';
 import { hymnSources } from '../hymn/sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { sungOf } from './marks.ts';
 
-const { hymnPage } = hymnSources(book, bundled);
+const { hymnPage } = hymnSources(book, encoded);
 const timing = new Map(readTiming());
 
 /** 1 when `mark` is a syllable of `line`, 0 for a line lit whole or a rest; a syllable the line does not draw throws. */

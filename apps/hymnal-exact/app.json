@@ -109,7 +109,8 @@
       "deviceFamily": ["iphone", "ipad"],
       "resources": [
         { "from": "meaning", "to": "Resources/meaning" },
-        { "from": "timing", "to": "Resources/timing" }
+        { "from": "timing", "to": "Resources/timing" },
+        { "from": "chords", "to": "Resources/chords" }
       ],
       "backgroundModes": ["audio"]
     }

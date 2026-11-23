@@ -82,7 +82,11 @@ const NAMED = ['1-1-1', '1-1-6', '1-1-7'];
 
 /** Hymn 2's first stanza as the source answers it with chords on: each line's words' pairs, by their ids' `k-i-j`. */
 const stanza = (() => {
-  const page = sourcesAt('https://hymns.cvr.im', [], readChords()).chordsPage([HYMN, true, []]);
+  const page = sourcesAt('https://hymns.cvr.im', [], new Map(readChords())).chordsPage([
+    HYMN,
+    true,
+    [],
+  ]);
   const lines = page.parts[0]?.lines ?? [];
   return lines.map((line) =>
     line.words.map((word) =>

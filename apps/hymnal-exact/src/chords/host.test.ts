@@ -4,10 +4,10 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
 import { book } from '../hymns/book.ts';
 import { below, pick, seeded } from '../test/random.ts';
-import { bundled } from './shipped.testing.ts';
+import { encoded } from './shipped.testing.ts';
 import { chordsSources } from './sources.ts';
 
-const sources = chordsSources(book, bundled);
+const sources = chordsSources(book, encoded);
 
 const GRIP_TOKENS = ['Db_0', 'Fs_5m7-b', 'Bbm_0_7', '', 'C', 'Es_0', 'C_zz', 'G_0-1-2'] as const;
 

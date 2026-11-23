@@ -18,10 +18,10 @@ import { book } from '../hymns/book.ts';
 import { pageAt } from '../hymn/page.ts';
 import { sourcesAt } from '../sources.ts';
 import type { ChordsPage } from './page.ts';
-import { bundled, shownByCurrent, shownByPort } from './shipped.testing.ts';
+import { bundled, encoded, shownByCurrent, shownByPort } from './shipped.testing.ts';
 import { chordsSources } from './sources.ts';
 
-const sources = sourcesAt('https://hymns.cvr.im', [], bundled);
+const sources = sourcesAt('https://hymns.cvr.im', [], encoded);
 
 const bytes = (value: ChordsPage) => new TextEncoder().encode(JSON.stringify(value)).length;
 
@@ -83,7 +83,7 @@ describe('a hymn’s own placement is the current app’s', () => {
 describe('the chords are light (A4)', () => {
   test('with chords off, or on a route that names no hymn, the source decodes nothing', () => {
     let decodes = 0;
-    const counted = chordsSources(book, bundled, (encoded, placement) => {
+    const counted = chordsSources(book, encoded, (encoded, placement) => {
       decodes += 1;
       return decodeHymn(encoded, placement);
     });

@@ -5,8 +5,9 @@
  * recordings are served from `origin` (held to the bucket or a loopback
  * fixture by `originOf`) and its stanzas timed by `timing` (`app.ts` passes
  * the written `src/player/timing.gen.ts`); the chords are `chords`, one
- * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
- * `nearest` is each hymn's More like this (the written
+ * string per hymn by number (`app.ts` passes its loader's, which reads each
+ * hymn's the first time a source needs them, `src/chords/first-use.ts`; a
+ * test passes what the build ships); `nearest` is each hymn's More like this (the written
  * `src/abouthymn/nearest.gen.ts`). The player and Downloads share one store
  * of saved recordings (`src/offline/sources.ts`), and the follow and the
  * timing's source one loader of the hymns' words' times (`src/timing/`).
@@ -36,7 +37,7 @@ import { timingSources } from './timing/sources.ts';
 export const sourcesAt = (
   origin: string,
   timing: ReadonlyArray<readonly [number, string]>,
-  chords: ReadonlyArray<readonly [number, string]> = [],
+  chords: ReadonlyMap<number, string> = new Map(),
   nearest: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [],
 ) => {
   const recordings = originOf(origin);

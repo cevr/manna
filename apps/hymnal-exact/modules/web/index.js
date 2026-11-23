@@ -249,10 +249,40 @@ const timing = {
   },
 };
 
+/** How often each shipped file was asked for, by its address: a read after a refused one imports it afresh. */
+const shippedTries = new Map();
+
+/**
+ * The shipped folders' ops (`src/shipped/load.ts`): `<folder>.read { n }`
+ * answers the text of the file `n` the web build ships beside this module
+ * (`<folder>/<n>.js`, written by `src/shipped/files.ts`), imported the
+ * first time the data module asks, as the iOS app reads its file
+ * (`bundle:/Resources/<folder>/<n>`). A name that is no plain word, or a
+ * file that is not there, is refused; the browser keeps a failed import by
+ * its address, so each later try asks a new one.
+ */
+const shipped = Object.fromEntries(
+  ['chords'].map((folder) => [
+    `${folder}.read`,
+    async (request) => {
+      const n = String(request.n ?? '');
+      if (!/^[a-z0-9]+$/.test(n)) throw new Error(`no ${folder} file ${request.n}`);
+      const path = `./${folder}/${n}.js`;
+      const tries = shippedTries.get(path) ?? 0;
+      shippedTries.set(path, tries + 1);
+      const url = new URL(path, import.meta.url);
+      if (tries > 0) url.searchParams.set('try', String(tries));
+      const file = await import(url.href);
+      if (file.default === undefined) throw new Error(`no ${folder} file ${n}`);
+      return { text: String(file.default) };
+    },
+  ]),
+);
+
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op];
+  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

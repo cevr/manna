@@ -25,7 +25,7 @@ import { chordStyles } from '@manna/hymnal-app/chord-choices';
 import * as thumb from '@manna/hymnal-app/player/thumb';
 import * as press from '@manna/hymnal-app/player/wheel';
 
-import { bundled, currentBook } from '../chords/shipped.testing.ts';
+import { currentBook, encoded } from '../chords/shipped.testing.ts';
 import { moveOf } from '../chords/move.ts';
 import { book } from '../hymns/book.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
@@ -122,7 +122,7 @@ const pressOf = (
 
 const tagsOf = (cues: ReadonlyArray<{ readonly _tag: string }>) => cues.map((cue) => cue._tag);
 
-const sources = keysSources(book, bundled);
+const sources = keysSources(book, encoded);
 
 describe('the key button’s sources, against the current app’s model', () => {
   test('the hymnal prints its hymns in more than one key, and some hymns have no chords', () => {
@@ -218,7 +218,7 @@ describe('the key button’s sources, against the current app’s model', () => 
 describe('the key button’s press, against the current app’s', () => {
   test('generated presses through keysPress make the current app’s taps, holds, enters, picks and wheel', () => {
     const random = seeded(41);
-    const press0 = keysSources(book, []);
+    const press0 = keysSources(book, new Map());
     const origin = { x: press.ORIGIN_X - 12, y: 22 };
     let seen = { tap: 0, hold: 0, enter: 0, pick: 0 };
     let theirs: press.Wheel = press.idle;
@@ -265,7 +265,7 @@ describe('the key button’s press, against the current app’s', () => {
   });
 
   test('a hold opens the wheel with the current app’s words; a slide picks; a slide before the hold is a swipe', () => {
-    const { keysPress } = keysSources(book, []);
+    const { keysPress } = keysSources(book, new Map());
     keysPress(['down', 35, 22, 0, true, false]);
     const open = keysPress(['tick', 0, 0, press.HOLD, true, false]);
     expect(open.open).toBe(true);
@@ -288,7 +288,7 @@ describe('the key button’s press, against the current app’s', () => {
   });
 
   test('with the ear the wheel offers the Tuner first, and a slide onto it picks it', () => {
-    const { keysPress } = keysSources(book, []);
+    const { keysPress } = keysSources(book, new Map());
     keysPress(['down', 35, 22, 0, true, true]);
     const open = keysPress(['tick', 0, 0, press.HOLD, true, true]);
     expect(open.items.map((each) => each.word)).toEqual([
