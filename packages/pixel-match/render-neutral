@@ -1,0 +1,89 @@
+9023eb142ca3 move: the hymn page's headLine, unchanged, from reader/HymnPage.tsx into reader/head-line.ts; an exports line for it and hymns/indexes
+a9cfb06d2db0 move: passageText and passageQuery, unchanged, from hymns/indexes.ts into hymns/passage-text.ts, re-exported from indexes; head-line imports it there
+7bdc38b7a953 move: STAGE_NAMES, unchanged, from app/index.tsx into src/garden/names.ts; an exports line whose types are the port's declaration
+4e992f83b0e7 move: the player's caption, the same eight lines for the same states, from FullPlayer.tsx's Player.$match into player/caption.ts's captionOf; an exports line for it
+4412fe6dab04 exports: one exports line in apps/hymnal/package.json (./reader/reading); no source changes
+ea182e8d146d exports: one exports line in apps/heartseed/package.json (./first/flow, its openingOf), a declaration whose types are the port's and its line in exact-declared.test.ts; no source changes
+fd197e420cab move: About's 'Version ' text, unchanged, from about/screen.tsx's JSX into about/version.ts's VERSION_PREFIX, the Text keeping its two children; an exports line whose types are the port's declaration
+ad8529417032 move: the credit's head template and its closing '.', unchanged, from about.tsx's Credit into credit.ts (creditHead, CREDIT_END), Credit keeping its three children; an exports line
+9e51c6d5fe21 exports: one exports line in apps/hymnal/package.json (./reader/rail-marks); no source changes
+7001b407b430 move: About this hymn's MORE_LIKE and its four section names, unchanged, from About.tsx into reader/about-rules.ts (ABOUT_GROUPS), each Group keeping its name; exports lines for it and hymns/meaning
+285f35cee93c move: the chordStyles list from settings.tsx and placements from settings.ts, unchanged values, into chord-choices.ts; settings.tsx, PlacementDial.tsx and a slow test import it there
+5e8896cbba12 move: About's Gemma notice words, its two addresses and the Terms button's label, unchanged, from about.tsx's JSX into gemma-notice.ts (GEMMA_NOTICE), the notice's Text keeping its five children
+7f48f02da8c2 exports: one exports line in apps/hymnal/package.json (./chord-choices); no source changes
+70b7bef84eac exports: one exports line in apps/hymnal/package.json (./gemma-notice); no source changes
+681f9dfdafbc exports: one exports line in apps/hymnal/package.json (./meaning/gemma-terms, the Terms asset); no source changes
+c82f7e9ebeb6 exports: one exports line in apps/hymnal/package.json (./player/button); One's only change in the commit
+4c6b055a91be merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+d01c2d92b3cf merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+954355a15d4b merge: apps/hymnal/package.json's exports lines of both sides kept, and About.tsx and about-rules.ts as 7001b407b430 left them; no source changes of its own
+9aa9fb892a0a exports: one exports line in apps/hymnal/package.json (./reader/pager); no source changes
+6a46e22a8ffb merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+4d1d848cefff exports: one exports line in apps/hymnal/package.json (./reader/rows); no source changes
+1aacd1c5995b move: All at once's tilesOf call over the playing number, unchanged, from AllAtOnce.tsx into home/tabs.ts's tilesFor; its declaration and held line in exact-home-declarations.ts
+7502f91cf966 move: a tile's count words and VoiceOver name, unchanged, from AllAtOnce.tsx's TileView into home/tabs.ts (tileCount, tileName); their declarations and held lines
+6fcb95e808aa test: exact-find-declarations.ts holds the port's new rows and foundOffset declarations; no source changes
+b1dde6a90fa5 declaration: tilesOf declared in exact/home/tabs.d.ts for the port's test, and a note in exact-home-declarations.ts; no source changes
+221c69843541 move: meaning search's rule, unchanged, from hymns/meaning.ts into hymns/meaning-rule.ts over a table it is handed; meaning.ts keeps every export over the shipped table
+dc8efe8b2473 exports: one exports line in apps/hymnal/package.json (./hymns/meaning-rule); no source changes
+a8d2ca532f2e test: exact-find-declarations.ts holds the port's meaning-rule declaration; no source changes
+3f538c9e0248 merge: origin/main into hymnapp/par-hy-results: apps/hymnal/package.json's exports lines of both sides kept, and the listed moves of both sides; no source changes of its own
+7a52f6793e76 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+45917c380eb2 imports: player/thumb.ts reads Cue, plain, keyName, Move, playedKey, soundingKey and still by relative path (../feel/cues, which ~/feel/cue re-exports, and ../hymns/chords); the same values, no source line else
+54fc3fd84c2b exports: one exports line in apps/hymnal/package.json (./player/thumb); no source changes
+867880c5d09a exports: one exports line in apps/hymnal/package.json (./player/wheel); no source changes
+dd224a16edb2 exports: one exports line in apps/hymnal/package.json (./player/wheelmotion); no source changes
+b5d4d3b13f3a move: the key wheel's WORDS, unchanged, from KeyWheel.tsx into wheel.ts, KeyWheel's Pill reading it there
+1931651bb79f move: the dials' RESET_WAIT, unchanged (600), from Dials.tsx into thumb.ts, Dials reading and re-exporting it
+6ec1b54858d7 merge: apps/hymnal/package.json's exports lines of both sides kept, and par-hy-settings' listed moves as main left them; no source changes of its own
+905862c69aea merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-results' and this unit's), and the moves listed above as they were; no source changes of its own
+1cb284fc36d8 merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+31f4e3a1b895 exports: one exports line in apps/hymnal/package.json (./player/sound, the score clock, for the port's clock model test); no source changes
+455902e59d7a move: Heartseed's first minute's words (the welcome's, how a verse grows', each phase's COPY, ONWARD, the pills', the replay's two labels), unchanged, from intro.tsx, screen.tsx, field/screen.tsx and settings/sheet.tsx into first/words.ts
+eb9b55b88936 move: Heartseed's TIPS, unchanged, from field/tips.tsx into field/tip-words.ts, re-exported from tips.tsx
+23a45d9b24ef move: Heartseed's first verse's query and the field's own row (PASSAGES), unchanged, from vite/passage.ts and app/index.tsx into first/verse.ts
+0529e37d91dd exports: Heartseed's exports lines ./first/tour, ./first/growth, ./first/words, ./first/verse, ./field/tips and the declarations for them and for flow's reducer; no source changes
+d39aa185b3fd refactor: Heartseed's first/verse.ts imports nothing and types its own row by its own OwnPassage (the declaration with it); no value or render changes
+e217201fabee exports: two exports lines in apps/hymnal/package.json (./player/tempo and ./player/countin, the tempo dial's and the count-in's rules, for the port's player); no source changes
+0c9b563efeb2 exports: one exports line in apps/hymnal/package.json (./player/recording, the key fallback, for the port's source test); no source changes
+2d96b08723a4 move: Move back's reducer (NAMED, Bar, Happened, IDLE, barAfter), unchanged, from garden/back.tsx into garden/bar.ts, back.tsx importing it, and its exports line; no behaviour change
+eb9a4dd3b581 move: Move back's three lines (askLine, movedLine, alertLine) and Today's footer offer of it (offersBack), unchanged, from garden/back.tsx and app/index.tsx into garden/bar.ts; no behaviour change
+df3ebef96abb move: the reading section's font and spacing labels, its size share and the serif's families, unchanged, from ReadingSheet.tsx and pageText.ts into reader/reading-choices.ts, both reading them; an exports line for it
+5ec9ac9706ca move: the reading view's LONG_PRESS (350) and its hold's activate, move, end and drop rule, unchanged, from reading/view.tsx into reading/hold.ts, the view calling it in the same order
+6353b4e317d9 exports: two exports lines in apps/heartseed/package.json (./reading/hold, ./reading/words) and voice/reading's machine declared, each held by exact-declared.test.ts; no source changes
+e1c8b607319f declare: home/tabs's groupAt declared in exact/home/tabs.d.ts for the port's aim property test, held by exact-home-declarations.ts; no source changes
+1a6e549d633d merge: apps/hymnal/package.json's exports lines of both sides kept; no source changes
+77a7280d1776 merge: apps/heartseed/package.json's exports lines of both sides kept (par-hs-seek's ./reading/hold and ./reading/words, this unit's ./garden/bar); no source changes
+14f9d2c332ce move: the held seek's pure rules (HOLD_MS to LINE_CHOSEN, contactAfter) from reader/word-seek.ts into reader/seek-rules.ts, re-exported by word-seek.ts, and the intro's share and readingOf from follow/intro.ts into follow/intro-rules.ts, introOf calling it; values unchanged
+d25b9ed183c8 exports: five exports lines in apps/hymnal/package.json (./follow/follower, ./follow/marks, ./follow/clock, ./follow/intro-rules, ./reader/seek-rules); no source changes
+5934df34a375 declare: seek-rules re-exports initialTarget, targetAt, targetsOf and their types from follow/seek-targets, introAt takes the place as a number (introOf flat-maps its option into it), and exact/follow/timeline.d.ts declares placeAt, held by test/exact-declarations.ts; values unchanged
+be1866670bea move: numbersOf (the held seek's accessible value) from reader/HymnPage.tsx into reader/seek-rules.ts, re-exported by word-seek.ts; text unchanged
+a7aa0d5ea783 move: reportOf from follow/follow.tsx into follow/report.ts, and the ./follow/report exports line; text unchanged
+ee3eaa99bd9c move: firstLines from reader/HymnPage.tsx and wordStarts from reader/SyllableWords.tsx into reader/sung-lines.ts, and the ./reader/sung-lines exports line; text unchanged
+a9090ceaf658 move: a saved recording's identity, storages, CHUNK and mediaHeader, unchanged, from offline/cache.ts into offline/identity.ts (cache.ts re-exporting them), and Downloads.tsx's every line and name into offline/words.ts, the leaf drawing the same strings
+f39b2ca17b22 exports: five exports lines in apps/hymnal/package.json (./offline/identity, ./offline/words, ./offline/estimate, ./offline/cache, ./player/offline); no source changes
+e7a80f5c0ef9 move: offline/identity.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+48ae1f83f5fd move: offline/cache.ts imports soundingOffset from '../remote' rather than '~/remote', the same module; no value changes
+e57c009af511 move: offline/estimate.ts imports timelineOf from '../follow/timeline' rather than '~/follow/timeline', the same module; no value changes
+0ff6c2aac1fd merge: origin/main into par-hs-first; One's exports lines and declarations of both sides kept (par-hs-back's and par-hs-seek's beside this unit's ./first/*), the duplicate imports of exact-declared.test.ts dropped; no source changes
+bf790776af54 move: Heartseed's first verse's query (FIRST_VERSE), unchanged, from src/first/verse.ts into vite/first-verse.ts, re-exported by first/verse.ts and read by vite/passage.ts; no value or render changes
+4b0d079dae13 move: the tuner screen's pure rules (noteOf, LABEL_EVERY 1000, LOWEST E2, pickOf, autoOf, BACK_TO_AUTO, pickedHint, SWING 50, TICKS, ACROSS), unchanged, from Tuner.tsx into src/tuner/screen.ts, Tuner reading them
+16357b5e84a9 exports: one exports line in apps/hymnal/package.json (./vite/app, the native manifest, for the port's microphone purpose test); no source changes
+4ebb14f58776 exports: one exports line in apps/hymnal/package.json (./tuner/pitch, for the port's reading test); no source changes
+3b7453b3736f exports: one exports line in apps/hymnal/package.json (./tuner/focus, for the port's tuner); no source changes
+d7f5ca3ea367 exports: one exports line in apps/hymnal/package.json (./tuner/tuning, for the port's tuner); no source changes
+ba4e34d5b41d exports: one exports line in apps/hymnal/package.json (./tuner/session, for the port's tuner); no source changes
+1f47822b2938 exports: one exports line in apps/hymnal/package.json (./tuner/screen, for the port's tuner); no source changes
+cda98ae25465 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-sheet's and this unit's); no source changes of its own
+ae6c94255283 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tempo's and this unit's); no source changes of its own
+9d7aa2563928 merge: origin/main into par-hy-follow; apps/hymnal/package.json's exports lines of both sides kept, no source changes
+38682ca4d654 merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-tuner's and par-hy-offline's); no source changes of its own
+fecfdfeab64b exports: one exports line in apps/hymnal/package.json (./home/reveal, for the port's pinned tab row); no source changes
+b6d288c624d9 move: PinnedTabs.tsx's slide and fade times, the same 200 and 150 ms, into reveal.ts's revealTimes, which PinnedTabs imports
+d067ca3735dd merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-offline's and this unit's); no source changes of its own
+8d53539e3f70 exports: Heartseed's ./first/verse exports line points at vite/first-verse.ts (the query alone); src/first/verse.ts drops its re-export of the query, ownPassagesOf and its row unchanged; no value or render changes
+69444068fb50 refactor: Move back's Exit-to-answer rule moved unchanged from back.tsx into bar.ts (answerOf), for the port's model test; same values, no picture change
+dcf2f0a97bb4 types: answerOf declared in exact/garden-bar.d.ts and held to its source by scripts/exact-declared.test.ts; no source changes
+7c3f55655e29 merge: origin/main into par-hy-follow; apps/hymnal/package.json's exports lines of both sides kept, no source changes
+ea3952b5378f merge: apps/hymnal/package.json's exports lines of both sides kept (par-hy-follow's and this unit's); no source changes of its own
+51c9a51059cb exports: src/player/bar.ts's SHEETS gains `export` (and its declaration in exact/player/bar.d.ts), for the port's player-paths check; same value, no behaviour change

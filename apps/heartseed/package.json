@@ -12,6 +12,42 @@
       "types": "./exact/garden.d.ts",
       "default": "./src/garden.ts"
     },
+    "./garden/names": {
+      "types": "./exact/stage-names.d.ts",
+      "default": "./src/garden/names.ts"
+    },
+    "./garden/bar": {
+      "types": "./exact/garden-bar.d.ts",
+      "default": "./src/garden/bar.ts"
+    },
+    "./about/version": {
+      "types": "./exact/about-version.d.ts",
+      "default": "./src/about/version.ts"
+    },
+    "./first/flow": {
+      "types": "./exact/first-flow.d.ts",
+      "default": "./src/first/flow.ts"
+    },
+    "./first/tour": {
+      "types": "./exact/first-tour.d.ts",
+      "default": "./src/first/tour.ts"
+    },
+    "./first/growth": {
+      "types": "./exact/first-growth.d.ts",
+      "default": "./src/first/growth.ts"
+    },
+    "./first/words": {
+      "types": "./exact/first-words.d.ts",
+      "default": "./src/first/words.ts"
+    },
+    "./first/verse": {
+      "types": "./exact/first-verse.d.ts",
+      "default": "./vite/first-verse.ts"
+    },
+    "./field/tips": {
+      "types": "./exact/tips.d.ts",
+      "default": "./src/field/tip-words.ts"
+    },
     "./sayit": {
       "types": "./exact/sayit.d.ts",
       "default": "./src/sayit.ts"
@@ -63,6 +99,14 @@
     "./voice/reading": {
       "types": "./exact/reading.d.ts",
       "default": "./src/voice/reading.ts"
+    },
+    "./reading/hold": {
+      "types": "./exact/reading-hold.d.ts",
+      "default": "./src/reading/hold.ts"
+    },
+    "./reading/words": {
+      "types": "./exact/reading-words.d.ts",
+      "default": "./src/reading/words.ts"
     },
     "./voice": {
       "types": "./exact/voice.d.ts",
@@ -347,7 +391,7 @@
     "@manna/core": "workspace:*",
     "@react-navigation/native": "8.0.0-alpha.51",
     "effect": "catalog:",
-    "one": "2.15.1",
+    "one": "2.22.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-native": "0.88.1",

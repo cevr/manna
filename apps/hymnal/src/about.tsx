@@ -15,11 +15,13 @@ import { Linking, Pressable, StyleSheet, Text, View, type ColorValue } from 'rea
 
 import { gemmaTerms } from '../assets/meaning/gemma-terms.js';
 import { color, useAccent } from '~/color';
+import { CREDIT_END, creditHead } from '~/credit';
+import { GEMMA_NOTICE } from '~/gemma-notice';
 
 function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: ColorValue }) {
   return (
     <Text style={styles.credit} dynamicTypeRamp="body">
-      {`${line.part}: ${line.work} by ${line.author}, `}
+      {creditHead(line)}
       {Option.match(Option.fromUndefinedOr(line.licenceUrl), {
         onNone: () => line.licence,
         onSome: (url) => (
@@ -28,13 +30,10 @@ function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: 
           </Text>
         ),
       })}
-      .
+      {CREDIT_END}
     </Text>
   );
 }
-
-const GEMMA_TERMS = 'https://ai.google.dev/gemma/terms';
-const GEMMA_POLICY = 'https://ai.google.dev/gemma/prohibited_use_policy';
 
 /**
  * The notice the Gemma Terms of Use ask of a work made from a Gemma model
@@ -50,12 +49,11 @@ function GemmaNotice({ accent }: { readonly accent: ColorValue }) {
   );
   return (
     <Text style={styles.credit} dynamicTypeRamp="body">
-      {
-        'Hymns about this and More like this: a word table and hymn vectors made from EmbeddingGemma by Google, a Gemma model, and modified (cut to 4 and 8 bits). Gemma is provided under and subject to the Gemma Terms of Use found at '
-      }
-      {link(GEMMA_TERMS, 'ai.google.dev/gemma/terms')}
-      {'. Their use is subject to the restrictions of the '}
-      {link(GEMMA_POLICY, 'Gemma Prohibited Use Policy')}.
+      {GEMMA_NOTICE.lead}
+      {link(GEMMA_NOTICE.termsUrl, GEMMA_NOTICE.terms)}
+      {GEMMA_NOTICE.between}
+      {link(GEMMA_NOTICE.policyUrl, GEMMA_NOTICE.policy)}
+      {GEMMA_NOTICE.end}
     </Text>
   );
 }
@@ -72,13 +70,13 @@ function GemmaTerms({ accent }: { readonly accent: ColorValue }) {
       <Pressable
         testID="gemma-terms"
         role="button"
-        aria-label="Gemma Terms of Use"
+        aria-label={GEMMA_NOTICE.termsButton}
         aria-expanded={open}
         onPress={() => setOpen((was) => !was)}
         hitSlop={8}
       >
         <Text style={[styles.credit, { color: accent }]} dynamicTypeRamp="body">
-          Gemma Terms of Use
+          {GEMMA_NOTICE.termsButton}
         </Text>
       </Pressable>
       {open && (

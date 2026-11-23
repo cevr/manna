@@ -17,6 +17,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { Grown } from '@manna/heartseed/home/grown';
 import { endMotionOf, MOTION } from '@manna/heartseed/home/motion';
+import { GROWTH } from '@manna/heartseed/first/growth';
 import { SAYIT_MOTION } from '@manna/heartseed/sayit/motion';
 
 import { readBrand, readContracts } from '../../tools/look';
@@ -29,6 +30,7 @@ const TOKENS = {
   'duration.rise': '250ms',
   'duration.ask': '200ms',
   'duration.pulse': '1200ms',
+  'duration.grow': '6900ms',
   'easing.out': 'cubic-bezier(0.23, 1, 0.32, 1)',
   'easing.pulse': 'cubic-bezier(0.5, 1, 0.89, 1)',
 } as const;
@@ -206,9 +208,15 @@ const namedBy = (row: Row, theme: ReadonlyMap<string, string>) =>
     .filter((word) => theme.has(word))
     .map((name) => ({ name, value: resolved(theme, name) }));
 
-/** The listening loop's ring: the one row that may run past 250 ms. */
+/** The two loops' own tokens: the listening ring's and the welcome's growing seed's. */
+const LOOPS: ReadonlySet<string> = new Set(['duration.pulse', 'duration.grow']);
+
+/** A row of the two loops, the listening ring and the welcome's growing seed: the rows that may run past 250 ms. */
 const isLoop = (row: Row, name: string) =>
-  name === 'duration.pulse' && /"hs-pulse duration\.pulse easing\.pulse infinite"/u.test(row.value);
+  (name === 'duration.pulse' &&
+    /"hs-pulse duration\.pulse easing\.pulse infinite"/u.test(row.value)) ||
+  (name === 'duration.grow' &&
+    /"hs-grow-(?:seed|blade|ear|corn) duration\.grow linear infinite"/u.test(row.value));
 
 /** Each token a row names that runs past 250 ms (the loop apart) or overshoots. */
 const timingFaults = (checked: readonly Row[], theme: ReadonlyMap<string, string>) =>
@@ -226,8 +234,7 @@ const tokenFaults = (theme: ReadonlyMap<string, string>) =>
   [...theme.keys()]
     .map((name) => ({ name, value: resolved(theme, name) }))
     .filter(
-      ({ name, value }) =>
-        (timeOf(value) > LONGEST_MS && name !== 'duration.pulse') || overshoots(value),
+      ({ name, value }) => (timeOf(value) > LONGEST_MS && !LOOPS.has(name)) || overshoots(value),
     )
     .map(({ name, value }) => `${name} = ${value}`);
 
@@ -242,6 +249,10 @@ describe('the motion tokens', () => {
       SAYIT_MOTION.light,
       SAYIT_MOTION.pulse,
     ]);
+  });
+
+  it("the growing seed's cycle is the current welcome's", () => {
+    expect(msOf(tokens.get('duration.grow'))).toBe(GROWTH.cycle);
   });
 
   it('the ring grows as the current ring does', () => {
@@ -284,9 +295,16 @@ describe('the Contract names its timings by token', () => {
 
   it('every press scales to 0.97', () => {
     const scales = [...contracts.values()].flatMap((text) =>
-      [...text.matchAll(/-exact-press-scale=(\S+)/gu)].map((match) => Number(match[1])),
+      [...text.matchAll(/-exact-press-scale=(\S+)/gu)].map((match) => {
+        const written = (match[1] ?? '').replaceAll('"', '');
+        const typed = new RegExp(
+          `^\\s+${written.replaceAll('.', '\\.')}:\\s*number\\s*=\\s*(\\S+)`,
+          'mu',
+        );
+        return Number(typed.exec(readBrand())?.[1] ?? written);
+      }),
     );
-    expect(scales.length).toBeGreaterThanOrEqual(2);
+    expect(scales.length).toBeGreaterThanOrEqual(1);
     expect(scales.filter((scale) => scale !== PRESS_SCALE)).toEqual([]);
   });
 
@@ -458,7 +476,7 @@ describe('Heartseed ticks as the hymnal does (q114)', () => {
     });
 
   it("ticking or unticking a verse of the chooser ticks a selection, then the chooser's tap", () => {
-    const action = actions.get(handed('ChooserVersesPage', 'tap'));
+    const action = actions.get(handed('ChapterPage', 'tap'));
     expect(ticks(action)).toBe(true);
     expect(action?.split('\n').slice(1)).toEqual(['    chooserTapIt(verse)']);
   });

@@ -1,18 +1,22 @@
-// About, pushed inside the Settings sheet: what Heartseed is, the KJV's
-// note, and the one row to the licences, whose text tools/licences.ts
-// writes at build from the current Heartseed's own derivation
-// (src/about/licences.ts, answered by `aboutLicences`).
+// About, pushed inside the Settings sheet: the app's name, its version (the
+// current Heartseed's package.json's), and the one row to the licences,
+// whose texts tools/licences.ts writes at build from the current Heartseed's
+// own derivation (src/about/licences.ts, answered by `aboutShown`). Each
+// page is drawn as the current app draws it (src/about/screen.tsx): its
+// heading One's title, its words One's ink, the row to the licences One's
+// row between two hairlines, each licence's text whole in One's licence
+// type; every measure is a token of app.forma (src/look/tokens.ts).
 
 shape AboutLicence
   index: number
-  name: string
   text: string
 
-shape AboutLicences
+shape AboutShown
+  version: string
   licences: AboutLicence[]
 
 members HeartseedExact
-  resource aboutLicences = aboutLicencesOf() when top(nav).name == "settingsLicences" as shape AboutLicences else empty()
+  resource aboutShown = aboutOf() when top(nav).name == "settingsAbout" or top(nav).name == "settingsLicences" as shape AboutShown else empty()
   action aboutOpen
     nav = push(nav, "/settings/about")
   action aboutOpenLicences
@@ -21,18 +25,19 @@ members HeartseedExact
 component AboutPage
   props
     route: number
+    version: string
     licences: action
   view
     column navigationKey=`${route}` navigationScroll="about-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="about"
       header display="flex" align-items="center"
-        text "About" role="heading" aria-level=2 flex=1
-      scroll id="about-scroll" flex=1 min-height=0
-        column gap=16 padding=20
-          text "Heartseed" font="-exact-title2" testId="about-name"
-          text "Heartseed helps you learn verses of Scripture by heart: hear a verse, say it back, and come back to it as it grows." testId="about-line"
-          text "Scripture is from the King James Version, which is in the public domain." color="-exact-secondary-label" testId="about-kjv"
-          button press=licences buttonStyle="bordered" testId="licences-row"
-            text "Licences"
+        text "About" role="heading" aria-level=1 font="type.title" flex=1
+      scroll id="about-scroll" flex=1 min-height=0 testId="about-scroll"
+        column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page"
+          text "Heartseed" font="type.name" testId="about-name"
+          text version font="type.credits" testId="about-version"
+          button press=licences aria-label="Licences" display="flex" flex-direction="row" align-items="center" justify-content="space-between" min-height="size.target" box-sizing="border-box" border-top-width="line.hair" border-bottom-width="line.hair" border-top-style="solid" border-bottom-style="solid" border-top-color="hs.ink" border-bottom-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="licences-row"
+            text "Licences" font="type.body"
+            text "›" font="type.body" aria-hidden=true
 
 component LicencesPage
   props
@@ -41,10 +46,8 @@ component LicencesPage
   view
     column navigationKey=`${route}` navigationScroll="licences-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="licences"
       header display="flex" align-items="center"
-        text "Licences" role="heading" aria-level=2 flex=1
-      scroll id="licences-scroll" flex=1 min-height=0
-        column gap=16 padding=20
+        text "Licences" role="heading" aria-level=1 font="type.title" flex=1
+      scroll id="licences-scroll" flex=1 min-height=0 testId="licences-scroll"
+        column gap="space.s16" padding-top="space.s8" padding-left="space.page" padding-right="space.page"
           for l in licences key=l.index
-            column gap=8
-              text l.name font="-exact-headline" testId=`licence-name-${l.index}`
-              text l.text font="-exact-footnote" white-space="pre-line" overflow-wrap="break-word" testId=`licence-text-${l.index}`
+            text l.text font="type.licence" white-space="pre-wrap" overflow-wrap="break-word" testId=`licence-text-${l.index}`

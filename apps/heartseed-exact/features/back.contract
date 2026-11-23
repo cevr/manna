@@ -1,0 +1,107 @@
+// Move back a stage, in Today's footer, as the current Heartseed's
+// (apps/heartseed/src/garden/back.tsx): offered at rest on a planted verse
+// Today shows by a tap (`today.back`, src/back/shown.ts). A verse past a
+// seed offers the control `Move back a stage`; a seed offers none. A tap
+// puts the ask in its place, with `Move back` and `Keep`; while the step
+// back runs both answers, and the control, show disabled. `Moved` leaves
+// the line `Moved back to <stage>.` (`moved`), the stage line above it
+// already the new stage; `Failed` leaves the alert `<reference> was not
+// moved back. Try again.` (`back-alert`) until the next tap. The control's
+// state is the current app's own reducer, kept by the data module
+// (src/back/sources.ts): each tap opens a new ask, numbered, which moves
+// the verse at most one stage however often its `Move back` is pressed,
+// and an answer lands only for the latest ask. The root provides the
+// members below to `TodayBack`, which Today's footer draws.
+
+shape TodayBackView
+  reference: string
+  offers: bool
+  status: string
+  ask: number
+  askLine: string
+  moved: string
+  alert: string
+
+shape TodayBackMoved
+  ask: number
+  answer: string
+
+members HeartseedExact
+  resource todayBackBooted = todayBackBoot() as shape TodayBackView else empty()
+  mutation todayBackStepped as shape TodayBackView queue
+  mutation todayBackMoved as shape TodayBackMoved queue refreshes garden then todayBackLanded
+  derive todayBack = match todayBackStepped { case some(v) => v, case none => todayBackBooted }
+  state todayBackPressed = 0
+  state todayBackPresses = 0
+  derive todayBackRunning = todayBackPresses > 0 and todayBack.ask != 0 and todayBackPressed == todayBack.ask
+  derive todayBackPlace = `${today.reference}|${today.session.stage}|${today.back}`
+  task todayBackFollow when current(todayBackBooted) key=todayBackPlace
+    change(todayBackSeenIt)
+  action todayBackSeenIt
+    send todayBackStepped = todayBackSeen(today.reference, today.session.stage, today.back)
+  action todayBackOpenIt
+    if not todayBackRunning
+      send todayBackStepped = todayBackOpen(today.reference, today.session.stage)
+  action todayBackKeepIt
+    if not todayBackRunning
+      send todayBackStepped = todayBackKeep()
+  action todayBackYes(ask: number)
+    todayBackPresses = (todayBackPressed == ask ? todayBackPresses + 1 : 1)
+    todayBackPressed = ask
+    gardenClock = performanceNow()
+    send todayBackMoved = todayBackMove(ask, gardenTime.epochAtZero + performanceNow(), gardenTime.utcOffset, gardenTime.seed)
+  derive todayBackLandedAsk = match todayBackMoved { case some(m) => m.ask, case none => 0 }
+  derive todayBackLandedAnswer = match todayBackMoved { case some(m) => m.answer, case none => "Failed" }
+  action todayBackLanded
+    if todayBackLandedAsk == todayBackPressed and todayBackPresses > 0
+      todayBackPresses = todayBackPresses - 1
+    send todayBackStepped = todayBackAnswered(todayBackLandedAsk, todayBackLandedAnswer)
+    todayOpenIt()
+
+// One of the ask's two answers, as the field's `Control`: a pill outlined
+// in ink, shown disabled while the step back runs.
+component TodayBackAnswer
+  props
+    label: string
+    press: action
+    busy: bool
+    id: string
+  view
+    if busy
+      button press=press disabled=true appearance="none" aria-label=label display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" font="type.label" opacity="opacity.disabled" testId=id
+        text label
+    else
+      button press=press appearance="none" aria-label=label display="flex" align-items="center" justify-content="center" min-height="size.target" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" font="type.label" -exact-press-opacity="opacity.pressed" testId=id
+        text label
+
+// The control, the ask, the moved line and the alert on the verse at
+// `reference`, drawn only once the state the data module keeps stands on
+// that verse.
+component TodayBack
+  props
+    reference: string
+  inject
+    todayBack: TodayBackView
+    todayBackRunning: bool
+    todayBackOpenIt: action
+    todayBackYes: action
+    todayBackKeepIt: action
+  view
+    if todayBack.reference == reference
+      column gap="space.s8" testId="today-back"
+        if todayBack.moved != ""
+          text todayBack.moved font="type.note-strong" color="hs.ink" testId="moved"
+        if todayBack.alert != ""
+          text todayBack.alert role="alert" font="type.note-strong" color="hs.ink" testId="back-alert"
+        if todayBack.offers and todayBack.status == "Asking"
+          column gap="space.s8" testId="back-asking"
+            text todayBack.askLine font="type.note-strong" color="hs.ink" testId="back-ask"
+            row gap="space.s8"
+              TodayBackAnswer(label="Move back", press=todayBackYes(todayBack.ask), busy=todayBackRunning, id="back-yes")
+              TodayBackAnswer(label="Keep", press=todayBackKeepIt, busy=todayBackRunning, id="back-keep")
+        else if todayBack.offers and todayBackRunning
+          button press=todayBackOpenIt disabled=true appearance="none" aria-label="Move back a stage" align-self="flex-start" display="flex" align-items="center" min-height="size.target" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r12" color="hs.quiet" font="type.label" opacity="opacity.disabled" testId="back-control"
+            text "Move back a stage"
+        else if todayBack.offers
+          button press=todayBackOpenIt appearance="none" aria-label="Move back a stage" align-self="flex-start" display="flex" align-items="center" min-height="size.target" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r12" color="hs.quiet" font="type.label" -exact-press-opacity="opacity.pressed" testId="back-control"
+            text "Move back a stage"

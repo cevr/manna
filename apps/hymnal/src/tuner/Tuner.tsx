@@ -56,6 +56,7 @@ import { Command, type HymnPlayer, Player } from '~/player/player';
 
 import { type Focus, hear, unfocused } from './focus';
 import { type Listen, type ListenEnd, listen } from './native';
+import { ACROSS, autoOf, LABEL_EVERY, noteOf, pickedHint, pickOf, SWING, TICKS } from './screen';
 import {
   Event,
   FEED_RATE,
@@ -251,24 +252,8 @@ const sameHeard = (was: Shown['heard'], now: Shown['heard']): boolean =>
       ),
   });
 
-/** The note heard, small under the string's name: `E2`, `A2 · in tune`, or nothing. */
-const noteOf = (heard: Shown['heard']): string =>
-  Option.match(heard, {
-    onNone: () => '',
-    onSome: ({ note, octave, inTune }) => {
-      if (inTune) return `${note}${octave} · in tune`;
-      return `${note}${octave}`;
-    },
-  });
-
-/** The words read aloud change at most this often. */
-const LABEL_EVERY = 1000;
-
 /** How many frames between two `frame ms` lines. */
 const LOG_EVERY = 10;
-
-/** The string a frame is read against when nothing was heard and Auto is turned off. */
-const LOWEST: StringId = 'E2';
 
 const isListening = (session: Option.Option<Session>) =>
   Option.exists(session, (now) => now.phase._tag === 'Listening');
@@ -382,19 +367,10 @@ export function Tuner({
    * other is picked. It reads `aim`, not the last render's `target`, so two
    * taps before a render still end in Auto.
    */
-  const pick = useCallback(
-    (id: StringId) => {
-      if (Option.contains(aim.current, id)) return aimAt(Option.none());
-      aimAt(Option.some(id));
-    },
-    [aimAt],
-  );
+  const pick = useCallback((id: StringId) => aimAt(pickOf(aim.current, id)), [aimAt]);
 
   /** Auto on clears the target; off picks the string last heard, or the lowest. */
-  const toggleAuto = useCallback(() => {
-    if (Option.isSome(aim.current)) return aimAt(Option.none());
-    aimAt(Option.some(Option.getOrElse(last.current, () => LOWEST)));
-  }, [aimAt]);
+  const toggleAuto = useCallback(() => aimAt(autoOf(aim.current, last.current)), [aimAt]);
 
   const dispatch = useRef<(event: Event) => void>(() => {});
   dispatch.current = (event: Event) => {
@@ -648,14 +624,8 @@ export function Tuner({
   );
 }
 
-/** The needle's swing either side of centre, in degrees, at `NEEDLE_CENTS`. */
-const SWING = 50;
-
 /** The gauge's radius, from the needle's pivot to the scale's ticks, in points. */
 const RADIUS = 130;
-
-/** The scale's ticks, in cents: one each 10, and the in-tune window's edges at ±5. */
-const TICKS = [-50, -40, -30, -20, -10, -5, 0, 5, 10, 20, 30, 40, 50] as const;
 
 /** The gauge: an arc of ticks from flat to sharp, the in-tune window marked in the accent, the needle over them. */
 function Gauge({
@@ -703,9 +673,6 @@ function Gauge({
     </View>
   );
 }
-
-/** The strings across the headstock, low to high, as they run down from the nut. */
-const ACROSS: ReadonlyArray<StringId> = [...LEFT].reverse().concat(RIGHT);
 
 /**
  * The headstock, in Views: three pegs down each side (`LEFT`, `RIGHT`), each
@@ -773,15 +740,6 @@ function Headstock({
     </View>
   );
 }
-
-/** What a second tap on the picked string does, as VoiceOver reads it after the circle's name. */
-const BACK_TO_AUTO = 'Goes back to Auto';
-
-/** The circle's VoiceOver hint: the picked string's says a second tap goes back to Auto; the others have none. */
-const pickedHint = (picked: boolean): Option.Option<string> => {
-  if (picked) return Option.some(BACK_TO_AUTO);
-  return Option.none();
-};
 
 /**
  * One string's circle: its letter, filled while lit, a tick once tuned; it

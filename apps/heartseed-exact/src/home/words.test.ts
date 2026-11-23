@@ -12,7 +12,7 @@ import { expect, it } from 'bun:test';
 import { join } from 'node:path';
 
 import { singleAskOf } from './home';
-import { removeAskOf, STAGE_WORDS } from '../list/page';
+import { DRAWN, removeAskOf, STAGE_WORDS, stageLineOf } from '../list/page';
 
 const CURRENT = join(import.meta.dir, '../../../heartseed/src');
 const FEATURES = join(import.meta.dir, '../../features');
@@ -47,6 +47,55 @@ it('each stage in words is the current list page’s', async () => {
     [...block.matchAll(/'?([a-z][a-z ]*)'?: '([^']*)'/gu)].map((each) => [each[1], each[2]]),
   );
   expect(shown).toEqual({ ...STAGE_WORDS });
+});
+
+it('each stage’s picture on a list’s page is the current page’s', async () => {
+  const source = await Bun.file(join(CURRENT, 'field/plot.tsx')).text();
+  const block = /export const DRAWN[^{]*\{([^}]*)\}/u.exec(source)?.[1] ?? '';
+  const drawn = Object.fromEntries(
+    [...block.matchAll(/'?([a-z][a-z ]*)'?: '([^']*)'/gu)].map((each) => [each[1], each[2]]),
+  );
+  expect(drawn).toEqual({ ...DRAWN });
+});
+
+it('a row’s stage line is the current list page’s', async () => {
+  const source = await Bun.file(join(CURRENT, 'list/screen.tsx')).text();
+  expect(source).toContain('return `${STAGE_SHOWN[plant.stage]} · ready today`;');
+  expect(stageLineOf('A seed', true)).toBe('A seed · ready today');
+  expect(stageLineOf('A seed', false)).toBe('A seed');
+});
+
+it('the field’s own words on home are the current home’s', async () => {
+  const source = await Bun.file(join(CURRENT, 'field/screen.tsx')).text();
+  const home = await Bun.file(join(FEATURES, 'home.contract')).text();
+  const shown = (words: string) =>
+    new RegExp(`>\\s*${words}\\s*<|shown="${words}"`, 'u').test(source);
+  for (const words of ['Your field', 'Lists', 'Add a list'])
+    expect({ words, one: shown(words), port: home.includes(`"${words}"`) }).toEqual({
+      words,
+      one: true,
+      port: true,
+    });
+});
+
+it('each picture is drawn at the current app’s size (the `glyph.` tokens)', async () => {
+  const forma = await Bun.file(join(FEATURES, '..', 'app.forma')).text();
+  const sizeIn = async (file: string, pattern: RegExp) =>
+    pattern.exec(await Bun.file(join(CURRENT, file)).text())?.[1];
+  const tokenOf = (name: string) =>
+    new RegExp(`${name.replace('.', '\\.')}: length = (\\d+)px`, 'u').exec(forma)?.[1];
+  expect(await sizeIn('field/screen.tsx', /<Icon name=\{greeting\.icon\} size=\{(\d+)\}/u)).toBe(
+    tokenOf('glyph.greeting'),
+  );
+  expect(
+    await sizeIn('field/plot.tsx', /onSome: \(name\) => <Icon name=\{name\} size=\{(\d+)\}/u),
+  ).toBe(tokenOf('glyph.control'));
+  expect(await sizeIn('list/screen.tsx', /<Icon name=\{furrow\.icon\} size=\{(\d+)\}/u)).toBe(
+    tokenOf('glyph.list'),
+  );
+  expect(await sizeIn('list/screen.tsx', /name=\{DRAWN\[plant\.stage\]\} size=\{(\d+)\}/u)).toBe(
+    tokenOf('glyph.list'),
+  );
 });
 
 it("the Contract's asks act on Yes alone, on the row asked (askStep)", async () => {

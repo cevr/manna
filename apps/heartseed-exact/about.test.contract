@@ -1,4 +1,11 @@
+fail fetch "https://egw.cvr.im"
+
 test "About opens from the sheet, Licences from About, and Back returns to the sheet as it was"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   tap "gear"
   clock settle
   tap "minutes-20"
@@ -8,13 +15,15 @@ test "About opens from the sheet, Licences from About, and Back returns to the s
   tap "about-row"
   clock settle
   expect text "about-name" == "Heartseed"
-  expect tree has "about-line"
-  expect text "about-kjv" == "Scripture is from the King James Version, which is in the public domain."
+  expect tree has "about-version"
+  expect tree missing "about-line"
+  expect tree missing "about-kjv"
   tap "licences-row"
   clock data
   clock settle
-  expect text "licence-name-0" == "Apache License, Version 2.0"
   expect tree has "licence-text-0"
+  expect tree has "licence-text-9"
+  expect tree missing "licence-name-0"
   back
   clock settle
   expect tree has "about-name"

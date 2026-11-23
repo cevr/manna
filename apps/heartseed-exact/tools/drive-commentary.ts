@@ -7,24 +7,31 @@
  * `HEARTSEED_PACKS_BASE` (the web's build reads it, the simulator's
  * launch through `SIMCTL_CHILD_`), which also draws the probe on Your
  * verses (`packs-fetch` is the Read tab's first showing). Checks: a
- * first fetch shows the quiet line while the fixture holds its answer, then
+ * first fetch shows the quiet line while the fixture holds its answer, keeps
+ * each study pack as it lands while the commentary is still held, then
  * lands, says so for 3 seconds and goes quiet; a relaunch with the fixture
  * stopped reads the kept pack; a relaunch 8 days on asks once with
- * `If-None-Match` and keeps the pack on a `304`; a new version replaces it;
+ * `If-None-Match` and keeps the pack on a `304`; a pack with one link moved
+ * and the same notes has a new version and replaces it; a new version replaces it;
  * refused, `500`, cut short and a changed character each fail on a fresh
- * store with nothing kept and Try again shown, and the next try lands; a
+ * store with the commentary not kept (the study packs kept) and Try again shown, and the next try lands; a
  * bad update leaves the old counts; a plain launch takes egw.cvr.im and has
- * no probe. `live` as the second argument (iOS, once `hs-bc-api` is
+ * no probe; and no run has a turn of the data host refused over its
+ * 100 ms budget (the agent's stderr names each). `live` as the second argument (iOS, once `hs-bc-api` is
  * deployed) downloads the real pack on a plain launch and prints its
  * version, count and time, no text. Exits 1 on any failed check.
  */
 
 import { join } from 'node:path';
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 
+import { gettingLine, landedLine } from '../src/packs/shown';
 import { checkoutPort, fixturePacks } from './commentary-fixture';
 
 const FIXTURE_PACKS = await fixturePacks();
+/** Loaded after the preload `fixturePacks` loads, as the packs' modules read the text. */
+const { COMMENTARY } = await import('../src/commentary/sources');
+const { STUDY_PACKS } = await import('../src/study/sources');
 
 const host = process.argv[2] ?? 'web';
 const live = process.argv[3] === 'live';
@@ -32,8 +39,8 @@ const app = join(import.meta.dir, '..');
 const DAY = 86_400_000;
 const START = Date.UTC(2026, 10, 16, 12);
 const epochAt = (days: number) => new Date(START + days * DAY).toISOString().replace('.000Z', 'Z');
-const GETTING = "Getting Ellen White's commentary…";
-const LANDED = 'Commentary is on this phone now.';
+const EVERY_PACK = [COMMENTARY, ...STUDY_PACKS];
+const LANDED = landedLine(EVERY_PACK);
 
 /** A free port from this checkout's own, so two checkouts' drives never meet. */
 const freePort = async () => {
@@ -102,8 +109,14 @@ const nameFixture = (on: boolean) => {
     else delete process.env[name];
 };
 
-/** The kit's machine, but each run started with this drive's environment as it is then (the fixture named or not). */
+/** What the agent said of a turn refused over the data host's 100 ms budget, run by run: `go` takes and checks them. */
+let overruns: Array<string> = [];
+const overrunsIn = (stderr: string) =>
+  [...stderr.matchAll(/[^\n]{0,160}over the 100 ms budget[^\n]{0,40}/gu)].map((match) => match[0]);
+
+/** The kit's machine, but each run started with this drive's environment as it is then (the fixture named or not), its stderr read for refused turns. */
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
@@ -118,7 +131,10 @@ const processes = {
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
         child.exited,
-      ]).then(([stdout, stderr, code]) => ({ code, stdout, stderr })),
+      ]).then(([stdout, stderr, code]) => {
+        overruns.push(...overrunsIn(stderr));
+        return { code, stdout, stderr };
+      }),
     };
   },
   signal: (pid: number, signal: 'SIGTERM') => {
@@ -133,7 +149,6 @@ const processes = {
 };
 
 const drive = makeDrive({ name: 'drive-commentary', host, appDir: app, processes });
-const webPort = host === 'web' ? ['--port', '8773'] : [];
 const stamp = Date.now().toString(36);
 const storeOf = (name: string) => `commentary-${host}-${name}-${stamp}`;
 
@@ -149,6 +164,13 @@ interface Counts {
   have: boolean;
   verses: Array<{ verse: number; notes: number }>;
 }
+
+/** The names of the packs `packsKept` holds (`src/packs/step.ts`, `keptWith`). */
+const keptNames = (text: unknown) =>
+  String(text ?? '')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => line.split(' ')[0] ?? '');
 
 /** The commentary's line in `packsKept` (`src/packs/step.ts`, `keptWith`). */
 const keptLine = (text: unknown) => {
@@ -175,6 +197,9 @@ const READS = {
         : { ...(shown as object), foot: status.foot, retry: status.retry };
     },
   },
+  packs: { ops: ['state packsShown'], read: ([packs]) => packs },
+  'kept names': { ops: ['state packsKept'], read: ([text]) => keptNames(text) },
+  'kept at the tap': { ops: ['state packsKept'], read: ([text]) => keptNames(text) },
   'kept version': { ops: ['state packsKept'], read: ([text]) => keptLine(text).version },
   'kept checkedAt': { ops: ['state packsKept'], read: ([text]) => keptLine(text).checkedAt },
 } satisfies Record<string, DriveRead>;
@@ -200,9 +225,14 @@ const go = async (store: string, kept: boolean, day: number, logical: ReadonlyAr
     '/verses',
     '--epoch',
     epochAt(day),
-    ...webPort,
   ];
+  overruns = [];
   const replies = await drive.run(flags, ops);
+  drive.check(
+    `${store.replace(`commentary-${host}-`, '').replace(`-${stamp}`, '')} day ${day}: no turn of the data host is refused over its 100 ms budget`,
+    overruns.length === 0,
+    overruns,
+  );
   return (op: string, nth = 0): unknown => {
     let seen = -1;
     const span = spans[logical.findIndex((each) => each === op && ++seen === nth)];
@@ -217,7 +247,7 @@ const has = (tree: unknown, id: string) => JSON.stringify(tree ?? '').includes(`
 const shot = (name: string) => `screenshot .exact/shots/commentary-${host}-${name}.png`;
 const countsOf = (counts: Counts | undefined) =>
   JSON.stringify(counts?.verses.map(({ verse, notes }) => [verse, notes]) ?? null);
-const expectedCounts = (pack: 'first' | 'second') =>
+const expectedCounts = (pack: 'first' | 'relinked' | 'second') =>
   JSON.stringify(
     (FIXTURE_PACKS[pack].verses['43.1'] ?? []).map(([verse, indexes]) => [verse, indexes.length]),
   );
@@ -228,16 +258,34 @@ const second = FIXTURE_PACKS.second;
 const fetchOps = ['tap packs-fetch', 'clock data', 'clock settle'];
 const readOps = ['shown', 'kept version', 'state commentaryProbeCounts', 'tree'];
 
+/** How long the fixture holds the commentary on a first fetch: longer than the ops between the tap and the study packs' wait take. */
+const HOLD_MS = 8000;
+
+/**
+ * While the commentary is held: real time with the clock frozen (every
+ * clock that moves waits for the held answer too) until the four study
+ * packs are kept, each by its own ask's call, with no follow-up timer, then
+ * the packs read once.
+ */
+const STUDY_KEPT_MS = 5000;
+const WHILE_HELD = [
+  `clock until state packsShown.missing == 1 within ${STUDY_KEPT_MS}`,
+  'packs',
+  'kept names',
+];
+
 /** First fetch: the line while the fixture holds its answer, the landing, the landed line's 3 seconds, one request. */
 const firstFetch = async (store: string) => {
-  await steer({ pack: 'first', reply: 'well', times: 0, holdMs: 2500 });
+  await steer({ pack: 'first', reply: 'well', times: 0, holdMs: HOLD_MS });
   const landing = await go(store, false, 0, [
     'clock data',
     'clock settle',
     'tap packs-fetch',
     'shown',
+    'kept at the tap',
     'tree',
     shot('getting'),
+    ...WHILE_HELD,
     'clock data',
     'clock settle',
     'shown',
@@ -251,12 +299,27 @@ const firstFetch = async (store: string) => {
     'state commentaryProbeCounts',
   ]);
   const getting = landing('shown') as Shown | undefined;
+  const keptAtTap = (landing('kept at the tap') as Array<string> | undefined) ?? [];
   const landed = landing('shown', 1) as Shown | undefined;
   const quiet = landing('shown', 2) as Shown | undefined;
+  const apart = landing('packs') as { phase?: string; missing?: number; foot?: string } | undefined;
+  const keptApart = (landing('kept names') as Array<string> | undefined) ?? [];
+  const studyNames = STUDY_PACKS.map((pack) => pack.name).toSorted();
   drive.check(
     'first fetch: the quiet line shows while the fixture holds its answer',
-    getting?.phase === 'fetching' && getting.foot === GETTING && has(landing('tree'), 'packs-line'),
-    getting,
+    getting?.phase === 'fetching' &&
+      !keptAtTap.includes('commentary') &&
+      getting.foot === gettingLine(EVERY_PACK.filter((pack) => !keptAtTap.includes(pack.name))) &&
+      has(landing('tree'), 'packs-line'),
+    { getting, kept: keptAtTap },
+  );
+  drive.check(
+    'first fetch: each study pack is kept as it lands, counted and named, while the commentary is still held',
+    apart?.phase === 'fetching' &&
+      JSON.stringify(keptApart) === JSON.stringify(studyNames) &&
+      apart.missing === 1 &&
+      apart.foot === gettingLine([COMMENTARY]),
+    { apart, kept: keptApart },
   );
   drive.check(
     'first fetch: the pack lands, ready, and the landed line shows',
@@ -317,7 +380,7 @@ const kept = async (store: string) => {
   );
 };
 
-/** A bad update, then a new version, over the kept store. */
+/** A bad update, one link moved under the same notes, then a new version, over the kept store. */
 const updates = async (store: string) => {
   await steer({ pack: 'second', reply: 'cut', times: 0 });
   const bad = await go(store, true, 16, ['clock data', 'clock settle', ...fetchOps, ...readOps]);
@@ -333,8 +396,34 @@ const updates = async (store: string) => {
     { badShown, counts: bad('state commentaryProbeCounts') },
   );
 
+  await steer({ pack: 'relinked', reply: 'well', times: 0 });
+  const relinked = await go(store, true, 16, [
+    'clock data',
+    'clock settle',
+    ...fetchOps,
+    ...readOps,
+  ]);
+  const relinkedShown = relinked('shown') as Shown | undefined;
+  const asked = await heard();
+  drive.check(
+    "one link moved, the notes the same: the pack's version is new, the check asks with the old one and replaces the kept pack",
+    JSON.stringify(FIXTURE_PACKS.relinked.notes) === JSON.stringify(first.notes) &&
+      FIXTURE_PACKS.relinked.version !== first.version &&
+      asked.at(-1)?.tag === `"${first.version}"` &&
+      relinkedShown?.version === FIXTURE_PACKS.relinked.version &&
+      relinked('kept version') === FIXTURE_PACKS.relinked.version &&
+      countsOf(relinked('state commentaryProbeCounts') as Counts) === expectedCounts('relinked') &&
+      expectedCounts('relinked') !== expectedCounts('first'),
+    {
+      versions: [first.version, FIXTURE_PACKS.relinked.version],
+      asked: asked.at(-1),
+      relinkedShown,
+      counts: relinked('state commentaryProbeCounts'),
+    },
+  );
+
   await steer({ pack: 'second', reply: 'well', times: 0 });
-  const renewed = await go(store, true, 16, [
+  const renewed = await go(store, true, 24, [
     'clock data',
     'clock settle',
     ...fetchOps,
@@ -359,6 +448,7 @@ const failures = async () => {
       'clock settle',
       ...fetchOps,
       ...readOps,
+      'kept names',
       shot(`failed-${reply}`),
       'tap packs-retry',
       'clock data',
@@ -368,15 +458,23 @@ const failures = async () => {
     ]);
     const failed = run('shown') as Shown | undefined;
     const retried = run('shown', 1) as Shown | undefined;
+    const keptOthers = (run('kept names') as Array<string> | undefined) ?? [];
     drive.check(
-      `${reply}: on a fresh store it fails, nothing is kept, and Try again shows`,
+      `${reply}: on a fresh store the commentary fails and is not kept, the study packs stay kept, and Try again shows`,
       failed?.phase === 'failed' &&
         failed.retry &&
         failed.foot === '' &&
         run('kept version') === '' &&
+        keptOthers.length === EVERY_PACK.length - 1 &&
+        !keptOthers.includes('commentary') &&
         (run('state commentaryProbeCounts') as Counts | undefined)?.have === false &&
         has(run('tree'), 'packs-retry'),
-      { failed, kept: run('kept version'), counts: run('state commentaryProbeCounts') },
+      {
+        failed,
+        kept: run('kept version'),
+        others: keptOthers,
+        counts: run('state commentaryProbeCounts'),
+      },
     );
     drive.check(
       `${reply}: the fixture then answers well and Try again lands it`,

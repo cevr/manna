@@ -1,7 +1,9 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- Exact's app folder cannot import effect (docs/exact.md): a host script that writes the shipped licences module before Exact or a test reads it. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs -- Exact's app folder cannot import effect (docs/exact.md): a host script that writes the shipped licences module before Exact or a test reads it, and types the current app's package.json as npm writes it. */
 
 /**
- * Writes the licences About shows where `app.ts` imports them,
+ * Writes the licences About shows, and the version it shows under the
+ * app's name (the current Heartseed's `package.json`'s), where `app.ts`
+ * imports them,
  * `src/about/licences.ts` (ignored, never committed; `licences.d.ts` beside
  * it declares it). The text is the current Heartseed's own derivation,
  * `readLicence()` (`@manna/heartseed/licence`, the vendored Apache License
@@ -27,20 +29,45 @@ export const LICENCES_FILE = join(import.meta.dir, '..', 'src', 'about', 'licenc
 export const fontLicence = (family: string, ofl: string): string =>
   `${family}\nSIL Open Font License, Version 1.1\n\n${ofl}`;
 
-/** The licences' texts in the order About lists them: the current app's own, then each bundled reading font's (`assets/fonts/<key>/OFL.txt`) in the sheet's order. */
+/** The credits of the study packs' sources (`src/study/`), which the phone downloads: their names over how each is licensed. */
+export const STUDY_CREDITS: ReadonlyArray<string> = [
+  [
+    'Cross-references',
+    'from OpenBible.info, Creative Commons Attribution License',
+    '',
+    "The reader's cross-references are OpenBible.info's (https://www.openbible.info/labs/cross-references/), each verse's first six, used under the Creative Commons Attribution License.",
+  ].join('\n'),
+  [
+    "Hebrew and Greek words and Strong's dictionary",
+    'from Open Scriptures, Creative Commons Attribution-ShareAlike',
+    '',
+    "The Strong's numbers behind the KJV's words and the Hebrew and Greek dictionaries are Open Scriptures' (https://github.com/openscriptures), used under the Creative Commons Attribution-ShareAlike license; the renderings each entry lists are counted from them.",
+  ].join('\n'),
+];
+
+/** The licences' texts in the order About lists them: the current app's own, then each bundled reading font's (`assets/fonts/<key>/OFL.txt`) in the sheet's order, then the study packs' credits. */
 export const licenceTexts = (): string[] => [
   readLicence(),
   ...TYPE_FONTS.filter((font) => font.bundled !== '').map((font) =>
     fontLicence(font.bundled, readFileSync(join(FONTS_DIR, font.key, 'OFL.txt'), 'utf8')),
   ),
+  ...STUDY_CREDITS,
 ];
 
-/** Writes the shipped licences module, when its text changed, and answers the texts. */
+/** The current Heartseed's version, as its bundle reads it from its own `package.json`, which About shows under the app's name. */
+export const heartseedVersion = (): string =>
+  (
+    JSON.parse(
+      readFileSync(join(import.meta.dir, '..', '..', 'heartseed', 'package.json'), 'utf8'),
+    ) as { readonly version: string }
+  ).version;
+
+/** Writes the shipped licences module, with the current Heartseed's version beside the texts, when its text changed, and answers the texts. */
 export const writeLicences = (): string[] => {
   const texts = licenceTexts();
   writeGenerated(
     LICENCES_FILE,
-    `/** The licences' texts, written by tools/licences.ts from the current Heartseed's; ignored. */\nexport default ${JSON.stringify(texts)};\n`,
+    `/** The licences' texts and the app's version, written by tools/licences.ts from the current Heartseed's; ignored. */\nexport default ${JSON.stringify(texts)};\nexport const version = ${JSON.stringify(heartseedVersion())};\n`,
   );
   return texts;
 };

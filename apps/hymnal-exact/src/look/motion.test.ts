@@ -14,8 +14,8 @@
  *   arm only fades (keyframes of opacity alone, a transition of opacity)
  *   or is `none`, and names its times by token: no Contract line writes a
  *   time, a curve or a spring;
- * - the filled buttons press to the brand's `pressed` under `onPressed`,
- *   at a scale of 0.97;
+ * - the filled buttons (the find drums' Open) press to the brand's
+ *   `pressed` under `onPressed`, at a scale of 0.97;
  * - every `haptic(` stands under `if settingsFeel`, and plays the kind
  *   the current hymnal's Feel seam gives its cue (`bodyOf(plain(cue))`),
  *   by the table below, which names each call's cue.
@@ -28,7 +28,9 @@ import { describe, expect, it } from 'bun:test';
 
 import * as body from '@manna/hymnal-app/feel/body';
 import * as cues from '@manna/hymnal-app/feel/cues';
+import * as reveal from '@manna/hymnal-app/home/reveal';
 import * as tiles from '@manna/hymnal-app/home/tile-times';
+import * as wheelmotion from '@manna/hymnal-app/player/wheelmotion';
 
 import type * as TilesDecl from '../find/decl/tile-times';
 import type * as BodyDecl from './decl/body';
@@ -62,8 +64,12 @@ const TOKENS = {
   'duration.bar-in': '250ms',
   'duration.bar-out': '150ms',
   'easing.out': 'cubic-bezier(0.23, 1, 0.32, 1)',
+  'easing.quad-out': 'cubic-bezier(0.5, 1, 0.89, 1)',
   'duration.panel': '250ms',
   'duration.growth': '250ms',
+  'duration.press': '200ms',
+  'duration.wheel-in': `${wheelmotion.BACKDROP.enter}ms`,
+  'duration.wheel-out': `${wheelmotion.BACKDROP.exit}ms`,
 };
 
 /**
@@ -75,6 +81,18 @@ const TILE_TOKENS = {
   'duration.tiles-out': tiles.tileTimes.out,
   'duration.fade': tiles.tileTimes.fade,
 };
+
+/**
+ * The pinned tab row's tokens, each the current `PinnedTabs`'s time
+ * (`revealTimes`): its slide, and the fade alone under Reduce Motion.
+ */
+const REVEAL_TOKENS = {
+  'duration.slide': reveal.revealTimes.slide,
+  'duration.fade': reveal.revealTimes.fade,
+};
+
+/** The current PinnedTabs' slide curve, Reanimated's `Easing.out(Easing.cubic)` (1 − (1 − t)³), as CSS's cubic Bézier of it. */
+const OUT_CUBIC = 'cubic-bezier(0.33, 1, 0.68, 1)';
 
 /**
  * The find bar's growth spring: critically damped (a ratio of 1, no
@@ -91,7 +109,7 @@ const PRESS_SCALE = '0.97';
 type Cue = Parameters<typeof body.bodyOf>[0];
 
 /** A dial's detent cue, as the current app tells a turn of `dial`. */
-const detent = (dial: 'key' | 'capo' | 'hundreds' | 'tens' | 'ones') => {
+const detent = (dial: 'key' | 'capo' | 'tempo' | 'hundreds' | 'tens' | 'ones') => {
   const cue = { _tag: 'detent', dial, at: 0 } as const;
   return cue;
 };
@@ -108,7 +126,47 @@ const HAPTICS: ReadonlyArray<{
     cues: [cues.plain('play'), cues.plain('pause')],
   },
   { action: 'playerAsk', when: 'else if kind == "stanza"', cues: [cues.plain('choose')] },
+  {
+    action: 'playerAsk',
+    when: 'else if kind == "chooseAll" or kind == "tap"',
+    cues: [cues.plain('press')],
+  },
+  { action: 'playerAsk', when: 'else if kind == "tempoReset"', cues: [cues.plain('reset')] },
+  {
+    action: 'playerCounted',
+    when: 'if player.count.beat == 0',
+    cues: [{ _tag: 'beat', accent: true }],
+  },
+  { action: 'playerCounted', when: 'if playerClick', cues: [{ _tag: 'beat', accent: false }] },
+  { action: 'scrolled', when: 'if i != at', cues: [detent('tempo')] },
+  { action: 'followAct', when: 'if followNow.ask == "pause"', cues: [cues.plain('seek-grab')] },
+  {
+    action: 'followAct',
+    when: 'else if followNow.ask == "seek"',
+    cues: [cues.plain('seek-release')],
+  },
+  {
+    action: 'followAct',
+    when: 'else if followNow.ask == "lift"',
+    cues: [cues.plain('seek-release')],
+  },
+  {
+    action: 'followTook',
+    when: 'if performanceNow() - followTickAt >= 30',
+    cues: [cues.plain('seek-tick')],
+  },
   { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'downloadsAsk', when: '', cues: [cues.plain('choose')] },
+  { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'readingFontChoose', when: '', cues: [cues.plain('choose')] },
+  { action: 'readingSpacingChoose', when: '', cues: [cues.plain('choose')] },
+  {
+    action: 'readingAwakeSet',
+    when: '',
+    cues: [cues.plain('switch-on'), cues.plain('switch-off')],
+  },
+  { action: 'sheetInherit', when: '', cues: [cues.plain('reset')] },
   {
     action: 'favouriteKeep',
     when: 'if f.numbers.length > favouriteList.length',
@@ -120,8 +178,24 @@ const HAPTICS: ReadonlyArray<{
     cues: [cues.plain('favourite-off')],
   },
   { action: 'listChoose', when: 'if name != listTab', cues: [cues.plain('tab')] },
+  { action: 'railTook', when: 'if m.ticks > 0', cues: [cues.plain('rail-tick')] },
   { action: 'chordsSet', when: '', cues: [cues.plain('chords-on'), cues.plain('chords-off')] },
-  { action: 'chordsStep', when: '', cues: [detent('key'), detent('capo')] },
+  {
+    action: 'playerSoundSwitch',
+    when: '',
+    cues: [cues.plain('switch-on'), cues.plain('switch-off')],
+  },
+  {
+    action: 'keysTook',
+    when: 'if s.cue == "chords-on" or s.cue == "chords-off"',
+    cues: [cues.plain('chords-on'), cues.plain('chords-off')],
+  },
+  { action: 'keysTook', when: 'else if s.cue == "press"', cues: [cues.plain('press')] },
+  { action: 'keysTook', when: 'else if s.cue == "wall"', cues: [cues.plain('wall')] },
+  { action: 'keysTook', when: 'else if s.cue == "reset"', cues: [cues.plain('reset')] },
+  { action: 'keysPressTook', when: 'if p.enter != ""', cues: [cues.plain('choose')] },
+  { action: 'keysKeyScrolled', when: 'if at != keysKeyAt', cues: [detent('key')] },
+  { action: 'keysCapoScrolled', when: 'if at != keysCapoAt', cues: [detent('capo')] },
   {
     action: 'findTurn',
     when: '',
@@ -459,6 +533,16 @@ describe('the hymnal’s motion is calm', () => {
     for (const { file, text } of files) expect(literalsOf(file, text)).toEqual([]);
   });
 
+  it('times the pinned tab row as the current PinnedTabs does: its slide out-cubic, its still arm a linear fade', () => {
+    for (const [name, ms] of Object.entries(REVEAL_TOKENS))
+      expect({ name, value: brand.motion.get(name) }).toEqual({ name, value: `${ms}ms` });
+    expect(brand.motion.get('easing.slide')).toBe(OUT_CUBIC);
+    const pinned = componentOf(appFile('features/list.contract'), 'ListTabsPinned').join('\n');
+    expect(pinned).toContain(
+      'transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide")',
+    );
+  });
+
   it('times the tiles as the current All at once does', () => {
     for (const [name, ms] of Object.entries(TILE_TOKENS))
       expect({ name, value: brand.motion.get(name) }).toEqual({ name, value: `${ms}ms` });
@@ -471,10 +555,7 @@ describe('the hymnal’s motion is calm', () => {
   });
 
   it('presses the filled buttons to the brand’s pressed roles, at 0.97', () => {
-    for (const body of [
-      componentOf(appFile('features/player.contract'), 'PlayerFilled'),
-      elementOf(appFile('features/find.contract'), 'drums-open'),
-    ])
+    for (const body of [elementOf(appFile('features/find.contract'), 'drums-open')])
       expect(Object.fromEntries(pressOf(body))).toEqual({
         'background-color': 'pressed',
         color: 'onPressed',

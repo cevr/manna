@@ -438,7 +438,10 @@ const foldersOf = (at: string) => {
  * or system config, so a machine's excludes (`core.excludesFile`, its
  * default `~/.config/git/ignore`, `.git/info/exclude`) never count. Each folder is
  * asked with its trailing slash, and the path both ways, so a folder-only
- * pattern (`.build/`) matches it whether a build made it or not.
+ * pattern (`.build/`) matches it whether a build made it or not. Git
+ * answers nothing beyond a link on disk (`tmp/logs/latest`, the active log
+ * session), so a path is asked only down to its first link, and the link
+ * without a slash.
  */
 const ignoredUnder = Effect.fn('test.docs.ignoredUnder')(function* (
   root: string,
@@ -446,14 +449,24 @@ const ignoredUnder = Effect.fn('test.docs.ignoredUnder')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const asked = Array.from(
-    new Set(
-      paths.flatMap((at) => {
-        const folders = foldersOf(at);
-        return [...folders.map((folder) => `${folder}/`), ...folders.slice(-1)];
-      }),
-    ),
-  );
+  const isLink = (folder: string) =>
+    fs.readLink(path.join(root, folder)).pipe(
+      Effect.as(true),
+      Effect.orElseSucceed(() => false),
+    );
+  const askedOf = (at: string) =>
+    Effect.gen(function* () {
+      const folders = foldersOf(at);
+      const link = yield* Effect.findFirst(folders, isLink);
+      return Option.match(link, {
+        onNone: () => [...folders.map((folder) => `${folder}/`), ...folders.slice(-1)],
+        onSome: (linked) => [
+          ...folders.slice(0, folders.indexOf(linked)).map((folder) => `${folder}/`),
+          linked,
+        ],
+      });
+    });
+  const asked = Array.from(new Set((yield* Effect.forEach(paths, askedOf)).flat()));
   if (asked.length === 0) return new Map<string, Option.Option<string>>();
   const gitDir = yield* fs.makeTempDirectoryScoped({ prefix: 'docs-ignores-' });
   yield* fs.makeDirectory(path.join(gitDir, 'objects'));
@@ -1511,6 +1524,9 @@ const apiOf = (api: typeof LabHttpApi): Api => {
   };
 };
 
+/** What oxc's parser gives a file: its program, comments and errors. */
+type Parsed = ReturnType<typeof parseSync>;
+
 /**
  * Each route or path a comment in `text` names that the API does not
  * declare, with its file and line: each comment as the parser (oxc) reads
@@ -1522,8 +1538,12 @@ const apiOf = (api: typeof LabHttpApi): Api => {
  * `/api/films/probe`), or a path the file's own code writes (the routes a
  * test's own server answers, `tools/page-render.slow.test.ts`).
  */
-const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<string> => {
-  const parsed = parseSync(file, text);
+const commentRouteDrift = (
+  file: string,
+  text: string,
+  api: Api,
+  parsed: Parsed = parseSync(file, text),
+): ReadonlyArray<string> => {
   if (parsed.errors.length > 0) return [`${file}: the parser cannot read it`];
   /** The file's code, its comments left out, joined once: read for a bare path the API lacks. */
   const parts: Array<string> = [];
@@ -1573,10 +1593,14 @@ const DIRECTIVE =
  * directive, with its file and line; none in a `.d.ts` file, which oxlint
  * ignores.
  */
-const strayComments = (file: string, text: string): ReadonlyArray<string> => {
+const strayComments = (
+  file: string,
+  text: string,
+  parsed: Parsed = parseSync(file, text),
+): ReadonlyArray<string> => {
   if (file.endsWith('.d.ts')) return [];
-  return parseSync(file, text)
-    .comments.filter(
+  return parsed.comments
+    .filter(
       (comment) =>
         !(comment.type === 'Block' && comment.value.startsWith('*')) &&
         !DIRECTIVE.test(comment.value),
@@ -1605,16 +1629,17 @@ describe('the docs', () => {
             ),
         )).flat();
         expect(files.length).toBeGreaterThan(600);
-        const drift = yield* Effect.forEach(files, (file) =>
-          Effect.map(fs.readFileString(`${root}/${file}`), (text) =>
-            commentRouteDrift(file, text, api),
-          ),
+        const read = yield* Effect.forEach(files, (file) =>
+          Effect.map(fs.readFileString(`${root}/${file}`), (text) => {
+            const parsed = parseSync(file, text);
+            return {
+              drift: commentRouteDrift(file, text, api, parsed),
+              stray: strayComments(file, text, parsed),
+            };
+          }),
         );
-        expect(drift.flat()).toEqual([]);
-        const stray = yield* Effect.forEach(files, (file) =>
-          Effect.map(fs.readFileString(`${root}/${file}`), (text) => strayComments(file, text)),
-        );
-        expect(stray.flat()).toEqual([]);
+        expect(read.flatMap(({ drift }) => drift)).toEqual([]);
+        expect(read.flatMap(({ stray }) => stray)).toEqual([]);
         const kinds = [
           '// A line.',
           '/* A block. */',

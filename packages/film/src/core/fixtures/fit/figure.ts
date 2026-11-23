@@ -4,8 +4,8 @@ type Rgb = readonly [number, number, number];
 
 export const INK: Rgb = [43, 29, 22];
 export const CREAM: Rgb = [253, 225, 188];
-export const TEAL: Rgb = [97, 137, 141];
-export const SKIN: Rgb = [253, 175, 112];
+const TEAL: Rgb = [97, 137, 141];
+const SKIN: Rgb = [253, 175, 112];
 export const SHEET_GROUND: Rgb = [253, 241, 219];
 export const RENDER_GROUND: Rgb = [238, 221, 201];
 
@@ -13,10 +13,10 @@ export const W = 64;
 export const H = 96;
 
 /** The figure's body: its left, right, top and bottom columns and rows, its line inside them. */
-export const BODY = { left: 18, right: 46, top: 26, bottom: 84 } as const;
+const BODY = { left: 18, right: 46, top: 26, bottom: 84 } as const;
 
 /** The column the body's teal gives way to its cream at, unmoved. */
-export const SEAM = 32;
+const SEAM = 32;
 
 /** Whether pixel (`x`, `y`) is of the figure moved `dx` to the right. */
 const figure = (x: number, y: number, dx = 0) => {
@@ -30,7 +30,7 @@ const figure = (x: number, y: number, dx = 0) => {
 /** A box `[x0, x1) × [y0, y1)`. */
 export type Box = readonly [number, number, number, number];
 
-export interface Paint {
+interface Paint {
   readonly ground: Rgb;
   /** How far right the whole figure is moved. */
   readonly dx?: number;

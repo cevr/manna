@@ -1,18 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { BunServices } from '@effect/platform-bun';
 import { SqliteClient } from '@effect/sql-sqlite-bun';
-import { Effect, Layer, Logger, Schema as S, type Scope } from 'effect';
+import { Effect, Layer, Logger, Option, Schema as S, type Scope } from 'effect';
 import { Etag, HttpPlatform, HttpRouter } from 'effect/http';
 import { HttpApiBuilder, HttpApiTest } from 'effect/http-api';
 
+import type { Schemas } from '@manna/core/egw';
 import { SearchService } from '@manna/core/search';
 
 import { CommentaryPackSchema, SearchApi } from './api.js';
 import { CommentaryMemoryLive, namesVersion } from './commentary-api.js';
-import { countedCorpus, madeUpCorpus, madeUpPack } from './commentary-fixture.js';
-import { notesSum } from './commentary.js';
+import { cite, countedCorpus, madeUpCorpus, madeUpPack } from './commentary-fixture.js';
+import { packSum } from './commentary.js';
 import { SearchGroupLive } from './search-api.js';
+import { studyGroupOver } from './study-api.js';
 import { VectorIndexLoad } from './vector-index.js';
+
+type Node = Schemas.Paragraph['nodes'][number];
 
 const decodePack = S.decodeUnknownSync(S.fromJsonString(CommentaryPackSchema));
 
@@ -65,7 +69,7 @@ describe('GET /api/commentary/pack', () => {
         expect(answer.etag).toBe(`"${pack.version}"`);
         expect({ notes: pack.notes, verses: pack.verses }).toEqual(madeUpPack);
         expect(pack.count).toBe(3);
-        expect(pack.sum).toBe(notesSum(pack.notes));
+        expect(pack.sum).toBe(packSum(pack.notes, pack.verses));
       }),
     ));
 
@@ -93,6 +97,46 @@ describe('GET /api/commentary/pack', () => {
         yield* ask();
         expect(first).toBeGreaterThan(0);
         expect(corpus.reads.value).toBe(first);
+      }),
+    ));
+
+  test('the paragraphs under a verse heading and the citations naming it are its notes', () =>
+    runScoped(
+      Effect.gen(function* () {
+        const made = (bookCode: string, puborder: number, nodes: readonly Node[]) => ({
+          bookCode,
+          para_id: Option.some(`${bookCode}.${String(puborder)}`),
+          refcode_short: Option.some(`${bookCode} ${String(puborder)}.1`),
+          nodes: [...nodes, { _tag: 'Text' as const, text: ' made up' }],
+          puborder,
+        });
+        const strong = (...children: Node[]): Node => ({
+          _tag: 'Unknown',
+          tag: 'strong',
+          className: '',
+          children,
+        });
+        const corpus = countedCorpus({
+          books: madeUpCorpus.books,
+          paragraphs: [
+            made('5BC', 1, [strong(cite('John 1:14', '14'))]),
+            ...Array.from({ length: 8 }, (_, at) => made('5BC', at + 2, [])),
+            made('5BC', 10, [strong(cite('John 1:16', '16'))]),
+            made('1BC', 1, [cite('John 1:1', 'John 1:1-3, 14')]),
+            made('1BC', 2, [cite('John 1:1', 'John 1:1')]),
+          ],
+        });
+        const pack = decodePack((yield* (yield* asking(corpus))()).body);
+        const notes = (verse: number) =>
+          (pack.verses['43.1']?.find(([number]) => number === verse)?.[1] ?? []).map(
+            (index) => pack.notes[index]?.[0],
+          );
+        expect(notes(14)).toEqual([
+          '1BC 1.1',
+          ...Array.from({ length: 9 }, (_, at) => `5BC ${String(at + 1)}.1`),
+        ]);
+        expect(notes(1)).toEqual(['1BC 1.1', '1BC 2.1']);
+        expect(notes(16)).toEqual(['5BC 10.1']);
       }),
     ));
 
@@ -144,6 +188,7 @@ describe('the Bun server', () => {
               Layer.mergeAll(
                 SearchGroupLive.pipe(Layer.provide(search)),
                 CommentaryMemoryLive.pipe(Layer.provide(corpus.layer)),
+                studyGroupOver(),
               ),
             ),
             Layer.provide([Etag.layer, HttpPlatform.layer]),

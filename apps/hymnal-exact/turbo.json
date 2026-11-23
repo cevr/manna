@@ -6,13 +6,43 @@
       "dependsOn": [
         "$TURBO_EXTENDS$",
         "test:app",
+        "test:player",
         "test:web",
         "test:chords",
         "test:moves",
+        "test:style",
+        "test:hymn",
         "test:find",
-        "test:motion"
+        "test:motion",
+        "test:keys",
+        "test:tuner",
+        "test:about",
+        "test:tempo",
+        "test:follow",
+        "test:timing",
+        "test:offline",
+        "test:pinch",
+        "test:tabs"
       ],
       "outputs": []
+    },
+    "test:tabs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
+    },
+    "test:about": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/apps/hymnal/assets/meaning/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**"
+      ]
     },
     "test:motion": {
       "dependsOn": ["^transit"],
@@ -22,9 +52,29 @@
     "test:find": {
       "dependsOn": ["^transit"],
       "outputs": [],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/assets/meaning/**"
+      ]
     },
     "test:app": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "$TURBO_ROOT$/apps/hymnal/assets/meaning/**"
+      ]
+    },
+    "test:player": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "passThroughEnv": ["PROTOCOL_DEPTH"],
@@ -36,15 +86,7 @@
         "$TURBO_ROOT$/packages/hymnal/src/**",
         "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
-        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
-        "!src/web/**/*.test.*",
-        "!src/chords/**/*.test.*",
-        "!src/find/**/*.test.*",
-        "!src/list/headers.test.ts",
-        "!src/no-bucket.test.ts",
-        "!src/look/motion.test.ts",
-        "!src/look/quiet.test.ts",
-        "!src/settings/feel.test.ts"
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
       ]
     },
     "test:web": {
@@ -64,10 +106,40 @@
         "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
         "$TURBO_ROOT$/packages/hymnal/data/playback/**",
-        "!src/**/*.test.*",
-        "src/chords/page.test.ts",
-        "src/chords/held.test.ts",
-        "src/chords/host.test.ts"
+        "!src/*.test.*",
+        "!src/{find,home,hymns,list,look,player,settings,web}/**/*.test.*"
+      ]
+    },
+    "test:style": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "!src/*.test.*",
+        "!src/{find,home,hymns,list,look,player,settings,web}/**/*.test.*"
+      ]
+    },
+    "test:hymn": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "!src/*.test.*",
+        "!src/{chords,find,home,hymns,list,look,player,settings,web}/**/*.test.*"
       ]
     },
     "test:moves": {
@@ -82,10 +154,98 @@
         "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
         "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
         "$TURBO_ROOT$/packages/hymnal/data/playback/**",
-        "!src/**/*.test.*",
-        "src/chords/move.test.ts",
-        "src/chords/rows.test.ts",
-        "src/chords/shape.test.ts"
+        "!src/*.test.*",
+        "!src/{find,home,hymns,list,look,player,settings,web}/**/*.test.*"
+      ]
+    },
+    "test:keys": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+      ]
+    },
+    "test:follow": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+      ]
+    },
+    "test:timing": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**",
+        "$TURBO_ROOT$/packages/hymnal/data/midi/**"
+      ]
+    },
+    "test:tuner": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/apps/hymnal/package.json"
+      ]
+    },
+    "test:pinch": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**"
+      ]
+    },
+    "test:tempo": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/apps/hymnal/vite/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/scripts/playback.ts",
+        "$TURBO_ROOT$/packages/hymnal/data/sdah-1985/**",
+        "$TURBO_ROOT$/packages/hymnal/data/playback/**"
+      ]
+    },
+    "test:offline": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal/src/**",
+        "$TURBO_ROOT$/packages/hymnal/src/**"
       ]
     }
   }

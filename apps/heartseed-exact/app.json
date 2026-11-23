@@ -5,9 +5,35 @@
   "start_url": "/",
   "env": [
     { "name": "HEARTSEED_GARDEN_DRIVE", "launch": true },
-    { "name": "HEARTSEED_PACKS_BASE", "launch": true }
+    { "name": "HEARTSEED_FIND_PACK", "launch": true },
+    { "name": "HEARTSEED_PACKS_BASE", "launch": true },
+    { "name": "HEARTSEED_TURN_PROBE", "launch": true }
   ],
   "display": "standalone",
+  "verify": {
+    "accept": [
+      {
+        "finding": "target",
+        "node": "word-*",
+        "why": "As One's (owner, q153: match One): a word to peek at is the word's own width and 36 pt tall, with One's 4-pt hit slop (apps/heartseed/src/sayit/draw.tsx, Peek)"
+      },
+      {
+        "finding": "overflow",
+        "node": "hear",
+        "why": "The web's alone, as One's: the web has no accessibility text sizes (Exact's accessibilityTextSize is false there), so at verify's 53-px root it keeps One's fixed 132-pt round button (apps/heartseed/src/sayit/draw.tsx, BigButton), whose label runs past the circle as One's reference cuts it. On iOS, at AX1 and up, Listen is a capsule the line's width that holds its label (owner, q160; tools/drive-largest.ts ios), and verify ios finds no spill there without this entry (hs-ax-better round 1)"
+      },
+      {
+        "finding": "overflow",
+        "node": "appearance-dark",
+        "why": "As One's on iOS at the largest text: Appearance's three choices share one row of equal cells that never wraps (apps/heartseed/src/appearance/choice.tsx: group row, radio flex 1), so the words cannot all fit; the port's last choice runs 2 pt past the side (hs-largest round 1)"
+      },
+      {
+        "finding": "clipped",
+        "node": "licence-text-*",
+        "why": "The web's measure, not a spill: the licences keep their spaces as One's text does (white-space pre-wrap), and Chrome's text range counts the space that hangs past a wrapped line's end; with the spaces collapsed (pre-line) the same check finds nothing, and verify ios finds no licence at the largest text (hs-largest round 1)"
+      }
+    ]
+  },
   "app": {
     "id": "app.heartseed.exact",
     "name": "Heartseed"

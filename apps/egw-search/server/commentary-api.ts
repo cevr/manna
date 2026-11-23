@@ -2,16 +2,26 @@
  * `GET /api/commentary/pack`: Ellen White's Bible Commentary as one pack.
  *
  * The pack is built from the corpus the server already holds, through the
- * paragraph database's own reads: per volume, its books, its links and its
- * paragraphs. Each host keeps the built pack its own way (`CommentaryPacks`):
+ * paragraph database's own reads: per volume, its books and its paragraphs,
+ * whose citations and verse headings make the links. Each host keeps the built pack its own way (`CommentaryPacks`):
  * the Bun server in memory, the Worker in the edge cache.
  */
 
-import { Context, Duration, Effect, Exit, Layer, Option, Stream } from 'effect';
+import {
+  Array as Arr,
+  Context,
+  Duration,
+  Effect,
+  Exit,
+  Layer,
+  Option,
+  Order,
+  Stream,
+} from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { HttpApiBuilder } from 'effect/http-api';
 
-import { nodesToText } from '@manna/core/egw';
+import { nodesToText, volumeVerses } from '@manna/core/egw';
 import { EGWParagraphDatabase } from '@manna/core/egw-db';
 
 import { CommentaryFailed, SearchApi } from './api.js';
@@ -25,52 +35,33 @@ export const PACK_PATH = '/api/commentary/pack';
 
 const CACHE_CONTROL = `public, max-age=${String(Duration.toSeconds(PACK_TTL))}`;
 
-/** A paragraph as a note: where it stands in its volume, and what it says. */
-interface Note {
-  readonly puborder: number;
-  readonly reference: string;
-  readonly text: string;
-}
-
-/** A paragraph as a note: where it stands in its volume, and what it says. */
-interface Note {
-  readonly puborder: number;
-  readonly reference: string;
-  readonly text: string;
-}
-
-/** The links of one volume, each joined to the paragraph it names. A link is
- *  stored against the paragraph's `ref_code`, which an import keys by the
- *  short reference code or by the paragraph id, so both are looked up. */
+/** The links of one volume, read from its paragraphs in publication order
+ *  (`volumeVerses`), not from the stored link rows: those were written by
+ *  whichever extractor ran at import, and a deploy must carry today's
+ *  reading. A paragraph with no short reference is never a note. */
 const volumeLinks = (db: EGWParagraphDatabase['Service'], bookId: number, bookCode: string) =>
   Effect.gen(function* () {
-    const refs = yield* db.getBibleRefsByBook(bookId);
-    if (refs.length === 0) return [];
-    const paragraphs = yield* Stream.runCollect(db.getParagraphsByBook(bookId));
-    const named = new Map<string, Note>();
-    for (const paragraph of paragraphs) {
-      for (const reference of Option.toArray(paragraph.refcode_short)) {
-        const note = {
+    const paragraphs = Arr.sort(
+      yield* Stream.runCollect(db.getParagraphsByBook(bookId)),
+      Order.mapInput(
+        Order.Number,
+        (paragraph: { readonly puborder: number }) => paragraph.puborder,
+      ),
+    );
+    const verses = volumeVerses(paragraphs);
+    return paragraphs.flatMap((paragraph, at): CommentaryLink[] =>
+      Option.toArray(paragraph.refcode_short).flatMap((reference) => {
+        const cited = verses[at] ?? [];
+        if (cited.length === 0) return [];
+        const text = nodesToText(paragraph.nodes);
+        return cited.map((verse) => ({
+          bookCode,
           puborder: paragraph.puborder,
           reference,
-          text: nodesToText(paragraph.nodes),
-        };
-        const keys = [
-          reference,
-          ...Option.toArray(paragraph.para_id),
-          ...Option.toArray(Option.fromNullishOr(paragraph.refcode_long)),
-        ];
-        for (const key of keys) if (!named.has(key)) named.set(key, note);
-      }
-    }
-    return refs.flatMap((ref): CommentaryLink[] =>
-      Option.toArray(Option.fromUndefinedOr(named.get(ref.para_ref_code))).map((note) => ({
-        bookCode,
-        ...note,
-        bibleBook: ref.bible_book,
-        bibleChapter: ref.bible_chapter,
-        bibleVerse: Option.fromNullishOr(ref.bible_verse),
-      })),
+          text,
+          ...verse,
+        }));
+      }),
     );
   });
 

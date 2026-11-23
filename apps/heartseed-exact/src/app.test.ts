@@ -322,7 +322,7 @@ it('answers every text source inside the data host, for seeded calls', async () 
   }
 });
 
-/** One Add verses or chooser call, or a garden call between them: rows, sections and routes named well, badly or not at all. */
+/** One Add verses, chapter or Go to call, or a garden call between them: rows, sections and routes named well, badly or not at all. */
 const addCallOf = (random: Random, now: number): readonly [string, readonly unknown[]] => {
   const key = random.pick(['', 'x']);
   const seed = random.below(2 ** 32);
@@ -352,24 +352,37 @@ const addCallOf = (random: Random, now: number): readonly [string, readonly unkn
     case 3:
       return ['addPlant', [slug, now, offset, seed]];
     case 4:
-      return ['chooserBooks', []];
+      return ['gotoBooks', []];
     case 5:
-      return ['chooserChapters', [book]];
+      return [
+        'gotoBook',
+        [book, random.below(70), random.below(160), random.pick(['', 'John 3:16', 'x|'])],
+      ];
     case 6:
       return [
-        'chooserTap',
-        [book, chapter, first, last, random.pick([1, 16, 0, 200, 2.5, Number.NaN])],
-      ];
-    case 7:
-      return [
-        'chooserRead',
+        'chapterTap',
         [
           book,
           chapter,
+          random.pick([`${book}.${chapter}`, '', '19.23']),
+          first,
+          last,
+          answer,
+          random.pick([1, 16, 0, 200, 2.5, Number.NaN]),
+        ],
+      ];
+    case 7:
+      return [
+        'chapterRead',
+        [
+          book,
+          chapter,
+          random.pick([`${book}.${chapter}`, '', '19.23']),
           first,
           last,
           answer,
           random.pick(['', 'John 3:16', 'John 3:16|John 3:17', '|']),
+          random.pick(['', 'John 3:16|Psalms 23:1', 'x|John 3:99']),
         ],
       ];
     default:
@@ -377,7 +390,7 @@ const addCallOf = (random: Random, now: number): readonly [string, readonly unkn
   }
 };
 
-it('answers every Add verses and chooser source inside the data host, between garden calls over a failing storage', async () => {
+it('answers every Add verses, chapter and Go to source inside the data host, between garden calls over a failing storage', async () => {
   for (let seed = 1; seed <= SEQUENCES / 4; seed++) {
     const random = seeded(seed);
     const storage = gardenStorageOf(random);
@@ -390,10 +403,10 @@ it('answers every Add verses and chooser source inside the data host, between ga
       if (source === 'addRead') expect(Array.isArray(answered['shelves'])).toBe(true);
       else if (source === 'addList') expect(Array.isArray(answered['verses'])).toBe(true);
       else if (source === 'addPlant') expect(typeof answered['answer']).toBe('string');
-      else if (source === 'chooserBooks') expect(Array.isArray(answered['testaments'])).toBe(true);
-      else if (source === 'chooserChapters') expect(Array.isArray(answered['chapters'])).toBe(true);
-      else if (source === 'chooserTap') expect(typeof answered['first']).toBe('number');
-      else if (source === 'chooserRead') expect(typeof answered['plant']).toBe('boolean');
+      else if (source === 'gotoBooks') expect(Array.isArray(answered['testaments'])).toBe(true);
+      else if (source === 'gotoBook') expect(Array.isArray(answered['chapters'])).toBe(true);
+      else if (source === 'chapterTap') expect(typeof answered['first']).toBe('number');
+      else if (source === 'chapterRead') expect(typeof answered['plant']).toBe('boolean');
       expect([...storage.files.keys()].every((path) => path === GARDEN_FILE)).toBe(true);
       now += random.below(86_400_000);
     }

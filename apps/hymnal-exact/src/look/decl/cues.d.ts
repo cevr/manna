@@ -13,7 +13,8 @@ type Told =
   | 'favourite-on'
   | 'favourite-off'
   | 'chords-on'
-  | 'chords-off';
+  | 'chords-off'
+  | 'rail-tick';
 
 /** A moment a control gives. */
 export type Cue = { readonly _tag: string };

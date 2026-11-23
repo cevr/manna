@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { hashedBy, unhashed } from './unhashed.js';
+import { hashedBy, readLog, unhashed } from './unhashed.js';
 
 const tasks: Parameters<typeof hashedBy>[0] = [
   {
@@ -88,5 +88,24 @@ describe("the files a workspace's tests read that its test task does not hash", 
         hashed,
       ),
     ).toEqual(['.claude/skills/film/CRAFT.md', 'packages/other/x.ts']);
+  });
+
+  test('are read from the log less each path the task or a task before it created', () => {
+    const { reads, created } = readLog(
+      [
+        '/repo/apps/app/src/made.ts',
+        '+/repo/apps/app/src/made.ts',
+        '/repo/apps/app/src/made.ts',
+        '/repo/apps/app/src/kept.ts',
+        '/repo/apps/app/earlier.json',
+        '',
+      ].join('\n'),
+      new Set(['/repo/apps/app/earlier.json']),
+    );
+    expect(reads).toEqual(['/repo/apps/app/src/kept.ts']);
+    expect([...created].toSorted()).toEqual([
+      '/repo/apps/app/earlier.json',
+      '/repo/apps/app/src/made.ts',
+    ]);
   });
 });

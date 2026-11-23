@@ -1,29 +1,24 @@
-/** One licence as the licences' page shows it: numbered from 0, named by its own first lines (`licenceName`), and its text whole. */
+import { VERSION_PREFIX } from '@manna/heartseed/about/version';
+
+/** One licence as the licences' page shows it: numbered from 0, its text whole, which names itself in its first lines. */
 export interface AboutLicence {
   readonly index: number;
-  readonly name: string;
   readonly text: string;
 }
 
-/** The licences, in the order the page lists them. */
-export interface AboutLicences {
+/** What About and its licences show: the app's version line, and the licences in the order the page lists them. */
+export interface AboutShown {
+  readonly version: string;
   readonly licences: AboutLicence[];
 }
 
-/** A licence's name: its first line that is not blank, then the next up to its first comma, each trimmed; the first alone when no next line holds words. */
-export const licenceName = (text: string): string => {
-  const [title = '', version = ''] = text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line !== '');
-  const [kept = ''] = version.split(',');
-  if (kept === '') return title;
-  return `${title}, ${kept}`;
-};
+/** About's line under the app's name, in the current Heartseed's words: its `VERSION_PREFIX`, then the version. */
+export const versionLine = (version: string): string => `${VERSION_PREFIX}${version}`;
 
-/** About's data source over the licences' `texts`, as `app.ts` registers it. */
-export const aboutSources = (texts: readonly string[]) => ({
-  aboutLicencesOf: (): AboutLicences => ({
-    licences: texts.map((text, index) => ({ index, name: licenceName(text), text })),
+/** About's data source over the licences' `texts` and the app's `version`, as `app.ts` registers it. */
+export const aboutSources = (texts: readonly string[], version: string) => ({
+  aboutOf: (): AboutShown => ({
+    version: versionLine(version),
+    licences: texts.map((text, index) => ({ index, text })),
   }),
 });

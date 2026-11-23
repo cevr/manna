@@ -17,6 +17,7 @@ import { Effect, Logger, Option, Schema } from 'effect';
 import { rowNamed } from '../add/shelves';
 import {
   joinRange,
+  keepFirst,
   moveBack,
   plantList,
   plantRange,
@@ -25,6 +26,8 @@ import {
   removeById,
 } from './program';
 import { SHORT_LINE } from '@manna/heartseed/chooser';
+import type { Stage } from '@manna/heartseed/garden';
+import { STAGE_NAMES } from '@manna/heartseed/garden/names';
 import { shownOf, verseIn, type At, type GardenShown, type GardenVerse } from './view';
 import { makeQueue, oneAtATime } from './writes';
 
@@ -61,6 +64,9 @@ export interface GardenVerseChange {
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 const Grade = Schema.Literals([1, 2, 3, 4]);
+
+/** Whether Contract's `text` names a stage: one the current Heartseed names. */
+const isStage = (text: string): text is Stage => Object.hasOwn(STAGE_NAMES, text);
 
 /** A recall as Contract hands it: SayIt's recall of the verse, its peeks at rest counted. */
 const RecallArg = Schema.Struct({
@@ -157,28 +163,35 @@ export const gardenSources = (options: GardenOptions = {}) => {
       seed,
     );
 
-  const gardenRecall: Source<
-    readonly [string, unknown, unknown, number, number, number],
-    GardenVerseChange
-  > = ([reference, recall, help, now, offset, seed], _store, storage) =>
-    Option.match(
-      Option.all([
-        Schema.decodeUnknownOption(RecallArg)(recall),
-        Schema.decodeUnknownOption(HelpArg)(help),
-      ]),
-      {
-        onNone: () => invalid(now, offset),
-        onSome: ([kept, taken]) =>
-          run(
-            Effect.map(recallVerse(storage, reference, kept, Option.some(taken)), (result) => ({
-              answer: result.answer,
-              verse: verseIn(result.held.garden, reference, at(now, offset)),
-            })),
-            now,
-            seed,
-          ),
-      },
-    );
+  /** A source that keeps a recall by `keep`: `recallVerse` for any recital, `keepFirst` for the first minute's. */
+  const recalling =
+    (
+      keep: typeof recallVerse,
+    ): Source<readonly [string, unknown, unknown, number, number, number], GardenVerseChange> =>
+    ([reference, recall, help, now, offset, seed], _store, storage) =>
+      Option.match(
+        Option.all([
+          Schema.decodeUnknownOption(RecallArg)(recall),
+          Schema.decodeUnknownOption(HelpArg)(help),
+        ]),
+        {
+          onNone: () => invalid(now, offset),
+          onSome: ([kept, taken]) =>
+            run(
+              Effect.map(keep(storage, reference, kept, Option.some(taken)), (result) => ({
+                answer: result.answer,
+                verse: verseIn(result.held.garden, reference, at(now, offset)),
+              })),
+              now,
+              seed,
+            ),
+        },
+      );
+
+  const gardenRecall = recalling(recallVerse);
+
+  /** The first minute's kept recital: the recall and the verse joined to the single verses, in one write (`keepFirst`). */
+  const gardenKeepFirst = recalling(keepFirst);
 
   const gardenBack: Source<readonly [string, number, number, number], GardenVerseChange> = (
     [reference, now, offset, seed],
@@ -193,6 +206,23 @@ export const gardenSources = (options: GardenOptions = {}) => {
       now,
       seed,
     );
+
+  const gardenBackFrom: Source<
+    readonly [string, string, number, number, number],
+    GardenVerseChange
+  > = ([reference, from, now, offset, seed], _store, storage) =>
+    Option.match(Option.liftPredicate(from, isStage), {
+      onNone: () => invalid(now, offset),
+      onSome: (stage) =>
+        run(
+          Effect.map(moveBack(storage, reference, Option.some(stage)), (result) => ({
+            answer: result.answer,
+            verse: verseIn(result.held.garden, reference, at(now, offset)),
+          })),
+          now,
+          seed,
+        ),
+    });
 
   const gardenDrive = () => Promise.resolve<GardenDriven>({ on: options.driven === true });
 
@@ -218,7 +248,9 @@ export const gardenSources = (options: GardenOptions = {}) => {
     gardenJoin,
     gardenRemove,
     gardenRecall,
+    gardenKeepFirst,
     gardenBack,
+    gardenBackFrom,
     gardenDrive,
   };
 };

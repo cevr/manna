@@ -1,2 +1,4 @@
+fail fetch "https://egw.cvr.im"
+
 test "the app's name heads the first screen"
   expect text "title" == "Heartseed"

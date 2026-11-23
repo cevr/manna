@@ -8,8 +8,8 @@
  */
 
 import {
-  notesSum,
   PACK_FORMAT,
+  packSum,
   versionOf,
   type CommentaryNote,
   type CommentaryPack,
@@ -32,7 +32,7 @@ export const packOf = (
   notes: ReadonlyArray<CommentaryNote>,
   verses: Readonly<Record<string, ReadonlyArray<CommentaryVerseNotes>>>,
 ): CommentaryPack => {
-  const sum = notesSum(notes);
+  const sum = packSum(notes, verses);
   return {
     format: PACK_FORMAT,
     version: versionOf(notes.length, sum),

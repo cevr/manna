@@ -48,10 +48,10 @@ const QUIET = [
 const SILENT = ['--mute-audio', '--disable-audio-output', '--disable-component-update'];
 
 /**
- * The flags that keep Chrome out of the host's keychain: a mock keychain on
- * macOS and a plain password store elsewhere, so a headless or debugged
- * Chrome never asks the owner's login keychain (a macOS dialog on their
- * screen) and the host's launch guard lets it start.
+ * The flags that keep Chrome out of the host's keychain: a mock keychain and
+ * a plain password store. On macOS a Chrome run with `HOME` moved (a sandboxed
+ * agent's scratch home) finds no login keychain there, and without these the
+ * system asks the owner for one ("A keychain cannot be found").
  */
 const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
 
@@ -67,9 +67,8 @@ const OWNED = [
  * Chrome's whole command line on `platform` for a caller's `requested`
  * flags, in `profile`: Bun 1.4.4's list in its order, `--disable-gpu` unless
  * the caller asks for the GPU on macOS (`drawsOnGpu`), the silent flags,
- * the keychain flags, then the caller's own in their order (Chrome takes
- * the last of a repeated switch), less any profile, debugging or keychain
- * flag of theirs.
+ * the keychain flags, then the caller's own in their order (Chrome takes the last of a repeated
+ * switch), less any profile, debugging or keychain flag of theirs.
  */
 export const chromeFlags = (
   platform: string,
@@ -90,7 +89,7 @@ export const chromeFlags = (
 ];
 
 /** A view's viewport, and where the page's `console.*` calls go (dropped when not given). */
-export interface ViewOptions {
+interface ViewOptions {
   readonly width: number;
   readonly height: number;
   readonly console?: (type: string, ...args: ReadonlyArray<unknown>) => void;

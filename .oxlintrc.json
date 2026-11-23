@@ -323,6 +323,29 @@
       }
     },
     {
+      // An Exact app's sources type check in a tree where Exact has not run
+      // (docs/exact.md): the generated `app.contract.d.ts` is ignored, so
+      // only the data module at the app's root may import it.
+      "files": ["**/apps/*-exact/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
+                "group": ["**/*.contract.d.ts", "**/*.contract.d"],
+                "message": "The generated contract declarations are ignored; type a source's arguments by hand (docs/exact.md)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       // The simulator driver reaches the host's files and tools only through
       // its contained host (packages/sim/src/host.ts), which refuses a path a
       // link leads out of its root; a direct node:fs, child_process or
@@ -1011,6 +1034,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1085,6 +1109,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1156,6 +1181,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1227,6 +1253,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1284,6 +1311,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1332,6 +1360,7 @@
                   "**/lab",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1499,6 +1528,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -1908,6 +1938,7 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/tools/chrome",
+                  "@manna/film/cast-build/sources",
                   "@manna/film/solid-plugin",
                   "@manna/film/ask",
                   "@manna/film/ask-server"
@@ -2010,6 +2041,17 @@
       "files": ["**/*.test.ts", "**/*.test.tsx", "**/test/**/*.ts", "**/test/**/*.tsx"],
       "rules": {
         "manna/seed-from-clock": "error"
+      }
+    },
+    {
+      // A Chrome launched for the DevTools protocol uses a mock keychain and
+      // a plain password store, or macOS asks the owner for a login keychain
+      // each run (packages/scripts/lint/chrome-mock-keychain.ts). A test's
+      // argument lists are data about launches, never launches.
+      "files": ["apps/**/*.ts", "packages/**/*.ts", "apps/**/*.mjs", "packages/**/*.mjs"],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/fixtures/**"],
+      "rules": {
+        "manna/chrome-mock-keychain": "error"
       }
     },
     {

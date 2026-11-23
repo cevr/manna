@@ -17,7 +17,7 @@
  */
 
 import { getBibleBook } from '@manna/core/bible';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 
 import type { HymnIndexes } from '~/hymns/indexes';
 
@@ -174,6 +174,24 @@ export const tilesOf = (tab: Tab, playing: Option.Option<number>): ReadonlyArray
     spans: spansOf(group.hymns),
     playing: Option.match(playing, { onNone: () => false, onSome: (n) => group.hymns.includes(n) }),
   }));
+
+/** `tab`'s tiles as `All at once` draws them, `playing` the number of the hymn the player has, 0 while idle. */
+export const tilesFor = (tab: Tab, playing: number): ReadonlyArray<Tile> =>
+  tilesOf(
+    tab,
+    Option.liftPredicate(playing, (number) => number > 0),
+  );
+
+/** How many hymns a tile's group holds, as its tile says it: `1 hymn`, `12 hymns`. */
+export const tileCount = (tile: Tile): string =>
+  Match.value(tile.count).pipe(
+    Match.when(1, () => '1 hymn'),
+    Match.orElse((n) => `${n} hymns`),
+  );
+
+/** A tile's name as VoiceOver reads it: its group's name, its count, then `playing` when it holds the player's hymn. */
+export const tileName = (tile: Tile): string =>
+  [tile.name, tileCount(tile), tile.playing && 'playing'].filter(Boolean).join(', ');
 
 /**
  * The group whose row is at or above the list's top at `offset`, given the

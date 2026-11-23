@@ -1,0 +1,16 @@
+fail fetch "https://egw.cvr.im"
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A plain launch draws no find field and asks find nothing"
+  at "/verses"
+  clock data
+  clock settle
+  expect tree has "verses-add"
+  expect tree missing "find-drive"
+  expect tree missing "find-field"
+  expect tree missing "find-results"
+  expect state findQuery == ""
+  expect state findTimes == []
+  expect no failures

@@ -12,14 +12,18 @@ const TOKENS = 'player/tokens.css';
 const FACE = 'player/face.ts';
 
 /**
- * Not the studio's chrome: canvas code and the house look's figures draw the
- * film's pixels in the film's own colours, the reading sheet is a page
+ * Not the studio's chrome: canvas code, the house look's figures and the
+ * pages and sheets a test draws a puppet, a painting or a traced rig on draw
+ * the film's pixels in the film's own colours, the reading sheet is a page
  * printed on paper, and sound code names a noise's colour, which is heard.
  */
 const OUTSIDE = [
   'canvas/',
   'style/',
   'lab/fixtures/',
+  'core/fixtures/',
+  'painting/fixtures/',
+  'puppet/fixtures/',
   'player/lookbook-sheet.ts',
   'player/contact.ts',
   'core/sheet.ts',

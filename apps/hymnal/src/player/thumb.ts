@@ -34,8 +34,8 @@
 import * as Chord from '@manna/hymnal/chord';
 import { Data, Option } from 'effect';
 
-import { type Cue, plain } from '~/feel/cue';
-import { keyName, type Move, playedKey, soundingKey, still } from '~/hymns/chords';
+import { type Cue, plain } from '../feel/cues';
+import { keyName, type Move, playedKey, soundingKey, still } from '../hymns/chords';
 
 export interface Thumb {
   /** Whether chords show, for every hymn. */
@@ -72,6 +72,9 @@ export interface Step {
   readonly state: Thumb;
   readonly cues: ReadonlyArray<Cue>;
 }
+
+/** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
+export const RESET_WAIT = 600;
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 

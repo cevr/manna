@@ -13,14 +13,60 @@ beside `/api/search`, `/api/search/batch`, `/api/commentary/pack` and `/health`.
 `/api/commentary/pack` is Ellen White's Bible Commentary as one JSON pack that
 Heartseed downloads and keeps: each paragraph of 1BC-7BC linked to a Bible
 verse, once, and each verse's notes (`server/commentary.ts` is the rule). It is
-built from the corpus the server holds, so it follows the weekly sync. Its
-`ETag` is its version, made of its note count and an FNV-1a sum of its notes, so
-an `If-None-Match` naming it answers `304`. The Bun server keeps the built pack
+built from the corpus the server holds, so it follows the weekly sync. The
+links are read from the paragraphs themselves when the pack is built, by
+core's one reading (`packages/core/src/egw/commentary-links.ts`), not from the
+stored `paragraph_bible_refs` rows, so a deploy carries the current reading: a
+citation names every verse its printed text names ("John 1:1-3, 14"), not only
+its title's first verse, and each paragraph under a verse heading ("14")
+comments on that verse. The stored rows `manna study` reads are made by the
+same reading at install; `manna egw relink [code...]` makes them again from
+the stored paragraphs when the reading changes. After
+a deploy, once the edge's hour has passed, check the served pack against the
+one the local corpus builds (one GET, references and counts only). D1 follows
+the weekly sync and the local file does not, so the verse counts drift apart;
+the check prints that drift and judges the code instead: it exits non-zero
+when more than 1% of the notes both packs hold (by paragraph reference) link
+other verses live, when either pack holds more than 5% of its notes alone, or
+when John 1:14 has fewer than ten notes live:
+
+```sh
+bun run --cwd apps/egw-search commentary:check
+```
+
+`server/commentary-corpus.slow.test.ts` (in `test:slow`) builds the pack over
+the local corpus, read-only, and skips, saying so, where there is none. The
+pack's `ETag` is its version, made of its note count and an FNV-1a sum of the
+whole pack (its notes, each field after its length, and its verse map,
+`packSum`), so a changed, swapped or reordered note or link
+gives a new version, and an `If-None-Match` naming the current one answers `304`. The Bun server keeps the built pack
 in memory for an hour; the Worker keeps it in the edge cache for an hour, so D1
 is read for it at most once an hour per edge (on a `workers.dev` stage the
 Cache API keeps nothing, so every ask reads D1). For development,
 `bun run --cwd apps/egw-search dev` runs Vite on port 5273 with `/api`
 proxied to the server on port 3101.
+
+`/api/study/:name` serves Heartseed's other packs, built from `bible.db`
+rather than this corpus: `xrefs` (OpenBible.info's cross-references, CC BY),
+`tags` and `lexicon` (Open Scriptures' Strong's numbers and dictionaries,
+CC BY-SA) and `words` (the word index find reads). The Worker reads them from
+the R2 bucket `heartseed-study-packs` (`StudyPackFiles`, adopted and retained;
+the deploy creates it), the Bun server from `EGW_STUDY_DIR` or
+`~/.bible/study`; each answers its version as its `ETag`, `304` for
+`If-None-Match`, and `404` until it is published. `bible.db` lives on the
+owner's Mac alone, so no deploy builds them: after a rebuild of `bible.db`, or
+a change to their builder (`apps/heartseed-exact/tools/study.ts`), run
+
+```sh
+bun run --cwd apps/egw-search study:publish            # build, upload, and check each answers 304
+bun run --cwd apps/egw-search study:publish --dry-run  # build and check only, no credentials
+```
+
+Heartseed's web build reads both packs from another origin, so those paths
+alone answer any origin (`server/pack-cors.ts`, a global middleware of either
+host's router): they expose the `ETag` and answer the preflight that
+`If-None-Match` makes a browser send. Every other path carries no CORS
+headers.
 
 ## Deploy
 

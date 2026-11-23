@@ -79,7 +79,7 @@ const count = (flags: ReadonlyArray<string>, flag: string) =>
 
 describe("Chrome's command line", () => {
   it.effect(
-    "states every flag: Bun's, the silent ones, one profile, the pipe, the GPU only on a Mac that asks, the request last",
+    "states every flag: Bun's, the silent ones, the keychain ones, one profile, the pipe, the GPU only on a Mac that asks, the request last",
     () =>
       Effect.gen(function* () {
         const result = yield* Arbitrary.checkEffect(
@@ -90,9 +90,13 @@ describe("Chrome's command line", () => {
             const kept = requested.filter((flag) => !owned(flag));
             return (
               BUN_FLAGS.every((flag) => line.includes(flag)) &&
-              ['--mute-audio', '--disable-audio-output', '--disable-component-update'].every(
-                (flag) => line.includes(flag),
-              ) &&
+              [
+                '--mute-audio',
+                '--disable-audio-output',
+                '--disable-component-update',
+                '--use-mock-keychain',
+                '--password-store=basic',
+              ].every((flag) => line.includes(flag)) &&
               line.filter((flag) => flag.startsWith('--user-data-dir=')).length === 1 &&
               line.includes(`--user-data-dir=${profile}`) &&
               line.filter((flag) => flag.startsWith('--remote-debugging-')).join() ===

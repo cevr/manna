@@ -1,0 +1,272 @@
+// The follow on the hymn page shown, as the current hymnal's
+// (apps/hymnal/src/follow/): while the player holds the page's hymn, the
+// sung line and syllable are marked, the page scrolls to keep the line a
+// third of the way down, a bar is counted in over the first sung line, the
+// intro is drawn as a line over it, and a still hold on the words seeks.
+// Every rule is the current hymnal's own follower and held seek, run in the
+// data module (`followStep`, src/follow/follow.ts); this file tells it the
+// player's view, the time and the reader's hand, and acts once on each of
+// its asks by key: a wake, a scroll, and the player's pause, seek and
+// resume for a hold.
+use PlayerView from "./player.contract"
+
+shape FollowView
+  serial: number
+  stamp: number
+  page: number
+  here: bool
+  line: number
+  mark: number
+  counting: bool
+  held: bool
+  wake: number
+  wakeIn: number
+  scroll: number
+  scrollLine: number
+  scrollMoves: bool
+  countLine: number
+  intro: bool
+  introShare: number
+  introNow: number
+  introText: string
+  armed: number
+  holding: bool
+  holdLine: number
+  holdWord: number
+  holdSaid: string
+  holdValue: string
+  ask: string
+  askKey: number
+  askAt: number
+  tick: number
+
+// Whether the page is shown (`exactPage()`): the follow's clock runs only
+// while it is.
+shape FollowPage
+  visibilityState: string
+
+// The count-in's newly lit beat grows and settles back
+// (`CountIn.tsx`'s pulse); Reduce Motion drops it.
+keyframes hy-pulse
+  from scale=1.6
+
+members HymnalExact
+  state followSeen = 0
+  state followAsked = 0
+  state followTicked = 0
+  state followTickAt = 0
+  state followWoken = 0
+  state followCentred = -1
+  state followPad = 0
+  resource followPage = exactPage() as shape FollowPage
+  resource followStart = followStep("view", 0, 0, 0, 0, 0, "") as shape FollowView
+  mutation followStepped as shape FollowView queue then followTook
+  derive followNow = match followStepped { case some(v) => (v.serial >= followStart.serial ? v : followStart), case none => followStart }
+  derive followNumber = match parseNumber(hymnOpen) { case some(n) => n, case none => 0 }
+  // The player's view, told as the current `useFollow` tells it: each
+  // change of the hymn shown, the player's hymn, phase, place, rate,
+  // count-in, last seek or stanza choice.
+  task followTell when hymnOpen != "" key=`${hymnOpen} ${player.number} ${player.phase} ${player.at} ${player.rate} ${player.count.on} ${player.seek} ${player.kept}`
+    change(followTold)
+  action followTold
+    send followStepped = followStep("report", followNumber, performanceNow(), player.at * 1000, player.rate, player.number, `${player.phase} ${player.count.on ? 1 : 0} ${player.seek} ${player.kept}`)
+  // The page's lines move when Reading or the chords change: the shown
+  // line goes back into place (the current `relayout`).
+  task followLayout when hymnOpen != "" key=`${chordsOn} ${readingShown.words} ${readingShown.line} ${readingShown.family}`
+    change(followLaidOut)
+  action followLaidOut
+    send followStepped = followStep("relayout", followNumber, performanceNow(), 0, 0, 0, "")
+  // The follower's next wake, by its key, while the page is shown: each
+  // frame asks whether its time has come, so a syllable lights on time.
+  task followWakeWatch when followNow.wake > 0 and followNow.wake != followWoken and followPage.visibilityState == "visible" key=followNow.wake
+    every(frame, followWakeCheck)
+  action followWakeCheck
+    if followNow.wake != followWoken and performanceNow() >= followNow.stamp + followNow.wakeIn
+      followWoken = followNow.wake
+      send followStepped = followStep("wake", followNumber, performanceNow(), 0, 0, followNow.wake, "")
+  // Each answer's asks, acted on once: the scroll to a line (a third of
+  // the way down, by the page's `scroll-padding-top`; at once under Reduce
+  // Motion), the held choice's tick, and the held line kept at the middle.
+  action followTook
+    if followNow.scroll > followSeen
+      followSeen = followNow.scroll
+      if followNow.scrollLine >= 0 and not followNow.holding
+        if followNow.scrollMoves and not motionStill
+          scrollIntoView(`sung-${followNow.scrollLine}`, block="start", behavior="smooth")
+        else
+          scrollIntoView(`sung-${followNow.scrollLine}`, block="start", behavior="instant")
+    if followNow.tick > followTicked
+      followTicked = followNow.tick
+      if performanceNow() - followTickAt >= 30
+        followTickAt = performanceNow()
+        if settingsFeel
+          haptic("selection")
+    if followNow.holding and followPad > 0 and followNow.holdLine >= 0 and followNow.holdLine != followCentred
+      followCentred = followNow.holdLine
+      scrollIntoView(`sung-${followNow.holdLine}`, block="center", behavior="instant")
+  // The hold's asks of the player, each once by its key: the pause as it
+  // takes (the page padded so its ends can come to the middle), the seek
+  // and play on, and the play on; run a moment after the answer that asks
+  // it, so the player's answer never feeds back into the report it came
+  // from.
+  task followAskWatch when followNow.askKey > followAsked key=followNow.askKey
+    after(1, followAct)
+  action followAct
+    if followNow.askKey > followAsked
+      followAsked = followNow.askKey
+      if followNow.ask == "pause"
+        if settingsFeel
+          haptic("selection")
+        followPad = round(frame("hymn-words").height / 2)
+        followCentred = followNow.holdLine
+        scrollIntoView(`sung-${followNow.holdLine}`, block="center", behavior="instant")
+        playerAsk("pause", 0)
+      else if followNow.ask == "seek"
+        if settingsFeel
+          haptic("impact-soft")
+        followPad = 0
+        followCentred = -1
+        playerAsk("seekTo", followNow.askAt)
+        playerAsk("resume", 0)
+      else if followNow.ask == "lift"
+        if settingsFeel
+          haptic("impact-soft")
+        followPad = 0
+        followCentred = -1
+        playerAsk("resume", 0)
+      else if followNow.ask == "resume"
+        followPad = 0
+        followCentred = -1
+        playerAsk("resume", 0)
+  // The reader's own scroll takes the page from the follow (the current
+  // `hand.ts`: a drag of the page, or a wheel on the web).
+  action followDragged
+    if followNow.here and not followNow.held and not followNow.holding
+      send followStepped = followStep("drag", followNumber, performanceNow(), 0, 0, 0, "")
+  action followWheeled(e: WheelEvent)
+    if followNow.here and not followNow.held and not followNow.holding and e.deltaY != 0
+      send followStepped = followStep("drag", followNumber, performanceNow(), 0, 0, 0, "")
+  action followResumed
+    send followStepped = followStep("resume", followNumber, performanceNow(), 0, 0, 0, "")
+  // A scroll that comes to rest while the follow has the page puts the
+  // sung line back where the follow keeps it: a capture or a turn that
+  // moved the scroller does not strand it.
+  action followRested
+    if followNow.here and not followNow.held and not followNow.holding and followNow.line >= 0
+      send followStepped = followStep("relayout", followNumber, performanceNow(), 0, 0, 0, "")
+  // The held seek's pointer on the words (the current web adapter's
+  // `contactAfter`), and its hold's time (`HOLD_MS`, 350 ms, held by
+  // src/follow/seek.test.ts).
+  action followDown(e: PointerEvent)
+    if followNow.here and player.phase == "playing" and not followNow.holding
+      send followStepped = followStep("down", followNumber, performanceNow(), e.clientX, e.clientY, e.pointerId, `${e.button} 1 ${motionStill ? 0 : 1}`)
+  action followMove(e: PointerEvent)
+    if followNow.armed > 0 or followNow.holding
+      send followStepped = followStep("move", followNumber, performanceNow(), e.clientX, e.clientY, e.pointerId, "")
+  action followUp(e: PointerEvent)
+    if followNow.armed > 0 or followNow.holding
+      send followStepped = followStep("up", followNumber, performanceNow(), e.clientX, e.clientY, e.pointerId, `${e.button} 1 ${motionStill ? 0 : 1}`)
+  task followHoldTimer when followNow.armed > 0 key=followNow.armed
+    after(350, followDeadline)
+  action followDeadline
+    send followStepped = followStep("deadline", followNumber, performanceNow(), 0, 0, followNow.armed, "")
+
+// The follow's mark on sung line `at` of the page: `OFF` (-2) off it or on
+// a neighbour, `WHOLE` (-3) for a line lit whole, else its sung syllable
+// (-1 in a rest), as the current `useLineMark`.
+fn markOf(f: FollowView, shown: bool, at: number): number = (shown and f.line == at) ? f.mark : -2
+
+// Whether word `w` of sung line `at` is the held seek's choice
+// (`useSeekTreatment`'s `word`).
+fn chosenOf(f: FollowView, shown: bool, at: number, w: number): bool = shown and f.holding and f.holdLine == at and f.holdWord == w
+
+// A syllable's colour under the follow, as the current `useLineFollow`'s
+// `syllableStyle` and `wordsStyle`: the held choice in the accent; a line
+// lit whole, or a line drawn as words, in the accent (ink while counting
+// in) on its tint; on a sung line drawn by syllables, the sung syllable in
+// the accent (none while counting in) and the rest muted; else ink.
+fn syllableColour(mark: number, timed: bool, counting: bool, chosen: bool, s: number): string = chosen ? "accent" : ((mark == -2 or mark == -3 or not timed) ? ((mark == -3 and not counting) ? "accent" : "ink") : ((s == mark and not counting) ? "accent" : "muted"))
+
+// Sung line `at`: its id the follow scrolls to (`sung-<at>`), selected and
+// current while sung, ringed while the held seek chooses it
+// (`useSeekTreatment`'s `line`), and the intro (line 0) and the count-in
+// (the follow's count line) drawn over it (`WithIntro`).
+component SungLine
+  props
+    at: number
+    label: string
+    tag: string
+    shown: bool
+  inject
+    followShown: FollowView
+    playerShown: PlayerView
+  slot
+  view
+    column id=`sung-${at}${tag}` position="relative" aria-selected=(shown and followShown.line == at) aria-current=((shown and followShown.line == at) ? "true" : "false") testId=(shown ? `sung-${at}` : `sung-${at}${tag}`)
+      children
+      if shown and followShown.holding and followShown.holdLine == at
+        column position="absolute" top="calc(space.s4 * -1)" bottom="calc(space.s4 * -1)" left="calc(space.s4 * -1)" right="calc(space.s4 * -1)" border-width="space.s2" border-style="solid" border-color="accent" border-radius="radius.r4" pointer-events="none" testId="reader-seek-line"
+      if shown and at == 0 and followShown.intro
+        FollowIntro(share=followShown.introShare, now=followShown.introNow, said=followShown.introText)
+      if shown and at == followShown.countLine and followShown.counting and playerShown.count.on
+        FollowCount(beats=playerShown.count.beats, beat=playerShown.count.beat)
+
+// The pill a hand scroll shows over the followed page (`ResumeFollow.tsx`):
+// at the page's foot on the ground with a hairline, its button the
+// platform's own (on iOS its title alone, in the button role, no fill); a
+// press scrolls back to the sung line and follows again.
+component FollowResume
+  inject
+    followShown: FollowView
+    followResume: action
+  view
+    if followShown.held
+      row position="absolute" left=0 right=0 bottom="space.s16" justify-content="center" pointer-events="none" testId="resume-follow-dock"
+        row border-radius="radius.r18" border="-exact-hairline solid line" background-color="ground" overflow="hidden" pointer-events="auto"
+          button press=followResume aria-label="Resume follow" testId="resume-follow"
+            text "Resume follow"
+
+// The held seek over the page (`HymnPage.tsx`'s `middle`): a mark in the
+// accent at the screen's middle, "Line timing only" under it on a line
+// timed whole, and the choice said for a screen reader, politely.
+component FollowSeekMarks
+  inject
+    followShown: FollowView
+  view
+    if followShown.holding
+      column position="absolute" left=0 right=0 top=0 bottom=0 pointer-events="none" testId="reader-seek"
+        column position="absolute" left="space.s4" top="50%" margin-top="space.marker-rise" width="size.marker-wide" height="size.mark" border-radius="radius.r2" background-color="accent" testId="reader-seek-marker"
+        if followShown.holdWord < 0
+          text "Line timing only" position="absolute" right="space.s20" top="50%" margin-top="space.note-drop" font="type.seek-note" color="muted" testId="reader-seek-line-only"
+        text followShown.holdSaid aria-live="polite" aria-label=followShown.holdSaid aria-valuetext=followShown.holdValue position="absolute" left=0 top=0 width="size.unseen" height="size.unseen" overflow="hidden" color="ink" testId="reader-seek-status"
+
+// The count-in over the line the follow holds at the first sung line
+// (`CountIn.tsx`): one mark per beat just above it, each lit in the
+// accent as its beat comes, the newly lit one pulsing by scale (none under
+// Reduce Motion); a progress bar read "Beat <k> of <n>", no live region.
+component FollowCount
+  props
+    beats: number
+    beat: number
+  inject
+    motionStill: bool
+  view
+    row position="absolute" left=0 top="space.beat-rise" gap="space.s6" role="progressbar" aria-label="Count-in" aria-valuemin=0 aria-valuemax=beats aria-valuenow=(beat + 1) aria-valuetext=`Beat ${beat + 1} of ${beats}` testId="count-in"
+      for m in range(beats) key=m
+        if m == beat
+          column width="size.beat" height="size.beat" border-radius="radius.r4" background-color="accent" testId="count-in-mark"
+            animation=(motionStill ? "none" : "hy-pulse duration.fade easing.quad-out")
+        else
+          column width="size.beat" height="size.beat" border-radius="radius.r4" background-color=(m < beat ? "accent" : "line") testId="count-in-mark"
+
+// The intro over line 0 (`IntroLine.tsx`): a thin accent line over a
+// hairline, filled by the share of the intro played; a progress bar named
+// "Introduction", whole percent played, whole seconds to the first line.
+component FollowIntro
+  props
+    share: number
+    now: number
+    said: string
+  view
+    column position="absolute" left=0 right=0 top="space.intro-rise" height="line.intro" background-color="line" overflow="hidden" role="progressbar" aria-label="Introduction" aria-valuemin=0 aria-valuemax=100 aria-valuenow=now aria-valuetext=said testId="intro"
+      column height="line.intro" width=`${share * 100}%` background-color="accent"

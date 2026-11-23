@@ -1,0 +1,164 @@
+// The player's bar: the device's element and the bar docked over the
+// stack's foot, as the current PlayerBar.tsx draws it. The player's state,
+// its calls and its sheet are features/player.contract's; this file draws
+// the bar, keeps the Sound switch and turns the element's events into the
+// player's calls. What the bar shows (its hymn, the player's button, the
+// seeker's times) is src/player/bar/view.ts's.
+use PlayerView from "./player.contract"
+use hy-rise, hy-sink, hy-fade-in, hy-fade-out from "./motion.contract"
+use KeysButton from "./keys.contract"
+
+// A drag let go on the bar is a swipe up past 24 points, or flung up faster
+// than 400 points a second: the current bar.ts's `swipedDown`, turned over
+// (src/player/bar/bar.model.test.ts holds it there).
+fn playerSwipedUp(pull: number, speed: number): bool = pull <= -24 or speed <= -400
+
+// Whether Play sounds the recording: on, the element plays aloud; off,
+// nothing sounds and no element is loaded, and the player's silent clock
+// runs the place over the score (features/player.contract's `playerClock`,
+// as the current sound.ts's score clock). The player is told each switch
+// (`playerSoundTell`); until its answer lands the element is muted. Kept
+// across launches, on until the reader turns it off, as the current
+// settings.ts's `sound`.
+members HymnalExact
+  state playerSound = true persist
+  action playerSoundSwitch
+    if settingsFeel
+      haptic("impact-light")
+    playerSound = not playerSound
+
+// The device and the bar, docked over the stack's foot (a route must be a
+// child of the navigation root, so the bar cannot take room of its own;
+// each screen leaves room under its last row): the element is keyed by
+// its load, so a new load is a new element and an old one's events end
+// with it; the bar shows while the player holds a hymn and no sheet is up,
+// and the dock has no box at all otherwise. While the player holds none,
+// a hymn page on top shows the same bar as its own (`pageBar`), as the
+// current hymnal's page draws it, so one bar stays put as Play docks it.
+component PlayerDock
+  props
+    player: PlayerView
+    ask: action
+    heard: action
+    ticked: action
+    broke: action
+    remote: action
+  inject
+    motionStill: bool
+    playerSoundOn: bool
+  view
+    column position="absolute" left=0 right=0 bottom=0 aria-hidden=(not (player.dock or player.pageBar))
+      for l in (player.src == "" ? [] : [player.load]) key=l
+        audio player.src id="audio" paused=player.paused currentTime=player.from playbackRate=player.rate muted=(not playerSoundOn) testId="audio"
+          metadata=MediaMetadata(title=player.session.title, artist=player.session.artist, album="SDA Hymnal", artwork="")
+          seekbackwardOffset=10 seekforwardOffset=10
+          seekto=remote("remoteSeek", 0) seekbackward=remote("remoteSkip", -1) seekforward=remote("remoteSkip", 1)
+          durationchange=heard("loaded", l) timeupdate=ticked(l) seeked=heard("seeked", l, 0)
+          waiting=heard("waiting", l, 0) play=heard("played", l, 0) playing=heard("playing", l, 0)
+          pause=heard("paused", l, 0) ended=heard("ended", l, 0) error=broke(l)
+      if player.dock or player.pageBar
+        column position="absolute" left=0 right=0 bottom=0 animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-rise duration.bar-in easing.out both") -exact-exit-animation=(motionStill ? "hy-fade-out duration.fade ease-out both" : "hy-sink duration.bar-out ease-out both")
+          PlayerBarFrame(player=player, ask=ask)
+
+// The bar, as the current PlayerBar.tsx draws it: over the home indicator,
+// on the bar's ground under a hairline, one row at the thumb. The opener
+// fills the row: it names the bar's hymn, or shows a grabber at the bar's
+// centre while that hymn is the page's own, and opens the full player.
+// Then the page's compact Play while another hymn sounds over it, the
+// Sound switch, and the player's button as a mark, or a spinner while it
+// loads, with Retry before Pause once a wait on the network runs long. A
+// hymn page's own bar, while nothing is held, shows the grabber,
+// Sound and the page's Play. While the bar's hymn sounds the bar grows to
+// hold the seeker under the row. A swipe up on the bar opens the full
+// player. A failure's reason shows under the hymn, where a mark cannot say
+// it.
+component PlayerBarFrame
+  props
+    player: PlayerView
+    ask: action
+  inject
+    motionStill: bool
+  state pull = 0
+  action pulled(dx: number, dy: number)
+    pull = pull + dy
+  action let(vx: number, vy: number)
+    if playerSwipedUp(pull, vy)
+      ask("open", 0)
+    pull = 0
+  view
+    column testId="bar" role="region" aria-label="Player" background-color="bar" border-top-width="line.hair" border-top-style="solid" border-top-color="line" padding-bottom="var(--exact-safe-area-inset-bottom)" touch-action="none" pan=pulled panrelease=let -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
+      row position="relative" align-items="center" gap="space.s8" padding="0px space.s12" height="calc(size.target + space.s12)"
+        KeysButton(number=player.onPage)
+        if player.pageBar or (player.bar.number == player.onPage and player.bar.phase != "failed")
+          row position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
+            view width="size.grabber" height="size.grabber-line" border-radius="radius.grabber" background-color="line" testId="bar-grabber"
+        if player.pageBar
+          view flex=1 min-width=0
+          PlayerSound()
+          PlayerMark(symbol="symbol:sf/play.fill", press=ask("page", player.onPage), id="play", name=player.pageLabel)
+        else
+          button press=ask("open", 0) appearance="none" flex=1 min-width=0 min-height="size.target" display="flex" flex-direction="column" justify-content="center" align-items="stretch" testId="bar-title" aria-label="Open player" aria-valuetext=player.bar.told
+            if player.bar.number != player.onPage
+              row gap="space.s8" align-items="center" justify-content="center"
+                text `${player.bar.number}` font="type.label" color="accent" font-variant-numeric="tabular-nums" testId="bar-number"
+                text player.bar.title font="type.small" color="ink" flex=1 min-width=0 line-clamp=1 text-align="left" testId="bar-hymn"
+            if player.bar.phase == "failed" and player.bar.said != ""
+              text player.bar.said font="type.small" color="muted" line-clamp=1 text-align="center" testId="bar-said"
+          if player.bar.page != 0
+            button press=ask("play", player.bar.page) appearance="none" min-height="size.target" min-width="size.target" padding="0px space.s4" testId="bar-page-play" aria-label=`Play hymn ${player.bar.page}`
+              text `Play ${player.bar.page}` font="type.label" color="button" font-variant-numeric="tabular-nums"
+          PlayerSound()
+          if player.bar.kind == "loading"
+            row align-items="center" justify-content="center" width="size.target" height="size.target" flex-shrink=0 testId="bar-loading"
+              progress width="size.glyph" height="size.glyph" aria-label=player.bar.label
+          else if player.bar.kind != ""
+            if player.bar.retry != ""
+              PlayerMark(symbol="symbol:sf/arrow.clockwise", press=ask("retry", 0), id="bar-retry", name=player.bar.retry)
+            PlayerMark(symbol=player.bar.mark, press=ask("bar", 0), id="bar-toggle", name=player.bar.label)
+      if player.bar.seeker and not player.pageBar
+        PlayerSeeker(player=player, ask=ask)
+
+// The bar's seeker, under its buttons while the bar's hymn sounds, as the
+// current Seeker.tsx draws it: the time gone, the place on a track the
+// reader drags, and the time left. A drag is the full player's own: the
+// place under the finger shows as it moves and is sent as it lets go;
+// VoiceOver moves it ten seconds a swipe.
+component PlayerSeeker
+  props
+    player: PlayerView
+    ask: action
+  inject
+    motionStill: bool
+  view
+    row align-items="center" gap="space.s8" padding="0px space.s16" height="size.slider" testId="seeker" animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.bar-in easing.out both")
+      text player.bar.gone font="type.footnote" color="muted" font-variant-numeric="tabular-nums" width="space.s40" aria-hidden=true testId="seek-gone"
+      input type="range" id="seek" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") flex=1 min-width=0 height="size.slider" aria-label="Seek" aria-valuetext=`${player.elapsed} of ${player.total}` testId="seek"
+      text player.bar.left font="type.footnote" color="muted" font-variant-numeric="tabular-nums" width="space.s40" text-align="right" aria-hidden=true testId="seek-left"
+
+// The Sound switch, as the current PlayerBar.tsx's `Sound` draws it: a
+// speaker with waves in the button's role while on, with a slash in the
+// muted role while off, left of the player's button; a switch to VoiceOver,
+// checked while on.
+component PlayerSound
+  inject
+    playerSoundOn: bool
+    playerSoundPress: action
+  view
+    button press=playerSoundPress appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId="bar-sound" role="switch" aria-label="Sound" aria-checked=playerSoundOn
+      :active
+        background-color = "soft"
+      image (playerSoundOn ? "symbol:sf/speaker.wave.2.fill" : "symbol:sf/speaker.slash.fill") width="size.glyph" height="size.glyph" object-fit="contain" color=(playerSoundOn ? "button" : "muted") aria-hidden=true
+
+// A bar button's mark: the symbol at 22 points in the button's role, in a
+// round 44-point target that takes the soft fill while held.
+component PlayerMark
+  props
+    symbol: string
+    press: action
+    id: string
+    name: string
+  view
+    button press=press appearance="none" display="flex" align-items="center" justify-content="center" width="size.target" height="size.target" border-radius="radius.pill" flex-shrink=0 testId=id aria-label=name
+      :active
+        background-color = "soft"
+      image symbol width="size.glyph" height="size.glyph" object-fit="contain" color="button" aria-hidden=true

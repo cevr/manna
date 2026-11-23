@@ -14,8 +14,21 @@ import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
 import { RENDER_PAGE } from '../../../../../apps/animations/server.ts';
-import { stageSources } from './sources.ts';
-import { buildSources, clipStages, memberStages } from './stages.ts';
+import { filmCastSources, pageSources, stageSources } from './sources.ts';
+import { clipStages, memberStages } from './stages.ts';
+
+// oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
+const SHARED = await Effect.runPromise(
+  Effect.all({ stage: stageSources, page: pageSources(RENDER_PAGE) }).pipe(
+    Effect.provide(BunServices.layer),
+  ),
+);
+
+/** The build's sources (`buildSources`) for the film the case's `FilmFolder` holds: its cast module's read in the case, the rest shared. */
+const sharedBuild = Effect.gen(function* () {
+  const filmCast = yield* filmCastSources((yield* FilmFolder).paths('in-its-order' as never).dir);
+  return { ...SHARED, filmCast };
+});
 
 /** A stage kind's source files, as `stageSources` makes them its inputs. */
 const wordValue = (word: string | Redacted.Redacted<string>): string => {
@@ -24,8 +37,8 @@ const wordValue = (word: string | Redacted.Redacted<string>): string => {
 };
 
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
-  Effect.map(stageSources, (all) =>
-    all[kind].flatMap((i) => {
+  Effect.succeed(
+    SHARED.stage[kind].flatMap((i) => {
       if (i._tag === 'File') return [i.path];
       return [];
     }),
@@ -104,7 +117,7 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
   });
 
 const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
-  Effect.flatMap(buildSources('in-its-order' as never, RENDER_PAGE), (src) =>
+  Effect.flatMap(sharedBuild, (src) =>
     memberStages(
       {
         film: 'in-its-order' as never,
@@ -266,7 +279,7 @@ const partsOver = <E>(
             coverage: { member: 'lead-feast', entries: [FRONT] },
             facts: { [FRONT.id]: complete },
           },
-          yield* buildSources('in-its-order' as never, RENDER_PAGE),
+          yield* sharedBuild,
         )).filter((s) =>
           [`drawing:${FRONT.id}@lead-feast`, ...BUILT[upTo]].some((id) => id === s.id),
         );
@@ -342,7 +355,7 @@ const ownCutterMember = Effect.gen(function* () {
           coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
           facts: { [entry.id]: complete },
         },
-        yield* buildSources('in-its-order' as never, RENDER_PAGE),
+        yield* sharedBuild,
       )).filter((s) => [`drawing:${entry.id}@fake`, `parts:${entry.id}@fake`].includes(s.id));
       const report = yield* buildGraph(stages, {
         root: '/',
@@ -483,7 +496,7 @@ describe('memberStages', () => {
             coverage: { member: 'filler-bases', entries: [FRONT] },
             facts: { [FRONT.id]: complete },
           },
-          yield* buildSources('in-its-order' as never, RENDER_PAGE),
+          yield* sharedBuild,
         );
         expect(filesOf(stages, `cut:${FRONT.id}@filler-bases`)).toEqual(
           expect.arrayContaining([
@@ -639,7 +652,7 @@ describe('memberStages', () => {
             facts: allComplete,
           },
           '/cache',
-          (yield* stageSources).chain,
+          SHARED.stage.chain,
           ['/reader/read.py'],
         );
         const inputs = clips.flatMap((c) => c.inputs);

@@ -53,3 +53,11 @@ export const VectorFilters = Effect.forEach(FILTERED_PROPERTIES, (property) =>
 export const SyncReports = Cloudflare.R2.Bucket('SyncReports', { name: 'egw-sync-reports' }).pipe(
   shared,
 );
+
+/** The reader's study packs (`../study-api.ts`), built from `bible.db` on the
+ *  owner's Mac and uploaded by `bun run study:publish`, since no deploy has
+ *  `bible.db`. Read by the search's Worker, and shared by every stage like
+ *  the reports, so a `destroy` keeps them. */
+export const StudyPackFiles = Cloudflare.R2.Bucket('StudyPackFiles', {
+  name: 'heartseed-study-packs',
+}).pipe(shared);

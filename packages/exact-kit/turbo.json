@@ -14,7 +14,28 @@
         "$TURBO_ROOT$/apps/heartseed-exact/package.json",
         "$TURBO_ROOT$/apps/hymnal-exact/exact.mjs",
         "$TURBO_ROOT$/apps/hymnal-exact/AGENTS.md",
-        "$TURBO_ROOT$/apps/hymnal-exact/package.json"
+        "$TURBO_ROOT$/apps/hymnal-exact/package.json",
+        "$TURBO_ROOT$/AGENTS.md",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/docs/exact-data-layer.md",
+        "$TURBO_ROOT$/apps/heartseed-exact/app.contract",
+        "$TURBO_ROOT$/apps/heartseed-exact/app.json",
+        "$TURBO_ROOT$/apps/heartseed-exact/app.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/src/about/licences.d.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/src/app.test.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/src/no-copy.test.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/src/test/random.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/strings/en.json",
+        "$TURBO_ROOT$/apps/heartseed-exact/tools/licences.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/tools/prepare.ts",
+        "$TURBO_ROOT$/apps/heartseed-exact/tsconfig.json",
+        "$TURBO_ROOT$/apps/hymnal-exact/app.contract",
+        "$TURBO_ROOT$/apps/hymnal-exact/app.json",
+        "$TURBO_ROOT$/apps/hymnal-exact/app.ts",
+        "$TURBO_ROOT$/apps/hymnal-exact/src/hymns/make.ts",
+        "$TURBO_ROOT$/apps/hymnal-exact/src/no-copy.test.ts",
+        "$TURBO_ROOT$/apps/hymnal-exact/src/test/random.ts",
+        "$TURBO_ROOT$/apps/hymnal-exact/tsconfig.json"
       ]
     }
   }

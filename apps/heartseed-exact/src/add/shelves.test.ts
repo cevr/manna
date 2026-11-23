@@ -52,7 +52,7 @@ const portRows = (held: Held) =>
     addShownOf(held, slugOf(shelf.id)).shelves.flatMap((each) => each.rows),
   );
 
-it('lists the shelves in the order, titles and notes of SHELVES, every row in place', async () => {
+it('lists the shelves in the order, titles, notes and icons of SHELVES, every row in place', async () => {
   const port = makePort();
   const held = await runCall(readGarden(port.storage), { now: START, seed: 1 }, HOST);
   const shown = addShownOf(held, '');
@@ -61,8 +61,8 @@ it('lists the shelves in the order, titles and notes of SHELVES, every row in pl
     const opened = addShownOf(held, slugOf(shelf.id)).shelves.filter((each) => each.open);
     expect(opened.map((each) => each.id)).toEqual(shelf.source._tag === 'Lists' ? [shelf.id] : []);
   }
-  expect(shown.shelves.map((each) => [each.id, each.title, each.note])).toEqual(
-    SHELVES.map((each) => [each.id, each.title, each.note]),
+  expect(shown.shelves.map((each) => [each.id, each.title, each.note, each.icon])).toEqual(
+    SHELVES.map((each) => [each.id, each.title, each.note, each.icon]),
   );
   expect(shown.shelves.map((each) => each.kind)).toEqual(
     SHELVES.map((each) => {

@@ -54,6 +54,7 @@ const standIn = (legs: ReadonlyArray<Leg>, seen: Seen): Processes => {
       seen.signals.push([pid, signal]);
     },
     sleep: (ms) => (ms >= TIMEOUT_MS ? new Promise(() => {}) : Promise.resolve()),
+    claim: async () => 8770,
   };
 };
 
@@ -115,10 +116,11 @@ describe('drive', () => {
   );
 
   it.effect(
-    "a launch resets the run's storage and a relaunch keeps it, through the app's own agent",
+    "a launch resets the run's storage and a relaunch keeps it, through the app's own agent, both on the one port the drive claimed once",
     () =>
       Effect.promise(async () => {
         const argvs: Array<ReadonlyArray<string>> = [];
+        const claims: Array<readonly [string, string]> = [];
         const drive = makeDrive({
           name: 'drive-probe',
           host: 'web',
@@ -134,10 +136,15 @@ describe('drive', () => {
             },
             signal: () => {},
             sleep: () => new Promise(() => {}),
+            claim: async (appDir, label) => {
+              claims.push([appDir, label]);
+              return 8772 + claims.length;
+            },
           },
         });
         expect(await drive.launch('s', ['state a', 'state b'])).toEqual([1, 'two']);
         await drive.relaunch('s', ['state a']);
+        expect(claims).toEqual([[PROBE, 'drive-probe web']]);
         expect(argvs).toEqual([
           [
             PROBE,
@@ -147,6 +154,8 @@ describe('drive', () => {
             'agent',
             'web',
             '--json',
+            '--port',
+            '8773',
             '--storage',
             's',
             '--reset-storage',
@@ -161,6 +170,8 @@ describe('drive', () => {
             'agent',
             'web',
             '--json',
+            '--port',
+            '8773',
             '--storage',
             's',
             '--keep-storage',
@@ -169,5 +180,33 @@ describe('drive', () => {
         ]);
         expect(drive.finish()).toBe(0);
       }),
+  );
+
+  it.effect('claims no port on iOS, nor on the web when the run names its own', () =>
+    Effect.promise(async () => {
+      const argvs: Array<ReadonlyArray<string>> = [];
+      let claims = 0;
+      const machine: Processes = {
+        spawn: (argv) => {
+          argvs.push(argv);
+          return { pid: 4242, ended: Promise.resolve({ code: 0, stdout: '1', stderr: '' }) };
+        },
+        signal: () => {},
+        sleep: () => new Promise(() => {}),
+        claim: async () => {
+          claims += 1;
+          return 8770;
+        },
+      };
+      const ios = makeDrive({ name: 'p', host: 'ios', appDir: PROBE, processes: machine });
+      await ios.launch('s', ['state a']);
+      const web = makeDrive({ name: 'p', host: 'web', appDir: PROBE, processes: machine });
+      await web.run(['--port=8771'], ['state a']);
+      expect(claims).toBe(0);
+      expect(argvs.map((argv) => argv.filter((a) => a.startsWith('--port')))).toEqual([
+        [],
+        ['--port=8771'],
+      ]);
+    }),
   );
 });

@@ -1,0 +1,101 @@
+// Two fingers between the home list and All at once, as the current app's
+// home/pinch.ts: a pinch in on the list zooms out to the tiles, a pinch out
+// on them zooms back to the list. The driver's pinch is two touches spread
+// about the node's middle in eight moves 16 ms apart (`tap … pinch
+// <scale>`), heard by the `pinch` hatch on the list's column
+// (modules/web/index.js). Its lift moves at about 0.7 a second, so a pinch
+// to 0.9 or 1.1 commits there, as the current app's `pinchAct` says of a
+// quick short pinch; inside 0.95 to 1.05 nothing commits at any speed (a
+// slow 0.9 is held in src/pinch/gesture.model.test.ts).
+test "A pinch in shows the tiles, a pinch out the list"
+  clock settle
+  clock data
+  expect tree has "hymn-list"
+  tap "hymn-list" pinch 0.7
+  clock settle
+  clock data
+  expect state find.tiles == true
+  expect tree has "tiles"
+  expect state find.top == "/"
+  tap "tiles" pinch 1.4
+  clock settle
+  clock data
+  expect state find.tiles == false
+  expect tree missing "tiles"
+  expect tree has "hymn-list"
+  expect state find.top == "/"
+
+test "Inside the dead band a pinch changes nothing"
+  clock settle
+  clock data
+  tap "hymn-list" pinch 0.97
+  clock settle
+  clock data
+  expect state find.tiles == false
+  tap "hymn-list" pinch 1.03
+  clock settle
+  clock data
+  expect state find.tiles == false
+  tap "tiles-show"
+  clock settle
+  clock data
+  expect state find.tiles == true
+  tap "tiles" pinch 1.03
+  clock settle
+  clock data
+  expect state find.tiles == true
+  tap "tiles" pinch 0.97
+  clock settle
+  clock data
+  expect state find.tiles == true
+
+// The list's gesture asks for the tiles at 0.8 and on to 0.5; once it has
+// committed it asks nothing more, so the tiles stay.
+test "One gesture commits at most once"
+  clock settle
+  clock data
+  tap "hymn-list" pinch 0.5
+  clock settle
+  clock data
+  expect state find.tiles == true
+  tap "tiles" pinch 0.5
+  clock settle
+  clock data
+  expect state find.tiles == true
+  tap "tiles" pinch 2
+  clock settle
+  clock data
+  expect state find.tiles == false
+
+test "With search open a pinch changes nothing"
+  clock settle
+  clock data
+  tap "find-search"
+  clock settle
+  clock data
+  expect state find.pinchable == false
+  tap "hymn-list" pinch 0.5
+  clock settle
+  clock data
+  expect state find.tiles == false
+  tap "find-cancel"
+  clock settle
+  clock data
+  expect state find.pinchable == true
+  tap "hymn-list" pinch 0.5
+  clock settle
+  clock data
+  expect state find.tiles == true
+
+test "With the drums open a pinch changes nothing"
+  clock settle
+  clock data
+  tap "find-number"
+  clock settle
+  clock data
+  expect state find.drums == true
+  expect state find.pinchable == false
+  tap "drums-outside" pinch 0.5
+  clock settle
+  clock data
+  expect state find.tiles == false

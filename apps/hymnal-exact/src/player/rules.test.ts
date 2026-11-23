@@ -188,15 +188,14 @@ describe('the recordings’ origin', () => {
       "const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';",
     );
     const grants = /export const grants = \{([^}]*)\};/u.exec(app)?.[1] ?? '';
-    expect(
-      grants
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean),
-    ).toEqual([
-      "'https://hymns.cvr.im': 'net.fetch https://hymns.cvr.im',",
-      "'http://127.0.0.1:4797': 'net.fetch http://127.0.0.1:4797',",
-    ]);
+    const files =
+      "'fs.read bundle:/Resources/meaning', 'fs.read bundle:/Resources/timing', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
+    expect(grants.replaceAll(/\s+/gu, ' ').trim()).toBe(
+      [
+        `'https://hymns.cvr.im': [ 'net.fetch https://hymns.cvr.im', ${files} ],`,
+        `'http://127.0.0.1:4797': [ 'net.fetch http://127.0.0.1:4797', ${files} ],`,
+      ].join(' '),
+    );
   });
 });
 

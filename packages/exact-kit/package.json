@@ -10,6 +10,7 @@
     "./main": "./src/main.ts",
     "./prepare": "./src/prepare/prepare.ts",
     "./drive": "./src/drive/drive.ts",
+    "./port": "./src/drive/port.ts",
     "./effect": {
       "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"
@@ -19,14 +20,16 @@
       "default": "./src/storage/store.ts"
     },
     "./data-host/testing": "./src/data-host/testing.ts",
-    "./no-copy/testing": "./src/no-copy/testing.ts"
+    "./no-copy/testing": "./src/no-copy/testing.ts",
+    "./look": "./src/look/allow.ts",
+    "./look/testing": "./src/look/testing.ts"
   },
   "scripts": {
     "exact": "bun lab/tools/prepare.ts && cd lab && bun ../src/bin.ts",
     "drive:lab": "bun lab/tools/drive.ts",
     "patch": "bun src/patch.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
-    "test": "bun test ./src"
+    "test": "bun test --parallel=2 ./src"
   },
   "dependencies": {
     "@effect/platform-bun": "catalog:",

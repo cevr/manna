@@ -12,7 +12,7 @@ import type { FileStorage } from '@manna/exact-kit/storage';
 import type { ExactStore, packSources } from '../packs/sources';
 import type { PackSpec } from '../packs/spec';
 import {
-  checkPack,
+  checkPackPaced,
   countsOf,
   readOf,
   type CommentaryCounts,
@@ -28,7 +28,7 @@ export const COMMENTARY: PackSpec<CommentaryPack> = {
   title: "Ellen White's commentary",
   noun: 'Commentary',
   waiting: 'The commentary is still on its way. It needs a connection once, then it works offline.',
-  check: checkPack,
+  check: checkPackPaced,
 };
 
 /** The downloader the commentary is read through. */

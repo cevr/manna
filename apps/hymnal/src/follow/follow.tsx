@@ -47,11 +47,12 @@ import { centerOffset, type PreviewHost } from '~/reader/word-seek';
 import { settings } from '~/store';
 
 import { book } from './book';
-import { followerOf, type Report } from './follower';
+import { followerOf } from './follower';
 import { handOf } from './hand';
 import { introOf } from './intro';
 import { type Marks, marksOf, OFF, WHOLE } from './marks';
 import { seekCount } from './seeks';
+import { reportOf } from './report';
 import { placeAt } from './timeline';
 
 interface Follow {
@@ -144,38 +145,6 @@ const wordsStyleOf = (marked: boolean, counting: boolean, accent: ColorValue): T
 
 /** The player's state when no player is provided. */
 const idle = Atom.make<Player>(Player.Idle());
-
-const away: Report = { _tag: 'Away' };
-
-/**
- * The follower's report of `state` on hymn `number`, its place moving at
- * `rate` (the player's `rate`). A count-in holds the place at the first
- * sung line, so while `counting` a playing state is reported paused there:
- * that line is marked and the follow's clock does not run on.
- */
-const reportOf = (number: number, state: Player, rate: number, counting: boolean): Report => {
-  const here = (
-    track: { readonly number: number },
-    at: number,
-    kind: 'playing' | 'waiting' | 'paused',
-  ): Report => {
-    if (track.number !== number) return away;
-    return { _tag: 'Here', at: at * 1000, state: kind, rate };
-  };
-  return Player.$match(state, {
-    Idle: () => away,
-    Loading: () => away,
-    Playing: ({ track, at }) => {
-      if (counting) return here(track, at, 'paused');
-      return here(track, at, 'playing');
-    },
-    Buffering: ({ track, at }) => here(track, at, 'waiting'),
-    Paused: ({ track, at }) => here(track, at, 'paused'),
-    Ended: () => away,
-    Stopped: () => away,
-    Failed: () => away,
-  });
-};
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 

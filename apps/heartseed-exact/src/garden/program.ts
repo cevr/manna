@@ -172,16 +172,19 @@ export const plantList = (storage: FileStorage, list: List) =>
 /** The prefix of a single verse's id: `single:<reference>`. */
 export const SINGLE = 'single:';
 
+/** The one-verse range of `reference`; none for a reference that names no verse. */
+const rangeOfReference = (reference: string): Option.Option<Range> =>
+  Option.map(placeOf(reference), (place) => ({
+    book: place.book,
+    chapter: place.chapter,
+    first: place.verse,
+    last: place.verse,
+  }));
+
 /** The single verse `single:<reference>` names, as its one-verse range. */
 const singleOf = (id: string): Option.Option<Range> =>
   Option.liftPredicate(id, (each) => each.startsWith(SINGLE)).pipe(
-    Option.flatMap((each) => placeOf(each.slice(SINGLE.length))),
-    Option.map((place) => ({
-      book: place.book,
-      chapter: place.chapter,
-      first: place.verse,
-      last: place.verse,
-    })),
+    Option.flatMap((each) => rangeOfReference(each.slice(SINGLE.length))),
   );
 
 /** Removes the list `id` (a range's or a Handbook list's), or the single verse `single:<reference>`. */
@@ -239,14 +242,24 @@ const gardenView = Effect.flatMap(Garden, (garden) => garden.view);
 
 /**
  * `storage` with its writes held back: every write of the call lands in
- * memory, and `commit` writes the last of them to the file once, answering
- * whether it landed (`true` when the call wrote nothing).
+ * memory, a read of the file written answers what was last written to it,
+ * so a second program over the staged storage reads the first's write, and
+ * `commit` writes the last of them to the file once, answering whether it
+ * landed (`true` when the call wrote nothing).
  */
 const stagedOf = (storage: FileStorage) => {
   const last = MutableRef.make(Option.none<{ path: string; data: Uint8Array }>());
   const staged: FileStorage = {
     fs: {
-      readFile: (path) => storage.fs.readFile(path),
+      readFile: (path) =>
+        Option.match(
+          Option.filter(MutableRef.get(last), (each) => each.path === path),
+          {
+            onNone: () => storage.fs.readFile(path),
+            // oxlint-disable-next-line effect/noNewPromise -- a FileStorage read answers a promise, as Exact's does; this one is in memory already.
+            onSome: ({ data }) => Promise.resolve(Uint8Array.from(data).buffer),
+          },
+        ),
       atomicWriteFile: (path, data) => {
         MutableRef.set(last, Option.some({ path, data }));
         // oxlint-disable-next-line effect/noNewPromise -- a FileStorage write answers a promise, as Exact's does; this one has landed already.
@@ -325,15 +338,47 @@ export const recallVerse = (
     return { answer: failed, held: yield* readGarden(storage) };
   });
 
-/** Moves `reference` back a stage from the stage it stands at, at the call's instant. */
-export const moveBack = (storage: FileStorage, reference: string) =>
+/**
+ * Keeps the first minute's recall of `reference` (`recallVerse`'s rules),
+ * then, once it is kept, joins the verse to the single verses by the
+ * chooser's own Add to single verses (`joinRange`), so what the file holds
+ * after is what that recall and that Add write one after the other. Both
+ * reach the file in one write: no later call, and no relaunch, reads the
+ * verse's plant without its hold. A join the single verses refuse (`Full`)
+ * leaves the recall kept, as the chooser's Add would be refused; when the
+ * write fails the call answers `Failed` with the garden as the file holds it.
+ */
+export const keepFirst = (
+  storage: FileStorage,
+  reference: string,
+  recall: RecallIn,
+  help: Option.Option<HelpIn>,
+) =>
+  Effect.gen(function* () {
+    const staged = stagedOf(storage);
+    const kept = yield* keepRecall(staged.storage, reference, recall, help);
+    const joinable = Option.filter(rangeOfReference(reference), () => kept.answer === 'Kept');
+    let held = kept.held;
+    if (Option.isSome(joinable)) held = (yield* joinRange(staged.storage, joinable.value)).held;
+    const answer: RecallAnswer = kept.answer;
+    if (yield* staged.commit) return { answer, held };
+    const failed: RecallAnswer = 'Failed';
+    return { answer: failed, held: yield* readGarden(storage) };
+  });
+
+/** Moves `reference` back a stage at the call's instant: from `from`, the stage the reader asked from, only while it still stands there (the current app's `Backs.back`); with none asked, from the stage it stands at. */
+export const moveBack = (
+  storage: FileStorage,
+  reference: string,
+  from: Option.Option<Stage> = Option.none(),
+) =>
   withGrounds(
     storage,
     Effect.gen(function* () {
       const plant = plantIn(yield* gardenView, reference);
       if (Option.isNone(plant)) return 'Failed' satisfies BackAnswer;
       return yield* Effect.flatMap(Backs, (backs) =>
-        backs.back({ reference, from: stageOf(plant.value) }),
+        backs.back({ reference, from: Option.getOrElse(from, () => stageOf(plant.value)) }),
       );
     }),
   );

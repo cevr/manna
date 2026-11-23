@@ -53,24 +53,14 @@ export {
   type PartRule,
   type PartSheet,
   type SheetClean,
-  SheetCleanRefused,
-  countedOf,
   cutParts,
   inkOf,
   inkTo,
   recompose,
 } from '../core/part-sheet.ts';
-export { type HiddenEntry, type PartsJob, jobOf, runParts, viewCutOf } from './part-sheet-cli.ts';
+export { type HiddenEntry, jobOf, runParts, viewCutOf } from './part-sheet-cli.ts';
 export { ImageRoute } from './image-route.ts';
-export {
-  type KeyFit,
-  type Limb,
-  type LimbCut,
-  cutLimb,
-  fitKey,
-  handPast,
-  keyInFrame,
-} from '../core/key-cut.ts';
+export { cutLimb, fitKey, handPast, keyInFrame } from '../core/key-cut.ts';
 export type { Raster } from '../core/raster.ts';
 export { decodePng, encodePng } from './png.ts';
 export { PuppetImagesBun } from '../puppet/images-bun.ts';

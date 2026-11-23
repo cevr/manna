@@ -3,15 +3,25 @@
 /**
  * What the player shows, from its state alone: the device's element (its
  * source, load and whether it is paused), the docked bar, the hymn page's
- * own Play, the full player and the system's Now Playing. The bar's rule is
- * the current app's (`bar.ts`'s `dockedBar`), written over this state and
- * held to it by `rules.test.ts`: docked while the player holds a hymn; on a
- * hymn page it acts on the page's hymn unless another hymn is sounding,
- * then it shows the sounding hymn and a compact Play for the page's.
+ * own Play, the full player and the system's Now Playing. The bar's part
+ * is `bar/view.ts`'s.
  */
 
+import { captionOf } from '@manna/hymnal-app/player/caption';
+import {
+  DEFAULT_TEMPO,
+  beatOf,
+  bpmAt,
+  bpmOf,
+  saidOf as percentOf,
+  STOPS,
+  stopAt,
+  stopIndexOf,
+} from '@manna/hymnal-app/player/tempo';
 import { clock } from '@manna/hymnal-app/player/time';
 
+import { TEMPO_PLACES } from '../tempo/places.ts';
+import { type BarView, type Toggle, barsOf, saidOf, toggleOf } from './bar/view.ts';
 import type { Choice } from './score.ts';
 import {
   type Command,
@@ -20,29 +30,62 @@ import {
   type Phase,
   type State,
   choiceOf,
+  countingOf,
   deviceOf,
-  pageOf,
+  rateFor,
   sessionOf,
-  sheetUp,
   skipAheadOf,
-  sounding,
+  tempoOf,
   timesOf,
 } from './step.ts';
 
-/** What a bar's or page's button does: Play, Pause, Try again, or nothing. */
-export type Toggle = 'play' | 'pause' | 'retry' | '';
+/** The tempo dial of the held hymn, as the current `TempoDial.tsx` reads it out. */
+const tempoView = (state: State): PlayerView['tempo'] => {
+  const { held } = state;
+  const percent = held === undefined ? DEFAULT_TEMPO : tempoOf(state, held.track.number);
+  const first = held?.track.score.tempo;
+  const beat = first === undefined ? undefined : beatOf(first);
+  const bpm = first === undefined ? 0 : bpmAt(bpmOf(first), percent);
+  const note = beat?.note ?? 4;
+  return {
+    at: stopIndexOf(percent),
+    percent,
+    said: percentOf(percent),
+    away: percent !== DEFAULT_TEMPO,
+    stops: STOPS.map((stop, at) => ({ at, percent: stop })),
+    places: TEMPO_PLACES,
+    timed: beat !== undefined,
+    bpmSaid: beat === undefined ? '' : `${beat.name} = ${bpm}`,
+    bpm,
+    note,
+    dotted: beat?.dotted ?? false,
+    open: note <= 2,
+    stem: note >= 2,
+    flags: Array.from({ length: FLAGS[note] ?? 0 }, (_, flag) => flag),
+  };
+};
 
-/** A hymn as the bar shows it: its number and title, and the player as that hymn sees it. */
-export interface BarView {
-  readonly shown: boolean;
-  readonly number: number;
-  readonly title: string;
-  readonly phase: Phase;
-  readonly said: string;
-  readonly toggle: Toggle;
-  /** The page's hymn, when another hymn sounds over it: the compact Play's; 0 when none. */
-  readonly page: number;
-}
+/** Flags on a note's stem, by the denominator that writes it, as the current `TempoDial.tsx`'s `FLAGS`. */
+const FLAGS: Readonly<Record<number, number>> = { 8: 1, 16: 2 };
+
+/** The count-in as the current `scoreClock`'s `beatAt` and `toNextBeat` read it, in the host's ms. */
+const countView = (state: State): PlayerView['count'] => {
+  const { held } = state;
+  const count = held?.count;
+  if (held === undefined || count === undefined || !countingOf(state, held))
+    return { on: false, beats: 0, beat: 0, left: 0, next: 0 };
+  const rate = rateFor(state, held.track.number);
+  const slack = 1e-6 * rate;
+  const index = count.beats - Math.ceil((count.left - slack) / count.beatMs);
+  const beat = Math.min(Math.max(index, 0), count.beats - 1);
+  return {
+    on: true,
+    beats: count.beats,
+    beat,
+    left: count.left / rate,
+    next: (count.left - (count.beats - beat - 1) * count.beatMs) / rate,
+  };
+};
 
 export interface Chip {
   readonly stanza: number;
@@ -54,6 +97,7 @@ export interface PlayerView {
   readonly serial: number;
   /** The element's source; empty while the device holds nothing. */
   readonly src: string;
+  /** The device's load, or the silent clock's while it holds the place; 0 for none. */
   readonly load: number;
   readonly from: number;
   readonly paused: boolean;
@@ -62,6 +106,8 @@ export interface PlayerView {
   readonly title: string;
   readonly phase: Phase;
   readonly said: string;
+  /** The full player's line under its title (`captionAt`); empty while nothing is held. */
+  readonly caption: string;
   readonly toggle: Toggle;
   /** The place the position bar shows (a drag while one is held) and the length, in sung seconds, and as a clock reads them. */
   readonly at: number;
@@ -79,9 +125,21 @@ export interface PlayerView {
   readonly place: number;
   /** The start of a span the choice leaves out within a tick or so of the place, in the recording's seconds; -1 for none. */
   readonly skipAt: number;
+  /** The silent clock plays: the contract's `playerClock` ticks it, under `load`. */
+  readonly ticking: boolean;
   /** The bar is docked: it shows, and no sheet is up over the stack. */
   readonly dock: boolean;
+  /**
+   * The hymn page shown draws the bar as its own (the current app's
+   * `pageBar`): the player holds no hymn, a hymn page is on top and no sheet
+   * is up over it. Its button plays the page's hymn.
+   */
+  readonly pageBar: boolean;
+  /** The hymn page shown, under a sheet too; 0 off a hymn page. The bar names its hymn only when it is not this one. */
+  readonly onPage: number;
   readonly bar: BarView;
+  /** The page's own bar's Play, by the name VoiceOver reads it. */
+  readonly pageLabel: string;
   /** The hymn page shown's own button: Pause while its hymn sounds, else what the player offers it. */
   readonly pageToggle: Toggle;
   readonly chips: Array<Chip>;
@@ -94,64 +152,69 @@ export interface PlayerView {
     readonly playing: boolean;
   };
   readonly go: Go;
-  /** Every stanza choice, as kept between launches (`encodeChoices`). */
+  /** Every stanza choice and tempo, as kept between launches (`encodeKept`). */
   readonly kept: string;
+  /** The rate the device plays at: the held hymn's tempo; 1 while nothing is held. */
+  readonly rate: number;
+  /** A choice is made: the `All` chip shows. */
+  readonly some: boolean;
+  /** The held hymn's tempo dial: its stop's place, its percent read out, and whether it is off 100 %. */
+  readonly tempo: {
+    readonly at: number;
+    readonly percent: number;
+    readonly said: string;
+    readonly away: boolean;
+    /** The dial's stops, each its place on the row and its percent. */
+    readonly stops: Array<{ readonly at: number; readonly percent: number }>;
+    /** The dial's measures (`TEMPO_PLACES`). */
+    readonly places: typeof TEMPO_PLACES;
+    /** The hymn is timed: its bpm read-out and `Tap` show. */
+    readonly timed: boolean;
+    /** The read-out as VoiceOver reads it, `<beat> = <bpm>`, and its parts as drawn. */
+    readonly bpmSaid: string;
+    readonly bpm: number;
+    /** The beat's note: its denominator, dotted or not, an open head (a half or whole), a stem (all but the whole), a flag per eighth's halving. */
+    readonly note: number;
+    readonly dotted: boolean;
+    readonly open: boolean;
+    readonly stem: boolean;
+    readonly flags: Array<number>;
+  };
+  /** The silent clock's count-in while it counts: its beats, the beat reached from 0, the host's ms left and to the next beat. */
+  readonly count: {
+    readonly on: boolean;
+    readonly beats: number;
+    readonly beat: number;
+    readonly left: number;
+    readonly next: number;
+  };
+  /** The recording plays in the printed key: the key its play asked for has none (`recording-key-fallback`). */
+  readonly fellBack: boolean;
+  /** The key the recording plays in, in semitones from the printed key's: the heard key, or 0 once it fell back. */
+  readonly offset: number;
   /** The command the step gave the device, for a test to read. */
   readonly command: string;
 }
 
-/** What the player says of a hymn in `phase` (failed for `why`). */
-export const saidOf = (phase: Phase, why: Held['why']): string => {
-  if (phase === 'loading' || phase === 'buffering') return 'Loading the recording…';
-  if (phase === 'paused') return 'Paused';
-  if (phase === 'ended') return 'Played to the end';
-  if (phase !== 'failed') return '';
-  if (why === 'network') return 'The recording needs a connection.';
-  if (why === 'missing') return 'This hymn has no recording.';
-  return 'The recording could not be played.';
-};
-
-/** What the button offers a hymn in `phase`: nothing for a hymn with no recording. */
-export const toggleOf = (phase: Phase, why: Held['why']): Toggle => {
-  if (phase === 'loading' || phase === 'playing' || phase === 'buffering') return 'pause';
-  if (phase !== 'failed') return 'play';
-  return why === 'missing' ? '' : 'retry';
-};
-
-const hidden: BarView = {
-  shown: false,
-  number: 0,
-  title: '',
-  phase: 'none',
-  said: '',
-  toggle: '',
-  page: 0,
-};
-
-/** The held hymn as the bar shows it, with the page's hymn beside it (0 for none). */
-const heldBar = (held: Held, page: number): BarView => ({
-  shown: true,
-  number: held.track.number,
-  title: held.track.title,
-  phase: held.phase,
-  said: saidOf(held.phase, held.why),
-  toggle: toggleOf(held.phase, held.why),
-  page,
-});
+/** The current app's player state each phase but a failure's is drawn as, for its caption. */
+const CAPTIONED = {
+  none: 'Idle',
+  loading: 'Loading',
+  playing: 'Playing',
+  buffering: 'Buffering',
+  paused: 'Paused',
+  ended: 'Ended',
+} as const;
 
 /**
- * The docked bar: hidden while the player holds no hymn. Over a hymn page
- * it shows the page's hymn (`titleOf` names it), as the player sees it,
- * unless another hymn is sounding: then that hymn, and the page's beside it.
+ * The line under the full player's title: the current app's `captionOf`
+ * for the state it would be in, and for a hymn with no recording, which
+ * the current app never holds, what `saidOf` says.
  */
-export const barOf = (state: State, titleOf: (number: number) => string): BarView => {
-  const { held } = state;
-  if (held === undefined) return hidden;
-  const page = pageOf(state);
-  if (page === undefined) return heldBar(held, 0);
-  if (held.track.number !== page && sounding(held)) return heldBar(held, page);
-  if (held.track.number === page) return heldBar(held, 0);
-  return { ...hidden, shown: true, number: page, title: titleOf(page), toggle: 'play' };
+const captionAt = (phase: Phase, why: Held['why']): string => {
+  if (phase !== 'failed') return captionOf({ _tag: CAPTIONED[phase] });
+  if (why === 'missing') return saidOf(phase, why);
+  return captionOf({ _tag: 'Failed', offline: why === 'network' });
 };
 
 /** Stanza choices as kept: `n:1.3` for each hymn with a choice, `,` between them. */
@@ -160,6 +223,28 @@ export const encodeChoices = (choices: Readonly<Record<string, Choice>>): string
     .filter(([, choice]) => choice.length > 0)
     .map(([number, choice]) => `${number}:${choice.join('.')}`)
     .join(',');
+
+/** Tempos as kept: `n@80` for each hymn off 100 %, `,` between them, after the choices. */
+export const encodeKept = (state: State): string =>
+  [
+    encodeChoices(state.choices),
+    ...Object.entries(state.tempos)
+      .filter(([, tempo]) => tempo !== DEFAULT_TEMPO)
+      .map(([number, tempo]) => `${number}@${tempo}`),
+  ]
+    .filter((part) => part !== '')
+    .join(',');
+
+/** Kept tempos read back, each on the dial's stops as the current `tempo.<n>` setting decodes it: one off them reads 100. */
+export const decodeTempos = (text: string): Readonly<Record<string, number>> => {
+  const tempos: Record<string, number> = {};
+  for (const part of text.split(',')) {
+    const found = /^([1-9]\d{0,2})@(\d{1,3})$/u.exec(part);
+    if (found === null) continue;
+    tempos[found[1] ?? ''] = stopAt(stopIndexOf(Number(found[2])));
+  }
+  return tempos;
+};
 
 /** Kept choices read back: anything `encodeChoices` would not write is left out. */
 export const decodeChoices = (text: string): Readonly<Record<string, Choice>> => {
@@ -194,10 +279,24 @@ const seekView = (state: State, chosen: ReadonlyArray<number>) => {
     dragging: held?.drag !== undefined,
     place: held?.at ?? 0,
     skipAt: skipAheadOf(state) ?? -1,
+    ticking: held?.silent === true && held.phase === 'playing',
     places:
       score === undefined || held === undefined || held.length <= 0
         ? []
         : chosen.filter((stanza) => score.stanzaAt(choice, stanza) !== undefined),
+  };
+};
+
+/** The tempo's part of the view: the rate, the dial, the count-in, the key the recording plays in, and whether a choice is made. */
+const pace = (state: State, choice: Choice) => {
+  const { held } = state;
+  return {
+    rate: held === undefined ? 1 : rateFor(state, held.track.number),
+    some: choice.length > 0,
+    tempo: tempoView(state),
+    count: countView(state),
+    fellBack: held !== undefined && held.offset !== held.heard,
+    offset: held?.heard ?? 0,
   };
 };
 
@@ -211,16 +310,13 @@ export const viewOf = (
   const device = deviceOf(state);
   const session = sessionOf(state);
   const { elapsed, total } = timesOf(state);
-  const page = pageOf(state);
-  const bar = barOf(state, titleOf);
-  const pageHeld = held !== undefined && page === held.track.number;
   const score = held?.track.score;
   const choice = held === undefined ? [] : choiceOf(state, held.track.number);
   const chosen = score?.chosen(choice) ?? [];
   return {
     serial: state.steps,
     src: device?.url ?? '',
-    load: device?.load ?? 0,
+    load: device?.load ?? (held?.silent === true ? held.load : 0),
     from: device?.from ?? 0,
     paused: device?.paused ?? true,
     held: held !== undefined,
@@ -228,15 +324,14 @@ export const viewOf = (
     title: held?.track.title ?? '',
     phase: held?.phase ?? 'none',
     said: held === undefined ? '' : saidOf(held.phase, held.why),
+    caption: held === undefined ? '' : captionAt(held.phase, held.why),
     toggle: held === undefined ? '' : toggleOf(held.phase, held.why),
     at: elapsed,
     length: total,
     elapsed: clock(elapsed),
     total: total > 0 ? clock(total) : '–:––',
     ...seekView(state, chosen),
-    dock: bar.shown && !sheetUp(state),
-    bar,
-    pageToggle: pageHeld ? toggleOf(held.phase, held.why) : 'play',
+    ...barsOf(state, titleOf),
     chips: Array.from({ length: score?.count ?? 0 }, (_, index) => ({
       stanza: index + 1,
       chosen: chosen.includes(index + 1),
@@ -248,7 +343,8 @@ export const viewOf = (
       playing: session?.playing ?? false,
     },
     go: state.go,
-    kept: encodeChoices(state.choices),
+    kept: encodeKept(state),
     command: commandText(command),
+    ...pace(state, choice),
   };
 };

@@ -1,0 +1,107 @@
+// The Sections list's number rail, as the current app's (src/reader/Rail.tsx):
+// in its own gutter at the list's right edge, which every row ends before,
+// six hymn numbers, faint, from the first to the last. A touch on it takes
+// the list to the hymn under it, and a drag along it to the hymn under the
+// thumb, one equal band per hymn; a bubble beside the thumb shows that
+// hymn's number and its topic, and each topic the drag passes is a tick,
+// felt only. Every rule is src/rail/rail.ts over the current app's
+// rail-marks, answered by `railPlaces` and `railTo` (src/rail/sources.ts);
+// this file draws it and turns the touch into calls. Its top follows the
+// header's bottom (`shift`) and its foot stands over the find bar's room
+// (`end`), as the current app's. Screen readers do not see it: the list's
+// headings, the tabs and All at once are their way through the hymns.
+
+shape RailLabel
+  number: number
+  top: number
+  lift: number
+
+// Whether the text is at one of iOS's accessibility sizes (`exactViewport()`).
+shape RailPort
+  accessibilityTextSize: bool
+
+shape RailPlaces
+  gutter: number
+  thumb: number
+  bubble: number
+  radius: number
+  width: number
+  gap: number
+  label: number
+  line: number
+  labelMost: number
+  lineMost: number
+  labels: RailLabel[]
+
+shape RailAt
+  at: number
+  number: number
+  section: string
+  y: number
+  ticks: number
+
+// The rail, `shift` below the list's top and `end` over its foot, in points.
+component HomeRail
+  props
+    shift: number
+    end: number
+  inject
+    settingsFeel: bool
+    listTabsJump: action
+  state railHeld = false
+  state railLength = 0
+  state railShown = -1
+  state railY = 0
+  resource railPlaced = railPlaces() as shape RailPlaces
+  resource railPort = exactViewport() as shape RailPort
+  mutation railMoved as shape RailAt then railTook
+  action railSized(w: number, h: number)
+    railLength = h
+  action railDown(e: PointerEvent)
+    railHeld = true
+    railShown = -1
+    send railMoved = railTo(-1, e.offsetY, railLength)
+  action railMove(e: PointerEvent)
+    if railHeld
+      send railMoved = railTo(railShown, e.offsetY, railLength)
+  action railUp
+    railHeld = false
+    railShown = -1
+  action railTook
+    match railMoved
+      case some(m)
+        if railHeld and m.at >= 0
+          railY = m.y
+          if m.at != railShown
+            railShown = m.at
+            listTabsJump()
+            scrollIntoView(`hymn-${m.number}`, block="start", behavior="instant")
+            if m.ticks > 0
+              if settingsFeel
+                haptic("selection")
+      case none
+        railY = railY
+  view
+    column position="absolute" right=0 width=`${railPlaced.gutter}px` top=`calc(var(--exact-safe-area-inset-top) + ${shift}px)` bottom=`${end}px`
+      aria-hidden=true touch-action="none" resize=railSized
+      pointerdown=railDown pointermove=railMove pointerup=railUp user-select="none" testId="rail"
+      for l in railPlaced.labels key=l.number
+        text `${l.number}` position="absolute" left=0 right=0 top=`${l.top}%` translate=`0 ${l.lift}%` pointer-events="none"
+          font-size=(railPort.accessibilityTextSize ? `${railPlaced.labelMost}px` : `min(${railPlaced.labelMost}px, ${railPlaced.label}rem)`)
+          line-height=(railPort.accessibilityTextSize ? `${railPlaced.lineMost}px` : `min(${railPlaced.lineMost}px, ${railPlaced.line}rem)`)
+          text-align="center" font-variant-numeric="tabular-nums" color="muted" line-clamp=1 testId=`rail-label-${l.number}`
+      column position="absolute" top=0 left=`${(railPlaced.gutter - railPlaced.thumb) / 2}px` width=`${railPlaced.thumb}px` height=`${railPlaced.thumb}px`
+        border-radius=`${railPlaced.thumb / 2}px` background-color="accent" pointer-events="none"
+        opacity=(railHeld and railShown >= 0 ? 1 : 0) translate=`0 ${railY - railPlaced.thumb / 2}px` testId="rail-thumb"
+      if railHeld and railShown >= 0
+        match railMoved
+          case some(m)
+            column position="absolute" top=0 right=`${railPlaced.gutter + railPlaced.gap}px` max-width=`${railPlaced.width}px` min-height=`${railPlaced.bubble}px`
+              padding-left="space.s16" padding-right="space.s16" padding-top="space.s8" padding-bottom="space.s8"
+              border-radius=`${railPlaced.radius}px` border-width="line.hair" border-style="solid" border-color="edge" background-color="panel"
+              display="flex" flex-direction="column" justify-content="center" pointer-events="none"
+              translate=`0 ${railY - railPlaced.bubble / 2}px` testId="rail-bubble"
+              text `${m.number}` font="type.hymn-number" font-variant-numeric="tabular-nums" color="accent" testId="rail-number"
+              text m.section font="type.footnote" color="muted" line-clamp=1 white-space="nowrap" testId="rail-section"
+          case none
+            column display="none"

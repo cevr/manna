@@ -10,6 +10,7 @@
         "test:add-b",
         "test:add-shelves",
         "test:chooser",
+        "test:goto",
         "test:packs",
         "test:garden-a",
         "test:garden-b",
@@ -24,9 +25,31 @@
         "test:session-c",
         "test:session-calls",
         "test:text",
-        "test:type"
+        "test:read",
+        "test:first",
+        "test:find",
+        "test:find-a",
+        "test:find-b",
+        "test:find-c",
+        "test:find-d",
+        "test:find-e",
+        "test:find-f",
+        "test:find-g",
+        "test:study",
+        "test:study-xrefs",
+        "test:study-tags-a",
+        "test:study-tags-b",
+        "test:study-lexicon",
+        "test:studyview",
+        "test:type",
+        "test:back"
       ],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_PACKS_BASE"],
+      "env": [
+        "HEARTSEED_GARDEN_DRIVE",
+        "HEARTSEED_FIND_PACK",
+        "HEARTSEED_PACKS_BASE",
+        "HEARTSEED_TURN_PROBE"
+      ],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -40,12 +63,19 @@
         "$TURBO_ROOT$/apps/heartseed/data/kjv-hearings.json",
         "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/src/bible/**",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "src/about/licences.ts",
+        "src/text/kjv.gen.json"
       ]
     },
     "test:app": {
       "dependsOn": ["^transit"],
-      "env": ["HEARTSEED_GARDEN_DRIVE", "HEARTSEED_PACKS_BASE"],
+      "env": [
+        "HEARTSEED_GARDEN_DRIVE",
+        "HEARTSEED_FIND_PACK",
+        "HEARTSEED_PACKS_BASE",
+        "HEARTSEED_TURN_PROBE"
+      ],
       "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -59,7 +89,8 @@
         "$TURBO_ROOT$/apps/heartseed/data/kjv-hearings.json",
         "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/src/bible/**",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "src/about/licences.ts"
       ]
     },
     "test:garden-a": {
@@ -170,6 +201,120 @@
         "$TURBO_ROOT$/apps/heartseed/src/**",
         "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
         "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "src/about/licences.ts",
+        "src/text/kjv.gen.json"
+      ]
+    },
+    "test:find": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-a": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-b": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-c": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-d": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-e": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-f": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:find-g": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },
@@ -304,7 +449,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },
-    "test:packs": {
+    "test:goto": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
@@ -314,6 +459,162 @@
         "$TURBO_ROOT$/apps/heartseed/src/**",
         "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
         "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:read": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:first": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:packs": {
+      "dependsOn": ["^transit"],
+      "env": ["EXACT"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/exact-kit/src/pin.ts",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:study": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test:study-xrefs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "$TURBO_ROOT$/packages/core/assets/cross-refs.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
+        "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:study-tags-a": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "$TURBO_ROOT$/packages/core/assets/cross-refs.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
+        "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:study-tags-b": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "$TURBO_ROOT$/packages/core/assets/cross-refs.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
+        "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:study-lexicon": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "$TURBO_ROOT$/packages/core/assets/cross-refs.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
+        "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:studyview": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/packages/core/src/bible/**",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv-strongs.json",
+        "$TURBO_ROOT$/packages/core/assets/strongs.json"
+      ]
+    },
+    "test:back": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed/package.json",
+        "$TURBO_ROOT$/apps/heartseed/src/**",
+        "$TURBO_ROOT$/apps/heartseed/vite/passage.ts",
+        "$TURBO_ROOT$/apps/heartseed/vite/kjv.ts",
+        "$TURBO_ROOT$/apps/heartseed/data/handbook.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
     },

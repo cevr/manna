@@ -1,8 +1,14 @@
+fail fetch "https://egw.cvr.im"
 epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
 
 test "A list's page shows its verses with stage and due"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -20,6 +26,9 @@ test "A list's page shows its verses with stage and due"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
@@ -30,13 +39,20 @@ test "A list's page shows its verses with stage and due"
   clock settle
   expect text "list-title" == "John 3:16-18"
   expect text "list-caption" == "3 verses · none planted yet"
-  expect text "list-stage-John-3-16" == "Not planted yet"
-  expect text "list-due-John-3-16" == "Due now"
+  expect text "list-stage-John-3-16" == "Not planted yet · ready today"
+  expect text "list-reference-John-3-16" == "John 3:16"
+  expect state listShown.verses.0.due == "Due now"
+  expect tree has "list-row-John-3-16"
   expect text "list-stage-John-3-18" == "Not planted yet"
   expect tree missing "list-back-John-3-16"
   expect no failures
 
 test "Practice this list reads its line and starts its verse"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -54,6 +70,9 @@ test "Practice this list reads its line and starts its verse"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   back
@@ -71,6 +90,11 @@ test "Practice this list reads its line and starts its verse"
   expect no failures
 
 test "Remove this list asks, then returns home without the row"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
   clock data
   tap "add-list"
   clock data
@@ -88,6 +112,9 @@ test "Remove this list asks, then returns home without the row"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"

@@ -1,0 +1,23 @@
+{
+  "name": "@manna/pixel-match",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test --parallel=2 ./src ./screens",
+    "pixel": "bun src/cli.ts",
+    "sim:heartseed": "bun src/sim/heartseed.ts",
+    "sim:hymnal": "bun src/sim/hymnal.ts"
+  },
+  "dependencies": {
+    "@manna/core": "workspace:*",
+    "@manna/exact-kit": "workspace:*",
+    "@manna/heartseed": "workspace:*",
+    "@manna/sim": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

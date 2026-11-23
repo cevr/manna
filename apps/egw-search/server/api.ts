@@ -264,8 +264,10 @@ export const COMMENTARY_FORMAT = 1;
  *  `notes` holds each paragraph of 1BC-7BC linked to a Bible verse, once, as
  *  its short reference code and its plain text. `verses` is keyed
  *  `book.chapter`; each linked verse (0 for a whole chapter) carries the
- *  indexes of its notes. `version` is made of `count` and `sum`, so an
- *  unchanged corpus answers the same version. */
+ *  indexes of its notes. `sum` covers the notes and the verse map
+ *  (`packSum` of `commentary.ts`), and `version` is made of `count` and
+ *  `sum`, so an unchanged pack answers the same version and any change
+ *  another. */
 export const CommentaryPackSchema = S.Struct({
   format: S.Literal(COMMENTARY_FORMAT),
   version: S.String,
@@ -293,4 +295,52 @@ export const CommentaryGroup = HttpApiGroup.make('commentary').add(
   }),
 );
 
-export class SearchApi extends HttpApi.make('EGWSearch').add(SearchGroup).add(CommentaryGroup) {}
+/** The study packs a phone downloads and keeps (q126), each built from
+ *  `bible.db` by `apps/heartseed-exact/tools/study.ts` and uploaded by
+ *  `bun run study:publish`: OpenBible.info's cross-references, the Strong's
+ *  tags lined up with the KJV, Strong's dictionaries, and find's word index
+ *  (`words`, `hs-find-index`'s pack, once it carries a version). */
+export const STUDY_NAMES = ['xrefs', 'tags', 'lexicon', 'words'] as const;
+
+/** The study packs' wire format; a reader refuses any other. */
+export const STUDY_FORMAT = 1;
+
+/** A study pack: `parts` are its strings (a chapter pack's one per chapter
+ *  of the canon), `sum` FNV-1a over them joined by `\n`, and `version` made
+ *  of `count` and `sum`, so the same parts answer the same version. */
+export const StudyPackSchema = S.Struct({
+  format: S.Literal(STUDY_FORMAT),
+  version: S.String,
+  count: S.Finite,
+  sum: S.Finite,
+  parts: S.Array(S.String),
+});
+
+/** No pack of that name has been published yet. */
+export class StudyMissing extends S.TaggedError<StudyMissing>()(
+  'StudyMissing',
+  { name: S.String },
+  { httpApiStatus: 404 },
+) {}
+
+export class StudyFailed extends S.TaggedError<StudyFailed>()(
+  'StudyFailed',
+  { message: S.String },
+  { httpApiStatus: 500 },
+) {}
+
+/** One study pack by name. `If-None-Match` naming the current version
+ *  answers `304` with no body. */
+export const StudyGroup = HttpApiGroup.make('study').add(
+  HttpApiEndpoint.get('pack', '/api/study/:name', {
+    params: { name: S.Literals(STUDY_NAMES) },
+    headers: { 'if-none-match': S.optional(S.String) },
+    success: StudyPackSchema,
+    error: [StudyMissing, StudyFailed],
+  }),
+);
+
+export class SearchApi extends HttpApi.make('EGWSearch')
+  .add(SearchGroup)
+  .add(CommentaryGroup)
+  .add(StudyGroup) {}

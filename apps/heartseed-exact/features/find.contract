@@ -1,0 +1,98 @@
+// Find: a reference or some words → places and verses, as the reader types,
+// offline. Every rule is `findRead` (src/find/find.ts), over the word index
+// the data module imports; this file holds the query, asks only while it
+// has one, and draws the answer (`FindResults`). Go to (hs-read-chapter)
+// draws the box and opens a row; until then a driver's launch draws a field
+// on Your verses (features/garden.contract) for the tests and the speed
+// drive (tools/drive-find.ts), which reads `findTimes`: under a driver's
+// launch, each answer's time since its keystroke, in ms, and in
+// `findTimedQueries` the query each answered. `findOpenIt`
+// keeps the place a row opened, for the tests, until Go to opens it.
+
+shape FindPlace
+  label: string
+  book: number
+  chapter: number
+  verse: number
+
+shape FindHit
+  reference: string
+  book: number
+  chapter: number
+  verse: number
+  before: string
+  match: string
+  after: string
+
+shape FindShown
+  query: string
+  places: FindPlace[]
+  hits: FindHit[]
+  more: number
+  line: string
+
+fn findMoreText(n: number): string = n == 1 ? "1 more verse has these words" : `${n} more verses have these words`
+
+members HeartseedExact
+  state findQuery = ""
+  state findTypedAt = 0
+  state findTimes: number[] = []
+  state findTimedQueries: string[] = []
+  resource findShown = findRead(findQuery, 50, studyWordsShown.version) when findQuery != "" as shape FindShown else empty()
+  action findType(text: string)
+    findQuery = text
+    if gardenDriven.on
+      findTypedAt = performanceNow()
+  action findClear
+    findQuery = ""
+  task findAnswered when gardenDriven.on and findQuery != "" and findShown.query == findQuery key=findShown.query
+    change(findTimed)
+  action findTimed
+    findTimes = findTimes.concat([performanceNow() - findTypedAt])
+    findTimedQueries = findTimedQueries.concat([findShown.query])
+  state findOpened = ""
+  action findOpenIt(book: number, chapter: number, verse: number)
+    findOpened = `${book} ${chapter} ${verse}`
+
+// The answer to a query: the place it names, then the verses that hold its
+// words, each a row of its reference and its words around the match, the
+// match in the sun's colour; then how many more verses hold the words, or
+// the line when nothing does. `open` is handed the row's book, chapter and
+// verse (0 for a chapter's top).
+component FindResults
+  props
+    found: FindShown
+    open: action
+  view
+    column gap="space.s4" testId="find-results"
+      for p in found.places key=`${p.book}-${p.chapter}-${p.verse}`
+        row role="button" press=open(p.book, p.chapter, p.verse) aria-label=`Go to ${p.label}` class=FindRow testId="find-place"
+          text p.label font="type.strong" flex=1 testId="find-place-label"
+          text "Go to" font="type.label" color="hs.sun" aria-hidden=true
+      for h in found.hits key=`${h.book}-${h.chapter}-${h.verse}`
+        column role="button" press=open(h.book, h.chapter, h.verse) aria-label=h.reference class=FindRow gap="space.s2" flex-direction="column" align-items="stretch" justify-content="center" testId=`find-hit-${h.book}-${h.chapter}-${h.verse}`
+          text h.reference font="type.strong" testId="find-hit-reference"
+          text font="type.small" color="hs.quiet"
+            text h.before
+            text h.match font="type.label" color="hs.sun"
+            text h.after
+      if found.more > 0
+        text findMoreText(found.more) font="type.small" color="hs.quiet" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s8" padding-right="space.s8" testId="find-more"
+      if found.line != ""
+        text found.line font="type.small" color="hs.quiet" padding-top="space.s8" padding-bottom="space.s8" padding-left="space.s8" padding-right="space.s8" testId="find-line"
+
+// One's verse row on a list (src/list/screen.tsx `row`): the card's ground
+// while pressed.
+style FindRow
+  display = "flex"
+  flex-direction = "row"
+  align-items = "center"
+  gap = "space.s12"
+  min-height = "size.row-tall"
+  padding-top = "space.s6"
+  padding-bottom = "space.s6"
+  padding-left = "space.s8"
+  padding-right = "space.s8"
+  border-radius = "radius.r16"
+  :active
+    background-color = "hs.card"

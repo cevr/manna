@@ -5,13 +5,14 @@
  * (`bun tools/drive-add.ts web|ios`), every launch a plain one (no
  * `HEARTSEED_GARDEN_DRIVE`):
  *
- * 1. John 3:16-18 planted through the chooser lands as a list; relaunched
- *    on the kept storage, the garden reads it;
+ * 1. John 3:16-18 planted on the chapter screen (Any passage opens Go to
+ *    over Read) lands as a list; relaunched on the kept storage, the
+ *    garden reads it;
  * 2. Psalm 119's 176 verses are drawn and its last is chosen;
- * 3. the chooser offers one verse to the single verses, not as a list;
+ * 3. the chapter offers one verse to the single verses, not as a list;
  *    twenty single verses planted through nineteen short picks and the
- *    chooser are held, a twenty-first pick offers no Plant and says the
- *    single verses' limit, and so does the chooser for one more verse;
+ *    chapter are held, a twenty-first pick offers no Plant and says the
+ *    single verses' limit, and so does the chapter for one more verse;
  * 4. a plain launch's Your verses has no test control in its tree.
  *
  * Screenshots go to `.exact/shots/add-<host>-*`. Exits 1 on any failed
@@ -22,16 +23,16 @@ import { join } from 'node:path';
 
 import { makeDrive } from '@manna/exact-kit/drive';
 
+import { fromHome } from './from-home';
+
 const host = process.argv[2] ?? 'web';
 const app = join(import.meta.dir, '..');
-const drive = makeDrive({ name: 'drive-add', host, appDir: app });
+const drive = fromHome(makeDrive({ name: 'drive-add', host, appDir: app }));
 const store = `add-${host}-${Date.now().toString(36)}`;
-/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8774'] : [];
 const shot = (name: string) => `screenshot .exact/shots/add-${host}-${name}.png`;
 const SINGLES_LIMIT = '20 single verses, the most for now. Remove one to add another.';
 
-/** From Add verses, the chooser at John 3. */
+/** From Add verses, Any passage's Go to, then the chapter screen at John 3. */
 const toChapter43 = () => [
   'tap shelf-any',
   'clock settle',
@@ -43,7 +44,7 @@ const toChapter43 = () => [
   'clock settle',
 ];
 
-/** Nineteen distinct verses of the first short picks, in Add verses' order (John 3:16 through the chooser makes twenty), and a twenty-first. */
+/** Nineteen distinct verses of the first short picks, in Add verses' order (John 3:16 through the chapter makes twenty), and a twenty-first. */
 const PICKS = [
   'pick-proverbs-20-4-23-23',
   'pick-proverbs-20-15-1-1',
@@ -111,13 +112,13 @@ const chosen = [
   'clock data',
   'tap verse-18',
   'clock data',
-  'state chooserShown',
+  'state chapterShown',
   shot('chosen'),
   'tap plant-list',
   'clock data',
   'clock settle',
   'state garden',
-  'tap shelf-any',
+  'tap chapter-title',
   'clock settle',
   'tap book-19',
   'clock data',
@@ -128,22 +129,19 @@ const chosen = [
   'state chooserWords.verses.length',
   'tap verse-176',
   'clock data',
-  'state chooserShown.reference',
+  'state chapterShown.reference',
   shot('psalm-119'),
 ];
-const first = replyOf(
-  chosen,
-  await drive.run([...port, '--storage', store, '--reset-storage'], chosen),
-);
-const offered = first('state chooserShown') as { reference?: string; plant?: boolean } | undefined;
+const first = replyOf(chosen, await drive.run(['--storage', store, '--reset-storage'], chosen));
+const offered = first('state chapterShown') as { reference?: string; plant?: boolean } | undefined;
 drive.check(
-  'the chooser offers Plant for John 3:16-18',
+  'the chapter offers Plant for John 3:16-18',
   offered?.reference === 'John 3:16-18' && offered.plant === true,
   offered,
 );
 const planted = first('state garden') as Garden | undefined;
 drive.check(
-  'planted through the chooser, John 3:16-18 is one list of three',
+  'planted on the chapter, John 3:16-18 is one list of three',
   planted?.lists.length === 1 &&
     planted.lists[0]?.verses.map((verse) => verse.reference).join(',') ===
       'John 3:16,John 3:17,John 3:18' &&
@@ -153,15 +151,12 @@ drive.check(
 drive.check(
   "Psalm 119's 176 verses are drawn, and its last is chosen",
   first('state chooserWords.verses.length') === 176 &&
-    first('state chooserShown.reference') === 'Psalms 119:176',
-  [first('state chooserWords.verses.length'), first('state chooserShown.reference')],
+    first('state chapterShown.reference') === 'Psalms 119:176',
+  [first('state chooserWords.verses.length'), first('state chapterShown.reference')],
 );
 
 const reread = ['clock data', 'clock settle', 'state garden', shot('relaunched')];
-const again = replyOf(
-  reread,
-  await drive.run([...port, '--storage', store, '--keep-storage'], reread),
-);
+const again = replyOf(reread, await drive.run(['--storage', store, '--keep-storage'], reread));
 const kept = again('state garden') as Garden | undefined;
 drive.check(
   'relaunched on the kept storage, the garden reads the list',
@@ -189,12 +184,15 @@ const sown = [
   ...toChapter43(),
   'tap verse-16',
   'clock data',
-  'state chooserShown',
+  'state chapterShown',
   shot('single-offered'),
   'tap plant-singles',
   'clock data',
   'clock settle',
   'state garden.singles.length',
+  'tap tab-garden',
+  'clock data',
+  'clock settle',
   'state addShown.line',
   `tap offer-${TWENTY_FIRST}`,
   'clock data',
@@ -206,23 +204,23 @@ const sown = [
   ...toChapter43(),
   'tap verse-17',
   'clock data',
-  'state chooserShown',
-  shot('chooser-singles-full'),
+  'state chapterShown',
+  shot('chapter-singles-full'),
 ];
 const full = replyOf(
   sown,
-  await drive.run([...port, '--storage', `${store}-singles`, '--reset-storage'], sown),
+  await drive.run(['--storage', `${store}-singles`, '--reset-storage'], sown),
 );
-const single = full('state chooserShown', 0) as
+const single = full('state chapterShown', 0) as
   | { reference?: string; singles?: boolean; plant?: boolean }
   | undefined;
 drive.check(
-  'the chooser offers John 3:16 alone to the single verses, not as a list',
+  'the chapter offers John 3:16 alone to the single verses, not as a list',
   single?.reference === 'John 3:16' && single.singles === true && single.plant === false,
   single,
 );
 drive.check(
-  'twenty single verses planted through nineteen picks and the chooser are held',
+  'twenty single verses planted through nineteen picks and the chapter are held',
   full('state garden.singles.length') === 20,
   full('state garden.singles.length'),
 );
@@ -239,11 +237,11 @@ drive.check(
   refused?.row?.offer === 'full' && refused.line === SINGLES_LIMIT,
   refused,
 );
-const shut = full('state chooserShown', 1) as
+const shut = full('state chapterShown', 1) as
   | { reference?: string; singles?: boolean; line?: string }
   | undefined;
 drive.check(
-  'at twenty, the chooser offers John 3:17 nothing and says the limit',
+  'at twenty, the chapter offers John 3:17 nothing and says the limit',
   shut?.reference === 'John 3:17' && shut.singles === false && shut.line === SINGLES_LIMIT,
   shut,
 );
@@ -251,10 +249,7 @@ drive.check(
 const plain = ['clock data', 'clock settle', 'state gardenDriven', 'tree', shot('plain-verses')];
 const looked = replyOf(
   plain,
-  await drive.run(
-    [...port, '--storage', `${store}-plain`, '--reset-storage', '--url', '/verses'],
-    plain,
-  ),
+  await drive.run(['--storage', `${store}-plain`, '--reset-storage', '--url', '/verses'], plain),
 );
 const tree = JSON.stringify(looked('tree') ?? '');
 drive.check(

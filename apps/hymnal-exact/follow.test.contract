@@ -1,0 +1,290 @@
+// The hymn page's follow (features/follow.contract) against the fixture
+// recordings (tools/recordings.ts, digital silence), with Sound off so the
+// silent clock runs on the test's clock. Hymn 2's timing sings its first
+// line from 22.278 s and each line of stanza 1 about 6.2 s after the last,
+// its first line's second word two syllables of 517 ms each from 23.313 s
+// (syllables 1 and 2), sung as the count-in ends; its
+// words' times are read at the page's first use (features/timing.contract),
+// so its sung syllable is marked. Hymn 663, which the current hymnal times
+// by lines alone, sings its first line from 0 s, lit whole. The rules are the
+// current follower's and held seek's, run in the data module and held to
+// them by src/follow/*.test.ts; here the page is. Each test opens on
+// Settings and turns Sounds and haptics off before it plays
+// (src/look/quiet.test.ts).
+
+test "With Sound off and Intro on, the count-in stands over the first sung line, then each line is marked as it is sung"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  expect state followNow.line == -1
+  tap "play"
+  clock data
+  clock settle
+  expect state player.count.on == true
+  expect state followNow.counting == true
+  expect state followNow.line == 0
+  expect state followNow.countLine == 0
+  expect tree has "count-in"
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect tree missing "count-in"
+  expect state followNow.counting == false
+  expect state followNow.line == 0
+  expect state followNow.mark >= 0
+  clock +6300
+  clock data
+  expect state followNow.line == 1
+  clock +6300
+  clock data
+  expect state followNow.line == 2
+
+test "At 50 % the mark moves half as fast"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state followNow.line == 0
+  tap "bar-toggle"
+  clock data
+  clock settle
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "dial-tempo-stop-50"
+  clock data
+  clock settle
+  expect state player.rate == 0.5
+  tap "player-title"
+  clock data
+  clock settle
+  tap "bar-toggle"
+  clock data
+  clock settle
+  expect state player.phase == "playing"
+  expect state followNow.line == 0
+  clock +6000
+  clock data
+  expect state followNow.line == 0
+  clock +6000
+  clock data
+  expect state followNow.line == 1
+
+test "A wheel on the followed page holds the follow, and Resume follow gives it back"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state followNow.line == 0
+  expect tree missing "resume-follow"
+  tap "hymn-words" wheel 0 300
+  clock data
+  clock settle
+  expect state followNow.held == true
+  expect tree has "resume-follow"
+  clock +6300
+  clock data
+  expect state followNow.line == 1
+  expect state followNow.held == true
+  tap "resume-follow"
+  clock data
+  clock settle
+  expect state followNow.held == false
+  expect tree missing "resume-follow"
+  expect state followNow.scrollLine == 1
+
+// The hold takes on the word sounding (line 0's second word); two line
+// steps up choose the same word two lines on, which line 2's words' times
+// start at 37.795 s.
+test "A still hold on the words, dragged up two line steps, seeks two lines on at the lift, and the pager stays on the page"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state followNow.line == 0
+  expect state player.at <= 26
+  tap "hymn-words" drag 0 -96 press 400 from 200 300 mouse
+  clock data
+  clock settle
+  expect state hymnOpen == "2"
+  expect state followNow.holding == false
+  expect state player.at >= 37.7
+  expect state player.at <= 38.4
+  expect state player.phase == "playing"
+  expect state followNow.line == 2
+
+test "A quick swipe is no hold: it turns the page, and the page turned to shows no mark"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state followNow.line == 0
+  tap "hymn-pager" drag -300 0 from 300 300
+  clock until state hymnOpen == "3" within 3000
+  clock settle
+  clock data
+  expect state player.number == 2
+  expect state player.at <= 28
+  expect state followNow.here == false
+  expect state followNow.line == -1
+  expect tree missing "resume-follow"
+
+test "Introduction shows while the recording's introduction plays"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock until state player.phase == "playing" within 10000
+  clock +1500 real
+  clock data
+  expect state followNow.intro == true
+  expect tree has "intro"
+  expect state followNow.line == -1
+
+test "Once the hymn's words' times are here, the mark moves syllable to syllable inside a word"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  expect state timingShown.number == 2
+  expect state timingShown.loaded == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state followNow.line == 0
+  expect state followNow.mark == 1
+  clock +517
+  clock data
+  expect state followNow.line == 0
+  expect state followNow.mark == 2
+
+test "A hymn the current hymnal times by lines alone is lit a line at a time"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "find-search"
+  clock settle
+  clock data
+  type "search" "663"
+  clock settle
+  clock data
+  tap "hymn-663"
+  clock settle
+  clock data
+  expect state hymnOpen == "663"
+  expect state timingShown.number == 663
+  expect state timingShown.loaded == true
+  tap "bar-sound"
+  clock settle
+  clock data
+  expect state player.fixture == true
+  tap "play"
+  clock data
+  clock settle
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state followNow.line == 0
+  expect state followNow.mark == -3
+  clock +1500
+  clock data
+  expect state followNow.line == 0
+  expect state followNow.mark == -3

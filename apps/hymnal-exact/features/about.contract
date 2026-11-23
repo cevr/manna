@@ -1,39 +1,74 @@
 // About, pushed in the Settings sheet: who made the sounds the recordings are
 // played on, as their licences ask (src/settings/about.ts, the current
-// hymnal's credits). A licence with an address opens it.
+// hymnal's credits). Drawn as the current hymnal draws its About
+// (src/about.tsx): a footnote heading over one group between hairlines, each
+// credit one paragraph whose licence runs on after its author, a link in the
+// accent where the licence has an address; every measure a token of
+// app.forma (src/look/tokens.ts).
 
 shape AboutCredit
   part: string
-  work: string
-  author: string
+  head: string
   licence: string
   url: string
+
+shape AboutGemma
+  lead: string
+  terms: string
+  termsUrl: string
+  between: string
+  policy: string
+  policyUrl: string
+  end: string
+  termsButton: string
+  termsText: string
 
 shape AboutPage
   lead: string
   credits: AboutCredit[]
+  end: string
+  gemma: AboutGemma
 
 members HymnalExact
   resource aboutShown = aboutCredits() as shape AboutPage
 
+// Under the credits, as the current hymnal's `GemmaNotice` and
+// `GemmaTerms`: the notice the Gemma Terms of Use ask of the meaning table,
+// its two links in the accent opening their addresses, then a button in the
+// accent that shows the Terms' text in place, and hides it again.
 component AboutScreen
   props
     entry: Entry
     page: AboutPage
+  state termsOpen = false
+  action termsToggle
+    termsOpen = not termsOpen
   view
-    column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 testId="about"
-      header display="flex" align-items="center" padding="8px 16px"
+    column navigationKey=`${entry.id}` navigationScroll="about-list" position="absolute" inset=0 background-color="ground" testId="about"
+      header display="flex" align-items="center" padding="space.s8 space.s16"
         text "About" role="heading" aria-level=2
-      list id="about-list" appearance="auto" listStyle="inset-grouped" flex=1 min-height=0
-        section
-          header
-            text "Recordings"
-          text page.lead testId="about-lead"
-          for c in page.credits key=c.part
-            column gap=2 align-items="flex-start" testId=`about-${c.part}`
-              text `${c.part}: ${c.work} by ${c.author}`
-              if c.url == ""
-                text c.licence color="-exact-secondary-label"
-              else
-                link href=c.url min-height=44 min-width=44 display="flex" align-items="center" testId=`about-licence-${c.part}`
+      scroll id="about-list" flex=1 min-height=0 testId="about-list"
+        column gap="space.s8" padding="space.s16"
+          text "Recordings" role="heading" aria-level=3 font="type.footnote" color="muted" text-transform="uppercase" margin-left="space.s16" margin-top="space.s16"
+          column gap="space.s8" padding="space.s11 space.s16" border-radius="radius.r12" border-width="line.hair" border-style="solid" border-color="line" overflow="hidden"
+            text page.lead font="type.small" color="ink" testId="about-lead"
+            for c in page.credits key=c.part
+              text font="type.small" color="ink" testId=`about-${c.part}`
+                text c.head
+                if c.url == ""
                   text c.licence
+                else
+                  text c.licence href=c.url color="accent" testId=`about-licence-${c.part}`
+                text page.end
+            text font="type.small" color="ink" overflow-wrap="break-word" testId="gemma-notice"
+              text page.gemma.lead
+              text page.gemma.terms href=page.gemma.termsUrl color="accent" testId="gemma-notice-terms"
+              text page.gemma.between
+              text page.gemma.policy href=page.gemma.policyUrl color="accent" testId="gemma-notice-policy"
+              text page.gemma.end
+            button press=termsToggle appearance="none" padding=0 align-self="flex-start" aria-label=page.gemma.termsButton aria-expanded=termsOpen -exact-hit-slop="space.s8" testId="gemma-terms"
+              :active
+                opacity = "opacity.pressed"
+              text page.gemma.termsButton font="type.small" color="accent" text-align="start"
+            if termsOpen
+              text page.gemma.termsText font="type.footnote" color="ink" user-select="text" testId="gemma-terms-text"

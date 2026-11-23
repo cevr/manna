@@ -20,6 +20,7 @@ import licence from 'virtual:heartseed-licence';
 import { version } from '../../package.json';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
+import { VERSION_PREFIX } from './version';
 
 /** The natural voice's credits, word for word: its model, its voices, its conversion and packaging, and its pronunciations, each with its licence. */
 export const CREDITS =
@@ -66,7 +67,8 @@ export function AboutScreen({
           Heartseed
         </Text>
         <Text testID="about-version" style={styles.credits}>
-          Version {version}
+          {VERSION_PREFIX}
+          {version}
         </Text>
         <Pressable
           role="button"

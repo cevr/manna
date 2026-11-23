@@ -1,22 +1,32 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
+  Array as Arr,
   ConfigProvider,
+  Console,
+  Deferred,
+  Duration,
   Effect,
+  Exit,
+  Fiber,
   Option,
   Record as Rec,
+  Result,
   FileSystem,
   Layer,
   Path,
+  Schedule,
   Schema,
   Sink,
   Stream,
 } from 'effect';
 import * as Arbitrary from 'effect/Arbitrary';
-import { ChildProcessSpawner } from 'effect/process';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
+import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
 
+import { fixturePort } from './drive/port.ts';
 import { EXACT_BASE } from './pin.ts';
-import { runExact } from './run.ts';
+import { PortClaims, runExact } from './run.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;
@@ -63,6 +73,21 @@ When an iPhone app is ready to try, run \`bun exact.mjs share\` and send its lin
 <!-- exact:end -->
 `;
 
+/**
+ * A launcher standing in for `exact-cli.ts`: it starts a `sleep` that outlives it in its process group, as Exact's
+ * test runners do, writes its pid beside the app as `exited.pid` (or `waited.pid` when the last argument is `wait`),
+ * then exits, or waits to be stopped.
+ */
+const LINGERING = `const { spawn } = require('node:child_process');
+const { writeFileSync } = require('node:fs');
+const [appDir] = process.argv.slice(2);
+const waits = process.argv.at(-1) === 'wait';
+const kept = spawn('sleep', ['20'], { stdio: 'ignore' });
+writeFileSync(appDir + (waits ? '/waited.pid' : '/exited.pid'), String(kept.pid));
+if (waits) setInterval(() => {}, 1000);
+else process.exit(0);
+`;
+
 /** The repo's root, from this file. */
 const repoRoot = Effect.gen(function* () {
   const path = yield* Path.Path;
@@ -93,15 +118,17 @@ const appFiles = Effect.gen(function* () {
   return Object.fromEntries(entries);
 }).pipe(Effect.provide(BunServices.layer));
 
-/** A file system over `files` (absolute path → text) that only reads, touching no disk. */
+/** A file system over `files` (absolute path → text, read as each read runs) that only reads, touching no disk. */
 const memoryFs = (files: Readonly<Record<string, string>>) => {
   const missing = FileSystem.makeNoop({});
   return FileSystem.layerNoop({
     readFileString: (file) =>
-      Option.match(Rec.get(files, file), {
-        onNone: () => missing.readFileString(file),
-        onSome: Effect.succeed,
-      }),
+      Effect.suspend(() =>
+        Option.match(Rec.get(files, file), {
+          onNone: () => missing.readFileString(file),
+          onSome: Effect.succeed,
+        }),
+      ),
   });
 };
 
@@ -114,12 +141,17 @@ interface Spawned {
   readonly extendEnv: boolean;
 }
 
-const handleOf = (stdout: string, exitCode: number) =>
+const handleOf = (
+  stdout: string,
+  exitCode: number,
+  exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
+) =>
   ChildProcessSpawner.makeHandle({
     pid: ChildProcessSpawner.ProcessId(0),
-    exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(exitCode)),
+    exitCode: Effect.as(exited, ChildProcessSpawner.ExitCode(exitCode)),
     isRunning: Effect.succeed(false),
-    kill: () => Effect.void,
+    kill: () => kill,
     stdin: Sink.drain,
     stdout: Stream.make(new TextEncoder().encode(stdout)),
     stderr: Stream.empty,
@@ -129,8 +161,16 @@ const handleOf = (stdout: string, exitCode: number) =>
     unref: Effect.succeed(Effect.void),
   });
 
-/** A spawner that starts nothing: it keeps each command, answers git's `rev-parse` with `head` (none: no clone), and every other command with 0. */
-const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
+/**
+ * A spawner that starts nothing: it keeps each command, answers git's `rev-parse` with `head` (none: no clone), and
+ * every other command with 0 once `exited` ends.
+ */
+const standIn = (
+  head: Option.Option<string>,
+  spawned: Array<Spawned>,
+  exited: Effect.Effect<void> = Effect.void,
+  kill: Effect.Effect<void> = Effect.void,
+) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf('', 0));
     const env = Object.entries(
@@ -148,33 +188,83 @@ const standIn = (head: Option.Option<string>, spawned: Array<Spawned>) =>
     if (command.command === 'git' && Option.isNone(head)) return Effect.succeed(handleOf('', 128));
     if (command.command === 'git')
       return Effect.succeed(handleOf(`${Option.getOrElse(head, () => '')}\n`, 0));
-    return Effect.succeed(handleOf('', 0));
+    return Effect.succeed(handleOf('', 0, exited, kill));
   });
 
 /** The caller's environment: what the wrapper may read (`HOME`, `EXACT`, `EXACT_PORT`) and what it must override. */
 type Caller = Readonly<Record<string, string>>;
 
-/** `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`, and the caller's `caller`. */
+/**
+ * `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`
+ * and whose child ends once `exited` does, and the caller's `caller`; `claims` and `spawned` are filled as it runs.
+ */
 const running = (
   app: App | 'heartseed',
   args: ReadonlyArray<string>,
   caller: Caller,
   head: Option.Option<string>,
   files: Readonly<Record<string, string>>,
-) => {
-  const spawned: Array<Spawned> = [];
-  return runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
+  {
+    exited = Effect.void,
+    kill = Effect.void,
+    claims = [],
+    spawned = [],
+  }: {
+    readonly exited?: Effect.Effect<void>;
+    readonly kill?: Effect.Effect<void>;
+    readonly claims?: Array<Claimed>;
+    readonly spawned?: Array<Spawned>;
+  } = {},
+) =>
+  runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
     Effect.result,
     Effect.provide(
       Layer.mergeAll(
         BunServices.layer,
         memoryFs(files),
-        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, standIn(head, spawned)),
+        Layer.succeed(
+          ChildProcessSpawner.ChildProcessSpawner,
+          standIn(head, spawned, exited, kill),
+        ),
+        Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
     ),
-    Effect.map((result) => ({ result, spawned })),
+    Effect.map((result) => ({ result, spawned, claims })),
   );
+
+/** Ports the stand-in claims were asked to hold: a block claimed from a range, or one port taken, and whether they were given back. */
+interface Claimed {
+  readonly asked: 'claimed' | number;
+  readonly ports: readonly [number, number];
+  given: boolean;
+}
+
+/**
+ * Claims that hold no port: a range's claim of `count` answers that many of its first ports (all of it when it holds
+ * fewer), a take the port; each is marked given when its scope closes.
+ */
+const claimsStandIn = (claims: Array<Claimed>) => {
+  const holding = (asked: Claimed['asked'], ports: readonly [number, number]) =>
+    Effect.acquireRelease(
+      Effect.sync(() => {
+        const claimed: Claimed = { asked, ports, given: false };
+        claims.push(claimed);
+        return claimed;
+      }),
+      (claimed) =>
+        Effect.sync(() => {
+          claimed.given = true;
+        }),
+    );
+  return {
+    claim: (range: readonly [number, number], count: number) =>
+      Effect.map(
+        holding('claimed', [range[0], Math.min(range[1], range[0] + count - 1)]),
+        (claimed) => claimed.ports,
+      ),
+    take: (port: number) => Effect.map(holding(port, [port, port]), () => port),
+  };
 };
 
 /** The pin and the apps' committed files, which every run but a refused one needs. */
@@ -267,7 +357,7 @@ type CallerPorts = Readonly<Record<PortVariable, string>>;
 
 /**
  * Starts drawn more often: the verbs that listen, each of which must keep to the app's ports, the native drives
- * on the Mac, and the launches a quiet app refuses.
+ * on the Mac and the simulator, and the launches a quiet app refuses.
  */
 const STARTS = [
   ['web'],
@@ -282,6 +372,8 @@ const STARTS = [
   ['mac', '--run'],
   ['ios', '--run=1'],
   ['test', 'mac'],
+  ['test', 'ios'],
+  ['agent', 'ios'],
 ] as const;
 
 /** What the app's folder holds: its own files, or one rewritten as Exact's `update` writes it. */
@@ -348,6 +440,57 @@ const mustRefuse = (
   );
 };
 
+/**
+ * The rule, written out: the port a run holds while its child runs. None for a verb other than `test`, `verify`
+ * and `agent`, or one on a native host; else the page's port its arguments or the caller's `EXACT_PORT` name, else
+ * one claimed from the spare range.
+ */
+const listenerFor = (
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+): 'none' | 'claimed' | number => {
+  if (!['test', 'verify', 'agent'].includes(args[0] ?? '') || mustLock(args)) return 'none';
+  const named = args.flatMap((a, i) => {
+    if (a === '--port') return [args[i + 1] ?? ''];
+    if (a.startsWith('--port=')) return [a.slice(7)];
+    return [];
+  });
+  const port = named[0] ?? callerPorts.EXACT_PORT;
+  if (port === '') return 'claimed';
+  return Number(port);
+};
+
+/**
+ * The rule, written out: how many adjacent ports a run of `verb` off the native hosts claims, so its pages at once
+ * each find one: `verify` the whole spare range, `test` two, `agent` one; never more than the range holds.
+ */
+const pagesOf = (app: App, verb: string) => {
+  const [lo, hi] = APPS[app].spare;
+  const size = hi - lo + 1;
+  if (verb === 'verify') return size;
+  if (verb === 'test') return Math.min(2, size);
+  return 1;
+};
+
+/**
+ * The range a child is held to and the turns it is told it holds, for `listener`: a claimed block is the range's
+ * first `pagesOf` ports (the stand-in's) and the child is held to it; a named one keeps the spare range; none holds
+ * no turn ("").
+ */
+const rangeHeld = (
+  app: App,
+  args: ReadonlyArray<string>,
+  listener: ReturnType<typeof listenerFor>,
+) => {
+  const [lo, hi] = APPS[app].spare;
+  if (listener === 'claimed') {
+    const top = lo + pagesOf(app, args[0] ?? '') - 1;
+    return { lo, hi: top, turns: Arr.range(lo, top).join(',') };
+  }
+  if (listener === 'none') return { lo, hi, turns: '' };
+  return { lo, hi, turns: String(listener) };
+};
+
 /** The rule, written out: what runs under the build lock. */
 const mustLock = (args: ReadonlyArray<string>) =>
   args[0] === 'ios' ||
@@ -390,6 +533,23 @@ const portsHeld = (
     }),
   );
 
+/**
+ * The rule, written out: a run on the simulator (`ios`, or `test`, `verify` or `agent` on `ios`) tells its child when
+ * the wrapper started, so the child clears the stale launch consoles before then, and runs under the build lock, so
+ * the clear never unlinks a locked run's live consoles; any other run removes the variable.
+ */
+const clearsOnSimulator = (child: Spawned, args: ReadonlyArray<string>) => {
+  const onSimulator =
+    args[0] === 'ios' || (['test', 'verify', 'agent'].includes(args[0] ?? '') && args[1] === 'ios');
+  const started = Rec.get(child.env, 'EXACT_KIT_CLEAR_BEFORE');
+  const removed = child.removed.includes('EXACT_KIT_CLEAR_BEFORE');
+  const locked =
+    child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  if (Option.isSome(started) && !locked) return false;
+  if (onSimulator) return Option.exists(started, (at) => /^\d+$/.test(at)) && !removed;
+  return Option.isNone(started) && removed;
+};
+
 /** `files` with `app`'s folder rewritten as `rewrite` says. */
 const rewritten = (
   files: Readonly<Record<string, string>>,
@@ -417,14 +577,17 @@ const ranAsPlanned = (
 ) => {
   const locked =
     child.command === 'lockf' && child.args[0] === '-k' && child.args[1] === BUILD_LOCK;
+  const { lo, hi, turns } = rangeHeld(app, args, listenerFor(args, callerPorts));
   return (
     child.extendEnv &&
     child.env['EXACT'] === clone &&
     child.env['EXACT_FEEDBACK'] === '0' &&
     child.env['EXACT_SIM'] === APPS[app].simulator &&
-    child.env['PORT_LO'] === String(APPS[app].spare[0]) &&
-    child.env['PORT_HI'] === String(APPS[app].spare[1]) &&
+    child.env['PORT_LO'] === String(lo) &&
+    child.env['PORT_HI'] === String(hi) &&
+    Option.getOrElse(Rec.get(child.env, 'EXACT_PORT_TURNS'), () => '') === turns &&
     portsHeld(child, app, args, callerPorts) &&
+    clearsOnSimulator(child, args) &&
     locked === mustLock(args) &&
     (locked || child.command === 'bun') &&
     child.args.slice(-args.length - 3).join('\u0000') ===
@@ -468,7 +631,11 @@ describe('the exact wrapper', () => {
                 Rec.get(caller, 'EXACT'),
                 () => `${PROBE}/home/${DEFAULT_CLONE}`,
               );
-              const { result: ran, spawned } = yield* running(
+              const {
+                result: ran,
+                spawned,
+                claims,
+              } = yield* running(
                 app,
                 args,
                 caller,
@@ -479,11 +646,17 @@ describe('the exact wrapper', () => {
                 return (
                   ran._tag === 'Failure' &&
                   ran.failure._tag === 'ExactRefused' &&
-                  spawned.length === 0
+                  spawned.length === 0 &&
+                  claims.length === 0
                 );
               const [git, child, ...more] = spawned;
               if (ran._tag !== 'Success' || !git || !child || more.length > 0) return false;
+              const listener = listenerFor(args, callerPorts);
               return (
+                Bun.deepEquals(
+                  claims.map((c) => [c.asked, c.given]),
+                  Arr.filter([[listener, true]], () => listener !== 'none'),
+                ) &&
                 git.command === 'git' &&
                 git.args.join(' ') === `-C ${clone} rev-parse HEAD` &&
                 ranAsPlanned(child, app, args, callerPorts, clone)
@@ -576,7 +749,11 @@ describe('the exact wrapper', () => {
         const head = Option.fromNullishOr(pins[0]);
         const hymnal = yield* running('hymnal-exact', ['serve'], { HOME: PROBE }, head, files);
         expect(hymnal.spawned[1]?.env['PORT']).toBe('8766');
-        expect(hymnal.spawned[1]?.removed).toEqual(['EXACT_PORT', 'EXACT_TOOL_PORT']);
+        expect(hymnal.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const heartseed = yield* running(
           'heartseed-exact',
           ['serve'],
@@ -625,6 +802,9 @@ describe('the exact wrapper', () => {
             expect(mac.result.failure.message).toContain('agent macos');
           const built = yield* running(app, ['ios'], { HOME: PROBE }, head, files);
           expect(built.result._tag).toBe('Success');
+          expect(built.spawned[1]?.args.slice(0, 2)).toEqual(['-k', BUILD_LOCK]);
+          expect(built.spawned[1]?.command).toBe('lockf');
+          expect(built.spawned[1]?.env['EXACT_KIT_CLEAR_BEFORE']).toMatch(/^\d+$/);
         }
         const hymnal = yield* running(
           'hymnal-exact',
@@ -663,6 +843,37 @@ describe('the exact wrapper', () => {
     }),
   );
 
+  it.effect(
+    "gives test and agent the checkout's own fixture origin unless the caller names one, and no build, dev loop or serve any",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const origin = `http://127.0.0.1:${fixturePort(`${PROBE}/apps/hymnal-exact`)}`;
+        const given = (app: App, args: ReadonlyArray<string>, caller: Caller = {}) =>
+          Effect.map(
+            running(app, args, { HOME: PROBE, ...caller }, head, files),
+            ({ spawned }) => spawned[1]?.env['HYMNAL_RECORDINGS'],
+          );
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeGreaterThanOrEqual(4790);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).toBeLessThanOrEqual(5789);
+        expect(fixturePort(`${PROBE}/apps/hymnal-exact`)).not.toBe(
+          fixturePort(`${PROBE}/other/hymnal-exact`),
+        );
+        expect(yield* given('hymnal-exact', ['test', 'web'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['test', 'ios', 'player.test.contract'])).toBe(origin);
+        expect(yield* given('hymnal-exact', ['agent', 'web', '--json'])).toBe(origin);
+        expect(
+          yield* given('hymnal-exact', ['test', 'web'], {
+            HYMNAL_RECORDINGS: 'http://127.0.0.1:4797',
+          }),
+        ).toBeUndefined();
+        for (const args of [['web-build', '--out', 'dist'], ['web'], ['serve', 'dist'], ['ios']])
+          expect(yield* given('hymnal-exact', args)).toBeUndefined();
+        expect(yield* given('heartseed-exact', ['test', 'web'])).toBeUndefined();
+      }),
+  );
+
   it.effect('refuses an app it does not know', () =>
     Effect.gen(function* () {
       const { pins, files } = yield* fixtures;
@@ -679,7 +890,7 @@ describe('the exact wrapper', () => {
   );
 
   it.effect(
-    "serves the web loop on the app own port, every other web host in its spare range without the caller's EXACT_PORT, and refuses a caller's EXACT_PORT not the app's",
+    "serves the web loop on the app own port, every other web host on ports it claims from its spare range without the caller's EXACT_PORT (verify all of them, test two, so each page at once finds one), and refuses a caller's EXACT_PORT not the app's",
     () =>
       Effect.gen(function* () {
         const { pins, files } = yield* fixtures;
@@ -697,8 +908,43 @@ describe('the exact wrapper', () => {
           head,
           files,
         );
-        expect(tested.spawned[1]?.env).toMatchObject({ PORT_LO: '8770', PORT_HI: '8774' });
-        expect(tested.spawned[1]?.removed).toEqual(['EXACT_PORT', 'PORT', 'EXACT_TOOL_PORT']);
+        expect(tested.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8771',
+          EXACT_PORT_TURNS: '8770,8771',
+        });
+        expect(tested.claims).toEqual([{ asked: 'claimed', ports: [8770, 8771], given: true }]);
+        const verified = yield* running(
+          'heartseed-exact',
+          ['verify', 'web'],
+          { HOME: PROBE },
+          head,
+          files,
+        );
+        expect(verified.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8774',
+          EXACT_PORT_TURNS: '8770,8771,8772,8773,8774',
+        });
+        const driven = yield* running(
+          'heartseed-exact',
+          ['agent', 'web', '--port', '8772', 'tree'],
+          { HOME: PROBE, EXACT_PORT_TURNS: '8772' },
+          head,
+          files,
+        );
+        expect(driven.claims).toEqual([{ asked: 8772, ports: [8772, 8772], given: true }]);
+        expect(driven.spawned[1]?.env).toMatchObject({
+          PORT_LO: '8770',
+          PORT_HI: '8774',
+          EXACT_PORT_TURNS: '8772',
+        });
+        expect(tested.spawned[1]?.removed).toEqual([
+          'EXACT_PORT',
+          'PORT',
+          'EXACT_TOOL_PORT',
+          'EXACT_KIT_CLEAR_BEFORE',
+        ]);
         const hymnals = yield* running(
           'hymnal-exact',
           ['test', 'web'],
@@ -710,6 +956,344 @@ describe('the exact wrapper', () => {
         if (hymnals.result._tag !== 'Failure') return;
         expect(hymnals.result.failure.message).toContain('EXACT_PORT=8281');
       }),
+  );
+
+  it.effect(
+    "a verify gives its ports back once Exact records its host's run, while its child runs on; another host's record, none, a test's, or a run another verify of the checkout started before it or after its own start keeps them",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const record = `${PROBE}/apps/heartseed-exact/.exact/verify/last.json`;
+        const runFor = (args: ReadonlyArray<string>, folder: Record<string, string>) =>
+          Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const claims: Array<Claimed> = [];
+            const fiber = yield* Effect.forkChild(
+              running('heartseed-exact', args, { HOME: PROBE }, head, folder, {
+                exited: Deferred.await(done),
+                claims,
+              }),
+            );
+            yield* TestClock.adjust('3 seconds');
+            const given = () => claims.map((c) => c.given);
+            const end = Effect.andThen(Deferred.done(done, Exit.void), Fiber.join(fiber));
+            return { claims, given, end };
+          });
+
+        const named = { ...files, [record]: '{"web":1000,"ios":5}' };
+        const verify = yield* runFor(['verify', 'web'], named);
+        expect(verify.claims.map((c) => c.ports)).toEqual([[8770, 8774]]);
+        expect(verify.given()).toEqual([false]);
+        named[record] = '{"web":1000,"ios":9}';
+        yield* TestClock.adjust('3 seconds');
+        expect(verify.given()).toEqual([false]);
+        named[record] = '{"web":1200,"ios":9}';
+        yield* TestClock.adjust('3 seconds');
+        expect(verify.given()).toEqual([true]);
+        expect((yield* verify.end).result._tag).toBe('Success');
+
+        const bare = { ...files };
+        const first = yield* runFor(['verify', '--json'], bare);
+        yield* TestClock.adjust('3 seconds');
+        expect(first.given()).toEqual([false]);
+        bare[record] = '{"web":800}';
+        yield* TestClock.adjust('3 seconds');
+        expect(first.given()).toEqual([true]);
+        yield* first.end;
+
+        const never = yield* runFor(['verify', 'web'], { ...files });
+        yield* TestClock.adjust('30 minutes');
+        expect(never.given()).toEqual([false]);
+        yield* never.end;
+        expect(never.given()).toEqual([true]);
+
+        const tested = { ...files };
+        const test = yield* runFor(['test', 'web'], tested);
+        tested[record] = '{"web":800}';
+        yield* TestClock.adjust('3 seconds');
+        expect(test.given()).toEqual([false]);
+        yield* test.end;
+
+        const shared = { ...files };
+        const ranged = yield* runFor(['verify', 'web'], shared);
+        yield* TestClock.adjust('37 seconds');
+        shared[record] = '{"web":10000}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([false]);
+        shared[record] = '{"web":50000}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([false]);
+        yield* TestClock.adjust('54 seconds');
+        shared[record] = '{"web":98500}';
+        yield* TestClock.adjust('3 seconds');
+        expect(ranged.given()).toEqual([true]);
+        yield* ranged.end;
+      }),
+  );
+
+  it.effect(
+    "a verify on any host whose child still runs two minutes after its report is stopped, its group ended, saying the device run's result: exit 124 when that host's run recorded clean, 1 when it recorded a failure, or nothing, or only another host's run; one whose child ends first, or that never reports, runs to its child's end",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const head = Option.fromNullishOr(pins[0]);
+        const at = `${PROBE}/apps/hymnal-exact/.exact`;
+        const start = (args: ReadonlyArray<string>, folder: Record<string, string>) =>
+          Effect.gen(function* () {
+            const done = yield* Deferred.make<void>();
+            const said: Array<string> = [];
+            const kills: Array<true> = [];
+            const fiber = yield* Effect.forkChild(
+              running('hymnal-exact', args, { HOME: PROBE }, head, folder, {
+                exited: Deferred.await(done),
+                kill: Effect.sync(() => kills.push(true)),
+              }).pipe(
+                Effect.provideService(Console.Console, {
+                  ...globalThis.console,
+                  error: (...line: ReadonlyArray<unknown>) => said.push(line.join(' ')),
+                }),
+              ),
+            );
+            yield* TestClock.adjust('3 seconds');
+            const code = Effect.map(Fiber.join(fiber), ({ result }) => Result.map(result, Number));
+            return { fiber, said, kills, code, exit: Deferred.done(done, Exit.void) };
+          });
+
+        const hung = { ...files };
+        const ios = yield* start(['verify', 'ios'], hung);
+        hung[`${at}/verify/last.json`] = '{"ios":2500}';
+        hung[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:00:01.000Z","host":"ios","what":"verify","result":"2 problems, 1 failed test"}\n';
+        yield* TestClock.adjust('1 second');
+        yield* TestClock.adjust('119 seconds');
+        expect(ios.fiber.pollUnsafe()).toBeUndefined();
+        yield* TestClock.adjust('1 second');
+        expect(yield* ios.code).toEqual(Result.succeed(1));
+        expect(ios.kills).toEqual([true]);
+        expect(ios.said.join('\n')).toContain('verify ios wrote its report 2m ago');
+        expect(ios.said.join('\n')).toContain('exit 1:');
+        expect(ios.said.join('\n')).toContain('recorded "2 problems, 1 failed test"');
+
+        const clean = { ...files };
+        const passed = yield* start(['verify', 'ios'], clean);
+        clean[`${at}/verify/last.json`] = '{"ios":2500}';
+        clean[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:02:10.000Z","host":"ios","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* passed.code).toEqual(Result.succeed(124));
+        expect(passed.said.join('\n')).toContain('exit 124:');
+        expect(passed.said.join('\n')).toContain('recorded "clean"');
+
+        const elsewhere = { ...files };
+        const other = yield* start(['verify', 'ios'], elsewhere);
+        elsewhere[`${at}/verify/last.json`] = '{"ios":2500}';
+        elsewhere[`${at}/runs.jsonl`] =
+          '{"at":"1970-01-01T00:04:20.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* other.code).toEqual(Result.succeed(1));
+        expect(other.said.join('\n')).toContain('recorded no result');
+
+        const stale = { ...files };
+        const web = yield* start(['verify'], stale);
+        stale[`${at}/verify/last.json`] = '{"web":2500}';
+        stale[`${at}/runs.jsonl`] =
+          '{"at":"1969-12-31T23:59:58.000Z","host":"web","what":"verify","result":"clean"}\n';
+        yield* TestClock.adjust('121 seconds');
+        expect(yield* web.code).toEqual(Result.succeed(1));
+        expect(web.said.join('\n')).toContain('recorded no result');
+
+        const ended = { ...files };
+        const quick = yield* start(['verify', 'ios'], ended);
+        ended[`${at}/verify/last.json`] = '{"ios":2500}';
+        yield* TestClock.adjust('60 seconds');
+        yield* quick.exit;
+        expect(yield* quick.code).toEqual(Result.succeed(0));
+        expect(quick.kills).toEqual([]);
+        expect(quick.said).toEqual([]);
+
+        const silent = yield* start(['verify', 'ios'], { ...files });
+        yield* TestClock.adjust('2 hours');
+        expect(silent.fiber.pollUnsafe()).toBeUndefined();
+        yield* silent.exit;
+        expect(yield* silent.code).toEqual(Result.succeed(0));
+        expect(silent.kills).toEqual([]);
+      }),
+  );
+
+  it.scopedLive(
+    'ends what its child left in its process group when the child exits or the run is interrupted',
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'exact-kit-tree-' });
+        const appDir = path.join(dir, 'heartseed-exact');
+        yield* fs.makeDirectory(appDir);
+        yield* fs.writeFileString(
+          path.join(appDir, 'exact.mjs'),
+          files[`${PROBE}/apps/heartseed-exact/exact.mjs`] ?? '',
+        );
+        const launcher = path.join(dir, 'launcher.cjs');
+        yield* fs.writeFileString(launcher, LINGERING);
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const alive = (pid: number) =>
+          spawner
+            .string(
+              ChildProcess.make('ps', ['-p', String(pid), '-o', 'pid='], {
+                forceKillAfter: Duration.seconds(5),
+              }),
+            )
+            .pipe(
+              Effect.map((out) => out.trim() !== ''),
+              Effect.orElseSucceed(() => false),
+            );
+        const left: Array<number> = [];
+        yield* Effect.addFinalizer(() =>
+          Effect.forEach(left, (pid) =>
+            Effect.flatMap(alive(pid), (still) =>
+              Effect.sync(() => {
+                if (still && pid > 1) process.kill(pid, 'SIGKILL');
+              }),
+            ),
+          ),
+        );
+        const pidOf = (run: string) =>
+          Effect.map(fs.readFileString(path.join(appDir, `${run}.pid`)), Number);
+        const runIn = (args: ReadonlyArray<string>) =>
+          runExact(appDir, args, launcher).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(PortClaims, claimsStandIn([])),
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: PROBE, EXACT: `${PROBE}/clone` }),
+                ),
+                Layer.effect(
+                  ChildProcessSpawner.ChildProcessSpawner,
+                  Effect.map(ChildProcessSpawner.ChildProcessSpawner, (real) =>
+                    ChildProcessSpawner.make((command) => {
+                      if (command._tag === 'StandardCommand' && command.command === 'git')
+                        return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
+                      return real.spawn(command);
+                    }),
+                  ),
+                ),
+              ).pipe(Layer.provideMerge(BunServices.layer)),
+            ),
+          );
+
+        expect(Number(yield* runIn(['contract', 'build']))).toBe(0);
+        const exited = yield* pidOf('exited');
+        left.push(exited);
+        expect(yield* alive(exited)).toBe(false);
+
+        const fiber = yield* Effect.forkChild(runIn(['contract', 'build', 'wait']));
+        const waited = yield* pidOf('waited').pipe(
+          Effect.retry({ schedule: Schedule.spaced('10 millis'), times: 300 }),
+        );
+        left.push(waited);
+        expect(yield* alive(waited)).toBe(true);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* alive(waited)).toBe(false);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scopedLive(
+    "sets aside a linked package's One route types while Exact runs, and puts them back after a pass, a failure or an interruption, unless a dev server wrote newer ones; an installed (non-workspace) package's stay put",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'exact-kit-routes-' });
+        const appDir = path.join(dir, 'apps', 'hymnal-exact');
+        const linked = path.join(dir, 'apps', 'hymnal');
+        const routes = path.join(linked, 'app', 'routes.d.ts');
+        const written = "import type { OneRouter } from 'one';\n";
+        yield* fs.makeDirectory(path.join(appDir, 'node_modules', '@manna'), { recursive: true });
+        yield* fs.makeDirectory(path.join(linked, 'app'), { recursive: true });
+        yield* fs.writeFileString(
+          path.join(appDir, 'exact.mjs'),
+          files[`${PROBE}/apps/hymnal-exact/exact.mjs`] ?? '',
+        );
+        yield* fs.writeFileString(
+          path.join(appDir, 'package.json'),
+          '{ "dependencies": { "@manna/hymnal-app": "workspace:*", "effect": "4.1.4", "one": "catalog:" } }',
+        );
+        yield* fs.symlink(linked, path.join(appDir, 'node_modules', '@manna', 'hymnal-app'));
+        const installedFiles = ['effect', 'one'].map((name) =>
+          path.join(appDir, 'node_modules', name, 'app', 'routes.d.ts'),
+        );
+        yield* Effect.forEach(installedFiles, (installed) =>
+          fs
+            .makeDirectory(path.dirname(installed), { recursive: true })
+            .pipe(Effect.andThen(fs.writeFileString(installed, written))),
+        );
+        const installed = Effect.map(
+          Effect.forEach(installedFiles, (file) => fs.exists(file)),
+          (there) => there.every(Boolean),
+        );
+        const seen: Array<boolean> = [];
+        const kept: Array<boolean> = [];
+        const runWith = (
+          code: number,
+          during: Effect.Effect<void, unknown> = Effect.void,
+          exited: Effect.Effect<void> = Effect.void,
+        ) =>
+          runExact(appDir, ['contract', 'build'], LAUNCHER).pipe(
+            Effect.provide(
+              Layer.mergeAll(
+                Layer.succeed(PortClaims, claimsStandIn([])),
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: PROBE, EXACT: `${PROBE}/clone` }),
+                ),
+                Layer.succeed(
+                  ChildProcessSpawner.ChildProcessSpawner,
+                  ChildProcessSpawner.make((command) => {
+                    if (command._tag === 'StandardCommand' && command.command === 'git')
+                      return Effect.succeed(handleOf(`${pins[0] ?? ''}\n`, 0));
+                    return fs.exists(routes).pipe(
+                      Effect.tap((there) => Effect.sync(() => seen.push(there))),
+                      Effect.andThen(installed),
+                      Effect.tap((there) => Effect.sync(() => kept.push(there))),
+                      Effect.andThen(during),
+                      Effect.orDie,
+                      Effect.as(handleOf('', code, exited)),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          );
+        const after = Effect.all([
+          fs.readFileString(routes),
+          fs.readDirectory(path.join(linked, 'app')),
+        ]);
+
+        yield* fs.writeFileString(routes, written);
+        expect(Number(yield* runWith(0))).toBe(0);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        expect(Number(yield* runWith(1))).toBe(1);
+        expect(yield* after).toEqual([written, ['routes.d.ts']]);
+
+        const newer = `${written}// newer\n`;
+        expect(Number(yield* runWith(0, fs.writeFileString(routes, newer)))).toBe(0);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        const started = yield* Deferred.make<boolean>();
+        const fiber = yield* Effect.forkChild(
+          runWith(0, Deferred.succeed(started, true), Effect.never),
+        );
+        yield* Deferred.await(started);
+        expect(yield* fs.exists(routes)).toBe(false);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* after).toEqual([newer, ['routes.d.ts']]);
+
+        expect(seen).toEqual([false, false, false, false]);
+        expect(kept).toEqual([true, true, true, true]);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   it.effect('docs/exact.md names the pin the wrapper runs at, then the base it is made from', () =>

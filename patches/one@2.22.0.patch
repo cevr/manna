@@ -106,10 +106,10 @@ index bc13bef26cffc8d5655d7ca965bc4fe871245341..ae24155b6efa03c540cd163d794a36f9
                  .build()
          )
 diff --git a/dist/cjs/platform/audio/index.cjs b/dist/cjs/platform/audio/index.cjs
-index b7667a0715cc48566a7edb1ceb332904f316996f..ebbbcfb7be45593a1c4bde7e20318f299dc9a325 100644
+index 08e987735445470ee79338b73035ee49ee0f7821..64cea878424956dfbe1e0f960529f65602cb3eca 100644
 --- a/dist/cjs/platform/audio/index.cjs
 +++ b/dist/cjs/platform/audio/index.cjs
-@@ -26,6 +26,7 @@ var import_validateCallback = require("../validateCallback.cjs");
+@@ -27,6 +27,7 @@ var import_validateCallback = require("../validateCallback.cjs");
  var import_nowPlaying = require("./nowPlaying.cjs");
  var import_player = require("./player.cjs");
  let player;
@@ -117,7 +117,7 @@ index b7667a0715cc48566a7edb1ceb332904f316996f..ebbbcfb7be45593a1c4bde7e20318f29
  let pendingLoad;
  let playbackError;
  let permission = "undetermined";
-@@ -189,6 +190,8 @@ const Audio = Object.freeze({
+@@ -190,6 +191,8 @@ const Audio = Object.freeze({
  		if (typeof positionMs !== "number" || !Number.isFinite(positionMs) || positionMs < 0) throw new Error("Audio.play: position must be finite and nonnegative");
  		clearPlayer();
  		const audio = new window.Audio(url.href);
@@ -126,7 +126,7 @@ index b7667a0715cc48566a7edb1ceb332904f316996f..ebbbcfb7be45593a1c4bde7e20318f29
  		player = audio;
  		audio.addEventListener("error", () => {
  			if (player === audio) playbackError = audio.error?.message ?? "Audio.play: decoding failed";
-@@ -276,6 +279,13 @@ const Audio = Object.freeze({
+@@ -277,6 +280,13 @@ const Audio = Object.freeze({
  		});
  		return playbackStatus();
  	},
@@ -141,10 +141,10 @@ index b7667a0715cc48566a7edb1ceb332904f316996f..ebbbcfb7be45593a1c4bde7e20318f29
  		clearPlayer();
  	},
 diff --git a/dist/cjs/platform/audio/index.native.cjs b/dist/cjs/platform/audio/index.native.cjs
-index e3d7a4eb3ebd294c88ad64082dc6baee930514ad..77b01523663eda3f68b2a155ba9e6f3b163e5023 100644
+index 93a88fa0e92386d3c884967f3f6dce18114d0683..86caf95f93932f30b237d8d2acd7432eeb80c00b 100644
 --- a/dist/cjs/platform/audio/index.native.cjs
 +++ b/dist/cjs/platform/audio/index.native.cjs
-@@ -49,6 +49,9 @@ var Audio = Object.freeze({
+@@ -50,6 +50,9 @@ var Audio = Object.freeze({
  	seek: function seek(positionMs) {
  		return (0, import_hybrid.audioNative)().seek(positionMs).catch(import_nativeError.rethrowNativeError);
  	},
@@ -155,10 +155,10 @@ index e3d7a4eb3ebd294c88ad64082dc6baee930514ad..77b01523663eda3f68b2a155ba9e6f3b
  		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
  	},
 diff --git a/dist/cjs/platform/audio/index.native.js b/dist/cjs/platform/audio/index.native.js
-index 3de637567e1524c1dcf52bcb697d0d3e94e91196..0cd0976e1d8a1511ca5114873986bc045f423680 100644
+index 166d00424438b1212b2b97626b8816296057c805..65fef109994e5f52654a58b6ea7546f52bb53b5c 100644
 --- a/dist/cjs/platform/audio/index.native.js
 +++ b/dist/cjs/platform/audio/index.native.js
-@@ -49,6 +49,9 @@ var Audio = Object.freeze({
+@@ -50,6 +50,9 @@ var Audio = Object.freeze({
  	seek: function seek(positionMs) {
  		return (0, import_hybrid.audioNative)().seek(positionMs).catch(import_nativeError.rethrowNativeError);
  	},
@@ -169,10 +169,10 @@ index 3de637567e1524c1dcf52bcb697d0d3e94e91196..0cd0976e1d8a1511ca5114873986bc04
  		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
  	},
 diff --git a/dist/cjs/platform/audio/unavailable.cjs b/dist/cjs/platform/audio/unavailable.cjs
-index 64415a5505066ffe8ab8ea47c4d05b4fd49cf0a1..c74338962b4faacce8f7c28d178c74e92b6677b0 100644
+index 57f7bd69cd4668b80ff0ba2ce220e1fb8cc889bd..22646bfad08058cd0bbf5edaf220429c8cc7a25b 100644
 --- a/dist/cjs/platform/audio/unavailable.cjs
 +++ b/dist/cjs/platform/audio/unavailable.cjs
-@@ -43,6 +43,7 @@ const Audio = Object.freeze({
+@@ -44,6 +44,7 @@ const Audio = Object.freeze({
  		state: "idle",
  		positionMs: 0
  	}),
@@ -181,10 +181,10 @@ index 64415a5505066ffe8ab8ea47c4d05b4fd49cf0a1..c74338962b4faacce8f7c28d178c74e9
  	startRecording: () => Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.startRecording")),
  	getRecordingStatus: () => Promise.resolve({
 diff --git a/dist/cjs/platform/audio/unavailable.native.cjs b/dist/cjs/platform/audio/unavailable.native.cjs
-index df7e98e16dc5e647d5b30a11830be4297f6d6ace..e23296b461c1332e9ab25ac73495d35be3e8c88e 100644
+index 0465e39dba264fb77b0d54d32f5dee5be49fa9bc..6a5faca53de7b2f13ac4f400363611bf20f74152 100644
 --- a/dist/cjs/platform/audio/unavailable.native.cjs
 +++ b/dist/cjs/platform/audio/unavailable.native.cjs
-@@ -59,6 +59,9 @@ var Audio = Object.freeze({
+@@ -60,6 +60,9 @@ var Audio = Object.freeze({
  			positionMs: 0
  		});
  	},
@@ -195,10 +195,10 @@ index df7e98e16dc5e647d5b30a11830be4297f6d6ace..e23296b461c1332e9ab25ac73495d35b
  		return Promise.resolve();
  	},
 diff --git a/dist/cjs/platform/audio/unavailable.native.js b/dist/cjs/platform/audio/unavailable.native.js
-index e87d471ef648a01acb016200c19ba90791479187..1223d6fbe8ba643c192ccccf7f384ae1b5be84d6 100644
+index 6d6013359266c5134170e02d05fe74aeecc01c4d..23801c3521d2e71109a7984cb58b869ad845308c 100644
 --- a/dist/cjs/platform/audio/unavailable.native.js
 +++ b/dist/cjs/platform/audio/unavailable.native.js
-@@ -59,6 +59,9 @@ var Audio = Object.freeze({
+@@ -60,6 +60,9 @@ var Audio = Object.freeze({
  			positionMs: 0
  		});
  	},
@@ -209,18 +209,18 @@ index e87d471ef648a01acb016200c19ba90791479187..1223d6fbe8ba643c192ccccf7f384ae1
  		return Promise.resolve();
  	},
 diff --git a/dist/esm/platform/audio/index.mjs b/dist/esm/platform/audio/index.mjs
-index 23b662b5ede2bc5c0927ba875d991f72a231c902..131954d616b0d328c6f561822dcf0e822311edfc 100644
+index f87be771d9b88ec2afefc81b06eaafb0e91b4eab..c1d458a1fba90eb0910a9f437b9f34b14b7af63c 100644
 --- a/dist/esm/platform/audio/index.mjs
 +++ b/dist/esm/platform/audio/index.mjs
-@@ -4,6 +4,7 @@ import { addRemoteListener, claimNowPlaying, releaseNowPlaying } from "./nowPlay
- import { AudioPlayer, createPlayer } from "./player.mjs";
+@@ -5,6 +5,7 @@ import { AudioPlayer, createPlayer } from "./player.mjs";
  
+ // dist/esm/platform/audio/index.js
  let player;
 +let playbackRate = 1;
  let pendingLoad;
  let playbackError;
  let permission = "undetermined";
-@@ -167,6 +168,8 @@ const Audio = Object.freeze({
+@@ -168,6 +169,8 @@ const Audio = Object.freeze({
  		if (typeof positionMs !== "number" || !Number.isFinite(positionMs) || positionMs < 0) throw new Error("Audio.play: position must be finite and nonnegative");
  		clearPlayer();
  		const audio = new window.Audio(url.href);
@@ -229,7 +229,7 @@ index 23b662b5ede2bc5c0927ba875d991f72a231c902..131954d616b0d328c6f561822dcf0e82
  		player = audio;
  		audio.addEventListener("error", () => {
  			if (player === audio) playbackError = audio.error?.message ?? "Audio.play: decoding failed";
-@@ -254,6 +257,13 @@ const Audio = Object.freeze({
+@@ -255,6 +258,13 @@ const Audio = Object.freeze({
  		});
  		return playbackStatus();
  	},
@@ -244,10 +244,10 @@ index 23b662b5ede2bc5c0927ba875d991f72a231c902..131954d616b0d328c6f561822dcf0e82
  		clearPlayer();
  	},
 diff --git a/dist/esm/platform/audio/index.native.js b/dist/esm/platform/audio/index.native.js
-index 0461574bb9caf518d96cc9d219eb92f60a3e2a18..276eb7feee6c37c31cdea63c796d0590a20fb786 100644
+index 57758f472d52403f4d491520f1ddd6fc2a551f1f..12cb2daaa86fded2b9d6776a56ab6bb510420ec7 100644
 --- a/dist/esm/platform/audio/index.native.js
 +++ b/dist/esm/platform/audio/index.native.js
-@@ -25,6 +25,9 @@ var Audio = Object.freeze({
+@@ -26,6 +26,9 @@ var Audio = Object.freeze({
  	seek: function seek(positionMs) {
  		return audioNative().seek(positionMs).catch(rethrowNativeError);
  	},
@@ -258,10 +258,10 @@ index 0461574bb9caf518d96cc9d219eb92f60a3e2a18..276eb7feee6c37c31cdea63c796d0590
  		return audioNative().stop().catch(rethrowNativeError);
  	},
 diff --git a/dist/esm/platform/audio/unavailable.mjs b/dist/esm/platform/audio/unavailable.mjs
-index 729b4717253f4129c5796914017a02938500e538..43cd16780927bebffba7fd9cda15b465cb677e12 100644
+index 2ff07d99b5aa8458c093ea9d56f73efbcd1d0394..e6583da66901a55267deacc5e89daad937a9ecb1 100644
 --- a/dist/esm/platform/audio/unavailable.mjs
 +++ b/dist/esm/platform/audio/unavailable.mjs
-@@ -21,6 +21,7 @@ const Audio = Object.freeze({
+@@ -22,6 +22,7 @@ const Audio = Object.freeze({
  		state: "idle",
  		positionMs: 0
  	}),
@@ -270,10 +270,10 @@ index 729b4717253f4129c5796914017a02938500e538..43cd16780927bebffba7fd9cda15b465
  	startRecording: () => Promise.reject(missingNativeBuild("Audio.startRecording")),
  	getRecordingStatus: () => Promise.resolve({
 diff --git a/dist/esm/platform/audio/unavailable.native.js b/dist/esm/platform/audio/unavailable.native.js
-index 7893ef191af9d668652df5898e485f95ae8ac8bb..d75024550b9219758ebee03d8a797d3d79b49940 100644
+index cb529c3badcf946f3f24c451e9dfd46d9a3adfd3..ccb492493f201c08eae3e942784e822c14c752f6 100644
 --- a/dist/esm/platform/audio/unavailable.native.js
 +++ b/dist/esm/platform/audio/unavailable.native.js
-@@ -35,6 +35,9 @@ var Audio = Object.freeze({
+@@ -36,6 +36,9 @@ var Audio = Object.freeze({
  			positionMs: 0
  		});
  	},
@@ -284,10 +284,10 @@ index 7893ef191af9d668652df5898e485f95ae8ac8bb..d75024550b9219758ebee03d8a797d3d
  		return Promise.resolve();
  	},
 diff --git a/ios/Nitro/HybridOneAudio.swift b/ios/Nitro/HybridOneAudio.swift
-index cf3d425dcb33d6c4cf0eddf9bea435f9727a71ad..d5bcc8ea90685f5da5731ba144fadd0ff6d2949d 100644
+index c5ce1b4e7c043a5950a72be3311ecdd4e5969602..f3d3f4edf67f29970626d625affe11cdf6318cfd 100644
 --- a/ios/Nitro/HybridOneAudio.swift
 +++ b/ios/Nitro/HybridOneAudio.swift
-@@ -43,6 +43,8 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -44,6 +44,8 @@ final class HybridOneAudio: HybridOneAudioSpec {
    private var playerURI: String?
    private var playbackPaused = false
    private var playbackEnded = false
@@ -296,7 +296,7 @@ index cf3d425dcb33d6c4cf0eddf9bea435f9727a71ad..d5bcc8ea90685f5da5731ba144fadd0f
    private var endObserver: NSObjectProtocol?
    private var playerStatusObservation: NSKeyValueObservation?
    private var itemStatusObservation: NSKeyValueObservation?
-@@ -179,7 +181,10 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -180,7 +182,10 @@ final class HybridOneAudio: HybridOneAudioSpec {
      try session.setActive(true)
      self.clearPlayer()
      let item = AVPlayerItem(url: url)
@@ -307,7 +307,7 @@ index cf3d425dcb33d6c4cf0eddf9bea435f9727a71ad..d5bcc8ea90685f5da5731ba144fadd0f
      self.player = player
      self.playerStatusObservation = player.observe(\.timeControlStatus, options: [.new]) {
        [weak self] _, _ in
-@@ -275,6 +280,21 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -276,6 +281,21 @@ final class HybridOneAudio: HybridOneAudioSpec {
      }
    }
  
@@ -329,7 +329,7 @@ index cf3d425dcb33d6c4cf0eddf9bea435f9727a71ad..d5bcc8ea90685f5da5731ba144fadd0f
    func seek(positionMs: Double) throws -> Promise<AudioPlaybackStatus> {
      let promise = Promise<AudioPlaybackStatus>()
      DispatchQueue.main.async {
-@@ -941,7 +961,7 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -942,7 +962,7 @@ final class HybridOneAudio: HybridOneAudioSpec {
        MPNowPlayingInfoPropertyElapsedPlaybackTime: position.isFinite ? max(0, position) : 0,
        MPNowPlayingInfoPropertyPlaybackRate:
          !ownerEnded() && player.timeControlStatus == .playing ? player.rate : 0.0,
@@ -553,7 +553,7 @@ index 7b7279859f959826b7c42aac764daa13ccccc0a4..b80d486c9bc4ff58dae5922b1b50ecdc
    startRecording(): Promise<AudioRecordingStatus>
    getRecordingStatus(): Promise<AudioRecordingStatus>
 diff --git a/types/platform/audio/index.d.ts b/types/platform/audio/index.d.ts
-index 770253a89c853baffc37091ccd962e4d8abd2395..743af3537e3c855d0c47d499194d5a0d21c80a3d 100644
+index 723168b26d5aa5862b42926b0321ff3648339ded..611e034dec9eacee84b9cee386011c23b9832388 100644
 --- a/types/platform/audio/index.d.ts
 +++ b/types/platform/audio/index.d.ts
 @@ -13,6 +13,7 @@ export declare const Audio: Readonly<{
@@ -565,7 +565,7 @@ index 770253a89c853baffc37091ccd962e4d8abd2395..743af3537e3c855d0c47d499194d5a0d
      startRecording: () => Promise<AudioRecordingStatus>;
      getRecordingStatus: () => Promise<AudioRecordingStatus>;
 diff --git a/types/platform/audio/index.native.d.ts b/types/platform/audio/index.native.d.ts
-index 3de9560fff80303bcf699e6577fe19678879f8fe..ee9fe69181bce091604419671160cc89fbac5a59 100644
+index ef667d927a3f2b8caad35ca1906478c629f992ef..9315d340f962d2877f021233caf24cba09b4c529 100644
 --- a/types/platform/audio/index.native.d.ts
 +++ b/types/platform/audio/index.native.d.ts
 @@ -10,6 +10,7 @@ export declare const Audio: Readonly<{
@@ -577,7 +577,7 @@ index 3de9560fff80303bcf699e6577fe19678879f8fe..ee9fe69181bce091604419671160cc89
      startRecording: () => Promise<AudioRecordingStatus>;
      getRecordingStatus: () => Promise<AudioRecordingStatus>;
 diff --git a/types/platform/audio/unavailable.d.ts b/types/platform/audio/unavailable.d.ts
-index a8eb112496f2d520699f18d8fd2b93870ca58eb3..099bc51446a2300d4acdee036502f5cdc7969f43 100644
+index 734b8e55defe11451fa2e03a3984eed018c24077..789fa9ab270316d18a70e49703971e4ef82f8101 100644
 --- a/types/platform/audio/unavailable.d.ts
 +++ b/types/platform/audio/unavailable.d.ts
 @@ -8,6 +8,7 @@ export declare const Audio: Readonly<{

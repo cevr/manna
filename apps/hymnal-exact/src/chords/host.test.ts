@@ -9,7 +9,6 @@ import { chordsSources } from './sources.ts';
 
 const sources = chordsSources(book, bundled);
 
-const STEPS = ['up', 'down', 'capo-up', 'capo-down', 'reset', '', 'sideways'] as const;
 const GRIP_TOKENS = ['Db_0', 'Fs_5m7-b', 'Bbm_0_7', '', 'C', 'Es_0', 'C_zz', 'G_0-1-2'] as const;
 
 /** A route's hymn number as a reader or a stale link writes it. */
@@ -29,9 +28,6 @@ describe("the chords' sources run where Exact runs them", () => {
         ]);
         expect(() =>
           sources.chordsPage([route(random), below(random, 4) > 0, moves]),
-        ).not.toThrow();
-        expect(() =>
-          sources.chordsMove([moves, below(random, 700), pick(random, STEPS)]),
         ).not.toThrow();
         expect(() => sources.chordsGrip([pick(random, GRIP_TOKENS)])).not.toThrow();
       }

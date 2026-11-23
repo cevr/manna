@@ -14,10 +14,11 @@ import { printSummary, trace, traceEffect } from './instrumentation/trace.js';
 import { AppleScriptLive } from './services/apple-script.js';
 import { ChimeLive } from './services/chime.js';
 import { CliLoggerLive } from './services/logger.js';
+import { cliVersion } from './lib/version.js';
 import { QuotationsLive } from './services/quotations.js';
 
 const cli = Command.run(rootCommand, {
-  version: 'v1.0.0',
+  version: cliVersion(),
 });
 
 const AppleScriptLayer = AppleScriptLive.pipe(Layer.provide(BunServices.layer));

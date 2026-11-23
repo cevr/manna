@@ -9,7 +9,15 @@
  * holds it open, and whether it is sown.
  */
 
-import { readyOf, furrowsOf, greetingOf, minuteOf, singlesOf } from '@manna/heartseed/home';
+import { fieldOf, harvestText, sownText } from '@manna/heartseed/field';
+import {
+  fieldPassagesWith,
+  furrowsOf,
+  greetingOf,
+  minuteOf,
+  readyOf,
+  singlesOf,
+} from '@manna/heartseed/home';
 import { startOf } from '@manna/heartseed/home/start';
 import { todayOf, type TodayAction } from '@manna/heartseed/home/today';
 import type { FurrowPlant } from '@manna/heartseed/home';
@@ -68,10 +76,15 @@ export interface HomeCard {
   slug: string;
 }
 
-/** Home: whether the garden is read (nothing is claimed before), the greeting, the card, the rows, the single verses, and the foot. */
+/** Home: whether the garden is read (nothing is claimed before), the greeting and its icon, the field's heading lines, the card, the rows, the single verses, and the foot. */
 export interface HomeShown {
   read: boolean;
   greeting: string;
+  /** The greeting's icon, `sun` or `moon` (the current app's `greetingOf`). */
+  greetingIcon: string;
+  /** The days sown and the verses at full corn under `Your field`, as the current field writes them; empty before the garden is read. */
+  sown: string;
+  harvest: string;
   card: HomeCard;
   rows: HomeRow[];
   singles: HomeSingle[];
@@ -171,15 +184,26 @@ const singlesShown = (ground: Ground, ready: ReadonlySet<string>): HomeSingle[] 
     ask: singleAskOf(plant.reference),
   }));
 
-/** The greeting at the call's instant in its zone. */
-const greetingAt = (at: At) => greetingOf(minuteOf(at.now, at.offset)).words;
+/** The greeting at the call's instant in its zone: its words and its icon. */
+const greetingAt = (at: At) => {
+  const greeting = greetingOf(minuteOf(at.now, at.offset));
+  return { greeting: greeting.words, greetingIcon: greeting.icon };
+};
+
+/** The field's heading lines over the ground, as the current home counts them (`fieldOf` over the lists and the single verses). */
+const fieldLines = (ground: Ground) => {
+  const field = fieldOf(ground.garden, fieldPassagesWith(ground.lists, ground.singles));
+  return { sown: sownText(field.sown), harvest: harvestText(field.harvest) };
+};
 
 /** Home over what one call read. */
 export const homeOf = (input: HomeIn): HomeShown =>
   Option.match(groundOf(input), {
     onNone: (): HomeShown => ({
       read: false,
-      greeting: greetingAt(input.at),
+      ...greetingAt(input.at),
+      sown: '',
+      harvest: '',
       card: NO_CARD,
       rows: [],
       singles: [],
@@ -194,7 +218,8 @@ export const homeOf = (input: HomeIn): HomeShown =>
       const singles = singlesShown(ground, ready);
       return {
         read: true,
-        greeting: greetingAt(input.at),
+        ...greetingAt(input.at),
+        ...fieldLines(ground),
         card: {
           line: Option.getOrElse(card.headline, () => ''),
           parts: Option.getOrElse(card.parts, () => ''),

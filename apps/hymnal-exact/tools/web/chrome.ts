@@ -6,7 +6,9 @@
  * through the DevTools protocol on one page target. `close` asks Chrome to
  * close (`Browser.close`), so it writes what it holds to the profile as a
  * person's closing it does, and stops the group only if it has not ended
- * in 10 s. The browser is `CHROME`, else the newest Chrome for Testing
+ * in 10 s. A call Chrome does not answer in `CALL_MS`, or one pending
+ * when its socket closes, rejects with its method named, so a dead or
+ * stuck Chrome fails the drive instead of hanging it. The browser is `CHROME`, else the newest Chrome for Testing
  * Playwright keeps (`~/Library/Caches/ms-playwright` on macOS,
  * `~/.cache/ms-playwright` elsewhere), the one Exact's agent starts.
  */
@@ -17,6 +19,9 @@ import { join } from 'node:path';
 
 type Child = ReturnType<typeof Bun.spawn>;
 type Listener = (params: Record<string, unknown>) => void;
+
+/** How long a DevTools call waits for Chrome's answer before it rejects, naming its method. */
+export const CALL_MS = 30_000;
 
 /** The browser this machine runs the drive in. */
 export const chromePath = (): string => {
@@ -50,6 +55,8 @@ export interface Page {
 export interface Chrome {
   readonly page: Page;
   readonly close: () => Promise<'closed' | 'stopped'>;
+  /** Chrome's process group stopped at once, for a drive that is itself being stopped. */
+  readonly stopNow: () => void;
 }
 
 /** Chrome on `profile` (made fresh when `fresh`), with one page open on `about:blank`. */
@@ -64,6 +71,8 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
       `--user-data-dir=${profile}`,
       '--remote-debugging-port=0',
       '--mute-audio',
+      '--use-mock-keychain',
+      '--password-store=basic',
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-background-networking',
@@ -89,8 +98,20 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
   }
   const socket = new WebSocket(socketUrl);
   await new Promise((resolve, reject) => {
-    socket.addEventListener('open', resolve, { once: true });
-    socket.addEventListener('error', reject, { once: true });
+    const timer = setTimeout(() => {
+      socket.close();
+      process.kill(-child.pid, 'SIGTERM');
+      reject(new Error(`Chrome's DevTools socket did not open in ${CALL_MS / 1000} s`));
+    }, CALL_MS);
+    socket.addEventListener('open', () => resolve(clearTimeout(timer)), { once: true });
+    socket.addEventListener(
+      'error',
+      () => {
+        clearTimeout(timer);
+        reject(new Error("Chrome's DevTools socket failed to open"));
+      },
+      { once: true },
+    );
   });
   let id = 0;
   const waiting = new Map<
@@ -98,6 +119,10 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
     { resolve: (v: Record<string, unknown>) => void; reject: (e: Error) => void }
   >();
   const listeners = new Map<string, Set<Listener>>();
+  socket.addEventListener('close', () => {
+    for (const call of waiting.values()) call.reject(new Error("Chrome's DevTools socket closed"));
+    waiting.clear();
+  });
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(String(event.data)) as {
       id?: number;
@@ -124,8 +149,27 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
   ) =>
     new Promise<Record<string, unknown>>((resolve, reject) => {
       id += 1;
-      waiting.set(id, { resolve, reject });
-      socket.send(JSON.stringify({ id, method, params, sessionId }));
+      const sent = id;
+      const timer = setTimeout(() => {
+        waiting.delete(sent);
+        reject(new Error(`${method} got no answer from Chrome in ${CALL_MS / 1000} s`));
+      }, CALL_MS);
+      waiting.set(sent, {
+        resolve: (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      });
+      if (socket.readyState !== WebSocket.OPEN) {
+        waiting.get(sent)?.reject(new Error(`${method}: Chrome's DevTools socket is closed`));
+        waiting.delete(sent);
+        return;
+      }
+      socket.send(JSON.stringify({ id: sent, method, params, sessionId }));
     });
   const { targetInfos } = (await call(undefined, 'Target.getTargets')) as {
     targetInfos: Array<{ targetId: string; type: string }>;
@@ -177,5 +221,13 @@ export const launchChrome = async (profile: string, fresh: boolean): Promise<Chr
     }
     return 'stopped';
   };
-  return { page, close };
+  const stopNow = () => {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      return;
+    }
+  };
+  return { page, close, stopNow };
 };

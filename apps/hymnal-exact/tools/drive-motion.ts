@@ -6,13 +6,14 @@
  * tools/drive-motion.ts web|ios`). Every Play here is made with Sounds
  * and haptics off.
  *
- * - **Press:** held down, a filled button (the page's Play, then its
- *   Pause) paints the brand's `pressed` fill, light and dark.
- * - **Bar enter:** 100 ms after Play the docked bar is still rising (its
- *   frame lies below where it rests, by less than its height), and after
- *   the clock settles it rests. Under Reduce Motion it does not move: at
- *   100 ms it rests and its words are fading in, drawn lighter than once
- *   settled.
+ * - **Press:** held down, a bar's mark (the page's Play, then the docked
+ *   bar's Pause) paints the brand's `soft` fill, light and dark, as the
+ *   current hymnal's bar does.
+ * - **Bar enter:** 100 ms after a hymn page is pushed its bar is still
+ *   rising (its frame lies below where it rests, by less than its height),
+ *   and after the clock settles it rests. Under Reduce Motion it does not
+ *   move: at 100 ms it rests and its Play mark is fading in, drawn lighter
+ *   than once settled.
  * - **Bar exit:** Settings opened, the bar is gone once the clock settles;
  *   closed, the bar rises again.
  * - **Room:** the hymn's last part, scrolled to the end, lies above the bar.
@@ -30,7 +31,7 @@
 
 import { join } from 'node:path';
 
-import { makeDrive } from '@manna/exact-kit/drive';
+import { bunProcesses, makeDrive } from '@manna/exact-kit/drive';
 import { theme } from '@manna/hymnal-app/theme';
 
 import { sourcesAt } from '../src/sources.ts';
@@ -44,14 +45,12 @@ const shots = process.env.SHOTS ?? join(app, '.exact/shots/motion');
 const shotFile = (name: string) => join(shots, `${name}-${host}.png`);
 const shot = (name: string) => `screenshot ${shotFile(name)}`;
 const backend = `http://127.0.0.1:${checkoutPort()}`;
-/** Chrome keeps a named store per port, so every web launch here, the relaunch too, takes one of the app's spare ports. */
-const port = host === 'web' ? ['--port', '8777'] : [];
-const env = { ...process.env, HYMNAL_RECORDINGS: backend };
 const processes = {
+  ...bunProcesses,
   spawn: (argv: ReadonlyArray<string>, cwd: string) => {
     const child = Bun.spawn([...argv], {
       cwd,
-      env,
+      env: { ...process.env, HYMNAL_RECORDINGS: backend },
       stdout: 'pipe',
       stderr: 'pipe',
       detached: true,
@@ -179,12 +178,6 @@ const first = named([
   ...feelOff,
   ['kept', 'state settingsFeelKept'],
   'tap hymn-1',
-  'clock settle',
-  'clock data',
-  ['play-light', 'layout play'],
-  'tap play down',
-  shot('press-light'),
-  'tap up',
   'clock data',
   'clock +100',
   ['rise-100', 'layout bar'],
@@ -192,10 +185,16 @@ const first = named([
   'clock settle',
   ['rise-end', 'layout bar'],
   shot('rise-end'),
+  ['play-light', 'layout play'],
+  'tap play down',
+  shot('press-light'),
+  'tap up',
+  'clock data',
+  'clock settle',
   'prefer prefers-color-scheme dark',
   'clock settle',
-  ['play-dark', 'layout play'],
-  'tap play down',
+  ['play-dark', 'layout bar-toggle'],
+  'tap bar-toggle down',
   shot('press-dark'),
   'tap up',
   'clock data',
@@ -222,7 +221,7 @@ const first = named([
 ]);
 
 const firstRun = () =>
-  drive.run([...port, '--backend', backend, '--storage', store, '--reset-storage'], first.ops);
+  drive.run(['--backend', backend, '--storage', store, '--reset-storage'], first.ops);
 const firstReplies = await firstRun();
 const read = (name: string) => first.reply(firstReplies, name);
 
@@ -236,9 +235,9 @@ drive.check('Sounds and haptics turned off is kept as "off"', read('kept') === '
 
 for (const scheme of ['light', 'dark'] as const) {
   const painted = await fillPixel(`press-${scheme}`, read(`play-${scheme}`));
-  const want = channels(theme[scheme].pressed);
+  const want = channels(theme[scheme].soft);
   drive.check(
-    `held down, Play paints the brand's ${scheme} pressed fill`,
+    `held down, the bar's ${scheme === 'light' ? 'Play' : 'Pause'} paints the brand's ${scheme} soft fill`,
     painted.length === 3 && distance(painted, want) <= 2,
     { painted, want },
   );
@@ -289,7 +288,7 @@ if (host === 'web')
 else drive.check('Settings closed, the bar is back', againEnd !== undefined, { againEnd });
 
 const kept = await drive.run(
-  [...port, '--backend', backend, '--storage', store, '--keep-storage'],
+  ['--backend', backend, '--storage', store, '--keep-storage'],
   ['clock data', 'state settingsFeelKept', 'state settingsFeel'],
 );
 drive.check(
@@ -306,21 +305,18 @@ const still = named([
   ['still', 'state motionStill'],
   ...feelOff,
   'tap hymn-1',
-  'clock settle',
-  'clock data',
-  'tap play',
   'clock data',
   'clock +100',
   ['bar-100', 'layout bar'],
-  ['words-100', 'layout bar-hymn'],
+  ['words-100', 'layout play'],
   shot('still-100'),
   'clock settle',
   ['bar-end', 'layout bar'],
-  ['words-end', 'layout bar-hymn'],
+  ['words-end', 'layout play'],
   shot('still-end'),
 ]);
 const stillReplies = await drive.run(
-  [...port, '--backend', backend, '--storage', `${store}-still`, '--reset-storage'],
+  ['--backend', backend, '--storage', `${store}-still`, '--reset-storage'],
   still.ops,
 );
 const stillRead = (name: string) => still.reply(stillReplies, name);
@@ -338,7 +334,7 @@ if (host === 'web') {
   const fading = await corePixel('still-100', stillRead('words-100'), 'light');
   const whole = await corePixel('still-end', stillRead('words-end'), 'light');
   drive.check(
-    'under Reduce Motion the bar fades in: at 100 ms its words are drawn lighter than once settled, and not gone',
+    'under Reduce Motion the bar fades in: at 100 ms its Play mark is drawn lighter than once settled, and not gone',
     fading.length === 3 &&
       whole.length === 3 &&
       distance(fading, ground) < distance(whole, ground) - 2 &&

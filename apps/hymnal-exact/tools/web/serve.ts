@@ -42,9 +42,13 @@ export const filesOf = (dir: string): Set<string> =>
       .filter(isPublic),
   );
 
-/** The cache rule of `file`: HTML and undigested files revalidate; a digest in the name keeps for a year. */
+/**
+ * The cache rule of `file`: HTML and undigested files revalidate; a digest
+ * in the name keeps for a year. The bundler's digest is eight base64url
+ * characters, `-` and `_` among them (`presence-glue-AGqduZL-.js`).
+ */
 export const cacheOf = (file: string): string =>
-  /-[A-Za-z0-9_]{8}\.(js|css|wasm)$/u.test(file)
+  /-[A-Za-z0-9_-]{8}\.(js|css|wasm)$/u.test(file)
     ? 'public, max-age=31536000, immutable'
     : 'no-cache';
 
@@ -53,7 +57,12 @@ export const serveBuilt = (dir: string, port: number) => {
   const files = filesOf(dir);
   const bodies = new Map<
     string,
-    { raw: Uint8Array; br: Uint8Array; gzip: Uint8Array; tag: string }
+    {
+      raw: Uint8Array<ArrayBuffer>;
+      br: Uint8Array<ArrayBuffer>;
+      gzip: Uint8Array<ArrayBuffer>;
+      tag: string;
+    }
   >();
   const bodyOf = (file: string) => {
     const kept = bodies.get(file);
@@ -101,7 +110,7 @@ export const serveBuilt = (dir: string, port: number) => {
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const at = args.indexOf('--port');
-  const port = Number(at >= 0 ? args[at + 1] : (process.env.PORT ?? 8766));
+  const port = Number(at >= 0 ? args[at + 1] : (process.env['PORT'] ?? 8766));
   const dir = args.find((arg, i) => !arg.startsWith('--') && args[i - 1] !== '--port') ?? 'dist';
   const server = serveBuilt(join(process.cwd(), dir), port);
   console.log(`[web] serving dir=${dir} url=http://127.0.0.1:${server.port}/`);

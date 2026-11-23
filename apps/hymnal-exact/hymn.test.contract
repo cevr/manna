@@ -9,10 +9,14 @@ test "A hymn opens and reads in sung order."
   expect state hymnShown.parts.1 .key == "refrain-1"
   expect state hymnShown.parts.2 .key == "stanza-2"
   expect state hymnShown.parts.3 .key == "refrain-2"
-  expect text "stanza-1" == "All creatures of our God and King,\nLift up your voice with us and sing:\nAlleluia! Alleluia!\nO burning sun with golden beam\nAnd silver moon with softer gleam:"
-  expect text "refrain-1" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
-  expect text "stanza-2" == "O rushing wind and breezes soft,\nO clouds that ride the winds aloft:\nOh, praise Him! Alleluia!\nO rising morn, in praise rejoice,\nO lights of evening, find a voice."
-  expect text "refrain-2" == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
+  expect state hymnShown.parts.1 .refrain == true
+  expect state hymnShown.parts.0 .refrain == false
+  expect tree has "line-stanza-1-5"
+  expect tree has "line-refrain-2-2"
+  expect state hymnShown.parts.0 .text == "All creatures of our God and King,\nLift up your voice with us and sing:\nAlleluia! Alleluia!\nO burning sun with golden beam\nAnd silver moon with softer gleam:"
+  expect state hymnShown.parts.1 .text == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
+  expect state hymnShown.parts.2 .text == "O rushing wind and breezes soft,\nO clouds that ride the winds aloft:\nOh, praise Him! Alleluia!\nO rising morn, in praise rejoice,\nO lights of evening, find a voice."
+  expect state hymnShown.parts.3 .text == "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
   perf
     back
     clock settle
@@ -30,6 +34,15 @@ test "A hymn's address opens it."
   expect tree missing "hymn-title"
   expect text "title" == "Hymns"
 
+test "A hymn page's way back is titled Hymns and goes home."
+  at "/hymns/2"
+  clock data
+  expect text "hymn-back" == "Hymns"
+  tap "hymn-back"
+  clock settle
+  expect tree missing "hymn-title"
+  expect text "title" == "Hymns"
+
 test "A hymn's address stays on it through a reload." on web
   at "/hymns/2"
   clock data
@@ -43,7 +56,7 @@ test "A hymn's address stays on it through a reload." on web
 test "An address that names no hymn says so."
   at "/hymns/999"
   clock data
-  expect text "notfound-title" == "No Such Page"
+  expect text "notfound-title" == "No hymn 999"
   back
   clock settle
   expect text "title" == "Hymns"

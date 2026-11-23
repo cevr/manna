@@ -37,7 +37,7 @@ describe('the way to the field', () => {
     device.launch(planted());
     const chimed = Promise.withResolvers<void>();
     const layer = appLayer({
-      source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 3 })),
+      source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 30 })),
       haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
       store,
       chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.promise(() => chimed.promise) })),

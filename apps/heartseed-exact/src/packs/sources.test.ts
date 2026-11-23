@@ -18,11 +18,14 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { appText } from '../../tools/commentary-fixture';
 import { readOf, versionOf, type CommentaryPack } from '../commentary/pack';
 import { COMMENTARY, commentarySources } from '../commentary/sources';
+import { STUDY_PACKS } from '../study/sources';
 import { bodyOf, madePack } from '../test/commentary-packs';
+import { askSettled, type PacksSettled } from '../test/packs-asked';
 import { seeded, type Random } from '../test/random';
 import { sumOf } from '../text/sum';
+import { nextTurn, SLICE, sumPaced, type Paced } from './paced';
 import { LANDED_MS, landedLine, gettingLine, type PackWords } from './shown';
-import { baseOf, PACKS_HOST, packSources, type PacksAnswer } from './sources';
+import { baseOf, PACKS_HOST, packSources } from './sources';
 import type { PackSpec } from './spec';
 import { keptIn, WEEK, type Checked } from './step';
 
@@ -54,6 +57,15 @@ const checkWords = (body: string): Checked<WordsPack> => {
   }
 };
 
+/** `checkWords`, its sum a step per `SLICE` code units, as the real packs' checks run. */
+function* checkWordsPaced(body: string): Paced<Checked<WordsPack>> {
+  const whole = checkWords(body);
+  if (whole._tag === 'Bad') return whole;
+  yield undefined;
+  const sum = yield* sumPaced(whole.pack.words);
+  return sum === sumOf(whole.pack.words.join('\n')) ? whole : { _tag: 'Bad', fault: 'sum' };
+}
+
 const WORDS: PackSpec<WordsPack> = {
   name: 'words',
   path: '/api/words/pack',
@@ -61,7 +73,32 @@ const WORDS: PackSpec<WordsPack> = {
   title: 'the words',
   noun: 'Words',
   waiting: 'The words are still on their way.',
-  check: checkWords,
+  check: checkWordsPaced,
+};
+
+/** A made-up pack whose check throws halfway, as a defect in one pack's check would. */
+const THROWS: PackSpec<WordsPack> = {
+  ...WORDS,
+  name: 'throws',
+  path: '/api/throws/pack',
+  file: 'app:/data/throws.json',
+  title: 'the thrown',
+  noun: 'Thrown',
+  *check(body: string): Paced<Checked<WordsPack>> {
+    yield undefined;
+    if (body !== '') throw new Error('a defect in the check');
+    return { _tag: 'Bad', fault: 'json' };
+  },
+};
+
+/** A made-up pack the server never publishes, so every fetch of it is refused. */
+const GONE: PackSpec<WordsPack> = {
+  ...WORDS,
+  name: 'gone',
+  path: '/api/gone/pack',
+  file: 'app:/data/gone.json',
+  title: 'the gone',
+  noun: 'Gone',
 };
 
 /** A made-up pack with at least one note, so a changed character has a note to change. */
@@ -80,8 +117,8 @@ const serverOf = (first: CommentaryPack, words = wordsPack(['alpha', 'beta'])) =
   const bodies = new Map<string, { version: string; body: string }>();
   const publish = (pack: CommentaryPack) =>
     bodies.set(COMMENTARY.path, { version: pack.version, body: bodyOf(pack) });
-  const publishWords = (pack: WordsPack) =>
-    bodies.set(WORDS.path, { version: pack.version, body: JSON.stringify(pack) });
+  const publishWords = (pack: WordsPack, path = WORDS.path) =>
+    bodies.set(path, { version: pack.version, body: JSON.stringify(pack) });
   publish(first);
   publishWords(words);
   const replies = new Map<string, Array<Reply>>();
@@ -157,9 +194,14 @@ const launch = (
   server: Server,
   packs: ReadonlyArray<PackSpec<CommentaryPack> | PackSpec<WordsPack>> = [COMMENTARY],
   setting = 'http://127.0.0.1:4801',
+  pause: () => Promise<void> = nextTurn,
 ) => {
-  const downloader = packSources({ setting, packs, fetcher: server.fetcher });
-  return { ...downloader, reader: commentarySources(downloader) };
+  const downloader = packSources({ setting, packs, fetcher: server.fetcher, pause });
+  return {
+    ...downloader,
+    names: packs.map((pack) => pack.name),
+    reader: commentarySources(downloader),
+  };
 };
 
 type Launch = ReturnType<typeof launch>;
@@ -169,19 +211,18 @@ interface Persisted {
   kept: string;
 }
 
-/** A fetch call as Contract sends it, started inside the data host; Contract keeps its answer. */
+/** A fetch call as Contract sends and follows it (`askSettled`); Contract keeps its answer, every pack it landed named in the packs' order. */
 const ask = async (
   launched: Launch,
   storage: Storage,
   persisted: Persisted,
   now: number,
   force = false,
-): Promise<PacksAnswer> => {
-  const answer = await withDataHost(() =>
-    launched.sources.packsAsk([persisted.kept, force, now], STORE, storage),
-  );
+): Promise<PacksSettled> => {
+  const answer = await askSettled(launched, [persisted.kept, force, now], storage);
   persisted.kept = answer.kept;
-  return answer;
+  const landed = new Set(answer.landed.split(' '));
+  return { ...answer, landed: launched.names.filter((name) => landed.has(name)).join(' ') };
 };
 
 const kept = (persisted: Persisted, name = 'commentary') => keptIn(persisted.kept, name);
@@ -408,6 +449,74 @@ describe('every pack in one go', () => {
   });
 });
 
+describe('each pack settled apart, a step a turn', () => {
+  /** A made-up pack of `slices` times `SLICE` code units, far past one turn's work. */
+  const bigPack = (slices: number) =>
+    wordsPack(
+      Array.from({ length: slices * 4 }, (_, index) =>
+        String.fromCharCode(97 + (index % 26)).repeat(SLICE / 4),
+      ),
+    );
+  const lengthOf = (pack: WordsPack) => pack.words.join('\n').length;
+
+  it('a check that throws, a refused fetch and a large pack checked over many turns leave the others kept, and Try again asks the failed ones again', async () => {
+    const first = notedPack(seeded(38), 10);
+    const big = bigPack(6);
+    const server = serverOf(first, big);
+    server.publishWords(wordsPack(['delta', 'epsilon']), THROWS.path);
+    const storage = storageOf();
+    let turns = 0;
+    const launched = launch(server, [COMMENTARY, WORDS, THROWS, GONE], undefined, async () => {
+      turns++;
+    });
+    const persisted: Persisted = { kept: '' };
+
+    const answer = await ask(launched, storage, persisted, NOW);
+    expect(answer.failed).toBe(true);
+    expect(answer.landed).toBe('commentary words');
+    expect(kept(persisted).version).toBe(first.version);
+    expect(kept(persisted, 'words').version).toBe(big.version);
+    expect(kept(persisted, 'throws').version).toBe('');
+    expect(kept(persisted, 'gone').version).toBe('');
+    expect([...storage.files.keys()].sort()).toEqual([COMMENTARY.file, WORDS.file].sort());
+    expect(turns).toBeGreaterThanOrEqual(Math.ceil(lengthOf(big) / SLICE));
+
+    const before = server.heard.length;
+    const again = await ask(launched, storage, persisted, NOW + 1000, true);
+    expect(
+      server.heard
+        .slice(before)
+        .map((each) => new URL(each.url).pathname)
+        .sort(),
+    ).toEqual([COMMENTARY.path, WORDS.path, THROWS.path, GONE.path].sort());
+    expect(again.failed).toBe(true);
+    expect(kept(persisted, 'words').version).toBe(big.version);
+  });
+
+  it('a large pack is checked a step a turn when it lands and when a relaunch first reads it', async () => {
+    const big = bigPack(5);
+    const server = serverOf(notedPack(seeded(39), 4), big);
+    const storage = storageOf();
+    const persisted: Persisted = { kept: '' };
+    const least = Math.ceil(lengthOf(big) / SLICE);
+    let landing = 0;
+    const fetching = launch(server, [WORDS], undefined, async () => {
+      landing++;
+    });
+    expect((await ask(fetching, storage, persisted, NOW)).landed).toBe('words');
+    expect(landing).toBeGreaterThanOrEqual(least);
+
+    let reading = 0;
+    const relaunched = launch(server, [WORDS], undefined, async () => {
+      reading++;
+    });
+    const read = await withDataHost(() => relaunched.packOf(WORDS, big.version, storage));
+    expect(read?.version).toBe(big.version);
+    expect(relaunched.reads('words')).toBe(1);
+    expect(reading).toBeGreaterThanOrEqual(least);
+  });
+});
+
 describe('the reader', () => {
   it('reads the kept file once per launch and version, and a pack it just fetched not at all', async () => {
     const random = seeded(34);
@@ -497,6 +606,46 @@ describe('the line', () => {
       });
     }
     expect(appText('features/packs.contract')).toContain(`after(${LANDED_MS}, packsLandedOver)`);
+  });
+});
+
+describe('the contract', () => {
+  it('asks each pack `app.ts` lists from a mutation of its own, and follows it alone', () => {
+    const contract = appText('features/packs.contract');
+    const packs = [COMMENTARY, ...STUDY_PACKS];
+    for (const { name } of packs) {
+      const slot = `packs${name.charAt(0).toUpperCase()}${name.slice(1)}Fetched`;
+      expect(contract).toContain(`mutation ${slot} as shape PacksAnswer then `);
+      expect(contract).toContain(`send ${slot} = packsAsk("${name}", packsKept, force, now)`);
+      expect(contract).toContain(`send ${slot} = packsWait("${name}", packsKept)`);
+      expect(contract.split('\n').find((line) => line.includes('derive packsBusy ='))).toContain(
+        slot.replace('Fetched', 'Busy'),
+      );
+    }
+    expect(contract).toContain(
+      '    if answer.at > packsKeptAt\n      packsKept = answer.kept\n      packsKeptAt = answer.at\n',
+    );
+    expect(contract.match(/packsAsk\(/gu)?.length).toBe(packs.length);
+    expect(contract.match(/packsWait\(/gu)?.length).toBe(packs.length);
+    expect(appText('features/read.contract')).not.toContain('packsAsk(');
+  });
+
+  it("a pack's fetch leaves the host's ordered lane, so a slow one lands after no other", async () => {
+    const inits: Array<RequestInit> = [];
+    const { sources } = packSources({
+      setting: 'http://127.0.0.1:4801',
+      packs: [COMMENTARY],
+      fetcher: async (_url, init) => {
+        inits.push(init);
+        return { status: 500, text: async () => '' };
+      },
+    });
+    await withDataHost(() =>
+      sources.packsAsk(['commentary', '', false, NOW], { forget: () => {} }, storageOf()),
+    );
+    expect(
+      inits.map((init) => (init as { exactIndependentHttp?: unknown }).exactIndependentHttp),
+    ).toEqual([{ maxResponseBytes: 12 * 1024 * 1024 }]);
   });
 });
 

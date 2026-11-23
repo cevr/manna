@@ -7,7 +7,7 @@ export const CLIP_BARS = { heightRatio: 0.03, feetPx: 4, named: 0.9, iou: 0.88, 
 export const FAL_LIMITS = { member: 5, week: 15 };
 
 /** The fal endpoint every clip is made with. */
-export const CLIP_ENDPOINT = 'minimax/h3-max/image-to-video';
+const CLIP_ENDPOINT = 'minimax/h3-max/image-to-video';
 
 const WEEK_MS = 7 * 86_400_000;
 
@@ -67,7 +67,7 @@ export class ClipMissing extends Schema.TaggedError<ClipMissing>()('ClipMissing'
 }) {}
 
 /** A band of frames, inclusive, with its mean chain IoU, the drawings it accepts (`member/entry`, none = no expectation) and the frames named per drawing. */
-export interface ClipBand {
+interface ClipBand {
   readonly from: number;
   readonly to: number;
   readonly iou: number;

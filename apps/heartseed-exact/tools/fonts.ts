@@ -90,8 +90,8 @@ const nameOf = (view: DataView, table: Table, id: number) => {
   return '';
 };
 
-/** Whether a format 4 subtable maps `code` to a glyph other than the missing one. */
-const drawsIn4 = (view: DataView, at: number, code: number) => {
+/** The glyph a format 4 subtable maps `code` to, 0 (the missing one) when none. */
+const glyphIn4 = (view: DataView, at: number, code: number) => {
   const segments = view.getUint16(at + 6) / 2;
   const ends = at + 14;
   const starts = ends + 2 * segments + 2;
@@ -100,26 +100,116 @@ const drawsIn4 = (view: DataView, at: number, code: number) => {
   for (let segment = 0; segment < segments; segment++) {
     if (view.getUint16(ends + 2 * segment) < code) continue;
     const start = view.getUint16(starts + 2 * segment);
-    if (start > code) return false;
+    if (start > code) return 0;
     const delta = view.getUint16(deltas + 2 * segment);
     const range = view.getUint16(ranges + 2 * segment);
-    if (range === 0) return ((code + delta) & 0xffff) !== 0;
+    if (range === 0) return (code + delta) & 0xffff;
     const glyph = view.getUint16(ranges + 2 * segment + range + 2 * (code - start));
-    return glyph !== 0 && ((glyph + delta) & 0xffff) !== 0;
+    if (glyph === 0) return 0;
+    return (glyph + delta) & 0xffff;
   }
-  return false;
+  return 0;
 };
 
-/** Whether a format 12 subtable maps `code` to a glyph other than the missing one. */
-const drawsIn12 = (view: DataView, at: number, code: number) => {
+/** The glyph a format 12 subtable maps `code` to, 0 (the missing one) when none. */
+const glyphIn12 = (view: DataView, at: number, code: number) => {
   const groups = view.getUint32(at + 12);
   for (let group = 0; group < groups; group++) {
     const entry = at + 16 + 12 * group;
     const start = view.getUint32(entry);
     if (code >= start && code <= view.getUint32(entry + 4))
-      return view.getUint32(entry + 8) + (code - start) !== 0;
+      return view.getUint32(entry + 8) + (code - start);
   }
-  return false;
+  return 0;
+};
+
+/** The glyph a `cmap` subtable at `subtable` maps a character to, 0 when it draws none. */
+const glyphOf = (view: DataView, subtable: number, char: string) => {
+  const code = char.codePointAt(0) ?? 0;
+  if (subtable < 0) return 0;
+  const format = view.getUint16(subtable);
+  if (format === 12) return glyphIn12(view, subtable, code);
+  if (format === 4 && code <= 0xffff) return glyphIn4(view, subtable, code);
+  return 0;
+};
+
+/** Where `glyph` sits in a coverage table at `at`, or -1 when it is not covered. */
+const coverageIndex = (view: DataView, at: number, glyph: number) => {
+  const format = view.getUint16(at);
+  const count = view.getUint16(at + 2);
+  for (let index = 0; index < count; index++) {
+    if (format === 1 && view.getUint16(at + 4 + 2 * index) === glyph) return index;
+    if (format === 2) {
+      const range = at + 4 + 6 * index;
+      const start = view.getUint16(range);
+      if (glyph >= start && glyph <= view.getUint16(range + 2))
+        return view.getUint16(range + 4) + glyph - start;
+    }
+  }
+  return -1;
+};
+
+/** What a single substitution subtable at `at` (GSUB type 1) turns `glyph` into, or `glyph` when it does not cover it. */
+const singleSubstitute = (view: DataView, at: number, glyph: number) => {
+  const covered = coverageIndex(view, at + view.getUint16(at + 2), glyph);
+  if (covered < 0) return glyph;
+  if (view.getUint16(at) === 1) return (glyph + view.getInt16(at + 4)) & 0xffff;
+  return view.getUint16(at + 6 + 2 * covered);
+};
+
+/** The glyph a GSUB feature `tag` puts in place of `glyph` by its single substitutions (an extension's too), or `glyph`. */
+const featureGlyph = (view: DataView, gsub: Table, tag: string, glyph: number) => {
+  if (gsub.length === 0) return glyph;
+  const features = gsub.offset + view.getUint16(gsub.offset + 6);
+  const lookups = gsub.offset + view.getUint16(gsub.offset + 8);
+  let shown = glyph;
+  for (let index = 0; index < view.getUint16(features); index++) {
+    const record = features + 2 + 6 * index;
+    const name = String.fromCharCode(...[0, 1, 2, 3].map((at) => view.getUint8(record + at)));
+    if (name !== tag) continue;
+    const feature = features + view.getUint16(record + 4);
+    for (let each = 0; each < view.getUint16(feature + 2); each++) {
+      const lookup =
+        lookups + view.getUint16(lookups + 2 + 2 * view.getUint16(feature + 4 + 2 * each));
+      const kind = view.getUint16(lookup);
+      for (let sub = 0; sub < view.getUint16(lookup + 4); sub++) {
+        const table = lookup + view.getUint16(lookup + 6 + 2 * sub);
+        if (kind === 1) shown = singleSubstitute(view, table, shown);
+        if (kind === 7 && view.getUint16(table + 2) === 1)
+          shown = singleSubstitute(view, table + view.getUint32(table + 4), shown);
+      }
+    }
+    return shown;
+  }
+  return shown;
+};
+
+/** A face's measures as its file states them, in ems: its ascent and descent (`hhea`, as Chrome and Core Text on Apple lay a line out), and a character's advance under `tnum` (the tabular figures a verse's number is drawn in). */
+export interface FontMeasures {
+  readonly ascent: number;
+  readonly descent: number;
+  readonly tabular: (char: string) => number;
+}
+
+/** The measures of the font file `bytes`. */
+export const fontMeasures = (bytes: Uint8Array): FontMeasures => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tables = tablesOf(view);
+  const table = (tag: string) => tables.get(tag) ?? { offset: 0, length: 0 };
+  const head = table('head').offset;
+  const hhea = table('hhea').offset;
+  const hmtx = table('hmtx').offset;
+  const units = view.getUint16(head + 18);
+  const metrics = view.getUint16(hhea + 34);
+  const subtable = unicodeSubtable(view, table('cmap'));
+  return {
+    ascent: view.getInt16(hhea + 4) / units,
+    descent: -view.getInt16(hhea + 6) / units,
+    tabular: (char) => {
+      const glyph = featureGlyph(view, table('GSUB'), 'tnum', glyphOf(view, subtable, char));
+      return view.getUint16(hmtx + 4 * Math.min(glyph, metrics - 1)) / units;
+    },
+  };
 };
 
 /** The `cmap` subtable a reader of Unicode uses: Windows' full repertoire (format 12), else its BMP (format 4). */
@@ -149,16 +239,10 @@ export const fontFacts = (bytes: Uint8Array): FontFacts => {
   const name = tables.get('name') ?? { offset: 0, length: 0 };
   const cmap = tables.get('cmap') ?? { offset: 0, length: 0 };
   const subtable = unicodeSubtable(view, cmap);
-  const format = subtable >= 0 && view.getUint16(subtable);
   return {
     family: nameOf(view, name, 1),
     typographic: nameOf(view, name, 16),
     version: nameOf(view, name, 5),
-    draws: (char) => {
-      const code = char.codePointAt(0) ?? 0;
-      if (format === 12) return drawsIn12(view, subtable, code);
-      if (format === 4) return code <= 0xffff && drawsIn4(view, subtable, code);
-      return false;
-    },
+    draws: (char) => glyphOf(view, subtable, char) !== 0,
   };
 };

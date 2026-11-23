@@ -1,6 +1,6 @@
 /**
- * The chooser's rules: the books under their testaments, a book's
- * chapters, and a chapter's range as the reader taps it. The range is one
+ * The chooser's rules: the books under their testaments and a chapter's
+ * range as the reader taps it. The range is one
  * pure `chooserStep` over the current Heartseed's `tapVerse`; what the
  * footer says of it is `chooserShown`, the current chooser's: the range's
  * reference and count, the cap, `Plant` once the range holds 3 verses or
@@ -45,14 +45,6 @@ export interface ChooserTestament {
 export interface ChooserBooks {
   heading: string;
   testaments: ChooserTestament[];
-}
-
-/** The chapters step: the book named, or `found` false. */
-export interface ChooserChapters {
-  found: boolean;
-  number: number;
-  name: string;
-  chapters: number[];
 }
 
 /** The verses chosen, first to last; `0`, `0` for none. */
@@ -113,18 +105,6 @@ export const chooserBooks = (): ChooserBooks => ({
     })),
   })),
 });
-
-/** The chapters of the book the route names. */
-export const chooserChapters = (bookText: string): ChooserChapters =>
-  Option.match(Option.flatMap(wholeOf(bookText), bookOf), {
-    onNone: () => ({ found: false, number: 0, name: '', chapters: [] }),
-    onSome: (book) => ({
-      found: true,
-      number: book.number,
-      name: book.name,
-      chapters: Array.from({ length: book.chapters }, (_, index) => index + 1),
-    }),
-  });
 
 /** The range as `tapVerse` holds it. */
 const versesIn = (range: ChooserRange) => {

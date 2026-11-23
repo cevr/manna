@@ -35,13 +35,22 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { color } from '~/color';
 import { useReduceMotion } from '~/player/motion';
 
-import { hidden, inReach, jumped, type Reveal, revealAt, shownHeight, touched } from './reveal';
+import {
+  hidden,
+  inReach,
+  jumped,
+  type Reveal,
+  revealAt,
+  revealTimes,
+  shownHeight,
+  touched,
+} from './reveal';
 
 /** The row's slide in or out over the list's top: quick out of the way, as a toolbar's. */
-const slide = { duration: 200, easing: Easing.out(Easing.cubic) };
+const slide = { duration: revealTimes.slide, easing: Easing.out(Easing.cubic) };
 
 /** Its fade alone with Reduce Motion on, as the find bar's cross-fade. */
-const fade = { duration: 150, easing: Easing.linear };
+const fade = { duration: revealTimes.fade, easing: Easing.linear };
 
 /** The pinned tab row's place over the list, read on the UI thread. */
 export interface TabReveal {

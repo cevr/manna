@@ -51,7 +51,31 @@ import type * as Chooser from '../src/chooser';
 import type * as Day from '../src/day';
 import type * as Fsrs from '../src/fsrs';
 import type * as Garden from '../src/garden';
+import type * as StageNames from '../src/garden/names';
+import type * as DeclaredStageNames from '../exact/stage-names.d.ts';
+import type * as GardenBar from '../src/garden/bar';
+import type * as DeclaredGardenBar from '../exact/garden-bar.d.ts';
+import type * as AboutVersion from '../src/about/version';
+import type * as DeclaredAboutVersion from '../exact/about-version.d.ts';
+import type * as FirstFlow from '../src/first/flow';
+import type * as DeclaredFirstFlow from '../exact/first-flow.d.ts';
+import type * as FirstTour from '../src/first/tour';
+import type * as DeclaredFirstTour from '../exact/first-tour.d.ts';
+import type * as FirstGrowth from '../src/first/growth';
+import type * as DeclaredFirstGrowth from '../exact/first-growth.d.ts';
+import type * as FirstWords from '../src/first/words';
+import type * as DeclaredFirstWords from '../exact/first-words.d.ts';
+import type * as FirstVerse from '../vite/first-verse';
+import type * as DeclaredFirstVerse from '../exact/first-verse.d.ts';
+import type * as TipWords from '../src/field/tip-words';
+import type * as DeclaredTips from '../exact/tips.d.ts';
 import type * as Kjv from '../src/kjv';
+import type * as DeclaredHold from '../exact/reading-hold.d.ts';
+import type * as DeclaredReading from '../exact/reading.d.ts';
+import type * as DeclaredWords from '../exact/reading-words.d.ts';
+import type * as Hold from '../src/reading/hold';
+import type * as Reading from '../src/voice/reading';
+import type * as Words from '../src/reading/words';
 import type * as Lists from '../src/lists';
 import type * as Passages from '../src/passages';
 import type * as SayIt from '../src/sayit';
@@ -88,6 +112,53 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof Garden.Garden, typeof DeclaredGarden.Garden>,
   true satisfies Mutual<typeof Garden.Backs, typeof DeclaredGarden.Backs>,
   true satisfies Mutual<typeof Garden.layer, typeof DeclaredGarden.layer>,
+  true satisfies Mutual<typeof StageNames.STAGE_NAMES, typeof DeclaredStageNames.STAGE_NAMES>,
+  true satisfies Mutual<typeof GardenBar.NAMED, typeof DeclaredGardenBar.NAMED>,
+  true satisfies Mutual<typeof GardenBar.IDLE, typeof DeclaredGardenBar.IDLE>,
+  true satisfies Mutual<typeof GardenBar.barAfter, typeof DeclaredGardenBar.barAfter>,
+  true satisfies Mutual<typeof GardenBar.answerOf, typeof DeclaredGardenBar.answerOf>,
+  true satisfies Mutual<GardenBar.Bar, DeclaredGardenBar.Bar>,
+  true satisfies Mutual<GardenBar.Happened, DeclaredGardenBar.Happened>,
+  true satisfies Mutual<typeof GardenBar.askLine, typeof DeclaredGardenBar.askLine>,
+  true satisfies Mutual<typeof GardenBar.movedLine, typeof DeclaredGardenBar.movedLine>,
+  true satisfies Mutual<typeof GardenBar.alertLine, typeof DeclaredGardenBar.alertLine>,
+  true satisfies Mutual<GardenBar.BackOffer, DeclaredGardenBar.BackOffer>,
+  true satisfies Mutual<typeof GardenBar.offersBack, typeof DeclaredGardenBar.offersBack>,
+  true satisfies Mutual<
+    typeof AboutVersion.VERSION_PREFIX,
+    typeof DeclaredAboutVersion.VERSION_PREFIX
+  >,
+  true satisfies Mutual<typeof FirstFlow.openingOf, typeof DeclaredFirstFlow.openingOf>,
+  true satisfies Mutual<FirstFlow.Opening, DeclaredFirstFlow.Opening>,
+  true satisfies Mutual<typeof FirstFlow.shownOpening, typeof DeclaredFirstFlow.shownOpening>,
+  true satisfies Mutual<FirstFlow.Phase, DeclaredFirstFlow.Phase>,
+  true satisfies Mutual<FirstFlow.Flow, DeclaredFirstFlow.Flow>,
+  true satisfies Mutual<FirstFlow.Input, DeclaredFirstFlow.Input>,
+  true satisfies Mutual<typeof FirstFlow.begin, typeof DeclaredFirstFlow.begin>,
+  true satisfies Mutual<typeof FirstFlow.isOwn, typeof DeclaredFirstFlow.isOwn>,
+  true satisfies Mutual<typeof FirstFlow.step, typeof DeclaredFirstFlow.step>,
+  true satisfies Mutual<typeof FirstFlow.observe, typeof DeclaredFirstFlow.observe>,
+  true satisfies Mutual<Reading.Ending, DeclaredReading.Ending>,
+  true satisfies Mutual<FirstTour.Tour, DeclaredFirstTour.Tour>,
+  true satisfies Mutual<FirstTour.TourTap, DeclaredFirstTour.TourTap>,
+  true satisfies Mutual<typeof FirstTour.tourStep, typeof DeclaredFirstTour.tourStep>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH, typeof DeclaredFirstGrowth.GROWTH>,
+  true satisfies Mutual<FirstGrowth.GrowthFrame, DeclaredFirstGrowth.GrowthFrame>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_STILL, typeof DeclaredFirstGrowth.GROWTH_STILL>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_STEPS, typeof DeclaredFirstGrowth.GROWTH_STEPS>,
+  true satisfies Mutual<typeof FirstGrowth.GROWTH_START, typeof DeclaredFirstGrowth.GROWTH_START>,
+  true satisfies Mutual<typeof FirstGrowth.growthAt, typeof DeclaredFirstGrowth.growthAt>,
+  true satisfies Mutual<FirstWords.IntroRun, DeclaredFirstWords.IntroRun>,
+  true satisfies Mutual<typeof FirstWords.WELCOME, typeof DeclaredFirstWords.WELCOME>,
+  true satisfies Mutual<typeof FirstWords.GROWS, typeof DeclaredFirstWords.GROWS>,
+  true satisfies Mutual<typeof FirstWords.ONWARD, typeof DeclaredFirstWords.ONWARD>,
+  true satisfies Mutual<FirstWords.ShownPhase, DeclaredFirstWords.ShownPhase>,
+  true satisfies Mutual<typeof FirstWords.COPY, typeof DeclaredFirstWords.COPY>,
+  true satisfies Mutual<typeof FirstWords.PHASES, typeof DeclaredFirstWords.PHASES>,
+  true satisfies Mutual<typeof FirstWords.REPLAY, typeof DeclaredFirstWords.REPLAY>,
+  true satisfies Mutual<typeof FirstWords.PILLS, typeof DeclaredFirstWords.PILLS>,
+  true satisfies Mutual<typeof FirstVerse.FIRST_VERSE, typeof DeclaredFirstVerse.FIRST_VERSE>,
+  true satisfies Mutual<typeof TipWords.TIPS, typeof DeclaredTips.TIPS>,
   true satisfies Mutual<typeof Passages.PASSAGES_KEY, typeof DeclaredPassages.PASSAGES_KEY>,
   true satisfies Mutual<typeof Passages.LISTS_KEY, typeof DeclaredPassages.LISTS_KEY>,
   true satisfies Mutual<typeof Passages.MOST_PASSAGES, typeof DeclaredPassages.MOST_PASSAGES>,
@@ -150,6 +221,8 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<Field.FieldPassage, DeclaredField.FieldPassage>,
   true satisfies Mutual<Field.Field, DeclaredField.Field>,
   true satisfies Mutual<typeof Field.fieldOf, typeof DeclaredField.fieldOf>,
+  true satisfies Mutual<typeof Field.sownText, typeof DeclaredField.sownText>,
+  true satisfies Mutual<typeof Field.harvestText, typeof DeclaredField.harvestText>,
   true satisfies Mutual<typeof Home.fieldPassagesWith, typeof DeclaredHome.fieldPassagesWith>,
   true satisfies Mutual<Shelves.Shelf, DeclaredShelves.Shelf>,
   true satisfies Mutual<typeof Shelves.SHELVES, typeof DeclaredShelves.SHELVES>,
@@ -181,6 +254,25 @@ const DECLARED: readonly true[] = [
   true satisfies Mutual<typeof List.listStartOf, typeof DeclaredList.listStartOf>,
   true satisfies Mutual<typeof List.listLineOf, typeof DeclaredList.listLineOf>,
   true satisfies Mutual<typeof List.listCaptionOf, typeof DeclaredList.listCaptionOf>,
+  true satisfies Mutual<typeof Hold.LONG_PRESS, typeof DeclaredHold.LONG_PRESS>,
+  true satisfies Mutual<Hold.Ask, DeclaredHold.Ask>,
+  true satisfies Mutual<Hold.Moment, DeclaredHold.Moment>,
+  true satisfies Mutual<typeof Hold.activate, typeof DeclaredHold.activate>,
+  true satisfies Mutual<typeof Hold.update, typeof DeclaredHold.update>,
+  true satisfies Mutual<typeof Hold.finalize, typeof DeclaredHold.finalize>,
+  true satisfies Mutual<typeof Hold.drop, typeof DeclaredHold.drop>,
+  true satisfies Mutual<Words.Box, DeclaredWords.Box>,
+  true satisfies Mutual<typeof Words.shownWordsOf, typeof DeclaredWords.shownWordsOf>,
+  true satisfies Mutual<typeof Words.wordAt, typeof DeclaredWords.wordAt>,
+  true satisfies Mutual<typeof Reading.CHOICES, typeof DeclaredReading.CHOICES>,
+  true satisfies Mutual<Reading.VoiceView, DeclaredReading.VoiceView>,
+  true satisfies Mutual<Reading.Reading, DeclaredReading.Reading>,
+  true satisfies Mutual<Reading.Input, DeclaredReading.Input>,
+  true satisfies Mutual<Reading.Step, DeclaredReading.Step>,
+  true satisfies Mutual<typeof Reading.wordSpans, typeof DeclaredReading.wordSpans>,
+  true satisfies Mutual<typeof Reading.initial, typeof DeclaredReading.initial>,
+  true satisfies Mutual<typeof Reading.isActive, typeof DeclaredReading.isActive>,
+  true satisfies Mutual<typeof Reading.step, typeof DeclaredReading.step>,
 ];
 
 it('declares for Exact what each module the port imports exports', () => {

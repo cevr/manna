@@ -12,6 +12,7 @@
  * | ONNX EmbeddingGemma in process  | Workers AI (`./workers-ai.ts`)          |
  * | `HttpStaticServer` over `dist/` | the Worker's static assets              |
  * | the commentary pack in memory   | the commentary pack in the edge cache   |
+ * | the study packs in a directory  | the study packs in R2 (`StudyPackFiles`) |
  *
  * Only `/api/*`, `/health` and the sync's reports under `/sync`
  * (`./sync-pages.ts`) reach the Worker; every other path is an asset,
@@ -45,7 +46,8 @@ import {
 import { CommentaryPacks, edgeStore } from '../commentary-api.js';
 import { VectorIndexLoad } from '../vector-index.js';
 import { D1Atomic } from './d1-atomic.ts';
-import { Corpus, SyncReports, Vectors } from './resources.ts';
+import { StudyPacks } from '../study-api.js';
+import { Corpus, StudyPackFiles, SyncReports, Vectors } from './resources.ts';
 import { isolated, searchRouter } from './router.ts';
 import { DOMAIN, SERVED_FROM, type ServedFrom, WORKER_NAME } from './site.ts';
 import { nameOfKey, type ReportStore, type StoredFile } from './sync-pages.ts';
@@ -78,6 +80,8 @@ interface Bindings {
   readonly corpus: D1Client.D1ClientConfig['db'];
   readonly vectors: VectorizeQuery;
   readonly ai: Cloudflare.Workers.AIClient;
+  /** A study pack's text from its bucket, or none. */
+  readonly study: (key: string) => Effect.Effect<Option.Option<string>>;
 }
 
 /** An R2 object as the report pages send it: its own stream when the
@@ -132,7 +136,11 @@ const searchLayer = (bindings: Bindings) => {
     VectorIndexLoad,
     VectorIndexLoad.of({ readiness: Effect.succeed('ready' as const) }),
   );
-  return Layer.mergeAll(search, ready, commentary).pipe(Layer.provideMerge(sql), Layer.orDie);
+  const study = StudyPacks.layerRead(bindings.study);
+  return Layer.mergeAll(search, ready, commentary, study).pipe(
+    Layer.provideMerge(sql),
+    Layer.orDie,
+  );
 };
 
 export default class Search extends Cloudflare.Worker<Search>()(
@@ -143,6 +151,20 @@ export default class Search extends Cloudflare.Worker<Search>()(
     const vectors = yield* Cloudflare.Vectorize.SearchIndex(yield* Vectors);
     const ai = yield* Cloudflare.Workers.AI();
     const reports = yield* Cloudflare.R2.ReadBucket(yield* SyncReports);
+    const studyFiles = yield* Cloudflare.R2.ReadBucket(yield* StudyPackFiles);
+    /** A study pack's text, or none when it was never published. A bucket
+     *  that cannot be read fails the request. */
+    const study = (key: string) =>
+      studyFiles.get(key).pipe(
+        Effect.flatMap((object) =>
+          Option.match(Option.fromNullishOr(object), {
+            onNone: () => Effect.succeedNone,
+            onSome: (body) => Effect.asSome(body.text()),
+          }),
+        ),
+        Effect.provide(RuntimeContext.phantom),
+        Effect.orDie,
+      );
     /** The sync's reports, as its pages read them. A bucket that cannot be
      *  read is a failure of the request, so it answers an error. */
     const reportsPage = (cursor: Option.Option<string>) =>
@@ -179,6 +201,7 @@ export default class Search extends Cloudflare.Worker<Search>()(
           corpus: yield* corpus.raw,
           vectors: yield* vectors.raw,
           ai,
+          study,
         };
         return yield* isolated(Layer.buildWithScope(searchLayer(bindings), scope));
       }),

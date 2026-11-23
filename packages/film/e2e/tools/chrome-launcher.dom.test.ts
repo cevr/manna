@@ -93,6 +93,8 @@ const holds = (step: Step, model: Model, result: string, root: string) => {
         '--mute-audio',
         '--disable-audio-output',
         '--disable-component-update',
+        '--use-mock-keychain',
+        '--password-store=basic',
       ]),
     );
     expect(flags.includes('--disable-gpu')).toBe(!gpuOf(model.flags));

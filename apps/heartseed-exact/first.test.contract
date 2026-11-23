@@ -1,0 +1,130 @@
+fail fetch "https://egw.cvr.im"
+epoch "2026-11-14T12:00:00Z"
+time-zone "America/New_York"
+seed 7
+
+test "A fresh store opens the welcome over home, with no bar and no tab bar"
+  clock data
+  clock settle
+  expect state startShown.opening == "first"
+  expect state startShown.route == "/first/welcome/none"
+  expect state first.phase == "welcome"
+  expect tree has "first-welcome"
+  expect tree has "first-heading"
+  expect text "first-line" == "Plant a verse. Say it from memory. Watch it grow."
+  expect tree has "reference"
+  expect tree has "growing"
+  expect enabled "first-begin"
+  expect enabled "first-skip"
+  expect state readSheetUp == true
+  expect no failures
+
+test "Begin shows how a verse grows, and its button starts the verse heard whole"
+  clock data
+  clock settle
+  tap "first-begin"
+  clock settle
+  expect state first.phase == "grows"
+  expect text "first-heading" == "Every verse is a plant"
+  expect text "first-caption" == "Mark 4:28"
+  expect text "first-on" == "Plant your first verse"
+  tap "first-on"
+  clock data
+  clock settle
+  expect state first.phase == "hear"
+  expect state today.cue == "full"
+  expect state today.words.length == 37
+  expect text "first-heading" == "Hear it"
+  expect tree has "phase-bar"
+  expect enabled "first-next"
+  expect no failures
+
+test "Skip goes straight to the verse heard whole"
+  clock data
+  clock settle
+  tap "first-skip"
+  clock data
+  clock settle
+  expect state first.phase == "hear"
+  expect state today.cue == "full"
+  expect no failures
+
+test "Next says it with its first letters"
+  clock data
+  clock settle
+  tap "first-skip"
+  clock data
+  clock settle
+  tap "first-next"
+  clock data
+  clock settle
+  expect state first.phase == "letters"
+  expect state today.cue == "initials"
+  expect text "first-heading" == "Say it with help"
+  expect text "first-say" == "Say it"
+  expect no failures
+
+test "The voice's reading heard to its end moves hear on to letters"
+  clock data
+  clock settle
+  tap "first-skip"
+  clock data
+  clock settle
+  tap "first-listen"
+  clock +20000
+  clock settle
+  clock +1000
+  clock settle
+  expect state first.phase == "letters"
+  expect state today.cue == "initials"
+  expect no failures
+
+test "A launch at a later step of the first minute opens the welcome"
+  at "/first/alone/none"
+  clock data
+  clock settle
+  expect state first.phase == "welcome"
+  expect tree has "first-welcome"
+  expect no failures
+
+test "The platform's Back does not leave the first minute, which is the whole app"
+  clock data
+  clock settle
+  back
+  clock settle
+  expect tree has "first-welcome"
+  expect state firstHeld == true
+  tap "first-skip"
+  clock data
+  clock settle
+  back
+  clock settle
+  expect state first.phase == "hear"
+  expect tree has "first-hear"
+  expect no failures
+
+test "A reload before Planted starts again at the welcome"
+  clock data
+  clock settle
+  tap "first-skip"
+  clock data
+  clock settle
+  tap "first-next"
+  clock data
+  clock settle
+  expect state first.phase == "letters"
+  reload
+  clock data
+  clock settle
+  expect state first.phase == "welcome"
+  expect state firstTop.name == "first"
+  expect tree has "first-welcome"
+  expect no failures
+
+test "Under reduced motion the growing seed stands still at full corn"
+  prefer prefers-reduced-motion reduce
+  clock data
+  clock settle
+  expect state motionStill == true
+  expect tree has "growing-corn"
+  expect no failures

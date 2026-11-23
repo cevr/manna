@@ -36,7 +36,7 @@ export interface PartCutOptions {
 }
 
 /** A part as pixels: the view's bytes where it owns a pixel, its paint where a part in front hides it, alpha 0 elsewhere; how many pixels it owns, and how many are painted. */
-export interface PartLayer {
+interface PartLayer {
   readonly name: string;
   readonly pixels: Raster;
   readonly kept: number;

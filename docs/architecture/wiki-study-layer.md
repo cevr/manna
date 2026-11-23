@@ -497,10 +497,11 @@ resolver-only restriction would have created exactly the divergence the shared
 ## 5. Navigation UX
 
 **Mode A — peek card, full navigation, breadcrumb trail. Sliding panes are
-rejected.** Prototype and decision asset: `prototypes/rabbit-hole/` — run
-`bun install && bun run --cwd prototypes/rabbit-hole dev`, then
+rejected.** Prototype and decision asset: the rabbit-hole prototype, a
+throwaway folder kept on the owner's machine and never committed — run
+`bun install && bun run dev` in it, then
 `http://localhost:5199?mode=A` / `?mode=B`. It is outside the root workspaces
-array and is throwaway; delete it once Milestone 6 lands.
+array; delete it once Milestone 6 lands.
 
 Geometry evidence against panes:
 

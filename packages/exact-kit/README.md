@@ -2,17 +2,18 @@
 
 What the Exact ports (`apps/heartseed-exact`, `apps/hymnal-exact`) share. The install, the pin and the rules: `docs/exact.md`.
 
-| Export                               | What                                                                                                                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@manna/exact-kit/effect`            | `runCall(effect, { now, seed })` and `runCallSync`: an effect run for one Exact call, on the call's clock, seed and scheduler (`docs/exact-data-layer.md`)        |
-| `@manna/exact-kit/main`              | `main(appDir, args)`: the wrapper every `bun run exact <verb>` goes through (each app's `exact.mjs` calls it), its refusal printed, its exit code the child's     |
-| `@manna/exact-kit/prepare`           | `linkExactModules(appDir, names, clone)` and `writeGenerated(path, source)`: what an app's `tools/prepare.ts` does before every `bun run exact` (`docs/exact.md`) |
-| `@manna/exact-kit/drive`             | `makeDrive({ name, host, appDir })`: a drive's steps through `bun run exact agent`, its `PASS`/`FAIL` lines and exit code; it never signals a kept touch runner   |
-| `@manna/exact-kit/data-host/testing` | `withDataHost(run)`: `run` with the clock, timers, random and `Symbol.dispose` refused as Exact's data module refuses them                                        |
-| `@manna/exact-kit/no-copy/testing`   | `noCopies(appDir, sources)` and `assertNoCopies(appDir, sourceDir)`: a port imports a current app's code, never copies it                                         |
-| `manna-exact` (bin)                  | `main` for the app in the current folder                                                                                                                          |
+| Export                               | What                                                                                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@manna/exact-kit/effect`            | `runCall(effect, { now, seed })` and `runCallSync`: an effect run for one Exact call, on the call's clock, seed and scheduler (`docs/exact-data-layer.md`)                                         |
+| `@manna/exact-kit/main`              | `main(appDir, args)`: the wrapper every `bun run exact <verb>` goes through (each app's `exact.mjs` calls it), its refusal printed, its exit code the child's                                      |
+| `@manna/exact-kit/prepare`           | `linkExactModules(appDir, names, clone)` and `writeGenerated(path, source)`: what an app's `tools/prepare.ts` does before every `bun run exact` (`docs/exact.md`)                                  |
+| `@manna/exact-kit/drive`             | `makeDrive({ name, host, appDir })`: a drive's steps through `bun run exact agent`, its `PASS`/`FAIL` lines and exit code, every web run on one claimed port; it never signals a kept touch runner |
+| `@manna/exact-kit/port`              | `claimAppPort(appDir)`, `claimPorts(range, count)` and `takePort(port)`: ports held for the run, shared by every checkout through Exact's own turns, freed when the process ends                   |
+| `@manna/exact-kit/data-host/testing` | `withDataHost(run)`: `run` with the clock, timers, random and `Symbol.dispose` refused as Exact's data module refuses them                                                                         |
+| `@manna/exact-kit/no-copy/testing`   | `noCopies(appDir, sources)` and `assertNoCopies(appDir, sourceDir)`: a port imports a current app's code, never copies it                                                                          |
+| `manna-exact` (bin)                  | `main` for the app in the current folder                                                                                                                                                           |
 
-`src/run.ts` holds the rules: the pin, the apps' simulators and ports, the build lock, the launcher every app's `exact.mjs` must be, and `runExact`, which refuses or runs one command. Each app's `bun run exact` is `manna-exact` (`src/bin.ts`), so a rewritten `exact.mjs` is refused rather than run; `run.test.ts` holds each app's script to it. `src/exact-cli.ts` is the child it starts once a command passes: the pinned clone's own app CLI, as Exact's generated `exact.mjs` runs it.
+`src/apps.ts` names the apps' simulators and ports. `src/run.ts` holds the rules: the pin, the build lock, the launcher every app's `exact.mjs` must be, and `runExact`, which refuses or runs one command. Each app's `bun run exact` is `manna-exact` (`src/bin.ts`), so a rewritten `exact.mjs` is refused rather than run; `run.test.ts` holds each app's script to it. `src/exact-cli.ts` is the child it starts once a command passes: the pinned clone's own app CLI, as Exact's generated `exact.mjs` runs it. On a run on the simulator it first clears, under the build lock, the stale `launch_console` FIFOs of the app's own simulator (`src/sim-tmp.ts`, `docs/exact.md`).
 
 The two helpers are test seams (`testing.ts`): only tests import them.
 

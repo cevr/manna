@@ -1,3 +1,4 @@
+fail fetch "https://egw.cvr.im"
 epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
@@ -43,6 +44,9 @@ test "The plan's first item shows, new pieces first heard"
   tap "plant-list"
   clock data
   clock settle
+  tap "tab-garden"
+  clock data
+  clock settle
   tap "shelf-proverbs"
   clock data
   clock settle
@@ -67,6 +71,9 @@ test "The plan's first item shows, new pieces first heard"
   expect enabled "hear"
   expect enabled "say"
   expect text "counts" == "1 new · about 1 min"
+  expect text "stage" == "Not planted yet"
+  expect state today.session.stage == "not planted"
+  expect tree missing "stage-plant"
   expect no failures
 
 test "Minutes shape the plan"
@@ -91,6 +98,9 @@ test "Minutes shape the plan"
   tap "verse-18"
   clock data
   tap "plant-list"
+  clock data
+  clock settle
+  tap "tab-garden"
   clock data
   clock settle
   tap "shelf-proverbs"

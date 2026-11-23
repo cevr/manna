@@ -8,7 +8,17 @@
 // state, and a `fn`'s answer reaches the page as such a text), so the
 // family is a chain of literals keyed on the font's key, written where it
 // is drawn: the column and each font's tile.
-// Labels, buttons and the sheet stay in the app's face (`family.hs`).
+// Labels, buttons and the sheet stay in the app's face (`family.hs`), drawn
+// in One's look with every measure a token of app.forma: One's Settings
+// page sheet with its own header, the choices as the Minutes pills, the
+// size steps and Reset as the outlined pill.
+// On iOS the sheet at its medium height is drawn at about 96 % of its
+// laid-out size, so a pill 44 tall would show 42: each choice is 48 tall
+// (a target with 2 above and below), and each font's tile counts its
+// padding and border in its width, so the tile cut by the sheet's edge at
+// rest has its middle on the sheet. The header row is painted the sheet's
+// ground, as Add's is, so the scroller stays below it rather than running
+// under it as under a control bar.
 // The seven bundled families are their upstream files, unmodified, under
 // assets/fonts/<key>/ beside each one's OFL.txt (assets/fonts/SOURCES.md).
 
@@ -125,12 +135,12 @@ component TypeSegments
     options: TypeOption[]
     choose: action
   view
-    column gap=8
-      text line font="-exact-subheadline" color="-exact-secondary-label"
-      row role="radiogroup" aria-label=group align-self="stretch" flex-wrap="wrap"
+    column gap="space.s10" align-items="flex-start"
+      text line font="type.label"
+      row role="radiogroup" aria-label=group appearance="none" align-self="stretch" flex-wrap="wrap" gap="space.s8"
         for o in options key=o.value
-          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) flex-grow=1 flex-shrink=1 flex-basis="5rem" testId=`${name}-${o.value}`
-            text o.label
+          button role="radio" aria-checked=(chosen == o.value) press=choose(o.value) appearance="none" min-height="size.target" padding-top="space.s2" padding-bottom="space.s2" padding-left="space.s14" padding-right="space.s14" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" background-color=(chosen == o.value ? "hs.ink" : "hs.card") color=(chosen == o.value ? "hs.on-ink" : "hs.ink") -exact-press-opacity="opacity.pressed" testId=`${name}-${o.value}`
+            text o.label font="type.label"
 
 component TypeSheet
   props
@@ -144,29 +154,35 @@ component TypeSheet
     reset: action
     done: action
   view
-    column navigationKey=`${route}` navigationPresentation="modal" navigationDetent="medium large" navigationScroll="type-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="type-sheet"
-      header display="flex" align-items="center"
-        text "Text" role="heading" aria-level=2 flex=1
-        button press=done testId="type-done"
-          text "Done"
+    column navigationKey=`${route}` navigationPresentation="modal" navigationBar="none" navigationDetent="medium large" navigationScroll="type-scroll" position="absolute" inset=0 display="flex" flex-direction="column" background-color="hs.ground" color="hs.ink" font-family="family.hs" testId="type-sheet"
+      row flex-wrap="wrap" align-items="center" justify-content="space-between" gap="space.s12" box-sizing="border-box" flex-shrink=0 min-height="size.target" padding-top="space.s20" padding-bottom="space.s8" padding-left="space.page" padding-right="space.page" background-color="hs.ground"
+        text "Text" role="heading" aria-level=2 font="type.sheet-title" flex-shrink=1
+        button press=done appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="type-done"
+          text "Done" font="type.label"
       scroll id="type-scroll" flex=1 min-height=0 testId="type-scroll"
-        column gap=20 padding=20 padding-bottom=96
-          row gap=12 align-items="center" flex-wrap="wrap"
-            button press=size(type.smaller) disabled=(not type.smallerEnabled) buttonStyle="bordered" aria-label="Smaller text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-smaller"
-              text "A" font-size="0.9rem"
-            text type.sizeLabel role="status" aria-label=type.sizeSpoken min-width="4.5rem" text-align="center" color="-exact-secondary-label" font-variant-numeric="tabular-nums" testId="type-size"
-            button press=size(type.larger) disabled=(not type.largerEnabled) buttonStyle="bordered" aria-label="Larger text" flex-grow=1 flex-shrink=1 flex-basis="4rem" min-height=44 testId="type-larger"
-              text "A" font-size="1.4rem"
-          column gap=8
-            text "Font" font="-exact-subheadline" color="-exact-secondary-label"
-            row role="radiogroup" aria-label="Font" id="type-fonts" overflow-x="auto" overflow-y="hidden" gap=8 padding-bottom=4 testId="type-fonts"
+        column gap="space.section" padding-top="space.s8" padding-bottom="space.s24" padding-left="space.page" padding-right="space.page"
+          row gap="space.s12" align-items="center"
+            button press=size(type.smaller) disabled=(not type.smallerEnabled) appearance="none" aria-label="Smaller text" flex=1 min-width=0 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="type-smaller"
+              :disabled
+                opacity = "opacity.disabled"
+              text "A" font="type.small"
+            text type.sizeLabel role="status" aria-label=type.sizeSpoken font="type.body" text-align="center" color="hs.quiet" font-variant-numeric="tabular-nums" white-space="nowrap" testId="type-size"
+            button press=size(type.larger) disabled=(not type.largerEnabled) appearance="none" aria-label="Larger text" flex=1 min-width=0 min-height="size.target" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="type-larger"
+              :disabled
+                opacity = "opacity.disabled"
+              text "A" font="type.word"
+          column gap="space.s10"
+            text "Font" font="type.label"
+            row role="radiogroup" aria-label="Font" id="type-fonts" appearance="none" overflow-x="auto" overflow-y="hidden" gap="space.s8" padding-bottom="space.s4" testId="type-fonts"
               for f in type.fonts key=f.value
-                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 min-width="6rem" min-height=84 padding=8 border-radius=14 border-width=2 border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap=2 id=`type-font-${f.value}` testId=`type-font-${f.value}`
-                  text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font-size="1.6rem" line-height="normal"
-                  text f.label font="-exact-caption1" text-align="center"
-                  text f.kind font="-exact-caption2" color="-exact-secondary-label"
+                button role="radio" aria-checked=(type.font == f.value) aria-label=f.spoken press=font(f.value) appearance="none" flex-shrink=0 box-sizing="border-box" min-width="size.button" padding="space.s12" border-radius="radius.r16" border-width="line.slot" border-style="solid" border-color=(type.font == f.value ? "hs.ink" : "hs.card") background-color="hs.card" color="hs.ink" display="flex" flex-direction="column" align-items="center" justify-content="center" gap="space.s2" -exact-press-opacity="opacity.pressed" id=`type-font-${f.value}` testId=`type-font-${f.value}`
+                  text "Ag" font-family=(f.value == "sf" ? "system-ui, sans-serif" : (f.value == "rounded" ? "ui-rounded, system-ui, sans-serif" : (f.value == "mono" ? "ui-monospace, Menlo, monospace" : (f.value == "literata" ? "Literata, ui-serif, Georgia, serif" : (f.value == "sourceserif" ? "\"Source Serif 4\", ui-serif, Georgia, serif" : (f.value == "merriweather" ? "Merriweather, ui-serif, Georgia, serif" : (f.value == "lora" ? "Lora, ui-serif, Georgia, serif" : (f.value == "inter" ? "Inter, system-ui, sans-serif" : (f.value == "atkinson" ? "\"Atkinson Hyperlegible\", system-ui, sans-serif" : (f.value == "opendyslexic" ? "OpenDyslexic, system-ui, sans-serif" : "ui-serif, Georgia, serif")))))))))) font="type.word"
+                  text f.label font="type.caption-strong" text-align="center"
+                  text f.kind font="type.caption" color="hs.quiet"
           TypeSegments(line="Line spacing", group="Line spacing", name="type-line", chosen=type.line, options=type.lines, choose=line)
           TypeSegments(line="Letter spacing", group="Letter spacing", name="type-letter", chosen=type.letter, options=type.letters, choose=letter)
           TypeSegments(line="Line width", group="Line width", name="type-width", chosen=type.width, options=type.widths, choose=width)
-          button press=reset disabled=(not type.differs) min-height=44 align-self="flex-start" testId="type-reset"
-            text "Reset to the default"
+          button press=reset disabled=(not type.differs) appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" align-self="flex-start" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="type-reset"
+            :disabled
+              opacity = "opacity.disabled"
+            text "Reset to the default" font="type.label"

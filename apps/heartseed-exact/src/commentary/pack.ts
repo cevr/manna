@@ -6,11 +6,13 @@
  * pack"), checked whole before it is kept, and read a chapter at a time.
  * `notes` holds each paragraph once, by book code then publication order;
  * `verses` holds, per `book.chapter`, each verse with the indexes of its
- * notes (verse 0 for a note on the whole chapter). `sum` is `sumOf` over
- * every note's reference and text joined by `\n`, and `version` is
- * `<count>-<sum as 8 hex digits>`, so the same notes give the same version.
+ * notes (verse 0 for a note on the whole chapter). `sum` is `packSum`, over
+ * every note's reference and text and every chapter of `verses`, and
+ * `version` is `<count>-<sum as 8 hex digits>`, so the same pack gives the
+ * same version and a changed note or link another.
  */
 
+import { atOnce, sumPaced, type Paced } from '../packs/paced';
 import { sumOf } from '../text/sum';
 
 /** The pack's format this app reads. */
@@ -40,9 +42,29 @@ export type PackCheck =
   | { readonly _tag: 'Good'; readonly pack: CommentaryPack }
   | { readonly _tag: 'Bad'; readonly fault: PackFault };
 
-/** The sum over `notes`: each reference and text joined by `\n`, in order. */
-export const notesSum = (notes: ReadonlyArray<CommentaryNote>): number =>
-  sumOf(notes.flatMap(([reference, text]) => [reference, text]).join('\n'));
+/** One chapter of the verse map as text: its key, then each verse as `<verse>:<indexes joined by ,>`, space-separated. */
+const chapterText = ([key, verses]: readonly [string, ReadonlyArray<CommentaryVerseNotes>]) =>
+  [key, ...verses.map(([verse, indexes]) => `${verse}:${indexes.join(',')}`)].join(' ');
+
+/** The texts a pack's sum covers, in order: every note's reference and text, each after its length in decimal, then each chapter of `verses` as `chapterText` writes it, in the map's order. The lengths make the joined text name one pack whatever a note holds, a `\n` included. The same list as egw-search's `packTexts` (`apps/egw-search/server/commentary.ts`), held to it by the shared vector in both sides' tests. */
+const packTexts = (
+  notes: ReadonlyArray<CommentaryNote>,
+  verses: CommentaryPack['verses'],
+): ReadonlyArray<string> => [
+  ...notes.flatMap(([reference, text]) => [
+    `${reference.length}`,
+    reference,
+    `${text.length}`,
+    text,
+  ]),
+  ...Object.entries(verses).map(chapterText),
+];
+
+/** The sum over the whole pack, its notes and its verse map: `packTexts` joined by `\n`, so a changed note or link gives another version. */
+export const packSum = (
+  notes: ReadonlyArray<CommentaryNote>,
+  verses: CommentaryPack['verses'],
+): number => sumOf(packTexts(notes, verses).join('\n'));
 
 /** A pack's version: `<count>-<sum as 8 hex digits>`. */
 export const versionOf = (count: number, sum: number): string =>
@@ -107,7 +129,7 @@ const parsed = (body: string): Parsed => {
   }
 };
 
-/** The first check `pack` fails, after its fields: format, count, every index inside `notes`, the sum, the version. */
+/** The first check `pack` fails, after its fields, before its sum: format, count, every index inside `notes`. */
 const faultOf = (pack: CommentaryPack): PackFault | undefined => {
   if (pack.format !== PACK_FORMAT) return 'format';
   if (pack.count !== pack.notes.length) return 'count';
@@ -115,21 +137,27 @@ const faultOf = (pack: CommentaryPack): PackFault | undefined => {
     verses.every(([, indexes]) => indexes.every((index) => index >= 0 && index < pack.count)),
   );
   if (!inside) return 'index';
-  const sum = notesSum(pack.notes);
-  if (pack.sum !== sum) return 'sum';
-  if (pack.version !== versionOf(pack.count, sum)) return 'version';
   return undefined;
 };
 
-/** `body` checked whole: it parses, has every field, `format` is 1, `count` is `notes.length`, every index is inside `notes`, the sum and the version are the notes'. */
-export const checkPack = (body: string): PackCheck => {
+/** `checkPack` in steps (`src/packs/paced.ts`): the parse, the fields, then the sum `SLICE` code units a step, so the downloader holds no turn of the data host past its budget. */
+export function* checkPackPaced(body: string): Paced<PackCheck> {
   const read = parsed(body);
   if (!read.ok) return { _tag: 'Bad', fault: 'json' };
+  yield undefined;
   if (!hasFields(read.value)) return { _tag: 'Bad', fault: 'fields' };
-  const fault = faultOf(read.value);
+  const pack = read.value;
+  const fault = faultOf(pack);
   if (fault !== undefined) return { _tag: 'Bad', fault };
-  return { _tag: 'Good', pack: read.value };
-};
+  yield undefined;
+  const sum = yield* sumPaced(packTexts(pack.notes, pack.verses));
+  if (pack.sum !== sum) return { _tag: 'Bad', fault: 'sum' };
+  if (pack.version !== versionOf(pack.count, sum)) return { _tag: 'Bad', fault: 'version' };
+  return { _tag: 'Good', pack };
+}
+
+/** `body` checked whole: it parses, has every field, `format` is 1, `count` is `notes.length`, every index is inside `notes`, the sum and the version are the whole pack's (`packSum`). */
+export const checkPack = (body: string): PackCheck => atOnce(checkPackPaced(body));
 
 /** One note as a chapter's reader shows it. */
 export interface CommentaryNoteShown {

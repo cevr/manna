@@ -50,6 +50,15 @@ export const LIFT = 1.08;
 
 export type Item = 'tuner' | 'keyDown' | 'keyUp' | 'reset' | 'chords';
 
+/** Each item's word on the wheel. */
+export const WORDS: Readonly<Record<Item, string>> = {
+  tuner: 'Tuner',
+  keyDown: 'Key ♭',
+  keyUp: 'Key ♯',
+  reset: 'Reset',
+  chords: 'Chords off',
+};
+
 /** Every item, highest first. */
 const ORDER: ReadonlyArray<Item> = ['tuner', 'keyDown', 'keyUp', 'reset', 'chords'];
 

@@ -24,14 +24,23 @@ members HymnalExact
       case none
         favouriteList = favouriteList
 
-// The star in a hymn page's header: filled while the hymn is a favourite.
+// The star at the end of a hymn's title row, as the current app's
+// `FavouriteButton` draws it: the star (the SF Symbol `star` on Apple), filled while the hymn is
+// a favourite, in the accent, fitted in its mark's box at the centre of a
+// round target that reaches past the row above and below; pressed, the
+// target takes the soft fill.
 component FavouriteStar
   props
     number: number
+    tag: string
   inject
     favouriteNumbers: number[]
     favouritePress: action
   view
     if number > 0
-      button press=favouritePress(number) aria-label="Favourite" aria-pressed=favouriteNumbers.includes(number) testId="favourite"
-        image (favouriteNumbers.includes(number) ? "symbol:star-fill" : "symbol:star")
+      view role="button" press=favouritePress(number) aria-label="Favourite" aria-pressed=favouriteNumbers.includes(number) testId=`favourite${tag}`
+        display="flex" align-items="center" justify-content="center" align-self="flex-start" margin-left="auto"
+        margin-top="calc(space.s8 * -1)" margin-bottom="calc(space.s8 * -1)" min-width="size.target" min-height="size.target" border-radius="radius.pill"
+        :active
+          background-color = "soft"
+        image (favouriteNumbers.includes(number) ? "symbol:star-fill" : "symbol:star") width="size.mark" height="size.mark" object-fit="contain" color="accent" aria-hidden=true

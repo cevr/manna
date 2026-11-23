@@ -18,11 +18,13 @@ import {
   sectionsOf,
   soundingKey,
 } from '@manna/hymnal-app/hymns/chords';
-import { simple } from '@manna/hymnal-app/hymns/simple';
+import { type ChordStyle, styled } from '@manna/hymnal-app/hymns/simple';
+import type { Placement } from '@manna/hymnal/placement';
 import { readChords } from '@manna/hymnal-app/vite/chords';
 
 import { book } from '../hymns/book.ts';
 import type { ChordsPage } from './page.ts';
+import { drawnText } from './rows.ts';
 
 export const bundled = readChords();
 
@@ -31,15 +33,23 @@ export const currentBook = chordBook(bundled);
 
 /**
  * What the current app shows over hymn `number` at `move`, with chords on
- * in its default Simple style: the keys named, and each section as `words`
- * or its lines' words of `[syllable, chords]` (a hyphen after a syllable
- * its word goes on from); `none` for a hymn with no chords.
+ * in `style` at `placement` (its defaults, Simple on the beat, unless
+ * given), as its `HymnPage` reads them: `chordBook(...).of(number,
+ * placement)`, kept where `hasChords`, `styled` in the style. The keys
+ * named, and each section as `words` or its lines' words of `[syllable,
+ * chords]` (a hyphen after a syllable its word goes on from); `none` for a
+ * hymn with no chords.
  */
-export const shownByCurrent = (number: number, move: Move) => {
+export const shownByCurrent = (
+  number: number,
+  move: Move,
+  style: ChordStyle = 'simple',
+  placement: Placement = 'beat',
+) => {
   const text = book.hymns.find((hymn) => hymn.number === number);
-  const chords = currentBook.of(number);
+  const chords = currentBook.of(number, placement);
   if (text === undefined || chords._tag === 'None' || !hasChords(chords.value)) return 'none';
-  const shown = simple(chords.value);
+  const shown = styled(chords.value, style);
   const key = playedKey(shown.key, move);
   return {
     played: keyName(key),
@@ -68,7 +78,9 @@ export const shownByPort = (page: ChordsPage) => {
     sections: page.parts.map((part) =>
       part.lines.length > 0
         ? part.lines.map((line) =>
-            line.words.map((word) => word.boxes.map((box) => [box.text, box.chord])),
+            line.words.map((word) =>
+              word.boxes.map((box, b) => [drawnText(box, b < word.boxes.length - 1), box.chord]),
+            ),
           )
         : 'words',
     ),

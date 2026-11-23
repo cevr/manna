@@ -1,18 +1,30 @@
 import {
   Array as Arr,
+  Clock,
   Config,
+  Console,
+  Context,
   Duration,
   Effect,
+  Exit,
   FileSystem,
+  Layer,
   Option,
   Path,
+  Record as Rec,
   Result,
+  Schedule,
   Schema,
+  Scope,
   Stream,
 } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+import { APPS, type ExactApp } from './apps.ts';
+import { claimPorts, fixturePort, takePort } from './drive/port.ts';
 import { EXACT_BASE, EXACT_PATCHES, EXACT_PIN } from './pin.ts';
+import { routeTypesAside } from './route-types.ts';
+import { CLEAR_BEFORE } from './sim-tmp.ts';
 
 /** How a clone comes to the pin. */
 const TO_PIN = 'bun packages/exact-kit/src/patch.ts';
@@ -22,37 +34,6 @@ const DEFAULT_CLONE = 'Developer/vendor/exact';
 
 /** The lock every native build and drive waits on, one at a time on this Mac. */
 const BUILD_LOCK = '/tmp/manna-exact-build.lock';
-
-/**
- * An app this wrapper runs: its simulator, its web port and its spare ports, and whether it is quiet: a quiet
- * app's plain launch would speak through the simulator, so it is looked at under the agent alone.
- */
-interface ExactApp {
-  readonly simulator: string;
-  readonly port: number;
-  readonly spare: readonly [number, number];
-  readonly quiet: boolean;
-}
-
-/**
- * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
- * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
- */
-const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
-  'heartseed-exact': {
-    simulator: 'verify-heartseed-exact',
-    port: 8765,
-    spare: [8770, 8774],
-    quiet: true,
-  },
-  'hymnal-exact': {
-    simulator: 'verify-hymnal-exact',
-    port: 8766,
-    spare: [8775, 8779],
-    quiet: false,
-  },
-  lab: { simulator: 'verify-heartseed-exact', port: 8774, spare: [8774, 8774], quiet: true },
-};
 
 /** The hosts a drive runs natively on this Mac: the simulator and the Mac itself. */
 const NATIVE_HOSTS: ReadonlyArray<string> = ['ios', 'macos', 'mac'];
@@ -109,6 +90,12 @@ const isNative = (args: ReadonlyArray<string>) => {
   const [verb = '', host = ''] = args;
   if (isLaunching(verb)) return true;
   return ['test', 'verify', 'agent'].includes(verb) && NATIVE_HOSTS.includes(host);
+};
+
+/** Whether `args` runs on the app's simulator: `ios`, or `test`, `verify` or `agent` on `ios`. */
+const onSimulator = (args: ReadonlyArray<string>) => {
+  const [verb = '', host = ''] = args;
+  return verb === 'ios' || (['test', 'verify', 'agent'].includes(verb) && host === 'ios');
 };
 
 /** The host whose agent shows what `args` would launch outside it, `ios` or `mac` with `--run`, if it would. */
@@ -196,18 +183,210 @@ const ownsPort = (app: ExactApp, port: number) =>
   port === app.port || (port >= app.spare[0] && port <= app.spare[1]);
 
 /**
+ * The port a run of `args` holds while its child runs, so no run of another checkout serves there meanwhile: none
+ * for a verb that serves no page of its own on the spare range (`web` and `serve` keep the app's own port, a native
+ * host none), else the page's port `args` or the caller's `EXACT_PORT` names (`Option.some` of it), else a
+ * block of `PAGES` adjacent ports claimed from the spare range (`Option.none`), which the child is then held to.
+ */
+const listenerOf = (
+  args: ReadonlyArray<string>,
+  callerPorts: CallerPorts,
+): Option.Option<Option.Option<number>> => {
+  if (!['test', 'verify', 'agent'].includes(args[0] ?? '') || isNative(args)) return Option.none();
+  const named = Option.orElse(Arr.head(portsOf(args)), () => callerPorts.EXACT_PORT);
+  return Option.some(Option.map(named, Number));
+};
+
+/**
+ * How many pages a run of each verb serves at once off the native hosts, each on a port of its own, and so how many
+ * adjacent ports of the spare range it claims when no port is named: `verify` all of them (its tests, its large-text
+ * tour and a launch per web size run at once, Exact's `scripts/verify.mjs`), `test` two (a relaunch listens on a fresh
+ * port while the last page may still be letting go of its own), `agent` one (a drive's relaunch keeps its port).
+ */
+const PAGES = {
+  verify: Number.POSITIVE_INFINITY,
+  test: 2,
+  agent: 1,
+} as const;
+
+/** How many ports a run of `verb` claims, as `PAGES` says: one for a verb it does not name. */
+const pagesOf = (verb: string) => Option.getOrElse(Rec.get<string, number>(PAGES, verb), () => 1);
+
+/** Each host's last run time, as Exact's `verify` records it in the app's `.exact/verify/last.json`. */
+const LastRuns = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Finite));
+
+/** How often a `verify` run's record is read for its pages' end. */
+const PAGES_READ = Duration.seconds(1);
+
+/**
+ * How long after the wrapper spawns it Exact's `verify` may start its run's clock, which its record counts from
+ * (`scripts/verify.mjs`, `deviceMain`'s `started`). A later start is another run's, so a slower start keeps the ports
+ * to the end, never gives them back early.
+ */
+const VERIFY_START = Duration.seconds(10);
+
+/** How far a record's start may fall before the spawn, for the millisecond each clock rounds to and the record's own rounding. */
+const CLOCK_SLACK = Duration.seconds(1);
+
+/** The host a `verify` run's pages are on: the one it names, else the web, which both apps ship (Exact's `shippedHost`). */
+const verifyHost = (args: ReadonlyArray<string>) =>
+  Option.getOrElse(
+    Option.filter(Option.fromUndefinedOr(args[1]), (host) => !host.startsWith('-')),
+    () => 'web',
+  );
+
+/**
+ * How long a `verify` run may go on after Exact records its host's run (`reportEnd`) before the wrapper stops it. What
+ * goes on then is its `contract verify` alone, whose `difftest verify` was seen to spin past an hour in a walk's clock
+ * advance (Exact's `semantics/difftest/src/settle.rs`, `MutationClock::advance`), holding the build lock.
+ */
+const SEMANTICS_WAIT = Duration.minutes(2);
+
+/** The code a `verify` the wrapper stopped after its report exits with when its device run recorded `CLEAN`, as `timeout` does. */
+const STOPPED = 124;
+
+/**
+ * The code a stopped `verify` exits with when its device run recorded anything but `CLEAN`, or nothing: a failure.
+ * Exact records a result as text, with no exit code of its own to pass on.
+ */
+const STOPPED_FAILING = 1;
+
+/** The result Exact's `verify` records for a device run with no problem (`scripts/verify.mjs`). */
+const CLEAN = 'clean';
+
+/** One line of the app's `.exact/runs.jsonl`, where Exact's `verify` records its device run's result (`scripts/evidence.mjs`). */
+const RunLine = Schema.fromJsonString(
+  Schema.Struct({
+    at: Schema.String,
+    host: Schema.String,
+    what: Schema.String,
+    result: Schema.String,
+  }),
+);
+
+/**
+ * For a `verify` run: an effect that ends once its device report is written and its pages have closed, when Exact's
+ * `verify` records a new run of its host in the app's `.exact/verify/last.json`. The pinned Exact writes that record
+ * after its pages, Chrome profiles and server are closed, just before it prints the report, and before its `contract
+ * verify` (difftest, which opens no socket) ends, so the ports may go back then (`scripts/verify.mjs`, `deviceMain`).
+ * The record as it stands is read now, before the run starts; a run that never records keeps its ports to its end. A
+ * record is this run's only when the run it times started as this one did: its value is the run's length, so the
+ * time it is read at less that value falls between the spawn and `VERIFY_START` after it (with a read's spacing on
+ * top). Another `verify` of the same checkout that names its own port, started before this one or well after it,
+ * writes the same record, and keeps them. `result` reads what the device run recorded in `.exact/runs.jsonl`, if it
+ * did.
+ */
+const reportEnd = (appDir: string, args: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const host = verifyHost(args);
+    const file = path.join(appDir, '.exact', 'verify', 'last.json');
+    const recorded = fs.readFileString(file).pipe(
+      Effect.map((text) => Option.flatMap(Schema.decodeOption(LastRuns)(text), Rec.get(host))),
+      Effect.orElseSucceed(() => Option.none<number>()),
+    );
+    const before = yield* recorded;
+    const spawned = yield* Clock.currentTimeMillis;
+    const earliest = spawned - Duration.toMillis(CLOCK_SLACK);
+    const latest = spawned + Duration.toMillis(Duration.sum(VERIFY_START, PAGES_READ));
+    const ours = (length: number, readAt: number) =>
+      readAt - length >= earliest && readAt - length <= latest;
+    const result = fs.readFileString(path.join(appDir, '.exact', 'runs.jsonl')).pipe(
+      Effect.map((text) =>
+        Option.flatMap(Arr.last(text.split('\n').filter((line) => line.trim() !== '')), (line) =>
+          Option.map(
+            Option.filter(
+              Schema.decodeOption(RunLine)(line),
+              (run) => run.what === 'verify' && run.host === host && Date.parse(run.at) >= earliest,
+            ),
+            (run) => run.result,
+          ),
+        ),
+      ),
+      Effect.orElseSucceed(() => Option.none<string>()),
+    );
+    return {
+      host,
+      result,
+      written: Effect.asVoid(
+        Effect.repeat(Effect.zip(recorded, Clock.currentTimeMillis), {
+          until: ([now, readAt]) =>
+            Option.exists(
+              now,
+              (length) => !Option.contains(before, length) && ours(length, readAt),
+            ),
+          schedule: Schedule.spaced(PAGES_READ),
+        }),
+      ),
+    };
+  });
+
+/**
+ * Holds ports for the child's run, given back when the run's scope closes: a block of adjacent ports of a range
+ * claimed, or one port taken, each waited for while a run of any checkout holds it. The live one is the turns of `drive/port.ts`; a test
+ * hands a stand-in.
+ */
+export class PortClaims extends Context.Service<
+  PortClaims,
+  {
+    readonly claim: (
+      range: readonly [number, number],
+      count: number,
+      label: string,
+    ) => Effect.Effect<readonly [number, number], ExactRefused, Scope.Scope>;
+    readonly take: (
+      port: number,
+      label: string,
+    ) => Effect.Effect<number, ExactRefused, Scope.Scope>;
+  }
+>()('@manna/exact-kit/PortClaims') {
+  static readonly live = Layer.succeed(
+    PortClaims,
+    PortClaims.of({
+      claim: (range, count, label) =>
+        held(() =>
+          claimPorts(range, count, { label }).then(({ lo, hi, give }) => ({
+            held: [lo, hi] as const,
+            give,
+          })),
+        ),
+      take: (port, label) =>
+        held(() => takePort(port, { label }).then(({ port: p, give }) => ({ held: p, give }))),
+    }),
+  );
+}
+
+/** A port held from `claim` until the scope closes; a claim that runs out of waiting is refused. */
+const held = <A>(claim: () => Promise<{ readonly held: A; readonly give: () => void }>) =>
+  Effect.map(
+    Effect.acquireRelease(
+      Effect.tryPromise({
+        try: claim,
+        catch: (error) => ExactRefused.make({ reason: String(error) }),
+      }),
+      (claimed) => Effect.sync(claimed.give),
+    ),
+    (claimed) => claimed.held,
+  );
+
+/**
  * The run of `args` for `app`, whose clone is at `clone`, with the caller's port variables: refused for
  * a verb that publishes or rewrites the launcher, a feedback send, a quiet app's launch outside the agent,
  * another device or simulator, or a port not the app's; else the child's variables, set over whatever the caller's held: the clone,
  * feedback off, the app's simulator and spare range. Each port variable is the caller's when it is the
  * app's, else the app's own port for the verb that listens by it bare (`web`, `serve`), else removed:
- * no child listens outside the app's ports.
+ * no child listens outside the app's ports. A run on the simulator is told when the wrapper `started` (`CLEAR_BEFORE`),
+ * so the child, once it holds the build lock, clears the launch consoles older than that from the app's simulator
+ * (`sim-tmp.ts`); any other run has the variable removed. Only a locked run is told, so no clear unlinks the live
+ * consoles of a run that holds the lock; every run on the simulator, the bare `ios` with them, is a locked one.
  */
 const plan = (
   args: ReadonlyArray<string>,
   app: ExactApp,
   clone: string,
   callerPorts: CallerPorts,
+  started: number,
 ): Result.Result<Plan, ExactRefused> =>
   Option.match(refusalOf(args, app, callerPorts), {
     onSome: (reason) => Result.fail(ExactRefused.make({ reason })),
@@ -224,9 +403,11 @@ const plan = (
             ),
           ] as const,
       );
+      const locked = isNative(args);
+      const clear = Option.filter(Option.some(String(started)), () => locked && onSimulator(args));
       return Result.succeed({
         args,
-        locked: isNative(args),
+        locked,
         env: {
           EXACT: clone,
           EXACT2: clone,
@@ -237,8 +418,12 @@ const plan = (
           ...Object.fromEntries(
             ports.flatMap(([name, port]) => Option.toArray(Option.map(port, (p) => [name, p]))),
           ),
+          ...Option.match(clear, { onNone: () => ({}), onSome: (at) => ({ [CLEAR_BEFORE]: at }) }),
         },
-        removed: ports.filter(([, port]) => Option.isNone(port)).map(([name]) => name),
+        removed: [
+          ...ports.filter(([, port]) => Option.isNone(port)).map(([name]) => name),
+          ...Arr.filter([CLEAR_BEFORE], () => Option.isNone(clear)),
+        ],
       });
     },
   });
@@ -299,6 +484,30 @@ const headOf = (clone: string) =>
     ),
   );
 
+/** The verbs that start the app's server, its fixture, for their run: `test`, `verify` and `agent`, on any host. */
+const SERVING_VERBS: ReadonlyArray<string> = ['test', 'verify', 'agent'];
+
+/**
+ * The fixture settings a run of `args` for `app` in `appDir` is given: for a serving verb, each of the app's
+ * `fixture` settings the caller leaves unset, as the origin of the checkout's own fixture port (`fixturePort` of its
+ * real path, the folder as given when it has none). Nothing for any other verb, so a build (`web-build`), the dev loop
+ * and `serve` keep the app's own default.
+ */
+const fixtureOf = (app: ExactApp, args: ReadonlyArray<string>, appDir: string) =>
+  Effect.gen(function* () {
+    if (!SERVING_VERBS.includes(args[0] ?? '')) return {};
+    const fs = yield* FileSystem.FileSystem;
+    const real = yield* fs.realPath(appDir).pipe(Effect.orElseSucceed(() => appDir));
+    const origin = `http://127.0.0.1:${fixturePort(real)}`;
+    const unset = yield* Effect.forEach(app.fixture, (name) =>
+      Effect.gen(function* () {
+        const given = yield* Config.option(Config.String(name));
+        return Option.match(given, { onNone: () => [name], onSome: () => [] });
+      }),
+    );
+    return Object.fromEntries(unset.flat().map((name) => [name, origin]));
+  });
+
 /** The app whose folder is `name`, if the wrapper runs it. */
 const appNamed = (name: string) =>
   Option.fromNullishOr(Object.entries(APPS).find(([folder]) => folder === name)?.[1]);
@@ -307,7 +516,12 @@ const appNamed = (name: string) =>
  * Runs Exact's `args` for the app in `appDir` through `launcher` (exact-cli.ts): refused before any
  * process when the command is, then unless the app's `exact.mjs` and `AGENTS.md` are its own and the
  * clone is at the pin, then run with the plan's
- * variables over the caller's, a native build or drive under the build lock. The child's exit code.
+ * variables over the caller's, a native build or drive under the build lock, a web page's port held while it runs
+ * (`listenerOf`), or a `verify`'s until its report is written (`reportEnd`), and One's route types in the packages the
+ * app links set aside until it ends (`routeTypesAside`). The child runs in a process group of its
+ * own, ended with whatever it left there when it exits or the run is stopped. The child's exit code; for a `verify`
+ * still running `SEMANTICS_WAIT` after its report, `STOPPED` when its device run of that host recorded `CLEAN`, else `STOPPED_FAILING`, its process group ended (its `scripts/verify.mjs` passes
+ * the signal on to the `contract verify` group it started).
  */
 export const runExact = Effect.fn('ExactKit.run')(function* (
   appDir: string,
@@ -332,8 +546,10 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
     PORT: yield* Config.option(Config.String('PORT')),
     EXACT_TOOL_PORT: yield* Config.option(Config.String('EXACT_TOOL_PORT')),
   };
-  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts));
+  const started = yield* Clock.currentTimeMillis;
+  const planned = yield* Effect.fromResult(plan(args, app, clone, callerPorts, started));
   yield* launcherHeld(appDir);
+  const fixture = yield* fixtureOf(app, args, appDir);
   const head = yield* headOf(clone);
   if (head !== EXACT_PIN)
     return yield* ExactRefused.make({
@@ -342,13 +558,45 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
   const lock = Arr.filter(['lockf', '-k', BUILD_LOCK], () => planned.locked);
   const [command = 'bun', ...rest] = [...lock, 'bun', launcher, appDir, name, ...planned.args];
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const claims = yield* PortClaims;
+  const turns = yield* Config.option(Config.String('EXACT_PORT_TURNS'));
+  const label = `exact ${args.slice(0, 2).join(' ')} in ${appDir}`;
+  const withTurns = (ports: ReadonlyArray<number>) =>
+    Arr.dedupe([
+      ...Option.getOrElse(turns, () => '')
+        .split(',')
+        .filter((t) => t !== ''),
+      ...ports.map(String),
+    ]).join(',');
   return yield* Effect.scoped(
-    Effect.flatMap(
-      spawner.spawn(
+    Effect.gen(function* () {
+      const pages = yield* Scope.fork(yield* Effect.scope);
+      const listener = yield* Effect.forEach(
+        Option.toArray(listenerOf(args, callerPorts)),
+        (named) =>
+          Option.match(named, {
+            onNone: () =>
+              Effect.map(claims.claim(app.spare, pagesOf(args[0] ?? ''), label), ([lo, hi]) => ({
+                PORT_LO: String(lo),
+                PORT_HI: String(hi),
+                EXACT_PORT_TURNS: withTurns(Arr.range(lo, hi)),
+              })),
+            onSome: (port) =>
+              Effect.as(claims.take(port, label), { EXACT_PORT_TURNS: withTurns([port]) }),
+          }),
+      ).pipe(Scope.provide(pages));
+      const report = yield* Effect.forEach(
+        Arr.filter([args[0]], (verb) => verb === 'verify'),
+        () => reportEnd(appDir, args),
+      );
+      yield* routeTypesAside(appDir);
+      const handle = yield* spawner.spawn(
         ChildProcess.make(command, rest, {
           cwd: appDir,
           env: {
+            ...fixture,
             ...planned.env,
+            ...listener[0],
             ...Object.fromEntries(
               // oxlint-disable-next-line effect/noNullish -- the spawner removes a variable set to undefined from the inherited environment
               planned.removed.map((name) => [name, undefined]),
@@ -360,8 +608,36 @@ export const runExact = Effect.fn('ExactKit.run')(function* (
           stderr: 'inherit',
           forceKillAfter: Duration.seconds(5),
         }),
-      ),
-      (handle) => handle.exitCode,
-    ),
+      );
+      const reported = Arr.head(report);
+      if (Option.isNone(reported)) return yield* handle.exitCode;
+      const verified = reported.value;
+      const exited = yield* Effect.raceFirst(
+        Effect.asSome(handle.exitCode),
+        verified.written.pipe(
+          Effect.andThen(Scope.close(pages, Exit.void)),
+          Effect.andThen(Effect.sleep(SEMANTICS_WAIT)),
+          Effect.as(Option.none<ChildProcessSpawner.ExitCode>()),
+        ),
+      );
+      if (Option.isSome(exited)) return exited.value;
+      const recorded = yield* verified.result;
+      const result = Option.match(recorded, {
+        onNone: () => 'recorded no result',
+        onSome: (said) => `recorded "${said}"`,
+      });
+      const code = Option.match(
+        Option.filter(recorded, (said) => said === CLEAN),
+        {
+          onNone: () => STOPPED_FAILING,
+          onSome: () => STOPPED,
+        },
+      );
+      yield* Console.error(
+        `exact-kit: verify ${verified.host} wrote its report ${Duration.format(SEMANTICS_WAIT)} ago and its contract verify (difftest) has not ended, so the run is stopped, exit ${code}: the device run ${result} and the report above stands; the semantics check did not finish (docs/exact.md)`,
+      );
+      yield* Effect.ignore(handle.kill({ forceKillAfter: Duration.seconds(5) }));
+      return ChildProcessSpawner.ExitCode(code);
+    }),
   );
 });

@@ -26,7 +26,7 @@ import { HttpClient, HttpClientResponse } from 'effect/http';
 import Stack, { providers } from '../alchemy.run.ts';
 import { CommentaryPackSchema } from '../server/api.ts';
 import { CorpusSyncInput } from '../server/cloudflare/Sync.ts';
-import { notesSum, versionOf } from '../server/commentary.ts';
+import { packSum, versionOf } from '../server/commentary.ts';
 
 const options = { providers, state: Cloudflare.state() };
 const { test, deploy, destroy } = Test.make(options);
@@ -123,7 +123,7 @@ test(
     const pack = yield* HttpClientResponse.schemaBodyJson(CommentaryPackSchema)(packed);
     expect(pack.format).toBe(1);
     expect(pack.count).toBe(pack.notes.length);
-    expect(pack.sum).toBe(notesSum(pack.notes));
+    expect(pack.sum).toBe(packSum(pack.notes, pack.verses));
     expect(pack.version).toBe(versionOf(pack.count, pack.sum));
     expect(etag).toBe(`"${pack.version}"`);
     const unchanged = yield* (yield* HttpClient.HttpClient)

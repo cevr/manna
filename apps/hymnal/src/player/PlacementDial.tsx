@@ -6,7 +6,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import { hasChords } from '~/hymns/chords';
-import { placements } from '~/settings';
+import { placements } from '~/chord-choices';
 import { ChordReaderContext } from './Dials';
 import { DialPanel } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';

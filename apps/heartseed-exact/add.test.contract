@@ -1,3 +1,4 @@
+fail fetch "https://egw.cvr.im"
 epoch "2026-11-14T12:00:00Z"
 time-zone "America/New_York"
 seed 7
@@ -33,6 +34,28 @@ test "The shelves, in order"
   clock settle
   expect tree missing "offer-pick-proverbs-20-4-23-23"
   expect tree missing "add-limit"
+  expect no failures
+
+test "Add a list is a sheet over home, and Done closes it"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
+  expect tree has "add-sheet"
+  expect text "add-title" == "Add a list"
+  expect text "add-done" == "Done"
+  expect tree has "shelf-any"
+  tap "add-done"
+  clock settle
+  expect tree missing "add-sheet"
+  expect state readGardenTab.length == 1
+  expect tree has "add-list"
   expect no failures
 
 test "A pick shows its verses before it is planted, then plants"
@@ -140,7 +163,22 @@ test "At three lists the rows say the limit"
   expect no failures
 
 test "At twenty single verses a short pick says its limit"
-  at "/add/bible/43/3"
+  at "/verses"
+  clock data
+  clock settle
+  back
+  clock settle
+  clock data
+  clock settle
+  tap "tab-read"
+  clock data
+  clock settle
+  tap "chapter-title"
+  clock settle
+  tap "book-43"
+  clock data
+  clock settle
+  tap "chapter-3"
   clock data
   clock settle
   tap "verse-1"
@@ -150,27 +188,11 @@ test "At twenty single verses a short pick says its limit"
   tap "plant-singles"
   clock data
   clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
   tap "verse-3"
   clock data
   tap "verse-4"
   clock data
   tap "plant-singles"
-  clock data
-  clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
   clock data
   clock settle
   tap "verse-5"
@@ -180,27 +202,11 @@ test "At twenty single verses a short pick says its limit"
   tap "plant-singles"
   clock data
   clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
   tap "verse-7"
   clock data
   tap "verse-8"
   clock data
   tap "plant-singles"
-  clock data
-  clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
   clock data
   clock settle
   tap "verse-9"
@@ -210,27 +216,11 @@ test "At twenty single verses a short pick says its limit"
   tap "plant-singles"
   clock data
   clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
   tap "verse-11"
   clock data
   tap "verse-12"
   clock data
   tap "plant-singles"
-  clock data
-  clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
   clock data
   clock settle
   tap "verse-13"
@@ -240,27 +230,11 @@ test "At twenty single verses a short pick says its limit"
   tap "plant-singles"
   clock data
   clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
   tap "verse-15"
   clock data
   tap "verse-16"
   clock data
   tap "plant-singles"
-  clock data
-  clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
   clock data
   clock settle
   tap "verse-17"
@@ -270,28 +244,13 @@ test "At twenty single verses a short pick says its limit"
   tap "plant-singles"
   clock data
   clock settle
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
+  expect state garden.singles.length == 18
   tap "verse-19"
   clock data
   tap "plant-singles"
   clock data
   clock settle
   expect state garden.singles.length == 19
-  tap "shelf-any"
-  clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
-  clock data
-  clock settle
   tap "verse-19"
   clock data
   tap "verse-20"
@@ -303,6 +262,12 @@ test "At twenty single verses a short pick says its limit"
   clock settle
   expect state garden.singles.length == 20
   expect state garden.singles.19.reference == "John 3:20"
+  tap "tab-garden"
+  clock data
+  clock settle
+  tap "add-list"
+  clock data
+  clock settle
   expect text "add-singles-limit" == "20 single verses, the most for now. Remove one to add another."
   tap "shelf-proverbs"
   clock data
@@ -315,12 +280,10 @@ test "At twenty single verses a short pick says its limit"
   expect text "shelf-singles-limit" == "20 single verses, the most for now. Remove one to add another."
   back
   clock settle
-  tap "shelf-any"
+  tap "add-done"
   clock settle
-  tap "book-43"
-  clock data
-  clock settle
-  tap "chapter-3"
+  expect tree missing "add-sheet"
+  tap "tab-read"
   clock data
   clock settle
   tap "verse-21"

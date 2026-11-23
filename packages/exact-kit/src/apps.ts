@@ -1,0 +1,46 @@
+/**
+ * An app the wrapper runs: its simulator, its web port and its spare ports, whether it is quiet (a quiet app's
+ * plain launch would speak through the simulator, so it is looked at under the agent alone), and the settings
+ * that name its loopback fixture's origin.
+ */
+export interface ExactApp {
+  readonly simulator: string;
+  readonly port: number;
+  readonly spare: readonly [number, number];
+  readonly quiet: boolean;
+  /**
+   * The settings (app.json's `env`) whose value is the origin of the fixture `test`, `verify` and `agent` start as
+   * the app's server: each is set to the checkout's own fixture port (`fixturePort`) for those verbs when the caller
+   * names none, so a plain test run never asks the real backend and two checkouts never share a fixture.
+   */
+  readonly fixture: ReadonlyArray<string>;
+}
+
+/**
+ * The apps, by folder: the two ports and the kit's lab (`packages/exact-kit/lab`). Each drives its own simulator
+ * and serves on its own ports; the lab shares Heartseed's simulator, under the build lock, and serves on 8774 alone.
+ * A run that listens in the spare range claims its ports first (`claimPorts`), so runs of every checkout share it.
+ */
+export const APPS: Readonly<Record<'heartseed-exact' | 'hymnal-exact' | 'lab', ExactApp>> = {
+  'heartseed-exact': {
+    simulator: 'verify-heartseed-exact',
+    port: 8765,
+    spare: [8770, 8774],
+    quiet: true,
+    fixture: [],
+  },
+  'hymnal-exact': {
+    simulator: 'verify-hymnal-exact',
+    port: 8766,
+    spare: [8775, 8779],
+    quiet: false,
+    fixture: ['HYMNAL_RECORDINGS'],
+  },
+  lab: {
+    simulator: 'verify-heartseed-exact',
+    port: 8774,
+    spare: [8774, 8774],
+    quiet: true,
+    fixture: [],
+  },
+};

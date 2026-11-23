@@ -291,3 +291,86 @@ describe('stage 2, from the source', () => {
     expect(repair(stored, Option.none()).lexicon['H4']).toBe(stored.H4);
   });
 });
+
+describe('stage 3, the numbers only the source has', () => {
+  const greek = (lemma: string, def: string): Source => ({
+    lemma,
+    translit: `${lemma}-x`,
+    derivation: 'from G1 (α);',
+    strongs_def: ` ${def}`,
+    kjv_def: def,
+  });
+
+  test('adds each in its numeric place in the sound style, every stored entry kept as stored', () => {
+    for (const [index, made] of draw(6, (random) => {
+      const numbers = [
+        ...new Set(Array.from({ length: between(random, 2, 12) }, () => between(random, 1, 60))),
+      ].toSorted((a, b) => a - b);
+      const stored = Object.fromEntries(
+        numbers
+          .filter((_, at) => at % 2 === 0)
+          .map((n) => [`G${n}`, { lemma: word(random), def: definition(random) }]),
+      );
+      const sources = Object.fromEntries(
+        numbers.map((n) => [`G${n}`, greek(word(random), words(random, 1, 4))]),
+      );
+      return { stored, sources };
+    }).entries()) {
+      const result = repair(made.stored, Option.some(made.sources));
+      const lacked = Object.keys(made.sources).filter((n) => !Object.hasOwn(made.stored, n));
+      const order = (n: string) => Number(n.slice(1));
+      expect(result.added, `draw ${index}`).toEqual(lacked.toSorted((a, b) => order(a) - order(b)));
+      expect(Object.keys(result.lexicon), `draw ${index}`).toEqual(
+        Object.keys(made.sources).toSorted((a, b) => order(a) - order(b)),
+      );
+      for (const [number, entry] of Object.entries(made.stored))
+        expect(result.lexicon[number], `draw ${index} ${number}`).toBe(entry);
+      for (const number of lacked) {
+        const source: Source = made.sources[number] ?? {};
+        expect(result.lexicon[number], `draw ${index} ${number}`).toStrictEqual({
+          lemma: source.lemma ?? 'none',
+          xlit: source.translit ?? 'none',
+          def: `${source.kjv_def} — ${source.kjv_def}.`,
+        });
+      }
+      expect(result.defective, `draw ${index}`).toEqual([]);
+      const again = repair(result.lexicon, Option.some(made.sources));
+      expect(again.lexicon, `draw ${index}`).toEqual(result.lexicon);
+      expect(again.added, `draw ${index}`).toEqual([]);
+    }
+  });
+
+  test('a Hebrew number takes its pronunciation and renderings, after the Greek, before a later Hebrew one', () => {
+    const result = repair(
+      { G2: { lemma: 'β', def: 'two — two.' }, H9: { lemma: 'ט', def: 'nine — nine.' } },
+      Option.some({
+        H3: {
+          lemma: 'ג',
+          xlit: 'gimel',
+          pron: "ghee'-mel",
+          strongs_def: 'a camel',
+          kjv_def: 'camel.',
+        },
+      }),
+    );
+    expect(Object.keys(result.lexicon)).toEqual(['G2', 'H3', 'H9']);
+    expect(result.lexicon['H3']).toEqual({
+      lemma: 'ג',
+      xlit: 'gimel',
+      def: 'a camel — camel.',
+      pron: "ghee'-mel",
+      kjvDef: 'camel.',
+    });
+  });
+
+  test('adds nothing without a source, nor a source entry with no definition or a number not shaped as a key', () => {
+    const stored = { G1: { lemma: 'α', def: 'one — one.' } };
+    expect(repair(stored, Option.none()).added).toEqual([]);
+    const result = repair(
+      stored,
+      Option.some({ G2: { lemma: 'β' }, G03: greek('γ', 'three'), G4a: greek('δ', 'four') }),
+    );
+    expect(result.added).toEqual([]);
+    expect(Object.keys(result.lexicon)).toEqual(['G1']);
+  });
+});

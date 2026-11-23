@@ -1,12 +1,23 @@
 // A list's page (`/lists/:id`, `:id` the slug of the list's id), opened by
-// its row's title on home: its title and caption, Practice this list and
-// the line under it, each verse with its stage and when it is due, a Move
-// back on a plant past a seed, and Remove this list for a list the reader
-// holds. What it draws is `listRead`'s answer (src/list/page.ts), the
-// current Heartseed's rules over the garden one call reads. An ask is a
-// state of its row (`listAsking`: `remove` for the list, else the verse's
-// reference), opened by its button and closed by any other tap.
-use homeMarkOf from "./home.contract"
+// its row's title on home, drawn as the current Heartseed draws it
+// (src/list/screen.tsx): fixed above the scroll, the list's icon and title
+// as the page's one heading, its caption, and Practice this list with the
+// line under it; in the scroll, each verse's row (its drawing: the gold
+// dot when ready, its stage's picture or bare soil; its reference and its
+// stage in words; a chevron, and the row one button that starts its
+// verse, when a tap starts it), then Remove this list for a list the
+// reader holds. The navigation bar's Back stands for the current page's
+// `‹ Your field` (owner, q2). The port's own parts, Read the chapter and a
+// plant's Move back, are drawn as the current page's pills. What it draws
+// is `listRead`'s answer (src/list/page.ts), the current Heartseed's rules
+// over the garden one call reads. An ask is a state of its row
+// (`listAsking`: `remove` for the list, else the verse's reference),
+// opened by its button and closed by any other tap. `list-band` marks the
+// top of the page's content under the bar, where the pixel match's band
+// starts. Every measure is a token of app.forma. At the accessibility text
+// sizes alone the page departs from the current one: its head scrolls with
+// the verses (`ListPage`).
+use homeMarkOf, homeIconOf, HomePill from "./home.contract"
 use hs-rise, hs-fade, hs-leave, hs-fade-out from "./motion.contract"
 
 shape ListVerse
@@ -16,6 +27,9 @@ shape ListVerse
   ready: bool
   sown: bool
   stage: string
+  stageLine: string
+  drawn: string
+  starts: bool
   due: string
   backTo: string
   backAsk: string
@@ -26,6 +40,7 @@ shape ListShown
   id: string
   slug: string
   title: string
+  icon: string
   caption: string
   verses: ListVerse[]
   start: string
@@ -37,7 +52,7 @@ shape ListShown
 
 members HeartseedExact
   state listAsking = ""
-  derive listSlug = match stack(nav).filter(x => x.name == "list").at(-1) { case some(t) => t.params.id, case none => "" }
+  derive listSlug = match readGardenStack.filter(x => x.name == "list").at(-1) { case some(t) => t.params.id, case none => "" }
   resource listShown = listRead(listSlug, gardenTime.utcOffset, today.session.wire, homeMarkOf(garden)) with gardenAt, gardenTime.seed as shape ListShown else empty()
   action listPractice(slug: string)
     listAsking = ""
@@ -54,51 +69,134 @@ members HeartseedExact
   action listNo
     listAsking = ""
 
-component ListPage
+// A verse's drawing, hidden from the screen reader: the gold dot when
+// ready (else its room), then its stage's picture, or bare soil before.
+component ListDrawing
+  props
+    verse: ListVerse
+    scheme: string
+  view
+    column width="size.drawing-list" align-items="center" gap="space.s2" aria-hidden=true
+      if verse.ready
+        column width="size.dot" height="size.dot" border-radius="radius.r4" background-color="hs.sun"
+      else
+        column width="size.dot" height="size.dot"
+      if verse.drawn == ""
+        column width="size.dash" height="line.dash" margin-top="space.s14" margin-bottom="space.s14" border-radius="radius.dash" background-color="hs.soil"
+      else
+        image homeIconOf(verse.drawn, scheme) width="glyph.list" height="glyph.list"
+
+// A verse's reference and its stage in words.
+component ListNames
+  props
+    verse: ListVerse
+  view
+    column flex=1 gap="space.s2"
+      text verse.reference font="type.strong" color="hs.ink" testId=`list-reference-${verse.slug}`
+      text verse.stageLine font="type.small" color="hs.quiet" testId=`list-stage-${verse.slug}`
+
+// The page's head: the list's icon and title as its one heading, its
+// caption, Practice this list with the line under it, and the port's Read
+// the chapter.
+component ListTop
+  props
+    list: ListShown
+    scheme: string
+    practice: action
+    chapter: string
+    read: action
+  view
+    column gap="space.s10" padding-top="space.s10" padding-left="space.page" padding-right="space.page" padding-bottom="space.s8" testId="list-top"
+      row align-items="center" gap="space.s10"
+        if list.icon != ""
+          image homeIconOf(list.icon, scheme) width="glyph.list" height="glyph.list" aria-hidden=true
+        text list.title role="heading" aria-level=1 font="type.title" color="hs.ink" flex-shrink=1 testId="list-title"
+      text list.caption font="type.small" color="hs.quiet" testId="list-caption"
+      if list.start != "none"
+        column gap="space.s6" margin-top="space.s4"
+          button press=practice(list.startSlug) aria-label="Practice this list" display="flex" flex-direction="row" align-items="center" justify-content="center" box-sizing="border-box" min-height="size.row" padding-left="space.s18" padding-right="space.s18" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" background-color="hs.ink" -exact-press-opacity="opacity.pressed" testId="list-practice"
+            text "Practice this list" font="type.label" color="hs.on-ink"
+          text list.startLine font="type.small" color="hs.quiet" testId="list-line"
+      if chapter != ""
+        HomePill(name=`Read ${chapter}`, label=`Read ${chapter}`, press=read, icon="", id="list-read")
+
+// The page's verses, each a row, then Remove this list.
+component ListVerses
   props
     list: ListShown
     asking: string
+    scheme: string
     practice: action
     ask: action
     yes: action
     no: action
     still: bool
   view
-    scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0
-      column gap=16 padding=20 max-width="40rem" testId="list-page"
-        text list.title role="heading" aria-level=2 testId="list-title"
-        text list.caption color="-exact-secondary-label" testId="list-caption"
-        if list.start != "none"
-          button press=practice(list.startSlug) buttonStyle="filled" testId="list-practice"
-            text "Practice this list"
-          text list.startLine color="-exact-secondary-label" testId="list-line"
-        for v in list.verses key=v.slug
-          column gap=4 -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
-            text v.reference font="-exact-headline"
-            row gap=12 flex-wrap="wrap"
-              text v.stage color="-exact-secondary-label" testId=`list-stage-${v.slug}`
-              text v.due color="-exact-secondary-label" testId=`list-due-${v.slug}`
-            if v.backTo != "" and asking != v.reference
-              button press=ask(v.reference) aria-label=`Move ${v.reference} back` buttonStyle="bordered" testId=`list-back-${v.slug}`
-                text "Move back"
-            if v.backTo != "" and asking == v.reference
-              column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${v.slug}`
-                text v.backAsk color="-exact-secondary-label"
-                row gap=8 flex-wrap="wrap"
-                  button press=yes buttonStyle="bordered" testId="ask-yes"
-                    text "Move back"
-                  button press=no buttonStyle="bordered" testId="ask-no"
-                    text "Keep"
-        if list.removeId != "" and asking == "remove"
-          column gap=8 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="ask-list"
-            text list.removeAsk color="-exact-secondary-label"
-            row gap=8 flex-wrap="wrap"
-              button press=yes buttonStyle="bordered" testId="ask-yes"
-                text "Remove"
-              button press=no buttonStyle="bordered" testId="ask-no"
-                text "Keep"
-        else if list.removeId != ""
-          column gap=4
-            button press=ask("remove") aria-label=`Remove ${list.removeName}` buttonStyle="bordered" testId="list-remove"
-              text "Remove this list"
-            text "Its plants stay in your field." color="-exact-secondary-label"
+    column gap="space.s4" padding-top="space.s8" padding-left="space.page" padding-right="space.page" padding-bottom="space.s24"
+      for v in list.verses key=v.slug
+        column gap="space.s4" -exact-layout-transition=(still ? "none" : "duration.ask easing.out") testId=`list-verse-${v.slug}`
+          if v.starts
+            row role="button" press=practice(v.slug) aria-label=v.label align-items="center" gap="space.s12" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r16" testId=`list-row-${v.slug}`
+              :active
+                background-color = "hs.card"
+              ListDrawing(verse=v, scheme=scheme)
+              ListNames(verse=v)
+              text "›" font="type.chevron" color="hs.quiet" aria-hidden=true
+          else
+            row align-items="center" gap="space.s12" box-sizing="border-box" min-height="size.row-tall" padding-top="space.s6" padding-bottom="space.s6" padding-left="space.s8" padding-right="space.s8" testId=`list-row-${v.slug}`
+              ListDrawing(verse=v, scheme=scheme)
+              ListNames(verse=v)
+          if v.backTo != "" and asking != v.reference
+            HomePill(name=`Move ${v.reference} back`, label="Move back", press=ask(v.reference), icon="", id=`list-back-${v.slug}`)
+          if v.backTo != "" and asking == v.reference
+            column gap="space.s8" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId=`ask-${v.slug}`
+              text v.backAsk font="type.note-strong" color="hs.ink"
+              row gap="space.s8"
+                HomePill(name="Move back", label="Move back", press=yes, icon="", id="ask-yes")
+                HomePill(name="Keep", label="Keep", press=no, icon="", id="ask-no")
+      if list.removeId != "" and asking == "remove"
+        column gap="space.s8" margin-top="space.s20" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-rise duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-leave duration.exit ease-out both") testId="ask-list"
+          text list.removeAsk font="type.note-strong" color="hs.ink"
+          row gap="space.s8"
+            HomePill(name="Remove", label="Remove", press=yes, icon="", id="ask-yes")
+            HomePill(name="Keep", label="Keep", press=no, icon="", id="ask-no")
+      else if list.removeId != ""
+        column gap="space.s6" margin-top="space.s20"
+          button press=ask("remove") aria-label=`Remove ${list.removeName}` display="flex" justify-content="center" align-self="flex-start" box-sizing="border-box" min-height="size.target" padding-left="space.s8" padding-right="space.s8" border-radius="radius.r12" testId="list-remove"
+            :active
+              background-color = "hs.card"
+            text "Remove this list" font="type.strong" color="hs.miss"
+          text "Its plants stay in your field." font="type.small" color="hs.quiet"
+
+// What the device says of the text size: whether it is one of the
+// accessibility sizes (UIKit's category, a body of 28 pt or more; never on
+// the web, which has no such class).
+shape ListTextSize
+  accessibilityTextSize: bool
+
+// The page: below the accessibility text sizes its head is fixed above the
+// scroll of verses, as the current page's; at them (owner, q160) the head
+// scrolls with the verses, so a verse and Practice stay in reach, where the
+// current page's head fills the screen.
+component ListPage
+  props
+    list: ListShown
+    asking: string
+    scheme: string
+    practice: action
+    ask: action
+    yes: action
+    no: action
+    still: bool
+    chapter: string
+    read: action
+  resource listSize = exactViewport() as shape ListTextSize
+  view
+    column flex=1 min-height=0 testId="list-page"
+      column height=0 aria-hidden=true testId="list-band"
+      if not listSize.accessibilityTextSize
+        ListTop(list=list, scheme=scheme, practice=practice, chapter=chapter, read=read)
+      scroll id="list-scroll" navigationScroll="list-scroll" flex=1 min-height=0 testId="list-scroll"
+        if listSize.accessibilityTextSize
+          ListTop(list=list, scheme=scheme, practice=practice, chapter=chapter, read=read)
+        ListVerses(list=list, asking=asking, scheme=scheme, practice=practice, ask=ask, yes=yes, no=no, still=still)

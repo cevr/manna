@@ -6,7 +6,14 @@
 // and the time of its last good check, as one `persist` string, kept only
 // after each file is written), sends the asks, and draws the one quiet
 // status line at a chapter's foot (`PacksLine`). `packsFetch` is the Read
-// tab's first showing in a launch; `packsRetry` is Try again. A driver's
+// tab's first showing in a launch; `packsRetry` is Try again. Each pack is
+// asked by a mutation of its own, so its fetch is its own call: Exact hands
+// over a call's fetches one at a time, and one slow pack would hold back
+// those asked after it. An ask answers as soon as its pack settles, `more`
+// while it is out, and the pack's follow-up asks for its next settle
+// (`packsWait`), so each pack's line is kept the moment it lands, whatever
+// the others do. `packs.test.ts` holds this file to the packs `app.ts`
+// lists. A driver's
 // launch that names a fixture (HEARTSEED_PACKS_BASE, app.json's `env`)
 // also draws `PacksProbe` on Your verses, until the Read tab calls
 // `packsFetch` itself.
@@ -31,32 +38,135 @@ shape PackState
 
 shape PacksAnswer
   kept: string
+  at: number
   failed: bool
   landed: string
+  more: bool
 
 shape PacksBase
   base: string
   fixture: bool
+
+// Whether a pack's last answer said it is still out, and whether its last try failed.
+fn packsMoreOf(slot: option<PacksAnswer>): bool = match slot { case some(a) => a.more, case none => false }
+fn packsFailedOf(slot: option<PacksAnswer>): bool = match slot { case some(a) => a.failed, case none => false }
 
 members HeartseedExact
   resource packsTime = exactTime() as shape PacksTime
   resource packsPlace = packsBase() as shape PacksBase
   state packsKept = "" persist
   state packsLanded = ""
-  mutation packsFetched as shape PacksAnswer then packsTook
-  derive packsBusy = pending(packsFetched)
-  derive packsAnswer = match packsFetched { case some(a) => a, case none => PacksAnswer(kept=packsKept, failed=false, landed="") }
-  derive packsFailed = failed(packsFetched) or packsAnswer.failed
+  state packsKeptAt = 0
+  derive packsBusy = packsCommentaryBusy or packsXrefsBusy or packsTagsBusy or packsLexiconBusy or packsWordsBusy
+  derive packsFailed = packsCommentaryFailed or packsXrefsFailed or packsTagsFailed or packsLexiconFailed or packsWordsFailed
   resource packsShown = packsView(packsKept, packsBusy, packsFailed, packsLanded) as shape PacksState else empty()
 
   action packsFetch
-    send packsFetched = packsAsk(packsKept, false, packsTime.epochAtZero + performanceNow())
+    packsAskEach(false)
   action packsRetry
-    send packsFetched = packsAsk(packsKept, true, packsTime.epochAtZero + performanceNow())
-  action packsTook
-    packsKept = packsAnswer.kept
-    if packsAnswer.landed != ""
-      packsLanded = packsAnswer.landed
+    packsAskEach(true)
+  action packsAskEach(force: bool)
+    let now = packsTime.epochAtZero + performanceNow()
+    send packsCommentaryFetched = packsAsk("commentary", packsKept, force, now)
+    send packsXrefsFetched = packsAsk("xrefs", packsKept, force, now)
+    send packsTagsFetched = packsAsk("tags", packsKept, force, now)
+    send packsLexiconFetched = packsAsk("lexicon", packsKept, force, now)
+    send packsWordsFetched = packsAsk("words", packsKept, force, now)
+  // An answer of one pack: every pack's kept line as the data module knows
+  // it, kept only from an answer given after the one kept (packs' answers
+  // land in any order), and the pack's own landing.
+  action packsTake(answer: PacksAnswer)
+    if answer.at > packsKeptAt
+      packsKept = answer.kept
+      packsKeptAt = answer.at
+    if answer.landed != ""
+      packsLanded = packsLanded == "" ? answer.landed : packsLanded + " " + answer.landed
+
+  mutation packsCommentaryFetched as shape PacksAnswer then packsCommentaryTook
+  state packsCommentaryRound = 0
+  derive packsCommentaryMore = packsMoreOf(packsCommentaryFetched) and not failed(packsCommentaryFetched)
+  derive packsCommentaryBusy = pending(packsCommentaryFetched) or packsCommentaryMore
+  derive packsCommentaryFailed = failed(packsCommentaryFetched) or packsFailedOf(packsCommentaryFetched)
+  action packsCommentaryTook
+    match packsCommentaryFetched
+      case some(a)
+        packsTake(a)
+        if a.more
+          packsCommentaryRound = packsCommentaryRound + 1
+      case none
+  task packsCommentaryFollow when packsCommentaryMore key=packsCommentaryRound
+    after(1, packsCommentaryWaitNext)
+  action packsCommentaryWaitNext
+    send packsCommentaryFetched = packsWait("commentary", packsKept)
+
+  mutation packsXrefsFetched as shape PacksAnswer then packsXrefsTook
+  state packsXrefsRound = 0
+  derive packsXrefsMore = packsMoreOf(packsXrefsFetched) and not failed(packsXrefsFetched)
+  derive packsXrefsBusy = pending(packsXrefsFetched) or packsXrefsMore
+  derive packsXrefsFailed = failed(packsXrefsFetched) or packsFailedOf(packsXrefsFetched)
+  action packsXrefsTook
+    match packsXrefsFetched
+      case some(a)
+        packsTake(a)
+        if a.more
+          packsXrefsRound = packsXrefsRound + 1
+      case none
+  task packsXrefsFollow when packsXrefsMore key=packsXrefsRound
+    after(1, packsXrefsWaitNext)
+  action packsXrefsWaitNext
+    send packsXrefsFetched = packsWait("xrefs", packsKept)
+
+  mutation packsTagsFetched as shape PacksAnswer then packsTagsTook
+  state packsTagsRound = 0
+  derive packsTagsMore = packsMoreOf(packsTagsFetched) and not failed(packsTagsFetched)
+  derive packsTagsBusy = pending(packsTagsFetched) or packsTagsMore
+  derive packsTagsFailed = failed(packsTagsFetched) or packsFailedOf(packsTagsFetched)
+  action packsTagsTook
+    match packsTagsFetched
+      case some(a)
+        packsTake(a)
+        if a.more
+          packsTagsRound = packsTagsRound + 1
+      case none
+  task packsTagsFollow when packsTagsMore key=packsTagsRound
+    after(1, packsTagsWaitNext)
+  action packsTagsWaitNext
+    send packsTagsFetched = packsWait("tags", packsKept)
+
+  mutation packsLexiconFetched as shape PacksAnswer then packsLexiconTook
+  state packsLexiconRound = 0
+  derive packsLexiconMore = packsMoreOf(packsLexiconFetched) and not failed(packsLexiconFetched)
+  derive packsLexiconBusy = pending(packsLexiconFetched) or packsLexiconMore
+  derive packsLexiconFailed = failed(packsLexiconFetched) or packsFailedOf(packsLexiconFetched)
+  action packsLexiconTook
+    match packsLexiconFetched
+      case some(a)
+        packsTake(a)
+        if a.more
+          packsLexiconRound = packsLexiconRound + 1
+      case none
+  task packsLexiconFollow when packsLexiconMore key=packsLexiconRound
+    after(1, packsLexiconWaitNext)
+  action packsLexiconWaitNext
+    send packsLexiconFetched = packsWait("lexicon", packsKept)
+
+  mutation packsWordsFetched as shape PacksAnswer then packsWordsTook
+  state packsWordsRound = 0
+  derive packsWordsMore = packsMoreOf(packsWordsFetched) and not failed(packsWordsFetched)
+  derive packsWordsBusy = pending(packsWordsFetched) or packsWordsMore
+  derive packsWordsFailed = failed(packsWordsFetched) or packsFailedOf(packsWordsFetched)
+  action packsWordsTook
+    match packsWordsFetched
+      case some(a)
+        packsTake(a)
+        if a.more
+          packsWordsRound = packsWordsRound + 1
+      case none
+  task packsWordsFollow when packsWordsMore key=packsWordsRound
+    after(1, packsWordsWaitNext)
+  action packsWordsWaitNext
+    send packsWordsFetched = packsWait("words", packsKept)
+
   task packsLandedShown when packsLanded != "" key=packsLanded
     after(3000, packsLandedOver)
   action packsLandedOver
@@ -64,13 +174,16 @@ members HeartseedExact
 
 // The one quiet line at a chapter's foot: while a pack is on its way, and
 // for 3 seconds once packs first land. Nothing while every pack is kept.
+// It takes at most a quarter of the screen and scrolls inside it, so at
+// the largest text it never squeezes the chapter above it out of sight.
 component PacksLine
   props
     shown: PacksState
     still: bool
   view
     if shown.foot != ""
-      text shown.foot role="status" font="-exact-footnote" color="-exact-secondary-label" text-align="center" padding=16 opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="packs-line"
+      scroll flex-shrink=0 max-height="25%" opacity=1 animation=(still ? "hs-fade duration.fade easing.out both" : "hs-fade duration.ask easing.out both") -exact-exit-animation=(still ? "hs-fade-out duration.fade ease-out both" : "hs-fade-out duration.exit ease-out both") testId="packs-line-room"
+        text shown.foot role="status" font="type.small" color="hs.quiet" text-align="center" padding="space.s16" testId="packs-line"
 
 // A driver's fixture launch only: the Read tab's first showing as a button,
 // Try again when the last try failed, and the line.
@@ -81,10 +194,10 @@ component PacksProbe
     retry: action
     still: bool
   view
-    column gap=8 padding=20 testId="packs-probe"
-      button press=fetch buttonStyle="bordered" testId="packs-fetch"
-        text "Fetch the packs"
+    column gap="space.s8" align-items="flex-start" padding="space.s20" testId="packs-probe"
+      button press=fetch appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="packs-fetch"
+        text "Fetch the packs" font="type.label"
       if shown.retry
-        button press=retry buttonStyle="bordered" testId="packs-retry"
-          text "Try again"
+        button press=retry appearance="none" min-height="size.target" padding-left="space.s18" padding-right="space.s18" display="flex" align-items="center" justify-content="center" border-radius="radius.pill" border-width="line.edge" border-style="solid" border-color="hs.ink" color="hs.ink" -exact-press-opacity="opacity.pressed" testId="packs-retry"
+          text "Try again" font="type.label"
       PacksLine(shown=shown, still=still)

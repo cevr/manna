@@ -9,7 +9,9 @@
  */
 
 import { LIMIT_LINE, SINGLES_LIMIT_LINE } from '@manna/heartseed/chooser';
+import { fieldOf, harvestText, sownText } from '@manna/heartseed/field';
 import {
+  fieldPassagesWith,
   furrowsOf,
   greetingOf,
   minuteOf,
@@ -26,7 +28,7 @@ import { Option } from 'effect';
 
 import { slugOf } from '../garden/view';
 import { homeOf, homeStartOf, type HomeShown } from '../home/home';
-import { listPageOf } from '../list/page';
+import { DRAWN as DRAWN_OF, listPageOf } from '../list/page';
 import { sessionWire } from '../today/sources';
 import type { HomeCase } from './home-model';
 
@@ -79,8 +81,12 @@ export const sidesOf = (each: HomeCase) => {
     ...furrows.flatMap((furrow) => furrow.plants.map((plant) => plant.reference)),
     ...singles.map((plant) => plant.reference),
   ];
+  const field = fieldOf(garden, fieldPassagesWith(lists, singleVersesOf([], passages)));
   const oracle = {
     greeting: greetingOf(minuteOf(each.at.now, each.at.offset)).words,
+    greetingIcon: greetingOf(minuteOf(each.at.now, each.at.offset)).icon,
+    sown: sownText(field.sown),
+    harvest: harvestText(field.harvest),
     line: Option.getOrElse(card.headline, () => ''),
     parts: Option.getOrElse(card.parts, () => ''),
     action: card.action._tag,
@@ -109,6 +115,11 @@ export const sidesOf = (each: HomeCase) => {
       const furrow = furrows.find((row) => row.id === list.id);
       return {
         caption: listCaptionOf(furrow?.plants ?? []),
+        icon: furrow?.icon ?? '',
+        rows: (furrow?.plants ?? []).map((plant) => [
+          plant.stage === 'not planted' ? '' : DRAWN_OF[plant.stage],
+          Option.isSome(startOf(each.view, garden, plant.reference)),
+        ]),
         start: start._tag,
         line: Option.getOrElse(listLineOf(start), () => ''),
         removes: list.range === undefined ? '' : passageReference(list.range),
@@ -117,6 +128,9 @@ export const sidesOf = (each: HomeCase) => {
   };
   const ported = {
     greeting: port.greeting,
+    greetingIcon: port.greetingIcon,
+    sown: port.sown,
+    harvest: port.harvest,
     line: port.card.line,
     parts: port.card.parts,
     action:
@@ -141,6 +155,8 @@ export const sidesOf = (each: HomeCase) => {
       const page = listPageOf(input, row.slug);
       return {
         caption: page.caption,
+        icon: page.icon,
+        rows: page.verses.map((verse) => [verse.drawn, verse.starts]),
         start:
           { open: 'Open', weakest: 'Weakest', learn: 'Learn', none: 'None' }[page.start] ??
           page.start,
@@ -190,7 +206,7 @@ export const runSeeds = (
   return reach as Reach;
 };
 
-/** The invariants every answer holds, each `true` when it holds. */
+/** The invariants every answer holds, each `true` when it holds. The greeting's own sun or moon, which the current home draws beside it, is the one icon home answers (`noIconOrGlyph` reads the rest). */
 export const invariantsOf = (port: HomeShown) => {
   const rowVerses = new Set(port.rows.flatMap((row) => row.plants.map((plant) => plant.reference)));
   const marks = new Map<string, string>();
@@ -200,7 +216,8 @@ export const invariantsOf = (port: HomeShown) => {
     if ((marks.get(plant.reference) ?? mark) !== mark) oneMark = false;
     marks.set(plant.reference, mark);
   }
-  const strings = stringsIn(port);
+  const { greetingIcon: _greeting, ...rows } = port;
+  const strings = stringsIn(rows);
   const ids = port.rows.flatMap((row) => row.plants.map((plant) => plant.id));
   return {
     singlesSectionExactlyWhenSingles: port.singlesShown === port.singles.length > 0,

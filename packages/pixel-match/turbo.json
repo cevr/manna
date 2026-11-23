@@ -1,0 +1,16 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/heartseed-exact/app.contract",
+        "$TURBO_ROOT$/apps/heartseed-exact/features/*.contract",
+        "$TURBO_ROOT$/apps/hymnal-exact/app.contract",
+        "$TURBO_ROOT$/apps/hymnal-exact/features/*.contract"
+      ]
+    }
+  }
+}
