@@ -4,12 +4,15 @@
  * The web build's budget (`tools/web/budget.json`), in two halves. A byte
  * count does not hang on the host's load: each is what every one of three
  * or more drive-web `measure` runs counted, at any load, and runs that
- * count differently are refused, never averaged. A time does hang on it:
+ * count differently are refused, never averaged; so are runs that measure
+ * different pages or names, in whatever order they come. A time does hang on it:
  * each is the median of five or more runs at a load of 5 or less, and a
  * run over that load never sets one. The runs each half was taken from are
  * kept beside it (`byteRuns`, the byte counts alone, and `runs`), so its
  * test (`src/web/budget.test.ts`) can take the limits again. A measure
- * passes when each byte count is within a tenth over its limit, and each
+ * (`overOf`) fails on a value with no limit, unless `UNBUDGETED` names it
+ * with its reason, and on a limit with no value; it passes when each byte
+ * count is within a tenth over its limit, and each
  * time within a tenth or `TIME_SLACK_MS` over, whichever is more: the
  * floor lies between the widest spread of a time across the quiet runs
  * and twice it, the spread of one sitting and the drift between sittings
@@ -74,8 +77,73 @@ const only = (measured: Measured, keep: (name: string) => boolean): Measured =>
     ]),
   );
 
-/** Each time's median across `runs`, which must all be quiet. */
+/** Every page and name a measure holds, as `<page> <name>`, sorted. */
+export const entriesOf = (measured: Measured): ReadonlyArray<string> =>
+  Object.entries(measured)
+    .flatMap(([key, values]) => Object.keys(values).map((name) => `${key} ${name}`))
+    .toSorted();
+
+/**
+ * Refuses `runs` unless every one measured the same pages and names: a
+ * page or name one run has and another lacks is named, whichever run
+ * comes first, so no order of the same runs takes a limit from some and
+ * leaves it out for the rest.
+ */
+export const sameEntries = (runs: ReadonlyArray<Run>): void => {
+  const all = new Set(runs.flatMap((run) => entriesOf(run.measured)));
+  const odd = [...all].toSorted().flatMap((entry) => {
+    const lacking = runs.flatMap((run, at) =>
+      entriesOf(run.measured).includes(entry) ? [] : [at + 1],
+    );
+    return lacking.length === 0 ? [] : [`${entry}: not in run ${lacking.join(', ')}`];
+  });
+  if (odd.length > 0)
+    throw new Error(`the runs measure different pages or names:\n${odd.join('\n')}`);
+};
+
+/**
+ * The measured values a page has no limit for, by `<page> <name>`, each
+ * with why it is measured and not budgeted. None is today: every value a
+ * measure holds has a limit.
+ */
+export const UNBUDGETED: Readonly<Record<string, string>> = {};
+
+/**
+ * What a measure breaks of `limits`: each value over its allowance (times
+ * only when `timesChecked`), each value with no limit and not listed in
+ * `unbudgeted`, and each limit with no value measured.
+ */
+export const overOf = (
+  measured: Measured,
+  limits: Measured,
+  timesChecked: boolean,
+  unbudgeted: Readonly<Record<string, string>> = UNBUDGETED,
+): ReadonlyArray<string> => {
+  /** What one measured value breaks: its limit's allowance, or having none. */
+  const breaks = (key: string, name: string, value: number): ReadonlyArray<string> => {
+    const limit = limits[key]?.[name];
+    if (limit === undefined)
+      return unbudgeted[`${key} ${name}`] === undefined
+        ? [`${key} ${name} ${value}: no limit`]
+        : [];
+    if (isTime(name) && !timesChecked) return [];
+    const allowed = allowedOver(name, limit);
+    return value > allowed ? [`${key} ${name} ${value} > ${Math.floor(allowed)}`] : [];
+  };
+  const over = Object.entries(measured).flatMap(([key, values]) =>
+    Object.entries(values).flatMap(([name, value]) => breaks(key, name, value)),
+  );
+  const unmeasured = Object.entries(limits).flatMap(([key, values]) =>
+    Object.keys(values)
+      .filter((name) => measured[key]?.[name] === undefined)
+      .map((name) => `${key} ${name}: limited, not measured`),
+  );
+  return [...over, ...unmeasured];
+};
+
+/** Each time's median across `runs`, which must all be quiet and measure the same names. */
 export const timesOf = (runs: ReadonlyArray<Run>): Measured => {
+  sameEntries(runs);
   const loaded = runs.filter((run) => run.load > MAX_LOAD);
   if (loaded.length > 0)
     throw new Error(
@@ -92,10 +160,11 @@ export const timesOf = (runs: ReadonlyArray<Run>): Measured => {
   return limits;
 };
 
-/** Each byte count every one of `runs` measured: refused when fewer than `LEAST_BYTE_RUNS`, or when any two differ. */
+/** Each byte count every one of `runs` measured: refused when fewer than `LEAST_BYTE_RUNS`, when they measure different pages or names, or when any two differ. */
 export const bytesOf = (runs: ReadonlyArray<Run>): Measured => {
   if (runs.length < LEAST_BYTE_RUNS)
     throw new Error(`${runs.length} runs for the byte counts; ${LEAST_BYTE_RUNS} needed`);
+  sameEntries(runs);
   const limits: Measured = {};
   const differ: Array<string> = [];
   for (const [key, values] of Object.entries(runs[0]?.measured ?? {})) {
@@ -110,10 +179,13 @@ export const bytesOf = (runs: ReadonlyArray<Run>): Measured => {
   return limits;
 };
 
-/** The limits: each page's byte counts from `byteRuns`, then its times from the quiet `runs`. */
+/** The limits: each page's byte counts from `byteRuns`, then its times from the quiet `runs`, both halves over the same pages. */
 export const limitsOf = (byteRuns: ReadonlyArray<Run>, runs: ReadonlyArray<Run>): Measured => {
   const bytes = bytesOf(byteRuns);
   const times = timesOf(runs);
+  const pages = (measured: Measured) => Object.keys(measured).toSorted().join(', ');
+  if (pages(bytes) !== pages(times))
+    throw new Error(`the byte runs measure ${pages(bytes)}; the time runs ${pages(times)}`);
   return Object.fromEntries(
     Object.entries(bytes).map(([key, values]) => [key, { ...values, ...times[key] }]),
   );
@@ -145,7 +217,10 @@ export const fromOf = (byteRuns: number, runs: number): string =>
 
 /** The budget from `reports`: bytes from them all, times from the quiet ones, or from `kept`'s runs when given. */
 export const budgetOf = (reports: ReadonlyArray<Run>, kept?: ReadonlyArray<Run>): Budget => {
+  sameEntries(reports);
   const runs = (kept ?? reports.filter((run) => run.load <= MAX_LOAD)).map(rounded);
+  const timed = (run: Run): Run => ({ ...run, measured: only(run.measured, isTime) });
+  sameEntries([...reports, ...runs].map(timed));
   const byteRuns = reports.map((run) =>
     rounded({ ...run, measured: only(run.measured, (name) => !isTime(name)) }),
   );

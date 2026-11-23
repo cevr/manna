@@ -22,9 +22,10 @@
  *   (`src/web/pages.ts`), and an unknown hymn is the not-found page;
  * - `measure`: the bytes and times of `/` and `/hymns/100`, cold (cache
  *   emptied) and warm, five each, medians against `tools/web/budget.json`
- *   (bytes always; times only at a load of 5 or less, by `allowedOver` of
- *   `tools/web/budget.ts`, which writes the budget from five or more such
- *   runs' `--json` reports), and `--throttle` measures over a slow phone
+ *   (bytes always; times only at a load of 5 or less, by `overOf` of
+ *   `tools/web/budget.ts`, which also fails a value with no limit unless
+ *   its `UNBUDGETED` names why, and writes the budget from such runs'
+ *   `--json` reports), and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
  * - `shipped`: `/` reads no hymn's chords and no indexes, `/hymns/100` its
  *   own chords, its neighbours' and the indexes once each, and a chords
@@ -61,7 +62,7 @@ import { recordingKey, setOf } from '@manna/hymnal/recordings';
 import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
 import { answer } from './recordings.ts';
-import { allowedOver, type Budget, isTime, MAX_LOAD, TIME_SLACK_MS } from './web/budget.ts';
+import { type Budget, MAX_LOAD, overOf, TIME_SLACK_MS } from './web/budget.ts';
 import { CALL_MS, type Chrome, type Page, launchChrome } from './web/chrome.ts';
 import { makeStall } from './web/stall.ts';
 
@@ -588,15 +589,8 @@ const measure = async (page: Page) => {
     console.log('throttled (150 ms, 1.6 Mbit/s down): measured only, no budget');
     return;
   }
-  const over: Array<string> = [];
   const timesChecked = load <= MAX_LOAD;
-  for (const [key, values] of Object.entries(measured))
-    for (const [name, value] of Object.entries(values)) {
-      const limit = limits[key]?.[name];
-      if (limit === undefined || (isTime(name) && !timesChecked)) continue;
-      const allowed = allowedOver(name, limit);
-      if (value > allowed) over.push(`${key} ${name} ${value} > ${Math.floor(allowed)}`);
-    }
+  const over = overOf(measured, limits, timesChecked);
   check(
     `bytes and times within tools/web/budget.json + 10% (a time + ${TIME_SLACK_MS} ms at least) (times ${timesChecked ? 'checked' : `not checked: load ${load.toFixed(1)}`})`,
     limits['/ cold'] !== undefined && over.length === 0,

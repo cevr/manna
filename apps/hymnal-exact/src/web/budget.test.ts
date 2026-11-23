@@ -27,10 +27,12 @@ import {
   limitsOf,
   MAX_LOAD,
   medianOf,
+  overOf,
   type Run,
   spreadOf,
   TIME_SLACK_MS,
   timesOf,
+  UNBUDGETED,
 } from '../../tools/web/budget.ts';
 
 const tools = join(import.meta.dir, '../../tools');
@@ -96,11 +98,74 @@ describe('the web budget', () => {
     expect(allowedOver('bytes', 1000)).toBeCloseTo(1100);
   });
 
-  test('drive-web checks by the budget module, with no floor of its own', () => {
+  test('refuses, in every order, runs that measure different pages or names', () => {
+    const page = { bytes: 100, html: 10, rowMs: 50 };
+    const plain = (load: number): Run => ({ load, measured: { '/ cold': page, '/ warm': page } });
+    const odd: ReadonlyArray<[string, Run]> = [
+      [
+        'a name more',
+        { load: 2, measured: { '/ cold': { ...page, newKind: 20 }, '/ warm': page } },
+      ],
+      [
+        'a name less',
+        { load: 2, measured: { '/ cold': { bytes: 100, rowMs: 50 }, '/ warm': page } },
+      ],
+      [
+        'a time less',
+        { load: 2, measured: { '/ cold': { bytes: 100, html: 10 }, '/ warm': page } },
+      ],
+      ['a page less', { load: 2, measured: { '/ cold': page } }],
+      ['a page more', { load: 2, measured: { '/ cold': page, '/ warm': page, '/x': page } }],
+    ];
+    /** Every order of `runs`. */
+    const orders = (runs: ReadonlyArray<Run>): ReadonlyArray<ReadonlyArray<Run>> => {
+      if (runs.length <= 1) return [runs];
+      return runs.flatMap((first, at) =>
+        orders(runs.toSpliced(at, 1)).map((rest) => [first, ...rest]),
+      );
+    };
+    const same = [1, 2, 3, 4, 5].map(plain);
+    expect(budgetOf(same).limits).toEqual({ '/ cold': page, '/ warm': page });
+    for (const [what, one] of odd) {
+      const mixed = [...same.slice(1), one];
+      const all = orders(mixed);
+      expect(all.length).toBe(120);
+      for (const each of all) {
+        expect(() => budgetOf(each), what).toThrow('different pages or names');
+        expect(() => bytesOf(each)).toThrow('different pages or names');
+      }
+      expect(() => budgetOf([plain(9), plain(9), plain(9)], [...same.slice(1), one])).toThrow(
+        'different pages or names',
+      );
+    }
+  });
+
+  test('a measure fails on a value with no limit, unless named unbudgeted with a reason, and on a limit with no value', () => {
+    const limits = { '/ cold': { bytes: 100, rowMs: 50 } };
+    expect(overOf({ '/ cold': { bytes: 100, rowMs: 50 } }, limits, true)).toEqual([]);
+    expect(overOf({ '/ cold': { bytes: 100, rowMs: 999 } }, limits, false)).toEqual([]);
+    expect(overOf({ '/ cold': { bytes: 111, rowMs: 50 } }, limits, true)).toEqual([
+      '/ cold bytes 111 > 110',
+    ]);
+    const more = { '/ cold': { bytes: 100, rowMs: 50, newKind: 20 }, '/x': { bytes: 1 } };
+    expect(overOf(more, limits, true)).toEqual([
+      '/ cold newKind 20: no limit',
+      '/x bytes 1: no limit',
+    ]);
+    expect(
+      overOf(more, limits, true, { '/ cold newKind': 'a reason', '/x bytes': 'another' }),
+    ).toEqual([]);
+    expect(overOf({ '/ cold': { rowMs: 50 } }, limits, true)).toEqual([
+      '/ cold bytes: limited, not measured',
+    ]);
+    expect(Object.values(UNBUDGETED).every((reason) => reason.length > 0)).toBe(true);
+  });
+
+  test('drive-web checks by the budget module, with no floor or rule of its own', () => {
     const drive = readFileSync(join(tools, 'drive-web.ts'), 'utf8');
     expect(drive).toContain("from './web/budget.ts'");
-    expect(drive).toContain('allowedOver(name, limit)');
-    expect(drive).not.toMatch(/const TIME_SLACK_MS|limit \+ \d|write-budget/u);
+    expect(drive).toContain('overOf(measured, limits, timesChecked)');
+    expect(drive).not.toMatch(/const TIME_SLACK_MS|limit \+ \d|write-budget|limit === undefined/u);
   });
 
   test('a median of an even count is the mean of the middle two', () => {
