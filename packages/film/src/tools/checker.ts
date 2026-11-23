@@ -14,7 +14,7 @@ import {
   resolveShort,
   shortKey,
 } from '../core/shorts.ts';
-import { type PageOpenError, lumaOf, steadyOf } from './browser.ts';
+import { type PageOpenError, driftOf, lumaOf } from './browser.ts';
 import {
   loopPicture,
   lumaDiff,
@@ -70,14 +70,14 @@ const once =
     });
 
 /**
- * A hold's frames as the checks read them: each probed, and its steady
- * colours over `area` read only once its probe holds still against the
- * anchor's (the pixels are asked only of a frame the marks cannot tell
- * moved).
+ * A hold's frames as the checks read them: each probed, and its drift from
+ * the anchor drawn frozen over `area`, read only once its probe holds still
+ * against the anchor's (the pixels are asked only of a frame the marks
+ * cannot tell moved).
  */
 interface HoldReads {
   readonly probe: (i: number) => Effect.Effect<Probed, FrameError>;
-  readonly steady: (i: number) => Effect.Effect<ReadonlyArray<number>, FrameError>;
+  readonly drift: (anchor: number, i: number) => Effect.Effect<ReadonlyArray<number>, FrameError>;
   readonly area: LumaArea;
 }
 
@@ -86,8 +86,23 @@ const heldAgainst = (reads: HoldReads, anchor: number, i: number) =>
   Effect.gen(function* () {
     const probed = [yield* reads.probe(anchor), yield* reads.probe(i)];
     if (!heldStill(probed)) return false;
-    const colours = [yield* reads.steady(anchor), yield* reads.steady(i)];
-    return framesHeld(probed, { area: reads.area, colours });
+    const drifts = [yield* reads.drift(anchor, i)];
+    return framesHeld(probed, { area: reads.area, drifts });
+  });
+
+/** How far each frame of `opening` after its first changed from the first, drawn frozen over `area` (`drift`). */
+const openDrifts = (
+  pages: ExportPages,
+  workers: number,
+  opening: ReadonlyArray<number>,
+  area: LumaArea,
+) =>
+  Option.match(Arr.head(opening), {
+    onNone: () => Effect.succeed<ReadonlyArray<ReadonlyArray<number>>>([]),
+    onSome: (from) =>
+      Effect.forEach(opening.slice(1), (i) => pages.use((page) => driftOf(page, from, i, area)), {
+        concurrency: workers,
+      }),
   });
 
 /** What probing across one hold candidate found, and how many frames it drew. */
@@ -135,7 +150,7 @@ const confirmHold = (
     const area: LumaArea = { x: 0, y: 0, w: info.width, h: info.height, ...SHORT_RULES.loopGrid };
     const reads: HoldReads = {
       probe: once(seen, (i) => pages.call('probe', i)),
-      steady: once(new Map(), (i) => pages.use((page) => steadyOf(page, i, area))),
+      drift: (anchor, i) => pages.use((page) => driftOf(page, anchor, i, area)),
       area,
     };
     const ticks = holdTicks(hold, info.fps);
@@ -330,11 +345,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               ...SHORT_RULES.loopGrid,
             };
             const lumaAt = (i: number) => pool.use((page) => lumaOf(page, i, frame));
-            const colours = yield* Effect.forEach(
-              opening,
-              (i) => pool.use((page) => steadyOf(page, i, frame)),
-              { concurrency: workers },
-            );
+            const drifts = yield* openDrifts(pool, workers, opening, frame);
             const [first, last] = yield* Effect.all([lumaAt(0), lumaAt(info.frames - 1)], {
               concurrency: 2,
             });
@@ -342,13 +353,13 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               ...words,
               ...unsafe,
               ...Option.toArray(
-                stillOpen(cut.id, open, SHORT_RULES.motionBy, { area: frame, colours }),
+                stillOpen(cut.id, open, SHORT_RULES.motionBy, { area: frame, drifts }),
               ),
               ...Option.toArray(titled),
               ...Option.toArray(loopPicture(cut.id, first, last)),
             ];
             yield* Effect.log(
-              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + colours.length + 2} loop=${lumaDiff(first, last).toFixed(3)} findings=${findings.length}`,
+              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + drifts.length + 3} loop=${lumaDiff(first, last).toFixed(3)} findings=${findings.length}`,
             );
             return findings;
           }),
@@ -396,19 +407,15 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               h: info.height,
               ...SHORT_RULES.loopGrid,
             };
-            const colours = yield* Effect.forEach(
-              opening,
-              (i) => pool.use((page) => steadyOf(page, i, area)),
-              { concurrency: workers },
-            );
+            const drifts = yield* openDrifts(pool, workers, opening, area);
             const findings = [
               ...unsafe,
               ...Option.toArray(
-                stillOpen(vertical.id, open, SHORT_RULES.motionBy, { area, colours }),
+                stillOpen(vertical.id, open, SHORT_RULES.motionBy, { area, drifts }),
               ),
             ];
             yield* Effect.log(
-              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length + colours.length} findings=${findings.length}`,
+              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length + drifts.length + 1} findings=${findings.length}`,
             );
             return findings;
           }),

@@ -53,7 +53,7 @@ export interface CallErrors {
   readonly contact: ContactFailed;
   readonly look: FrameFailed;
   readonly luma: FrameFailed;
-  readonly steady: FrameFailed;
+  readonly drift: FrameFailed;
   readonly drawTimes: FrameFailed;
   readonly scenes: FrameFailed;
   readonly still: FrameFailed;
@@ -95,9 +95,9 @@ const CALLS: CallPolicies = {
   contact: { timeout: SHEET_TIMEOUT, fail: (_, reason) => ContactFailed.make({ reason }) },
   look: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   luma: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
-  steady: {
+  drift: {
     timeout: FRAME_TIMEOUT,
-    fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
+    fail: ([, frame], reason) => FrameFailed.make({ frame, reason }),
   },
   drawTimes: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   scenes: { timeout: FRAME_TIMEOUT, fail: (_, reason) => FrameFailed.make({ frame: 0, reason }) },
@@ -192,26 +192,26 @@ export const lumaOf = (page: FramePage, i: number, area: LumaArea) =>
     );
 
 /**
- * A steady frame's colours as a page hands them back: red, green and blue
- * for each cell of `area`'s grid; an empty or short read is refused, so
- * motion is never judged on nothing.
+ * A drift as a page hands it back: one value for each cell of `area`'s
+ * grid; an empty or short read is refused, so motion is never judged on
+ * nothing.
  */
-export const colourGrid = (area: LumaArea) =>
+export const driftGrid = (area: LumaArea) =>
   Schema.Array(Schema.Finite).check(
     Schema.makeFilter(
       (cells) =>
-        cells.length === 3 * area.cols * area.rows ||
-        `${cells.length} colour values for a ${area.cols}×${area.rows} grid`,
+        cells.length === area.cols * area.rows ||
+        `${cells.length} drift values for a ${area.cols}×${area.rows} grid`,
     ),
   );
 
-/** Frame `i` drawn steady on `page` (`steady`): each cell of `area`'s grid's mean colour (`colourGrid`). */
-export const steadyOf = (page: FramePage, i: number, area: LumaArea) =>
+/** How far frame `i` drawn frozen on `page` changed from frame `from` (`drift`), cell by cell of `area`'s grid (`driftGrid`). */
+export const driftOf = (page: FramePage, from: number, i: number, area: LumaArea) =>
   page
-    .call('steady', i, area)
+    .call('drift', from, i, area)
     .pipe(
       Effect.flatMap((cells) =>
-        Schema.decodeEffect(colourGrid(area))(cells).pipe(
+        Schema.decodeEffect(driftGrid(area))(cells).pipe(
           Effect.mapError((error) => FrameFailed.make({ frame: i, reason: error.message })),
         ),
       ),

@@ -50,7 +50,39 @@ const strokes = (film: Film, opts: RenderOptions) =>
     return sink.inks.flatMap((m) => m.points.flat()).join(' ');
   });
 
+/** Every image the frame at `T` draws on its canvas (the grain's sheet among them), by its canvas's number, drawn with `opts`. */
+const images = (film: Film, T: number, opts: RenderOptions) =>
+  withDom(() => {
+    const target = recorder(film.width, film.height);
+    film.render(target.ctx, T, opts);
+    return target.images.map((d) => `#${d.image.made}@${d.alpha}`).join(' ');
+  });
+
+/** Two frames on boil ticks 6 and 9 (`boilTick`, 12 a second), whose grain sheets differ. */
+const TICKS = [0.5, 0.75] as const;
+
 describe('a steady draw (`RenderOptions.boil`)', () => {
+  test("a film's grain moves with its frame's tick, and holds on the frozen one", () => {
+    const film = held();
+    const [a, b] = TICKS.map((T) => images(film, T, {}));
+    expect(a).not.toBe(b);
+    const [fa, fb] = TICKS.map((T) => images(film, T, { boil: 0 }));
+    expect(fa?.length).toBeGreaterThan(0);
+    expect(fa).toBe(fb);
+  });
+
+  test("a short page's own grain, above and below its band, holds on the frozen tick too", () => {
+    const short = createShort(held(), {
+      id: 'cut',
+      title: 'Cut',
+      spans: [{ scene: 'held', from: { at: 'start' }, to: { at: 'end' } }],
+    });
+    const [a, b] = TICKS.map((T) => images(short, T, { captions: false }));
+    expect(a).not.toBe(b);
+    const [fa, fb] = TICKS.map((T) => images(short, T, { boil: 0, captions: false }));
+    expect(fa).toBe(fb);
+  });
+
   test('a held stroke boils frame to frame, and draws the same on one tick', () => {
     const film = held();
     const boiling = strokes(film, {});

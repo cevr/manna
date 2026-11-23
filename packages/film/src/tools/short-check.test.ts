@@ -7,6 +7,7 @@ import type { Phrase } from '../core/phrases.ts';
 import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
 import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
 import { type DrawnPicture, PICTURE_STEP } from './check.ts';
+import { cellDrift } from '../player/dom.ts';
 import {
   loopGap,
   loopPicture,
@@ -70,16 +71,10 @@ const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] }
 
 /** The band of a 1080 × 1920 short page, on the grid the checks read (`SHORT_RULES.loopGrid`). */
 const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid };
-const CELLS = BAND.cols * BAND.rows;
-
-/** A steady band whose cell `k` is the colour `at(k)`: red, green and blue a cell. */
-const band = (at: (k: number) => readonly [number, number, number]): ReadonlyArray<number> =>
-  Arr.flatMap(Arr.makeBy(CELLS, at), (rgb) => [...rgb]);
-
-/** The band drawn the same, frame after frame. */
+/** The band drawn the same, frame after frame: no cell drifts. */
 const HELD: DrawnPicture = {
   area: BAND,
-  colours: [band(() => [128, 128, 128]), band(() => [128, 128, 128])],
+  drifts: [Arr.makeBy(BAND.cols * BAND.rows, () => 0)],
 };
 
 describe('shortLength', () => {
@@ -272,40 +267,54 @@ describe('the open', () => {
     expect(Option.isSome(stillOpen('probe', [a, b], 0.5, HELD))).toBe(true);
   });
 
-  describe('as drawn steady: every cell of the band, every channel', () => {
-    /** The open's nine frames, as `openFrames(30)` reads them, `t` of 1 through it. */
-    const open = (draw: (t: number) => ReadonlyArray<number>): DrawnPicture => ({
-      area: BAND,
-      colours: Arr.makeBy(openFrames(30).length, (k) => draw(k / 8)),
-    });
-    /** A painted plate filling the band, pushed in about its centre to `zoom`. */
-    const plate = (zoom: number) =>
-      band((k) => {
-        const c = (k % BAND.cols) - BAND.cols / 2;
-        const r = Math.floor(k / BAND.cols) - BAND.rows / 2;
-        const v = 128 + 60 * Math.sin((c * zoom) / 3) * Math.cos((r * zoom) / 3);
+  describe('as drawn frozen: every pixel against the first frame', () => {
+    /** A strip of band on a grid whose cells are the band's own size (17 × 18 px), small enough to paint in a test. */
+    const AREA: LumaArea = { x: 0, y: 620, w: 272, h: 162, cols: 16, rows: 9 };
+    type Rgb = readonly [number, number, number];
+    /** `AREA`'s pixels, RGBA, each `paint(x, y)`. */
+    const raster = (paint: (x: number, y: number) => Rgb): Uint8ClampedArray => {
+      const out = new Uint8ClampedArray(AREA.w * AREA.h * 4);
+      for (let y = 0; y < AREA.h; y++)
+        for (let x = 0; x < AREA.w; x++) out.set([...paint(x, y), 255], (y * AREA.w + x) * 4);
+      return out;
+    };
+    /** The open's nine frames, `t` of 1 through it, through the page's reducer (`cellDrift`). */
+    const open = (paint: (t: number) => (x: number, y: number) => Rgb): DrawnPicture => {
+      const frames = Arr.makeBy(openFrames(30).length, (k) => raster(paint(k / 8)));
+      const first = frames[0] ?? raster(paint(0));
+      return { area: AREA, drifts: frames.slice(1).map((f) => cellDrift(first, f, AREA)) };
+    };
+    /** A painted plate pushed in about its centre to `zoom`, under a fixed grain. */
+    const plate =
+      (zoom: number) =>
+      (x: number, y: number): Rgb => {
+        const v =
+          128 +
+          60 * Math.sin(((x - 136) * zoom) / 9) * Math.cos(((y - 81) * zoom) / 9) +
+          3 * Math.sin(x * 12.9898 + y * 78.233);
         return [v, v * 0.8, v * 0.6];
-      });
-    /** Teal paper with a cell (`c`, `r`) coloured `rgb`. */
-    const touched = (c: number, r: number, rgb: readonly [number, number, number]) =>
-      band((k): readonly [number, number, number] => {
-        if (k === r * BAND.cols + c) return rgb;
-        return [76, 126, 146];
-      });
+      };
+    const TEAL: Rgb = [76, 126, 146];
+    const RUST: Rgb = [228, 93, 0];
+    /** Teal paper with a block 20 × 16 px of `rgb` at (`left`, 70). */
+    const block = (left: number, rgb: Rgb) => (x: number, y: number) => {
+      if (x >= left && x < left + 20 && y >= 70 && y < 86) return rgb;
+      return TEAL;
+    };
     const nothing = Arr.makeBy(openFrames(30).length, () => frame());
-    /** A held diagonal stroke across most of the band: its box covers cells (10..50, 2..30). */
+    /** A held diagonal stroke across most of the strip: its box covers cells (1..14, 0..8). */
     const diagonal: InkMark = {
       kind: 'stroke',
       scene: 'a',
       points: [
-        [170, 670],
-        [860, 1300],
+        [20, 625],
+        [250, 775],
       ],
       width: 6,
-      x: 170,
-      y: 670,
-      w: 690,
-      h: 630,
+      x: 20,
+      y: 625,
+      w: 230,
+      h: 150,
       alpha: 1,
       order: 0,
       scale: 1,
@@ -314,24 +323,11 @@ describe('the open', () => {
       texts: [],
       inks: [diagonal],
     }));
-    /** Rust that slides from cell (`from`, row 20) to (`from` + 5, row 20). */
-    const slide = (from: number) =>
-      open((t) => touched(from + Math.round(5 * t), 20, [228, 93, 0]));
+    const moves = (picture: DrawnPicture, probed: ReadonlyArray<Probed> = nothing) =>
+      Option.isNone(stillOpen('cut', probed, 0.5, picture));
 
-    test('a full-bleed painting the camera pushes in on, with no mark on it, moves', () => {
-      expect(
-        Option.isNone(
-          stillOpen(
-            'cut',
-            nothing,
-            0.5,
-            open((t) => plate(1 + 0.02 * t)),
-          ),
-        ),
-      ).toBe(true);
-    });
-
-    test('the same painting held, drawn steady, is a still open', () => {
+    test('a full-bleed painting the camera pushes in on moves; the same plate held, its grain frozen, is a still open', () => {
+      expect(moves(open((t) => plate(1 + 0.02 * t)))).toBe(true);
       expect(
         Option.getOrThrow(
           stillOpen(
@@ -344,33 +340,60 @@ describe('the open', () => {
       ).toBe('still open');
     });
 
+    test('a dark edge the camera slides 10 px inside one cell column moves, though its cells keep their means', () => {
+      const CREAM: Rgb = [239, 230, 212];
+      const SLATE: Rgb = [32, 43, 51];
+      /** A stripe 6 × 140 px from (`left`, 10) on cream: the slide's old and new pixels never overlap. */
+      const stripe = (left: number) => (x: number, y: number) => {
+        if (x >= left && x < left + 6 && y >= 10 && y < 150) return SLATE;
+        return CREAM;
+      };
+      const meanOfColumn = (pixels: Uint8ClampedArray) => {
+        let sum = 0;
+        for (let y = 18; y < 144; y++)
+          for (let x = 0; x < 17; x++) sum += pixels[(y * AREA.w + x) * 4] ?? 0;
+        return sum;
+      };
+      expect(meanOfColumn(raster(stripe(1)))).toBe(meanOfColumn(raster(stripe(11))));
+      expect(moves(open((t) => stripe(1 + Math.round(10 * t))))).toBe(true);
+      expect(moves(open(() => stripe(1)))).toBe(false);
+    });
+
     test('a block moving beside a held diagonal, and inside its box, moves', () => {
-      expect(Option.isNone(stillOpen('cut', inked, 0.5, slide(52)))).toBe(true);
-      expect(Option.isNone(stillOpen('cut', inked, 0.5, slide(20)))).toBe(true);
       expect(
-        Option.isSome(
-          stillOpen(
-            'cut',
-            inked,
-            0.5,
-            open(() => plate(1)),
-          ),
+        moves(
+          open((t) => block(200 + Math.round(40 * t), RUST)),
+          inked,
         ),
       ).toBe(true);
+      expect(
+        moves(
+          open((t) => block(60 + Math.round(40 * t), RUST)),
+          inked,
+        ),
+      ).toBe(true);
+      expect(
+        moves(
+          open(() => block(60, RUST)),
+          inked,
+        ),
+      ).toBe(false);
     });
 
     test('a hue that slides at one luma moves', () => {
-      const rust: readonly [number, number, number] = [228, 93, 0];
-      const luma = (rgb: readonly [number, number, number]) =>
-        0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-      expect(Math.abs(luma(rust) - luma([76, 126, 146]))).toBeLessThan(2);
-      expect(Option.isNone(stillOpen('cut', nothing, 0.5, slide(30)))).toBe(true);
+      const luma = (rgb: Rgb) => 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+      expect(Math.abs(luma(RUST) - luma(TEAL))).toBeLessThan(2);
+      expect(moves(open((t) => block(60 + Math.round(40 * t), RUST)))).toBe(true);
     });
 
-    test('a cell that changes past one step moves; at it, it holds', () => {
-      const by = (step: number) => open((t) => touched(40, 10, [76 + step * t, 126, 146]));
-      expect(Option.isNone(stillOpen('cut', nothing, 0.5, by(PICTURE_STEP + 1)))).toBe(true);
-      expect(Option.isSome(stillOpen('cut', nothing, 0.5, by(PICTURE_STEP)))).toBe(true);
+    test('one pixel that changes past one step moves; at it, it holds', () => {
+      const by = (step: number) =>
+        open((t) => (x, y): Rgb => {
+          if (x === 100 && y === 50) return [76 + step * t, 126, 146];
+          return TEAL;
+        });
+      expect(moves(by(PICTURE_STEP + 1))).toBe(true);
+      expect(moves(by(PICTURE_STEP))).toBe(false);
     });
   });
 

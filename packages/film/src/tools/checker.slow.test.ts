@@ -63,11 +63,11 @@ const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.pages.closed).toBe(ledger.pages.opened);
 };
 
-/** A steady page whose every cell of frame `i` is the grey `v(i)` (its red, green and blue). */
+/** A frozen page whose every pixel of frame `i` is the grey `v(i)`: each cell drifts from frame `from` by their difference. */
 const greys =
   (v: (i: number) => number) =>
-  (i: number, area: LumaArea): ReadonlyArray<number> =>
-    Arr.makeBy(3 * area.cols * area.rows, () => v(i));
+  (from: number, i: number, area: LumaArea): ReadonlyArray<number> =>
+    Arr.makeBy(area.cols * area.rows, () => Math.abs(v(i) - v(from)));
 
 /** Frame of scene a's `hit` cue start, where the fake page draws a collision. */
 const hitFrame = Math.round(2 * testExportInfo.fps);
@@ -153,7 +153,7 @@ describe('Checker', () => {
                 texts: [textBox('A MOST PRECIOUS MESSAGE', 600, 300, 700, 80)],
                 inks: [],
               }),
-            steady: greys((i) => i),
+            drift: greys((i) => i),
           },
           testFilm(holdScenes, holdTimings),
         );
@@ -258,7 +258,7 @@ describe('Checker.short', () => {
     Effect.gen(function* () {
       const filmPage = { width: 1080, height: 810, fps: 30, duration: 20, frames: 600 };
       const areas: Array<LumaArea> = [];
-      const steadied: Array<LumaArea> = [];
+      const drifted: Array<LumaArea> = [];
       const { check } = setupShort({
         info,
         infoAt: (url) =>
@@ -267,16 +267,16 @@ describe('Checker.short', () => {
           areas.push(area);
           return 128;
         },
-        steady: (i, area) => {
-          steadied.push(area);
-          return greys(() => 128)(i, area);
+        drift: (from, i, area) => {
+          drifted.push(area);
+          return greys(() => 128)(from, i, area);
         },
       });
       yield* check;
       const band = { x: 0, y: 620, w: 1080, h: 810, cols: 64, rows: 36 };
       expect(areas.length).toBe(2 * 64 * 36);
-      expect(steadied.length).toBe(openFrames(info.fps).length);
-      for (const area of [...areas, ...steadied]) expect(area).toEqual(band);
+      expect(drifted.length).toBe(openFrames(info.fps).length - 1);
+      for (const area of [...areas, ...drifted]) expect(area).toEqual(band);
     }),
   );
 
@@ -287,7 +287,7 @@ describe('Checker.short', () => {
         const word = { texts: [textBox('Justify', 400, 900, 100, 60)], inks: [] };
         const opens = (grey: (i: number) => number) =>
           Effect.map(
-            setupShort({ info, probe: () => Effect.succeed(word), steady: greys(grey) }).check,
+            setupShort({ info, probe: () => Effect.succeed(word), drift: greys(grey) }).check,
             (found) =>
               found.flatMap((f) => {
                 if (f._tag !== 'ShortHook' || f.reason !== 'still open') return [];
@@ -361,7 +361,7 @@ describe('Checker.talk', () => {
       const check = Effect.gen(function* () {
         return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
       }).pipe(Effect.provide(Checker.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)))));
-      const drawn: FakeRenderHost = { ...host, steady: greys((i) => 100 + i) };
+      const drawn: FakeRenderHost = { ...host, drift: greys((i) => 100 + i) };
       const moving = Effect.gen(function* () {
         return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
       }).pipe(
