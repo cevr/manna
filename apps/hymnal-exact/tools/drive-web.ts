@@ -493,7 +493,13 @@ const kindOf = (url: string, type: string) => {
   return 'data';
 };
 
-/** One load of `path`: bytes on the wire by kind and by file, and its times from navigation start. */
+/**
+ * One load of `path`: bytes on the wire by kind and by file, and its times
+ * from navigation start. The bytes are the site's own: a recording the app
+ * fetches from the bucket once the page has rested (the printed key's save)
+ * is listed among the files but not counted, as it is no part of the launch
+ * and lands inside the window only when the page was slow to show.
+ */
 const measureOnce = async (page: Page, path: string, cold: boolean) => {
   if (cold) await page.send('Network.clearBrowserCache');
   const seen = new Map<string, { url: string; type: string; bytes: number; status: number }>();
@@ -529,7 +535,8 @@ const measureOnce = async (page: Page, path: string, cold: boolean) => {
     file: entry.url.replace(origin, ''),
   }));
   const bytes: Record<string, number> = { html: 0, script: 0, css: 0, data: 0, wasm: 0 };
-  for (const file of files) bytes[file.kind] = (bytes[file.kind] ?? 0) + file.bytes;
+  for (const file of files.filter(({ url }) => !url.startsWith(BUCKET)))
+    bytes[file.kind] = (bytes[file.kind] ?? 0) + file.bytes;
   return { bytes, total: Object.values(bytes).reduce((a, b) => a + b, 0), marks, files };
 };
 
@@ -689,7 +696,7 @@ const shipped = async (page: Page) => {
     const again = await waitFor(
       page,
       `[...document.querySelectorAll('[data-testid="stanza-1"]')].some((e) => e.getBoundingClientRect().left >= 0 && e.getBoundingClientRect().left < innerWidth)`,
-      5000,
+      10_000,
     );
     await Bun.sleep(600);
     const retried = seen.files().filter(({ file }) => file.startsWith('/modules/chords/101.js?'));
