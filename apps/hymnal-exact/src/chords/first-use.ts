@@ -2,18 +2,14 @@
 
 /**
  * The sources that read a hymn's chords, each answered only once that
- * hymn's chords are read (`load.ts`): `hymnPage` (the page's syllables)
- * with chords on, `chordsPage` with chords on, `keysPage` and `keysStep` (the printed key)
+ * hymn's chords are read (`load.ts`): `hymnPage` (the page's syllables),
+ * `chordsPage` with chords on, `keysPage` and `keysStep` (the printed key)
  * and `sheetPlacement` (whether the dial shows). A source asked for a hymn
  * whose chords are here answers at once, as before; one asked for a hymn
  * not yet read answers once the read has settled, so the page shown, its
  * pager's neighbours, the key button and the player sheet are first drawn
  * with the chords, never first without them. A read that fails answers as
  * a hymn with none (its words alone, `none`), and the next ask reads again.
- * With chords off a page's words wait for nothing: `hymnPage` answers at
- * once and reads the hymn's chords behind it (the loader's `before`), and
- * the syllables they split its words into (the same words, drawn the same,
- * which follow times by) reach the shown page by `chordsRead`'s `mended`.
  *
  * A source answered without a hymn's chords keeps that answer while its
  * arguments stand, so a pager page asked as a neighbour whose read failed
@@ -61,19 +57,8 @@ export const chordsFirstUse = (book: Book, loader: ChordsLoader, sources: Chords
         source(args),
       );
     };
-  const page = gated(sources.hymnPage, ([route]) => numberOf(route));
   return {
-    hymnPage: (
-      [route, on]: readonly [string, boolean],
-      store?: unknown,
-      storage?: ShippedFiles | null,
-      native?: AppModule | null,
-    ) => {
-      if (on) return page([route], store, storage, native);
-      const number = numberOf(route);
-      if (!isHymn(number)) return sources.hymnPage([route]);
-      return loader.before(number, chordsReader(storage, native), () => sources.hymnPage([route]));
-    },
+    hymnPage: gated(sources.hymnPage, ([route]) => numberOf(route)),
     chordsPage: gated(sources.chordsPage, ([route, on]) => (on ? numberOf(route) : 0)),
     keysPage: gated(sources.keysPage, ([route]) => numberOf(route)),
     keysStep: gated(sources.keysStep, ([, , route]) => numberOf(route)),

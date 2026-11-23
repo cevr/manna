@@ -53,7 +53,7 @@ shape PagerPlaces
 
 members HymnalExact
   derive hymnOpen = match stack(nav).filter(e => e.name == "hymn").at(-1) { case some(e) => e.params.n, case none => "" }
-  resource hymnShown = hymnPage(hymnOpen, chordsOn) as shape HymnText
+  resource hymnShown = hymnPage(hymnOpen) as shape HymnText
   action hymnBack
     nav = back(nav)
 

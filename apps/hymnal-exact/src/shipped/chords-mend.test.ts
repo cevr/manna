@@ -83,8 +83,8 @@ interface Resource {
 const RESOURCES = {
   pagerPages: {
     pager: true,
-    args: (n, ask) => [n, ask.on],
-    asked: (gate, n, ask, call) => gate.hymnPage([n, ask.on], ...call),
+    args: (n) => [n],
+    asked: (gate, n, _ask, call) => gate.hymnPage([n], ...call),
     wanted: (n) => all.hymnPage([n]),
   },
   pagerChords: {
@@ -95,8 +95,8 @@ const RESOURCES = {
   },
   hymnShown: {
     pager: false,
-    args: (n, ask) => [n, ask.on],
-    asked: (gate, n, ask, call) => gate.hymnPage([n, ask.on], ...call),
+    args: (n) => [n],
+    asked: (gate, n, _ask, call) => gate.hymnPage([n], ...call),
     wanted: (n) => all.hymnPage([n]),
   },
   chordsShown: {
@@ -293,30 +293,5 @@ describe('a hymn whose chords failed to load', () => {
         expect(view.gate.keysStep(step, ...view.call)).toEqual(all.keysStep(step));
       }),
     );
-  });
-
-  it('has its syllables with chords off on the page shown, its words answered before its read, reading each file once', async () => {
-    const view = screen();
-    view.at.ask = { on: false, moves: [] };
-    const words = view.gate.hymnPage([n, false], ...view.call);
-    expect(words).not.toBeInstanceOf(Promise);
-    expect(words).not.toEqual(all.hymnPage([n]));
-    await view.show(n, [before, n, after]);
-    expect(view.stale()).toEqual([]);
-    const next = `${Number(after) + 1}`;
-    await view.show(after, [n, after, next]);
-    expect(view.stale()).toEqual([`pagerPages ${next}`]);
-    await view.show(next, [after, next, `${Number(next) + 1}`]);
-    expect(view.stale().filter((each) => each.endsWith(` ${next}`))).toEqual([]);
-    expect([before, n, after].map(view.readsOf)).toEqual([1, 1, 1]);
-  });
-
-  it('has its syllables with chords off once a failed read behind its words is read again', async () => {
-    const view = screen();
-    view.at.ask = { on: false, moves: [] };
-    view.failing.set(n, 1);
-    await view.show(n, [before, n, after]);
-    expect(view.stale()).toEqual([]);
-    expect([before, n, after].map(view.readsOf)).toEqual([1, 2, 1]);
   });
 });
