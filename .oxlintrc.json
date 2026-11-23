@@ -2055,6 +2055,25 @@
       }
     },
     {
+      // No tool of the Exact ports or their packages starts a browser binary
+      // itself: Playwright starts and stops its own (owner, 2026-11-23;
+      // packages/scripts/lint/no-browser-spawn.ts).
+      "files": [
+        "apps/*-exact/**/*.ts",
+        "apps/*-exact/**/*.mjs",
+        "apps/*-exact/**/*.js",
+        "packages/exact-kit/**/*.ts",
+        "packages/exact-kit/**/*.mjs",
+        "packages/exact-kit/**/*.js",
+        "packages/pixel-match/**/*.ts",
+        "packages/pixel-match/**/*.mjs",
+        "packages/pixel-match/**/*.js"
+      ],
+      "rules": {
+        "manna/no-browser-spawn": "error"
+      }
+    },
+    {
       // The film's browser suite (`test:e2e`) runs outside the budget, on
       // real Chrome workers, and sizes its own timeouts; it still runs every
       // test (packages/film/README.md, the E2E suite).
