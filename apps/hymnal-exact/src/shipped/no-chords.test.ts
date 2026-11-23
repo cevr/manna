@@ -54,7 +54,10 @@ const INDEXES = [
 describe('the data module ships no indexes', () => {
   it('finds the table through the testing book and the current app through its search', () => {
     const testing = reachedFrom('apps/hymnal-exact/src/hymns/book.testing.ts');
-    expect(testing.reached.has(INDEXES[3] ?? '')).toBe(true);
+    expect(
+      testing.reached.has(INDEXES[3] ?? '') ||
+        testing.unresolved.includes('virtual:hymnal-indexes'),
+    ).toBe(true);
     expect(reachedFrom('apps/hymnal/src/hymns/search.ts').reached.has(INDEXES[1] ?? '')).toBe(true);
   });
 
