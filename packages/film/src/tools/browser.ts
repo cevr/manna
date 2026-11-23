@@ -11,7 +11,7 @@ import {
   type Scope,
   Semaphore,
 } from 'effect';
-import { type View, chromeInUse, openView, thrownBy } from './chrome.ts';
+import { type View, chromeLease, openView, thrownBy } from './chrome.ts';
 import { GPU_FLAG } from './chrome-gpu.ts';
 import {
   type CallAnswers,
@@ -311,9 +311,7 @@ export const browserReady: Effect.Effect<
   void,
   BrowserMissing | BrowserFailed,
   FileSystem.FileSystem | Path.Path
-> = Effect.scoped(Effect.andThen(chromeInUse, Effect.asVoid(frameView))).pipe(
-  Effect.withSpan('Browser.ready'),
-);
+> = Effect.scoped(Effect.asVoid(frameView)).pipe(Effect.withSpan('Browser.ready'));
 
 export class Browser extends Context.Service<Browser, BrowserService>()(
   '@manna/film/tools/Browser',
@@ -332,14 +330,14 @@ export class Browser extends Context.Service<Browser, BrowserService>()(
 /**
  * Pages in this process's Chrome, each a tab closed with the scope that
  * opened it; Chrome itself is closed with the scope that made the browser,
- * unless another scope still uses it (`chromeInUse`).
+ * unless another scope still uses it (`chromeLease`): held here, Chrome stays warm between the browser's pages.
  */
 export const makeBrowser: Effect.Effect<
   BrowserService,
   never,
   FileSystem.FileSystem | Path.Path | Scope.Scope
 > = Effect.gen(function* () {
-  yield* chromeInUse;
+  yield* chromeLease.hold;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const open = Effect.fn('Browser.open')(function* (url: string) {

@@ -6,7 +6,7 @@ import { collectWithin } from './process.ts';
 
 describe('the browser', () => {
   it.live.layer(BunServices.layer)(
-    "ends this process's Chrome with the scope that used it, so a command that is done exits, and launches it again for the next",
+    "ends this process's Chrome with the scope that used it, so a command that is done exits, launches it again for the next, and keeps it for a view still open",
     () =>
       Effect.gen(function* () {
         const done = yield* collectWithin(
@@ -15,10 +15,13 @@ describe('the browser', () => {
           ChildProcess.make('bun', [`${import.meta.dir}/fixtures/chrome-idle-exit.ts`], {
             forceKillAfter: '5 seconds',
           }),
-          Duration.seconds(30),
+          Duration.seconds(60),
         );
-        expect([done.exitCode, done.stdout.trim()]).toEqual([0, '{"open":1,"closed":0,"again":1}']);
+        expect([done.exitCode, done.stdout.trim()]).toEqual([
+          0,
+          '{"open":1,"closed":0,"again":1,"beside":42,"last":0}',
+        ]);
       }),
-    40_000,
+    70_000,
   );
 });

@@ -15,6 +15,7 @@ import {
   Semaphore,
 } from 'effect';
 import { drawsOnGpu } from './chrome-gpu.ts';
+import { leased, makeLease } from './chrome-lease.ts';
 import {
   PROFILE_ROOT,
   endChrome,
@@ -175,6 +176,8 @@ interface Running {
    * is gone, so a dead Chrome can still pass (`viewOf` then opens again).
    */
   readonly runs: () => boolean;
+  /** The lease's generation it was launched in (`chromeLease`). */
+  readonly generation: number;
 }
 
 /** How this process's Chrome is launched, once its first view opened. */
@@ -215,28 +218,35 @@ const holdOpen = (change: 1 | -1) =>
       Bool.match(hold, { onTrue: () => handle.ref(), onFalse: () => handle.unref() });
   });
 
-/** How many scopes use this process's Chrome (`chromeInUse`). */
-let users = 0;
+/** The generation of this process's Chrome that holders use now (`chromeLease`): each Chrome launched in it is tagged with it. */
+let generation = 0;
 
 /**
- * This process's Chrome in use for the scope: when the last scope that uses
- * it closes, the Chrome that runs is ended (`endChrome`: its process group
- * killed, its pipes closed with it) and forgotten, so a later view launches
- * Chrome again. An idle Chrome's handles are unreferenced (`holdOpen`), yet
- * once a render has drawn on it Bun still keeps the event loop open while it
- * runs, so a command that is done would never exit.
+ * This process's Chrome in use for the scope: every view holds it from
+ * before it opens until after it closes (`openView`), and a caller may hold
+ * it longer to keep Chrome warm between its views (`makeBrowser`). When the
+ * last holder's scope closes, the Chrome of the generation it held is ended
+ * (`endChrome`: its process group killed, its pipes closed with it) and
+ * forgotten, so the next hold begins a generation and launches Chrome again.
+ * An idle Chrome's handles are unreferenced (`holdOpen`), yet once a render
+ * has drawn on it Bun still keeps the event loop open while it runs, so a
+ * command that is done would never exit.
  */
-export const chromeInUse: Effect.Effect<void, never, Scope.Scope> = Effect.acquireRelease(
+export const chromeLease = makeLease(
   Effect.sync(() => {
-    users += 1;
+    generation += 1;
+    return generation;
   }),
-  () =>
-    Effect.sync(() => {
-      users -= 1;
-      if (users > 0) return;
-      endChrome();
-      running = Option.none();
-    }),
+  (ended) =>
+    Effect.sync(() =>
+      Option.map(
+        Option.filter(running, (chrome) => chrome.generation === ended),
+        () => {
+          endChrome();
+          running = Option.none();
+        },
+      ),
+    ),
 );
 
 /** `effect`, with this process held open while it runs. */
@@ -453,7 +463,7 @@ const launchChrome = (launch: Launch) =>
       try: () => browser.target().createCDPSession(),
       catch: failed,
     });
-    const chrome: Running = { browser, session, root: wireOf(session), runs };
+    const chrome: Running = { browser, session, root: wireOf(session), runs, generation };
     running = Option.some(chrome);
     return chrome;
   });
@@ -701,7 +711,9 @@ const tabOf = (
  * The first view launches Chrome with `requested` (`chromeFlags`: muted); a
  * later one asking for other flags fails, since the running Chrome cannot
  * take them. When this process's Chrome died, the next view launches it
- * again: the same executable, command line and profile.
+ * again: the same executable, command line and profile. The view holds
+ * `chromeLease` from before it opens until after it closes, so no other
+ * scope's end stops Chrome under it.
  */
 export const openView = (
   requested: ReadonlyArray<string>,
@@ -712,32 +724,34 @@ export const openView = (
   Scope.Scope | FileSystem.FileSystem | Path.Path
 > => {
   const flags = requested.join(' ');
-  return Effect.acquireRelease(
-    opening.withPermits(1)(
-      Effect.suspend(() =>
-        Option.match(launched, {
-          onNone: () =>
-            Effect.tap(firstLaunch(requested), (launch) =>
-              Effect.sync(() => {
-                launched = Option.some(launch);
-              }),
-            ),
-          onSome: (launch) => {
-            if (launch.flags !== flags)
-              return Effect.fail(
-                BrowserFailed.make({
-                  reason: `this process's Chrome runs with "${launch.flags}", not "${flags}": one Chrome per process`,
+  return leased(chromeLease, () =>
+    Effect.acquireRelease(
+      opening.withPermits(1)(
+        Effect.suspend(() =>
+          Option.match(launched, {
+            onNone: () =>
+              Effect.tap(firstLaunch(requested), (launch) =>
+                Effect.sync(() => {
+                  launched = Option.some(launch);
                 }),
-              );
-            return Effect.succeed(launch);
-          },
-        }).pipe(
-          Effect.flatMap((launch: Launch) => viewOf(launch, options)),
-          held,
+              ),
+            onSome: (launch) => {
+              if (launch.flags !== flags)
+                return Effect.fail(
+                  BrowserFailed.make({
+                    reason: `this process's Chrome runs with "${launch.flags}", not "${flags}": one Chrome per process`,
+                  }),
+                );
+              return Effect.succeed(launch);
+            },
+          }).pipe(
+            Effect.flatMap((launch: Launch) => viewOf(launch, options)),
+            held,
+          ),
         ),
       ),
+      (view) => Effect.sync(() => view.close()),
     ),
-    (view) => Effect.sync(() => view.close()),
   );
 };
 
