@@ -844,7 +844,10 @@ background-throttling flags, `--disable-ipc-flooding-protection`,
 `--no-startup-window`), `--disable-gpu` unless the caller asks for the GPU
 on macOS (`GPU_FLAG`, `--enable-gpu`; `tools/chrome-gpu.ts`, `drawsOnGpu`),
 `--mute-audio`, `--disable-audio-output`, `--disable-component-update`
-(Chrome downloads no components, about 130 MB, into a new profile), then the
+(Chrome downloads no components, about 130 MB, into a new profile),
+`--use-mock-keychain` and `--password-store=basic` (Chrome never asks the
+host's keychain, so no macOS keychain dialog opens and the host's launch
+guard lets it start; a caller's own keychain flag is dropped), then the
 caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
 one Bun 1.4.4 would find, searched here as Bun searches (`chromeSearch`: the
 browsers it names on `$PATH`, then its app bundles in `/Applications` and

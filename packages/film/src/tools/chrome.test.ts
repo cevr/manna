@@ -54,6 +54,9 @@ const POOL = [
   '--mute-audio',
   '--disable-gpu-vsync',
   '--autoplay-policy=no-user-gesture-required',
+  '--password-store=keychain',
+  '--password-store=gnome-libsecret',
+  '--use-mock-keychain',
 ];
 
 /** The flags of puppeteer's own defaults that move a page's pixels. */
@@ -65,9 +68,11 @@ const asked = Arbitrary.all({
   profile: Arbitrary.schema(Schema.String),
 });
 
-/** Whether a flag is one the launcher owns: a profile or a debugging transport. */
+/** Whether a flag is one the launcher owns: a profile, a debugging transport or a keychain flag. */
 const owned = (flag: string) =>
-  flag.startsWith('--user-data-dir=') || flag.startsWith('--remote-debugging-');
+  ['--user-data-dir=', '--remote-debugging-', '--use-mock-keychain', '--password-store'].some(
+    (prefix) => flag.startsWith(prefix),
+  );
 
 const count = (flags: ReadonlyArray<string>, flag: string) =>
   flags.filter((f) => f === flag).length;
@@ -98,6 +103,26 @@ describe("Chrome's command line", () => {
             );
           },
           { runs: 2000, seed: 11 },
+        );
+        expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
+      }),
+  );
+
+  it.effect(
+    "keeps Chrome out of the host's keychain on macOS and Linux, whatever keychain flag the caller passes",
+    () =>
+      Effect.gen(function* () {
+        const result = yield* Arbitrary.checkEffect(
+          asked,
+          ({ platform, requested, profile }) => {
+            const line = chromeFlags(platform, requested, profile);
+            return (
+              count(line, '--use-mock-keychain') === 1 &&
+              line.filter((flag) => flag.startsWith('--password-store')).join() ===
+                '--password-store=basic'
+            );
+          },
+          { runs: 500, seed: 12 },
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
       }),

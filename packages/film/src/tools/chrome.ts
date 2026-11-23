@@ -47,15 +47,29 @@ const QUIET = [
  */
 const SILENT = ['--mute-audio', '--disable-audio-output', '--disable-component-update'];
 
-/** The flags the launcher owns: a caller's own profile or debugging transport is dropped. */
-const OWNED = ['--user-data-dir=', '--remote-debugging-'];
+/**
+ * The flags that keep Chrome out of the host's keychain: a mock keychain on
+ * macOS and a plain password store elsewhere, so a headless or debugged
+ * Chrome never asks the owner's login keychain (a macOS dialog on their
+ * screen) and the host's launch guard lets it start.
+ */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
+/** The flags the launcher owns: a caller's own profile, debugging transport or keychain flag is dropped. */
+const OWNED = [
+  '--user-data-dir=',
+  '--remote-debugging-',
+  '--use-mock-keychain',
+  '--password-store',
+];
 
 /**
  * Chrome's whole command line on `platform` for a caller's `requested`
  * flags, in `profile`: Bun 1.4.4's list in its order, `--disable-gpu` unless
  * the caller asks for the GPU on macOS (`drawsOnGpu`), the silent flags,
- * then the caller's own in their order (Chrome takes the last of a repeated
- * switch), less any profile or debugging flag of theirs.
+ * the keychain flags, then the caller's own in their order (Chrome takes
+ * the last of a repeated switch), less any profile, debugging or keychain
+ * flag of theirs.
  */
 export const chromeFlags = (
   platform: string,
@@ -71,6 +85,7 @@ export const chromeFlags = (
   }),
   ...QUIET,
   ...SILENT,
+  ...KEYCHAIN,
   ...requested.filter((flag) => !OWNED.some((owned) => flag.startsWith(owned))),
 ];
 
