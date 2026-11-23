@@ -163,11 +163,12 @@ describe("Chrome's command line", () => {
           ({ platform, requested, profile }) => {
             const line = chromeFlags(platform, requested, profile);
             const kept = requested.filter((flag) => !KEYCHAIN_SPELLINGS.includes(flag));
-            const launcher = line.slice(0, line.length - kept.length);
+            const expected = [...chromeFlags(platform, [], profile), ...kept];
             return (
-              line.slice(line.length - kept.length).join('\n') === kept.join('\n') &&
-              count(launcher, '--use-mock-keychain') === 1 &&
-              count(launcher, '--password-store=basic') === 1
+              count(expected, '--use-mock-keychain') === 1 &&
+              count(expected, '--password-store=basic') === 1 &&
+              line.length === expected.length &&
+              line.every((flag, at) => flag === expected[at])
             );
           },
           { runs: 1000, seed: 12 },
