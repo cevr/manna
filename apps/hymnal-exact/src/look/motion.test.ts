@@ -489,7 +489,7 @@ describe('the finders find a planted defect', () => {
       rowFault(
         rowsOf(
           'x',
-          ['    if other', '      row transition="translate duration.fade"'].join('\n'),
+          ['    if other', '      row transition="opacity duration.fade linear"'].join('\n'),
         )[0] ?? { at: '', name: '' },
         planted,
       ),
