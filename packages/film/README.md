@@ -847,7 +847,9 @@ on macOS (`GPU_FLAG`, `--enable-gpu`; `tools/chrome-gpu.ts`, `drawsOnGpu`),
 (Chrome downloads no components, about 130 MB, into a new profile),
 `--use-mock-keychain` and `--password-store=basic` (Chrome never reaches
 the host's keychain, so a run with `HOME` moved raises no "A keychain cannot
-be found" dialog; a caller's own keychain flag is dropped), then the caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
+be found" dialog; a caller's own keychain switch is dropped in any spelling
+Chromium reads as the same switch: one or two dashes, ASCII whitespace at
+either end), then the caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
 one Bun 1.4.4 would find, searched here as Bun searches (`chromeSearch`: the
 browsers it names on `$PATH`, then its app bundles in `/Applications` and
 `~/Applications`, then Playwright's headless shell), else Playwright's

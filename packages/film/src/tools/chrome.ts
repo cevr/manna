@@ -55,20 +55,44 @@ const SILENT = ['--mute-audio', '--disable-audio-output', '--disable-component-u
  */
 const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
 
-/** The flags the launcher owns: a caller's own profile, debugging transport or keychain flag is dropped. */
-const OWNED = [
-  '--user-data-dir=',
-  '--remote-debugging-',
-  '--use-mock-keychain',
-  '--password-store',
-];
+/** The switches the launcher owns by exact key: a caller's own profile or keychain switch is dropped. */
+const OWNED_KEYS = ['user-data-dir', 'use-mock-keychain', 'password-store'];
+
+/** The family of switches the launcher owns by key prefix: a caller's own debugging transport is dropped. */
+const OWNED_FAMILY = 'remote-debugging-';
+
+/** The ASCII whitespace Chromium trims from each argument's ends on POSIX (`TrimWhitespaceASCII`). */
+const ASCII_ENDS = /^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g;
+
+/**
+ * The switch key Chromium reads from `flag` on POSIX (`CommandLine`'s
+ * parser): its ends trimmed of ASCII whitespace, then `--` or `-`, then the
+ * key up to the first `=`. A flag that is only a prefix, or no switch at all,
+ * has none.
+ */
+const switchKey = (flag: string): Option.Option<string> => {
+  const arg = flag.replace(ASCII_ENDS, '');
+  return Option.flatMap(
+    Option.fromUndefinedOr(['--', '-'].find((prefix) => arg.startsWith(prefix))),
+    (prefix) => {
+      const rest = arg.slice(prefix.length);
+      const key = rest.split('=')[0] ?? '';
+      return Option.liftPredicate(key, () => rest.length > 0 && key.length > 0);
+    },
+  );
+};
+
+/** Whether Chromium would read `flag` as a switch the launcher owns. */
+const ownedByLauncher = (flag: string) =>
+  Option.exists(switchKey(flag), (key) => OWNED_KEYS.includes(key) || key.startsWith(OWNED_FAMILY));
 
 /**
  * Chrome's whole command line on `platform` for a caller's `requested`
  * flags, in `profile`: Bun 1.4.4's list in its order, `--disable-gpu` unless
  * the caller asks for the GPU on macOS (`drawsOnGpu`), the silent flags,
  * the keychain flags, then the caller's own in their order (Chrome takes the last of a repeated
- * switch), less any profile, debugging or keychain flag of theirs.
+ * switch), less any profile, debugging or keychain switch of theirs in any
+ * spelling Chromium reads as the same switch (`switchKey`).
  */
 export const chromeFlags = (
   platform: string,
@@ -85,7 +109,7 @@ export const chromeFlags = (
   ...QUIET,
   ...SILENT,
   ...KEYCHAIN,
-  ...requested.filter((flag) => !OWNED.some((owned) => flag.startsWith(owned))),
+  ...requested.filter((flag) => !ownedByLauncher(flag)),
 ];
 
 /** A view's viewport, and where the page's `console.*` calls go (dropped when not given). */

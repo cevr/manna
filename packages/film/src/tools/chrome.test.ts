@@ -74,6 +74,48 @@ const owned = (flag: string) =>
     (prefix) => flag.startsWith(prefix),
   );
 
+/**
+ * A caller's keychain switches in spellings Chromium's POSIX parser reads as
+ * `use-mock-keychain` or `password-store`: one or two dashes, ASCII
+ * whitespace at either end, with or without a value.
+ */
+const KEYCHAIN_SPELLINGS = [
+  '--password-store=keychain',
+  '-password-store=gnome-libsecret',
+  ' --password-store=keychain',
+  '\t-password-store=kwallet\n',
+  '--password-store',
+  '\v--password-store=keychain\f',
+  '-use-mock-keychain',
+  '--use-mock-keychain=0',
+  ' \r--use-mock-keychain ',
+];
+
+/**
+ * Lookalikes Chromium reads as another switch or as no switch: three dashes,
+ * another key, another case (POSIX keys keep theirs), no dash, and a
+ * non-ASCII space Chromium does not trim. The launcher passes them on.
+ */
+const LOOKALIKES = [
+  '---password-store=keychain',
+  '--password-storex=keychain',
+  '--password_store=keychain',
+  '--use-mock-keychains',
+  '--Password-Store=keychain',
+  'password-store=keychain',
+  '--disable-password-store',
+  '\u00a0--password-store=keychain',
+];
+
+const keychainAsked = Arbitrary.all({
+  platform: Arbitrary.schema(Schema.Literals(['darwin', 'linux'])),
+  requested: Arbitrary.array(
+    Arbitrary.schema(Schema.Literals([...KEYCHAIN_SPELLINGS, ...LOOKALIKES, '--mute-audio'])),
+    { maxLength: 12 },
+  ),
+  profile: Arbitrary.schema(Schema.String),
+});
+
 const count = (flags: ReadonlyArray<string>, flag: string) =>
   flags.filter((f) => f === flag).length;
 
@@ -117,16 +159,18 @@ describe("Chrome's command line", () => {
     () =>
       Effect.gen(function* () {
         const result = yield* Arbitrary.checkEffect(
-          asked,
+          keychainAsked,
           ({ platform, requested, profile }) => {
             const line = chromeFlags(platform, requested, profile);
+            const kept = requested.filter((flag) => !KEYCHAIN_SPELLINGS.includes(flag));
+            const launcher = line.slice(0, line.length - kept.length);
             return (
-              count(line, '--use-mock-keychain') === 1 &&
-              line.filter((flag) => flag.startsWith('--password-store')).join() ===
-                '--password-store=basic'
+              line.slice(line.length - kept.length).join('\n') === kept.join('\n') &&
+              count(launcher, '--use-mock-keychain') === 1 &&
+              count(launcher, '--password-store=basic') === 1
             );
           },
-          { runs: 500, seed: 12 },
+          { runs: 1000, seed: 12 },
         );
         expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
       }),
