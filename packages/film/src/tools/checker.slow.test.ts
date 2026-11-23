@@ -4,6 +4,7 @@ import { type Address, resolveAddress } from '../core/address.ts';
 import { layout } from '../core/layout.ts';
 import type { Short, Timed } from '../core/schema.ts';
 import { holdGrid, holdTicks, layoutSamples } from './check.ts';
+import { openFrames } from './short-check.ts';
 import { Checker } from './checker.ts';
 import type { LumaArea } from '../core/export-handle.ts';
 import { PageError } from './errors.ts';
@@ -129,9 +130,28 @@ describe('Checker', () => {
           holdTicks({ from: ambient.start + 1.4, to: ambient.start + 6.4 }, fps),
         ).length;
         expect(ledger.frames).toHaveLength(
-          layoutSamples(placed, fps).length + probedHeld + probedAmbient,
+          layoutSamples(placed, fps).length + 2 * probedHeld + probedAmbient,
         );
         expectAllClosed(ledger);
+      }),
+  );
+
+  it.live(
+    'a hold whose marks keep still while its drawn picture moves where none lies (a painting pushed in) is no StaticHold',
+    () =>
+      Effect.gen(function* () {
+        const { check } = setup(
+          {
+            probe: () =>
+              Effect.succeed({
+                texts: [textBox('A MOST PRECIOUS MESSAGE', 600, 300, 700, 80)],
+                inks: [],
+              }),
+            luma: (i) => i,
+          },
+          testFilm(holdScenes, holdTimings),
+        );
+        expect(yield* check()).toEqual([]);
       }),
   );
 
@@ -243,9 +263,26 @@ describe('Checker.short', () => {
       });
       yield* check;
       const band = { x: 0, y: 620, w: 1080, h: 810, cols: 64, rows: 36 };
-      expect(areas.length).toBe(2 * 64 * 36);
+      expect(areas.length).toBe((2 + openFrames(info.fps).length) * 64 * 36);
       for (const area of areas) expect(area).toEqual(band);
     }),
+  );
+
+  it.live(
+    "reads the open's band as drawn: a picture that moves where no mark lies is no still open, one that holds is",
+    () =>
+      Effect.gen(function* () {
+        const word = { texts: [textBox('Justify', 400, 900, 100, 60)], inks: [] };
+        const opens = (luma: (i: number) => number) =>
+          Effect.map(setupShort({ info, probe: () => Effect.succeed(word), luma }).check, (found) =>
+            found.flatMap((f) => {
+              if (f._tag !== 'ShortHook' || f.reason !== 'still open') return [];
+              return [f.reason];
+            }),
+          );
+        expect(yield* opens((i) => 100 + Math.min(i, 15))).toEqual([]);
+        expect(yield* opens(() => 128)).toEqual(['still open']);
+      }),
   );
 
   it.live(
@@ -262,7 +299,7 @@ describe('Checker.short', () => {
               ],
               inks: [],
             }),
-          luma: (i) => Math.min(255, i * 8),
+          luma: (i) => Math.min(255, Math.max(0, i - 20) * 8),
         });
         const findings = yield* check;
         expect(findings.map((f) => f._tag).sort()).toEqual([
@@ -310,6 +347,12 @@ describe('Checker.talk', () => {
       const check = Effect.gen(function* () {
         return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
       }).pipe(Effect.provide(Checker.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)))));
+      const drawn: FakeRenderHost = { ...host, luma: (i) => 100 + i };
+      const moving = Effect.gen(function* () {
+        return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
+      }).pipe(
+        Effect.provide(Checker.layer.pipe(Layer.provide(fakeRenderHost(emptyLedger(), drawn)))),
+      );
       return Effect.gen(function* () {
         const findings = yield* check;
         expect(findings.map((f) => f._tag)).toEqual(['ShortUnsafeText', 'ShortHook']);
@@ -320,6 +363,7 @@ describe('Checker.talk', () => {
         expect(findings[1]).toMatchObject({ reason: 'still open' });
         expect(ledger.urls.every((u) => u.includes(`film=${film.paths.name}&`))).toBe(true);
         expectAllClosed(ledger);
+        expect((yield* moving).map((f) => f._tag)).toEqual(['ShortUnsafeText']);
       });
     },
   );

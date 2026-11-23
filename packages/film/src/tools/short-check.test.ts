@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { Option, Result } from 'effect';
+import { Array as Arr, Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
 import { hashText } from '../core/narration.ts';
 import { shortPhrases } from '../core/phrases.ts';
 import type { Phrase } from '../core/phrases.ts';
-import type { Probed, TextBox } from '../core/export-handle.ts';
-import { type ResolvedShort, resolveShort } from '../core/shorts.ts';
+import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
+import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
+import { type DrawnPicture, PICTURE_STEP } from './check.ts';
 import {
   loopGap,
   loopPicture,
@@ -66,6 +67,16 @@ const box = (text: string, x: number, y: number, w: number, h: number): TextBox 
 const own = (t: TextBox): TextBox => ({ ...t, caption: true });
 
 const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] });
+
+/** The band of a 1080 × 1920 short page, on the grid the checks read (`SHORT_RULES.loopGrid`). */
+const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid };
+const CELLS = BAND.cols * BAND.rows;
+
+/** A drawn band whose every cell reads `luma`. */
+const flat = (luma: number): ReadonlyArray<number> => Arr.makeBy(CELLS, () => luma);
+
+/** The band drawn the same, frame after frame. */
+const HELD: DrawnPicture = { area: BAND, lumas: [flat(128), flat(128)] };
 
 describe('shortLength', () => {
   test('45 to 75 s holds', () => {
@@ -245,14 +256,97 @@ describe('the open', () => {
   test('an open that holds still is a hook error; one that moves is not', () => {
     const still = frame(box('word', 100, 100, 100, 40));
     const moved = frame(box('word', 300, 100, 100, 40));
-    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5)).reason).toBe('still open');
-    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5))).toBe(true);
+    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5, HELD)).reason).toBe(
+      'still open',
+    );
+    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5, HELD))).toBe(true);
   });
 
   test('the captions and the hook do not count as motion', () => {
     const a = frame(box('word', 100, 100, 100, 40), own(box('one two', 100, 2600, 400, 80)));
     const b = frame(box('word', 100, 100, 100, 40), own(box('three four', 100, 2600, 400, 80)));
-    expect(Option.isSome(stillOpen('probe', [a, b], 0.5))).toBe(true);
+    expect(Option.isSome(stillOpen('probe', [a, b], 0.5, HELD))).toBe(true);
+  });
+
+  describe('as drawn: the band read for what the probe cannot see', () => {
+    /** The open's nine frames, as `openFrames(30)` reads them, `k` of 8 through it. */
+    const open = (draw: (k: number) => ReadonlyArray<number>): DrawnPicture => ({
+      area: BAND,
+      lumas: Arr.makeBy(openFrames(30).length, (k) => draw(k / 8)),
+    });
+    /** A painted plate filling the band, pushed in about its centre to `zoom`. */
+    const plate = (zoom: number): ReadonlyArray<number> =>
+      Arr.makeBy(CELLS, (k) => {
+        const c = (k % BAND.cols) - BAND.cols / 2;
+        const r = Math.floor(k / BAND.cols) - BAND.rows / 2;
+        return 128 + 60 * Math.sin((c * zoom) / 3) * Math.cos((r * zoom) / 3);
+      });
+    /** The band with cell (`c`, `r`) changed by `by`. */
+    const touched = (c: number, r: number, by: number): ReadonlyArray<number> =>
+      Arr.makeBy(CELLS, (k) => 128 + by * Number(k === r * BAND.cols + c));
+    const nothing = Arr.makeBy(openFrames(30).length, () => frame());
+    /** A stroke 20 × 20 page px at (500, 845): cells 28 to 31 of rows 9 to 11 lie under its reach. */
+    const stroke: InkMark = {
+      kind: 'stroke',
+      scene: 'a',
+      points: [
+        [500, 845],
+        [520, 865],
+      ],
+      width: 4,
+      x: 500,
+      y: 845,
+      w: 20,
+      h: 20,
+      alpha: 1,
+      order: 0,
+      scale: 1,
+    };
+    const inked = Arr.makeBy(openFrames(30).length, (): Probed => ({ texts: [], inks: [stroke] }));
+
+    test('a full-bleed painting the camera pushes in on, with no mark on it, moves', () => {
+      const push = open((t) => plate(1 + 0.02 * t));
+      expect(Option.isNone(stillOpen('cut', nothing, 0.5, push))).toBe(true);
+    });
+
+    test('the same painting held, its grain under half a luma a cell, is a still open', () => {
+      const grain = open((t) => plate(1).map((v, k) => v + 0.5 * Math.sin(k * 7 + t * 13)));
+      expect(Option.getOrThrow(stillOpen('cut', nothing, 0.5, grain)).reason).toBe('still open');
+    });
+
+    test('a picture that draws the same, whatever moves off the band or behind it, is a still open', () => {
+      const fixed = open(() => plate(1));
+      expect(Option.isSome(stillOpen('cut', nothing, 0.5, fixed))).toBe(true);
+    });
+
+    test("a mark's boil is the probe's to judge: its cells may change, the open holds", () => {
+      const boiled = open((t) => touched(30, 10, 40 * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, boiled))).toBe(true);
+      const edge = open((t) => touched(31, 11, 40 * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, edge))).toBe(true);
+    });
+
+    test('a rig moving in place where no mark lies moves past one step, not at it', () => {
+      const past = open((t) => touched(40, 10, (PICTURE_STEP + 1) * t));
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, past))).toBe(true);
+      const at = open((t) => touched(40, 10, PICTURE_STEP * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, at))).toBe(true);
+      const beside = open((t) => touched(32, 10, (PICTURE_STEP + 1) * t));
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, beside))).toBe(true);
+    });
+
+    test("a talk's caption line is the voice: its cells are its marks', not the picture", () => {
+      const talkArea: LumaArea = { x: 0, y: 0, w: 1080, h: 1920, ...SHORT_RULES.loopGrid };
+      const line = own(box('the law', 228, 1100, 660, 60));
+      const said = Arr.makeBy(openFrames(30).length, () => frame(line));
+      const highlight = {
+        area: talkArea,
+        lumas: Arr.makeBy(openFrames(30).length, (k) =>
+          Arr.makeBy(CELLS, (cell) => 128 + 30 * k * Number(cell === 20 * 64 + 25)),
+        ),
+      };
+      expect(Option.isSome(stillOpen('why', said, 0.5, highlight))).toBe(true);
+    });
   });
 
   test("the film's title in the first frame is a title card", () => {
@@ -293,10 +387,12 @@ describe('a talk, checked as a vertical film', () => {
   });
 
   test('its footage moving is motion: a still open is one whose source time holds', () => {
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5))).toBe(true);
-    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5, HELD))).toBe(
+      true,
+    );
+    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5, HELD))).toBe(true);
     const other = { ...shot(1), footage: [{ source: 'take.why/ba9876543210', at: 1 }] };
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5, HELD))).toBe(true);
   });
 
   test("its text is held to every platform's zone, naming the platforms a line runs under", () => {
