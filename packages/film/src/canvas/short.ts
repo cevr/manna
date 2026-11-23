@@ -62,13 +62,6 @@ const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
       points: i.points.map(([x, y]) => [x, y + dy] as const),
       order: sink.texts.length + sink.inks.length,
     });
-  for (const p of from.placed ?? []) sink.placed?.push({ ...p, y: p.y + dy });
-};
-
-/** The band's own sink for a frame the page probes into `sink`: its placed planes too, when the page collects them. */
-const bandSink = (sink: ProbeSink): ProbeSink => {
-  if (sink.placed === undefined) return { texts: [], inks: [] };
-  return { texts: [], inks: [], placed: [] };
 };
 
 /**
@@ -137,7 +130,7 @@ export const createShort = (film: Film, declared: Short): Film => {
     const span = short.spans[index] ?? short.spans[0];
     const at = movedFrames(T, span.shift, film.fps);
     const sink = opts.probe;
-    const probed: ProbeSink | undefined = sink && bandSink(sink);
+    const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };
     bandOptions.knobs = opts.knobs;
     bandOptions.probe = probed;
     film.render(frame.ctx, at, bandOptions);

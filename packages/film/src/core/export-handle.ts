@@ -167,23 +167,6 @@ export const FootageMark = Schema.Struct({
 });
 export type FootageMark = typeof FootageMark.Type;
 
-/**
- * A plane a probed frame placed whole (a painted plate, a rig or puppet):
- * its key, the box it covers on screen in canvas pixels, the scale of the
- * space it was placed in (canvas pixels per unit) and its opacity, so a
- * check sees a camera push or a rig moving without reading its pixels.
- */
-export const PlacedMark = Schema.Struct({
-  key: Schema.String,
-  x: Schema.Finite,
-  y: Schema.Finite,
-  w: Schema.Finite,
-  h: Schema.Finite,
-  scale: Schema.Finite,
-  alpha: Schema.Finite,
-});
-export type PlacedMark = typeof PlacedMark.Type;
-
 /** A probed frame: every line of text and every mark of ink it drew, and the faces and hands. */
 export const Probed = Schema.Struct({
   texts: Schema.Array(TextBox),
@@ -194,8 +177,6 @@ export const Probed = Schema.Struct({
   hands: Schema.optionalKey(Schema.Array(HandMark)),
   /** Each footage frame it drew, in order: only a film that reads footage (a talk) records any. */
   footage: Schema.optionalKey(Schema.Array(FootageMark)),
-  /** Each painting and rig it placed, in order: recorded where the sink asks (the `probe` call, `heldStill`). */
-  placed: Schema.optionalKey(Schema.Array(PlacedMark)),
 });
 export type Probed = typeof Probed.Type;
 
