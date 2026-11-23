@@ -23,11 +23,15 @@ const THROTTLE = ((written: string): number => {
 /**
  * The flags every Chromium here launches with, as the film's `chromeArgs`:
  * `--mute-audio` mutes its pages and `--disable-audio-output` plays to a fake
- * device, so a test never opens the host's speakers.
+ * device, so a test never opens the host's speakers; `--use-mock-keychain`
+ * and `--password-store=basic` keep it out of the host's keychain, so no
+ * macOS keychain dialog opens.
  */
 const SILENT = [
   '--mute-audio',
   '--disable-audio-output',
+  '--use-mock-keychain',
+  '--password-store=basic',
   '--overscroll-history-navigation=0',
   '--pull-to-refresh=0',
 ];

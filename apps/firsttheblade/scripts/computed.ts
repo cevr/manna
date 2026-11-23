@@ -60,6 +60,9 @@ import sharp from 'sharp';
 
 import { DIST, layerLocal } from '../src/worker/local.ts';
 
+/** Chrome's flags that keep it out of the host's keychain, so no macOS keychain dialog opens. */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
 const LEAF_HOLD =
   'on the home page (light scheme, 1x, script on), at heights 900 and 844 and the narrowest and widest px of each band the built stylesheets’ width media queries make, the healing leaf turns 5deg about its stem’s foot on the page when the Health and Cure card’s link is hovered or focused by Tab under a fine pointer, with no other move and no growth, on the root’s motion tokens, and rests for less motion at rest, when pointed at and focused by Tab, and under a coarse pointer at rest, when pointed at and after a tap, by each part’s computed turn, pivot, transition and page matrix, with no element from its drawing to its card or inside its parts changing its rotate, translate, scale, transform or animation-name';
 const IMAGE_HOLD =
@@ -883,7 +886,7 @@ const imageProblems = Effect.fn('computed.images')(function* (browser: Browser, 
 const computed = HttpServer.addressFormattedWith((base) =>
   Effect.gen(function* () {
     const browser = yield* Effect.acquireRelease(
-      step('launch', () => chromium.launch({ channel: 'chrome' })),
+      step('launch', () => chromium.launch({ channel: 'chrome', args: KEYCHAIN })),
       (launched) => Effect.promise(() => launched.close()),
     );
     const [leaf, images] = yield* Effect.all(

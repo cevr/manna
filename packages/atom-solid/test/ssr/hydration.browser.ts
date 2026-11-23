@@ -41,7 +41,7 @@ beforeAll(async () => {
       });
     },
   });
-  browser = await chromium.launch();
+  browser = await chromium.launch({ args: ['--use-mock-keychain', '--password-store=basic'] });
 });
 
 afterAll(async () => {

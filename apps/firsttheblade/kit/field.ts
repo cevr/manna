@@ -30,6 +30,9 @@ import {
   withoutRays,
 } from './field-paint.ts';
 
+/** Chrome's flags that keep it out of the host's keychain, so no macOS keychain dialog opens. */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
 const KIT = import.meta.dir;
 const ART = `${KIT}/../src/art`;
 
@@ -147,7 +150,7 @@ const field = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const master = yield* fs.readFile(`${KIT}/art/field.webp`);
   const browser = yield* Effect.acquireRelease(
-    step('launch', () => chromium.launch()),
+    step('launch', () => chromium.launch({ args: KEYCHAIN })),
     (opened) => Effect.promise(() => opened.close()),
   );
   const page = yield* step('page', () => browser.newPage());

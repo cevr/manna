@@ -27,6 +27,9 @@ import { HttpServer } from 'effect/http';
 import { PAGES } from '../src/pages.ts';
 import { layerLocal } from '../src/worker/local.ts';
 
+/** Chrome's flags that keep it out of the host's keychain, so no macOS keychain dialog opens. */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
 const WIDTHS = [1440, 390] as const;
 /** The board measured under the pointer. */
 const HOVER_WIDTH = 1440;
@@ -428,7 +431,7 @@ const byMargin = Order.mapInput(Order.Number, (run: Measured) => run.p95 / run.b
 const contrast = HttpServer.addressFormattedWith((base) =>
   Effect.gen(function* () {
     const browser = yield* Effect.acquireRelease(
-      step('launch', () => chromium.launch({ channel: 'chrome' })),
+      step('launch', () => chromium.launch({ channel: 'chrome', args: KEYCHAIN })),
       (opened) => Effect.promise(() => opened.close()),
     );
     const boards = WIDTHS.flatMap((width) => PAGES.map(({ path }) => ({ path, width })));

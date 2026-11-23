@@ -15,6 +15,7 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: `http://127.0.0.1:${String(port)}`,
     trace: 'retain-on-failure',
+    launchOptions: { args: ['--use-mock-keychain', '--password-store=basic'] },
   },
   webServer: {
     command: 'bun server.ts',

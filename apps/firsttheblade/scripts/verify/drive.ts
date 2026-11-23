@@ -33,8 +33,13 @@ import { awaitLetter, readOutbox, redactTokens } from './outbox.ts';
 export const JOURNEYS = ['confirm', 'confirm-noscript'] as const;
 export type JourneyName = (typeof JOURNEYS)[number];
 
-/** Chrome with no sound, as every browser a drive starts. */
-const MUTED = ['--mute-audio', '--disable-audio-output'];
+/** Chrome with no sound and out of the host's keychain (no macOS keychain dialog), as every browser a drive starts. */
+const MUTED = [
+  '--mute-audio',
+  '--disable-audio-output',
+  '--use-mock-keychain',
+  '--password-store=basic',
+];
 
 const VIEWPORT = { width: 1280, height: 800 };
 

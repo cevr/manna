@@ -94,10 +94,11 @@ A stage: `verify:doctor --origin <url>` runs `answers` and `load`, GET only.
 
 ## Drive
 
-Every browser is muted and named for the run. Set once per shell:
+Every browser is muted, kept out of the host's keychain and named for the
+run. Set once per shell:
 
 ```bash
-export AGENT_BROWSER_SESSION=$RUN AGENT_BROWSER_ARGS=--mute-audio,--disable-audio-output
+export AGENT_BROWSER_SESSION=$RUN AGENT_BROWSER_ARGS=--mute-audio,--disable-audio-output,--use-mock-keychain,--password-store=basic
 ```
 
 then `agent-browser open http://127.0.0.1:$PORT/`. The feature files write

@@ -27,6 +27,9 @@ import { SERIES, type Series, type SeriesId } from '../src/content.ts';
 import { PALETTE } from '../src/palette.ts';
 import { reportAgainstRecord } from './approval.ts';
 
+/** Chrome's flags that keep it out of the host's keychain, so no macOS keychain dialog opens. */
+const KEYCHAIN = ['--use-mock-keychain', '--password-store=basic'];
+
 const KIT = import.meta.dir;
 const APP = `${KIT}/..`;
 const OUT = `${KIT}/out`;
@@ -334,7 +337,7 @@ const kit = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const wheat = yield* fs.readFileString(WHEAT);
   const browser = yield* Effect.acquireRelease(
-    step('launch', () => chromium.launch({ channel: 'chrome' })),
+    step('launch', () => chromium.launch({ channel: 'chrome', args: KEYCHAIN })),
     (opened) => Effect.promise(() => opened.close()),
   );
 
