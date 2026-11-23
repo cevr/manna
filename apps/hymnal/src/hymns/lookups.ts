@@ -10,6 +10,9 @@ import type { Passage } from '@manna/hymnal/indexes';
 import { fold } from '@manna/hymnal/fold';
 import { Option } from 'effect';
 
+export type { Passage } from '@manna/hymnal/indexes';
+export { passageQuery, passageText } from './passage-text';
+
 /** The indexes the app carries (`vite/indexes.ts`). */
 export interface HymnIndexes {
   /** The Topical index's topics in printed order, a subtopic naming its heading. */
