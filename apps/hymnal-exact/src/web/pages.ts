@@ -5,7 +5,11 @@
  * screen (the list, a hymn by its number and title, Recent, the player),
  * and `404.html` for every other address. The browser draws each from the
  * same script; nothing is rendered at build, so no page carries answers
- * that a reader's kept lists would make stale (README.md, "The web").
+ * that a reader's kept lists would make stale (README.md, "The web"). A
+ * hymn's page names as module preloads the page module and the hymn's
+ * chords file (`modules/web/index.js`, `chords.read`), which its words wait
+ * for, so the browser fetches and compiles both while the app's script
+ * loads, before the data module first asks.
  */
 
 import type { Book } from '../hymns/book.ts';
@@ -14,6 +18,8 @@ import { hymnPages } from './place.ts';
 interface Head {
   readonly title: string;
   readonly description: string;
+  /** The site's files the page preloads as modules, from its root. */
+  readonly preload?: ReadonlyArray<string>;
 }
 
 const NAME = 'Hymnal';
@@ -30,6 +36,7 @@ export const withHead = (shell: string, head: Head): string => {
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:site_name" content="${NAME}">`,
+    ...(head.preload ?? []).map((file) => `<link rel="modulepreload" href="./${file}">`),
   ].join('\n');
   return shell.replace(/<title>[^<]*<\/title>/u, () => tags);
 };
@@ -69,6 +76,7 @@ export const headsOf = (book: Book): ReadonlyArray<readonly [string, Head]> => {
         {
           title: hymn?.title ?? n,
           description: `Hymn ${n} of the hymnal, under ${hymn?.topic ?? ''}.`,
+          preload: ['modules/index.js', `modules/chords/${n}.js`],
         },
       ] as const;
     }),

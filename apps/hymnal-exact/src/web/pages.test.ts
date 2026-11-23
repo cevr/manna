@@ -40,12 +40,20 @@ describe("the site's pages", () => {
 
   test("a page is the shell with its own title and description, and a hymn's names it", () => {
     for (const [file, html] of pages) {
-      expect(html.replace(/<title>[^<]*<\/title>(\n<meta [^>]*>)*/u, '<title>Hymnal</title>')).toBe(
-        SHELL,
-      );
+      expect(
+        html.replace(
+          /<title>[^<]*<\/title>(\n<meta [^>]*>)*(\n<link rel="modulepreload" [^>]*>)*/u,
+          '<title>Hymnal</title>',
+        ),
+      ).toBe(SHELL);
       expect(html).toContain('<meta name="description" content="');
+      const preloads = [...html.matchAll(/<link rel="modulepreload" href="([^"]*)">/gu)].map(
+        (found) => found[1],
+      );
+      if (!file.startsWith('hymns/')) expect(preloads).toEqual([]);
       if (file.startsWith('hymns/')) {
         const n = Number(file.split('/')[1]);
+        expect(preloads).toEqual(['./modules/index.js', `./modules/chords/${n}.js`]);
         const hymn = byNumber.get(n);
         expect(html).toContain(`content="Hymn ${n} of the hymnal`);
         const title = withHead('<title></title>', { title: hymn?.title ?? '-', description: '' });
