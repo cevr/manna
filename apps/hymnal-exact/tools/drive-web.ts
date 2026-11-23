@@ -29,8 +29,9 @@
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
  * - `shipped`: `/` reads no hymn's chords and no indexes, `/hymns/100` its
  *   own chords, its neighbours' and the indexes once each, and a chords
- *   file that fails to load leaves the page drawn and is read again at the
- *   next ask (`src/shipped/load.ts`);
+ *   file that fails to load leaves the page drawn, and the hymn, turned to
+ *   by the pager or opened by its address, shows its chords once they are
+ *   read again (`src/shipped/load.ts`, `chordsMend`);
  * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
  *   stanza choice; Chrome closed as a person closes it and opened again on
  *   its profile: all four kept.
@@ -624,19 +625,16 @@ const shippedRequests = (page: Page) => {
   };
 };
 
-/** Hymn `number` opened within the launch, as a move through the browser's history opens it (a `popstate`), so the data module, and what it has read, stays. */
-const within = (page: Page, number: number) =>
-  page.evaluate(
-    `(() => { history.pushState(null, '', '/hymns/${number}'); dispatchEvent(new PopStateEvent('popstate', { state: null })); })()`,
-  );
-
 /**
  * The files the launch does not bundle (`src/shipped/load.ts`): `/` reads
  * no hymn's chords and no indexes; `/hymns/100` reads its own chords, its
- * pager's neighbours' and the indexes once each; and a read that fails
- * (101's chords blocked, as offline) leaves the page drawn with its words,
- * and once they can load the next ask of 101, opening it within the
- * launch, reads them again (a new address, `?try=1`) and draws it.
+ * pager's neighbours' and the indexes once each. With chords on, a
+ * neighbour's read that fails (101's chords blocked, as offline) leaves
+ * the page drawn with its chords and words, and once they can load the
+ * pager turned to 101 (a sideways wheel) shows 101 with its chords, read
+ * again (a new address, `?try=1`; `chordsMend`, features/chords.contract);
+ * and a hymn opened by its address whose first read fails (102's) shows
+ * its chords from the read made again at once.
  */
 const shipped = async (page: Page) => {
   const launch = async (path: string) => {
@@ -669,47 +667,109 @@ const shipped = async (page: Page) => {
       ),
     atHymn,
   );
+  mark('chords on');
+  await open(page, '/');
+  await tap(page, '[data-testid="gear"]');
+  await waitFor(page, `document.querySelector('[data-testid="chords-toggle"]') !== null`, 5000);
+  await tap(page, '[data-testid="chords-toggle"]');
+  const on = await waitFor(
+    page,
+    `document.querySelector('[data-testid="chords-toggle"]')?.getAttribute('aria-checked') === 'true'`,
+    5000,
+  );
   mark('block 101 chords');
   await page.send('Network.setBlockedURLs', { urls: [`${origin}/modules/chords/101.js`] });
   await page.send('Network.clearBrowserCache');
   const seen = shippedRequests(page);
   try {
     await open(page, '/hymns/100');
-    const words = await waitFor(page, `window.__web.words !== undefined`, 5000);
-    await Bun.sleep(600);
-    const failed = seen.files().filter(({ file }) => file === '/modules/chords/101.js');
-    check(
-      "a neighbour's chords that fail to load leave the hymn page drawn with its words",
-      words && failed.length === 1 && failed[0]?.status === 0,
-      { words, files: seen.files() },
-    );
-    await page.send('Network.setBlockedURLs', { urls: [] });
-    mark('open 101 within the launch');
-    await within(page, 101);
-    const turned = await waitFor(page, `location.pathname === '/hymns/101'`, 5000);
-    const again = await waitFor(
+    const words = await waitFor(
       page,
-      `[...document.querySelectorAll('[data-testid="stanza-1"]')].some((e) => e.getBoundingClientRect().left >= 0 && e.getBoundingClientRect().left < innerWidth)`,
+      `(${shownChords}).number === 100 && (${shownChords}).chords > 0`,
       10_000,
     );
     await Bun.sleep(600);
+    const failed = seen.files().filter(({ file }) => file === '/modules/chords/101.js');
+    check(
+      "a neighbour's chords that fail to load leave the hymn page drawn with its chords and words",
+      on && words && failed.length === 1 && failed[0]?.status === 0,
+      { on, words, files: seen.files() },
+    );
+    await page.send('Network.setBlockedURLs', { urls: [] });
+    mark('turn the pager to 101');
+    const pager = await page.evaluate<{ x: number; y: number; width: number }>(
+      `(() => { const r = document.querySelector('[data-testid="hymn-pager"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, width: r.width }; })()`,
+    );
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel',
+      x: pager.x,
+      y: pager.y,
+      deltaX: pager.width,
+      deltaY: 0,
+    });
+    const drawn = await waitFor(page, chordsDrawn(101), 12_000);
     const retried = seen.files().filter(({ file }) => file.startsWith('/modules/chords/101.js?'));
     check(
-      'the next ask of a hymn whose chords failed reads them again, and its page is drawn',
-      turned && again && retried.some(({ status }) => status === 200),
-      {
-        turned,
-        again,
-        at: await page.evaluate<string>(
-          `(() => { const p = document.querySelector('[data-testid="hymn-pager"]'); return location.pathname + ' ' + p.scrollLeft + '/' + p.clientWidth; })()`,
-        ),
-        files: seen.files(),
-      },
+      'the pager turned to a neighbour whose chords failed shows that hymn with its chords once they are read again',
+      drawn && retried.some(({ status }) => status === 200),
+      { drawn, shown: await page.evaluate(shownChords), files: seen.files() },
     );
   } finally {
     seen.stop();
     await page.send('Network.setBlockedURLs', { urls: [] });
   }
+  mark('refuse 102 chords once');
+  await page.send('Network.clearBrowserCache');
+  const once = await refuseOnce(page, '/modules/chords/102.js');
+  const linked = shippedRequests(page);
+  try {
+    await open(page, '/hymns/102');
+    const drawn = await waitFor(page, chordsDrawn(102), 12_000);
+    const reads = linked.files().filter(({ file }) => file.startsWith('/modules/chords/102.js'));
+    check(
+      "a hymn opened by its address whose chords' first read fails shows its chords once they are read again",
+      drawn && once.refused() === 1 && reads.some(({ status }) => status === 200),
+      { drawn, refused: once.refused(), shown: await page.evaluate(shownChords), reads },
+    );
+  } finally {
+    linked.stop();
+    await once.stop();
+  }
+  mark('chords off');
+  await open(page, '/');
+  await tap(page, '[data-testid="gear"]');
+  await waitFor(page, `document.querySelector('[data-testid="chords-toggle"]') !== null`, 5000);
+  await tap(page, '[data-testid="chords-toggle"]');
+};
+
+/** The shown hymn page: its hymn's number, its chords drawn and whether it says it has none. */
+const shownChords = `(() => { const root = document.querySelector('[data-testid="hymn-page"]'); return { path: location.pathname, number: Number(root?.querySelector('[data-testid="hymn-number"]')?.textContent ?? 0), chords: root ? root.querySelectorAll('[data-testid^="chord-"]').length : 0, none: Boolean(root?.querySelector('[data-testid^="no-chords"]')) }; })()`;
+
+/** Whether hymn `n` is the page shown, at its address, its chords drawn and no notice that it has none. */
+const chordsDrawn = (n: number) =>
+  `(() => { const shown = ${shownChords}; return shown.path === '/hymns/${n}' && shown.number === ${n} && shown.chords > 0 && !shown.none; })()`;
+
+/** Fails the page's first request for `file` (as a network failure), and lets every later one through. */
+const refuseOnce = async (page: Page, file: string) => {
+  let refused = 0;
+  const off = page.on('Fetch.requestPaused', (params) => {
+    const id = String(params.requestId);
+    const url = (params.request as { url: string }).url;
+    if (refused === 0 && url === `${origin}${file}`) {
+      refused += 1;
+      void page.send('Fetch.failRequest', { requestId: id, errorReason: 'Failed' });
+      return;
+    }
+    void page.send('Fetch.continueRequest', { requestId: id });
+  });
+  await page.send('Fetch.enable', { patterns: [{ urlPattern: `${origin}${file}*` }] });
+  return {
+    refused: () => refused,
+    stop: async () => {
+      off();
+      await page.send('Fetch.disable');
+    },
+  };
 };
 
 /** The app's root is drawn in the dark scheme (`color-scheme=settingsScheme` in `app.contract`). */
