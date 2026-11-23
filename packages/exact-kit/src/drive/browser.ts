@@ -4,7 +4,10 @@
  * The browser of a port's web drive, with no Exact driver attached:
  * Playwright's Chromium (`channel: 'chromium'`, the Chrome for Testing
  * build `@playwright/test` pins, in its new headless mode) on a persistent
- * profile folder, 430×932, audio muted, one page. Playwright starts the
+ * profile folder, 430×932, audio muted, one page, with no media feature
+ * emulated (Playwright's default emulation of the colour scheme, reduced
+ * motion, forced colours and contrast cost every load about 40-50 ms,
+ * measured; a drive that wants one sets it with `emulateMedia`). Playwright starts the
  * browser, passes its keychain flags and stops it when the drive's process
  * ends; no tool of ours starts a browser binary itself
  * (`manna/no-browser-spawn`). A drive reads the network through the
@@ -74,6 +77,10 @@ export const launchBrowser = async (profile: string, fresh: boolean): Promise<Br
     channel: 'chromium',
     headless: true,
     viewport: VIEWPORT,
+    colorScheme: null,
+    reducedMotion: null,
+    forcedColors: null,
+    contrast: null,
     args: ['--mute-audio'],
     handleSIGINT: false,
     handleSIGTERM: false,
