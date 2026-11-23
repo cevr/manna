@@ -22,6 +22,7 @@ import { type ShortFinding, levelOf } from './findings.ts';
 import { voicedAt } from '../core/voiced.ts';
 import { camera } from '../canvas/camera.ts';
 import { createFilm, drawing } from '../canvas/film.ts';
+import { createShort } from '../canvas/short.ts';
 import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
 import type { PaintingSpec } from '../canvas/painting.ts';
 import { type ProbeSink, probeFigure, probing } from '../canvas/probe.ts';
@@ -262,7 +263,7 @@ describe('the open', () => {
 
   describe('a painting or a rig, with no text or ink, under a camera push', () => {
     const W = 1080;
-    const H = 1920;
+    const H = 608;
     const PLATE: PaintingSpec = { key: 'test/plate', png: 'plate.png', size: [W, H] };
     const plate = drawing({ timeline: {}, paintings: { plate: PLATE }, draw: () => {} });
     const film = withDom(() =>
@@ -289,26 +290,37 @@ describe('the open', () => {
         ],
       }),
     );
-    /** The open's frames from `from` seconds, each probed as the page's `probe` call probes it. */
-    const openFrom = (from: number): ReadonlyArray<Probed> => {
+    /**
+     * The open of a short cut from one scene, each frame probed through the
+     * short's page as the page's `probe` call probes it (`player/render.ts`).
+     */
+    const shortOpen = (scene: string): ReadonlyArray<Probed> => {
+      const short = createShort(film, {
+        id: 'cut',
+        title: 'Cut',
+        spans: [{ scene, from: { at: 'start' }, to: { at: 'end' } }],
+      });
       const down = film.paintings.stand(new Map([[PLATE, { image: Option.none() }]]));
-      const frames = openFrames(30).map((i) => {
+      const frames = openFrames(short.fps).map((i) => {
         const sink: ProbeSink = { texts: [], inks: [], placed: [] };
-        withDom(() => film.render(recorder(W, H).ctx, from + i / 30, { probe: sink }));
+        withDom(() =>
+          short.render(recorder(short.width, short.height).ctx, i / short.fps, { probe: sink }),
+        );
         return sink;
       });
       down();
       return frames;
     };
 
-    test('its open moves, with no text or ink in it', () => {
-      const open = openFrom(0);
-      expect(open.every((p) => p.texts.length === 0 && p.inks.length === 0)).toBe(true);
-      expect(Option.isNone(stillOpen('probe', open, 0.5))).toBe(true);
+    test("a short's open moves, with no text or ink in its picture", () => {
+      const open = shortOpen('push');
+      const picture = (p: Probed) => [...p.texts, ...p.inks].filter((m) => m.caption !== true);
+      expect(open.every((p) => picture(p).length === 0)).toBe(true);
+      expect(Option.isNone(stillOpen('cut', open, 0.5))).toBe(true);
     });
 
-    test('the same painting held, no camera and no breath, is a still open', () => {
-      expect(Option.getOrThrow(stillOpen('probe', openFrom(4), 0.5)).reason).toBe('still open');
+    test('the same painting held in a short, no camera and no breath, is a still open', () => {
+      expect(Option.getOrThrow(stillOpen('cut', shortOpen('held'), 0.5)).reason).toBe('still open');
     });
 
     test('a rig it declares moves with the camera as a painting does', () => {
