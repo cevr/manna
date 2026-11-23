@@ -44,17 +44,25 @@ const readersAsked = [
   ...contracts.matchAll(/^\s*resource (\w+) = (hymnPage|chordsPage|keysPage|sheetPlacement)\(/gmu),
 ].map((found) => found[1] ?? '');
 
-/** The resources `chordsMended` refreshes, read from its body. */
-const refreshed = (() => {
+/**
+ * `chordsMended` as `features/chords.contract` writes it: the state of
+ * `chordsHere` its one `if` asks for, and the resources it then refreshes.
+ */
+const mended = (() => {
   const text = readFileSync(join(features, 'chords.contract'), 'utf8');
   const start = text.indexOf('  action chordsMended\n');
-  if (start < 0) return [];
+  if (start < 0) return { when: '', refreshed: [] };
   const body = text.slice(start).split('\n').slice(1);
   const end = body.findIndex((line) => !line.startsWith('   '));
-  return body
-    .slice(0, end < 0 ? body.length : end)
-    .flatMap((line) => /^\s*refresh (\w+)$/u.exec(line)?.[1] ?? []);
+  const lines = body.slice(0, end < 0 ? body.length : end);
+  return {
+    when:
+      lines.flatMap((line) => /^ {4}if chordsHere\.state == "(\w+)"$/u.exec(line)?.[1] ?? [])[0] ??
+      '',
+    refreshed: lines.flatMap((line) => /^ {6}refresh (\w+)$/u.exec(line)?.[1] ?? []),
+  };
 })();
+const { refreshed } = mended;
 
 interface Ask {
   readonly on: boolean;
@@ -169,7 +177,7 @@ const screen = () => {
     const key = `${read.number} ${read.state}`;
     if (key === here.key) return;
     here.key = key;
-    if (read.state === 'mended') await Promise.all(refreshed.flatMap((name) => ask(name, true)));
+    if (read.state === mended.when) await Promise.all(refreshed.flatMap((name) => ask(name, true)));
   };
 
   /** The screen once a commit's asks settle. */
