@@ -237,9 +237,9 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       await draw(i);
       return canvasLuma(canvas, area);
     },
-    drift: async (from, i, area) => {
+    drift: async (from, i, area, floor) => {
       const before = await referenceOf(from, area);
-      return cellDrift(before, await frozen(i, area), area);
+      return cellDrift(before, await frozen(i, area), area, floor);
     },
     drawTimes: (frames) =>
       frames.reduce<Promise<ReadonlyArray<number>>>(

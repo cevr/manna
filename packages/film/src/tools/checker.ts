@@ -32,7 +32,9 @@ import {
   type HoldCandidate,
   type Sample,
   frameFindings,
+  PICTURE_NOISE,
   framesHeld,
+  pictureDrift,
   heldStill,
   holdCandidates,
   holdGrid,
@@ -100,9 +102,13 @@ const openDrifts = (
   Option.match(Arr.head(opening), {
     onNone: () => Effect.succeed<ReadonlyArray<ReadonlyArray<number>>>([]),
     onSome: (from) =>
-      Effect.forEach(opening.slice(1), (i) => pages.use((page) => driftOf(page, from, i, area)), {
-        concurrency: workers,
-      }),
+      Effect.forEach(
+        opening.slice(1),
+        (i) => pages.use((page) => driftOf(page, from, i, area, PICTURE_NOISE)),
+        {
+          concurrency: workers,
+        },
+      ),
   });
 
 /** What probing across one hold candidate found, and how many frames it drew. */
@@ -150,7 +156,7 @@ const confirmHold = (
     const area: LumaArea = { x: 0, y: 0, w: info.width, h: info.height, ...SHORT_RULES.loopGrid };
     const reads: HoldReads = {
       probe: once(seen, (i) => pages.call('probe', i)),
-      drift: (anchor, i) => pages.use((page) => driftOf(page, anchor, i, area)),
+      drift: (anchor, i) => pages.use((page) => driftOf(page, anchor, i, area, PICTURE_NOISE)),
       area,
     };
     const ticks = holdTicks(hold, info.fps);
@@ -359,7 +365,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               ...Option.toArray(loopPicture(cut.id, first, last)),
             ];
             yield* Effect.log(
-              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + drifts.length + 3} loop=${lumaDiff(first, last).toFixed(3)} findings=${findings.length}`,
+              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + drifts.length + 3} loop=${lumaDiff(first, last).toFixed(3)} ${pictureDrift({ area: frame, drifts })} findings=${findings.length}`,
             );
             return findings;
           }),
@@ -415,7 +421,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               ),
             ];
             yield* Effect.log(
-              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length + drifts.length + 1} findings=${findings.length}`,
+              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length + drifts.length + 1} ${pictureDrift({ area, drifts })} findings=${findings.length}`,
             );
             return findings;
           }),

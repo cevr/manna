@@ -1718,9 +1718,9 @@ export const heldStill = (frames: ReadonlyArray<Probed>): boolean => {
 /**
  * Frames as their page draws them frozen (`drift`: no captions, every line
  * and the grain on one boil tick), each after the first compared with the
- * first pixel by pixel over `area`: for each cell of its grid, the largest
- * change of one channel of one of its pixels (`cellDrift`), in the order the
- * frames were probed.
+ * first pixel by pixel over `area`: for each cell of its grid, how many of
+ * its pixels changed by more than `PICTURE_NOISE` and its largest change
+ * (`cellDrift`, two values a cell), in the order the frames were probed.
  */
 export interface DrawnPicture {
   readonly area: LumaArea;
@@ -1728,22 +1728,48 @@ export interface DrawnPicture {
 }
 
 /**
- * The change (0–255) of one channel of one pixel past which the picture
- * moved. Drawn frozen, a picture that does not move draws the same pixels
- * frame after frame (its boil and grain pinned to one tick, its captions
- * off), so a held frame's drift is 0 and the step need only sit above the
- * one or two levels a resampled image may round by. 8 is a quarter pixel's
- * slide of an edge of contrast 34 (a step a viewer sees), and about 3 % of
- * one pixel's channel, under what a viewer notices in one pixel alone.
- * Pixels are compared before any pooling, so a slide inside a cell cannot
- * average away, and each channel is held on its own, so a hue that moves at
- * one luma moves.
+ * The change (0–255) of one channel of one pixel that a frozen draw of a
+ * held picture may still show: its noise floor, as measured. Drawn frozen (its
+ * boil and grain pinned to one tick, its captions off), a picture that does
+ * not move draws the same commands frame after frame, and Chrome rasters them
+ * to the same bytes: the settled `stones` card read peak 0 in every pixel of
+ * its open on the real page (round 8's measured run), as does every held
+ * fixture here. A pixel past it changed because the picture did.
  */
-export const PICTURE_STEP = 8;
+export const PICTURE_NOISE = 0;
 
-/** Some frame changed from the first by more than `PICTURE_STEP` in some pixel's channel. */
+/**
+ * How many pixels past `PICTURE_NOISE` a frame must change before it moved
+ * as a viewer sees it: a patch of 2 × 2 px, about the least a viewer
+ * resolves on a phone (a 1080 px short about 65 mm wide, at 30 cm, sets one
+ * arcminute near 1.4 px). Each changed pixel counts once however far it
+ * changed, so a broad soft pan of a few levels counts as a sharp slide does,
+ * and one stray pixel does not.
+ */
+export const PICTURE_MIN = 4;
+
+/** How a frame's drift grid reads: the pixels it changed past `PICTURE_NOISE`, and its largest change of one channel. */
+export const driftOfGrid = (grid: ReadonlyArray<number>) => {
+  let changed = 0;
+  let peak = 0;
+  for (let k = 0; k + 1 < grid.length; k += 2) {
+    changed += grid[k] ?? 0;
+    peak = Math.max(peak, grid[k + 1] ?? 0);
+  }
+  return { changed, peak };
+};
+
+/** Some frame changed at least `PICTURE_MIN` pixels from the first past `PICTURE_NOISE`. */
 export const pictureMoved = (picture: DrawnPicture): boolean =>
-  picture.drifts.some((grid) => grid.some((d) => d > PICTURE_STEP));
+  picture.drifts.some((grid) => driftOfGrid(grid).changed >= PICTURE_MIN);
+
+/** The open's drift as a log line reads it: its most-changed frame's pixels, and the largest change of any. */
+export const pictureDrift = (picture: DrawnPicture): string => {
+  const read = picture.drifts.map(driftOfGrid);
+  const changed = Math.max(0, ...read.map((r) => r.changed));
+  const peak = Math.max(0, ...read.map((r) => r.peak));
+  return `drift=${changed}px/${peak}`;
+};
 
 /**
  * Whether frames hold still as a viewer sees them: their probed marks at rest

@@ -6,7 +6,7 @@ import { shortPhrases } from '../core/phrases.ts';
 import type { Phrase } from '../core/phrases.ts';
 import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
 import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
-import { type DrawnPicture, PICTURE_STEP } from './check.ts';
+import { type DrawnPicture, PICTURE_MIN, PICTURE_NOISE } from './check.ts';
 import { cellDrift } from '../player/dom.ts';
 import {
   loopGap,
@@ -74,7 +74,7 @@ const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid 
 /** The band drawn the same, frame after frame: no cell drifts. */
 const HELD: DrawnPicture = {
   area: BAND,
-  drifts: [Arr.makeBy(BAND.cols * BAND.rows, () => 0)],
+  drifts: [Arr.makeBy(2 * BAND.cols * BAND.rows, () => 0)],
 };
 
 describe('shortLength', () => {
@@ -289,7 +289,10 @@ describe('the open', () => {
     const open = (paint: (t: number) => (x: number, y: number) => Rgb): DrawnPicture => {
       const frames = Arr.makeBy(openFrames(30).length, (k) => raster(paint(k / 8)));
       const first = frames[0] ?? raster(paint(0));
-      return { area: AREA, drifts: frames.slice(1).map((f) => cellDrift(first, f, AREA)) };
+      return {
+        area: AREA,
+        drifts: frames.slice(1).map((f) => cellDrift(first, f, AREA, PICTURE_NOISE)),
+      };
     };
     /** A painted plate pushed in about its centre to `zoom`, under a fixed grain. */
     const plate =
@@ -393,14 +396,50 @@ describe('the open', () => {
       expect(moves(open((t) => block(20 + Math.round(20 * t), RUST)))).toBe(true);
     });
 
-    test('one pixel that changes past one step moves; at it, it holds', () => {
-      const by = (step: number) =>
+    test('a broad low-contrast block panning 40 px moves, every changed pixel 8 levels; held, it is a still open', () => {
+      const DUSK: Rgb = [48, 92, 132];
+      const SKY: Rgb = [56, 100, 140];
+      /** A block 40 × 54 px of the dusk blue from `left`, the strip's whole height, on a sky blue 8 levels lighter. */
+      const soft = (left: number) => (x: number) => {
+        if (x >= left && x < left + 40) return DUSK;
+        return SKY;
+      };
+      expect(moves(open((t) => soft(10 + Math.round(40 * t))))).toBe(true);
+      expect(moves(open(() => soft(10)))).toBe(false);
+    });
+
+    test('a patch of PICTURE_MIN pixels that changes by one level moves; one fewer stays still', () => {
+      const patch = (count: number) =>
         open((t) => (x, y): Rgb => {
-          if (x === 50 && y === 30) return [76 + step * t, 126, 146];
+          if (y === 30 && x >= 50 && x < 50 + count) return [76 + Math.ceil(t), 126, 146];
           return TEAL;
         });
-      expect(moves(by(PICTURE_STEP + 1))).toBe(true);
-      expect(moves(by(PICTURE_STEP))).toBe(false);
+      expect(moves(patch(PICTURE_MIN))).toBe(true);
+      expect(moves(patch(PICTURE_MIN - 1))).toBe(false);
+    });
+
+    test('a plate that moves wholly off the strip, at its corner, or under a fill that covers the strip, is a still open', () => {
+      /** A plate 30 px square of rust sliding from (`x0`, `y0`) by (`dx`, `dy`) on teal, in the strip's own px. */
+      const plateAt = (x0: number, y0: number, dx: number, dy: number) =>
+        open((t) => (x, y): Rgb => {
+          const left = x0 + dx * t;
+          const top = y0 + dy * t;
+          if (x >= left && x < left + 30 && y >= top && y < top + 30) return RUST;
+          return TEAL;
+        });
+      expect(moves(plateAt(150, 100, 40, 0))).toBe(false);
+      expect(moves(plateAt(-80, -80, -20, -20))).toBe(false);
+      /** A fill twice the strip's size sliding 20 px: every pixel of the strip stays inside it. */
+      expect(
+        moves(
+          open((t) => (x, y): Rgb => {
+            const left = -60 + 20 * t;
+            if (x >= left && x < left + 220 && y >= -50 && y < 110) return RUST;
+            return TEAL;
+          }),
+        ),
+      ).toBe(false);
+      expect(moves(plateAt(-25, 10, 15, 0))).toBe(true);
     });
   });
 

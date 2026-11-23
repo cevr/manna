@@ -192,23 +192,23 @@ export const lumaOf = (page: FramePage, i: number, area: LumaArea) =>
     );
 
 /**
- * A drift as a page hands it back: one value for each cell of `area`'s
- * grid; an empty or short read is refused, so motion is never judged on
+ * A drift as a page hands it back: two values for each cell of `area`'s
+ * grid (`cellDrift`); an empty or short read is refused, so motion is never judged on
  * nothing.
  */
 export const driftGrid = (area: LumaArea) =>
   Schema.Array(Schema.Finite).check(
     Schema.makeFilter(
       (cells) =>
-        cells.length === area.cols * area.rows ||
+        cells.length === 2 * area.cols * area.rows ||
         `${cells.length} drift values for a ${area.cols}×${area.rows} grid`,
     ),
   );
 
 /** How far frame `i` drawn frozen on `page` changed from frame `from` (`drift`), cell by cell of `area`'s grid (`driftGrid`). */
-export const driftOf = (page: FramePage, from: number, i: number, area: LumaArea) =>
+export const driftOf = (page: FramePage, from: number, i: number, area: LumaArea, floor: number) =>
   page
-    .call('drift', from, i, area)
+    .call('drift', from, i, area, floor)
     .pipe(
       Effect.flatMap((cells) =>
         Schema.decodeEffect(driftGrid(area))(cells).pipe(

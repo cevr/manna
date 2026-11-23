@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Effect, Exit, Layer, Option, Result } from 'effect';
+import { Array as Arr, Effect, Exit, Function as Fn, Layer, Option, Result } from 'effect';
 import { type Address, resolveAddress } from '../core/address.ts';
 import { layout } from '../core/layout.ts';
 import type { Short, Timed } from '../core/schema.ts';
@@ -63,11 +63,19 @@ const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.pages.closed).toBe(ledger.pages.opened);
 };
 
-/** A frozen page whose every pixel of frame `i` is the grey `v(i)`: each cell drifts from frame `from` by their difference. */
+/**
+ * A frozen page whose every pixel of frame `i` is the grey `v(i)`: each cell
+ * changed from frame `from` by their difference in every pixel, as
+ * `cellDrift` counts it past `floor`.
+ */
 const greys =
   (v: (i: number) => number) =>
-  (from: number, i: number, area: LumaArea): ReadonlyArray<number> =>
-    Arr.makeBy(area.cols * area.rows, () => Math.abs(v(i) - v(from)));
+  (from: number, i: number, area: LumaArea, floor: number): ReadonlyArray<number> => {
+    const d = Math.abs(v(i) - v(from));
+    const pixels = Math.round(area.w / area.cols) * Math.round(area.h / area.rows);
+    const changed = pixels * Number(d > floor);
+    return Arr.flatMap(Arr.makeBy(area.cols * area.rows, Fn.identity), () => [changed, d]);
+  };
 
 /** Frame of scene a's `hit` cue start, where the fake page draws a collision. */
 const hitFrame = Math.round(2 * testExportInfo.fps);
@@ -267,9 +275,9 @@ describe('Checker.short', () => {
           areas.push(area);
           return 128;
         },
-        drift: (from, i, area) => {
+        drift: (from, i, area, floor) => {
           drifted.push(area);
-          return greys(() => 128)(from, i, area);
+          return greys(() => 128)(from, i, area, floor);
         },
       });
       yield* check;
