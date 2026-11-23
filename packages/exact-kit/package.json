@@ -11,6 +11,7 @@
     "./prepare": "./src/prepare/prepare.ts",
     "./drive": "./src/drive/drive.ts",
     "./port": "./src/drive/port.ts",
+    "./browser": "./src/drive/browser.ts",
     "./effect": {
       "types": "./src/effect/runner.d.ts",
       "default": "./src/effect/runner.ts"
@@ -33,6 +34,7 @@
   },
   "dependencies": {
     "@effect/platform-bun": "catalog:",
+    "@playwright/test": "1.65.1",
     "effect": "catalog:"
   },
   "devDependencies": {
