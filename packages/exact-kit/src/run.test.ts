@@ -166,7 +166,8 @@ const leftovers = Effect.gen(function* () {
 const watched = <A, E, R>(effect: Effect.Effect<A, E, R>, lost: string) =>
   Effect.timeoutOrElse(effect, {
     duration: WATCHDOG,
-    orElse: () => Effect.die(new Error(`${lost} within ${Duration.format(WATCHDOG)}`)),
+    orElse: () =>
+      Effect.die(new Error(`${lost}: the watchdog gave up after ${Duration.format(WATCHDOG)}`)),
   });
 
 /** The repo's root, from this file. */

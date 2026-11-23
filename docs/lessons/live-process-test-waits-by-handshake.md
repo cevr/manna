@@ -1,0 +1,9 @@
+### live-process-test-waits-by-handshake
+
+- **Date:** 2026-11-23
+- **Kind:** review
+- **Said:** "use child-readiness and exit handshakes (watchdog for lost children), and hold the wrapper's cleanup logic deterministically at the spawner seam rather than polling a pid file on a loaded host"
+- **Source:** hymnapp/batch-vb-133-findings.md o1 (On base, its first item)
+- **Wrong:** A land's merge gate failed once on `@manna/exact-kit`'s `ends what its child left in its process group when the child exits or the run is interrupted`: at load 61 the test passed bun's 5 s timeout and failed, then passed on the rerun. It polled for a pid file its real child wrote and asked `ps` whether the pid lived, so its pass rested on real processes being scheduled within a short wall-time bound.
+- **Cause:** The one test of the wrapper's process-group cleanup was a live one, and it waited on the child by a short timeout, where a loaded host schedules a child late. Now the cleanup rule (which group ends, and when: after the child's exit is seen, on interruption, at a verify's two-minute stop) is held at the spawner seam by a stand-in spawner and the test clock, as a property over those orders and the children left, and the one live test waits by handshakes: the child it leaves connects to the test and says it is up, its death is the connection closing, and its only time bound is a 30 s watchdog that names what was lost.
+- **Guard:** code: `packages/exact-kit/src/run.test.ts` `ends the child's process group, with every child it left there, after the run sees the child exit, when the run is interrupted first, or when a verify is stopped two minutes after its report; never while the child runs on otherwise`; code: `packages/exact-kit/src/run.test.ts` `ends what its child left in its process group when the child exits or the run is interrupted`
