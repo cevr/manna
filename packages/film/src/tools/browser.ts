@@ -11,7 +11,7 @@ import {
   type Scope,
   Semaphore,
 } from 'effect';
-import { type View, openView, thrownBy } from './chrome.ts';
+import { type View, chromeInUse, openView, thrownBy } from './chrome.ts';
 import { GPU_FLAG } from './chrome-gpu.ts';
 import {
   type CallAnswers,
@@ -306,12 +306,14 @@ const openPage = (view: View, url: string) =>
     return framePage(info, title, invoke);
   });
 
-/** Preflight: Chrome opens a page (and closes it again); `BrowserMissing` says how to get one. */
+/** Preflight: Chrome opens a page (and closes it again, and itself with it); `BrowserMissing` says how to get one. */
 export const browserReady: Effect.Effect<
   void,
   BrowserMissing | BrowserFailed,
   FileSystem.FileSystem | Path.Path
-> = Effect.scoped(Effect.asVoid(frameView)).pipe(Effect.withSpan('Browser.ready'));
+> = Effect.scoped(Effect.andThen(chromeInUse, Effect.asVoid(frameView))).pipe(
+  Effect.withSpan('Browser.ready'),
+);
 
 export class Browser extends Context.Service<Browser, BrowserService>()(
   '@manna/film/tools/Browser',
@@ -327,17 +329,25 @@ export class Browser extends Context.Service<Browser, BrowserService>()(
   );
 }
 
-/** Pages in this process's Chrome, each a tab closed with the scope that opened it. */
-export const makeBrowser: Effect.Effect<BrowserService, never, FileSystem.FileSystem | Path.Path> =
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const open = Effect.fn('Browser.open')(function* (url: string) {
-      const view = yield* frameView.pipe(
-        Effect.provideService(FileSystem.FileSystem, fs),
-        Effect.provideService(Path.Path, path),
-      );
-      return yield* openPage(view, url);
-    });
-    return Browser.of({ open });
+/**
+ * Pages in this process's Chrome, each a tab closed with the scope that
+ * opened it; Chrome itself is closed with the scope that made the browser,
+ * unless another scope still uses it (`chromeInUse`).
+ */
+export const makeBrowser: Effect.Effect<
+  BrowserService,
+  never,
+  FileSystem.FileSystem | Path.Path | Scope.Scope
+> = Effect.gen(function* () {
+  yield* chromeInUse;
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const open = Effect.fn('Browser.open')(function* (url: string) {
+    const view = yield* frameView.pipe(
+      Effect.provideService(FileSystem.FileSystem, fs),
+      Effect.provideService(Path.Path, path),
+    );
+    return yield* openPage(view, url);
   });
+  return Browser.of({ open });
+});

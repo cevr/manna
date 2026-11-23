@@ -15,7 +15,13 @@ import {
   Semaphore,
 } from 'effect';
 import { drawsOnGpu } from './chrome-gpu.ts';
-import { PROFILE_ROOT, holdChrome, profileFolder, releaseChrome } from './chrome-profile.ts';
+import {
+  PROFILE_ROOT,
+  endChrome,
+  holdChrome,
+  profileFolder,
+  releaseChrome,
+} from './chrome-profile.ts';
 import { BrowserFailed, BrowserMissing } from './errors.ts';
 
 /**
@@ -208,6 +214,30 @@ const holdOpen = (change: 1 | -1) =>
     for (const handle of handles)
       Bool.match(hold, { onTrue: () => handle.ref(), onFalse: () => handle.unref() });
   });
+
+/** How many scopes use this process's Chrome (`chromeInUse`). */
+let users = 0;
+
+/**
+ * This process's Chrome in use for the scope: when the last scope that uses
+ * it closes, the Chrome that runs is ended (`endChrome`: its process group
+ * killed, its pipes closed with it) and forgotten, so a later view launches
+ * Chrome again. An idle Chrome's handles are unreferenced (`holdOpen`), yet
+ * once a render has drawn on it Bun still keeps the event loop open while it
+ * runs, so a command that is done would never exit.
+ */
+export const chromeInUse: Effect.Effect<void, never, Scope.Scope> = Effect.acquireRelease(
+  Effect.sync(() => {
+    users += 1;
+  }),
+  () =>
+    Effect.sync(() => {
+      users -= 1;
+      if (users > 0) return;
+      endChrome();
+      running = Option.none();
+    }),
+);
 
 /** `effect`, with this process held open while it runs. */
 const held = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
