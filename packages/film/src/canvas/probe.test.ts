@@ -8,11 +8,121 @@ import {
   probesFaces,
   probePlate,
   probing,
+  quadOnCanvas,
   recordInk,
   recordPlate,
   recordText,
   unprobed,
 } from './probe.ts';
+import { insidePolygon } from '../core/polygon.ts';
+import { rng } from '../core/random.ts';
+import type { Point } from '../core/schema.ts';
+
+describe('quadOnCanvas', () => {
+  const W = 320;
+  const H = 180;
+  /** `n` × `n` points across the open square (0, 1)², each at its cell's centre. */
+  const grid = (n: number): ReadonlyArray<Point> =>
+    Array.from({ length: n * n }, (_, k): Point => [
+      ((k % n) + 0.5) / n,
+      (Math.floor(k / n) + 0.5) / n,
+    ]);
+  const fine = grid(48);
+  /** A grid dense enough to land in a sliver of a few px², sampled only where the coarse one finds nothing. */
+  const sliver = grid(640);
+
+  test('agrees with a brute-force sample over random transforms of a plate', () => {
+    const next = rng(20261123);
+    const span = (lo: number, hi: number) => lo + (hi - lo) * next();
+    const seen = { on: 0, off: 0, boxOnly: 0 };
+    const disagree: Array<{ readonly k: number; readonly quad: ReadonlyArray<Point> }> = [];
+    for (let k = 0; k < 400; k++) {
+      const [w, h] = [span(10, 400), span(10, 400)];
+      const turn = span(0, 2 * Math.PI);
+      const [sx, sy] = [span(0.05, 3), span(0.05, 3)];
+      const skew = span(-1, 1);
+      const [ex, ey] = [span(-400, 600), span(-400, 500)];
+      const map = ([u, v]: Point): Point => {
+        const x = u * w * sx + v * h * skew * sx;
+        const y = v * h * sy;
+        return [
+          Math.cos(turn) * x - Math.sin(turn) * y + ex,
+          Math.sin(turn) * x + Math.cos(turn) * y + ey,
+        ];
+      };
+      const quad = (
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ] as const
+      ).map((p) => map(p));
+      const sampled = (points: ReadonlyArray<Point>) =>
+        points.map(map).some(([x, y]) => x > 0 && x < W && y > 0 && y < H) ||
+        points.some(([u, v]) => insidePolygon(quad, [u * W, v * H]));
+      const fast = quadOnCanvas(quad, W, H);
+      const brute = sampled(fine) || (fast && sampled(sliver));
+      const boxOn =
+        Math.max(...quad.map((p) => p[0])) > 0 &&
+        Math.max(...quad.map((p) => p[1])) > 0 &&
+        Math.min(...quad.map((p) => p[0])) < W &&
+        Math.min(...quad.map((p) => p[1])) < H;
+      if (fast) seen.on++;
+      if (boxOn && !fast) seen.boxOnly++;
+      if (!boxOn) seen.off++;
+      if (fast !== brute) disagree.push({ k, quad });
+    }
+    expect(disagree).toEqual([]);
+    expect(seen.on).toBeGreaterThan(60);
+    expect(seen.off).toBeGreaterThan(60);
+    expect(seen.boxOnly).toBeGreaterThan(20);
+  });
+
+  test('a tilted plate past a corner, its box over the canvas, is off it', () => {
+    const quad: ReadonlyArray<Point> = [
+      [60, -70],
+      [-70, 60],
+      [-75, 55],
+      [55, -75],
+    ];
+    expect(quadOnCanvas(quad, W, H)).toBe(false);
+    expect(
+      quadOnCanvas(
+        quad.map(([x, y]): Point => [x + 30, y + 30]),
+        W,
+        H,
+      ),
+    ).toBe(true);
+  });
+
+  test('a plate of no area, or one only touching an edge, is off it', () => {
+    expect(
+      quadOnCanvas(
+        [
+          [10, 10],
+          [100, 10],
+          [100, 10],
+          [10, 10],
+        ],
+        W,
+        H,
+      ),
+    ).toBe(false);
+    expect(
+      quadOnCanvas(
+        [
+          [-50, 0],
+          [0, 0],
+          [0, 50],
+          [-50, 50],
+        ],
+        W,
+        H,
+      ),
+    ).toBe(false);
+  });
+});
 
 /**
  * A stand-in context (bun has no canvas): attaching and detaching a probe only

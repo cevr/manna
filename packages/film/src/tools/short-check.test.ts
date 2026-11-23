@@ -298,6 +298,18 @@ describe('the open', () => {
                 f.painting('plate');
               }),
           },
+          {
+            id: 'corner',
+            min: 4,
+            drift: 0,
+            ...plate,
+            draw: (f) => {
+              f.ctx.translate(20 + f.t * 40, -60);
+              f.ctx.rotate((3 * Math.PI) / 4);
+              f.ctx.scale(0.12, 0.02);
+              f.painting('plate');
+            },
+          },
         ],
       }),
     );
@@ -334,16 +346,28 @@ describe('the open', () => {
       expect(Option.getOrThrow(stillOpen('cut', shortOpen('held'), 0.5)).reason).toBe('still open');
     });
 
-    test('a painting pushed wholly outside the picture is a still open, in a short or the film', () => {
-      expect(Option.getOrThrow(stillOpen('cut', shortOpen('away'), 0.5)).reason).toBe('still open');
+    /** The wide film's own open of the scene starting at `from` seconds, probed as its page probes it. */
+    const wideOpen = (from: number): ReadonlyArray<Probed> => {
       const down = film.paintings.stand(new Map([[PLATE, { image: Option.none() }]]));
-      const wide = openFrames(film.fps).map((i) => {
+      const frames = openFrames(film.fps).map((i) => {
         const sink: ProbeSink = { texts: [], inks: [], placed: [] };
-        withDom(() => film.render(recorder(W, H).ctx, 8 + i / film.fps, { probe: sink }));
+        withDom(() => film.render(recorder(W, H).ctx, from + i / film.fps, { probe: sink }));
         return sink;
       });
       down();
-      expect(Option.isSome(stillOpen('away', wide, 0.5))).toBe(true);
+      return frames;
+    };
+
+    test('a painting pushed wholly outside the picture is a still open, in a short or the film', () => {
+      expect(Option.getOrThrow(stillOpen('cut', shortOpen('away'), 0.5)).reason).toBe('still open');
+      expect(Option.isSome(stillOpen('away', wideOpen(8), 0.5))).toBe(true);
+    });
+
+    test('a tilted painting sliding past a corner, its box over the picture, is a still open', () => {
+      expect(Option.getOrThrow(stillOpen('cut', shortOpen('corner'), 0.5)).reason).toBe(
+        'still open',
+      );
+      expect(Option.isSome(stillOpen('corner', wideOpen(12), 0.5))).toBe(true);
     });
 
     test('a rig it declares moves with the camera as a painting does', () => {

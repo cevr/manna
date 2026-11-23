@@ -343,17 +343,69 @@ const boxOn = (
   const corners = [map(left, top), map(right, top), map(right, bottom), map(left, bottom)];
   const xs = corners.map((c) => c[0]);
   const ys = corners.map((c) => c[1]);
-  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+  return {
+    corners,
+    x0: Math.min(...xs),
+    y0: Math.min(...ys),
+    x1: Math.max(...xs),
+    y1: Math.max(...ys),
+  };
+};
+
+/** The extent of `points` along `axis`: the least and the most of their dot products with it. */
+const extentAlong = (points: ReadonlyArray<Point>, axis: Point) => {
+  const along = points.map(([x, y]) => x * axis[0] + y * axis[1]);
+  return { lo: Math.min(...along), hi: Math.max(...along) };
+};
+
+/**
+ * Whether the convex quadrilateral `quad` (a rectangle under any affine
+ * transform, corners in order) covers some of the `width` × `height` canvas:
+ * a box reject first, then the separating-axis test on its own edges'
+ * normals (the canvas's are the box's). Touching an edge, or a quad of no
+ * area (it paints nothing), is not on it.
+ */
+export const quadOnCanvas = (
+  quad: ReadonlyArray<Point>,
+  width: number,
+  height: number,
+): boolean => {
+  const xs = quad.map((p) => p[0]);
+  const ys = quad.map((p) => p[1]);
+  if (Math.max(...xs) <= 0 || Math.max(...ys) <= 0) return false;
+  if (Math.min(...xs) >= width || Math.min(...ys) >= height) return false;
+  const twiceArea = quad.reduce((sum, a, i) => {
+    const b = quad[(i + 1) % quad.length] ?? a;
+    return sum + a[0] * b[1] - b[0] * a[1];
+  }, 0);
+  if (twiceArea === 0) return false;
+  const canvas: ReadonlyArray<Point> = [
+    [0, 0],
+    [width, 0],
+    [width, height],
+    [0, height],
+  ];
+  return quad.every((a, i) => {
+    const b = quad[(i + 1) % quad.length] ?? a;
+    const axis: Point = [a[1] - b[1], b[0] - a[0]];
+    if (axis[0] === 0 && axis[1] === 0) return true;
+    const q = extentAlong(quad, axis);
+    const c = extentAlong(canvas, axis);
+    return q.hi > c.lo && c.hi > q.lo;
+  });
 };
 
 /**
  * Declare a plane placed whole in the current transform's space (a painted
  * plate, a rig or a puppet): `key` and the rectangle `[left, right] × [top,
  * bottom]` it covers, so `heldStill` sees it move (a camera push, a rig
- * walking) as it sees ink. Records only a plane whose box lies on the
- * canvas `ctx` draws into (the frame, or a short's band), since one wholly
- * off it moves nothing the viewer sees, and only when a probe that collects
- * placed planes is attached; draws nothing.
+ * walking) as it sees ink. Records only a plane whose quadrilateral on
+ * screen covers some of the canvas `ctx` draws into (the frame, or a
+ * short's band, `quadOnCanvas`): one wholly off it moves nothing the viewer
+ * sees. One partly on it is recorded whole: a plate's corners change only
+ * when its transform does, and an affine map that changes moves all but a
+ * line of it, so what shows moves too. Records only
+ * when a probe that collects placed planes is attached; draws nothing.
  */
 export const probePlaced = (
   ctx: CanvasRenderingContext2D,
@@ -366,9 +418,8 @@ export const probePlaced = (
   const probe = probes.get(ctx);
   const placed = probe?.sink.placed;
   if (probe === undefined || placed === undefined) return;
-  const { x0, y0, x1, y1 } = boxOn(ctx, probe, left, top, right, bottom);
-  const { width, height } = ctx.canvas;
-  if (x1 <= 0 || y1 <= 0 || x0 >= width || y0 >= height) return;
+  const { corners, x0, y0, x1, y1 } = boxOn(ctx, probe, left, top, right, bottom);
+  if (!quadOnCanvas(corners, ctx.canvas.width, ctx.canvas.height)) return;
   placed.push({
     key,
     x: x0,
