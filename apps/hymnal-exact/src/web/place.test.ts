@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 
 import { hymns } from '@manna/hymnal-app/hymns/hymns';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { type Place, ROUTE_OF, hymnPages, placeOf } from './place.ts';
 

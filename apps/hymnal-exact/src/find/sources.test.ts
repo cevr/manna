@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { appFile, contractFiles, oneFile } from '../look/design.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { findSources } from './sources.ts';

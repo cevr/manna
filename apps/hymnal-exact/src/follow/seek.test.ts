@@ -36,7 +36,7 @@ import {
 import { readTiming } from '@manna/hymnal-app/vite/timing';
 import { Option } from 'effect';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { type Random, below, pick, seeded } from '../test/random.ts';
 import { type FollowView, followDesk } from './follow.ts';
 

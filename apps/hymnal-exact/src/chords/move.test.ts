@@ -16,14 +16,14 @@ import { describe, expect, test } from 'bun:test';
 
 import { capoed, hasChords, type Move, still, transposed } from '@manna/hymnal-app/hymns/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { moveOf, movesTo } from './move.ts';
 import type { ChordsPage } from './page.ts';
-import { bundled, currentBook, shownByCurrent, shownByPort } from './shipped.testing.ts';
+import { currentBook, encoded, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
-const sources = sourcesAt('https://hymns.cvr.im', [], bundled);
+const sources = sourcesAt('https://hymns.cvr.im', [], encoded);
 
 const chorded = book.hymns.flatMap((hymn) => {
   const chords = currentBook.of(hymn.number);

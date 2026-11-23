@@ -330,7 +330,9 @@ component HomeTabs
 // stands there. Touches and the screen reader reach it exactly while the
 // current `inReach` says (`listTabs.reach`); else it is inert and hidden. A
 // tap on a tab chooses it as the list's own row does. Its height, as laid
-// out, goes to `sized`: the room it covers.
+// out, goes to `sized`: the room it covers. The slide and the fade are two
+// boxes, each with a literal `transition`: a computed one is taken for a
+// possible spring, which loads the motion engine at launch on the web.
 component ListTabsPinned
   props
     tab: string
@@ -344,9 +346,12 @@ component ListTabsPinned
     column position="absolute" top="var(--exact-safe-area-inset-top)" left=0 right=0 z-index=2 overflow="hidden"
       opacity=(listTabs.past ? 1 : 0) inert=(not listTabs.reach) aria-hidden=(not listTabs.reach) pointer-events=(listTabs.reach ? "auto" : "none")
       resize=sized testId="shown-tabs"
-      column background-color="ground" translate=(motionStill or listTabs.shown ? "0px 0px" : "0px -100%") opacity=(motionStill and not listTabs.shown ? 0 : 1)
-        transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide") testId="shown-tabs-slide"
-        HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true, away=false)
+      if motionStill
+        column background-color="ground" opacity=(listTabs.shown ? 1 : 0) transition="opacity duration.fade linear" testId="shown-tabs-slide"
+          HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true, away=false)
+      else
+        column background-color="ground" translate=(listTabs.shown ? "0px 0px" : "0px -100%") transition="translate duration.slide easing.slide" testId="shown-tabs-slide"
+          HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=true, away=false)
 
 // A group's header, as the current app's topic row: its name, quiet, on
 // the ground over a hairline, as tall as its text's line and its padding

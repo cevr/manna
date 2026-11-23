@@ -19,7 +19,7 @@ import { titleGoes } from '@manna/hymnal-app/player/title';
 import { setHolds, setOf } from '@manna/hymnal/recordings';
 import { Option } from 'effect';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { current } from './current.testing.ts';
 import { TRACKS, inputOf, titleOf } from './fixtures.testing.ts';
@@ -189,7 +189,7 @@ describe('the recordings’ origin', () => {
     );
     const grants = /export const grants = \{([^}]*)\};/u.exec(app)?.[1] ?? '';
     const files =
-      "'fs.read bundle:/Resources/meaning', 'fs.read bundle:/Resources/timing', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
+      "'fs.read bundle:/Resources/meaning', 'fs.read bundle:/Resources/timing', 'fs.read bundle:/Resources/chords', 'fs.read bundle:/Resources/indexes', 'fs.read app:/data', 'fs.write app:/data', 'device.microphone tunerPurpose',";
     expect(grants.replaceAll(/\s+/gu, ' ').trim()).toBe(
       [
         `'https://hymns.cvr.im': [ 'net.fetch https://hymns.cvr.im', ${files} ],`,

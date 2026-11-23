@@ -67,7 +67,10 @@ members HymnalExact
 // scrolls up and down on its own, a fling turning one page; each page
 // keyed by its hymn, so the page swiped to stays the same page as the
 // route moves to it. A strip at the left edge (`pagerPlaces.edge`) lies
-// over the pager, so a pan there goes back and turns no page.
+// over the pager, so a pan there goes back and turns no page. A page is
+// drawn once both its words and its chords' answer for that hymn are here
+// (each hymn's chords are read on its first use, src/chords/first-use.ts),
+// so it is never first drawn without the chords it shows.
 component HymnPage
   props
     entry: Entry
@@ -102,9 +105,12 @@ component HymnPage
                 case some(page)
                   match chordsAll.at(numbers.indexOf(n))
                     case some(chords)
-                      HymnSheet(page=page, chords=chords, shown=(`${n}` == entry.params.n))
+                      if chords.number == page.number
+                        HymnSheet(page=page, chords=chords, shown=(`${n}` == entry.params.n))
+                      else
+                        column flex=1
                     case none
-                      HymnSheet(page=page, chords=chords, shown=(`${n}` == entry.params.n))
+                      column flex=1
                 case none
                   column flex=1
         column position="absolute" left=0 top=0 bottom=0 width=`${pagerPlacesShown.edge}px` touch-action="none" testId="back-edge"

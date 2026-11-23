@@ -1,6 +1,7 @@
 /**
- * The chords' sources, as `app.ts` registers them over the shipped chords
- * (`chords.gen.ts`, one string per hymn, decoded only for the hymn asked):
+ * The chords' sources, as `app.ts` registers them over the hymns' chords
+ * in `encoded` (one string per hymn, read on first use, `load.ts`, decoded
+ * only for the hymn asked):
  * `chordsPage(n, on, moves, style, placement, own)` the page's chords in the
  * kept chord style and the hymn's effective placement (its own in `own`,
  * else the global one), Simple on the beat when they are absent (`page.ts`, each hymn's kept move read by `move.ts`),
@@ -15,10 +16,10 @@ import { gripPageOf } from './shape.ts';
 
 export const chordsSources = (
   book: Book,
-  bundled: ReadonlyArray<readonly [number, string]>,
-  decode: ChordsShipped['decode'] = (encoded, placement) => decodeHymn(encoded, placement),
+  encoded: ReadonlyMap<number, string>,
+  decode: ChordsShipped['decode'] = (text, placement) => decodeHymn(text, placement),
 ) => {
-  const shipped = { encoded: new Map(bundled), decode };
+  const shipped = { encoded, decode };
   return {
     chordsPage: ([route, on, moves, style, placement, own]: readonly [
       string,

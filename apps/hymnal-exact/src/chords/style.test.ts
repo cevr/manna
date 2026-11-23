@@ -18,11 +18,11 @@ import { describe, expect, test } from 'bun:test';
 import { chordStyles, placements } from '@manna/hymnal-app/chord-choices';
 import { still } from '@manna/hymnal-app/hymns/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
-import { bundled, shownByCurrent, shownByPort } from './shipped.testing.ts';
+import { encoded, shownByCurrent, shownByPort } from './shipped.testing.ts';
 
-const sources = sourcesAt('https://hymns.cvr.im', [], bundled);
+const sources = sourcesAt('https://hymns.cvr.im', [], encoded);
 
 const simpleBeat = new Map(
   book.hymns.map((hymn) => [hymn.number, JSON.stringify(shownByCurrent(hymn.number, still))]),

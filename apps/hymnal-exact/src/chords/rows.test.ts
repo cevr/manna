@@ -12,12 +12,12 @@
 
 import { describe, expect, test } from 'bun:test';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import type { ChordsLine } from './page.ts';
 import { breaksOf, drawnText, pairWidth, type Place, rowsOf, wordWidths } from './rows.ts';
-import { bundled } from './shipped.testing.ts';
+import { encoded } from './shipped.testing.ts';
 
 const SYLLABLES = [
   'a',
@@ -124,7 +124,7 @@ describe('the line rule (A3)', () => {
   });
 
   test('the book’s own chorded lines hold the rule at a phone’s widths and the largest text’s', () => {
-    const sources = sourcesAt('https://hymns.cvr.im', [], bundled);
+    const sources = sourcesAt('https://hymns.cvr.im', [], encoded);
     const random = seeded(5);
     for (let run = 0; run < 40; run++) {
       const page = sources.chordsPage([`${pick(random, book.hymns).number}`, true, []]);

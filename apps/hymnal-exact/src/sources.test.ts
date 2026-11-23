@@ -6,7 +6,7 @@ import { withDataHost } from '@manna/exact-kit/data-host/testing';
 import { indexOf } from '@manna/hymnal-app/hymns/search';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
-import { book } from './hymns/book.ts';
+import { book } from './hymns/book.testing.ts';
 import { BUCKET } from './player/sources.ts';
 import { sourcesAt } from './sources.ts';
 import { below, pick, query, seeded } from './test/random.ts';

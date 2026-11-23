@@ -8,22 +8,23 @@
  * (`sectionsOf`), with chords on or off; a part the chords do not split, or
  * a hymn they do not hold, is its words, each one syllable. A word but the
  * line's last ends in a no-break space, as the current app's words do
- * (`SyllableWords.tsx`). The passages are read from the indexes the build
- * bundles, as the home's are (`home/sources.ts`).
+ * (`SyllableWords.tsx`). The passages are read from the book's indexes,
+ * as the home's are (`home/sources.ts`), so a page waits for them
+ * (`src/indexes/first-use.ts`).
  */
 
 import type { HymnChords, Word } from '@manna/hymnal-app/hymns/chords';
 import { sectionsOf } from '@manna/hymnal-app/hymns/chords';
 import { headLine } from '@manna/hymnal-app/reader/head-line';
-import bundled from 'virtual:hymnal-indexes';
 
 import type { Book } from '../hymns/book.ts';
 import { hymnAt, missing, type Page, type PageLine, type PageWord, pageOf } from './page.ts';
 
 /** The passages hymn `number` alludes to, in the Scriptural index's printed order, as the current app's `referencesOf` gives them. */
-const referencesOf = (number: number) =>
-  bundled.references
-    .filter((reference) => reference.hymn === number)
+const referencesOf = (book: Book, number: number) =>
+  book
+    .indexes()
+    .references.filter((reference) => reference.hymn === number)
     .map((reference) => reference.passage);
 
 /** A word but the line's last ends in a no-break space; `start` is its first syllable's place in the line. */
@@ -82,7 +83,7 @@ export const shownAt = (
   const sections = decoded === undefined ? [] : sectionsOf(hymn, decoded);
   return {
     ...page,
-    head: headLine(hymn.topic, referencesOf(hymn.number)),
+    head: headLine(hymn.topic, referencesOf(book, hymn.number)),
     parts: page.parts.map((part, k) => {
       const printed = hymn.sections[k]?.lines ?? [];
       const split = sections[k];

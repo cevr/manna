@@ -21,7 +21,7 @@
 
 import { afterEach, describe, expect, it } from 'bun:test';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { BUCKET, playerSources } from '../player/sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { type RecordingFiles, offlineSources } from './sources.ts';

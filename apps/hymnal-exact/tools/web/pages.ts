@@ -22,6 +22,12 @@ const wordsBook = (): Book => ({
   index: () => {
     throw new Error('pages ask no search');
   },
+  indexes: () => {
+    throw new Error('pages read no indexes');
+  },
+  lookups: () => {
+    throw new Error('pages read no indexes');
+  },
 });
 
 /** Writes every page of `book` (the hymnal's own by default) into `dir`; how many it wrote and how many it left as they were. */

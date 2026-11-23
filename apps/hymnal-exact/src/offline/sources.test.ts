@@ -21,7 +21,7 @@ import type * as EstimateDecl from './decl/estimate';
 import type * as IdentityDecl from './decl/identity';
 import type * as WordsDecl from './decl/words';
 import { later } from '../../modules/web/index.js';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { BUCKET, playerSources, recordingAt } from '../player/sources.ts';
 import { type AppModule, type RecordingFiles, offlineSources } from './sources.ts';
 import { ROOT, partOf, pathOf } from './store.ts';

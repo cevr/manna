@@ -15,12 +15,12 @@ import { sectionsOf } from '@manna/hymnal-app/hymns/chords';
 import { referencesOf } from '@manna/hymnal-app/hymns/indexes';
 import { headLine } from '@manna/hymnal-app/reader/head-line';
 
-import { bundled, currentBook } from '../chords/shipped.testing.ts';
-import { book } from '../hymns/book.ts';
+import { currentBook, encoded } from '../chords/shipped.testing.ts';
+import { book } from '../hymns/book.testing.ts';
 import type { Page } from './page.ts';
 import { hymnSources } from './sources.ts';
 
-const { hymnPage } = hymnSources(book, bundled);
+const { hymnPage } = hymnSources(book, encoded);
 
 const bytes = (value: Page) => new TextEncoder().encode(JSON.stringify(value)).length;
 

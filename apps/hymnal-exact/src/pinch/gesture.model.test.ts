@@ -22,7 +22,7 @@ import { pinchAct } from '@manna/hymnal-app/home/find-rules';
 
 import { connect, later, pinchTracker } from '../../modules/web/index.js';
 import { findSources } from '../find/sources.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { pinchSources } from './sources.ts';
 

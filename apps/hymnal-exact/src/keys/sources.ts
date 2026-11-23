@@ -1,8 +1,9 @@
 /* oxlint-disable effect/noNullish, effect/noTernary, effect/noAs -- Exact's data module reads no effect of its own (docs/exact.md): a hymn with no printed key is `undefined`, a call branches plainly, and the option the current app's `hintOf` takes is named by the shape it takes at run time. */
 
 /**
- * The key button's sources, as `app.ts` registers them over the shipped
- * chords (`chords.gen.ts`, decoded only for the hymn asked). Every rule is
+ * The key button's sources, as `app.ts` registers them over the hymns'
+ * chords in `encoded` (one string per hymn, read on first use,
+ * `src/chords/load.ts`, decoded only for the hymn asked). Every rule is
  * the current app's own, imported: the key button's model
  * (`@manna/hymnal-app/player/thumb`) and its press
  * (`@manna/hymnal-app/player/wheel`); these sources turn a call's
@@ -236,10 +237,10 @@ const itemOf = (outs: ReadonlyArray<press.Out>, tag: 'Enter' | 'Pick'): string =
 
 export const keysSources = (
   book: Book,
-  bundled: ReadonlyArray<readonly [number, string]>,
-  decode: Shipped['decode'] = (encoded) => decodeHymn(encoded),
+  encoded: ReadonlyMap<number, string>,
+  decode: Shipped['decode'] = (text) => decodeHymn(text),
 ) => {
-  const shipped: Shipped = { encoded: new Map(bundled), decode };
+  const shipped: Shipped = { encoded, decode };
   const held: Press = { wheel: press.idle, at: { x: 0, y: 0 }, pull: 0, slid: false };
   const thumbOf = (
     on: boolean,

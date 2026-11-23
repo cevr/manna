@@ -12,7 +12,7 @@ import { TAB_NAMES } from '@manna/hymnal-app/home/tabs';
 import { foundOffset } from '@manna/hymnal-app/player/drums';
 import indexes from 'virtual:hymnal-indexes';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { followRow, listedRows } from './follow.ts';
 

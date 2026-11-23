@@ -1,6 +1,10 @@
 import type { Answer, Sources } from './app.contract.d.ts';
 import nearest from './src/abouthymn/nearest.gen';
-import chords from './src/chords/chords.gen';
+import { chordsFirstUse } from './src/chords/first-use.ts';
+import { chordsLoader } from './src/chords/load.ts';
+import { bookOf } from './src/hymns/book.ts';
+import { indexesFirstUse } from './src/indexes/first-use.ts';
+import { indexesLoader, indexesOf } from './src/indexes/load.ts';
 import timing from './src/player/timing.gen';
 import { sourcesAt } from './src/sources.ts';
 import { mic } from './src/tuner/mic.ts';
@@ -19,7 +23,10 @@ const origin = import.meta.env.HYMNAL_RECORDINGS ?? 'https://hymns.cvr.im';
  * and the saved recordings fetch whole recordings: the bucket's, or the
  * fixture's in a development build. Search reads the meaning table the iOS
  * app ships (src/results/table.ts), and the follow each hymn's words' times
- * it ships, at the hymn's first use (src/timing/sources.ts). The saved recordings live in the app's
+ * it ships, at the hymn's first use (src/timing/sources.ts), as the hymn
+ * page, the key button and the player sheet each hymn's chords
+ * (src/chords/load.ts), and a search, an index tab, a hymn's head line
+ * and its About sheet the back-matter indexes (src/indexes/load.ts). The saved recordings live in the app's
  * own files (src/offline/sources.ts). The tuner hears the microphone, its
  * prompt in the current app's words (`tunerPurpose`, strings/en.json).
  */
@@ -28,6 +35,8 @@ export const grants = {
     'net.fetch https://hymns.cvr.im',
     'fs.read bundle:/Resources/meaning',
     'fs.read bundle:/Resources/timing',
+    'fs.read bundle:/Resources/chords',
+    'fs.read bundle:/Resources/indexes',
     'fs.read app:/data',
     'fs.write app:/data',
     'device.microphone tunerPurpose',
@@ -36,14 +45,23 @@ export const grants = {
     'net.fetch http://127.0.0.1:4797',
     'fs.read bundle:/Resources/meaning',
     'fs.read bundle:/Resources/timing',
+    'fs.read bundle:/Resources/chords',
+    'fs.read bundle:/Resources/indexes',
     'fs.read app:/data',
     'fs.write app:/data',
     'device.microphone tunerPurpose',
   ],
 };
 
+const chords = chordsLoader();
+const indexes = indexesLoader();
+const book = bookOf(() => indexesOf(indexes));
+const answered = sourcesAt(origin, timing, chords.kept, nearest, book);
+const withChords = { ...answered, ...chordsFirstUse(book, chords, answered) };
+
 const sources: Sources = {
-  ...sourcesAt(origin, timing, chords, nearest),
+  ...withChords,
+  ...indexesFirstUse(indexes, withChords),
   ...tunerSources(mic),
 };
 export const answer: Answer = (source, args, store, storage, native) =>

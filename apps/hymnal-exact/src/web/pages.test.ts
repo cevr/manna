@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { writePages } from '../../tools/web/pages.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { pagesOf, withHead } from './pages.ts';
 import { placeOf } from './place.ts';
 

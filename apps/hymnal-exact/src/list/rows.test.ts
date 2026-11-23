@@ -5,7 +5,8 @@ import { describe, expect, test } from 'bun:test';
 import { find, hymnIndex, indexOf } from '@manna/hymnal-app/hymns/search';
 import { plainRowsOf, resultRowsOf } from '@manna/hymnal-app/reader/rows';
 
-import { type Book, book, type HymnText } from '../hymns/book.ts';
+import type { Book, HymnText } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, query, type Random, seeded } from '../test/random.ts';
 import { type RowSection, rowsOf, slugOf } from './rows.ts';
 
@@ -172,7 +173,7 @@ describe('the list’s rows, as a rule', () => {
       const keep = 0.02 + random() * 0.3;
       const hymns = book.hymns.filter(() => random() < keep);
       let index: ReturnType<typeof indexOf> | undefined;
-      const sub: Book = { hymns, index: () => (index ??= indexOf(hymns)) };
+      const sub: Book = { ...book, hymns, index: () => (index ??= indexOf(hymns)) };
       expectSections(sub, rowsOf(sub, ' '.repeat(below(random, 3))));
       for (let asked = 0; asked < 10; asked++) {
         const text = query(random, book.hymns);
@@ -185,7 +186,7 @@ describe('the list’s rows, as a rule', () => {
   test('a list with no query asks for no search index', () => {
     const asked: Array<string> = [];
     const watched: Book = {
-      hymns: book.hymns,
+      ...book,
       index: () => {
         asked.push('index');
         return book.index();

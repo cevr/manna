@@ -5,9 +5,13 @@
  * recordings are served from `origin` (held to the bucket or a loopback
  * fixture by `originOf`) and its stanzas timed by `timing` (`app.ts` passes
  * the written `src/player/timing.gen.ts`); the chords are `chords`, one
- * string per hymn (`app.ts` passes the written `src/chords/chords.gen.ts`);
- * `nearest` is each hymn's More like this (the written
- * `src/abouthymn/nearest.gen.ts`). The player and Downloads share one store
+ * string per hymn by number (`app.ts` passes its loader's, which reads each
+ * hymn's the first time a source needs them, `src/chords/first-use.ts`; a
+ * test passes what the build ships); `nearest` is each hymn's More like this (the written
+ * `src/abouthymn/nearest.gen.ts`); `book` is the hymnal over its back-matter
+ * indexes (`app.ts` passes the book over its indexes' loader, read the first
+ * time a source needs them, `src/indexes/first-use.ts`; a test passes the
+ * book over what the build ships, or none). The player and Downloads share one store
  * of saved recordings (`src/offline/sources.ts`), and the follow and the
  * timing's source one loader of the hymns' words' times (`src/timing/`).
  */
@@ -18,7 +22,8 @@ import { homeSources } from './home/sources.ts';
 import { chordsSources } from './chords/sources.ts';
 import { hymnSources } from './hymn/sources.ts';
 import { keysSources } from './keys/sources.ts';
-import { book } from './hymns/book.ts';
+import { type Book, bookOf } from './hymns/book.ts';
+import { NO_INDEXES } from './indexes/load.ts';
 import { listSources } from './list/sources.ts';
 import { offlineSources } from './offline/sources.ts';
 import { pagerSources } from './pager/sources.ts';
@@ -36,8 +41,9 @@ import { timingSources } from './timing/sources.ts';
 export const sourcesAt = (
   origin: string,
   timing: ReadonlyArray<readonly [number, string]>,
-  chords: ReadonlyArray<readonly [number, string]> = [],
+  chords: ReadonlyMap<number, string> = new Map(),
   nearest: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [],
+  book: Book = bookOf(() => NO_INDEXES),
 ) => {
   const recordings = originOf(origin);
   const saved = offlineSources(recordings, recordings !== BUCKET, timing);

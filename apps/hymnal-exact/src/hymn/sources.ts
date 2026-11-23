@@ -1,9 +1,10 @@
-/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a hymn the shipped chords do not hold is undefined in their map. */
+/* oxlint-disable effect/noNullish -- Exact's data module cannot import effect (docs/exact.md): a hymn whose chords are not here is undefined in their map. */
 
 /**
  * The hymn page's sources, as `app.ts` registers them: `hymnPage(n)` answers
- * `shownAt`, its syllables from the shipped chords (`chords.gen.ts`, one
- * string per hymn), decoded only for the hymn asked.
+ * `shownAt`, its syllables from the hymn's chords in `encoded` (one string
+ * per hymn, read on first use, `src/chords/load.ts`), decoded only for the
+ * hymn asked.
  */
 
 import { decodeHymn } from '@manna/hymnal-app/hymns/chords';
@@ -13,10 +14,9 @@ import { shownAt } from './shown.ts';
 
 export const hymnSources = (
   book: Book,
-  bundled: ReadonlyArray<readonly [number, string]> = [],
+  encoded: ReadonlyMap<number, string>,
   decode: typeof decodeHymn = decodeHymn,
 ) => {
-  const encoded = new Map(bundled);
   const chords = (hymn: number) => {
     const shipped = encoded.get(hymn);
     if (shipped === undefined) return undefined;

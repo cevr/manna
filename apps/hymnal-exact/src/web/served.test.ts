@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from 'bun:test';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { headsOf } from './pages.ts';
 import { hymnPages, placeOf } from './place.ts';

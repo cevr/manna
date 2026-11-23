@@ -18,8 +18,6 @@
  * order (`src/pinch/run.ts`).
  */
 
-import bundled from 'virtual:hymnal-indexes';
-
 import type { TabSource } from '../home/tabs.ts';
 import type { Book } from '../hymns/book.ts';
 import { runOf } from '../pinch/run.ts';
@@ -118,16 +116,17 @@ export const inputOf = (kind: string, text: string, a: number, b: number): Input
 };
 
 /**
- * The sources over `book` and the back-matter indexes the build bundles;
+ * The sources over `book` and its back-matter indexes as they are when
+ * asked (`book.indexes()`), or `indexes` when given;
  * `counts` counts the tiles' answers, given so a test can read it.
  */
 export const findSources = (
   book: Book,
   counts: { tiles: number } = { tiles: 0 },
-  indexes: TabSource['indexes'] = bundled,
+  indexes?: TabSource['indexes'],
 ) => {
   let state: State = initial;
-  const source: TabSource = { book, indexes };
+  const source = (): TabSource => ({ book, indexes: indexes ?? book.indexes() });
   return {
     findStep: ([kind, text, a, b]: readonly [string, string, number, number]): View => {
       if (kind === 'pinchRun') {
@@ -147,21 +146,21 @@ export const findSources = (
       number,
     ]): Array<GroupTile> => {
       counts.tiles += 1;
-      return groupTiles(source, tab, favourites, recent, playing);
+      return groupTiles(source(), tab, favourites, recent, playing);
     },
     findTileAt: ([tab, ids, favourites, recent]: readonly [
       string,
       ReadonlyArray<string>,
       ReadonlyArray<number>,
       ReadonlyArray<number>,
-    ]) => ({ index: tileAt(source, tab, ids, favourites, recent) }),
+    ]) => ({ index: tileAt(source(), tab, ids, favourites, recent) }),
     findFollowRow: ([tab, n, favourites, recent]: readonly [
       string,
       number,
       ReadonlyArray<number>,
       ReadonlyArray<number>,
     ]) => ({
-      row: followRow(listedRows(source, tab, favourites, recent), n),
+      row: followRow(listedRows(source(), tab, favourites, recent), n),
     }),
   };
 };

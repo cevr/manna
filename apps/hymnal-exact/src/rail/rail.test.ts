@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'bun:test';
 import * as one from '@manna/hymnal-app/reader/rail-marks';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { rowsOf } from '../list/rows.ts';
 import { oneFile } from '../look/design.testing.ts';
 import { railSources } from './sources.ts';

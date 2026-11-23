@@ -255,6 +255,7 @@ const keyframesOf = (text: string): ReadonlyMap<string, ReadonlySet<string>> => 
 
 const ROW = /(?:^|\s)(animation|transition|-exact-exit-animation|-exact-layout-transition)=/gu;
 const CHOICE = /^\(motionStill \? "([^"]*)" : "([^"]*)"\)/u;
+const LITERAL_ROW = /^"([^"]*)"/u;
 
 interface Row {
   readonly at: string;
@@ -263,14 +264,46 @@ interface Row {
   readonly full?: string;
 }
 
-/** Every motion row of a Contract text: its arms when it is a choice on `motionStill`. */
-const rowsOf = (file: string, text: string): ReadonlyArray<Row> =>
-  linesOf(file, text).flatMap((line) =>
+/**
+ * Which arm of a choice on `motionStill` holds `lines[index]`: `still` under
+ * `if motionStill`, `full` under that `if`'s `else`, or none.
+ */
+const armOf = (lines: ReadonlyArray<Line>, index: number): 'still' | 'full' | undefined => {
+  for (const holder of ancestors(lines, index)) {
+    if (holder.text === 'if motionStill') return 'still';
+    if (holder.text === 'else') {
+      const at = lines.indexOf(holder);
+      const opened = lines
+        .slice(0, at)
+        .findLast((line) => line.indent === holder.indent && /^(?:else )?if /u.test(line.text));
+      if (opened?.text === 'if motionStill') return 'full';
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Every motion row of a Contract text: its arms when it is a choice on
+ * `motionStill`, written in one row (`(motionStill ? still : full)`) or as
+ * two boxes, each with its arm's literal (`if motionStill` and its `else`;
+ * the other arm, another row, is "").
+ */
+const rowsOf = (file: string, text: string): ReadonlyArray<Row> => {
+  const lines = linesOf(file, text);
+  return lines.flatMap((line, index) =>
     [...line.text.matchAll(ROW)].map((found) => {
-      const choice = CHOICE.exec(line.text.slice((found.index ?? 0) + found[0].length));
-      return { at: line.at, name: found[1] ?? '', still: choice?.[1], full: choice?.[2] };
+      const value = line.text.slice((found.index ?? 0) + found[0].length);
+      const choice = CHOICE.exec(value);
+      if (choice) return { at: line.at, name: found[1] ?? '', still: choice[1], full: choice[2] };
+      const literal = LITERAL_ROW.exec(value)?.[1];
+      const arm = literal === undefined ? undefined : armOf(lines, index);
+      if (arm === 'still') return { at: line.at, name: found[1] ?? '', still: literal, full: '' };
+      if (arm === 'full')
+        return { at: line.at, name: found[1] ?? '', still: 'none', full: literal };
+      return { at: line.at, name: found[1] ?? '' };
     }),
   );
+};
 
 /** What is wrong with a row: not a choice on `motionStill`, or a still arm that moves. */
 const rowFault = (row: Row, frames: ReadonlyMap<string, ReadonlySet<string>>): string => {
@@ -434,6 +467,35 @@ describe('the finders find a planted defect', () => {
     ).toBe('');
   });
 
+  it('a row split into two boxes on motionStill, its still box only fading', () => {
+    const split = (still: string) =>
+      rowsOf(
+        'x',
+        [
+          '    if motionStill',
+          `      row transition="${still}"`,
+          '    else',
+          '      row transition="translate duration.slide"',
+        ].join('\n'),
+      );
+    expect(split('opacity duration.fade linear').map((each) => rowFault(each, planted))).toEqual([
+      '',
+      '',
+    ]);
+    expect(rowFault(split('translate duration.fade')[0] ?? { at: '', name: '' }, planted)).not.toBe(
+      '',
+    );
+    expect(
+      rowFault(
+        rowsOf(
+          'x',
+          ['    if other', '      row transition="opacity duration.fade linear"'].join('\n'),
+        )[0] ?? { at: '', name: '' },
+        planted,
+      ),
+    ).not.toBe('');
+  });
+
   it('a time, a curve or a spring written in Contract', () => {
     for (const line of [
       'row transition="opacity 200ms ease"',
@@ -538,9 +600,11 @@ describe('the hymnal’s motion is calm', () => {
       expect({ name, value: brand.motion.get(name) }).toEqual({ name, value: `${ms}ms` });
     expect(brand.motion.get('easing.slide')).toBe(OUT_CUBIC);
     const pinned = componentOf(appFile('features/list.contract'), 'ListTabsPinned').join('\n');
-    expect(pinned).toContain(
-      'transition=(motionStill ? "opacity duration.fade linear" : "translate duration.slide easing.slide")',
-    );
+    const arms = rowsOf('list', pinned).filter((row) => row.name === 'transition');
+    expect(arms.map(({ still, full }) => ({ still, full }))).toEqual([
+      { still: 'opacity duration.fade linear', full: '' },
+      { still: 'none', full: 'translate duration.slide easing.slide' },
+    ]);
   });
 
   it('times the tiles as the current All at once does', () => {

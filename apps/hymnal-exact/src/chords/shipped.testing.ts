@@ -2,8 +2,8 @@
 
 /**
  * The chords the build ships, for the chords' tests: every hymn's string as
- * the current app's `vite/chords.ts` makes it (the same `make.ts` writes to
- * `chords.gen.ts`), read once per test run; the current app's own decoding
+ * the current app's `vite/chords.ts` makes it (the same `make.ts` writes as
+ * the files the apps ship), read once per test run; the current app's own decoding
  * of them (`chordBook`); and what the current app shows over a hymn at a
  * move, which the port's answers are held to.
  */
@@ -22,11 +22,14 @@ import { type ChordStyle, styled } from '@manna/hymnal-app/hymns/simple';
 import type { Placement } from '@manna/hymnal/placement';
 import { readChords } from '@manna/hymnal-app/vite/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import type { ChordsPage } from './page.ts';
 import { drawnText } from './rows.ts';
 
 export const bundled = readChords();
+
+/** The same chords by hymn number, as the sources read them once every hymn's file is read. */
+export const encoded: ReadonlyMap<number, string> = new Map(bundled);
 
 /** The current app's decoding of the shipped chords, each hymn decoded once and kept. */
 export const currentBook = chordBook(bundled);

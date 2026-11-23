@@ -21,7 +21,7 @@ import { groupAt, TAB_NAMES } from '@manna/hymnal-app/home/tabs';
 import indexes from 'virtual:hymnal-indexes';
 
 import { tabGroups } from '../home/tabs.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { listedRows } from './follow.ts';
 import { tileAt } from './tiles.ts';
