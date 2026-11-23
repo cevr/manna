@@ -269,13 +269,20 @@ describe('the open', () => {
 
   describe('as drawn frozen: every pixel against the first frame', () => {
     /** A strip of band on a grid whose cells are the band's own size (17 × 18 px), small enough to paint in a test. */
-    const AREA: LumaArea = { x: 0, y: 620, w: 272, h: 162, cols: 16, rows: 9 };
+    const AREA: LumaArea = { x: 0, y: 620, w: 102, h: 54, cols: 6, rows: 3 };
     type Rgb = readonly [number, number, number];
     /** `AREA`'s pixels, RGBA, each `paint(x, y)`. */
     const raster = (paint: (x: number, y: number) => Rgb): Uint8ClampedArray => {
       const out = new Uint8ClampedArray(AREA.w * AREA.h * 4);
       for (let y = 0; y < AREA.h; y++)
-        for (let x = 0; x < AREA.w; x++) out.set([...paint(x, y), 255], (y * AREA.w + x) * 4);
+        for (let x = 0; x < AREA.w; x++) {
+          const [r, g, b] = paint(x, y);
+          const p = (y * AREA.w + x) * 4;
+          out[p] = r;
+          out[p + 1] = g;
+          out[p + 2] = b;
+          out[p + 3] = 255;
+        }
       return out;
     };
     /** The open's nine frames, `t` of 1 through it, through the page's reducer (`cellDrift`). */
@@ -290,31 +297,31 @@ describe('the open', () => {
       (x: number, y: number): Rgb => {
         const v =
           128 +
-          60 * Math.sin(((x - 136) * zoom) / 9) * Math.cos(((y - 81) * zoom) / 9) +
+          60 * Math.sin(((x - 51) * zoom) / 9) * Math.cos(((y - 27) * zoom) / 9) +
           3 * Math.sin(x * 12.9898 + y * 78.233);
         return [v, v * 0.8, v * 0.6];
       };
     const TEAL: Rgb = [76, 126, 146];
     const RUST: Rgb = [228, 93, 0];
-    /** Teal paper with a block 20 × 16 px of `rgb` at (`left`, 70). */
+    /** Teal paper with a block 10 × 8 px of `rgb` at (`left`, 20). */
     const block = (left: number, rgb: Rgb) => (x: number, y: number) => {
-      if (x >= left && x < left + 20 && y >= 70 && y < 86) return rgb;
+      if (x >= left && x < left + 10 && y >= 20 && y < 28) return rgb;
       return TEAL;
     };
     const nothing = Arr.makeBy(openFrames(30).length, () => frame());
-    /** A held diagonal stroke across most of the strip: its box covers cells (1..14, 0..8). */
+    /** A held diagonal stroke across most of the strip: its box covers cells (0..3, 0..2). */
     const diagonal: InkMark = {
       kind: 'stroke',
       scene: 'a',
       points: [
-        [20, 625],
-        [250, 775],
+        [5, 625],
+        [60, 665],
       ],
       width: 6,
-      x: 20,
+      x: 5,
       y: 625,
-      w: 230,
-      h: 150,
+      w: 55,
+      h: 40,
       alpha: 1,
       order: 0,
       scale: 1,
@@ -327,7 +334,7 @@ describe('the open', () => {
       Option.isNone(stillOpen('cut', probed, 0.5, picture));
 
     test('a full-bleed painting the camera pushes in on moves; the same plate held, its grain frozen, is a still open', () => {
-      expect(moves(open((t) => plate(1 + 0.02 * t)))).toBe(true);
+      expect(moves(open((t) => plate(1 + 0.05 * t)))).toBe(true);
       expect(
         Option.getOrThrow(
           stillOpen(
@@ -343,14 +350,14 @@ describe('the open', () => {
     test('a dark edge the camera slides 10 px inside one cell column moves, though its cells keep their means', () => {
       const CREAM: Rgb = [239, 230, 212];
       const SLATE: Rgb = [32, 43, 51];
-      /** A stripe 6 × 140 px from (`left`, 10) on cream: the slide's old and new pixels never overlap. */
-      const stripe = (left: number) => (x: number, y: number) => {
-        if (x >= left && x < left + 6 && y >= 10 && y < 150) return SLATE;
+      /** A stripe 6 px wide from `left`, the strip's whole height, on cream: the slide's old and new pixels never overlap. */
+      const stripe = (left: number) => (x: number) => {
+        if (x >= left && x < left + 6) return SLATE;
         return CREAM;
       };
       const meanOfColumn = (pixels: Uint8ClampedArray) => {
         let sum = 0;
-        for (let y = 18; y < 144; y++)
+        for (let y = 0; y < AREA.h; y++)
           for (let x = 0; x < 17; x++) sum += pixels[(y * AREA.w + x) * 4] ?? 0;
         return sum;
       };
@@ -362,19 +369,19 @@ describe('the open', () => {
     test('a block moving beside a held diagonal, and inside its box, moves', () => {
       expect(
         moves(
-          open((t) => block(200 + Math.round(40 * t), RUST)),
+          open((t) => block(66 + Math.round(20 * t), RUST)),
           inked,
         ),
       ).toBe(true);
       expect(
         moves(
-          open((t) => block(60 + Math.round(40 * t), RUST)),
+          open((t) => block(20 + Math.round(20 * t), RUST)),
           inked,
         ),
       ).toBe(true);
       expect(
         moves(
-          open(() => block(60, RUST)),
+          open(() => block(20, RUST)),
           inked,
         ),
       ).toBe(false);
@@ -383,13 +390,13 @@ describe('the open', () => {
     test('a hue that slides at one luma moves', () => {
       const luma = (rgb: Rgb) => 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
       expect(Math.abs(luma(RUST) - luma(TEAL))).toBeLessThan(2);
-      expect(moves(open((t) => block(60 + Math.round(40 * t), RUST)))).toBe(true);
+      expect(moves(open((t) => block(20 + Math.round(20 * t), RUST)))).toBe(true);
     });
 
     test('one pixel that changes past one step moves; at it, it holds', () => {
       const by = (step: number) =>
         open((t) => (x, y): Rgb => {
-          if (x === 100 && y === 50) return [76 + step * t, 126, 146];
+          if (x === 50 && y === 30) return [76 + step * t, 126, 146];
           return TEAL;
         });
       expect(moves(by(PICTURE_STEP + 1))).toBe(true);
