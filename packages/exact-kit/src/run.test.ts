@@ -4,7 +4,6 @@ import {
   ConfigProvider,
   Console,
   Deferred,
-  Duration,
   Effect,
   Exit,
   Fiber,
@@ -28,6 +27,7 @@ import { createServer, type Socket } from 'node:net';
 import { fixturePort } from './drive/port.ts';
 import { EXACT_BASE } from './pin.ts';
 import { PortClaims, runExact } from './run.ts';
+import { LIVE_MS, watched } from './watchdog/testing.ts';
 
 const PROBE = '/nonexistent/loop-probe-x';
 const LAUNCHER = `${PROBE}/exact-cli.ts`;
@@ -106,9 +106,6 @@ socket.on('close', () => process.exit(0));
 setInterval(() => {}, 1 << 30);
 `;
 
-/** How long the live run waits on any one handshake before it fails, naming what never came: far past any load. */
-const WATCHDOG = Duration.seconds(30);
-
 /** A child the stand-in launcher left that reached the test: its pid, and `gone`, done once its connection closed. */
 interface Leftover {
   readonly pid: number;
@@ -161,14 +158,6 @@ const leftovers = Effect.gen(function* () {
   );
   return { port, next: Queue.take(arrived) };
 });
-
-/** `effect`, or a failure naming `lost` once `WATCHDOG` passes first. */
-const watched = <A, E, R>(effect: Effect.Effect<A, E, R>, lost: string) =>
-  Effect.timeoutOrElse(effect, {
-    duration: WATCHDOG,
-    orElse: () =>
-      Effect.die(new Error(`${lost}: the watchdog gave up after ${Duration.format(WATCHDOG)}`)),
-  });
 
 /** The repo's root, from this file. */
 const repoRoot = Effect.gen(function* () {
@@ -442,12 +431,6 @@ const GroupCase = Arbitrary.all({
 /** Whether `fiber` has ended. */
 const ended = (fiber: Fiber.Fiber<unknown, unknown>) =>
   Option.isSome(Option.fromUndefinedOr(fiber.pollUnsafe()));
-
-/**
- * The live run's timeout: its handshakes' `WATCHDOG` and the platform spawner's group stop on top. It spawns, through
- * `runExact`, a launcher and the child it leaves, twice: a loaded machine's spawns are slow (spawn budget).
- */
-const LIVE_MS = 45_000;
 
 /** The pin and the apps' committed files, which every run but a refused one needs. */
 const fixtures = Effect.all({ pins: docsPins, files: appFiles });

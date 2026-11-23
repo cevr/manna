@@ -7,6 +7,7 @@ import { KEYS, probe } from '../../lab/probe.ts';
 import table from '../../lab/probe-table.json';
 import { contractTest } from '../../lab/tools/contract.ts';
 import { withDataHost } from '../data-host/testing.ts';
+import { LIVE_MS, watched } from '../watchdog/testing.ts';
 
 /** A call as Exact makes one: a time past 2026 and a seed. */
 const CALL = { now: 1_800_000_000_123.5, seed: 7 };
@@ -39,22 +40,26 @@ describe('the Effect probe', () => {
       }),
   );
 
-  it.effect(
+  it.live(
     'effect, effect/persistence and the runner load for the first time under the data-host rules',
     () =>
       Effect.gen(function* () {
         const script = yield* here('./import-probe.ts');
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const loaded = yield* Effect.scoped(
-          Effect.flatMap(
-            spawner.spawn(
-              ChildProcess.make('bun', [script], { forceKillAfter: Duration.seconds(5) }),
+        const loaded = yield* watched(
+          Effect.scoped(
+            Effect.flatMap(
+              spawner.spawn(
+                ChildProcess.make('bun', [script], { forceKillAfter: Duration.seconds(5) }),
+              ),
+              (handle) => Stream.mkString(Stream.decodeText(handle.stdout)),
             ),
-            (handle) => Stream.mkString(Stream.decodeText(handle.stdout)),
           ),
+          'import-probe.ts did not close its output',
         );
         expect(loaded).toBe(table['import-defaults']);
       }).pipe(Effect.provide(BunServices.layer)),
+    LIVE_MS,
   );
 
   it.effect("the lab's contract test asks every row and expects the table's text", () =>
