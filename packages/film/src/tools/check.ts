@@ -35,7 +35,7 @@ import type {
   Timeline,
   Until,
 } from '../core/schema.ts';
-import type { FaceMark, InkMark, Probed, TextBox } from '../core/export-handle.ts';
+import type { FaceMark, InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
 import {
   LEAD_IN,
   type Library,
@@ -1681,33 +1681,26 @@ const boxAtRest = (a: Mark, b: Mark) =>
 
 /**
  * The picture in a probed frame: everything but the caption line and its
- * plate, which are the voice, the paintings and rigs it placed, and the
- * footage frames it drew (none for a drawn film).
+ * plate, which are the voice, and the footage frames it drew (none for a
+ * drawn film).
  */
-const pictureOf = (
-  probed: Probed,
-): Required<Pick<Probed, 'texts' | 'inks' | 'placed' | 'footage'>> => ({
+const pictureOf = (probed: Probed): Required<Pick<Probed, 'texts' | 'inks' | 'footage'>> => ({
   texts: probed.texts.filter((t) => t.caption !== true),
   inks: probed.inks.filter((m) => m.caption !== true),
-  placed: probed.placed ?? [],
   footage: probed.footage ?? [],
 });
 
 /**
  * Two pictures draw the same marks, in the same order, each where and as
- * strong as it was, place the same paintings and rigs where they were (a
- * camera push on a painting moves its box), over the same footage frames:
- * a source's time moving (the edit playing its take) is motion, read from
- * the edit, not the pixels.
+ * strong as it was, over the same footage frames: a source's time moving
+ * (the edit playing its take) is motion, read from the edit, not the pixels.
  */
 const atRest = (a: ReturnType<typeof pictureOf>, b: ReturnType<typeof pictureOf>) =>
   a.texts.length === b.texts.length &&
   a.inks.length === b.inks.length &&
-  a.placed.length === b.placed.length &&
   a.footage.length === b.footage.length &&
   Arr.zip(a.texts, b.texts).every(([s, t]) => s.text === t.text && boxAtRest(s, t)) &&
   Arr.zip(a.inks, b.inks).every(([m, n]) => m.kind === n.kind && boxAtRest(m, n)) &&
-  Arr.zip(a.placed, b.placed).every(([p, q]) => p.key === q.key && boxAtRest(p, q)) &&
   Arr.zip(a.footage, b.footage).every(([s, t]) => s.source === t.source && s.at === t.at);
 
 /**
@@ -1721,3 +1714,79 @@ export const heldStill = (frames: ReadonlyArray<Probed>): boolean => {
     onSome: (first) => pictures.slice(1).every((p) => atRest(first, p)),
   });
 };
+
+/**
+ * Frames as their page draws them: each one's luma over `area` (`luma`), one
+ * value per cell of its grid, in the order the frames were probed.
+ */
+export interface DrawnPicture {
+  readonly area: LumaArea;
+  readonly lumas: ReadonlyArray<ReadonlyArray<number>>;
+}
+
+/**
+ * The luma step (0–255) past which a cell clear of every probed mark moved.
+ * A cell of the 64 × 36 grid the checks read (`SHORT_RULES.loopGrid`) is the
+ * mean of a few hundred pixels (about 17 × 22 px of a 1080 px band, 30 × 30 of
+ * a 1920 px frame), so the paper's grain, laid anew each boil tick at 3 %
+ * opacity (a few luma a pixel), averages to well under one luma there; 6
+ * (2.4 %) is about the least change of a mid-tone a viewer notices, and twelve
+ * times the half luma an 8-bit read rounds by.
+ */
+export const PICTURE_STEP = 6;
+
+/**
+ * Page px a probed mark is grown by before it covers a cell: what its boil
+ * moves its box (`STILL_DRIFT` of its own units) and a pixel of edge.
+ */
+const markReach = (scale: number) => STILL_DRIFT * scale + 1;
+
+/** The cells of a grid of `count` cells of `size` from `origin` that the span `[lo, hi]` touches. */
+const cellSpan = (lo: number, hi: number, origin: number, size: number, count: number) => ({
+  from: Math.max(0, Math.floor((lo - origin) / size)),
+  to: Math.min(count - 1, Math.floor((hi - origin) / size)),
+});
+
+/**
+ * Which cells of `area`'s grid lie clear of every text and ink mark the
+ * frames probed (the caption's too), each grown by its boil's reach and half
+ * a cell (the resize's footprint). Ink is judged by the probe, which knows
+ * its boil; a clear cell holds only what the probe does not see (a painting,
+ * a camera on it, a rig, the paper), so a change there is the picture moving.
+ */
+const clearCells = (frames: ReadonlyArray<Probed>, area: LumaArea): ReadonlyArray<boolean> => {
+  const cw = area.w / area.cols;
+  const ch = area.h / area.rows;
+  const clear = Arr.makeBy(area.cols * area.rows, () => true);
+  for (const m of frames.flatMap((p) => [...p.texts, ...p.inks])) {
+    const grow = markReach(m.scale);
+    const cols = cellSpan(m.x - grow - cw / 2, m.x + m.w + grow + cw / 2, area.x, cw, area.cols);
+    const rows = cellSpan(m.y - grow - ch / 2, m.y + m.h + grow + ch / 2, area.y, ch, area.rows);
+    for (let r = rows.from; r <= rows.to; r++)
+      for (let c = cols.from; c <= cols.to; c++) clear[r * area.cols + c] = false;
+  }
+  return clear;
+};
+
+/** Some cell clear of every probed mark changed by more than `PICTURE_STEP` from the first frame's. */
+export const pictureMoved = (frames: ReadonlyArray<Probed>, picture: DrawnPicture): boolean =>
+  Option.match(Arr.head(picture.lumas), {
+    onNone: () => false,
+    onSome: (first) => {
+      const clear = clearCells(frames, picture.area);
+      return picture.lumas
+        .slice(1)
+        .some((grid) =>
+          clear.some((c, k) => c && Math.abs((grid[k] ?? 0) - (first[k] ?? 0)) > PICTURE_STEP),
+        );
+    },
+  });
+
+/**
+ * Whether frames hold still as a viewer sees them: their probed marks at rest
+ * but for their boil, over the same footage frames (`heldStill`), and their
+ * drawn picture unchanged where no mark lies (`pictureMoved`: what the probe
+ * cannot see, a painting, a camera pushing on it, a rig moving in place).
+ */
+export const framesHeld = (frames: ReadonlyArray<Probed>, picture: DrawnPicture): boolean =>
+  heldStill(frames) && !pictureMoved(frames, picture);

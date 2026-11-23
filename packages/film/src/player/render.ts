@@ -155,8 +155,8 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     },
     probe: async (i) => {
       const sink: ProbeSink = Option.match(footageReads(film), {
-        onNone: () => ({ texts: [], inks: [], placed: [] }),
-        onSome: () => ({ texts: [], inks: [], placed: [], footage: [] }),
+        onNone: () => ({ texts: [], inks: [] }),
+        onSome: () => ({ texts: [], inks: [], footage: [] }),
       });
       drawWith(i, await footageOf(i), { probe: sink });
       return sink;

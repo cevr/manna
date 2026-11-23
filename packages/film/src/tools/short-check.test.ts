@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { Option, Result } from 'effect';
+import { Array as Arr, Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
 import { hashText } from '../core/narration.ts';
 import { shortPhrases } from '../core/phrases.ts';
 import type { Phrase } from '../core/phrases.ts';
-import type { Probed, TextBox } from '../core/export-handle.ts';
-import { type ResolvedShort, resolveShort } from '../core/shorts.ts';
+import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
+import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
+import { type DrawnPicture, PICTURE_STEP } from './check.ts';
 import {
   loopGap,
   loopPicture,
@@ -20,12 +21,6 @@ import {
 } from './short-check.ts';
 import { type ShortFinding, levelOf } from './findings.ts';
 import { voicedAt } from '../core/voiced.ts';
-import { camera } from '../canvas/camera.ts';
-import { createFilm, drawing } from '../canvas/film.ts';
-import { createShort } from '../canvas/short.ts';
-import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
-import type { PaintingSpec } from '../canvas/painting.ts';
-import { type ProbeSink, probeFigure, probing } from '../canvas/probe.ts';
 
 /** How bad a short's finding is; `--allow-stale` does not touch any. */
 const level = (finding: ShortFinding) => levelOf(finding, { allowStale: false });
@@ -72,6 +67,16 @@ const box = (text: string, x: number, y: number, w: number, h: number): TextBox 
 const own = (t: TextBox): TextBox => ({ ...t, caption: true });
 
 const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] });
+
+/** The band of a 1080 × 1920 short page, on the grid the checks read (`SHORT_RULES.loopGrid`). */
+const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid };
+const CELLS = BAND.cols * BAND.rows;
+
+/** A drawn band whose every cell reads `luma`. */
+const flat = (luma: number): ReadonlyArray<number> => Arr.makeBy(CELLS, () => luma);
+
+/** The band drawn the same, frame after frame. */
+const HELD: DrawnPicture = { area: BAND, lumas: [flat(128), flat(128)] };
 
 describe('shortLength', () => {
   test('45 to 75 s holds', () => {
@@ -251,144 +256,96 @@ describe('the open', () => {
   test('an open that holds still is a hook error; one that moves is not', () => {
     const still = frame(box('word', 100, 100, 100, 40));
     const moved = frame(box('word', 300, 100, 100, 40));
-    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5)).reason).toBe('still open');
-    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5))).toBe(true);
+    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5, HELD)).reason).toBe(
+      'still open',
+    );
+    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5, HELD))).toBe(true);
   });
 
   test('the captions and the hook do not count as motion', () => {
     const a = frame(box('word', 100, 100, 100, 40), own(box('one two', 100, 2600, 400, 80)));
     const b = frame(box('word', 100, 100, 100, 40), own(box('three four', 100, 2600, 400, 80)));
-    expect(Option.isSome(stillOpen('probe', [a, b], 0.5))).toBe(true);
+    expect(Option.isSome(stillOpen('probe', [a, b], 0.5, HELD))).toBe(true);
   });
 
-  describe('a painting or a rig, with no text or ink, under a camera push', () => {
-    const W = 1080;
-    const H = 608;
-    const PLATE: PaintingSpec = { key: 'test/plate', png: 'plate.png', size: [W, H] };
-    const plate = drawing({ timeline: {}, paintings: { plate: PLATE }, draw: () => {} });
-    const film = withDom(() =>
-      createFilm({
-        fps: 30,
-        title: 'plates',
-        width: W,
-        height: H,
-        paper: { base: '#ffffff', tone: '#000000', seed: 1 },
-        shade: '#000000',
-        finish: { vignette: 0, grain: 0 },
-        scenes: [
-          {
-            id: 'push',
-            min: 4,
-            drift: 0,
-            ...plate,
-            draw: (f) =>
-              camera(f.ctx, { x: W / 2, y: H / 2, zoom: 1 + (0.4 * f.t) / f.dur }, W, H, () =>
-                f.painting('plate'),
-              ),
-          },
-          { id: 'held', min: 4, drift: 0, ...plate, draw: (f) => f.painting('plate') },
-          {
-            id: 'away',
-            min: 4,
-            drift: 0,
-            ...plate,
-            draw: (f) =>
-              camera(f.ctx, { x: W / 2, y: H / 2, zoom: 1 + (0.4 * f.t) / f.dur }, W, H, () => {
-                f.ctx.translate(4 * W, 0);
-                f.painting('plate');
-              }),
-          },
-          {
-            id: 'corner',
-            min: 4,
-            drift: 0,
-            ...plate,
-            draw: (f) => {
-              f.ctx.translate(20 + f.t * 40, -60);
-              f.ctx.rotate((3 * Math.PI) / 4);
-              f.ctx.scale(0.12, 0.02);
-              f.painting('plate');
-            },
-          },
-        ],
-      }),
-    );
-    /**
-     * The open of a short cut from one scene, each frame probed through the
-     * short's page as the page's `probe` call probes it (`player/render.ts`).
-     */
-    const shortOpen = (scene: string): ReadonlyArray<Probed> => {
-      const short = createShort(film, {
-        id: 'cut',
-        title: 'Cut',
-        spans: [{ scene, from: { at: 'start' }, to: { at: 'end' } }],
+  describe('as drawn: the band read for what the probe cannot see', () => {
+    /** The open's nine frames, as `openFrames(30)` reads them, `k` of 8 through it. */
+    const open = (draw: (k: number) => ReadonlyArray<number>): DrawnPicture => ({
+      area: BAND,
+      lumas: Arr.makeBy(openFrames(30).length, (k) => draw(k / 8)),
+    });
+    /** A painted plate filling the band, pushed in about its centre to `zoom`. */
+    const plate = (zoom: number): ReadonlyArray<number> =>
+      Arr.makeBy(CELLS, (k) => {
+        const c = (k % BAND.cols) - BAND.cols / 2;
+        const r = Math.floor(k / BAND.cols) - BAND.rows / 2;
+        return 128 + 60 * Math.sin((c * zoom) / 3) * Math.cos((r * zoom) / 3);
       });
-      const down = film.paintings.stand(new Map([[PLATE, { image: Option.none() }]]));
-      const frames = openFrames(short.fps).map((i) => {
-        const sink: ProbeSink = { texts: [], inks: [], placed: [] };
-        withDom(() =>
-          short.render(recorder(short.width, short.height).ctx, i / short.fps, { probe: sink }),
-        );
-        return sink;
-      });
-      down();
-      return frames;
+    /** The band with cell (`c`, `r`) changed by `by`. */
+    const touched = (c: number, r: number, by: number): ReadonlyArray<number> =>
+      Arr.makeBy(CELLS, (k) => 128 + by * Number(k === r * BAND.cols + c));
+    const nothing = Arr.makeBy(openFrames(30).length, () => frame());
+    /** A stroke 20 × 20 page px at (500, 845): cells 28 to 31 of rows 9 to 11 lie under its reach. */
+    const stroke: InkMark = {
+      kind: 'stroke',
+      scene: 'a',
+      points: [
+        [500, 845],
+        [520, 865],
+      ],
+      width: 4,
+      x: 500,
+      y: 845,
+      w: 20,
+      h: 20,
+      alpha: 1,
+      order: 0,
+      scale: 1,
     };
+    const inked = Arr.makeBy(openFrames(30).length, (): Probed => ({ texts: [], inks: [stroke] }));
 
-    test("a short's open moves, with no text or ink in its picture", () => {
-      const open = shortOpen('push');
-      const picture = (p: Probed) => [...p.texts, ...p.inks].filter((m) => m.caption !== true);
-      expect(open.every((p) => picture(p).length === 0)).toBe(true);
-      expect(Option.isNone(stillOpen('cut', open, 0.5))).toBe(true);
+    test('a full-bleed painting the camera pushes in on, with no mark on it, moves', () => {
+      const push = open((t) => plate(1 + 0.02 * t));
+      expect(Option.isNone(stillOpen('cut', nothing, 0.5, push))).toBe(true);
     });
 
-    test('the same painting held in a short, no camera and no breath, is a still open', () => {
-      expect(Option.getOrThrow(stillOpen('cut', shortOpen('held'), 0.5)).reason).toBe('still open');
+    test('the same painting held, its grain under half a luma a cell, is a still open', () => {
+      const grain = open((t) => plate(1).map((v, k) => v + 0.5 * Math.sin(k * 7 + t * 13)));
+      expect(Option.getOrThrow(stillOpen('cut', nothing, 0.5, grain)).reason).toBe('still open');
     });
 
-    /** The wide film's own open of the scene starting at `from` seconds, probed as its page probes it. */
-    const wideOpen = (from: number): ReadonlyArray<Probed> => {
-      const down = film.paintings.stand(new Map([[PLATE, { image: Option.none() }]]));
-      const frames = openFrames(film.fps).map((i) => {
-        const sink: ProbeSink = { texts: [], inks: [], placed: [] };
-        withDom(() => film.render(recorder(W, H).ctx, from + i / film.fps, { probe: sink }));
-        return sink;
-      });
-      down();
-      return frames;
-    };
-
-    test('a painting pushed wholly outside the picture is a still open, in a short or the film', () => {
-      expect(Option.getOrThrow(stillOpen('cut', shortOpen('away'), 0.5)).reason).toBe('still open');
-      expect(Option.isSome(stillOpen('away', wideOpen(8), 0.5))).toBe(true);
+    test('a picture that draws the same, whatever moves off the band or behind it, is a still open', () => {
+      const fixed = open(() => plate(1));
+      expect(Option.isSome(stillOpen('cut', nothing, 0.5, fixed))).toBe(true);
     });
 
-    test('a tilted painting sliding past a corner, its box over the picture, is a still open', () => {
-      expect(Option.getOrThrow(stillOpen('cut', shortOpen('corner'), 0.5)).reason).toBe(
-        'still open',
-      );
-      expect(Option.isSome(stillOpen('corner', wideOpen(12), 0.5))).toBe(true);
+    test("a mark's boil is the probe's to judge: its cells may change, the open holds", () => {
+      const boiled = open((t) => touched(30, 10, 40 * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, boiled))).toBe(true);
+      const edge = open((t) => touched(31, 11, 40 * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, edge))).toBe(true);
     });
 
-    test('a rig it declares moves with the camera as a painting does', () => {
-      const rigAt = (zoom: number): Probed => {
-        const sink: ProbeSink = { texts: [], inks: [], placed: [] };
-        const { ctx } = recorder(W, H);
-        ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
-        probing(ctx, { sink, scene: 'push', dx: 0, alpha: 1 }, () =>
-          probeFigure(ctx, {
-            key: 'rig',
-            left: 200,
-            top: 400,
-            right: 600,
-            bottom: 1400,
-            face: true,
-          }),
-        );
-        return sink;
+    test('a rig moving in place where no mark lies moves past one step, not at it', () => {
+      const past = open((t) => touched(40, 10, (PICTURE_STEP + 1) * t));
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, past))).toBe(true);
+      const at = open((t) => touched(40, 10, PICTURE_STEP * t));
+      expect(Option.isSome(stillOpen('cut', inked, 0.5, at))).toBe(true);
+      const beside = open((t) => touched(32, 10, (PICTURE_STEP + 1) * t));
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, beside))).toBe(true);
+    });
+
+    test("a talk's caption line is the voice: its cells are its marks', not the picture", () => {
+      const talkArea: LumaArea = { x: 0, y: 0, w: 1080, h: 1920, ...SHORT_RULES.loopGrid };
+      const line = own(box('the law', 228, 1100, 660, 60));
+      const said = Arr.makeBy(openFrames(30).length, () => frame(line));
+      const highlight = {
+        area: talkArea,
+        lumas: Arr.makeBy(openFrames(30).length, (k) =>
+          Arr.makeBy(CELLS, (cell) => 128 + 30 * k * Number(cell === 20 * 64 + 25)),
+        ),
       };
-      expect(Option.isNone(stillOpen('probe', [rigAt(1), rigAt(1.05)], 0.5))).toBe(true);
-      expect(Option.isSome(stillOpen('probe', [rigAt(1), rigAt(1)], 0.5))).toBe(true);
+      expect(Option.isSome(stillOpen('why', said, 0.5, highlight))).toBe(true);
     });
   });
 
@@ -430,10 +387,12 @@ describe('a talk, checked as a vertical film', () => {
   });
 
   test('its footage moving is motion: a still open is one whose source time holds', () => {
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5))).toBe(true);
-    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5, HELD))).toBe(
+      true,
+    );
+    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5, HELD))).toBe(true);
     const other = { ...shot(1), footage: [{ source: 'take.why/ba9876543210', at: 1 }] };
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5, HELD))).toBe(true);
   });
 
   test("its text is held to every platform's zone, naming the platforms a line runs under", () => {

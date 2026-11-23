@@ -32,6 +32,7 @@ import {
   type HoldCandidate,
   type Sample,
   frameFindings,
+  framesHeld,
   heldStill,
   holdCandidates,
   holdGrid,
@@ -57,21 +58,36 @@ interface LayoutCheckOptions {
   readonly server: Option.Option<string>;
 }
 
-type ProbeFrame = (
-  i: number,
-) => Effect.Effect<Probed, PageOpenError | PageError | PageCrashed | FrameFailed>;
+type FrameError = PageOpenError | PageError | PageCrashed | FrameFailed;
 
-/** Probe frames on `pages`, each at most once however many runs reach it: `seen` keeps them. */
-const probedOnce =
-  (pages: ExportPages, seen: Map<number, Probed>): ProbeFrame =>
-  (i) =>
+/** Read frame `i` once however many runs reach it: `seen` keeps what it read. */
+const once =
+  <A>(seen: Map<number, A>, read: (i: number) => Effect.Effect<A, FrameError>) =>
+  (i: number): Effect.Effect<A, FrameError> =>
     Option.match(Option.fromNullishOr(seen.get(i)), {
-      onSome: (probed) => Effect.succeed(probed),
-      onNone: () =>
-        pages
-          .call('probe', i)
-          .pipe(Effect.tap((probed) => Effect.sync(() => void seen.set(i, probed)))),
+      onSome: (a) => Effect.succeed(a),
+      onNone: () => read(i).pipe(Effect.tap((a) => Effect.sync(() => void seen.set(i, a)))),
     });
+
+/**
+ * A hold's frames as the checks read them: each probed, and its luma over
+ * `area` read only once its probe holds still against the anchor's (the
+ * pixels are asked only of a frame the marks cannot tell moved).
+ */
+interface HoldReads {
+  readonly probe: (i: number) => Effect.Effect<Probed, FrameError>;
+  readonly luma: (i: number) => Effect.Effect<ReadonlyArray<number>, FrameError>;
+  readonly area: LumaArea;
+}
+
+/** Whether frame `i` holds still against frame `anchor`, as probed and as drawn (`framesHeld`). */
+const heldAgainst = (reads: HoldReads, anchor: number, i: number) =>
+  Effect.gen(function* () {
+    const probed = [yield* reads.probe(anchor), yield* reads.probe(i)];
+    if (!heldStill(probed)) return false;
+    const lumas = [yield* reads.luma(anchor), yield* reads.luma(i)];
+    return framesHeld(probed, { area: reads.area, lumas });
+  });
 
 /** What probing across one hold candidate found, and how many frames it drew. */
 interface HoldProbe {
@@ -81,22 +97,18 @@ interface HoldProbe {
 
 /**
  * The last of `frames`, in order, that holds still against `anchor` before
- * one moves; `from` when the first moves. They are probed `workers` at a
+ * one moves; `anchor` when the first moves. They are read `workers` at a
  * time, so a run grows on every page at once.
  */
-const reach = (
-  probeAt: ProbeFrame,
-  workers: number,
-  anchor: Probed,
-  from: number,
-  frames: ReadonlyArray<number>,
-) =>
+const reach = (reads: HoldReads, workers: number, anchor: number, frames: ReadonlyArray<number>) =>
   Effect.gen(function* () {
-    let still = from;
+    let still = anchor;
     for (const batch of Arr.chunksOf(frames, workers)) {
-      const probed = yield* Effect.forEach(batch, probeAt, { concurrency: workers });
-      for (const [i, p] of Arr.zip(batch, probed)) {
-        if (!heldStill([anchor, p])) return still;
+      const held = yield* Effect.forEach(batch, (i) => heldAgainst(reads, anchor, i), {
+        concurrency: workers,
+      });
+      for (const [i, h] of Arr.zip(batch, held)) {
+        if (!h) return still;
         still = i;
       }
     }
@@ -114,25 +126,29 @@ const reach = (
 const confirmHold = (
   pages: ExportPages,
   workers: number,
-  fps: number,
+  info: { readonly fps: number; readonly width: number; readonly height: number },
   hold: HoldCandidate,
-): Effect.Effect<HoldProbe, PageOpenError | PageError | PageCrashed | FrameFailed> =>
+): Effect.Effect<HoldProbe, FrameError> =>
   Effect.gen(function* () {
     const seen = new Map<number, Probed>();
-    const probeAt = probedOnce(pages, seen);
-    const ticks = holdTicks(hold, fps);
+    const area: LumaArea = { x: 0, y: 0, w: info.width, h: info.height, ...SHORT_RULES.loopGrid };
+    const reads: HoldReads = {
+      probe: once(seen, (i) => pages.call('probe', i)),
+      luma: once(new Map(), (i) => pages.use((page) => lumaOf(page, i, area))),
+      area,
+    };
+    const ticks = holdTicks(hold, info.fps);
     const grid = holdGrid(ticks);
-    yield* Effect.forEach(grid, probeAt, { concurrency: workers, discard: true });
+    yield* Effect.forEach(grid, reads.probe, { concurrency: workers, discard: true });
     let longest: Interval = { from: hold.from, to: hold.from };
     let reached = -1;
     for (const [tick, next] of Arr.zip(grid, grid.slice(1))) {
       if (tick <= reached) continue;
-      const anchor = yield* probeAt(tick);
-      if (!heldStill([anchor, yield* probeAt(next)])) continue;
+      if (!(yield* heldAgainst(reads, tick, next))) continue;
       const at = ticks.indexOf(tick);
-      const hi = yield* reach(probeAt, workers, anchor, tick, ticks.slice(at + 1));
-      const lo = yield* reach(probeAt, workers, anchor, tick, ticks.slice(0, at).reverse());
-      const run = stillSpan(hold, ticks, lo, hi, fps);
+      const hi = yield* reach(reads, workers, tick, ticks.slice(at + 1));
+      const lo = yield* reach(reads, workers, tick, ticks.slice(0, at).reverse());
+      const run = stillSpan(hold, ticks, lo, hi, info.fps);
       reached = hi;
       if (run.to - run.from > longest.to - longest.from) longest = run;
     }
@@ -239,7 +255,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
             const candidates = holdCandidates(placed).filter((c) => chosen.has(c.scene));
             const probed = yield* Effect.forEach(
               candidates,
-              (hold) => confirmHold(pool, workers, info.fps, hold),
+              (hold) => confirmHold(pool, workers, info, hold),
               { concurrency: workers },
             );
             const holds = probed.flatMap((p) => p.holds);
@@ -298,7 +314,8 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
                 unsafeTexts(cut.id, options.zone, secondsAt(i, info.fps), p, k),
               ),
             );
-            const open = yield* Effect.forEach(openFrames(info.fps), probeAt, {
+            const opening = openFrames(info.fps);
+            const open = yield* Effect.forEach(opening, probeAt, {
               concurrency: workers,
             });
             const titled = Option.flatMap(Arr.head(open), (first) =>
@@ -312,18 +329,21 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               ...SHORT_RULES.loopGrid,
             };
             const lumaAt = (i: number) => pool.use((page) => lumaOf(page, i, frame));
+            const lumas = yield* Effect.forEach(opening, lumaAt, { concurrency: workers });
             const [first, last] = yield* Effect.all([lumaAt(0), lumaAt(info.frames - 1)], {
               concurrency: 2,
             });
             const findings = [
               ...words,
               ...unsafe,
-              ...Option.toArray(stillOpen(cut.id, open, SHORT_RULES.motionBy)),
+              ...Option.toArray(
+                stillOpen(cut.id, open, SHORT_RULES.motionBy, { area: frame, lumas }),
+              ),
               ...Option.toArray(titled),
               ...Option.toArray(loopPicture(cut.id, first, last)),
             ];
             yield* Effect.log(
-              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + 2} loop=${lumaDiff(first, last).toFixed(3)} findings=${findings.length}`,
+              `check.short film=${name} short=${cut.id} zone=${options.zone} frames=${frames.length + open.length + lumas.length + 2} loop=${lumaDiff(first, last).toFixed(3)} findings=${findings.length}`,
             );
             return findings;
           }),
@@ -362,15 +382,28 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
                 unsafeTexts(vertical.id, 'platforms', secondsAt(i, info.fps), p, k),
               ),
             );
-            const open = yield* Effect.forEach(openFrames(info.fps).filter(inSpan), probeAt, {
-              concurrency: workers,
-            });
+            const opening = openFrames(info.fps).filter(inSpan);
+            const open = yield* Effect.forEach(opening, probeAt, { concurrency: workers });
+            const area: LumaArea = {
+              x: 0,
+              y: 0,
+              w: info.width,
+              h: info.height,
+              ...SHORT_RULES.loopGrid,
+            };
+            const lumas = yield* Effect.forEach(
+              opening,
+              (i) => pool.use((page) => lumaOf(page, i, area)),
+              { concurrency: workers },
+            );
             const findings = [
               ...unsafe,
-              ...Option.toArray(stillOpen(vertical.id, open, SHORT_RULES.motionBy)),
+              ...Option.toArray(
+                stillOpen(vertical.id, open, SHORT_RULES.motionBy, { area, lumas }),
+              ),
             ];
             yield* Effect.log(
-              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length} findings=${findings.length}`,
+              `check.talk film=${vertical.id} zone=platforms frames=${frames.length + open.length + lumas.length} findings=${findings.length}`,
             );
             return findings;
           }),
