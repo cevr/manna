@@ -529,7 +529,7 @@ const measureOnce = async (page: Page, path: string, cold: boolean) => {
   await Bun.sleep(600);
   for (const off of offs) off();
   const marks = await page.evaluate<Record<string, number>>(
-    `(() => { const n = performance.getEntriesByType('navigation')[0]; return { ...window.__web, response: n.responseEnd, dom: n.domContentLoadedEventEnd, load: n.loadEventEnd }; })()`,
+    `(() => { const n = performance.getEntriesByType('navigation')[0]; const c = performance.getEntriesByType('resource').find((e) => e.name.includes('/modules/chords/')); return { ...window.__web, response: n.responseEnd, dom: n.domContentLoadedEventEnd, load: n.loadEventEnd, ...(c ? { chordsAsked: c.startTime } : {}) }; })()`,
   );
   const files = [...seen.values()].map((entry) => ({
     ...entry,
@@ -541,6 +541,17 @@ const measureOnce = async (page: Page, path: string, cold: boolean) => {
     bytes[file.kind] = (bytes[file.kind] ?? 0) + file.bytes;
   return { bytes, total: Object.values(bytes).reduce((a, b) => a + b, 0), marks, files };
 };
+
+/** How long after the app's ready a hymn page may ask its chords file: its first ask's own turn, no serial wait before it. */
+const CHORDS_ASKED_MS = 25;
+
+/**
+ * The files a hymn page must not fetch to draw its words: Exact's storage
+ * pieces, which the web loads only to refuse a read of the app's files
+ * (`src/shipped/load.ts` asks the page module alone), and the indexes file,
+ * whose head line the page reads from its bundled table (`src/hymn/heads.ts`).
+ */
+const UNWAITED = /\/(storage-fs|storage-environment|grant-admission)\.js$|^\/modules\/indexes\//u;
 
 const measure = async (page: Page) => {
   const load = loadavg()[0] ?? 0;
@@ -582,6 +593,24 @@ const measure = async (page: Page) => {
         bytes,
         status,
       }));
+      if (path === '/hymns/100' && cold) {
+        const waited = runs.flatMap((run) =>
+          run.files.filter(({ file }) => UNWAITED.test(file)).map(({ file }) => file),
+        );
+        check(
+          "a hymn page's words wait for no read of Exact's storage pieces nor the indexes file (cold /hymns/100)",
+          runs.length > 0 && waited.length === 0,
+          waited,
+        );
+        const asked = Math.round(
+          median(runs.map((run) => (run.marks.chordsAsked ?? Number.NaN) - (run.marks.ready ?? 0))),
+        );
+        check(
+          `a hymn page asks its chords file within ${CHORDS_ASKED_MS} ms of the app's ready (cold /hymns/100: ${asked} ms${load <= MAX_LOAD ? '' : `, not checked: load ${load.toFixed(1)}`})`,
+          load > MAX_LOAD || asked <= CHORDS_ASKED_MS,
+          asked,
+        );
+      }
     }
   }
   report.measure = { load, throttled, measured, loads };
@@ -653,14 +682,9 @@ const shipped = async (page: Page) => {
   const atHome = await launch('/');
   check("the list's launch reads no hymn's chords and no indexes", atHome.length === 0, atHome);
   const atHymn = await launch('/hymns/100');
-  const wanted = [
-    '/modules/chords/100.js',
-    '/modules/chords/99.js',
-    '/modules/chords/101.js',
-    '/modules/indexes/all.js',
-  ];
+  const wanted = ['/modules/chords/100.js', '/modules/chords/99.js', '/modules/chords/101.js'];
   check(
-    "a hymn page's launch reads its chords, its neighbours' and the indexes, once each",
+    "a hymn page's launch reads its chords and its neighbours', once each, and no indexes",
     atHymn.length === wanted.length &&
       wanted.every(
         (file) => atHymn.filter((each) => each.file === file && each.status === 200).length === 1,
@@ -740,6 +764,89 @@ const shipped = async (page: Page) => {
   await tap(page, '[data-testid="gear"]');
   await waitFor(page, `document.querySelector('[data-testid="chords-toggle"]') !== null`, 5000);
   await tap(page, '[data-testid="chords-toggle"]');
+  await waitFor(
+    page,
+    `document.querySelector('[data-testid="chords-toggle"]')?.getAttribute('aria-checked') === 'false'`,
+    5000,
+  );
+  mark('hold 103 chords 1.5 s');
+  await page.send('Network.clearBrowserCache');
+  const held = await holdFile(page, '/modules/chords/103.js', HELD_MS, false);
+  try {
+    const seen = await sampleWords(page, '/hymns/103', HELD_MS + 1500);
+    const bare = seen.filter((sample) => sample.words > 0 && sample.hyphens === 0);
+    const first = seen.find((sample) => sample.hyphens > 0);
+    check(
+      `a hymn page whose chords file is held ${HELD_MS} ms draws its words only with their syllables, once it lands`,
+      held.held() === 1 && bare.length === 0 && first !== undefined && first.at < HELD_MS + 600,
+      { held: held.held(), bare: bare.length, first, during: seen.at(0) },
+    );
+    report.held = seen;
+  } finally {
+    await held.stop();
+  }
+  mark('fail 104 chords');
+  await page.send('Network.clearBrowserCache');
+  const missing = await holdFile(page, '/modules/chords/104.js', 0, true);
+  try {
+    const seen = await sampleWords(page, '/hymns/104', 1500);
+    const first = seen.find((sample) => sample.words > 0);
+    check(
+      'a hymn page whose chords file cannot be read draws its words, without their syllables, after the read and its one retry fail',
+      missing.held() >= 2 && first !== undefined && first.at < 1000,
+      { refused: missing.held(), first, last: seen.at(-1) },
+    );
+    report.missing = seen;
+  } finally {
+    await missing.stop();
+  }
+};
+
+/** How long the slow-network case holds a chords file back. */
+const HELD_MS = 1500;
+
+/** Opens `path` and samples its first stanza every 50 ms for `ms`: when, how many words and hyphens it draws, and what the page shows. */
+const sampleWords = async (page: Page, path: string, ms: number) => {
+  const samples: Array<{ at: number; words: number; hyphens: number; shown: string }> = [];
+  const start = Date.now();
+  void open(page, path).catch(() => undefined);
+  while (Date.now() - start < ms) {
+    const got = await page
+      .evaluate<{ words: number; hyphens: number; shown: string }>(
+        `(() => { const s = document.querySelector('[data-testid="stanza-1"]'); const t = s ? s.innerText : ''; return { words: t.split(/\\s+/).filter(Boolean).length, hyphens: (t.match(/-/g) ?? []).length, shown: (document.querySelector('[data-testid="hymn-page"]') ? 'hymn page' : document.body.innerText.slice(0, 40)) }; })()`,
+      )
+      .catch(() => ({ words: 0, hyphens: 0, shown: 'navigating' }));
+    samples.push({ at: Date.now() - start, ...got });
+    await Bun.sleep(50);
+  }
+  return samples;
+};
+
+/** Holds the page's requests for `file` `ms` before letting them through, or fails each when `fail`; `held` counts them. */
+const holdFile = async (page: Page, file: string, ms: number, fail: boolean) => {
+  let held = 0;
+  const off = page.on('Fetch.requestPaused', (params) => {
+    const id = String(params.requestId);
+    const url = (params.request as { url: string }).url;
+    if (!new URL(url).pathname.startsWith(file)) {
+      void page.send('Fetch.continueRequest', { requestId: id });
+      return;
+    }
+    held += 1;
+    if (fail) {
+      void page.send('Fetch.failRequest', { requestId: id, errorReason: 'InternetDisconnected' });
+      return;
+    }
+    setTimeout(() => void page.send('Fetch.continueRequest', { requestId: id }), ms);
+  });
+  await page.send('Fetch.enable', { patterns: [{ urlPattern: `${origin}${file}*` }] });
+  return {
+    held: () => held,
+    stop: async () => {
+      off();
+      await page.send('Fetch.disable');
+    },
+  };
 };
 
 /** The shown hymn page: its hymn's number, its chords drawn and whether it says it has none. */
