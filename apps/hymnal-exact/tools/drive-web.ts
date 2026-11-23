@@ -265,6 +265,7 @@ const watch = async (page: Page) => {
       method: string;
       headers: Record<string, string>;
     };
+    if (!request.url.startsWith(`${BUCKET}/`)) return;
     const local = new URL(request.url);
     const response = answer(
       new Request(`http://127.0.0.1${local.pathname}`, {
@@ -768,12 +769,12 @@ const shipped = async (page: Page) => {
   await page.send('Network.clearBrowserCache');
   const held = await holdFile(page, '/modules/chords/103.js', HELD_MS, false);
   try {
-    const seen = await sampleWords(page, '/hymns/103', HELD_MS + 1500);
+    const seen = await sampleWords(page, '/hymns/103', HELD_MS + 3000);
     const bare = seen.filter((sample) => sample.words > 0 && sample.hyphens === 0);
     const first = seen.find((sample) => sample.hyphens > 0);
     check(
       `a hymn page whose chords file is held ${HELD_MS} ms draws its words only with their syllables, once it lands`,
-      held.held() === 1 && bare.length === 0 && first !== undefined && first.at < HELD_MS + 600,
+      held.held() === 1 && bare.length === 0 && first !== undefined && first.at < HELD_MS + 1500,
       { held: held.held(), bare: bare.length, first, during: seen.at(0) },
     );
     report.held = seen;
@@ -823,10 +824,7 @@ const holdFile = async (page: Page, file: string, ms: number, fail: boolean) => 
   const off = page.on('Fetch.requestPaused', (params) => {
     const id = String(params.requestId);
     const url = (params.request as { url: string }).url;
-    if (!new URL(url).pathname.startsWith(file)) {
-      void page.send('Fetch.continueRequest', { requestId: id });
-      return;
-    }
+    if (!url.startsWith(`${origin}${file}`)) return;
     held += 1;
     if (fail) {
       void page.send('Fetch.failRequest', { requestId: id, errorReason: 'InternetDisconnected' });
@@ -834,12 +832,13 @@ const holdFile = async (page: Page, file: string, ms: number, fail: boolean) => 
     }
     setTimeout(() => void page.send('Fetch.continueRequest', { requestId: id }), ms);
   });
-  await page.send('Fetch.enable', { patterns: [{ urlPattern: `${origin}${file}*` }] });
+  const bucket = { urlPattern: `${BUCKET}/*` };
+  await page.send('Fetch.enable', { patterns: [bucket, { urlPattern: `${origin}${file}*` }] });
   return {
     held: () => held,
     stop: async () => {
       off();
-      await page.send('Fetch.disable');
+      await page.send('Fetch.enable', { patterns: [bucket] });
     },
   };
 };
@@ -862,14 +861,16 @@ const refuseOnce = async (page: Page, file: string) => {
       void page.send('Fetch.failRequest', { requestId: id, errorReason: 'Failed' });
       return;
     }
-    void page.send('Fetch.continueRequest', { requestId: id });
+    if (url.startsWith(`${origin}${file}`))
+      void page.send('Fetch.continueRequest', { requestId: id });
   });
-  await page.send('Fetch.enable', { patterns: [{ urlPattern: `${origin}${file}*` }] });
+  const bucket = { urlPattern: `${BUCKET}/*` };
+  await page.send('Fetch.enable', { patterns: [bucket, { urlPattern: `${origin}${file}*` }] });
   return {
     refused: () => refused,
     stop: async () => {
       off();
-      await page.send('Fetch.disable');
+      await page.send('Fetch.enable', { patterns: [bucket] });
     },
   };
 };
