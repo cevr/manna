@@ -6,7 +6,7 @@ import { shortPhrases } from '../core/phrases.ts';
 import type { Phrase } from '../core/phrases.ts';
 import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
 import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
-import { type DrawnPicture, PICTURE_MIN, PICTURE_NOISE } from './check.ts';
+import { type DrawnPicture, PICTURE_NOISE } from './check.ts';
 import { cellDrift } from '../player/dom.ts';
 import {
   loopGap,
@@ -408,14 +408,14 @@ describe('the open', () => {
       expect(moves(open(() => soft(10)))).toBe(false);
     });
 
-    test('a patch of PICTURE_MIN pixels that changes by one level moves; one fewer stays still', () => {
+    test('four pixels that change by one level move; three stay still', () => {
       const patch = (count: number) =>
         open((t) => (x, y): Rgb => {
           if (y === 30 && x >= 50 && x < 50 + count) return [76 + Math.ceil(t), 126, 146];
           return TEAL;
         });
-      expect(moves(patch(PICTURE_MIN))).toBe(true);
-      expect(moves(patch(PICTURE_MIN - 1))).toBe(false);
+      expect(moves(patch(4))).toBe(true);
+      expect(moves(patch(3))).toBe(false);
     });
 
     test('a plate that moves wholly off the strip, at its corner, or under a fill that covers the strip, is a still open', () => {
