@@ -350,8 +350,10 @@ const boxOn = (
  * Declare a plane placed whole in the current transform's space (a painted
  * plate, a rig or a puppet): `key` and the rectangle `[left, right] × [top,
  * bottom]` it covers, so `heldStill` sees it move (a camera push, a rig
- * walking) as it sees ink. Records only when a probe that collects placed
- * planes is attached; draws nothing.
+ * walking) as it sees ink. Records only a plane whose box lies on the
+ * canvas `ctx` draws into (the frame, or a short's band), since one wholly
+ * off it moves nothing the viewer sees, and only when a probe that collects
+ * placed planes is attached; draws nothing.
  */
 export const probePlaced = (
   ctx: CanvasRenderingContext2D,
@@ -365,6 +367,8 @@ export const probePlaced = (
   const placed = probe?.sink.placed;
   if (probe === undefined || placed === undefined) return;
   const { x0, y0, x1, y1 } = boxOn(ctx, probe, left, top, right, bottom);
+  const { width, height } = ctx.canvas;
+  if (x1 <= 0 || y1 <= 0 || x0 >= width || y0 >= height) return;
   placed.push({
     key,
     x: x0,
