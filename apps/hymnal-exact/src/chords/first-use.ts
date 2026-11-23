@@ -10,6 +10,17 @@
  * pager's neighbours, the key button and the player sheet are first drawn
  * with the chords, never first without them. A read that fails answers as
  * a hymn with none (its words alone, `none`), and the next ask reads again.
+ *
+ * A source answered without a hymn's chords keeps that answer while its
+ * arguments stand, so a pager page asked as a neighbour whose read failed
+ * would stay chordless once shown, though a later read of the same file
+ * succeeds. `chordsRead` is that later read for the hymn shown: asked at
+ * each hymn opened and each turn of chords on or off (its second
+ * argument, read for nothing else), it reads that hymn's chords when they are not kept,
+ * once more when that read fails, and answers where they stand
+ * (`ShippedState`): `mended` (the screen asks the chords' readers again,
+ * `chordsMend`), `kept`, `missing`, or `none` for no hymn; at once when
+ * the chords are here, else once the reads have settled.
  */
 
 import type { Book } from '../hymns/book.ts';
@@ -17,6 +28,12 @@ import { hymnAt } from '../hymn/page.ts';
 import type { AppModule, ShippedFiles } from '../shipped/load.ts';
 import type { sourcesAt } from '../sources.ts';
 import { type ChordsLoader, chordsReader, isHymn } from './load.ts';
+
+/** Where the shown hymn's chords file stands (`chordsRead`). */
+export interface ChordsRead {
+  readonly number: number;
+  readonly state: string;
+}
 
 /** The chords' readers among the sources `sourcesAt` answers. */
 export type ChordsReaders = Pick<
@@ -46,5 +63,21 @@ export const chordsFirstUse = (book: Book, loader: ChordsLoader, sources: Chords
     keysPage: gated(sources.keysPage, ([route]) => numberOf(route)),
     keysStep: gated(sources.keysStep, ([, , route]) => numberOf(route)),
     sheetPlacement: gated(sources.sheetPlacement, ([number]) => number),
+    chordsRead: (
+      [route]: readonly [string, boolean],
+      _store?: unknown,
+      storage?: ShippedFiles | null,
+      native?: AppModule | null,
+    ): ChordsRead | Promise<ChordsRead> => {
+      const number = numberOf(route);
+      const here = (): ChordsRead => ({ number, state: loader.stateOf(number) });
+      if (!isHymn(number)) return { number, state: 'none' };
+      if (loader.kept.has(number)) return here();
+      const read = chordsReader(storage, native);
+      return loader
+        .load(number, read)
+        .then(() => (loader.kept.has(number) ? undefined : loader.load(number, read)))
+        .then(here);
+    },
   };
 };

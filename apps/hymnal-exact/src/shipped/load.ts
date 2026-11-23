@@ -11,6 +11,9 @@ export interface AppModule {
   readonly later: (request: Readonly<Record<string, string | number>>) => Promise<unknown>;
 }
 
+/** Where a shipped key stands (`shippedLoader`'s `stateOf`). */
+export type ShippedState = 'kept' | 'mended' | 'missing' | 'unread';
+
 /** A read of the file `name`'s text; it rejects when the file cannot be read. */
 export type ReadShipped = (name: string) => Promise<string>;
 
@@ -52,7 +55,10 @@ export const readerOf =
  * undefined to refuse it. A key is read once however often it is asked: a
  * second ask while the read runs waits for the same one. A read that fails,
  * or whose text `accept` refuses, keeps nothing, so the source answers as
- * without it and the next ask reads again.
+ * without it and the next ask reads again. `stateOf` tells a key kept from
+ * the start or at its first read (`kept`), kept by a read after one that
+ * failed (`mended`: what was answered without it is stale), not kept after
+ * a failed read (`missing`), or never read (`unread`).
  */
 export const shippedLoader = <K, V>(
   given: ReadonlyMap<K, V>,
@@ -61,7 +67,14 @@ export const shippedLoader = <K, V>(
 ) => {
   const kept = new Map(given);
   const reading = new Map<K, Promise<void>>();
+  const missed = new Set<K>();
+  const mended = new Set<K>();
   const view: ReadonlyMap<K, V> = kept;
+  const stateOf = (key: K): ShippedState => {
+    if (mended.has(key)) return 'mended';
+    if (kept.has(key)) return 'kept';
+    return missed.has(key) ? 'missing' : 'unread';
+  };
 
   /** `key`'s file read by `read` unless kept or already being read; it settles once the read has, kept or not. */
   const load = (key: K, read: ReadShipped): Promise<void> => {
@@ -73,9 +86,16 @@ export const shippedLoader = <K, V>(
       .then(
         (text) => {
           const value = accept(text);
-          if (value !== undefined) kept.set(key, value);
+          if (value === undefined) {
+            missed.add(key);
+            return;
+          }
+          kept.set(key, value);
+          if (missed.delete(key)) mended.add(key);
         },
-        () => undefined,
+        () => {
+          missed.add(key);
+        },
       )
       .finally(() => {
         reading.delete(key);
@@ -88,6 +108,7 @@ export const shippedLoader = <K, V>(
     /** The values read so far, by key. */
     kept: view,
     load,
+    stateOf,
     /**
      * `answer()` now when `key`'s value is kept or `wanted` is false, else
      * once its read has settled, so a source answers once, with the value

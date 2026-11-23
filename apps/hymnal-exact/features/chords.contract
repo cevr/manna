@@ -43,6 +43,12 @@ shape ChordsPage
   capo: number
   parts: ChordsPart[]
 
+// Where the shown hymn's chords file stands: `kept`, `mended` (read after a
+// read that failed), `missing` (its read failed) or `none` (no hymn).
+shape ChordsRead
+  number: number
+  state: string
+
 shape ChordsMark
   x: number
   text: string
@@ -96,6 +102,28 @@ members HymnalExact
     chordsOn = on
   action chordsGripClose
     nav = back(nav)
+  // The shown hymn's chords file where it stands (src/chords/first-use.ts):
+  // asked at each hymn opened and each turn of chords on or off, it reads
+  // the file when it is not here yet, once more when that read fails, so a
+  // reader whose hymn came without its chords has them again by turning
+  // to it or by turning chords on. Once a read after a failed one lands
+  // (`mended`), every page and control that shows the hymn asks again, as
+  // each kept the answer it had without the chords while its arguments
+  // stood: the pager's pages (a neighbour's read that failed before it was
+  // turned to), the hymn's words, its chords, the key button and the player
+  // sheet's dial. Another page the pager draws asks again too, its chords
+  // already here, so no file is read for it.
+  resource chordsHere = chordsRead(hymnOpen, chordsOn) as shape ChordsRead
+  task chordsMend key=`${chordsHere.number} ${chordsHere.state}`
+    change(chordsMended)
+  action chordsMended
+    if chordsHere.state == "mended"
+      refresh pagerPages
+      refresh pagerChords
+      refresh hymnShown
+      refresh chordsShown
+      refresh keysShown
+      refresh sheetDial
 
 // While chords are on and the hymn has none, a quiet notice says so over
 // its words (the current app's `ChordNotice`). Its `tag` ends its id: empty
