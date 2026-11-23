@@ -6,11 +6,12 @@
  * current app's `virtual:hymnal`), the back-matter indexes (`indexes.gen.json`,
  * its `virtual:hymnal-indexes`, which the tests read, and the file the apps
  * ship, read the first time a source needs them, `src/indexes/load.ts`),
- * and every hymn's
+ * each hymn's head line over them (`heads.gen.json`, the data module's
+ * `virtual:hymnal-heads`, bundled, `src/hymn/heads.ts`), and every hymn's
  * chords, one string per hymn (its `virtual:hymnal-chords`), as the files
  * the apps ship and the chords' sources read on first use
  * (`src/chords/load.ts`, written by `src/shipped/files.ts`), never bundled.
- * The app's `tsconfig.json` maps the two virtual modules to the JSON files,
+ * The app's `tsconfig.json` maps the three virtual modules to the JSON files,
  * so Exact's bundler takes the current app's hymns unchanged; the app's
  * modules import no indexes (`src/shipped/no-chords.test.ts`). A file is written only when its bytes change, so an unchanged
  * book leaves the build fresh. None of them is committed.
@@ -22,6 +23,7 @@ import { readIndexes } from '@manna/hymnal-app/vite/indexes';
 import { readWords } from '@manna/hymnal-app/vite/words';
 
 import { CHORDS } from '../chords/load.ts';
+import { headsOf } from '../hymn/heads.ts';
 import { ALL, INDEXES } from '../indexes/load.ts';
 import { shippedFiles } from '../shipped/files.ts';
 import { writeShipped } from '../shipped/write.ts';
@@ -34,6 +36,7 @@ const indexes = JSON.stringify(readIndexes());
 const files = [
   ['./words.gen.json', JSON.stringify(readWords())],
   ['./indexes.gen.json', indexes],
+  ['./heads.gen.json', JSON.stringify(headsOf(readWords(), readIndexes()))],
 ] as const;
 
 for (const [name, text] of files) {

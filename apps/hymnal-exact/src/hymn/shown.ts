@@ -8,24 +8,23 @@
  * (`sectionsOf`), with chords on or off; a part the chords do not split, or
  * a hymn they do not hold, is its words, each one syllable. A word but the
  * line's last ends in a no-break space, as the current app's words do
- * (`SyllableWords.tsx`). The passages are read from the book's indexes,
- * as the home's are (`home/sources.ts`), so a page waits for them
- * (`src/indexes/first-use.ts`).
+ * (`SyllableWords.tsx`). The head line is the hymn's in the table built at
+ * prepare with the current app's `headLine` (`heads.ts`), so a page waits
+ * for no indexes file.
  */
 
 import type { HymnChords, Word } from '@manna/hymnal-app/hymns/chords';
 import { sectionsOf } from '@manna/hymnal-app/hymns/chords';
-import { headLine } from '@manna/hymnal-app/reader/head-line';
+import heads from 'virtual:hymnal-heads';
 
 import type { Book } from '../hymns/book.ts';
 import { hymnAt, missing, type Page, type PageLine, type PageWord, pageOf } from './page.ts';
 
-/** The passages hymn `number` alludes to, in the Scriptural index's printed order, as the current app's `referencesOf` gives them. */
-const referencesOf = (book: Book, number: number) =>
-  book
-    .indexes()
-    .references.filter((reference) => reference.hymn === number)
-    .map((reference) => reference.passage);
+/** Each hymn's head line by its number. */
+const table: Readonly<Record<string, string | undefined>> = heads;
+
+/** Hymn `number`'s head line, its section alone for a hymn the table does not hold. */
+const headOf = (number: number, topic: string): string => table[`${number}`] ?? topic;
 
 /** A word but the line's last ends in a no-break space; `start` is its first syllable's place in the line. */
 const spaced = (syllables: Array<string>, last: boolean, start: number): PageWord => ({
@@ -83,7 +82,7 @@ export const shownAt = (
   const sections = decoded === undefined ? [] : sectionsOf(hymn, decoded);
   return {
     ...page,
-    head: headLine(hymn.topic, referencesOf(book, hymn.number)),
+    head: headOf(hymn.number, hymn.topic),
     parts: page.parts.map((part, k) => {
       const printed = hymn.sections[k]?.lines ?? [];
       const split = sections[k];

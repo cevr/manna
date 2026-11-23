@@ -5,13 +5,12 @@
  * they are read (`load.ts`): `hymnRows` for a query (the search reads the
  * Scriptural and Topical indexes), `listTabRows`, `findGroupTiles`,
  * `findTileAt` and `findFollowRow` for the Topics, Scripture and Metres
- * tabs, `hymnPage` (its head line's passages) and `abouthymnPage`. The
- * launch asks none of these, so it reads no indexes; the first that is
- * asked reads them, once, and answers after, so none is first drawn
- * without them. A read that fails answers as with no indexes, and the next
- * ask reads again. Each source is handed the host's arguments whole, so a
- * source gated on another read too (`hymnPage`, `src/chords/first-use.ts`)
- * reads through the same host.
+ * tabs, and `abouthymnPage`. Neither the launch nor a hymn page asks any
+ * of these (a page's head line is bundled, `src/hymn/heads.ts`), so they
+ * read no indexes; the first that is asked reads them, once, and answers
+ * after, so none is first drawn without them. A read that fails answers as
+ * with no indexes, and the next ask reads again. Each source is handed the
+ * host's arguments whole, so it reads through the host it was asked by.
  */
 
 import { readsIndexes } from '../home/tabs.ts';
@@ -33,20 +32,19 @@ type Led = readonly [string, ...Array<unknown>];
  * The indexes' readers, by name, as the sources answer them; each is a
  * method, so a source's own narrower arguments are taken as they are.
  */
-export interface IndexesReaders<R, L, G, T, F, H, B> {
+export interface IndexesReaders<R, L, G, T, F, B> {
   hymnRows(...call: Parameters<Source<Led, R>>): R;
   listTabRows(...call: Parameters<Source<Led, L>>): L;
   findGroupTiles(...call: Parameters<Source<Led, G>>): G;
   findTileAt(...call: Parameters<Source<Led, T>>): T;
   findFollowRow(...call: Parameters<Source<Led, F>>): F;
-  hymnPage(...call: Parameters<Source<Led, H>>): H;
   abouthymnPage(...call: Parameters<Source<Led, B>>): B;
 }
 
 /** `sources`' indexes' readers, each answering once the indexes are read by `loader`. */
-export const indexesFirstUse = <R, L, G, T, F, H, B>(
+export const indexesFirstUse = <R, L, G, T, F, B>(
   loader: IndexesLoader,
-  sources: IndexesReaders<R, L, G, T, F, H, B>,
+  sources: IndexesReaders<R, L, G, T, F, B>,
 ) => {
   const gated =
     <Args, A>(source: Source<Args, A>, wanted: (args: Args) => boolean) =>
@@ -67,7 +65,6 @@ export const indexesFirstUse = <R, L, G, T, F, H, B>(
     findGroupTiles: gated(sources.findGroupTiles, tab),
     findTileAt: gated(sources.findTileAt, tab),
     findFollowRow: gated(sources.findFollowRow, tab),
-    hymnPage: gated(sources.hymnPage, named),
     abouthymnPage: gated(sources.abouthymnPage, named),
   };
 };

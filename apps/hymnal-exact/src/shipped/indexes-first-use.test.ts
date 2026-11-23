@@ -2,11 +2,12 @@
 
 /**
  * The indexes' first-use gate (`src/indexes/first-use.ts`) as `app.ts`
- * wires it: a search, an index tab's rows and tiles, a hymn page and its
- * About sheet asked before the indexes are read answer only after the one
+ * wires it: a search, an index tab's rows and tiles and a hymn's About
+ * sheet asked before the indexes are read answer only after the one
  * read, and then exactly what they answer with the indexes at hand, so
  * nothing is first drawn without them; what the launch asks (no query, the
- * Sections and Lists tabs) answers at once with no read; a read that fails
+ * Sections and Lists tabs) and a hymn page, whose head line is bundled
+ * (`src/hymn/heads.ts`), answer at once with no read; a read that fails
  * answers as with no indexes and the next ask reads again. The reads go to
  * the page module's `indexes.read`, as on the web.
  */
@@ -67,14 +68,13 @@ describe("the indexes' first-use gate", () => {
     expect(gate.findFollowRow(['Metres', 100, [], []], ...call)).toEqual(
       all.findFollowRow(['Metres', 100, [], []]),
     );
-    expect(gate.hymnPage(['100'], ...call)).toEqual(all.hymnPage(['100']));
     expect(gate.abouthymnPage(['100'], ...call)).toEqual(all.abouthymnPage(['100']));
     expect(asked).toEqual([{ op: 'indexes.read', n: 'all' }]);
     expect(all.listTabRows(['Topics', [], []]).length).toBeGreaterThan(0);
     expect(none.listTabRows(['Topics', [], []])).toEqual([]);
   });
 
-  it('answers what the launch asks at once, reading nothing', () => {
+  it('answers what the launch and a hymn page ask at once, reading nothing', () => {
     const { gate, asked, call } = wired();
     expect(gate.hymnRows([''], ...call)).toEqual(all.hymnRows(['']));
     for (const tab of ['Sections', 'Lists']) {
@@ -83,7 +83,9 @@ describe("the indexes' first-use gate", () => {
         all.findGroupTiles([tab, [], [], 0]),
       );
     }
-    expect(gate.hymnPage([''], ...call)).toEqual(all.hymnPage(['']));
+    expect('hymnPage' in gate).toBe(false);
+    expect(none.hymnPage(['100'])).toEqual(all.hymnPage(['100']));
+    expect(none.hymnPage(['100']).head).toContain('·');
     expect(asked).toEqual([]);
   });
 
@@ -91,13 +93,10 @@ describe("the indexes' first-use gate", () => {
     const { gate, asked, state, call } = wired();
     state.down = true;
     expect(await gate.listTabRows(['Topics', [], []], ...call)).toEqual([]);
-    expect(await gate.hymnPage(['100'], ...call)).toEqual(none.hymnPage(['100']));
     state.down = false;
     expect(await gate.listTabRows(['Topics', [], []], ...call)).toEqual(
       all.listTabRows(['Topics', [], []]),
     );
-    expect(gate.hymnPage(['100'], ...call)).toEqual(all.hymnPage(['100']));
-    expect(asked).toHaveLength(3);
-    expect(none.hymnPage(['100'])).not.toEqual(all.hymnPage(['100']));
+    expect(asked).toHaveLength(2);
   });
 });

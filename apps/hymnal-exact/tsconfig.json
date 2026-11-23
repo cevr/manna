@@ -3,6 +3,7 @@
     "paths": {
       "virtual:hymnal": ["./src/hymns/words.gen.json"],
       "virtual:hymnal-indexes": ["./src/hymns/indexes.gen.json"],
+      "virtual:hymnal-heads": ["./src/hymns/heads.gen.json"],
       "@manna/hymnal-app/reader/about-rules": ["./src/abouthymn/decl/about-rules"],
       "@manna/hymnal-app/reader/head-line": ["./src/hymn/decl/head-line"],
       "@manna/hymnal-app/reader/rail-marks": ["./src/rail/decl/rail-marks"],
