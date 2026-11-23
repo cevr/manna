@@ -40,10 +40,49 @@ const fakeLauncher = () => {
         () => Effect.sync(() => log.push(`${name} closed stopped=${process.stopped}`)),
       ),
     );
-  return { lease, use, view, stops };
+  /** A view of the fake whose opening waits on `gate` (interruptible) before it opens. */
+  const slowView = (log: Array<string>, name: string, gate: Deferred.Deferred<boolean>) =>
+    leased(lease, (process) =>
+      Effect.andThen(
+        Deferred.await(gate),
+        Effect.acquireRelease(
+          Effect.suspend(() => Effect.succeed(process)),
+          () => Effect.sync(() => log.push(`${name} closed`)),
+        ),
+      ),
+    );
+  return { lease, use, view, slowView, stops };
 };
 
 describe('the Chrome lease', () => {
+  it.effect(
+    'an opening that fails or is interrupted gives its lease back at once, while the caller scope stays open',
+    () =>
+      Effect.gen(function* () {
+        const fake = fakeLauncher();
+        const log: Array<string> = [];
+        const caller = yield* Scope.make();
+        const live = yield* Scope.provide(caller)(fake.view(log, 'live'));
+        expect(yield* fake.lease.holders).toBe(1);
+        const refused = yield* Effect.exit(Scope.provide(caller)(fake.view(log, 'refused', true)));
+        expect(Exit.isFailure(refused)).toBe(true);
+        expect(yield* fake.lease.holders).toBe(1);
+        const gate = yield* Deferred.make<boolean>();
+        const fiber = yield* Effect.forkChild(
+          Scope.provide(caller)(fake.slowView(log, 'waiting', gate)),
+        );
+        yield* Effect.yieldNow;
+        expect(yield* fake.lease.holders).toBe(2);
+        yield* Fiber.interrupt(fiber);
+        expect(yield* fake.lease.holders).toBe(1);
+        expect(yield* fake.use(live)).toBe(1);
+        expect([log, fake.stops]).toEqual([[], []]);
+        yield* Scope.close(caller, Exit.void);
+        expect([log, fake.stops]).toEqual([['live closed stopped=false'], [1]]);
+        expect(yield* fake.lease.holders).toBe(0);
+      }),
+  );
+
   it.effect('a view still open keeps its process when another scope that held it closes', () =>
     Effect.gen(function* () {
       const fake = fakeLauncher();
