@@ -75,7 +75,8 @@ export const readerOf =
  * or whose text `accept` refuses, keeps nothing, so the source answers as
  * without it and the next ask reads again. `stateOf` tells a key kept from
  * the start or at its first read (`kept`), kept by a read after one that
- * failed (`mended`: what was answered without it is stale), not kept after
+ * failed or after an answer given without it (`before`) (`mended`: what was
+ * answered without it is stale), not kept after
  * a failed read (`missing`), or never read (`unread`).
  */
 export const shippedLoader = <K, V>(
@@ -87,6 +88,7 @@ export const shippedLoader = <K, V>(
   const reading = new Map<K, Promise<void>>();
   const missed = new Set<K>();
   const mended = new Set<K>();
+  const owed = new Set<K>();
   const view: ReadonlyMap<K, V> = kept;
   const stateOf = (key: K): ShippedState => {
     if (mended.has(key)) return 'mended';
@@ -109,7 +111,8 @@ export const shippedLoader = <K, V>(
             return;
           }
           kept.set(key, value);
-          if (missed.delete(key)) mended.add(key);
+          const failed = missed.delete(key);
+          if (owed.delete(key) || failed) mended.add(key);
         },
         () => {
           missed.add(key);
@@ -139,6 +142,17 @@ export const shippedLoader = <K, V>(
       answer: () => A,
     ): A | Promise<Awaited<A>> =>
       !wanted || kept.has(key) ? answer() : load(key, read).then(() => Promise.resolve(answer())),
+    /**
+     * `answer()` now, kept or not, and `key`'s file read by `read` behind
+     * it when not kept; a read that then keeps it marks it `mended`, since
+     * what was answered without it is stale.
+     */
+    before: <A>(key: K, read: ReadShipped, answer: () => A): A => {
+      if (kept.has(key)) return answer();
+      owed.add(key);
+      void load(key, read);
+      return answer();
+    },
   };
 };
 

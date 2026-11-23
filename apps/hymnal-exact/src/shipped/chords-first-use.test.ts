@@ -46,9 +46,40 @@ const wired = () => {
 };
 
 describe("the chords' first-use gate", () => {
+  it("answers a page's words at once with chords off, reads its chords behind them, and says they mend it", async () => {
+    const { gate, asked, call } = wired();
+    const words = gate.hymnPage(['100', false], ...call);
+    expect(words).not.toBeInstanceOf(Promise);
+    expect(words).toEqual(none.hymnPage(['100']));
+    await Promise.resolve();
+    expect(asked).toEqual([{ op: 'chords.read', n: '100' }]);
+    expect(await gate.chordsRead(['100', false], ...call)).toEqual({
+      number: 100,
+      state: 'mended',
+    });
+    expect(gate.hymnPage(['100', false], ...call)).toEqual(all.hymnPage(['100']));
+    expect(gate.hymnPage(['100', true], ...call)).toEqual(all.hymnPage(['100']));
+    expect(asked).toHaveLength(1);
+    expect(none.hymnPage(['100'])).not.toEqual(all.hymnPage(['100']));
+  });
+
+  it('retries a chords-off read that fails behind the words, and says it mends the page', async () => {
+    const { gate, asked, state, call } = wired();
+    state.down = true;
+    expect(gate.hymnPage(['300', false], ...call)).toEqual(none.hymnPage(['300']));
+    await Promise.resolve();
+    state.down = false;
+    expect(await gate.chordsRead(['300', false], ...call)).toEqual({
+      number: 300,
+      state: 'mended',
+    });
+    expect(gate.hymnPage(['300', false], ...call)).toEqual(all.hymnPage(['300']));
+    expect(asked.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('answers each reader once its hymn is read, as with every hymn at hand', async () => {
     const { gate, asked, call } = wired();
-    const page = gate.hymnPage(['100'], ...call);
+    const page = gate.hymnPage(['100', true], ...call);
     expect(page).toBeInstanceOf(Promise);
     expect(await page).toEqual(all.hymnPage(['100']));
     expect(await gate.chordsPage(['101', true, []], ...call)).toEqual(
@@ -70,7 +101,7 @@ describe("the chords' first-use gate", () => {
 
   it('answers at once a hymn already read, chords off, and a route that names no hymn, reading nothing more', async () => {
     const { gate, asked, call } = wired();
-    await gate.hymnPage(['100'], ...call);
+    await gate.hymnPage(['100', true], ...call);
     expect(gate.chordsPage(['100', true, []], ...call)).toEqual(all.chordsPage(['100', true, []]));
     expect(gate.keysPage(['100', true, [], false, ''], ...call)).toEqual(
       all.keysPage(['100', true, [], false, '']),
@@ -79,7 +110,7 @@ describe("the chords' first-use gate", () => {
       all.chordsPage(['200', false, []]),
     );
     for (const route of ['0', '696', 'abc', ''])
-      expect(gate.hymnPage([route], ...call)).toEqual(all.hymnPage([route]));
+      expect(gate.hymnPage([route, true], ...call)).toEqual(all.hymnPage([route]));
     expect(gate.sheetPlacement([0, [], ''], ...call)).toEqual(all.sheetPlacement([0, [], '']));
     expect(asked).toHaveLength(1);
   });
@@ -87,7 +118,7 @@ describe("the chords' first-use gate", () => {
   it('answers a failed read as a hymn with no chords, and reads again at the next ask', async () => {
     const { gate, asked, state, call } = wired();
     state.down = true;
-    expect(await gate.hymnPage(['300'], ...call)).toEqual(none.hymnPage(['300']));
+    expect(await gate.hymnPage(['300', true], ...call)).toEqual(none.hymnPage(['300']));
     expect(await gate.chordsPage(['300', true, []], ...call)).toEqual(
       none.chordsPage(['300', true, []]),
     );
@@ -95,7 +126,7 @@ describe("the chords' first-use gate", () => {
     expect(await gate.chordsPage(['300', true, []], ...call)).toEqual(
       all.chordsPage(['300', true, []]),
     );
-    expect(gate.hymnPage(['300'], ...call)).toEqual(all.hymnPage(['300']));
+    expect(gate.hymnPage(['300', true], ...call)).toEqual(all.hymnPage(['300']));
     expect(asked).toHaveLength(3);
     expect(all.chordsPage(['300', true, []]).kind).toBe('chords');
     expect(bundled.length).toBe(book.hymns.length);
