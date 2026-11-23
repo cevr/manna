@@ -4,6 +4,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { APPS } from './apps.ts';
+import { LIVE_MS, watched } from './watchdog/testing.ts';
 
 /** The simulator the run is on, as the wrapper names it in `EXACT_SIM`, and its udid in the stand-in `simctl` list. */
 const SIMULATOR = APPS['heartseed-exact'].simulator;
@@ -32,7 +33,7 @@ const standInExact = (dir: string, stale: string) => ({
 const standInXcrun = (list: string) => `#!/bin/sh\nexec cat ${json(list)}\n`;
 
 describe('exact-cli, the child the wrapper starts', () => {
-  it.effect(
+  it.live(
     "on an iOS run clears the app simulator's stale launch consoles, says so, and only then runs Exact's CLI",
     () =>
       Effect.scoped(
@@ -89,9 +90,11 @@ describe('exact-cli, the child the wrapper starts', () => {
                   },
                 ),
               );
-              const [said, code] = yield* Effect.all(
-                [Stream.mkString(Stream.decodeText(handle.stderr)), handle.exitCode],
-                { concurrency: 2 },
+              const [said, code] = yield* watched(
+                Effect.all([Stream.mkString(Stream.decodeText(handle.stderr)), handle.exitCode], {
+                  concurrency: 2,
+                }),
+                'exact-cli.ts did not exit',
               );
               return { said: said.trim(), code };
             }),
@@ -103,5 +106,6 @@ describe('exact-cli, the child the wrapper starts', () => {
           expect((yield* fs.readDirectory(tmp)).toSorted()).toEqual([FRESH]);
         }),
       ).pipe(Effect.provide(BunServices.layer)),
+    LIVE_MS,
   );
 });

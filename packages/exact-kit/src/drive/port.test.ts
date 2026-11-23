@@ -1,8 +1,9 @@
 import { createServer } from 'node:net';
 
-import { Effect } from 'effect';
+import { Duration, Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
+import { LIVE_MS, WATCHDOG, watched } from '../watchdog/testing.ts';
 import { claimAppPort, claimPorts, takePort } from './port.ts';
 
 /** A claim of one port of `range`: a block of one, read as its port. */
@@ -18,33 +19,47 @@ const claimPort = async (
 const LO = 47_310;
 const RANGE = [LO, LO + 3] as const;
 
-/** A claim made from another process, with no turn of this one's inherited: its port, and how to end it. */
-const elsewhere = async (range: readonly [number, number]) => {
-  const child = Bun.spawn(
-    [
-      'bun',
-      '-e',
-      `const { claimPorts } = await import(${JSON.stringify(`${import.meta.dir}/port.ts`)});
+/**
+ * A claim made from another process, with no turn of this one's inherited: its port, once the process prints it
+ * (its readiness), and `end`, which closes its input and waits for its exit, when the kernel frees its turn. Each
+ * wait is a handshake under the watchdog.
+ */
+const elsewhere = (range: readonly [number, number]) =>
+  Effect.gen(function* () {
+    const child = Bun.spawn(
+      [
+        'bun',
+        '-e',
+        `const { claimPorts } = await import(${JSON.stringify(`${import.meta.dir}/port.ts`)});
        const { lo } = await claimPorts([${range[0]}, ${range[1]}], 1, { label: 'run b', waitMs: 0 });
        console.log(lo);
        for await (const _ of process.stdin) {}`,
-    ],
-    {
-      stdin: 'pipe',
-      stdout: 'pipe',
-      env: { ...process.env, EXACT_PORT_TURNS: '' },
-    },
-  );
-  const reader = child.stdout.getReader();
-  const { value } = await reader.read();
-  return {
-    port: Number(new TextDecoder().decode(value).trim()),
-    end: async () => {
-      void child.stdin.end();
-      await child.exited;
-    },
-  };
-};
+      ],
+      {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        env: { ...process.env, EXACT_PORT_TURNS: '' },
+      },
+    );
+    const said = yield* watched(
+      Effect.promise(() => child.stdout.getReader().read()),
+      `the claim of ${range.join('-')} in another process never said its port`,
+    );
+    const port = Number(new TextDecoder().decode(said.value).trim());
+    return {
+      port,
+      end: watched(
+        Effect.promise(async () => {
+          void child.stdin.end();
+          await child.exited;
+        }),
+        `the claim of ${port} in another process did not exit once its input closed`,
+      ),
+    };
+  });
+
+/** What a claim waits on a holder to answer with its card: the watchdog's time, so a busy holder is still named. */
+const ASK_MS = Duration.toMillis(WATCHDOG);
 
 describe('claimPort', () => {
   it.effect(
@@ -67,34 +82,44 @@ describe('claimPort', () => {
       }),
   );
 
-  it.effect(
+  it.live(
     "a claim in another process, which inherits none of this one's, takes another port; its end frees its own",
     () =>
-      Effect.promise(async () => {
-        const mine = await claimPort([LO, LO + 1]);
-        const theirs = await elsewhere([LO, LO + 1]);
+      Effect.gen(function* () {
+        const mine = yield* Effect.promise(() => claimPort([LO, LO + 1]));
+        const theirs = yield* elsewhere([LO, LO + 1]);
         expect(theirs.port).not.toBe(mine.port);
-        await theirs.end();
+        yield* theirs.end;
         mine.give();
-        const again = await claimPort([theirs.port, theirs.port], { waitMs: 0 });
+        const again = yield* Effect.promise(() =>
+          claimPort([theirs.port, theirs.port], { waitMs: 0 }),
+        );
         expect(again.port).toBe(theirs.port);
         again.give();
       }),
+    LIVE_MS,
   );
 
-  it.effect(
+  it.live(
     'waits for a range all taken, naming the holder, and rejects when the wait is out',
     () =>
-      Effect.promise(async () => {
-        const theirs = await elsewhere([LO, LO]);
+      Effect.gen(function* () {
+        const theirs = yield* elsewhere([LO, LO]);
         const said: Array<string> = [];
-        const refused = await claimPort([LO, LO], {
-          waitMs: 0,
-          say: (line) => said.push(line),
-        }).catch((error: Error) => error.message);
-        await theirs.end();
+        const refused = yield* watched(
+          Effect.promise(() =>
+            claimPort([LO, LO], {
+              waitMs: 0,
+              askMs: ASK_MS,
+              say: (line) => said.push(line),
+            }).catch((error: Error) => error.message),
+          ),
+          'the claim of a range all taken neither took it nor was refused',
+        );
+        yield* theirs.end;
         expect(refused).toContain('run b');
       }),
+    LIVE_MS,
   );
 
   it.effect('passes over a port something listens on without a turn', () =>
@@ -150,14 +175,17 @@ describe('claimPort', () => {
       }),
   );
 
-  it.effect('a block claim passes over a block one of whose ports another run holds', () =>
-    Effect.promise(async () => {
-      const theirs = await elsewhere([LO + 1, LO + 1]);
-      const block = await claimPorts(RANGE, 2, { waitMs: 0 });
-      await theirs.end();
-      expect([block.lo, block.hi]).toEqual([LO + 2, LO + 3]);
-      block.give();
-    }),
+  it.live(
+    'a block claim passes over a block one of whose ports another run holds',
+    () =>
+      Effect.gen(function* () {
+        const theirs = yield* elsewhere([LO + 1, LO + 1]);
+        const block = yield* Effect.promise(() => claimPorts(RANGE, 2, { waitMs: 0 }));
+        yield* theirs.end;
+        expect([block.lo, block.hi]).toEqual([LO + 2, LO + 3]);
+        block.give();
+      }),
+    LIVE_MS,
   );
 
   it.effect('refuses a drive of an app the wrapper does not run, naming it', () =>

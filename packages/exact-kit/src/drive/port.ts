@@ -14,12 +14,23 @@ interface Claim {
   readonly give: () => void;
 }
 
-/** What a claim is told: who claims (said to a run that waits), how long to wait, and where to say it. */
+/**
+ * What a claim is told: who claims (said to a run that waits), how long to wait, how long a holder has to answer
+ * with its card (`holderOf`), and where to say it.
+ */
 interface ClaimOptions {
   readonly label?: string;
   readonly waitMs?: number;
+  readonly askMs?: number;
   readonly say?: (line: string) => void;
 }
+
+/**
+ * How long a holder has to answer with its card by default. A holder that is stopped or hung still has its turn's
+ * socket accept the connection (the kernel does), so only a timer tells it from a slow one; past it the holder is
+ * named `another run`.
+ */
+const ASK_MS = 2000;
 
 /** The variable, Exact's own (`scripts/port-lock.mjs`), naming the ports this process and its ancestors hold. */
 const TURNS = 'EXACT_PORT_TURNS';
@@ -69,12 +80,12 @@ const answers = (port: number) =>
     socket.once('error', () => done(false));
   });
 
-/** Who holds `port`'s turn, as its card says, or null when no run does. */
-const holderOf = (port: number) =>
+/** Who holds `port`'s turn, as its card says within `askMs`, or null when no run does. */
+const holderOf = (port: number, askMs: number) =>
   new Promise<string | null>((done) => {
     let text = '';
     const socket = createConnection({ host: '127.0.0.1', port: turnPort(port) });
-    socket.setTimeout(2000, () => {
+    socket.setTimeout(askMs, () => {
       socket.destroy();
       done('another run');
     });
@@ -160,7 +171,12 @@ const span = ([lo, hi]: readonly [number, number]) =>
 export const claimPorts = async (
   range: readonly [number, number],
   count: number,
-  { label = 'a run', waitMs = 20 * 60_000, say = (line) => console.error(line) }: ClaimOptions = {},
+  {
+    label = 'a run',
+    waitMs = 20 * 60_000,
+    askMs = ASK_MS,
+    say = (line) => console.error(line),
+  }: ClaimOptions = {},
 ): Promise<Block> => {
   const card = JSON.stringify({ label, pid: process.pid, at: new Date().toISOString() });
   const end = Date.now() + waitMs;
@@ -174,7 +190,7 @@ export const claimPorts = async (
       card,
     );
     if (free) return free;
-    const holders = await Promise.all(span(range).map(holderOf));
+    const holders = await Promise.all(span(range).map((port) => holderOf(port, askMs)));
     const names = holders.filter((h) => h !== null).join(', ') || 'programs that take no turn';
     if (Date.now() > end)
       // oxlint-disable-next-line effect/noThrowStatement, effect/noNewError -- a host helper's plain promise: the drive or the wrapper says the rejection's message

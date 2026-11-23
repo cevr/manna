@@ -15,7 +15,7 @@ What the Exact ports (`apps/heartseed-exact`, `apps/hymnal-exact`) share. The in
 
 `src/apps.ts` names the apps' simulators and ports. `src/run.ts` holds the rules: the pin, the build lock, the launcher every app's `exact.mjs` must be, and `runExact`, which refuses or runs one command. Each app's `bun run exact` is `manna-exact` (`src/bin.ts`), so a rewritten `exact.mjs` is refused rather than run; `run.test.ts` holds each app's script to it. `src/exact-cli.ts` is the child it starts once a command passes: the pinned clone's own app CLI, as Exact's generated `exact.mjs` runs it. On a run on the simulator it first clears, under the build lock, the stale `launch_console` FIFOs of the app's own simulator (`src/sim-tmp.ts`, `docs/exact.md`).
 
-The two helpers are test seams (`testing.ts`): only tests import them.
+The two helpers are test seams (`testing.ts`): only tests import them. So is `src/watchdog/testing.ts`, the watchdog every test that waits on a real process waits under: it waits by handshake (the child's readiness, its answer, its exit), and only the watchdog's 30 s bounds a wait, so a busy host makes such a test slower, never red.
 
 `bun test ./src` runs the tests (the gate's `test` task). They need no Exact clone: the wrapper's tests run `runExact` over a stand-in spawner that starts nothing, against the apps, ports and lock written out as the spec names them and the pin `docs/exact.md` names.
 
