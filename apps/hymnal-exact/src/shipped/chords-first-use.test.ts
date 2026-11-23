@@ -15,7 +15,7 @@ import { describe, expect, it } from 'bun:test';
 import { bundled, encoded } from '../chords/shipped.testing.ts';
 import { chordsFirstUse } from '../chords/first-use.ts';
 import { chordsLoader } from '../chords/load.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
 
 const ORIGIN = 'https://hymns.cvr.im';

@@ -13,7 +13,7 @@
  * asks for it.
  */
 
-import { find } from '@manna/hymnal-app/hymns/search';
+import { find } from '@manna/hymnal-app/hymns/search-rules';
 import { resultRowsOf } from '@manna/hymnal-app/reader/rows';
 
 import type { Book, HymnText } from '../hymns/book.ts';

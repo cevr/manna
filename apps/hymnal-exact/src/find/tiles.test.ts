@@ -14,7 +14,7 @@ import { describe, expect, test } from 'bun:test';
 import { TAB_NAMES, tabsOf, tilesOf } from '@manna/hymnal-app/home/tabs';
 import indexes from 'virtual:hymnal-indexes';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { rowsOf } from '../list/rows.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { listedRows } from './follow.ts';

@@ -16,7 +16,7 @@ import { referencesOf } from '@manna/hymnal-app/hymns/indexes';
 import { headLine } from '@manna/hymnal-app/reader/head-line';
 
 import { currentBook, encoded } from '../chords/shipped.testing.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import type { Page } from './page.ts';
 import { hymnSources } from './sources.ts';
 

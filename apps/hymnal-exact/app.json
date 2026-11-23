@@ -110,7 +110,8 @@
       "resources": [
         { "from": "meaning", "to": "Resources/meaning" },
         { "from": "timing", "to": "Resources/timing" },
-        { "from": "chords", "to": "Resources/chords" }
+        { "from": "chords", "to": "Resources/chords" },
+        { "from": "indexes", "to": "Resources/indexes" }
       ],
       "backgroundModes": ["audio"]
     }

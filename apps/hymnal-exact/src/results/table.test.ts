@@ -10,7 +10,7 @@
 import { describe, expect, test } from 'bun:test';
 import { aboutQuery } from '@manna/hymnal-app/hymns/meaning';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { reachedFrom } from '../test/graph.testing.ts';
 import { query, seeded } from '../test/random.ts';
 import { MEANING_FIELDS, MEANING_ROOT } from './fields.ts';

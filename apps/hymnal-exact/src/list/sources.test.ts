@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'bun:test';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { rowsOf } from './rows.ts';
 import { aboutShownOf, listSources } from './sources.ts';
 

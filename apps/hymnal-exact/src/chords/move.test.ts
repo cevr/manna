@@ -16,7 +16,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { capoed, hasChords, type Move, still, transposed } from '@manna/hymnal-app/hymns/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { moveOf, movesTo } from './move.ts';

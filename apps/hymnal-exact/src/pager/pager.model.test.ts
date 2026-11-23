@@ -16,7 +16,7 @@ import { describe, expect, test } from 'bun:test';
 
 import * as one from '@manna/hymnal-app/reader/pager';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import type * as PagerDecl from './decl/pager';
 import { around, pagesFor, settled } from './pager.ts';

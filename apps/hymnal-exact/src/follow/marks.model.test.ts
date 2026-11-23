@@ -22,7 +22,7 @@ import { firstLines, wordStarts } from '@manna/hymnal-app/reader/sung-lines';
 import { readTiming } from '@manna/hymnal-app/vite/timing';
 
 import { currentBook, encoded } from '../chords/shipped.testing.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import type { PageLine } from '../hymn/page.ts';
 import { hymnSources } from '../hymn/sources.ts';
 import { below, pick, seeded } from '../test/random.ts';

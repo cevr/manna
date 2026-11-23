@@ -15,13 +15,15 @@ import { describe, expect, it } from 'bun:test';
 
 import { hymnAt, hymns } from '@manna/hymnal-app/hymns/hymns';
 import * as indexes from '@manna/hymnal-app/hymns/indexes';
+import * as lookups from '@manna/hymnal-app/hymns/lookups';
 import * as meaning from '@manna/hymnal-app/hymns/meaning';
 import * as rules from '@manna/hymnal-app/reader/about-rules';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { aboutAt, noHymn } from './about.ts';
 import { nearestRows, nearestText } from './nearest.ts';
 import type * as RulesDecl from './decl/about-rules';
+import type * as LookupsDecl from '../hymns/decl/lookups';
 import type * as IndexesDecl from './decl/indexes';
 import type * as MeaningDecl from './decl/meaning';
 
@@ -44,6 +46,11 @@ const held = {
     passageText: indexes.passageText,
     passageQuery: indexes.passageQuery,
   } satisfies Held<typeof IndexesDecl>,
+  lookups: {
+    lookupsOf: lookups.lookupsOf,
+    passageText: lookups.passageText,
+    passageQuery: lookups.passageQuery,
+  } satisfies Held<typeof LookupsDecl>,
   meaning: { moreLike: meaning.moreLike } satisfies Held<typeof MeaningDecl>,
   rules: {
     MORE_LIKE: rules.MORE_LIKE,

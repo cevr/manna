@@ -16,7 +16,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { RECENT, RECENT_SHOWN, toggleFavourite, visited } from '@manna/hymnal-app/reader/lists';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { homeSources } from './sources.ts';
 

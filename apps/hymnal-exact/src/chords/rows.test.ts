@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from 'bun:test';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { sourcesAt } from '../sources.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import type { ChordsLine } from './page.ts';

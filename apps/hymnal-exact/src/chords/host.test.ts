@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { withDataHost } from '@manna/exact-kit/data-host/testing';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { encoded } from './shipped.testing.ts';
 import { chordsSources } from './sources.ts';

@@ -12,13 +12,7 @@
  * and a section with no rows is left out.
  */
 
-import {
-  passageQuery,
-  passageText,
-  referencesOf,
-  sameMetre,
-  topicsOf,
-} from '@manna/hymnal-app/hymns/indexes';
+import { passageQuery, passageText } from '@manna/hymnal-app/hymns/lookups';
 import { ABOUT_GROUPS } from '@manna/hymnal-app/reader/about-rules';
 
 import type { Book } from '../hymns/book.ts';
@@ -83,29 +77,35 @@ export const aboutAt = (book: Book, nearest: Nearest, number: string): AboutPage
     { name: like, rows: hymnRows(book, nearest.get(hymn.number) ?? [], 'about-like') },
     {
       name: topics,
-      rows: topicsOf(hymn.number).map((topic, i) => ({
-        id: `about-topic-${i}`,
-        kind: 'topic' as const,
-        number: 0,
-        label: topic.name,
-        detail: topic.parent._tag === 'Some' ? topic.parent.value : '',
-        name: topic.name,
-        query: topic.name,
-      })),
+      rows: book
+        .lookups()
+        .topicsOf(hymn.number)
+        .map((topic, i) => ({
+          id: `about-topic-${i}`,
+          kind: 'topic' as const,
+          number: 0,
+          label: topic.name,
+          detail: topic.parent._tag === 'Some' ? topic.parent.value : '',
+          name: topic.name,
+          query: topic.name,
+        })),
     },
     {
       name: scripture,
-      rows: referencesOf(hymn.number).map((passage, i) => ({
-        id: `about-scripture-${i}`,
-        kind: 'passage' as const,
-        number: 0,
-        label: passageText(passage),
-        detail: '',
-        name: passageText(passage),
-        query: passageQuery(passage),
-      })),
+      rows: book
+        .lookups()
+        .referencesOf(hymn.number)
+        .map((passage, i) => ({
+          id: `about-scripture-${i}`,
+          kind: 'passage' as const,
+          number: 0,
+          label: passageText(passage),
+          detail: '',
+          name: passageText(passage),
+          query: passageQuery(passage),
+        })),
     },
-    { name: tune, rows: hymnRows(book, sameMetre(hymn.number), 'about-tune') },
+    { name: tune, rows: hymnRows(book, book.lookups().sameMetre(hymn.number), 'about-tune') },
   ];
   return {
     number: hymn.number,

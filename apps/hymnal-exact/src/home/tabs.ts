@@ -45,6 +45,10 @@ export interface TabSource {
 /** Whether `name` is one of the tabs. */
 export const isTab = (name: string): name is TabName => TAB_NAMES.some((tab) => tab === name);
 
+/** Whether tab `name` is made of the back-matter indexes (`inputFor`), so its answer waits for them (`src/indexes/first-use.ts`). */
+export const readsIndexes = (name: string): boolean =>
+  name === 'Topics' || name === 'Scripture' || name === 'Metres';
+
 /** The input `tabsOf` needs to make tab `name`, and nothing another tab reads. */
 export const inputFor = (
   name: TabName,

@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { TAB_NAMES, tabsOf } from '@manna/hymnal-app/home/tabs';
 import indexes from 'virtual:hymnal-indexes';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { listSources } from '../list/sources.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { homeSources } from './sources.ts';

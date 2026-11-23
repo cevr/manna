@@ -27,7 +27,7 @@ import * as press from '@manna/hymnal-app/player/wheel';
 
 import { currentBook, encoded } from '../chords/shipped.testing.ts';
 import { moveOf } from '../chords/move.ts';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { styleOf } from '../settings/chords.ts';
 import { keysSources, pitchOf } from './sources.ts';

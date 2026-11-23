@@ -262,7 +262,7 @@ const shippedTries = new Map();
  * its address, so each later try asks a new one.
  */
 const shipped = Object.fromEntries(
-  ['chords'].map((folder) => [
+  ['chords', 'indexes'].map((folder) => [
     `${folder}.read`,
     async (request) => {
       const n = String(request.n ?? '');

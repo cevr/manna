@@ -13,24 +13,22 @@
  * - `listOpening(url, n)`: how a found hymn opens from the screen at `url`.
  */
 
-import bundled from 'virtual:hymnal-indexes';
-
 import type { Book } from '../hymns/book.ts';
 import { favouritesAfter, recentAfter, recentView } from './lists.ts';
 import { openingMove } from './opening.ts';
 import { TAB_NAMES, type TabSource, tabGroups, titlesOf } from './tabs.ts';
 
 /**
- * The home's sources over `book` and the back-matter indexes the build
- * bundles; `tabs` is the current app's `tabsOf`, given so a test can count
- * the tabs computed.
+ * The home's sources over `book` and its back-matter indexes as they are
+ * when asked (`book.indexes()`), or `indexes` when given; `tabs` is the
+ * current app's `tabsOf`, given so a test can count the tabs computed.
  */
 export const homeSources = (
   book: Book,
-  indexes: TabSource['indexes'] = bundled,
+  indexes?: TabSource['indexes'],
   tabs?: Parameters<typeof tabGroups>[4],
 ) => {
-  const source: TabSource = { book, indexes };
+  const source = (): TabSource => ({ book, indexes: indexes ?? book.indexes() });
   return {
     listTabs: () => [...TAB_NAMES],
     listTitles: () => titlesOf(book),
@@ -38,7 +36,7 @@ export const homeSources = (
       string,
       ReadonlyArray<number>,
       ReadonlyArray<number>,
-    ]) => tabGroups(source, name, favourites, recent, tabs),
+    ]) => tabGroups(source(), name, favourites, recent, tabs),
     recentAfter: ([recent, segment]: readonly [ReadonlyArray<number>, string]) => ({
       numbers: recentAfter(book, recent, segment),
     }),

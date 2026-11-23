@@ -14,7 +14,7 @@ import { soundingOffset } from '@manna/hymnal-app/remote';
 import { Effect, Option } from 'effect';
 
 import type * as Local from '@manna/hymnal-app/player/offline';
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { current } from '../player/current.testing.ts';
 import { BUCKET, playerSources } from '../player/sources.ts';
 import { below, pick, seeded } from '../test/random.ts';

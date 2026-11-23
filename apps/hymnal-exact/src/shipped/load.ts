@@ -93,8 +93,13 @@ export const shippedLoader = <K, V>(
      * once its read has settled, so a source answers once, with the value
      * when it could be read and without it when not.
      */
-    after: <A>(key: K, wanted: boolean, read: ReadShipped, answer: () => A): A | Promise<A> =>
-      !wanted || kept.has(key) ? answer() : load(key, read).then(answer),
+    after: <A>(
+      key: K,
+      wanted: boolean,
+      read: ReadShipped,
+      answer: () => A,
+    ): A | Promise<Awaited<A>> =>
+      !wanted || kept.has(key) ? answer() : load(key, read).then(() => Promise.resolve(answer())),
   };
 };
 

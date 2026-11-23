@@ -8,7 +8,7 @@ import { readHymns, readTopics } from '@manna/hymnal-app/vite/words';
 
 import { pageAt } from '../hymn/page.ts';
 import { rowsOf } from '../list/rows.ts';
-import { book } from './book.ts';
+import { book } from './book.testing.ts';
 
 const compiled = readHymns();
 const topics = readTopics();

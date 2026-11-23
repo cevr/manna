@@ -14,7 +14,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { decodeHymn, still } from '@manna/hymnal-app/hymns/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { pageAt } from '../hymn/page.ts';
 import { sourcesAt } from '../sources.ts';
 import type { ChordsPage } from './page.ts';

@@ -34,7 +34,7 @@ export const chordsFirstUse = (book: Book, loader: ChordsLoader, sources: Chords
       _store?: unknown,
       storage?: ShippedFiles | null,
       native?: AppModule | null,
-    ): A | Promise<A> => {
+    ): A | Promise<Awaited<A>> => {
       const number = hymnOf(args);
       return loader.after(number, isHymn(number), chordsReader(storage, native), () =>
         source(args),

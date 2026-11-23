@@ -27,7 +27,7 @@ import { chosenOf, cutOf, keptOf, toggle } from '@manna/hymnal-app/player/stanza
 import type { Section, Timeline } from '@manna/hymnal-app/player/stanzas';
 import { Duration } from 'effect';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import { appFile, brandOf } from '../look/design.testing.ts';
 import { below, pick, seeded } from '../test/random.ts';
 import { type Choice, plainScore, scoreOf } from './score.ts';

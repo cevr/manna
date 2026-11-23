@@ -36,3 +36,35 @@ describe('the data module ships no chords', () => {
     expect(unresolved.filter((specifier) => specifier.includes('chords'))).toEqual([]);
   });
 });
+
+const INDEXES = [
+  'apps/hymnal/vite/indexes.ts',
+  'apps/hymnal/src/hymns/indexes.ts',
+  'apps/hymnal/src/hymns/search.ts',
+  'apps/hymnal-exact/src/hymns/indexes.gen.json',
+];
+
+/**
+ * Nor the back-matter indexes: no module `app.ts` reaches is their reader,
+ * the generated table, or the current app's modules over the bundled ones
+ * (`hymns/indexes.ts`, `hymns/search.ts`); it reaches the rules over
+ * indexes given (`lookups.ts`, `search-rules.ts`), the loader and its gate.
+ * The walker is tried on the testing book first, which reaches the table.
+ */
+describe('the data module ships no indexes', () => {
+  it('finds the table through the testing book and the current app through its search', () => {
+    const testing = reachedFrom('apps/hymnal-exact/src/hymns/book.testing.ts');
+    expect(testing.reached.has(INDEXES[3] ?? '')).toBe(true);
+    expect(reachedFrom('apps/hymnal/src/hymns/search.ts').reached.has(INDEXES[1] ?? '')).toBe(true);
+  });
+
+  it('no module app.ts reaches is the indexes, the loader and its gate among them', () => {
+    const { reached, unresolved } = reachedFrom('apps/hymnal-exact/app.ts');
+    expect(reached.has('apps/hymnal-exact/src/indexes/load.ts')).toBe(true);
+    expect(reached.has('apps/hymnal-exact/src/indexes/first-use.ts')).toBe(true);
+    expect(reached.has('apps/hymnal/src/hymns/lookups.ts')).toBe(true);
+    expect(reached.has('apps/hymnal/src/hymns/search-rules.ts')).toBe(true);
+    for (const module of INDEXES) expect(reached.has(module)).toBe(false);
+    expect(unresolved.filter((specifier) => specifier.includes('indexes'))).toEqual([]);
+  });
+});

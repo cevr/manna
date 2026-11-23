@@ -22,7 +22,7 @@ import { type ChordStyle, styled } from '@manna/hymnal-app/hymns/simple';
 import type { Placement } from '@manna/hymnal/placement';
 import { readChords } from '@manna/hymnal-app/vite/chords';
 
-import { book } from '../hymns/book.ts';
+import { book } from '../hymns/book.testing.ts';
 import type { ChordsPage } from './page.ts';
 import { drawnText } from './rows.ts';
 
