@@ -26,6 +26,10 @@
  *   `tools/web/budget.ts`, which writes the budget from five or more such
  *   runs' `--json` reports), and `--throttle` measures over a slow phone
  *   network (150 ms, 1.6 Mbit/s down) with no budget;
+ * - `shipped`: `/` reads no hymn's chords and no indexes, `/hymns/100` its
+ *   own chords, its neighbours' and the indexes once each, and a chords
+ *   file that fails to load leaves the page drawn and is read again at the
+ *   next ask (`src/shipped/load.ts`);
  * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
  *   stanza choice; Chrome closed as a person closes it and opened again on
  *   its profile: all four kept.
@@ -69,7 +73,15 @@ const flag = (name: string) => {
   return at >= 0 ? args[at + 1] : undefined;
 };
 const server = flag('--server') ?? 'plain';
-const CHECKS = ['rest', 'addresses', 'notfound', 'noscript', 'measure', 'return'] as const;
+const CHECKS = [
+  'rest',
+  'addresses',
+  'notfound',
+  'noscript',
+  'measure',
+  'shipped',
+  'return',
+] as const;
 const named = args.filter(
   (arg, i) => !arg.startsWith('--') && !args[i - 1]?.startsWith('--') && arg !== 'web',
 );
@@ -585,6 +597,120 @@ const measure = async (page: Page) => {
   );
 };
 
+/** The page's requests for the chords' and the indexes' shipped files (`modules/<folder>/<n>.js`), in order, each with its status, 0 for one that failed. */
+const shippedRequests = (page: Page) => {
+  const asked: Array<{ id: string; file: string; status: number }> = [];
+  const offs = [
+    page.on('Network.requestWillBeSent', (params) => {
+      const url = (params.request as { url: string }).url;
+      if (/^\/modules\/(chords|indexes)\//u.test(url.replace(origin, '')))
+        asked.push({ id: String(params.requestId), file: url.replace(origin, ''), status: -1 });
+    }),
+    page.on('Network.responseReceived', (params) => {
+      const entry = asked.find(({ id }) => id === params.requestId);
+      if (entry) entry.status = (params.response as { status: number }).status;
+    }),
+    page.on('Network.loadingFailed', (params) => {
+      const entry = asked.find(({ id }) => id === params.requestId);
+      if (entry) entry.status = 0;
+    }),
+  ];
+  return {
+    files: () => asked.map(({ file, status }) => ({ file, status })),
+    stop: () => {
+      for (const off of offs) off();
+    },
+  };
+};
+
+/** Hymn `number` opened within the launch, as a move through the browser's history opens it (a `popstate`), so the data module, and what it has read, stays. */
+const within = (page: Page, number: number) =>
+  page.evaluate(
+    `(() => { history.pushState(null, '', '/hymns/${number}'); dispatchEvent(new PopStateEvent('popstate', { state: null })); })()`,
+  );
+
+/**
+ * The files the launch does not bundle (`src/shipped/load.ts`): `/` reads
+ * no hymn's chords and no indexes; `/hymns/100` reads its own chords, its
+ * pager's neighbours' and the indexes once each; and a read that fails
+ * (101's chords blocked, as offline) leaves the page drawn with its words,
+ * and once they can load the next ask of 101, opening it within the
+ * launch, reads them again (a new address, `?try=1`) and draws it.
+ */
+const shipped = async (page: Page) => {
+  const launch = async (path: string) => {
+    await page.send('Network.clearBrowserCache');
+    const seen = shippedRequests(page);
+    await open(page, path);
+    await waitFor(
+      page,
+      path === '/' ? `window.__web.row !== undefined` : `window.__web.words !== undefined`,
+      5000,
+    );
+    await Bun.sleep(600);
+    seen.stop();
+    return seen.files();
+  };
+  const atHome = await launch('/');
+  check("the list's launch reads no hymn's chords and no indexes", atHome.length === 0, atHome);
+  const atHymn = await launch('/hymns/100');
+  const wanted = [
+    '/modules/chords/100.js',
+    '/modules/chords/99.js',
+    '/modules/chords/101.js',
+    '/modules/indexes/all.js',
+  ];
+  check(
+    "a hymn page's launch reads its chords, its neighbours' and the indexes, once each",
+    atHymn.length === wanted.length &&
+      wanted.every(
+        (file) => atHymn.filter((each) => each.file === file && each.status === 200).length === 1,
+      ),
+    atHymn,
+  );
+  mark('block 101 chords');
+  await page.send('Network.setBlockedURLs', { urls: [`${origin}/modules/chords/101.js`] });
+  await page.send('Network.clearBrowserCache');
+  const seen = shippedRequests(page);
+  try {
+    await open(page, '/hymns/100');
+    const words = await waitFor(page, `window.__web.words !== undefined`, 5000);
+    await Bun.sleep(600);
+    const failed = seen.files().filter(({ file }) => file === '/modules/chords/101.js');
+    check(
+      "a neighbour's chords that fail to load leave the hymn page drawn with its words",
+      words && failed.length === 1 && failed[0]?.status === 0,
+      { words, files: seen.files() },
+    );
+    await page.send('Network.setBlockedURLs', { urls: [] });
+    mark('open 101 within the launch');
+    await within(page, 101);
+    const turned = await waitFor(page, `location.pathname === '/hymns/101'`, 5000);
+    const again = await waitFor(
+      page,
+      `[...document.querySelectorAll('[data-testid="stanza-1"]')].some((e) => e.getBoundingClientRect().left >= 0 && e.getBoundingClientRect().left < innerWidth)`,
+      5000,
+    );
+    await Bun.sleep(600);
+    const retried = seen.files().filter(({ file }) => file.startsWith('/modules/chords/101.js?'));
+    check(
+      'the next ask of a hymn whose chords failed reads them again, and its page is drawn',
+      turned && again && retried.some(({ status }) => status === 200),
+      {
+        turned,
+        again,
+        at: await page.evaluate<string>(
+          `(() => { const p = document.querySelector('[data-testid="hymn-pager"]'); return location.pathname + ' ' + p.scrollLeft + '/' + p.clientWidth; })()`,
+        ),
+        files: seen.files(),
+      },
+    );
+  } finally {
+    seen.stop();
+    await page.send('Network.setBlockedURLs', { urls: [] });
+  }
+};
+
 /** The app's root is drawn in the dark scheme (`color-scheme=settingsScheme` in `app.contract`). */
 const isDark = `getComputedStyle(document.querySelector('[data-testid="root"]') ?? document.documentElement).colorScheme === 'dark'`;
 
@@ -755,6 +881,7 @@ const ON_ONE_PAGE = {
   notfound: notFound,
   noscript: noScript,
   measure,
+  shipped,
 } as const satisfies Record<
   Exclude<(typeof CHECKS)[number], 'return'>,
   (page: Page) => Promise<void>
