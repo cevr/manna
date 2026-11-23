@@ -20,13 +20,21 @@ export type ReadShipped = (name: string) => Promise<string>;
 /** Where the iOS app ships `folder`: `app.json` puts the folder `<folder>/` at `Resources/<folder>`. */
 export const rootOf = (folder: string): string => `bundle:/Resources/${folder}`;
 
+/** Whether each app module reads the shipped files (the web's page module), once a read has said; unknown before. */
+const byModule = new WeakMap<AppModule, boolean>();
+
 /**
- * A read of `folder`'s files through a source's `storage` and `native`: the
- * iOS app reads the file it ships (`bundle:/Resources/<folder>/<name>`,
- * `app.json` `host.ios.resources`); the web, whose read of the app's files
- * is refused, asks the page module (`native.later`, `<folder>.read`), which
- * imports the module shipped beside it (`modules/web/<folder>/<name>.js`,
- * written by `files.ts`).
+ * A read of `folder`'s files through a source's `storage` and `native`. The
+ * web's page module answers `<folder>.read` (`native.later`) by importing
+ * the module shipped beside it (`modules/web/<folder>/<name>.js`, written by
+ * `files.ts`), so the web never asks Exact's storage, whose read of the
+ * app's files it refuses only once its lazily loaded storage pieces have
+ * loaded (about 60 ms at launch). The iOS app's module answers no such op
+ * (`modules/apple/Hymnal.swift` refuses it at once), and the app reads the
+ * file it ships (`bundle:/Resources/<folder>/<name>`, `app.json`
+ * `host.ios.resources`); once such a read has landed, every read goes there
+ * alone. Once the page module has answered one, a read it fails (a file
+ * that did not load) is refused, never sent to the storage.
  */
 export const readerOf =
   (
@@ -35,15 +43,25 @@ export const readerOf =
     native: AppModule | null | undefined,
   ): ReadShipped =>
   async (name) => {
-    try {
+    const fromFiles = async () => {
       if (storage?.fs === undefined) throw new Error(`no files to read ${folder}/${name} from`);
       return new TextDecoder().decode(await storage.fs.readFile(`${rootOf(folder)}/${name}`));
-    } catch (refused) {
-      if (native?.available !== true) throw refused;
+    };
+    if (native?.available !== true || byModule.get(native) === false) return fromFiles();
+    try {
       const answer = await native.later({ op: `${folder}.read`, n: name });
-      if (typeof answer !== 'object' || answer === null || !('text' in answer)) throw refused;
-      if (typeof answer.text !== 'string') throw refused;
+      if (typeof answer !== 'object' || answer === null || !('text' in answer))
+        throw new Error(`the module answered no text for ${folder}/${name}`);
+      if (typeof answer.text !== 'string')
+        throw new Error(`the module answered no text for ${folder}/${name}`);
+      byModule.set(native, true);
       return answer.text;
+    } catch (refused) {
+      if (byModule.get(native) === true) throw refused;
+      const text = await fromFiles().catch(() => undefined);
+      if (text === undefined) throw refused;
+      byModule.set(native, false);
+      return text;
     }
   };
 

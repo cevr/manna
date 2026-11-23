@@ -81,8 +81,16 @@ describe('the shipped reader', () => {
     expect(rootOf('chords')).toBe('bundle:/Resources/chords');
   });
 
-  it("asks the page module's op where the app's files are refused, and refuses what it cannot read", async () => {
-    const refused = { fs: { readFile: () => Promise.reject(new Error('refused')) } };
+  it("asks the web's page module alone, never the storage, and refuses what it cannot read", async () => {
+    const files: Array<string> = [];
+    const refused = {
+      fs: {
+        readFile: (path: string) => {
+          files.push(path);
+          return Promise.reject(new Error('refused'));
+        },
+      },
+    };
     const requests: Array<unknown> = [];
     const native = {
       available: true,
@@ -95,8 +103,33 @@ describe('the shipped reader', () => {
     };
     expect(await readerOf('chords', refused, native)('3')).toBe('from the page');
     expect(requests).toEqual([{ op: 'chords.read', n: '3' }]);
-    await expect(readerOf('chords', refused, native)('4')).rejects.toThrow('refused');
+    await expect(readerOf('chords', refused, native)('4')).rejects.toThrow('no text');
+    expect(files).toEqual([]);
     await expect(readerOf('chords', refused, null)('3')).rejects.toThrow('refused');
     await expect(readerOf('chords', undefined, undefined)('3')).rejects.toThrow();
+  });
+
+  it("reads iOS's bundled file once its module answers no such op, and then asks the module no more", async () => {
+    const paths: Array<string> = [];
+    const storage = {
+      fs: {
+        readFile: (path: string) => {
+          paths.push(path);
+          return Promise.resolve(bytes(`file ${path.split('/').at(-1)}`));
+        },
+      },
+    };
+    const requests: Array<unknown> = [];
+    const native = {
+      available: true,
+      later: (request: Readonly<Record<string, string | number>>) => {
+        requests.push(request);
+        return Promise.reject(new Error(`Hymnal answers no op ${request['op']}`));
+      },
+    };
+    expect(await readerOf('chords', storage, native)('5')).toBe('file 5');
+    expect(await readerOf('indexes', storage, native)('all')).toBe('file all');
+    expect(requests).toEqual([{ op: 'chords.read', n: '5' }]);
+    expect(paths).toEqual([`${rootOf('chords')}/5`, `${rootOf('indexes')}/all`]);
   });
 });
