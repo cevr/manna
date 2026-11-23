@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { Option, Result } from 'effect';
+import { Array as Arr, Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
 import { hashText } from '../core/narration.ts';
 import { shortPhrases } from '../core/phrases.ts';
 import type { Phrase } from '../core/phrases.ts';
-import type { Probed, TextBox } from '../core/export-handle.ts';
-import { type ResolvedShort, resolveShort } from '../core/shorts.ts';
+import type { InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
+import { type ResolvedShort, SHORT_RULES, resolveShort } from '../core/shorts.ts';
+import { type DrawnPicture, PICTURE_NOISE } from './check.ts';
+import { cellDrift } from '../player/dom.ts';
 import {
   loopGap,
   loopPicture,
@@ -66,6 +68,14 @@ const box = (text: string, x: number, y: number, w: number, h: number): TextBox 
 const own = (t: TextBox): TextBox => ({ ...t, caption: true });
 
 const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] });
+
+/** The band of a 1080 × 1920 short page, on the grid the checks read (`SHORT_RULES.loopGrid`). */
+const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid };
+/** The band drawn the same, frame after frame: no cell drifts. */
+const HELD: DrawnPicture = {
+  area: BAND,
+  drifts: [Arr.makeBy(2 * BAND.cols * BAND.rows, () => 0)],
+};
 
 describe('shortLength', () => {
   test('45 to 75 s holds', () => {
@@ -245,14 +255,192 @@ describe('the open', () => {
   test('an open that holds still is a hook error; one that moves is not', () => {
     const still = frame(box('word', 100, 100, 100, 40));
     const moved = frame(box('word', 300, 100, 100, 40));
-    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5)).reason).toBe('still open');
-    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5))).toBe(true);
+    expect(Option.getOrThrow(stillOpen('probe', [still, still], 0.5, HELD)).reason).toBe(
+      'still open',
+    );
+    expect(Option.isNone(stillOpen('probe', [still, moved], 0.5, HELD))).toBe(true);
   });
 
   test('the captions and the hook do not count as motion', () => {
     const a = frame(box('word', 100, 100, 100, 40), own(box('one two', 100, 2600, 400, 80)));
     const b = frame(box('word', 100, 100, 100, 40), own(box('three four', 100, 2600, 400, 80)));
-    expect(Option.isSome(stillOpen('probe', [a, b], 0.5))).toBe(true);
+    expect(Option.isSome(stillOpen('probe', [a, b], 0.5, HELD))).toBe(true);
+  });
+
+  describe('as drawn frozen: every pixel against the first frame', () => {
+    /** A strip of band on a grid whose cells are the band's own size (17 × 18 px), small enough to paint in a test. */
+    const AREA: LumaArea = { x: 0, y: 620, w: 102, h: 54, cols: 6, rows: 3 };
+    type Rgb = readonly [number, number, number];
+    /** `AREA`'s pixels, RGBA, each `paint(x, y)`. */
+    const raster = (paint: (x: number, y: number) => Rgb): Uint8ClampedArray => {
+      const out = new Uint8ClampedArray(AREA.w * AREA.h * 4);
+      for (let y = 0; y < AREA.h; y++)
+        for (let x = 0; x < AREA.w; x++) {
+          const [r, g, b] = paint(x, y);
+          const p = (y * AREA.w + x) * 4;
+          out[p] = r;
+          out[p + 1] = g;
+          out[p + 2] = b;
+          out[p + 3] = 255;
+        }
+      return out;
+    };
+    /** The open's nine frames, `t` of 1 through it, through the page's reducer (`cellDrift`). */
+    const open = (paint: (t: number) => (x: number, y: number) => Rgb): DrawnPicture => {
+      const frames = Arr.makeBy(openFrames(30).length, (k) => raster(paint(k / 8)));
+      const first = frames[0] ?? raster(paint(0));
+      return {
+        area: AREA,
+        drifts: frames.slice(1).map((f) => cellDrift(first, f, AREA, PICTURE_NOISE)),
+      };
+    };
+    /** A painted plate pushed in about its centre to `zoom`, under a fixed grain. */
+    const plate =
+      (zoom: number) =>
+      (x: number, y: number): Rgb => {
+        const v =
+          128 +
+          60 * Math.sin(((x - 51) * zoom) / 9) * Math.cos(((y - 27) * zoom) / 9) +
+          3 * Math.sin(x * 12.9898 + y * 78.233);
+        return [v, v * 0.8, v * 0.6];
+      };
+    const TEAL: Rgb = [76, 126, 146];
+    const RUST: Rgb = [228, 93, 0];
+    /** Teal paper with a block 10 × 8 px of `rgb` at (`left`, 20). */
+    const block = (left: number, rgb: Rgb) => (x: number, y: number) => {
+      if (x >= left && x < left + 10 && y >= 20 && y < 28) return rgb;
+      return TEAL;
+    };
+    const nothing = Arr.makeBy(openFrames(30).length, () => frame());
+    /** A held diagonal stroke across most of the strip: its box covers cells (0..3, 0..2). */
+    const diagonal: InkMark = {
+      kind: 'stroke',
+      scene: 'a',
+      points: [
+        [5, 625],
+        [60, 665],
+      ],
+      width: 6,
+      x: 5,
+      y: 625,
+      w: 55,
+      h: 40,
+      alpha: 1,
+      order: 0,
+      scale: 1,
+    };
+    const inked = Arr.makeBy(openFrames(30).length, (): Probed => ({
+      texts: [],
+      inks: [diagonal],
+    }));
+    const moves = (picture: DrawnPicture, probed: ReadonlyArray<Probed> = nothing) =>
+      Option.isNone(stillOpen('cut', probed, 0.5, picture));
+
+    test('a full-bleed painting the camera pushes in on moves; the same plate held, its grain frozen, is a still open', () => {
+      expect(moves(open((t) => plate(1 + 0.05 * t)))).toBe(true);
+      expect(
+        Option.getOrThrow(
+          stillOpen(
+            'cut',
+            nothing,
+            0.5,
+            open(() => plate(1)),
+          ),
+        ).reason,
+      ).toBe('still open');
+    });
+
+    test('a dark edge the camera slides 10 px inside one cell column moves, though its cells keep their means', () => {
+      const CREAM: Rgb = [239, 230, 212];
+      const SLATE: Rgb = [32, 43, 51];
+      /** A stripe 6 px wide from `left`, the strip's whole height, on cream: the slide's old and new pixels never overlap. */
+      const stripe = (left: number) => (x: number) => {
+        if (x >= left && x < left + 6) return SLATE;
+        return CREAM;
+      };
+      const meanOfColumn = (pixels: Uint8ClampedArray) => {
+        let sum = 0;
+        for (let y = 0; y < AREA.h; y++)
+          for (let x = 0; x < 17; x++) sum += pixels[(y * AREA.w + x) * 4] ?? 0;
+        return sum;
+      };
+      expect(meanOfColumn(raster(stripe(1)))).toBe(meanOfColumn(raster(stripe(11))));
+      expect(moves(open((t) => stripe(1 + Math.round(10 * t))))).toBe(true);
+      expect(moves(open(() => stripe(1)))).toBe(false);
+    });
+
+    test('a block moving beside a held diagonal, and inside its box, moves', () => {
+      expect(
+        moves(
+          open((t) => block(66 + Math.round(20 * t), RUST)),
+          inked,
+        ),
+      ).toBe(true);
+      expect(
+        moves(
+          open((t) => block(20 + Math.round(20 * t), RUST)),
+          inked,
+        ),
+      ).toBe(true);
+      expect(
+        moves(
+          open(() => block(20, RUST)),
+          inked,
+        ),
+      ).toBe(false);
+    });
+
+    test('a hue that slides at one luma moves', () => {
+      const luma = (rgb: Rgb) => 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+      expect(Math.abs(luma(RUST) - luma(TEAL))).toBeLessThan(2);
+      expect(moves(open((t) => block(20 + Math.round(20 * t), RUST)))).toBe(true);
+    });
+
+    test('a broad low-contrast block panning 40 px moves, every changed pixel 8 levels; held, it is a still open', () => {
+      const DUSK: Rgb = [48, 92, 132];
+      const SKY: Rgb = [56, 100, 140];
+      /** A block 40 × 54 px of the dusk blue from `left`, the strip's whole height, on a sky blue 8 levels lighter. */
+      const soft = (left: number) => (x: number) => {
+        if (x >= left && x < left + 40) return DUSK;
+        return SKY;
+      };
+      expect(moves(open((t) => soft(10 + Math.round(40 * t))))).toBe(true);
+      expect(moves(open(() => soft(10)))).toBe(false);
+    });
+
+    test('four pixels that change by one level move; three stay still', () => {
+      const patch = (count: number) =>
+        open((t) => (x, y): Rgb => {
+          if (y === 30 && x >= 50 && x < 50 + count) return [76 + Math.ceil(t), 126, 146];
+          return TEAL;
+        });
+      expect(moves(patch(4))).toBe(true);
+      expect(moves(patch(3))).toBe(false);
+    });
+
+    test('a plate that moves wholly off the strip, at its corner, or under a fill that covers the strip, is a still open', () => {
+      /** A plate 30 px square of rust sliding from (`x0`, `y0`) by (`dx`, `dy`) on teal, in the strip's own px. */
+      const plateAt = (x0: number, y0: number, dx: number, dy: number) =>
+        open((t) => (x, y): Rgb => {
+          const left = x0 + dx * t;
+          const top = y0 + dy * t;
+          if (x >= left && x < left + 30 && y >= top && y < top + 30) return RUST;
+          return TEAL;
+        });
+      expect(moves(plateAt(150, 100, 40, 0))).toBe(false);
+      expect(moves(plateAt(-80, -80, -20, -20))).toBe(false);
+      /** A fill twice the strip's size sliding 20 px: every pixel of the strip stays inside it. */
+      expect(
+        moves(
+          open((t) => (x, y): Rgb => {
+            const left = -60 + 20 * t;
+            if (x >= left && x < left + 220 && y >= -50 && y < 110) return RUST;
+            return TEAL;
+          }),
+        ),
+      ).toBe(false);
+      expect(moves(plateAt(-25, 10, 15, 0))).toBe(true);
+    });
   });
 
   test("the film's title in the first frame is a title card", () => {
@@ -293,10 +481,12 @@ describe('a talk, checked as a vertical film', () => {
   });
 
   test('its footage moving is motion: a still open is one whose source time holds', () => {
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5))).toBe(true);
-    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), shot(1 + 1 / 30)], 0.5, HELD))).toBe(
+      true,
+    );
+    expect(Option.isSome(stillOpen('why-the-law', [shot(1), shot(1)], 0.5, HELD))).toBe(true);
     const other = { ...shot(1), footage: [{ source: 'take.why/ba9876543210', at: 1 }] };
-    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5))).toBe(true);
+    expect(Option.isNone(stillOpen('why-the-law', [shot(1), other], 0.5, HELD))).toBe(true);
   });
 
   test("its text is held to every platform's zone, naming the platforms a line runs under", () => {

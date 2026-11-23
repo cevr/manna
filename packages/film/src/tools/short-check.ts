@@ -13,7 +13,7 @@ import {
 } from '../core/shorts.ts';
 import { TALK_FORMATS } from '../core/talk.ts';
 import { CLOCK_EPSILON, frameAtOrAfter } from '../core/time.ts';
-import { heldStill } from './check.ts';
+import { type DrawnPicture, framesHeld } from './check.ts';
 import {
   type ShortFinding,
   ShortHook,
@@ -245,15 +245,21 @@ export const openFrames = (fps: number): ReadonlyArray<number> => {
   return Arr.dedupe([...Arr.makeBy(Math.floor(last / 2) + 1, (i) => i * 2), last]);
 };
 
-/** The open's frames all hold still (the hook and captions left out): nothing moves by the rule. */
+/**
+ * The open holds still (the hook and captions left out): its frames, as
+ * probed and as drawn over `picture.area` (the film's own frame on the page,
+ * so the hook and captions round it are left out), hold still
+ * (`framesHeld`), so nothing moves by the rule.
+ */
 export const stillOpen = (
   short: string,
   frames: ReadonlyArray<Probed>,
   at: number,
+  picture: DrawnPicture,
 ): Option.Option<ShortHook> =>
   Option.liftPredicate(
     ShortHook.make({ short, reason: 'still open', at, max: SHORT_RULES.motionBy }),
-    () => frames.length > 1 && heldStill(frames),
+    () => frames.length > 1 && framesHeld(frames, picture),
   );
 
 /** Words, case and punctuation aside. */

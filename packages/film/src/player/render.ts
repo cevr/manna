@@ -1,7 +1,7 @@
 import type { Film, RenderOptions } from '../canvas/film.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import { Footage, type FootageShown, footageAt, footageReads } from '../browser/footage.ts';
-import type { ExportHandle } from '../core/export-handle.ts';
+import type { ExportHandle, LumaArea } from '../core/export-handle.ts';
 import type { FigureMark } from '../core/match.ts';
 import { sceneTimesOf } from '../core/easel.ts';
 import { frameAtOrAfter, secondsAt } from '../core/time.ts';
@@ -16,7 +16,14 @@ import type { Host } from '../browser/host.ts';
 import { BrowserHost } from '../browser/host-browser.ts';
 import { composeContact } from './contact.ts';
 import { composeStill } from './still.ts';
-import { bytesBase64, canvasBase64, canvasLuma, showFailure } from './dom.ts';
+import {
+  bytesBase64,
+  canvasBase64,
+  canvasLuma,
+  canvasPixels,
+  cellDrift,
+  showFailure,
+} from './dom.ts';
 import { encodeChunk, encoderChoice } from './encode.ts';
 import { pictureFacesWait } from './face.ts';
 import { composeLookbook } from './lookbook-sheet.ts';
@@ -132,6 +139,25 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     film.render(ctx, secondsAt(i, film.fps), { captions: captions.on, ...shown, ...extra });
   /** Frame `i` drawn, once its footage is decoded. */
   const draw = async (i: number) => drawWith(i, await footageOf(i));
+  /** Frame `i` drawn frozen (captions off, every line and the grain on boil tick 0) and `area`'s pixels read. */
+  const frozen = async (i: number, area: LumaArea) => {
+    drawWith(i, await footageOf(i), { captions: false, boil: 0 });
+    return canvasPixels(ctx, area);
+  };
+  /** The last reference `drift` read, by its frame and area: each later frame of a run is compared with it, so it is drawn once. */
+  const reference = new Map<string, Uint8ClampedArray>();
+  const referenceOf = async (i: number, area: LumaArea) => {
+    const key = `${i} ${area.x} ${area.y} ${area.w} ${area.h} ${area.cols} ${area.rows}`;
+    return Option.match(Option.fromNullishOr(reference.get(key)), {
+      onSome: async (kept) => kept,
+      onNone: async () => {
+        const pixels = await frozen(i, area);
+        reference.clear();
+        reference.set(key, pixels);
+        return pixels;
+      },
+    });
+  };
   /** Draw frame `i` with its decoded footage and raster it: the ms it took, the decoding not in it. */
   const drawn = (i: number, shown: FootageShown) => {
     const began = nowMs();
@@ -210,6 +236,10 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     luma: async (i, area) => {
       await draw(i);
       return canvasLuma(canvas, area);
+    },
+    drift: async (from, i, area, floor) => {
+      const before = await referenceOf(from, area);
+      return cellDrift(before, await frozen(i, area), area, floor);
     },
     drawTimes: (frames) =>
       frames.reduce<Promise<ReadonlyArray<number>>>(

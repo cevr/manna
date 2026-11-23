@@ -261,6 +261,14 @@ export interface CallArgs {
   /** Frame `i` drawn, and the luma (0–255) of `area`, sampled down to its grid, row by row. */
   readonly luma: readonly [i: number, area: LumaArea];
   /**
+   * Frames `from` and `i` drawn frozen (no captions, every line and the
+   * grain on boil tick 0, `RenderOptions.boil`), so they differ only by what
+   * moves, and how each cell of `area`'s grid changed between them, row by
+   * row, two values a cell: its pixels changed by more than `floor` in some
+   * channel, and its largest change of one channel (0–255, `cellDrift`).
+   */
+  readonly drift: readonly [from: number, i: number, area: LumaArea, floor: number];
+  /**
    * `frames` drawn one by one, each rastered before the clock stops, and the
    * ms each took: the draw alone, with no encoder or transfer in it.
    */
@@ -292,6 +300,7 @@ const Answers = {
   contact: Schema.Uint8ArrayFromBase64,
   look: LookedFrames,
   luma: Schema.Array(Schema.Finite),
+  drift: Schema.Array(Schema.Finite),
   drawTimes: Schema.Array(Schema.Finite),
   scenes: Schema.Array(SceneTimes),
   still: Schema.Uint8ArrayFromBase64,

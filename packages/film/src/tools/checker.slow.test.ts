@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Effect, Exit, Layer, Option, Result } from 'effect';
+import { Array as Arr, Effect, Exit, Function as Fn, Layer, Option, Result } from 'effect';
 import { type Address, resolveAddress } from '../core/address.ts';
 import { layout } from '../core/layout.ts';
 import type { Short, Timed } from '../core/schema.ts';
 import { holdGrid, holdTicks, layoutSamples } from './check.ts';
+import { openFrames } from './short-check.ts';
 import { Checker } from './checker.ts';
 import type { LumaArea } from '../core/export-handle.ts';
 import { PageError } from './errors.ts';
@@ -61,6 +62,20 @@ const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.browser).toEqual({ launched: 1, closed: 1 });
   expect(ledger.pages.closed).toBe(ledger.pages.opened);
 };
+
+/**
+ * A frozen page whose every pixel of frame `i` is the grey `v(i)`: each cell
+ * changed from frame `from` by their difference in every pixel, as
+ * `cellDrift` counts it past `floor`.
+ */
+const greys =
+  (v: (i: number) => number) =>
+  (from: number, i: number, area: LumaArea, floor: number): ReadonlyArray<number> => {
+    const d = Math.abs(v(i) - v(from));
+    const pixels = Math.round(area.w / area.cols) * Math.round(area.h / area.rows);
+    const changed = pixels * Number(d > floor);
+    return Arr.flatMap(Arr.makeBy(area.cols * area.rows, Fn.identity), () => [changed, d]);
+  };
 
 /** Frame of scene a's `hit` cue start, where the fake page draws a collision. */
 const hitFrame = Math.round(2 * testExportInfo.fps);
@@ -129,9 +144,28 @@ describe('Checker', () => {
           holdTicks({ from: ambient.start + 1.4, to: ambient.start + 6.4 }, fps),
         ).length;
         expect(ledger.frames).toHaveLength(
-          layoutSamples(placed, fps).length + probedHeld + probedAmbient,
+          layoutSamples(placed, fps).length + 2 * probedHeld + probedAmbient,
         );
         expectAllClosed(ledger);
+      }),
+  );
+
+  it.live(
+    'a hold whose marks keep still while its drawn picture moves where none lies (a painting pushed in) is no StaticHold',
+    () =>
+      Effect.gen(function* () {
+        const { check } = setup(
+          {
+            probe: () =>
+              Effect.succeed({
+                texts: [textBox('A MOST PRECIOUS MESSAGE', 600, 300, 700, 80)],
+                inks: [],
+              }),
+            drift: greys((i) => i),
+          },
+          testFilm(holdScenes, holdTimings),
+        );
+        expect(yield* check()).toEqual([]);
       }),
   );
 
@@ -232,6 +266,7 @@ describe('Checker.short', () => {
     Effect.gen(function* () {
       const filmPage = { width: 1080, height: 810, fps: 30, duration: 20, frames: 600 };
       const areas: Array<LumaArea> = [];
+      const drifted: Array<LumaArea> = [];
       const { check } = setupShort({
         info,
         infoAt: (url) =>
@@ -240,12 +275,36 @@ describe('Checker.short', () => {
           areas.push(area);
           return 128;
         },
+        drift: (from, i, area, floor) => {
+          drifted.push(area);
+          return greys(() => 128)(from, i, area, floor);
+        },
       });
       yield* check;
       const band = { x: 0, y: 620, w: 1080, h: 810, cols: 64, rows: 36 };
       expect(areas.length).toBe(2 * 64 * 36);
-      for (const area of areas) expect(area).toEqual(band);
+      expect(drifted.length).toBe(openFrames(info.fps).length - 1);
+      for (const area of [...areas, ...drifted]) expect(area).toEqual(band);
     }),
+  );
+
+  it.live(
+    "reads the open's band as drawn: a picture that moves where no mark lies is no still open, one that holds is",
+    () =>
+      Effect.gen(function* () {
+        const word = { texts: [textBox('Justify', 400, 900, 100, 60)], inks: [] };
+        const opens = (grey: (i: number) => number) =>
+          Effect.map(
+            setupShort({ info, probe: () => Effect.succeed(word), drift: greys(grey) }).check,
+            (found) =>
+              found.flatMap((f) => {
+                if (f._tag !== 'ShortHook' || f.reason !== 'still open') return [];
+                return [f.reason];
+              }),
+          );
+        expect(yield* opens((i) => 100 + Math.min(i, 15))).toEqual([]);
+        expect(yield* opens(() => 128)).toEqual(['still open']);
+      }),
   );
 
   it.live(
@@ -262,7 +321,7 @@ describe('Checker.short', () => {
               ],
               inks: [],
             }),
-          luma: (i) => Math.min(255, i * 8),
+          luma: (i) => Math.min(255, Math.max(0, i - 20) * 8),
         });
         const findings = yield* check;
         expect(findings.map((f) => f._tag).sort()).toEqual([
@@ -310,6 +369,12 @@ describe('Checker.talk', () => {
       const check = Effect.gen(function* () {
         return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
       }).pipe(Effect.provide(Checker.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)))));
+      const drawn: FakeRenderHost = { ...host, drift: greys((i) => 100 + i) };
+      const moving = Effect.gen(function* () {
+        return yield* (yield* Checker).talk(film, talk, { workers: 2, span: Option.none() });
+      }).pipe(
+        Effect.provide(Checker.layer.pipe(Layer.provide(fakeRenderHost(emptyLedger(), drawn)))),
+      );
       return Effect.gen(function* () {
         const findings = yield* check;
         expect(findings.map((f) => f._tag)).toEqual(['ShortUnsafeText', 'ShortHook']);
@@ -320,6 +385,7 @@ describe('Checker.talk', () => {
         expect(findings[1]).toMatchObject({ reason: 'still open' });
         expect(ledger.urls.every((u) => u.includes(`film=${film.paths.name}&`))).toBe(true);
         expectAllClosed(ledger);
+        expect((yield* moving).map((f) => f._tag)).toEqual(['ShortUnsafeText']);
       });
     },
   );

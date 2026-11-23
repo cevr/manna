@@ -35,7 +35,7 @@ import type {
   Timeline,
   Until,
 } from '../core/schema.ts';
-import type { FaceMark, InkMark, Probed, TextBox } from '../core/export-handle.ts';
+import type { FaceMark, InkMark, LumaArea, Probed, TextBox } from '../core/export-handle.ts';
 import {
   LEAD_IN,
   type Library,
@@ -1714,3 +1714,68 @@ export const heldStill = (frames: ReadonlyArray<Probed>): boolean => {
     onSome: (first) => pictures.slice(1).every((p) => atRest(first, p)),
   });
 };
+
+/**
+ * Frames as their page draws them frozen (`drift`: no captions, every line
+ * and the grain on one boil tick), each after the first compared with the
+ * first pixel by pixel over `area`: for each cell of its grid, how many of
+ * its pixels changed by more than `PICTURE_NOISE` and its largest change
+ * (`cellDrift`, two values a cell), in the order the frames were probed.
+ */
+export interface DrawnPicture {
+  readonly area: LumaArea;
+  readonly drifts: ReadonlyArray<ReadonlyArray<number>>;
+}
+
+/**
+ * The change (0–255) of one channel of one pixel that a frozen draw of a
+ * held picture may still show: its noise floor, as measured. Drawn frozen (its
+ * boil and grain pinned to one tick, its captions off), a picture that does
+ * not move draws the same commands frame after frame, and Chrome rasters them
+ * to the same bytes: the settled `stones` card read peak 0 in every pixel of
+ * its open on the real page (round 8's measured run), as does every held
+ * fixture here. A pixel past it changed because the picture did.
+ */
+export const PICTURE_NOISE = 0;
+
+/**
+ * How many pixels past `PICTURE_NOISE` a frame must change before it moved
+ * as a viewer sees it: a patch of 2 × 2 px, about the least a viewer
+ * resolves on a phone (a 1080 px short about 65 mm wide, at 30 cm, sets one
+ * arcminute near 1.4 px). Each changed pixel counts once however far it
+ * changed, so a broad soft pan of a few levels counts as a sharp slide does,
+ * and one stray pixel does not.
+ */
+export const PICTURE_MIN = 4;
+
+/** How a frame's drift grid reads: the pixels it changed past `PICTURE_NOISE`, and its largest change of one channel. */
+export const driftOfGrid = (grid: ReadonlyArray<number>) => {
+  let changed = 0;
+  let peak = 0;
+  for (let k = 0; k + 1 < grid.length; k += 2) {
+    changed += grid[k] ?? 0;
+    peak = Math.max(peak, grid[k + 1] ?? 0);
+  }
+  return { changed, peak };
+};
+
+/** Some frame changed at least `PICTURE_MIN` pixels from the first past `PICTURE_NOISE`. */
+export const pictureMoved = (picture: DrawnPicture): boolean =>
+  picture.drifts.some((grid) => driftOfGrid(grid).changed >= PICTURE_MIN);
+
+/** The open's drift as a log line reads it: its most-changed frame's pixels, and the largest change of any. */
+export const pictureDrift = (picture: DrawnPicture): string => {
+  const read = picture.drifts.map(driftOfGrid);
+  const changed = Math.max(0, ...read.map((r) => r.changed));
+  const peak = Math.max(0, ...read.map((r) => r.peak));
+  return `drift=${changed}px/${peak}`;
+};
+
+/**
+ * Whether frames hold still as a viewer sees them: their probed marks at rest
+ * but for their boil, over the same footage frames (`heldStill`), and their
+ * frozen drawn picture unchanged everywhere (`pictureMoved`: a painting, a
+ * camera pushing on it, a rig moving in place, ink moving, a hue sliding).
+ */
+export const framesHeld = (frames: ReadonlyArray<Probed>, picture: DrawnPicture): boolean =>
+  heldStill(frames) && !pictureMoved(picture);

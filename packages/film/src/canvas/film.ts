@@ -616,6 +616,12 @@ export interface RenderOptions {
    * frame; the pixels are the same either way.
    */
   readonly probe?: ProbeSink;
+  /**
+   * Draw every line and the grain on this boil tick rather than the frame's
+   * own (`boilTick(T)`): frames drawn on one tick differ only by what moves
+   * (the checks' steady draw, `steady`).
+   */
+  readonly boil?: number;
 }
 
 export interface Film {
@@ -1587,7 +1593,7 @@ export const createFilm = (spec: FilmSpec): Film => {
 
   const render = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions = {}) => {
     const { a, b } = getAssets();
-    const boil = boilTick(T);
+    const boil = opts.boil ?? boilTick(T);
     const cur = sceneAt(T);
     const prev = placed[cur.index - 1];
     const enter = cur.spec.enter;

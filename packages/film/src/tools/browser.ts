@@ -11,7 +11,7 @@ import {
   type Scope,
   Semaphore,
 } from 'effect';
-import { type View, openView, thrownBy } from './chrome.ts';
+import { type View, chromeLease, openView, thrownBy } from './chrome.ts';
 import { GPU_FLAG } from './chrome-gpu.ts';
 import {
   type CallAnswers,
@@ -53,6 +53,7 @@ export interface CallErrors {
   readonly contact: ContactFailed;
   readonly look: FrameFailed;
   readonly luma: FrameFailed;
+  readonly drift: FrameFailed;
   readonly drawTimes: FrameFailed;
   readonly scenes: FrameFailed;
   readonly still: FrameFailed;
@@ -94,6 +95,10 @@ const CALLS: CallPolicies = {
   contact: { timeout: SHEET_TIMEOUT, fail: (_, reason) => ContactFailed.make({ reason }) },
   look: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   luma: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
+  drift: {
+    timeout: FRAME_TIMEOUT,
+    fail: ([, frame], reason) => FrameFailed.make({ frame, reason }),
+  },
   drawTimes: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   scenes: { timeout: FRAME_TIMEOUT, fail: (_, reason) => FrameFailed.make({ frame: 0, reason }) },
   still: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
@@ -181,6 +186,32 @@ export const lumaOf = (page: FramePage, i: number, area: LumaArea) =>
     .pipe(
       Effect.flatMap((cells) =>
         Schema.decodeEffect(lumaGrid(area))(cells).pipe(
+          Effect.mapError((error) => FrameFailed.make({ frame: i, reason: error.message })),
+        ),
+      ),
+    );
+
+/**
+ * A drift as a page hands it back: two values for each cell of `area`'s
+ * grid (`cellDrift`); an empty or short read is refused, so motion is never judged on
+ * nothing.
+ */
+export const driftGrid = (area: LumaArea) =>
+  Schema.Array(Schema.Finite).check(
+    Schema.makeFilter(
+      (cells) =>
+        cells.length === 2 * area.cols * area.rows ||
+        `${cells.length} drift values for a ${area.cols}×${area.rows} grid`,
+    ),
+  );
+
+/** How far frame `i` drawn frozen on `page` changed from frame `from` (`drift`), cell by cell of `area`'s grid (`driftGrid`). */
+export const driftOf = (page: FramePage, from: number, i: number, area: LumaArea, floor: number) =>
+  page
+    .call('drift', from, i, area, floor)
+    .pipe(
+      Effect.flatMap((cells) =>
+        Schema.decodeEffect(driftGrid(area))(cells).pipe(
           Effect.mapError((error) => FrameFailed.make({ frame: i, reason: error.message })),
         ),
       ),
@@ -306,7 +337,7 @@ const openPage = (view: View, url: string) =>
     return framePage(info, title, invoke);
   });
 
-/** Preflight: Chrome opens a page (and closes it again); `BrowserMissing` says how to get one. */
+/** Preflight: Chrome opens a page (and closes it again, and itself with it); `BrowserMissing` says how to get one. */
 export const browserReady: Effect.Effect<
   void,
   BrowserMissing | BrowserFailed,
@@ -327,17 +358,25 @@ export class Browser extends Context.Service<Browser, BrowserService>()(
   );
 }
 
-/** Pages in this process's Chrome, each a tab closed with the scope that opened it. */
-export const makeBrowser: Effect.Effect<BrowserService, never, FileSystem.FileSystem | Path.Path> =
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const open = Effect.fn('Browser.open')(function* (url: string) {
-      const view = yield* frameView.pipe(
-        Effect.provideService(FileSystem.FileSystem, fs),
-        Effect.provideService(Path.Path, path),
-      );
-      return yield* openPage(view, url);
-    });
-    return Browser.of({ open });
+/**
+ * Pages in this process's Chrome, each a tab closed with the scope that
+ * opened it; Chrome itself is closed with the scope that made the browser,
+ * unless another scope still uses it (`chromeLease`): held here, Chrome stays warm between the browser's pages.
+ */
+export const makeBrowser: Effect.Effect<
+  BrowserService,
+  never,
+  FileSystem.FileSystem | Path.Path | Scope.Scope
+> = Effect.gen(function* () {
+  yield* chromeLease.hold;
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const open = Effect.fn('Browser.open')(function* (url: string) {
+    const view = yield* frameView.pipe(
+      Effect.provideService(FileSystem.FileSystem, fs),
+      Effect.provideService(Path.Path, path),
+    );
+    return yield* openPage(view, url);
   });
+  return Browser.of({ open });
+});
