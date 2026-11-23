@@ -14,15 +14,16 @@ import {
   FileSystem,
   Layer,
   Path,
-  Schedule,
+  Queue,
   Schema,
   Sink,
   Stream,
 } from 'effect';
 import * as Arbitrary from 'effect/Arbitrary';
-import { ChildProcess, ChildProcessSpawner } from 'effect/process';
+import { ChildProcessSpawner } from 'effect/process';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'effect-bun-test';
+import { createServer, type Socket } from 'node:net';
 
 import { fixturePort } from './drive/port.ts';
 import { EXACT_BASE } from './pin.ts';
@@ -74,19 +75,99 @@ When an iPhone app is ready to try, run \`bun exact.mjs share\` and send its lin
 `;
 
 /**
- * A launcher standing in for `exact-cli.ts`: it starts a `sleep` that outlives it in its process group, as Exact's
- * test runners do, writes its pid beside the app as `exited.pid` (or `waited.pid` when the last argument is `wait`),
- * then exits, or waits to be stopped.
+ * A launcher standing in for `exact-cli.ts`: it starts `leftover.cjs` beside it, a child that outlives it in its
+ * process group as Exact's test runners do, waits until that child says it reached the test on the port its
+ * arguments name (last, or before a last `wait`), then exits, or with `wait` runs until it is stopped.
  */
 const LINGERING = `const { spawn } = require('node:child_process');
-const { writeFileSync } = require('node:fs');
-const [appDir] = process.argv.slice(2);
-const waits = process.argv.at(-1) === 'wait';
-const kept = spawn('sleep', ['20'], { stdio: 'ignore' });
-writeFileSync(appDir + (waits ? '/waited.pid' : '/exited.pid'), String(kept.pid));
-if (waits) setInterval(() => {}, 1000);
-else process.exit(0);
+const { join } = require('node:path');
+const args = process.argv.slice(2);
+const waits = args.at(-1) === 'wait';
+const port = args.at(waits ? -2 : -1);
+const kept = spawn(process.execPath, [join(__dirname, 'leftover.cjs'), port], { stdio: ['ignore', 'pipe', 'inherit'] });
+kept.stdout.once('data', () => {
+  kept.stdout.destroy();
+  if (waits) setInterval(() => {}, 1000);
+  else process.exit(0);
+});
 `;
+
+/**
+ * The child `LINGERING` leaves: it connects to the test's port, sends its pid, says `ready` to its parent once the
+ * pid is sent, and runs until it is ended; it ends itself too when the test's side of the connection goes. Its
+ * connection closes when it dies, which is how the test sees its end.
+ */
+const LEFTOVER = `const { connect } = require('node:net');
+const socket = connect(Number(process.argv[2]), '127.0.0.1', () => {
+  socket.write(String(process.pid) + '\\n', () => process.stdout.write('ready\\n'));
+});
+socket.on('error', () => process.exit(1));
+socket.on('close', () => process.exit(0));
+setInterval(() => {}, 1 << 30);
+`;
+
+/** How long the live run waits on any one handshake before it fails, naming what never came: far past any load. */
+const WATCHDOG = Duration.seconds(30);
+
+/** A child the stand-in launcher left that reached the test: its pid, and `gone`, done once its connection closed. */
+interface Leftover {
+  readonly pid: number;
+  readonly gone: Deferred.Deferred<void>;
+}
+
+/** A listening server's address: the port it was given. */
+const Listening = Schema.Struct({ port: Schema.Int });
+
+/**
+ * A server on a free local port that each leftover child connects to: `next` is the next one to send its pid, and
+ * every connection still open is destroyed when the scope closes, which ends a child that was never ended.
+ */
+const leftovers = Effect.gen(function* () {
+  const arrived = yield* Queue.unbounded<Leftover>();
+  const open = new Set<Socket>();
+  const server = createServer((socket) => {
+    open.add(socket);
+    const gone = Deferred.makeUnsafe<void>();
+    const said = { text: '', sent: false };
+    socket.on('data', (chunk) => {
+      said.text += chunk.toString();
+      const end = said.text.indexOf('\n');
+      if (said.sent || end < 0) return;
+      said.sent = true;
+      Queue.offerUnsafe(arrived, { pid: Number(said.text.slice(0, end)), gone });
+    });
+    socket.on('error', () => {});
+    socket.on('close', () => {
+      open.delete(socket);
+      Deferred.doneUnsafe(gone, Effect.void);
+    });
+  });
+  const port = yield* Effect.acquireRelease(
+    Effect.callback<number>((resume) => {
+      server.listen(0, '127.0.0.1', () => {
+        resume(
+          Effect.map(
+            Effect.orDie(Schema.decodeUnknownEffect(Listening)(server.address())),
+            (address) => address.port,
+          ),
+        );
+      });
+    }),
+    () =>
+      Effect.sync(() => {
+        for (const socket of open) socket.destroy();
+        server.close();
+      }),
+  );
+  return { port, next: Queue.take(arrived) };
+});
+
+/** `effect`, or a failure naming `lost` once `WATCHDOG` passes first. */
+const watched = <A, E, R>(effect: Effect.Effect<A, E, R>, lost: string) =>
+  Effect.timeoutOrElse(effect, {
+    duration: WATCHDOG,
+    orElse: () => Effect.die(new Error(`${lost} within ${Duration.format(WATCHDOG)}`)),
+  });
 
 /** The repo's root, from this file. */
 const repoRoot = Effect.gen(function* () {
@@ -196,7 +277,8 @@ type Caller = Readonly<Record<string, string>>;
 
 /**
  * `runExact` for `app` at `PROBE/apps/<app>`, over `files` for its folder, a stand-in spawner whose clone is at `head`
- * and whose child ends once `exited` does, and the caller's `caller`; `claims` and `spawned` are filled as it runs.
+ * and whose child ends once `exited` does (or over `spawner`), and the caller's `caller`; `claims` and `spawned` are
+ * filled as it runs.
  */
 const running = (
   app: App | 'heartseed',
@@ -209,11 +291,13 @@ const running = (
     kill = Effect.void,
     claims = [],
     spawned = [],
+    spawner = standIn(head, spawned, exited, kill),
   }: {
     readonly exited?: Effect.Effect<void>;
     readonly kill?: Effect.Effect<void>;
     readonly claims?: Array<Claimed>;
     readonly spawned?: Array<Spawned>;
+    readonly spawner?: ChildProcessSpawner.ChildProcessSpawner['Service'];
   } = {},
 ) =>
   runExact(`${PROBE}/apps/${app}`, args, LAUNCHER).pipe(
@@ -222,10 +306,7 @@ const running = (
       Layer.mergeAll(
         BunServices.layer,
         memoryFs(files),
-        Layer.succeed(
-          ChildProcessSpawner.ChildProcessSpawner,
-          standIn(head, spawned, exited, kill),
-        ),
+        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
         Layer.succeed(PortClaims, claimsStandIn(claims)),
         ConfigProvider.layer(ConfigProvider.fromUnknown(caller)),
       ),
@@ -266,6 +347,106 @@ const claimsStandIn = (claims: Array<Claimed>) => {
     take: (port: number) => Effect.map(holding(port, [port, port]), () => port),
   };
 };
+
+/**
+ * When a stand-in process group was ended: by closing the spawn's scope while its leader ran, after the run saw the
+ * leader's exit, or after an exit no one awaited; or by the handle's `kill`.
+ */
+type GroupEnd = 'while it ran' | 'after its exit was seen' | 'after an unseen exit' | 'killed';
+
+/** A process group the group stand-in started: how many children of its leader it still holds, and each end it was given. */
+interface Group {
+  left: number;
+  readonly ends: Array<GroupEnd>;
+}
+
+/**
+ * A spawner that starts no process and models the group the platform's spawner gives a child: git answers `pin`, and
+ * every other command leads a group of its own (none when it asks `detached: false`) that holds `left` children
+ * and whose leader exits with `exit`'s code. Closing the spawn's scope ends the group with every child in it, as the
+ * platform's spawner does, and so does the handle's `kill`, which ends the leader too. `groups` gets each group.
+ */
+const groupSpawner = (
+  pin: string,
+  left: number,
+  exit: Deferred.Deferred<number>,
+  groups: Array<Group>,
+) =>
+  ChildProcessSpawner.make((command) => {
+    if (command._tag !== 'StandardCommand' || command.command === 'git')
+      return Effect.succeed(handleOf(`${pin}\n`, 0));
+    const own = command.options.detached !== false;
+    const seen = { exit: false };
+    const end = (group: Group, how: GroupEnd) => {
+      group.ends.push(how);
+      if (own) group.left = 0;
+    };
+    const ending = (group: Group) =>
+      Effect.map(Deferred.isDone(exit), (done) => {
+        if (seen.exit) return end(group, 'after its exit was seen');
+        if (done) return end(group, 'after an unseen exit');
+        end(group, 'while it ran');
+      });
+    return Effect.map(
+      Effect.acquireRelease(
+        Effect.sync(() => {
+          const group: Group = { left, ends: [] };
+          groups.push(group);
+          return group;
+        }),
+        ending,
+      ),
+      (group) =>
+        ChildProcessSpawner.makeHandle({
+          pid: ChildProcessSpawner.ProcessId(0),
+          exitCode: Deferred.await(exit).pipe(
+            Effect.tap(() =>
+              Effect.sync(() => {
+                seen.exit = true;
+              }),
+            ),
+            Effect.map(ChildProcessSpawner.ExitCode),
+          ),
+          isRunning: Effect.map(Deferred.isDone(exit), (done) => !done),
+          kill: () =>
+            Effect.andThen(
+              Effect.sync(() => end(group, 'killed')),
+              Deferred.succeed(exit, 143),
+            ),
+          stdin: Sink.drain,
+          stdout: Stream.empty,
+          stderr: Stream.empty,
+          all: Stream.empty,
+          getInputFd: () => Sink.drain,
+          getOutputFd: () => Stream.empty,
+          unref: Effect.succeed(Effect.void),
+        }),
+    );
+  });
+
+/**
+ * A run's child, how many children it leaves in its group, its exit code, and the order things happen in: the child
+ * exits and then the run is interrupted, the run is interrupted while the child runs and then the child exits, or the
+ * child runs on for two minutes after a `verify` records its report (two hours for any other verb) before it exits.
+ */
+const GroupCase = Arbitrary.all({
+  verb: Arbitrary.schema(Schema.Literals(['contract', 'verify'])),
+  left: Arbitrary.schema(Schema.Literals([0, 1, 2, 3])),
+  code: Arbitrary.schema(Schema.Literals([0, 1, 2])),
+  order: Arbitrary.schema(
+    Schema.Literals(['exit, then interrupt', 'interrupt, then exit', 'runs on past its report']),
+  ),
+});
+
+/** Whether `fiber` has ended. */
+const ended = (fiber: Fiber.Fiber<unknown, unknown>) =>
+  Option.isSome(Option.fromUndefinedOr(fiber.pollUnsafe()));
+
+/**
+ * The live run's timeout: its handshakes' `WATCHDOG` and the platform spawner's group stop on top. It spawns, through
+ * `runExact`, a launcher and the child it leaves, twice: a loaded machine's spawns are slow (spawn budget).
+ */
+const LIVE_MS = 45_000;
 
 /** The pin and the apps' committed files, which every run but a refused one needs. */
 const fixtures = Effect.all({ pins: docsPins, files: appFiles });
@@ -1121,6 +1302,69 @@ describe('the exact wrapper', () => {
       }),
   );
 
+  it.effect(
+    "ends the child's process group, with every child it left there, after the run sees the child exit, when the run is interrupted first, or when a verify is stopped two minutes after its report; never while the child runs on otherwise",
+    () =>
+      Effect.gen(function* () {
+        const { pins, files } = yield* fixtures;
+        const pin = pins[0] ?? '';
+        const record = `${PROBE}/apps/hymnal-exact/.exact/verify/last.json`;
+        const quiet = { ...globalThis.console, error: () => {} };
+        const result = yield* Arbitrary.checkEffect(
+          GroupCase,
+          ({ verb, left, code, order }) =>
+            Effect.gen(function* () {
+              const exit = yield* Deferred.make<number>();
+              const groups: Array<Group> = [];
+              const folder = { ...files };
+              const args = { verify: ['verify', 'ios'], contract: ['contract', 'build'] }[verb];
+              const fiber = yield* Effect.forkChild(
+                running('hymnal-exact', args, { HOME: PROBE }, Option.some(pin), folder, {
+                  spawner: groupSpawner(pin, left, exit, groups),
+                }).pipe(Effect.provideService(Console.Console, quiet)),
+              );
+              yield* TestClock.adjust('3 seconds');
+              const [group] = groups;
+              if (!group || groups.length !== 1 || group.ends.length > 0 || group.left !== left)
+                return false;
+              const exitedWith = (expected: number) =>
+                Effect.map(
+                  Fiber.join(fiber),
+                  ({ result: ran }) => Result.isSuccess(ran) && Number(ran.success) === expected,
+                );
+              if (order === 'interrupt, then exit') {
+                yield* Fiber.interrupt(fiber);
+                yield* Deferred.succeed(exit, code);
+                return Bun.deepEquals(group.ends, ['while it ran']) && group.left === 0;
+              }
+              if (order === 'runs on past its report' && verb === 'verify') {
+                folder[record] = '{"ios":3500}';
+                yield* TestClock.adjust('1 second');
+                yield* TestClock.adjust('119 seconds');
+                if (group.ends.length > 0 || ended(fiber)) return false;
+                yield* TestClock.adjust('1 second');
+                const stopped = yield* exitedWith(1);
+                return stopped && group.ends[0] === 'killed' && group.left === 0;
+              }
+              if (order === 'runs on past its report') {
+                yield* TestClock.adjust('2 hours');
+                if (group.ends.length > 0 || ended(fiber)) return false;
+              }
+              yield* Deferred.succeed(exit, code);
+              const exited = yield* exitedWith(code);
+              yield* Fiber.interrupt(fiber);
+              return (
+                exited &&
+                Bun.deepEquals(group.ends, ['after its exit was seen']) &&
+                group.left === 0
+              );
+            }),
+          { runs: 200 },
+        );
+        expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
+      }),
+  );
+
   it.scopedLive(
     'ends what its child left in its process group when the child exits or the run is interrupted',
     () =>
@@ -1137,30 +1381,8 @@ describe('the exact wrapper', () => {
         );
         const launcher = path.join(dir, 'launcher.cjs');
         yield* fs.writeFileString(launcher, LINGERING);
-        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const alive = (pid: number) =>
-          spawner
-            .string(
-              ChildProcess.make('ps', ['-p', String(pid), '-o', 'pid='], {
-                forceKillAfter: Duration.seconds(5),
-              }),
-            )
-            .pipe(
-              Effect.map((out) => out.trim() !== ''),
-              Effect.orElseSucceed(() => false),
-            );
-        const left: Array<number> = [];
-        yield* Effect.addFinalizer(() =>
-          Effect.forEach(left, (pid) =>
-            Effect.flatMap(alive(pid), (still) =>
-              Effect.sync(() => {
-                if (still && pid > 1) process.kill(pid, 'SIGKILL');
-              }),
-            ),
-          ),
-        );
-        const pidOf = (run: string) =>
-          Effect.map(fs.readFileString(path.join(appDir, `${run}.pid`)), Number);
+        yield* fs.writeFileString(path.join(dir, 'leftover.cjs'), LEFTOVER);
+        const { port, next } = yield* leftovers;
         const runIn = (args: ReadonlyArray<string>) =>
           runExact(appDir, args, launcher).pipe(
             Effect.provide(
@@ -1183,20 +1405,28 @@ describe('the exact wrapper', () => {
             ),
           );
 
-        expect(Number(yield* runIn(['contract', 'build']))).toBe(0);
-        const exited = yield* pidOf('exited');
-        left.push(exited);
-        expect(yield* alive(exited)).toBe(false);
-
-        const fiber = yield* Effect.forkChild(runIn(['contract', 'build', 'wait']));
-        const waited = yield* pidOf('waited').pipe(
-          Effect.retry({ schedule: Schedule.spaced('10 millis'), times: 300 }),
+        const ran = yield* watched(
+          runIn(['contract', 'build', String(port)]),
+          'the run whose child exits did not end',
         );
-        left.push(waited);
-        expect(yield* alive(waited)).toBe(true);
+        expect(Number(ran)).toBe(0);
+        const exited = yield* watched(next, "no child left by the run's child reached the test");
+        yield* watched(
+          Deferred.await(exited.gone),
+          `the child ${exited.pid} that the exited child left in its group outlived the run`,
+        );
+
+        const fiber = yield* Effect.forkChild(runIn(['contract', 'build', String(port), 'wait']));
+        const waited = yield* watched(next, 'no child left by the waiting child reached the test');
+        expect(Deferred.isDoneUnsafe(waited.gone)).toBe(false);
         yield* Fiber.interrupt(fiber);
-        expect(yield* alive(waited)).toBe(false);
+        yield* watched(
+          Deferred.await(waited.gone),
+          `the child ${waited.pid} that the waiting child left in its group outlived the interrupted run`,
+        );
       }).pipe(Effect.provide(BunServices.layer)),
+    // oxlint-disable-next-line film/tests-keep-their-strength -- runExact spawns the launcher and the child it leaves, twice, a spawn inside the code under test (spawn budget).
+    LIVE_MS,
   );
 
   it.scopedLive(
