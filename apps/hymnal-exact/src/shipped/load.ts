@@ -27,14 +27,15 @@ const byModule = new WeakMap<AppModule, boolean>();
  * A read of `folder`'s files through a source's `storage` and `native`. The
  * web's page module answers `<folder>.read` (`native.later`) by importing
  * the module shipped beside it (`modules/web/<folder>/<name>.js`, written by
- * `files.ts`), so the web never asks Exact's storage, whose read of the
- * app's files it refuses only once its lazily loaded storage pieces have
- * loaded (about 60 ms at launch). The iOS app's module answers no such op
- * (`modules/apple/Hymnal.swift` refuses it at once), and the app reads the
- * file it ships (`bundle:/Resources/<folder>/<name>`, `app.json`
- * `host.ios.resources`); once such a read has landed, every read goes there
- * alone. Once the page module has answered one, a read it fails (a file
- * that did not load) is refused, never sent to the storage.
+ * `files.ts`), so the web never asks Exact's storage first, which refuses
+ * a read of the app's files there, and the module's answer waits on no
+ * refusal. The iOS app's module answers no such op
+ * (`modules/apple/Hymnal.swift` refuses it at once, the launch's one
+ * extra call), and the app reads the file it ships
+ * (`bundle:/Resources/<folder>/<name>`, `app.json` `host.ios.resources`);
+ * once such a read has landed, every read goes there alone. Once the page
+ * module has answered one, a read it fails (a file that did not load) is
+ * refused, never sent to the storage.
  */
 export const readerOf =
   (

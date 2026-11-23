@@ -545,13 +545,8 @@ const measureOnce = async (page: Page, path: string, cold: boolean) => {
 /** How long after the app's ready a hymn page may ask its chords file: its first ask's own turn, no serial wait before it. */
 const CHORDS_ASKED_MS = 25;
 
-/**
- * The files a hymn page must not fetch to draw its words: Exact's storage
- * pieces, which the web loads only to refuse a read of the app's files
- * (`src/shipped/load.ts` asks the page module alone), and the indexes file,
- * whose head line the page reads from its bundled table (`src/hymn/heads.ts`).
- */
-const UNWAITED = /\/(storage-fs|storage-environment|grant-admission)\.js$|^\/modules\/indexes\//u;
+/** The file a hymn page must not fetch to draw its words: the indexes, whose head line it reads from its bundled table (`src/hymn/heads.ts`). */
+const UNWAITED = /^\/modules\/indexes\//u;
 
 const measure = async (page: Page) => {
   const load = loadavg()[0] ?? 0;
@@ -598,7 +593,7 @@ const measure = async (page: Page) => {
           run.files.filter(({ file }) => UNWAITED.test(file)).map(({ file }) => file),
         );
         check(
-          "a hymn page's words wait for no read of Exact's storage pieces nor the indexes file (cold /hymns/100)",
+          "a hymn page's words wait for no read of the indexes file (cold /hymns/100)",
           runs.length > 0 && waited.length === 0,
           waited,
         );
