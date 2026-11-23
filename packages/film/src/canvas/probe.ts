@@ -6,6 +6,7 @@ import type {
   GripShares,
   HandMark,
   InkMark,
+  PlacedMark,
   TextBox,
 } from '../core/export-handle.ts';
 import type { ConceptRef, FigureMark } from '../core/match.ts';
@@ -25,6 +26,8 @@ export interface ProbeSink {
   readonly figures?: FigureMark[];
   /** Given, every painted plate a scene paints lands here (`f.painting`: the draw leg's `PaintingEdge`). */
   readonly paintings?: PaintingMark[];
+  /** Given, every painting and rig the frame places lands here (`probePlaced`: `heldStill` sees them move). */
+  readonly placed?: PlacedMark[];
 }
 
 /**
@@ -318,20 +321,69 @@ export const probeHand = (ctx: CanvasRenderingContext2D, hand: HandSeen) => {
 };
 
 /**
- * Whether a probe that collects figures is attached to `ctx`: a rig asks
- * before working out its box, so a frame nobody probes pays one lookup.
+ * Whether a probe that collects figures, or the planes a frame places, is
+ * attached to `ctx`: a rig asks before working out its box, so a frame
+ * nobody probes pays one lookup.
  */
-export const probesFigures = (ctx: CanvasRenderingContext2D): boolean =>
-  probes.get(ctx)?.sink.figures !== undefined;
+export const probesFigures = (ctx: CanvasRenderingContext2D): boolean => {
+  const sink = probes.get(ctx)?.sink;
+  return sink?.figures !== undefined || sink?.placed !== undefined;
+};
+
+/** The box on screen around the rectangle `[left, right] × [top, bottom]` of the current space. */
+const boxOn = (
+  ctx: CanvasRenderingContext2D,
+  probe: Probe,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+) => {
+  const map = screen(ctx, probe);
+  const corners = [map(left, top), map(right, top), map(right, bottom), map(left, bottom)];
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+};
+
+/**
+ * Declare a plane placed whole in the current transform's space (a painted
+ * plate, a rig or a puppet): `key` and the rectangle `[left, right] × [top,
+ * bottom]` it covers, so `heldStill` sees it move (a camera push, a rig
+ * walking) as it sees ink. Records only when a probe that collects placed
+ * planes is attached; draws nothing.
+ */
+export const probePlaced = (
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+) => {
+  const probe = probes.get(ctx);
+  const placed = probe?.sink.placed;
+  if (probe === undefined || placed === undefined) return;
+  const { x0, y0, x1, y1 } = boxOn(ctx, probe, left, top, right, bottom);
+  placed.push({
+    key,
+    x: x0,
+    y: y0,
+    w: x1 - x0,
+    h: y1 - y0,
+    scale: scaleOf(ctx),
+    alpha: ctx.globalAlpha * probe.alpha,
+  });
+};
 
 /**
  * Declare a figure drawn in the current transform's space: `key` (its rig),
  * the rectangle `[left, right] × [top, bottom]` it was drawn in (its box on
  * screen is the box around that rectangle mapped through the transform, the
  * layer's offset added), whether it has a face, and its concept reference,
- * so `match` crops it from a still and holds it against its concept.
- * Records only when a probe that collects figures is attached; draws
- * nothing.
+ * so `match` crops it from a still and holds it against its concept, and
+ * `heldStill` sees it move (`probePlaced`). Records only when a probe that
+ * collects figures or placed planes is attached; draws nothing.
  */
 export const probeFigure = (
   ctx: CanvasRenderingContext2D,
@@ -345,22 +397,22 @@ export const probeFigure = (
     readonly concept?: ConceptRef;
   },
 ) => {
+  probePlaced(ctx, figure.key, figure.left, figure.top, figure.right, figure.bottom);
   const probe = probes.get(ctx);
   const figures = probe?.sink.figures;
   if (probe === undefined || figures === undefined) return;
-  const map = screen(ctx, probe);
-  const corners = [
-    map(figure.left, figure.top),
-    map(figure.right, figure.top),
-    map(figure.right, figure.bottom),
-    map(figure.left, figure.bottom),
-  ];
-  const xs = corners.map((c) => c[0]);
-  const ys = corners.map((c) => c[1]);
+  const { x0, y0, x1, y1 } = boxOn(
+    ctx,
+    probe,
+    figure.left,
+    figure.top,
+    figure.right,
+    figure.bottom,
+  );
   figures.push({
     scene: probe.scene,
     key: figure.key,
-    box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+    box: [x0, y0, x1, y1],
     face: figure.face,
     concept: figure.concept,
   });

@@ -20,6 +20,11 @@ import {
 } from './short-check.ts';
 import { type ShortFinding, levelOf } from './findings.ts';
 import { voicedAt } from '../core/voiced.ts';
+import { camera } from '../canvas/camera.ts';
+import { createFilm, drawing } from '../canvas/film.ts';
+import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
+import type { PaintingSpec } from '../canvas/painting.ts';
+import { type ProbeSink, probeFigure, probing } from '../canvas/probe.ts';
 
 /** How bad a short's finding is; `--allow-stale` does not touch any. */
 const level = (finding: ShortFinding) => levelOf(finding, { allowStale: false });
@@ -253,6 +258,79 @@ describe('the open', () => {
     const a = frame(box('word', 100, 100, 100, 40), own(box('one two', 100, 2600, 400, 80)));
     const b = frame(box('word', 100, 100, 100, 40), own(box('three four', 100, 2600, 400, 80)));
     expect(Option.isSome(stillOpen('probe', [a, b], 0.5))).toBe(true);
+  });
+
+  describe('a painting or a rig, with no text or ink, under a camera push', () => {
+    const W = 1080;
+    const H = 1920;
+    const PLATE: PaintingSpec = { key: 'test/plate', png: 'plate.png', size: [W, H] };
+    const plate = drawing({ timeline: {}, paintings: { plate: PLATE }, draw: () => {} });
+    const film = withDom(() =>
+      createFilm({
+        fps: 30,
+        title: 'plates',
+        width: W,
+        height: H,
+        paper: { base: '#ffffff', tone: '#000000', seed: 1 },
+        shade: '#000000',
+        finish: { vignette: 0, grain: 0 },
+        scenes: [
+          {
+            id: 'push',
+            min: 4,
+            drift: 0,
+            ...plate,
+            draw: (f) =>
+              camera(f.ctx, { x: W / 2, y: H / 2, zoom: 1 + (0.4 * f.t) / f.dur }, W, H, () =>
+                f.painting('plate'),
+              ),
+          },
+          { id: 'held', min: 4, drift: 0, ...plate, draw: (f) => f.painting('plate') },
+        ],
+      }),
+    );
+    /** The open's frames from `from` seconds, each probed as the page's `probe` call probes it. */
+    const openFrom = (from: number): ReadonlyArray<Probed> => {
+      const down = film.paintings.stand(new Map([[PLATE, { image: Option.none() }]]));
+      const frames = openFrames(30).map((i) => {
+        const sink: ProbeSink = { texts: [], inks: [], placed: [] };
+        withDom(() => film.render(recorder(W, H).ctx, from + i / 30, { probe: sink }));
+        return sink;
+      });
+      down();
+      return frames;
+    };
+
+    test('its open moves, with no text or ink in it', () => {
+      const open = openFrom(0);
+      expect(open.every((p) => p.texts.length === 0 && p.inks.length === 0)).toBe(true);
+      expect(Option.isNone(stillOpen('probe', open, 0.5))).toBe(true);
+    });
+
+    test('the same painting held, no camera and no breath, is a still open', () => {
+      expect(Option.getOrThrow(stillOpen('probe', openFrom(4), 0.5)).reason).toBe('still open');
+    });
+
+    test('a rig it declares moves with the camera as a painting does', () => {
+      const rigAt = (zoom: number): Probed => {
+        const sink: ProbeSink = { texts: [], inks: [], placed: [] };
+        const { ctx } = recorder(W, H);
+        ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
+        probing(ctx, { sink, scene: 'push', dx: 0, alpha: 1 }, () =>
+          probeFigure(ctx, {
+            key: 'rig',
+            left: 200,
+            top: 400,
+            right: 600,
+            bottom: 1400,
+            face: true,
+          }),
+        );
+        return sink;
+      };
+      expect(Option.isNone(stillOpen('probe', [rigAt(1), rigAt(1.05)], 0.5))).toBe(true);
+      expect(Option.isSome(stillOpen('probe', [rigAt(1), rigAt(1)], 0.5))).toBe(true);
+    });
   });
 
   test("the film's title in the first frame is a title card", () => {

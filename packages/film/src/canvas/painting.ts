@@ -1,5 +1,5 @@
 import { Option } from 'effect';
-import type { PaintingMark, Probe } from './probe.ts';
+import { type PaintingMark, type Probe, probePlaced } from './probe.ts';
 
 /** One edge of a plate's rectangle, in the plate's own frame. */
 export type Edge = 'top' | 'right' | 'bottom' | 'left';
@@ -93,7 +93,8 @@ export const shownEdges = (quad: Quad, w: number, h: number): ReadonlyArray<Edge
  * scale(scale), the image at (0, 0), smoothing fixed at 'high'. With no image
  * (Bun's check) nothing is drawn. Either way, a probe that collects
  * paintings records the plate's screen quad from the same transform the draw
- * uses, so the check sees what the page paints.
+ * uses, so the check sees what the page paints, and one that collects
+ * placed planes its box (`probePlaced`), so `heldStill` sees it move.
  */
 export const drawPainting = (
   ctx: CanvasRenderingContext2D,
@@ -111,9 +112,10 @@ export const drawPainting = (
     };
     sink.push(mark);
   }
-  if (Option.isNone(loaded.image)) return;
   const [x, y] = spec.at ?? [0, 0];
   const s = spec.scale ?? 1;
+  probePlaced(ctx, spec.key, x, y, x + s * spec.size[0], y + s * spec.size[1]);
+  if (Option.isNone(loaded.image)) return;
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
