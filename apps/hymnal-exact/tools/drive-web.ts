@@ -1,11 +1,12 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, effect/noAs, effect/noTryCatch, effect/noUnsafeDictionaryType, effect/noKnownValueWidening, effect/maxCognitiveComplexity, eslint/no-await-in-loop -- a host script that serves the built site and drives headless Chrome over the DevTools protocol, each in a process group of its own, awaits each page in turn, reads each method's JSON as it comes, and prints what it found in a report of named sections; it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noTernary, effect/noThrowStatement, effect/noUnknownParameters, effect/noAs, effect/noTryCatch, effect/noUnsafeDictionaryType, effect/noKnownValueWidening, effect/maxCognitiveComplexity, eslint/no-await-in-loop -- a host script that serves the built site in a process group of its own and drives Playwright's headless Chromium, partly over the DevTools protocol on Playwright's own session, awaits each page in turn, reads each method's JSON as it comes, and prints what it found in a report of named sections; it never runs in the data module. */
 
 /**
  * The production web build as a visitor meets it (spec B), with no Exact
  * driver attached: `dist/` (`bun run build:web`, a release build) served as
  * plain files by the host's one rule (`tools/web/serve.ts`, or with
- * `--server exact` by Exact's own `serve` through the wrapper), and Chrome
- * driven over the DevTools protocol (`tools/web/chrome.ts`). Each check
+ * `--server exact` by Exact's own `serve` through the wrapper), and the
+ * page driven by Playwright (`@manna/exact-kit/browser`), its network read and
+ * shaped over the DevTools protocol on Playwright's own session. Each check
  * prints one `PASS` or `FAIL` line; the drive exits 1 on any failure.
  *
  * - `rest`: a hymn page left before the rest's delay asks the bucket
@@ -33,7 +34,7 @@
  *   by the pager or opened by its address, shows its chords once they are
  *   read again (`src/shipped/load.ts`, `chordsMend`);
  * - `return`: Dark chosen in Settings, a hymn visited, a favourite, a
- *   stanza choice; Chrome closed as a person closes it and opened again on
+ *   stanza choice; the browser closed as a person closes it and opened again on
  *   its profile: all four kept.
  *
  * Every request is recorded by origin: one not the local server's fails,
@@ -56,6 +57,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
 
+import { type Browser, CALL_MS, type Page, launchBrowser } from '@manna/exact-kit/browser';
 import { claimAppPort } from '@manna/exact-kit/port';
 import { readWords } from '@manna/hymnal-app/vite/words';
 import { recordingKey, setOf } from '@manna/hymnal/recordings';
@@ -64,7 +66,6 @@ import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
 import { answer } from './recordings.ts';
 import { type Budget, MAX_LOAD, overOf, TIME_SLACK_MS } from './web/budget.ts';
-import { CALL_MS, type Chrome, type Page, launchChrome } from './web/chrome.ts';
 import { makeStall } from './web/stall.ts';
 
 const app = join(import.meta.dir, '..');
@@ -148,13 +149,14 @@ const run = async (name: string, body: () => Promise<unknown>) => {
   );
 };
 
-/** Every Chrome the drive opened, closed at its end whatever became of its check. */
-const launched: Array<Chrome> = [];
+/** Every browser the drive opened, closed at its end whatever became of its check. */
+const launched: Array<Browser> = [];
 const launch = async (profile: string, fresh: boolean) => {
-  mark(`launch Chrome on ${profile}`);
-  const chrome = await launchChrome(profile, fresh);
-  launched.push(chrome);
-  return chrome;
+  mark(`launch the browser on ${profile}`);
+  const browser = await launchBrowser(profile, fresh);
+  launched.push(browser);
+  report.browser = browser.version;
+  return browser;
 };
 
 type Child = ReturnType<typeof Bun.spawn>;
@@ -167,10 +169,9 @@ const stop = (child: Child) => {
     groups.delete(child);
   }
 };
-/** The server's and every Chrome's process groups stopped, at the drive's exit or when it is stopped itself. */
+/** The server's process group stopped, at the drive's exit or when it is stopped itself; Playwright stops its browsers at the exit. */
 const stopAll = () => {
   for (const child of groups) stop(child);
-  for (const chrome of launched) chrome.stopNow();
 };
 process.on('exit', stopAll);
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const)
@@ -247,13 +248,11 @@ const watch = async (page: Page) => {
     const number = place.screen === 'hymn' ? place.number : 0;
     if (number !== shown.number) Object.assign(shown, { number, since: Date.now() });
   };
-  page.on('Page.frameNavigated', (params) => {
-    const frame = params.frame as { url: string; parentId?: string };
-    if (frame.parentId === undefined) showing(frame.url);
+  page.page.on('framenavigated', (frame) => {
+    if (frame === page.page.mainFrame()) showing(frame.url());
   });
-  page.on('Page.navigatedWithinDocument', (params) => showing(String(params.url)));
-  page.on('Network.requestWillBeSent', (params) => {
-    const url = (params.request as { url: string }).url;
+  page.page.on('request', (request) => {
+    const url = request.url();
     const at = Date.now();
     const rested = shown.number > 0 && url === printed(shown.number) && at - shown.since >= REST_MS;
     requests.push({ url, afterPlay: played, rested, at });
@@ -311,22 +310,18 @@ const waitFor = async (page: Page, expression: string, ms = 10_000) => {
   return false;
 };
 
-/** `path` opened as typed: its document's status, once it has loaded (and, with script, once the app is ready). */
+/** How long an open waits for its page's load before it reads what the page shows. */
+const OPEN_MS = 15_000;
+
+/** `path` opened as typed: its document's status (0 for a load that did not end in `OPEN_MS`, or a move within the shown document, which loads no document), once it has loaded (and, with script, once the app is ready). */
 const open = async (page: Page, path: string, script = true) => {
   mark(`open ${path}`);
-  let status = 0;
-  const off = page.on('Network.responseReceived', (params) => {
-    if (params.type === 'Document') status = (params.response as { status: number }).status;
-  });
-  const loaded = new Promise<void>((resolve) => {
-    const done = page.on('Page.loadEventFired', () => {
-      done();
-      resolve();
-    });
-  });
-  await page.send('Page.navigate', { url: `${origin}${path}` });
-  await Promise.race([loaded, Bun.sleep(15_000)]);
-  off();
+  const status = await page.page
+    .goto(`${origin}${path}`, { waitUntil: 'load', timeout: OPEN_MS })
+    .then(
+      (response) => response?.status() ?? 0,
+      () => 0,
+    );
   const ready = script
     ? await waitFor(page, 'globalThis.exact && globalThis.exact.ready === true')
     : false;
@@ -720,13 +715,8 @@ const shipped = async (page: Page) => {
     const pager = await page.evaluate<{ x: number; y: number; width: number }>(
       `(() => { const r = document.querySelector('[data-testid="hymn-pager"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, width: r.width }; })()`,
     );
-    await page.send('Input.dispatchMouseEvent', {
-      type: 'mouseWheel',
-      x: pager.x,
-      y: pager.y,
-      deltaX: pager.width,
-      deltaY: 0,
-    });
+    await page.page.mouse.move(pager.x, pager.y);
+    await page.page.mouse.wheel(pager.width, 0);
     const drawn = await waitFor(page, chordsDrawn(101), 12_000);
     const retried = seen.files().filter(({ file }) => file.startsWith('/modules/chords/101.js?'));
     check(
@@ -879,13 +869,13 @@ const refuseOnce = async (page: Page, file: string) => {
 const isDark = `getComputedStyle(document.querySelector('[data-testid="root"]') ?? document.documentElement).colorScheme === 'dark'`;
 
 /** A light system on both launches, so a dark root after the reopen is the kept choice, not the system's. */
-const LIGHT_SYSTEM = [{ name: 'prefers-color-scheme', value: 'light' }];
+const lightSystem = (on: Page) => on.page.emulateMedia({ colorScheme: 'light' });
 
 const returning = async () => {
   const profile = join(app, '.exact/web-return-profile');
   const first = await launch(profile, true);
   await watch(first.page);
-  await first.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
+  await lightSystem(first.page);
   const page = first.page;
   const trace: Array<unknown> = [];
   let firstPlayLost = 0;
@@ -943,16 +933,16 @@ const returning = async () => {
   await Bun.sleep(500);
   const chosen = await page.evaluate<Array<string | null>>(chips);
   await step('kept', page.evaluate(`localStorage.getItem('exact.state.playerKept')`));
-  mark('close Chrome');
+  mark('close the browser');
   const closed = await first.close();
   check(
-    'Chrome closed as a person closes it (Browser.close), not stopped',
+    "the browser closed as a person closes it (Playwright's close: Browser.close), not stopped",
     closed === 'closed',
     closed,
   );
   const second = await launch(profile, false);
   await watch(second.page);
-  await second.page.send('Emulation.setEmulatedMedia', { features: LIGHT_SYSTEM });
+  await lightSystem(second.page);
   await step('reopen', open(second.page, '/'));
   const darkKept = await waitFor(second.page, isDark, 5000);
   const shelf = await waitFor(second.page, has('shelf-2'), 5000);
@@ -1055,23 +1045,23 @@ const serverChild = await startServer();
 try {
   const onePage = Object.entries(ON_ONE_PAGE).filter(([name]) => checks.includes(name));
   if (onePage.length > 0) {
-    const opened: { chrome?: Chrome } = {};
-    await run('launch Chrome', async () => {
-      const chrome = await launch(join(app, '.exact/web-drive-profile'), true);
-      await watch(chrome.page);
+    const opened: { browser?: Browser } = {};
+    await run('launch the browser', async () => {
+      const browser = await launch(join(app, '.exact/web-drive-profile'), true);
+      await watch(browser.page);
       mark('add the marks script');
-      await chrome.page.send('Page.addScriptToEvaluateOnNewDocument', { source: MARKS });
-      opened.chrome = chrome;
+      await browser.page.page.addInitScript(MARKS);
+      opened.browser = browser;
     });
     for (const [name, body] of onePage)
       await run(name, async () =>
-        opened.chrome === undefined ? undefined : body(opened.chrome.page),
+        opened.browser === undefined ? undefined : body(opened.browser.page),
       );
-    await opened.chrome?.close();
+    await opened.browser?.close();
   }
   if (checks.includes('return')) await run('return', returning);
 } finally {
-  for (const chrome of launched) await chrome.close();
+  for (const browser of launched) await browser.close();
   stop(serverChild);
 }
 
