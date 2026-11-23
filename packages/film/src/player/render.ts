@@ -16,7 +16,7 @@ import type { Host } from '../browser/host.ts';
 import { BrowserHost } from '../browser/host-browser.ts';
 import { composeContact } from './contact.ts';
 import { composeStill } from './still.ts';
-import { bytesBase64, canvasBase64, canvasLuma, showFailure } from './dom.ts';
+import { bytesBase64, canvasBase64, canvasColours, canvasLuma, showFailure } from './dom.ts';
 import { encodeChunk, encoderChoice } from './encode.ts';
 import { pictureFacesWait } from './face.ts';
 import { composeLookbook } from './lookbook-sheet.ts';
@@ -210,6 +210,10 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     luma: async (i, area) => {
       await draw(i);
       return canvasLuma(canvas, area);
+    },
+    steady: async (i, area) => {
+      drawWith(i, await footageOf(i), { captions: false, boil: 0 });
+      return canvasColours(ctx, area);
     },
     drawTimes: (frames) =>
       frames.reduce<Promise<ReadonlyArray<number>>>(

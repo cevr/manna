@@ -72,11 +72,15 @@ const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] }
 const BAND: LumaArea = { x: 0, y: 620, w: 1080, h: 810, ...SHORT_RULES.loopGrid };
 const CELLS = BAND.cols * BAND.rows;
 
-/** A drawn band whose every cell reads `luma`. */
-const flat = (luma: number): ReadonlyArray<number> => Arr.makeBy(CELLS, () => luma);
+/** A steady band whose cell `k` is the colour `at(k)`: red, green and blue a cell. */
+const band = (at: (k: number) => readonly [number, number, number]): ReadonlyArray<number> =>
+  Arr.flatMap(Arr.makeBy(CELLS, at), (rgb) => [...rgb]);
 
 /** The band drawn the same, frame after frame. */
-const HELD: DrawnPicture = { area: BAND, lumas: [flat(128), flat(128)] };
+const HELD: DrawnPicture = {
+  area: BAND,
+  colours: [band(() => [128, 128, 128]), band(() => [128, 128, 128])],
+};
 
 describe('shortLength', () => {
   test('45 to 75 s holds', () => {
@@ -268,84 +272,105 @@ describe('the open', () => {
     expect(Option.isSome(stillOpen('probe', [a, b], 0.5, HELD))).toBe(true);
   });
 
-  describe('as drawn: the band read for what the probe cannot see', () => {
-    /** The open's nine frames, as `openFrames(30)` reads them, `k` of 8 through it. */
-    const open = (draw: (k: number) => ReadonlyArray<number>): DrawnPicture => ({
+  describe('as drawn steady: every cell of the band, every channel', () => {
+    /** The open's nine frames, as `openFrames(30)` reads them, `t` of 1 through it. */
+    const open = (draw: (t: number) => ReadonlyArray<number>): DrawnPicture => ({
       area: BAND,
-      lumas: Arr.makeBy(openFrames(30).length, (k) => draw(k / 8)),
+      colours: Arr.makeBy(openFrames(30).length, (k) => draw(k / 8)),
     });
     /** A painted plate filling the band, pushed in about its centre to `zoom`. */
-    const plate = (zoom: number): ReadonlyArray<number> =>
-      Arr.makeBy(CELLS, (k) => {
+    const plate = (zoom: number) =>
+      band((k) => {
         const c = (k % BAND.cols) - BAND.cols / 2;
         const r = Math.floor(k / BAND.cols) - BAND.rows / 2;
-        return 128 + 60 * Math.sin((c * zoom) / 3) * Math.cos((r * zoom) / 3);
+        const v = 128 + 60 * Math.sin((c * zoom) / 3) * Math.cos((r * zoom) / 3);
+        return [v, v * 0.8, v * 0.6];
       });
-    /** The band with cell (`c`, `r`) changed by `by`. */
-    const touched = (c: number, r: number, by: number): ReadonlyArray<number> =>
-      Arr.makeBy(CELLS, (k) => 128 + by * Number(k === r * BAND.cols + c));
+    /** Teal paper with a cell (`c`, `r`) coloured `rgb`. */
+    const touched = (c: number, r: number, rgb: readonly [number, number, number]) =>
+      band((k): readonly [number, number, number] => {
+        if (k === r * BAND.cols + c) return rgb;
+        return [76, 126, 146];
+      });
     const nothing = Arr.makeBy(openFrames(30).length, () => frame());
-    /** A stroke 20 × 20 page px at (500, 845): cells 28 to 31 of rows 9 to 11 lie under its reach. */
-    const stroke: InkMark = {
+    /** A held diagonal stroke across most of the band: its box covers cells (10..50, 2..30). */
+    const diagonal: InkMark = {
       kind: 'stroke',
       scene: 'a',
       points: [
-        [500, 845],
-        [520, 865],
+        [170, 670],
+        [860, 1300],
       ],
-      width: 4,
-      x: 500,
-      y: 845,
-      w: 20,
-      h: 20,
+      width: 6,
+      x: 170,
+      y: 670,
+      w: 690,
+      h: 630,
       alpha: 1,
       order: 0,
       scale: 1,
     };
-    const inked = Arr.makeBy(openFrames(30).length, (): Probed => ({ texts: [], inks: [stroke] }));
+    const inked = Arr.makeBy(openFrames(30).length, (): Probed => ({
+      texts: [],
+      inks: [diagonal],
+    }));
+    /** Rust that slides from cell (`from`, row 20) to (`from` + 5, row 20). */
+    const slide = (from: number) =>
+      open((t) => touched(from + Math.round(5 * t), 20, [228, 93, 0]));
 
     test('a full-bleed painting the camera pushes in on, with no mark on it, moves', () => {
-      const push = open((t) => plate(1 + 0.02 * t));
-      expect(Option.isNone(stillOpen('cut', nothing, 0.5, push))).toBe(true);
-    });
-
-    test('the same painting held, its grain under half a luma a cell, is a still open', () => {
-      const grain = open((t) => plate(1).map((v, k) => v + 0.5 * Math.sin(k * 7 + t * 13)));
-      expect(Option.getOrThrow(stillOpen('cut', nothing, 0.5, grain)).reason).toBe('still open');
-    });
-
-    test('a picture that draws the same, whatever moves off the band or behind it, is a still open', () => {
-      const fixed = open(() => plate(1));
-      expect(Option.isSome(stillOpen('cut', nothing, 0.5, fixed))).toBe(true);
-    });
-
-    test("a mark's boil is the probe's to judge: its cells may change, the open holds", () => {
-      const boiled = open((t) => touched(30, 10, 40 * t));
-      expect(Option.isSome(stillOpen('cut', inked, 0.5, boiled))).toBe(true);
-      const edge = open((t) => touched(31, 11, 40 * t));
-      expect(Option.isSome(stillOpen('cut', inked, 0.5, edge))).toBe(true);
-    });
-
-    test('a rig moving in place where no mark lies moves past one step, not at it', () => {
-      const past = open((t) => touched(40, 10, (PICTURE_STEP + 1) * t));
-      expect(Option.isNone(stillOpen('cut', inked, 0.5, past))).toBe(true);
-      const at = open((t) => touched(40, 10, PICTURE_STEP * t));
-      expect(Option.isSome(stillOpen('cut', inked, 0.5, at))).toBe(true);
-      const beside = open((t) => touched(32, 10, (PICTURE_STEP + 1) * t));
-      expect(Option.isNone(stillOpen('cut', inked, 0.5, beside))).toBe(true);
-    });
-
-    test("a talk's caption line is the voice: its cells are its marks', not the picture", () => {
-      const talkArea: LumaArea = { x: 0, y: 0, w: 1080, h: 1920, ...SHORT_RULES.loopGrid };
-      const line = own(box('the law', 228, 1100, 660, 60));
-      const said = Arr.makeBy(openFrames(30).length, () => frame(line));
-      const highlight = {
-        area: talkArea,
-        lumas: Arr.makeBy(openFrames(30).length, (k) =>
-          Arr.makeBy(CELLS, (cell) => 128 + 30 * k * Number(cell === 20 * 64 + 25)),
+      expect(
+        Option.isNone(
+          stillOpen(
+            'cut',
+            nothing,
+            0.5,
+            open((t) => plate(1 + 0.02 * t)),
+          ),
         ),
-      };
-      expect(Option.isSome(stillOpen('why', said, 0.5, highlight))).toBe(true);
+      ).toBe(true);
+    });
+
+    test('the same painting held, drawn steady, is a still open', () => {
+      expect(
+        Option.getOrThrow(
+          stillOpen(
+            'cut',
+            nothing,
+            0.5,
+            open(() => plate(1)),
+          ),
+        ).reason,
+      ).toBe('still open');
+    });
+
+    test('a block moving beside a held diagonal, and inside its box, moves', () => {
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, slide(52)))).toBe(true);
+      expect(Option.isNone(stillOpen('cut', inked, 0.5, slide(20)))).toBe(true);
+      expect(
+        Option.isSome(
+          stillOpen(
+            'cut',
+            inked,
+            0.5,
+            open(() => plate(1)),
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    test('a hue that slides at one luma moves', () => {
+      const rust: readonly [number, number, number] = [228, 93, 0];
+      const luma = (rgb: readonly [number, number, number]) =>
+        0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+      expect(Math.abs(luma(rust) - luma([76, 126, 146]))).toBeLessThan(2);
+      expect(Option.isNone(stillOpen('cut', nothing, 0.5, slide(30)))).toBe(true);
+    });
+
+    test('a cell that changes past one step moves; at it, it holds', () => {
+      const by = (step: number) => open((t) => touched(40, 10, [76 + step * t, 126, 146]));
+      expect(Option.isNone(stillOpen('cut', nothing, 0.5, by(PICTURE_STEP + 1)))).toBe(true);
+      expect(Option.isSome(stillOpen('cut', nothing, 0.5, by(PICTURE_STEP)))).toBe(true);
     });
   });
 

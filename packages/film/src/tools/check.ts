@@ -1716,77 +1716,43 @@ export const heldStill = (frames: ReadonlyArray<Probed>): boolean => {
 };
 
 /**
- * Frames as their page draws them: each one's luma over `area` (`luma`), one
- * value per cell of its grid, in the order the frames were probed.
+ * Frames as their page draws them steady (`steady`: no captions, every line
+ * and the grain on one boil tick), each one's mean colour over `area`, red,
+ * green and blue for each cell of its grid, in the order the frames were
+ * probed.
  */
 export interface DrawnPicture {
   readonly area: LumaArea;
-  readonly lumas: ReadonlyArray<ReadonlyArray<number>>;
+  readonly colours: ReadonlyArray<ReadonlyArray<number>>;
 }
 
 /**
- * The luma step (0–255) past which a cell clear of every probed mark moved.
- * A cell of the 64 × 36 grid the checks read (`SHORT_RULES.loopGrid`) is the
- * mean of a few hundred pixels (about 17 × 22 px of a 1080 px band, 30 × 30 of
- * a 1920 px frame), so the paper's grain, laid anew each boil tick at 3 %
- * opacity (a few luma a pixel), averages to well under one luma there; 6
- * (2.4 %) is about the least change of a mid-tone a viewer notices, and twelve
- * times the half luma an 8-bit read rounds by.
+ * The step (0–255) in a cell's mean red, green or blue past which the picture
+ * there moved. Drawn steady, a picture that does not move draws the same
+ * pixels frame after frame (its boil and grain pinned to one tick, its
+ * captions off), and the cells are exact sums of them, so the step need only
+ * sit above nothing; 2 is what an edge of contrast 34 (a step a viewer sees)
+ * leaves in a cell 22 px tall of the 64 × 36 grid of a 1080 px band
+ * (`SHORT_RULES.loopGrid`, about 17 × 22 px a cell) when it moves 1 px.
+ * Each channel is held on its own, so a hue that moves at one luma moves.
  */
-export const PICTURE_STEP = 6;
+export const PICTURE_STEP = 2;
 
-/**
- * Page px a probed mark is grown by before it covers a cell: what its boil
- * moves its box (`STILL_DRIFT` of its own units) and a pixel of edge.
- */
-const markReach = (scale: number) => STILL_DRIFT * scale + 1;
-
-/** The cells of a grid of `count` cells of `size` from `origin` that the span `[lo, hi]` touches. */
-const cellSpan = (lo: number, hi: number, origin: number, size: number, count: number) => ({
-  from: Math.max(0, Math.floor((lo - origin) / size)),
-  to: Math.min(count - 1, Math.floor((hi - origin) / size)),
-});
-
-/**
- * Which cells of `area`'s grid lie clear of every text and ink mark the
- * frames probed (the caption's too), each grown by its boil's reach and half
- * a cell (the resize's footprint). Ink is judged by the probe, which knows
- * its boil; a clear cell holds only what the probe does not see (a painting,
- * a camera on it, a rig, the paper), so a change there is the picture moving.
- */
-const clearCells = (frames: ReadonlyArray<Probed>, area: LumaArea): ReadonlyArray<boolean> => {
-  const cw = area.w / area.cols;
-  const ch = area.h / area.rows;
-  const clear = Arr.makeBy(area.cols * area.rows, () => true);
-  for (const m of frames.flatMap((p) => [...p.texts, ...p.inks])) {
-    const grow = markReach(m.scale);
-    const cols = cellSpan(m.x - grow - cw / 2, m.x + m.w + grow + cw / 2, area.x, cw, area.cols);
-    const rows = cellSpan(m.y - grow - ch / 2, m.y + m.h + grow + ch / 2, area.y, ch, area.rows);
-    for (let r = rows.from; r <= rows.to; r++)
-      for (let c = cols.from; c <= cols.to; c++) clear[r * area.cols + c] = false;
-  }
-  return clear;
-};
-
-/** Some cell clear of every probed mark changed by more than `PICTURE_STEP` from the first frame's. */
-export const pictureMoved = (frames: ReadonlyArray<Probed>, picture: DrawnPicture): boolean =>
-  Option.match(Arr.head(picture.lumas), {
+/** Some cell's mean red, green or blue changed by more than `PICTURE_STEP` from the first frame's. */
+export const pictureMoved = (picture: DrawnPicture): boolean =>
+  Option.match(Arr.head(picture.colours), {
     onNone: () => false,
-    onSome: (first) => {
-      const clear = clearCells(frames, picture.area);
-      return picture.lumas
+    onSome: (first) =>
+      picture.colours
         .slice(1)
-        .some((grid) =>
-          clear.some((c, k) => c && Math.abs((grid[k] ?? 0) - (first[k] ?? 0)) > PICTURE_STEP),
-        );
-    },
+        .some((grid) => grid.some((v, k) => Math.abs(v - (first[k] ?? v)) > PICTURE_STEP)),
   });
 
 /**
  * Whether frames hold still as a viewer sees them: their probed marks at rest
  * but for their boil, over the same footage frames (`heldStill`), and their
- * drawn picture unchanged where no mark lies (`pictureMoved`: what the probe
- * cannot see, a painting, a camera pushing on it, a rig moving in place).
+ * steady drawn picture unchanged everywhere (`pictureMoved`: a painting, a
+ * camera pushing on it, a rig moving in place, ink moving, a hue sliding).
  */
 export const framesHeld = (frames: ReadonlyArray<Probed>, picture: DrawnPicture): boolean =>
-  heldStill(frames) && !pictureMoved(frames, picture);
+  heldStill(frames) && !pictureMoved(picture);

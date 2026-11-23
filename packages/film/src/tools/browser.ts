@@ -53,6 +53,7 @@ export interface CallErrors {
   readonly contact: ContactFailed;
   readonly look: FrameFailed;
   readonly luma: FrameFailed;
+  readonly steady: FrameFailed;
   readonly drawTimes: FrameFailed;
   readonly scenes: FrameFailed;
   readonly still: FrameFailed;
@@ -94,6 +95,10 @@ const CALLS: CallPolicies = {
   contact: { timeout: SHEET_TIMEOUT, fail: (_, reason) => ContactFailed.make({ reason }) },
   look: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   luma: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
+  steady: {
+    timeout: FRAME_TIMEOUT,
+    fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
+  },
   drawTimes: { timeout: SHEET_TIMEOUT, fail: batchFailed },
   scenes: { timeout: FRAME_TIMEOUT, fail: (_, reason) => FrameFailed.make({ frame: 0, reason }) },
   still: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
@@ -181,6 +186,32 @@ export const lumaOf = (page: FramePage, i: number, area: LumaArea) =>
     .pipe(
       Effect.flatMap((cells) =>
         Schema.decodeEffect(lumaGrid(area))(cells).pipe(
+          Effect.mapError((error) => FrameFailed.make({ frame: i, reason: error.message })),
+        ),
+      ),
+    );
+
+/**
+ * A steady frame's colours as a page hands them back: red, green and blue
+ * for each cell of `area`'s grid; an empty or short read is refused, so
+ * motion is never judged on nothing.
+ */
+export const colourGrid = (area: LumaArea) =>
+  Schema.Array(Schema.Finite).check(
+    Schema.makeFilter(
+      (cells) =>
+        cells.length === 3 * area.cols * area.rows ||
+        `${cells.length} colour values for a ${area.cols}×${area.rows} grid`,
+    ),
+  );
+
+/** Frame `i` drawn steady on `page` (`steady`): each cell of `area`'s grid's mean colour (`colourGrid`). */
+export const steadyOf = (page: FramePage, i: number, area: LumaArea) =>
+  page
+    .call('steady', i, area)
+    .pipe(
+      Effect.flatMap((cells) =>
+        Schema.decodeEffect(colourGrid(area))(cells).pipe(
           Effect.mapError((error) => FrameFailed.make({ frame: i, reason: error.message })),
         ),
       ),

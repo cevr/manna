@@ -163,6 +163,11 @@ export interface FakeRenderHost {
   readonly looked?: (i: number) => FakeLook;
   /** The luma every sample of frame `i`'s `area` reads, as `luma` reports it (default 128). */
   readonly luma?: (i: number, area: LumaArea) => number;
+  /**
+   * Frame `i` drawn steady: each cell of `area`'s grid's red, green and blue,
+   * as `steady` reports them (every value 128 by default: nothing moves).
+   */
+  readonly steady?: (i: number, area: LumaArea) => ReadonlyArray<number>;
   /** The scenes the page reports (`scenes`, a look's clocks; none by default). */
   readonly scenes?: ReadonlyArray<SceneTimes>;
   /** What page `page`'s `scenes` waits on before it answers (nothing by default): a page still opening. */
@@ -204,6 +209,12 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
     faces: [],
   }));
   const luma = Option.getOrElse(Option.fromNullishOr(host.luma), () => () => 128);
+  const steady = Option.getOrElse(
+    Option.fromNullishOr(host.steady),
+    () =>
+      (_: number, area: LumaArea): ReadonlyArray<number> =>
+        Arr.makeBy(3 * area.cols * area.rows, () => 128),
+  );
   const scenes = Option.getOrElse(
     Option.fromNullishOr(host.scenes),
     (): ReadonlyArray<SceneTimes> => [],
@@ -300,6 +311,7 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
           frame(i),
           Array.from({ length: area.cols * area.rows }, () => luma(i, area)),
         ),
+      steady: (i, area) => Effect.as(frame(i), steady(i, area)),
       drawTimes: (frames) => Effect.forEach(frames, (i) => Effect.as(frame(i), 1)),
       scenes: () => Effect.as(opening(page), scenes),
       still: (i, view) =>

@@ -133,6 +133,7 @@ export const createShort = (film: Film, declared: Short): Film => {
     const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };
     bandOptions.knobs = opts.knobs;
     bandOptions.probe = probed;
+    bandOptions.boil = opts.boil;
     film.render(frame.ctx, at, bandOptions);
 
     ctx.save();
@@ -151,7 +152,7 @@ export const createShort = (film: Film, declared: Short): Film => {
       page.width,
       page.height - below,
     );
-    const boil = boilTick(T);
+    const boil = opts.boil ?? boilTick(T);
     grainRect(ctx, grain, boil, 0, 0, page.width, band.top, finish.grain);
     grainRect(
       ctx,
