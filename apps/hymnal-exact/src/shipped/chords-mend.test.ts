@@ -128,17 +128,18 @@ const screen = () => {
   const gate = chordsFirstUse(book, loader, sourcesAt(ORIGIN, [], loader.kept));
   const reads: Array<string> = [];
   const failing = new Map<string, number>();
+  const holding = new Map<string, Promise<void>>();
   const native = {
     available: true,
-    later: (request: Readonly<Record<string, string | number>>) => {
+    later: async (request: Readonly<Record<string, string | number>>) => {
       const n = String(request['n']);
       reads.push(n);
       const left = failing.get(n) ?? 0;
       failing.set(n, left - 1);
+      await holding.get(n);
       const text = encoded.get(Number(n));
-      return left > 0 || text === undefined
-        ? Promise.reject(new Error('offline'))
-        : Promise.resolve({ text });
+      if (left > 0 || text === undefined) throw new Error('offline');
+      return { text };
     },
   };
   const refused = {
@@ -198,6 +199,7 @@ const screen = () => {
   return {
     at,
     failing,
+    holding,
     gate,
     call,
     settle,
@@ -291,6 +293,24 @@ describe('a hymn whose chords failed to load', () => {
         expect(stepping).toBeInstanceOf(Promise);
         expect(await stepping).toEqual(all.keysStep(step));
         expect(view.gate.keysStep(step, ...view.call)).toEqual(all.keysStep(step));
+      }),
+    );
+  });
+
+  it('ends in the key and capo it was moved to while its one read was still out, the dial and the shape with it', async () => {
+    await Promise.all(
+      ['2:0', '0:3', '-3:2'].map(async (move) => {
+        const view = screen();
+        const release = Promise.withResolvers<void>();
+        view.holding.set(n, release.promise);
+        const shown = view.show(n, [before, n, after]);
+        const moved = view.turn({ on: true, moves: [`${n}:${move}`] });
+        release.resolve();
+        await Promise.all([shown, moved]);
+        expect(view.stale()).toEqual([]);
+        expect(view.readsOf(n)).toBe(1);
+        const page = all.chordsPage([n, true, [`${n}:${move}`]]);
+        expect([page.transpose, page.capo]).toEqual(move.split(':').map(Number));
       }),
     );
   });
