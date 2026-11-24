@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAsyncFunction, effect/noNewError, effect/noNewPromise, effect/noNullish, effect/noUnsafeDictionaryType, effect/noAs -- a host tool that opens Chrome through Playwright on a profile folder and speaks the DevTools protocol on Playwright's own session to its page, whose messages' parameters are each method's own JSON; no Exact driver is attached, and it never runs in a data module. */
+/* oxlint-disable effect/noNewError, effect/noUnsafeDictionaryType -- a host tool that opens Chrome through Playwright on a profile folder and speaks the DevTools protocol on Playwright's own session to its page, whose messages' parameters are each method's own JSON; no Exact driver is attached, and it never runs in a data module. */
 
 /**
  * The browser of a port's web drive, with no Exact driver attached:
@@ -34,7 +34,7 @@ type Listener = (params: Record<string, unknown>) => void;
 export const CALL_MS = 30_000;
 
 /** The size of a phone held upright, the page's viewport. */
-export const VIEWPORT = { width: 430, height: 932 } as const;
+const VIEWPORT = { width: 430, height: 932 } as const;
 
 /** `call`, rejected naming `what` when it has not settled in `CALL_MS`. */
 const bounded = <T>(what: string, call: Promise<T>): Promise<T> => {
