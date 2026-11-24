@@ -109,7 +109,36 @@ describe('the shipped reader', () => {
     await expect(readerOf('chords', undefined, undefined)('3')).rejects.toThrow();
   });
 
-  it("reads iOS's bundled file once its module answers no such op, and then asks the module no more", async () => {
+  it('sends a web read the page module fails to no storage, the first one too, and asks the module again next', async () => {
+    const files: Array<string> = [];
+    const storage = {
+      fs: {
+        readFile: (path: string) => {
+          files.push(path);
+          return Promise.reject(new Error('the web reads no app files'));
+        },
+      },
+    };
+    const answers = ['offline', 'ok', 'offline'];
+    const requests: Array<unknown> = [];
+    const native = {
+      available: true,
+      later: (request: Readonly<Record<string, string | number>>) => {
+        requests.push(request);
+        return answers.shift() === 'ok'
+          ? Promise.resolve({ text: 'from the page' })
+          : Promise.reject(new Error('the module artifact chords/9.js did not load'));
+      },
+    };
+    const read = readerOf('chords', storage, native);
+    await expect(read('9')).rejects.toThrow('did not load');
+    expect(await read('9')).toBe('from the page');
+    await expect(read('9')).rejects.toThrow('did not load');
+    expect(requests).toHaveLength(3);
+    expect(files).toEqual([]);
+  });
+
+  it("reads iOS's bundled file once its module answers no such op, and asks the module no more for that op", async () => {
     const paths: Array<string> = [];
     const storage = {
       fs: {
@@ -128,8 +157,61 @@ describe('the shipped reader', () => {
       },
     };
     expect(await readerOf('chords', storage, native)('5')).toBe('file 5');
+    expect(await readerOf('chords', storage, native)('6')).toBe('file 6');
     expect(await readerOf('indexes', storage, native)('all')).toBe('file all');
-    expect(requests).toEqual([{ op: 'chords.read', n: '5' }]);
-    expect(paths).toEqual([`${rootOf('chords')}/5`, `${rootOf('indexes')}/all`]);
+    expect(requests).toEqual([
+      { op: 'chords.read', n: '5' },
+      { op: 'indexes.read', n: 'all' },
+    ]);
+    expect(paths).toEqual([
+      `${rootOf('chords')}/5`,
+      `${rootOf('chords')}/6`,
+      `${rootOf('indexes')}/all`,
+    ]);
+  });
+
+  it('keeps one op unanswered without moving another op of the same module, or another module, to the bundle', async () => {
+    const storage = { fs: { readFile: () => Promise.resolve(bytes('from the bundle')) } };
+    const answered = new Set<string>();
+    const native = {
+      available: true,
+      later: (request: Readonly<Record<string, string | number>>) =>
+        answered.has(String(request['op']))
+          ? Promise.resolve({ text: 'from the module' })
+          : Promise.reject(new Error(`Hymnal answers no op ${request['op']}`)),
+    };
+    expect(await readerOf('chords', storage, native)('1')).toBe('from the bundle');
+    answered.add('indexes.read');
+    expect(await readerOf('indexes', storage, native)('all')).toBe('from the module');
+    answered.add('chords.read');
+    expect(await readerOf('chords', storage, native)('2')).toBe('from the bundle');
+    const other = { ...native };
+    expect(await readerOf('chords', storage, other)('2')).toBe('from the module');
+  });
+
+  it("reads the bundle for each of two first reads asked together, both meeting the module's refusal", async () => {
+    const paths: Array<string> = [];
+    const storage = {
+      fs: {
+        readFile: (path: string) => {
+          paths.push(path);
+          return Promise.resolve(bytes(`file ${path.split('/').at(-1)}`));
+        },
+      },
+    };
+    let asked = 0;
+    const native = {
+      available: true,
+      later: (request: Readonly<Record<string, string | number>>) => {
+        asked += 1;
+        return Promise.reject(new Error(`Hymnal answers no op ${request['op']}`));
+      },
+    };
+    const read = readerOf('chords', storage, native);
+    expect(await Promise.all([read('7'), read('8')])).toEqual(['file 7', 'file 8']);
+    expect(asked).toBe(2);
+    expect(await read('9')).toBe('file 9');
+    expect(asked).toBe(2);
+    expect(paths).toHaveLength(3);
   });
 });

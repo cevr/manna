@@ -20,22 +20,31 @@ export type ReadShipped = (name: string) => Promise<string>;
 /** Where the iOS app ships `folder`: `app.json` puts the folder `<folder>/` at `Resources/<folder>`. */
 export const rootOf = (folder: string): string => `bundle:/Resources/${folder}`;
 
-/** Whether each app module reads the shipped files (the web's page module), once a read has said; unknown before. */
-const byModule = new WeakMap<AppModule, boolean>();
+/**
+ * How the app's own modules refuse an op none of their parts answers
+ * (`modules/apple/Hymnal.swift`, `modules/web/index.js`: "Hymnal answers no
+ * op <op>"), told apart from a read of an op they answer that failed (a
+ * file that did not load). `src/shipped/unanswered.test.ts` holds both
+ * modules to it.
+ */
+export const UNANSWERED = /answers no op/u;
+
+/** The ops each app module has said it answers no read for, so their reads go to the bundle alone. */
+const unanswered = new WeakMap<AppModule, Set<string>>();
 
 /**
  * A read of `folder`'s files through a source's `storage` and `native`. The
- * web's page module answers `<folder>.read` (`native.later`) by importing
- * the module shipped beside it (`modules/web/<folder>/<name>.js`, written by
- * `files.ts`), so the web never asks Exact's storage first, which refuses
- * a read of the app's files there, and the module's answer waits on no
- * refusal. The iOS app's module answers no such op
- * (`modules/apple/Hymnal.swift` refuses it at once, the launch's one
- * extra call), and the app reads the file it ships
- * (`bundle:/Resources/<folder>/<name>`, `app.json` `host.ios.resources`);
- * once such a read has landed, every read goes there alone. Once the page
- * module has answered one, a read it fails (a file that did not load) is
- * refused, never sent to the storage.
+ * app's module is asked first: the web's page module answers
+ * `<folder>.read` (`native.later`) by importing the module shipped beside
+ * it (`modules/web/<folder>/<name>.js`, written by `files.ts`), and a read
+ * it fails is refused, never sent to Exact's storage, which refuses a read
+ * of the app's files on the web. Only the module's own refusal of the op
+ * (`UNANSWERED`) sends a read to the bundle: the iOS app's module answers no
+ * such op, and the app reads the file it ships
+ * (`bundle:/Resources/<folder>/<name>`, `app.json` `host.ios.resources`).
+ * That refusal is kept for its module and op, so every later read of that
+ * op goes to the bundle alone; reads asked together before the first
+ * refusal lands each meet the same refusal and each read the bundle.
  */
 export const readerOf =
   (
@@ -44,25 +53,24 @@ export const readerOf =
     native: AppModule | null | undefined,
   ): ReadShipped =>
   async (name) => {
+    const op = `${folder}.read`;
     const fromFiles = async () => {
       if (storage?.fs === undefined) throw new Error(`no files to read ${folder}/${name} from`);
       return new TextDecoder().decode(await storage.fs.readFile(`${rootOf(folder)}/${name}`));
     };
-    if (native?.available !== true || byModule.get(native) === false) return fromFiles();
+    if (native?.available !== true || unanswered.get(native)?.has(op) === true) return fromFiles();
     try {
-      const answer = await native.later({ op: `${folder}.read`, n: name });
+      const answer = await native.later({ op, n: name });
       if (typeof answer !== 'object' || answer === null || !('text' in answer))
         throw new Error(`the module answered no text for ${folder}/${name}`);
       if (typeof answer.text !== 'string')
         throw new Error(`the module answered no text for ${folder}/${name}`);
-      byModule.set(native, true);
       return answer.text;
     } catch (refused) {
-      if (byModule.get(native) === true) throw refused;
-      const text = await fromFiles().catch(() => undefined);
-      if (text === undefined) throw refused;
-      byModule.set(native, false);
-      return text;
+      if (!(refused instanceof Error) || !UNANSWERED.test(refused.message)) throw refused;
+      const ops = unanswered.get(native) ?? new Set<string>();
+      unanswered.set(native, ops.add(op));
+      return fromFiles();
     }
   };
 
