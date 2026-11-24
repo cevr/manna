@@ -23,17 +23,28 @@ const nodesOf = (node: Node): ReadonlyArray<Node> =>
     return [child, ...nodesOf(child)];
   });
 
-/** How many process starts the rule reports in `source`, run on the parser's tree as oxlint walks it. */
-const reportsIn = (source: string) => {
-  const nodes = nodesOf(parseSync('drive.ts', source).program);
+/** The node kinds the rule visits. */
+const VISITED = new Set([
+  'CallExpression',
+  'TaggedTemplateExpression',
+  'ImportDeclaration',
+  'ImportExpression',
+]);
+
+/** The rule's reports in `source`, run on the parser's tree as oxlint walks it, by the kind of node each names. */
+const reportedIn = (source: string) => {
+  const nodes = nodesOf(parseSync('drive.ts', source).program).filter((node) =>
+    VISITED.has(node.type),
+  );
   return Testing.runRuleMulti(
     noBrowserSpawn,
-    nodes
-      .filter((node) => node.type === 'CallExpression' || node.type === 'TaggedTemplateExpression')
-      .map((node) => [node.type, node] as const),
+    nodes.map((node) => [node.type, node] as const),
     { filename: 'drive.ts', sourceText: source },
-  ).length;
+  );
 };
+
+/** How many reports the rule makes in `source`. */
+const reportsIn = (source: string) => reportedIn(source).length;
 
 describe('manna/no-browser-spawn', () => {
   test.each([
@@ -60,7 +71,49 @@ describe('manna/no-browser-spawn', () => {
     ["spawn(['git', 'show', 'HEAD:apps/hymnal-exact/tools/web/browser.txt'])"],
     ['$`bun test ./src`'],
     ["page.evaluate('document.title')"],
+    [
+      "import { chromium } from '@playwright/test'; const context = await chromium.launchPersistentContext(profile, { headless: true });",
+    ],
+    [
+      "import * as pw from '@playwright/test'; const browser = await pw.chromium.launch({ headless: true }); await browser.close();",
+    ],
+    ['const app = await launch(appDir); server.connect(port); webdriver.remote(url)'],
   ])('a process on no browser, or Playwright starting its own, is not reported: %s', (source) => {
     expect(reportsIn(source)).toBe(0);
+  });
+
+  test.each([
+    [
+      "import puppeteer from 'puppeteer-core'; await puppeteer.launch({ executablePath: path, headless: true });",
+      2,
+    ],
+    [
+      "import * as driver from 'puppeteer'; const browser = await driver.launch({ headless: true });",
+      2,
+    ],
+    ["import { launch as go } from 'puppeteer-core'; await go({ headless: true });", 2],
+    ["import { launch } from 'chrome-launcher'; await launch({ chromeFlags: [] });", 2],
+    ["const puppeteer = require('puppeteer'); puppeteer.connect({ browserURL: url });", 2],
+    ["const { launch: start } = await import('puppeteer'); await start();", 2],
+    ["await (await import('puppeteer-core')).default.launch({ headless: true });", 2],
+    ["import { remote } from 'webdriverio'; await remote({ capabilities });", 2],
+    ["import { Builder } from 'selenium-webdriver'; new Builder().forBrowser('chrome');", 1],
+    ["import type { Browser } from 'puppeteer-core/lib/types';", 1],
+  ])(
+    'a browser driver other than Playwright is reported, its import and each launch bound to it: %s',
+    (source, reports) => {
+      expect(reportsIn(source)).toBe(reports);
+    },
+  );
+
+  test('a Puppeteer launch is reported at the launch call itself, aliased or namespaced', () => {
+    const launches = reportedIn(
+      "import * as driver from 'puppeteer-core'; import p from 'puppeteer'; await driver.launch({}); await p.launch({});",
+    ).filter((report) =>
+      Option.fromNullishOr(report.diagnostic.node).pipe(
+        Option.exists((node) => Reflect.get(node, 'type') === 'CallExpression'),
+      ),
+    );
+    expect(launches).toHaveLength(2);
   });
 });
