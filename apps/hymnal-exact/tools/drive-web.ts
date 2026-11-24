@@ -936,7 +936,7 @@ const returning = async () => {
   mark('close the browser');
   const closed = await first.close();
   check(
-    "the browser closed as a person closes it (Playwright's close: Browser.close), not stopped",
+    'the browser closed as a person closes it: the close succeeded and Chrome then wrote its clean exit (Normal) to the profile, not refused, killed or late',
     closed === 'closed',
     closed,
   );

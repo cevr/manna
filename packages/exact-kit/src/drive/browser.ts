@@ -16,7 +16,9 @@
  * cleared, a file blocked, held or failed (`Fetch`, which leaves the HTTP
  * cache on, where `page.route` turns it off), and script turned off.
  * `close` closes the context, which asks Chrome to close (`Browser.close`),
- * so it writes what it holds to the profile as a person's closing it does.
+ * so it writes what it holds to the profile as a person's closing it does,
+ * and answers `closed` only when Chrome recorded that clean exit
+ * (`close.ts`).
  * A call the browser does not answer in `CALL_MS` rejects with its method
  * named, so a dead or stuck browser fails the drive instead of hanging it.
  * It lives here, outside the app folders, because Exact's type check stages
@@ -27,6 +29,10 @@
 import { rmSync } from 'node:fs';
 
 import { type BrowserContext, type Page as PlaywrightPage, chromium } from '@playwright/test';
+
+import { type Closed, cleanExitSince, closeOutcome } from './close.ts';
+
+export type { Closed } from './close.ts';
 
 type Listener = (params: Record<string, unknown>) => void;
 
@@ -66,8 +72,8 @@ export interface Browser {
   readonly page: Page;
   /** The browser's version, as Playwright reports it. */
   readonly version: string;
-  /** `closed` when the browser closed within 10 s of being asked, else `stopped`: Playwright stops it at the drive's exit. */
-  readonly close: () => Promise<'closed' | 'stopped'>;
+  /** How the browser's close went (`closeOutcome`); one not `closed` is stopped by Playwright at the drive's exit. */
+  readonly close: () => Promise<Closed>;
 }
 
 /** The browser on `profile` (made fresh when `fresh`), with one page open on `about:blank` and the page's `Page` and `Network` domains on. */
@@ -109,16 +115,12 @@ export const launchBrowser = async (profile: string, fresh: boolean): Promise<Br
   };
   await Promise.all(['Page.enable', 'Network.enable'].map((method) => page.send(method)));
   const version = context.browser()?.version() ?? 'unknown';
-  const close = async (): Promise<'closed' | 'stopped'> => {
-    const ended = await Promise.race([
-      context.close().then(
-        () => true,
-        () => true,
-      ),
-      Bun.sleep(10_000).then(() => false),
-    ]);
-    if (ended) return 'closed';
-    return 'stopped';
+  const close = () => {
+    const asked = Math.floor(Date.now());
+    return closeOutcome(
+      () => context.close(),
+      () => cleanExitSince(profile, asked - 1),
+    );
   };
   return { page, version, close };
 };
