@@ -77,10 +77,15 @@ const only = (measured: Measured, keep: (name: string) => boolean): Measured =>
     ]),
   );
 
-/** Every page and name a measure holds, as `<page> <name>`, sorted. */
+/**
+ * Every page a measure holds, as `<page>:`, and every name under it, as
+ * `<page> <name>`, sorted: a page counts whether or not it holds a value,
+ * so a run with an extra page that measured nothing differs from one
+ * without it.
+ */
 export const entriesOf = (measured: Measured): ReadonlyArray<string> =>
   Object.entries(measured)
-    .flatMap(([key, values]) => Object.keys(values).map((name) => `${key} ${name}`))
+    .flatMap(([key, values]) => [`${key}:`, ...Object.keys(values).map((name) => `${key} ${name}`)])
     .toSorted();
 
 /**

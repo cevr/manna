@@ -116,6 +116,8 @@ describe('the web budget', () => {
       ],
       ['a page less', { load: 2, measured: { '/ cold': page } }],
       ['a page more', { load: 2, measured: { '/ cold': page, '/ warm': page, '/x': page } }],
+      ['an empty page more', { load: 2, measured: { '/ cold': page, '/ warm': page, '/x': {} } }],
+      ['a page emptied', { load: 2, measured: { '/ cold': page, '/ warm': {} } }],
     ];
     /** Every order of `runs`. */
     const orders = (runs: ReadonlyArray<Run>): ReadonlyArray<ReadonlyArray<Run>> => {
