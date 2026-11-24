@@ -98,12 +98,103 @@ const spawns = (call: ESTree.CallExpression) =>
     onSome: (name) => SPAWNERS.has(name),
   });
 
+const DRIVER_MESSAGE =
+  'a browser driver other than Playwright (Puppeteer, chrome-launcher, Selenium, WebdriverIO) starts its own Chrome: no tool of ours does (owner, 2026-11-23: "stop using chrome and use a real testing framework"). Drive the page through Playwright (`chromium.launch`, `chromium.launchPersistentContext`), or through Exact\'s own verbs.';
+
+/** The packages that start or drive a browser of their own, Playwright aside. */
+const DRIVERS = /^(?:puppeteer(?:-core)?|chrome-launcher|selenium-webdriver|webdriverio)(?:\/|$)/u;
+
+/** The calls on a driver that start or reach a browser: Puppeteer's and chrome-launcher's `launch`, Puppeteer's `connect`, WebdriverIO's `remote`. */
+const LAUNCHES = new Set(['launch', 'connect', 'remote']);
+
+/** Whether `node` is a string naming a browser driver's package. */
+const namesDriver = (node: ESTree.Node): boolean =>
+  node.type === 'Literal' && Predicate.isString(node.value) && DRIVERS.test(node.value);
+
+/** Whether `node` is `require('<driver>')`. */
+const requiresDriver = (node: ESTree.Node): boolean =>
+  node.type === 'CallExpression' &&
+  node.callee.type === 'Identifier' &&
+  node.callee.name === 'require' &&
+  node.arguments.slice(0, 1).some(namesDriver);
+
+/** Whether `node` yields a driver's module: `require('<driver>')`, `import('<driver>')`, either awaited, or its `.default`. */
+const driverModule = (node: ESTree.Node): boolean => {
+  if (node.type === 'AwaitExpression') return driverModule(node.argument);
+  if (node.type === 'ParenthesizedExpression') return driverModule(node.expression);
+  if (node.type === 'ImportExpression') return namesDriver(node.source);
+  if (node.type === 'MemberExpression' && node.property.type === 'Identifier')
+    return node.property.name === 'default' && driverModule(node.object);
+  return requiresDriver(node);
+};
+
+/** The name an import specifier takes from its module: `*` for the default or the namespace. */
+const importedName = (specifier: ESTree.Node): string => {
+  if (specifier.type !== 'ImportSpecifier') return '*';
+  if (specifier.imported.type === 'Identifier') return specifier.imported.name;
+  return String(specifier.imported.value);
+};
+
+/** A statement's imports of a driver: each local name with the name it takes from the module. */
+const importBindings = (statement: ESTree.Node): ReadonlyArray<readonly [string, string]> => {
+  if (statement.type !== 'ImportDeclaration' || !namesDriver(statement.source)) return [];
+  return statement.specifiers.map((specifier) => [specifier.local.name, importedName(specifier)]);
+};
+
+/** The names a destructuring pattern binds, each with the property it takes. */
+const patternBindings = (pattern: ESTree.Node): ReadonlyArray<readonly [string, string]> => {
+  if (pattern.type === 'Identifier') return [[pattern.name, '*']];
+  if (pattern.type !== 'ObjectPattern') return [];
+  return pattern.properties.flatMap((property) => {
+    if (property.type !== 'Property') return [];
+    if (property.key.type !== 'Identifier' || property.value.type !== 'Identifier') return [];
+    return [[property.value.name, property.key.name] as const];
+  });
+};
+
+/** A statement's `const … = require('<driver>')` or `await import('<driver>')` bindings. */
+const requireBindings = (statement: ESTree.Node): ReadonlyArray<readonly [string, string]> =>
+  Option.toArray(declared(statement)).flatMap((declaration) => {
+    if (declaration.type !== 'VariableDeclaration') return [];
+    return declaration.declarations.flatMap((declarator) =>
+      Option.fromNullishOr(declarator.init).pipe(
+        Option.filter(driverModule),
+        Option.match({ onNone: () => [], onSome: () => patternBindings(declarator.id) }),
+      ),
+    );
+  });
+
+/** The program's names bound to a driver's module (`*`) or to one of its exports (that export's name), by local name. */
+const driverBindings = (program: ESTree.Node): ReadonlyMap<string, string> => {
+  if (program.type !== 'Program') return new Map();
+  return new Map(
+    program.body.flatMap((statement) => [
+      ...importBindings(statement),
+      ...requireBindings(statement),
+    ]),
+  );
+};
+
+/** Whether a call launches a driver's browser: a bound launch export called (`launch()`, `go()` for `{ launch as go }`), or a launch on the module or its binding (`puppeteer.launch()`, `(await import('puppeteer')).launch()`). */
+const launchesDriver = (call: ESTree.CallExpression): boolean => {
+  if (requiresDriver(call)) return true;
+  const bound = driverBindings(programOf(call));
+  const callee = call.callee;
+  if (callee.type === 'Identifier') return LAUNCHES.has(bound.get(callee.name) ?? '');
+  if (callee.type !== 'MemberExpression' || callee.property.type !== 'Identifier') return false;
+  if (!LAUNCHES.has(callee.property.name)) return false;
+  if (callee.object.type === 'Identifier') return bound.get(callee.object.name) === '*';
+  return driverModule(callee.object);
+};
+
 /**
  * A process start whose command names a browser: a spawner's argument (its
  * command list or string, never its options object) holding a browser's
  * name or flag as text (`'Google Chrome for Testing'`, `'--headless=new'`,
  * `` `--remote-debugging-port=${port}` ``) or a value or call named for one
  * (`chromePath()`, `CHROME`), and Bun's shell (`` $`…` ``) doing the same.
+ * A browser driver other than Playwright is refused whole: its import
+ * (static, dynamic or `require`) and every launch bound to it, however named.
  */
 export const noBrowserSpawn = Rule.define({
   name: 'no-browser-spawn',
@@ -116,9 +207,24 @@ export const noBrowserSpawn = Rule.define({
     const context = yield* RuleContext;
     const report = (node: ESTree.Node) =>
       context.report(Diagnostic.make({ node, message: MESSAGE }));
+    const refuse = (node: ESTree.Node) =>
+      context.report(Diagnostic.make({ node, message: DRIVER_MESSAGE }));
     return Visitor.merge(
+      Visitor.on('ImportDeclaration', (node) =>
+        Effect.suspend(() => {
+          if (!namesDriver(node.source)) return Effect.void;
+          return refuse(node);
+        }),
+      ),
+      Visitor.on('ImportExpression', (node) =>
+        Effect.suspend(() => {
+          if (!namesDriver(node.source)) return Effect.void;
+          return refuse(node);
+        }),
+      ),
       Visitor.on('CallExpression', (node) =>
         Effect.suspend(() => {
+          if (launchesDriver(node)) return refuse(node);
           if (!spawns(node)) return Effect.void;
           const command = node.arguments.filter((argument) => argument.type !== 'ObjectExpression');
           if (!command.some((word) => namesBrowser(word))) return Effect.void;
