@@ -89,3 +89,4 @@ ea3952b5378f merge: apps/hymnal/package.json's exports lines of both sides kept 
 51c9a51059cb exports: src/player/bar.ts's SHEETS gains `export` (and its declaration in exact/player/bar.d.ts), for the port's player-paths check; same value, no behaviour change
 382e0fe21c93 refactor: src/hymns/indexes.ts's types and lookupsOf move unchanged into lookups.ts, search.ts's rules into search-rules.ts (indexOf's bundled default and hymnIndex stay in search.ts, which re-exports them), and package.json exports both, for the port to read the indexes at run time; same values, no picture change
 5e504b2c3eed exports: src/hymns/lookups.ts re-exports passageText and passageQuery from passage-text.ts, for the port; no source changes, no picture change
+c847e494f0ee exports: package.json gains ./feel/voice and ./feel/feel, for the port's cue sounds and their model test; no source changes, no picture change
