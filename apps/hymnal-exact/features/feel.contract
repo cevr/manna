@@ -1,0 +1,82 @@
+// The Feel, as the current hymnal's (src/feel/feel.ts `feelOver`): each
+// cue a control tells is felt by its haptic and heard by its sound, the
+// body the current app gives it (src/feel/body.ts), while Sounds and haptics
+// is on, and nothing while it is off. The table is the data module's
+// (`feelRows`, src/feel/cues.ts): no call site names a haptic or a file.
+// A cue is told only from a touch's handler (the count-in's beat, Play's
+// result told in time, is the one exception). Two rules of the current
+// app's hold here: a tick's haptic (a dial's detent, the seeker's and the
+// rail's ticks) is felt no closer than its row's `floor` after the last
+// tick's, and a sound starts only once the last one has ended, so no two
+// ever ring at once. `feelGive` gives a body whatever the switch says: the
+// switch's own turn on is felt at once, as the current app's Settings does.
+// `feelTold` counts the bodies given and `feelLast` says the last (its cue,
+// the haptic played or `-`, the sound played or `-`), for the tests.
+sound "assets/feel/key-0.wav"
+sound "assets/feel/key-1.wav"
+sound "assets/feel/key-2.wav"
+sound "assets/feel/key-3.wav"
+sound "assets/feel/key-4.wav"
+sound "assets/feel/key-5.wav"
+sound "assets/feel/key-6.wav"
+sound "assets/feel/key-7.wav"
+sound "assets/feel/key-8.wav"
+sound "assets/feel/key-9.wav"
+sound "assets/feel/key-10.wav"
+sound "assets/feel/key-11.wav"
+sound "assets/feel/thock.wav"
+
+shape FeelRow
+  cue: string
+  haptic: string
+  floor: number
+  sounds: string[]
+  lengths: number[]
+  gain: number
+  group: string
+
+fn feelMod(n: number, by: number): number = ((n % by) + by) % by
+
+// The first stop a dial's scroll from stop `was` to stop `at` crosses (a
+// dial not yet placed, `was` -1, is at `at`). A scroll that crosses more
+// than one stop tells one cue, the first's, as the current app tells each:
+// its later detents fall inside the floor and the ringing sound.
+fn feelCrossed(was: number, at: number): number = was < 0 ? at : (at > was ? was + 1 : was - 1)
+
+members HymnalExact
+  resource feelTable = feelRows() as shape FeelRow[] else empty()
+  state feelTickAt = -1000000
+  state feelQuietAt = -1000000
+  state feelTold = 0
+  state feelLast = ""
+  action feelTell(cue: string, at: number)
+    if settingsFeel
+      feelGive(cue, at, 0)
+  // A cue whose sound is due at `due` on the runner's clock: the
+  // count-in's beat, told a frame ahead so its sound lands on the beat.
+  action feelTellAt(cue: string, at: number, due: number)
+    if settingsFeel
+      feelGive(cue, at, due)
+  // `at` picks the row's sound (the key dial's pitch class); `due` is
+  // the runner's time the sound is due at (the past, or 0, is now).
+  action feelGive(cue: string, at: number, due: number)
+    match first(feelTable.filter(r => r.cue == cue))
+      case some(row)
+        let now = performanceNow()
+        let start = max(now, due)
+        let felt = row.floor == 0 or now - feelTickAt >= row.floor
+        let i = row.sounds.length == 0 ? 0 : feelMod(round(at), row.sounds.length)
+        let src = match row.sounds.at(i) { case some(s) => s, case none => "" }
+        let ms = match row.lengths.at(i) { case some(l) => l, case none => 0 }
+        let heard = src != "" and start >= feelQuietAt
+        if felt
+          haptic(row.haptic)
+        if felt and row.floor > 0
+          feelTickAt = now
+        if heard
+          playSound(src, at=start, gain=row.gain, group=row.group)
+          feelQuietAt = start + ms
+        feelTold = feelTold + 1
+        feelLast = `${cue} ${felt ? row.haptic : "-"} ${heard ? src : "-"}`
+      case none
+        feelTold = feelTold

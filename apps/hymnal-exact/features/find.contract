@@ -129,6 +129,8 @@ members HymnalExact
   derive find = match findStepped { case some(v) => (v.serial >= findOnScreen.serial ? v : findOnScreen), case none => findOnScreen }
   resource findTileGroups = findGroupTiles(listTab, listTab == "Lists" ? favouriteList : [], listTab == "Lists" ? recentList : [], player.number) when findTilesAsked as shape FindTile[] else empty()
   state findLanding = ""
+  state findZoomAsked = false
+  state findZoomFrom = false
   state findFollowed = 0
   mutation findFollowing as shape FindFollow queue then findFollow
   // The current app's search mode asks for the hymns about its query once
@@ -171,8 +173,17 @@ members HymnalExact
   action findAsk(kind: string, n: number)
     if kind == "tilesShow"
       findAimAtTop()
+    if kind == "tilesShow" or kind == "tilesDone"
+      findZoomAsk()
     send findStepped = findStep(kind, "", n, 0)
+  // A zoom the reader asks for (a header, Done, a tile, a pinch, a
+  // ctrl-wheel) is felt as its answer shows or closes the tiles, as the
+  // current app's `useZoom` tells `zoom-out` and `zoom-in`.
+  action findZoomAsk
+    findZoomAsked = true
+    findZoomFrom = find.homeTiles
   action findSearch
+    feelTell("tab", 0)
     listQuery = ""
     send findStepped = findStep("searchOn", "", 0, 0)
   action findCancel
@@ -182,13 +193,13 @@ members HymnalExact
     listQuery = v
     send findStepped = findStep("query", v, 0, 0)
   action findTurn(drum: string, n: number)
-    if settingsFeel
-      haptic("selection")
+    feelTell(playerSound ? `detent-${drum}` : "rail-tick", n)
     send findStepped = findStep("turn", drum, n, 0)
   action findWheeled(e: WheelEvent)
     if e.ctrlKey
       preventDefault()
       findAimAtTop()
+      findZoomAsk()
       send findStepped = findStep("wheel", "", e.deltaY, 0)
   // Two fingers on the home list or its tiles, as the current app's
   // home/pinch.ts: the `pinch` hatch on the list's column
@@ -205,11 +216,16 @@ members HymnalExact
     if findPinchHeard.serial > findPinchSeen
       findPinchSeen = findPinchHeard.serial
       findAimAtTop()
+      findZoomAsk()
       send findStepped = findStep("pinchRun", findPinchHeard.run, 0, 0)
   action findTilePick(row: string)
     findLanding = row
+    findZoomAsk()
     send findStepped = findStep("tilesDone", "", 0, 0)
   action findTook
+    if findZoomAsked and find.homeTiles != findZoomFrom
+      findZoomAsked = false
+      feelTell(find.homeTiles ? "zoom-out" : "zoom-in", 0)
     if find.homeTiles
       findTilesAsked = true
     else if findLanding != ""

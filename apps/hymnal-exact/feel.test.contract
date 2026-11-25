@@ -1,0 +1,183 @@
+// The Feel (features/feel.contract): each cue a control tells is felt by
+// the haptic and heard by the sound the current hymnal's body gives it,
+// while Sounds and haptics is on, and nothing while it is off. The runner
+// records each voice (`expect sound`); a haptic is read from `feelLast`
+// (its cue, the haptic played or `-`, the sound played or `-`). No test
+// here plays a hymn.
+
+test "The key dial sounds the key it turns to, the capo dial thocks, a toggle is felt only"
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  type "dial-key-value" "3"
+  clock data
+  clock settle
+  expect state feelLast == "detent-key selection assets/feel/key-3.wav"
+  expect sound has "assets/feel/key-3.wav"
+  clock +500
+  type "dial-capo-value" "2"
+  clock data
+  clock settle
+  expect state feelLast == "detent-capo selection assets/feel/thock.wav"
+  expect sound has "assets/feel/thock.wav"
+  expect sound missing "assets/feel/key-2.wav"
+
+test "A favourite is felt as a success, and its taking back as a light impact, with no sound"
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "favourite"
+  clock data
+  clock settle
+  expect state feelLast == "favourite-on success -"
+  tap "favourite"
+  clock data
+  clock settle
+  expect state feelLast == "favourite-off impact-light -"
+  expect sound missing "assets/feel/thock.wav"
+
+test "Off, nothing is told; turned on, the switch itself is felt at once"
+  tap "gear"
+  clock settle
+  clock data
+  tap "appearance-dark"
+  clock settle
+  clock data
+  expect state feelLast == "choose selection -"
+  expect state feelTold == 1
+  tap "settings-feel"
+  clock settle
+  clock data
+  expect state settingsFeel == false
+  tap "appearance-light"
+  clock settle
+  clock data
+  expect state feelTold == 1
+  tap "settings-feel"
+  clock settle
+  clock data
+  expect state feelTold == 2
+  expect state feelLast == "switch-on impact-light -"
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  type "dial-key-value" "5"
+  clock data
+  clock settle
+  expect state feelLast == "detent-key selection assets/feel/key-5.wav"
+
+// A dial is felt only while the reader drives it: drawn, or turned to a
+// stop by a tap (the app scrolls it there), it tells nothing.
+test "A dial drawn, or set by a tap on a stop, tells nothing"
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  expect state keysOpen == true
+  expect state feelLast == "press selection -"
+  expect state feelTold == 2
+  tap "dial-key-stop-4"
+  clock data
+  clock settle
+  expect state keysShown.keyAt == 4
+  expect state feelTold == 2
+  tap "dial-capo-stop-1"
+  clock data
+  clock settle
+  expect state feelTold == 2
+  expect sound missing "assets/feel/key-4.wav"
+  expect sound missing "assets/feel/thock.wav"
+
+// Played with Sounds and haptics off, as the owner's rule asks: the beats'
+// times are read from `playerBeatEarly`, how long before its beat each was
+// told (its sound scheduled at the beat), which the switch does not move.
+test "With Click on, each beat of the count-in after the first is told within a frame before the player's beat"
+  at "/settings"
+  clock settle
+  tap "settings-feel"
+  clock settle
+  expect state settingsFeel == false
+  tap "settings-done"
+  clock settle
+  tap "hymn-1"
+  clock settle
+  clock data
+  tap "bar-sound"
+  clock settle
+  clock data
+  tap "play"
+  clock data
+  clock +2500
+  clock data
+  tap "bar-title"
+  clock data
+  clock settle
+  tap "start-click"
+  clock settle
+  clock data
+  expect state playerClick == true
+  tap "player-title"
+  clock data
+  clock settle
+  back
+  clock settle
+  clock data
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "bar-page-play"
+  clock data
+  clock settle
+  expect state player.number == 2
+  expect state player.count.on == true
+  expect state player.count.beats == 4
+  clock +2500
+  clock data
+  expect state player.count.on == false
+  expect state playerBeatEarly.length == 3
+  expect state playerBeatEarly.0 >= 0
+  expect state playerBeatEarly.0 <= 17
+  expect state playerBeatEarly.1 >= 0
+  expect state playerBeatEarly.1 <= 17
+  expect state playerBeatEarly.2 >= 0
+  expect state playerBeatEarly.2 <= 17
+  expect state feelTold == 0
+
+test "Turned off, no dial sounds"
+  tap "gear"
+  clock settle
+  clock data
+  tap "settings-feel"
+  clock settle
+  clock data
+  tap "settings-done"
+  clock settle
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  type "dial-key-value" "3"
+  clock data
+  clock settle
+  expect state feelTold == 0
+  expect sound missing "assets/feel/key-3.wav"

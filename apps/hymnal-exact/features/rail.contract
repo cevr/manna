@@ -46,7 +46,7 @@ component HomeRail
     shift: number
     end: number
   inject
-    settingsFeel: bool
+    feelTell: action
     listTabsJump: action
   state railHeld = false
   state railLength = 0
@@ -77,8 +77,7 @@ component HomeRail
             listTabsJump()
             scrollIntoView(`hymn-${m.number}`, block="start", behavior="instant")
             if m.ticks > 0
-              if settingsFeel
-                haptic("selection")
+              feelTell("rail-tick", 0)
       case none
         railY = railY
   view

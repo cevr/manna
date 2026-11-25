@@ -99,8 +99,7 @@ members HymnalExact
       followTicked = followNow.tick
       if performanceNow() - followTickAt >= 30
         followTickAt = performanceNow()
-        if settingsFeel
-          haptic("selection")
+        feelTell("seek-tick", 0)
     if followNow.holding and followPad > 0 and followNow.holdLine >= 0 and followNow.holdLine != followCentred
       followCentred = followNow.holdLine
       scrollIntoView(`sung-${followNow.holdLine}`, block="center", behavior="instant")
@@ -115,22 +114,19 @@ members HymnalExact
     if followNow.askKey > followAsked
       followAsked = followNow.askKey
       if followNow.ask == "pause"
-        if settingsFeel
-          haptic("selection")
+        feelTell("seek-grab", 0)
         followPad = round(frame("hymn-words").height / 2)
         followCentred = followNow.holdLine
         scrollIntoView(`sung-${followNow.holdLine}`, block="center", behavior="instant")
         playerAsk("pause", 0)
       else if followNow.ask == "seek"
-        if settingsFeel
-          haptic("impact-soft")
+        feelTell("seek-release", 0)
         followPad = 0
         followCentred = -1
         playerAsk("seekTo", followNow.askAt)
         playerAsk("resume", 0)
       else if followNow.ask == "lift"
-        if settingsFeel
-          haptic("impact-soft")
+        feelTell("seek-release", 0)
         followPad = 0
         followCentred = -1
         playerAsk("resume", 0)

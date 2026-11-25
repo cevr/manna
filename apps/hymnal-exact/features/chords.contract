@@ -97,8 +97,7 @@ members HymnalExact
   derive chordsGripOpen = match stack(nav).filter(e => e.name == "chord").at(-1) { case some(e) => e.params.grip, case none => "" }
   resource chordsGripShown = chordsGrip(chordsGripOpen) as shape ChordsGripPage
   action chordsSet(on: bool)
-    if settingsFeel
-      haptic("impact-light")
+    feelTell(on ? "chords-on" : "chords-off", 0)
     chordsOn = on
   action chordsGripClose
     nav = back(nav)

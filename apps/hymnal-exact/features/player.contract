@@ -109,6 +109,7 @@ members HymnalExact
   state playerSkipLanded = -1
   state playerClockAt = 0
   state playerTicking = false
+  state playerSeekStretch = -1
   derive playerPaths = stack(nav).map(e => e.name == "hymn" ? `/hymns/${e.params.n}` : (e.name == "player" ? "/player" : (e.name == "settings" or e.name == "about" or e.name == "tuner" or e.name == "chord" or e.name == "abouthymn" ? "/settings" : "/"))).join(" ")
   resource playerPage = exactPage() as shape PlayerPage
   resource playerBooted = playerStep("restore", 0, 0, 0, playerKept) as shape PlayerView
@@ -145,18 +146,35 @@ members HymnalExact
       else if player.go.kind == "replace"
         nav = go(nav, player.go.path)
   action playerAsk(kind: string, value: number)
-    if settingsFeel
-      if kind == "page" or kind == "bar" or kind == "play"
-        haptic("impact-light")
-      else if kind == "stanza"
-        haptic("selection")
-      else if kind == "chooseAll" or kind == "tap"
-        haptic("selection")
-      else if kind == "tempoReset"
-        haptic("impact-medium")
+    if kind == "page"
+      feelTell(player.toggle == "pause" ? "pause" : "play", 0)
+    else if kind == "bar"
+      feelTell(player.bar.kind == "pause" ? "pause" : "play", 0)
+    else if kind == "play" or kind == "retry"
+      feelTell("play", 0)
+    else if kind == "stanza" or kind == "chooseAll" or kind == "tap"
+      feelTell("press", 0)
+    else if kind == "tempoReset"
+      feelTell("reset", 0)
     if player.ticking
       playerClockTicked()
     send playerStepped = playerStep(kind, 0, 0, value, "")
+  // The bar's seeker, felt as the current Seeker.tsx's: `seek-grab` as a
+  // drag takes, `seek-tick` at each five seconds' boundary the knob passes
+  // (`TICK`), `seek-release` as it lets go. The full player's position
+  // slider, the current Scrubber.tsx's, is felt by nothing.
+  action playerSeekDrag(seconds: number)
+    let stretch = floor(seconds / 5)
+    if playerSeekStretch < 0
+      feelTell("seek-grab", 0)
+    else if stretch != playerSeekStretch
+      feelTell("seek-tick", 0)
+    playerSeekStretch = stretch
+    playerAsk("dragTo", seconds)
+  action playerSeekLet(seconds: number)
+    feelTell("seek-release", 0)
+    playerSeekStretch = -1
+    playerAsk("dragEnd", seconds)
   // The silent clock (Sound off) runs on the time since its last tick,
   // told before each of the reader's asks and each switch, so a pause or
   // a hand-over takes the place as it stands.

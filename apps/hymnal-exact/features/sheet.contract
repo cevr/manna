@@ -12,6 +12,7 @@ use PlayerView, PlayerPill, playerLabel from "./player.contract"
 use KeysPage, KeysCapoDial, KeysKeyDial, KeysPlaces, KeysDialName, KeysResetChip from "./keys.contract"
 use ReadingGroup from "./reading.contract"
 use TempoDial, StanzasAll, RecordingNotice, StartRow from "./tempo.contract"
+use feelCrossed from "./feel.contract"
 
 shape SheetStop
   value: string
@@ -32,6 +33,8 @@ shape SheetKept
 members HymnalExact
   state sheetPlacements: string[] = [] persist
   state sheetPlaceX = 0
+  state sheetPlaceAt = -1
+  state sheetPlaceDriven = false
   resource sheetDial = sheetPlacement(player.number, sheetPlacements, settingsPlacement) as shape SheetPlacement
   mutation sheetPlaced as shape SheetKept queue then sheetTook
   action sheetPlace(own: string)
@@ -50,9 +53,21 @@ members HymnalExact
           sheetPlace(s.value)
       case none
         sheetPlaceX = sheetPlaceX
+  action sheetPlaceAdjusted(at: number)
+    feelTell("detent-placement", at)
+    sheetPlaceTurn(at)
   action sheetPlaceScrolled(x: number, y: number)
+    let at = round(x / keysPlaced.detent)
+    let was = sheetPlaceAt
     sheetPlaceX = x
+    if at != was
+      sheetPlaceAt = at
+      if sheetPlaceDriven
+        feelTell("detent-placement", feelCrossed(was, at))
+  action sheetPlaceDrive
+    sheetPlaceDriven = true
   action sheetPlaceSettled
+    sheetPlaceDriven = false
     let at = min(sheetDial.stops.length - 1, max(0, round(sheetPlaceX / keysPlaced.detent)))
     if at != sheetDial.index
       sheetPlaceTurn(at)
@@ -60,8 +75,7 @@ members HymnalExact
       scrollIntoView(`sheet-place-stop-${at}`, inline="center", behavior="instant")
   action sheetInherit
     sheetPlace("inherit")
-    if settingsFeel
-      haptic("impact-medium")
+    feelTell("reset", 0)
   action sheetKeysClose
     if keysOpen
       keysAsk("page", 0)
@@ -199,6 +213,8 @@ component SheetPlacementDial
     sheetPlaceTurn: action
     sheetPlaceScrolled: action
     sheetPlaceSettled: action
+    sheetPlaceDrive: action
+    sheetPlaceAdjusted: action
     sheetInherit: action
   view
     if sheetDial.has
@@ -210,7 +226,7 @@ component SheetPlacementDial
             view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
               scroll id="dial-placement-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
                 scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-                scrollLeft=(sheetDial.index * keysPlaced.detent) scroll=sheetPlaceScrolled scrollend=sheetPlaceSettled aria-hidden=true tabindex=-1 testId="dial-placement-row"
+                scrollLeft=(sheetDial.index * keysPlaced.detent) scroll=sheetPlaceScrolled scrollend=sheetPlaceSettled scrolldragstart=sheetPlaceDrive wheel=sheetPlaceDrive aria-hidden=true tabindex=-1 testId="dial-placement-row"
                 for s, si in sheetDial.stops key=s.value
                   button press=sheetPlaceTurn(si) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                     display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
@@ -218,7 +234,7 @@ component SheetPlacementDial
                     text s.mark font="type.note" color=(si == sheetDial.index ? "chord" : "muted") white-space="nowrap" line-clamp=1
               view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
                 background-color="chord" pointer-events="none" aria-hidden=true
-              input type="range" min=0 max=(sheetDial.stops.length - 1) step=1 value=sheetDial.index input=sheetPlaceTurn aria-label="Chord placement" aria-valuetext=sheetDial.said
+              input type="range" min=0 max=(sheetDial.stops.length - 1) step=1 value=sheetDial.index input=sheetPlaceAdjusted aria-label="Chord placement" aria-valuetext=sheetDial.said
                 position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-placement-value"
         button press=sheetInherit appearance="none" display="flex" flex-direction="row" align-items="center" justify-content="space-between" gap="space.s8" min-height="size.target" -exact-press-opacity="opacity.pressed" aria-label="Use global chord placement" aria-pressed=sheetDial.inherit testId="sheet-inherit"
           text "Use global" font="type.body" color="ink"

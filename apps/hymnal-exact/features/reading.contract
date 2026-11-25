@@ -8,6 +8,7 @@
 // line, the chords over them and the hanging indent, in `rem`, so they
 // grow with the system's text size as the current page's do).
 use KeysPlaces, KeysDialName from "./keys.contract"
+use feelCrossed from "./feel.contract"
 
 shape ReadingRow
   value: string
@@ -47,15 +48,29 @@ members HymnalExact
   state readingSpacing = "" persist
   state readingAwake = false persist
   state readingSizeX = 0
+  state readingSizeAt = -1
+  state readingSizeDriven = false
   resource readingShown = readingAt(readingSize, readingFont, readingSpacing) as shape ReadingView else readingAt("", "", "")
   resource readingPort = exactViewport() as shape ReadingPort
   action readingSizeTurn(step: number)
     let to = min(readingShown.stops.length - 1, max(0, round(step)))
     if to != readingShown.step
       readingSize = `${to}`
+  action readingSizeAdjusted(step: number)
+    feelTell("detent-size", step)
+    readingSizeTurn(step)
   action readingSizeScrolled(x: number, y: number)
+    let at = round(x / keysPlaced.detent)
+    let was = readingSizeAt
     readingSizeX = x
+    if at != was
+      readingSizeAt = at
+      if readingSizeDriven
+        feelTell("detent-size", feelCrossed(was, at))
+  action readingSizeDrive
+    readingSizeDriven = true
   action readingSizeSettled
+    readingSizeDriven = false
     let at = min(readingShown.stops.length - 1, max(0, round(readingSizeX / keysPlaced.detent)))
     if at != readingShown.step
       readingSize = `${at}`
@@ -63,16 +78,13 @@ members HymnalExact
       scrollIntoView(`reading-size-stop-${at}`, inline="center", behavior="instant")
   action readingFontChoose(font: string)
     readingFont = font
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
   action readingSpacingChoose(spacing: string)
     readingSpacing = spacing
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
   action readingAwakeSet(on: bool)
     readingAwake = on
-    if settingsFeel
-      haptic("impact-light")
+    feelTell(on ? "switch-on" : "switch-off", 0)
 
 // The Reading group: the text-size dial on its panel, Font, Line spacing,
 // and Keep screen on.
@@ -134,6 +146,8 @@ component ReadingSizeDial
     readingSizeTurn: action
     readingSizeScrolled: action
     readingSizeSettled: action
+    readingSizeDrive: action
+    readingSizeAdjusted: action
   view
     column background-color="panel" border-width="line.panel" border-style="solid" border-color="edge" border-radius=`${keysPlaced.detent / 2 + keysPlaced.pad}px` padding=`${keysPlaced.pad}px` testId="reading-size-panel"
       row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-size"
@@ -141,7 +155,7 @@ component ReadingSizeDial
         view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
           scroll id="dial-size-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
             scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-            scrollLeft=(readingShown.step * keysPlaced.detent) scroll=readingSizeScrolled scrollend=readingSizeSettled aria-hidden=true tabindex=-1 testId="dial-size-row"
+            scrollLeft=(readingShown.step * keysPlaced.detent) scroll=readingSizeScrolled scrollend=readingSizeSettled scrolldragstart=readingSizeDrive wheel=readingSizeDrive aria-hidden=true tabindex=-1 testId="dial-size-row"
             for s in readingShown.stops key=s.step
               button press=readingSizeTurn(s.step) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                 display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
@@ -149,5 +163,5 @@ component ReadingSizeDial
                 text "A" font="type.strong" font-size=(readingPort.accessibilityTextSize ? s.most : `min(${s.most}, ${s.mark})`) line-height="normal" color=(s.step == readingShown.step ? "chord" : "ink")
           view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
             background-color="chord" pointer-events="none" aria-hidden=true
-          input type="range" min=0 max=(readingShown.stops.length - 1) step=1 value=readingShown.step input=readingSizeTurn aria-label="Text size" aria-valuetext=readingShown.said
+          input type="range" min=0 max=(readingShown.stops.length - 1) step=1 value=readingShown.step input=readingSizeAdjusted aria-label="Text size" aria-valuetext=readingShown.said
             position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-size-value"

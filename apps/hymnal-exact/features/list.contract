@@ -77,6 +77,10 @@ shape ListTabsShown
   cover: number
 
 // Hymn n's title, from the book's titles at their numbers less one.
+// The place among `ids` (the list's group headers) of the first header
+// among `hit`, the ids under the list's top, or -1.
+fn listFeelPlaceOf(ids: string[], hit: string[]): number = match first(hit.filter(i => ids.includes(i))) { case some(i) => ids.indexOf(i), case none => -1 }
+
 fn listTitle(titles: string[], n: number): string = match titles.at(n - 1) { case some(t) => t, case none => "" }
 
 // A tab row's `testId` (`<kind>-<n>`), or, for a hymn a group above lists
@@ -142,9 +146,8 @@ members HymnalExact
       case none
         listTabsAt = listTabsAt
   action listChoose(name: string)
-    if settingsFeel
-      if name != listTab
-        haptic("selection")
+    if name != listTab
+      feelTell("tab", 0)
     if name != listTab
       send listTabsMoved = listTabsStep("jump", 0, 0, 0, listTabsEdge)
       listTabsSent = listTabsSent + 1
@@ -194,10 +197,19 @@ component HymnList
     listTabs: ListTabsShown
     listTabsReport: action
     listTabsTouch: action
+    feelTell: action
   state listHead = 0
   state listPull = 0
   state listPin = 0
   state listTabsHigh = 0
+  // The group whose header stands at the list's top, by its place among
+  // the list's groups, felt (`section`) as another comes there while the
+  // reader drives the list (a drag, a fling, a wheel, until it rests), as
+  // the current app's pinned topic is; the app's own moves of the list
+  // (a tab, a tile, the rail, a landing) tell nothing.
+  state listFeelDriven = false
+  state listFeelPlace = -1
+  derive listFeelIds = tab == "Sections" ? sections.map(s => `section-${s.slug}`) : groups.map(g => `group-${g.slug}`)
   derive listShift = listHead + listPull
   action listHeaded(w: number, h: number)
     listHead = h
@@ -209,7 +221,22 @@ component HymnList
     if s != listPull
       listPull = s
     listTabsReport(y, listHead - listTabsHigh, listTabsHigh)
+    if listFeelDriven
+      let list = frame("hymn-list")
+      let place = listFeelPlaceOf(listFeelIds, elementsFromPoint(list.x + list.width / 2, list.y + listTabs.cover + 1))
+      if place != listFeelPlace
+        listFeelPlace = place
+        if place >= 0
+          feelTell("section", place)
+  action listFeelDrive
+    let list = frame("hymn-list")
+    listFeelDriven = true
+    listFeelPlace = listFeelPlaceOf(listFeelIds, elementsFromPoint(list.x + list.width / 2, list.y + listTabs.cover + 1))
+  action listEnded
+    listFeelDriven = false
+    listRested()
   action listWheeled(e: WheelEvent)
+    listFeelDrive()
     listTabsTouch()
     findWheel(e)
   action listPinned(w: number, h: number)
@@ -228,7 +255,7 @@ component HymnList
         HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
         column flex="none" testId="home-searching"
       else if tab == "Sections"
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listEnded scrolldragstart=listFeelDrive scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
           column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
             HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)
@@ -256,7 +283,7 @@ component HymnList
           HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=false)
           text "No hymns here yet." font="type.body" color="muted" padding="space.s16" testId="lists-empty"
       else
-        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listRested scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
+        scroll id="hymn-list" flex=1 min-height=0 display=(findShown.homeTiles ? "none" : "flex") flex-direction="column" background-color="ground" wheel=listWheeled pointerdown=listTabsTouch scroll=listScrolled scrollend=listEnded scrolldragstart=listFeelDrive scroll-padding-top=`${listPin + listTabs.cover}px` testId="hymn-list"
           column id="list-top" flex-shrink=0 resize=listHeaded testId="list-head"
             HomeTitle(own=true)
             HomeTabs(tab=tab, tabs=tabs, choose=choose, pinned=false, away=listTabs.reach)

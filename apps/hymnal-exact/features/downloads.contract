@@ -49,8 +49,7 @@ members HymnalExact
   mutation downloadsStepped as shape DownloadsView queue
   derive downloads = match downloadsStepped { case some(v) => (v.serial >= downloadsShown.serial ? v : downloadsShown), case none => downloadsShown }
   action downloadsAsk(kind: string)
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
     send downloadsStepped = offlineStep(kind, 0, 0)
   action downloadsPolled
     downloadsTick = downloadsTick + 1

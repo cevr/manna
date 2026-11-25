@@ -1,8 +1,7 @@
 /* oxlint-disable effect/noTernary, effect/noNullish -- a Bun test's reader of the app's own Contract and design text, line by line. */
 
 /**
- * The hymnal's motion and haptics are calm and kept to their rules (A1,
- * A2), read from `app.forma` and every Contract file:
+ * The hymnal's motion is calm and kept to its rules (A1), read from `app.forma` and every Contract file:
  *
  * - the motion tokens are the calm basis (the owner's q113, 150–250 ms):
  *   each named one has exactly its value, no duration is over 250 ms and
@@ -15,10 +14,9 @@
  *   or is `none`, and names its times by token: no Contract line writes a
  *   time, a curve or a spring;
  * - the filled buttons (the find drums' Open) press to the brand's
- *   `pressed` under `onPressed`, at a scale of 0.97;
- * - every `haptic(` stands under `if settingsFeel`, and plays the kind
- *   the current hymnal's Feel seam gives its cue (`bodyOf(plain(cue))`),
- *   by the table below, which names each call's cue.
+ *   `pressed` under `onPressed`, at a scale of 0.97.
+ *
+ * Its haptics and sounds are the Feel's (`src/feel/sites.test.ts`).
  *
  * Each finder is first tried on a planted defect, so a finder that finds
  * nothing cannot pass.
@@ -26,15 +24,11 @@
 
 import { describe, expect, it } from 'bun:test';
 
-import * as body from '@manna/hymnal-app/feel/body';
-import * as cues from '@manna/hymnal-app/feel/cues';
 import * as reveal from '@manna/hymnal-app/home/reveal';
 import * as tiles from '@manna/hymnal-app/home/tile-times';
 import * as wheelmotion from '@manna/hymnal-app/player/wheelmotion';
 
 import type * as TilesDecl from '../find/decl/tile-times';
-import type * as BodyDecl from './decl/body';
-import type * as CuesDecl from './decl/cues';
 import { appFile, brandOf, contractFiles } from './design.testing.ts';
 
 /**
@@ -49,8 +43,6 @@ type Held<T> = {
 };
 
 const held = {
-  body: { bodyOf: body.bodyOf } satisfies Held<typeof BodyDecl>,
-  cues: { plain: cues.plain } satisfies Held<typeof CuesDecl>,
   tiles: { tileTimes: tiles.tileTimes } satisfies Held<typeof TilesDecl>,
 };
 
@@ -105,103 +97,6 @@ const growthSpring = (seconds: number) =>
 
 /** The press of a filled button: q113's gentle one. */
 const PRESS_SCALE = '0.97';
-
-type Cue = Parameters<typeof body.bodyOf>[0];
-
-/** A dial's detent cue, as the current app tells a turn of `dial`. */
-const detent = (dial: 'key' | 'capo' | 'tempo' | 'hundreds' | 'tens' | 'ones') => {
-  const cue = { _tag: 'detent', dial, at: 0 } as const;
-  return cue;
-};
-
-/** The cues each `haptic(` call is told by, by its action and the condition it stands under. */
-const HAPTICS: ReadonlyArray<{
-  readonly action: string;
-  readonly when: string;
-  readonly cues: ReadonlyArray<Cue>;
-}> = [
-  {
-    action: 'playerAsk',
-    when: 'if kind == "page" or kind == "bar" or kind == "play"',
-    cues: [cues.plain('play'), cues.plain('pause')],
-  },
-  { action: 'playerAsk', when: 'else if kind == "stanza"', cues: [cues.plain('choose')] },
-  {
-    action: 'playerAsk',
-    when: 'else if kind == "chooseAll" or kind == "tap"',
-    cues: [cues.plain('press')],
-  },
-  { action: 'playerAsk', when: 'else if kind == "tempoReset"', cues: [cues.plain('reset')] },
-  {
-    action: 'playerCounted',
-    when: 'if player.count.beat == 0',
-    cues: [{ _tag: 'beat', accent: true }],
-  },
-  { action: 'playerCounted', when: 'if playerClick', cues: [{ _tag: 'beat', accent: false }] },
-  { action: 'scrolled', when: 'if i != at', cues: [detent('tempo')] },
-  { action: 'followAct', when: 'if followNow.ask == "pause"', cues: [cues.plain('seek-grab')] },
-  {
-    action: 'followAct',
-    when: 'else if followNow.ask == "seek"',
-    cues: [cues.plain('seek-release')],
-  },
-  {
-    action: 'followAct',
-    when: 'else if followNow.ask == "lift"',
-    cues: [cues.plain('seek-release')],
-  },
-  {
-    action: 'followTook',
-    when: 'if performanceNow() - followTickAt >= 30',
-    cues: [cues.plain('seek-tick')],
-  },
-  { action: 'settingsChoose', when: '', cues: [cues.plain('choose')] },
-  { action: 'downloadsAsk', when: '', cues: [cues.plain('choose')] },
-  { action: 'settingsStyleChoose', when: '', cues: [cues.plain('choose')] },
-  { action: 'settingsPlacementChoose', when: '', cues: [cues.plain('choose')] },
-  { action: 'readingFontChoose', when: '', cues: [cues.plain('choose')] },
-  { action: 'readingSpacingChoose', when: '', cues: [cues.plain('choose')] },
-  {
-    action: 'readingAwakeSet',
-    when: '',
-    cues: [cues.plain('switch-on'), cues.plain('switch-off')],
-  },
-  { action: 'sheetInherit', when: '', cues: [cues.plain('reset')] },
-  {
-    action: 'favouriteKeep',
-    when: 'if f.numbers.length > favouriteList.length',
-    cues: [cues.plain('favourite-on')],
-  },
-  {
-    action: 'favouriteKeep',
-    when: 'else if f.numbers.length < favouriteList.length',
-    cues: [cues.plain('favourite-off')],
-  },
-  { action: 'listChoose', when: 'if name != listTab', cues: [cues.plain('tab')] },
-  { action: 'railTook', when: 'if m.ticks > 0', cues: [cues.plain('rail-tick')] },
-  { action: 'chordsSet', when: '', cues: [cues.plain('chords-on'), cues.plain('chords-off')] },
-  {
-    action: 'playerSoundSwitch',
-    when: '',
-    cues: [cues.plain('switch-on'), cues.plain('switch-off')],
-  },
-  {
-    action: 'keysTook',
-    when: 'if s.cue == "chords-on" or s.cue == "chords-off"',
-    cues: [cues.plain('chords-on'), cues.plain('chords-off')],
-  },
-  { action: 'keysTook', when: 'else if s.cue == "press"', cues: [cues.plain('press')] },
-  { action: 'keysTook', when: 'else if s.cue == "wall"', cues: [cues.plain('wall')] },
-  { action: 'keysTook', when: 'else if s.cue == "reset"', cues: [cues.plain('reset')] },
-  { action: 'keysPressTook', when: 'if p.enter != ""', cues: [cues.plain('choose')] },
-  { action: 'keysKeyScrolled', when: 'if at != keysKeyAt', cues: [detent('key')] },
-  { action: 'keysCapoScrolled', when: 'if at != keysCapoAt', cues: [detent('capo')] },
-  {
-    action: 'findTurn',
-    when: '',
-    cues: [detent('hundreds'), detent('tens'), detent('ones')],
-  },
-];
 
 const brand = brandOf(appFile('app.forma'));
 const files = contractFiles().map((file) => ({ file, text: appFile(file) }));
@@ -383,48 +278,8 @@ const pressOf = (body: ReadonlyArray<string>): ReadonlyMap<string, string> => {
   return block;
 };
 
-interface Haptic {
-  readonly at: string;
-  readonly kind: string;
-  readonly action: string;
-  readonly when: string;
-  readonly felt: boolean;
-}
-
-/** Every `haptic(` of a Contract text: its kind, its action, the condition it stands under, and whether `settingsFeel` holds it. */
-const hapticsOf = (file: string, text: string): ReadonlyArray<Haptic> => {
-  const lines = linesOf(file, text);
-  return lines.flatMap((line, index) => {
-    const call = /haptic\("([^"]*)"\)/u.exec(line.text);
-    if (!call) return [];
-    const holders = ancestors(lines, index);
-    const felt = holders.some((each) => each.text === 'if settingsFeel');
-    const when = holders.find(
-      (each) => /^(?:else )?if /u.test(each.text) && each.text !== 'if settingsFeel',
-    );
-    const action = holders.find((each) => each.text.startsWith('action '));
-    return [
-      {
-        at: line.at,
-        kind: call[1] ?? '',
-        action: /^action\s+(\w+)/u.exec(action?.text ?? '')?.[1] ?? '',
-        when: when?.text ?? '',
-        felt,
-      },
-    ];
-  });
-};
-
-/** A haptic of the Feel seam, by Exact's name. */
-const exactName = (haptic: ReturnType<typeof body.bodyOf>['haptic']): string => {
-  if (haptic._tag === 'impact') return `impact-${haptic.style}`;
-  if (haptic._tag === 'notification') return haptic.type;
-  return haptic._tag;
-};
-
 const frames = new Map(files.flatMap(({ text }) => [...keyframesOf(text)]));
 const rows = files.flatMap(({ file, text }) => rowsOf(file, text));
-const haptics = files.flatMap(({ file, text }) => hapticsOf(file, text));
 
 describe('the finders find a planted defect', () => {
   const planted = new Map([
@@ -534,29 +389,10 @@ describe('the finders find a planted defect', () => {
     expect(Object.fromEntries(pressOf(elementOf(text, 'b')))).toEqual({ color: 'onPressed' });
     expect(pressOf(elementOf(text, 'c')).size).toBe(0);
   });
-
-  it('a haptic outside the setting, and its cue and action', () => {
-    const text = [
-      'members X',
-      '  action a(kind: string)',
-      '    if settingsFeel',
-      '      if kind == "x"',
-      '        haptic("selection")',
-      '    haptic("impact-light")',
-    ].join('\n');
-    expect(
-      hapticsOf('x', text).map(({ kind, action, when, felt }) => ({ kind, action, when, felt })),
-    ).toEqual([
-      { kind: 'selection', action: 'a', when: 'if kind == "x"', felt: true },
-      { kind: 'impact-light', action: 'a', when: '', felt: false },
-    ]);
-  });
 });
 
 describe('the hymnal’s motion is calm', () => {
   it('holds each declaration to its current source', () => {
-    expect(held.body.bodyOf).toBe(body.bodyOf);
-    expect(held.cues.plain).toBe(cues.plain);
     expect(held.tiles.tileTimes).toBe(tiles.tileTimes);
   });
 
@@ -626,30 +462,5 @@ describe('the hymnal’s motion is calm', () => {
         '-exact-press-scale': PRESS_SCALE,
       });
     expect(brand.colours.has('pressed') && brand.colours.has('onPressed')).toBe(true);
-  });
-});
-
-describe('the hymnal’s haptics are the current Feel seam’s, under Sounds and haptics', () => {
-  it('plays every haptic under `if settingsFeel`', () => {
-    expect(haptics.length).toBeGreaterThan(0);
-    for (const haptic of haptics)
-      expect({ at: haptic.at, felt: haptic.felt }).toEqual({ at: haptic.at, felt: true });
-  });
-
-  it('plays the kind the current app gives each call’s cue', () => {
-    const site = ({ action, when }: { readonly action: string; readonly when: string }) =>
-      `${action}: ${when}`;
-    expect(haptics.map(site).toSorted()).toEqual(HAPTICS.map(site).toSorted());
-    for (const haptic of haptics) {
-      const named = HAPTICS.find(
-        (each) => each.action === haptic.action && each.when === haptic.when,
-      );
-      for (const cue of named?.cues ?? [])
-        expect({ at: haptic.at, cue, kind: haptic.kind }).toEqual({
-          at: haptic.at,
-          cue,
-          kind: exactName(body.bodyOf(cue).haptic),
-        });
-    }
   });
 });

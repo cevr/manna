@@ -22,11 +22,17 @@
         "test:timing",
         "test:offline",
         "test:pinch",
-        "test:tabs"
+        "test:tabs",
+        "test:feel"
       ],
       "outputs": []
     },
     "test:tabs": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]
+    },
+    "test:feel": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json", "$TURBO_ROOT$/apps/hymnal/src/**"]

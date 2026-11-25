@@ -23,8 +23,7 @@ fn playerSwipedUp(pull: number, speed: number): bool = pull <= -24 or speed <= -
 members HymnalExact
   state playerSound = true persist
   action playerSoundSwitch
-    if settingsFeel
-      haptic("impact-light")
+    feelTell(playerSound ? "switch-off" : "switch-on", 0)
     playerSound = not playerSound
 
 // The device and the bar, docked over the stack's foot (a route must be a
@@ -78,13 +77,18 @@ component PlayerBarFrame
     ask: action
   inject
     motionStill: bool
+    feelTell: action
   state pull = 0
   action pulled(dx: number, dy: number)
     pull = pull + dy
   action let(vx: number, vy: number)
     if playerSwipedUp(pull, vy)
+      feelTell("sheet-open", 0)
       ask("open", 0)
     pull = 0
+  action opened
+    feelTell("press", 0)
+    ask("open", 0)
   view
     column testId="bar" role="region" aria-label="Player" background-color="bar" border-top-width="line.hair" border-top-style="solid" border-top-color="line" padding-bottom="var(--exact-safe-area-inset-bottom)" touch-action="none" pan=pulled panrelease=let -exact-layout-transition=(motionStill ? "none" : "duration.bar-in easing.out")
       row position="relative" align-items="center" gap="space.s8" padding="0px space.s12" height="calc(size.target + space.s12)"
@@ -97,7 +101,7 @@ component PlayerBarFrame
           PlayerSound()
           PlayerMark(symbol="symbol:sf/play.fill", press=ask("page", player.onPage), id="play", name=player.pageLabel)
         else
-          button press=ask("open", 0) appearance="none" flex=1 min-width=0 min-height="size.target" display="flex" flex-direction="column" justify-content="center" align-items="stretch" testId="bar-title" aria-label="Open player" aria-valuetext=player.bar.told
+          button press=opened appearance="none" flex=1 min-width=0 min-height="size.target" display="flex" flex-direction="column" justify-content="center" align-items="stretch" testId="bar-title" aria-label="Open player" aria-valuetext=player.bar.told
             if player.bar.number != player.onPage
               row gap="space.s8" align-items="center" justify-content="center"
                 text `${player.bar.number}` font="type.label" color="accent" font-variant-numeric="tabular-nums" testId="bar-number"
@@ -129,10 +133,12 @@ component PlayerSeeker
     ask: action
   inject
     motionStill: bool
+    playerSeekDrag: action
+    playerSeekLet: action
   view
     row align-items="center" gap="space.s8" padding="0px space.s16" height="size.slider" testId="seeker" animation=(motionStill ? "hy-fade-in duration.fade ease-out both" : "hy-fade-in duration.bar-in easing.out both")
       text player.bar.gone font="type.footnote" color="muted" font-variant-numeric="tabular-nums" width="space.s40" aria-hidden=true testId="seek-gone"
-      input type="range" id="seek" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=ask("dragTo") change=ask("dragEnd") flex=1 min-width=0 height="size.slider" aria-label="Seek" aria-valuetext=`${player.elapsed} of ${player.total}` testId="seek"
+      input type="range" id="seek" min=0 max=player.length value=player.at adjust-step=10 disabled=(player.length <= 0) input=playerSeekDrag change=playerSeekLet flex=1 min-width=0 height="size.slider" aria-label="Seek" aria-valuetext=`${player.elapsed} of ${player.total}` testId="seek"
       text player.bar.left font="type.footnote" color="muted" font-variant-numeric="tabular-nums" width="space.s40" text-align="right" aria-hidden=true testId="seek-left"
 
 // The Sound switch, as the current PlayerBar.tsx's `Sound` draws it: a

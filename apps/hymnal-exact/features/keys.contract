@@ -16,6 +16,7 @@
 use PlayerView from "./player.contract"
 use hy-fade-in, hy-fade-out from "./motion.contract"
 use TunerMark from "./tuner.contract"
+use feelCrossed from "./feel.contract"
 
 shape KeysStop
   pitch: number
@@ -140,6 +141,8 @@ members HymnalExact
   state keysKeyX = 0
   state keysCapoAt = -1
   state keysCapoX = 0
+  state keysKeyDriven = false
+  state keysCapoDriven = false
   resource keysShown = keysPage(hymnOpen, chordsOn, chordsMoves, keysOpen, settingsChordStyle) as shape KeysPage
   resource keysPlaced = keysPlaces() as shape KeysPlaces
   mutation keysStepped as shape KeysStepped queue then keysTook
@@ -156,15 +159,8 @@ members HymnalExact
         if s.wait
           keysWaiting = true
           keysResets = keysResets + 1
-        if settingsFeel
-          if s.cue == "chords-on" or s.cue == "chords-off"
-            haptic("impact-light")
-          else if s.cue == "press"
-            haptic("selection")
-          else if s.cue == "wall"
-            haptic("impact-rigid")
-          else if s.cue == "reset"
-            haptic("impact-medium")
+        if s.cue != ""
+          feelTell(s.cue, 0)
       case none
         keysOpen = keysOpen
   task keysResetWait when keysWaiting key=keysResets
@@ -222,20 +218,29 @@ members HymnalExact
           keysAsk("tune", 0)
           tunerOpenFrom()
         else if p.swipe and keysSwipedUp(p.pull, p.speed)
+          feelTell("sheet-open", 0)
           playerAsk("open", 0)
         if p.enter != ""
-          if settingsFeel
-            haptic("selection")
+          feelTell("choose", 0)
       case none
         keysWheelOpen = false
   action keysKeyScrolled(x: number, y: number)
     let at = round(x / keysPlaced.detent)
+    let was = keysKeyAt
     keysKeyX = x
-    if at != keysKeyAt
+    if at != was
       keysKeyAt = at
-      if settingsFeel
-        haptic("selection")
+      if keysKeyDriven
+        feelTell("detent-key", feelCrossed(was, at))
+  // A dial is felt only while the reader drives it: from the touch, the
+  // wheel or the drag that moves it until it comes to rest; a scroll the
+  // app makes (the dial set from outside, re-placed at rest) tells nothing.
+  action keysKeyDrive
+    keysKeyDriven = true
+  action keysCapoDrive
+    keysCapoDriven = true
   action keysKeySettled
+    keysKeyDriven = false
     let at = round(keysKeyX / keysPlaced.detent)
     let pitch = ((at % 12) + 12) % 12
     if pitch != keysShown.keyAt
@@ -243,15 +248,21 @@ members HymnalExact
     if at < 12 or at > 23
       scrollIntoView(`dial-key-stop-${12 + pitch}`, inline="center", behavior="instant")
   action keysKeyAdjusted(v: number)
+    feelTell("detent-key", ((v % 12) + 12) % 12)
     keysAsk("key", ((v % 12) + 12) % 12)
+  action keysCapoAdjusted(v: number)
+    feelTell("detent-capo", v)
+    keysAsk("capo", v)
   action keysCapoScrolled(x: number, y: number)
     let at = round(x / keysPlaced.detent)
+    let was = keysCapoAt
     keysCapoX = x
-    if at != keysCapoAt
+    if at != was
       keysCapoAt = at
-      if settingsFeel
-        haptic("selection")
+      if keysCapoDriven
+        feelTell("detent-capo", feelCrossed(was, at))
   action keysCapoSettled
+    keysCapoDriven = false
     let at = min(11, max(0, round(keysCapoX / keysPlaced.detent)))
     if at != keysShown.capo
       keysAsk("capo", at == 0 ? -1 : (at == 11 ? 12 : at))
@@ -391,13 +402,15 @@ component KeysCapoDial
     keysAsk: action
     keysCapoScrolled: action
     keysCapoSettled: action
+    keysCapoDrive: action
+    keysCapoAdjusted: action
   view
     row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-capo"
       KeysDialName(title="CAPO")
       view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
         scroll id="dial-capo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
           scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled aria-hidden=true tabindex=-1 testId="dial-capo-row"
+          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled scrolldragstart=keysCapoDrive wheel=keysCapoDrive aria-hidden=true tabindex=-1 testId="dial-capo-row"
           for f in keysShown.capoStops key=f.capo
             button press=keysAsk("capo", f.capo) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
               display="flex" flex-direction="column" align-items="center" justify-content="center" scroll-snap-align="center"
@@ -406,7 +419,7 @@ component KeysCapoDial
               text f.played font="type.dial-played" color=(f.open ? "chord" : "muted")
         view position="absolute" top=0 left="50%" width=`${keysPlaced.notchWide}px` height=`${keysPlaced.notch}px` translate="-50% 0px"
           background-color="chord" pointer-events="none" aria-hidden=true
-        input type="range" min=0 max=11 step=1 value=keysShown.capo input=keysAsk("capo") aria-label="Capo" aria-valuetext=keysShown.capoSaid
+        input type="range" min=0 max=11 step=1 value=keysShown.capo input=keysCapoAdjusted aria-label="Capo" aria-valuetext=keysShown.capoSaid
           position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-capo-value"
 
 // The key dial: the twelve sounding keys on a row that snaps a key at a
@@ -421,13 +434,14 @@ component KeysKeyDial
     keysKeyScrolled: action
     keysKeySettled: action
     keysKeyAdjusted: action
+    keysKeyDrive: action
   view
     row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-key"
       KeysDialName(title="KEY")
       view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
         scroll id="dial-key-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
           scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-          scrollLeft=((12 + keysShown.keyAt) * keysPlaced.detent) scroll=keysKeyScrolled scrollend=keysKeySettled aria-hidden=true tabindex=-1 testId="dial-key-row"
+          scrollLeft=((12 + keysShown.keyAt) * keysPlaced.detent) scroll=keysKeyScrolled scrollend=keysKeySettled scrolldragstart=keysKeyDrive wheel=keysKeyDrive aria-hidden=true tabindex=-1 testId="dial-key-row"
           for c in [0, 1, 2] key=c
             for s in keysShown.keyStops key=s.pitch
               button press=keysAsk("key", s.pitch) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`

@@ -28,7 +28,8 @@ shape SettingsChords
 // paints light first; `setScheme` takes the platform's own (sheets, bars).
 // Sounds and haptics is on until the reader turns it off, kept as its
 // word (`settingsFeelKept`, "on" or "off") and read by `feelOf`
-// (src/settings/feel.ts); every `haptic` of the app plays only under it.
+// (src/settings/feel.ts); every cue the Feel tells (features/feel.contract)
+// is felt and heard only under it.
 // Chord style and Chord placement are kept as the text tapped, "" until
 // chosen, and read by the current hymnal's rule (src/settings/chords.ts):
 // the text when it is exactly a choice, else Simple and On the beat.
@@ -45,18 +46,18 @@ members HymnalExact
   derive settingsScheme = settingsLook == "dark" or settingsLook == "light" ? settingsLook : (settingsMedia.prefersColorScheme == "dark" ? "dark" : "light")
   action settingsChoose(look: string)
     settingsLook = look
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
   action settingsStyleChoose(style: string)
     settingsChordStyle = style
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
   action settingsPlacementChoose(placement: string)
     settingsPlacement = placement
-    if settingsFeel
-      haptic("selection")
+    feelTell("choose", 0)
+  // Turned on, the switch is felt at once; turned off, it says nothing.
   action settingsFeelSet(on: bool)
     settingsFeelKept = on ? "on" : "off"
+    if on
+      feelGive("switch-on", 0, 0)
   action settingsApply
     setScheme(settingsLook)
   action settingsOpen

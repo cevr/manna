@@ -6,6 +6,8 @@
 // recording and its fallback. This file draws them, keeps Intro and Click,
 // and tells the player Intro and the chords' key at launch and each change.
 
+use feelCrossed from "./feel.contract"
+
 shape PlayerStop
   at: number
   percent: number
@@ -46,6 +48,13 @@ members HymnalExact
   state playerIntro = true persist
   state playerClick = false persist
   state playerBeat = -1
+  state playerBeatTold = -1
+  // How long before its beat each beat after the first was told, in ms:
+  // the tests' read of the count-in's timing, which Sounds and haptics off
+  // (the owner's rule before any play) leaves unheard.
+  state playerBeatEarly: number[] = []
+  // How far ahead of its beat a beat is told: one frame at 60 Hz, in ms.
+  derive playerFrameAhead = 17
   action playerIntroSwitch(on: bool)
     playerIntro = on
   action playerClickSwitch(on: bool)
@@ -53,20 +62,33 @@ members HymnalExact
   action playerIntroTold
     send playerStepped = playerStep("intro", 0, 0, playerIntro ? 1 : 0, "")
   // Each beat of the count-in, as the player answers it: a click under
-  // Sounds and haptics while Click is on (the sound is par-hy-feel's).
+  // Sounds and haptics while Click is on: the first beat accented, as the
+  // current CountIn.tsx tells it. The first is told as the count starts;
+  // each later one a frame before it is due (`playerCountCheck`), its
+  // sound scheduled at the beat on the runner's clock, so it lands on the
+  // beat; a beat the frames missed is told as the player reaches it.
   action playerCounted
     if not player.count.on
       playerBeat = -1
+      playerBeatTold = -1
     else if player.count.beat != playerBeat
       playerBeat = player.count.beat
-      if playerClick
-        if settingsFeel
-          if player.count.beat == 0
-            haptic("impact-medium")
-          else
-            haptic("impact-light")
+      if player.count.beat == 0
+        playerBeatEarly = []
+      if player.count.beat > playerBeatTold
+        playerBeatTold = player.count.beat
+        if playerClick
+          feelTell(player.count.beat == 0 ? "beat-accent" : "beat", 0)
   action playerCountCheck
-    if performanceNow() - playerClockAt >= player.count.next
+    let now = performanceNow()
+    let due = playerClockAt + player.count.next
+    let coming = player.count.beat + 1
+    if coming < player.count.beats and coming > playerBeatTold and now >= due - playerFrameAhead
+      playerBeatTold = coming
+      if playerClick
+        playerBeatEarly = playerBeatEarly.concat([due - now])
+        feelTellAt("beat", 0, due)
+    if now - playerClockAt >= player.count.next
       playerClockTicked()
   // Intro is told at launch and at each switch; it waits for the next Play.
   task playerIntroTell key=playerIntro
@@ -100,21 +122,29 @@ component TempoDial
     tempo: PlayerTempo
     ask: action
   inject
-    settingsFeel: bool
+    feelTell: action
   state x = 0
   state at = -1
+  state driven = false
   state pressedAt = -1000
   action scrolled(sx: number, sy: number)
     let i = round(sx / tempo.places.detent)
+    let was = at
     x = sx
-    if i != at
+    if i != was
       at = i
-      if settingsFeel
-        haptic("selection")
+      if driven
+        feelTell("detent-tempo", feelCrossed(was, i))
+  action drive
+    driven = true
+  action adjusted(i: number)
+    feelTell("detent-tempo", i)
+    ask("tempo", i)
   action picked(i: number)
     pressedAt = performanceNow()
     ask("tempo", i)
   action settled
+    driven = false
     let i = min(tempo.stops.length - 1, max(0, round(x / tempo.places.detent)))
     if i != tempo.at and performanceNow() - pressedAt >= 600
       ask("tempo", i)
@@ -128,7 +158,7 @@ component TempoDial
           view position="relative" flex=1 min-width=0 height=`${tempo.places.detent}px`
             scroll id="dial-tempo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
               scroll-snap-type="x mandatory" height=`${tempo.places.detent}px` padding-left=`calc(50% - ${tempo.places.detent / 2}px)` padding-right=`calc(50% - ${tempo.places.detent / 2}px)` box-sizing="border-box"
-              scrollLeft=(tempo.at * tempo.places.detent) scroll=scrolled scrollend=settled aria-hidden=true tabindex=-1 testId="dial-tempo-row"
+              scrollLeft=(tempo.at * tempo.places.detent) scroll=scrolled scrollend=settled scrolldragstart=drive wheel=drive aria-hidden=true tabindex=-1 testId="dial-tempo-row"
               for s in tempo.stops key=s.at
                 button press=picked(s.at) appearance="none" padding=0 flex-shrink=0 width=`${tempo.places.detent}px` height=`${tempo.places.detent}px`
                   display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
@@ -136,7 +166,7 @@ component TempoDial
                   text `${s.percent}` font="type.key-face" color=(s.at == tempo.at ? "chord" : "muted") white-space="nowrap"
             view position="absolute" top=0 left="50%" width=`${tempo.places.notchWide}px` height=`${tempo.places.notch}px` translate="-50% 0px"
               background-color="chord" pointer-events="none" aria-hidden=true
-            input type="range" min=0 max=(tempo.stops.length - 1) step=1 value=tempo.at input=ask("tempo") aria-label="Tempo" aria-valuetext=tempo.said
+            input type="range" min=0 max=(tempo.stops.length - 1) step=1 value=tempo.at input=adjusted aria-label="Tempo" aria-valuetext=tempo.said
               position="absolute" inset=0 width="100%" height="100%" margin=0 appearance="none" background-color="transparent" opacity=0.02 pointer-events="none" testId="dial-tempo-value"
       if tempo.timed or tempo.away
         row align-items="center" justify-content="space-between" padding="0px space.s16"
