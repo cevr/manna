@@ -33,6 +33,7 @@ import { railSources } from './rail/sources.ts';
 import { resultsSources } from './results/sources.ts';
 import { settingsSources } from './settings/sources.ts';
 import { readingSources } from './reading/sources.ts';
+import { feelSources } from './feel/cues.ts';
 import { sheetSources } from './sheet/sources.ts';
 import { followSources } from './follow/sources.ts';
 import { timingLoader } from './timing/load.ts';
@@ -64,6 +65,7 @@ export const sourcesAt = (
     ...resultsSources(),
     ...sheetSources(chords),
     ...readingSources(),
+    ...feelSources(),
     ...pinchSources(),
     ...followSources(book, timing, words.words),
     ...timingSources(words),

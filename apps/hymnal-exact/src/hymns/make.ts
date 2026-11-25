@@ -31,6 +31,7 @@ import { writeShipped } from '../shipped/write.ts';
 import '../abouthymn/make.ts'; // oxlint-disable-line import/no-unassigned-import -- About's More like this is written as this module is imported, before Exact bundles it.
 import '../../tools/timing.ts'; // oxlint-disable-line import/no-unassigned-import -- the player's timing is written as this module is imported, before Exact bundles it.
 import '../results/meaning-files.ts'; // oxlint-disable-line import/no-unassigned-import -- the meaning table's files the iOS app ships are written as this module is imported.
+import '../../tools/sounds.ts'; // oxlint-disable-line import/no-unassigned-import -- the Feel's WAVs the app declares are written as this module is imported.
 
 const indexes = JSON.stringify(readIndexes());
 const files = [

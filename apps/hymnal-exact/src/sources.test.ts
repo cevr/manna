@@ -205,6 +205,7 @@ describe('the data module runs where Exact runs it', () => {
       'chordsGrip',
       'chordsPage',
       'favouritesAfter',
+      'feelRows',
       'findAbout',
       'findFollowRow',
       'findGroupTiles',
