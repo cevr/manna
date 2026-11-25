@@ -58,6 +58,8 @@
     },
     "./feel/body": "./src/feel/body.ts",
     "./feel/cues": "./src/feel/cues.ts",
+    "./feel/voice": "./src/feel/voice.ts",
+    "./feel/feel": "./src/feel/feel.ts",
     "./follow/seek-targets": "./src/follow/seek-targets.ts",
     "./follow/follower": "./src/follow/follower.ts",
     "./follow/marks": "./src/follow/marks.ts",
