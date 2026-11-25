@@ -121,6 +121,7 @@ test "With Click on, each beat of the count-in after the first is told within a 
   tap "bar-sound"
   clock settle
   clock data
+  expect state player.fixture == true
   tap "play"
   clock data
   clock +2500
