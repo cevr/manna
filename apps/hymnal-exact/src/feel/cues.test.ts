@@ -19,46 +19,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { Option } from 'effect';
 
 import * as body from '@manna/hymnal-app/feel/body';
-import type { Cue, DialName, PlainCue } from '@manna/hymnal-app/feel/cues';
+import type { Cue } from '@manna/hymnal-app/feel/cues';
 import { lengthMs, RATE, RECIPES, soundLength, voiced } from '@manna/hymnal-app/feel/voice';
 
 import { FEEL_ROWS, FEEL_SOUNDS, SOUND_FOLDER, soundPath } from './cues.ts';
+import { DIALS, PLAIN } from './cue-names.testing.ts';
 import { soundFiles } from './sounds.ts';
 import { feelSources } from './sources.ts';
-
-const PLAIN: ReadonlyArray<PlainCue> = [
-  'wall',
-  'reset',
-  'chords-on',
-  'chords-off',
-  'play',
-  'pause',
-  'switch-on',
-  'switch-off',
-  'favourite-on',
-  'favourite-off',
-  'press',
-  'choose',
-  'tab',
-  'zoom-out',
-  'zoom-in',
-  'sheet-open',
-  'seek-grab',
-  'seek-tick',
-  'seek-release',
-  'rail-tick',
-];
-
-const DIALS: ReadonlyArray<DialName> = [
-  'key',
-  'capo',
-  'size',
-  'tempo',
-  'placement',
-  'hundreds',
-  'tens',
-  'ones',
-];
 
 /** Every cue the current app tells, by the name the port tells it by, with each of its forms. */
 const CUES: ReadonlyArray<{ readonly name: string; readonly forms: ReadonlyArray<Cue> }> = [
@@ -140,8 +107,14 @@ describe('the Feel table is the current hymnal’s body', () => {
     expect(written.toSorted()).toEqual(FEEL_SOUNDS.map(soundPath).toSorted());
     expect(FEEL_SOUNDS.length).toBe(13);
     expect(shipped).toContainEqual({ from: SOUND_FOLDER, to: `Resources/${SOUND_FOLDER}` });
-    const swift = readFileSync(new URL('modules/apple/Feel.swift', appDir), 'utf8');
-    expect(swift).toContain(`"ExactResources/Resources/${SOUND_FOLDER}"`);
+    const swift = readFileSync(new URL('modules/apple/Feel.swift', appDir), 'utf8')
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .join('\n');
+    const folders = [
+      ...swift.matchAll(/Bundle\.main\.bundleURL\s*\.appendingPathComponent\("([^"]*)"/gu),
+    ].map((found) => found[1]);
+    expect(folders).toEqual([`ExactResources/Resources/${SOUND_FOLDER}`]);
   });
 });
 

@@ -24,11 +24,12 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Haptic } from '@manna/hymnal-app/feel/body';
-import type { Cue, DialName, PlainCue } from '@manna/hymnal-app/feel/cues';
+import type { Cue } from '@manna/hymnal-app/feel/cues';
 import { feelOver } from '@manna/hymnal-app/feel/feel';
 
 import { below, pick, type Random, seeded } from '../test/random.ts';
 import { FEEL_ROWS } from './cues.ts';
+import { DIALS, PLAIN } from './cue-names.testing.ts';
 
 /** A body given: what played, and when on the runner's clock. */
 interface Given {
@@ -117,39 +118,6 @@ const currentFeel = (
   }
   return given;
 };
-
-const PLAIN: ReadonlyArray<PlainCue> = [
-  'wall',
-  'reset',
-  'chords-on',
-  'chords-off',
-  'play',
-  'pause',
-  'switch-on',
-  'switch-off',
-  'favourite-on',
-  'favourite-off',
-  'press',
-  'choose',
-  'tab',
-  'zoom-out',
-  'zoom-in',
-  'sheet-open',
-  'seek-grab',
-  'seek-tick',
-  'seek-release',
-  'rail-tick',
-];
-const DIALS: ReadonlyArray<DialName> = [
-  'key',
-  'capo',
-  'size',
-  'tempo',
-  'placement',
-  'hundreds',
-  'tens',
-  'ones',
-];
 
 /** A cue as a run draws it: ticks and detents most, so the floor and the ringing sound are met. */
 const cueOf = (random: Random): Cue => {
