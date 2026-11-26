@@ -5,7 +5,8 @@
  * every control tells its `Tell` (A2, the haptics guard this replaces):
  *
  * - no Contract line but `features/feel.contract`'s plays a `haptic(` or a
- *   `playSound(`: a call site names a cue, never a body;
+ *   sound (`playSound(`, or the voice's `feelSound(`): a call site names a
+ *   cue, never a body;
  * - `feelTell` and `feelTellAt` give a body only under `if settingsFeel`,
  *   and `feelGive`, which gives one whatever the switch says, is told only
  *   by them and by the Sounds and haptics switch's own turn on;
@@ -231,7 +232,7 @@ describe('the finders find a planted defect', () => {
 
 describe('every cue goes through the Feel', () => {
   it('plays a haptic or a sound in features/feel.contract alone', () => {
-    const bodies = all(['haptic', 'playSound']);
+    const bodies = all(['haptic', 'playSound', 'feelSound']);
     expect(bodies.length).toBeGreaterThan(0);
     expect(bodies.filter((call) => !call.at.startsWith(`${FEEL}:`)).map((call) => call.at)).toEqual(
       [],

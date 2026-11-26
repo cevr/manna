@@ -10,10 +10,10 @@
  * - any cues at any gaps, the switch turned at random: the same haptics
  *   and the same sounds at the same times (a tick's floor, a sound dropped
  *   over a ringing one, nothing while off);
- * - a sound cued before the current voice has loaded: the current app
- *   drops it and the port plays it (Exact reads every declared sound at
- *   its first voice, docs/reference.md "Sound"): the one difference,
- *   named here; the haptics, and every sound after the load, are the same;
+ * - a sound cued before the voice has loaded (the app module's, `feelLoaded`):
+ *   both drop it and still hold the next sound back while it would ring;
+ *   the haptics, and every sound after the load, are the same; a voice
+ *   never loaded (the web's) sends no sound, and every haptic still plays;
  * - the count-in at generated tempos and bars, its beats told as
  *   `features/tempo.contract` tells them (the first as the count starts,
  *   each later one at the first frame within `AHEAD` of its beat, its sound
@@ -28,7 +28,7 @@ import type { Cue, DialName, PlainCue } from '@manna/hymnal-app/feel/cues';
 import { feelOver } from '@manna/hymnal-app/feel/feel';
 
 import { below, pick, type Random, seeded } from '../test/random.ts';
-import { FEEL_ROWS, soundPath } from './cues.ts';
+import { FEEL_ROWS } from './cues.ts';
 
 /** A body given: what played, and when on the runner's clock. */
 interface Given {
@@ -67,8 +67,11 @@ const exactName = (haptic: Haptic): string => {
 
 const mod = (n: number, by: number) => ((n % by) + by) % by;
 
-/** The port's `feelTell`/`feelTellAt` and `feelGive`, as `features/feel.contract` writes them. */
-const portFeel = (run: ReadonlyArray<Told>): ReadonlyArray<Given> => {
+/** The port's `feelTell`/`feelTellAt` and `feelGive`, as `features/feel.contract` writes them, its voice loaded from `loadedAt` on. */
+const portFeel = (
+  run: ReadonlyArray<Told>,
+  loadedAt = Number.NEGATIVE_INFINITY,
+): ReadonlyArray<Given> => {
   let tickAt = -1000000;
   let quietAt = -1000000;
   return run.flatMap(({ cue, now, due, on }) => {
@@ -82,10 +85,8 @@ const portFeel = (run: ReadonlyArray<Told>): ReadonlyArray<Given> => {
     const given: Array<Given> = [];
     if (felt) given.push({ kind: 'haptic', what: row.haptic, at: now });
     if (felt && row.floor > 0) tickAt = now;
-    if (heard) {
-      given.push({ kind: 'sound', what: src, at: start });
-      quietAt = start + (row.lengths[i] ?? 0);
-    }
+    if (heard && now >= loadedAt) given.push({ kind: 'sound', what: src, at: start });
+    if (heard) quietAt = start + (row.lengths[i] ?? 0);
     return given;
   });
 };
@@ -103,8 +104,7 @@ const currentFeel = (
     },
     sound: {
       play: (sound) => {
-        if (clock.now >= loadedAt)
-          given.push({ kind: 'sound', what: soundPath(sound), at: clock.now });
+        if (clock.now >= loadedAt) given.push({ kind: 'sound', what: sound, at: clock.now });
       },
     },
     on: () => clock.on,
@@ -188,19 +188,32 @@ describe('the port’s Feel gives the current app’s bodies', () => {
     expect(dropped).toBeGreaterThan(0);
   });
 
-  test('a sound cued before the current voice has loaded: the current app drops it, the port plays it; all else the same', () => {
+  test('a sound cued before the voice has loaded: both drop it; all else the same', () => {
     let early = 0;
     for (const seed of SEEDS) {
       const random = seeded(seed);
       const run = runOf(random, 40, false);
       const loadedAt = (run[below(random, run.length)]?.now ?? 0) + 0.5;
-      const port = portFeel(run);
-      const current = currentFeel(run, loadedAt);
-      const late = (g: Given) => g.kind === 'haptic' || g.at >= loadedAt;
-      expect({ seed, port: port.filter(late) }).toEqual({ seed, port: [...current] });
-      early += port.filter((g) => !late(g)).length;
+      const port = portFeel(run, loadedAt);
+      expect({ seed, port }).toEqual({ seed, port: currentFeel(run, loadedAt) });
+      early += portFeel(run).filter((g) => g.kind === 'sound' && g.at < loadedAt).length;
     }
     expect(early).toBeGreaterThan(0);
+  });
+
+  test('a voice never loaded (the web’s) sends no sound, and every haptic still plays', () => {
+    for (const seed of SEEDS) {
+      const run = runOf(seeded(seed), 40, true);
+      const port = portFeel(run, Number.POSITIVE_INFINITY);
+      expect({ seed, sounds: port.filter((g) => g.kind === 'sound') }).toEqual({
+        seed,
+        sounds: [],
+      });
+      expect({ seed, haptics: port }).toEqual({
+        seed,
+        haptics: portFeel(run).filter((g) => g.kind === 'haptic'),
+      });
+    }
   });
 });
 

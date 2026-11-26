@@ -4,16 +4,19 @@ import Foundation
 /// `native.later` goes to the part its op's prefix names, and an op no part
 /// claims is refused. The parts: the tuner's ear (`tuner.`, `TunerEar.swift`)
 /// and the saved recordings' backup mark (`backup.`, `Backup.swift`), and
-/// the home list's pinch (`pinch.`, `Pinch.swift`, the `pinch` hatch).
+/// the home list's pinch (`pinch.`, `Pinch.swift`, the `pinch` hatch), and
+/// the Feel's voice (`feel.`, `Feel.swift`).
 final class Hymnal: ExactModule {
     private lazy var parts: [String: (_ request: [String: Any], _ reply: ExactReply) -> Void] = [
         "tuner.": { [unowned self] request, reply in self.ear.later(request, reply: reply) },
         "backup.": { [unowned self] request, reply in self.backup.later(request, reply: reply) },
         "pinch.": { [unowned self] request, reply in self.pinch.later(request, reply: reply) },
+        "feel.": { [unowned self] request, reply in self.feel.later(request, reply: reply) },
     ]
     private lazy var ear = TunerEar(context: context)
     private lazy var backup = Backup(context: context)
     private lazy var pinch = Pinch(context: context)
+    private lazy var feel = Feel(context: context)
 
     override func element(_ element: ExactElement) {
         if element.hatch == .pinch { pinch.element(element) }
@@ -33,6 +36,7 @@ final class Hymnal: ExactModule {
 
     override func destroy() {
         ear.end("stopped")
+        feel.end()
     }
 }
 

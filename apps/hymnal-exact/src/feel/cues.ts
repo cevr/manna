@@ -1,16 +1,14 @@
-/** One cue's body, as the view reads it. */
+/** One cue's body, as the view reads it: its haptic by Exact's `haptic()` name, its floor, and its sounds by the voice's names with how long each plays. */
 export interface FeelRow {
   readonly cue: string;
   readonly haptic: string;
   readonly floor: number;
   readonly sounds: ReadonlyArray<string>;
   readonly lengths: ReadonlyArray<number>;
-  readonly gain: number;
-  readonly group: string;
 }
 
-/** The folder under the app the sounds are written to and declared from. */
-export const SOUND_FOLDER = 'assets/feel';
+/** The folder under the app the sounds are written to, which the iOS app ships at `Resources/feel` (`app.json`). */
+export const SOUND_FOLDER = 'feel';
 
 /** The file the voice's sound `name` is written to. */
 export const soundPath = (name: string): string => `${SOUND_FOLDER}/${name}.wav`;
@@ -25,36 +23,36 @@ const TINE_MS = 112;
 /** The key dial's twelve tines, C up to B. */
 const KEYS = Array.from({ length: 12 }, (_, n) => `key-${n}`);
 
+/** A cue felt only. */
 const felt = (cue: string, haptic: string, floor = 0): FeelRow => ({
   cue,
   haptic,
   floor,
   sounds: [],
   lengths: [],
-  gain: 1,
-  group: 'feel',
 });
 
+/** A cue felt and heard by one of `sounds`, each `ms` long. */
 const heard = (
   cue: string,
   haptic: string,
   floor: number,
   sounds: ReadonlyArray<string>,
   ms: number,
-): FeelRow => ({
-  cue,
-  haptic,
-  floor,
-  sounds: sounds.map(soundPath),
-  lengths: sounds.map(() => ms),
-  gain: 1,
-  group: 'feel',
-});
+): FeelRow => ({ cue, haptic, floor, sounds, lengths: sounds.map(() => ms) });
 
 /** The dials whose detent thocks: every dial but the key's. */
 const THOCKED = ['capo', 'size', 'tempo', 'placement', 'hundreds', 'tens', 'ones'] as const;
 
-/** Every cue's body. */
+/**
+ * Every cue's body: each of the current hymnal's cues (`feel/cues.ts`) by
+ * the name the view tells it by (its tag; a dial's detent `detent-<dial>`;
+ * the count-in's beat `beat-accent`, its first, or `beat`), with the body
+ * the current `body.ts` gives it. A row with more than one sound is the key
+ * dial's: the cue's `at`, a pitch class, picks the sound at `at` mod their
+ * count. A tick keeps `floor` ms from the last tick's haptic. `cues.test.ts`
+ * holds every row to the current app's body.
+ */
 export const FEEL_ROWS: ReadonlyArray<FeelRow> = [
   felt('section', 'impact-light'),
   felt('wall', 'impact-rigid'),
@@ -87,9 +85,3 @@ export const FEEL_ROWS: ReadonlyArray<FeelRow> = [
 export const FEEL_SOUNDS: ReadonlyArray<string> = [
   ...new Set(FEEL_ROWS.flatMap((row) => row.sounds)),
 ];
-
-/** The Feel's source, as `app.ts` registers it: `feelRows()` answers the table. */
-export const feelSources = () => ({
-  feelRows: () =>
-    FEEL_ROWS.map((row) => ({ ...row, sounds: [...row.sounds], lengths: [...row.lengths] })),
-});

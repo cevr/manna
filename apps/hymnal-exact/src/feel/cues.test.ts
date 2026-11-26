@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noTernary, effect/noNullish -- a Bun test that reads the app's own Contract text for its sound lines and the current app's body as plain values. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noTernary, effect/noNullish, effect/noGlobals -- a Bun test that reads the app's own Contract text for sound lines, its app.json for the iOS resources (JSON.parse), and the current app's body as plain values. */
 
 /**
  * The port's Feel table is the current hymnal's body, cue by cue: each
@@ -7,13 +7,14 @@
  * by pitch class); its lengths are the voice's own (`soundLength`); a tick
  * keeps the current `FLOOR`. Each sound file is the current voice's
  * render, in memory: a RIFF WAV of 16-bit mono PCM at the voice's rate, as
- * long as its recipe, the same bytes at each render; and the sounds the
- * Contract declares are exactly the files `tools/sounds.ts` writes. No test
- * here reads a generated file.
+ * long as its recipe, the same bytes at each render. The Contract declares
+ * no sound, so Exact's web plan fetches none; the iOS app ships exactly
+ * the files `tools/sounds.ts` writes, where `modules/apple/Feel.swift`
+ * reads them. No test here reads a generated file.
  */
 
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import { Option } from 'effect';
 
@@ -21,8 +22,9 @@ import * as body from '@manna/hymnal-app/feel/body';
 import type { Cue, DialName, PlainCue } from '@manna/hymnal-app/feel/cues';
 import { lengthMs, RATE, RECIPES, soundLength, voiced } from '@manna/hymnal-app/feel/voice';
 
-import { FEEL_ROWS, FEEL_SOUNDS, feelSources, soundPath } from './cues.ts';
+import { FEEL_ROWS, FEEL_SOUNDS, SOUND_FOLDER, soundPath } from './cues.ts';
 import { soundFiles } from './sounds.ts';
+import { feelSources } from './sources.ts';
 
 const PLAIN: ReadonlyArray<PlainCue> = [
   'wall',
@@ -88,19 +90,33 @@ const currentRow = (name: string, forms: ReadonlyArray<Cue>) => {
     cue: name,
     haptic: exactName(body.bodyOf(first).haptic),
     floor: body.isTick(first) ? body.FLOOR : 0,
-    sounds: sounds.map(soundPath),
+    sounds,
     lengths: sounds.map(soundLength),
-    gain: 1,
-    group: 'feel',
   };
 };
 
-/** The sounds the app declares, by `sound` line, in `app.contract` and `features/feel.contract`. */
-const declared = ['../../app.contract', '../../features/feel.contract'].flatMap((file) =>
-  [...readFileSync(new URL(file, import.meta.url), 'utf8').matchAll(/^sound "([^"]+)"$/gmu)].map(
-    (found) => found[1],
-  ),
-);
+const appDir = new URL('../../', import.meta.url);
+
+/** Every `sound` line in the app's Contract files: what Exact's plan would fetch on the web. */
+const declared = [
+  'app.contract',
+  ...readdirSync(new URL('features/', appDir)).map((name) => `features/${name}`),
+]
+  .filter((file) => file.endsWith('.contract'))
+  .flatMap((file) =>
+    [...readFileSync(new URL(file, appDir), 'utf8').matchAll(/^\s*sound "([^"]+)"/gmu)].map(
+      (found) => found[1],
+    ),
+  );
+
+/** The trees app.json ships in the iOS app. */
+const shipped = (
+  JSON.parse(readFileSync(new URL('app.json', appDir), 'utf8')) as {
+    readonly host: {
+      readonly ios: { readonly resources: ReadonlyArray<{ from: string; to: string }> };
+    };
+  }
+).host.ios.resources;
 
 describe('the Feel table is the current hymnal’s body', () => {
   it('gives every cue the current app tells its haptic, floor, sounds and lengths', () => {
@@ -115,10 +131,17 @@ describe('the Feel table is the current hymnal’s body', () => {
     );
   });
 
-  it('declares exactly the sounds the table names and the generator writes', () => {
+  it('declares no sound to Exact, so the web fetches none, as the current app’s web has no voice', () => {
+    expect(declared).toEqual([]);
+  });
+
+  it('ships the iOS app exactly the sounds the table names, where its module reads them', () => {
     const written = soundFiles().map((file) => file.path);
-    expect(declared.toSorted()).toEqual([...FEEL_SOUNDS].toSorted());
-    expect(written.toSorted()).toEqual([...FEEL_SOUNDS].toSorted());
+    expect(written.toSorted()).toEqual(FEEL_SOUNDS.map(soundPath).toSorted());
+    expect(FEEL_SOUNDS.length).toBe(13);
+    expect(shipped).toContainEqual({ from: SOUND_FOLDER, to: `Resources/${SOUND_FOLDER}` });
+    const swift = readFileSync(new URL('modules/apple/Feel.swift', appDir), 'utf8');
+    expect(swift).toContain(`"ExactResources/Resources/${SOUND_FOLDER}"`);
   });
 });
 

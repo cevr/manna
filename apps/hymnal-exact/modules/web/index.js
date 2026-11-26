@@ -222,6 +222,24 @@ const backup = {
   'backup.exclude': () => ({ excluded: false }),
 };
 
+/**
+ * The Feel's voice: the web holds none, as the current hymnal's web has no
+ * voice (`feel/native.ts`): it loads and plays nothing and fetches no
+ * sound, so the page sends none (`features/feel.contract`). Under the
+ * agent it says it holds every sound named, so a drive reads what would be
+ * sent, and still plays none.
+ */
+const feel = {
+  'feel.load': (request) => ({
+    loaded: host.agent
+      ? String(request.names ?? '')
+          .split(' ')
+          .filter(Boolean).length
+      : 0,
+  }),
+  'feel.play': () => ({ played: false }),
+};
+
 /** How often each hymn's timing file was asked for: a read after a refused one imports it afresh. */
 const timingTries = new Map();
 
@@ -282,7 +300,7 @@ const shipped = Object.fromEntries(
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op];
+  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op] ?? feel[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

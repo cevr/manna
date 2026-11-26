@@ -3,6 +3,14 @@
 // body the current app gives it (src/feel/body.ts), while Sounds and haptics
 // is on, and nothing while it is off. The table is the data module's
 // (`feelRows`, src/feel/cues.ts): no call site names a haptic or a file.
+// The sound is the app module's, as the current app's is its native
+// voice (native/feel/Voice.swift): `feelLoaded` asks it to make the
+// voice's system sounds at launch, and `feelSent` asks it to play one
+// (`feelSound`, src/feel/sources.ts; modules/apple/Feel.swift). The web
+// holds no voice, as the current app's web has none: its module loads
+// none, so no sound is sent there (the agent's web module says it holds
+// them all, so a drive reads what would be sent). A cue before the load
+// plays its haptic and no sound, as the current app's does.
 // A cue is told only from a touch's handler (the count-in's beat, Play's
 // result told in time, is the one exception). Two rules of the current
 // app's hold here: a tick's haptic (a dial's detent, the seeker's and the
@@ -10,21 +18,9 @@
 // tick's, and a sound starts only once the last one has ended, so no two
 // ever ring at once. `feelGive` gives a body whatever the switch says: the
 // switch's own turn on is felt at once, as the current app's Settings does.
-// `feelTold` counts the bodies given and `feelLast` says the last (its cue,
-// the haptic played or `-`, the sound played or `-`), for the tests.
-sound "assets/feel/key-0.wav"
-sound "assets/feel/key-1.wav"
-sound "assets/feel/key-2.wav"
-sound "assets/feel/key-3.wav"
-sound "assets/feel/key-4.wav"
-sound "assets/feel/key-5.wav"
-sound "assets/feel/key-6.wav"
-sound "assets/feel/key-7.wav"
-sound "assets/feel/key-8.wav"
-sound "assets/feel/key-9.wav"
-sound "assets/feel/key-10.wav"
-sound "assets/feel/key-11.wav"
-sound "assets/feel/thock.wav"
+// `feelTold` counts the bodies given, `feelSounds` the sounds sent, and
+// `feelLast` says the last body (its cue, the haptic played or `-`, the
+// sound sent or `-`), for the tests.
 
 shape FeelRow
   cue: string
@@ -32,8 +28,14 @@ shape FeelRow
   floor: number
   sounds: string[]
   lengths: number[]
-  gain: number
-  group: string
+
+shape FeelLoaded
+  loaded: number
+
+shape FeelSent
+  serial: number
+  sound: string
+  asked: bool
 
 fn feelMod(n: number, by: number): number = ((n % by) + by) % by
 
@@ -45,38 +47,44 @@ fn feelCrossed(was: number, at: number): number = was < 0 ? at : (at > was ? was
 
 members HymnalExact
   resource feelTable = feelRows() as shape FeelRow[] else empty()
+  resource feelLoaded = feelLoad() as shape FeelLoaded
+  mutation feelSent as shape FeelSent parallel
   state feelTickAt = -1000000
   state feelQuietAt = -1000000
   state feelTold = 0
+  state feelSounds = 0
   state feelLast = ""
   action feelTell(cue: string, at: number)
     if settingsFeel
       feelGive(cue, at, 0)
-  // A cue whose sound is due at `due` on the runner's clock: the
-  // count-in's beat, told a frame ahead so its sound lands on the beat.
-  action feelTellAt(cue: string, at: number, due: number)
+  // A cue whose sound is due `wait` ms from now: the count-in's beat,
+  // told a frame ahead so its sound lands on the beat.
+  action feelTellAt(cue: string, at: number, wait: number)
     if settingsFeel
-      feelGive(cue, at, due)
-  // `at` picks the row's sound (the key dial's pitch class); `due` is
-  // the runner's time the sound is due at (the past, or 0, is now).
-  action feelGive(cue: string, at: number, due: number)
+      feelGive(cue, at, wait)
+  // `at` picks the row's sound (the key dial's pitch class); `wait` is
+  // how long from now the sound is due (0 or less is now).
+  action feelGive(cue: string, at: number, wait: number)
     match first(feelTable.filter(r => r.cue == cue))
       case some(row)
         let now = performanceNow()
-        let start = max(now, due)
+        let start = now + max(0, wait)
         let felt = row.floor == 0 or now - feelTickAt >= row.floor
         let i = row.sounds.length == 0 ? 0 : feelMod(round(at), row.sounds.length)
         let src = match row.sounds.at(i) { case some(s) => s, case none => "" }
         let ms = match row.lengths.at(i) { case some(l) => l, case none => 0 }
         let heard = src != "" and start >= feelQuietAt
+        let sent = heard and feelLoaded.loaded > 0
         if felt
           haptic(row.haptic)
         if felt and row.floor > 0
           feelTickAt = now
+        if sent
+          send feelSent = feelSound(src, max(0, wait))
+          feelSounds = feelSounds + 1
         if heard
-          playSound(src, at=start, gain=row.gain, group=row.group)
           feelQuietAt = start + ms
         feelTold = feelTold + 1
-        feelLast = `${cue} ${felt ? row.haptic : "-"} ${heard ? src : "-"}`
+        feelLast = `${cue} ${felt ? row.haptic : "-"} ${sent ? src : "-"}`
       case none
         feelTold = feelTold

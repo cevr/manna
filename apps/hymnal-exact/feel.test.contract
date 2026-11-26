@@ -1,9 +1,10 @@
 // The Feel (features/feel.contract): each cue a control tells is felt by
 // the haptic and heard by the sound the current hymnal's body gives it,
-// while Sounds and haptics is on, and nothing while it is off. The runner
-// records each voice (`expect sound`); a haptic is read from `feelLast`
-// (its cue, the haptic played or `-`, the sound played or `-`). No test
-// here plays a hymn.
+// while Sounds and haptics is on, and nothing while it is off. Each is read
+// from `feelLast` (its cue, the haptic played or `-`, the sound sent to
+// the app's module or `-`): under the agent the web's module says it holds
+// every sound, so what would be sent shows, and it plays none. No test here
+// plays a hymn with Sounds and haptics on.
 
 test "The key dial sounds the key it turns to, the capo dial thocks, a toggle is felt only"
   tap "hymn-2"
@@ -17,15 +18,12 @@ test "The key dial sounds the key it turns to, the capo dial thocks, a toggle is
   type "dial-key-value" "3"
   clock data
   clock settle
-  expect state feelLast == "detent-key selection assets/feel/key-3.wav"
-  expect sound has "assets/feel/key-3.wav"
+  expect state feelLast == "detent-key selection key-3"
   clock +500
   type "dial-capo-value" "2"
   clock data
   clock settle
-  expect state feelLast == "detent-capo selection assets/feel/thock.wav"
-  expect sound has "assets/feel/thock.wav"
-  expect sound missing "assets/feel/key-2.wav"
+  expect state feelLast == "detent-capo selection thock"
 
 test "A favourite is felt as a success, and its taking back as a light impact, with no sound"
   tap "hymn-2"
@@ -39,7 +37,6 @@ test "A favourite is felt as a success, and its taking back as a light impact, w
   clock data
   clock settle
   expect state feelLast == "favourite-off impact-light -"
-  expect sound missing "assets/feel/thock.wav"
 
 test "Off, nothing is told; turned on, the switch itself is felt at once"
   tap "gear"
@@ -76,7 +73,7 @@ test "Off, nothing is told; turned on, the switch itself is felt at once"
   type "dial-key-value" "5"
   clock data
   clock settle
-  expect state feelLast == "detent-key selection assets/feel/key-5.wav"
+  expect state feelLast == "detent-key selection key-5"
 
 // A dial is felt only while the reader drives it: drawn, or turned to a
 // stop by a tap (the app scrolls it there), it tells nothing.
@@ -101,8 +98,6 @@ test "A dial drawn, or set by a tap on a stop, tells nothing"
   clock data
   clock settle
   expect state feelTold == 2
-  expect sound missing "assets/feel/key-4.wav"
-  expect sound missing "assets/feel/thock.wav"
 
 // Played with Sounds and haptics off, as the owner's rule asks: the beats'
 // times are read from `playerBeatEarly`, how long before its beat each was
@@ -181,4 +176,3 @@ test "Turned off, no dial sounds"
   clock data
   clock settle
   expect state feelTold == 0
-  expect sound missing "assets/feel/key-3.wav"
