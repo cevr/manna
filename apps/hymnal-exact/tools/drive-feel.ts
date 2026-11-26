@@ -107,18 +107,21 @@ const checkWall = (dial: string, replies: ReadonlyArray<unknown>) => {
 
 const capo = wallSteps('dial-capo-row', wallPush(-300));
 const landed = [
-  'tap dial-capo-row drag -3000 0 over 600',
+  'tap dial-capo-row drag -300 0 over 400',
+  'clock settle',
+  'tap dial-capo-row drag -300 0 over 400',
   'clock settle',
   'clock data',
+  'state keysShown.capo',
   'state feelLast',
 ];
 const dials = await drive.launch(store('capo'), [...onDials, ...capo, 'clock +500', ...landed]);
 checkWall('capo', dials.slice(0, onDials.length + capo.length));
-const [capoLast] = dials.slice(-1);
+const [capoAt, capoLast] = dials.slice(-2);
 drive.check(
   'the capo dial landing on its last fret tells its detent, no wall',
-  /^detent-capo /u.test(String(capoLast)),
-  { capoLast },
+  Number(capoAt) === 11 && /^detent-capo /u.test(String(capoLast)),
+  { capoAt, capoLast },
 );
 
 const sheetOpen = [
@@ -142,7 +145,10 @@ const sheetOpen = [
 ];
 const toStop = (stop: string) => [`tap ${stop}`, 'clock data', 'clock settle'];
 const sheetWalls = [
-  ['placement', wallSteps('dial-placement-row', wallPush(-300))],
+  [
+    'placement',
+    wallSteps('dial-placement-row', wallPush(-300), toStop('dial-placement-stop-beat')),
+  ],
   ['tempo', wallSteps('dial-tempo-row', wallPush(-300), toStop('dial-tempo-stop-50'))],
   ['text size', wallSteps('dial-size-row', wallPush(300), toStop('dial-size-stop-7'))],
 ] as const;
@@ -162,9 +168,14 @@ const drum = await drive.launch(store('drum'), [
   'tap find-number',
   'clock data',
   'clock settle',
-  ...wallSteps('drum-hundreds', 'drag -300 0 over 400'),
+  ...wallSteps('drum-hundreds', 'drag -75 0 over 400'),
 ]);
-checkWall('hundreds', drum);
+const [drumBefore, , , drumAfter, drumLast] = drum.slice(-5);
+drive.check(
+  'the hundreds drum dragged off its first digit tells wall last (the touch lands mid-control, so the digits it crosses back tell first)',
+  Number(drumAfter) > Number(drumBefore) && /^wall /u.test(String(drumLast)),
+  { drumBefore, drumAfter, drumLast },
+);
 
 const quiet = [
   'clock data',
