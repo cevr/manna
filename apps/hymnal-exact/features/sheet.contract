@@ -57,15 +57,21 @@ members HymnalExact
     feelTell("detent-placement", at)
     sheetPlaceTurn(at)
   action sheetPlaceScrolled(x: number, y: number)
-    let at = round(x / keysPlaced.detent)
+    let at = min(sheetDial.stops.length - 1, max(0, round(x / keysPlaced.detent)))
     let was = sheetPlaceAt
     sheetPlaceX = x
     if at != was
       sheetPlaceAt = at
       if sheetPlaceDriven
         feelTell("detent-placement", feelCrossed(was, at))
+    if sheetPlaceDriven
+      feelHeld("placement", x, (sheetDial.stops.length - 1) * keysPlaced.detent)
   action sheetPlaceDrive
     sheetPlaceDriven = true
+    feelGrab()
+  action sheetPlaceWheel(e: WheelEvent)
+    sheetPlaceDriven = true
+    feelWheeled("placement", sheetPlaceX, e.deltaX, (sheetDial.stops.length - 1) * keysPlaced.detent)
   action sheetPlaceSettled
     sheetPlaceDriven = false
     let at = min(sheetDial.stops.length - 1, max(0, round(sheetPlaceX / keysPlaced.detent)))
@@ -214,6 +220,7 @@ component SheetPlacementDial
     sheetPlaceScrolled: action
     sheetPlaceSettled: action
     sheetPlaceDrive: action
+    sheetPlaceWheel: action
     sheetPlaceAdjusted: action
     sheetInherit: action
   view
@@ -226,7 +233,7 @@ component SheetPlacementDial
             view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
               scroll id="dial-placement-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
                 scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-                scrollLeft=(sheetDial.index * keysPlaced.detent) scroll=sheetPlaceScrolled scrollend=sheetPlaceSettled scrolldragstart=sheetPlaceDrive wheel=sheetPlaceDrive aria-hidden=true tabindex=-1 testId="dial-placement-row"
+                scrollLeft=(sheetDial.index * keysPlaced.detent) scroll=sheetPlaceScrolled scrollend=sheetPlaceSettled scrolldragstart=sheetPlaceDrive wheel=sheetPlaceWheel aria-hidden=true tabindex=-1 testId="dial-placement-row"
                 for s, si in sheetDial.stops key=s.value
                   button press=sheetPlaceTurn(si) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                     display="flex" align-items="center" justify-content="center" scroll-snap-align="center"

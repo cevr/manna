@@ -54,6 +54,38 @@ members HymnalExact
   state feelTold = 0
   state feelSounds = 0
   state feelLast = ""
+  // The stopping dial held past one of its ends now, or "": the current
+  // app's `walled` latch (player/dial.ts `dragTo`, DialView.tsx), which
+  // tells `wall` once as a push carries the dial past an end and is armed
+  // again only when the dial is back inside its ends, or a new drag or
+  // wheel push begins. `feelWheelAt` is the last wheel push past an end:
+  // a wheel's events within 250 ms of it are the same push.
+  state feelWalled = ""
+  state feelWheelAt = -1000000
+  // A driven dial `dial`'s scroll to `place`, its ends 0 and `end`: past
+  // either (the iOS scroller's bounce, a finger held past it or a fling
+  // into it) tells `wall` once.
+  action feelHeld(dial: string, place: number, end: number)
+    let past = place < -0.5 or place > end + 0.5
+    if past and feelWalled != dial
+      feelTell("wall", 0)
+    if past
+      feelWalled = dial
+    else if place > 0.5 and place < end - 0.5
+      feelWalled = ""
+  // A wheel's push of `delta` on dial `dial` at `place`: one that would
+  // carry it past an end tells `wall` once a push.
+  action feelWheeled(dial: string, place: number, delta: number, end: number)
+    let now = performanceNow()
+    let past = place + delta < -0.5 or place + delta > end + 0.5
+    if past and (feelWalled != dial or now - feelWheelAt > 250)
+      feelTell("wall", 0)
+    if past
+      feelWalled = dial
+      feelWheelAt = now
+  // A new drag of a dial: its push past an end is a new one.
+  action feelGrab
+    feelWalled = ""
   action feelTell(cue: string, at: number)
     if settingsFeel
       feelGive(cue, at, 0)

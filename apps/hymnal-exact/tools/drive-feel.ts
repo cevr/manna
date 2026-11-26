@@ -11,6 +11,14 @@
  *   app), and the dial come to rest tells nothing more;
  * - a drag down the hymn list tells `section` as another group's header
  *   takes the list's top, felt and never heard;
+ * - each dial that stops (capo, placement, tempo, text size, the hundreds
+ *   drum) pushed past its end tells `wall` once, as the current app's
+ *   dial does (`player/dial.ts` `dragTo`): on the web a wheel carrying a
+ *   scroller's row past its end, on iOS a finger dragging it into its
+ *   bounce; the drum, a finger dragged off its control's end; and the capo
+ *   dial dragged to land on its last fret tells that fret's detent, no wall
+ *   (a web finger at a scroller's end is the browser's own pan and tells
+ *   nothing, as the current app's web feels nothing);
  * - with Sounds and haptics off the same drags tell nothing.
  *
  * No sound plays under the agent, and Exact's runner holds no voice on any
@@ -76,6 +84,87 @@ drive.check(
   Number(listTold) > 0 && String(listLast) === 'section impact-light -' && Number(listSent) === 0,
   { listTold, listLast, listSent },
 );
+
+const wallSteps = (target: string, push: string, setUp: ReadonlyArray<string> = []) => [
+  ...setUp,
+  'state feelTold',
+  `tap ${target} ${push}`,
+  'clock data',
+  'state feelTold',
+  'state feelLast',
+];
+/** A push of the row `dx` px past where it is: a wheel's on the web, a finger's the other way on iOS (its scroller's bounce). */
+const wallPush = (dx: number) => (host === 'web' && `wheel ${dx} 0`) || `drag ${-dx} 0 over 400`;
+/** The replies ending in a dial's `wallSteps`: its count before, after and the last body. */
+const checkWall = (dial: string, replies: ReadonlyArray<unknown>) => {
+  const [before, , , after, last] = replies.slice(-5);
+  drive.check(
+    `the ${dial} dial pushed past its end tells wall, once`,
+    Number(after) === Number(before) + 1 && /^wall /u.test(String(last)),
+    { before, after, last },
+  );
+};
+
+const capo = wallSteps('dial-capo-row', wallPush(-300));
+const landed = [
+  'tap dial-capo-row drag -3000 0 over 600',
+  'clock settle',
+  'clock data',
+  'state feelLast',
+];
+const dials = await drive.launch(store('capo'), [...onDials, ...capo, 'clock +500', ...landed]);
+checkWall('capo', dials.slice(0, onDials.length + capo.length));
+const [capoLast] = dials.slice(-1);
+drive.check(
+  'the capo dial landing on its last fret tells its detent, no wall',
+  /^detent-capo /u.test(String(capoLast)),
+  { capoLast },
+);
+
+const sheetOpen = [
+  'clock data',
+  'tap gear',
+  'clock settle',
+  'clock data',
+  'tap chords-toggle',
+  'clock data',
+  'tap settings-done',
+  'clock settle',
+  'tap hymn-7',
+  'clock settle',
+  'clock data',
+  'tap play',
+  'clock data',
+  'clock settle',
+  'tap bar-title',
+  'clock settle',
+  'clock data',
+];
+const toStop = (stop: string) => [`tap ${stop}`, 'clock data', 'clock settle'];
+const sheetWalls = [
+  ['placement', wallSteps('dial-placement-row', wallPush(-300))],
+  ['tempo', wallSteps('dial-tempo-row', wallPush(-300), toStop('dial-tempo-stop-50'))],
+  ['text size', wallSteps('dial-size-row', wallPush(300), toStop('dial-size-stop-7'))],
+] as const;
+const sheet = await drive.launch(store('sheet'), [
+  ...sheetOpen,
+  ...sheetWalls.flatMap(([, steps]) => [...steps, 'clock +500']),
+]);
+let at = sheetOpen.length;
+for (const [dial, steps] of sheetWalls) {
+  checkWall(dial, sheet.slice(0, at + steps.length));
+  at += steps.length + 1;
+}
+
+const drum = await drive.launch(store('drum'), [
+  'clock data',
+  'clock settle',
+  'tap find-number',
+  'clock data',
+  'clock settle',
+  ...wallSteps('drum-hundreds', 'drag -300 0 over 400'),
+]);
+checkWall('hundreds', drum);
 
 const quiet = [
   'clock data',

@@ -156,11 +156,17 @@ component HymnalExact
     feelTell
     keysKeyDrive
     keysCapoDrive
+    keysCapoWheel
     keysCapoAdjusted
     sheetPlaceDrive
+    sheetPlaceWheel
     sheetPlaceAdjusted
     readingSizeDrive
+    readingSizeWheel
     readingSizeAdjusted
+    feelHeld
+    feelWheeled
+    feelGrab
     playerSeekDrag
     playerSeekLet
   action follow(url: string)

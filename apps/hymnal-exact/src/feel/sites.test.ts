@@ -12,7 +12,10 @@
  *   by them and by the Sounds and haptics switch's own turn on;
  * - each `feelTell(` and `feelTellAt(` stands in the action the table below names, and every
  *   cue its first argument can name is a row of the Feel table, so a call
- *   site dropped, moved or misspelt fails here.
+ *   site dropped, moved or misspelt fails here;
+ * - every cue the current app's own source tells (`one-sites.testing.ts`),
+ *   each stopping dial's wall among them, the port tells too, and no other,
+ *   so a site of the current app never ported fails here.
  *
  * Each finder is first tried on a planted defect, so a finder that finds
  * nothing cannot pass.
@@ -21,7 +24,9 @@
 import { describe, expect, it } from 'bun:test';
 
 import { appFile, contractFiles } from '../look/design.testing.ts';
+import { PLAIN } from './cue-names.testing.ts';
 import { FEEL_ROWS } from './cues.ts';
+import { type OneFile, oneCues, oneFiles } from './one-sites.testing.ts';
 
 /** The cues the key and capo dials' bar tells by its step's answer (`keysStep`'s `cue`: the current thumb.ts's). */
 const THUMB = ['chords-on', 'chords-off', 'press', 'wall', 'reset'];
@@ -75,6 +80,8 @@ const SITES: ReadonlyArray<{ readonly action: string; readonly cues: ReadonlyArr
   { action: 'playerCountCheck', cues: ['beat'] },
   { action: 'scrolled', cues: ['detent-tempo'] },
   { action: 'adjusted', cues: ['detent-tempo'] },
+  { action: 'feelHeld', cues: ['wall'] },
+  { action: 'feelWheeled', cues: ['wall'] },
 ];
 
 /** The find drums' names, as `detent-${drum}` spells their cues. */
@@ -188,6 +195,42 @@ const all = (names: ReadonlyArray<string>) =>
 const tells = all(['feelTell', 'feelTellAt']);
 const rows = new Set(FEEL_ROWS.map((row) => row.cue));
 
+/** Each dial whose push past an end the port tells as a wall, as `wall-<dial>`: the dial each call of `feelHeld` or `feelWheeled` names, of those of the two whose block tells `wall` (`walling`); a find drum's `drum` is each drum drawn with `wraps=false`. */
+const portWalls = (
+  sources: ReadonlyArray<{ readonly text: string }>,
+  walling: ReadonlyArray<string>,
+): ReadonlyArray<string> => {
+  const names = ['feelHeld', 'feelWheeled'].filter((name) => walling.includes(name));
+  if (names.length === 0) return [];
+  const code = sources.map(({ text }) =>
+    linesOf('', text)
+      .map((line) => line.text)
+      .join('\n'),
+  );
+  const drums = code.flatMap((text) =>
+    [...text.matchAll(/FindDrum\(drum="(\w+)"[^)\n]*\bwraps=false/gu)].map(
+      (found) => found[1] ?? '',
+    ),
+  );
+  return code
+    .flatMap((text) => [
+      ...text.matchAll(
+        new RegExp(`(?<![\\w.])(?:${names.join('|')})\\((?:"(\\w+)"|drum\\b)`, 'gu'),
+      ),
+    ])
+    .flatMap((found) => (found[1] === undefined ? drums : [found[1]]))
+    .map((dial) => `wall-${dial}`);
+};
+
+/** Every cue the port tells, a stopping dial's wall as `wall-<dial>`, sorted. */
+const portCues = (sources: ReadonlyArray<{ readonly file: string; readonly text: string }>) => {
+  const told = sources.flatMap(({ file, text }) => callsOf(file, text, ['feelTell', 'feelTellAt']));
+  const walling = told.filter((call) => call.cues.includes('wall')).map((call) => call.action);
+  return [
+    ...new Set([...told.flatMap((call) => call.cues), ...portWalls(sources, walling)]),
+  ].toSorted();
+};
+
 describe('the finders find a planted defect', () => {
   it('a call, its action, its cues and whether the setting holds it', () => {
     const text = [
@@ -217,6 +260,61 @@ describe('the finders find a planted defect', () => {
       },
       { name: 'feelTell', action: 'a', cues: THUMB, felt: false },
     ]);
+  });
+
+  it('the current app’s cues, each stopping dial’s wall and each drum among them', () => {
+    const one: ReadonlyArray<OneFile> = [
+      { path: 'src/player/dial.ts', text: "cues.push({ _tag: 'wall' });" },
+      {
+        path: 'src/player/drums.ts',
+        text: "hundreds: { name: 'hundreds', count: 7, wrap: false },\ntens: { name: 'tens', count: 10, wrap: true },",
+      },
+      {
+        path: 'src/player/Dials.tsx',
+        text: '<DialView dial="capo" wrap={false} onTurn={(c) => f(c)} />\n<DialView dial="key" wrap />',
+      },
+      {
+        path: 'src/player/FindDrums.tsx',
+        text: '<DialView\n  dial={drum}\n  wrap={DRUMS[drum].wrap}\n/>',
+      },
+      {
+        path: 'src/x.tsx',
+        text: "cue(plain((on && 'chords-on') || 'chords-off'));\nplain(chord);\ntell({ _tag: 'beat', accent });\n{ _tag: 'selection' }",
+      },
+    ];
+    expect(oneCues(one, PLAIN)).toEqual([
+      'beat',
+      'beat-accent',
+      'chords-off',
+      'chords-on',
+      'detent-capo',
+      'detent-hundreds',
+      'detent-key',
+      'detent-tens',
+      'wall-capo',
+      'wall-hundreds',
+    ]);
+    expect(
+      portCues([
+        {
+          file: 'x',
+          text: [
+            'members X',
+            '  action feelHeld(dial: string, x: number, end: number)',
+            '    feelTell("wall", 0)',
+            '  action a',
+            '    feelHeld("capo", x, 1)',
+            '    feelTell("press", 0)',
+            '  action b',
+            '    // feelWheeled("tempo", x, 1, 2)',
+            '    feelHeld(drum, x, 1)',
+            '  view',
+            '    FindDrum(drum="hundreds", wraps=false)',
+            '    FindDrum(drum="tens", wraps=true)',
+          ].join('\n'),
+        },
+      ]),
+    ).toEqual(['press', 'wall', 'wall-capo', 'wall-hundreds']);
   });
 
   it('a call inside another’s argument, not a name ending in the call’s', () => {
@@ -262,6 +360,10 @@ describe('every cue goes through the Feel', () => {
       readonly cues: ReadonlyArray<string>;
     }) => `${action}: ${[...cues].toSorted().join(' ')}`;
     expect(tells.map(site).toSorted()).toEqual(SITES.map(site).toSorted());
+  });
+
+  it('tells every cue the current app’s source tells, a wall on each dial that stops, and no other', () => {
+    expect(portCues(files)).toEqual([...oneCues(oneFiles(), PLAIN)]);
   });
 
   it('names a row of the Feel table in every cue it tells', () => {

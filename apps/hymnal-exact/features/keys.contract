@@ -239,6 +239,10 @@ members HymnalExact
     keysKeyDriven = true
   action keysCapoDrive
     keysCapoDriven = true
+    feelGrab()
+  action keysCapoWheel(e: WheelEvent)
+    keysCapoDriven = true
+    feelWheeled("capo", keysCapoX, e.deltaX, 11 * keysPlaced.detent)
   action keysKeySettled
     keysKeyDriven = false
     let at = round(keysKeyX / keysPlaced.detent)
@@ -254,18 +258,20 @@ members HymnalExact
     feelTell("detent-capo", v)
     keysAsk("capo", v)
   action keysCapoScrolled(x: number, y: number)
-    let at = round(x / keysPlaced.detent)
+    let at = min(11, max(0, round(x / keysPlaced.detent)))
     let was = keysCapoAt
     keysCapoX = x
     if at != was
       keysCapoAt = at
       if keysCapoDriven
         feelTell("detent-capo", feelCrossed(was, at))
+    if keysCapoDriven
+      feelHeld("capo", x, 11 * keysPlaced.detent)
   action keysCapoSettled
     keysCapoDriven = false
     let at = min(11, max(0, round(keysCapoX / keysPlaced.detent)))
     if at != keysShown.capo
-      keysAsk("capo", at == 0 ? -1 : (at == 11 ? 12 : at))
+      keysAsk("capo", at)
 
 // The key button, first in the bar's row, for the hymn on top: the lit
 // pill with chords on (the guitar's head, and the words over the key on a
@@ -403,6 +409,7 @@ component KeysCapoDial
     keysCapoScrolled: action
     keysCapoSettled: action
     keysCapoDrive: action
+    keysCapoWheel: action
     keysCapoAdjusted: action
   view
     row height=`${keysPlaced.detent}px` align-items="center" border-radius=`${keysPlaced.detent / 2}px` overflow="hidden" testId="dial-capo"
@@ -410,7 +417,7 @@ component KeysCapoDial
       view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
         scroll id="dial-capo-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
           scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled scrolldragstart=keysCapoDrive wheel=keysCapoDrive aria-hidden=true tabindex=-1 testId="dial-capo-row"
+          scrollLeft=(keysShown.capo * keysPlaced.detent) scroll=keysCapoScrolled scrollend=keysCapoSettled scrolldragstart=keysCapoDrive wheel=keysCapoWheel aria-hidden=true tabindex=-1 testId="dial-capo-row"
           for f in keysShown.capoStops key=f.capo
             button press=keysAsk("capo", f.capo) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
               display="flex" flex-direction="column" align-items="center" justify-content="center" scroll-snap-align="center"

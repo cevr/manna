@@ -518,12 +518,23 @@ component FindDrum
     wraps: bool
   inject
     findDial: action
+    feelHeld: action
+    feelGrab: action
   resource findDrumPlaces = findPlaces() as shape FindPlaces
+  // A finger on a stopping drum (the hundreds) held past either end of
+  // its control: the current app's wall (player/dial.ts `dragTo`), once a
+  // push, through the Feel's latch (`feelHeld`).
+  action grabbed
+    feelGrab()
+  action pushed(e: PointerEvent)
+    if not wraps and e.buttons != 0
+      let f = frame(`drum-range-${drum}`)
+      feelHeld(drum, e.clientX - f.x, f.width)
   view
     column flex="1 1 0px" min-width=0 position="relative" testId=`drum-face-${drum}`
       for at in [-1, 0, 1] key=at
         FindStop(digit=digit, at=at, wraps=wraps, high=high, detent=findDrumPlaces.detent)
-      input type="range" min=low max=high step=1 value=digit input=findDial(drum) aria-label=label aria-valuetext=`${digit}`
+      input type="range" id=`drum-range-${drum}` min=low max=high step=1 value=digit input=findDial(drum) pointerdown=grabbed pointermove=pushed aria-label=label aria-valuetext=`${digit}`
         position="absolute" inset=0 width="100%" height="100%" margin=0 opacity=0.02 testId=`drum-${drum}`
 
 // One stop of a drum, `at` stops from its notch: the digit there, which

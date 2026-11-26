@@ -60,15 +60,21 @@ members HymnalExact
     feelTell("detent-size", step)
     readingSizeTurn(step)
   action readingSizeScrolled(x: number, y: number)
-    let at = round(x / keysPlaced.detent)
+    let at = min(readingShown.stops.length - 1, max(0, round(x / keysPlaced.detent)))
     let was = readingSizeAt
     readingSizeX = x
     if at != was
       readingSizeAt = at
       if readingSizeDriven
         feelTell("detent-size", feelCrossed(was, at))
+    if readingSizeDriven
+      feelHeld("size", x, (readingShown.stops.length - 1) * keysPlaced.detent)
   action readingSizeDrive
     readingSizeDriven = true
+    feelGrab()
+  action readingSizeWheel(e: WheelEvent)
+    readingSizeDriven = true
+    feelWheeled("size", readingSizeX, e.deltaX, (readingShown.stops.length - 1) * keysPlaced.detent)
   action readingSizeSettled
     readingSizeDriven = false
     let at = min(readingShown.stops.length - 1, max(0, round(readingSizeX / keysPlaced.detent)))
@@ -147,6 +153,7 @@ component ReadingSizeDial
     readingSizeScrolled: action
     readingSizeSettled: action
     readingSizeDrive: action
+    readingSizeWheel: action
     readingSizeAdjusted: action
   view
     column background-color="panel" border-width="line.panel" border-style="solid" border-color="edge" border-radius=`${keysPlaced.detent / 2 + keysPlaced.pad}px` padding=`${keysPlaced.pad}px` testId="reading-size-panel"
@@ -155,7 +162,7 @@ component ReadingSizeDial
         view position="relative" flex=1 min-width=0 height=`${keysPlaced.detent}px`
           scroll id="dial-size-row" display="flex" flex-direction="row" overflow-x="scroll" overflow-y="hidden" scrollbar-width="none"
             scroll-snap-type="x mandatory" height=`${keysPlaced.detent}px` padding-left=`calc(50% - ${keysPlaced.detent / 2}px)` padding-right=`calc(50% - ${keysPlaced.detent / 2}px)` box-sizing="border-box"
-            scrollLeft=(readingShown.step * keysPlaced.detent) scroll=readingSizeScrolled scrollend=readingSizeSettled scrolldragstart=readingSizeDrive wheel=readingSizeDrive aria-hidden=true tabindex=-1 testId="dial-size-row"
+            scrollLeft=(readingShown.step * keysPlaced.detent) scroll=readingSizeScrolled scrollend=readingSizeSettled scrolldragstart=readingSizeDrive wheel=readingSizeWheel aria-hidden=true tabindex=-1 testId="dial-size-row"
             for s in readingShown.stops key=s.step
               button press=readingSizeTurn(s.step) appearance="none" padding=0 flex-shrink=0 width=`${keysPlaced.detent}px` height=`${keysPlaced.detent}px`
                 display="flex" align-items="center" justify-content="center" scroll-snap-align="center"
