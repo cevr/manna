@@ -552,6 +552,7 @@ const measure = async (page: Page) => {
       : undefined) ?? {};
   const measured: Record<string, Record<string, number>> = {};
   const loads: Record<string, unknown> = {};
+  const sounds: Array<string> = [];
   const throttled = args.includes('--throttle');
   if (throttled)
     await page.send('Network.emulateNetworkConditions', {
@@ -567,6 +568,13 @@ const measure = async (page: Page) => {
       const runs = [];
       for (let i = 0; i < 5; i++) runs.push(await measureOnce(page, path, cold));
       const key = `${path} ${cold ? 'cold' : 'warm'}`;
+      sounds.push(
+        ...runs.flatMap((run) =>
+          run.files
+            .filter(({ file }) => /\.wav(\?|$)/u.test(file))
+            .map(({ file }) => `${key} ${file}`),
+        ),
+      );
       measured[key] = {
         bytes: median(runs.map((run) => run.total)),
         html: median(runs.map((run) => run.bytes.html ?? 0)),
@@ -604,6 +612,11 @@ const measure = async (page: Page) => {
       }
     }
   }
+  check(
+    'no load asks for a sound file, cold or warm: the web has no voice, as the current hymnal’s web has none (features/feel.contract)',
+    sounds.length === 0,
+    sounds,
+  );
   report.measure = { load, throttled, measured, loads };
   console.log(JSON.stringify(measured, null, 1));
   if (throttled) {
