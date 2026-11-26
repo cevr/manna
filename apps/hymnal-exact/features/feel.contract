@@ -89,9 +89,14 @@ members HymnalExact
   action feelTell(cue: string, at: number)
     if settingsFeel
       feelGive(cue, at, 0)
+  // How far ahead of its sound the last cue told ahead was told, in ms
+  // (`feelTellAt`'s `wait`), kept whatever Sounds and haptics says: the
+  // tests' read of what the count-in sends.
+  state feelAhead = 0
   // A cue whose sound is due `wait` ms from now: the count-in's beat,
   // told a frame ahead so its sound lands on the beat.
   action feelTellAt(cue: string, at: number, wait: number)
+    feelAhead = wait
     if settingsFeel
       feelGive(cue, at, wait)
   // `at` picks the row's sound (the key dial's pitch class); `wait` is

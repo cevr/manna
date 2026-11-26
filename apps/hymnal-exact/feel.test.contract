@@ -147,6 +147,8 @@ test "With Click on, each beat of the count-in after the first is told within a 
   clock data
   expect state player.count.on == false
   expect state playerBeatEarly.length == 3
+  expect state feelAhead >= 0.1
+  expect state feelAhead <= 17
   expect state playerBeatEarly.0 >= 0
   expect state playerBeatEarly.0 <= 17
   expect state playerBeatEarly.1 >= 0
@@ -176,3 +178,34 @@ test "Turned off, no dial sounds"
   clock data
   clock settle
   expect state feelTold == 0
+
+// The Feel's own rules, read off the key dial's detents a few ms apart
+// (the current feel.ts `feelOver`): a tick within its floor (30 ms) of
+// the last felt one is not felt, and a sound while the last one rings
+// (a tine 112 ms) is not heard; the floor and the ringing are each kept
+// from the cue that was felt or heard.
+test "A detent within the tick floor is neither felt nor heard; past the floor it is felt; past the ringing tine, heard"
+  tap "hymn-2"
+  clock settle
+  clock data
+  tap "key-button"
+  clock data
+  tap "key-button"
+  clock data
+  clock settle
+  expect state feelSounds == 0
+  type "dial-key-value" "3"
+  expect state feelLast == "detent-key selection key-3"
+  expect state feelSounds == 1
+  clock +10
+  type "dial-key-value" "4"
+  expect state feelLast == "detent-key - -"
+  expect state feelSounds == 1
+  clock +40
+  type "dial-key-value" "5"
+  expect state feelLast == "detent-key selection -"
+  expect state feelSounds == 1
+  clock +100
+  type "dial-key-value" "6"
+  expect state feelLast == "detent-key selection key-6"
+  expect state feelSounds == 2

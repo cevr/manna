@@ -86,8 +86,9 @@ members HymnalExact
     if coming < player.count.beats and coming > playerBeatTold and now >= due - playerFrameAhead
       playerBeatTold = coming
       if playerClick
-        playerBeatEarly = playerBeatEarly.concat([due - now])
-        feelTellAt("beat", 0, playerClockAt - now + player.count.next)
+        let wait = playerClockAt - now + player.count.next
+        playerBeatEarly = playerBeatEarly.concat([wait])
+        feelTellAt("beat", 0, wait)
     if now - playerClockAt >= player.count.next
       playerClockTicked()
   // Intro is told at launch and at each switch; it waits for the next Play.
