@@ -231,8 +231,8 @@ const startServer = async () => {
 };
 
 /**
- * Every request a page makes, by URL and resource type, with whether it was
- * after the first Play and the page rest it falls in: the printed key's
+ * Every request a page makes, by URL and the hymn page last shown, with
+ * whether it was after the first Play and the page rest it falls in: the printed key's
  * recording of the hymn the page has shown for at least `REST_MS`
  * (`tools/web/saves.ts`).
  */
@@ -246,16 +246,22 @@ const REST_MS = 650;
 const printed = (number: number) => `${BUCKET}/audio/${setOf(number)}/${recordingKey(number)}`;
 
 const watch = async (page: Page) => {
-  const shown: { number: number; since: number; showing: number } = {
+  const shown: { number: number; since: number; showing: number; last: number } = {
     number: 0,
     since: 0,
     showing: 0,
+    last: 0,
   };
   const showing = (url: string) => {
     const place = placeOf(book, new URL(url).pathname);
     const number = place.screen === 'hymn' ? place.number : 0;
     if (number !== shown.number)
-      Object.assign(shown, { number, since: Date.now(), showing: (showings += 1) });
+      Object.assign(shown, {
+        number,
+        since: Date.now(),
+        showing: (showings += 1),
+        last: number > 0 ? number : shown.last,
+      });
   };
   page.page.on('framenavigated', (frame) => {
     if (frame === page.page.mainFrame()) showing(frame.url());
@@ -266,7 +272,7 @@ const watch = async (page: Page) => {
     const rested = shown.number > 0 && url === printed(shown.number) && at - shown.since >= REST_MS;
     requests.push({
       url,
-      type: request.resourceType(),
+      hymn: shown.last,
       afterPlay: played,
       rest: rested ? shown.showing : 0,
       at,
@@ -1027,7 +1033,7 @@ const resting = async (page: Page) => {
   const restAsked = bucketSince(rest);
   check(
     "a hymn page rested on asks the bucket for its printed key's recording once, and nothing else",
-    row && shownRest && oneSave(restAsked, printed(1)),
+    row && shownRest && oneSave(restAsked, printed(1), BUCKET),
     { row, shownRest, asked: restAsked.slice(0, 5) },
   );
   await tap(page, '[data-testid="hymn-back"]');
@@ -1096,7 +1102,7 @@ report.requests = {
   total: requests.length,
   foreign: foreign.length,
   bucketAnsweredByDrive: foreign.length - unasked.length,
-  restedSaves: [...savesByRest(requests).values()].reduce((sum, count) => sum + count, 0),
+  restedSaves: [...savesByRest(requests, BUCKET).values()].reduce((sum, count) => sum + count, 0),
 };
 check(
   `every request is the local server's, but the bucket's stream after Play or one save of each rested hymn page's printed key, answered by the drive (${requests.length} requests, ${foreign.length - unasked.length} to the bucket)`,
