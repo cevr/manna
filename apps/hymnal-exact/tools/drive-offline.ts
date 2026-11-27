@@ -12,12 +12,14 @@
  * or more), and the browser is closed as a person closes it. Relaunched on
  * the same profile, the list is opened, and once the page module
  * (`modules/index.js`, which Exact fetches only after the first paint, and
- * which no read can answer without) has loaded, the page goes offline and
- * hymn 2 is tapped:
+ * which no read can answer without) and the Exact files it reads as it
+ * connects (`AFTER_PAINT`, waited for up to 3 s) have loaded, the page goes
+ * offline and hymn 2 is tapped:
  *
  * - (a) its stanza draws;
  *
- * then the leg named, `chords` (the default):
+ * then the leg named, `all` (the default) running `chords`, then the page
+ * offline again and hymn 2 opened from the list, then `play`; `chords`:
  *
  * - (b) as many chords draw as online, with no no-chords notice;
  * - (e) a swipe to hymn `NEIGHBOUR`, whose chords the pager read as hymn 2's
@@ -28,11 +30,12 @@
  *   read as hymn 2's other neighbour, draws its kept chords at once, with
  *   no retry of the read;
  *
- * or `play`:
+ * and `play`:
  *
- * - (c) Play plays the saved recording, asking the bucket nothing.
+ * - (c) Play plays the saved recording (the audio ready 3 or more, its time
+ *   going on, the bar past `bar-loading`), asking the bucket nothing.
  *
- * `bun tools/drive-offline.ts web [chords|play]`. Exits 1 on a failed
+ * `bun tools/drive-offline.ts web [all|chords|play]`. Exits 1 on a failed
  * check, 2 when a step did not settle.
  */
 
@@ -53,9 +56,9 @@ if (host !== 'web') {
   );
   process.exit(2);
 }
-const leg = process.argv[3] ?? 'chords';
-if (leg !== 'chords' && leg !== 'play') {
-  console.error(`drive-offline: the legs are chords (the default) and play, not ${leg}`);
+const leg = process.argv[3] ?? 'all';
+if (leg !== 'all' && leg !== 'chords' && leg !== 'play') {
+  console.error(`drive-offline: the legs are all (the default), chords and play, not ${leg}`);
   process.exit(2);
 }
 const app = join(import.meta.dir, '..');
@@ -70,6 +73,13 @@ const NEIGHBOUR = 3;
 const NEVER = 5;
 const BLOCKED = 1;
 const BUCKET = 'https://hymns.cvr.im';
+/** The page module and the Exact files it reads as it connects (`modules/web/index.js`'s `APP_FILES`). */
+const AFTER_PAINT = [
+  '/modules/index.js',
+  '/storage-environment.js',
+  '/storage-fs.js',
+  '/picker-glue.js',
+];
 const port = (await claimAppPort(app, { label: 'drive-offline' })).port;
 const site = serveBuilt(dist, port);
 const origin = `http://127.0.0.1:${port}`;
@@ -87,6 +97,7 @@ const check = (name: string, ok: boolean, detail?: unknown) => {
 const seen = {
   offline: false,
   bucketOffline: [] as Array<string>,
+  failedOffline: [] as Array<string>,
   errors: [] as Array<string>,
   chordFiles: [] as Array<string>,
 };
@@ -100,6 +111,10 @@ const watch = async (on: Page) => {
       const { pathname, search } = new URL(url);
       seen.chordFiles.push(`${seen.offline ? 'offline' : 'online'} ${pathname}${search}`);
     }
+  });
+  on.page.on('requestfailed', (request) => {
+    const url = request.url();
+    if (seen.offline && url.startsWith(origin)) seen.failedOffline.push(new URL(url).pathname);
   });
   on.page.on('pageerror', (error) => {
     seen.errors.push(String(error));
@@ -175,6 +190,9 @@ const stanza = `Boolean(${page}?.querySelector('[data-testid="stanza-1"]'))`;
 const shown = (n: number) =>
   `location.pathname === '/hymns/${n}' && ${page}?.querySelector('[data-testid="hymn-number"]')?.textContent === '${n}'`;
 const audio = `document.querySelector('[data-testid="audio"]')`;
+/** Whether every file of `paths` has been fetched whole by the page. */
+const loadedAll = (paths: ReadonlyArray<string>) =>
+  `${JSON.stringify(paths)}.every((file) => performance.getEntriesByType('resource').some((e) => new URL(e.name).pathname === file && e.responseEnd > 0))`;
 
 const launched: Array<Browser> = [];
 const launch = async (fresh: boolean) => {
@@ -227,11 +245,8 @@ try {
   const back = second.page;
   await open(back, '/');
   await settle(back, `row hymn-${HYMN}`, `document.querySelector('[data-testid="hymn-${HYMN}"]')`);
-  await settle(
-    back,
-    'the page module loaded',
-    `performance.getEntriesByType('resource').some((e) => new URL(e.name).pathname === '/modules/index.js' && e.responseEnd > 0)`,
-  );
+  await settle(back, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
+  await waitFor(back, 'the files the page module reads at once', loadedAll(AFTER_PAINT), 3000);
   step = 'offline';
   await back.page.context().setOffline(true);
   seen.offline = true;
@@ -242,8 +257,9 @@ try {
     `(a) offline: hymn ${HYMN}'s stanza draws`,
     await waitFor(back, 'stanza offline', stanza, 8000),
   );
-  if (leg === 'play') await played(back);
-  else await chordsKept(back, online);
+  if (leg !== 'play') await chordsKept(back, online);
+  if (leg === 'all') await againOffline(back);
+  if (leg !== 'chords') await played(back);
 } catch (error) {
   unsettled = `${step}: ${error instanceof Error ? error.message : String(error)}`;
   check(`the drive ran to its end (it stopped at ${step})`, false, unsettled);
@@ -339,6 +355,22 @@ async function chordsKept(back: Page, online: number) {
   await back.send('Network.setBlockedURLs', { urls: [] });
 }
 
+/** After the chords leg, which ends online: the page offline again, and hymn 2 opened from the list. */
+async function againOffline(back: Page) {
+  step = 'offline again';
+  await back.page.context().setOffline(true);
+  seen.offline = true;
+  await settle(back, 'the page offline again', '!navigator.onLine', 6000);
+  await tap(back, 'hymn-back');
+  await settle(
+    back,
+    `row hymn-${HYMN}`,
+    `location.pathname === '/' && document.querySelector('[data-testid="hymn-${HYMN}"]')`,
+  );
+  await tap(back, `hymn-${HYMN}`);
+  await settle(back, `hymn ${HYMN} shown offline again`, shown(HYMN));
+}
+
 /** (c): Play on hymn 2 offline sounds its saved recording, asking the bucket nothing. */
 async function played(back: Page) {
   await settle(back, 'play shown', `document.querySelector('[data-testid="play"]')`, 5000);
@@ -356,10 +388,22 @@ async function played(back: Page) {
   const state = await back.evaluate<unknown>(
     `({ src: (${audio}?.currentSrc ?? '').slice(0, 40), paused: ${audio}?.paused, at: ${audio}?.currentTime, ready: ${audio}?.readyState, error: ${audio}?.error?.code ?? null, loading: Boolean(document.querySelector('[data-testid="bar-loading"]')) })`,
   );
-  const src = (state as { src: string }).src;
+  const { src, at, ready, loading } = state as {
+    src: string;
+    at: number;
+    ready: number;
+    loading: boolean;
+  };
+  await Bun.sleep(400);
+  const later = await back.evaluate<number>(`${audio}?.currentTime ?? 0`);
   check(
-    '(c) offline: Play plays the saved recording, asking the bucket nothing',
-    playing && !src.startsWith(BUCKET) && seen.bucketOffline.length === 0,
-    { playing, state, bucket: seen.bucketOffline },
+    '(c) offline: Play plays the saved recording (ready 3 or more, its time going on, the bar past loading), asking the bucket nothing',
+    playing &&
+      ready >= 3 &&
+      later > at &&
+      !loading &&
+      !src.startsWith(BUCKET) &&
+      seen.bucketOffline.length === 0,
+    { playing, state, later, bucket: seen.bucketOffline, failed: seen.failedOffline },
   );
 }
