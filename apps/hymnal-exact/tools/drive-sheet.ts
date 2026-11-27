@@ -317,9 +317,40 @@ const listed = (
     verify: { accept: ReadonlyArray<{ finding: string; node: string }> };
   }
 ).verify.accept;
-const largestNodes = new Map((treesOf(largest)[0] ?? []).map((node) => [node.id, node]));
+/** Every finding of each `check` reply, those the agent counts and those it took as accepted. */
+const judgedOf = (replies: ReadonlyArray<unknown>): ReadonlyArray<Finding> =>
+  replies.flatMap((reply) =>
+    (
+      (
+        reply as
+          | {
+              check?: ReadonlyArray<{
+                findings?: ReadonlyArray<Finding>;
+                accepted?: ReadonlyArray<Finding>;
+              }>;
+            }
+          | undefined
+      )?.check ?? []
+    ).flatMap((run) => [...(run.findings ?? []), ...(run.accepted ?? [])]),
+  );
+/** The phone size `exact verify web` reads the largest text at (its `WEB_SIZES[0]`), where the dial's end stops lie across its edge. */
+const VERIFY_SIZE = '390x844';
+const sized = await drive.run(
+  ['--storage', store('largest-size'), '--reset-storage', '--size', VERIFY_SIZE],
+  [
+    `prefer root-font-size ${LARGEST}`,
+    'clock settle',
+    ...opened,
+    `tap dial-size-stop-${defaultReading.size}`,
+    'clock data',
+    'clock settle',
+    'tree',
+    'check',
+  ],
+);
+const largestNodes = new Map((treesOf(sized)[0] ?? []).map((node) => [node.id, node]));
 const sizeShown = [...largestNodes.values()].some((node) => node.props?.testId === 'dial-size');
-const onSizeStops = findingsOf(largest).filter((finding) =>
+const onSizeStops = judgedOf(sized).filter((finding) =>
   (largestNodes.get(finding.id)?.props?.testId ?? '').startsWith('dial-size-stop-'),
 );
 const sizeUnaccepted = onSizeStops.filter(
