@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters, effect/noTernary -- a host script that drives the built app through `bun run exact agent` and reads its untyped JSON replies by the fields it checks. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noAs, effect/noNullish, effect/noAsyncFunction, effect/noUnknownParameters, effect/noTernary, node/no-process-env -- a host script that drives the built app through `bun run exact agent`, reads its untyped JSON replies by the fields it checks, and loads Exact's own accept matcher from the clone `EXACT` names, as the wrapper does. */
 
 /**
  * The player sheet's live checks a `.test.contract` cannot hold: the names
@@ -25,13 +25,15 @@
  *   counted by its rows), and the shown line
  *   stays where it stood across the page (no jump of the pager, `layout`);
  * - at the largest system text with the largest Reading size, no node of
- *   the sheet is clipped or spills (`check`), and the sheet scrolls to its
- *   last row, Keep screen on, which a tap turns on;
+ *   the sheet is clipped or spills (`check`), every finding on the size
+ *   dial's stops is one `app.json` accepts (by Exact's own matcher), and
+ *   the sheet scrolls to its last row, Keep screen on, which a tap turns on;
  * - with Reduce Motion on the sheet opens and its choices turn the page.
  *
  * Exits 1 on any failed check.
  */
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { defaultReading, readingStyle } from '@manna/hymnal-app/reader/reading';
@@ -298,6 +300,66 @@ drive.check(
   'at the largest text and Reading size no node of the sheet is clipped or spills',
   sheet.size > 0 && spilled.length === 0,
   { nodes: sheet.size, spilled },
+);
+
+/** Exact's own matcher of `verify.accept`, from the clone `bun run exact` runs. */
+const { accepts } = (await import(
+  join(process.env.EXACT ?? join(homedir(), 'Developer/vendor/exact'), 'scripts/agent-check.mjs')
+)) as {
+  accepts: (
+    entries: ReadonlyArray<{ finding: string; node: string }>,
+    finding: Finding,
+    nodes: ReadonlyMap<number, TreeNode>,
+  ) => unknown;
+};
+const listed = (
+  (await Bun.file(join(import.meta.dir, '..', 'app.json')).json()) as {
+    verify: { accept: ReadonlyArray<{ finding: string; node: string }> };
+  }
+).verify.accept;
+/** Every finding of each `check` reply, those the agent counts and those it took as accepted. */
+const judgedOf = (replies: ReadonlyArray<unknown>): ReadonlyArray<Finding> =>
+  replies.flatMap((reply) =>
+    (
+      (
+        reply as
+          | {
+              check?: ReadonlyArray<{
+                findings?: ReadonlyArray<Finding>;
+                accepted?: ReadonlyArray<Finding>;
+              }>;
+            }
+          | undefined
+      )?.check ?? []
+    ).flatMap((run) => [...(run.findings ?? []), ...(run.accepted ?? [])]),
+  );
+/** The phone size `exact verify web` reads the largest text at (its `WEB_SIZES[0]`), where the dial's end stops lie across its edge. */
+const VERIFY_SIZE = '390x844';
+const sized = await drive.run(
+  ['--storage', store('largest-size'), '--reset-storage', '--size', VERIFY_SIZE],
+  [
+    `prefer root-font-size ${LARGEST}`,
+    'clock settle',
+    ...opened,
+    `tap dial-size-stop-${defaultReading.size}`,
+    'clock data',
+    'clock settle',
+    'tree',
+    'check',
+  ],
+);
+const largestNodes = new Map((treesOf(sized)[0] ?? []).map((node) => [node.id, node]));
+const sizeShown = [...largestNodes.values()].some((node) => node.props?.testId === 'dial-size');
+const onSizeStops = judgedOf(sized).filter((finding) =>
+  (largestNodes.get(finding.id)?.props?.testId ?? '').startsWith('dial-size-stop-'),
+);
+const sizeUnaccepted = onSizeStops.filter(
+  (finding) => accepts(listed, finding, largestNodes) === undefined,
+);
+drive.check(
+  'at the largest text, with the Reading size dial shown, every finding on its stops is one app.json accepts, as the key, capo and tempo dials’ are',
+  sizeShown && onSizeStops.length > 0 && sizeUnaccepted.length === 0,
+  { shown: sizeShown, found: onSizeStops.length, unaccepted: sizeUnaccepted },
 );
 drive.check(
   'at the largest text the sheet scrolls to Keep screen on, which a tap turns on',

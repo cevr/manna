@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- a Bun test that reads the web budget's JSON and drive-web's source, to hold the budget to the runs it was taken from. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noNullish, effect/noUnknownParameters -- a Bun test that reads the web budget's JSON and drive-web's source, to hold the budget to the runs it was taken from, and feeds the budget values that are not finite numbers (`null` among them) where a report's JSON may hold them. */
 
 /**
  * The web build's budget (`tools/web/budget.json`) is what its runs say:
@@ -168,6 +168,63 @@ describe('the web budget', () => {
     expect(drive).toContain("from './web/budget.ts'");
     expect(drive).toContain('overOf(measured, limits, timesChecked)');
     expect(drive).not.toMatch(/const TIME_SLACK_MS|limit \+ \d|write-budget|limit === undefined/u);
+  });
+
+  test('refuses, in every order, a run holding a value that is not a finite number, and takes legitimate runs', () => {
+    const NOT_FINITE: ReadonlyArray<unknown> = [
+      {},
+      null,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      '40',
+    ];
+    const plain = (at: number): Run => ({
+      load: 1 + at / 2,
+      measured: { '/ cold': { bytes: 150, readyMs: 40 + at } },
+    });
+    /** Run `at` with `value` in place of its `where`: its load, its byte count or its time. */
+    const spoiled = (at: number, where: 'load' | 'bytes' | 'readyMs', value: unknown) => {
+      const run = structuredClone(plain(at));
+      if (where === 'load') Reflect.set(run, 'load', value);
+      else Reflect.set(run.measured['/ cold'] ?? {}, where, value);
+      return run;
+    };
+    const orders = (runs: ReadonlyArray<Run>): ReadonlyArray<ReadonlyArray<Run>> => {
+      if (runs.length <= 1) return [runs];
+      return runs.flatMap((first, at) =>
+        orders(runs.toSpliced(at, 1)).map((rest) => [first, ...rest]),
+      );
+    };
+    const legit = [0, 1, 2, 3, 4].map(plain);
+    for (const each of orders(legit))
+      expect(budgetOf(each).limits).toEqual({ '/ cold': { bytes: 150, readyMs: 42 } });
+    for (const value of NOT_FINITE)
+      for (const where of ['load', 'bytes', 'readyMs'] as const)
+        for (let bad = 0; bad < legit.length; bad++) {
+          const runs = legit.toSpliced(bad, 1, spoiled(bad, where, value));
+          for (const each of orders(runs)) {
+            expect(() => budgetOf(each), `${String(value)} as ${where}`).toThrow(
+              'not a finite number',
+            );
+            expect(() => budgetOf(legit, each)).toThrow('not a finite number');
+          }
+          if (where !== 'load') {
+            expect(() => bytesOf(runs)).toThrow('not a finite number');
+            expect(() => timesOf(runs)).toThrow('not a finite number');
+          }
+        }
+    const limits = { '/ cold': { bytes: 150, readyMs: 40 } };
+    for (const value of NOT_FINITE) {
+      const odd = structuredClone(limits);
+      Reflect.set(odd['/ cold'], 'readyMs', value);
+      expect(() => overOf({ '/ cold': { bytes: 150, readyMs: 500 } }, odd, true)).toThrow(
+        'the limits holds a value that is not a finite number',
+      );
+      expect(() => overOf(odd, limits, true)).toThrow(
+        'the measure holds a value that is not a finite number',
+      );
+    }
   });
 
   test('a median of an even count is the mean of the middle two', () => {
