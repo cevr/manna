@@ -22,6 +22,9 @@
  *   neighbour, draws its chords;
  * - (d) hymn `NEVER`, whose chords file the first launch never asked for,
  *   shows the no-chords notice, and the page throws no error;
+ * - (f) back online, with hymn `BLOCKED`'s chords file blocked, that hymn,
+ *   read as hymn 2's other neighbour, draws its kept chords at once, with
+ *   no retry of the read;
  *
  * or `play`:
  *
@@ -63,6 +66,7 @@ if (!existsSync(join(dist, '.exact-build.json'))) {
 const HYMN = 2;
 const NEIGHBOUR = 3;
 const NEVER = 5;
+const BLOCKED = 1;
 const BUCKET = 'https://hymns.cvr.im';
 const port = (await claimAppPort(app, { label: 'drive-offline' })).port;
 const site = serveBuilt(dist, port);
@@ -90,8 +94,10 @@ const watch = async (on: Page) => {
   on.page.on('request', (request) => {
     const url = request.url();
     if (seen.offline && url.startsWith(`${BUCKET}/`)) seen.bucketOffline.push(url);
-    if (url.includes('/chords/'))
-      seen.chordFiles.push(`${seen.offline ? 'offline' : 'online'} ${new URL(url).pathname}`);
+    if (url.includes('/chords/')) {
+      const { pathname, search } = new URL(url);
+      seen.chordFiles.push(`${seen.offline ? 'offline' : 'online'} ${pathname}${search}`);
+    }
   });
   on.page.on('pageerror', (error) => {
     seen.errors.push(String(error));
@@ -246,7 +252,7 @@ console.log(
 );
 process.exit(unsettled !== undefined ? 2 : failed === 0 ? 0 : 1);
 
-/** (b), (e) and (d): hymn 2's chords kept, its neighbour's kept, a hymn never read told so. */
+/** (b), (e), (d) and (f): hymn 2's chords kept, its neighbours' kept, a hymn never read told so, a blocked read answered by the copy. */
 async function chordsKept(back: Page, online: number) {
   const drawn = await waitFor(back, 'chords offline', `${chords} >= ${online}`, 6000);
   const count = await back.evaluate<number>(chords);
@@ -294,6 +300,36 @@ async function chordsKept(back: Page, online: number) {
     !read && quiet && none === 0 && seen.errors.length === 0,
     { readOnline: read, notice: quiet, chords: none, errors: seen.errors },
   );
+  step = `block hymn ${BLOCKED}'s chords online`;
+  await back.page.context().setOffline(false);
+  seen.offline = false;
+  await settle(back, 'the page online', 'navigator.onLine', 6000);
+  await back.send('Network.setBlockedURLs', { urls: [`${origin}/modules/chords/${BLOCKED}.js*`] });
+  const before = seen.chordFiles.length;
+  await tap(back, 'hymn-back');
+  await settle(
+    back,
+    `row hymn-${BLOCKED}`,
+    `location.pathname === '/' && document.querySelector('[data-testid="hymn-${BLOCKED}"]')`,
+  );
+  await tap(back, `hymn-${BLOCKED}`);
+  await settle(back, `hymn ${BLOCKED} shown`, shown(BLOCKED));
+  const kept = await waitFor(
+    back,
+    `hymn ${BLOCKED}'s kept chords`,
+    `${chords} > 0 && !${notice}`,
+    6000,
+  );
+  await Bun.sleep(600);
+  const retries = seen.chordFiles
+    .slice(before)
+    .filter((file) => file.includes(`/chords/${BLOCKED}.js?`));
+  check(
+    `(f) online, hymn ${BLOCKED}'s chords read blocked: its kept copy (read as hymn ${HYMN}'s neighbour) draws at once, with no retry`,
+    kept && retries.length === 0,
+    { kept, chords: await back.evaluate<number>(chords), retries },
+  );
+  await back.send('Network.setBlockedURLs', { urls: [] });
 }
 
 /** (c): Play on hymn 2 offline sounds its saved recording, asking the bucket nothing. */
