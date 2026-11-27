@@ -11,6 +11,14 @@ type Fields = Readonly<Record<string, string | number | boolean>>;
 
 export declare function later(request: Fields): Promise<Fields>;
 
+/** The saved recordings' folder (`index.js`), the store's `ROOT`. */
+export declare const RECORDINGS: string;
+
+/** Whether a file store's `readdir` finds a saved recording under `RECORDINGS` (`index.js`). */
+export declare function holdsSaved(
+  readdir: (path: string) => Promise<ReadonlyArray<string>>,
+): Promise<boolean>;
+
 /** A finger down, in the page's points. */
 interface Point {
   readonly x: number;

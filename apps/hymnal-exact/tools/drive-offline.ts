@@ -6,20 +6,22 @@
  * Playwright's Chromium on a kept profile (`@manna/exact-kit/browser`), the
  * bucket answered by the recordings' fixture (`tools/recordings.ts`), its
  * silence labelled `audio/mpeg` as the bucket's recordings are, since a
- * release build saves only those, and refused once the page is offline. With
- * Sounds and haptics off and chords on, hymn 2 is opened and its chords
- * counted, the page rests until its recording is saved (Downloads says one
- * or more), and the browser is closed as a person closes it. Relaunched on
- * the same profile, the list is opened, and once the page module
- * (`modules/index.js`, which Exact fetches only after the first paint, and
- * which no read can answer without) and the Exact file it reads as it
- * connects (`AFTER_PAINT`, waited for up to 3 s) have loaded, the page goes
- * offline and hymn 2 is tapped:
+ * release build saves only those, and refused once the page is offline. On
+ * a fresh profile (g) the page module (`modules/index.js`, which Exact
+ * fetches only after the first paint) reads no `picker-glue.js` as it
+ * connects. With Sounds and haptics off and chords on, hymn 2 is opened and
+ * its chords counted, the page rests until its recording is saved
+ * (Downloads says one or more), and the browser is closed as a person
+ * closes it. Relaunched on the same profile, the list is opened, the page
+ * module loads, and (h) it reads `picker-glue.js` as it connects
+ * (`AFTER_PAINT`, waited for up to 3 s); then the page goes offline and
+ * hymn 2 is tapped:
  *
  * - (a) its stanza draws;
  *
  * then the leg named, `all` (the default) running `chords`, then the page
- * offline again and hymn 2 opened from the list, then `play`; `chords`:
+ * offline again and hymn 2 opened from the list, then `play`, then
+ * `session`; `chords`:
  *
  * - (b) as many chords draw as online, with no no-chords notice;
  * - (e) a swipe to hymn `NEIGHBOUR`, whose chords the pager read as hymn 2's
@@ -33,9 +35,16 @@
  * and `play`:
  *
  * - (c) Play plays the saved recording (the audio ready 3 or more, its time
- *   going on, the bar past `bar-loading`), asking the bucket nothing.
+ *   going on, the bar past `bar-loading`), asking the bucket nothing;
  *
- * `bun tools/drive-offline.ts web [all|chords|play]`. Exits 1 on a failed
+ * and `session`, on a fresh profile again:
+ *
+ * - (c') hymn 2's recording saved, the page goes offline with no relaunch
+ *   and Play plays it, as (c);
+ * - (j) back online, Delete downloads empties the store, and relaunched the
+ *   page module reads no `picker-glue.js` as it connects, as (g).
+ *
+ * `bun tools/drive-offline.ts web [all|chords|play|session]`. Exits 1 on a failed
  * check, 2 when a step did not settle.
  */
 
@@ -57,8 +66,10 @@ if (host !== 'web') {
   process.exit(2);
 }
 const leg = process.argv[3] ?? 'all';
-if (leg !== 'all' && leg !== 'chords' && leg !== 'play') {
-  console.error(`drive-offline: the legs are all (the default), chords and play, not ${leg}`);
+if (leg !== 'all' && leg !== 'chords' && leg !== 'play' && leg !== 'session') {
+  console.error(
+    `drive-offline: the legs are all (the default), chords, play and session, not ${leg}`,
+  );
   process.exit(2);
 }
 const app = join(import.meta.dir, '..');
@@ -200,9 +211,30 @@ const launch = async (fresh: boolean) => {
 
 let unsettled: string | undefined;
 try {
+  if (leg === 'session') await sameSession();
+  else await savedThenRelaunched();
+  if (leg === 'all') await sameSession();
+} catch (error) {
+  unsettled = `${step}: ${error instanceof Error ? error.message : String(error)}`;
+  check(`the drive ran to its end (it stopped at ${step})`, false, unsettled);
+} finally {
+  for (const browser of launched) await browser.close().catch(() => 'stopped');
+  void site.stop(true);
+  rmSync(profile, { recursive: true, force: true });
+}
+console.log(
+  failed === 0
+    ? `drive-offline ${leg}: every check passed`
+    : `drive-offline ${leg}: ${failed} failed`,
+);
+process.exit(unsettled !== undefined ? 2 : failed === 0 ? 0 : 1);
+
+/** (g), the save, the relaunch, (h), (a), then the legs `chords` and `play` as named. */
+async function savedThenRelaunched() {
   const first = await launch(true);
   const on = first.page;
   await open(on, '/settings');
+  await readsNoGlue(on, '(g) a launch that never saved');
   await tap(on, 'settings-feel');
   await settle(on, 'sounds and haptics off', QUIET_STORED, 3000);
   await tap(on, 'chords-toggle');
@@ -241,7 +273,10 @@ try {
   await open(back, '/');
   await settle(back, `row hymn-${HYMN}`, `document.querySelector('[data-testid="hymn-${HYMN}"]')`);
   await settle(back, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
-  await waitFor(back, 'the file the page module reads at once', loadedAll(AFTER_PAINT), 3000);
+  check(
+    `(h) relaunched with hymn ${HYMN}'s recording saved, the page reads picker-glue.js as it connects`,
+    await waitFor(back, 'the file the page module reads at once', loadedAll(AFTER_PAINT), 3000),
+  );
   step = 'offline';
   await back.page.context().setOffline(true);
   seen.offline = true;
@@ -255,20 +290,7 @@ try {
   if (leg !== 'play') await chordsKept(back, online);
   if (leg === 'all') await againOffline(back);
   if (leg !== 'chords') await played(back);
-} catch (error) {
-  unsettled = `${step}: ${error instanceof Error ? error.message : String(error)}`;
-  check(`the drive ran to its end (it stopped at ${step})`, false, unsettled);
-} finally {
-  for (const browser of launched) await browser.close().catch(() => 'stopped');
-  void site.stop(true);
-  rmSync(profile, { recursive: true, force: true });
 }
-console.log(
-  failed === 0
-    ? `drive-offline ${leg}: every check passed`
-    : `drive-offline ${leg}: ${failed} failed`,
-);
-process.exit(unsettled !== undefined ? 2 : failed === 0 ? 0 : 1);
 
 /** (b), (e), (d) and (f): hymn 2's chords kept, its neighbours' kept, a hymn never read told so, a blocked read answered by the copy. */
 async function chordsKept(back: Page, online: number) {
@@ -350,6 +372,99 @@ async function chordsKept(back: Page, online: number) {
   await back.send('Network.setBlockedURLs', { urls: [] });
 }
 
+/** (g) and (j): once the page module has loaded and a second has passed, no ask for `picker-glue.js` was made. */
+async function readsNoGlue(on: Page, name: string) {
+  await settle(on, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
+  await Bun.sleep(1000);
+  const read = await on.evaluate<boolean>(loadedAll(AFTER_PAINT.slice(1)));
+  check(`${name} reads no picker-glue.js as the page module connects`, !read);
+}
+
+/** Downloads, from the list, until it says `saved` recordings or more (at most, with `atMost`). */
+async function downloadsSay(on: Page, name: string, saved: number) {
+  await tap(on, 'gear');
+  return waitFor(
+    on,
+    name,
+    `Number(document.querySelector('[data-testid="downloads-progress"]')?.getAttribute('aria-valuenow') ?? -1) >= ${saved}`,
+    15_000,
+  );
+}
+
+/**
+ * The leg `session`: a fresh launch saves hymn 2's recording, goes offline
+ * with no relaunch and plays it (c'); back online Delete downloads empties
+ * the store, and relaunched, (j) the page reads no `picker-glue.js` as it
+ * connects, as one that never saved.
+ */
+async function sameSession() {
+  step = 'session: launch fresh';
+  seen.offline = false;
+  seen.bucketOffline.length = 0;
+  for (const browser of launched.splice(0)) await browser.close().catch(() => 'stopped');
+  const browser = await launch(true);
+  const on = browser.page;
+  await open(on, '/settings');
+  await tap(on, 'settings-feel');
+  await settle(on, 'session: sounds and haptics off', QUIET_STORED, 3000);
+  await open(on, `/hymns/${HYMN}`);
+  await settle(on, `session: hymn ${HYMN} shown`, `${shown(HYMN)} && ${stanza}`);
+  await Bun.sleep(2500);
+  await tap(on, 'hymn-back');
+  await settle(on, 'session: the list', `location.pathname === '/'`);
+  check(
+    `session: hymn ${HYMN}'s recording saved`,
+    await downloadsSay(on, 'session: a recording saved', 1),
+  );
+  step = 'session: offline';
+  await on.page.context().setOffline(true);
+  seen.offline = true;
+  await settle(on, 'session: the page offline', '!navigator.onLine', 6000);
+  await on.evaluate('history.back()');
+  await settle(
+    on,
+    `session: row hymn-${HYMN}`,
+    `location.pathname === '/' && document.querySelector('[data-testid="hymn-${HYMN}"]')`,
+  );
+  await tap(on, `hymn-${HYMN}`);
+  await settle(on, `session: hymn ${HYMN} shown offline`, shown(HYMN));
+  await played(on, "(c') the same session, offline with no relaunch:");
+  step = 'session: delete downloads';
+  await tap(on, 'pause').catch(() => {});
+  await on.page.context().setOffline(false);
+  seen.offline = false;
+  await settle(on, 'session: the page online', 'navigator.onLine', 6000);
+  await tap(on, 'hymn-back');
+  await settle(on, 'session: the list again', `location.pathname === '/'`);
+  await tap(on, 'gear');
+  await settle(
+    on,
+    'session: delete shown',
+    `document.querySelector('[data-testid="downloads-delete"]')`,
+  );
+  await tap(on, 'downloads-delete');
+  await settle(
+    on,
+    'session: confirm shown',
+    `document.querySelector('[data-testid="downloads-confirm"]')`,
+  );
+  await tap(on, 'downloads-confirm');
+  check(
+    'session: Delete downloads empties the store',
+    await waitFor(
+      on,
+      'session: none saved',
+      `Number(document.querySelector('[data-testid="downloads-progress"]')?.getAttribute('aria-valuenow') ?? -1) === 0`,
+      15_000,
+    ),
+  );
+  step = 'session: close';
+  await browser.close();
+  const again = await launch(false);
+  await open(again.page, '/');
+  await readsNoGlue(again.page, '(j) relaunched after every saved recording was deleted, the page');
+}
+
 /** After the chords leg, which ends online: the page offline again, and hymn 2 opened from the list. */
 async function againOffline(back: Page) {
   step = 'offline again';
@@ -367,7 +482,7 @@ async function againOffline(back: Page) {
 }
 
 /** (c): Play on hymn 2 offline sounds its saved recording, asking the bucket nothing. */
-async function played(back: Page) {
+async function played(back: Page, label = '(c) offline:') {
   await settle(back, 'play shown', `document.querySelector('[data-testid="play"]')`, 5000);
   await tap(back, 'play');
   if (
@@ -392,7 +507,7 @@ async function played(back: Page) {
   await Bun.sleep(400);
   const later = await back.evaluate<number>(`${audio}?.currentTime ?? 0`);
   check(
-    '(c) offline: Play plays the saved recording (ready 3 or more, its time going on, the bar past loading), asking the bucket nothing',
+    `${label} Play plays the saved recording (ready 3 or more, its time going on, the bar past loading), asking the bucket nothing`,
     playing &&
       ready >= 3 &&
       later > at &&

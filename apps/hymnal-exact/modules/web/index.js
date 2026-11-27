@@ -19,7 +19,9 @@ let host = { changed: () => {}, agent: false, now: () => performance.now() };
  */
 export function connect({ changed, agent, now }) {
   host = { changed, agent, now };
-  readAppURL();
+  savedHere()
+    .then((saved) => saved && readAppURL())
+    .catch(() => {});
 }
 
 /**
@@ -30,15 +32,69 @@ export function connect({ changed, agent, now }) {
  * Exact fetches it on the first such source, and it carries no digest in
  * its name, so the host serves it to be asked again (`tools/web/serve.ts`):
  * a reader who goes offline before that first Play gets no saved recording,
- * the bar loading for ever. Read once as the page module connects, it stays
- * in the page's module map, so a saved recording plays with no network, as
- * One's web, whose bundle holds its OPFS reader
- * (`apps/hymnal/src/offline/media.ts`), does. A page that cannot read it is
- * left to Exact's own load on first use.
+ * the bar loading for ever. Read once, it stays in the page's module map,
+ * so a saved recording plays with no network, as One's web, whose bundle
+ * holds its OPFS reader (`apps/hymnal/src/offline/media.ts`), does. A page
+ * that cannot read it is left to Exact's own load on first use.
  */
 const readAppURL = () => {
   const read = import(new URL('../picker-glue.js', import.meta.url).href);
   read.catch(() => {});
+};
+
+/** The saved recordings' folder, the data module's store's `ROOT` (`src/offline/store.ts`). */
+export const RECORDINGS = 'app:/data/recordings';
+
+/**
+ * Whether `readdir` (a file store's) finds a saved recording: an `.mp3` in
+ * a folder under `RECORDINGS`, as the store publishes one; a part file
+ * still downloading is none. A folder that cannot be read holds none.
+ */
+export async function holdsSaved(readdir) {
+  const inAny = async ([folder, ...rest]) => {
+    if (folder === undefined) return false;
+    const names = await readdir(`${RECORDINGS}/${folder}`).catch(() => []);
+    return names.some((name) => name.endsWith('.mp3')) || inAny(rest);
+  };
+  return inAny(await readdir(RECORDINGS).catch(() => []));
+}
+
+/**
+ * Whether this browser holds a saved recording, read once as the page
+ * module connects from the app's own file store, the one the data module
+ * saves into (Exact's `storage-environment.js` `storageKey` and
+ * `storage-fs.js` `createFileStore`, which the page has read at launch, so
+ * their import asks nothing more): a page that saved none, or deleted every
+ * one, never reads `picker-glue.js` before it needs it. A page whose store
+ * cannot open holds none.
+ */
+const savedHere = async () => {
+  const environment = import(new URL('../storage-environment.js', import.meta.url).href);
+  const store = await environment
+    .then(({ storageKey }) => {
+      const key = storageKey(globalThis.exact?.compat?.inputs?.app);
+      if (key == null) return null;
+      const fs = import(new URL('../storage-fs.js', import.meta.url).href);
+      return fs.then(({ createFileStore }) => createFileStore(key));
+    })
+    .catch(() => null);
+  if (store === null) return false;
+  const saved = await holdsSaved((path) => store.readdir(path));
+  store.close();
+  return saved;
+};
+
+/**
+ * The saved recordings' op: `recordings.saved`, sent by the data module
+ * once a launch when its store first holds a saved file
+ * (`src/offline/sources.ts`), reads `picker-glue.js` now, so a recording
+ * saved in this launch plays offline before the next.
+ */
+const recordings = {
+  'recordings.saved': () => {
+    readAppURL();
+    return { read: true };
+  },
 };
 
 /** The ear as it stands: listening or not, its feed's rate and frame, when it started, its ends. */
@@ -355,7 +411,8 @@ const shipped = Object.fromEntries(
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op] ?? feel[op];
+  const part =
+    tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op] ?? feel[op] ?? recordings[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }
