@@ -19,29 +19,26 @@ let host = { changed: () => {}, agent: false, now: () => performance.now() };
  */
 export function connect({ changed, agent, now }) {
   host = { changed, agent, now };
-  warmAppFiles();
+  readAppURL();
 }
 
 /**
- * Exact's files that turn an `app:/` source into something the audio
- * element plays (`picker-glue.js`'s `appURL` and the file store it opens,
- * `host/web/glue.js`'s `picker`), beside the page's script. Exact fetches
- * them on the first such source, and they carry no digest in their names,
- * so the host serves them to be asked again (`tools/web/serve.ts`): a
- * reader who goes offline before that first Play gets no saved recording,
- * the bar loading for ever. Read once while the page module loads, they
- * stay in the page's module map, so a saved recording plays with no
- * network, as One's web, whose bundle holds its OPFS reader
- * (`apps/hymnal/src/offline/media.ts`), does.
+ * Exact's file that turns an `app:/` source into something the audio
+ * element plays (`picker-glue.js`'s `appURL`, `host/web/glue.js`'s
+ * `picker`), beside the page's script; the file store it opens
+ * (`storage-environment.js`, `storage-fs.js`) the page has read at launch.
+ * Exact fetches it on the first such source, and it carries no digest in
+ * its name, so the host serves it to be asked again (`tools/web/serve.ts`):
+ * a reader who goes offline before that first Play gets no saved recording,
+ * the bar loading for ever. Read once as the page module connects, it stays
+ * in the page's module map, so a saved recording plays with no network, as
+ * One's web, whose bundle holds its OPFS reader
+ * (`apps/hymnal/src/offline/media.ts`), does. A page that cannot read it is
+ * left to Exact's own load on first use.
  */
-const APP_FILES = ['../storage-environment.js', '../storage-fs.js', '../picker-glue.js'];
-
-/** Imports `APP_FILES`; a file the page cannot read is left to Exact's own load on first use. */
-const warmAppFiles = () => {
-  for (const file of APP_FILES) {
-    const read = import(new URL(file, import.meta.url).href);
-    read.catch(() => {});
-  }
+const readAppURL = () => {
+  const read = import(new URL('../picker-glue.js', import.meta.url).href);
+  read.catch(() => {});
 };
 
 /** The ear as it stands: listening or not, its feed's rate and frame, when it started, its ends. */

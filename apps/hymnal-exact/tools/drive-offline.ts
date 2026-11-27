@@ -12,7 +12,7 @@
  * or more), and the browser is closed as a person closes it. Relaunched on
  * the same profile, the list is opened, and once the page module
  * (`modules/index.js`, which Exact fetches only after the first paint, and
- * which no read can answer without) and the Exact files it reads as it
+ * which no read can answer without) and the Exact file it reads as it
  * connects (`AFTER_PAINT`, waited for up to 3 s) have loaded, the page goes
  * offline and hymn 2 is tapped:
  *
@@ -73,13 +73,8 @@ const NEIGHBOUR = 3;
 const NEVER = 5;
 const BLOCKED = 1;
 const BUCKET = 'https://hymns.cvr.im';
-/** The page module and the Exact files it reads as it connects (`modules/web/index.js`'s `APP_FILES`). */
-const AFTER_PAINT = [
-  '/modules/index.js',
-  '/storage-environment.js',
-  '/storage-fs.js',
-  '/picker-glue.js',
-];
+/** The page module and the Exact file it reads as it connects (`modules/web/index.js`'s `readAppURL`). */
+const AFTER_PAINT = ['/modules/index.js', '/picker-glue.js'];
 const port = (await claimAppPort(app, { label: 'drive-offline' })).port;
 const site = serveBuilt(dist, port);
 const origin = `http://127.0.0.1:${port}`;
@@ -246,7 +241,7 @@ try {
   await open(back, '/');
   await settle(back, `row hymn-${HYMN}`, `document.querySelector('[data-testid="hymn-${HYMN}"]')`);
   await settle(back, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
-  await waitFor(back, 'the files the page module reads at once', loadedAll(AFTER_PAINT), 3000);
+  await waitFor(back, 'the file the page module reads at once', loadedAll(AFTER_PAINT), 3000);
   step = 'offline';
   await back.page.context().setOffline(true);
   seen.offline = true;
