@@ -10,8 +10,10 @@
  * Sounds and haptics off and chords on, hymn 2 is opened and its chords
  * counted, the page rests until its recording is saved (Downloads says one
  * or more), and the browser is closed as a person closes it. Relaunched on
- * the same profile, the list is opened, the page goes offline and hymn 2 is
- * tapped:
+ * the same profile, the list is opened, and once the page module
+ * (`modules/index.js`, which Exact fetches only after the first paint, and
+ * which no read can answer without) has loaded, the page goes offline and
+ * hymn 2 is tapped:
  *
  * - (a) its stanza draws;
  *
@@ -225,6 +227,11 @@ try {
   const back = second.page;
   await open(back, '/');
   await settle(back, `row hymn-${HYMN}`, `document.querySelector('[data-testid="hymn-${HYMN}"]')`);
+  await settle(
+    back,
+    'the page module loaded',
+    `performance.getEntriesByType('resource').some((e) => new URL(e.name).pathname === '/modules/index.js' && e.responseEnd > 0)`,
+  );
   step = 'offline';
   await back.page.context().setOffline(true);
   seen.offline = true;
