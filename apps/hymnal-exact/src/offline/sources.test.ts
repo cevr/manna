@@ -204,7 +204,7 @@ describe('the saved recordings, as the data module keeps them', () => {
     expect(view.progress).toBe(words.progressText({ printed: words.RECORDINGS }));
     expect(view.bytes).toBe(SIZE * words.RECORDINGS);
     expect(view.failure).toBe('');
-    expect(backups).toEqual([{ op: 'backup.exclude', path: ROOT }]);
+    expect(backups).toEqual([{ op: 'backup.exclude', path: ROOT }, { op: 'recordings.saved' }]);
     expect(asked.length).toBe(words.RECORDINGS);
     expect(new Set(asked).size).toBe(words.RECORDINGS);
     await disk.idle();
@@ -224,6 +224,53 @@ describe('the saved recordings, as the data module keeps them', () => {
 
   it('on the web the app’s module marks nothing, as the current app’s backup marks nothing off iOS', async () => {
     expect(await later({ op: 'backup.exclude', path: ROOT })).toEqual({ excluded: false });
+  });
+
+  it('tells the app’s module recordings.saved once a launch, only once a file is saved', async () => {
+    const heard = (asked: Array<string>): AppModule => ({
+      available: true,
+      later: async (request) => {
+        asked.push(String(request['op']));
+        return {};
+      },
+    });
+    const none: Array<string> = [];
+    const empty = diskOf();
+    serve(empty, () => 'refused');
+    const quiet = launch(empty, heard(none));
+    quiet.ask('all');
+    await settled(quiet.view);
+    expect(none.filter((op) => op === 'recordings.saved')).toEqual([]);
+
+    const saving: Array<string> = [];
+    const disk = diskOf();
+    serve(disk);
+    const run = launch(disk, heard(saving));
+    run.ask('all');
+    await settled(run.view);
+    expect(saving.filter((op) => op === 'recordings.saved')).toEqual(['recordings.saved']);
+
+    const relaunched: Array<string> = [];
+    const again = launch(disk, heard(relaunched));
+    await settled(again.view);
+    expect(relaunched).toEqual(['recordings.saved']);
+  });
+
+  it('tells nothing of a part left mid-download, and on the web recordings.saved reads what plays a saved file', async () => {
+    const heard: Array<string> = [];
+    const disk = diskOf();
+    serve(disk, () => 'refused');
+    disk.put(partOf({ number: 1, offset: 0 }), SIZE / 2);
+    const run = launch(disk, {
+      available: true,
+      later: async (request) => {
+        heard.push(String(request['op']));
+        return {};
+      },
+    });
+    await settled(run.view);
+    expect(heard).toEqual([]);
+    expect(await later({ op: 'recordings.saved' })).toEqual({ read: true });
   });
 
   it('saves nothing of a refused, cut-off, short or non-audio reply, says so, and Download all retries', async () => {

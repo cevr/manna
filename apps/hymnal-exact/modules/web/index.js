@@ -21,6 +21,39 @@ export function connect({ changed, agent, now }) {
   host = { changed, agent, now };
 }
 
+/**
+ * Exact's file that turns an `app:/` source into something the audio
+ * element plays (`picker-glue.js`'s `appURL`, `host/web/glue.js`'s
+ * `picker`), beside the page's script; the file store it opens the page
+ * has read at launch. Exact fetches it on the first such source, and it
+ * carries no digest in its name, so the host serves it to be asked again
+ * (`tools/web/serve.ts`): a reader who goes offline before that first Play
+ * gets no saved recording, the bar loading for ever. Read once, it stays in
+ * the page's module map, so a saved recording plays with no network, as
+ * One's web, whose bundle holds its OPFS reader
+ * (`apps/hymnal/src/offline/media.ts`), does. A page that cannot read it is
+ * left to Exact's own load on first use.
+ */
+const readAppURL = () => {
+  const read = import(new URL('../picker-glue.js', import.meta.url).href);
+  read.catch(() => {});
+};
+
+/**
+ * The saved recordings' op: `recordings.saved`, sent by the data module
+ * once a launch when its store first holds a saved file
+ * (`src/offline/sources.ts`: at launch, as the player's first step starts
+ * the store and it reads its folders, or once a save lands), reads
+ * `picker-glue.js` now. A launch that holds no saved file never reads it
+ * ahead, and one that holds some reads it before the reader goes offline.
+ */
+const recordings = {
+  'recordings.saved': () => {
+    readAppURL();
+    return { read: true };
+  },
+};
+
 /** The ear as it stands: listening or not, its feed's rate and frame, when it started, its ends. */
 const ear = {
   listening: false,
@@ -335,7 +368,8 @@ const shipped = Object.fromEntries(
 /** One `native.later` call: the op's answer, or a refusal for an op no part names. */
 export async function later(request) {
   const op = String(request?.op ?? '');
-  const part = tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op] ?? feel[op];
+  const part =
+    tuner[op] ?? backup[op] ?? pinch[op] ?? timing[op] ?? shipped[op] ?? feel[op] ?? recordings[op];
   if (part === undefined) throw new Error(`Hymnal answers no op ${op}`);
   return part(request);
 }

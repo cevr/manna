@@ -169,12 +169,28 @@ export const offlineSources = (
   const note = (event: string, detail: string) => {
     console.log(`[offline] ${event} ${detail}`);
   };
+  let toldSaved = false;
+  /**
+   * Once a launch, when the store first holds a saved file, the app's
+   * module hears `recordings.saved`: on the web it reads now what plays a
+   * saved file (`modules/web/index.js`), so one saved this launch plays
+   * offline; a host whose module has no such op logs that it did not hear.
+   */
+  const tellSaved = () => {
+    if (toldSaved || countsOf(store).saved === 0) return;
+    toldSaved = true;
+    if (module?.available !== true || module.later === undefined) return;
+    module
+      .later({ op: 'recordings.saved' })
+      .catch(() => note('saved.unheard', 'op=recordings.saved'));
+  };
   const feed = (input: Input) => {
     if (files === undefined) return;
     const next = stepStore(store, input);
     store = next.store;
     serial += 1;
     for (const command of next.commands) carry(command);
+    tellSaved();
   };
   /** The disk's changes, one at a time and in the store's order: a Delete of every saved file never fills the host's storage queue (256 waiting, `full`). */
   let turn: Promise<unknown> = Promise.resolve();
