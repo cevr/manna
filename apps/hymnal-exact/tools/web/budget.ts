@@ -47,7 +47,7 @@ export interface Budget {
 }
 
 /** A time's least allowance over its limit: no less than the widest spread of a time across the budget's runs, no more than twice it. */
-export const TIME_SLACK_MS = 20;
+export const TIME_SLACK_MS = 25;
 /** The highest load a time is measured or checked at. */
 export const MAX_LOAD = 5;
 /** The fewest quiet runs the times are taken from. */
