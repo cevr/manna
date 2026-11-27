@@ -267,6 +267,31 @@ const timing = {
   },
 };
 
+/**
+ * The page's own copy of each shipped file it has read, by the file's
+ * address, in the page's Cache Storage (`hymnal-shipped`): the files carry
+ * no digest in their names, so the host serves them to be asked again
+ * (`tools/web/serve.ts`), and offline that ask fails. A read whose import
+ * fails answers the copy, so a hymn read once still draws its chords with
+ * no network, as One's web, whose bundle holds every hymn's chords, does.
+ * A page with no Cache Storage, or one that refuses a write, keeps none.
+ */
+const shippedKept = {
+  keep: (address, text) =>
+    globalThis.caches
+      ?.open('hymnal-shipped')
+      .then((cache) => cache.put(address, new Response(text)))
+      .catch(() => {}),
+  read: async (address) => {
+    if (globalThis.caches === undefined) return undefined;
+    return globalThis.caches
+      .open('hymnal-shipped')
+      .then((cache) => cache.match(address))
+      .then((kept) => kept?.text())
+      .catch(() => undefined);
+  },
+};
+
 /** How often each shipped file was asked for, by its address: a read after a refused one imports it afresh. */
 const shippedTries = new Map();
 
@@ -275,9 +300,10 @@ const shippedTries = new Map();
  * answers the text of the file `n` the web build ships beside this module
  * (`<folder>/<n>.js`, written by `src/shipped/files.ts`), imported the
  * first time the data module asks, as the iOS app reads its file
- * (`bundle:/Resources/<folder>/<n>`). A name that is no plain word, or a
- * file that is not there, is refused; the browser keeps a failed import by
- * its address, so each later try asks a new one.
+ * (`bundle:/Resources/<folder>/<n>`), and kept (`shippedKept`). A name that
+ * is no plain word is refused, and so is a file that is not there and was
+ * never kept; the browser keeps a failed import by its address, so each
+ * later try asks a new one.
  */
 const shipped = Object.fromEntries(
   ['chords', 'indexes'].map((folder) => [
@@ -288,11 +314,20 @@ const shipped = Object.fromEntries(
       const path = `./${folder}/${n}.js`;
       const tries = shippedTries.get(path) ?? 0;
       shippedTries.set(path, tries + 1);
+      const address = new URL(path, import.meta.url).href;
       const url = new URL(path, import.meta.url);
       if (tries > 0) url.searchParams.set('try', String(tries));
-      const file = await import(url.href);
+      const imported = import(url.href);
+      const file = await imported.catch((failed) =>
+        shippedKept.read(address).then((text) => {
+          if (text === undefined) throw failed;
+          return { default: text, kept: true };
+        }),
+      );
       if (file.default === undefined) throw new Error(`no ${folder} file ${n}`);
-      return { text: String(file.default) };
+      const text = String(file.default);
+      if (file.kept !== true) void shippedKept.keep(address, text);
+      return { text };
     },
   ]),
 );
