@@ -20,7 +20,7 @@ import * as words from '@manna/hymnal-app/offline/words';
 import type * as EstimateDecl from './decl/estimate';
 import type * as IdentityDecl from './decl/identity';
 import type * as WordsDecl from './decl/words';
-import { RECORDINGS, holdsSaved, later } from '../../modules/web/index.js';
+import { later } from '../../modules/web/index.js';
 import { book } from '../hymns/book.testing.ts';
 import { BUCKET, playerSources, recordingAt } from '../player/sources.ts';
 import { type AppModule, type RecordingFiles, offlineSources } from './sources.ts';
@@ -256,23 +256,20 @@ describe('the saved recordings, as the data module keeps them', () => {
     expect(relaunched).toEqual(['recordings.saved']);
   });
 
-  it('on the web the page module holds a saved recording by an .mp3 in a folder of the store’s root, not by a part', async () => {
-    const readdirOf =
-      (tree: Readonly<Record<string, ReadonlyArray<string>>>) =>
-      async (path: string): Promise<ReadonlyArray<string>> => {
-        const names = tree[path];
-        if (names === undefined) throw new Error(`no folder ${path}`);
-        return names;
-      };
-    const folder = pathOf({ number: 1, offset: 0 }).replace(/\/[^/]+$/u, '');
-    const name = pathOf({ number: 1, offset: 0 }).slice(folder.length + 1);
-    const part = partOf({ number: 1, offset: 0 }).slice(folder.length + 1);
-    const storage = folder.slice(ROOT.length + 1);
-    expect(RECORDINGS).toBe(ROOT);
-    expect(await holdsSaved(readdirOf({}))).toBe(false);
-    expect(await holdsSaved(readdirOf({ [ROOT]: [storage], [folder]: [] }))).toBe(false);
-    expect(await holdsSaved(readdirOf({ [ROOT]: [storage], [folder]: [part] }))).toBe(false);
-    expect(await holdsSaved(readdirOf({ [ROOT]: ['gone', storage], [folder]: [name] }))).toBe(true);
+  it('tells nothing of a part left mid-download, and on the web recordings.saved reads what plays a saved file', async () => {
+    const heard: Array<string> = [];
+    const disk = diskOf();
+    serve(disk, () => 'refused');
+    disk.put(partOf({ number: 1, offset: 0 }), SIZE / 2);
+    const run = launch(disk, {
+      available: true,
+      later: async (request) => {
+        heard.push(String(request['op']));
+        return {};
+      },
+    });
+    await settled(run.view);
+    expect(heard).toEqual([]);
     expect(await later({ op: 'recordings.saved' })).toEqual({ read: true });
   });
 

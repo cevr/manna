@@ -19,76 +19,33 @@ let host = { changed: () => {}, agent: false, now: () => performance.now() };
  */
 export function connect({ changed, agent, now }) {
   host = { changed, agent, now };
-  savedHere()
-    .then((saved) => saved && readAppURL())
-    .catch(() => {});
 }
 
 /**
  * Exact's file that turns an `app:/` source into something the audio
  * element plays (`picker-glue.js`'s `appURL`, `host/web/glue.js`'s
- * `picker`), beside the page's script; the file store it opens
- * (`storage-environment.js`, `storage-fs.js`) the page has read at launch.
- * Exact fetches it on the first such source, and it carries no digest in
- * its name, so the host serves it to be asked again (`tools/web/serve.ts`):
- * a reader who goes offline before that first Play gets no saved recording,
- * the bar loading for ever. Read once, it stays in the page's module map,
- * so a saved recording plays with no network, as One's web, whose bundle
- * holds its OPFS reader (`apps/hymnal/src/offline/media.ts`), does. A page
- * that cannot read it is left to Exact's own load on first use.
+ * `picker`), beside the page's script; the file store it opens the page
+ * has read at launch. Exact fetches it on the first such source, and it
+ * carries no digest in its name, so the host serves it to be asked again
+ * (`tools/web/serve.ts`): a reader who goes offline before that first Play
+ * gets no saved recording, the bar loading for ever. Read once, it stays in
+ * the page's module map, so a saved recording plays with no network, as
+ * One's web, whose bundle holds its OPFS reader
+ * (`apps/hymnal/src/offline/media.ts`), does. A page that cannot read it is
+ * left to Exact's own load on first use.
  */
 const readAppURL = () => {
   const read = import(new URL('../picker-glue.js', import.meta.url).href);
   read.catch(() => {});
 };
 
-/** The saved recordings' folder, the data module's store's `ROOT` (`src/offline/store.ts`). */
-export const RECORDINGS = 'app:/data/recordings';
-
-/**
- * Whether `readdir` (a file store's) finds a saved recording: an `.mp3` in
- * a folder under `RECORDINGS`, as the store publishes one; a part file
- * still downloading is none. A folder that cannot be read holds none.
- */
-export async function holdsSaved(readdir) {
-  const inAny = async ([folder, ...rest]) => {
-    if (folder === undefined) return false;
-    const names = await readdir(`${RECORDINGS}/${folder}`).catch(() => []);
-    return names.some((name) => name.endsWith('.mp3')) || inAny(rest);
-  };
-  return inAny(await readdir(RECORDINGS).catch(() => []));
-}
-
-/**
- * Whether this browser holds a saved recording, read once as the page
- * module connects from the app's own file store, the one the data module
- * saves into (Exact's `storage-environment.js` `storageKey` and
- * `storage-fs.js` `createFileStore`, which the page has read at launch, so
- * their import asks nothing more): a page that saved none, or deleted every
- * one, never reads `picker-glue.js` before it needs it. A page whose store
- * cannot open holds none.
- */
-const savedHere = async () => {
-  const environment = import(new URL('../storage-environment.js', import.meta.url).href);
-  const store = await environment
-    .then(({ storageKey }) => {
-      const key = storageKey(globalThis.exact?.compat?.inputs?.app);
-      if (key == null) return null;
-      const fs = import(new URL('../storage-fs.js', import.meta.url).href);
-      return fs.then(({ createFileStore }) => createFileStore(key));
-    })
-    .catch(() => null);
-  if (store === null) return false;
-  const saved = await holdsSaved((path) => store.readdir(path));
-  store.close();
-  return saved;
-};
-
 /**
  * The saved recordings' op: `recordings.saved`, sent by the data module
  * once a launch when its store first holds a saved file
- * (`src/offline/sources.ts`), reads `picker-glue.js` now, so a recording
- * saved in this launch plays offline before the next.
+ * (`src/offline/sources.ts`: at launch, as the player's first step starts
+ * the store and it reads its folders, or once a save lands), reads
+ * `picker-glue.js` now. A launch that holds no saved file never reads it
+ * ahead, and one that holds some reads it before the reader goes offline.
  */
 const recordings = {
   'recordings.saved': () => {

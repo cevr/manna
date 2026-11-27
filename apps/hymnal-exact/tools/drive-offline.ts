@@ -8,13 +8,13 @@
  * silence labelled `audio/mpeg` as the bucket's recordings are, since a
  * release build saves only those, and refused once the page is offline. On
  * a fresh profile (g) the page module (`modules/index.js`, which Exact
- * fetches only after the first paint) reads no `picker-glue.js` as it
- * connects. With Sounds and haptics off and chords on, hymn 2 is opened and
+ * fetches only after the first paint) loads and in the second after it
+ * the page reads no `picker-glue.js`. With Sounds and haptics off and chords on, hymn 2 is opened and
  * its chords counted, the page rests until its recording is saved
  * (Downloads says one or more), and the browser is closed as a person
  * closes it. Relaunched on the same profile, the list is opened, the page
- * module loads, and (h) it reads `picker-glue.js` as it connects
- * (`AFTER_PAINT`, waited for up to 3 s); then the page goes offline and
+ * module loads, and (h) the page reads `picker-glue.js` ahead, as the store
+ * finds the saved file (`AFTER_PAINT`, waited for up to 3 s); then the page goes offline and
  * hymn 2 is tapped:
  *
  * - (a) its stanza draws;
@@ -42,7 +42,8 @@
  * - (c') hymn 2's recording saved, the page goes offline with no relaunch
  *   and Play plays it, as (c);
  * - (j) back online, Delete downloads empties the store, and relaunched the
- *   page module reads no `picker-glue.js` as it connects, as (g).
+ *   page has read `picker-glue.js` in the second after its module loaded
+ *   only if Downloads then says a recording is saved.
  *
  * `bun tools/drive-offline.ts web [all|chords|play|session]`. Exits 1 on a failed
  * check, 2 when a step did not settle.
@@ -84,7 +85,7 @@ const NEIGHBOUR = 3;
 const NEVER = 5;
 const BLOCKED = 1;
 const BUCKET = 'https://hymns.cvr.im';
-/** The page module and the Exact file it reads as it connects (`modules/web/index.js`'s `readAppURL`). */
+/** The page module and the Exact file it reads ahead where a recording is saved (`modules/web/index.js`'s `readAppURL`). */
 const AFTER_PAINT = ['/modules/index.js', '/picker-glue.js'];
 const port = (await claimAppPort(app, { label: 'drive-offline' })).port;
 const site = serveBuilt(dist, port);
@@ -274,7 +275,7 @@ async function savedThenRelaunched() {
   await settle(back, `row hymn-${HYMN}`, `document.querySelector('[data-testid="hymn-${HYMN}"]')`);
   await settle(back, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
   check(
-    `(h) relaunched with hymn ${HYMN}'s recording saved, the page reads picker-glue.js as it connects`,
+    `(h) relaunched with hymn ${HYMN}'s recording saved, the page reads picker-glue.js ahead (within 3 s of its module)`,
     await waitFor(back, 'the file the page module reads at once', loadedAll(AFTER_PAINT), 3000),
   );
   step = 'offline';
@@ -372,15 +373,15 @@ async function chordsKept(back: Page, online: number) {
   await back.send('Network.setBlockedURLs', { urls: [] });
 }
 
-/** (g) and (j): once the page module has loaded and a second has passed, no ask for `picker-glue.js` was made. */
+/** (g): once the page module has loaded and a second has passed, no ask for `picker-glue.js` was made. */
 async function readsNoGlue(on: Page, name: string) {
   await settle(on, 'the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
   await Bun.sleep(1000);
   const read = await on.evaluate<boolean>(loadedAll(AFTER_PAINT.slice(1)));
-  check(`${name} reads no picker-glue.js as the page module connects`, !read);
+  check(`${name} reads no picker-glue.js in the second after the page module loads`, !read);
 }
 
-/** Downloads, from the list, until it says `saved` recordings or more (at most, with `atMost`). */
+/** Downloads, from the list, until it says `saved` recordings or more. */
 async function downloadsSay(on: Page, name: string, saved: number) {
   await tap(on, 'gear');
   return waitFor(
@@ -394,8 +395,8 @@ async function downloadsSay(on: Page, name: string, saved: number) {
 /**
  * The leg `session`: a fresh launch saves hymn 2's recording, goes offline
  * with no relaunch and plays it (c'); back online Delete downloads empties
- * the store, and relaunched, (j) the page reads no `picker-glue.js` as it
- * connects, as one that never saved.
+ * the store, and relaunched, (j) the page has read `picker-glue.js` ahead
+ * only if Downloads says a recording is saved.
  */
 async function sameSession() {
   step = 'session: launch fresh';
@@ -462,7 +463,24 @@ async function sameSession() {
   await browser.close();
   const again = await launch(false);
   await open(again.page, '/');
-  await readsNoGlue(again.page, '(j) relaunched after every saved recording was deleted, the page');
+  await settle(again.page, 'session: the page module loaded', loadedAll(AFTER_PAINT.slice(0, 1)));
+  await Bun.sleep(1000);
+  const read = await again.page.evaluate<boolean>(loadedAll(AFTER_PAINT.slice(1)));
+  await tap(again.page, 'gear');
+  await settle(
+    again.page,
+    'session: Downloads read',
+    `document.querySelector('[data-testid="downloads-progress"]')?.hasAttribute('aria-valuenow')`,
+  );
+  await Bun.sleep(500);
+  const saved = await again.page.evaluate<number>(
+    `Number(document.querySelector('[data-testid="downloads-progress"]')?.getAttribute('aria-valuenow') ?? -1)`,
+  );
+  check(
+    '(j) relaunched after every saved recording was deleted, the page reads picker-glue.js ahead only while Downloads says a recording is saved',
+    !read || saved >= 1,
+    { read, saved },
+  );
 }
 
 /** After the chords leg, which ends online: the page offline again, and hymn 2 opened from the list. */
