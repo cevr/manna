@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAs, effect/noTernary, effect/noNullish, effect/noKnownValueWidening -- a host script that writes `tools/web/budget.json` from drive-web's JSON reports, whose measures are open records of numbers by page and name, and the rule drive-web checks a measure by; it never runs in the data module. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAs, effect/noTernary, effect/noNullish, effect/noKnownValueWidening, effect/noUnknownParameters -- a host script that writes `tools/web/budget.json` from drive-web's JSON reports, whose measures are open records of numbers by page and name, each decoded at its door by a schema of finite numbers, and the rule drive-web checks a measure by; it never runs in the data module. */
 
 /**
  * The web build's budget (`tools/web/budget.json`), in two halves. A byte
@@ -28,6 +28,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { Result, Schema } from 'effect';
+
+/** A measure's schema: each page and cache state's values by name, each a finite number. */
+const MeasuredSchema = Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Finite));
+
+/** A run's schema: its load and its measure, finite numbers all. */
+const RunSchema = Schema.Struct({ load: Schema.Finite, measured: MeasuredSchema });
+
 /** A measure: each page and cache state's byte counts and times by name. */
 export type Measured = Record<string, Record<string, number>>;
 
@@ -36,6 +44,25 @@ export interface Run {
   readonly load: number;
   readonly measured: Measured;
 }
+
+/** `input` read by `schema`, or refused as `what` with the value that is not a finite number named. */
+const decoded = <A>(schema: Schema.Decoder<A>, input: unknown, what: string): A => {
+  const result = Schema.decodeUnknownResult(schema)(input);
+  if (Result.isFailure(result))
+    throw new Error(`${what} holds a value that is not a finite number: ${result.failure.message}`);
+  return result.success;
+};
+
+/** `input` as a run, refused as `what` unless its load and every value are finite numbers. */
+export const runOf = (input: unknown, what: string): Run => decoded(RunSchema, input, what);
+
+/** `input` as a measure, refused as `what` unless every value is a finite number. */
+export const measuredOf = (input: unknown, what: string): Measured =>
+  decoded(MeasuredSchema, input, what);
+
+/** Each of `runs` read as a run, the `n`th refused as `<label> n`. */
+const runsOf = (runs: ReadonlyArray<unknown>, label: string): ReadonlyArray<Run> =>
+  runs.map((run, at) => runOf(run, `${label} ${at + 1}`));
 
 export interface Budget {
   readonly from: string;
@@ -119,11 +146,13 @@ export const UNBUDGETED: Readonly<Record<string, string>> = {};
  * `unbudgeted`, and each limit with no value measured.
  */
 export const overOf = (
-  measured: Measured,
-  limits: Measured,
+  measuredGiven: Measured,
+  limitsGiven: Measured,
   timesChecked: boolean,
   unbudgeted: Readonly<Record<string, string>> = UNBUDGETED,
 ): ReadonlyArray<string> => {
+  const measured = measuredOf(measuredGiven, 'the measure');
+  const limits = measuredOf(limitsGiven, 'the limits');
   /** What one measured value breaks: its limit's allowance, or having none. */
   const breaks = (key: string, name: string, value: number): ReadonlyArray<string> => {
     const limit = limits[key]?.[name];
@@ -147,7 +176,8 @@ export const overOf = (
 };
 
 /** Each time's median across `runs`, which must all be quiet and measure the same names. */
-export const timesOf = (runs: ReadonlyArray<Run>): Measured => {
+export const timesOf = (given: ReadonlyArray<Run>): Measured => {
+  const runs = runsOf(given, 'time run');
   sameEntries(runs);
   const loaded = runs.filter((run) => run.load > MAX_LOAD);
   if (loaded.length > 0)
@@ -166,7 +196,8 @@ export const timesOf = (runs: ReadonlyArray<Run>): Measured => {
 };
 
 /** Each byte count every one of `runs` measured: refused when fewer than `LEAST_BYTE_RUNS`, when they measure different pages or names, or when any two differ. */
-export const bytesOf = (runs: ReadonlyArray<Run>): Measured => {
+export const bytesOf = (given: ReadonlyArray<Run>): Measured => {
+  const runs = runsOf(given, 'byte run');
   if (runs.length < LEAST_BYTE_RUNS)
     throw new Error(`${runs.length} runs for the byte counts; ${LEAST_BYTE_RUNS} needed`);
   sameEntries(runs);
@@ -221,7 +252,9 @@ export const fromOf = (byteRuns: number, runs: number): string =>
   `bytes: what each of ${byteRuns} drive-web measure runs counted, at any load; times: the median of ${runs} drive-web measure runs at a load of ${MAX_LOAD} or less`;
 
 /** The budget from `reports`: bytes from them all, times from the quiet ones, or from `kept`'s runs when given. */
-export const budgetOf = (reports: ReadonlyArray<Run>, kept?: ReadonlyArray<Run>): Budget => {
+export const budgetOf = (given: ReadonlyArray<Run>, keptGiven?: ReadonlyArray<Run>): Budget => {
+  const reports = runsOf(given, 'run');
+  const kept = keptGiven === undefined ? undefined : runsOf(keptGiven, 'kept run');
   sameEntries(reports);
   const runs = (kept ?? reports.filter((run) => run.load <= MAX_LOAD)).map(rounded);
   const timed = (run: Run): Run => ({ ...run, measured: only(run.measured, isTime) });
@@ -249,7 +282,7 @@ if (import.meta.main) {
       };
       if (report.measure === undefined || report.measure.throttled === true)
         throw new Error(`${path}: no unthrottled measure`);
-      return { load: report.measure.load, measured: report.measure.measured };
+      return runOf({ load: report.measure.load, measured: report.measure.measured }, path);
     });
   const kept = keepTimes ? (JSON.parse(readFileSync(file, 'utf8')) as Budget).runs : undefined;
   const budget = budgetOf(reports, kept);

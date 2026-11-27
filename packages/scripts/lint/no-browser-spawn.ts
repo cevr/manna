@@ -111,11 +111,22 @@ const LAUNCHES = new Set(['launch', 'connect', 'remote']);
 const namesDriver = (node: ESTree.Node): boolean =>
   node.type === 'Literal' && Predicate.isString(node.value) && DRIVERS.test(node.value);
 
-/** Whether `node` is `require('<driver>')`. */
+/** Whether `node` is a call of `createRequire` (`createRequire(import.meta.url)`, `module.createRequire(…)`). */
+const makesRequire = (node: ESTree.Node): boolean =>
+  node.type === 'CallExpression' &&
+  Option.exists(nameOf(node.callee), (name) => name === 'createRequire');
+
+/** Whether `callee` is a `require`: the global one, a `createRequire(…)` result called at once, or a top-level `const` bound to one. */
+const isRequire = (callee: ESTree.Node): boolean => {
+  if (makesRequire(callee)) return true;
+  if (callee.type !== 'Identifier') return false;
+  return callee.name === 'require' || boundValue(programOf(callee), callee.name).some(makesRequire);
+};
+
+/** Whether `node` is `require('<driver>')`, by any `require`. */
 const requiresDriver = (node: ESTree.Node): boolean =>
   node.type === 'CallExpression' &&
-  node.callee.type === 'Identifier' &&
-  node.callee.name === 'require' &&
+  isRequire(node.callee) &&
   node.arguments.slice(0, 1).some(namesDriver);
 
 /** Whether `node` yields a driver's module: `require('<driver>')`, `import('<driver>')`, either awaited, or its `.default`. */
@@ -194,7 +205,9 @@ const launchesDriver = (call: ESTree.CallExpression): boolean => {
  * `` `--remote-debugging-port=${port}` ``) or a value or call named for one
  * (`chromePath()`, `CHROME`), and Bun's shell (`` $`…` ``) doing the same.
  * A browser driver other than Playwright is refused whole: its import
- * (static, dynamic or `require`) and every launch bound to it, however named.
+ * (static, dynamic, `require` or a `createRequire(…)` result's), its
+ * re-export (`export … from`, `export * from`) and every launch bound to
+ * it, however named.
  */
 export const noBrowserSpawn = Rule.define({
   name: 'no-browser-spawn',
@@ -211,6 +224,18 @@ export const noBrowserSpawn = Rule.define({
       context.report(Diagnostic.make({ node, message: DRIVER_MESSAGE }));
     return Visitor.merge(
       Visitor.on('ImportDeclaration', (node) =>
+        Effect.suspend(() => {
+          if (!namesDriver(node.source)) return Effect.void;
+          return refuse(node);
+        }),
+      ),
+      Visitor.on('ExportNamedDeclaration', (node) =>
+        Effect.suspend(() => {
+          if (!Option.exists(Option.fromNullishOr(node.source), namesDriver)) return Effect.void;
+          return refuse(node);
+        }),
+      ),
+      Visitor.on('ExportAllDeclaration', (node) =>
         Effect.suspend(() => {
           if (!namesDriver(node.source)) return Effect.void;
           return refuse(node);

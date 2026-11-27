@@ -66,6 +66,7 @@ import { placeOf } from '../src/web/place.ts';
 import { QUIET_STORED } from './quiet.ts';
 import { answer } from './recordings.ts';
 import { type Budget, MAX_LOAD, overOf, TIME_SLACK_MS } from './web/budget.ts';
+import { type Asked, foreignOf, oneSave, savesByRest, unaskedOf } from './web/saves.ts';
 import { makeStall } from './web/stall.ts';
 
 const app = join(import.meta.dir, '..');
@@ -230,23 +231,37 @@ const startServer = async () => {
 };
 
 /**
- * Every request a page makes, by URL, with whether it was after the first
- * Play and whether it is the save of a rested hymn page: the printed key's
- * recording of the hymn the page has shown for at least `REST_MS`.
+ * Every request a page makes, by URL and the hymn page last shown, with
+ * whether it was after the first Play and the page rest it falls in: the printed key's
+ * recording of the hymn the page has shown for at least `REST_MS`
+ * (`tools/web/saves.ts`).
  */
-const requests: Array<{ url: string; afterPlay: boolean; rested: boolean; at: number }> = [];
+const requests: Array<Asked> = [];
 let played = false;
+/** The count of hymn pages shown so far, across pages: each showing is its own rest. */
+let showings = 0;
 /** The app saves the hymn page the reader rests on 750 ms after it shows (`downloadsRest`, `features/downloads.contract`); the drive allows its own observation of the page's change up to 100 ms late. */
 const REST_MS = 650;
 /** The printed key's recording of hymn `number`, as the bucket names it. */
 const printed = (number: number) => `${BUCKET}/audio/${setOf(number)}/${recordingKey(number)}`;
 
 const watch = async (page: Page) => {
-  const shown: { number: number; since: number } = { number: 0, since: 0 };
+  const shown: { number: number; since: number; showing: number; last: number } = {
+    number: 0,
+    since: 0,
+    showing: 0,
+    last: 0,
+  };
   const showing = (url: string) => {
     const place = placeOf(book, new URL(url).pathname);
     const number = place.screen === 'hymn' ? place.number : 0;
-    if (number !== shown.number) Object.assign(shown, { number, since: Date.now() });
+    if (number !== shown.number)
+      Object.assign(shown, {
+        number,
+        since: Date.now(),
+        showing: (showings += 1),
+        last: number > 0 ? number : shown.last,
+      });
   };
   page.page.on('framenavigated', (frame) => {
     if (frame === page.page.mainFrame()) showing(frame.url());
@@ -255,7 +270,13 @@ const watch = async (page: Page) => {
     const url = request.url();
     const at = Date.now();
     const rested = shown.number > 0 && url === printed(shown.number) && at - shown.since >= REST_MS;
-    requests.push({ url, afterPlay: played, rested, at });
+    requests.push({
+      url,
+      hymn: shown.last,
+      afterPlay: played,
+      rest: rested ? shown.showing : 0,
+      at,
+    });
   });
   await page.send('Fetch.enable', { patterns: [{ urlPattern: `${BUCKET}/*` }] });
   page.on('Fetch.requestPaused', (params) => {
@@ -1012,11 +1033,8 @@ const resting = async (page: Page) => {
   await Bun.sleep(2000);
   const restAsked = bucketSince(rest);
   check(
-    "a hymn page rested on asks the bucket for its printed key's recording, and nothing else",
-    row &&
-      shownRest &&
-      restAsked.length > 0 &&
-      restAsked.every(({ url, rested }) => rested && url === printed(1)),
+    "a hymn page rested on asks the bucket for its printed key's recording once, and nothing else",
+    row && shownRest && oneSave(restAsked, printed(1), BUCKET),
     { row, shownRest, asked: restAsked.slice(0, 5) },
   );
   await tap(page, '[data-testid="hymn-back"]');
@@ -1079,20 +1097,16 @@ try {
   stop(serverChild);
 }
 
-const foreign = requests.filter(
-  ({ url }) => !url.startsWith(origin) && !/^(data|blob):/u.test(url),
-);
-const unasked = foreign.filter(
-  ({ url, afterPlay, rested }) => !url.startsWith(BUCKET) || !(afterPlay || rested),
-);
+const foreign = foreignOf(requests, origin);
+const unasked = unaskedOf(requests, origin, BUCKET);
 report.requests = {
   total: requests.length,
   foreign: foreign.length,
   bucketAnsweredByDrive: foreign.length - unasked.length,
-  restedSaves: foreign.filter(({ rested }) => rested).length,
+  restedSaves: [...savesByRest(requests, BUCKET).values()].reduce((sum, count) => sum + count, 0),
 };
 check(
-  `every request is the local server's, but the bucket after Play or a rested hymn page's printed key, answered by the drive (${requests.length} requests, ${foreign.length - unasked.length} to the bucket)`,
+  `every request is the local server's, but the bucket's stream after Play or one save of each rested hymn page's printed key, answered by the drive (${requests.length} requests, ${foreign.length - unasked.length} to the bucket)`,
   unasked.length === 0,
   unasked.slice(0, 5),
 );
