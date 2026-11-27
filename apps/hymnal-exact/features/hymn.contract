@@ -95,18 +95,18 @@ component HymnPage
         button id="hymn-back" press=hymnPressBack appearance="none" padding=0 min-height="size.target" color="accent" font="type.body" aria-label="Hymns" display="flex" flex-direction="row" align-items="center" gap="space.s4" testId="hymn-back"
           text "Hymns" font="type.body" color="accent"
           image "symbol:back" order=-1 width="size.mark" height="size.mark" color="accent" aria-hidden=true
-        text hymnTitleOf(pages, entry.params.n) role="heading" aria-level=2 testId="hymn-title"
+        text hymnTitleOf(pages.concat([page]), entry.params.n) role="heading" aria-level=2 testId="hymn-title"
       FindBar(entry=entry, results=true)
       row flex=1 min-height=0 position="relative"
         scroll id="hymn-pager" flex=1 min-height=0 display="flex" flex-direction="row" overflow-x="auto" overflow-y="hidden" scroll-snap-type="x mandatory" scrollend=ended scrolldragstart=armed wheel=wheeled touch-action=(followShown.holding ? "none" : "auto") testId="hymn-pager"
-          for n in numbers key=n
+          for n in hymnDrawn(numbers, page, entry.params.n) key=n
             column id=`hymn-page-${n}` inert=(`${n}` != entry.params.n) aria-hidden=(`${n}` != entry.params.n) flex="none" width="100%" height="100%" scroll-snap-align="start" scroll-snap-stop="always" display="flex" flex-direction="column" testId=(`${n}` == entry.params.n ? "hymn-page" : `hymn-page-${n}`)
-              match pages.at(numbers.indexOf(n))
-                case some(page)
-                  match chordsAll.at(numbers.indexOf(n))
-                    case some(chords)
-                      if chords.number == page.number
-                        HymnSheet(page=page, chords=chords, shown=(`${n}` == entry.params.n))
+              match hymnPageAt(pages, page, n).at(0)
+                case some(p)
+                  match hymnChordsAt(chordsAll, chords, n).at(0)
+                    case some(c)
+                      if c.number == p.number
+                        HymnSheet(page=p, chords=c, shown=(`${n}` == entry.params.n))
                       else
                         column flex=1
                     case none
@@ -121,6 +121,23 @@ component HymnPage
 // The title of the route's hymn, from the pages the pager draws ("" until
 // its words come).
 fn hymnTitleOf(pages: HymnText[], n: string): string = match pages.filter(p => `${p.number}` == n).at(0) { case some(p) => p.title, case none => "" }
+
+// The route's hymn `n` is drawn from its own answers (`hymnShown`,
+// `chordsShown`, asked as the route opens) until the pager has placed its
+// pages around it and their answers for it are here: a hymn opened is
+// drawn once its own words and chords are here, never waiting for the
+// pager's turn or its neighbours' chords files. Whether the pager has not
+// placed the route's hymn yet:
+fn hymnLaunched(numbers: number[], page: HymnText, n: string): bool = numbers.filter(x => `${x}` == n).length == 0 and `${page.number}` == n
+
+// The hymns the pager draws: its own, else the route's hymn alone.
+fn hymnDrawn(numbers: number[], page: HymnText, n: string): number[] = hymnLaunched(numbers, page, n) ? [page.number] : numbers
+
+// The words drawn for hymn `n`: the pager's answer for it, else the route's own.
+fn hymnPageAt(pages: HymnText[], page: HymnText, n: number): HymnText[] = pages.filter(p => p.number == n).length > 0 ? pages.filter(p => p.number == n) : [page].filter(p => p.number == n)
+
+// The chords drawn for hymn `n`: the pager's answer for it, else the route's own.
+fn hymnChordsAt(chordsAll: ChordsPage[], chords: ChordsPage, n: number): ChordsPage[] = chordsAll.filter(c => c.number == n).length > 0 ? chordsAll.filter(c => c.number == n) : [chords].filter(c => c.number == n)
 
 // One hymn's page in the pager: its own scroll up and down, its head line,
 // number, title and star, then its parts, with chords when on. The shown
