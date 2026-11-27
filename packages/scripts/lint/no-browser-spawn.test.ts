@@ -29,6 +29,8 @@ const VISITED = new Set([
   'TaggedTemplateExpression',
   'ImportDeclaration',
   'ImportExpression',
+  'ExportNamedDeclaration',
+  'ExportAllDeclaration',
 ]);
 
 /** The rule's reports in `source`, run on the parser's tree as oxlint walks it, by the kind of node each names. */
@@ -78,6 +80,8 @@ describe('manna/no-browser-spawn', () => {
       "import * as pw from '@playwright/test'; const browser = await pw.chromium.launch({ headless: true }); await browser.close();",
     ],
     ['const app = await launch(appDir); server.connect(port); webdriver.remote(url)'],
+    ["export { chromium } from '@playwright/test'; export * from './drive.ts';"],
+    ["import { createRequire } from 'node:module'; createRequire(import.meta.url)('playwright');"],
   ])('a process on no browser, or Playwright starting its own, is not reported: %s', (source) => {
     expect(reportsIn(source)).toBe(0);
   });
@@ -99,6 +103,16 @@ describe('manna/no-browser-spawn', () => {
     ["import { remote } from 'webdriverio'; await remote({ capabilities });", 2],
     ["import { Builder } from 'selenium-webdriver'; new Builder().forBrowser('chrome');", 1],
     ["import type { Browser } from 'puppeteer-core/lib/types';", 1],
+    ["export { default as driver } from 'puppeteer';", 1],
+    ["export * from 'puppeteer-core';", 1],
+    [
+      "import { createRequire } from 'node:module'; createRequire(import.meta.url)('puppeteer');",
+      1,
+    ],
+    [
+      "import { createRequire } from 'node:module'; const load = createRequire(import.meta.url); const p = load('puppeteer-core'); await p.launch({});",
+      2,
+    ],
   ])(
     'a browser driver other than Playwright is reported, its import and each launch bound to it: %s',
     (source, reports) => {
