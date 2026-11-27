@@ -729,6 +729,7 @@ const shipped = async (page: Page) => {
   mark('block 101 chords');
   await page.send('Network.setBlockedURLs', { urls: [`${origin}/modules/chords/101.js`] });
   await page.send('Network.clearBrowserCache');
+  await page.send('Storage.clearDataForOrigin', { origin, storageTypes: 'cache_storage' });
   const seen = shippedRequests(page);
   try {
     await open(page, '/hymns/100');
